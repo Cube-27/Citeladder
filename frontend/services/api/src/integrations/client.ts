@@ -38,6 +38,12 @@ export type TokenBundle = {
 export type ProviderProperty = { property_ref: string; label: string };
 export type ImportPage = { payload: Record<string, unknown>; rawRowCount: number };
 export type IntegrationIO = { fetch: typeof fetch; sleep: (milliseconds: number) => Promise<void> };
+function providerValue<T>(schema: z.ZodType<T>, value: unknown): T {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success)
+    throw new IntegrationError(codes.ERROR_PROVIDER_API, 'Malformed integration provider response');
+  return parsed.data;
+}
 const defaultIO: IntegrationIO = {
   fetch: (...args) => fetch(...args),
   sleep: (milliseconds) =>
@@ -194,16 +200,13 @@ export class IntegrationClient {
           provider,
         ),
       );
-      return z
-        .array(object)
-        .parse(payload.siteEntry ?? [])
-        .flatMap((entry) =>
-          typeof entry.siteUrl === 'string' &&
-          entry.siteUrl.trim() &&
-          entry.permissionLevel !== endpoints.GSC_PERMISSION_UNVERIFIED
-            ? [{ property_ref: entry.siteUrl, label: entry.siteUrl }]
-            : [],
-        );
+      return providerValue(z.array(object), payload.siteEntry ?? []).flatMap((entry) =>
+        typeof entry.siteUrl === 'string' &&
+        entry.siteUrl.trim() &&
+        entry.permissionLevel !== endpoints.GSC_PERMISSION_UNVERIFIED
+          ? [{ property_ref: entry.siteUrl, label: entry.siteUrl }]
+          : [],
+      );
     }
     if (provider === 'bing') {
       const payload = await this.#json(
@@ -215,14 +218,11 @@ export class IntegrationClient {
           provider,
         ),
       );
-      return z
-        .array(object)
-        .parse(payload.d ?? [])
-        .flatMap((entry) =>
-          typeof entry.Url === 'string' && entry.Url.trim() && entry.IsVerified === true
-            ? [{ property_ref: entry.Url, label: entry.Url }]
-            : [],
-        );
+      return providerValue(z.array(object), payload.d ?? []).flatMap((entry) =>
+        typeof entry.Url === 'string' && entry.Url.trim() && entry.IsVerified !== false
+          ? [{ property_ref: entry.Url, label: entry.Url }]
+          : [],
+      );
     }
     const properties = new Map<string, ProviderProperty>();
     let pageToken = '';
@@ -232,8 +232,8 @@ export class IntegrationClient {
       url.searchParams.set('pageSize', String(endpoints.GA4_ACCOUNT_SUMMARIES_PAGE_SIZE));
       if (pageToken) url.searchParams.set('pageToken', pageToken);
       const payload = await this.#json(await this.#request(url, { headers }, provider));
-      for (const account of z.array(object).parse(payload.accountSummaries ?? [])) {
-        for (const property of z.array(object).parse(account.propertySummaries ?? [])) {
+      for (const account of providerValue(z.array(object), payload.accountSummaries ?? [])) {
+        for (const property of providerValue(z.array(object), account.propertySummaries ?? [])) {
           const ref =
             typeof property.property === 'string'
               ? property.property.replace(/^properties\//u, '')
@@ -245,7 +245,7 @@ export class IntegrationClient {
           properties.set(ref, { property_ref: ref, label: labels.join(' / ') || ref });
         }
       }
-      pageToken = z.string().parse(payload.nextPageToken ?? '');
+      pageToken = providerValue(z.string(), payload.nextPageToken ?? '');
       if (!pageToken) return [...properties.values()];
       if (seen.has(pageToken)) break;
       seen.add(pageToken);
@@ -288,7 +288,7 @@ export class IntegrationClient {
           provider,
         ),
       );
-      const rows = z.array(z.unknown()).parse(payload.rows ?? []);
+      const rows = providerValue(z.array(z.unknown()), payload.rows ?? []);
       return { payload, rawRowCount: rows.length };
     }
     if (provider === 'ga4') {
@@ -332,7 +332,7 @@ export class IntegrationClient {
         }
       }
       const payload = await this.#json(response);
-      const raw = z.array(z.unknown()).parse(payload.rows ?? []);
+      const raw = providerValue(z.array(z.unknown()), payload.rows ?? []);
       return { payload, rawRowCount: raw.length };
     }
     if (offset > 0) return { payload: { rows: [] }, rawRowCount: 0 };
@@ -341,9 +341,9 @@ export class IntegrationClient {
     );
     url.searchParams.set('siteUrl', property);
     const payload = await this.#json(await this.#request(url, { headers }, provider));
-    const raw = z.array(z.unknown()).parse(payload.d ?? []);
+    const raw = providerValue(z.array(z.unknown()), payload.d ?? []);
     return {
-      payload: { rows: raw.flatMap((row) => normalizeBing(row, template)) },
+      payload: { ...payload, rows: raw.flatMap((row) => normalizeBing(row, template)) },
       rawRowCount: raw.length,
     };
   }

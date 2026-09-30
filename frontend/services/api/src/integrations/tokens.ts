@@ -2,17 +2,24 @@ import { randomUUID } from 'node:crypto';
 
 import type { Database } from '../db/database.ts';
 import { IntegrationClient, IntegrationError } from './client.ts';
-import { integrationSettings, type IntegrationTransport } from './config.ts';
+import type { IntegrationTransport } from './config.ts';
 
-const settings = integrationSettings();
+function decryptCredential(client: IntegrationClient, value: string): string {
+  try {
+    return client.secrets.cipher.decrypt(value);
+  } catch {
+    throw new IntegrationError('grant_auth_failed', 'Integration credential needs reconnection');
+  }
+}
 
 /** Refresh a grant outside a transaction and persist only while its fence holds. */
 export async function freshAccessToken(
   db: Database,
   grantId: string,
   workspaceId: string,
+  client = new IntegrationClient(),
 ): Promise<string> {
-  const client = new IntegrationClient();
+  const settings = client.settings;
   const cutoff = Date.now() + settings.token_refresh_skew_seconds * 1000;
   for (
     let wait = 0;
@@ -31,7 +38,7 @@ export async function freshAccessToken(
       if (grant === undefined || grant.status !== 'connected')
         throw new IntegrationError('grant_auth_failed', 'Integration grant is unavailable');
       if (grant.token_expires_at === null || new Date(grant.token_expires_at).getTime() > cutoff) {
-        return { token: client.secrets.cipher.decrypt(grant.access_token_encrypted), claim: null };
+        return { token: decryptCredential(client, grant.access_token_encrypted), claim: null };
       }
       if (
         grant.refresh_claim_expires_at !== null &&
@@ -53,7 +60,7 @@ export async function freshAccessToken(
           id: claimId,
           revision: grant.token_revision,
           transport: grant.transport as IntegrationTransport,
-          refresh: client.secrets.cipher.decrypt(grant.refresh_token_encrypted),
+          refresh: decryptCredential(client, grant.refresh_token_encrypted),
         },
       };
     });
@@ -92,18 +99,14 @@ export async function freshAccessToken(
         .where('workspace_id', '=', workspaceId)
         .where('refresh_claim_id', '=', claim.id)
         .where('token_revision', '=', claim.revision)
+        .where('status', '=', 'connected')
+        .where('refresh_claim_expires_at', '>', now)
         .returning('id')
         .executeTakeFirst();
       if (updated) return tokens.accessToken;
-      const current = await db
-        .selectFrom('integration_oauth_grants')
-        .select('access_token_encrypted')
-        .where('id', '=', grantId)
-        .where('workspace_id', '=', workspaceId)
-        .executeTakeFirst();
-      if (current === undefined)
-        throw new IntegrationError('grant_auth_failed', 'Integration grant is unavailable');
-      return client.secrets.cipher.decrypt(current.access_token_encrypted);
+      // Re-enter the locked status/expiry check after losing a refresh fence.
+      // Disconnect, revocation or another rotation may have replaced this grant.
+      continue;
     } catch (error) {
       await db
         .updateTable('integration_oauth_grants')

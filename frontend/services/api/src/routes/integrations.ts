@@ -261,7 +261,11 @@ export const integrationRoutes = [
     async handle({ c, db }) {
       const rows = await db
         .selectFrom('integration_connections as connection')
-        .innerJoin('integration_oauth_grants as grant', 'grant.id', 'connection.grant_id')
+        .innerJoin('integration_oauth_grants as grant', (join) =>
+          join
+            .onRef('grant.id', '=', 'connection.grant_id')
+            .onRef('grant.workspace_id', '=', 'connection.workspace_id'),
+        )
         .select([
           'connection.id',
           'connection.workspace_id',
@@ -350,19 +354,23 @@ export const integrationRoutes = [
     response: integrationPropertyListSchema,
     async handle({ c, db }, { path }) {
       const workspaceId = c.get('workspace').workspaceId;
-      await enforceWorkspaceRequest(db, `${workspaceId}:${path.connection_id}`, {
-        operation: 'integrations.properties',
-        limit: resolveSettingSpec(policy.abuse.property_discovery_limit) as number,
-        windowSeconds: resolveSettingSpec(policy.abuse.property_discovery_window_seconds) as number,
-      });
       const row = await db
         .selectFrom('integration_connections as connection')
-        .innerJoin('integration_oauth_grants as grant', 'grant.id', 'connection.grant_id')
+        .innerJoin('integration_oauth_grants as grant', (join) =>
+          join
+            .onRef('grant.id', '=', 'connection.grant_id')
+            .onRef('grant.workspace_id', '=', 'connection.workspace_id'),
+        )
         .select(['connection.provider', 'connection.grant_id'])
         .where('connection.id', '=', path.connection_id)
         .where('connection.workspace_id', '=', workspaceId)
         .executeTakeFirst();
       if (!row) throw notFound('Integration connection');
+      await enforceWorkspaceRequest(db, `${workspaceId}:${path.connection_id}`, {
+        operation: 'integrations.properties',
+        limit: resolveSettingSpec(policy.abuse.property_discovery_limit) as number,
+        windowSeconds: resolveSettingSpec(policy.abuse.property_discovery_window_seconds) as number,
+      });
       try {
         const token = await freshAccessToken(db, row.grant_id, workspaceId);
         return await new IntegrationClient().properties(
@@ -436,7 +444,13 @@ export const integrationRoutes = [
         if (!others) {
           await trx
             .updateTable('integration_oauth_grants')
-            .set({ status: 'pending_revocation', updated_at: now })
+            .set({
+              status: 'pending_revocation',
+              token_revision: grant.token_revision + 1,
+              refresh_claim_id: null,
+              refresh_claim_expires_at: null,
+              updated_at: now,
+            })
             .where('id', '=', grant.id)
             .where('workspace_id', '=', workspaceId)
             .execute();
@@ -547,6 +561,22 @@ export const integrationRoutes = [
           .where('status', '=', 'active')
           .where('property_ref', '!=', ref)
           .execute();
+        const existing = await trx
+          .selectFrom('integration_property_mappings')
+          .selectAll()
+          .where('workspace_id', '=', workspaceId)
+          .where('connection_id', '=', connection.id)
+          .where('project_id', '=', project.id)
+          .where('property_ref', '=', ref)
+          .where('status', '=', 'active')
+          .forUpdate()
+          .executeTakeFirst();
+        if (existing)
+          return {
+            ...existing,
+            created_at: existing.created_at.toISOString(),
+            updated_at: existing.updated_at.toISOString(),
+          };
         await trx
           .updateTable('integration_connections')
           .set({ account_ref: ref, updated_at: new Date() })
@@ -602,6 +632,13 @@ export const integrationRoutes = [
         logger.exception('integration_backfill_enqueue_incomplete', error, {
           connection_id: path.connection_id,
         });
+        throw new ApiError(
+          503,
+          'The mapping was saved, but its history import could not be queued. Retry saving the mapping.',
+          {
+            details: { mapping_id: mapping.id },
+          },
+        );
       }
       return integrationPropertyMappingListSchema.element.parse(mapping);
     },
@@ -616,7 +653,11 @@ export const integrationRoutes = [
       const workspaceId = c.get('workspace').workspaceId;
       const row = await db
         .selectFrom('integration_connections as connection')
-        .innerJoin('integration_oauth_grants as grant', 'grant.id', 'connection.grant_id')
+        .innerJoin('integration_oauth_grants as grant', (join) =>
+          join
+            .onRef('grant.id', '=', 'connection.grant_id')
+            .onRef('grant.workspace_id', '=', 'connection.workspace_id'),
+        )
         .select(['connection.provider', 'connection.grant_id', 'connection.account_ref'])
         .where('connection.id', '=', path.connection_id)
         .where('connection.workspace_id', '=', workspaceId)

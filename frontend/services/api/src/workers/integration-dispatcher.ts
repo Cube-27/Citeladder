@@ -6,10 +6,10 @@ import { IntegrationClient } from '../integrations/client.ts';
 import { endpoints, integrationSettings } from '../integrations/config.ts';
 import { enqueueSyncRun } from '../integrations/sync.ts';
 import { getLogger } from '../logging.ts';
+import { waitForPoll } from './poll.ts';
 
 const logger = getLogger('workers.integration-dispatcher');
 const settings = integrationSettings();
-const client = new IntegrationClient();
 
 function day(value: Date): string {
   return value.toISOString().slice(0, 10);
@@ -22,9 +22,14 @@ function addDays(value: string, amount: number): string {
 
 export class IntegrationDispatcher {
   readonly #db: Database;
+  readonly #client: Pick<IntegrationClient, 'secrets' | 'revoke'>;
 
-  constructor(db: Database) {
+  constructor(
+    db: Database,
+    client: Pick<IntegrationClient, 'secrets' | 'revoke'> = new IntegrationClient(),
+  ) {
     this.#db = db;
+    this.#client = client;
   }
 
   async runOnce(): Promise<void> {
@@ -39,24 +44,18 @@ export class IntegrationDispatcher {
       } catch (error) {
         logger.exception('integration_dispatcher_iteration_failed', error);
       }
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, settings.dispatcher_interval_seconds * 1000);
-        signal.addEventListener(
-          'abort',
-          () => {
-            clearTimeout(timer);
-            resolve();
-          },
-          { once: true },
-        );
-      });
+      await waitForPoll(settings.dispatcher_interval_seconds * 1000, signal);
     }
   }
 
   async #schedule(): Promise<void> {
     const targets = await this.#db
       .selectFrom('integration_property_mappings as mapping')
-      .innerJoin('integration_connections as connection', 'connection.id', 'mapping.connection_id')
+      .innerJoin('integration_connections as connection', (join) =>
+        join
+          .onRef('connection.id', '=', 'mapping.connection_id')
+          .onRef('connection.workspace_id', '=', 'mapping.workspace_id'),
+      )
       .innerJoin('integration_oauth_grants as grant', (join) =>
         join
           .onRef('grant.id', '=', 'connection.grant_id')
@@ -123,6 +122,7 @@ export class IntegrationDispatcher {
   }
 
   async #revokeGrant(grantId: string, workspaceId: string): Promise<void> {
+    const client = this.#client;
     const claimId = randomUUID();
     const grant = await this.#db.transaction().execute(async (trx) => {
       const row = await trx
@@ -154,13 +154,22 @@ export class IntegrationDispatcher {
     });
     if (!grant) return;
     try {
-      const token = client.secrets.cipher.decrypt(
-        grant.refresh_token_encrypted || grant.access_token_encrypted,
-      );
-      await client.revoke(
-        grant.transport as keyof typeof endpoints.INTEGRATION_OAUTH_REVOKE_URLS,
-        token,
-      );
+      let token: string | null;
+      try {
+        token = client.secrets.cipher.decrypt(
+          grant.refresh_token_encrypted || grant.access_token_encrypted,
+        );
+      } catch {
+        // A credential which cannot be recovered is resolved locally. Provider
+        // failures still use the existing revoke-failed path below.
+        token = null;
+      }
+      if (token !== null) {
+        await client.revoke(
+          grant.transport as keyof typeof endpoints.INTEGRATION_OAUTH_REVOKE_URLS,
+          token,
+        );
+      }
       await this.#db.transaction().execute(async (trx) => {
         const updated = await trx
           .updateTable('integration_oauth_grants')
@@ -178,6 +187,7 @@ export class IntegrationDispatcher {
           .where('workspace_id', '=', workspaceId)
           .where('refresh_claim_id', '=', claimId)
           .where('token_revision', '=', grant.token_revision)
+          .where('status', '=', 'pending_revocation')
           .returning('id')
           .executeTakeFirst();
         if (updated)

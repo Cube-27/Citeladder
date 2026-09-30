@@ -25,6 +25,10 @@ connection, project and property. Retiring one project's mapping must not retire
 another's. The Python readiness projection remains a read-only bridge for Agent
 readiness until its owning migration.
 
+If saving a mapping succeeds but its history import cannot be queued, the API
+reports the failure with the saved mapping ID. Retrying the same binding reuses
+the mapping and retries missing history work rather than creating a duplicate.
+
 ## Sync and evidence
 
 [Sync enqueue](../frontend/services/api/src/integrations/sync.ts) freezes

@@ -1670,6 +1670,7 @@
     ],
     "ga4_capability_key": "ga4_item_attribution",
     "ga4_capability_version": "ga4-item-attribution-1",
+    "ga4_fallback_granularity": "default_channel_group",
     "importer_version": "integrations-importer-1",
     "free_history_window_days": 30,
     "history_window_days": {

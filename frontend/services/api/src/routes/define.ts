@@ -146,7 +146,9 @@ function defineRoute<
   if (publicRead && method !== 'get') throw new Error('Only read routes may be public');
   const byWorkspacePath = route.authorize === 'workspace-path';
   const workspaceHeaders =
-    byProject || byWorkspacePath || publicRead || route.public ? z.object({}) : ACTIVE_WORKSPACE_HEADERS;
+    byProject || byWorkspacePath || publicRead || route.public
+      ? z.object({})
+      : ACTIVE_WORKSPACE_HEADERS;
   const contract: RouteContract = {
     family: route.family,
     method,

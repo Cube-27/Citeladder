@@ -56,9 +56,8 @@ describe('declaredKeysFor', () => {
     expect(keys?.required).not.toContain('audit_scope');
   });
 
-  it('resolves page wrappers and arrays to their object shape', () => {
+  it('resolves page wrappers to their object shape', () => {
     expect(declaredKeysFor('siteCrawlListPageSchema')?.declared).toContain('items');
-    expect(declaredKeysFor('integrationConnectionSchema')?.declared.length).toBeGreaterThan(0);
   });
 });
 

@@ -102,6 +102,7 @@ export async function enqueueSyncRun(
         .selectFrom('integration_sync_runs')
         .select(['window_start', 'window_end'])
         .where('mapping_id', '=', target.id)
+        .where('workspace_id', '=', input.workspaceId)
         .where('status', '=', 'succeeded')
         .orderBy('window_start', 'asc')
         .orderBy('window_end', 'asc')
@@ -128,6 +129,7 @@ export async function enqueueSyncRun(
     const prior = await trx
       .selectFrom('integration_sync_runs')
       .select('resync_seq')
+      .where('workspace_id', '=', input.workspaceId)
       .where((eb) =>
         eb.or([
           eb('connection_id', '=', input.connectionId),

@@ -1,12 +1,20 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
-import { IntegrationClient, IntegrationError, providerNumber } from '../integrations/client.ts';
+import { IntegrationClient, IntegrationError } from '../integrations/client.ts';
 import { integrationPolicy, integrationSettings } from '../integrations/config.ts';
 import { freshAccessToken } from '../integrations/tokens.ts';
+import { normalizedRows } from '../integrations/normalize.ts';
+import {
+  activeSyncTarget,
+  artifactOffset,
+  selectedItemDataset,
+} from '../integrations/sync-state.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
+import { waitForPoll } from './poll.ts';
 
 const logger = getLogger('workers.integrations');
 const statuses = policy.task_queue.statuses;
@@ -21,81 +29,15 @@ type Run = {
   project_id: string;
   property_ref: string;
   sync_kind: string;
-  window_start: Date;
-  window_end: Date;
+  window_start: string;
+  window_end: string;
   resync_seq: number;
   attempt_count: number;
   max_attempts: number;
 };
 
-function valueDate(value: Date): string {
-  return value.toISOString().slice(0, 10);
-}
-function isoDate(raw: unknown): string | null {
-  if (typeof raw !== 'string') return null;
-  if (/^\d{8}$/u.test(raw)) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
-  return /^\d{4}-\d{2}-\d{2}$/u.test(raw) ? raw : null;
-}
-function values(row: Record<string, unknown>): unknown[] {
-  return Array.isArray(row.keys) ? row.keys : [];
-}
-function normalizedRows(
-  provider: string,
-  dataset: string,
-  template: (typeof templates)[number],
-  payload: Record<string, unknown>,
-) {
-  const source = Array.isArray(payload.rows) ? payload.rows : [];
-  return source.flatMap((item) => {
-    if (item === null || typeof item !== 'object' || Array.isArray(item)) return [];
-    let row = item as Record<string, unknown>;
-    if (provider === 'ga4') {
-      const dimensions = Array.isArray(row.dimensionValues) ? row.dimensionValues : [];
-      const metrics = Array.isArray(row.metricValues) ? row.metricValues : [];
-      if (
-        dimensions.length !== template.dimensions.length ||
-        metrics.length !== template.metrics.length
-      )
-        return [];
-      const keys = dimensions.map((value) =>
-        value !== null && typeof value === 'object' && 'value' in value ? value.value : null,
-      );
-      const numeric = metrics.map((value) =>
-        value !== null && typeof value === 'object' && 'value' in value
-          ? providerNumber(value.value)
-          : null,
-      );
-      if (
-        keys.some((value) => typeof value !== 'string') ||
-        numeric.some((value) => value === null)
-      )
-        return [];
-      row = {
-        keys,
-        ...Object.fromEntries(template.metrics.map((name, index) => [name, numeric[index]])),
-      };
-    }
-    const keys = values(row);
-    if (keys.length !== template.dimensions.length || keys.some((key) => typeof key !== 'string'))
-      return [];
-    const dateIndex = template.dimensions.findIndex(
-      (dimension) => dimension.toLowerCase() === 'date',
-    );
-    if (dateIndex < 0) return [];
-    const date = isoDate(keys[dateIndex]);
-    if (date === null) return [];
-    const metrics = Object.fromEntries(
-      template.metrics.flatMap((name) => {
-        const metric = row[name];
-        return typeof metric === 'number' && Number.isFinite(metric) ? [[name, metric]] : [];
-      }),
-    );
-    if (Object.keys(metrics).length !== template.metrics.length) return [];
-    const dimensionKey = keys
-      .filter((_key, index) => index !== dateIndex)
-      .join(integrationPolicy.dimension_separator);
-    return [{ provider, dataset, date, dimension_key: dimensionKey, metrics }];
-  });
+function valueDate(value: string): string {
+  return value.slice(0, 10);
 }
 
 export class IntegrationWorker {
@@ -131,6 +73,7 @@ export class IntegrationWorker {
         .where('id', '=', run.id)
         .where('lease_owner', '=', this.#owner)
         .where('status', '=', statuses.running)
+        .where('lease_expires_at', '>', new Date())
         .execute()
         .catch((error: unknown) =>
           logger.exception('integration_heartbeat_failed', error, { sync_run_id: run.id }),
@@ -149,18 +92,12 @@ export class IntegrationWorker {
 
   async runForever(signal: AbortSignal): Promise<void> {
     while (!signal.aborted) {
-      if (await this.runOnce()) continue;
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, this.#settings.poll_interval_seconds * 1000);
-        signal.addEventListener(
-          'abort',
-          () => {
-            clearTimeout(timer);
-            resolve();
-          },
-          { once: true },
-        );
-      });
+      try {
+        if (await this.runOnce()) continue;
+      } catch (error) {
+        logger.exception('integration_worker_iteration_failed', error);
+      }
+      await waitForPoll(this.#settings.poll_interval_seconds * 1000, signal);
     }
   }
 
@@ -192,6 +129,10 @@ export class IntegrationWorker {
         .where('id', '=', row.id)
         .where('status', 'in', [statuses.queued, statuses.retry_wait])
         .returningAll()
+        .returning([
+          sql<string>`window_start::text`.as('window_start'),
+          sql<string>`window_end::text`.as('window_end'),
+        ])
         .executeTakeFirst();
       if (updated) {
         await trx
@@ -213,12 +154,21 @@ export class IntegrationWorker {
   }
 
   async #execute(run: Run): Promise<void> {
+    await this.#db.transaction().execute(async (trx) => {
+      await this.#ownedTarget(trx, run);
+    });
     const connection = await this.#db
       .selectFrom('integration_connections as connection')
       .innerJoin('integration_oauth_grants as grant', 'grant.id', 'connection.grant_id')
-      .select(['connection.provider', 'connection.grant_id', 'grant.status as grant_status'])
+      .select([
+        'connection.provider',
+        'connection.grant_id',
+        'connection.dataset_capabilities',
+        'grant.status as grant_status',
+      ])
       .where('connection.id', '=', run.connection_id)
       .where('connection.workspace_id', '=', run.workspace_id)
+      .where('grant.workspace_id', '=', run.workspace_id)
       .executeTakeFirst();
     if (!connection)
       throw new IntegrationError('unmapped_property', 'Integration connection no longer exists');
@@ -232,24 +182,27 @@ export class IntegrationWorker {
       .where('sync_run_id', '=', run.id)
       .where('workspace_id', '=', run.workspace_id)
       .execute();
-    for (const template of templates) {
+    const selected = selectedItemDataset(connection.dataset_capabilities);
+    for (let template of templates) {
       if (template.provider !== provider || excluded.has(template.dataset)) continue;
+      if (
+        provider === 'ga4' &&
+        template.dataset.startsWith('ga4_item_') &&
+        template.dataset !== selected
+      )
+        continue;
       const offsets = new Set(
         artifacts
           .filter((item) => item.dataset === template.dataset)
-          .map((item) => {
-            const snapshot = item.query_snapshot as Record<string, unknown> | null;
-            return typeof snapshot?.page_offset === 'number' ? snapshot.page_offset : -1;
-          }),
+          .map((item) => artifactOffset(item.query_snapshot)),
       );
       const previousPages = artifacts.filter((item) => item.dataset === template.dataset);
       if (provider === 'bing' && offsets.has(0)) continue;
       if (
         previousPages.some((item) => {
-          const snapshot = item.query_snapshot as Record<string, unknown> | null;
           return (
-            typeof snapshot?.page_offset === 'number' &&
-            snapshot.page_offset === Math.max(...offsets) &&
+            artifactOffset(item.query_snapshot) >= 0 &&
+            artifactOffset(item.query_snapshot) === Math.max(...offsets) &&
             item.row_count < this.#settings.sync_page_size
           );
         })
@@ -261,15 +214,39 @@ export class IntegrationWorker {
           offset += this.#settings.sync_page_size;
           continue;
         }
-        const page = await this.#client.page(
-          provider,
-          token,
-          run.property_ref,
-          template,
-          valueDate(run.window_start),
-          valueDate(run.window_end),
-          offset,
-        );
+        await this.#db.transaction().execute(async (trx) => {
+          await this.#ownedTarget(trx, run);
+        });
+        let page;
+        try {
+          page = await this.#client.page(
+            provider,
+            token,
+            run.property_ref,
+            template,
+            valueDate(run.window_start),
+            valueDate(run.window_end),
+            offset,
+          );
+        } catch (error) {
+          if (
+            !(error instanceof IntegrationError) ||
+            error.code !== integrationPolicy.contracts.ERROR_GA4_DIMENSION_INCOMPATIBLE ||
+            template.dataset !== 'ga4_item_source_medium_daily' ||
+            offsets.size > 0
+          )
+            throw error;
+          template = await this.#itemFallback(run);
+          page = await this.#client.page(
+            provider,
+            token,
+            run.property_ref,
+            template,
+            valueDate(run.window_start),
+            valueDate(run.window_end),
+            offset,
+          );
+        }
         const encoded = JSON.stringify(page.payload);
         if (Buffer.byteLength(encoded, 'utf8') > this.#settings.max_inline_payload_bytes)
           throw new IntegrationError(
@@ -282,24 +259,18 @@ export class IntegrationWorker {
           dimensions: template.dimensions,
           metrics: template.metrics,
           date_range: { start: valueDate(run.window_start), end: valueDate(run.window_end) },
-          page_offset: offset,
+          startRow: offset,
         };
-        const rows = normalizedRows(provider, template.dataset, template, page.payload);
+        const rows = normalizedRows(
+          provider,
+          template.dataset,
+          template,
+          page.payload,
+          valueDate(run.window_start),
+          valueDate(run.window_end),
+        );
         await this.#db.transaction().execute(async (trx) => {
-          const current = await trx
-            .selectFrom('integration_sync_runs')
-            .select(['status', 'lease_owner'])
-            .where('id', '=', run.id)
-            .where('workspace_id', '=', run.workspace_id)
-            .forUpdate()
-            .executeTakeFirst();
-          if (
-            !current ||
-            current.status !== statuses.running ||
-            current.lease_owner !== this.#owner
-          ) {
-            throw new IntegrationError('provider_api_error', 'Integration sync lease was lost');
-          }
+          await this.#ownedTarget(trx, run);
           await trx
             .insertInto('integration_import_artifacts')
             .values({
@@ -363,18 +334,81 @@ export class IntegrationWorker {
     }
   }
 
+  async #ownedTarget(db: Database, run: Run) {
+    const current = await db
+      .selectFrom('integration_sync_runs')
+      .select(['status', 'lease_owner', 'lease_expires_at'])
+      .where('id', '=', run.id)
+      .where('workspace_id', '=', run.workspace_id)
+      .forUpdate()
+      .executeTakeFirst();
+    if (
+      !current ||
+      current.status !== statuses.running ||
+      current.lease_owner !== this.#owner ||
+      current.lease_expires_at === null ||
+      current.lease_expires_at.getTime() <= Date.now()
+    )
+      throw new IntegrationError('provider_api_error', 'Integration sync lease was lost');
+    return activeSyncTarget(db, run);
+  }
+
+  async #itemFallback(run: Run) {
+    return this.#db.transaction().execute(async (trx) => {
+      const connection = await this.#ownedTarget(trx, run);
+      const template = templates.find((item) => item.dataset === 'ga4_item_channel_group_daily');
+      if (!template) throw new Error('GA4 item fallback policy is missing');
+      const capabilities =
+        connection.dataset_capabilities !== null &&
+        typeof connection.dataset_capabilities === 'object'
+          ? connection.dataset_capabilities
+          : {};
+      await trx
+        .updateTable('integration_connections')
+        .set({
+          dataset_capabilities: JSON.stringify({
+            ...capabilities,
+            [integrationPolicy.ga4_capability_key]: {
+              selected_dataset: template.dataset,
+              source_granularity: integrationPolicy.ga4_fallback_granularity,
+              reason: integrationPolicy.contracts.ERROR_GA4_DIMENSION_INCOMPATIBLE,
+              version: integrationPolicy.ga4_capability_version,
+            },
+          }),
+          updated_at: new Date(),
+        })
+        .where('id', '=', run.connection_id)
+        .where('workspace_id', '=', run.workspace_id)
+        .execute();
+      return template;
+    });
+  }
+
   async #finish(run: Run, failure: unknown): Promise<void> {
     const now = new Date();
     await this.#db.transaction().execute(async (trx) => {
       const current = await trx
         .selectFrom('integration_sync_runs')
-        .select(['status', 'lease_owner'])
+        .select(['status', 'lease_owner', 'lease_expires_at'])
         .where('id', '=', run.id)
         .where('workspace_id', '=', run.workspace_id)
         .forUpdate()
         .executeTakeFirst();
-      if (!current || current.status !== statuses.running || current.lease_owner !== this.#owner)
+      if (
+        !current ||
+        current.status !== statuses.running ||
+        current.lease_owner !== this.#owner ||
+        current.lease_expires_at === null ||
+        current.lease_expires_at.getTime() <= Date.now()
+      )
         return;
+      if (failure === null) {
+        try {
+          await this.#ownedTarget(trx, run);
+        } catch (error) {
+          failure = error;
+        }
+      }
       if (failure === null) {
         await trx
           .updateTable('integration_sync_runs')
@@ -481,6 +515,7 @@ export class IntegrationWorker {
                 .selectFrom('integration_connections')
                 .select('grant_id')
                 .where('id', '=', run.connection_id)
+                .where('workspace_id', '=', run.workspace_id)
                 .executeTakeFirstOrThrow()
             ).grant_id,
           )
