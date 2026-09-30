@@ -32,6 +32,7 @@ from app.models.prompt import Prompt, PromptSet, Topic
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 
+
 async def _account(
     session: AsyncSession, label: str
 ) -> tuple[User, Workspace, Project]:

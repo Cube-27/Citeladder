@@ -124,10 +124,19 @@ describe('route-ownership gate', () => {
     ]);
   });
   it('checks non-browser protocol paths independently of OpenAPI', () => {
-    const failures = routeOwnershipFailures(migrated({
-      protocolPaths: ['/mcp', '/token'],
-      ingress: { Caddyfile: ingressRouter(`${SPLIT_INGRESS}\nreverse_proxy /mcp {$API_SERVICE_ORIGIN}\nreverse_proxy /token {$BACKEND_ORIGIN}\n`, UPSTREAMS) },
-    }));
-    expect(failures).toEqual([expect.stringContaining('protocol /token must reach only typescript')]);
+    const failures = routeOwnershipFailures(
+      migrated({
+        protocolPaths: ['/mcp', '/token'],
+        ingress: {
+          Caddyfile: ingressRouter(
+            `${SPLIT_INGRESS}\nreverse_proxy /mcp {$API_SERVICE_ORIGIN}\nreverse_proxy /token {$BACKEND_ORIGIN}\n`,
+            UPSTREAMS,
+          ),
+        },
+      }),
+    );
+    expect(failures).toEqual([
+      expect.stringContaining('protocol /token must reach only typescript'),
+    ]);
   });
 });

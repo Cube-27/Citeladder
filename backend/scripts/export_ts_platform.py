@@ -54,7 +54,6 @@ from app.core.config import errors as error_config
 from app.core.config import integrations_contracts as integration_contracts
 from app.core.config import jev as jev_config
 from app.core.config import legal as legal_config
-from app.core.config import mcp as mcp_config
 from app.core.config import oauth as oauth_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
@@ -158,8 +157,6 @@ from app.core.config.provider_catalog import (
     TRANSPORT_DATAFORSEO,
     is_search_surface,
 )
-from app.core.config.site_health_acquisition import POLICY_BLOCKING_ERROR_CODES
-from app.core.config.site_health_crawl_policy import INVENTORY_SOURCE_CRAWL_IDS_KEY
 from app.core.config.task_queue import (
     ERROR_MAX_ATTEMPTS,
     TASK_CLAIMABLE_STATUSES,
@@ -177,6 +174,7 @@ from scripts.auth_policy import (
     site_health_runtime_policy,
     workspace_policy,
 )
+from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
 from scripts.ts_platform_integrations import integration_policy
@@ -322,19 +320,7 @@ def build_config() -> dict[str, Any]:
             "service_port": TS_API_SERVICE_PORT,
             "request_body_max_bytes": API_REQUEST_BODY_MAX_BYTES,
         },
-        "mcp": {
-            "settings": {
-                name: _setting(name, mcp_config.McpSettings)
-                for name in mcp_config.McpSettings.model_fields
-            },
-            "constants": {
-                **_prefixed_constants(mcp_config, "MCP_"),
-                "api_request_body_max_bytes": API_REQUEST_BODY_MAX_BYTES,
-                "inventory_source_crawl_ids_key": INVENTORY_SOURCE_CRAWL_IDS_KEY,
-                "policy_blocking_error_codes": sorted(POLICY_BLOCKING_ERROR_CODES),
-            },
-            "terms_revision": legal_config.TERMS_REVISION,
-        },
+        "mcp": mcp_policy(_setting),
         "errors": {
             "status_default_code": {
                 str(status): code

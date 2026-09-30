@@ -1,17 +1,24 @@
 """Retained Python Agent projection bridges, retired when PR 19 moves its tools."""
+
 from __future__ import annotations
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
 from app.core.config.opportunities import OPPORTUNITY_TYPE_SITE
 from app.domain.mcp.common import read_as_member
-from app.domain.mcp.data import list_account_projects, search_business_context, project_business_context, read_growth_evidence
+from app.domain.mcp.data import (
+    list_account_projects,
+    project_business_context,
+    read_growth_evidence,
+    search_business_context,
+)
 from app.domain.mcp.retrieval import fetch_business_record
-from app.models.user import User
-from app.models.workspace import Workspace, WorkspaceMember
+from app.models.opportunity import Opportunity
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
-from app.models.opportunity import Opportunity
+from app.models.user import User
+from app.models.workspace import Workspace, WorkspaceMember
 
 
 @pytest.mark.asyncio

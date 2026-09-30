@@ -339,6 +339,7 @@
       "server_version": "1.1.0",
       "documentation_url": "https://docs.citeladder.com/mcp/",
       "max_search_results": 20,
+      "search_snippet_chars": 500,
       "default_list_limit": 50,
       "default_roadmap_limit": 10,
       "default_search_limit": 10,

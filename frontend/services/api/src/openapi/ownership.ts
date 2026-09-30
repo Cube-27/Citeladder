@@ -134,7 +134,9 @@ export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
     for (const path of inputs.protocolPaths ?? []) {
       const reached = [...route(path)].filter((outcome) => outcome !== 'respond');
       if (reached.length !== 1 || reached[0] !== 'typescript')
-        failures.push(`${file}: protocol ${path} must reach only typescript, but reaches [${reached.join(', ')}]`);
+        failures.push(
+          `${file}: protocol ${path} must reach only typescript, but reaches [${reached.join(', ')}]`,
+        );
     }
   }
   return failures;

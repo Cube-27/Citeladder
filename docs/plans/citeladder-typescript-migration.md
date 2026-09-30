@@ -767,7 +767,9 @@ are removed. Python `domain/mcp` read adapters remain only for the Agent's
 `domain/agent/tool_catalog.py`; its retained bridge tests cover isolation and
 persisted evidence until PR 19 removes that caller. The TypeScript Site Page
 resolver uses the exact requested analysis and its artifact instead of selecting
-a newer analysis for the same URL. Local protocol and PostgreSQL coverage do not
+a newer analysis for the same URL. Referral presets now follow the analytics
+owner's `30d`/`90d`/`1y` values, and a missing explicit window stays unavailable.
+Local protocol and PostgreSQL coverage do not
 replace external client or deployment acceptance.
 
 ### PR 16: Billing and the entitlement ledger

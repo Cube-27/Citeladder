@@ -86,16 +86,17 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export async function getAiReferrals(
+export async function readAiReferrals(
   db: Database,
   query: AiReferralsQuery,
-): Promise<AiReferralsResponse> {
+): Promise<{ snapshotId: string | null; response: AiReferralsResponse }> {
   const granularity = validateGranularity(query.granularity);
   validateRange(query.rangeToken);
   validateWindow(query.fromDate, query.toDate);
   let snapshots = db
     .selectFrom('ai_referrals_snapshots')
     .select([
+      'id',
       'granularity',
       'metrics',
       'analyzer_version',
@@ -129,14 +130,17 @@ export async function getAiReferrals(
   };
   if (snapshot === undefined) {
     return {
-      project_id: query.projectId,
-      window_start: query.fromDate ?? '',
-      window_end: query.toDate ?? '',
-      granularity: granularitySchema.parse(granularity),
-      referral_volume: [],
-      referral_share: [],
-      sources: [],
-      ...versions,
+      snapshotId: null,
+      response: {
+        project_id: query.projectId,
+        window_start: query.fromDate ?? '',
+        window_end: query.toDate ?? '',
+        granularity: granularitySchema.parse(granularity),
+        referral_volume: [],
+        referral_share: [],
+        sources: [],
+        ...versions,
+      },
     };
   }
   if (snapshot.metrics != null && !isObject(snapshot.metrics)) {
@@ -144,14 +148,24 @@ export async function getAiReferrals(
   }
   const metrics = isObject(snapshot.metrics) ? snapshot.metrics : {};
   return {
-    project_id: query.projectId,
-    window_start: snapshot.window_start,
-    window_end: snapshot.window_end,
-    granularity: granularitySchema.parse(snapshot.granularity),
-    referral_volume: metricSeriesPoints(metrics.referral_volume),
-    referral_share: metricSeriesPoints(metrics.referral_share),
-    sources: aiReferralSources(metrics.sources),
-    analyzer_version: snapshot.analyzer_version,
-    formula_version: snapshot.formula_version,
+    snapshotId: snapshot.id,
+    response: {
+      project_id: query.projectId,
+      window_start: snapshot.window_start,
+      window_end: snapshot.window_end,
+      granularity: granularitySchema.parse(snapshot.granularity),
+      referral_volume: metricSeriesPoints(metrics.referral_volume),
+      referral_share: metricSeriesPoints(metrics.referral_share),
+      sources: aiReferralSources(metrics.sources),
+      analyzer_version: snapshot.analyzer_version,
+      formula_version: snapshot.formula_version,
+    },
   };
+}
+
+export async function getAiReferrals(
+  db: Database,
+  query: AiReferralsQuery,
+): Promise<AiReferralsResponse> {
+  return (await readAiReferrals(db, query)).response;
 }

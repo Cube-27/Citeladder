@@ -171,7 +171,7 @@ function isDevelopmentEnv(appEnv: string): boolean {
 }
 
 /** Mirror of `secret_is_weak` in `backend/app/core/config`, from its exported policy. */
-function secretIsWeak(value: string): boolean {
+export function secretIsWeak(value: string): boolean {
   const rules = policy.secret_policy;
   return (
     new TextEncoder().encode(value).length < rules.min_bytes ||
@@ -191,6 +191,13 @@ function assertDeployable(config: ServiceConfig): void {
   if (config.database.sslMode !== 'require') {
     throw new ConfigError('db_ssl_mode must be require in production');
   }
+}
+
+// Auxiliary owners resolve the same startup input. Keep it out of loggable
+// configuration objects because an environment can contain unrelated secrets.
+const environments = new WeakMap<ServiceConfig, Record<string, string | undefined>>();
+export function configEnvironment(config: ServiceConfig): Record<string, string | undefined> {
+  return environments.get(config) ?? {};
 }
 
 /** Resolve the service configuration from `env` (defaults to `process.env`). */
@@ -248,6 +255,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     readinessTimeoutMs: policy.api.readiness_timeout_seconds * 1000,
   };
   assertDeployable(config);
+  environments.set(config, { ...env });
   return config;
 }
 

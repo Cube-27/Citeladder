@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.mcp import (
     MCP_MAX_SEARCH_RESULTS,
+    MCP_SEARCH_SNIPPET_CHARS,
     mcp_public_origin,
 )
 from app.domain.agent.tools import ToolExecutionContext, execute_tool
@@ -567,5 +568,5 @@ def _result(kind: str, row_id: uuid.UUID, title: str, text: str) -> dict[str, st
         "type": kind,
         "title": title,
         "url": f"{mcp_public_origin()}/dashboard?record={quote(record_uri, safe='')}",
-        "text": text[:500],
+        "text": text[:MCP_SEARCH_SNIPPET_CHARS],
     }

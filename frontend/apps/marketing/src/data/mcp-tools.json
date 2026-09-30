@@ -14,9 +14,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id"
-        ],
+        "required": ["id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -60,9 +58,7 @@
             ]
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -76,10 +72,7 @@
         "type": "object",
         "properties": {
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "limit": {
             "anyOf": [
@@ -115,15 +108,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": [
-                  "day",
-                  "week",
-                  "month",
-                  "3_months",
-                  "6_months",
-                  "last_synced",
-                  "custom"
-                ]
+                "enum": ["30d", "90d", "1y"]
               },
               {
                 "type": "null"
@@ -155,9 +140,7 @@
             ]
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -176,9 +159,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -197,9 +178,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -218,10 +197,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "limit": {
             "anyOf": [
@@ -236,15 +212,10 @@
             ]
           },
           "status": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -266,15 +237,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": [
-                  "day",
-                  "week",
-                  "month",
-                  "3_months",
-                  "6_months",
-                  "last_synced",
-                  "custom"
-                ]
+                "enum": ["3_months", "6_months", "custom", "day", "last_synced", "month", "week"]
               },
               {
                 "type": "null"
@@ -309,11 +272,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": [
-                  "day",
-                  "week",
-                  "month"
-                ]
+                "enum": ["day", "month", "week"]
               },
               {
                 "type": "null"
@@ -324,12 +283,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": [
-                  "none",
-                  "previous",
-                  "year_over_year",
-                  "custom"
-                ]
+                "enum": ["custom", "none", "previous", "year_over_year"]
               },
               {
                 "type": "null"
@@ -361,9 +315,7 @@
             ]
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -385,15 +337,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": [
-                  "day",
-                  "week",
-                  "month",
-                  "3_months",
-                  "6_months",
-                  "last_synced",
-                  "custom"
-                ]
+                "enum": ["3_months", "6_months", "custom", "day", "last_synced", "month", "week"]
               },
               {
                 "type": "null"
@@ -457,16 +401,10 @@
             ]
           },
           "sort": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "page_size": {
             "anyOf": [
@@ -493,9 +431,7 @@
             ]
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -514,10 +450,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "limit": {
             "anyOf": [
@@ -544,15 +477,10 @@
             ]
           },
           "cohort": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -571,10 +499,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "limit": {
             "anyOf": [
@@ -599,10 +524,7 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "query": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "site_url_id": {
             "anyOf": [
@@ -617,17 +539,10 @@
             ]
           },
           "resolution_outcome": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         },
-        "required": [
-          "project_id",
-          "window_start",
-          "window_end"
-        ],
+        "required": ["project_id", "window_start", "window_end"],
         "additionalProperties": false
       },
       "read_only": true
@@ -646,10 +561,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "limit": {
             "anyOf": [
@@ -669,25 +581,15 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "sort": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "direction": {
             "default": "asc",
             "type": "string",
-            "enum": [
-              "asc",
-              "desc"
-            ]
+            "enum": ["asc", "desc"]
           }
         },
-        "required": [
-          "project_id",
-          "dataset_id",
-          "direction"
-        ],
+        "required": ["project_id", "dataset_id", "direction"],
         "additionalProperties": false
       },
       "read_only": true
@@ -706,9 +608,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -727,9 +627,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -748,10 +646,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "limit": {
             "anyOf": [
@@ -783,10 +678,7 @@
             ]
           }
         },
-        "required": [
-          "project_id",
-          "crawl_id"
-        ],
+        "required": ["project_id", "crawl_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -805,10 +697,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "limit": {
             "anyOf": [
@@ -835,21 +724,13 @@
             ]
           },
           "page_kind": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "status": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -884,10 +765,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "project_id",
-          "completed_baseline"
-        ],
+        "required": ["project_id", "completed_baseline"],
         "additionalProperties": false
       },
       "read_only": true
@@ -911,24 +789,15 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "engine": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": [
-              "core",
-              "comparison"
-            ]
+            "enum": ["core", "comparison"]
           },
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "limit": {
             "anyOf": [
@@ -955,11 +824,7 @@
             ]
           }
         },
-        "required": [
-          "project_id",
-          "audit_id",
-          "cohort"
-        ],
+        "required": ["project_id", "audit_id", "cohort"],
         "additionalProperties": false
       },
       "read_only": true
@@ -983,24 +848,15 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "engine": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": [
-              "core",
-              "comparison"
-            ]
+            "enum": ["core", "comparison"]
           },
           "cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "limit": {
             "anyOf": [
@@ -1017,18 +873,10 @@
           "level": {
             "default": "domain",
             "type": "string",
-            "enum": [
-              "domain",
-              "url"
-            ]
+            "enum": ["domain", "url"]
           }
         },
-        "required": [
-          "project_id",
-          "audit_id",
-          "cohort",
-          "level"
-        ],
+        "required": ["project_id", "audit_id", "cohort", "level"],
         "additionalProperties": false
       },
       "read_only": true
@@ -1064,10 +912,7 @@
             "maximum": 20
           }
         },
-        "required": [
-          "query",
-          "limit"
-        ],
+        "required": ["query", "limit"],
         "additionalProperties": false
       },
       "read_only": true
