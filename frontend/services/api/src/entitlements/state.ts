@@ -82,9 +82,6 @@ export function drawOrder(grants: readonly GrantRow[], end: Date | null): GrantR
 
 export function grantExpiry(grant: GrantRow, end: Date | null): Date | null {
   const time = expiryMs(grant, end);
-  return time === -Infinity
-    ? new Date('0001-01-01T00:00:00Z')
-    : time === null
-      ? null
-      : new Date(time);
+  if (time === null) return null;
+  return time === -Infinity ? new Date('0001-01-01T00:00:00Z') : new Date(time);
 }

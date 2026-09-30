@@ -83,7 +83,7 @@ async def test_legacy_http_exception_router_normalized_by_shim(
     client: httpx.AsyncClient,
 ) -> None:
     """Unmigrated router authorization keeps its normalized envelope."""
-    invalid = await client.get("/api/v1/billing/usage")
+    invalid = await client.get("/api/v1/agent/skills")
     assert invalid.status_code == 401
     body = invalid.json()
     assert isinstance(body["detail"], str)  # legacy string detail preserved

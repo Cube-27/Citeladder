@@ -12,14 +12,9 @@ const grants = z
         policy.entitlements.capabilities[
           grant.key as keyof typeof policy.entitlements.capabilities
         ];
-      return (
-        definition?.issuable &&
-        (definition.type === 'flag'
-          ? grant.value <= 1
-          : definition.type === 'level'
-            ? grant.value < definition.levels
-            : true)
-      );
+      if (!definition?.issuable) return false;
+      if (definition.type === 'flag') return grant.value <= 1;
+      return definition.type !== 'level' || grant.value < definition.levels;
     }),
   )
   .refine((rows) => new Set(rows.map((row) => row.key)).size === rows.length);

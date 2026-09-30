@@ -15,6 +15,16 @@ import { catalog, capabilityValue } from './catalog.ts';
 import { checkoutAvailable } from './razorpay.ts';
 import { scheduledSchema } from './settlement.ts';
 
+const UNITS: Record<string, string> = {
+  'counter.consumable': 'credits',
+  'counter.occupancy': 'slots',
+};
+
+function unavailableReason(available: boolean, contactOnly: boolean) {
+  if (available) return null;
+  return contactOnly ? 'contact_only' : 'checkout_unavailable';
+}
+
 export async function publicCatalog(db: Database, config: ServiceConfig, country: string | null) {
   const published = await catalog(db);
   const region = country === 'IN' ? 'india' : 'international';
@@ -77,11 +87,7 @@ export async function publicCatalog(db: Database, config: ServiceConfig, country
         credit_price: null,
         funded_total_price: funded ? money(funded) : null,
         checkout_available: Boolean(available),
-        unavailable_reason: available
-          ? null
-          : plan.contact_only
-            ? 'contact_only'
-            : 'checkout_unavailable',
+        unavailable_reason: unavailableReason(Boolean(available), plan.contact_only),
         capabilities: capabilities.map((grant) => ({
           key: grant.key,
           capability_type:
@@ -240,7 +246,7 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
       });
       const expiries = grants
         .flatMap((grant) => (grant.effective_valid_until ? [grant.effective_valid_until] : []))
-        .sort();
+        .sort((a, b) => a.localeCompare(b));
       const known = definition.type === 'counter.consumable' && !state.error;
       const allowance = known ? grants.reduce((sum, grant) => sum + grant.allowance, 0) : null;
       const consumed = known ? grants.reduce((sum, grant) => sum + grant.consumed, 0) : null;
@@ -249,12 +255,7 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
       return {
         key,
         capability_type: definition.type,
-        unit:
-          definition.type === 'counter.consumable'
-            ? 'credits'
-            : definition.type === 'counter.occupancy'
-              ? 'slots'
-              : 'runs',
+        unit: UNITS[definition.type] ?? 'runs',
         limit_state: known || hint ? 'finite' : 'unknown',
         allowance: hint?.allowance ?? allowance,
         consumed: hint?.consumed ?? consumed,

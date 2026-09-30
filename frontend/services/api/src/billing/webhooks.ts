@@ -23,6 +23,57 @@ const ref = z
   .max(255);
 const hash = (body: string | Uint8Array) => createHash('sha256').update(body).digest('hex');
 
+/** Reads the raw body, refusing it as soon as it exceeds `limit` bytes. */
+async function boundedBody(c: Context<AppEnv>, limit: number) {
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  // Leaving the loop early cancels the stream.
+  for await (const chunk of c.req.raw.body ?? []) {
+    length += chunk.length;
+    if (length > limit) throw new ApiError(413, 'webhook_body_too_large');
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+/** The current secret, or the previous one inside a bounded rotation overlap. */
+function authentic(settings: ServiceConfig['razorpay'], bytes: Buffer, signature: string) {
+  const now = new Date();
+  const overlap =
+    settings.previousStart &&
+    settings.previousEnd &&
+    settings.previousStart <= now &&
+    now < settings.previousEnd &&
+    settings.previousEnd.getTime() - settings.previousStart.getTime() <= 86_400_000 &&
+    settings.previousEnd > settings.previousStart;
+  return (
+    authenticateSignature(settings.webhookSecret, bytes, signature) ||
+    Boolean(overlap && authenticateSignature(settings.previousSecret, bytes, signature))
+  );
+}
+
+const PAYLOAD_KEYS: Record<string, string> = {
+  'refund.processed': 'refund',
+  'order.paid': 'order',
+  'payment.captured': 'payment',
+  'payment.failed': 'payment',
+};
+
+/** The supported event's entity and provider reference; unsupported events have none. */
+function eventEntity(parsed: z.infer<typeof envelope>) {
+  const subscriptionEvent = policy.billing.contracts.razorpay_event_types.includes(parsed.event);
+  let payloadKey = subscriptionEvent ? 'subscription' : PAYLOAD_KEYS[parsed.event];
+  // A subscription charge carries its invoice; the subscription events settle it.
+  if (payloadKey === 'payment' && parsed.payload.payment?.entity.invoice_id) payloadKey = undefined;
+  if (!payloadKey) return { entity: null, reference: '' };
+  const entity = parsed.payload[payloadKey]?.entity;
+  // A supported event without its entity is malformed, not ignorable.
+  if (!entity) throw new ApiError(400, 'webhook_payload_invalid');
+  const reference = payloadKey === 'payment' ? entity.order_id : entity.id;
+  if (!ref.safeParse(reference).success) throw new ApiError(400, 'webhook_reference_invalid');
+  return { entity, reference: String(reference) };
+}
+
 /** Size and authentication precede parsing; receipt commit precedes provider I/O. */
 export async function receiveWebhook(
   db: Database,
@@ -32,40 +83,10 @@ export async function receiveWebhook(
 ) {
   if (provider !== 'razorpay' || !configured(config.razorpay))
     throw new ApiError(400, 'webhook_unavailable');
-  const reader = c.req.raw.body?.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  if (reader) {
-    try {
-      while (true) {
-        const chunk = await reader.read();
-        if (chunk.done) break;
-        length += chunk.value.length;
-        if (length > config.billing.webhookBytes) {
-          await reader.cancel();
-          throw new ApiError(413, 'webhook_body_too_large');
-        }
-        chunks.push(chunk.value);
-      }
-    } finally {
-      reader.releaseLock();
-    }
-  }
-  const bytes = Buffer.concat(chunks);
-  const signature = c.req.header('x-razorpay-signature') ?? '';
+  const bytes = await boundedBody(c, config.billing.webhookBytes);
   const settings = config.razorpay;
   const now = new Date();
-  const overlap =
-    settings.previousStart &&
-    settings.previousEnd &&
-    settings.previousStart <= now &&
-    now < settings.previousEnd &&
-    settings.previousEnd.getTime() - settings.previousStart.getTime() <= 86_400_000 &&
-    settings.previousEnd > settings.previousStart;
-  if (
-    !authenticateSignature(settings.webhookSecret, bytes, signature) &&
-    !(overlap && authenticateSignature(settings.previousSecret, bytes, signature))
-  )
+  if (!authentic(settings, bytes, c.req.header('x-razorpay-signature') ?? ''))
     throw new ApiError(400, 'webhook_authentication_failed');
   const eventId = c.req.header('x-razorpay-event-id')?.trim();
   if (!eventId || eventId.length > 255) throw new ApiError(400, 'webhook_event_id_required');
@@ -75,27 +96,10 @@ export async function receiveWebhook(
   } catch {
     throw new ApiError(400, 'webhook_payload_invalid');
   }
-  const paymentEvent = parsed.event === 'payment.captured' || parsed.event === 'payment.failed';
-  // A subscription charge carries its invoice; the subscription events settle it.
-  const subscriptionCharge = paymentEvent && Boolean(parsed.payload.payment?.entity.invoice_id);
-  const payloadKey = policy.billing.contracts.razorpay_event_types.includes(parsed.event)
-    ? 'subscription'
-    : parsed.event === 'refund.processed'
-      ? 'refund'
-      : parsed.event === 'order.paid'
-        ? 'order'
-        : paymentEvent && !subscriptionCharge
-          ? 'payment'
-          : null;
-  const entity = payloadKey ? parsed.payload[payloadKey]?.entity : null;
-  // A supported event without its entity is malformed, not ignorable.
-  if (payloadKey && !entity) throw new ApiError(400, 'webhook_payload_invalid');
-  const reference = entity ? (paymentEvent ? entity.order_id : entity.id) : '';
-  if (entity && !ref.safeParse(reference).success)
-    throw new ApiError(400, 'webhook_reference_invalid');
+  const { entity, reference } = eventEntity(parsed);
   const summary = {
-    reference: String(reference ?? ''),
-    reference_hash: hash(String(reference ?? '')),
+    reference,
+    reference_hash: hash(reference),
     status: typeof entity?.status === 'string' ? entity.status : '',
   };
   const digest = hash(bytes);

@@ -15,7 +15,7 @@ export type Subject =
 type Entry = Selectable<ConsumableLedger>;
 const logger = getLogger('api.entitlements');
 
-async function verifySubject(db: Database, subject: Subject) {
+function verifySubject(db: Database, subject: Subject) {
   if (subject.kind === 'audit') {
     return db
       .selectFrom('audit_tasks')
@@ -32,6 +32,23 @@ async function verifySubject(db: Database, subject: Subject) {
     .where('id', '=', subject.id)
     .where('workspace_id', '=', subject.workspaceId)
     .executeTakeFirst();
+}
+
+/** Draws `units` from grants in draw order against their remaining balances. */
+function allocate(
+  grants: readonly { id: string; value: number }[],
+  balances: Map<string, { reserved: number; consumed: number }>,
+  units: number,
+) {
+  let left = units;
+  const allocations: { grantId: string; units: number }[] = [];
+  for (const grant of grants) {
+    const balance = balances.get(grant.id) ?? { reserved: 0, consumed: 0 };
+    const take = Math.min(left, Math.max(0, grant.value - balance.reserved - balance.consumed));
+    if (take) allocations.push({ grantId: grant.id, units: take });
+    left -= take;
+  }
+  return { allocations, left };
 }
 
 /** Callers pass their transaction and commit the hold before dispatch. */
@@ -71,7 +88,7 @@ export async function reserveUsage(
   )
     throw new LedgerError('capability_not_consumable');
   // Lock UUID order (as Python's ledger bridge does), allocate expiry order.
-  const ids = candidates.map((grant) => grant.id).sort();
+  const ids = candidates.map((grant) => grant.id).sort((a, b) => a.localeCompare(b));
   if (ids.length)
     await db
       .selectFrom('account_grants')
@@ -81,15 +98,11 @@ export async function reserveUsage(
       .orderBy('id')
       .forUpdate()
       .execute();
-  const balances = await ledgerBalances(db, accountId);
-  let left = units;
-  const allocations: { grantId: string; units: number }[] = [];
-  for (const grant of drawOrder(candidates, state.end)) {
-    const balance = balances.get(grant.id) ?? { reserved: 0, consumed: 0 };
-    const take = Math.min(left, Math.max(0, grant.value - balance.reserved - balance.consumed));
-    if (take) allocations.push({ grantId: grant.id, units: take });
-    left -= take;
-  }
+  const { allocations, left } = allocate(
+    drawOrder(candidates, state.end),
+    await ledgerBalances(db, accountId),
+    units,
+  );
   if (left) {
     logger.info('billing.consumable_credits_exhausted', {
       account_id: accountId,
@@ -100,10 +113,10 @@ export async function reserveUsage(
     throw new LedgerError('funded_credits_exhausted');
   }
   const reservationId = randomUUID();
-  for (const [index, allocation] of allocations.entries()) {
-    await db
-      .insertInto('consumable_ledger')
-      .values({
+  await db
+    .insertInto('consumable_ledger')
+    .values(
+      allocations.map((allocation, index) => ({
         id: randomUUID(),
         billing_account_id: accountId,
         workspace_id: subject.workspaceId,
@@ -125,9 +138,9 @@ export async function reserveUsage(
         attempt: null,
         idempotency_key: index === 0 ? key : `${key}#${allocation.grantId}`,
         created_at: at,
-      })
-      .execute();
-  }
+      })),
+    )
+    .execute();
   return reservationId;
 }
 
@@ -174,31 +187,30 @@ async function reservation(db: Database, workspaceId: string, accountId: string,
   return { rows, holds, released };
 }
 
-async function append(
-  db: Database,
+/** A derived ledger row: the parent's identity with this entry's facts. */
+function entry(
   base: Entry,
-  kind: string,
-  units: number,
-  key: string,
-  at: Date,
-  fingerprint: string,
-  dispatch: string,
-  attempt: number | null,
+  facts: {
+    kind: string;
+    units: number;
+    key: string;
+    at: Date;
+    fingerprint: string;
+    dispatch: string;
+    attempt: number | null;
+  },
 ) {
-  await db
-    .insertInto('consumable_ledger')
-    .values({
-      ...base,
-      id: randomUUID(),
-      entry_kind: kind,
-      units,
-      idempotency_key: key,
-      created_at: at,
-      request_fingerprint: fingerprint,
-      dispatch_key: dispatch,
-      attempt,
-    })
-    .execute();
+  return {
+    ...base,
+    id: randomUUID(),
+    entry_kind: facts.kind,
+    units: facts.units,
+    idempotency_key: facts.key,
+    created_at: facts.at,
+    request_fingerprint: facts.fingerprint,
+    dispatch_key: facts.dispatch,
+    attempt: facts.attempt,
+  };
 }
 
 export async function debitUsage(
@@ -241,31 +253,26 @@ export async function debitUsage(
     return { row, units: take };
   });
   if (left) throw new LedgerError('reservation_exhausted');
-  for (const item of allocations)
-    if (item.units) {
-      await append(
-        db,
-        item.row,
-        'release',
-        item.units,
-        `${key}:release:${item.row.grant_id}`,
-        at,
-        fingerprint,
-        dispatchKey,
-        null,
-      );
-      await append(
-        db,
-        item.row,
-        'debit',
-        item.units,
-        `${key}:debit:${item.row.grant_id}`,
-        at,
-        fingerprint,
-        dispatchKey,
+  const facts = { at, fingerprint, dispatch: dispatchKey };
+  const entries = allocations
+    .filter((item) => item.units)
+    .flatMap(({ row, units: taken }) => [
+      entry(row, {
+        ...facts,
+        kind: 'release',
+        units: taken,
+        key: `${key}:release:${row.grant_id}`,
+        attempt: null,
+      }),
+      entry(row, {
+        ...facts,
+        kind: 'debit',
+        units: taken,
+        key: `${key}:debit:${row.grant_id}`,
         attempt,
-      );
-    }
+      }),
+    ]);
+  if (entries.length) await db.insertInto('consumable_ledger').values(entries).execute();
 }
 
 export async function releaseUsage(
@@ -274,21 +281,22 @@ export async function releaseUsage(
 ) {
   const { workspaceId, accountId, reservationId, key, at } = request;
   const { holds, released } = await reservation(db, workspaceId, accountId, reservationId);
-  for (const row of holds) {
+  const entries = holds.flatMap((row) => {
     const units = row.units - (released.get(row.grant_id) ?? 0);
-    if (units > 0)
-      await append(
-        db,
-        row,
-        'release',
+    if (units <= 0) return [];
+    return [
+      entry(row, {
+        kind: 'release',
         units,
-        `${key}:${row.grant_id}`,
+        key: `${key}:${row.grant_id}`,
         at,
-        digest({ reservationId, grantId: row.grant_id, units }),
-        'release',
-        null,
-      );
-  }
+        fingerprint: digest({ reservationId, grantId: row.grant_id, units }),
+        dispatch: 'release',
+        attempt: null,
+      }),
+    ];
+  });
+  if (entries.length) await db.insertInto('consumable_ledger').values(entries).execute();
 }
 
 /** Append a bounded refund against a particular immutable debit. */

@@ -93,6 +93,10 @@ export interface BillingProvider {
   refund(reference: string): Promise<RefundEvidence>;
 }
 
+function basicCredentials(keyId: string, keySecret: string) {
+  return Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+}
+
 export class ProviderError extends Error {
   readonly uncertain: boolean;
   constructor(uncertain: boolean, message = 'provider_unavailable') {
@@ -197,7 +201,7 @@ export class RazorpayProvider implements BillingProvider {
         redirect: 'error',
         signal: AbortSignal.timeout(this.shared.timeoutMs),
         headers: {
-          authorization: `Basic ${Buffer.from(`${this.adapter.keyId}:${this.adapter.keySecret}`).toString('base64')}`,
+          authorization: `Basic ${basicCredentials(this.adapter.keyId, this.adapter.keySecret)}`,
           'content-type': 'application/json',
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -278,39 +282,44 @@ export class RazorpayProvider implements BillingProvider {
     if (matches.length > 1) throw new ProviderError(true, 'provider_reference_ambiguous');
     return matches.length ? reference.parse(matches[0]!.id) : null;
   }
-  async evidence(id: string, base: boolean): Promise<Evidence> {
+  evidence(id: string, base: boolean): Promise<Evidence> {
     reference.parse(id);
-    if (!base) {
-      const order = await this.request('GET', `/orders/${id}`);
-      if (order.id !== id) throw new ProviderError(true, 'provider_reference_mismatch');
-      const data = await this.request('GET', `/orders/${id}/payments`);
-      const attempts = z.array(paymentSchema).parse(data.items);
-      const captures = attempts.map((row) => payment(row)).filter((row) => row !== null);
-      if (captures.length > 1) throw new ProviderError(true, 'provider_payment_ambiguous');
-      const capture = captures[0] ?? null;
-      if (
-        capture &&
-        (capture.orderId !== id ||
-          capture.amount !== order.amount ||
-          capture.currency !== order.currency)
-      )
-        throw new ProviderError(true, 'provider_amount_mismatch');
-      const failed =
-        attempts.length > 0 &&
-        attempts.every(
-          (row) =>
-            policy.billing.contracts.razorpay_payment_status_map[
-              row.status as keyof typeof policy.billing.contracts.razorpay_payment_status_map
-            ] === 'payment_failed',
-        );
-      return {
-        kind: 'payment',
-        payment: capture,
-        reference: id,
-        notes: notes.parse(order.notes),
-        failed,
-      };
-    }
+    return base ? this.subscriptionEvidence(id) : this.orderEvidence(id);
+  }
+
+  private async orderEvidence(id: string): Promise<Evidence> {
+    const order = await this.request('GET', `/orders/${id}`);
+    if (order.id !== id) throw new ProviderError(true, 'provider_reference_mismatch');
+    const data = await this.request('GET', `/orders/${id}/payments`);
+    const attempts = z.array(paymentSchema).parse(data.items);
+    const captures = attempts.map((row) => payment(row)).filter((row) => row !== null);
+    if (captures.length > 1) throw new ProviderError(true, 'provider_payment_ambiguous');
+    const capture = captures[0] ?? null;
+    if (
+      capture &&
+      (capture.orderId !== id ||
+        capture.amount !== order.amount ||
+        capture.currency !== order.currency)
+    )
+      throw new ProviderError(true, 'provider_amount_mismatch');
+    const failed =
+      attempts.length > 0 &&
+      attempts.every(
+        (row) =>
+          policy.billing.contracts.razorpay_payment_status_map[
+            row.status as keyof typeof policy.billing.contracts.razorpay_payment_status_map
+          ] === 'payment_failed',
+      );
+    return {
+      kind: 'payment',
+      payment: capture,
+      reference: id,
+      notes: notes.parse(order.notes),
+      failed,
+    };
+  }
+
+  private async subscriptionEvidence(id: string): Promise<Evidence> {
     const sub = subscription(await this.request('GET', `/subscriptions/${id}`));
     if (sub.id !== id) throw new ProviderError(true, 'provider_reference_mismatch');
     const invoices = await this.collection(`/invoices?subscription_id=${encodeURIComponent(id)}`);

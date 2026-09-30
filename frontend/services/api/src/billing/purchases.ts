@@ -19,6 +19,7 @@ import {
   type Identity,
   type Pending,
   type Account,
+  type Subscription,
 } from './contracts.ts';
 import { catalog } from './catalog.ts';
 import { baseIntent, packIntent, quoteIntent, roundedRatio, type Intent } from './quotes.ts';
@@ -137,13 +138,7 @@ function matches(pending: Pending, request: ReturnType<typeof requestIdentity>) 
   );
 }
 
-async function createPending(
-  db: Database,
-  account: Account,
-  intent: Intent,
-  key: string,
-  mode: string,
-) {
+function createPending(db: Database, account: Account, intent: Intent, key: string, mode: string) {
   const now = new Date();
   const fingerprint = digest({
     kind: intent.kind,
@@ -227,6 +222,80 @@ async function dispatch(db: Database, pending: Pending, provider: BillingProvide
     .executeTakeFirstOrThrow();
 }
 
+/** Refuses a purchase the account's current subscription or open intents rule out. */
+async function purchasable(db: Database, accountId: string, request: Purchase) {
+  const current = await db
+    .selectFrom('billing_subscriptions')
+    .selectAll()
+    .where('billing_account_id', '=', accountId)
+    .where('is_current', '=', true)
+    .executeTakeFirst();
+  const pending = await db
+    .selectFrom('pending_activations')
+    .select(['activation_kind', 'catalog_key'])
+    .where('billing_account_id', '=', accountId)
+    .where('status', '=', 'pending')
+    .execute();
+  if (request.kind === 'base') {
+    if (current && policy.billing.contracts.live_subscription_statuses.includes(current.status))
+      conflict('subscription_already_active');
+    if (pending.some((row) => row.activation_kind === 'base')) conflict('subscription_pending');
+  } else {
+    if (
+      !current?.current_period_end ||
+      current.current_period_end <= new Date() ||
+      !policy.billing.contracts.live_subscription_statuses.includes(current.status)
+    )
+      conflict('base_subscription_required');
+    if (
+      request.kind === 'addon' &&
+      pending.some((row) => row.activation_kind === 'addon' && row.catalog_key === request.key)
+    )
+      conflict('addon_pending');
+  }
+  return current;
+}
+
+function purchaseIntent(
+  config: ServiceConfig,
+  frozen: Awaited<ReturnType<typeof catalog>>,
+  request: Purchase,
+  identity: ReturnType<typeof requestIdentity>,
+  current: Subscription | undefined,
+  now: Date,
+) {
+  let intent: Intent;
+  if (request.kind === 'base') {
+    const plan = frozen.payload.plans.find((row) => row.key === request.key);
+    if (!plan) conflict('catalog_key_unknown');
+    intent = baseIntent(
+      config.billing,
+      plan,
+      identity.country,
+      identity.identity,
+      frozen.revision,
+      now,
+    );
+    const price = plan.regional_byok_prices[intent.region];
+    if (price?.provider_mode !== config.razorpay.mode) conflict('checkout_unavailable');
+  } else {
+    const item = (request.kind === 'addon' ? frozen.payload.addons : frozen.payload.topups).find(
+      (row) => row.key === request.key,
+    );
+    if (!item) conflict('catalog_key_unknown');
+    intent = packIntent(config.billing, item, {
+      kind: request.kind,
+      quantity: request.quantity,
+      planKey: current!.catalog_key,
+      country: identity.country,
+      identity: identity.identity,
+      revision: frozen.revision,
+      now,
+    });
+  }
+  return intent;
+}
+
 export async function purchase(
   db: Database,
   config: ServiceConfig,
@@ -259,68 +328,10 @@ export async function purchase(
     )
       conflict('idempotency_key_reused');
     if (request.mode !== 'byok') conflict('checkout_unavailable');
-    const current = await trx
-      .selectFrom('billing_subscriptions')
-      .selectAll()
-      .where('billing_account_id', '=', account.id)
-      .where('is_current', '=', true)
-      .executeTakeFirst();
-    const pending = await trx
-      .selectFrom('pending_activations')
-      .select(['activation_kind', 'catalog_key'])
-      .where('billing_account_id', '=', account.id)
-      .where('status', '=', 'pending')
-      .execute();
-    if (request.kind === 'base') {
-      if (current && policy.billing.contracts.live_subscription_statuses.includes(current.status))
-        conflict('subscription_already_active');
-      if (pending.some((row) => row.activation_kind === 'base')) conflict('subscription_pending');
-    } else {
-      if (
-        !current?.current_period_end ||
-        current.current_period_end <= new Date() ||
-        !policy.billing.contracts.live_subscription_statuses.includes(current.status)
-      )
-        conflict('base_subscription_required');
-      if (
-        request.kind === 'addon' &&
-        pending.some((row) => row.activation_kind === 'addon' && row.catalog_key === request.key)
-      )
-        conflict('addon_pending');
-    }
+    const current = await purchasable(trx, account.id, request);
     const frozen = await catalog(trx);
-    let intent: Intent;
     const now = new Date();
-    if (request.kind === 'base') {
-      const plan = frozen.payload.plans.find((row) => row.key === request.key);
-      if (!plan) conflict('catalog_key_unknown');
-      intent = baseIntent(
-        config.billing,
-        plan,
-        identity.country,
-        identity.identity,
-        frozen.revision,
-        now,
-      );
-      const price = plan.regional_byok_prices[intent.region];
-      if (price?.provider_mode !== config.razorpay.mode) conflict('checkout_unavailable');
-    } else {
-      const item = (request.kind === 'addon' ? frozen.payload.addons : frozen.payload.topups).find(
-        (row) => row.key === request.key,
-      );
-      if (!item) conflict('catalog_key_unknown');
-      intent = packIntent(
-        config.billing,
-        item,
-        request.kind,
-        request.quantity,
-        current!.catalog_key,
-        identity.country,
-        identity.identity,
-        frozen.revision,
-        now,
-      );
-    }
+    const intent = purchaseIntent(config, frozen, request, identity, current, now);
     if (!checkoutAvailable(config.billing, config.razorpay, intent.region))
       conflict('checkout_unavailable');
     if (request.kind === 'base')
@@ -347,6 +358,69 @@ export async function purchase(
       )
     : prepared.pending;
   return activationResponse(pending);
+}
+
+/** Commits a downgrade for the period end; the provider switch follows the commit. */
+async function scheduleDowngrade(
+  db: Database,
+  {
+    accountId,
+    subId,
+    periodEnd,
+    key,
+    targetKey,
+    terms,
+    now,
+  }: {
+    accountId: string;
+    subId: string;
+    periodEnd: Date;
+    key: string;
+    targetKey: string;
+    terms: z.infer<typeof frozenTermsSchema>;
+    now: Date;
+  },
+) {
+  const effective = periodEnd.toISOString();
+  const response = planChangeSchema.parse({
+    direction: 'downgrade',
+    catalog_key: targetKey,
+    status: 'requested',
+    effective_at: effective,
+    activation: null,
+  });
+  await db
+    .insertInto('idempotency_records')
+    .values({
+      id: randomUUID(),
+      billing_account_id: accountId,
+      idempotency_key: key,
+      operation: 'subscription.change',
+      request_fingerprint: digest({ targetKey }),
+      state: 'completed',
+      response_body: JSON.stringify(response),
+      response_status: 200,
+      expires_at: periodEnd,
+      created_at: now,
+      updated_at: now,
+    })
+    .execute();
+  await db
+    .updateTable('billing_subscriptions')
+    .set({
+      scheduled_change: JSON.stringify({
+        direction: 'downgrade',
+        catalog_key: targetKey,
+        effective_at: effective,
+        state: 'requested',
+        source: key,
+        terms,
+      }),
+      updated_at: now,
+    })
+    .where('id', '=', subId)
+    .execute();
+  return response;
 }
 
 export async function changePlan(
@@ -485,44 +559,15 @@ export async function changePlan(
     const difference = target.quote.base_price.amount_minor - current.quote.base_price.amount_minor;
     const effective = sub.current_period_end.toISOString();
     if (difference <= 0) {
-      const response = planChangeSchema.parse({
-        direction: 'downgrade',
-        catalog_key: targetKey,
-        status: 'requested',
-        effective_at: effective,
-        activation: null,
+      const response = await scheduleDowngrade(trx, {
+        accountId: account.id,
+        subId: sub.id,
+        periodEnd: sub.current_period_end,
+        key,
+        targetKey,
+        terms,
+        now,
       });
-      await trx
-        .insertInto('idempotency_records')
-        .values({
-          id: randomUUID(),
-          billing_account_id: account.id,
-          idempotency_key: key,
-          operation: 'subscription.change',
-          request_fingerprint: digest({ targetKey }),
-          state: 'completed',
-          response_body: JSON.stringify(response),
-          response_status: 200,
-          expires_at: sub.current_period_end,
-          created_at: now,
-          updated_at: now,
-        })
-        .execute();
-      await trx
-        .updateTable('billing_subscriptions')
-        .set({
-          scheduled_change: JSON.stringify({
-            direction: 'downgrade',
-            catalog_key: targetKey,
-            effective_at: effective,
-            state: 'requested',
-            source: key,
-            terms,
-          }),
-          updated_at: now,
-        })
-        .where('id', '=', sub.id)
-        .execute();
       return { pending: null, fresh: true, subId: sub.id, response };
     }
     const totalSeconds = Math.floor(

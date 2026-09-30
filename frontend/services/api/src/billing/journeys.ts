@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
+import type { Selectable } from 'kysely';
 import { z } from 'zod';
 import { noCardOfferSchema, noCardClaimSchema } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
+import type { IntroductoryClaims } from '../generated/db-schema.ts';
 import { lockAccount, issueBundle, revokeBundle } from '../entitlements/grants.ts';
 import { workspaceAccount } from './purchases.ts';
 import { catalog } from './catalog.ts';
@@ -19,7 +21,8 @@ export const claimRequest = z
 
 /** RFC 9562 v5 identity persists across catalog revisions and both stacks. */
 function campaignId(key: string) {
-  const bytes = createHash('sha1')
+  // RFC 9562 UUIDv5 is defined over SHA-1; this is an identifier, not a secret.
+  const bytes = createHash('sha1') // NOSONAR
     .update(Buffer.from('5f0ae2be21f34c0ba312b1d946f32921', 'hex'))
     .update(key)
     .digest()
@@ -69,58 +72,62 @@ export async function offerRead(db: Database, workspaceId: string, now: Date) {
   });
 }
 
-export async function claimOffer(
+const codeHash = (code: string) => createHash('sha256').update(code).digest('hex');
+
+/** A repeated claim replays only with the same key, campaign and operator code. */
+async function replayClaim(
+  db: Database,
+  prior: Selectable<IntroductoryClaims>,
+  request: z.infer<typeof claimRequest>,
+  key: string,
+) {
+  const waiver = prior.operator_code_id
+    ? await db
+        .selectFrom('introductory_operator_codes')
+        .select('code_sha256')
+        .where('id', '=', prior.operator_code_id)
+        .executeTakeFirst()
+    : null;
+  const codeMatches = request.operator_code
+    ? waiver?.code_sha256 === codeHash(request.operator_code)
+    : !prior.operator_code_id;
+  if (prior.idempotency_key !== key || prior.campaign_id !== request.campaign_id || !codeMatches)
+    conflict('lifetime_introduction_consumed');
+  return noCardClaimSchema.parse({
+    campaign_id: prior.campaign_id,
+    grant_id: prior.primary_grant_id,
+    tier_key: 'tier_1',
+    starts_at: prior.claimed_at.toISOString(),
+    expires_at: prior.expires_at.toISOString(),
+    charged: false,
+    renews: false,
+  });
+}
+
+export function claimOffer(
   db: Database,
   workspaceId: string,
   userId: string,
   request: z.infer<typeof claimRequest>,
   key: string,
 ) {
-  if (!request.terms_consent || !request.data_sharing_consent)
-    conflict('explicit_consent_required');
   return db.transaction().execute(async (trx) => {
+    if (!request.terms_consent || !request.data_sharing_consent)
+      conflict('explicit_consent_required');
     const account = await workspaceAccount(trx, workspaceId);
     await lockAccount(trx, workspaceId, account.id);
     const fingerprint = digest({
       campaignId: request.campaign_id,
       terms: request.terms_consent,
       data: request.data_sharing_consent,
-      code: request.operator_code
-        ? createHash('sha256').update(request.operator_code).digest('hex')
-        : null,
+      code: request.operator_code ? codeHash(request.operator_code) : null,
     });
     const prior = await trx
       .selectFrom('introductory_claims')
       .selectAll()
       .where('billing_account_id', '=', account.id)
       .executeTakeFirst();
-    if (prior) {
-      const waiver = prior.operator_code_id
-        ? await trx
-            .selectFrom('introductory_operator_codes')
-            .select('code_sha256')
-            .where('id', '=', prior.operator_code_id)
-            .executeTakeFirst()
-        : null;
-      const codeMatches = request.operator_code
-        ? waiver?.code_sha256 === createHash('sha256').update(request.operator_code).digest('hex')
-        : !prior.operator_code_id;
-      if (
-        prior.idempotency_key !== key ||
-        prior.campaign_id !== request.campaign_id ||
-        !codeMatches
-      )
-        conflict('lifetime_introduction_consumed');
-      return noCardClaimSchema.parse({
-        campaign_id: prior.campaign_id,
-        grant_id: prior.primary_grant_id,
-        tier_key: 'tier_1',
-        starts_at: prior.claimed_at.toISOString(),
-        expires_at: prior.expires_at.toISOString(),
-        charged: false,
-        renews: false,
-      });
-    }
+    if (prior) return replayClaim(trx, prior, request, key);
     const now = new Date();
     const offer = await offerRead(trx, workspaceId, now);
     if (offer.campaign_id !== request.campaign_id) conflict('campaign_identity_changed');
@@ -146,7 +153,7 @@ export async function claimOffer(
     let waiverId: string | null = null;
     if (request.operator_code) {
       if (!offer.operator_code_allowed) conflict('operator_code_invalid');
-      const digest = createHash('sha256').update(request.operator_code).digest('hex');
+      const digest = codeHash(request.operator_code);
       const waiver = await trx
         .selectFrom('introductory_operator_codes')
         .selectAll()
@@ -233,7 +240,7 @@ export async function claimOffer(
   });
 }
 
-export async function endOffer(db: Database, workspaceId: string, userId: string, key: string) {
+export function endOffer(db: Database, workspaceId: string, userId: string, key: string) {
   return db.transaction().execute(async (trx) => {
     const account = await workspaceAccount(trx, workspaceId);
     await lockAccount(trx, workspaceId, account.id);

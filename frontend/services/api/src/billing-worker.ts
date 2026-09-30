@@ -18,9 +18,9 @@ try {
       if (!process.argv.includes('--loop')) throw error;
     }
     if (!process.argv.includes('--loop')) break;
-    await setTimeout(config.billing.pollSeconds * 1000, undefined, { signal: stop.signal }).catch(
-      () => {},
-    );
+    // Sequential polling is the point: one sweep, then one interval.
+    const interval = config.billing.pollSeconds * 1000;
+    await setTimeout(interval, undefined, { signal: stop.signal }).catch(() => {}); // NOSONAR
   } while (!stop.signal.aborted);
 } finally {
   await db.destroy();

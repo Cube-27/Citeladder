@@ -195,19 +195,15 @@ export function paidSubscription(
 export function fakeProvider(overrides: Partial<BillingProvider> = {}): BillingProvider {
   return {
     mode: 'test',
-    create: async (pending) =>
-      `${pending.activation_kind === 'base' ? 'sub' : 'order'}_${pending.id.replaceAll('-', '')}`,
-    recover: async () => null,
-    evidence: async () => {
-      throw new Error('Unexpected provider read');
-    },
-    cancel: async () => {
-      throw new Error('Unexpected cancellation');
-    },
-    change: async () => {},
-    refund: async () => {
-      throw new Error('Unexpected refund');
-    },
+    create: (pending) =>
+      Promise.resolve(
+        `${pending.activation_kind === 'base' ? 'sub' : 'order'}_${pending.id.replaceAll('-', '')}`,
+      ),
+    recover: () => Promise.resolve(null),
+    evidence: () => Promise.reject(new Error('Unexpected provider read')),
+    cancel: () => Promise.reject(new Error('Unexpected cancellation')),
+    change: () => Promise.resolve(),
+    refund: () => Promise.reject(new Error('Unexpected refund')),
     ...overrides,
   };
 }

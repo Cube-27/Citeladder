@@ -23,12 +23,12 @@ export const identitySchema = z.object({
   city: z.string().trim().min(1).max(255),
   state_code: z
     .string()
-    .regex(/^(?:0[1-9]|[12][0-9]|3[0-8]|97|99)$/u)
+    .regex(/^(?:0[1-9]|[12]\d|3[0-8]|97|99)$/u)
     .nullable(),
   postal_code: z.string().trim().min(1).max(32),
   customer_gstin: z
     .string()
-    .regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/u)
+    .regex(/^\d{2}[A-Z]{5}\d{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/u)
     .nullable(),
   export_eligibility_attested: z.boolean(),
 });

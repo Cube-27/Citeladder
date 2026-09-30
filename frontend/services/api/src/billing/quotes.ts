@@ -184,13 +184,23 @@ export function baseIntent(
 export function packIntent(
   settings: BillingSettings,
   item: CatalogItem,
-  kind: 'addon' | 'topup',
-  quantity: number,
-  planKey: string,
-  country: string,
-  identity: Identity,
-  revision: string,
-  now: Date,
+  {
+    kind,
+    quantity,
+    planKey,
+    country,
+    identity,
+    revision,
+    now,
+  }: {
+    kind: 'addon' | 'topup';
+    quantity: number;
+    planKey: string;
+    country: string;
+    identity: Identity;
+    revision: string;
+    now: Date;
+  },
 ) {
   if (!item.eligible_plan_keys.includes(planKey)) conflict('item_plan_ineligible');
   if (!item.available) conflict('provider_unavailable');

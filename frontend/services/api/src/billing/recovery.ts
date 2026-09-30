@@ -87,15 +87,15 @@ async function applyReference(
   return true;
 }
 
-/** Claims one row at a time so a batch never expires while waiting for earlier I/O. */
-async function pendingProbe(
+/** Leases the next due pending intent, counting the attempt, or null. */
+function claimPending(
   db: Database,
   config: ServiceConfig,
   provider: BillingProvider,
   seen: string[],
+  now: Date,
 ) {
-  const now = new Date();
-  const pending = await db.transaction().execute(async (trx) => {
+  return db.transaction().execute(async (trx) => {
     let query = trx
       .selectFrom('pending_activations')
       .selectAll()
@@ -149,6 +149,29 @@ async function pendingProbe(
       .returningAll()
       .executeTakeFirstOrThrow();
   });
+}
+
+/** Cancels an abandoned subscription checkout; false when the provider kept it. */
+async function cancelAbandoned(provider: BillingProvider, reference: string) {
+  try {
+    const cancelled = await provider.cancel(reference, false);
+    return cancelled.id === reference && ['cancelled', 'expired'].includes(cancelled.status);
+  } catch (error) {
+    // A definite refusal (e.g. already cancelled) is final; uncertainty retries.
+    if (!(error instanceof ProviderError) || error.uncertain) throw error;
+    return true;
+  }
+}
+
+/** Claims one row at a time so a batch never expires while waiting for earlier I/O. */
+async function pendingProbe(
+  db: Database,
+  config: ServiceConfig,
+  provider: BillingProvider,
+  seen: string[],
+) {
+  const now = new Date();
+  const pending = await claimPending(db, config, provider, seen, now);
   if (!pending) return null;
   const stopLease = maintainLease(config.billing.leaseSeconds, async () => {
     const result = await db
@@ -174,16 +197,13 @@ async function pendingProbe(
     const abandoned =
       unpaid &&
       pending.created_at.getTime() <= now.getTime() - config.billing.abandonSeconds * 1000;
-    if (abandoned && reference && pending.activation_kind === 'base') {
-      try {
-        const cancelled = await provider.cancel(reference, false);
-        if (cancelled.id !== reference || !['cancelled', 'expired'].includes(cancelled.status))
-          return pending.id;
-      } catch (error) {
-        // A definite refusal (e.g. already cancelled) is final; uncertainty retries.
-        if (!(error instanceof ProviderError) || error.uncertain) throw error;
-      }
-    }
+    if (
+      abandoned &&
+      reference &&
+      pending.activation_kind === 'base' &&
+      !(await cancelAbandoned(provider, reference))
+    )
+      return pending.id;
     await db.transaction().execute(async (trx) => {
       await lockOwner(trx, pending.billing_account_id);
       const owned = await trx
@@ -353,11 +373,9 @@ async function webhookProbe(
           receipt.provider_mode,
           refund,
         );
-      const matched = refund
-        ? Boolean(payment)
-        : evidence
-          ? await applyReference(trx, provider.mode, summary.reference, evidence, 'webhook')
-          : false;
+      let matched = Boolean(refund && payment);
+      if (!refund && evidence)
+        matched = await applyReference(trx, provider.mode, summary.reference, evidence, 'webhook');
       if (!matched) return;
       await trx
         .updateTable('billing_webhook_events')

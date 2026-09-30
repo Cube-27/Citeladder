@@ -63,7 +63,7 @@ async function numbers(db: Database, at: Date, prefix: string, credit: boolean) 
   return { day, year, invoice, receipt };
 }
 
-async function insertInvoice(
+function insertInvoice(
   db: Database,
   payment: Payment,
   numbered: Awaited<ReturnType<typeof numbers>>,
@@ -94,6 +94,12 @@ async function insertInvoice(
     .returningAll()
     .executeTakeFirstOrThrow();
 }
+
+const KIND_SUFFIX: Record<string, string> = {
+  base: ' subscription',
+  upgrade: ' upgrade (prorated)',
+  addon: ' add-on',
+};
 
 export async function recordPayment(
   db: Database,
@@ -192,7 +198,7 @@ export async function recordPayment(
     seller: snapshot.seller,
     customer: { ...snapshot.customer, country_code: pending.country_code, email: customer.email },
     line: {
-      description: `CiteLadder ${label}${pending.activation_kind === 'base' ? ' subscription' : pending.activation_kind === 'upgrade' ? ' upgrade (prorated)' : pending.activation_kind === 'addon' ? ' add-on' : ' top-up'}`,
+      description: `CiteLadder ${label}${KIND_SUFFIX[pending.activation_kind] ?? ' top-up'}`,
       quantity: pending.quantity,
       unit_price_minor: Math.floor(tax.subtotal_minor / pending.quantity),
       amount_minor: tax.subtotal_minor,

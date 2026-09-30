@@ -50,7 +50,7 @@ const keyHeaders = z.object({ 'idempotency-key': z.string().nullable().optional(
 const verifyRequest = z
   .object({
     fields: z
-      .record(z.string().regex(/^[A-Za-z0-9_]{1,64}$/u), z.string().max(512))
+      .record(z.string().regex(/^\w{1,64}$/u), z.string().max(512))
       .refine((fields) => Object.keys(fields).length <= 8),
   })
   .strict();
@@ -129,9 +129,8 @@ export const billingRoutes = [
     ...privateRoute,
     path: `${root}/card-trial/quote`,
     response: cardTrialUnavailableSchema,
-    async handle() {
-      return { status: 'unavailable', reason: 'provider_evidence_required' } as const;
-    },
+    handle: () =>
+      Promise.resolve({ status: 'unavailable', reason: 'provider_evidence_required' } as const),
   }),
   defineRoute({
     ...privateRoute,
