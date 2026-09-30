@@ -3,6 +3,7 @@ import { recordSecurityEvent } from '../auth/security-events.ts';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
+import { compareText } from '../text-order.ts';
 import { READ_ROLES } from './data.ts';
 import { accountAllowed, loadMcpConfig, type McpConfig } from './config.ts';
 import type { McpPrincipal } from './types.ts';
@@ -31,7 +32,7 @@ export async function authenticateMcp(
   request: Request,
   mcp = loadMcpConfig(config),
 ): Promise<McpPrincipal | null> {
-  const bearer = /^Bearer\s+(.+)$/iu.exec(request.headers.get('authorization') ?? '')?.[1];
+  const bearer = /^Bearer +(\S+)$/iu.exec(request.headers.get('authorization') ?? '')?.[1];
   if (!bearer) return null;
   const digest = tokenHash(config, bearer);
   const row = await db
@@ -51,8 +52,7 @@ export async function authenticateMcp(
     .where('g.access_expires_at', '>', new Date())
     .executeTakeFirst();
   if (
-    !row ||
-    !row.is_active ||
+    !row?.is_active ||
     !accountAllowed(config, mcp, row.email) ||
     row.resource !== `${mcp.origin}/mcp` ||
     !strings(row.scopes).includes(policy.mcp.constants.read_scope)
@@ -114,7 +114,7 @@ export async function completeConsent(
         .executeTakeFirst();
       if (!user?.is_active || !accountAllowed(config, mcp, user.email))
         throw new OAuthError('access_denied', 'This account is not enabled for MCP access');
-      const unique = [...new Set(selected)].sort();
+      const unique = [...new Set(selected)].sort(compareText);
       const allowed = new Set((await consentableWorkspaces(trx, userId)).map((w) => w.id));
       if (!unique.length || unique.some((id) => !allowed.has(id)))
         throw new OAuthError('access_denied', 'Select at least one currently accessible workspace');

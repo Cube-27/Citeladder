@@ -59,7 +59,7 @@ export function decodeCursor(value: string, size: number): string[] {
       parts.length !== size ||
       parts.some((part) => typeof part !== 'string')
     )
-      throw new Error();
+      throw new Error('cursor shape');
     return parts as string[];
   } catch {
     throw new McpInputError('cursor is invalid');
@@ -135,7 +135,10 @@ export async function searchBusinessContext(
   if (projectId) await authorizeProject(db, principal, projectId);
   const workspaces = await authorizedWorkspaceIds(db, principal),
     results: Record<string, string>[] = [];
-  const pattern = `%${normalized.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')}%`;
+  const pattern = `%${normalized
+    .replaceAll('\\', String.raw`\\`)
+    .replaceAll('%', String.raw`\%`)
+    .replaceAll('_', String.raw`\_`)}%`;
   const append = (kind: string, id: string, title: string, text: string) => {
     const uri = `citeladder://${kind}/${id}`;
     results.push({

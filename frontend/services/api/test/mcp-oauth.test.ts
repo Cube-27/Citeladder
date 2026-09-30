@@ -186,6 +186,20 @@ it('binds CSRF, explicit selection, PKCE and redirect before a code can be consu
   expect(row.access_token_hash).toBe(tokenHash(config, success.access_token));
 });
 
+it('renders untrusted client metadata inert on the consent page', async () => {
+  const c = await client();
+  const transaction = await pending(c.client_id);
+  const page = await app.request(
+    `${browser}/mcp/oauth/consent?transaction=${encodeURIComponent(transaction)}`,
+    { headers: { cookie } },
+  );
+  expect(page.status).toBe(200);
+  const body = await page.text();
+  expect(body).toContain('&lt;Unverified&gt;');
+  expect(body).not.toContain('<Unverified>');
+  expect(body).toContain(`value="${tenant.workspaceId}"`);
+});
+
 it('consumes denial without minting a grant and safely binds untrusted registration redirects', async () => {
   const c = await client();
   const transaction = await pending(c.client_id);

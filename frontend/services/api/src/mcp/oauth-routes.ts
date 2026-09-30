@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { getCookie } from 'hono/cookie';
+import { html } from 'hono/html';
 import { sessionUser } from '../auth/session.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
 import { configEnvironment, demoAccessExpired, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
+import { scalarText } from '../text-order.ts';
 import { ApiError, onError } from '../errors.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
@@ -23,13 +25,6 @@ import {
 } from './oauth.ts';
 import { admitRegistration, registerClient, RegistrationLimit } from './registration.ts';
 
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 async function registrationBody(request: Request): Promise<unknown> {
   const limit = mcpPolicy.registration_max_body_bytes;
   const declared = request.headers.get('content-length');
@@ -66,7 +61,7 @@ async function authenticatedClient(
   c: Context<AppEnv>,
   form: URLSearchParams,
 ) {
-  const basic = /^Basic\s+(.+)$/iu.exec(c.req.header('authorization') ?? '');
+  const basic = /^Basic +(\S+)$/iu.exec(c.req.header('authorization') ?? '');
   let clientId = form.get('client_id') ?? '';
   let secret = form.get('client_secret') ?? '';
   let method = secret ? 'client_secret_post' : 'none';
@@ -75,7 +70,7 @@ async function authenticatedClient(
     try {
       decoded = Buffer.from(basic[1] ?? '', 'base64').toString('utf8');
       const colon = decoded.indexOf(':');
-      if (colon < 0) throw new Error();
+      if (colon < 0) throw new Error('missing credential separator');
       clientId = decodeURIComponent(decoded.slice(0, colon));
       secret = decodeURIComponent(decoded.slice(colon + 1));
     } catch {
@@ -99,7 +94,7 @@ async function authenticatedClient(
           secret,
         )
       )
-        throw new Error();
+        throw new Error('client secret mismatch');
     } catch {
       throw new OAuthError('invalid_client', 'Invalid client authentication');
     }
@@ -264,20 +259,62 @@ export function registerOAuthRoutes(
       .executeTakeFirst();
     if (!row) return c.text('Authorization request is invalid or expired', 403);
     const metadata = record(row.client_metadata);
-    const choices = (await consentableWorkspaces(db, c.get('user').id))
-      .map(
-        (w) =>
-          `<p><label><input type="checkbox" name="workspace_id" value="${escapeHtml(w.id)}"> ${escapeHtml(w.name)}</label></p>`,
-      )
-      .join('');
+    const workspaces = await consentableWorkspaces(db, c.get('user').id);
+    const redirect = new URL(row.redirect_uri);
     c.header('x-frame-options', 'DENY');
     c.header(
       'content-security-policy',
-      `${mcpPolicy.consent_csp}; form-action 'self' ${new URL(row.redirect_uri).origin}`,
+      `${mcpPolicy.consent_csp}; form-action 'self' ${redirect.origin}`,
     );
     const csrf = consentCsrf(config, getCookie(c, config.session.cookieName) ?? '', transaction);
+    // hono/html escapes every interpolated value; client metadata is untrusted.
+    const choices = workspaces.map(
+      (w) =>
+        html`<p>
+          <label><input type="checkbox" name="workspace_id" value="${w.id}" /> ${w.name}</label>
+        </p>`,
+    );
     return c.html(
-      `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Authorize MCP access</title></head><body><main><h1>Authorize MCP access</h1><p><strong>${escapeHtml(String(metadata.client_name ?? 'MCP client'))}</strong> <span>Unverified application</span></p><p>This name was supplied by the application and has not been verified by CiteLadder. Approve only if you started this connection and recognize <strong>${escapeHtml(new URL(row.redirect_uri).host)}</strong>.</p><p>Read-only access to the workspaces you select. Joining another workspace does not grant this connection access. Losing membership removes access.</p><p>Sends you back to <code>${escapeHtml(row.redirect_uri)}</code></p><form method="post" action="/mcp/oauth/consent"><input type="hidden" name="transaction" value="${escapeHtml(transaction)}"><input type="hidden" name="csrf_token" value="${csrf}"><fieldset><legend>Workspaces to authorize</legend>${choices}</fieldset><button name="decision" value="approve">Approve access</button><button name="decision" value="deny">Deny access</button></form></main></body></html>`,
+      html`<!doctype html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Authorize MCP access</title>
+          </head>
+          <body>
+            <main>
+              <h1>Authorize MCP access</h1>
+              <p>
+                <strong>${scalarText(metadata.client_name) || 'MCP client'}</strong>
+                <span>Unverified application</span>
+              </p>
+              <p>
+                This name was supplied by the application and has not been verified by CiteLadder.
+                Approve only if you started this connection and recognize
+                <strong>${redirect.host}</strong>.
+              </p>
+              <p>
+                Read-only access to the workspaces you select. Joining another workspace does not
+                grant this connection access. Losing membership removes access.
+              </p>
+              <p>Sends you back to <code>${row.redirect_uri}</code></p>
+              <form method="post" action="/mcp/oauth/consent">
+                <input type="hidden" name="transaction" value="${transaction}" /><input
+                  type="hidden"
+                  name="csrf_token"
+                  value="${csrf}"
+                />
+                <fieldset>
+                  <legend>Workspaces to authorize</legend>
+                  ${choices}
+                </fieldset>
+                <button name="decision" value="approve">Approve access</button
+                ><button name="decision" value="deny">Deny access</button>
+              </form>
+            </main>
+          </body>
+        </html>`,
     );
   });
   app.post('/mcp/oauth/consent', async (c) => {

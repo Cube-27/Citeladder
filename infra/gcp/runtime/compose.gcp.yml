@@ -212,9 +212,7 @@ services:
       MCP_ENABLED: "true"
       MCP_PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:?MCP_PUBLIC_BASE_URL is required}
       MCP_ALLOWED_ACCOUNT_EMAIL: ${MCP_ALLOWED_ACCOUNT_EMAIL-}
-      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
       DEV_LOGIN_EMAIL: ${DEV_LOGIN_EMAIL:?DEV_LOGIN_EMAIL is required}
-      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:?TRUSTED_PROXY_CIDRS is required}
     depends_on:
       db:
         condition: service_healthy

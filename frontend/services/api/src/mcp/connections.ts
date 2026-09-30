@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { record, strings } from '../db/json.ts';
+import { scalarText } from '../text-order.ts';
 
 export async function listConnections(
   db: Database,
@@ -20,7 +21,10 @@ export async function listConnections(
   else query = query.where('g.user_id', '=', scope.userId);
   return (await query.orderBy('g.created_at', 'desc').execute()).map((row) => ({
     id: row.id,
-    client_name: String(record(row.client_metadata).client_name || 'MCP client').slice(0, 255),
+    client_name: (scalarText(record(row.client_metadata).client_name) || 'MCP client').slice(
+      0,
+      255,
+    ),
     workspace_ids: scope.workspaceId ? [scope.workspaceId] : strings(row.workspace_ids),
     created_at: row.created_at.toISOString(),
     requires_consent: strings(row.workspace_ids).length === 0,

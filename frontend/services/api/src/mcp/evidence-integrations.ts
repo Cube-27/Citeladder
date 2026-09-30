@@ -1,5 +1,6 @@
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
+import { compareText } from '../text-order.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Evidence, ReadScope } from './types.ts';
 
@@ -101,7 +102,7 @@ export async function readIntegrationStatus(db: Database, scope: ReadScope): Pro
   const covered = rollups.map((row) => row.through);
   const importedThrough =
     covered.length && covered.every((value) => value !== null)
-      ? (covered as string[]).sort()[0]
+      ? (covered as string[]).sort(compareText)[0]
       : null;
   const performance = await workspace
     .selectFrom(db, 'traffic_snapshots')
