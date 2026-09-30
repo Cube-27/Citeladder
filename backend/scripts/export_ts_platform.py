@@ -43,6 +43,7 @@ from app.core.config import (
     Settings,
 )
 from app.core.config import agent as agent_config
+from app.core.config import audit_schedules as audit_schedule_config
 from app.core.config import brand_discovery as discovery_config
 from app.core.config import brand_evidence as evidence_config
 from app.core.config import brand_logos as brand_logo_config
@@ -153,6 +154,7 @@ from app.core.config.prompts import (
 from app.core.config.provider_catalog import (
     ERROR_UNKNOWN,
     LOGICAL_ENGINES,
+    SELECTABLE_ENGINES,
     TEST_STATUS_OK,
     TRANSPORT_DATAFORSEO,
     is_search_surface,
@@ -357,6 +359,15 @@ def build_config() -> dict[str, Any]:
             "location_codes": search_config.LOCATION_CODES,
             "language_codes": sorted(search_config.LANGUAGE_CODES),
             "prompt_set_name": prompts_config.ONBOARDING_PROMPT_SET_NAME,
+        },
+        "audit_schedules": {
+            "cadences": sorted(audit_schedule_config.AUDIT_SCHEDULE_CADENCES),
+            "default_timezone": audit_schedule_config.DEFAULT_AUDIT_SCHEDULE_TIMEZONE,
+            "selectable_engines": sorted(SELECTABLE_ENGINES),
+            "min_interval_minutes": _setting(
+                "min_interval_minutes",
+                audit_schedule_config.AuditScheduleSettings,
+            ),
         },
         "discovery": _discovery_policy(),
         "brand_evidence": _prefixed_constants(evidence_config, "BRAND_EVIDENCE_"),

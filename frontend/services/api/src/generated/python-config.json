@@ -3544,6 +3544,32 @@
     ],
     "prompt_set_name": "AI Visibility"
   },
+  "audit_schedules": {
+    "cadences": [
+      "daily",
+      "every_n_minutes",
+      "hourly",
+      "one_time",
+      "weekly"
+    ],
+    "default_timezone": "UTC",
+    "selectable_engines": [
+      "chatgpt",
+      "chatgpt_search",
+      "claude",
+      "gemini",
+      "gemini_consumer",
+      "google_ai_overview"
+    ],
+    "min_interval_minutes": {
+      "env": [
+        "AUDIT_SCHEDULE_MIN_INTERVAL_MINUTES"
+      ],
+      "type": "int",
+      "default": 5,
+      "exclusive_minimum": 0
+    }
+  },
   "discovery": {
     "settings": {
       "lease_seconds": {
