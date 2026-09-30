@@ -91,34 +91,23 @@ Source: owner decision of 26 September 2026 in the
 [prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3a.
 [Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
 
-## Generated prompts get a shadow quality judgment
-
-Generation records bounded JEV (TypeSafe) judgments on the candidates it
-selects. This reverses "no fuzzy-similarity quality judges" for recording only:
-in shadow mode a judgment ranks and flags the review list and never drops a
-candidate, and code keeps every check code can make. It becomes a gate only
-after calibration against real accept/reject decisions and the privacy
-revision naming TypeSafe (PR 3c); until that revision is published, production
-runs without `JEV_API_KEY`.
-
-Source: owner decision of 26 September 2026 in the
-[prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3b.
-[Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
-
 ## The quality judgment gates generated prompts
 
-The JEV judgment is now a hard gate by default: a strong fail never reaches
-review, an uncertain candidate is shown flagged and the rest pass. The owner
-chose provisional, versioned thresholds (`jev-gate-1`) because judgments
+Generation records bounded JEV (TypeSafe) judgments on the candidates it
+selects, reversing "no fuzzy-similarity quality judges". The judgment is a hard
+gate by default: a strong fail never reaches review, an uncertain candidate is
+shown flagged and the rest pass. The owner first shipped it record-only (PR 3b),
+then chose provisional, versioned thresholds (`jev-gate-1`) because judgments
 can only be calibrated once the feature runs live. `JEV_MODE=shadow` restores
-record-only behavior. Calibration needs outcomes, so a rejected candidate that
+record-only behavior, in which a judgment ranks and flags the review list but
+never drops a candidate. Calibration needs outcomes, so a rejected candidate that
 carries a judgment, whether rejected by a user or by the gate, is kept as an
 outcome record without its question text for a configured retention. This
 narrows "rejected candidates are deleted". Code still owns every check code
 can make, and a judgment never retires a tracked prompt.
 
-Source: owner decisions of 27 September 2026 for the
-[prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3c.
+Source: owner decisions of 26 September 2026 (PR 3b) and 27 September 2026
+(PR 3c) for the [prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md).
 [Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
 
 ## TypeSafe is a published subprocessor; production runs JEV

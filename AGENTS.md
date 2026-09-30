@@ -63,23 +63,30 @@ These are reminders, not a replacement for the affected invariants.
 
 ## Validation
 
-Run `./scripts/check.ps1` once after the intended executable diff is complete.
-It runs all backend/frontend static and contract checks with formatting fixes;
-`-CheckOnly` is the non-mutating alternative. [Development](docs/DEVELOPMENT.md)
-owns command examples. During iteration, run the smallest relevant native tests.
-Authorization, persistence, concurrency and shared runtime changes need stronger
-affected-owner coverage. CI owns full selected suites and release validation;
-do not run the full backend suite locally instead of selecting relevant tests.
+Validation has three tiers; each one owns what the one before it skips.
+
+1. **While iterating**, run only the smallest relevant native tests for the
+   behavior at risk. The pre-commit hook formats and lints staged files.
+   Authorization, persistence, concurrency and shared runtime changes need
+   stronger affected-owner coverage.
+2. **Once, when the executable diff is complete**, run `./scripts/check.ps1`.
+   It checks only the owners the working diff touches, builds only affected
+   production artifacts, applies formatting fixes and skips a tree that already
+   passed. Use `-All` only for shared-config changes or when asked for a release
+   check; `-CheckOnly` is the non-mutating form.
+3. **CI** runs the full selected owner suites, every production build, E2E and
+   release validation. Do not reproduce it locally, including the full backend suite.
 
 Ordinary copy/documentation edits need only cheap whitespace/reference checks.
 Documentation consumed by the application as runtime or packaged input, including
 Agent skills and templates, needs validation of the affected consumer instead.
 
-Do not overlap test/check processes or repeat successful runs merely for a commit,
+Do not overlap test/check processes or repeat successful runs for a commit,
 handoff or milestone. If later executable changes invalidate the evidence, rerun
-what they affect before claiming completion. Keep test logs in the worktree's Git
-directory; report exit status and inspect failure tails first. Open a larger log
-section only when the tail is insufficient. The check script already bounds output.
+what they affect before claiming completion. `check.ps1` keeps its own bounded
+logs; send native test output to one reusable log in the worktree's Git directory
+rather than a new file per run. Report exit status and inspect failure tails first.
+[Development](docs/DEVELOPMENT.md#repository-validation-harness) owns command details.
 
 ## What earns a test
 
@@ -116,8 +123,8 @@ raise thresholds or delete meaningful safety coverage to make validation green.
   data under that policy.
 - Never reset, deploy, call live providers, activate payments or mutate external
   systems unless the task explicitly authorizes the operation.
-- Use `apply_patch` for code/document edits. Stage explicit paths and preserve
-  user-owned changes.
+- Edit files with your editing tool (`apply_patch` or equivalent), not shell
+  rewrites. Stage explicit paths and preserve user-owned changes.
 
 ## Completion and review
 

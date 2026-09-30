@@ -12,12 +12,20 @@ import { fmtConfig, lintConfig } from './frontend/vp-shared-config.ts';
  * from frontend/vp-shared-config.ts so the hook and the frontend npm scripts
  * always enforce the same rules.
  */
-export default {
+const config = {
   lint: lintConfig,
   fmt: fmtConfig,
   staged: {
     // Restrict to JS/TS/CSS/JSON: oxfmt/oxlint no-op on other types, and this
-    // keeps commits of .py/.md/.ps1 files from paying for a pointless check.
+    // keeps commits of .md/.ps1 files from paying for a pointless check.
     '*.{js,jsx,mjs,ts,tsx,mts,cts,css,json}': 'vp check --fix',
+    // Ruff finds backend/pyproject.toml from each file path; --no-sync keeps
+    // the hook from resolving dependencies on every commit.
+    'backend/**/*.py': [
+      'uv run --project backend --no-sync ruff check --fix',
+      'uv run --project backend --no-sync ruff format',
+    ],
   },
 };
+
+export default config;

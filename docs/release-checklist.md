@@ -7,8 +7,8 @@ until every applicable gate is complete and the release owner approves the exact
 ## 1. Select the candidate
 
 - [ ] The candidate is a merged commit on the protected release branch.
-- [ ] The version and scope are agreed, and [`../CHANGELOG.md`](../CHANGELOG.md) has accurate
-      release notes under `Unreleased`.
+- [ ] The version and scope are agreed, and the GitHub release notes for the candidate are
+      drafted from its merged pull requests.
 - [ ] Open dependency PRs are reviewed independently; grouped Dependabot patch/minor updates do
       not bypass normal CI or review.
 - [ ] Required security fixes, migrations, configuration changes, and rollback notes are known.

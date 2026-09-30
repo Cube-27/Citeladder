@@ -297,30 +297,39 @@ compares it with Python output.
 
 ### Repository validation harness
 
-After the intended executable diff is complete, run the mode appropriate to the
-task once. Choose the formatting/fix mode locally or the non-mutating alternative;
-do not run both by default. Follow [AGENTS.md](../AGENTS.md#validation) for scope,
-documentation/runtime-input exceptions and when changed evidence needs a rerun:
+[AGENTS.md](../AGENTS.md#validation) owns when each tier runs. This section
+covers the commands.
+
+The pre-commit hook (`vp staged`, configured in the root `vite.config.ts`) runs
+`vp check --fix` on staged JS/TS/CSS/JSON files and Ruff lint/format fixes on
+staged backend Python files.
 
 ```powershell
-.\scripts\check.ps1
-.\scripts\check.ps1 -CheckOnly # non-mutating, used by CI
+.\scripts\check.ps1            # affected owners, affected builds, with fixes
+.\scripts\check.ps1 -CheckOnly # the same, non-mutating
+.\scripts\check.ps1 -Build     # affected owners, every production build
+.\scripts\check.ps1 -All       # every owner and build (release, shared config)
 ```
 
-`scripts/quality.mjs` owns these checks. The PowerShell entry point always checks
-backend, frontend, and API contracts, holds a worktree lock, and stores full logs
-under the worktree Git directory. Output contains step names, the final result,
-and at most 60 lines per failure. Inspect failure tails before opening larger
-log sections. The cross-platform `pnpm quality:fix` and `pnpm quality:check`
-commands also default to all owners; CI may pass an explicit `--scope`.
+`scripts/quality.mjs` owns these checks. The PowerShell entry point holds a
+worktree lock and passes `--scope changed`. The affected owners are the ones
+the CI classifier (`scripts/ci-changes.mjs`) selects for the branch diff against
+`origin/main`, plus staged, unstaged and untracked files. With `--builds affected`,
+the Astro marketing, Astro docs and Vite app builds run only when their sources
+or shared build configuration changed; tsc and `vp check` still cover ordinary
+TypeScript. A passing run records the tree it judged in `.git/quality-pass.json`,
+and a rerun on the identical tree exits immediately; delete that file to force a
+rerun. Full logs go to `.git/quality-logs/`; output shows step names, the result
+and at most 60 lines per failure. The cross-platform `pnpm quality:fix` and
+`pnpm quality:check` default to every owner and every build; CI passes an
+explicit `--scope`.
 
 Run focused behavior tests directly with the native runner: pytest from
 `backend/`, `pnpm exec vp test run <test-paths>` from `frontend/`, or
 `node --test <test-paths>` from the root. Browser checks use
 `pnpm exec playwright test --config playwright.config.ts <spec-paths>`.
-Redirect output to a log in the worktree Git directory and inspect only failures.
 Choose tests from the behavior at risk; there is no local test mapping or retry
-state. Do not overlap checks/tests or rerun successful evidence merely to commit.
+state.
 
 GitHub CI has one cheap classifier before the implementation jobs. On an
 initial pull-request run it classifies the complete PR diff. A later push uses

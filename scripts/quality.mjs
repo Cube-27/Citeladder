@@ -1,6 +1,15 @@
 #!/usr/bin/env node
 
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -68,6 +77,89 @@ if (scopes.size === 0) {
   process.exit(0);
 }
 
+// `all` builds every production artifact (CI, release). `affected` builds only
+// the artifacts whose sources or build configuration are in the working diff:
+// tsc and `vp check` already cover ordinary TypeScript, and CI still builds.
+const builds = option('--builds', 'all');
+if (!['all', 'affected'].includes(builds)) throw new Error(`Unknown builds mode: ${builds}`);
+
+const SHARED_BUILD_INPUTS = [
+  'frontend/package.json',
+  'frontend/pnpm-lock.yaml',
+  'frontend/pnpm-workspace.yaml',
+  'frontend/vite.config.ts',
+  'frontend/vp-shared-config.ts',
+  'frontend/tsconfig.json',
+  'frontend/postcss.config.mjs',
+  'frontend/lib/config/',
+];
+const BUILD_INPUTS = {
+  marketing: [
+    'frontend/apps/marketing/',
+    'frontend/components/marketing/',
+    'frontend/lib/marketing-content/',
+  ],
+  docs: ['frontend/apps/docs/', 'frontend/scripts/prepare-docs-assets.mjs'],
+  app: [
+    'frontend/apps/app/vite.config.ts',
+    'frontend/scripts/bundle-budget.json',
+    'frontend/scripts/check-bundle-budget.mjs',
+  ],
+};
+
+function selectedBuilds() {
+  if (builds === 'all') return new Set(Object.keys(BUILD_INPUTS));
+  const paths = workingDiffPaths();
+  const touches = (prefixes) =>
+    paths.some((path) => prefixes.some((prefix) => path === prefix || path.startsWith(prefix)));
+  return new Set(
+    Object.keys(BUILD_INPUTS).filter((name) =>
+      touches([...SHARED_BUILD_INPUTS, ...BUILD_INPUTS[name]]),
+    ),
+  );
+}
+
+// A passing run records the exact tree it judged. Rerunning the same checks on
+// an unchanged tree cannot produce new evidence, so it is skipped.
+const gitDirectory = gitPaths(['rev-parse', '--absolute-git-dir'])[0];
+const passRecordPath = join(gitDirectory, 'quality-pass.json');
+
+function treeFingerprint() {
+  const hash = createHash('sha256');
+  hash.update(execFileSync('git', ['-C', repositoryRoot, 'rev-parse', 'HEAD']));
+  hash.update(
+    execFileSync('git', ['-C', repositoryRoot, 'diff', 'HEAD', '--binary', '--no-ext-diff'], {
+      maxBuffer: 512 * 1024 * 1024,
+    }),
+  );
+  for (const path of gitPaths(['ls-files', '--others', '--exclude-standard']).sort()) {
+    hash.update(path);
+    hash.update(readFileSync(join(repositoryRoot, path)));
+  }
+  return hash.digest('hex');
+}
+
+function previousPass() {
+  try {
+    return JSON.parse(readFileSync(passRecordPath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+const previous = previousPass();
+if (
+  previous?.tree === treeFingerprint() &&
+  [...scopes].every((scope) => previous.scopes.includes(scope)) &&
+  (builds === 'affected' || previous.builds === 'all')
+) {
+  process.stdout.write(
+    `\n${[...scopes].join(', ')} quality already passed for this exact tree; nothing to rerun.\n` +
+      `Delete ${passRecordPath} to force a rerun.\n`,
+  );
+  process.exit(0);
+}
+
 function executable(candidates, missingMessage) {
   const path = candidates.find(existsSync);
   if (!path) throw new Error(missingMessage);
@@ -90,7 +182,7 @@ function backendTool(name) {
   );
 }
 
-const logDirectory = join(gitPaths(['rev-parse', '--absolute-git-dir'])[0], 'quality-logs');
+const logDirectory = join(gitDirectory, 'quality-logs');
 mkdirSync(logDirectory, { recursive: true });
 const failedSteps = [];
 
@@ -182,12 +274,18 @@ function backendChecks() {
 }
 
 function frontendChecks() {
-  pnpm('Astro marketing build', ['build'], QUALITY_BUILD_ENV);
-  pnpm('Astro documentation build', ['build:docs'], QUALITY_BUILD_ENV);
+  const artifacts = selectedBuilds();
+  if (artifacts.has('marketing')) pnpm('Astro marketing build', ['build'], QUALITY_BUILD_ENV);
+  if (artifacts.has('docs')) {
+    pnpm('Astro documentation build', ['build:docs'], QUALITY_BUILD_ENV);
+  }
   // The budget reads the build's manifest, so it only runs against a fresh
   // build; after a failed one it would judge stale output.
-  if (pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV)) {
+  if (artifacts.has('app') && pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV)) {
     pnpm('Eager bundle budget', ['check:bundle']);
+  }
+  if (artifacts.size < Object.keys(BUILD_INPUTS).length) {
+    process.stdout.write('Unaffected production builds skipped; CI builds every artifact.\n');
   }
   // Single static-check step: `vp check` (format + lint) reads its strict
   // policy — denyWarnings, unused-disable-directives-as-errors — from the
@@ -269,4 +367,9 @@ if (failedSteps.length) {
   process.stderr.write(`\nFailed: ${failedSteps.join(', ')}. Logs: ${logDirectory}\n`);
   process.exit(1);
 }
+// Fingerprint after the run: fix mode may have rewritten files.
+writeFileSync(
+  passRecordPath,
+  JSON.stringify({ tree: treeFingerprint(), scopes: [...scopes], builds }),
+);
 process.stdout.write(`\n${[...scopes].join(', ')} quality ${mode} passed. Logs: ${logDirectory}\n`);

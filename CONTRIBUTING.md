@@ -71,9 +71,8 @@ acceptance sources, not ordinary CI prerequisites.
 
 Releases are maintainer-owned and occur only after merge. Do not create a tag,
 GitHub release or package publication from a feature branch. Follow
-[release acceptance](docs/release-checklist.md), update [CHANGELOG.md](CHANGELOG.md),
-and obtain release-owner approval for the exact candidate commit before creating
-release artifacts.
+[release acceptance](docs/release-checklist.md) and obtain release-owner approval
+for the exact candidate commit before creating release artifacts.
 
 ## Reporting issues
 
