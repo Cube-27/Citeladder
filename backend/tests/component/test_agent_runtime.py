@@ -439,6 +439,84 @@ async def test_long_form_content_is_outlined_before_an_approved_draft(
     assert first.approved_at is not None
 
 
+async def test_content_questions_and_clarification_continue_without_creating_output(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-conversation@example.com")
+    await _verified_route(session_factory, project_id)
+    chat_id = await _start(
+        client, project_id, "What makes a useful buyer guide?", skill_id="content_create"
+    )
+    turns = [
+        ("What makes a useful buyer guide?", "It helps a buyer make a specific decision."),
+        ("Write one for our buyers.", "Which buyer group should this guide help?"),
+        ("Focus on enterprise buyers.", "I will focus the guide on enterprise buyers."),
+    ]
+    for index, (request, reply) in enumerate(turns):
+        if index:
+            sent = await client.post(
+                f"/api/v1/agent/chats/{chat_id}/messages", json={"message": request}
+            )
+            assert sent.status_code == 202, sent.text
+        gateway = ScriptedGateway([{"action": "respond", "reply": reply}])
+        assert await _worker(session_factory, gateway).run_once() == 1
+        detail = await _detail(client, chat_id)
+        assert detail["output"] is None
+        assert detail["latest_run"]["status"] == "succeeded"
+        assert detail["messages"][-1]["content"] == reply
+        assert detail["messages"][-1]["skill_id"] == "content_create"
+        if index:
+            assert turns[index - 1][1] in gateway.prompts[0][1]
+
+    sent = await client.post(
+        f"/api/v1/agent/chats/{chat_id}/messages",
+        json={"message": "Create the guide outline with that audience."},
+    )
+    assert sent.status_code == 202, sent.text
+    gateway = ScriptedGateway(
+        [{"action": "respond", "reply": "Outline ready.",
+          "output": _output("## Enterprise buyer decisions", phase="draft", target=None)}]
+    )
+    assert await _worker(session_factory, gateway).run_once() == 1
+    detail = await _detail(client, chat_id)
+    assert detail["output"]["phase"] == "outline"
+    assert "Focus on enterprise buyers." in gateway.prompts[0][1]
+
+
+async def test_discussing_an_edited_outline_preserves_its_revision(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-discuss@example.com")
+    await _verified_route(session_factory, project_id)
+    chat_id = await _start(client, project_id, "Create a guide.", skill_id="content_create")
+    await _worker(
+        session_factory,
+        ScriptedGateway([{"action": "respond", "reply": "Outline ready.",
+                          "output": _output("## Buyer decisions", target=None)}]),
+    ).run_once()
+    revision = (await _detail(client, chat_id))["output"]["latest_revision"]
+    edited = await client.post(
+        f"/api/v1/agent/chats/{chat_id}/output/revisions",
+        json={"base_revision_id": revision["id"], "title": "Guide",
+              "body": "## Enterprise procurement decisions"},
+    )
+    assert edited.status_code == 201, edited.text
+    sent = await client.post(
+        f"/api/v1/agent/chats/{chat_id}/messages",
+        json={"message": "Why include procurement?"},
+    )
+    assert sent.status_code == 202, sent.text
+    gateway = ScriptedGateway(
+        [{"action": "respond", "reply": "Procurement is part of the buyer's decision."}]
+    )
+    assert await _worker(session_factory, gateway).run_once() == 1
+    detail = await _detail(client, chat_id)
+    assert detail["output"]["latest_revision"]["id"] == edited.json()["id"]
+    assert "## Enterprise procurement decisions" in gateway.prompts[0][1]
+    history = await client.get(f"/api/v1/agent/chats/{chat_id}/output/revisions")
+    assert [item["author"] for item in history.json()["items"]] == ["user", "agent"]
+
+
 async def test_the_turn_stops_at_its_step_budget_without_saving(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
