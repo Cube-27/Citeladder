@@ -1,16 +1,25 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
-const mocks = vi.hoisted(() => ({ saveBlob: vi.fn() }));
+const mocks = vi.hoisted(() => ({ saveBlob: vi.fn(), agentEnabled: true }));
 vi.mock('@/lib/download', () => ({ saveBlob: mocks.saveBlob }));
 vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ hasCapability: () => true }),
+  useEntitlement: () => ({ hasCapability: () => mocks.agentEnabled }),
 }));
 
 import { ChatScreen } from './chat-screen';
@@ -156,9 +165,17 @@ function renderChat() {
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() =>
+  mswServer.use(
+    http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
+      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
+    ),
+  ),
+);
 afterEach(() => {
   mswServer.resetHandlers();
   mocks.saveBlob.mockReset();
+  mocks.agentEnabled = true;
 });
 afterAll(() => mswServer.close());
 
@@ -425,11 +442,14 @@ describe('ChatScreen', () => {
     await user.type(await screen.findByLabelText('Reply to the agent'), 'Shorten it.');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByRole('alert');
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('Shorten it.');
+    await user.type(screen.getByLabelText('Reply to the agent'), ' Next draft.');
+    await user.click(screen.getByRole('button', { name: 'Retry send' }));
 
     await vi.waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[0]).toBeTruthy();
     expect(keys[1]).toBe(keys[0]);
+    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('Shorten it. Next draft.');
   });
 
   it('exports the revision as Markdown', async () => {
@@ -450,6 +470,63 @@ describe('ChatScreen', () => {
     expect(await blob.text()).toBe('# Pricing page edits\n\nBody text.\n');
   });
 
+  it('disables failed-submission retry when Agent access is lost', async () => {
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(detail(revision(REV1, 1, 'agent', 'Body.'))),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, () => {
+        mocks.agentEnabled = false;
+        return HttpResponse.json({ detail: 'Unavailable' }, { status: 503 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+    await user.type(await screen.findByLabelText('Reply to the agent'), 'My question');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByRole('button', { name: 'Retry send' })).toBeDisabled();
+    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('My question');
+    expect(screen.getByRole('region', { name: 'Pricing page edits' })).toBeVisible();
+  });
+
+  it('starts a fresh attempt after an accepted run fails', async () => {
+    let current = detail(revision(REV1, 1, 'agent', 'Body.'));
+    const keys: (string | null)[] = [];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key'));
+        current = {
+          ...detail(revision(REV1, 1, 'agent', 'Body.'), {
+            status: 'failed',
+            error_code: 'provider_error',
+          }),
+          messages: [
+            ...current.messages,
+            {
+              ...current.messages[0]!,
+              id: '77777777-7777-4777-8777-777777777774',
+              sequence: 3,
+              content: 'Shorten it.',
+            },
+          ],
+        };
+        return HttpResponse.json({ chat_id: CHAT, run: current.latest_run }, { status: 202 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+    await user.type(await screen.findByLabelText('Reply to the agent'), 'Shorten it.');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(await screen.findByRole('button', { name: 'Review request to try again' }));
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await vi.waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).not.toBe(keys[0]);
+  });
+
   it('keeps stopped-at-limit distinct from a failure and locks nothing that saved', async () => {
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
@@ -466,7 +543,7 @@ describe('ChatScreen', () => {
 
     expect(await screen.findByText(/stopped at its step limit/i)).toBeVisible();
     expect(screen.queryByText(/could not finish/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Make it shorter' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Review request to try again' })).toBeEnabled();
   });
 
   it('shows what a running turn has done so far', async () => {
@@ -484,9 +561,11 @@ describe('ChatScreen', () => {
         ),
       ),
     );
+    const user = userEvent.setup();
     renderChat();
 
-    const steps = within(await screen.findByRole('list', { name: 'Agent progress' }));
+    await user.click(await screen.findByText('View activity'));
+    const steps = within(screen.getByRole('list', { name: 'Agent progress' }));
     expect(steps.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'Read site health · no data yet',
       'Deciding the next step…',
@@ -510,9 +589,106 @@ describe('ChatScreen', () => {
 
     const pane = await screen.findByRole('region', { name: 'Pricing page edits' });
     expect(within(pane).getByRole('button', { name: 'Edit' })).toBeDisabled();
-    expect(screen.getByLabelText('Reply to the agent')).toBeDisabled();
+    expect(screen.getByLabelText('Reply to the agent')).toBeEnabled();
+    await user.type(screen.getByLabelText('Reply to the agent'), 'Next question');
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Stop' }));
     expect(cancels).toHaveLength(1);
+  });
+
+  it('prefills a suggestion for review and hides suggestions after discussion', async () => {
+    let current = detail(revision(REV1, 1, 'agent', 'Body.'));
+    const sends: unknown[] = [];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {
+        sends.push(await request.json());
+        return HttpResponse.json({ chat_id: CHAT, run: current.latest_run }, { status: 202 });
+      }),
+    );
+    const user = userEvent.setup();
+    const { queryClient } = renderChat();
+    await user.click(await screen.findByRole('button', { name: 'Make it shorter' }));
+    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('Make it shorter');
+    expect(sends).toHaveLength(0);
+    current = {
+      ...current,
+      messages: [
+        ...current.messages,
+        {
+          ...current.messages[1]!,
+          id: '77777777-7777-4777-8777-777777777773',
+          content: 'Here is why.',
+          sequence: 3,
+          created_at: '2026-09-25T11:00:00Z',
+        },
+      ],
+    };
+    await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
+    await screen.findByText('Here is why.');
+    expect(screen.queryByRole('group', { name: 'Suggested follow-ups' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('Make it shorter');
+  });
+
+  it('shows the workflow inherited from the chat without promising automatic routing', async () => {
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json({
+          ...detail(revision(REV1, 1, 'agent', 'Body.')),
+          pinned_skill_id: 'gsc_optimize',
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderChat();
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Skill: Continue with Search Console optimization',
+      }),
+    );
+    expect(screen.queryByRole('menuitemradio', { name: 'Automatic' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemradio', { name: 'Search Console optimization' }));
+    await user.click(screen.getByRole('button', { name: 'Skill: Search Console optimization' }));
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Continue with Search Console optimization' }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Skill: Continue with Search Console optimization' }),
+    ).toBeVisible();
+  });
+
+  it('preserves reading position through polling until the reader jumps to latest', async () => {
+    let current = detail(revision(REV1, 1, 'agent', 'Body.'));
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
+    );
+    const scroll = vi.fn();
+    vi.stubGlobal('scrollY', 0);
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 4000,
+    });
+    const oldScroll = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scroll;
+    try {
+      const user = userEvent.setup();
+      const { queryClient } = renderChat();
+      await screen.findByLabelText('Reply to the agent');
+      const initialScrolls = scroll.mock.calls.length;
+      fireEvent.scroll(window);
+      current = detail(revision(REV2, 2, 'agent', 'Updated body.'));
+      await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
+      expect(scroll).toHaveBeenCalledTimes(initialScrolls);
+      await user.click(screen.getByRole('button', { name: 'Jump to latest' }));
+      expect(scroll).toHaveBeenCalledTimes(initialScrolls + 1);
+    } finally {
+      HTMLElement.prototype.scrollIntoView = oldScroll;
+      Reflect.deleteProperty(document.documentElement, 'scrollHeight');
+      vi.unstubAllGlobals();
+    }
   });
 
   it('declares the revision on screen implemented and shows what it waits for', async () => {

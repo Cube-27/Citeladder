@@ -41,11 +41,15 @@ export function SkillPicker({
   value,
   onChange,
   outputKind,
+  inheritedSkillId,
+  hasAction = false,
   disabled,
 }: Readonly<{
   value: string | null;
   onChange: (skillId: string | null) => void;
   outputKind?: string | null;
+  inheritedSkillId?: string | null;
+  hasAction?: boolean;
   disabled?: boolean;
 }>) {
   const skills = useSkillCatalog().filter(
@@ -56,7 +60,15 @@ export function SkillPicker({
     const label = skillGroupLabel(skill.group);
     groups.set(label, [...(groups.get(label) ?? []), skill]);
   }
-  const current = skillLabel(skills, value) ?? 'Automatic';
+  const inherited = skillLabel(skills, inheritedSkillId ?? null);
+  const defaultLabel = inherited
+    ? `Continue with ${inherited}`
+    : outputKind
+      ? 'Continue chat workflow'
+      : hasAction
+        ? 'From attached Action'
+        : 'Automatic';
+  const current = skillLabel(skills, value) ?? defaultLabel;
   return (
     <Dropdown>
       <DropdownTrigger asChild>
@@ -70,7 +82,7 @@ export function SkillPicker({
           value={value ?? AUTOMATIC}
           onValueChange={(next) => onChange(next === AUTOMATIC ? null : next)}
         >
-          <DropdownRadioItem value={AUTOMATIC}>Automatic</DropdownRadioItem>
+          <DropdownRadioItem value={AUTOMATIC}>{defaultLabel}</DropdownRadioItem>
           {[...groups].map(([group, rows]) => (
             <Fragment key={group}>
               <DropdownSeparator />

@@ -30,6 +30,7 @@ export function Conversation({
   onStop,
   stopping,
   canSend,
+  sending = false,
 }: Readonly<{
   detail: AgentChatDetail;
   output?: ReactNode;
@@ -37,6 +38,7 @@ export function Conversation({
   onStop: () => void;
   stopping: boolean;
   canSend: boolean;
+  sending?: boolean;
 }>) {
   const skills = useSkillCatalog();
   const outcome = runOutcome(detail.latest_run);
@@ -57,7 +59,13 @@ export function Conversation({
         onStop={onStop}
         stopping={stopping}
       />
-      {output?.latest_revision && canSend && outcome.kind !== 'running' ? (
+      {sending ? (
+        <output aria-live="polite" className={textRole('caption')}>
+          Sending message…
+        </output>
+      ) : null}
+      <TurnRecovery detail={detail} canSend={canSend} onReview={onRefine} />
+      {output?.latest_revision && canSend && hasFreshDeliverable(detail) ? (
         <FollowUps
           kind={output.kind}
           title={output.latest_revision.title}
@@ -66,6 +74,41 @@ export function Conversation({
         />
       ) : null}
     </div>
+  );
+}
+
+/** Current DTOs expose timestamps, but no revision-to-message link. Be conservative. */
+function hasFreshDeliverable(detail: AgentChatDetail): boolean {
+  const revision = detail.output?.latest_revision;
+  const reply = detail.messages.at(-1);
+  return (
+    revision?.author === 'agent' &&
+    reply?.role === 'agent' &&
+    Date.parse(revision.created_at) >= Date.parse(reply.created_at) &&
+    detail.latest_run?.status === 'succeeded'
+  );
+}
+
+function TurnRecovery({
+  detail,
+  canSend,
+  onReview,
+}: Readonly<{
+  detail: AgentChatDetail;
+  canSend: boolean;
+  onReview: (message: string) => void;
+}>) {
+  const request = [...detail.messages].reverse().find((message) => message.role === 'user');
+  if (
+    !canSend ||
+    !request ||
+    !['failed', 'cancelled', 'stopped_at_limit'].includes(runOutcome(detail.latest_run).kind)
+  )
+    return null;
+  return (
+    <Button variant="secondary" size="sm" onClick={() => onReview(request.content)}>
+      Review request to try again
+    </Button>
   );
 }
 
@@ -147,7 +190,8 @@ function FollowUps({
   const next = nextStepsFor(kind, title);
   return (
     <div className="grid gap-3">
-      <fieldset aria-label="Quick refinements" className="flex flex-wrap gap-2">
+      <fieldset aria-label="Suggested follow-ups" className="flex flex-wrap gap-2">
+        <legend className={textRole('caption')}>Add a suggestion to your message:</legend>
         {refinementsFor(kind).map((instruction) => (
           <Button
             key={instruction}
@@ -200,26 +244,33 @@ function RunState({
   switch (outcome.kind) {
     case 'running':
       return (
-        <output className={cn('grid gap-2', textRole('body'))}>
+        <div className={cn('grid gap-2', textRole('body'))}>
           <span className="flex items-center gap-3">
             <Spinner className="text-muted" />
-            <span className="flex-1">
-              {outcome.queued ? 'Waiting to start…' : 'The agent is working…'}
-            </span>
+            <output aria-live="polite" className="flex-1">
+              {outcome.queued
+                ? 'Waiting to start…'
+                : progress.at(-1)
+                  ? runStepLabel(progress.at(-1)!)
+                  : 'The agent is working…'}
+            </output>
             <Button variant="ghost" size="sm" disabled={stopping} onClick={onStop}>
               Stop
             </Button>
           </span>
           {progress.length > 0 ? (
-            <ol aria-label="Agent progress" className="grid gap-1 ps-8">
-              {progress.map((step) => (
-                <li key={step.ordinal} className={textRole('caption')}>
-                  {runStepLabel(step)}
-                </li>
-              ))}
-            </ol>
+            <details>
+              <summary className={textRole('caption', 'cursor-pointer')}>View activity</summary>
+              <ol aria-label="Agent progress" className="grid gap-1 ps-4 pt-2">
+                {progress.map((step) => (
+                  <li key={step.ordinal} className={textRole('caption')}>
+                    {runStepLabel(step)}
+                  </li>
+                ))}
+              </ol>
+            </details>
           ) : null}
-        </output>
+        </div>
       );
     case 'stopped_at_limit':
       return <Alert tone="warning">{runErrorCopy('stopped_at_limit')}</Alert>;

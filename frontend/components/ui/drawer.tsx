@@ -17,6 +17,7 @@ export function Drawer({
   footer,
   className,
   bodyClassName,
+  bodyLabel,
   closeLabel = 'Close drawer',
   side = 'right',
   hideHeader = false,
@@ -30,6 +31,8 @@ export function Drawer({
   footer?: ReactNode;
   className?: string;
   bodyClassName?: string;
+  /** Names a scrolling content region when it has independent navigation. */
+  bodyLabel?: string;
   closeLabel?: string;
   side?: 'left' | 'right';
   /** Keeps the accessible title but removes duplicate visual drawer chrome. */
@@ -116,6 +119,8 @@ export function Drawer({
             </header>
           )}
           <div
+            role={bodyLabel ? 'region' : undefined}
+            aria-label={bodyLabel}
             className={cn(
               'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-[var(--modal-padding)] py-4',
               bodyClassName,

@@ -74,7 +74,10 @@ const NEXT_STEPS: Record<string, readonly NextStep[]> = {
 };
 
 export function refinementsFor(kind: string | null | undefined): readonly string[] {
-  return [...DEFAULT_REFINEMENTS, ...(kind ? (REFINEMENTS[kind] ?? []) : [])];
+  return [
+    DEFAULT_REFINEMENTS[0],
+    ...(kind ? (REFINEMENTS[kind] ?? [DEFAULT_REFINEMENTS[1]]) : [DEFAULT_REFINEMENTS[1]]),
+  ];
 }
 
 /** New-chat suggestions for this deliverable, each naming it by title. */
