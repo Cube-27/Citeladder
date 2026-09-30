@@ -409,9 +409,8 @@
           "page_size": {
             "anyOf": [
               {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
+                "type": "number",
+                "enum": [10, 25, 50, 100]
               },
               {
                 "type": "null"

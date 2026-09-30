@@ -65,11 +65,20 @@ const read = (name: string, args: Record<string, unknown> = {}) =>
 
 it('pages prompts stably while context includes only active prompts and foreign IDs cannot fetch', async () => {
   const set = await promptSet(db, tenant.projectId);
-  const first = await prompt(db, set, 'Acme first');
-  const second = await prompt(db, set, 'Acme second');
-  const retired = await prompt(db, set, 'Acme retired', { status: 'retired' });
+  // Distinct instants: same-millisecond fixtures would page in random-UUID order.
+  const at = (offset: number) => new Date(Date.UTC(2026, 0, 1) + offset);
+  const first = await prompt(db, set, 'Acme first', { createdAt: at(0) });
+  const second = await prompt(db, set, 'Acme second', { createdAt: at(1) });
+  const retired = await prompt(db, set, 'Acme retired', { status: 'retired', createdAt: at(2) });
   const page = await read('read_prompt_portfolio', { limit: 1 });
   expect(page.items).toEqual([expect.objectContaining({ id: first })]);
+  expect(page).toMatchObject({
+    project_id: tenant.projectId,
+    applicability: { pagination: 'applicable' },
+  });
+  expect(await read('read_site_health')).toMatchObject({
+    applicability: { pagination: 'not_applicable' },
+  });
   const next = await read('read_prompt_portfolio', {
     limit: 1,
     cursor: (page.pagination as { next_cursor: string }).next_cursor,

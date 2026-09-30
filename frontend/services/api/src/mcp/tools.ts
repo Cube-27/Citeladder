@@ -132,7 +132,7 @@ const definitions = {
       snapshot_id: nullable(uuid),
       sort: nullable(z.string()),
       cursor,
-      page_size: nullable(z.number().int().positive()),
+      page_size: nullable(z.literal(policy.traffic.PERFORMANCE_PAGE_SIZE_OPTIONS)),
       compare_snapshot_id: nullable(uuid),
     }),
   },
@@ -232,8 +232,7 @@ const annotations = {
   openWorldHint: false,
 };
 const output = z.record(z.string(), z.json());
-const PAGINATED_READS = new Set(['read_opportunities', 'read_performance_table']);
-function readApplicability(name: string) {
+function readApplicability(name: string, evidence: Evidence) {
   const integrations = name === 'read_integration_status';
   return {
     identity: integrations
@@ -247,7 +246,7 @@ function readApplicability(name: string) {
         }
       : 'applicable',
     coverage: 'applicable',
-    pagination: PAGINATED_READS.has(name) ? 'applicable' : 'not_applicable',
+    pagination: 'pagination' in evidence ? 'applicable' : 'not_applicable',
     follow_through: integrations ? 'not_applicable' : 'applicable',
   };
 }
@@ -305,7 +304,11 @@ export async function dispatchTool(
         ? await readSiteEvidence(db, authorized, name, args)
         : await readEvidence(db, authorized, name, args);
     // Every project read names its scope and applicability; a tool's own values win.
-    result = { project_id: project.id, applicability: readApplicability(name), ...evidence };
+    result = {
+      project_id: project.id,
+      applicability: readApplicability(name, evidence),
+      ...evidence,
+    };
   }
   // Dates serialize as ISO instants, then every tool returns its declared JSON
   // object contract. An invalid persisted projection fails here on the server.

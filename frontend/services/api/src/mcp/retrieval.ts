@@ -315,8 +315,10 @@ const records = {
 } as const;
 type Kind = keyof typeof records | 'project' | 'prompt';
 
+const NOT_A_RECORD = 'id must be an allowlisted citeladder:// record URI';
 export function parseRecordId(value: string): { kind: Kind; id: string; part: number } {
-  const uri = new URL(value);
+  const uri = URL.parse(value);
+  if (!uri) throw new McpInputError(NOT_A_RECORD);
   const kind = uri.hostname;
   const id = parseUuid(uri.pathname.slice(1));
   if (
@@ -328,7 +330,7 @@ export function parseRecordId(value: string): { kind: Kind; id: string; part: nu
     !id ||
     (kind !== 'project' && kind !== 'prompt' && !Object.hasOwn(records, kind))
   ) {
-    throw new McpInputError('id must be an allowlisted citeladder:// record URI');
+    throw new McpInputError(NOT_A_RECORD);
   }
   const parts = uri.searchParams.getAll('part');
   if (

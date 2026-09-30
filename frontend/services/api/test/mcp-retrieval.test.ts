@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, it } from 'vitest';
 import { mcpPolicy } from '../src/mcp/config.ts';
 import { parseRecordId, retrievalDocument } from '../src/mcp/retrieval.ts';
+import { McpInputError } from '../src/mcp/types.ts';
 
 it('bounds complete UTF-8 documents and reassembles Unicode without losing structured evidence', () => {
   const id = randomUUID();
@@ -63,6 +64,7 @@ it('rejects arbitrary sources and ambiguous continuation parameters', () => {
     `citeladder://prompt/${id}?part=0&part=1`,
     `citeladder://prompt/${id}?sql=select`,
     `citeladder://user@prompt/${id}`,
+    'not a record uri',
   ])
-    expect(() => parseRecordId(uri)).toThrow();
+    expect(() => parseRecordId(uri)).toThrow(McpInputError);
 });
