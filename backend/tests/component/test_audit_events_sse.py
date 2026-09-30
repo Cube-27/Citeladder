@@ -73,6 +73,7 @@ from app.models.workspace import WorkspaceMember
 from app.orchestration.provider_capacity import CapacityDecision
 from app.workers.audit_worker_support import capacity_wait_payload
 from tests.component.audit_helpers import Seed, seed_audit_fixtures
+from tests.component.auth_helpers import register_and_login
 
 
 async def _register_and_seed(
@@ -81,16 +82,7 @@ async def _register_and_seed(
 ) -> Seed:
     """Register a real user, seed an auditable workspace, attach them."""
     email = f"sse-{uuid.uuid4().hex[:8]}@example.com"
-    reg = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert reg.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
+    await register_and_login(client, email)
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=2)
         user = await session.scalar(select(User).where(User.email == email))

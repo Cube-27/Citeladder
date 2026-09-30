@@ -16,9 +16,20 @@ from joserfc.jwk import OctKey
 from joserfc.jwt import JWTClaimsRegistry
 
 from app.core.config import settings
+from app.core.config.auth import (
+    ARGON2_HASH_LENGTH,
+    ARGON2_MEMORY_COST,
+    ARGON2_PARALLELISM,
+    ARGON2_TIME_COST,
+)
 from app.core.config.oauth import oauth_settings
 
-_PASSWORD_HASHER = PasswordHasher()
+_PASSWORD_HASHER = PasswordHasher(
+    memory_cost=ARGON2_MEMORY_COST,
+    time_cost=ARGON2_TIME_COST,
+    parallelism=ARGON2_PARALLELISM,
+    hash_len=ARGON2_HASH_LENGTH,
+)
 _ARGON2_PREFIXES = ("$argon2id$", "$argon2i$", "$argon2d$")
 
 

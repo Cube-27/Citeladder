@@ -176,6 +176,15 @@ async def _authorized_operator(
     *,
     lock_membership: bool = False,
 ) -> User:
+    if lock_membership:
+        # Shared with the TS workspace owner: root, actor membership, target.
+        workspace = await session.scalar(
+            select(Workspace.id)
+            .where(Workspace.id == workspace_id, Workspace.is_system.is_(False))
+            .with_for_update()
+        )
+        if workspace is None:
+            raise PermissionError("workspace_admin_required")
     actor = await session.get(User, actor_id, populate_existing=True)
     statement = select(WorkspaceMember).where(
         WorkspaceMember.workspace_id == workspace_id,

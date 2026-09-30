@@ -74,7 +74,7 @@ from app.domain.billing.webhooks import (
 )
 from app.models.billing import BillingAccount, BillingSubscription, BillingWebhookEvent
 from app.models.workspace import Workspace
-from tests.component.auth_helpers import register_and_login
+from tests.component.auth_helpers import register_and_login, workspace_ids_for_session
 from tests.component.billing_catalog_helpers import publish_test_catalog
 
 ALPHA = "test_alpha"
@@ -239,7 +239,7 @@ async def test_public_pricing_and_workspace_reads_need_no_provider(
     assert not any(plan["checkout_available"] for plan in catalog.json()["plans"])
 
     await register_and_login(client, "no-provider@example.com")
-    workspace_id = (await client.get("/api/v1/workspaces")).json()[0]["id"]
+    workspace_id = (await workspace_ids_for_session(client))[0]
     entitlements = await client.get(f"/api/v1/workspaces/{workspace_id}/entitlements")
     assert entitlements.status_code == 200
     usage = await client.get(

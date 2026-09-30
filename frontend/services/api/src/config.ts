@@ -138,6 +138,16 @@ export type ServiceConfig = {
     secretKey: string;
     algorithm: 'HS256';
     cookieName: string;
+    expireSeconds: number;
+  };
+  auth: {
+    publicSignup: boolean;
+    frontendUrl: string;
+    trustedProxyCidrs: string;
+    oauthSettings: Record<string, string | number | boolean>;
+    limits: Record<keyof typeof policy.abuse, number>;
+    /** Injected provider transport for recorded-fixture tests. */
+    fetch?: typeof fetch;
   };
   demo: { enabled: boolean; expiresAt: Date | null };
   readinessTimeoutMs: number;
@@ -210,6 +220,25 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       secretKey: setting('jwt_secret_key') as string,
       algorithm: setting('jwt_algorithm') as 'HS256',
       cookieName: setting('session_cookie_name') as string,
+      expireSeconds: (setting('jwt_expire_hours') as number) * 3600,
+    },
+    auth: {
+      publicSignup: setting('public_signup_enabled') as boolean,
+      frontendUrl: setting('frontend_url') as string,
+      trustedProxyCidrs: setting('trusted_proxy_cidrs') as string,
+      oauthSettings: {
+        ...Object.fromEntries(
+          Object.entries(policy.auth.oauth.settings).map(([name, spec]) => [
+            name,
+            resolveSettingSpec(spec, env),
+          ]),
+        ),
+        integration_client_id: setting('integration_google_client_id'),
+        integration_client_secret: setting('integration_google_client_secret'),
+      } as Record<string, string | number | boolean>,
+      limits: Object.fromEntries(
+        Object.entries(policy.abuse).map(([name, spec]) => [name, resolveSettingSpec(spec, env)]),
+      ) as ServiceConfig['auth']['limits'],
     },
     demo: {
       enabled: setting('demo_mode') as boolean,

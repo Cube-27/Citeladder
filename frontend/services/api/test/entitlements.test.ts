@@ -3,7 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { admitPrompts } from '../src/entitlements/occupancy.ts';
-import { foldEntitlement, type GrantRow } from '../src/entitlements/resolve.ts';
+import {
+  entitlementChangeAt,
+  foldEntitlement,
+  type GrantRow,
+} from '../src/entitlements/resolve.ts';
 import { ApiError } from '../src/errors.ts';
 import { billingAccount, grant, prompt, promptSet } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -27,6 +31,41 @@ function row(input: Partial<GrantRow> & { value: number }): GrantRow {
 }
 
 describe('foldEntitlement', () => {
+  it('expires projections at future grants, selected revocations and subscription boundaries', () => {
+    const selected = row({
+      value: 50,
+      bundle_role: 'primary',
+      bundle_id: 'pro',
+      profile_priority: 10,
+      valid_until: new Date(at.getTime() + 4 * day),
+    });
+    const ignored = row({
+      value: 10,
+      bundle_role: 'primary',
+      bundle_id: 'free',
+      valid_until: new Date(at.getTime() + 1),
+    });
+    const scheduled = row({ value: 5, valid_from: new Date(at.getTime() + day) });
+    expect(entitlementChangeAt([selected, ignored, scheduled], [], null, at)).toEqual(
+      scheduled.valid_from,
+    );
+    expect(
+      entitlementChangeAt(
+        [selected, ignored],
+        [
+          { grant_id: ignored.id, effective_from: new Date(at.getTime() + 1) },
+          { grant_id: selected.id, effective_from: new Date(at.getTime() + 2 * day) },
+        ],
+        null,
+        at,
+      ),
+    ).toEqual(new Date(at.getTime() + 2 * day));
+    expect(entitlementChangeAt([selected], [], new Date(at.getTime() + day), at)).toEqual(
+      new Date(at.getTime() + day),
+    );
+    expect(entitlementChangeAt([row({ value: 3 })], [], null, at)).toBeNull();
+  });
+
   it('counts one primary bundle, the highest priority, plus every supplement', () => {
     const values = foldEntitlement(
       [

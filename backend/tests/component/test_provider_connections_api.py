@@ -34,6 +34,7 @@ from app.models.audit import ProviderCapacityBucket
 from app.models.provider import ProviderAppRoute, ProviderConnection
 from app.models.provider_disclosure import ProviderDisclosure
 from app.models.security_event import SecurityEvent
+from tests.component.auth_helpers import invalidate_session, workspace_ids_for_session
 from tests.component.auth_helpers import register_and_login as _register
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
@@ -729,7 +730,7 @@ async def test_cross_workspace_access_denied(
     conn_id = created.json()["id"]
 
     # A different user (fresh workspace) must not see or touch it.
-    await client.post("/api/v1/auth/logout")
+    await invalidate_session(client)
     await _register(client, "intruder@example.com")
     listed = await client.get("/api/v1/provider-connections")
     assert listed.status_code == 200
@@ -826,9 +827,7 @@ async def test_system_workspace_hidden_and_membership_inert(
     )
     await db_session.commit()
 
-    listed = await client.get("/api/v1/workspaces")
-    assert listed.status_code == 200
-    workspace_ids = {w["id"] for w in listed.json()}
+    workspace_ids = set(await workspace_ids_for_session(client))
     assert str(system.id) not in workspace_ids
     assert len(workspace_ids) == 1  # only the auto-created tenant workspace
 

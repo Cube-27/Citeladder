@@ -38,6 +38,23 @@ export async function enforceWorkspaceRequest(
   { operation, limit, windowSeconds, amount = 1 }: UsageLimit,
   now: Date = new Date(),
 ): Promise<void> {
+  return enforceSubjectRequest(
+    db,
+    'workspace',
+    workspaceId,
+    { operation, limit, windowSeconds, amount },
+    now,
+  );
+}
+
+/** Autocommitted atomic counters, before hashing or provider I/O. */
+export async function enforceSubjectRequest(
+  db: Database,
+  subjectKind: 'workspace' | 'client' | 'email',
+  subjectValue: string,
+  { operation, limit, windowSeconds, amount = 1 }: UsageLimit,
+  now: Date = new Date(),
+): Promise<void> {
   if (![limit, windowSeconds, amount].every((value) => Number.isInteger(value) && value > 0)) {
     throw new Error('Usage limit, window and amount must be positive integers');
   }
@@ -51,12 +68,12 @@ export async function enforceWorkspaceRequest(
       headers: { 'retry-after': String(retryAfter) },
     });
   if (amount > limit) throw exhausted();
-  const subject = createHash('sha256').update(workspaceId.trim().toLowerCase()).digest('hex');
+  const subject = createHash('sha256').update(subjectValue.trim().toLowerCase()).digest('hex');
   const consumed = await db
     .insertInto('usage_windows')
     .values({
       id: randomUUID(),
-      subject_kind: 'workspace',
+      subject_kind: subjectKind,
       subject_hash: subject,
       operation,
       window_started_at: started,

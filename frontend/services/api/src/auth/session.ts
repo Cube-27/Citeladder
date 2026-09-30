@@ -1,10 +1,9 @@
 /**
- * Session verification for cookies the Python backend issued.
+ * Session verification for cookies issued by either application stack.
  *
  * Mirrors `get_current_user` in `backend/app/api/deps.py`: an HS256 JWT in the
  * HttpOnly session cookie, whose `ver` claim must equal the user's
- * `session_version`. This service never issues sessions (TypeScript migration
- * PR 12 moves issuance). Failure messages match the backend's word for word.
+ * `session_version`. Issuance belongs to the TypeScript auth service.
  */
 import type { MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';

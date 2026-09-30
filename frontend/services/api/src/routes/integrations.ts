@@ -217,7 +217,7 @@ export const integrationRoutes = [
   defineGetRoute({
     family,
     path: '/api/v1/integrations/oauth/{provider}/callback',
-    public: true,
+    authorize: 'public',
     raw: true,
     params: {
       path: providerPath,

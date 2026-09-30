@@ -8,13 +8,7 @@
  * contract is added or renamed, update this table in the same change.
  */
 export const CONTRACT_SCHEMA_MAP = {
-  // Auth / workspace / shell
-  authResponseSchema: 'AuthResponse',
-  registrationResponseSchema: 'RegistrationResponse',
-  sessionUserSchema: 'SessionUser',
-  workspaceSchema: 'WorkspaceResponse',
-  productTourSchema: 'ProductTourResponse',
-  oauthStartResponseSchema: 'OAuthStartResponse',
+  // Auth, workspaces and projects are owned and served by the TypeScript API.
   // Providers
   providerConnectionSchema: 'ProviderConnectionResponse',
   connectionTestResultSchema: 'ProviderConnectionTestResponse',

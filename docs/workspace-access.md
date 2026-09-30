@@ -9,8 +9,8 @@ The designation is distinct from platform/operator administration.
 
 ## Authentication and authorization
 
-[Auth API](../backend/app/api/auth.py) and
-[auth service](../backend/app/domain/auth/service.py) own session establishment.
+[Auth API](../frontend/services/api/src/routes/auth.ts) and
+[auth service](../frontend/services/api/src/auth/service.ts) own session establishment.
 Registration returns a generic acknowledgement rather than a session, and is
 refused unless `PUBLIC_SIGNUP_ENABLED` is set; operators otherwise create
 accounts with `backend/scripts/account_manager.py`. Google sign-in, which
@@ -20,13 +20,24 @@ session-version checks invalidate stale sessions. The frontend crosses the
 identity boundary with full-document navigation so a prefetched anonymous
 layout cannot be reused.
 
-[API dependencies](../backend/app/api/deps.py) resolve membership and expose
+TypeScript issues sessions and reads the Argon2, OAuth and abuse policies from
+the generated Python config export. Remaining Python APIs and MCP verify the
+same HS256 claims against the persisted user session version. Google sign-in
+uses a signed state bound to an HttpOnly transaction cookie and verified email
+before linking a new provider subject. Provider requests have host, redirect,
+deadline and response-size bounds. PostgreSQL abuse counters commit before
+password verification or provider I/O; successful credentials bypass email
+failure budgets.
+
+[TypeScript authorization](../frontend/services/api/src/auth/workspace.ts) and
+[remaining Python dependencies](../backend/app/api/deps.py) resolve membership and expose
 safe capabilities. Flat APIs use an explicit workspace header or the user's
 default membership. A project-detail or image request can resolve membership
 through its project ID, but never trusts that ID alone. Foreign/missing objects
 do not reveal product data.
 
-The [role policy](../backend/app/domain/workspaces/policy.py) is the sole matrix:
+The [role policy](../backend/app/domain/workspaces/policy.py) is the sole matrix,
+exported for TypeScript authorization:
 
 | Role | Product read | Product write/run | Billing, members, credentials |
 |---|---|---|---|
@@ -71,14 +82,18 @@ sign-in and customer provider-credential mutations also use this bounded
 writer. Event records contain identifiers and event kinds, never request
 bodies, provider credentials or prompts.
 
-[Workspace APIs](../backend/app/api/workspaces.py) use the
-[workspace domain](../backend/app/domain/workspaces/) for invitations,
+[Workspace APIs](../frontend/services/api/src/routes/workspaces.ts) use the
+[workspace owner](../frontend/services/api/src/workspaces/) for invitations,
 acceptance, role changes, removal and ownership transfer. Invitation tokens are
 hashed, expiring and single-use; acceptance requires the matching authenticated
 identity. Repeated acceptance is inert. Owner is not an assignable invitation
 role. Transfer installs a replacement atomically, and removal, demotion or
 departure cannot leave a workspace ownerless. Owned-workspace limits count
-ownership rather than invited memberships.
+ownership rather than invited memberships, including ownership transfer.
+Workspace-root locks serialize membership and invitation changes; mutations
+recheck live authority after taking the lock. Creation and incoming ownership
+share the per-user creation advisory lock. Terms and product-tour reads never
+repair state.
 
 Invitation records exist, but there is no mail transport owner. Multi-workspace
 selection at sign-in remains deferred; neither limitation is a claim that the
@@ -123,7 +138,8 @@ sign-in redirect; the server still authorizes every billing mutation.
 [Billing](billing-entitlements.md) resolves exactly one account per workspace.
 [MCP](mcp.md) rechecks current memberships for account-bound grants.
 [Onboarding](onboarding.md) creates projects subject to role and occupancy.
-The [role tests](../backend/tests/component/test_workspace_roles.py) and
+The [workspace tests](../frontend/services/api/test/workspaces.test.ts),
+[auth tests](../frontend/services/api/test/auth-routes.test.ts) and
 [workspace authorization tests](../backend/tests/unit/test_workspace_auth.py)
 cover the central boundaries. Accepted rationale is in
 [decisions](decisions.md); the retained shell plan tracks only remaining work.
@@ -157,3 +173,16 @@ sudo docker compose --env-file /opt/citeladder/runtime.env \
 ```
 
 Passwords are prompted without echo and are never command-line arguments.
+
+The Python account-manager bridge retains invitation issuance and assignable
+role changes. It locks the workspace root before actor/target membership rows,
+matching the TypeScript owner; password updates follow those locks. Auth
+provisioning takes the creation advisory lock and billing-account lock before
+the final user lock and credential/version recheck. Failed rechecks roll back
+the repair. Both stacks serialize baseline grant issuance on the billing
+account and use the same idempotency key; the registration cohort remains frozen.
+
+Python registration, workspace bootstrap and password/session helpers remain
+for operator/demo scripts and unmigrated APIs/MCP. Their removal depends on the
+last caller moving, as recorded in the migration plan; they serve no auth or
+workspace HTTP routes.
