@@ -869,6 +869,50 @@ review creation).
 for robots, sitemaps and HTML parsing. Decide here whether crawl fetching
 needs TLS impersonation; if so, keep only a Python fetch service (section 2).
 
+D7 splits this retirement into dependency-ordered slices. PR 18a moves the
+`internal_link_judgment` and `source_page_inspection` analytics kinds, source
+extraction/presence, content differentiation, and placement settlement. It
+retires their Python writers and terminal-compensation hooks. Python keeps
+citation identity and source projections for answer analysis, report listing
+for Agent tools, and shared web acquisition for the remaining Site Health
+crawler. The core crawl task kinds, page analysis, change intelligence and Site
+Health route family are assigned to pending PR 18b; PR 18 is not complete here.
+
+Node pinned acquisition identifies CiteLadder's crawler and checks robots and
+durable suppression at each hop. The existing owner does not require browser
+TLS impersonation, so the moved source inspector needs no Python fetch service.
+
+Departures in 18a: a truncated extraction cannot establish absence; a positive
+literal match without retained quotation space abstains as ambiguous; headings
+retain DOM order; an organic-only admission no longer consumes the citation
+recurrence marker; placement settlement and its verification enqueue commit
+atomically. Replaced Python tests move to focused TypeScript and PostgreSQL
+coverage; schema integrity and Python bridge tests remain.
+
+PR 18a also adds the TypeScript SiteCrawlTask lease worker and moves `link_metrics`.
+Both Python worker lanes exclude that kind. Metrics and the architecture
+successor commit with acknowledgement under crawl/task locks.
+Python retains terminal-crawl metric admission and its schema-isolation tests;
+graph decisions, persistence, cancellation and queue concurrency move to TS tests.
+PR 18a moves observed architecture and its root-anchored findings. Both Python
+lanes exclude `architecture`; its Python writer, phase and queue admission helper
+are retired. Python retains the persisted architecture reader and schema-isolation
+coverage. Native tests cover hierarchy evidence priority, cycles, incomplete
+coverage, archetype abstention, exact source IDs and replay. Architecture now
+bounds source admission to 500 current-version pages, downgrades capped coverage,
+reads relationships from the parser's structured-data blocks, and rejects numeric
+strings as confidence.
+
+**PR 18b — pending:** move change-intelligence comparison and immutable snapshots
+with their atomic analytics handoff; the page parser, classifier, deterministic
+rules and scoring; the `discover`, `site_setup` and `analyze` executors; durable
+frontier, robots, fetch budgets, crawl admission, cancellation, finalization and
+lease recovery; and all 27 Site Health API operations with their contracts and
+route ownership. Retire replaced Python writers and acquisition paths after
+their callers move. Retain the read-only Agent/MCP, source-identity and entitlement
+bridges until their external callers migrate. PR 18 remains incomplete until 18b
+lands.
+
 ### PR 19: Agent runtime
 
 The Agent tool catalog, runs and outputs, retiring the remaining Opportunity,

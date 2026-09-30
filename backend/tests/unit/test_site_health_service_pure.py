@@ -34,7 +34,6 @@ from app.core.config.task_queue import (
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
 )
-from app.domain.site_health.architecture import _indexability_outcome
 from app.domain.site_health.normalization import (
     CursorScopeError,
     decode_keyset_cursor,
@@ -432,10 +431,3 @@ def test_search_eligibility_uses_only_public_representation_and_indexability() -
     assert _eligibility_state(
         "satisfied", "unknown", "satisfied", "satisfied", task
     ) == ("unknown", "pending")
-
-
-def test_only_determinate_indexability_outcomes_become_booleans() -> None:
-    assert _indexability_outcome("satisfied") is True
-    assert _indexability_outcome("missing") is False
-    assert _indexability_outcome("unknown") is None
-    assert _indexability_outcome("unavailable") is None

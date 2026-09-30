@@ -17,15 +17,34 @@ export class FetchError extends Error {
     this.code = code;
   }
 }
-type FetchOptions = {
+export type FetchOptions = {
   maxBytes: number;
   timeoutSeconds: number;
   redirects: number;
   contentTypes: readonly string[];
   domain?: string;
   signal?: AbortSignal;
+  maxDecodedBytes?: number;
+  gate?: <T>(url: URL, send: () => Promise<T>, signal: AbortSignal) => Promise<T>;
+  authorize?: (url: URL) => Promise<void>;
 };
-type FetchedPage = { url: string; status: number; contentType: string; body: Buffer };
+export type FetchedPage = {
+  url: string;
+  status: number;
+  contentType: string;
+  body: Buffer;
+  charset?: string;
+  headers?: Record<string, string>;
+  redirects?: string[];
+};
+type TransportResult = {
+  status: number;
+  location: string | undefined;
+  type: string;
+  body: Buffer;
+  charset?: string;
+  headers?: Record<string, string>;
+};
 export type WebsiteFetcher = (url: string, options: FetchOptions) => Promise<FetchedPage>;
 type Dns = (host: string) => Promise<readonly { address: string; family: number }[]>;
 
@@ -111,70 +130,86 @@ export async function pinnedRequest(
   options: FetchOptions,
   signal: AbortSignal,
 ) {
-  return new Promise<{ status: number; location: string | undefined; type: string; body: Buffer }>(
-    (resolve, reject) => {
-      const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(
-        url,
-        {
-          agent: false,
-          // Exactly one validated address is selected above; no family race.
-          family: target.family,
-          signal,
-          headers: {
-            accept: options.contentTypes.join(', '),
-            'accept-encoding': 'gzip, deflate, br',
-          },
-          // Keep the URL hostname for Host, TLS SNI and certificate verification.
-          lookup: (_host, _options, callback) => callback(null, target.address, target.family),
+  return new Promise<TransportResult>((resolve, reject) => {
+    const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(
+      url,
+      {
+        agent: false,
+        // Exactly one validated address is selected above; no family race.
+        family: target.family,
+        signal,
+        headers: {
+          'user-agent': policy.web_fetch.user_agent,
+          accept: options.contentTypes.join(', '),
+          'accept-encoding': 'gzip, deflate, br',
         },
-        (response) => {
-          response.on('error', reject);
-          const status = response.statusCode ?? 0;
-          const type = String(response.headers['content-type'] ?? '')
-            .split(';')[0]!
-            .trim()
-            .toLowerCase();
-          if (status >= 300 && status < 400 && response.headers.location) {
-            response.destroy();
-            resolve({ status, location: response.headers.location, type, body: Buffer.alloc(0) });
+        // Keep the URL hostname for Host, TLS SNI and certificate verification.
+        lookup: (_host, _options, callback) => callback(null, target.address, target.family),
+      },
+      (response) => {
+        response.on('error', reject);
+        const status = response.statusCode ?? 0;
+        const type = String(response.headers['content-type'] ?? '')
+          .split(';')[0]!
+          .trim()
+          .toLowerCase();
+        if (status >= 300 && status < 400 && response.headers.location) {
+          response.destroy();
+          resolve({ status, location: response.headers.location, type, body: Buffer.alloc(0) });
+          return;
+        }
+        if (status >= 200 && status < 300 && !options.contentTypes.includes(type)) {
+          response.destroy(new FetchError('content_type'));
+          return;
+        }
+        const chunks: Buffer[] = [];
+        let bytes = 0;
+        response.on('data', (chunk: Buffer) => {
+          bytes += chunk.length;
+          if (bytes > options.maxBytes) {
+            response.destroy(new FetchError('response_too_large'));
             return;
           }
-          if (status >= 200 && status < 300 && !options.contentTypes.includes(type)) {
-            response.destroy(new FetchError('content_type'));
-            return;
-          }
-          const chunks: Buffer[] = [];
-          let bytes = 0;
-          response.on('data', (chunk: Buffer) => {
-            bytes += chunk.length;
-            if (bytes > options.maxBytes) {
-              response.destroy(new FetchError('response_too_large'));
-              return;
-            }
-            chunks.push(chunk);
-          });
-          response.on('end', () => {
-            try {
-              resolve({
-                status,
-                location: undefined,
-                type,
-                body: decodedBody(
-                  Buffer.concat(chunks),
-                  String(response.headers['content-encoding'] ?? ''),
-                  options.maxBytes,
+          chunks.push(chunk);
+        });
+        response.on('end', () => {
+          try {
+            resolve({
+              status,
+              location: undefined,
+              type,
+              body: decodedBody(
+                Buffer.concat(chunks),
+                String(response.headers['content-encoding'] ?? ''),
+                options.maxDecodedBytes ?? options.maxBytes,
+              ),
+              charset:
+                /charset\s*=\s*["']?([^;"'\s]+)/iu.exec(
+                  String(response.headers['content-type'] ?? ''),
+                )?.[1] ?? '',
+              headers: Object.fromEntries(
+                [
+                  'content-type',
+                  'content-length',
+                  'content-encoding',
+                  'x-robots-tag',
+                  'link',
+                  'last-modified',
+                  'strict-transport-security',
+                ].flatMap((key) =>
+                  typeof response.headers[key] === 'string' ? [[key, response.headers[key]]] : [],
                 ),
-              });
-            } catch (error) {
-              reject(error);
-            }
-          });
-        },
-      );
-      request.on('error', reject);
-      request.end();
-    },
-  );
+              ),
+            });
+          } catch (error) {
+            reject(error);
+          }
+        });
+      },
+    );
+    request.on('error', reject);
+    request.end();
+  });
 }
 
 export function createWebsiteFetcher(
@@ -182,28 +217,44 @@ export function createWebsiteFetcher(
   send = pinnedRequest,
 ): WebsiteFetcher {
   return async (value, options) => {
-    const timeout = AbortSignal.timeout(options.timeoutSeconds * 1000);
+    const timeout = options.gate
+      ? new AbortController().signal
+      : AbortSignal.timeout(options.timeoutSeconds * 1000);
     const signal = options.signal ? AbortSignal.any([timeout, options.signal]) : timeout;
     let url = publicUrl(value);
+    const redirects: string[] = [];
     for (let hop = 0; hop <= options.redirects; hop++) {
       signal.throwIfAborted();
       if (options.domain && getDomain(url.hostname) !== options.domain)
         throw new FetchError('out_of_scope');
-      const host = url.hostname.replaceAll(/[[\]]/gu, '');
-      const addresses = isIP(host)
-        ? [{ address: host, family: isIP(host) }]
-        : await abortable(dns(host), signal);
-      if (!addresses.length) throw new FetchError('dns_resolution_failed');
-      for (const target of addresses) validateAddress(target.address);
-      const result = await send(url, addresses[0]!, options, signal);
+      const sendHop = async () => {
+        const hopSignal = AbortSignal.any([
+          signal,
+          AbortSignal.timeout(options.timeoutSeconds * 1000),
+        ]);
+        await options.authorize?.(url);
+        hopSignal.throwIfAborted();
+        const host = url.hostname.replaceAll(/[[\]]/gu, '');
+        const addresses = isIP(host)
+          ? [{ address: host, family: isIP(host) }]
+          : await abortable(dns(host), hopSignal);
+        if (!addresses.length) throw new FetchError('dns_resolution_failed');
+        for (const target of addresses) validateAddress(target.address);
+        return send(url, addresses[0]!, options, hopSignal);
+      };
+      const result = options.gate ? await options.gate(url, sendHop, signal) : await sendHop();
       if (!result.location)
         return {
           url: url.href,
           status: result.status,
           contentType: result.type,
           body: result.body,
+          charset: result.charset,
+          headers: result.headers,
+          redirects,
         };
       url = publicUrl(result.location, url.href);
+      redirects.push(url.href);
     }
     throw new FetchError('redirect_limit');
   };

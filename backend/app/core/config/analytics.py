@@ -360,6 +360,8 @@ ANALYTICS_TASK_KINDS: Final[frozenset[str]] = frozenset(
 # the Python sweeper for every kind.
 ANALYTICS_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
     {
+        ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
+        ANALYTICS_TASK_KIND_INTERNAL_LINK_JUDGMENT,
         ANALYTICS_TASK_KIND_INTERNAL_LINK_PUBLISH,
         ANALYTICS_TASK_KIND_INGEST_REFERRALS,
         ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
@@ -380,6 +382,7 @@ ANALYTICS_PYTHON_TASK_KINDS: Final[frozenset[str]] = (
 # Error token stamped when a claimed kind has no registered executor — a
 # permanent-until-deploy condition, so the worker never retries it.
 ERROR_EXECUTOR_NOT_WIRED: Final = "executor_not_wired"
+ANALYTICS_TERMINAL_COMPENSATION_BATCH: Final = 100
 
 
 class AnalyticsSettings(BaseSettings):

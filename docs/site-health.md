@@ -28,6 +28,15 @@ explicit Run new crawl
 Read endpoints only render persisted projections. They never acquire, classify,
 score, call a model/provider or repair state.
 
+During the TypeScript cutover, `site-health-worker-ts` claims `link_metrics` and
+`architecture` from the existing `site_crawl_tasks` queue. Python's preferred and borrowed
+lanes exclude those kinds. The TypeScript owner locks crawl then task, publishes
+immutable derived evidence and admits successors with acknowledgement in one
+transaction.
+Python retains the other crawl kinds, terminal-crawl admission and lease sweeping.
+Source inspection and internal-link judgments run in the TypeScript analytics
+worker; their failed-task recovery also covers Python-sweeper terminalization.
+
 ## Acquisition and evidence guarantees
 
 The curl transport sends `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)`
