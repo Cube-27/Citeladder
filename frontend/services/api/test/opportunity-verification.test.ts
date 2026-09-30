@@ -453,4 +453,11 @@ it('keeps boolean page facts distinct from numeric expectations', async () => {
     );
   expect(await inspect(true)).toMatchObject({ observed: 1, matched: 1, contradicted: false });
   expect(await inspect(1)).toMatchObject({ observed: 1, matched: 0, contradicted: true });
+  const unspecified = await evidenceFor(
+    db,
+    { ...d, expected_checks: [{ kind: 'page_fact', fact_key: 'secure' }] },
+    source,
+  );
+  expect(unspecified).toMatchObject({ observed: 0, matched: 0, contradicted: false });
+  expect(unspecified.limitations).toContain('page_fact: no expected value');
 });

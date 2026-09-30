@@ -149,7 +149,7 @@ export async function readBusinessMap(db: Database, scope: ProjectScope): Promis
 }
 
 /** Replace the map; surviving entries keep their provenance. */
-export async function updateBusinessMap(
+export function updateBusinessMap(
   db: Database,
   scope: ProjectScope,
   userId: string,

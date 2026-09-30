@@ -252,7 +252,7 @@ async function insertBuyerPrompt(
   return id;
 }
 
-async function persist(db: Database, scope: CommerceScope, batches: Batch[]) {
+function persist(db: Database, scope: CommerceScope, batches: Batch[]) {
   return db.transaction().execute(async (trx) => {
     const contexts = [];
     for (const batch of batches) contexts.push(await targetContext(trx, scope, batch.target));

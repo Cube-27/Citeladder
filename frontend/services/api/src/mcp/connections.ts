@@ -30,7 +30,7 @@ export async function listConnections(
     requires_consent: strings(row.workspace_ids).length === 0,
   }));
 }
-export async function revokeConnection(
+export function revokeConnection(
   db: Database,
   grantId: string,
   scope: { userId: string; workspaceId?: string },

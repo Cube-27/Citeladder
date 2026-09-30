@@ -108,6 +108,46 @@ async function declarations(
     declared_implemented_at: `${row.declared_text}Z`,
   }));
 }
+/** Append one verification observation for a declaration, idempotently per source revision. */
+async function recordVerification(
+  db: Database,
+  task: QueueTask,
+  project: string,
+  source: Source,
+  declaration: Declaration,
+) {
+  const result = await evidenceFor(db, declaration, source);
+  const kind = observationKind(
+    result,
+    Array.isArray(declaration.expected_checks) ? declaration.expected_checks.length : 0,
+  );
+  if (!kind) return;
+  const audit = source.kind === 'audit' ? source.id : null;
+  const comparison = await buildVerificationResult(db, declaration, audit);
+  await db
+    .insertInto('opportunity_verification_events')
+    .values({
+      id: randomUUID(),
+      workspace_id: task.workspace_id,
+      project_id: project,
+      implementation_event_id: declaration.id,
+      observation_kind: kind,
+      observed_at: source.observed_at,
+      created_at: sql`now()`,
+      crawl_id: source.kind === 'site_crawl' ? source.id : null,
+      audit_id: audit,
+      source_analysis_ids: sql`${JSON.stringify([...result.analysis_ids])}::jsonb`,
+      source_rule_evaluation_ids: sql`${JSON.stringify([...result.rule_evaluation_ids])}::jsonb`,
+      source_metric_ids: sql`${JSON.stringify([...result.metric_ids])}::jsonb`,
+      result: sql`${JSON.stringify(comparison)}::jsonb`,
+      verifier_version: p.IMPLEMENTATION_VERIFIER_VERSION,
+      limitations: sql`${JSON.stringify(result.limitations)}::jsonb`,
+      idempotency_key: `verification:${declaration.id}:${source.kind}:${source.id}:${sourceRevision(source.observed_at)}:${p.IMPLEMENTATION_VERIFIER_VERSION}`,
+    })
+    .onConflict((oc) => oc.columns(['workspace_id', 'idempotency_key']).doNothing())
+    .execute();
+}
+
 /** The queue claim is already committed; this transaction only reads persisted evidence. */
 export const verifyImplementationEvents: Executor = async (task, context) => {
   const project = await taskProject(context.db, task);
@@ -116,41 +156,9 @@ export const verifyImplementationEvents: Executor = async (task, context) => {
     let after: Declaration | undefined;
     for (;;) {
       const rows = await declarations(db, task, project, source, after);
-      for (const declaration of rows) {
-        const result = await evidenceFor(db, declaration, source);
-        const kind = observationKind(
-          result,
-          Array.isArray(declaration.expected_checks) ? declaration.expected_checks.length : 0,
-        );
-        if (!kind) continue;
-        const comparison = await buildVerificationResult(
-          db,
-          declaration,
-          source.kind === 'audit' ? source.id : null,
-        );
-        await db
-          .insertInto('opportunity_verification_events')
-          .values({
-            id: randomUUID(),
-            workspace_id: task.workspace_id,
-            project_id: project,
-            implementation_event_id: declaration.id,
-            observation_kind: kind,
-            observed_at: source.observed_at,
-            created_at: sql`now()`,
-            crawl_id: source.kind === 'site_crawl' ? source.id : null,
-            audit_id: source.kind === 'audit' ? source.id : null,
-            source_analysis_ids: sql`${JSON.stringify([...result.analysis_ids])}::jsonb`,
-            source_rule_evaluation_ids: sql`${JSON.stringify([...result.rule_evaluation_ids])}::jsonb`,
-            source_metric_ids: sql`${JSON.stringify([...result.metric_ids])}::jsonb`,
-            result: sql`${JSON.stringify(comparison)}::jsonb`,
-            verifier_version: p.IMPLEMENTATION_VERIFIER_VERSION,
-            limitations: sql`${JSON.stringify(result.limitations)}::jsonb`,
-            idempotency_key: `verification:${declaration.id}:${source.kind}:${source.id}:${sourceRevision(source.observed_at)}:${p.IMPLEMENTATION_VERIFIER_VERSION}`,
-          })
-          .onConflict((oc) => oc.columns(['workspace_id', 'idempotency_key']).doNothing())
-          .execute();
-      }
+      // One transaction connection runs these in order; concurrency would not overlap them.
+      for (const declaration of rows)
+        await recordVerification(db, task, project, source, declaration); // NOSONAR
       if (rows.length < p.IMPLEMENTATION_VERIFICATION_BATCH_MAX) break;
       after = rows.at(-1);
     }

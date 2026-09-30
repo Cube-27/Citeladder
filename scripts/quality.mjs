@@ -39,11 +39,14 @@ for (const scope of requestedScopes) {
   if (!validScopes.has(scope)) throw new Error(`Unknown quality scope: ${scope}`);
 }
 
+// Developer tooling runs `git` from the caller's PATH, like every other command
+// this script launches; a pinned absolute path would not be portable.
+function git(arguments_, options = {}) {
+  return execFileSync('git', ['-C', repositoryRoot, ...arguments_], options); // NOSONAR: trusted PATH.
+}
+
 function gitPaths(arguments_) {
-  const output = execFileSync('git', ['-C', repositoryRoot, ...arguments_], {
-    encoding: 'utf8',
-  });
-  return output
+  return git(arguments_, { encoding: 'utf8' })
     .split(/\r?\n/u)
     .filter(Boolean)
     .map((path) => path.replaceAll('\\', '/'));
@@ -126,12 +129,8 @@ const passRecordPath = join(gitDirectory, 'quality-pass.json');
 
 function treeFingerprint() {
   const hash = createHash('sha256');
-  hash.update(execFileSync('git', ['-C', repositoryRoot, 'rev-parse', 'HEAD']));
-  hash.update(
-    execFileSync('git', ['-C', repositoryRoot, 'diff', 'HEAD', '--binary', '--no-ext-diff'], {
-      maxBuffer: 512 * 1024 * 1024,
-    }),
-  );
+  hash.update(git(['rev-parse', 'HEAD']));
+  hash.update(git(['diff', 'HEAD', '--binary', '--no-ext-diff'], { maxBuffer: 512 * 1024 * 1024 }));
   for (const path of gitPaths(['ls-files', '--others', '--exclude-standard']).sort()) {
     hash.update(path);
     hash.update(readFileSync(join(repositoryRoot, path)));

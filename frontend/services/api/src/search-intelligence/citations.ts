@@ -58,7 +58,7 @@ function selectionHash(parentId: string, auditIds: string[], citationIds: string
   );
 }
 
-export async function deriveCitationMatches(
+export function deriveCitationMatches(
   db: Database,
   scope: Scope,
   parentDatasetId: string,

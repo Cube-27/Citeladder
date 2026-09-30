@@ -24,7 +24,7 @@ export const offeringMaps = (business: Record<string, unknown>): OfferingMap[] =
   businessMap.parse(business.business_map ?? {}).offerings;
 
 /** A project without topics gets one generated topic per confirmed offering. */
-async function recoverTopics(trx: Database, projectId: string, offerings: string[]) {
+function recoverTopics(trx: Database, projectId: string, offerings: string[]) {
   const names = new Map<string, string>();
   for (const offering of offerings) {
     const name = offering
@@ -67,7 +67,7 @@ function fieldSources(business: Record<string, unknown>, sources: Record<string,
   return result;
 }
 
-export async function generationContext(
+export function generationContext(
   db: Database,
   workspaceId: string,
   setId: string,

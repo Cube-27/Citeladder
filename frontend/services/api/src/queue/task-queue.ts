@@ -97,13 +97,13 @@ export class TaskQueue {
   }
 
   /** Claim up to `limit` eligible rows of `kinds` for `owner`, committed. */
-  async claim(options: {
+  claim(options: {
     owner: string;
     kinds: readonly string[];
     limit?: number;
   }): Promise<QueueTask[]> {
     const { owner, kinds, limit = 1 } = options;
-    if (kinds.length === 0) return [];
+    if (kinds.length === 0) return Promise.resolve([]);
     const now = this.#now();
     const leaseExpires = addSeconds(now, this.#leaseTtlSeconds);
     return this.#db.transaction().execute(async (trx) => {

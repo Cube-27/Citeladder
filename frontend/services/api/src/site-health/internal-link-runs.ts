@@ -18,7 +18,7 @@ import { loadLinkPages, type LinkScope } from './internal-link-pages.ts';
 const { succeeded, failed, cancelled } = policy.task_queue.statuses;
 const terminalTaskStatuses = [succeeded, failed, cancelled];
 
-export async function latestLinkCrawl(db: Database, scope: LinkScope) {
+export function latestLinkCrawl(db: Database, scope: LinkScope) {
   return db
     .selectFrom('site_crawls')
     .select('id')

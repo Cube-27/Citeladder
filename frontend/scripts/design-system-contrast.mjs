@@ -71,6 +71,45 @@ function contrastRatio(first, second) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+/** Pairs the design system deliberately keeps off-limits for body text. */
+const isExemptPair = (textToken, surfaceToken) =>
+  textToken === '--color-subtle' &&
+  ['--color-panel-tonal', '--color-active'].includes(surfaceToken);
+
+function neutralTextViolations(source, scope, cssLabel) {
+  const palette = resolvePalette(source, scope);
+  const violations = [];
+  for (const textToken of NEUTRAL_TEXT_TOKENS) {
+    for (const surfaceToken of LIGHT_SURFACE_TOKENS) {
+      if (isExemptPair(textToken, surfaceToken)) continue;
+      const ink = palette.get(textToken);
+      const surface = palette.get(surfaceToken);
+      if (!isHex(ink) || !isHex(surface)) {
+        violations.push(`${cssLabel}: ${scope} cannot resolve ${textToken} on ${surfaceToken}`);
+      } else if (contrastRatio(ink, surface) < MINIMUM_NORMAL_TEXT_CONTRAST) {
+        violations.push(
+          `${cssLabel}: ${scope} ${textToken} on ${surfaceToken} needs 4.5:1 contrast`,
+        );
+      }
+    }
+  }
+  return violations;
+}
+
+function darkChartViolations(source, cssLabel) {
+  const darkPalette = resolvePalette(source, ":root[data-theme='dark']");
+  const surface = darkPalette.get('--color-panel');
+  const violations = [];
+  for (let index = 1; index <= 8; index += 1) {
+    const chartToken = `--color-chart-${index}`;
+    const mark = darkPalette.get(chartToken);
+    if (!isHex(mark) || !isHex(surface) || contrastRatio(mark, surface) < 3) {
+      violations.push(`${cssLabel}: dark ${chartToken} needs 3:1 contrast on the product panel`);
+    }
+  }
+  return violations;
+}
+
 export function textContrastViolations(root) {
   const cssPath = join(root, ...TOKEN_CSS.split('/'));
   const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
@@ -86,36 +125,8 @@ export function textContrastViolations(root) {
     '[data-public-surface]',
     ":root[data-theme='dark']",
   ]) {
-    const palette = resolvePalette(source, scope);
-    for (const textToken of NEUTRAL_TEXT_TOKENS) {
-      for (const surfaceToken of LIGHT_SURFACE_TOKENS) {
-        if (
-          textToken === '--color-subtle' &&
-          ['--color-panel-tonal', '--color-active'].includes(surfaceToken)
-        )
-          continue;
-        const ink = palette.get(textToken);
-        const surface = palette.get(surfaceToken);
-        if (!isHex(ink) || !isHex(surface)) {
-          violations.push(`${cssLabel}: ${scope} cannot resolve ${textToken} on ${surfaceToken}`);
-        } else if (contrastRatio(ink, surface) < MINIMUM_NORMAL_TEXT_CONTRAST) {
-          violations.push(
-            `${cssLabel}: ${scope} ${textToken} on ${surfaceToken} needs 4.5:1 contrast`,
-          );
-        }
-      }
-    }
+    violations.push(...neutralTextViolations(source, scope, cssLabel));
   }
-
-  const darkPalette = resolvePalette(source, ":root[data-theme='dark']");
-  for (let index = 1; index <= 8; index += 1) {
-    const chartToken = `--color-chart-${index}`;
-    const mark = darkPalette.get(chartToken);
-    const surface = darkPalette.get('--color-panel');
-    if (!isHex(mark) || !isHex(surface) || contrastRatio(mark, surface) < 3) {
-      violations.push(`${cssLabel}: dark ${chartToken} needs 3:1 contrast on the product panel`);
-    }
-  }
-
+  violations.push(...darkChartViolations(source, cssLabel));
   return violations;
 }

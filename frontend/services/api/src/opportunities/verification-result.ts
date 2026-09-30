@@ -105,7 +105,7 @@ async function visibilityLeg(
     .executeTakeFirst();
   return visibilityMeasurementLeg(before ?? null, after ?? null);
 }
-async function referralSnapshot(ctx: Context, after: boolean) {
+function referralSnapshot(ctx: Context, after: boolean) {
   return ctx.scope
     .selectFrom(ctx.db, 'ai_referrals_snapshots')
     .selectAll()

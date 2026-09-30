@@ -287,7 +287,7 @@ async function writeRefresh(
  * latest usable ones are read. `skipIfCurrent` returns the latest snapshot
  * when it already describes these exact sources and versions.
  */
-export async function recomputeOpportunities(
+export function recomputeOpportunities(
   db: Database,
   scope: Scope,
   options: { auditId?: string | null; siteCrawlId?: string | null; skipIfCurrent?: boolean } = {},

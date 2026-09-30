@@ -137,7 +137,7 @@ async function targets(
   return { target_site_url_ids: selected, target_external_url: null };
 }
 
-export async function declareAction(
+export function declareAction(
   db: Database,
   workspaceId: string,
   actionId: string,

@@ -180,6 +180,27 @@ def _reused_dataset(snapshot: SearchIntelligenceDataset) -> dict[str, Any]:
     }
 
 
+def _selection_depth(selection: DatasetSelection) -> int:
+    if selection.kind == "backlink_history":
+        return HISTORY_MAX_OBSERVATIONS
+    if selection.kind in {"footprint", "backlink_summary"}:
+        return 1
+    return selection.depth
+
+
+def _request_options(
+    payload: ReviewCreate, selection: DatasetSelection, now: datetime
+) -> RequestOptions:
+    return {
+        "research_scope": payload.research_scope or "domain_subdomains",
+        "grouping": selection.grouping,
+        "order": selection.order,
+        "min_volume": selection.min_volume,
+        "date_from": (now.date() - timedelta(days=HISTORY_DAYS)).isoformat(),
+        "date_to": (now.date() - timedelta(days=1)).isoformat(),
+    }
+
+
 async def _build_call_plan(
     session: AsyncSession,
     *,
@@ -205,20 +226,8 @@ async def _build_call_plan(
         )
         if comparison is not None:
             comparison = resolved_competitors[comparison.identity]
-        if selection.kind == "backlink_history":
-            depth = HISTORY_MAX_OBSERVATIONS
-        elif selection.kind in {"footprint", "backlink_summary"}:
-            depth = 1
-        else:
-            depth = selection.depth
-        request_options: RequestOptions = {
-            "research_scope": payload.research_scope or "domain_subdomains",
-            "grouping": selection.grouping,
-            "order": selection.order,
-            "min_volume": selection.min_volume,
-            "date_from": (now.date() - timedelta(days=HISTORY_DAYS)).isoformat(),
-            "date_to": (now.date() - timedelta(days=1)).isoformat(),
-        }
+        depth = _selection_depth(selection)
+        request_options = _request_options(payload, selection, now)
         endpoint, first_request = build_request(
             kind=selection.kind,
             target=dataset_target,

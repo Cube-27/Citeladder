@@ -209,18 +209,59 @@ export function detectCtrGap(rows: QueryInput[]): Evaluation {
   };
 }
 
-export function detectTrends(rows: QueryInput[], windowEnd: string): Evaluation {
+function hasTrendCoverage(rows: QueryInput[], windowEnd: string) {
   const dates = new Set(rows.map((r) => r.observed_date));
   for (let i = 0; i < p.DEMAND_TREND_REQUIRED_DAYS; i++)
-    if (!dates.has(addDays(windowEnd, -i)))
-      return {
-        state: 'insufficient_history',
-        candidates: [],
-        counts_by_classification: classificationCounts(rows),
-        limitations: [`At least ${p.DEMAND_TREND_REQUIRED_DAYS} days of coverage are required.`],
-      };
+    if (!dates.has(addDays(windowEnd, -i))) return false;
+  return true;
+}
+
+/** Impressions and rows in the prior and recent comparison windows; other dates are ignored. */
+function windowTotals(group: QueryInput[], windowEnd: string) {
   const recentStart = addDays(windowEnd, -(p.DEMAND_TREND_WINDOW_DAYS - 1));
   const priorStart = addDays(recentStart, -p.DEMAND_TREND_WINDOW_DAYS);
+  let prior = 0,
+    recent = 0;
+  const rows: QueryInput[] = [];
+  for (const row of group) {
+    if (row.observed_date >= priorStart && row.observed_date < recentStart)
+      prior += row.impressions;
+    else if (row.observed_date >= recentStart && row.observed_date <= windowEnd)
+      recent += row.impressions;
+    else continue;
+    rows.push(row);
+  }
+  return { prior, recent, rows };
+}
+
+function trendType(prior: number, recent: number) {
+  if (
+    prior + recent < p.DEMAND_TREND_MIN_TOTAL_IMPRESSIONS ||
+    prior < p.DEMAND_TREND_MIN_WINDOW_IMPRESSIONS ||
+    recent < p.DEMAND_TREND_MIN_WINDOW_IMPRESSIONS
+  )
+    return null;
+  if (
+    recent >= prior * p.DEMAND_TREND_EMERGING_RATIO &&
+    recent - prior >= p.DEMAND_TREND_MIN_ABSOLUTE_CHANGE
+  )
+    return p.DEMAND_SIGNAL_EMERGING_QUERY;
+  if (
+    recent <= prior * p.DEMAND_TREND_DECLINING_RATIO &&
+    prior - recent >= p.DEMAND_TREND_MIN_ABSOLUTE_CHANGE
+  )
+    return p.DEMAND_SIGNAL_DECLINING_QUERY;
+  return null;
+}
+
+export function detectTrends(rows: QueryInput[], windowEnd: string): Evaluation {
+  if (!hasTrendCoverage(rows, windowEnd))
+    return {
+      state: 'insufficient_history',
+      candidates: [],
+      counts_by_classification: classificationCounts(rows),
+      limitations: [`At least ${p.DEMAND_TREND_REQUIRED_DAYS} days of coverage are required.`],
+    };
   const candidates: Candidate[] = [];
   const groups = grouped(
     rows.filter((r) => r.classification === 'non_branded'),
@@ -228,31 +269,11 @@ export function detectTrends(rows: QueryInput[], windowEnd: string): Evaluation 
   );
   for (const query of [...groups.keys()].sort(compareText)) {
     const group = groups.get(query)!;
-    let prior = 0,
-      recent = 0;
-    for (const row of group) {
-      if (row.observed_date >= priorStart && row.observed_date < recentStart)
-        prior += row.impressions;
-      else if (row.observed_date >= recentStart && row.observed_date <= windowEnd)
-        recent += row.impressions;
-    }
-    if (
-      prior + recent < p.DEMAND_TREND_MIN_TOTAL_IMPRESSIONS ||
-      prior < p.DEMAND_TREND_MIN_WINDOW_IMPRESSIONS ||
-      recent < p.DEMAND_TREND_MIN_WINDOW_IMPRESSIONS
-    )
-      continue;
-    const type =
-      recent >= prior * p.DEMAND_TREND_EMERGING_RATIO &&
-      recent - prior >= p.DEMAND_TREND_MIN_ABSOLUTE_CHANGE
-        ? p.DEMAND_SIGNAL_EMERGING_QUERY
-        : recent <= prior * p.DEMAND_TREND_DECLINING_RATIO &&
-            prior - recent >= p.DEMAND_TREND_MIN_ABSOLUTE_CHANGE
-          ? p.DEMAND_SIGNAL_DECLINING_QUERY
-          : null;
+    const { prior, recent, rows: evidence } = windowTotals(group, windowEnd);
+    const type = trendType(prior, recent);
     if (!type) continue;
-    const pages = unique(group.filter(resolved).map((r) => r.resolved_page_url));
-    const a = aggregate(group);
+    const pages = unique(evidence.filter(resolved).map((r) => r.resolved_page_url));
+    const a = aggregate(evidence);
     candidates.push(
       queryCandidate(
         type,

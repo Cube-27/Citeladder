@@ -163,7 +163,7 @@ export class AnalyticsWorker {
   }
 
   /** The one locked terminal write per dispatch. */
-  async #finalize(taskId: string, error: Error | null): Promise<boolean> {
+  #finalize(taskId: string, error: Error | null): Promise<boolean> {
     return this.#db.transaction().execute(async (trx) => {
       const row = await trx
         .selectFrom('analytics_tasks')

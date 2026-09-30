@@ -186,7 +186,7 @@ async function importRow(
   return outcome(rowNumber, changed ? 'updated' : 'unchanged', product.id);
 }
 
-export async function importCatalog(
+export function importCatalog(
   db: Database,
   scope: CommerceScope,
   input: { content: string; filename: string; content_type: string },

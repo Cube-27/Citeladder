@@ -66,15 +66,16 @@ function checkTypeScriptFamily(
   }
 }
 
-function checkIngress(
-  inputs: OwnershipInputs,
+/** Each served path's owning stack, reporting paths that two stacks would share. */
+function pathOwners(
+  manifest: OwnershipInputs['manifest'],
   served: Map<string, Operation[]>[],
   failures: string[],
-): void {
+): Map<string, { stack: RouteStack; family: string }> {
   const owners = new Map<string, { stack: RouteStack; family: string }>();
   for (const families of served) {
     for (const [family, operations] of families) {
-      const stack = inputs.manifest[family];
+      const stack = manifest[family];
       if (!stack) continue;
       for (const { path } of operations) {
         const existing = owners.get(path);
@@ -87,16 +88,66 @@ function checkIngress(
       }
     }
   }
+  return owners;
+}
+
+/** The stacks an ingress sends `path` to, or null when that is exactly `stack`. */
+function misrouted(route: (path: string) => Set<IngressOutcome>, path: string, stack: RouteStack) {
+  const reached = [...route(path)].filter((outcome) => outcome !== 'respond');
+  return reached.length === 1 && reached[0] === stack ? null : reached.join(', ');
+}
+
+function checkIngress(
+  inputs: OwnershipInputs,
+  served: Map<string, Operation[]>[],
+  failures: string[],
+): void {
+  const owners = pathOwners(inputs.manifest, served, failures);
   for (const [file, route] of Object.entries(inputs.ingress)) {
     for (const [path, { stack, family }] of owners) {
-      const reached = [...route(path.replaceAll(/\{[^}]+\}/gu, SAMPLE_SEGMENT))].filter(
-        (outcome) => outcome !== 'respond',
-      );
-      if (reached.length !== 1 || reached[0] !== stack) {
+      // The negated class cannot match the closing brace, so matching is linear.
+      const sample = path.replaceAll(/\{[^}]+\}/gu, SAMPLE_SEGMENT); // NOSONAR
+      const reached = misrouted(route, sample, stack);
+      if (reached !== null)
         failures.push(
-          `${file}: ${path} ('${family}') must reach only ${stack}, but reaches [${reached.join(', ')}]`,
+          `${file}: ${path} ('${family}') must reach only ${stack}, but reaches [${reached}]`,
         );
-      }
+    }
+    for (const path of inputs.protocolPaths ?? []) {
+      const reached = misrouted(route, path, 'typescript');
+      if (reached !== null)
+        failures.push(
+          `${file}: protocol ${path} must reach only typescript, but reaches [${reached}]`,
+        );
+    }
+  }
+}
+
+/** Every served family is in the manifest, on the stack the manifest names. */
+function checkManifest(
+  manifest: OwnershipInputs['manifest'],
+  served: { python: Map<string, Operation[]>; typescript: Map<string, Operation[]> },
+  failures: string[],
+): void {
+  for (const family of served.python.keys()) {
+    if (!(family in manifest)) {
+      failures.push(`Python family '${family}' is missing from the route-ownership manifest`);
+    }
+  }
+  for (const family of served.typescript.keys()) {
+    if (manifest[family] !== 'typescript') {
+      failures.push(
+        `The TypeScript service serves '${family}', which the manifest assigns to ${manifest[family] ?? 'no stack'}`,
+      );
+    }
+  }
+  for (const [family, stack] of Object.entries(manifest)) {
+    if (stack === 'typescript') {
+      checkTypeScriptFamily(family, served, failures);
+    } else if (!served.python.has(family)) {
+      failures.push(
+        `The manifest assigns '${family}' to python, but Python serves no route for it`,
+      );
     }
   }
 }
@@ -108,36 +159,7 @@ export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
     python: familyOperations(inputs.python, inputs.apiPrefix, 'python', failures),
     typescript: familyOperations(inputs.typescript, inputs.apiPrefix, 'typescript', failures),
   };
-  for (const family of served.python.keys()) {
-    if (!(family in inputs.manifest)) {
-      failures.push(`Python family '${family}' is missing from the route-ownership manifest`);
-    }
-  }
-  for (const family of served.typescript.keys()) {
-    if (inputs.manifest[family] !== 'typescript') {
-      failures.push(
-        `The TypeScript service serves '${family}', which the manifest assigns to ${inputs.manifest[family] ?? 'no stack'}`,
-      );
-    }
-  }
-  for (const [family, stack] of Object.entries(inputs.manifest)) {
-    if (stack === 'typescript') {
-      checkTypeScriptFamily(family, served, failures);
-    } else if (!served.python.has(family)) {
-      failures.push(
-        `The manifest assigns '${family}' to python, but Python serves no route for it`,
-      );
-    }
-  }
+  checkManifest(inputs.manifest, served, failures);
   checkIngress(inputs, [served.python, served.typescript], failures);
-  for (const [file, route] of Object.entries(inputs.ingress)) {
-    for (const path of inputs.protocolPaths ?? []) {
-      const reached = [...route(path)].filter((outcome) => outcome !== 'respond');
-      if (reached.length !== 1 || reached[0] !== 'typescript')
-        failures.push(
-          `${file}: protocol ${path} must reach only typescript, but reaches [${reached.join(', ')}]`,
-        );
-    }
-  }
   return failures;
 }

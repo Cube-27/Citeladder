@@ -63,7 +63,7 @@ export async function authenticateMcp(
     ? { userId: row.user_id, grantId: row.id, workspaceIds, tokenHash: digest }
     : null;
 }
-export async function consentableWorkspaces(db: Database, userId: string) {
+export function consentableWorkspaces(db: Database, userId: string) {
   return db
     .selectFrom('workspaces as w')
     .innerJoin('workspace_members as m', 'm.workspace_id', 'w.id')
@@ -84,7 +84,7 @@ export async function consentableWorkspaces(db: Database, userId: string) {
     .orderBy('w.id')
     .execute();
 }
-export async function completeConsent(
+export function completeConsent(
   db: Database,
   config: ServiceConfig,
   mcp: McpConfig,
@@ -148,7 +148,7 @@ export async function completeConsent(
     return destination.href;
   });
 }
-export async function exchangeToken(
+export function exchangeToken(
   db: Database,
   config: ServiceConfig,
   mcp: McpConfig,
