@@ -92,6 +92,7 @@ it('preserves recorded research metadata and enforces a shared call budget befor
     {
       results: [
         {
+          source_id: 'recorded-source',
           url: 'https://acme.com/about',
           title: 'Acme',
           snippet: 'Recorded facts',
@@ -103,6 +104,7 @@ it('preserves recorded research metadata and enforces a shared call budget befor
     },
     {
       data: {
+        source_id: 'recorded-page',
         url: 'https://acme.com/company',
         title: 'Company',
         markdown: 'Recorded full page',
@@ -120,6 +122,8 @@ it('preserves recorded research metadata and enforces a shared call budget befor
     published_at: '2025-01-01T00:00:00Z',
     acquired_at: '2026-03-02T00:00:00Z',
     query_ref: 'recorded-query',
+    source_id: 'recorded-page',
+    parent_source_id: 'recorded-source',
     live: false,
   });
   expect(
@@ -154,21 +158,22 @@ it('seeds recognizable domain spellings without expanding an unrelated brand', (
   expect(seedBrandAliases('bestandless', ['bestandless.com'])).toEqual([]);
 });
 it('keeps identity fixed while retrying malformed provisional competitors', async () => {
+  const page = extractPage(
+    Buffer.from('<title>Acme</title><p>Analytics services</p>'),
+    'https://acme.com/',
+  );
+  const ref = `fp-${page.source_id}`;
   const replies = [
     {
       status: 'ready',
       profile: { category: 'Analytics', description: 'Recorded business evidence' },
       signature: { category: 'Analytics' },
-      field_evidence_refs: { description: ['fp-1'] },
+      field_evidence_refs: { description: [ref] },
     },
     { competitors: 'invalid' },
     { competitors: [{ name: 'Globex', domains: ['globex.com'], aliases: [] }] },
   ];
   const { gateway, transport } = recordedGateway(replies);
-  const page = extractPage(
-    Buffer.from('<title>Acme</title><p>Analytics services</p>'),
-    'https://acme.com/',
-  );
   const result = await researchBrand(
     discoveryCreate.parse({ brand_name: 'Acme', website_url: 'acme.com', primary_market: 'US' }),
     { url: page.url, domain: 'acme.com', page, warning: '' },
@@ -189,7 +194,7 @@ it('keeps identity fixed while retrying malformed provisional competitors', asyn
     ['competitor_suggestions', 'failed'],
     ['competitor_suggestions', 'succeeded'],
   ]);
-  expect(result.snapshot.field_evidence_refs).toEqual({ description: ['fp-1'] });
+  expect(result.snapshot.field_evidence_refs).toEqual({ description: [ref] });
 });
 it.each(['ready', 'failed'] as const)(
   'reports competitor search %s while retaining successful model suggestions',
@@ -276,6 +281,23 @@ it('keeps a proven oversized site reviewable despite a failed HTTP fallback', as
     warning: 'research_degraded',
   });
 });
+it('preserves transient transport errors and rejects unrelated first-party redirects', async () => {
+  const error = new FetchError('dns_resolution_failed');
+  await expect(
+    resolveSite('example.com', async () => {
+      throw error;
+    }),
+  ).rejects.toBe(error);
+  const send = vi.fn(async () => ({
+    status: 302,
+    location: 'https://unrelated.com/',
+    type: 'text/html',
+    body: Buffer.alloc(0),
+  }));
+  const fetcher = createWebsiteFetcher(async () => [{ address: '93.184.216.34', family: 4 }], send);
+  await expect(resolveSite('example.com', fetcher)).rejects.toMatchObject({ code: 'out_of_scope' });
+  expect(send).toHaveBeenCalledTimes(1);
+});
 it('extracts visible text and ranks offering navigation while dropping active subtrees', () => {
   const page = extractPage(
     Buffer.from(
@@ -286,6 +308,13 @@ it('extracts visible text and ranks offering navigation while dropping active su
   expect(page.text).toContain('Real analytics services');
   expect(page.text).not.toContain('Invented');
   expect(offeringLinks([page]).map((item) => item.label)).toEqual(['Analytics']);
+  expect(offeringLinks([page])[0]).toMatchObject({
+    source_id: page.source_id,
+    processing_version: page.processing_version,
+  });
+  expect(extractPage(Buffer.from('Different capture'), page.url).source_id).not.toBe(
+    page.source_id,
+  );
   expect(page.icons).toEqual(['https://example.com/icon.png']);
   expect(rasterType(Buffer.from('<svg>script</svg>'))).toBeNull();
   expect(rasterType(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))).toBe('image/png');

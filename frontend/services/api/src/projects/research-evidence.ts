@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
@@ -7,6 +9,9 @@ import { discoverySettings } from './discovery-inputs.ts';
 import type { ResolvedSite } from './site-resolution.ts';
 
 export type ResearchEvidence = {
+  source_id: string;
+  processing_version: string;
+  parent_source_id: string | null;
   evidence_ref: string;
   source_url: string;
   title: string;
@@ -57,6 +62,12 @@ function evidence(
   kind: ResearchEvidence['source_kind'],
 ): ResearchEvidence {
   return {
+    source_id: ref,
+    processing_version:
+      kind === 'first_party'
+        ? policy.brand_evidence.version
+        : policy.discovery.constants.keenable_research_version,
+    parent_source_id: null,
     evidence_ref: ref,
     source_url: url,
     title,
@@ -98,15 +109,17 @@ export async function collectFirstParty(site: ResolvedSite, fetcher: WebsiteFetc
   );
   for (const outcome of outcomes)
     if (outcome.status === 'fulfilled' && outcome.value) pages.push(outcome.value);
-  const items = pages.map((page, index) =>
-    evidence(
-      `fp-${index + 1}`,
+  const items = pages.map((page) => ({
+    ...evidence(
+      `fp-${page.source_id}`,
       page.url,
       page.title,
       [page.title, page.description, page.text].filter(Boolean).join('\n'),
       'first_party',
     ),
-  );
+    source_id: page.source_id,
+    processing_version: page.processing_version,
+  }));
   return {
     pages,
     items: boundedEvidence(items, cfg.max_total_chars),
@@ -114,6 +127,8 @@ export async function collectFirstParty(site: ResolvedSite, fetcher: WebsiteFetc
   };
 }
 const searchResult = z.object({
+  source_id: z.string().optional(),
+  id: z.union([z.string(), z.number()]).optional(),
   title: z.string().default(''),
   url: z.string(),
   snippet: z.string().default(''),
@@ -172,10 +187,13 @@ export function createResearchClient(
         .array(z.unknown())
         .parse(body.results ?? body.data)
         .slice(0, maximum);
-      return results.flatMap((raw, index) => {
+      return results.flatMap((raw) => {
         const parsed = searchResult.safeParse(raw);
         if (!parsed.success) return [];
         const item = parsed.data;
+        const sourceId =
+          item.source_id ??
+          String(item.id ?? createHash('sha256').update(JSON.stringify(raw)).digest('hex'));
         try {
           publicUrl(item.url);
         } catch {
@@ -184,7 +202,7 @@ export function createResearchClient(
         return [
           {
             ...evidence(
-              `${prefix}-${index + 1}`,
+              `keenable-${sourceId}`,
               item.url,
               item.title,
               (item.snippet || item.description).slice(0, settings.keenable_snippet_max_chars),
@@ -192,6 +210,7 @@ export function createResearchClient(
             ),
             published_at: item.published_at,
             acquired_at: item.acquired_at,
+            source_id: sourceId,
             query_ref: prefix,
           },
         ];
@@ -208,13 +227,23 @@ export function createResearchClient(
       const text = z.string().parse(body.markdown ?? body.content ?? body.text ?? '');
       const sourceUrl = z.string().parse(body.url ?? item.source_url);
       publicUrl(sourceUrl);
+      const sourceId = z
+        .union([z.string(), z.number()])
+        .transform(String)
+        .parse(
+          body.source_id ??
+            body.id ??
+            createHash('sha256').update(JSON.stringify(body)).digest('hex'),
+        );
       return {
         ...item,
         source_url: sourceUrl,
         title: z.string().parse(body.title ?? item.title),
         published_at: z.string().parse(body.published_at ?? item.published_at),
         acquired_at: z.string().parse(body.acquired_at ?? item.acquired_at),
-        evidence_ref: `${item.evidence_ref}-fetch`,
+        source_id: sourceId,
+        parent_source_id: item.source_id,
+        evidence_ref: `keenable-fetch-${sourceId}`,
         text: text.slice(0, settings.keenable_fetch_max_chars),
         source_kind: 'external_fetch' as const,
         live,

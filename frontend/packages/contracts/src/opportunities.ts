@@ -204,6 +204,9 @@ export const commandCenterSchema = responseObject({
     benchmark_mode: z.string(),
     logical_engines: z.array(z.string()),
     comparable_audit_id: uuid().nullable(),
+    metric_snapshot_id: uuid().nullable().default(null),
+    analyzer_version: z.string().nullable().default(null),
+    scoring_rule_version: z.string().nullable().default(null),
   }).nullable(),
   state: responseObject({
     visibility: commandCenterMetricSchema,
@@ -225,6 +228,15 @@ export const commandCenterSchema = responseObject({
     since_audit_id: uuid().nullable(),
     count: z.number().int(),
     titles: z.array(z.string()),
+    evidence: z
+      .array(
+        responseObject({
+          action_id: uuid(),
+          implementation_event_ids: z.array(uuid()),
+          verification_event_ids: z.array(uuid()),
+        }),
+      )
+      .default([]),
   }),
   report_available: z.boolean(),
   stale: z.boolean(),

@@ -87,7 +87,7 @@ export function discoveryCatalog() {
     prompt_cohorts: ['core', 'brand_diagnostic', 'comparison'],
   };
 }
-export async function createDiscovery(
+export function createDiscovery(
   db: Database,
   workspaceId: string,
   input: DiscoveryInput,
@@ -188,13 +188,15 @@ export async function createDiscovery(
 }
 function confirmedCompetitors(input: DiscoveryCompletion, brandName: string, owned: string[]) {
   const names = new Set([brandName.toLowerCase()]);
+  const seenDomains = new Set(owned);
   return input.competitors.map((item) => {
     if (names.has(item.name.toLowerCase()))
       throw new ApiError(409, 'Competitors must be unique and distinct from the brand');
     names.add(item.name.toLowerCase());
     const domains = [...new Set(item.domains.map((domain) => websiteIdentity(domain).domain))];
-    if (!domains.length || domains.some((domain) => owned.includes(domain)))
+    if (!domains.length || domains.some((domain) => seenDomains.has(domain)))
       throw new ApiError(409, 'Competitors must have a distinct public domain');
+    for (const domain of domains) seenDomains.add(domain);
     return { ...item, aliases: cleanList(item.aliases), domains };
   });
 }
@@ -363,9 +365,8 @@ export async function completeDiscovery(
       .orderBy('created_at', 'desc')
       .orderBy('id', 'desc')
       .executeTakeFirst();
-    const artifacts = snapshot
-      ? Object.fromEntries(Object.keys(sources).map((field) => [field, snapshot.id]))
-      : {};
+    if (!snapshot) throw new ApiError(409, 'Discovery research evidence is unavailable');
+    const artifacts = Object.fromEntries(Object.keys(sources).map((field) => [field, snapshot.id]));
     const brandName = z.string().parse(data.brand_name);
     const aliases = seedBrandAliases(brandName, domains);
     const projectId = await insertProject(

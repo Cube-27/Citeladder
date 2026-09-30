@@ -71,7 +71,11 @@ export const discoveryComplete = z.object({
     .default([]),
 });
 export const idempotencyHeaders = z.object({
-  'idempotency-key': z.string().trim().min(1).max(128),
+  'idempotency-key': z
+    .string()
+    .trim()
+    .min(constants.discovery_idempotency_key_min_chars)
+    .max(constants.discovery_idempotency_key_max_chars),
 });
 export type DiscoveryInput = z.output<typeof discoveryCreate>;
 export type DiscoveryCompletion = z.output<typeof discoveryComplete>;

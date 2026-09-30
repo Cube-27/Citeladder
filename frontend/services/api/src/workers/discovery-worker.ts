@@ -17,6 +17,19 @@ import { DiscoveryQueue, type DiscoveryTask } from '../queue/discovery-queue.ts'
 const cfg = policy.discovery.constants;
 const logger = getLogger('app.workers.brand_discovery_worker');
 type Result = Awaited<ReturnType<typeof researchBrand>>;
+function siteFailure(error: unknown): error is FetchError {
+  return (
+    error instanceof FetchError &&
+    ['invalid_url', 'site_not_found', 'ssrf_blocked', 'out_of_scope'].includes(error.code)
+  );
+}
+function retryable(error: unknown, attempt: number, maximum: number) {
+  return error != null && !siteFailure(error) && attempt < maximum;
+}
+function terminalStatus(retry: boolean, error: unknown) {
+  if (retry) return policy.task_queue.statuses.retry_wait;
+  return error != null ? policy.task_queue.statuses.failed : policy.task_queue.statuses.succeeded;
+}
 export class DiscoveryWorker {
   readonly queue: DiscoveryQueue;
   readonly settings: ReturnType<typeof discoverySettings>;
@@ -117,10 +130,7 @@ export class DiscoveryWorker {
       if (!(await this.queue.lockedTask(trx, task, owner))) return;
       const now = new Date();
       const attempt = held.attempt_count + 1;
-      const siteFailure =
-        error instanceof FetchError &&
-        ['invalid_url', 'site_not_found', 'ssrf_blocked'].includes(error.code);
-      const retry = error != null && !siteFailure && attempt < held.max_attempts;
+      const retry = retryable(error, attempt, held.max_attempts);
       if (result) {
         await trx
           .insertInto('brand_research_snapshots')
@@ -196,7 +206,7 @@ export class DiscoveryWorker {
           .set({
             status: cfg.discovery_status_failed,
             stage: 'failed',
-            error_code: siteFailure ? (error as FetchError).code : cfg.error_brand_discovery,
+            error_code: siteFailure(error) ? error.code : cfg.error_brand_discovery,
             error_detail: 'Brand research could not complete',
             warnings: JSON.stringify(['research_degraded']),
             updated_at: now,
@@ -208,11 +218,7 @@ export class DiscoveryWorker {
       const finalized = await trx
         .updateTable('brand_discovery_tasks')
         .set({
-          status: retry
-            ? policy.task_queue.statuses.retry_wait
-            : error != null
-              ? policy.task_queue.statuses.failed
-              : policy.task_queue.statuses.succeeded,
+          status: terminalStatus(retry, error),
           attempt_count: attempt,
           completed_at: retry ? null : now,
           available_at: retry

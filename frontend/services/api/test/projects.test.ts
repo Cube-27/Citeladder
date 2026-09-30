@@ -15,15 +15,13 @@ import { commandCenter } from '../src/projects/command-center.ts';
 import { billingAccount, grant, prompt, promptSet } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
+import { actionFixture, type ActionSeed } from './action-support.ts';
 
 describe('project owner', () => {
   const db = testDatabase();
   const fixtures = new Fixtures(db);
   const measurements = new VisibilityFixtures(db);
-  const ledgerIds: string[] = [];
   afterAll(async () => {
-    if (ledgerIds.length)
-      await db.deleteFrom('consumable_ledger').where('id', 'in', ledgerIds).execute();
     await measurements.cleanup();
     await fixtures.cleanup();
     await db.destroy();
@@ -101,6 +99,21 @@ describe('project owner', () => {
       description: { origin: 'manual', review_state: 'confirmed', reviewed_by: t.userId },
     });
     expect(profile.products_services).toEqual(['Analytics']);
+    const renamed = await createApp(testConfig(), db).request(`/api/v1/projects/${created.id}`, {
+      method: 'PATCH',
+      headers: {
+        cookie: `${testConfig().session.cookieName}=${await sessionToken({ sub: t.userId, ver: 0 })}`,
+        'X-Workspace-Id': t.workspaceId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: 'Renamed' }),
+    });
+    expect(renamed.status).toBe(200);
+    expect(await renamed.json()).toEqual({
+      ...created,
+      name: 'Renamed',
+      updated_at: expect.any(String),
+    });
     const changed = await updateProject(
       db,
       scope,
@@ -208,7 +221,9 @@ describe('project owner', () => {
     expect((await app.request('/api/v1/projects')).status).toBe(401);
   });
   it('keeps immutable audit evidence when deletion is requested', async () => {
-    const t = await measurements.tenant();
+    // Retain this tenant and its ledger until the disposable test database is dropped.
+    const retained = new VisibilityFixtures(db);
+    const t = await retained.tenant();
     await db
       .updateTable('projects')
       .set({ benchmark_mode: 'consumer_like' })
@@ -216,11 +231,10 @@ describe('project owner', () => {
       .execute();
     const account = await billingAccount(db, t.workspaceId);
     await grant(db, account, { key: 'project_deletion', value: 1 });
-    const audit = await measurements.audit(t);
-    const { taskId } = await measurements.execution(t, { auditId: audit });
+    const audit = await retained.audit(t);
+    const { taskId } = await retained.execution(t, { auditId: audit });
     const grantId = await grant(db, account, { key: 'audit_credits', value: 1 });
     const ledgerId = randomUUID();
-    ledgerIds.push(ledgerId);
     await db
       .insertInto('consumable_ledger')
       .values({
@@ -283,6 +297,90 @@ describe('project owner', () => {
       commandCenter(db, { workspaceId: t.workspaceId, projectId: project.id }, randomUUID()),
     ).rejects.toMatchObject({ status: 404 });
   });
+  it('retains exact declaration and verified observation IDs in resolved action summaries', async () => {
+    // Immutable fixture evidence is retained until the disposable database is dropped.
+    const seeded = await actionFixture<ActionSeed>('seed');
+    const actionId = seeded.actions.missing_structured_data!;
+    const action = await db
+      .selectFrom('actions')
+      .select('opportunity_snapshot_id')
+      .where('id', '=', actionId)
+      .executeTakeFirstOrThrow();
+    const scope = { workspaceId: seeded.workspace_id, projectId: seeded.project_id };
+    const now = new Date();
+    const implementationId = randomUUID();
+    await db
+      .insertInto('opportunity_implementation_events')
+      .values({
+        id: implementationId,
+        workspace_id: scope.workspaceId,
+        project_id: scope.projectId,
+        action_id: actionId,
+        actor_user_id: seeded.user_id,
+        created_at: now,
+        declared_implemented_at: now,
+        expected_checks: '[]',
+        idempotency_key: implementationId,
+        member_opportunity_ids: '[]',
+        opportunity_snapshot_id: action.opportunity_snapshot_id!,
+        output_revision_id: null,
+        request_fingerprint: 'recorded-test',
+        target_external_url: null,
+        target_site_url_ids: '[]',
+      })
+      .execute();
+    const verifiedId = randomUUID();
+    await db
+      .insertInto('opportunity_verification_events')
+      .values({
+        id: verifiedId,
+        workspace_id: scope.workspaceId,
+        project_id: scope.projectId,
+        implementation_event_id: implementationId,
+        audit_id: null,
+        crawl_id: null,
+        created_at: now,
+        observed_at: now,
+        idempotency_key: verifiedId,
+        limitations: '[]',
+        observation_kind: 'verified',
+        result: '{}',
+        source_analysis_ids: '[]',
+        source_metric_ids: '[]',
+        source_rule_evaluation_ids: '[]',
+        verifier_version: '1',
+      })
+      .execute();
+    const observation = await db
+      .selectFrom('opportunity_verification_events')
+      .selectAll()
+      .where('id', '=', verifiedId)
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto('opportunity_verification_events')
+      .values({
+        ...observation,
+        id: randomUUID(),
+        idempotency_key: randomUUID(),
+        created_at: new Date(now.getTime() + 1000),
+      })
+      .execute();
+    await db
+      .updateTable('audits')
+      .set({ status: 'failed' })
+      .where('project_id', '=', scope.projectId)
+      .execute();
+    expect((await commandCenter(db, scope, null)).resolved_actions).toMatchObject({
+      count: 1,
+      evidence: [
+        {
+          action_id: actionId,
+          implementation_event_ids: [implementationId],
+          verification_event_ids: [verifiedId],
+        },
+      ],
+    });
+  }, 60_000);
   it('overview compares frozen measurements and keeps unknown metrics distinct from observed zero', async () => {
     const t = await measurements.tenant();
     await db
@@ -334,12 +432,27 @@ describe('project owner', () => {
     const current = await measured('2026-03-03T00:00:00Z', 2, 40);
     const view = await commandCenter(db, t, null);
     expect(view).toMatchObject({
-      measurement: { audit_id: current, comparable_audit_id: baseline },
+      measurement: {
+        audit_id: current,
+        comparable_audit_id: baseline,
+        analyzer_version: 'test',
+        scoring_rule_version: 'test',
+      },
       state: { visibility: { value: 40, delta: 40 } },
       track: { citation_share: { value: 0, delta: 0 } },
       report_available: true,
+      stale: false,
     });
-    expect((await commandCenter(db, t, baseline)).state.visibility).toEqual({
+    const historical = await commandCenter(db, t, baseline);
+    expect(historical).toMatchObject({ stale: true, loop: { tracked: { freshness: 'unknown' } } });
+    expect(
+      await db
+        .selectFrom('metric_snapshots')
+        .select('audit_id')
+        .where('id', '=', view.measurement!.metric_snapshot_id!)
+        .executeTakeFirst(),
+    ).toEqual({ audit_id: current });
+    expect(historical.state.visibility).toEqual({
       value: 0,
       delta: null,
     });

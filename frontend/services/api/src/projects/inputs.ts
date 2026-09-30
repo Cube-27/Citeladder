@@ -60,7 +60,22 @@ export const projectCreate = z.object({
     )
     .default({}),
 });
-export const projectUpdate = z.object({ ...scalars, ...collections }).partial();
+export const projectUpdate = z.object({
+  name: scalars.name.optional(),
+  brand_name: scalars.brand_name.unwrap().optional(),
+  website_url: scalars.website_url.unwrap().optional(),
+  industry: scalars.industry.unwrap().optional(),
+  subindustry: scalars.subindustry.unwrap().optional(),
+  primary_market: marketInput.optional(),
+  country_code: scalars.country_code.unwrap().optional(),
+  language_code: scalars.language_code.unwrap().optional(),
+  benchmark_mode: benchmarkModeSchema.optional(),
+  default_repetitions: scalars.default_repetitions.unwrap().optional(),
+  brand: z.object({ aliases: list }).optional(),
+  owned_domains: list.optional(),
+  unintended_domains: list.optional(),
+  competitors: collections.competitors.unwrap().optional(),
+});
 export type ProjectCreate = z.output<typeof projectCreate>;
 export type ProjectUpdate = z.output<typeof projectUpdate>;
 

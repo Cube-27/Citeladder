@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { parse, type DefaultTreeAdapterTypes } from 'parse5';
 
 import { policy } from '../config.ts';
@@ -6,6 +8,8 @@ import { publicUrl } from './safe-fetch.ts';
 type Node = DefaultTreeAdapterTypes.Node;
 type Element = DefaultTreeAdapterTypes.Element;
 export type PageEvidence = {
+  source_id: string;
+  processing_version: string;
   url: string;
   title: string;
   description: string;
@@ -27,40 +31,52 @@ function textOf(node: Node): string {
   return 'childNodes' in node ? node.childNodes.map(textOf).join(' ') : '';
 }
 const compact = (value: string) => value.replaceAll(/\s+/gu, ' ').trim();
+function collectLink(node: Element, result: PageEvidence) {
+  const href = attr(node, 'href');
+  if (!href) return;
+  try {
+    const target = publicUrl(href, result.url);
+    if (
+      node.tagName === 'a' &&
+      target.origin === new URL(result.url).origin &&
+      result.links.length < cfg.max_navigation_links
+    )
+      result.links.push({ url: target.href, label: compact(textOf(node)) });
+    if (
+      node.tagName === 'link' &&
+      attr(node, 'rel')
+        .toLowerCase()
+        .split(/\s+/u)
+        .some((rel) => rel === 'icon' || rel.endsWith('-icon'))
+    )
+      result.icons.push(target.href);
+  } catch {
+    /* Invalid navigation is not evidence. */
+  }
+}
+function collectElement(node: Element, result: PageEvidence) {
+  if (node.tagName === 'title') result.title = compact(textOf(node));
+  if (node.tagName === 'meta' && attr(node, 'name').toLowerCase() === 'description')
+    result.description = attr(node, 'content');
+  if (node.tagName === 'body') result.text = compact(textOf(node)).slice(0, cfg.max_page_chars);
+  if (node.tagName === 'a' || node.tagName === 'link') collectLink(node, result);
+}
 export function extractPage(body: Buffer, url: string): PageEvidence {
   const root = parse(body.toString('utf8'));
-  const result: PageEvidence = { url, title: '', description: '', text: '', links: [], icons: [] };
+  const result: PageEvidence = {
+    source_id: createHash('sha256').update(url).update('\0').update(body).digest('hex'),
+    processing_version: cfg.version,
+    url,
+    title: '',
+    description: '',
+    text: '',
+    links: [],
+    icons: [],
+  };
   function visit(node: Node) {
     if (element(node)) {
       if (excluded.has(node.tagName)) return;
-      if (node.tagName === 'title') result.title = compact(textOf(node));
-      if (node.tagName === 'meta' && attr(node, 'name').toLowerCase() === 'description')
-        result.description = attr(node, 'content');
-      if (node.tagName === 'body') result.text = compact(textOf(node)).slice(0, cfg.max_page_chars);
-      if (node.tagName === 'a' || node.tagName === 'link') {
-        const href = attr(node, 'href');
-        try {
-          const target = publicUrl(href, url);
-          if (
-            href &&
-            node.tagName === 'a' &&
-            target.origin === new URL(url).origin &&
-            result.links.length < cfg.max_navigation_links
-          )
-            result.links.push({ url: target.href, label: compact(textOf(node)) });
-          if (
-            href &&
-            node.tagName === 'link' &&
-            attr(node, 'rel')
-              .toLowerCase()
-              .split(/\s+/u)
-              .some((rel) => rel === 'icon' || rel.endsWith('-icon'))
-          )
-            result.icons.push(target.href);
-        } catch {
-          /* Invalid navigation is not evidence. */
-        }
-      }
+      collectElement(node, result);
     }
     if ('childNodes' in node) node.childNodes.forEach(visit);
   }
@@ -73,10 +89,22 @@ function tokens(value: string) {
 function hasTerm(values: readonly string[], terms: readonly string[]) {
   return values.some((word) => terms.includes(word));
 }
+function labelFamily(label: string) {
+  const words = label.toLowerCase().split(/\s+/u);
+  const index = words.findIndex(
+    (word, i) => i > 0 && i < words.length - 1 && (word === 'in' || word === 'at'),
+  );
+  return (index < 0 ? words : words.slice(0, index)).join(' ');
+}
 export function offeringLinks(pages: readonly PageEvidence[]) {
   const seen = new Set<string>();
   const candidates = pages.flatMap((page) =>
-    page.links.map((link) => ({ ...link, source: page.url })),
+    page.links.map((link) => ({
+      ...link,
+      source: page.url,
+      source_id: page.source_id,
+      processing_version: page.processing_version,
+    })),
   );
   const selected = candidates
     .filter((link) => {
@@ -111,7 +139,7 @@ export function offeringLinks(pages: readonly PageEvidence[]) {
   return selected
     .filter((link) => {
       const prefix = new URL(link.url).pathname.split('/')[1] ?? '';
-      const family = link.label.toLowerCase().replace(/\s+(in|at)\s+.+$/u, '');
+      const family = labelFamily(link.label);
       if (
         (prefixes.get(prefix) ?? 0) >= cfg.max_nodes_per_prefix ||
         (sourcePages.get(link.source) ?? 0) >= cfg.max_nodes_per_page ||

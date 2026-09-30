@@ -77,6 +77,134 @@ export type ResearchDependencies = {
   env?: Record<string, string | undefined>;
   onCompetitors?: () => Promise<void>;
 };
+async function generateIdentity(
+  gateway: ModelGateway | null | undefined,
+  input: DiscoveryInput,
+  items: readonly ResearchEvidence[],
+  modelCalls: Record<string, unknown>[],
+) {
+  if (!gateway) return null;
+  try {
+    const generated = await gateway.structured(
+      cfg.identity_research_system_prompt,
+      JSON.stringify({
+        ...input,
+        prompt_version: cfg.brand_identity_prompt_version,
+        allowed_business_models: cfg.business_models,
+        allowed_market_scopes: cfg.market_scopes,
+        allowed_buyer_registers: cfg.buyer_registers,
+        allowed_sectors: cfg.sectors,
+        allowed_knowledge_strengths: cfg.knowledge_strengths,
+        evidence: items,
+      }),
+      identityEnvelope,
+    );
+    const identity = validateIdentity(generated.value, items);
+    modelCalls.push({
+      phase: 'identity',
+      prompt_version: cfg.brand_identity_prompt_version,
+      outcome: 'succeeded',
+      ...generated.result,
+      content: undefined,
+    });
+    return identity;
+  } catch {
+    modelCalls.push({
+      phase: 'identity',
+      prompt_version: cfg.brand_identity_prompt_version,
+      outcome: 'failed',
+      provider: gateway.baseUrlHost,
+      model: gateway.model,
+    });
+    return null;
+  }
+}
+function captureMethod(kind: ResearchEvidence['source_kind']) {
+  if (kind === 'first_party') return cfg.capture_method_crawler;
+  return kind === 'external_fetch'
+    ? cfg.capture_method_external_fetch
+    : cfg.capture_method_external_search;
+}
+async function suggestCompetitors(
+  gateway: ModelGateway | null | undefined,
+  identity: Identity | null,
+  input: DiscoveryInput,
+  site: ResolvedSite,
+  category: string,
+  evidence: readonly ResearchEvidence[],
+  settings: ReturnType<typeof discoverySettings>,
+  modelCalls: Record<string, unknown>[],
+) {
+  if (!gateway || !identity) return { competitors: [], available: false };
+  const schema = z.object({
+    competitors: z.array(competitorInput).max(settings.competitor_suggestion_maximum),
+  });
+  for (let attempt = 0; attempt < settings.competitor_model_maximum_attempts; attempt++) {
+    try {
+      const generated = await gateway.structured(
+        cfg.competitor_suggestion_system_prompt,
+        JSON.stringify({
+          brand_name: input.brand_name,
+          owned_domain: site.domain,
+          primary_market: input.primary_market,
+          profile: identity.profile,
+          signature: { ...identity.signature, category },
+          evidence: boundedEvidence(evidence, settings.competitor_suggestion_evidence_max_chars),
+        }),
+        schema,
+      );
+      const competitors = cleanSuggestions(
+        generated.value.competitors,
+        input.brand_name,
+        site.domain,
+        settings.competitor_suggestion_maximum,
+      );
+      modelCalls.push({
+        phase: 'competitor_suggestions',
+        prompt_version: cfg.brand_competitor_suggestion_version,
+        outcome: 'succeeded',
+        ...generated.result,
+        content: undefined,
+      });
+      return { competitors, available: true };
+    } catch {
+      modelCalls.push({
+        phase: 'competitor_suggestions',
+        prompt_version: cfg.brand_competitor_suggestion_version,
+        outcome: 'failed',
+        provider: gateway.baseUrlHost,
+        model: gateway.model,
+      });
+    }
+  }
+  return { competitors: [], available: false };
+}
+function researchWarnings(
+  warning: string,
+  externalState: string,
+  competitorState: string,
+  identity: Identity | null,
+  available: boolean,
+  count: number,
+) {
+  const warnings = new Set<string>(warning ? [warning] : []);
+  if (['unavailable', 'failed'].includes(externalState))
+    warnings.add('external_research_unavailable');
+  if (externalState === 'no_results') warnings.add('external_research_no_results');
+  if (competitorState === 'failed') warnings.add('competitor_search_failed');
+  if (!identity || !available) warnings.add('research_degraded');
+  if (!count) warnings.add('competitors_not_found');
+  const confidence = cfg.identity_conflict_fields.flatMap((field) => {
+    const value = identity?.profile.field_confidence[field];
+    return value === undefined ? [] : [value];
+  });
+  if (
+    identity?.status === 'conflicting_evidence' &&
+    (!confidence.length || Math.min(...confidence) < cfg.identity_conflict_confidence_ceiling)
+  )
+    warnings.add('conflicting_evidence');
+  return [...warnings];
+}
 export async function researchBrand(
   input: DiscoveryInput,
   site: ResolvedSite,
@@ -111,41 +239,7 @@ export async function researchBrand(
     }
   }
   const modelCalls: Record<string, unknown>[] = [];
-  let identity: Identity | null = null;
-  if (gateway) {
-    try {
-      const generated = await gateway.structured(
-        cfg.identity_research_system_prompt,
-        JSON.stringify({
-          ...input,
-          prompt_version: cfg.brand_identity_prompt_version,
-          allowed_business_models: cfg.business_models,
-          allowed_market_scopes: cfg.market_scopes,
-          allowed_buyer_registers: cfg.buyer_registers,
-          allowed_sectors: cfg.sectors,
-          allowed_knowledge_strengths: cfg.knowledge_strengths,
-          evidence: items,
-        }),
-        identityEnvelope,
-      );
-      identity = validateIdentity(generated.value, items);
-      modelCalls.push({
-        phase: 'identity',
-        prompt_version: cfg.brand_identity_prompt_version,
-        outcome: 'succeeded',
-        ...generated.result,
-        content: undefined,
-      });
-    } catch {
-      modelCalls.push({
-        phase: 'identity',
-        prompt_version: cfg.brand_identity_prompt_version,
-        outcome: 'failed',
-        provider: gateway.baseUrlHost,
-        model: gateway.model,
-      });
-    }
-  }
+  const identity = await generateIdentity(gateway, input, items, modelCalls);
   const profile =
     identity?.profile ??
     discoveryProfile.parse({
@@ -182,81 +276,29 @@ export async function researchBrand(
       competitorState = 'failed';
     }
   }
-  let competitors: z.output<typeof competitorInput>[] = [];
-  let suggestionAvailable = false;
-  const suggestionEnvelope = z.object({
-    competitors: z.array(competitorInput).max(settings.competitor_suggestion_maximum),
-  });
-  if (gateway && identity) {
-    for (let attempt = 0; attempt < settings.competitor_model_maximum_attempts; attempt++) {
-      try {
-        const generated = await gateway.structured(
-          cfg.competitor_suggestion_system_prompt,
-          JSON.stringify({
-            brand_name: input.brand_name,
-            owned_domain: site.domain,
-            primary_market: input.primary_market,
-            profile,
-            signature: { ...identity.signature, category },
-            evidence: boundedEvidence(
-              competitorEvidence,
-              settings.competitor_suggestion_evidence_max_chars,
-            ),
-          }),
-          suggestionEnvelope,
-        );
-        competitors = cleanSuggestions(
-          generated.value.competitors,
-          input.brand_name,
-          site.domain,
-          settings.competitor_suggestion_maximum,
-        );
-        modelCalls.push({
-          phase: 'competitor_suggestions',
-          prompt_version: cfg.brand_competitor_suggestion_version,
-          outcome: 'succeeded',
-          ...generated.result,
-          content: undefined,
-        });
-        suggestionAvailable = true;
-        break;
-      } catch {
-        modelCalls.push({
-          phase: 'competitor_suggestions',
-          prompt_version: cfg.brand_competitor_suggestion_version,
-          outcome: 'failed',
-          provider: gateway.baseUrlHost,
-          model: gateway.model,
-        });
-      }
-    }
-  }
-  const warnings = new Set<string>(site.warning ? [site.warning] : []);
-  if (['unavailable', 'failed'].includes(external.state))
-    warnings.add('external_research_unavailable');
-  if (external.state === 'no_results') warnings.add('external_research_no_results');
-  if (competitorState === 'failed') warnings.add('competitor_search_failed');
-  if (!identity || !suggestionAvailable) warnings.add('research_degraded');
-  if (!competitors.length) warnings.add('competitors_not_found');
-  const confidence = cfg.identity_conflict_fields.flatMap((field) => {
-    const value = profile.field_confidence[field];
-    return value === undefined ? [] : [value];
-  });
-  if (
-    identity?.status === 'conflicting_evidence' &&
-    (!confidence.length || Math.min(...confidence) < cfg.identity_conflict_confidence_ceiling)
-  )
-    warnings.add('conflicting_evidence');
+  const { competitors, available } = await suggestCompetitors(
+    gateway,
+    identity,
+    input,
+    site,
+    category,
+    competitorEvidence,
+    settings,
+    modelCalls,
+  );
+  const warnings = researchWarnings(
+    site.warning,
+    external.state,
+    competitorState,
+    identity,
+    available,
+    competitors.length,
+  );
   const manifest = [...items, ...competitorEvidence];
   const capturedAt = new Date().toISOString();
   const evidence = manifest.map((item) => ({
     source_url: item.source_url,
-    capture_method:
-      item.source_kind === 'first_party'
-        ? cfg.capture_method_crawler
-        : item.source_kind === 'external_fetch'
-          ? cfg.capture_method_external_fetch
-          : cfg.capture_method_external_search,
+    capture_method: captureMethod(item.source_kind),
     confidence: item.source_kind === 'first_party' ? 0.9 : 0.7,
     captured_at: capturedAt,
     supports: item.supports,
@@ -268,10 +310,11 @@ export async function researchBrand(
   return {
     profile,
     competitors,
-    warnings: [...warnings],
+    warnings,
     evidence,
     pagesRead: firstParty.pages.length,
     snapshot: {
+      review_state: 'unreviewed',
       profile,
       competitive_signature: identity?.signature ?? {},
       competitors,
@@ -287,7 +330,7 @@ export async function researchBrand(
         competitor_search_state: competitorState,
       },
     },
-    provider: String(successful?.endpoint_host ?? ''),
-    model: String(successful?.returned_model ?? ''),
+    provider: z.string().catch('').parse(successful?.endpoint_host),
+    model: z.string().catch('').parse(successful?.returned_model),
   };
 }

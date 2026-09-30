@@ -64,12 +64,60 @@ describe('durable onboarding', () => {
   async function ready(workspaceId: string) {
     const row = await createDiscovery(db, workspaceId, input, randomUUID());
     await db
+      .insertInto('brand_research_snapshots')
+      .values({
+        id: randomUUID(),
+        workspace_id: workspaceId,
+        discovery_id: row.id,
+        research_version: '1',
+        provider: '',
+        model: '',
+        method: 'recorded-test',
+        extracted_fields: '{}',
+        field_confidence: '{}',
+        evidence: '[]',
+        warnings: '[]',
+        created_at: new Date(),
+      })
+      .execute();
+    await db
       .updateTable('brand_discoveries')
       .set({ status: 'ready' })
       .where('id', '=', row.id)
       .execute();
     return row;
   }
+  it('rejects completion without persisted research and overlapping competitor domains', async () => {
+    const t = await tenant();
+    const missing = await createDiscovery(db, t.workspaceId, input, randomUUID());
+    await db
+      .updateTable('brand_discoveries')
+      .set({ status: 'ready' })
+      .where('id', '=', missing.id)
+      .execute();
+    await expect(
+      completeDiscovery(db, t.workspaceId, t.userId, missing.id, completion, randomUUID(), fetcher),
+    ).rejects.toMatchObject({ status: 409, message: 'Discovery research evidence is unavailable' });
+    const row = await ready(t.workspaceId);
+    await expect(
+      completeDiscovery(
+        db,
+        t.workspaceId,
+        t.userId,
+        row.id,
+        discoveryComplete.parse({
+          ...completion,
+          competitors: [
+            { name: 'Globex', domains: ['globex.com'] },
+            { name: 'Other name', domains: ['www.globex.com'] },
+          ],
+        }),
+        randomUUID(),
+        fetcher,
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+    expect((await discoveryRow(db, t.workspaceId, row.id)).project_id).toBeNull();
+  });
   it('accepts concurrent idempotent requests once with one committed queue row', async () => {
     const t = await tenant();
     const key = randomUUID();

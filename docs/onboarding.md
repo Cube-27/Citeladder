@@ -42,7 +42,12 @@ warnings preserve degraded research states.
 
 [BrandResearchSnapshot](../backend/app/models/discovery.py) and
 [discovery records](../backend/app/models/discovery.py) retain the research
-manifest, model provenance and progress. BrandProfile field provenance records
+manifest, model provenance and progress.
+Each first-party capture uses a content-derived source ID and extraction version;
+external research retains provider source IDs (or a content-derived ID when
+absent), including the parent search source for fetched pages. Suggested profile
+and competitor values remain explicitly unreviewed in the research snapshot.
+BrandProfile field provenance records
 origin, review state, reviewer and review time. The Projects-owned
 `BusinessContext` serializes confirmed and inferred facets into that profile;
 unknown facets remain absent, and its field sources distinguish visible choices
@@ -100,6 +105,10 @@ confirmed offerings.
 - Company facts and competitors also appear in Overview's Facts editor.
   [Command Center](../frontend/services/api/src/projects/command-center.ts) composes
   persisted evidence and chooses the next action; it does not acquire evidence.
+  Its measurement names the metric snapshot and processing versions, and its
+  resolved-action summary retains implementation and verification event IDs.
+  Selecting an older measurement marks the view stale; evidence with no
+  freshness guarantee reports unknown freshness.
 - Offering harvest is bounded HTML evidence, not a sitemap or JavaScript
   rendering service. Missing evidence must not be padded with generic topics.
 - Confirmation authorizes completion, not publishing, an external mutation or

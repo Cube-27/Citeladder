@@ -10,6 +10,7 @@ import { notFound } from '../errors.ts';
 import type { Audits } from '../generated/db-schema.ts';
 import { listOpportunities } from '../opportunities/reads.ts';
 import { getVisibility, type VisibilityResponse } from '../visibility/dashboard.ts';
+import { compareText } from '../text-order.ts';
 import type { ProjectScope } from './brand-profile.ts';
 import { readProject } from './service.ts';
 
@@ -25,12 +26,14 @@ function state(
   coverage: string[],
   limitations: string[],
   partial = false,
+  freshness: 'current' | 'unknown' = 'unknown',
 ): View['loop']['connected'] {
   const observed = at instanceof Date ? at.toISOString() : at;
+  const observedState = partial ? 'partial' : 'observed';
   return {
-    state: observed ? (partial ? 'partial' : 'observed') : 'not_run',
+    state: observed ? observedState : 'not_run',
     observed_at: observed,
-    freshness: observed ? 'current' : 'unknown',
+    freshness: observed ? freshness : 'unknown',
     coverage: observed ? coverage : [],
     limitations,
   };
@@ -66,7 +69,7 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
   const engineNames = (id: string) =>
     [
       ...new Set(engines.filter((row) => row.audit_id === id).map((row) => row.logical_engine)),
-    ].sort();
+    ].sort(compareText);
   const identity = (audit: Audit) =>
     JSON.stringify([
       frozenComparisonKey(audit.configuration) || audit.id,
@@ -79,7 +82,7 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
             .filter((row) => row.audit_id === audit.id)
             .map((row) => row.prompt_id ?? `text:${row.text}`),
         ),
-      ].sort(),
+      ].sort(compareText),
     ]);
   const key = identity(selected);
   const previous =
@@ -87,7 +90,12 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
       (audit) =>
         audit.id !== selected.id && instant(audit) < instant(selected) && identity(audit) === key,
     ) ?? null;
-  return { selected, previous, engines: engineNames(selected.id) };
+  return {
+    selected,
+    previous,
+    engines: engineNames(selected.id),
+    historical: selected.id !== audits[0]?.id,
+  };
 }
 async function visibility(
   db: Database,
@@ -245,6 +253,12 @@ async function resolvedActions(
       'actions.id',
       'actions.target_label',
       sql<Date>`min(verified.created_at)`.as('resolved_at'),
+      sql<string>`(array_agg(impl.id order by verified.created_at, verified.id))[1]`.as(
+        'implementation_id',
+      ),
+      sql<string>`(array_agg(verified.id order by verified.created_at, verified.id))[1]`.as(
+        'verification_id',
+      ),
     ])
     .where('actions.workspace_id', '=', scope.workspaceId)
     .where('actions.project_id', '=', scope.projectId)
@@ -272,6 +286,42 @@ async function resolvedActions(
     since_audit_id: audits?.previous?.id ?? null,
     count: rows.length,
     titles: rows.slice(0, 5).map((row) => row.target_label),
+    evidence: rows.slice(0, 5).map((row) => ({
+      action_id: row.id,
+      implementation_event_ids: [row.implementation_id],
+      verification_event_ids: [row.verification_id],
+    })),
+  };
+}
+function trackLimitations(
+  audits: Awaited<ReturnType<typeof comparableAudits>>,
+  previous: VisibilityResponse | null,
+) {
+  if (!audits) return ['No visibility audit has run yet.'];
+  return previous ? [] : ['No comparable prior audit is available.'];
+}
+async function measurement(
+  db: Database,
+  scope: ProjectScope,
+  audits: Awaited<ReturnType<typeof comparableAudits>>,
+): Promise<View['measurement']> {
+  if (!audits) return null;
+  const snapshot = await db
+    .selectFrom('metric_snapshots')
+    .select(['id', 'analyzer_version', 'scoring_rule_version'])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('audit_id', '=', audits.selected.id)
+    .executeTakeFirstOrThrow();
+  return {
+    audit_id: audits.selected.id,
+    completed_at: instant(audits.selected),
+    benchmark_mode: audits.selected.benchmark_mode,
+    logical_engines: audits.engines,
+    comparable_audit_id: audits.previous?.id ?? null,
+    metric_snapshot_id: snapshot.id,
+    analyzer_version: snapshot.analyzer_version,
+    scoring_rule_version: snapshot.scoring_rule_version,
   };
 }
 export async function commandCenter(
@@ -341,6 +391,8 @@ export async function commandCenter(
         mapping?.updated_at ?? null,
         mapping ? [mapping.provider] : [],
         mapping ? [] : ['No GSC or GA4 property is connected.'],
+        false,
+        'current',
       ),
       analyzed: state(
         analyzedAt,
@@ -359,6 +411,8 @@ export async function commandCenter(
         audits ? instant(audits.selected) : null,
         audits?.engines ?? [],
         audits ? [] : ['No visibility audit has run yet.'],
+        false,
+        audits?.historical ? 'unknown' : 'current',
       ),
     },
     active_prompt_count: count,
@@ -376,28 +430,16 @@ export async function commandCenter(
       },
       engine_coverage: audits?.engines.length ?? 0,
       observed_at: audits ? instant(audits.selected) : null,
-      limitations: !audits
-        ? ['No visibility audit has run yet.']
-        : previous
-          ? []
-          : ['No comparable prior audit is available.'],
+      limitations: trackLimitations(audits, previous),
     },
-    measurement: audits
-      ? {
-          audit_id: audits.selected.id,
-          completed_at: instant(audits.selected),
-          benchmark_mode: audits.selected.benchmark_mode,
-          logical_engines: audits.engines,
-          comparable_audit_id: audits.previous?.id ?? null,
-        }
-      : null,
+    measurement: await measurement(db, scope, audits),
     state: metrics(current, previous),
     movements: movements(current, previous),
     actions: opportunities.items,
     action_order_version: order?.version ?? 0,
     resolved_actions: await resolvedActions(db, scope, audits),
     report_available: Boolean(audits),
-    stale: false,
+    stale: audits?.historical ?? false,
   };
 }
 function projectSchemaStrings(value: unknown) {

@@ -34,8 +34,8 @@ export const brandDiscoveryRoutes = [
     authorize: 'public',
     params: { path: {}, query: {} },
     response: brandDiscoveryCatalogSchema,
-    async handle() {
-      return discoveryCatalog();
+    handle() {
+      return Promise.resolve(discoveryCatalog());
     },
   }),
   definePostRoute({

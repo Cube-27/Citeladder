@@ -19,7 +19,7 @@ export class DiscoveryQueue {
     this.leaseSeconds = leaseSeconds;
     this.now = now;
   }
-  async claim(owner: string): Promise<DiscoveryTask | null> {
+  claim(owner: string): Promise<DiscoveryTask | null> {
     const now = this.now();
     return this.db.transaction().execute(async (trx) => {
       const selected = await trx
@@ -93,7 +93,7 @@ export class DiscoveryQueue {
       .executeTakeFirst();
     return result.numUpdatedRows > 0n;
   }
-  async lockedTask(db: Database, task: DiscoveryTask, owner: string) {
+  lockedTask(db: Database, task: DiscoveryTask, owner: string) {
     return db
       .selectFrom(table)
       .selectAll()

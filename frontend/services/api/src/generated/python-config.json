@@ -2991,6 +2991,8 @@
       "legacy_discovery_status_completing": "completing",
       "legacy_task_kind_brand_completion": "brand_completion",
       "task_kind_brand_discovery": "brand_discovery",
+      "discovery_idempotency_key_min_chars": 1,
+      "discovery_idempotency_key_max_chars": 128,
       "business_types": [
         "b2b",
         "b2c",

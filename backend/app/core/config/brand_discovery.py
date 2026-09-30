@@ -39,6 +39,8 @@ DISCOVERY_STATUSES: Final = frozenset(
 LEGACY_DISCOVERY_STATUS_COMPLETING: Final = "completing"
 LEGACY_TASK_KIND_BRAND_COMPLETION: Final = "brand_completion"
 TASK_KIND_BRAND_DISCOVERY: Final = "brand_discovery"
+DISCOVERY_IDEMPOTENCY_KEY_MIN_CHARS: Final = 1
+DISCOVERY_IDEMPOTENCY_KEY_MAX_CHARS: Final = 128
 
 BUSINESS_TYPES: Final = ("b2b", "b2c", "both")
 PRICE_TIERS: Final = ("budget", "mid_market", "premium", "luxury", "unknown")
