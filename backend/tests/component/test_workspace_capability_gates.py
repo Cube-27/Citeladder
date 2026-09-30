@@ -1,6 +1,6 @@
 """The role matrix as the remaining Python-owned routes enforce it.
 
-Workspace management moved to the TypeScript API, but billing and provider
+Workspace management and billing moved to the TypeScript API, but provider
 credentials still authorize through ``app.api.deps``. A permitted role must
 reach the endpoint's real success status: "not 403" would also accept a 500.
 """
@@ -51,18 +51,6 @@ async def _session_with_role(
         )
         await db_session.commit()
     return uuid.UUID(workspace_id)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(("role", "permitted"), _ROLES)
-async def test_billing_usage_is_administrative(
-    client: httpx.AsyncClient, db_session: AsyncSession, role: str, permitted: bool
-) -> None:
-    workspace_id = await _session_with_role(client, db_session, role)
-    response = await client.get(
-        "/api/v1/billing/usage", headers={"X-Workspace-Id": str(workspace_id)}
-    )
-    assert response.status_code == (200 if permitted else 403), response.text
 
 
 @pytest.mark.asyncio

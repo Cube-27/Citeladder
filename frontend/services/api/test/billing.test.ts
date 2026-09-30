@@ -926,7 +926,18 @@ describe('billing money and access owner', () => {
           'x-workspace-id': workspace,
         },
       });
-    expect((await request(member, '/api/v1/billing/usage')).status).toBe(403);
+    // Billing reads are administrative: owner and admin succeed, member and viewer are refused.
+    const admin = await fixtures.user();
+    await fixtures.member(t.workspaceId, admin, 'admin');
+    const viewer = await fixtures.user();
+    await fixtures.member(t.workspaceId, viewer, 'viewer');
+    for (const [user, status] of [
+      [t.userId, 200],
+      [admin, 200],
+      [member, 403],
+      [viewer, 403],
+    ] as const)
+      expect((await request(user, '/api/v1/billing/usage')).status).toBe(status);
     expect((await request(member, `/api/v1/workspaces/${t.workspaceId}/entitlements`)).status).toBe(
       200,
     );
