@@ -76,15 +76,20 @@ export async function receiveWebhook(
     throw new ApiError(400, 'webhook_payload_invalid');
   }
   const paymentEvent = parsed.event === 'payment.captured' || parsed.event === 'payment.failed';
-  const entity = policy.billing.contracts.razorpay_event_types.includes(parsed.event)
-    ? parsed.payload.subscription?.entity
+  // A subscription charge carries its invoice; the subscription events settle it.
+  const subscriptionCharge = paymentEvent && Boolean(parsed.payload.payment?.entity.invoice_id);
+  const payloadKey = policy.billing.contracts.razorpay_event_types.includes(parsed.event)
+    ? 'subscription'
     : parsed.event === 'refund.processed'
-      ? parsed.payload.refund?.entity
+      ? 'refund'
       : parsed.event === 'order.paid'
-        ? parsed.payload.order?.entity
-        : paymentEvent && parsed.payload.payment?.entity.order_id
-          ? parsed.payload.payment.entity
+        ? 'order'
+        : paymentEvent && !subscriptionCharge
+          ? 'payment'
           : null;
+  const entity = payloadKey ? parsed.payload[payloadKey]?.entity : null;
+  // A supported event without its entity is malformed, not ignorable.
+  if (payloadKey && !entity) throw new ApiError(400, 'webhook_payload_invalid');
   const reference = entity ? (paymentEvent ? entity.order_id : entity.id) : '';
   if (entity && !ref.safeParse(reference).success)
     throw new ApiError(400, 'webhook_reference_invalid');

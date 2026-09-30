@@ -137,7 +137,7 @@ export function entitlementChangeAt(
   return future.length ? new Date(Math.min(...future)) : null;
 }
 
-/** Capability values at `at`; throws `CorruptGrant` on any invalid row. */
+/** Grants selected at `at`; throws `CorruptGrant` on any invalid row. */
 export function selectedGrants(
   grants: readonly GrantRow[],
   revocations: readonly RevocationRow[],
@@ -153,6 +153,7 @@ export function selectedGrants(
   return active.filter((grant) => grant.bundle_role !== PRIMARY || grant.bundle_id === bundle);
 }
 
+/** Capability values at `at`; throws `CorruptGrant` on any invalid row. */
 export function foldEntitlement(
   grants: readonly GrantRow[],
   revocations: readonly RevocationRow[],

@@ -126,11 +126,12 @@ class FundedCreditsExhaustedError(RuntimeError):
 async def _active_grants_in_draw_order(
     session: AsyncSession, *, account_id: uuid.UUID, capability_key: str, at: datetime
 ) -> list[AccountGrant]:
-    """Active grant rows for the capability, locked in resolver draw order.
+    """Active grant rows for the capability, returned in resolver draw order.
 
     The resolver fold owns which grants are active at ``at`` and the exact
-    consumable draw order (invariant 2); this locks each row ``FOR UPDATE``
-    in that order so concurrent reservations serialize on the rows themselves.
+    consumable draw order (invariant 2). Rows are locked ``FOR UPDATE`` in
+    UUID order, the order the TypeScript ledger uses, so concurrent
+    reservations from either stack serialize without deadlocking.
     """
     entitlement = await resolve_account_entitlement(
         session, account_id=account_id, at=at
@@ -141,12 +142,12 @@ async def _active_grants_in_draw_order(
         else None
     )
     draw_ids = capability.ordered_draw_grant_ids if capability is not None else ()
-    rows: list[AccountGrant] = []
-    for grant_id in draw_ids:
+    locked: dict[uuid.UUID, AccountGrant] = {}
+    for grant_id in sorted(draw_ids):
         row = await session.get(AccountGrant, grant_id, with_for_update=True)
         if row is not None:
-            rows.append(row)
-    return rows
+            locked[grant_id] = row
+    return [locked[grant_id] for grant_id in draw_ids if grant_id in locked]
 
 
 async def _ledger_sums(

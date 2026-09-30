@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { z } from 'zod';
 import {
   activationSchema,
@@ -194,31 +195,31 @@ async function createPending(
 
 async function dispatch(db: Database, pending: Pending, provider: BillingProvider) {
   // The intent transaction has committed. Never retry uncertain creation here.
-  let reference: string;
   try {
-    reference = await provider.create(pending);
+    const reference = await provider.create(pending);
+    await db
+      .updateTable('pending_activations')
+      .set({ external_reference: reference, updated_at: new Date() })
+      .where('id', '=', pending.id)
+      .where('external_reference', 'is', null)
+      .execute();
   } catch (error) {
-    if (error instanceof ProviderError && !error.uncertain) {
+    if (!(error instanceof ProviderError)) throw error;
+    // An uncertain failure leaves the committed intent pending: the client
+    // polls and recovery finds or abandons the provider record.
+    if (!error.uncertain)
       await db
         .updateTable('pending_activations')
         .set({
           status: 'failed',
           failed_at: new Date(),
-          failure_code: 'provider_rejected',
+          failure_code: error.message,
           updated_at: new Date(),
         })
         .where('id', '=', pending.id)
         .where('status', '=', 'pending')
         .execute();
-    }
-    throw new ApiError(502, 'provider_unavailable');
   }
-  await db
-    .updateTable('pending_activations')
-    .set({ external_reference: reference, updated_at: new Date() })
-    .where('id', '=', pending.id)
-    .where('external_reference', 'is', null)
-    .execute();
   return db
     .selectFrom('pending_activations')
     .selectAll()
@@ -562,36 +563,63 @@ export async function changePlan(
   });
   if (!prepared.fresh) return prepared.response;
   const adapter = provider ?? new RazorpayProvider(config.billing, config.razorpay);
-  if (prepared.pending && prepared.fresh)
+  if (prepared.pending)
     return {
       ...prepared.response,
       activation: activationResponse(await dispatch(db, prepared.pending, adapter)),
     };
-  if (prepared.subId && prepared.fresh) await pushChange(db, prepared.subId, adapter);
-  return prepared.response;
+  const state = prepared.subId ? await pushChange(db, prepared.subId, adapter) : null;
+  if (state === 'provider_rejected') {
+    // The refused change stays replaceable; a retry with the same key re-requests it.
+    await db
+      .deleteFrom('idempotency_records')
+      .where('idempotency_key', '=', key)
+      .where('operation', '=', 'subscription.change')
+      .where(
+        'billing_account_id',
+        '=',
+        db.selectFrom('billing_accounts').select('id').where('workspace_id', '=', workspaceId),
+      )
+      .execute();
+    throw new ApiError(502, 'provider_rejected');
+  }
+  return state === 'scheduled' ? { ...prepared.response, status: state } : prepared.response;
 }
 
+/** Push a requested change to the provider; returns the state it recorded. */
 export async function pushChange(db: Database, id: string, provider: BillingProvider) {
   const sub = await db
     .selectFrom('billing_subscriptions')
     .selectAll()
     .where('id', '=', id)
     .executeTakeFirstOrThrow();
-  if (!sub.scheduled_change || sub.provider !== 'razorpay' || sub.provider_mode !== provider.mode)
-    return;
+  // An ending subscription never renews onto the new plan.
+  if (
+    !sub.scheduled_change ||
+    !sub.is_current ||
+    sub.cancel_at_period_end ||
+    sub.provider !== 'razorpay' ||
+    sub.provider_mode !== provider.mode
+  )
+    return null;
   const change = scheduledSchema.parse(sub.scheduled_change);
-  if (change.state !== 'requested') return;
+  if (change.state !== 'requested') return null;
   let state: 'scheduled' | 'provider_rejected' = 'scheduled';
   try {
     await provider.change(sub.external_subscription_id, change.terms.price_ref);
   } catch (error) {
-    if (!(error instanceof ProviderError) || error.uncertain) return;
+    if (!(error instanceof ProviderError) || error.uncertain) return null;
     state = 'provider_rejected';
   }
-  await db
+  const updated = await db
     .updateTable('billing_subscriptions')
-    .set({ scheduled_change: JSON.stringify({ ...change, state }), updated_at: new Date() })
+    .set({
+      scheduled_change: sql`jsonb_set(scheduled_change, '{state}', to_jsonb(${state}::text))`,
+      updated_at: new Date(),
+    })
     .where('id', '=', id)
-    .where('scheduled_change', '=', JSON.stringify(change))
-    .execute();
+    .where(sql<string>`scheduled_change->>'source'`, '=', change.source)
+    .where(sql<string>`scheduled_change->>'state'`, '=', 'requested')
+    .executeTakeFirst();
+  return updated.numUpdatedRows > 0n ? state : null;
 }

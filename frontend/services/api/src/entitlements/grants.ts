@@ -126,7 +126,12 @@ export async function issueBundle(
     });
     return prior;
   }
-  if (!specs.length || new Set(specs.map((spec) => spec.key)).size !== specs.length)
+  // The resolver fails closed on an unknown source kind, so never write one.
+  if (
+    !specs.length ||
+    new Set(specs.map((spec) => spec.key)).size !== specs.length ||
+    !(policy.entitlements.grant_source_kinds as readonly string[]).includes(input.sourceKind)
+  )
     conflict('grant_bundle_invalid');
   for (const spec of specs) {
     const definition =

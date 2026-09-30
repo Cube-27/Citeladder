@@ -9,14 +9,14 @@ from typing import Any
 from pydantic_settings import BaseSettings
 
 from app.core.config import billing_contracts
-from app.core.config import site_health_crawl_policy as crawl_policy
+from app.core.config import entitlements as entitlements_config
+from app.core.config.billing_contracts import SUBSCRIPTION_KIND_BASE
 from app.core.config.billing_settings import BillingSettings
 from app.core.config.provider_catalog import (
     PUBLIC_PROVIDER_CATALOG,
     public_provider_routes,
 )
 from app.core.config.razorpay_settings import RAZORPAY_API_ORIGIN, RazorpaySettings
-from app.core.config.site_health_runtime import SiteHealthSettings
 
 Setting = Callable[[str, type[BaseSettings]], dict[str, Any]]
 
@@ -54,18 +54,46 @@ def billing_policy(setting: Setting) -> dict[str, Any]:
     }
 
 
-def site_health_runtime_policy(setting: Setting) -> dict[str, Any]:
+def entitlements_policy() -> dict[str, Any]:
+    """The capability registry and the account-capacity lock both stacks take."""
+    ent = entitlements_config
+    registry = ent.CAPABILITY_REGISTRY
     return {
-        "settings": {
-            name: setting(name, SiteHealthSettings)
-            for name in (
-                "automatic_page_limit",
-                "sample_url_limit",
-                "sample_discovery_url_cap",
-            )
+        "registry_revision": registry.revision,
+        "capabilities": {
+            entry.key: {
+                "type": entry.capability_type.value,
+                "levels": len(entry.ordered_values),
+                "ordered_values": list(entry.ordered_values),
+                "issuable": entry.issuable,
+                "public": entry.public,
+                "rolling_window_seconds": entry.rolling_window_seconds,
+            }
+            for entry in registry.entries
         },
-        "full_mode": crawl_policy.DISCOVERY_MODE_FULL,
-        "sample_mode": crawl_policy.DISCOVERY_MODE_SAMPLE,
-        "full_minimum": crawl_policy.MIN_FULL_DISCOVERY_URL_CAP,
-        "full_headroom": crawl_policy.FULL_DISCOVERY_HEADROOM,
+        "grant_source_kinds": sorted(ent.GRANT_SOURCE_KINDS),
+        "draw_source_order": list(ent.CONSUMABLE_DRAW_SOURCE_ORDER),
+        "paid_access_sources": [ent.GRANT_SOURCE_ADDON, ent.GRANT_SOURCE_TOPUP],
+        "base_subscription_kind": SUBSCRIPTION_KIND_BASE,
+        "prompt_slots": ent.KEY_PROMPT_SLOTS,
+        "project_slots": ent.KEY_PROJECT_SLOTS,
+        "project_deletion": ent.KEY_PROJECT_DELETION,
+        "capacity_lock": {
+            "namespace": ent.OCCUPANCY_LOCK_NAMESPACE,
+            "person": ent.OCCUPANCY_LOCK_PERSON,
+        },
+        "baseline": {
+            "revision": ent.BASELINE_GRANT_REVISION,
+            "source_kind": ent.GRANT_SOURCE_OVERRIDE,
+            "grants": {
+                ent.KEY_PROJECT_SLOTS: ent.FREE_PROJECT_SLOTS,
+                ent.KEY_PROMPT_SLOTS: ent.FREE_PROMPT_SLOTS,
+                ent.KEY_MONITORED_URLS: ent.FREE_MONITORED_URLS,
+            },
+        },
+        "codes": {
+            "limit_exceeded": ent.CODE_OCCUPANCY_LIMIT_EXCEEDED,
+            "unresolved": ent.CODE_OCCUPANCY_UNRESOLVED,
+            "capability_not_granted": ent.CODE_CAPABILITY_NOT_GRANTED,
+        },
     }

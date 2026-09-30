@@ -68,8 +68,8 @@ events and settle against the original payment receipt.
 
 Receipt list/download reads and PDF rendering are TypeScript-owned in
 [`src/billing/`](../frontend/services/api/src/billing/). The `billing-documents`
-route family contains the existing invoice paths; the remaining `billing`
-mutations stay Python until PR 16b. Reads require the active workspace's billing
+route family contains the existing invoice paths; the `billing` family owns
+the commercial mutations. Reads require the active workspace's billing
 permission and select its account, independently of owner-user metadata. A
 workspace without an account reads as having no receipts; reads never
 provision one.
@@ -133,7 +133,11 @@ usage. Customer BYOK consumes no platform credits and never silently falls back.
 reserves a crawl's page budget at creation and settles analyzed pages on every
 terminal path; accounts without a page-fetch grant are not metered there.
 These Python metering, grant-write, resolver and admission bridges retire with
-their audit, Site Health and Agent callers in migration PRs 17–19. Operator
+their audit, Site Health and Agent callers in migration PRs 17–19. Until then
+Python is the only production ledger writer: the two stacks' request
+fingerprints are not byte-compatible, so a subject's reservations, debits and
+releases must stay with one stack. Each migration moves a caller's ledger
+writes whole; it never retries a Python-written key from TypeScript. Operator
 catalog publication, grant correction and plan verification remain Python-owned;
 the read-only Razorpay plan reader has no checkout or settlement methods and
 retires when that operator CLI migrates.

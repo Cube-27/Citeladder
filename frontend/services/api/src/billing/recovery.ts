@@ -3,11 +3,20 @@ import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { lockAccount } from '../entitlements/grants.ts';
-import { configured, RazorpayProvider, type BillingProvider, type Evidence } from './razorpay.ts';
+import {
+  configured,
+  ProviderError,
+  RazorpayProvider,
+  type BillingProvider,
+  type Evidence,
+} from './razorpay.ts';
 import { settlePending, settleSubscription } from './settlement.ts';
 import { recordRefund } from './receipts.ts';
 import { pushChange } from './purchases.ts';
 import { webhookSummary } from './webhooks.ts';
+import { getLogger } from '../logging.ts';
+
+const logger = getLogger('api.billing');
 
 /** Renew only an unexpired claim; a delayed worker can never revive a lost lease. */
 function maintainLease(seconds: number, renew: () => Promise<boolean>) {
@@ -108,7 +117,14 @@ async function pendingProbe(
           eb('reconciliation_next_at', '<=', now),
         ]),
       )
-      .where('reconciliation_attempts', '<', config.billing.attempts)
+      // Past the abandon window an exhausted row still gets its final probe,
+      // so an unpaid checkout terminalizes instead of blocking new purchases.
+      .where((eb) =>
+        eb.or([
+          eb('reconciliation_attempts', '<', config.billing.attempts),
+          eb('created_at', '<=', new Date(now.getTime() - config.billing.abandonSeconds * 1000)),
+        ]),
+      )
       .orderBy('created_at')
       .forUpdate()
       .skipLocked()
@@ -159,9 +175,14 @@ async function pendingProbe(
       unpaid &&
       pending.created_at.getTime() <= now.getTime() - config.billing.abandonSeconds * 1000;
     if (abandoned && reference && pending.activation_kind === 'base') {
-      const cancelled = await provider.cancel(reference, false);
-      if (cancelled.id !== reference || !['cancelled', 'expired'].includes(cancelled.status))
-        return pending.id;
+      try {
+        const cancelled = await provider.cancel(reference, false);
+        if (cancelled.id !== reference || !['cancelled', 'expired'].includes(cancelled.status))
+          return pending.id;
+      } catch (error) {
+        // A definite refusal (e.g. already cancelled) is final; uncertainty retries.
+        if (!(error instanceof ProviderError) || error.uncertain) throw error;
+      }
     }
     await db.transaction().execute(async (trx) => {
       await lockOwner(trx, pending.billing_account_id);
@@ -211,7 +232,11 @@ async function pendingProbe(
         .execute();
     });
   } catch (error) {
-    // Uncertain reads never prove nonpayment. Exhaustion requires operator review.
+    // Uncertain reads never prove nonpayment; the row stays pending for review.
+    logger.warning('billing.pending_recovery_failed', {
+      activation_id: pending.id,
+      exception: String(error),
+    });
     await db
       .updateTable('pending_activations')
       .set({
@@ -441,10 +466,18 @@ async function subscriptionProbe(
   });
   try {
     await pushChange(db, sub.id, provider);
-    // A durable cancellation intent survives an interrupted provider request.
-    if (sub.cancel_at_period_end && sub.status === 'active')
+    let evidence = await provider.evidence(sub.external_subscription_id, true);
+    // A durable cancellation intent survives an interrupted provider request;
+    // cancel only while the provider still shows the subscription renewing.
+    if (
+      sub.cancel_at_period_end &&
+      evidence.kind === 'base' &&
+      evidence.subscription.status === 'active' &&
+      !evidence.subscription.cancelAtEnd
+    ) {
       await provider.cancel(sub.external_subscription_id, true);
-    const evidence = await provider.evidence(sub.external_subscription_id, true);
+      evidence = await provider.evidence(sub.external_subscription_id, true);
+    }
     await db.transaction().execute(async (trx) => {
       await lockOwner(trx, sub.billing_account_id);
       const owned = await trx
@@ -469,7 +502,11 @@ async function subscriptionProbe(
         .where('id', '=', sub.id)
         .execute();
     });
-  } catch {
+  } catch (error) {
+    logger.warning('billing.subscription_recovery_failed', {
+      subscription_id: sub.id,
+      exception: String(error),
+    });
     await db
       .updateTable('billing_subscriptions')
       .set({ reconciliation_lease_token: null, reconciliation_lease_expires_at: null })

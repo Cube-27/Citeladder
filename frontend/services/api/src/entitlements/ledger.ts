@@ -70,7 +70,7 @@ export async function reserveUsage(
       ?.type !== 'counter.consumable'
   )
     throw new LedgerError('capability_not_consumable');
-  // Lock UUID order, allocate expiry order. Both stacks share the account capacity lock.
+  // Lock UUID order (as Python's ledger bridge does), allocate expiry order.
   const ids = candidates.map((grant) => grant.id).sort();
   if (ids.length)
     await db

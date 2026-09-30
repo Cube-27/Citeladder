@@ -44,6 +44,8 @@ export const buyer = {
 export class BillingFixtures extends Fixtures {
   readonly database: Database;
   private readonly revisions: string[] = [];
+  // Non-fixture revisions this fixture retired; cleanup republishes them.
+  private readonly retired: string[] = [];
   readonly accounts: string[] = [];
   readonly operatorCodes: string[] = [];
   constructor(db: Database) {
@@ -82,12 +84,17 @@ export class BillingFixtures extends Fixtures {
     const revision = `fixture-${randomUUID()}`;
     payload.contact_sales_url = `https://example.test/contact/${revision}`;
     const actor = await this.user();
-    if (published)
-      await this.database
+    if (published) {
+      const retired = await this.database
         .updateTable('billing_catalog_revisions')
         .set({ publication_state: 'retired' })
         .where('publication_state', '=', 'published')
+        .returning('revision')
         .execute();
+      for (const row of retired)
+        if (!row.revision.startsWith('fixture-') && !this.retired.includes(row.revision))
+          this.retired.push(row.revision);
+    }
     await this.database
       .insertInto('billing_catalog_revisions')
       .values({
@@ -135,6 +142,12 @@ export class BillingFixtures extends Fixtures {
       await this.database
         .deleteFrom('billing_catalog_revisions')
         .where('revision', 'in', this.revisions)
+        .execute();
+    if (this.retired.length)
+      await this.database
+        .updateTable('billing_catalog_revisions')
+        .set({ publication_state: 'published' })
+        .where('revision', 'in', this.retired)
         .execute();
     await super.cleanup();
   }

@@ -114,7 +114,6 @@ from app.core.config.audits import (
     AUDIT_STATUS_PARTIALLY_COMPLETED,
     MEASUREMENT_POLICY_KEY,
 )
-from app.core.config.billing_contracts import SUBSCRIPTION_KIND_BASE
 from app.core.config.errors import (
     CODE_HTTP_ERROR,
     CODE_INTERNAL_ERROR,
@@ -178,7 +177,7 @@ from scripts.auth_policy import (
 from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
-from scripts.ts_platform_billing import billing_policy, site_health_runtime_policy
+from scripts.ts_platform_billing import billing_policy, entitlements_policy
 from scripts.ts_platform_integrations import integration_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
@@ -401,9 +400,8 @@ def build_config() -> dict[str, Any]:
         },
         "auth": auth_policy(_setting),
         "site_health_runtime": site_health_runtime_policy(_setting),
-        "entitlements": _entitlements_policy(),
+        "entitlements": entitlements_policy(),
         "billing": billing_policy(_setting),
-        "site_health_runtime": site_health_runtime_policy(_setting),
         "prompts": _prompts_policy(),
         "models": {
             "gateway": {
@@ -420,51 +418,6 @@ def build_config() -> dict[str, Any]:
                 for name, value in vars(jev_config).items()
                 if name.startswith("JEV_")
             },
-        },
-    }
-
-
-def _entitlements_policy() -> dict[str, Any]:
-    """The capability registry and the account-capacity lock both stacks take."""
-    ent = entitlements_config
-    registry = ent.CAPABILITY_REGISTRY
-    return {
-        "registry_revision": registry.revision,
-        "capabilities": {
-            entry.key: {
-                "type": entry.capability_type.value,
-                "levels": len(entry.ordered_values),
-                "ordered_values": list(entry.ordered_values),
-                "issuable": entry.issuable,
-                "public": entry.public,
-                "rolling_window_seconds": entry.rolling_window_seconds,
-            }
-            for entry in registry.entries
-        },
-        "grant_source_kinds": sorted(ent.GRANT_SOURCE_KINDS),
-        "draw_source_order": list(ent.CONSUMABLE_DRAW_SOURCE_ORDER),
-        "paid_access_sources": [ent.GRANT_SOURCE_ADDON, ent.GRANT_SOURCE_TOPUP],
-        "base_subscription_kind": SUBSCRIPTION_KIND_BASE,
-        "prompt_slots": ent.KEY_PROMPT_SLOTS,
-        "project_slots": ent.KEY_PROJECT_SLOTS,
-        "project_deletion": ent.KEY_PROJECT_DELETION,
-        "capacity_lock": {
-            "namespace": ent.OCCUPANCY_LOCK_NAMESPACE,
-            "person": ent.OCCUPANCY_LOCK_PERSON,
-        },
-        "baseline": {
-            "revision": ent.BASELINE_GRANT_REVISION,
-            "source_kind": ent.GRANT_SOURCE_OVERRIDE,
-            "grants": {
-                ent.KEY_PROJECT_SLOTS: ent.FREE_PROJECT_SLOTS,
-                ent.KEY_PROMPT_SLOTS: ent.FREE_PROMPT_SLOTS,
-                ent.KEY_MONITORED_URLS: ent.FREE_MONITORED_URLS,
-            },
-        },
-        "codes": {
-            "limit_exceeded": ent.CODE_OCCUPANCY_LIMIT_EXCEEDED,
-            "unresolved": ent.CODE_OCCUPANCY_UNRESOLVED,
-            "capability_not_granted": ent.CODE_CAPABILITY_NOT_GRANTED,
         },
     }
 

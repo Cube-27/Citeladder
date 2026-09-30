@@ -95,20 +95,20 @@ describe('billing money and access owner', () => {
   it('preserves uncertain creation and recovers without creating or granting twice', async () => {
     const t = await fixtures.tenant();
     const key = randomUUID();
-    await expect(
-      purchase(
-        db,
-        config,
-        t.workspaceId,
-        { kind: 'base', key: 'tier_1', quantity: 1, mode: 'byok', country: 'US', identity: buyer },
-        key,
-        fakeProvider({
-          create: async () => {
-            throw new ProviderError(true);
-          },
-        }),
-      ),
-    ).rejects.toMatchObject({ status: 502 });
+    // The committed intent is truthful: the client polls while recovery resolves it.
+    const accepted = await purchase(
+      db,
+      config,
+      t.workspaceId,
+      { kind: 'base', key: 'tier_1', quantity: 1, mode: 'byok', country: 'US', identity: buyer },
+      key,
+      fakeProvider({
+        create: async () => {
+          throw new ProviderError(true);
+        },
+      }),
+    );
+    expect(accepted.status).toBe('pending');
     const row = await db
       .selectFrom('pending_activations')
       .selectAll()
@@ -141,6 +141,41 @@ describe('billing money and access owner', () => {
       .execute();
     expect(invoices).toHaveLength(1);
     expect(invoices[0]!.total_amount_minor).toBe(receipts[0]!.amount_minor);
+  });
+  it('abandons an unpaid checkout past its window even after attempts are exhausted', async () => {
+    const t = await fixtures.tenant();
+    const response = await buy(t.workspaceId);
+    const row = await pending(response.activation_id);
+    await db
+      .updateTable('pending_activations')
+      .set({
+        created_at: new Date(Date.now() - (config.billing.abandonSeconds + 60) * 1000),
+        reconciliation_attempts: config.billing.attempts,
+        reconciliation_next_at: new Date(),
+      })
+      .where('id', '=', row.id)
+      .execute();
+    const unpaid = paidSubscription(row, { status: 'created', payment: null });
+    const cancel = vi.fn(async (reference: string) => ({
+      ...unpaid.subscription,
+      id: reference,
+      status: 'cancelled',
+    }));
+    await recoverBilling(
+      db,
+      { ...config, billing: { ...config.billing, batchSize: 1000 } },
+      fakeProvider({
+        evidence: async (reference) => {
+          if (reference !== row.external_reference) throw new ProviderError(true);
+          return unpaid;
+        },
+        cancel,
+      }),
+    );
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect((await pending(row.id)).status).toBe('abandoned');
+    // The terminal row no longer blocks a new base purchase.
+    expect((await buy(t.workspaceId)).status).toBe('pending');
   });
   it('settles concurrent evidence once and refuses an active subscription without a captured invoice', async () => {
     const t = await fixtures.tenant();
@@ -496,8 +531,7 @@ describe('billing money and access owner', () => {
     ).toBe(true);
     expect(new Set(rows.map((row) => row.receipt_number)).size).toBe(3);
   });
-  it('settles an upgrade once, preserving the current paid period and frozen renewal target', async () => {
-    await fixtures.catalog();
+  async function upgrade(paidAt = new Date()) {
     const t = await activated();
     const result = await changePlan(
       db,
@@ -524,13 +558,18 @@ describe('billing money and access owner', () => {
         orderId: row.external_reference,
         amount: quote.total_price.amount_minor,
         currency: quote.total_price.currency,
-        paidAt: new Date(),
+        paidAt,
         periodStart: null,
         periodEnd: null,
         taxMinor: null,
         method: 'card',
       },
     } as const;
+    return { t, row, payment };
+  }
+  it('settles an upgrade once, preserving the current paid period and frozen renewal target', async () => {
+    await fixtures.catalog();
+    const { t, row, payment } = await upgrade();
     await Promise.all(
       ['webhook', 'reconciliation'].map((authority) =>
         db.transaction().execute((trx) => settlePending(trx, row.id, 'test', payment, authority)),
@@ -560,6 +599,31 @@ describe('billing money and access owner', () => {
     expect(
       upgrades.every((row) => row.valid_until?.getTime() === t.sub.current_period_end!.getTime()),
     ).toBe(true);
+  });
+  it('keeps the receipt for an upgrade paid after its period, granting nothing', async () => {
+    await fixtures.catalog();
+    const { t, row, payment } = await upgrade(new Date(Date.now() + 40 * 86_400_000));
+    await db.transaction().execute((trx) => settlePending(trx, row.id, 'test', payment, 'webhook'));
+    expect((await pending(row.id)).status).toBe('activated');
+    const receipts = await db
+      .selectFrom('billing_payments')
+      .select('external_payment_id')
+      .where('billing_account_id', '=', t.accountId)
+      .execute();
+    expect(receipts.map((receipt) => receipt.external_payment_id)).toContain(payment.payment.id);
+    const grants = await db
+      .selectFrom('account_grants')
+      .select('id')
+      .where('billing_account_id', '=', t.accountId)
+      .where('source_ref', '=', `activation:${row.id}`)
+      .execute();
+    expect(grants).toHaveLength(0);
+    const sub = await db
+      .selectFrom('billing_subscriptions')
+      .select('scheduled_change')
+      .where('id', '=', t.sub.id)
+      .executeTakeFirstOrThrow();
+    expect(sub.scheduled_change).toBeNull();
   });
   it('issues fixed-expiry one-time grants and rejects a mismatched captured amount atomically', async () => {
     await fixtures.catalog();
@@ -660,8 +724,20 @@ describe('billing money and access owner', () => {
       randomUUID(),
       fakeProvider({ change }),
     );
-    expect(result.direction).toBe('downgrade');
+    expect(result).toMatchObject({ direction: 'downgrade', status: 'scheduled' });
     expect(change).toHaveBeenCalledTimes(1);
+    // A refused switch is reported, and the same key can request it again.
+    const refused = await activated();
+    const key = randomUUID();
+    const reject = vi.fn(async () => {
+      throw new ProviderError(false, 'provider_rejected');
+    });
+    await expect(
+      changePlan(db, config, refused.workspaceId, 'tier_2', key, fakeProvider({ change: reject })),
+    ).rejects.toMatchObject({ status: 502 });
+    expect(
+      await changePlan(db, config, refused.workspaceId, 'tier_2', key, fakeProvider({ change })),
+    ).toMatchObject({ direction: 'downgrade', status: 'scheduled' });
     await expect(
       cancelSubscription(
         db,
@@ -893,7 +969,7 @@ describe('billing money and access owner', () => {
       .mockRejectedValue(new Error('Unexpected provider I/O'));
     try {
       const disabled = createApp({ ...config, billing: { ...config.billing, enabled: false } }, db);
-      const pricing = await disabled.request('/api/v1/billing/catalog?country_code=US');
+      const pricing = await disabled.request('/api/v1/billing/catalog?country=US');
       expect(pricing.status).toBe(200);
       const catalog = (await pricing.json()) as {
         plans: { checkout_available: boolean }[];

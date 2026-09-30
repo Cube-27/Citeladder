@@ -62,11 +62,11 @@ export const billingRoutes = [
     authorize: 'public',
     params: {
       path: {},
-      query: { country_code: { scalar: { kind: 'str', minLength: 2, maxLength: 2 } } },
+      query: { country: { scalar: { kind: 'str', maxLength: 2 } } },
     },
     response: billingCatalogSchema,
     handle: ({ db, config }, { query }) =>
-      publicCatalog(db, config, query.country_code?.trim().toUpperCase() ?? null),
+      publicCatalog(db, config, query.country?.trim().toUpperCase() ?? null),
   }),
   defineRoute({
     family,
@@ -299,6 +299,10 @@ export const billingRoutes = [
       )
         conflict('checkout_unavailable');
       verifyCallback(config.razorpay, pending.external_reference, input.fields);
+      if (pending.status === 'activated') return activationResponse(pending);
+      // The callback authenticates only; recovery verifies captured funds.
+      if (pending.status !== 'pending' || pending.expires_at <= new Date())
+        conflict('checkout_unavailable');
       await db
         .updateTable('pending_activations')
         .set({ reconciliation_next_at: new Date() })

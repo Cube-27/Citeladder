@@ -190,7 +190,13 @@ export function defineRoute<
   return { contract, params: route.params, register };
 }
 
-export const defineGetRoute = defineRoute;
+export function defineGetRoute<
+  const Path extends ParamSpecs,
+  const Query extends ParamSpecs,
+  Response extends z.ZodType,
+>(route: RouteSpec<Path, Query, Response>): ProductRoute {
+  return defineRoute(route);
+}
 export function definePostRoute<
   const Path extends ParamSpecs,
   const Query extends ParamSpecs,

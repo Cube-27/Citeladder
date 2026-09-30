@@ -15,6 +15,9 @@ import {
 import type { Evidence, SubscriptionEvidence } from './razorpay.ts';
 import { recordPayment } from './receipts.ts';
 import { policy } from '../config.ts';
+import { getLogger } from '../logging.ts';
+
+const logger = getLogger('api.billing');
 
 export const frozenTermsSchema = z.object({
   catalog_key: z.string(),
@@ -37,6 +40,12 @@ export const scheduledSchema = z.object({
 });
 const grantedStates = new Set(['active', 'cancel_scheduled']);
 const terminalStates = new Set(['cancelled', 'expired', 'unpaid']);
+
+/** The frozen revision's display name for a plan, as receipts print it. */
+async function planName(db: Database, revision: string, key: string) {
+  const frozen = await catalog(db, revision);
+  return frozen.payload.plans.find((row) => row.key === key)?.name ?? key;
+}
 
 async function accountWorkspace(db: Database, accountId: string) {
   return (
@@ -80,7 +89,6 @@ export async function settlePending(
       notes.citeladder_catalog_revision !== pending.catalog_revision)
   )
     conflict('provider_reference_mismatch');
-  if (pending.status === 'activated') return;
   if (pending.status !== 'pending') return;
   const failed =
     evidence.kind === 'base'
@@ -290,7 +298,7 @@ export async function settleSubscription(
       terms.quote,
       terms.tax_snapshot,
       sub.id,
-      terms.catalog_key,
+      await planName(db, terms.catalog_revision, terms.catalog_key),
     );
     if (grantedStates.has(event.status))
       await issueBundle(db, {
@@ -360,7 +368,10 @@ export async function settleSubscription(
       ended_at: endedAt,
       current_period_start: event.start,
       current_period_end: end,
-      cancel_at_period_end: event.cancelAtEnd || terminalStates.has(event.status),
+      // A committed cancellation intent survives evidence the provider has not
+      // caught up with; the subscription sweep retries the provider call.
+      cancel_at_period_end:
+        event.cancelAtEnd || terminalStates.has(event.status) || sub.cancel_at_period_end,
       provider_state_version: event.version,
       ...(renewal
         ? {
@@ -404,22 +415,8 @@ async function settleUpgrade(
   const change = z
     .object({ subscription_id: z.uuid(), effective_at: z.string(), terms: frozenTermsSchema })
     .parse(pending.change_terms);
-  const sub = await db
-    .selectFrom('billing_subscriptions')
-    .selectAll()
-    .where('id', '=', change.subscription_id)
-    .where('billing_account_id', '=', pending.billing_account_id)
-    .forUpdate()
-    .executeTakeFirstOrThrow();
-  if (
-    !sub.is_current ||
-    sub.status !== 'active' ||
-    sub.cancel_at_period_end ||
-    sub.current_period_end?.getTime() !== new Date(change.effective_at).getTime() ||
-    sub.scheduled_change
-  )
-    conflict('plan_change_unavailable');
   const quote = resolvedQuoteSchema.parse(pending.quote);
+  // The receipt stands whatever happens to the grant: money was collected.
   await recordPayment(
     db,
     pending,
@@ -427,10 +424,23 @@ async function settleUpgrade(
     quote,
     pending.tax_snapshot,
     null,
-    pending.catalog_key,
+    await planName(db, change.terms.catalog_revision, pending.catalog_key),
   );
-  const end = new Date(change.effective_at);
-  if (evidence.payment.paidAt >= end) conflict('plan_change_unavailable');
+  const paidAt = evidence.payment.paidAt;
+  const sub = await db
+    .selectFrom('billing_subscriptions')
+    .selectAll()
+    .where('id', '=', change.subscription_id)
+    .where('billing_account_id', '=', pending.billing_account_id)
+    .forUpdate()
+    .executeTakeFirst();
+  const end = sub?.is_current ? sub.current_period_end : null;
+  if (!sub || !end || end <= paidAt) {
+    // Paid after the upgraded period ended: nothing left to grant. An operator
+    // reviews the payment for a refund.
+    logger.warning('billing.upgrade_paid_after_period', { activation_id: pending.id });
+    return;
+  }
   await issueBundle(db, {
     workspaceId,
     accountId: pending.billing_account_id,
@@ -439,14 +449,18 @@ async function settleUpgrade(
     sourceRef: `activation:${pending.id}`,
     specs: change.terms.grant_specs.map(([key, value]) => ({ key, value })),
     revision: change.terms.catalog_revision,
-    from: evidence.payment.paidAt,
+    from: paidAt,
     until: end,
     primary: true,
     profile: pending.catalog_key,
     priority: policy.billing.contracts.upgrade_bundle_priority,
-    periodStart: evidence.payment.paidAt,
+    periodStart: paidAt,
     periodEnd: end,
   });
+  const inFlight =
+    sub.scheduled_change &&
+    scheduledSchema.parse(sub.scheduled_change).state !== 'provider_rejected';
+  if (inFlight || sub.cancel_at_period_end) return;
   await db
     .updateTable('billing_subscriptions')
     .set({
@@ -454,10 +468,12 @@ async function settleUpgrade(
         direction: 'upgrade',
         state: 'requested',
         catalog_key: pending.catalog_key,
-        effective_at: change.effective_at,
+        effective_at: end.toISOString(),
         source: pending.id,
         terms: change.terms,
       }),
+      // The next subscription sweep makes the provider call promptly.
+      reconciliation_next_at: new Date(),
       updated_at: new Date(),
     })
     .where('id', '=', sub.id)
