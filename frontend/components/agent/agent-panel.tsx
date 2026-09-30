@@ -169,11 +169,13 @@ function PanelStart({
 function PanelLayout({
   children,
   composer,
-}: Readonly<{ children: ReactNode; composer: ReactNode }>) {
+  end,
+}: Readonly<{ children: ReactNode; composer: ReactNode; end?: ReactNode }>) {
   return (
     <div className="flex min-h-full flex-1 flex-col gap-4">
       <div className="flex min-w-0 flex-1 flex-col gap-4">{children}</div>
       <div className="bg-elevated z-sticky sticky bottom-0 pt-2 pb-4">{composer}</div>
+      {end}
     </div>
   );
 }
@@ -240,6 +242,7 @@ function PanelConversation({
   const { endRef, showJump, jumpToLatest } = useFollowLatest(detail);
   return (
     <PanelLayout
+      end={<div ref={endRef} />}
       composer={
         <>
           {showJump ? (
@@ -290,6 +293,8 @@ function PanelConversation({
           ) : null
         }
         onRefine={turn.suggest}
+        onRecover={turn.recover}
+        hasDraft={Boolean(turn.draft.trim() || turn.commands.mentions.length)}
         sending={turn.pending}
         onStop={() => detail.latest_run && cancel.mutate({ chatId, runId: detail.latest_run.id })}
         stopping={cancel.isPending}
@@ -297,7 +302,6 @@ function PanelConversation({
       />
       {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
       <FollowUpFailure turn={turn} actionId={detail.chat.action_id} canSend={access.canSend} />
-      <div ref={endRef} />
     </PanelLayout>
   );
 }

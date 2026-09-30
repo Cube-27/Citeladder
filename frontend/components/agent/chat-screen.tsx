@@ -96,6 +96,8 @@ function ChatView({
             ) : null
           }
           onRefine={turn.suggest}
+          onRecover={turn.recover}
+          hasDraft={Boolean(turn.draft.trim() || turn.commands.mentions.length)}
           sending={turn.pending}
           onStop={() => detail.latest_run && cancel.mutate({ chatId, runId: detail.latest_run.id })}
           stopping={cancel.isPending}

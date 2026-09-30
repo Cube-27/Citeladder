@@ -135,6 +135,13 @@ for (const width of [1280, 390]) {
         content: 'Latest persisted answer.',
       });
       await expect.poll(() => reads).toBeGreaterThan(priorReads);
+      await expect(page.getByText('Latest persisted answer.')).toBeAttached();
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+          }),
+      );
       const position =
         surface === 'panel'
           ? await page
@@ -144,6 +151,26 @@ for (const width of [1280, 390]) {
       expect(position).toBe(0);
       await page.getByRole('button', { name: 'Jump to latest' }).click();
       await expect(page.getByText('Latest persisted answer.')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Jump to latest' })).not.toBeAttached();
+      current.messages.push({
+        ...current.messages.at(-1)!,
+        id: '77777777-7777-4777-8777-999999999998',
+        sequence: 26,
+        content: 'Next persisted answer.\n\n' + 'Additional buyer evidence. '.repeat(40),
+      });
+      await expect(page.getByText(/Next persisted answer/)).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Jump to latest' })).not.toBeAttached();
+      const remaining =
+        surface === 'panel'
+          ? await page
+              .getByRole('region', { name: 'Agent conversation' })
+              .evaluate(
+                (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
+              )
+          : await page.evaluate(
+              () => document.documentElement.scrollHeight - window.scrollY - window.innerHeight,
+            );
+      expect(remaining).toBeLessThanOrEqual(surface === 'panel' ? 1 : 96);
       await expect(reply).toHaveValue('Draft kept while working');
       const stop = page.getByRole('button', { name: 'Stop', exact: true });
       await stop.focus();

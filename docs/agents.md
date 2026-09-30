@@ -147,8 +147,10 @@ following. The composer permits drafting while a run is active, but cannot send
 another turn. Drafts stay in component memory, scoped to the current chat and
 workspace, and survive recoverable submission failures. **Retry send** replays
 the exact failed submission with its original idempotency key; newer unsent text
-is retained. After an accepted run fails or stops, reviewing its request prefills
-the composer, and sending it starts a new attempt through normal admission.
+is retained. After an accepted run fails or stops, reviewing its request restores
+the message and typed Action mentions. If another draft is present, the recovery
+button explicitly offers to replace it. Sending starts a new attempt through
+normal admission.
 
 Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts). **Work on this** attaches an

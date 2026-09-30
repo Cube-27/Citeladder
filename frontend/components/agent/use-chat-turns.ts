@@ -12,6 +12,7 @@ import {
   agentQueries,
   type AgentChatDetail,
   type AgentContextRefs,
+  type AgentMessage,
 } from '@/lib/api/agent';
 import { queryKeys } from '@/lib/api/query-keys';
 import { AGENT_RUN_POLL_MS } from '@/lib/config/agent';
@@ -88,8 +89,14 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     ...agentMutations.sendMessage(workspaceId),
     onSuccess: (accepted, variables) => {
       requestKey.accepted();
-      setDraft((current) => (current.trim() === variables.message ? '' : current));
-      if (draft.trim() === variables.message) commands.clear();
+      const submittedMentions = variables.mentions ?? [];
+      const unchangedMentions =
+        commands.mentions.length === submittedMentions.length &&
+        commands.mentions.every((mention, index) => mention.id === submittedMentions[index]);
+      if (draft.trim() === variables.message && unchangedMentions) {
+        setDraft('');
+        commands.clear();
+      }
       queryClient.setQueryData<AgentChatDetail>(queryKeys.agent.chat(chatId), (current) =>
         current ? { ...current, latest_run: accepted.run } : current,
       );
@@ -119,6 +126,10 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     setDraft,
     suggest: (instruction: string) =>
       setDraft((current) => (current.trim() ? `${current}\n\n${instruction}` : instruction)),
+    recover: (message: AgentMessage) => {
+      setDraft(message.content);
+      commands.restore(message.mentions);
+    },
     skillId,
     setSkillId,
     lastMessage,

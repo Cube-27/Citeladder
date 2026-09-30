@@ -25,6 +25,7 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 import { ChatScreen } from './chat-screen';
 import { OutputHistory } from './output-history';
 import { queryKeys } from '@/lib/api/query-keys';
+import type { AgentMessage } from '@/lib/api/agent';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const CHAT = '22222222-2222-4222-8222-222222222222';
@@ -78,6 +79,7 @@ function detail(
         sequence: 1,
         role: 'user',
         content: 'Improve our pricing page snippet.',
+        mentions: [] as AgentMessage['mentions'],
         skill_id: null,
         skill_source: null,
         evidence_refs: [],
@@ -89,6 +91,7 @@ function detail(
         sequence: 2,
         role: 'agent',
         content: 'Here are the edits.',
+        mentions: [] as AgentMessage['mentions'],
         skill_id: 'gsc_optimize',
         skill_source: 'model',
         evidence_refs: [],
@@ -490,14 +493,48 @@ describe('ChatScreen', () => {
     expect(screen.getByRole('region', { name: 'Pricing page edits' })).toBeVisible();
   });
 
-  it('starts a fresh attempt after an accepted run fails', async () => {
+  it('restores Action context for a fresh attempt and explicitly replaces an existing draft', async () => {
+    const ACTION = '88888888-8888-4888-8888-888888888888';
     let current = detail(revision(REV1, 1, 'agent', 'Body.'));
     const keys: (string | null)[] = [];
+    const bodies: unknown[] = [];
+    let accept!: () => void;
+    const acceptance = new Promise<void>((resolve) => {
+      accept = resolve;
+    });
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
       http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
-      http.post(`/api/v1/agent/chats/${CHAT}/messages`, ({ request }) => {
+      http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: ACTION,
+              project_id: PROJECT,
+              target_kind: 'page',
+              target_label: 'Pricing page',
+              target_url: null,
+              target_prompt_id: null,
+              origin: 'evidence',
+              status: 'open',
+              priority_score: 1,
+              families: [],
+              approach: 'fix_technical',
+              skill_id: 'technical_health',
+              member_count: 1,
+              evidence_cleared_at: null,
+              created_at: NOW,
+              updated_at: NOW,
+            },
+          ],
+          next_cursor: null,
+          status_counts: {},
+        }),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {
         keys.push(request.headers.get('Idempotency-Key'));
+        bodies.push(await request.json());
+        if (keys.length === 1) await acceptance;
         current = {
           ...detail(revision(REV1, 1, 'agent', 'Body.'), {
             status: 'failed',
@@ -507,9 +544,10 @@ describe('ChatScreen', () => {
             ...current.messages,
             {
               ...current.messages[0]!,
-              id: '77777777-7777-4777-8777-777777777774',
-              sequence: 3,
-              content: 'Shorten it.',
+              id: `77777777-7777-4777-8777-${String(keys.length + 3).padStart(12, '0')}`,
+              sequence: current.messages.length + 1,
+              content: '@Pricing page Shorten it.',
+              mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page' }],
             },
           ],
         };
@@ -518,13 +556,26 @@ describe('ChatScreen', () => {
     );
     const user = userEvent.setup();
     renderChat();
-    await user.type(await screen.findByLabelText('Reply to the agent'), 'Shorten it.');
+    await user.type(await screen.findByLabelText('Reply to the agent'), '@Pricing');
+    await user.click(await screen.findByRole('option', { name: /Pricing page/ }));
+    await user.type(screen.getByLabelText('Reply to the agent'), 'Shorten it.');
     await user.click(screen.getByRole('button', { name: 'Send' }));
-    await user.click(await screen.findByRole('button', { name: 'Review request to try again' }));
+    await user.click(screen.getByRole('button', { name: 'Remove @Pricing page' }));
+    accept();
+    await screen.findByRole('button', { name: 'Replace draft with failed request' });
+    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('@Pricing page Shorten it.');
+    expect(screen.queryByRole('button', { name: 'Remove @Pricing page' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Replace draft with failed request' }));
+    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('@Pricing page Shorten it.');
+    expect(screen.getByRole('button', { name: 'Remove @Pricing page' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await vi.waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[0]).toBeTruthy();
     expect(keys[1]).not.toBe(keys[0]);
+    expect(bodies).toEqual([
+      { message: '@Pricing page Shorten it.', mentions: [ACTION] },
+      { message: '@Pricing page Shorten it.', mentions: [ACTION] },
+    ]);
   });
 
   it('keeps stopped-at-limit distinct from a failure and locks nothing that saved', async () => {
@@ -659,37 +710,41 @@ describe('ChatScreen', () => {
     ).toBeVisible();
   });
 
-  it('preserves reading position through polling until the reader jumps to latest', async () => {
-    let current = detail(revision(REV1, 1, 'agent', 'Body.'));
-    mswServer.use(
-      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
-    );
-    const scroll = vi.fn();
-    vi.stubGlobal('scrollY', 0);
-    Object.defineProperty(document.documentElement, 'scrollHeight', {
-      configurable: true,
-      value: 4000,
-    });
-    const oldScroll = HTMLElement.prototype.scrollIntoView;
-    HTMLElement.prototype.scrollIntoView = scroll;
-    try {
-      const user = userEvent.setup();
-      const { queryClient } = renderChat();
-      await screen.findByLabelText('Reply to the agent');
-      const initialScrolls = scroll.mock.calls.length;
-      fireEvent.scroll(window);
-      current = detail(revision(REV2, 2, 'agent', 'Updated body.'));
-      await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
-      expect(scroll).toHaveBeenCalledTimes(initialScrolls);
-      await user.click(screen.getByRole('button', { name: 'Jump to latest' }));
-      expect(scroll).toHaveBeenCalledTimes(initialScrolls + 1);
-    } finally {
-      HTMLElement.prototype.scrollIntoView = oldScroll;
-      Reflect.deleteProperty(document.documentElement, 'scrollHeight');
-      vi.unstubAllGlobals();
-    }
-  });
+  it.each([0, 2000])(
+    'preserves reading position through polling from scroll offset %i',
+    async (offset) => {
+      let current = detail(revision(REV1, 1, 'agent', 'Body.'));
+      mswServer.use(
+        http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+        http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
+      );
+      const scroll = vi.fn();
+      vi.stubGlobal('scrollY', offset);
+      Object.defineProperty(document.documentElement, 'scrollHeight', {
+        configurable: true,
+        value: 4000,
+      });
+      const oldScroll = HTMLElement.prototype.scrollIntoView;
+      HTMLElement.prototype.scrollIntoView = scroll;
+      try {
+        const user = userEvent.setup();
+        const { queryClient } = renderChat();
+        await screen.findByLabelText('Reply to the agent');
+        const initialScrolls = scroll.mock.calls.length;
+        if (offset > 0) expect(initialScrolls).toBe(0);
+        fireEvent.scroll(window);
+        current = detail(revision(REV2, 2, 'agent', 'Updated body.'));
+        await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
+        expect(scroll).toHaveBeenCalledTimes(initialScrolls);
+        await user.click(screen.getByRole('button', { name: 'Jump to latest' }));
+        expect(scroll).toHaveBeenCalledTimes(initialScrolls + 1);
+      } finally {
+        HTMLElement.prototype.scrollIntoView = oldScroll;
+        Reflect.deleteProperty(document.documentElement, 'scrollHeight');
+        vi.unstubAllGlobals();
+      }
+    },
+  );
 
   it('declares the revision on screen implemented and shows what it waits for', async () => {
     const ACTION = '88888888-8888-4888-8888-888888888888';

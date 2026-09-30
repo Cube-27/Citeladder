@@ -27,6 +27,8 @@ export function Conversation({
   detail,
   output: outputView,
   onRefine,
+  onRecover,
+  hasDraft = false,
   onStop,
   stopping,
   canSend,
@@ -35,6 +37,8 @@ export function Conversation({
   detail: AgentChatDetail;
   output?: ReactNode;
   onRefine: (instruction: string) => void;
+  onRecover: (message: AgentMessage) => void;
+  hasDraft?: boolean;
   onStop: () => void;
   stopping: boolean;
   canSend: boolean;
@@ -64,7 +68,7 @@ export function Conversation({
           Sending message…
         </output>
       ) : null}
-      <TurnRecovery detail={detail} canSend={canSend} onReview={onRefine} />
+      <TurnRecovery detail={detail} canSend={canSend} onReview={onRecover} hasDraft={hasDraft} />
       {output?.latest_revision && canSend && hasFreshDeliverable(detail) ? (
         <FollowUps
           kind={output.kind}
@@ -93,10 +97,12 @@ function TurnRecovery({
   detail,
   canSend,
   onReview,
+  hasDraft,
 }: Readonly<{
   detail: AgentChatDetail;
   canSend: boolean;
-  onReview: (message: string) => void;
+  onReview: (message: AgentMessage) => void;
+  hasDraft: boolean;
 }>) {
   const request = [...detail.messages].reverse().find((message) => message.role === 'user');
   if (
@@ -106,8 +112,8 @@ function TurnRecovery({
   )
     return null;
   return (
-    <Button variant="secondary" size="sm" onClick={() => onReview(request.content)}>
-      Review request to try again
+    <Button variant="secondary" size="sm" onClick={() => onReview(request)}>
+      {hasDraft ? 'Replace draft with failed request' : 'Review request to try again'}
     </Button>
   );
 }

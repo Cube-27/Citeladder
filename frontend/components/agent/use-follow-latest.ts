@@ -27,6 +27,8 @@ export function useFollowLatest(detail: AgentChatDetail) {
       following.current = nearEnd;
       setShowJump(!nearEnd);
     };
+    // A fresh chat starts at latest; a restored reading position stays where it is.
+    if ((root?.scrollTop ?? window.scrollY) > 0) onScroll();
     surface.addEventListener('scroll', onScroll, { passive: true });
     return () => surface.removeEventListener('scroll', onScroll);
   }, []);
