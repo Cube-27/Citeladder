@@ -16,7 +16,7 @@ import { getVisibilitySources } from '../visibility/sources.ts';
 import { readiness, datasetPage } from '../search-intelligence/reads.ts';
 import { opportunityStatusClause, validateStatus } from '../opportunities/action-status.ts';
 import { authorizeProject, decodeCursor, encodeCursor, pagination } from './data.ts';
-import type { Evidence, McpPrincipal, ReadScope } from './types.ts';
+import { McpInputError, type Evidence, type McpPrincipal, type ReadScope } from './types.ts';
 
 const reference = (kind: string, id: string, retrievable = true) => ({
   kind,
@@ -29,7 +29,7 @@ const unavailable = (reason: string): Evidence => ({
   state: 'unavailable',
   reason,
   artifact_refs: [],
-  omissions: [],
+  omissions: [{ reason, count: 1 }],
 });
 export type ReadArguments = Record<string, string | number | boolean | string[] | null | undefined>;
 const text = (args: ReadArguments, key: string) =>
@@ -105,9 +105,9 @@ async function ranked(db: Database, scope: ReadScope, args: ReadArguments): Prom
   }
   const cursor = text(args, 'cursor');
   if (cursor) {
-    if (!parseUuid(cursor)) throw new Error('cursor must be a UUID');
+    if (!parseUuid(cursor)) throw new McpInputError('cursor must be a UUID');
     const row = await query.where('id', '=', cursor).executeTakeFirst();
-    if (!row) throw new Error('cursor is invalid for this opportunity selection');
+    if (!row) throw new McpInputError('cursor is invalid for this opportunity selection');
     query = query.where(
       sql<boolean>`(priority_score < ${row.priority_score} or (priority_score = ${row.priority_score} and id > ${row.id}::uuid))`,
     );
@@ -205,7 +205,8 @@ async function promptPortfolio(
   if (args.cohort) query = query.where('p.cohort', '=', text(args, 'cohort')!);
   if (args.cursor) {
     const [at, id] = decodeCursor(text(args, 'cursor')!, 2);
-    if (!at || Number.isNaN(Date.parse(at)) || !parseUuid(id)) throw new Error('cursor is invalid');
+    if (!at || Number.isNaN(Date.parse(at)) || !parseUuid(id))
+      throw new McpInputError('cursor is invalid');
     query = query.where(sql<boolean>`(p.created_at,p.id) > (${at}::timestamptz,${id}::uuid)`);
   }
   const count = limit(args),
@@ -339,7 +340,7 @@ export async function readEvidence(
   if (name === 'read_query_evidence') {
     const start = text(args, 'window_start')!,
       end = text(args, 'window_end')!;
-    if (end < start) throw new Error('window_end must not precede window_start');
+    if (end < start) throw new McpInputError('window_end must not precede window_start');
     try {
       const page = await queryEvidencePage(
         db,
@@ -444,7 +445,7 @@ export async function readEvidence(
     }
     const offset = args.cursor ? Number(decodeCursor(text(args, 'cursor')!, 1)[0]) : 0;
     if (!Number.isInteger(offset) || offset < 0 || offset > mcpPolicy.max_visibility_source_offset)
-      throw new Error('cursor offset is outside the supported range');
+      throw new McpInputError('cursor offset is outside the supported range');
     const dimension = text(args, 'level') === 'url' ? 'url' : 'domain';
     const page = await getVisibilitySources(db, selection, {
       domain: null,

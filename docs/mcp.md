@@ -122,6 +122,13 @@ become arbitrary redirects. Grant revocation is available through the OAuth
 revocation endpoint and supporting clients; membership removal blocks affected
 reads immediately.
 
+Tool arguments are strict: unknown arguments, out-of-range limits and
+malformed UUIDs are rejected as invalid params (JSON-RPC `-32602`) rather than
+ignored or clamped. Defaulted arguments are optional in the published schema.
+Caller-caused read errors, such as a stale cursor or an inverted window, return
+their message; other read failures return only "Evidence is unavailable."
+A client may refresh only with a grant type it registered.
+
 The TypeScript transport has no Python MCP SDK dependency. Component acceptance covers the legacy
 `2025-11-25` initialize lifecycle and the `2026-07-28` per-request lifecycle
 (`server/discover`, protocol/method headers and reserved request metadata).

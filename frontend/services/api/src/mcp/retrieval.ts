@@ -10,7 +10,7 @@ import { getExecutionEvidence } from '../visibility/execution.ts';
 import { authorizedWorkspaceIds, authorizeProject } from './data.ts';
 import { projectBusinessContext } from './evidence.ts';
 import { mcpPolicy } from './config.ts';
-import type { Evidence, McpPrincipal } from './types.ts';
+import { McpInputError, type Evidence, type McpPrincipal } from './types.ts';
 
 type Descriptor = { table: keyof DB; columns: readonly string[]; title: string };
 function descriptor<T extends keyof DB>(
@@ -328,7 +328,7 @@ export function parseRecordId(value: string): { kind: Kind; id: string; part: nu
     !id ||
     (kind !== 'project' && kind !== 'prompt' && !Object.hasOwn(records, kind))
   ) {
-    throw new Error('id must be an allowlisted citeladder:// record URI');
+    throw new McpInputError('id must be an allowlisted citeladder:// record URI');
   }
   const parts = uri.searchParams.getAll('part');
   if (
@@ -336,13 +336,14 @@ export function parseRecordId(value: string): { kind: Kind; id: string; part: nu
     parts.length > 1 ||
     (parts[0] !== undefined && !/^\d+$/.test(parts[0]))
   )
-    throw new Error('Record URI contains unsupported parameters');
+    throw new McpInputError('Record URI contains unsupported parameters');
   const part = Number(parts[0] ?? 0);
-  if (!Number.isSafeInteger(part)) throw new Error('Record part must be a non-negative integer');
+  if (!Number.isSafeInteger(part))
+    throw new McpInputError('Record part must be a non-negative integer');
   return { kind: kind as Kind, id, part };
 }
 
-const missing = () => new Error('The requested record was not found in this account');
+const missing = () => new McpInputError('The requested record was not found in this account');
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
 function jsonValue(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();
@@ -694,7 +695,7 @@ export function retrievalDocument(
   const bytes = (value: Evidence) => Buffer.byteLength(JSON.stringify(value), 'utf8');
   const full = document(serialized);
   if (bytes(full) <= limit) {
-    if (part !== 0) throw new Error('The requested evidence part was not found');
+    if (part !== 0) throw new McpInputError('The requested evidence part was not found');
     return full;
   }
   const characters = Array.from(serialized);
@@ -713,7 +714,7 @@ export function retrievalDocument(
       characters.slice(index * chunkSize, (index + 1) * chunkSize).join(''),
     );
     if (parts.every((entry) => bytes(document(entry, uris)) <= limit)) {
-      if (part >= count) throw new Error('The requested evidence part was not found');
+      if (part >= count) throw new McpInputError('The requested evidence part was not found');
       return document(parts[part]!, uris);
     }
   }

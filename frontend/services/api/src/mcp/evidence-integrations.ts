@@ -3,7 +3,11 @@ import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Evidence, ReadScope } from './types.ts';
 
-/** Project grain: one connection's unrelated project imports are not coverage. */
+/**
+ * Project grain: one connection's unrelated project imports are not coverage.
+ * Mirrors `backend/app/domain/integrations/readiness.py`, which the dashboard
+ * still owns; change both together until the Agent migrates (PR 19).
+ */
 export async function readIntegrationStatus(db: Database, scope: ReadScope): Promise<Evidence> {
   const workspace = new WorkspaceScope(scope.workspaceId);
   const mappings = await workspace

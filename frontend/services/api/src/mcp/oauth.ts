@@ -1,6 +1,9 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { recordSecurityEvent } from '../auth/security-events.ts';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { strings } from '../db/json.ts';
+import { READ_ROLES } from './data.ts';
 import { accountAllowed, loadMcpConfig, type McpConfig } from './config.ts';
 import type { McpPrincipal } from './types.ts';
 
@@ -22,11 +25,6 @@ export function equalSecret(left: string, right: string): boolean {
 export const consentCsrf = (config: ServiceConfig, session: string, transaction: string) =>
   tokenHash(config, `mcp-consent:${session}:${transaction}`);
 const deadline = (seconds: number) => new Date(Date.now() + seconds * 1000);
-export function jsonStrings(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string')
-    : [];
-}
 export async function authenticateMcp(
   db: Database,
   config: ServiceConfig,
@@ -57,24 +55,21 @@ export async function authenticateMcp(
     !row.is_active ||
     !accountAllowed(config, mcp, row.email) ||
     row.resource !== `${mcp.origin}/mcp` ||
-    !jsonStrings(row.scopes).includes(policy.mcp.constants.read_scope)
+    !strings(row.scopes).includes(policy.mcp.constants.read_scope)
   )
     return null;
-  const workspaceIds = jsonStrings(row.workspace_ids);
+  const workspaceIds = strings(row.workspace_ids);
   return workspaceIds.length
     ? { userId: row.user_id, grantId: row.id, workspaceIds, tokenHash: digest }
     : null;
 }
 export async function consentableWorkspaces(db: Database, userId: string) {
-  const roles = Object.entries(policy.workspaces.roles)
-    .filter(([, caps]) => caps.includes('read'))
-    .map(([role]) => role);
   return db
     .selectFrom('workspaces as w')
     .innerJoin('workspace_members as m', 'm.workspace_id', 'w.id')
     .select(['w.id', 'w.name'])
     .where('m.user_id', '=', userId)
-    .where('m.role', 'in', roles)
+    .where('m.role', 'in', READ_ROLES)
     .where('w.is_system', '=', false)
     .where(({ exists, selectFrom }) =>
       exists(
@@ -87,25 +82,6 @@ export async function consentableWorkspaces(db: Database, userId: string) {
     )
     .orderBy('w.name')
     .orderBy('w.id')
-    .execute();
-}
-export async function securityEvent(
-  db: Database,
-  event: string,
-  actorId: string,
-  targetId: string | null,
-  workspaceId: string | null = null,
-) {
-  await db
-    .insertInto('security_events')
-    .values({
-      id: randomUUID(),
-      event,
-      actor_id: actorId,
-      target_id: targetId,
-      workspace_id: workspaceId,
-      occurred_at: new Date(),
-    })
     .execute();
 }
 export async function completeConsent(
@@ -161,7 +137,7 @@ export async function completeConsent(
           created_at: new Date(),
         })
         .execute();
-      for (const id of unique) await securityEvent(trx, 'mcp.consent', userId, null, id);
+      for (const id of unique) await recordSecurityEvent(trx, 'mcp.consent', userId, id);
       destination.searchParams.set('code', code);
     }
     await trx
@@ -204,7 +180,7 @@ export async function exchangeToken(
         ) ||
         (row.redirect_uri_provided_explicitly && form.get('redirect_uri') !== row.redirect_uri) ||
         (form.has('redirect_uri') && form.get('redirect_uri') !== row.redirect_uri) ||
-        !jsonStrings(row.workspace_ids).length
+        !strings(row.workspace_ids).length
       )
         throw new OAuthError('invalid_grant', 'Code is invalid');
       const user = await trx
@@ -216,10 +192,10 @@ export async function exchangeToken(
         !user?.is_active ||
         !accountAllowed(config, mcp, user.email) ||
         row.resource !== `${mcp.origin}/mcp` ||
-        !jsonStrings(row.scopes).includes(policy.mcp.constants.read_scope)
+        !strings(row.scopes).includes(policy.mcp.constants.read_scope)
       )
         throw new OAuthError('invalid_grant', 'Code is invalid');
-      scopes = jsonStrings(row.scopes);
+      scopes = strings(row.scopes);
       await trx
         .updateTable('mcp_authorization_codes')
         .set({ consumed_at: now })
@@ -253,7 +229,7 @@ export async function exchangeToken(
         .where('refresh_expires_at', '>', now)
         .forUpdate()
         .executeTakeFirst();
-      if (!row || !jsonStrings(row.workspace_ids).length)
+      if (!row || !strings(row.workspace_ids).length)
         throw new OAuthError('invalid_grant', 'Refresh token is invalid');
       const user = await trx
         .selectFrom('users')
@@ -266,8 +242,11 @@ export async function exchangeToken(
         row.resource !== `${mcp.origin}/mcp`
       )
         throw new OAuthError('invalid_grant', 'Refresh token is invalid');
-      scopes = form.get('scope')?.split(/\s+/u).filter(Boolean) ?? jsonStrings(row.scopes);
-      if (scopes.some((scope) => !jsonStrings(row.scopes).includes(scope)))
+      const granted = strings(row.scopes);
+      const requested = form.get('scope')?.split(/\s+/u).filter(Boolean) ?? [];
+      // An absent or blank scope keeps the grant; narrowing is allowed, expansion is not.
+      scopes = requested.length ? requested : granted;
+      if (scopes.some((scope) => !granted.includes(scope)))
         throw new OAuthError('invalid_scope', 'Refresh cannot expand the original grant');
       await trx
         .updateTable('mcp_oauth_grants')
@@ -315,6 +294,6 @@ export async function revokeToken(
       .set({ revoked_at: new Date() })
       .where('id', '=', row.id)
       .execute();
-    await securityEvent(trx, 'mcp.revoke', row.user_id, row.id);
+    await recordSecurityEvent(trx, 'mcp.revoke', row.user_id, null, row.id);
   });
 }

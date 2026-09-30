@@ -7,7 +7,7 @@ import { parseUuid } from '../http/uuid.ts';
 import { mcpPolicy } from './config.ts';
 import { decodeCursor, encodeCursor, pagination } from './data.ts';
 import type { ReadArguments } from './evidence.ts';
-import type { Evidence, ReadScope } from './types.ts';
+import { McpInputError, type Evidence, type ReadScope } from './types.ts';
 
 export async function readSiteEvidence(
   db: Database,
@@ -24,7 +24,7 @@ export async function readSiteEvidence(
   if (args.crawl_id) query = query.where('id', '=', String(args.crawl_id));
   const crawl = await query.orderBy('created_at', 'desc').orderBy('id', 'desc').executeTakeFirst();
   if (!crawl) {
-    if (name === 'read_site_links') throw new Error('Crawl was not found in this project');
+    if (name === 'read_site_links') throw new McpInputError('Crawl was not found in this project');
     return {
       state: 'unavailable',
       reason: 'no_site_crawl',
@@ -41,7 +41,7 @@ export async function readSiteEvidence(
     if (args.site_url_id) links = links.where('site_url_id', '=', String(args.site_url_id));
     if (args.cursor) {
       const [id] = decodeCursor(String(args.cursor), 1);
-      if (!parseUuid(id)) throw new Error('cursor is invalid');
+      if (!parseUuid(id)) throw new McpInputError('cursor is invalid');
       links = links.where('id', '>', id!);
     }
     const rows = await links
@@ -95,7 +95,7 @@ export async function readSiteEvidence(
       !url ||
       !parseUuid(id)
     )
-      throw new Error('cursor is invalid');
+      throw new McpInputError('cursor is invalid');
     after = sql`and (u.normalized_url,u.id) > (${url},${id}::uuid)`;
   }
   const terminal = ['completed', 'partially_completed', 'failed', 'cancelled'].includes(

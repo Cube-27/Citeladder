@@ -235,6 +235,32 @@ it('rotates refresh tokens once and excludes membership changes, new tenants and
   expect(await authorizedWorkspaceIds(db, live)).toEqual([]);
 });
 
+it('keeps the grant on a blank refresh scope and refuses grant types the client did not register', async () => {
+  const { client: c, value } = await grant();
+  const blank = await token(c.client_id, {
+    grant_type: 'refresh_token',
+    refresh_token: value.refresh_token,
+    scope: ' ',
+  });
+  expect(blank.status).toBe(200);
+  const rotated = (await blank.json()) as { access_token: string; refresh_token: string };
+  const bearer = { authorization: `Bearer ${rotated.access_token}` };
+  expect(
+    await authenticateMcp(db, config, new Request(`${protocol}/mcp`, { headers: bearer })),
+  ).not.toBeNull();
+  await db
+    .updateTable('mcp_oauth_clients')
+    .set({ client_metadata: JSON.stringify({ ...c, grant_types: ['authorization_code'] }) })
+    .where('client_id', '=', c.client_id)
+    .execute();
+  const refused = await token(c.client_id, {
+    grant_type: 'refresh_token',
+    refresh_token: rotated.refresh_token,
+  });
+  expect(refused.status).toBe(400);
+  expect(await refused.json()).toMatchObject({ error: 'unsupported_grant_type' });
+});
+
 it('lets workspace admins remove only their authorization while users cannot revoke another account', async () => {
   const { principal, value } = await grant();
   const other = await fixtures.ownedWorkspace(tenant.userId);

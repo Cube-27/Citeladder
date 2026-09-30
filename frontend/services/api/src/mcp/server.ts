@@ -6,8 +6,10 @@ import type { Database } from '../db/database.ts';
 import { loadMcpConfig, mcpPolicy } from './config.ts';
 import { authenticateMcp } from './oauth.ts';
 import { registerOAuthRoutes } from './oauth-routes.ts';
-import { dispatchTool, McpInputError, tools } from './tools.ts';
+import { dispatchTool, tools } from './tools.ts';
+import { McpInputError } from './types.ts';
 import { getLogger } from '../logging.ts';
+import { parseUuid } from '../http/uuid.ts';
 const logger = getLogger('mcp');
 
 export const MCP_PROTOCOL_PATHS = [
@@ -110,11 +112,12 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
   registerOAuthRoutes(app, config, db);
   for (const path of ['/mcp', '/mcp/'])
     app.all(path, async (c) => {
-      const principal = await authenticateMcp(db, config, c.req.raw);
+      const principal = await authenticateMcp(db, config, c.req.raw, settings);
       if (!principal) {
         c.header(
           'WWW-Authenticate',
-          `Bearer resource_metadata="${settings.origin}/.well-known/oauth-protected-resource/mcp", scope="${mcpPolicy.read_scope}"`,
+          // RFC 6750 §3: a presented but rejected token is invalid_token, prompting refresh.
+          `Bearer resource_metadata="${settings.origin}/.well-known/oauth-protected-resource/mcp", scope="${mcpPolicy.read_scope}"${c.req.header('authorization') ? ', error="invalid_token"' : ''}`,
         );
         return c.json(
           { error: 'invalid_token', error_description: 'A valid MCP access token is required.' },
@@ -281,8 +284,10 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
                 { uri: params.uri, mimeType: 'application/json', text: JSON.stringify(value) },
               ],
             };
-          } catch {
-            return c.json(rpcError(message.id, -32602, 'Resource not found'), 400);
+          } catch (error) {
+            if (error instanceof McpInputError)
+              return c.json(rpcError(message.id, -32602, 'Resource not found'), 400);
+            throw error;
           }
           break;
         }
@@ -301,7 +306,8 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           if (
             params.name !== 'business_health_review' ||
             !object(params.arguments) ||
-            typeof params.arguments.project_id !== 'string'
+            typeof params.arguments.project_id !== 'string' ||
+            !parseUuid(params.arguments.project_id)
           )
             return c.json(rpcError(message.id, -32602, 'Invalid prompt arguments'), 400);
           result = {

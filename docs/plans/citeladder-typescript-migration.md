@@ -327,7 +327,7 @@ Stays Python, by reason:
   Fernet BYOK decryption (PR 17) and provider-capacity locking shared with
   audits.
 - `service.py` `readiness`, `dataset_page`, `dataset_dict`, `row_dict` and
-  `pagination.py`: bridges for `domain/mcp` until PR 15.
+  `pagination.py`: bridges for the retained `domain/mcp` Agent reads until PR 19.
 
 Rule 1 exception on `search_intelligence_runs`: Python creates and executes
 runs; TS confirms and cancels. Both take the run row lock; confirmation takes

@@ -589,7 +589,7 @@
             "enum": ["asc", "desc"]
           }
         },
-        "required": ["project_id", "dataset_id", "direction"],
+        "required": ["project_id", "dataset_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -765,7 +765,7 @@
             "type": "boolean"
           }
         },
-        "required": ["project_id", "completed_baseline"],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -824,7 +824,7 @@
             ]
           }
         },
-        "required": ["project_id", "audit_id", "cohort"],
+        "required": ["project_id", "audit_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -876,7 +876,7 @@
             "enum": ["domain", "url"]
           }
         },
-        "required": ["project_id", "audit_id", "cohort", "level"],
+        "required": ["project_id", "audit_id"],
         "additionalProperties": false
       },
       "read_only": true
@@ -912,7 +912,7 @@
             "maximum": 20
           }
         },
-        "required": ["query", "limit"],
+        "required": ["query"],
         "additionalProperties": false
       },
       "read_only": true

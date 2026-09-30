@@ -6,6 +6,7 @@ import type { Database } from '../src/db/database.ts';
 import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { authenticateMcp } from '../src/mcp/oauth.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
+import { McpInputError } from '../src/mcp/types.ts';
 
 vi.mock('../src/mcp/oauth.ts', () => ({ authenticateMcp: vi.fn() }));
 vi.mock('../src/mcp/oauth-routes.ts', () => ({
@@ -20,7 +21,6 @@ vi.mock('../src/mcp/oauth-routes.ts', () => ({
 vi.mock('../src/mcp/tools.ts', () => ({
   tools: [{ name: 'list_projects', inputSchema: { type: 'object' } }],
   dispatchTool: vi.fn(),
-  McpInputError: class extends Error {},
 }));
 const db = {} as Database;
 function app() {
@@ -248,6 +248,16 @@ describe('hosted MCP transport', () => {
     expect((await rpc(response)).result).toEqual({
       content: [{ type: 'text', text: 'Evidence is unavailable.' }],
       isError: true,
+    });
+    vi.mocked(dispatchTool).mockRejectedValueOnce(new McpInputError('cursor is invalid'));
+    const invalid = await app().request(
+      'https://protocol.example.test/mcp',
+      request('tools/call', { name: 'list_projects' }),
+    );
+    expect(invalid.status).toBe(400);
+    expect((await rpc(invalid)).error).toMatchObject({
+      code: -32602,
+      message: 'cursor is invalid',
     });
   });
 });

@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
-import { jsonStrings, securityEvent } from './oauth.ts';
+import { recordSecurityEvent } from '../auth/security-events.ts';
+import { record, strings } from '../db/json.ts';
 
 export async function listConnections(
   db: Database,
@@ -19,12 +20,10 @@ export async function listConnections(
   else query = query.where('g.user_id', '=', scope.userId);
   return (await query.orderBy('g.created_at', 'desc').execute()).map((row) => ({
     id: row.id,
-    client_name: String(
-      (row.client_metadata as Record<string, unknown>).client_name || 'MCP client',
-    ).slice(0, 255),
-    workspace_ids: scope.workspaceId ? [scope.workspaceId] : jsonStrings(row.workspace_ids),
+    client_name: String(record(row.client_metadata).client_name || 'MCP client').slice(0, 255),
+    workspace_ids: scope.workspaceId ? [scope.workspaceId] : strings(row.workspace_ids),
     created_at: row.created_at.toISOString(),
-    requires_consent: jsonStrings(row.workspace_ids).length === 0,
+    requires_consent: strings(row.workspace_ids).length === 0,
   }));
 }
 export async function revokeConnection(
@@ -46,7 +45,7 @@ export async function revokeConnection(
         .updateTable('mcp_oauth_grants')
         .set({
           workspace_ids: JSON.stringify(
-            jsonStrings(row.workspace_ids).filter((id) => id !== scope.workspaceId),
+            strings(row.workspace_ids).filter((id) => id !== scope.workspaceId),
           ),
           updated_at: new Date(),
         })
@@ -58,12 +57,12 @@ export async function revokeConnection(
         .set({ revoked_at: row.revoked_at ?? new Date(), updated_at: new Date() })
         .where('id', '=', grantId)
         .execute();
-    await securityEvent(
+    await recordSecurityEvent(
       trx,
       scope.workspaceId ? 'mcp.workspace_revoke' : 'mcp.revoke',
       scope.userId,
-      grantId,
       scope.workspaceId ?? null,
+      grantId,
     );
     return true;
   });

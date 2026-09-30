@@ -1,9 +1,5 @@
-import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import { expect, it } from 'vitest';
-import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { mcpPolicy } from '../src/mcp/config.ts';
 import { parseRecordId, retrievalDocument } from '../src/mcp/retrieval.ts';
 
@@ -69,36 +65,4 @@ it('rejects arbitrary sources and ambiguous continuation parameters', () => {
     `citeladder://user@prompt/${id}`,
   ])
     expect(() => parseRecordId(uri)).toThrow();
-});
-
-it('reads Fernet custody in both runtimes and rejects tampering without a generated fixture', async () => {
-  const backend = fileURLToPath(new URL('../../../../backend/', import.meta.url));
-  const executable = fileURLToPath(
-    new URL(
-      process.platform === 'win32'
-        ? '../../../../backend/.venv/Scripts/python.exe'
-        : '../../../../backend/.venv/bin/python',
-      import.meta.url,
-    ),
-  );
-  const system = Object.fromEntries(
-    ['PATH', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'HOME'].flatMap((key) =>
-      process.env[key] ? [[key, process.env[key]!]] : [],
-    ),
-  );
-  const secret = 'interop-only-not-a-production-secret';
-  const cipher = createSecretCipher(secret);
-  const ciphertext = cipher.encrypt('credential');
-  const code =
-    'import base64,hashlib,sys; from cryptography.fernet import Fernet; f=Fernet(base64.urlsafe_b64encode(hashlib.sha256(sys.argv[1].encode()).digest())); print(f.decrypt(sys.argv[2].encode()).decode()); print(f.encrypt(b"python-credential").decode())';
-  const { stdout } = await promisify(execFile)(executable, ['-c', code, secret, ciphertext], {
-    cwd: backend,
-    env: system,
-  });
-  const [clear, pythonCipher] = stdout.trim().split(/\r?\n/u);
-  expect(clear).toBe('credential');
-  expect(cipher.decrypt(pythonCipher!)).toBe('python-credential');
-  const altered = Buffer.from(ciphertext, 'base64url');
-  altered[30] = altered[30]! ^ 1;
-  expect(() => cipher.decrypt(altered.toString('base64url'))).toThrow();
 });

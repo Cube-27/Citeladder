@@ -4,16 +4,18 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { utcText } from '../db/timestamps.ts';
-import type { McpPrincipal } from './types.ts';
+import { McpInputError, type McpPrincipal } from './types.ts';
 import { mcpPolicy } from './config.ts';
+
+/** Roles whose capabilities include reading workspace evidence. */
+export const READ_ROLES = Object.entries(policy.workspaces.roles)
+  .filter(([, caps]) => caps.includes('read'))
+  .map(([role]) => role);
 
 export async function authorizedWorkspaceIds(
   db: Database,
   principal: McpPrincipal,
 ): Promise<string[]> {
-  const roles = Object.entries(policy.workspaces.roles)
-    .filter(([, caps]) => caps.includes('read'))
-    .map(([role]) => role);
   const rows = await db
     .selectFrom('workspace_members as member')
     .innerJoin('workspaces as workspace', 'workspace.id', 'member.workspace_id')
@@ -21,7 +23,7 @@ export async function authorizedWorkspaceIds(
     .innerJoin('users as account', 'account.id', 'member.user_id')
     .select('member.workspace_id')
     .where('member.user_id', '=', principal.userId)
-    .where('member.role', 'in', roles)
+    .where('member.role', 'in', READ_ROLES)
     .where('workspace.is_system', '=', false)
     .where('account.is_active', '=', true)
     .where('g.id', '=', principal.grantId)
@@ -34,7 +36,7 @@ export async function authorizedWorkspaceIds(
 }
 export async function authorizeProject(db: Database, principal: McpPrincipal, projectId: string) {
   const id = parseUuid(projectId);
-  if (!id) throw new Error('project_id must be a UUID');
+  if (!id) throw new McpInputError('project_id must be a UUID');
   const workspaces = await authorizedWorkspaceIds(db, principal);
   const row = workspaces.length
     ? await db
@@ -44,7 +46,7 @@ export async function authorizeProject(db: Database, principal: McpPrincipal, pr
         .where('workspace_id', 'in', workspaces)
         .executeTakeFirst()
     : undefined;
-  if (!row) throw new Error('Project was not found in this account');
+  if (!row) throw new McpInputError('Project was not found in this account');
   return row;
 }
 export const encodeCursor = (...parts: unknown[]) =>
@@ -60,7 +62,7 @@ export function decodeCursor(value: string, size: number): string[] {
       throw new Error();
     return parts as string[];
   } catch {
-    throw new Error('cursor is invalid');
+    throw new McpInputError('cursor is invalid');
   }
 }
 export const pagination = (
@@ -99,7 +101,8 @@ export async function listAccountProjects(
     .where('p.workspace_id', 'in', workspaces);
   if (cursor) {
     const [at, id] = decodeCursor(cursor, 2);
-    if (!parseUuid(id) || !at || Number.isNaN(Date.parse(at))) throw new Error('cursor is invalid');
+    if (!parseUuid(id) || !at || Number.isNaN(Date.parse(at)))
+      throw new McpInputError('cursor is invalid');
     query = query.where(sql<boolean>`(p.created_at, p.id) > (${at}::timestamptz, ${id}::uuid)`);
   }
   const rows = await query
@@ -128,7 +131,7 @@ export async function searchBusinessContext(
   origin: string,
 ) {
   const normalized = query.trim();
-  if (!normalized) throw new Error('query must not be empty');
+  if (!normalized) throw new McpInputError('query must not be empty');
   if (projectId) await authorizeProject(db, principal, projectId);
   const workspaces = await authorizedWorkspaceIds(db, principal),
     results: Record<string, string>[] = [];

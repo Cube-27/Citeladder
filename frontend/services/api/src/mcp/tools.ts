@@ -6,9 +6,8 @@ import { authorizeProject, listAccountProjects, searchBusinessContext } from './
 import { projectBusinessContext, readEvidence, type ReadArguments } from './evidence.ts';
 import { readSiteEvidence } from './evidence-site.ts';
 import { fetchRecord } from './retrieval.ts';
-import type { Evidence, McpPrincipal } from './types.ts';
+import { McpInputError, type Evidence, type McpPrincipal } from './types.ts';
 
-export class McpInputError extends Error {}
 const nullable = <T extends z.ZodType>(schema: T) => schema.nullish();
 const uuid = z.uuid();
 const pageLimit = nullable(z.number().int().min(1).max(mcpPolicy.max_list_limit));
@@ -233,11 +232,30 @@ const annotations = {
   openWorldHint: false,
 };
 const output = z.record(z.string(), z.json());
+const PAGINATED_READS = new Set(['read_opportunities', 'read_performance_table']);
+function readApplicability(name: string) {
+  const integrations = name === 'read_integration_status';
+  return {
+    identity: integrations
+      ? {
+          state: 'applicable',
+          connection_id: 'applicable',
+          snapshot_id: 'not_applicable',
+          audit_id: 'not_applicable',
+          crawl_id: 'not_applicable',
+          dataset_id: 'not_applicable',
+        }
+      : 'applicable',
+    coverage: 'applicable',
+    pagination: PAGINATED_READS.has(name) ? 'applicable' : 'not_applicable',
+    follow_through: integrations ? 'not_applicable' : 'applicable',
+  };
+}
 export const tools = Object.entries(definitions).map(([name, definition]) => ({
   name,
   title: definition.title,
   description: definition.description,
-  inputSchema: z.toJSONSchema(definition.schema),
+  inputSchema: z.toJSONSchema(definition.schema, { io: 'input' }),
   outputSchema: z.toJSONSchema(output),
   annotations,
 }));
@@ -282,10 +300,12 @@ export async function dispatchTool(
   else {
     const project = await authorizeProject(db, principal, String(args.project_id));
     const authorized = { workspaceId: project.workspace_id, projectId: project.id };
-    result =
+    const evidence =
       name === 'read_site_pages' || name === 'read_site_links'
         ? await readSiteEvidence(db, authorized, name, args)
         : await readEvidence(db, authorized, name, args);
+    // Every project read names its scope and applicability; a tool's own values win.
+    result = { project_id: project.id, applicability: readApplicability(name), ...evidence };
   }
   // Dates serialize as ISO instants, then every tool returns its declared JSON
   // object contract. An invalid persisted projection fails here on the server.

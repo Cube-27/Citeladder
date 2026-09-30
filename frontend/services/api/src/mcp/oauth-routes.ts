@@ -3,13 +3,10 @@ import { Hono, type Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { sessionUser } from '../auth/session.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
-import {
-  configEnvironment,
-  demoAccessExpired,
-  type ServiceConfig,
-} from '../config.ts';
+import { configEnvironment, demoAccessExpired, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
+import { record, strings } from '../db/json.ts';
 import { ApiError, onError } from '../errors.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
@@ -19,7 +16,6 @@ import {
   consentCsrf,
   equalSecret,
   exchangeToken,
-  jsonStrings,
   mintToken,
   OAuthError,
   revokeToken,
@@ -92,8 +88,8 @@ async function authenticatedClient(
     .selectAll()
     .where('client_id', '=', clientId)
     .executeTakeFirst();
-  const metadata = row?.client_metadata as Record<string, unknown> | undefined;
-  if (!row || (metadata?.token_endpoint_auth_method ?? 'client_secret_post') !== method)
+  const metadata = record(row?.client_metadata);
+  if (!row || (metadata.token_endpoint_auth_method ?? 'client_secret_post') !== method)
     throw new OAuthError('invalid_client', 'Invalid client authentication');
   if (row.client_secret_encrypted) {
     try {
@@ -108,7 +104,7 @@ async function authenticatedClient(
       throw new OAuthError('invalid_client', 'Invalid client authentication');
     }
   }
-  return { row, metadata: metadata ?? {} };
+  return { row, metadata };
 }
 export function registerOAuthRoutes(
   parentApp: Hono<AppEnv>,
@@ -135,23 +131,7 @@ export function registerOAuthRoutes(
     app.use(path, async (c, next) => {
       c.header('cache-control', 'no-store');
       c.header('access-control-allow-origin', '*');
-      try {
-        await next();
-      } catch (error) {
-        if (error instanceof OAuthError)
-          return c.json(
-            { error: error.error, error_description: error.message },
-            error.error === 'invalid_client' ? 401 : 400,
-          );
-        if (error instanceof RegistrationLimit) {
-          c.header('retry-after', String(error.retryAfter));
-          return c.json(
-            { error: 'temporarily_unavailable', error_description: error.message },
-            429,
-          );
-        }
-        throw error;
-      }
+      await next();
     });
   app.get('/.well-known/oauth-authorization-server', (c) =>
     c.json({
@@ -199,9 +179,7 @@ export function registerOAuthRoutes(
         .forKeyShare()
         .executeTakeFirst();
       if (!client) throw new OAuthError('invalid_client', 'Client is not registered');
-      const redirects = jsonStrings(
-        (client.client_metadata as Record<string, unknown>).redirect_uris,
-      );
+      const redirects = strings(record(client.client_metadata).redirect_uris);
       const redirect = q.get('redirect_uri') ?? (redirects.length === 1 ? redirects[0] : undefined);
       if (!redirect || !redirects.includes(redirect))
         throw new OAuthError('invalid_request', 'Redirect URI is not registered');
@@ -243,11 +221,13 @@ export function registerOAuthRoutes(
   for (const path of ['/token', '/revoke'])
     app.post(path, async (c) => {
       const form = new URLSearchParams(await c.req.text());
-      const { row } = await authenticatedClient(db, mcp, c, form);
+      const { row, metadata } = await authenticatedClient(db, mcp, c, form);
       if (path === '/revoke') {
         await revokeToken(db, config, row.client_id, form.get('token') ?? '');
         return c.json({});
       }
+      if (!strings(metadata.grant_types).includes(form.get('grant_type') ?? ''))
+        throw new OAuthError('unsupported_grant_type', 'Grant type is not allowed for this client');
       if (form.has('resource') && form.get('resource')?.replace(/\/$/u, '') !== resource)
         throw new OAuthError('invalid_target', 'The requested resource is not this MCP server');
       return c.json(await exchangeToken(db, config, mcp, row.client_id, form));
@@ -283,7 +263,7 @@ export function registerOAuthRoutes(
       .where('r.expires_at', '>', new Date())
       .executeTakeFirst();
     if (!row) return c.text('Authorization request is invalid or expired', 403);
-    const metadata = row.client_metadata as Record<string, unknown>;
+    const metadata = record(row.client_metadata);
     const choices = (await consentableWorkspaces(db, c.get('user').id))
       .map(
         (w) =>
