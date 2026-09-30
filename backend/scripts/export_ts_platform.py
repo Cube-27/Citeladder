@@ -51,6 +51,9 @@ from app.core.config import dataforseo as search_config
 from app.core.config import demand as demand_config
 from app.core.config import entitlements as entitlements_config
 from app.core.config import errors as error_config
+from app.core.config import integrations_contracts as integration_contracts
+from app.core.config import integrations_datasets as integration_datasets
+from app.core.config import integrations_transport as integration_transport
 from app.core.config import jev as jev_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
@@ -111,6 +114,7 @@ from app.core.config.audits import (
     MEASUREMENT_POLICY_KEY,
 )
 from app.core.config.billing_contracts import SUBSCRIPTION_KIND_BASE
+from app.core.config.entitlements import HISTORY_WINDOW_VALUES
 from app.core.config.errors import (
     CODE_HTTP_ERROR,
     CODE_INTERNAL_ERROR,
@@ -132,7 +136,13 @@ from app.core.config.integrations_datasets import (
     DIMENSION_KEY_SEPARATOR,
     INTEGRATION_DATASET_TEMPLATES,
 )
+from app.core.config.integrations_settings import (
+    INTEGRATION_FREE_HISTORY_WINDOW_DAYS,
+    INTEGRATION_HISTORY_WINDOW_DAYS,
+    IntegrationSettings,
+)
 from app.core.config.jev import QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE
+from app.core.config.oauth import OAuthSettings
 from app.core.config.projects import (
     MAX_PROJECT_COMPETITORS,
     PROMPT_INTENTS,
@@ -202,6 +212,12 @@ EXPORTED_SETTINGS = (
     "session_cookie_name",
     "demo_mode",
     "demo_expires_at",
+    "encryption_key",
+    "frontend_url",
+    "integration_google_client_id",
+    "integration_google_client_secret",
+    "integration_microsoft_client_id",
+    "integration_microsoft_client_secret",
 )
 
 
@@ -325,6 +341,7 @@ def build_config() -> dict[str, Any]:
         "referrals": _referral_policy(),
         "traffic": traffic_policy(),
         "demand": demand_policy(),
+        "integrations": _integration_policy(),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
         "internal_links": {
@@ -389,6 +406,8 @@ def build_config() -> dict[str, Any]:
                 "agent_call_window_seconds",
                 "brand_logo_refresh_limit",
                 "brand_logo_refresh_window_seconds",
+                "property_discovery_limit",
+                "property_discovery_window_seconds",
             )
         },
         "entitlements": _entitlements_policy(),
@@ -692,10 +711,56 @@ ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
     opportunities_config,
     search_intelligence_config,
     commerce_config,
+    integration_contracts,
     prompts_config,
     entitlements_config,
 )
 _ERROR_CODE_PREFIXES = ("CODE_", "ERROR_")
+
+
+def _integration_policy() -> dict[str, Any]:
+    transport = {
+        name: sorted(value) if isinstance(value, frozenset) else value
+        for name, value in vars(integration_transport).items()
+        if name.isupper() and isinstance(value, (str, int, dict, tuple, frozenset))
+    }
+    return {
+        "transport": transport,
+        "settings": {
+            name: _setting(name, IntegrationSettings)
+            for name in IntegrationSettings.model_fields
+        },
+        "state_ttl_seconds": _setting("state_ttl_seconds", OAuthSettings),
+        "contracts": {
+            name: value
+            for name, value in vars(integration_contracts).items()
+            if name.isupper() and isinstance(value, str)
+        },
+        "datasets": {
+            name: dataclasses.asdict(template)
+            for name, template in (
+                integration_datasets.INTEGRATION_DATASET_TEMPLATES.items()
+            )
+        },
+        "excluded_datasets": sorted(
+            integration_datasets.INTEGRATION_SYNC_EXCLUDED_DATASETS
+        ),
+        "dimension_separator": integration_datasets.DIMENSION_KEY_SEPARATOR,
+        "ga4_incompatible_markers": (
+            integration_datasets.GA4_DIMENSION_INCOMPATIBLE_DETAIL_MARKERS
+        ),
+        "ga4_capability_key": (
+            integration_datasets.GA4_ITEM_ATTRIBUTION_CAPABILITY_KEY
+        ),
+        "ga4_capability_version": (
+            integration_datasets.GA4_ITEM_ATTRIBUTION_CAPABILITY_VERSION
+        ),
+        "importer_version": integration_contracts.INTEGRATION_IMPORTER_VERSION,
+        "free_history_window_days": INTEGRATION_FREE_HISTORY_WINDOW_DAYS,
+        "history_window_days": INTEGRATION_HISTORY_WINDOW_DAYS,
+        "history_window_values": HISTORY_WINDOW_VALUES,
+        "history_window_capability_key": entitlements_config.KEY_HISTORY_WINDOW,
+    }
 
 
 def error_codes(modules: Iterable[types.ModuleType] = ERROR_CODE_MODULES) -> list[str]:

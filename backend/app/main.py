@@ -18,7 +18,6 @@ from app.api.audits import router as audits_router
 from app.api.auth import router as auth_router
 from app.api.billing import router as billing_router
 from app.api.commerce import router as commerce_router
-from app.api.integrations import router as integrations_router
 from app.api.mcp_connections import router as mcp_connections_router
 from app.api.oauth import router as oauth_router
 from app.api.performance import router as performance_router
@@ -73,7 +72,6 @@ _ROUTERS = (
     audit_schedules_router,
     site_health_router,
     search_intelligence_reviews_router,
-    integrations_router,
     performance_router,
     agent_router,
     commerce_router,

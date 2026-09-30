@@ -26,6 +26,8 @@ dataset covering every major surface of the app:
     a mocked HTTP transport) with pages ranging from rich/healthy to thin/
     unhealthy, producing page analyses, rule evaluations, issues, and a
     crawl-level snapshot.
+  - Provider grants and imports are not seeded here; integrations now run
+    through the TypeScript routes and PostgreSQL workers.
 
 Idempotent: re-running deletes any previously-seeded demo workspaces (by a
 well-known name prefix) before recreating them, so it is safe to run
@@ -41,7 +43,7 @@ import asyncio
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,7 +54,6 @@ from app.core.config.brand_profile import (
     BRAND_PROFILE_REVIEW_CONFIRMED,
     BRAND_PROFILE_SOURCE_MANUAL,
 )
-from app.core.config.integrations_transport import INTEGRATION_TRANSPORT_GOOGLE
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
@@ -65,7 +66,6 @@ from app.core.config.provider_catalog import (
 from app.core.database import SessionLocal
 from app.core.security import encrypt_secret
 from app.domain.auth.service import register_user
-from app.domain.integrations.sync import enqueue_sync_run
 from app.domain.workspaces.service import ensure_personal_workspace
 from app.models.brand import (
     Brand,
@@ -75,18 +75,11 @@ from app.models.brand import (
     OwnedDomain,
     UnintendedDomain,
 )
-from app.models.integrations import (
-    IntegrationConnection,
-    IntegrationOAuthGrant,
-    IntegrationPropertyMapping,
-)
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.provider import ProviderConnection, ProviderRoute
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
-from app.workers.analytics_worker import AnalyticsWorker
-from app.workers.integration_worker import IntegrationWorker
 from scripts.seed_dev_runs import (
     run_actions_and_comparison,
     run_seed_audits,
@@ -94,7 +87,6 @@ from scripts.seed_dev_runs import (
 )
 from scripts.seed_dev_support import (
     PROMPT_SPECS,
-    _integration_transport,
     _prompt_bucket,
     _SeedStubAdapter,
 )
@@ -420,89 +412,6 @@ async def _seed_primary_project(
     )
 
 
-async def _seed_google_integrations(
-    workspace_id: uuid.UUID, project_id: uuid.UUID
-) -> None:
-    # 4. Persist one real Google consent graph (shared by GSC + GA4), map both
-    # properties, and drain the real sync + analytics queues against a
-    # deterministic provider transport. This yields immutable raw artifacts,
-    # metric rows, Traffic/Demand projections, and honest connection history.
-    metric_date = datetime.now(UTC).date() - timedelta(days=2)
-    window = (metric_date - timedelta(days=27), metric_date)
-    async with SessionLocal() as session:
-        grant = IntegrationOAuthGrant(
-            workspace_id=workspace_id,
-            transport=INTEGRATION_TRANSPORT_GOOGLE,
-            access_token_encrypted=encrypt_secret("dev-google-access-token"),
-            refresh_token_encrypted=encrypt_secret("dev-google-refresh-token"),
-            token_expires_at=datetime.now(UTC) + timedelta(days=1),
-            granted_scopes=["gsc.readonly", "analytics.readonly"],
-            status="connected",
-        )
-        session.add(grant)
-        await session.flush()
-        gsc = IntegrationConnection(
-            workspace_id=workspace_id,
-            grant_id=grant.id,
-            provider="gsc",
-            label="Wanderlust Search Console",
-            account_ref="https://wanderlustgear.com",
-        )
-        ga4 = IntegrationConnection(
-            workspace_id=workspace_id,
-            grant_id=grant.id,
-            provider="ga4",
-            label="Wanderlust GA4",
-            account_ref="123456789",
-        )
-        session.add_all([gsc, ga4])
-        await session.flush()
-        session.add_all(
-            [
-                IntegrationPropertyMapping(
-                    workspace_id=workspace_id,
-                    connection_id=gsc.id,
-                    provider="gsc",
-                    property_ref=gsc.account_ref,
-                    project_id=project_id,
-                    status="active",
-                ),
-                IntegrationPropertyMapping(
-                    workspace_id=workspace_id,
-                    connection_id=ga4.id,
-                    provider="ga4",
-                    property_ref=ga4.account_ref,
-                    project_id=project_id,
-                    status="active",
-                ),
-            ]
-        )
-        await enqueue_sync_run(
-            session,
-            workspace_id=workspace_id,
-            connection_id=gsc.id,
-            window_start=window[0],
-            window_end=window[1],
-        )
-        await enqueue_sync_run(
-            session,
-            workspace_id=workspace_id,
-            connection_id=ga4.id,
-            window_start=window[0],
-            window_end=window[1],
-        )
-    integration_worker = IntegrationWorker(
-        session_factory=SessionLocal,
-        owner="seed-integration-worker",
-        transport=_integration_transport(metric_date),
-    )
-    await integration_worker.run_until_idle()
-    await AnalyticsWorker(
-        session_factory=SessionLocal, owner="seed-analytics-worker"
-    ).run_until_idle()
-    logger.info("Completed deterministic GSC/GA4 sync and analytics refresh")
-
-
 async def _seed_agency_project(
     agency_workspace_id: uuid.UUID,
 ) -> _SeedAgencyProject:
@@ -606,7 +515,6 @@ async def seed() -> None:
     primary = await _seed_primary_project(
         workspaces.workspace_id, workspaces.demo_user_id
     )
-    await _seed_google_integrations(workspaces.workspace_id, primary.project_id)
     agency = await _seed_agency_project(workspaces.agency_workspace_id)
 
     audit_id = await run_seed_audits(

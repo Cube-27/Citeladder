@@ -148,7 +148,10 @@ async function defaultWorkspaceMember(db: Database, userId: string): Promise<Wor
  * caller's earliest tenant membership. Mirrors `require_active_workspace`;
  * membership is verified either way, and a foreign workspace is a 404.
  */
-export function activeWorkspace(db: Database): MiddlewareHandler<AppEnv> {
+export function activeWorkspace(
+  db: Database,
+  capability?: WorkspaceCapability,
+): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const selected = c.req.header('x-workspace-id');
     let workspace: WorkspaceContext;
@@ -159,6 +162,7 @@ export function activeWorkspace(db: Database): MiddlewareHandler<AppEnv> {
     } else {
       workspace = await defaultWorkspaceMember(db, c.get('user').id);
     }
+    if (capability !== undefined) workspace.require(capability);
     c.set('workspace', workspace);
     await next();
   };

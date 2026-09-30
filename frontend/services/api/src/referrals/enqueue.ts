@@ -7,8 +7,10 @@
  * task never adds a second row (invariant 8).
  */
 import { randomUUID } from 'node:crypto';
+import type { Transaction } from 'kysely';
 
 import { policy } from '../config.ts';
+import type { DB } from '../generated/db-schema.ts';
 import type { Database } from '../db/database.ts';
 
 const KIND_CLASSIFY = 'classify_referrals';
@@ -30,7 +32,10 @@ export function taskKey(kind: string, parts: readonly (string | number)[]): stri
 }
 
 /** Insert one queue row unless its key exists; the new id, or null. */
-export async function enqueueTask(db: Database, task: Enqueue): Promise<string | null> {
+export async function enqueueTask(
+  db: Database | Transaction<DB>,
+  task: Enqueue,
+): Promise<string | null> {
   const now = new Date();
   const inserted = await db
     .insertInto('analytics_tasks')

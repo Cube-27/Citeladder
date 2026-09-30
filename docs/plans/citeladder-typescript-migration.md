@@ -236,14 +236,14 @@ predates the migration).
 ### PR 5: Traffic, performance and demand
 
 TS owns the four Performance projection/read routes and all five Demand routes.
-`/performance/sync` and `/readiness` stay Python under their own manifest
-entries (`performance-sync`, `readiness`) because they call integrations
-admission and readiness readers.
+At this stage, `/performance/sync` and `/readiness` stayed Python under their
+own manifest entries (`performance-sync`, `readiness`). PR 13 moves
+`/performance/sync` to TypeScript; `/readiness` remains Python because the
+Agent still consumes its persisted projection.
 
 | Python bridge | Remaining caller |
 | --- | --- |
 | `traffic.performance`, `traffic.query_support` and DTOs | Agent |
-| trimmed `traffic.service` | integrations sync targets |
 | `demand.query_evidence_reads`, query normalization | MCP |
 | `demand.selection` | prompts, opportunities |
 | `demand.page_equivalence` | implementation events |
@@ -693,6 +693,9 @@ A Fernet-compatible TS encrypt/decrypt proven against Python ciphertext.
 `integrations` routes, and the `integration-dispatcher` and `integration-worker`
 processes. The import worker's immutable artifacts and resume-from-artifact
 behavior are tested with recorded page sequences, including mid-run failure.
+
+Implementation is complete locally; deployment and the one-week cutover soak
+remain separate release work.
 
 ### PR 14: Auth and workspaces
 

@@ -21,14 +21,7 @@ export const CONTRACT_SCHEMA_MAP = {
   providerCatalogSchema: 'ProviderCatalogResponse',
   auditSchema: 'AuditResponse',
   executionSchema: 'AuditTaskResponse',
-  // Integrations
-  integrationConnectionSchema: 'IntegrationConnectionResponse',
-  integrationSyncRunSchema: 'IntegrationSyncRunResponse',
-  integrationBackfillProgressSchema: 'IntegrationBackfillProgressResponse',
-  integrationSyncEnqueueSchema: 'IntegrationSyncEnqueueResponse',
-  integrationTestResultSchema: 'IntegrationTestResponse',
-  integrationPropertySchema: 'IntegrationPropertyResponse',
-  integrationPropertyMappingSchema: 'IntegrationPropertyMappingResponse',
+  // Integrations are owned and served by the TypeScript API.
   // Search Intelligence: the Python review route still publishes RunResponse;
   // every other response is served by the TypeScript API.
   searchRunSchema: 'RunResponse',

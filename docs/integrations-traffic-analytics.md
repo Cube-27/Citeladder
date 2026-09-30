@@ -16,25 +16,28 @@ include_granted_scopes. Bing uses separate Microsoft consent even if the Bing
 account was created with a Google identity. Property discovery supplies verified
 sites or GA4 account summaries; users do not type a property reference.
 
-[Integration API](../backend/app/api/integrations.py) delegates to
-[the domain](../backend/app/domain/integrations/). Credentials remain encrypted
-and credential management is Owner/Admin-only. Product read/run permissions and
-entitlement limits are separate. A mapping binds an authorized connection,
-project and property. Retiring one project's mapping must not retire another's.
+[Integration routes](../frontend/services/api/src/routes/integrations.ts) use
+the TypeScript integration owner in
+[integrations](../frontend/services/api/src/integrations/). Credentials remain
+encrypted and credential management is Owner/Admin-only. Product read/run
+permissions and entitlement limits are separate. A mapping binds an authorized
+connection, project and property. Retiring one project's mapping must not retire
+another's. The Python readiness projection remains a read-only bridge for Agent
+readiness until its owning migration.
 
 ## Sync and evidence
 
-[Sync enqueue](../backend/app/domain/integrations/sync.py) freezes mapping_id,
-property_ref and project_id onto each IntegrationSyncRun. Dispatcher fan-out is
-per mapping. Fetch, resume and derivation use frozen identity, never the mutable
+[Sync enqueue](../frontend/services/api/src/integrations/sync.ts) freezes
+mapping_id, property_ref and project_id onto each IntegrationSyncRun. Dispatcher
+fan-out is per mapping. Fetch and resume use frozen identity, never the mutable
 connection pointer. A retired mapping fails its in-flight work rather than
 relabeling imported evidence.
 
-[Integration workers](../backend/app/workers/integration_worker.py) claim leased
-PostgreSQL work, commit before I/O, persist append-only import artifacts and
-derive versioned metric rows. Dataset configuration owns provider report grains,
-compatibility, coverage and truncation. Provider errors, expired credentials and
-partial data remain distinguishable from an observed zero.
+[Integration workers](../frontend/services/api/src/workers/integration-worker.ts)
+claim leased PostgreSQL work, commit before I/O, persist append-only import
+artifacts and derive versioned metric rows. Dataset configuration owns provider
+report grains, compatibility, coverage and truncation. Provider errors, expired
+credentials and partial data remain distinguishable from an observed zero.
 Interactive probes and workers share a fenced grant refresh claim: the claim
 commits before OAuth I/O, concurrent callers wait within a bound, and a rotated
 token is saved only while the claim and credential revision still match.
