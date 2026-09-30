@@ -180,7 +180,7 @@ async function acceptedRows(
   });
 }
 
-export async function reviewCandidates(
+export function reviewCandidates(
   db: Database,
   workspaceId: string,
   promptSetId: string,

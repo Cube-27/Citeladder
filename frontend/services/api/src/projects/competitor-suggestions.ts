@@ -53,7 +53,7 @@ export async function listSuggestions(db: Database, scope: ProjectScope): Promis
  * Track the suggested competitor: an existing competitor with the same name
  * or domain is reused, otherwise one is added within the project ceiling.
  */
-export async function acceptSuggestion(
+export function acceptSuggestion(
   db: Database,
   scope: ProjectScope,
   candidateId: string,

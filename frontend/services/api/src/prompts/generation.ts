@@ -121,7 +121,7 @@ async function mergeMapSuggestions(
     .execute();
 }
 
-async function stage(
+function stage(
   db: Database,
   workspaceId: string,
   context: GenerationContext,

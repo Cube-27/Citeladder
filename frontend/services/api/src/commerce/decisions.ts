@@ -1,7 +1,7 @@
 import type { Database } from '../db/database.ts';
 import { buyerPrompts, candidates, commerceMissing, type CommerceScope } from './reads.ts';
 
-export async function decideCandidate(
+export function decideCandidate(
   db: Database,
   scope: CommerceScope,
   id: string,
@@ -28,7 +28,7 @@ export async function decideCandidate(
   });
 }
 
-export async function decideBuyerPrompt(
+export function decideBuyerPrompt(
   db: Database,
   scope: CommerceScope,
   id: string,

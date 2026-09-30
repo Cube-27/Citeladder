@@ -144,7 +144,7 @@ export async function readBrandProfile(db: Database, scope: ProjectScope): Promi
  * confirmed (first review) or edited (a later one) by this reviewer, and
  * drops the suggestion artifact it no longer matches.
  */
-export async function updateBrandProfile(
+export function updateBrandProfile(
   db: Database,
   scope: ProjectScope,
   userId: string,

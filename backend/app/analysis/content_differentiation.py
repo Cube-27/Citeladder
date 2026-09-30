@@ -117,6 +117,35 @@ def _entry(feature: str, value: str, count: int, denominator: int) -> dict[str, 
     }
 
 
+def _classify(
+    owned: DifferentiationPage, compared: tuple[DifferentiationPage, ...]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split feature values into parity, gaps and unique owned contributions."""
+    denominator = len(compared)
+    owned_features = _features(owned)
+    counts: dict[str, Counter[str]] = {feature: Counter() for feature in owned_features}
+    for page in compared:
+        for feature, values in _features(page).items():
+            counts[feature].update(values)
+
+    required = max(1, int(denominator * DIFFERENTIATION_MOST_PAGES_RATIO + 0.999999))
+    parity: list[dict[str, Any]] = []
+    gaps: list[dict[str, Any]] = []
+    unique: list[dict[str, Any]] = []
+    for feature in sorted(counts):
+        own_values = owned_features[feature]
+        for value, count in sorted(counts[feature].items()):
+            if count >= required:
+                target = parity if value in own_values else gaps
+                target.append(_entry(feature, value, count, denominator))
+        unique.extend(
+            _entry(feature, value, 0, denominator)
+            for value in sorted(own_values)
+            if counts[feature][value] == 0
+        )
+    return parity, gaps, unique
+
+
 def analyze_content_differentiation(
     owned: DifferentiationPage,
     competitors: Iterable[DifferentiationPage],
@@ -164,25 +193,7 @@ def analyze_content_differentiation(
         ]
         return base
 
-    owned_features = _features(owned)
-    counts: dict[str, Counter[str]] = {feature: Counter() for feature in owned_features}
-    for page in compared:
-        for feature, values in _features(page).items():
-            counts[feature].update(values)
-
-    required = max(1, int(denominator * DIFFERENTIATION_MOST_PAGES_RATIO + 0.999999))
-    parity: list[dict[str, Any]] = []
-    gaps: list[dict[str, Any]] = []
-    unique: list[dict[str, Any]] = []
-    for feature in sorted(counts):
-        own_values = owned_features[feature]
-        for value, count in sorted(counts[feature].items()):
-            if count >= required:
-                target = parity if value in own_values else gaps
-                target.append(_entry(feature, value, count, denominator))
-        for value in sorted(own_values):
-            if counts[feature][value] == 0:
-                unique.append(_entry(feature, value, 0, denominator))
+    parity, gaps, unique = _classify(owned, compared)
     base["parity"] = parity[:DIFFERENTIATION_MAX_FEATURE_VALUES]
     base["gaps"] = gaps[:DIFFERENTIATION_MAX_FEATURE_VALUES]
     base["unique_contributions"] = unique[:DIFFERENTIATION_MAX_FEATURE_VALUES]

@@ -59,6 +59,92 @@ function emptyDiagnostics(candidates: number) {
   };
 }
 
+type Diagnostics = ReturnType<typeof emptyDiagnostics>;
+
+function countReason(diagnostics: Diagnostics, reason: string) {
+  diagnostics.reasons[reason] = (diagnostics.reasons[reason] ?? 0) + 1;
+}
+
+/** One judged candidate as a publishable link, or null after counting why not. */
+function resolveCandidate(
+  candidate: LinkCandidate,
+  outcome: Record<string, unknown>,
+  pages: Map<string, InternalLinkPage>,
+  threshold: number,
+  diagnostics: Diagnostics,
+): InternalLink | null {
+  const answers = record(outcome.answers);
+  const judgment = noul.safeParse(answers.link);
+  if (outcome.state !== 'completed' || !judgment.success) {
+    countReason(diagnostics, typeof outcome.reason === 'string' ? outcome.reason : 'unavailable');
+    diagnostics.unavailable += 1;
+    return null;
+  }
+  diagnostics.completed += 1;
+  if (judgment.data.noul < threshold) {
+    diagnostics.below_threshold += 1;
+    return null;
+  }
+  const source = pages.get(candidate.source);
+  const target = pages.get(candidate.target);
+  if (!source || !target) throw new Error('Link candidate has no frozen page');
+  const placement = selectedPlacement(candidate, source, answers.anchor);
+  if (!placement) {
+    const selection = choice.safeParse(answers.anchor);
+    if (selection.success && selection.data.choice === 'none') {
+      countReason(diagnostics, 'no_placement');
+    } else {
+      countReason(diagnostics, 'invalid_placement');
+      diagnostics.completed -= 1;
+      diagnostics.unavailable += 1;
+    }
+    return null;
+  }
+  return {
+    id: candidate.id,
+    source: summary(source),
+    target: summary(target),
+    anchor: placement.anchor,
+    placement,
+    usefulness: judgment.data.noul,
+    action_id: null,
+    action_status: null,
+  };
+}
+
+function linkState(diagnostics: Diagnostics, omittedPages: unknown) {
+  if (diagnostics.pending) return 'running';
+  if (diagnostics.candidates && diagnostics.unavailable === diagnostics.candidates)
+    return 'unavailable';
+  if (diagnostics.unavailable || Number(omittedPages)) return 'partial';
+  return 'completed';
+}
+
+/** Most useful first; a link whose anchor overlaps a kept one on the same source is dropped. */
+function dedupeOverlaps(links: InternalLink[], diagnostics: Diagnostics) {
+  const anchorStart = (link: InternalLink) => link.placement!.start + link.placement!.anchor_start;
+  const recommendations: InternalLink[] = [];
+  for (const link of links.toSorted(
+    (a, b) =>
+      b.usefulness - a.usefulness ||
+      a.source.url.localeCompare(b.source.url) ||
+      a.target.url.localeCompare(b.target.url),
+  )) {
+    const start = anchorStart(link);
+    const overlaps = recommendations.some((other) => {
+      const otherStart = anchorStart(other);
+      return (
+        other.source.analysis_id === link.source.analysis_id &&
+        start < otherStart + other.anchor.length &&
+        otherStart < start + link.anchor.length
+      );
+    });
+    if (overlaps) countReason(diagnostics, 'overlapping_placement');
+    else recommendations.push(link);
+  }
+  return recommendations;
+}
+
 export function projectLinks(manifest: Record<string, unknown>, outcomes: Map<string, unknown>) {
   const pages = new Map(
     internalLinkPageSchema
@@ -79,75 +165,12 @@ export function projectLinks(manifest: Record<string, unknown>, outcomes: Map<st
       continue;
     }
     const outcome = record(outcomes.get(candidate.id));
-    const answers = record(outcome.answers);
-    const judgment = noul.safeParse(answers.link);
-    if (outcome.state !== 'completed' || !judgment.success) {
-      const reason = typeof outcome.reason === 'string' ? outcome.reason : 'unavailable';
-      diagnostics.reasons[reason] = (diagnostics.reasons[reason] ?? 0) + 1;
-      diagnostics.unavailable += 1;
-      continue;
-    }
-    diagnostics.completed += 1;
-    if (judgment.data.noul < threshold) {
-      diagnostics.below_threshold += 1;
-      continue;
-    }
-    const source = pages.get(candidate.source);
-    const target = pages.get(candidate.target);
-    if (!source || !target) throw new Error('Link candidate has no frozen page');
-    const placement = selectedPlacement(candidate, source, answers.anchor);
-    if (!placement) {
-      const selection = choice.safeParse(answers.anchor);
-      const reason =
-        selection.success && selection.data.choice === 'none'
-          ? 'no_placement'
-          : 'invalid_placement';
-      diagnostics.reasons[reason] = (diagnostics.reasons[reason] ?? 0) + 1;
-      if (reason === 'invalid_placement') {
-        diagnostics.completed -= 1;
-        diagnostics.unavailable += 1;
-      }
-      continue;
-    }
-    links.push({
-      id: candidate.id,
-      source: summary(source),
-      target: summary(target),
-      anchor: placement.anchor,
-      placement,
-      usefulness: judgment.data.noul,
-      action_id: null,
-      action_status: null,
-    });
+    const link = resolveCandidate(candidate, outcome, pages, threshold, diagnostics);
+    if (link) links.push(link);
   }
-  let state: 'running' | 'unavailable' | 'partial' | 'completed' = 'completed';
-  if (diagnostics.pending) state = 'running';
-  else if (diagnostics.candidates && diagnostics.unavailable === diagnostics.candidates)
-    state = 'unavailable';
-  else if (diagnostics.unavailable || Number(manifest.omitted_pages)) state = 'partial';
-  const recommendations: InternalLink[] = [];
-  for (const link of links.toSorted(
-    (a, b) =>
-      b.usefulness - a.usefulness ||
-      a.source.url.localeCompare(b.source.url) ||
-      a.target.url.localeCompare(b.target.url),
-  )) {
-    const start = link.placement!.start + link.placement!.anchor_start;
-    const overlaps = recommendations.some((other) => {
-      const otherStart = other.placement!.start + other.placement!.anchor_start;
-      return (
-        other.source.analysis_id === link.source.analysis_id &&
-        start < otherStart + other.anchor.length &&
-        otherStart < start + link.anchor.length
-      );
-    });
-    if (overlaps)
-      diagnostics.reasons.overlapping_placement =
-        (diagnostics.reasons.overlapping_placement ?? 0) + 1;
-    else recommendations.push(link);
-  }
+  const state = linkState(diagnostics, manifest.omitted_pages);
   return {
-    recommendations,
+    recommendations: dedupeOverlaps(links, diagnostics),
     diagnostics: { ...diagnostics, sources_without_passages: sourcesWithoutPassages },
     state,
   };

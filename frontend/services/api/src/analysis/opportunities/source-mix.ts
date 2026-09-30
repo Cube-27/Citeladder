@@ -1,6 +1,6 @@
 import { policy } from '../../config.ts';
 import { round } from '../../demand/projection.ts';
-import type { AnalysisEvidence, PromptSnapshotEvidence } from './evidence.ts';
+import type { AnalysisEvidence, CitationEvidence, PromptSnapshotEvidence } from './evidence.ts';
 import { byDomain } from './source-patterns.ts';
 import { compareText } from '../../text-order.ts';
 const p = policy.opportunity.earned_actions;
@@ -105,6 +105,35 @@ function project(value: Rollup, eligible: number) {
       p.EARNED_SOURCE_DEFAULT_SKILL,
   };
 }
+function increment(counts: Map<string, number>, key: string) {
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+function newRollup(domain: string, kind: string, path: Rollup['pathway']): Rollup {
+  return {
+    canonical_domain: domain,
+    source_class: kind,
+    pathway: path,
+    analysis_ids: new Set(),
+    artifact_ids: new Set(),
+    prompt_indices: new Set(),
+    themes: new Set(),
+    competitors: new Set(),
+    citations: new Map(),
+  };
+}
+function addToRollup(
+  item: Rollup,
+  row: AnalysisEvidence,
+  theme: string | null | undefined,
+  citation: CitationEvidence,
+) {
+  item.analysis_ids.add(row.analysis_id);
+  if (row.artifact_id !== null) item.artifact_ids.add(row.artifact_id);
+  item.prompt_indices.add(row.prompt_index);
+  if (theme) item.themes.add(theme);
+  for (const name of row.competitor_names) item.competitors.add(name);
+  if (!item.citations.has(citation.url)) item.citations.set(citation.url, citation.title);
+}
 export function buildSourceProjection(
   analyses: AnalysisEvidence[],
   snapshots: PromptSnapshotEvidence[],
@@ -120,31 +149,13 @@ export function buildSourceProjection(
   for (const row of rows) {
     const domains = byDomain(row.citations);
     if (domains.size) answers++;
+    const theme = meta.get(row.prompt_index)?.theme;
     for (const [domain, [kind, citation]] of domains) {
       const path = actionPath(kind);
-      const observation = observedPath(kind);
-      observed.set(observation, (observed.get(observation) ?? 0) + 1);
-      if (path) actions.set(path, (actions.get(path) ?? 0) + 1);
-      const item =
-        rollups.get(domain) ??
-        ({
-          canonical_domain: domain,
-          source_class: kind,
-          pathway: path,
-          analysis_ids: new Set(),
-          artifact_ids: new Set(),
-          prompt_indices: new Set(),
-          themes: new Set(),
-          competitors: new Set(),
-          citations: new Map(),
-        } as Rollup);
-      item.analysis_ids.add(row.analysis_id);
-      if (row.artifact_id !== null) item.artifact_ids.add(row.artifact_id);
-      item.prompt_indices.add(row.prompt_index);
-      const theme = meta.get(row.prompt_index)?.theme;
-      if (theme) item.themes.add(theme);
-      for (const name of row.competitor_names) item.competitors.add(name);
-      if (!item.citations.has(citation.url)) item.citations.set(citation.url, citation.title);
+      increment(observed, observedPath(kind));
+      if (path) increment(actions, path);
+      const item = rollups.get(domain) ?? newRollup(domain, kind, path);
+      addToRollup(item, row, theme, citation);
       rollups.set(domain, item);
     }
   }

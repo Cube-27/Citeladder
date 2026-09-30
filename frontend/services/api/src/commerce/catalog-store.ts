@@ -19,7 +19,7 @@ export async function lockCatalog(db: Database, scope: CommerceScope) {
   if (!project) commerceMissing('Project not found');
 }
 
-export async function newProduct(
+export function newProduct(
   db: Database,
   scope: CommerceScope,
   url: string,

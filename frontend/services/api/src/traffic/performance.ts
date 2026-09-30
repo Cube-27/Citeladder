@@ -1,6 +1,6 @@
 /** Persisted Performance reads, shared with the retained Python Agent reader. */
 import { performanceDimensionSchema } from '@citeladder/contracts/performance';
-import { sql } from 'kysely';
+import { type RawBuilder, sql } from 'kysely';
 import type { z } from 'zod';
 
 import { metricSeriesPoints } from '../analytics/metric-series.ts';
@@ -54,7 +54,7 @@ function snapshots(db: Database, scope: Scope) {
     .where('project_id', '=', scope.projectId);
 }
 type Snapshot = NonNullable<Awaited<ReturnType<ReturnType<typeof snapshots>['executeTakeFirst']>>>;
-async function exactSnapshot(db: Database, scope: Scope, window: Window, granularity: string) {
+function exactSnapshot(db: Database, scope: Scope, window: Window, granularity: string) {
   return snapshots(db, scope)
     .where('window_start', '=', sql<Date>`${window[0]}::date`)
     .where('window_end', '=', sql<Date>`${window[1]}::date`)
@@ -207,6 +207,65 @@ function tableMetrics(value: unknown) {
 function badCursor(): never {
   throw new ApiError(400, 'Invalid performance cursor', { code: 'invalid_cursor' });
 }
+type TableSort = { sort: string; key: string; descending: boolean };
+type TableKeyset = readonly [string, string];
+
+function tablePageSize(requested: number | null | undefined) {
+  const pageSize = requested ?? p.PERFORMANCE_DEFAULT_PAGE_SIZE;
+  if (!p.PERFORMANCE_PAGE_SIZE_OPTIONS.includes(pageSize))
+    throw new ApiError(
+      422,
+      `page_size must be one of [${[...p.PERFORMANCE_PAGE_SIZE_OPTIONS].sort((a, b) => a - b).join(', ')}]`,
+    );
+  return pageSize;
+}
+function tableSort(dimension: string, requested: string | null | undefined): TableSort {
+  const defaults: Record<string, string> = p.PERFORMANCE_DIMENSION_DEFAULT_SORT;
+  const sort = requested || defaults[dimension]!;
+  const descending = sort.startsWith('-');
+  const key = descending ? sort.slice(1) : sort;
+  if (!p.PERFORMANCE_SORT_WHITELIST.includes(key))
+    throw new ApiError(422, `unknown performance sort: '${sort}'`);
+  return { sort, key, descending };
+}
+function decodeTableCursor(cursor: string, fingerprint: string): TableKeyset {
+  let decoded: Record<string, unknown>;
+  try {
+    decoded = record(JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')));
+  } catch {
+    badCursor();
+  }
+  const k = decoded.k;
+  if (
+    decoded.fp !== fingerprint ||
+    !Array.isArray(k) ||
+    k.length !== 2 ||
+    typeof k[0] !== 'string' ||
+    !parseUuid(k[1])
+  )
+    badCursor();
+  return [k[0], k[1] as string];
+}
+function encodeTableCursor(fingerprint: string, value: string | number | null, id: string) {
+  return Buffer.from(
+    JSON.stringify({ fp: fingerprint, k: [value === null ? '' : String(value), id] }),
+  )
+    .toString('base64')
+    .replaceAll('+', '-')
+    .replaceAll('/', '_');
+}
+/** Keyset continuation after `after`, with nulls sorted last in either direction. */
+function afterKeyset(
+  expression: RawBuilder<unknown>,
+  after: TableKeyset,
+  { key, descending }: TableSort,
+) {
+  const [value, id] = after;
+  if (value === '') return sql<boolean>`${expression} is null and id > ${id}::uuid`;
+  const typed = key === p.PERFORMANCE_SORT_KEY_DIMENSION ? value : Number(value);
+  if (typeof typed === 'number' && !Number.isFinite(typed)) badCursor();
+  return sql<boolean>`(${expression} ${sql.raw(descending ? '<' : '>')} ${typed} or (${expression} = ${typed} and id > ${id}::uuid) or ${expression} is null)`;
+}
 
 export async function getPerformanceTable(
   db: Database,
@@ -225,86 +284,44 @@ export async function getPerformanceTable(
     p.PERFORMANCE_DEFAULT_DIMENSION,
     p.PERFORMANCE_DIMENSIONS,
   );
-  const pageSize = options.page_size ?? p.PERFORMANCE_DEFAULT_PAGE_SIZE;
-  if (!p.PERFORMANCE_PAGE_SIZE_OPTIONS.includes(pageSize))
-    throw new ApiError(
-      422,
-      `page_size must be one of [${[...p.PERFORMANCE_PAGE_SIZE_OPTIONS].sort((a, b) => a - b).join(', ')}]`,
-    );
-  const defaults: Record<string, string> = p.PERFORMANCE_DIMENSION_DEFAULT_SORT;
-  const sort = options.sort || defaults[dimension]!;
-  const descending = sort.startsWith('-');
-  const key = descending ? sort.slice(1) : sort;
-  if (!p.PERFORMANCE_SORT_WHITELIST.includes(key))
-    throw new ApiError(422, `unknown performance sort: '${sort}'`);
+  const pageSize = tablePageSize(options.page_size);
+  const order = tableSort(dimension, options.sort);
   const filters = {
     dimension,
     page_size: String(pageSize),
     project_id: options.projectId,
     snapshot_id: options.snapshot_id,
-    sort,
+    sort: order.sort,
   };
   const fingerprint = hash(JSON.stringify({ f: filters, s: 'performance-table' })).slice(0, 16);
-  let after: [string, string] | null = null;
-  if (options.cursor) {
-    try {
-      const decoded: unknown = JSON.parse(
-        Buffer.from(options.cursor, 'base64url').toString('utf8'),
-      );
-      const c = record(decoded);
-      if (
-        c.fp !== fingerprint ||
-        !Array.isArray(c.k) ||
-        c.k.length !== 2 ||
-        typeof c.k[0] !== 'string' ||
-        !parseUuid(c.k[1])
-      )
-        badCursor();
-      after = [c.k[0] as string, c.k[1] as string];
-    } catch {
-      badCursor();
-    }
-  }
+  const after = options.cursor ? decodeTableCursor(options.cursor, fingerprint) : null;
   const snapshot = await snapshots(db, options)
     .where('id', '=', options.snapshot_id)
     .executeTakeFirst();
   const empty = { dimension, items: [], next_cursor: null, total_count: 0, page_size: pageSize };
   if (!snapshot) return empty;
-  const expression =
-    key === p.PERFORMANCE_SORT_KEY_DIMENSION
-      ? sql<string>`dimension_key`
-      : sql<number>`(metrics ->> ${key})::double precision`;
-  let query = new WorkspaceScope(options.workspaceId)
-    .selectFrom(db, 'performance_dimension_stats')
-    .selectAll()
-    .where('project_id', '=', options.projectId)
-    .where('snapshot_id', '=', options.snapshot_id)
-    .where('dimension', '=', dimension);
-  if (after) {
-    const [value, id] = after;
-    if (value === '') query = query.where(sql<boolean>`${expression} is null and id > ${id}::uuid`);
-    else {
-      const typed = key === p.PERFORMANCE_SORT_KEY_DIMENSION ? value : Number(value);
-      if (typeof typed === 'number' && !Number.isFinite(typed)) badCursor();
-      query = query.where(
-        sql<boolean>`(${expression} ${sql.raw(descending ? '<' : '>')} ${typed} or (${expression} = ${typed} and id > ${id}::uuid) or ${expression} is null)`,
-      );
-    }
-  }
+  const byDimensionKey = order.key === p.PERFORMANCE_SORT_KEY_DIMENSION;
+  const expression = byDimensionKey
+    ? sql<string>`dimension_key`
+    : sql<number>`(metrics ->> ${order.key})::double precision`;
+  const stats = (snapshotId: string) =>
+    new WorkspaceScope(options.workspaceId)
+      .selectFrom(db, 'performance_dimension_stats')
+      .selectAll()
+      .where('project_id', '=', options.projectId)
+      .where('snapshot_id', '=', snapshotId)
+      .where('dimension', '=', dimension);
+  let query = stats(options.snapshot_id);
+  if (after) query = query.where(afterKeyset(expression, after, order));
   const fetched = await query
-    .orderBy(sql`${expression} ${sql.raw(descending ? 'desc' : 'asc')} nulls last`)
+    .orderBy(sql`${expression} ${sql.raw(order.descending ? 'desc' : 'asc')} nulls last`)
     .orderBy('id')
     .limit(pageSize + 1)
     .execute();
   const rows = fetched.slice(0, pageSize);
   const comparisons =
     options.compare_snapshot_id && rows.length
-      ? await new WorkspaceScope(options.workspaceId)
-          .selectFrom(db, 'performance_dimension_stats')
-          .selectAll()
-          .where('project_id', '=', options.projectId)
-          .where('snapshot_id', '=', options.compare_snapshot_id)
-          .where('dimension', '=', dimension)
+      ? await stats(options.compare_snapshot_id)
           .where(
             'dimension_key',
             'in',
@@ -313,20 +330,15 @@ export async function getPerformanceTable(
           .execute()
       : [];
   const peers = new Map(comparisons.map((r) => [r.dimension_key, tableMetrics(r.metrics)]));
-  let nextCursor = null;
-  if (fetched.length > pageSize) {
-    const last = rows.at(-1)!;
-    const value =
-      key === p.PERFORMANCE_SORT_KEY_DIMENSION
-        ? last.dimension_key
-        : numberOrNull(record(last.metrics)[key]);
-    nextCursor = Buffer.from(
-      JSON.stringify({ fp: fingerprint, k: [value === null ? '' : String(value), last.id] }),
-    )
-      .toString('base64')
-      .replaceAll('+', '-')
-      .replaceAll('/', '_');
-  }
+  const last = rows.at(-1);
+  const nextCursor =
+    fetched.length > pageSize && last
+      ? encodeTableCursor(
+          fingerprint,
+          byDimensionKey ? last.dimension_key : numberOrNull(record(last.metrics)[order.key]),
+          last.id,
+        )
+      : null;
   return {
     dimension,
     items: rows.map((r) => ({

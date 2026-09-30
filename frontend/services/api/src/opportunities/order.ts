@@ -16,7 +16,7 @@ import type { Scope } from './sources.ts';
 
 const CONFLICT = asApiErrorCode(policy.opportunity.opportunities.CODE_OPPORTUNITY_ORDER_CONFLICT);
 
-export async function updateOrder(
+export function updateOrder(
   db: Database,
   scope: Scope,
   update: { orderedIds: string[]; expectedVersion: number; userId: string },

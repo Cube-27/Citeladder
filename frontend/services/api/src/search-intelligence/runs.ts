@@ -94,7 +94,7 @@ async function enqueueAcquisition(trx: Database, scope: Scope, runId: string): P
 }
 
 /** Confirm a reviewed run once; a repeated confirmation returns the run unchanged. */
-export async function confirmRun(db: Database, scope: Scope, runId: string) {
+export function confirmRun(db: Database, scope: Scope, runId: string) {
   return db.transaction().execute(async (trx) => {
     // The project lock serializes confirmations, so one acquisition is active.
     await scope.workspace
@@ -125,7 +125,7 @@ export async function confirmRun(db: Database, scope: Scope, runId: string) {
 }
 
 /** Cancel an unfinished run and its unfinished acquisition task. */
-export async function cancelRun(db: Database, scope: Scope, runId: string) {
+export function cancelRun(db: Database, scope: Scope, runId: string) {
   return db.transaction().execute(async (trx) => {
     const run = await lockRun(trx, scope, runId);
     if (run === undefined) throw notFound('Run');

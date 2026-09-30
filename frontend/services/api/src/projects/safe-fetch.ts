@@ -56,17 +56,22 @@ export function websiteIdentity(value: string) {
   return { url: url.href, domain };
 }
 
+// IANA special-purpose IPv4 blocks that ipaddr labels ordinary unicast.
+// These fixed CIDRs deny outbound targets; they are not server addresses to connect to.
+const SPECIAL_PURPOSE_IPV4 = [
+  '192.0.0.0/24', // NOSONAR: a denied SSRF target, not a connection address.
+  '192.0.2.0/24',
+  '198.51.100.0/24',
+  '203.0.113.0/24',
+];
+
 export function validateAddress(address: string): void {
   if (!ipaddr.isValid(address)) throw new FetchError('ssrf_blocked');
   const ip = ipaddr.process(address);
   if (ip.range() !== 'unicast') throw new FetchError('ssrf_blocked');
-  // IANA special-purpose IPv4 blocks that ipaddr labels ordinary unicast.
-  // These fixed CIDRs deny outbound targets; they are not server addresses to connect to.
   if (
     ip.kind() === 'ipv4' &&
-    ['192.0.0.0/24', '192.0.2.0/24', '198.51.100.0/24', '203.0.113.0/24'].some((range) =>
-      ip.match(ipaddr.parseCIDR(range) as [ipaddr.IPv4, number]),
-    )
+    SPECIAL_PURPOSE_IPV4.some((range) => ip.match(ipaddr.parseCIDR(range) as [ipaddr.IPv4, number]))
   )
     throw new FetchError('ssrf_blocked');
 }

@@ -26,10 +26,60 @@ const checksOf = (d: Declaration) =>
   Array.isArray(d.expected_checks) ? d.expected_checks.map(record) : [];
 const kindName = (check: Record<string, unknown>) =>
   check.kind === null || check.kind === undefined ? 'unknown' : scalarText(check.kind);
+type SiteAnalysis = { normalized_facts: unknown; source_evaluation_ids: unknown };
+type SiteCheckKind = 'site_rule' | 'page_fact' | 'contextual_link';
+/** Whether the analyzed page matches the check, or null once a limitation is recorded. */
+type SiteEvaluator = (
+  ctx: Context,
+  analysis: SiteAnalysis,
+  check: Record<string, unknown>,
+) => Promise<boolean | null> | boolean | null;
+
+const siteEvaluators: Record<SiteCheckKind, SiteEvaluator> = {
+  contextual_link(ctx, analysis, check) {
+    const observed = contextualLinkObserved(analysis.normalized_facts, check);
+    if (observed === null)
+      ctx.result.limitations.push('contextual_link: insufficient or incompatible link capture');
+    return observed;
+  },
+  async site_rule(ctx, analysis, check) {
+    const ids = Array.isArray(analysis.source_evaluation_ids)
+      ? analysis.source_evaluation_ids.map(String)
+      : [];
+    const rule = ids.length
+      ? await ctx.scope
+          .selectFrom(ctx.db, 'site_rule_evaluations')
+          .selectAll()
+          .where('id', 'in', ids)
+          .where('rule_id', '=', String(check.rule_id ?? ''))
+          .executeTakeFirst()
+      : undefined;
+    if (!rule || !['satisfied', 'missing', 'partial'].includes(rule.outcome)) {
+      ctx.result.limitations.push('site_rule: no applicable evaluation');
+      return null;
+    }
+    ctx.result.rule_evaluation_ids.add(rule.id);
+    return rule.outcome === expectedRuleOutcome(check.expected_outcome);
+  },
+  page_fact(ctx, analysis, check) {
+    const facts = record(analysis.normalized_facts);
+    const key = String(check.fact_key || '');
+    if (!Object.hasOwn(facts, key)) {
+      ctx.result.limitations.push(`page_fact: ${key} unavailable`);
+      return null;
+    }
+    return isDeepStrictEqual(facts[key], check.expected_value ?? null);
+  },
+};
+function expectedRuleOutcome(expected: unknown) {
+  if (expected === 'pass') return 'satisfied';
+  if (expected === 'fail') return 'missing';
+  return expected;
+}
 async function siteCheck(ctx: Context, crawlId: string, check: Record<string, unknown>) {
   const kind = kindName(check);
   const d = ctx.declaration;
-  if (!['site_rule', 'page_fact', 'contextual_link'].includes(kind)) {
+  if (!Object.hasOwn(siteEvaluators, kind)) {
     ctx.result.limitations.push(`${kind}: unavailable from a site crawl`);
     return;
   }
@@ -63,47 +113,9 @@ async function siteCheck(ctx: Context, crawlId: string, check: Record<string, un
     ctx.result.limitations.push(`${kind}: target was not analyzed`);
     return;
   }
-  let matched: boolean;
-  if (kind === 'contextual_link') {
-    const observed = contextualLinkObserved(analysis.normalized_facts, check);
-    if (observed === null) {
-      ctx.result.limitations.push('contextual_link: insufficient or incompatible link capture');
-      return;
-    }
-    matched = observed;
-  } else if (kind === 'site_rule') {
-    const ids = Array.isArray(analysis.source_evaluation_ids)
-      ? analysis.source_evaluation_ids.map(String)
-      : [];
-    const rule = ids.length
-      ? await ctx.scope
-          .selectFrom(ctx.db, 'site_rule_evaluations')
-          .selectAll()
-          .where('id', 'in', ids)
-          .where('rule_id', '=', String(check.rule_id ?? ''))
-          .executeTakeFirst()
-      : undefined;
-    if (!rule || !['satisfied', 'missing', 'partial'].includes(rule.outcome)) {
-      ctx.result.limitations.push('site_rule: no applicable evaluation');
-      return;
-    }
-    ctx.result.rule_evaluation_ids.add(rule.id);
-    const expected =
-      check.expected_outcome === 'pass'
-        ? 'satisfied'
-        : check.expected_outcome === 'fail'
-          ? 'missing'
-          : check.expected_outcome;
-    matched = rule.outcome === expected;
-  } else {
-    const facts = record(analysis.normalized_facts);
-    const key = String(check.fact_key || '');
-    if (!Object.hasOwn(facts, key)) {
-      ctx.result.limitations.push(`page_fact: ${key} unavailable`);
-      return;
-    }
-    matched = isDeepStrictEqual(facts[key], check.expected_value ?? null);
-  }
+  const evaluate = siteEvaluators[kind as SiteCheckKind];
+  const matched = await evaluate(ctx, analysis, check);
+  if (matched === null) return;
   ctx.result.observed++;
   ctx.result.analysis_ids.add(analysis.id);
   if (matched) ctx.result.matched++;
