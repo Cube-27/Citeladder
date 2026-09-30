@@ -198,6 +198,15 @@ export const noCardClaimSchema = responseObject({
   renews: z.literal(false),
 });
 
+export const introductoryEndSchema = responseObject({
+  status: z.literal('ended'),
+  ended_at: z.string(),
+});
+export const cardTrialUnavailableSchema = responseObject({
+  status: z.literal('unavailable'),
+  reason: z.literal('provider_evidence_required'),
+});
+
 export const billingCatalogSchema = responseObject({
   catalog_revision: z.string(),
   country_code: z.string().nullable(),

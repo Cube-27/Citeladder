@@ -33,5 +33,4 @@ frontend/**/*.test.ts
 frontend/**/*.test.tsx
 backend/tests
 backend/scripts/*
-!backend/scripts/reconcile_billing.py
 !backend/scripts/account_manager.py

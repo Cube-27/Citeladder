@@ -1,0 +1,99 @@
+"""Billing policy export; Python config remains the single policy authority."""
+
+from __future__ import annotations
+
+import dataclasses
+from collections.abc import Callable
+from typing import Any
+
+from pydantic_settings import BaseSettings
+
+from app.core.config import billing_contracts
+from app.core.config import entitlements as entitlements_config
+from app.core.config.billing_contracts import SUBSCRIPTION_KIND_BASE
+from app.core.config.billing_settings import BillingSettings
+from app.core.config.provider_catalog import (
+    PUBLIC_PROVIDER_CATALOG,
+    public_provider_routes,
+)
+from app.core.config.razorpay_settings import RAZORPAY_API_ORIGIN, RazorpaySettings
+
+Setting = Callable[[str, type[BaseSettings]], dict[str, Any]]
+
+
+def billing_policy(setting: Setting) -> dict[str, Any]:
+    return {
+        "settings": {
+            name: setting(name, BillingSettings)
+            for name in BillingSettings.model_fields
+        },
+        "razorpay_settings": {
+            name: setting(name, RazorpaySettings)
+            for name in RazorpaySettings.model_fields
+        },
+        "razorpay_origin": RAZORPAY_API_ORIGIN,
+        "contracts": {
+            name.lower(): sorted(value) if isinstance(value, frozenset) else value
+            for name, value in vars(billing_contracts).items()
+            if name.isupper()
+        },
+        "providers": [
+            {
+                **dataclasses.asdict(entry),
+                "routes": [
+                    {
+                        "logical_engine": route.logical_engine,
+                        "transport_provider": route.transport_provider,
+                        "model": route.transport_model,
+                    }
+                    for route in public_provider_routes(entry.key)
+                ],
+            }
+            for entry in PUBLIC_PROVIDER_CATALOG
+        ],
+    }
+
+
+def entitlements_policy() -> dict[str, Any]:
+    """The capability registry and the account-capacity lock both stacks take."""
+    ent = entitlements_config
+    registry = ent.CAPABILITY_REGISTRY
+    return {
+        "registry_revision": registry.revision,
+        "capabilities": {
+            entry.key: {
+                "type": entry.capability_type.value,
+                "levels": len(entry.ordered_values),
+                "ordered_values": list(entry.ordered_values),
+                "issuable": entry.issuable,
+                "public": entry.public,
+                "rolling_window_seconds": entry.rolling_window_seconds,
+            }
+            for entry in registry.entries
+        },
+        "grant_source_kinds": sorted(ent.GRANT_SOURCE_KINDS),
+        "draw_source_order": list(ent.CONSUMABLE_DRAW_SOURCE_ORDER),
+        "paid_access_sources": [ent.GRANT_SOURCE_ADDON, ent.GRANT_SOURCE_TOPUP],
+        "base_subscription_kind": SUBSCRIPTION_KIND_BASE,
+        "prompt_slots": ent.KEY_PROMPT_SLOTS,
+        "project_slots": ent.KEY_PROJECT_SLOTS,
+        "project_deletion": ent.KEY_PROJECT_DELETION,
+        "capacity_lock": {
+            "namespace": ent.OCCUPANCY_LOCK_NAMESPACE,
+            "person": ent.OCCUPANCY_LOCK_PERSON,
+        },
+        "baseline": {
+            "revision": ent.BASELINE_GRANT_REVISION,
+            "source_kind": ent.GRANT_SOURCE_OVERRIDE,
+            "grants": {
+                ent.KEY_PROJECT_SLOTS: ent.FREE_PROJECT_SLOTS,
+                ent.KEY_PROMPT_SLOTS: ent.FREE_PROMPT_SLOTS,
+                ent.KEY_MONITORED_URLS: ent.FREE_MONITORED_URLS,
+            },
+        },
+        "codes": {
+            "limit_exceeded": ent.CODE_OCCUPANCY_LIMIT_EXCEEDED,
+            "unresolved": ent.CODE_OCCUPANCY_UNRESOLVED,
+            "capability_not_granted": ent.CODE_CAPABILITY_NOT_GRANTED,
+        },
+    }

@@ -1,6 +1,6 @@
 # Payment provider readiness
 
-Status as of 24 September 2026.
+Runtime owner updated on 30 September 2026; provider acceptance is unchanged.
 
 **Payments are not enabled.** `BILLING_CHECKOUT_ENABLED` and
 `BILLING_RAZORPAY_LIVE_READY` are false and no real payment has been taken.
@@ -23,17 +23,20 @@ is evidence that money can be taken correctly.
 
 | Guarantee | Where it is enforced | Verified by |
 | --- | --- | --- |
-| The app, workspace billing reads and public pricing work with NO provider configured | `core/config/billing_catalog.region_checkout_ready` | `test_provider_boundary.py` |
-| An unknown or unconfigured provider returns a safe unavailable result BEFORE any provider I/O, and never falls back to Razorpay | `connectors/billing/registry.resolve_binding` | `test_provider_boundary.py` |
-| A new intent freezes its provider AND environment before any network call | `domain/billing/idempotency.commit_intent` | `test_provider_boundary.py` |
-| Changing the new-checkout default leaves prior records on their originating adapter | `connectors/billing/factory.provider_for_record` | `test_provider_boundary.py` |
-| A record created in one environment is never served by another | `registry.binding_for_record` | `test_provider_boundary.py` |
-| Equivalent external ids in different providers/environments do not collide | `(provider, provider_mode, external_*)` unique constraints | `test_provider_boundary.py` |
-| Webhook authentication is provider-specific and vendor headers keep their real names | `connectors/billing/razorpay_webhook`, `api/billing.provider_webhook` | `test_provider_boundary.py` |
-| Duplicate webhook delivery grants once, per (provider, environment, event id) | `domain/billing/webhooks._record_event` | `test_provider_boundary.py` |
-| Status and event vocabulary stay inside their adapter | `ProviderRegistration.normalize_subscription_status` / `.is_payment_event` | `test_provider_boundary.py` |
-| An uncertain creation is never retried against a different provider | reconciliation binds to the persisted pair | `test_provider_boundary.py` |
-| The quote-signing secret is independent of EVERY provider's gateway secrets | `domain/billing/quotes._quote_secret` | `test_provider_boundary.py` |
+| Unknown or unconfigured providers fail closed before transport, without fallback | `src/billing/razorpay.ts` | `billing-boundaries.test.ts` |
+| A new intent commits its provider/environment and frozen terms before network I/O | `src/billing/purchases.ts` | `billing.test.ts` |
+| Disabled checkout still permits stored-intent replay and originating-environment recovery | `src/billing/purchases.ts`, `src/billing/recovery.ts` | `billing.test.ts` |
+| Foreign environments cannot cancel or settle a record | Frozen provider/mode checks in purchases, settlement and receipts | `billing.test.ts` |
+| Webhook authentication uses bounded exact bytes and vendor headers | `src/billing/webhooks.ts` | `billing.test.ts` |
+| Duplicate events settle once; conflicting event digests quarantine | `src/billing/webhooks.ts`, shared settlement | `billing.test.ts` |
+| Recurring paid evidence binds the captured payment to its subscription invoice and period | `src/billing/razorpay.ts` | `billing-boundaries.test.ts` |
+| Uncertain creation is recovered without another create request | `src/billing/recovery.ts` | `billing.test.ts` |
+| Quote signing uses an independent secret with no gateway fallback | `src/billing/razorpay.ts` | `billing-boundaries.test.ts` |
+
+Paths above are relative to `frontend/services/api/`. Python config remains
+the exported policy authority; Python catalog/operator administration and
+worker metering bridges remain until their assigned migrations. Public pricing
+and billing reads consume persisted state without provider calls.
 
 ## Configuration
 
@@ -59,10 +62,10 @@ Razorpay-owned (`core/config/razorpay_settings.py`): `BILLING_RAZORPAY_MODE`,
 
 1. Write its settings module beside `razorpay_settings.py`, keeping its
    variable names its own.
-2. Write its adapter: the `BillingProvider` calls, a `BillingWebhookVerifier`,
-   and a `BillingCheckoutAdapter`.
-3. Register it in `connectors/billing/factory.py` — one explicit entry,
-   including its own status map and payment-event predicate.
+2. Implement its TypeScript `BillingProvider` operations, webhook authentication
+   and checkout signature verification under `src/billing/`.
+3. Add explicit provider selection and frozen-record routing under that owner,
+   with its own status/event vocabulary; unknown identities must remain unavailable.
 4. Point `BILLING_CHECKOUT_PROVIDER` at it.
 
 Then verify its commercial and tax role for the regions it will sell in, pass

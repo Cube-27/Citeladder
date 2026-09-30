@@ -8,6 +8,12 @@
  * only applies the same environment overrides pydantic-settings would.
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
+import {
+  billingSettings,
+  razorpaySettings,
+  type BillingSettings,
+  type RazorpaySettings,
+} from './billing/config.ts';
 import { epochMicros, parseDatetime } from './http/datetimes.ts';
 import { parseTrustedProxies, type TrustedProxies } from './auth/client-identity.ts';
 
@@ -117,6 +123,8 @@ function resolveSetting(name: string, env: Record<string, string | undefined>): 
 }
 
 export type ServiceConfig = {
+  billing: BillingSettings;
+  razorpay: RazorpaySettings;
   appName: string;
   appEnv: string;
   host: string;
@@ -204,6 +212,8 @@ export function configEnvironment(config: ServiceConfig): Record<string, string 
 export function loadConfig(env: Record<string, string | undefined> = process.env): ServiceConfig {
   const setting = (name: keyof typeof policy.settings) => resolveSetting(name, env);
   const config: ServiceConfig = {
+    billing: billingSettings(env),
+    razorpay: razorpaySettings(env),
     appName: setting('app_name') as string,
     appEnv: setting('app_env') as string,
     // Every interface by default, as a bridged container needs; a host-network

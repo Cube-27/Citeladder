@@ -19,9 +19,11 @@ import { authRoutes } from './auth.ts';
 import { workspaceRoutes } from './workspaces.ts';
 import { MCP_CONNECTION_ROUTES } from './mcp-connections.ts';
 import { billingDocumentRoutes } from './billing-documents.ts';
+import { billingRoutes } from './billing.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...MCP_CONNECTION_ROUTES,
+  ...billingRoutes,
   ...projectRoutes,
   ...brandDiscoveryRoutes,
   ...authRoutes,

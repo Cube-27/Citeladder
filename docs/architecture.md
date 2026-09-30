@@ -23,6 +23,14 @@ positioning; [the index](README.md) routes to substantive feature documents.
 | MCP | OAuth authorization records | Read-only access to the same owners |
 | Billing / Entitlements | Commercial evidence, grants and ledger | Admission, availability and settlement |
 
+TypeScript owns billing checkout, subscription changes, webhook receipt,
+leased recovery, invoice issuance, consumable-ledger writes and, under the
+`billing-documents` family, receipt list/PDF reads. Python retains
+catalog/operator administration and metering/admission bridges for the audit,
+Site Health and Agent workers until their migrations (PRs 17–19). Both stacks
+use the same durable rows and follow the lock order below; see
+[Billing and entitlements](billing-entitlements.md) for the owner boundaries.
+
 Site Health, Content Intelligence, Demand Intelligence and the Agent are the
 durable product capabilities; the Agent's skills deliver content creation, and
 AI Visibility is Track. Commerce reuses the same

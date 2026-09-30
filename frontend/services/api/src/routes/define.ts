@@ -132,7 +132,7 @@ function methodNotAllowed(method: string): never {
   throw new ApiError(405, 'Method Not Allowed', { headers: { allow: method } });
 }
 
-function defineRoute<
+export function defineRoute<
   const Path extends ParamSpecs,
   const Query extends ParamSpecs,
   Response extends z.ZodType,
@@ -190,7 +190,13 @@ function defineRoute<
   return { contract, params: route.params, register };
 }
 
-export const defineGetRoute = defineRoute;
+export function defineGetRoute<
+  const Path extends ParamSpecs,
+  const Query extends ParamSpecs,
+  Response extends z.ZodType,
+>(route: RouteSpec<Path, Query, Response>): ProductRoute {
+  return defineRoute(route);
+}
 export function definePostRoute<
   const Path extends ParamSpecs,
   const Query extends ParamSpecs,

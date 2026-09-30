@@ -46,10 +46,11 @@
   TS. PR 13 moves integrations routes, connectors and workers to TS. PR 14
   moves auth and workspace HTTP ownership to TS. PR 15 moves the MCP server and
   OAuth provider to TS. PR 16 is split under D7's retirement budget: 16a moves
-  receipt reads and both PDF exports to TS and retires reportlab; 16b's
-  commercial mutations, settlement, recovery and ledger remain pending.
-  PRs 17–20 follow the re-sequenced order. Deployment of implemented cutovers
-  and their one-week soaks are pending.
+  receipt reads and both PDF exports to TS and retires reportlab; 16b moves
+  commercial mutations, settlement, leased recovery, receipt issuance and the
+  typed entitlement ledger to TS, keeping Python worker/operator bridges for
+  their assigned migrations. PRs 17–20 follow the re-sequenced order.
+  Deployment of implemented cutovers and their one-week soaks are pending.
 
 - [Agent capabilities](citeladder-agent-capabilities.md)
   — foundations and MVP items 1–4 are present in #203, with handoff/evidence

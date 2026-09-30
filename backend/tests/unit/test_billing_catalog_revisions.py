@@ -3,14 +3,17 @@ from __future__ import annotations
 import copy
 from decimal import Decimal
 
+import httpx
 import pytest
 from pydantic import ValidationError
 
+from app.connectors.billing.razorpay import RazorpayPlanReader
 from app.core.config.billing_pricing import (
     AUTHORING_USD_INR_RATE,
     inr_minor_from_usd_minor,
 )
 from app.core.config.billing_settings import billing_settings
+from app.core.config.razorpay_settings import RazorpaySettings
 from app.domain.billing.admin import OperatorContext, redact, require_operator
 from app.domain.billing.catalog_revisions import (
     RegionalPricePayload,
@@ -19,6 +22,32 @@ from app.domain.billing.catalog_revisions import (
 from app.domain.billing.launch_catalog import launch_pricing_v1_payload
 from app.models.user import User
 from scripts.provision_razorpay_plans import bind_plan_refs, recurring_prices
+
+
+@pytest.mark.asyncio
+async def test_operator_plan_reader_stays_read_only_and_refuses_redirects() -> None:
+    requests: list[httpx.Request] = []
+
+    def transport(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path.endswith("plan_redirect"):
+            return httpx.Response(302, headers={"location": "https://other.example"})
+        return httpx.Response(200, json={"id": "plan_fixture", "period": "monthly"})
+
+    settings = RazorpaySettings(
+        _env_file=None, mode="test", key_id="rzp_test_fixture", key_secret="fixture"
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(transport)) as client:
+        reader = RazorpayPlanReader(client=client, settings=settings)
+        assert (await reader.fetch_plan("plan_fixture"))["period"] == "monthly"
+        with pytest.raises(ValueError, match="redirect rejected"):
+            await reader.fetch_plan("plan_redirect")
+        with pytest.raises(ValueError, match="Invalid plan reference"):
+            await reader.fetch_plan("https://other.example")
+    assert [(request.method, request.url.host) for request in requests] == [
+        ("GET", "api.razorpay.com"),
+        ("GET", "api.razorpay.com"),
+    ]
 
 
 @pytest.mark.parametrize(

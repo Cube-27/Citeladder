@@ -1,0 +1,626 @@
+{
+  "schema_version": 1,
+  "plans": [
+    {
+      "key": "tier_1",
+      "name": "Starter",
+      "description": "Daily AI visibility tracking for one project.",
+      "cadence": "monthly",
+      "self_serve": true,
+      "contact_only": false,
+      "byok_price": {
+        "currency": "USD",
+        "amount_minor": 4900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "funded_price": {
+        "currency": "USD",
+        "amount_minor": 9900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "regional_byok_prices": {
+        "international": {
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "90",
+          "metadata": "launch-pricing-v1",
+          "currency": "USD",
+          "amount_minor": 4900,
+          "tax_behavior": "inclusive",
+          "tax_minor": 0,
+          "provider_plan_name": "CiteLadder Starter BYOK USD",
+          "tax_rate": "0",
+          "tax_verified": true
+        },
+        "india": {
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "90",
+          "metadata": "launch-pricing-v1",
+          "currency": "INR",
+          "amount_minor": 449900,
+          "tax_behavior": "exclusive",
+          "tax_minor": 80982,
+          "provider_plan_name": "CiteLadder Starter BYOK INR",
+          "tax_rate": "0.18",
+          "tax_verified": true
+        }
+      },
+      "grants": [
+        {
+          "key": "audit_cadence",
+          "value": 2
+        },
+        {
+          "key": "project_slots",
+          "value": 1
+        },
+        {
+          "key": "prompt_slots",
+          "value": 10
+        },
+        {
+          "key": "monitored_urls",
+          "value": 50
+        },
+        {
+          "key": "site_health_page_fetches_per_period",
+          "value": 500
+        },
+        {
+          "key": "history_window",
+          "value": 1
+        },
+        {
+          "key": "manual_runs_per_day",
+          "value": 3
+        },
+        {
+          "key": "exports",
+          "value": 1
+        },
+        {
+          "key": "support_tier",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "key": "tier_2",
+      "name": "Growth",
+      "description": "Prompt fan-out and the Agent for three projects.",
+      "cadence": "monthly",
+      "self_serve": true,
+      "contact_only": false,
+      "byok_price": {
+        "currency": "USD",
+        "amount_minor": 9900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "funded_price": {
+        "currency": "USD",
+        "amount_minor": 24900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "regional_byok_prices": {
+        "international": {
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "90",
+          "metadata": "launch-pricing-v1",
+          "currency": "USD",
+          "amount_minor": 9900,
+          "tax_behavior": "inclusive",
+          "tax_minor": 0,
+          "provider_plan_name": "CiteLadder Growth BYOK USD",
+          "tax_rate": "0",
+          "tax_verified": true
+        },
+        "india": {
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "90",
+          "metadata": "launch-pricing-v1",
+          "currency": "INR",
+          "amount_minor": 899900,
+          "tax_behavior": "exclusive",
+          "tax_minor": 161982,
+          "provider_plan_name": "CiteLadder Growth BYOK INR",
+          "tax_rate": "0.18",
+          "tax_verified": true
+        }
+      },
+      "grants": [
+        {
+          "key": "audit_cadence",
+          "value": 2
+        },
+        {
+          "key": "project_slots",
+          "value": 3
+        },
+        {
+          "key": "prompt_slots",
+          "value": 30
+        },
+        {
+          "key": "monitored_urls",
+          "value": 150
+        },
+        {
+          "key": "site_health_page_fetches_per_period",
+          "value": 1500
+        },
+        {
+          "key": "history_window",
+          "value": 2
+        },
+        {
+          "key": "manual_runs_per_day",
+          "value": 6
+        },
+        {
+          "key": "exports",
+          "value": 1
+        },
+        {
+          "key": "support_tier",
+          "value": 0
+        },
+        {
+          "key": "ai_credits",
+          "value": 500
+        },
+        {
+          "key": "fanout",
+          "value": 1
+        },
+        {
+          "key": "agent",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "key": "tier_3",
+      "name": "Scale",
+      "description": "Ten projects, two years of history and priority support.",
+      "cadence": "monthly",
+      "self_serve": true,
+      "contact_only": false,
+      "byok_price": {
+        "currency": "USD",
+        "amount_minor": 19900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "funded_price": {
+        "currency": "USD",
+        "amount_minor": 49900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "regional_byok_prices": {
+        "international": {
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "90",
+          "metadata": "launch-pricing-v1",
+          "currency": "USD",
+          "amount_minor": 19900,
+          "tax_behavior": "inclusive",
+          "tax_minor": 0,
+          "provider_plan_name": "CiteLadder Scale BYOK USD",
+          "tax_rate": "0",
+          "tax_verified": true
+        },
+        "india": {
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "90",
+          "metadata": "launch-pricing-v1",
+          "currency": "INR",
+          "amount_minor": 1799900,
+          "tax_behavior": "exclusive",
+          "tax_minor": 323982,
+          "provider_plan_name": "CiteLadder Scale BYOK INR",
+          "tax_rate": "0.18",
+          "tax_verified": true
+        }
+      },
+      "grants": [
+        {
+          "key": "audit_cadence",
+          "value": 2
+        },
+        {
+          "key": "project_slots",
+          "value": 10
+        },
+        {
+          "key": "prompt_slots",
+          "value": 60
+        },
+        {
+          "key": "monitored_urls",
+          "value": 400
+        },
+        {
+          "key": "site_health_page_fetches_per_period",
+          "value": 4000
+        },
+        {
+          "key": "history_window",
+          "value": 3
+        },
+        {
+          "key": "manual_runs_per_day",
+          "value": 12
+        },
+        {
+          "key": "exports",
+          "value": 1
+        },
+        {
+          "key": "support_tier",
+          "value": 1
+        },
+        {
+          "key": "ai_credits",
+          "value": 1500
+        },
+        {
+          "key": "fanout",
+          "value": 1
+        },
+        {
+          "key": "agent",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "key": "enterprise",
+      "name": "Enterprise",
+      "description": "Custom volume, security review, and deployment options.",
+      "cadence": "custom",
+      "self_serve": false,
+      "contact_only": true,
+      "byok_price": null,
+      "funded_price": null,
+      "grants": []
+    }
+  ],
+  "addons": [
+    {
+      "key": "addon_extra_project",
+      "name": "Extra project",
+      "description": "One more tracked project for 30 days.",
+      "available": true,
+      "eligible_plan_keys": ["tier_1", "tier_2", "tier_3"],
+      "quantity_min": 1,
+      "quantity_max": 20,
+      "expiry_days": 30,
+      "modes": {
+        "byok": {
+          "usd_minor": 1900,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 1900,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 179900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "project_slots",
+              "value": 1
+            }
+          ]
+        },
+        "funded": {
+          "usd_minor": 1900,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 1900,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 179900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "project_slots",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "addon_extra_prompts",
+      "name": "Extra 10 prompts",
+      "description": "Ten more tracked prompts for 30 days.",
+      "available": true,
+      "eligible_plan_keys": ["tier_1", "tier_2", "tier_3"],
+      "quantity_min": 1,
+      "quantity_max": 20,
+      "expiry_days": 30,
+      "modes": {
+        "byok": {
+          "usd_minor": 1500,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 1500,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 139900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "prompt_slots",
+              "value": 10
+            }
+          ]
+        },
+        "funded": {
+          "usd_minor": 9900,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 9900,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 899900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "prompt_slots",
+              "value": 10
+            },
+            {
+              "key": "audit_credits",
+              "value": 1000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "addon_extra_site_health",
+      "name": "Site Health pack",
+      "description": "250 more monitored URLs and 2,500 page fetches for 30 days.",
+      "available": true,
+      "eligible_plan_keys": ["tier_1", "tier_2", "tier_3"],
+      "quantity_min": 1,
+      "quantity_max": 20,
+      "expiry_days": 30,
+      "modes": {
+        "byok": {
+          "usd_minor": 1900,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 1900,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 179900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "monitored_urls",
+              "value": 250
+            },
+            {
+              "key": "site_health_page_fetches_per_period",
+              "value": 2500
+            }
+          ]
+        },
+        "funded": {
+          "usd_minor": 1900,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 1900,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 179900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "monitored_urls",
+              "value": 250
+            },
+            {
+              "key": "site_health_page_fetches_per_period",
+              "value": 2500
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "topups": [
+    {
+      "key": "topup_audit_credits",
+      "name": "Managed answer top-up",
+      "description": "1,000 managed visibility answers, usable for 30 days.",
+      "available": false,
+      "eligible_plan_keys": ["tier_1", "tier_2", "tier_3"],
+      "quantity_min": 1,
+      "quantity_max": 20,
+      "expiry_days": 30,
+      "modes": {
+        "byok": {
+          "usd_minor": 9900,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 9900,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 899900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "audit_credits",
+              "value": 1000
+            }
+          ]
+        },
+        "funded": {
+          "usd_minor": 9900,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 9900,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 899900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "audit_credits",
+              "value": 1000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "topup_ai_credits",
+      "name": "Workflow AI top-up",
+      "description": "1,000 AI credits for the Agent, 30 days.",
+      "available": true,
+      "eligible_plan_keys": ["tier_2", "tier_3"],
+      "quantity_min": 1,
+      "quantity_max": 20,
+      "expiry_days": 30,
+      "modes": {
+        "byok": {
+          "usd_minor": 2500,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 2500,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 229900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "ai_credits",
+              "value": 1000
+            }
+          ]
+        },
+        "funded": {
+          "usd_minor": 2500,
+          "regional_prices": {
+            "international": {
+              "currency": "USD",
+              "amount_minor": 2500,
+              "tax_behavior": "inclusive"
+            },
+            "india": {
+              "currency": "INR",
+              "amount_minor": 229900,
+              "tax_behavior": "exclusive",
+              "fx_inr_per_usd": "90"
+            }
+          },
+          "grants": [
+            {
+              "key": "ai_credits",
+              "value": 1000
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "campaign": {
+    "key": "no_card_tier_1_intro",
+    "state": "draft",
+    "enabled": false,
+    "duration_days": 7,
+    "plan_key": "tier_1",
+    "claim_available": false,
+    "cohort_started_at": null,
+    "ends_at": null,
+    "eligibility_policy": "new_account",
+    "operator_code_allowed": true
+  },
+  "contact_sales_url": "https://www.cube27.com/contact/",
+  "support_contact": {
+    "email": "contact@cube27.com",
+    "phone": "",
+    "contact_url": "https://www.cube27.com/contact/"
+  },
+  "platform_routes": [],
+  "ai_credit_policy": null
+}

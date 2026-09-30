@@ -185,6 +185,28 @@ services:
     healthcheck:
       disable: true
 
+  billing-worker-ts:
+    image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE must be an immutable digest}
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - path: runtime.env
+        required: ${RUNTIME_ENV_REQUIRED:-true}
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DB_SSL_MODE: require
+      DB_POOL_SIZE: "2"
+      DB_MAX_OVERFLOW: "0"
+    command: ["node", "src/billing-worker.ts", "--loop"]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      disable: true
+
   # TypeScript API service: the route families the route-ownership manifest
   # assigns to TypeScript, which Caddy sends to :8100. Same database, session
   # key and runtime.env as the Python web process; a smaller pool, since it
