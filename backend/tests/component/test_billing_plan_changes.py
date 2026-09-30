@@ -42,6 +42,7 @@ from tests.component.billing_catalog_helpers import (
 )
 from tests.component.billing_provider_helpers import (
     configure_test_provider,
+    issued_documents,
     post_webhook,
 )
 
@@ -308,8 +309,7 @@ async def test_upgrade_is_immediate_after_the_prorated_charge_settles(
     assert summary["catalog_key"] == "tier_1"  # renewal terms switch at period end
     assert summary["scheduled_change"]["direction"] == "upgrade"
     assert summary["scheduled_change"]["state"] == "requested"
-    documents = (await client.get("/api/v1/billing/invoices")).json()["invoices"]
-    assert len(documents) == 1
+    assert len(await issued_documents(db_session, account_id)) == 1
 
     # The sweep moves the provider subscription to Growth from the next cycle.
     provider.cycle = _cycle("plan_starter", start, end)
@@ -356,10 +356,9 @@ async def test_upgrade_is_immediate_after_the_prorated_charge_settles(
         )
     ).all()
     assert {grant.profile_key for grant in period_bundle} == {"tier_2"}
-    documents = (await client.get("/api/v1/billing/invoices")).json()["invoices"]
     assert sorted(
-        (document["amount_paid"]["amount_minor"], document["description"])
-        for document in documents
+        (document.total_amount_minor, document.payload["line"]["description"])
+        for document in await issued_documents(db_session, account_id)
     ) == [
         (2_500, "CiteLadder upgrade to Growth (prorated for the current period)"),
         (9_900, "CiteLadder Growth subscription"),

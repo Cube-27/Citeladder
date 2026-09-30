@@ -18,7 +18,6 @@ from app.api.audits import router as audits_router
 from app.api.billing import router as billing_router
 from app.api.commerce import router as commerce_router
 from app.api.performance import router as performance_router
-from app.api.projects import router as projects_router
 from app.api.provider_connections import (
     catalog_router as provider_catalog_router,
 )
@@ -56,7 +55,6 @@ logger = logging.getLogger("app")
 # owns its own paths; the prefix keeps the whole surface under /api/v1.
 _ROUTERS = (
     billing_router,
-    projects_router,
     provider_connections_router,
     provider_catalog_router,
     audits_router,

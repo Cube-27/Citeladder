@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import json
+import uuid
 from dataclasses import replace
 
 import httpx
@@ -19,6 +20,7 @@ from app.core.database import get_session
 from app.domain.billing.webhook_recovery import recover_webhook_receipts
 from app.main import app
 from app.models.billing import PendingActivation
+from app.models.billing_invoice import BillingInvoice
 from tests.billing_settings_support import apply_billing_settings
 
 
@@ -119,3 +121,14 @@ async def post_webhook(
     if response.status_code == 204:
         await drain_webhook(json.loads(raw))
     return response
+
+
+async def issued_documents(session, account_id) -> list[BillingInvoice]:
+    """Receipts and credit notes settlement issued; the read API is TypeScript's."""
+    session.expire_all()
+    rows = await session.scalars(
+        select(BillingInvoice).where(
+            BillingInvoice.billing_account_id == uuid.UUID(str(account_id))
+        )
+    )
+    return list(rows.all())

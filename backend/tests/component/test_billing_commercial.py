@@ -67,6 +67,7 @@ from tests.component.billing_catalog_helpers import (
 )
 from tests.component.billing_provider_helpers import (
     configure_test_provider,
+    issued_documents,
     post_webhook,
     sign_webhook,
 )
@@ -1349,7 +1350,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
         )
     ).all()
     assert [receipt.external_order_id for receipt in receipts] == ["order_topup"]
-    assert len((await client.get("/api/v1/billing/invoices")).json()["invoices"]) == 1
+    assert len(await issued_documents(db_session, account_id)) == 1
 
     # A full refund (reported by refund.processed) revokes what is left of
     # the purchase; consumed units would stay consumed, and the refund issues
@@ -1377,8 +1378,8 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     usage = await client.get("/api/v1/billing/usage")
     items = {item["key"]: item for item in usage.json()["items"]}
     assert items.get("audit_credits", {}).get("allowance", 0) == 0
-    notes = (await client.get("/api/v1/billing/invoices")).json()["invoices"]
-    assert [row["document_kind"] for row in notes].count("credit_note") == 1
+    notes = await issued_documents(db_session, account_id)
+    assert [row.document_kind for row in notes].count("credit_note") == 1
 
 
 @pytest.mark.asyncio

@@ -8,8 +8,10 @@ state and queues. Domain behavior is documented in the feature owners listed in
 Projects, onboarding research/completion, logo refresh and command-center reads
 are TypeScript-owned under frontend/services/api/src/projects/. Discovery runs
 in its TypeScript worker; the Python queue sweeper retains lease-expiry and retry
-reconciliation. Python keeps authorized project reads for integrations and the
-executive PDF, whose projection/rendering moves in PR 16. Ingress routing is
+reconciliation. Python keeps authorized project reads for integrations and
+remaining visibility consumers. Executive PDFs use the TypeScript command-center
+projection and shared PDF renderer; receipt list/download reads are also
+TypeScript-owned. Ingress routing is
 checked against the shared route-ownership manifest.
 
 ## Layers and extension

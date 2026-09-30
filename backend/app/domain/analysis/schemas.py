@@ -16,7 +16,6 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.analysis.aio_schemas import SearchSurfaceEvidence
-from app.domain.audits.schemas import ModelProvenance
 
 
 class MetricsResponse(BaseModel):
@@ -33,28 +32,6 @@ class MetricsResponse(BaseModel):
     visibility_score: float
     metrics: dict = Field(default_factory=dict)
     created_at: datetime
-
-
-class MeasurementCounts(BaseModel):
-    state: str = "unavailable"
-    responses: int = 0
-    brand_responses: int | None = None
-    owned_citation_responses: int | None = None
-    entity_presences: int | None = None
-    expected: int | None = None
-    failed: int | None = None
-    not_run: int | None = None
-
-    @property
-    def is_complete(self) -> bool:
-        """Every expected response was actually observed.
-
-        An unknown expectation is NOT complete. Coverage decides whether a
-        comparison may be stated without qualification, so the three places
-        that ask spell the same question one way — a fourth spelling of it
-        that drifted would be a movement claim over a partial measurement.
-        """
-        return self.expected is not None and self.responses == self.expected
 
 
 class SourceRowBrand(BaseModel):
@@ -126,14 +103,6 @@ class SourceRow(BaseModel):
     brands: list[SourceRowBrand] = Field(default_factory=list)
 
 
-class CitationTotals(BaseModel):
-    """Citation-level counts, distinct from the answer-level citation rate."""
-
-    citations: int = 0
-    owned_citations: int = 0
-    owned_share: float | None = None
-
-
 class SourcesResponse(BaseModel):
     items: list[SourceRow] = Field(default_factory=list)
     total: int = 0
@@ -149,103 +118,6 @@ class SourcesResponse(BaseModel):
     next_offset: int | None = None
     as_of: datetime
     comparison_status: str = "no_baseline"
-
-
-class RankingRow(BaseModel):
-    """One brand-vs-competitor rankings-table row for the dashboard."""
-
-    name: str
-    is_brand: bool = False
-    logo_url: str | None = None
-    website_url: str | None = None
-    mention_rate: float | None = None
-    citation_rate: float | None = None
-    share_of_voice: float | None = None
-    mention_count: int = 0
-    visibility_delta: float | None = None
-    gap_count: int | None = None
-    matched_visibility_rate: float | None = None
-    matched_visibility_delta: float | None = None
-    matched_response_count: int | None = None
-    # `avg_position` is deterministic (mention offsets); `sentiment` stays null
-    # until a tone-scoring stage exists.
-    sentiment: str | None = None
-    avg_position: float | None = None
-
-
-class VisibilityComparison(BaseModel):
-    status: str = "no_baseline"
-    baseline_audit_id: uuid.UUID | None = None
-    baseline_audit_ids: list[uuid.UUID] = Field(default_factory=list)
-    baseline_at: datetime | None = None
-    baseline_counts: MeasurementCounts | None = None
-    current_counts: MeasurementCounts | None = None
-    deltas: dict[str, float | None] = Field(default_factory=dict)
-    rankings: list[RankingRow] = Field(default_factory=list)
-    skipped_runs: int = 0
-    matched_cells: int = 0
-    current_cells: int = 0
-    baseline_cells: int = 0
-    current_values: dict[str, float | None] = Field(default_factory=dict)
-    baseline_values: dict[str, float | None] = Field(default_factory=dict)
-    current_rankings: list[RankingRow] = Field(default_factory=list)
-
-
-class EngineComparisonRow(BaseModel):
-    """One per-engine comparison row for the selected run."""
-
-    logical_engine: str
-    total_completed: int
-    brand_mention_rate: float | None = None
-    owned_citation_rate: float | None = None
-    search_use_rate: float | None = None
-    visibility_score: float | None = None
-    counts: MeasurementCounts = Field(default_factory=MeasurementCounts)
-
-
-class VisibilityResponse(BaseModel):
-    """Selected-run dashboard projection (``GET /projects/{id}/visibility``).
-
-    Computed server-side from the persisted ``MetricSnapshot`` for the selected
-    audit (defaults to the project's latest completed audit). No cross-run trend
-    yet (roadmap). Visibility %, SOV and average position are populated;
-    sentiment stays null until a tone-scoring stage exists.
-    """
-
-    project_id: uuid.UUID
-    audit_id: uuid.UUID
-    audit_status: str
-    analyzer_version: str
-    scoring_rule_version: str
-    cohort: str = "core"
-    coverage: dict[str, int | float | None] = Field(default_factory=dict)
-    total_completed: int
-    total_failed: int
-    # Historical composite alias; never a presence percentage.
-    visibility_score: float | None
-    visibility_rate: float | None = None
-    prompt_performance_score: float | None = None
-    owned_citation_rate: float | None = None
-    counts: MeasurementCounts = Field(default_factory=MeasurementCounts)
-    comparison_key: str | None = None
-    comparison: VisibilityComparison = Field(default_factory=VisibilityComparison)
-    citation_totals: CitationTotals = Field(default_factory=CitationTotals)
-    selection_mode: str = "run"
-    source_audit_ids: list[uuid.UUID] = Field(default_factory=list)
-    configuration_groups: dict[str, int] = Field(default_factory=dict)
-    from_at: datetime | None = None
-    to_at: datetime | None = None
-    # Frozen measurement provenance of the selected run (invariants 4/7): the
-    # stable catalog-ordered route list
-    # (aggregate surface — never a forced singular model across engines).
-    model_provenance: list[ModelProvenance] = Field(default_factory=list)
-    rankings: list[RankingRow] = Field(default_factory=list)
-    per_engine: list[EngineComparisonRow] = Field(default_factory=list)
-    # `avg_position` is deterministic (mention offsets); `sentiment` stays null
-    # until a tone-scoring stage exists.
-    sentiment: str | None = None
-    avg_position: float | None = None
-    created_at: datetime
 
 
 class CitationEvidence(BaseModel):

@@ -63,7 +63,6 @@ from app.api.billing_guards import (
     require_live_base,
     safe_commercial_errors,
 )
-from app.api.billing_invoices import router as invoices_router
 from app.api.billing_plan_changes import router as plan_changes_router
 from app.api.deps import (
     WorkspaceContext,
@@ -140,7 +139,6 @@ from app.models.billing import BillingAccount
 
 router = APIRouter(tags=["billing"])
 router.include_router(checkout_router)
-router.include_router(invoices_router)
 router.include_router(plan_changes_router)
 
 

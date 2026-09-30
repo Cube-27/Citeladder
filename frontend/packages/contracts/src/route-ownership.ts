@@ -17,6 +17,7 @@ export const ROUTE_OWNERSHIP = {
   audits: 'python',
   auth: 'typescript',
   billing: 'python',
+  'billing-documents': 'typescript',
   'brand-identity': 'typescript',
   'brand-discoveries': 'typescript',
   commerce: 'typescript',
@@ -30,7 +31,7 @@ export const ROUTE_OWNERSHIP = {
   'performance-sync': 'typescript',
   readiness: 'python',
   projects: 'typescript',
-  'executive-report': 'python',
+  'executive-report': 'typescript',
   'prompt-generation': 'typescript',
   prompts: 'typescript',
   providers: 'python',
@@ -51,6 +52,9 @@ export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
  * documents; the development proxy reads this list directly.
  */
 export const TYPESCRIPT_INGRESS_PATHS = [
+  '/api/v1/billing/invoices',
+  '/api/v1/billing/invoices/*/pdf',
+  '/api/v1/projects/*/reports/executive.pdf',
   '/api/v1/mcp/connections',
   '/api/v1/mcp/connections/*',
   '/api/v1/workspaces/*/mcp/connections',
