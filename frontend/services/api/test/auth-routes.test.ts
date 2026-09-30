@@ -287,6 +287,7 @@ describe('password auth routes', () => {
       createApp(limited, db),
     );
     expect(response.status).toBe(429);
+    expect(((await response.json()) as { detail: string }).detail).toBe('Too many requests');
     expect(Number(response.headers.get('retry-after'))).toBeGreaterThan(0);
     await clearClientBudget();
   });
@@ -363,6 +364,21 @@ describe('Google sign-in', () => {
       },
     );
   }
+
+  it('keeps the coded provider detail for unknown and unconfigured providers', async () => {
+    const unknown = await call('/auth/oauth/gitlab/start');
+    expect(unknown.status).toBe(404);
+    expect(((await unknown.json()) as { detail: unknown }).detail).toEqual({
+      code: 'oauth_provider_unknown',
+      provider: 'gitlab',
+    });
+    const unconfigured = await call('/auth/oauth/google/start');
+    expect(unconfigured.status).toBe(503);
+    expect(((await unconfigured.json()) as { detail: unknown }).detail).toEqual({
+      code: 'oauth_provider_not_configured',
+      provider: 'google',
+    });
+  });
 
   it('uses shared Google client credentials and identity scopes, with cookie-bound state', async () => {
     const { data, nonceCookie } = await start();

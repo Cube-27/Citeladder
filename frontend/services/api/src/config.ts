@@ -9,6 +9,7 @@
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { epochMicros, parseDatetime } from './http/datetimes.ts';
+import { parseTrustedProxies, type TrustedProxies } from './auth/client-identity.ts';
 
 type SettingSpec = {
   env: string[];
@@ -143,7 +144,7 @@ export type ServiceConfig = {
   auth: {
     publicSignup: boolean;
     frontendUrl: string;
-    trustedProxyCidrs: string;
+    trustedProxies: TrustedProxies;
     oauthSettings: Record<string, string | number | boolean>;
     limits: Record<keyof typeof policy.abuse, number>;
     /** Injected provider transport for recorded-fixture tests. */
@@ -225,7 +226,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     auth: {
       publicSignup: setting('public_signup_enabled') as boolean,
       frontendUrl: setting('frontend_url') as string,
-      trustedProxyCidrs: setting('trusted_proxy_cidrs') as string,
+      trustedProxies: parseTrustedProxies(setting('trusted_proxy_cidrs') as string),
       oauthSettings: {
         ...Object.fromEntries(
           Object.entries(policy.auth.oauth.settings).map(([name, spec]) => [

@@ -3,13 +3,23 @@ import { getConnInfo } from '@hono/node-server/conninfo';
 import type { Context } from 'hono';
 import type { ServiceConfig } from '../config.ts';
 
-/** Forwarding headers are authority only when the socket peer is trusted. */
-export function clientIdentity(peer: string, forwarded: string | undefined, cidrs: string): string {
-  const networks = cidrs
+export type TrustedProxies = readonly [ipaddr.IPv4 | ipaddr.IPv6, number][];
+
+/** Parsed once at config load, so a malformed CIDR fails startup, not every login. */
+export function parseTrustedProxies(cidrs: string): TrustedProxies {
+  return cidrs
     .split(',')
     .map((cidr) => cidr.trim())
     .filter(Boolean)
     .map((cidr) => ipaddr.parseCIDR(cidr));
+}
+
+/** Forwarding headers are authority only when the socket peer is trusted. */
+export function clientIdentity(
+  peer: string,
+  forwarded: string | undefined,
+  networks: TrustedProxies,
+): string {
   if (!ipaddr.isValid(peer)) return peer;
   const trusted = (value: string) => {
     const address = ipaddr.process(value);
@@ -28,5 +38,5 @@ export function clientIdentity(peer: string, forwarded: string | undefined, cidr
 export function trustedClientIdentity(c: Context, config: ServiceConfig): string {
   // app.request fixtures have no socket; headers still cannot manufacture a peer.
   const peer = c.env?.incoming ? (getConnInfo(c).remote.address ?? 'unavailable') : 'unavailable';
-  return clientIdentity(peer, c.req.header('x-forwarded-for'), config.auth.trustedProxyCidrs);
+  return clientIdentity(peer, c.req.header('x-forwarded-for'), config.auth.trustedProxies);
 }

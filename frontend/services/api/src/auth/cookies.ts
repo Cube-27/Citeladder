@@ -19,6 +19,10 @@ export function setSessionCookie(c: Context, config: ServiceConfig, token: strin
   });
 }
 
+export function clearSessionCookie(c: Context, config: ServiceConfig): void {
+  deleteCookie(c, config.session.cookieName, { ...cookieOptions(config), path: '/' });
+}
+
 export function clearOAuthCookies(c: Context, config: ServiceConfig): void {
   clearAuthOAuthCookie(c, config);
   deleteCookie(c, policy.auth.oauth.integration_cookie_name, {

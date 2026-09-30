@@ -5,7 +5,7 @@ import { jwtVerify } from 'jose';
 import { beforeAll, describe, it, expect } from 'vitest';
 import { hashPassword, verifyPassword } from '../src/auth/password.ts';
 import { issueSession } from '../src/auth/service.ts';
-import { clientIdentity } from '../src/auth/client-identity.ts';
+import { clientIdentity, parseTrustedProxies } from '../src/auth/client-identity.ts';
 import { testConfig } from './support.ts';
 
 const backend = fileURLToPath(new URL('../../../../backend/', import.meta.url));
@@ -80,11 +80,21 @@ describe('cross-stack authentication crypto', () => {
   });
 
   it('accepts a forwarding chain only from a trusted peer and stops at its first untrusted hop', () => {
-    expect(clientIdentity('203.0.113.9', '198.51.100.1', '127.0.0.0/8')).toBe('203.0.113.9');
-    expect(clientIdentity('127.0.0.1', '198.51.100.1, 10.0.0.2', '127.0.0.0/8,10.0.0.0/8')).toBe(
-      '198.51.100.1',
+    expect(clientIdentity('203.0.113.9', '198.51.100.1', parseTrustedProxies('127.0.0.0/8'))).toBe(
+      '203.0.113.9',
     );
-    expect(clientIdentity('127.0.0.1', '198.51.100.1, invalid', '127.0.0.0/8')).toBe('127.0.0.1');
-    expect(clientIdentity('::ffff:127.0.0.1', '2001:db8::1', '127.0.0.0/8')).toBe('2001:db8::1');
+    expect(
+      clientIdentity(
+        '127.0.0.1',
+        '198.51.100.1, 10.0.0.2',
+        parseTrustedProxies('127.0.0.0/8,10.0.0.0/8'),
+      ),
+    ).toBe('198.51.100.1');
+    expect(
+      clientIdentity('127.0.0.1', '198.51.100.1, invalid', parseTrustedProxies('127.0.0.0/8')),
+    ).toBe('127.0.0.1');
+    expect(
+      clientIdentity('::ffff:127.0.0.1', '2001:db8::1', parseTrustedProxies('127.0.0.0/8')),
+    ).toBe('2001:db8::1');
   });
 });

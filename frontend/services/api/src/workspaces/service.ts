@@ -1,5 +1,5 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { sql, type Selectable } from 'kysely';
+import { randomUUID } from 'node:crypto';
+import type { Selectable } from 'kysely';
 import { workspaceSchema, workspaceMemberSchema } from '@citeladder/contracts/auth';
 import { z } from 'zod';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../auth/workspace.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { policy } from '../config.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { Users, WorkspaceMembers, Workspaces } from '../generated/db-schema.ts';
@@ -16,7 +17,9 @@ import { ensureWorkspaceBilling } from '../entitlements/bootstrap.ts';
 
 export type User = Selectable<Users>;
 export type Member = Selectable<WorkspaceMembers>;
-const roleSchema = z.enum(['owner', 'admin', 'member', 'viewer']);
+type Role = keyof typeof policy.workspaces.roles;
+// The exported Python matrix names the roles, so the wire enum cannot drift from it.
+const roleSchema = z.enum(Object.keys(policy.workspaces.roles) as [Role, ...Role[]]);
 export const assignableRoleSchema = roleSchema.exclude(['owner']);
 export type AssignableRole = z.infer<typeof assignableRoleSchema>;
 
@@ -32,11 +35,6 @@ export function workspaceView(
     created_at: workspace.created_at.toISOString(),
     updated_at: workspace.updated_at.toISOString(),
   };
-}
-
-async function lockWorkspaceCreation(db: Database, userId: string): Promise<void> {
-  const key = createHash('sha256').update(`workspace.create:${userId}`).digest().readBigInt64BE(0);
-  await sql`SELECT pg_advisory_xact_lock(${key})`.execute(db);
 }
 
 async function ownedWorkspaces(db: Database, userId: string) {
@@ -87,7 +85,7 @@ async function insertWorkspace(
 
 /** Login repair is a write; /me and workspace GETs never call this. */
 export async function provisionAccount(db: Database, user: User): Promise<string | null> {
-  await lockWorkspaceCreation(db, user.id);
+  await subjectXactLock(db, `workspace.create:${user.id}`);
   let owned = await ownedWorkspaces(db, user.id);
   let createdId: string | null = null;
   if (owned.length === 0) {
@@ -105,7 +103,7 @@ export async function provisionAccount(db: Database, user: User): Promise<string
 
 export async function createWorkspace(db: Database, userId: string, name: string) {
   return db.transaction().execute(async (trx) => {
-    await lockWorkspaceCreation(trx, userId);
+    await subjectXactLock(trx, `workspace.create:${userId}`);
     if ((await ownedWorkspaces(trx, userId)).length >= policy.workspaces.max_owned)
       throw new ApiError(403, `Owned workspace limit of ${policy.workspaces.max_owned} reached`, {
         code: 'workspace_limit_exceeded',
@@ -252,7 +250,7 @@ export async function transferOwnership(
       throw new ApiError(404, 'member_not_found', { code: 'workspace_member_not_found' });
     if (!previous) throw new Error('workspace_has_no_owner');
     if (incoming.id === previous.id) ownerRequired('already_owner');
-    await lockWorkspaceCreation(trx, incoming.user_id);
+    await subjectXactLock(trx, `workspace.create:${incoming.user_id}`);
     if ((await ownedWorkspaces(trx, incoming.user_id)).length >= policy.workspaces.max_owned)
       throw new ApiError(403, 'The replacement owner already owns a workspace', {
         code: 'workspace_limit_exceeded',

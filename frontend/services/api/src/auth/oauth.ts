@@ -1,8 +1,8 @@
-import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
-import { sql } from 'kysely';
 import { z } from 'zod';
 import { policy, type ServiceConfig } from '../config.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
@@ -25,12 +25,26 @@ export class SignInError extends Error {
   }
 }
 
+/** A coded provider error; `detail` keeps the exact `{code, provider}` shape clients read. */
+export function providerError(
+  status: 404 | 501 | 503,
+  code:
+    | 'oauth_provider_unknown'
+    | 'oauth_provider_not_configured'
+    | 'oauth_callback_not_implemented',
+  message: string,
+  provider: string,
+): ApiError {
+  return new ApiError(status, message, {
+    code,
+    details: { provider },
+    detail: { code, provider },
+  });
+}
+
 export function knownProvider(value: string): OAuthProvider {
   if (!Object.hasOwn(cfg.labels, value))
-    throw new ApiError(404, 'Unknown OAuth provider', {
-      code: 'oauth_provider_unknown',
-      details: { provider: value },
-    });
+    throw providerError(404, 'oauth_provider_unknown', 'Unknown OAuth provider', value);
   return value as OAuthProvider;
 }
 
@@ -57,18 +71,23 @@ function redirectUri(config: ServiceConfig, provider: OAuthProvider): string {
   );
 }
 
-export async function startSignIn(config: ServiceConfig, provider: OAuthProvider) {
+export function requireProviderConfigured(config: ServiceConfig, provider: OAuthProvider): void {
   if (!providerConfigured(config, provider))
-    throw new ApiError(503, 'OAuth provider is not configured', {
-      code: 'oauth_provider_not_configured',
-      details: { provider },
-    });
+    throw providerError(
+      503,
+      'oauth_provider_not_configured',
+      'OAuth provider is not configured',
+      provider,
+    );
+}
+
+export async function startSignIn(config: ServiceConfig, provider: OAuthProvider) {
+  requireProviderConfigured(config, provider);
   const nonce = randomBytes(32).toString('base64url');
   const ttl = Number(config.auth.oauthSettings.state_ttl_seconds);
   const state = await new SignJWT({
     sub: 'oauth-state',
     provider,
-    nonce: randomBytes(16).toString('base64url'),
     session_nonce: nonce,
   })
     .setProtectedHeader({ alg: config.session.algorithm })
@@ -129,7 +148,7 @@ const identitySchema = z.object({
         value === true || (typeof value === 'string' && value.trim().toLowerCase() === 'true'),
     ),
 });
-export type SignInIdentity = z.infer<typeof identitySchema>;
+type SignInIdentity = z.infer<typeof identitySchema>;
 
 async function providerJson(
   config: ServiceConfig,
@@ -212,13 +231,8 @@ async function resolveAccount(
   identity: SignInIdentity,
 ) {
   // Stable subject and normalized address serialize linking. Sort before locks.
-  for (const value of [
-    `oauth:${provider}:${identity.sub}`,
-    `auth.email:${identity.email}`,
-  ].sort()) {
-    const key = createHash('sha256').update(value).digest().readBigInt64BE(0);
-    await sql`SELECT pg_advisory_xact_lock(${key})`.execute(db);
-  }
+  for (const value of [`oauth:${provider}:${identity.sub}`, `auth.email:${identity.email}`].sort())
+    await subjectXactLock(db, value);
   const linked = await db
     .selectFrom('user_identities')
     .selectAll()
@@ -228,11 +242,13 @@ async function resolveAccount(
   let user: User;
   let event: 'auth.oauth_registered' | 'auth.oauth_linked' | null = null;
   if (linked) {
-    user = await db
+    const owner = await db
       .selectFrom('users')
       .selectAll()
       .where('id', '=', linked.user_id)
-      .executeTakeFirstOrThrow();
+      .executeTakeFirst();
+    if (!owner) throw new SignInError('oauth_signin_state_invalid');
+    user = owner;
   } else {
     if (!identity.email_verified) throw new SignInError('oauth_signin_email_unverified');
     const existing = await db

@@ -119,6 +119,27 @@ describe('workspace authorization and root allocation', () => {
       ),
     ).toBe(false);
   });
+
+  it('refuses a member inviting others or promoting itself', async () => {
+    const member = await fixtures.user();
+    actors.push(member);
+    await fixtures.member(workspace, member, 'member');
+    const cookie = await userCookie(member);
+    const invite = { email: `${member}-guest@example.test`, role: 'admin' };
+    expect((await request(`/${workspace}/invitations`, 'POST', invite, cookie)).status).toBe(403);
+    const own = `/${workspace}/members/${await memberId(member)}`;
+    expect((await request(own, 'PATCH', { role: 'admin' }, cookie)).status).toBe(403);
+    expect(
+      (
+        await db
+          .selectFrom('workspace_members')
+          .select('role')
+          .where('workspace_id', '=', workspace)
+          .where('user_id', '=', member)
+          .executeTakeFirstOrThrow()
+      ).role,
+    ).toBe('member');
+  });
 });
 
 describe('invitation lifecycle and contention', () => {

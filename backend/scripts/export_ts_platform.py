@@ -57,7 +57,6 @@ from app.core.config import legal as legal_config
 from app.core.config import oauth as oauth_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
-from app.core.config import product_tour as tour_config
 from app.core.config import projects as projects_config
 from app.core.config import prompts as prompts_config
 from app.core.config import search_intelligence as search_intelligence_config
@@ -170,12 +169,11 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
 )
-from app.core.config.workspaces import (
-    CAPABILITY_DENIAL_MESSAGES,
-    CODE_WORKSPACE_ROLE_FORBIDDEN,
+from scripts.auth_policy import (
+    auth_policy,
+    site_health_runtime_policy,
+    workspace_policy,
 )
-from app.domain.workspaces.policy import WORKSPACE_ROLES, effective_capabilities
-from scripts.auth_policy import auth_policy, site_health_runtime_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
 from scripts.ts_platform_integrations import integration_policy
@@ -329,19 +327,7 @@ def build_config() -> dict[str, Any]:
             "internal_error_code": CODE_INTERNAL_ERROR,
             "retryable_statuses": sorted(RETRYABLE_STATUSES),
         },
-        "workspaces": {
-            "max_owned": workspace_config.MAX_OWNED_WORKSPACES_PER_USER,
-            "invitation_ttl_hours": workspace_config.INVITATION_TTL_HOURS,
-            "max_pending_invitations": (
-                workspace_config.MAX_PENDING_INVITATIONS_PER_WORKSPACE
-            ),
-            "tour_version": tour_config.PRODUCT_TOUR_VERSION,
-            "roles": {
-                role: list(effective_capabilities(role)) for role in WORKSPACE_ROLES
-            },
-            "forbidden_code": CODE_WORKSPACE_ROLE_FORBIDDEN,
-            "denial_messages": dict(CAPABILITY_DENIAL_MESSAGES),
-        },
+        "workspaces": workspace_policy(),
         "visibility": _visibility_policy(),
         "analytics": _analytics_policy(),
         "task_queue": _task_queue_policy(),

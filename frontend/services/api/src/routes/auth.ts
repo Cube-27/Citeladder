@@ -4,7 +4,7 @@ import {
   oauthStartResponseSchema,
   oauthProvidersResponseSchema,
 } from '@citeladder/contracts/auth';
-import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
+import { getCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
 import { defineGetRoute, definePostRoute } from './define.ts';
 import { demoAccessExpired, policy, type ServiceConfig } from '../config.ts';
@@ -21,11 +21,14 @@ import {
   cookieOptions,
   clearOAuthCookies,
   clearAuthOAuthCookie,
+  clearSessionCookie,
   setSessionCookie,
 } from '../auth/cookies.ts';
 import {
   knownProvider,
   providerConfigured,
+  providerError,
+  requireProviderConfigured,
   startSignIn,
   completeSignIn,
   SignInError,
@@ -125,7 +128,7 @@ export const authRoutes = [
     status: 204,
     async handle({ c, db, config }) {
       await logoutUser(db, c.get('user').id);
-      deleteCookie(c, config.session.cookieName, { path: '/' });
+      clearSessionCookie(c, config);
       clearOAuthCookies(c, config);
       return c.body(null, 204);
     },
@@ -215,13 +218,13 @@ export const authRoutes = [
     async handle({ c, config }, { path }): Promise<never> {
       clearAuthOAuthCookie(c, config);
       const provider = knownProvider(path.provider);
-      if (!providerConfigured(config, provider))
-        throw new ApiError(503, 'OAuth provider is not configured', {
-          code: 'oauth_provider_not_configured',
-        });
-      throw new ApiError(501, 'OAuth callback is not implemented', {
-        code: 'oauth_callback_not_implemented',
-      });
+      requireProviderConfigured(config, provider);
+      throw providerError(
+        501,
+        'oauth_callback_not_implemented',
+        'OAuth callback is not implemented',
+        provider,
+      );
     },
   }),
 ];

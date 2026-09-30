@@ -1,8 +1,9 @@
 /**
  * Durable per-workspace usage windows (`usage_windows`), shared with the
  * Python limiter (`app/domain/abuse/service.py`) while both stacks count the
- * same operations: the subject hash, fixed window start and conflict target
- * are identical, so one budget spans both.
+ * same operations: the fixed window start and conflict target are identical,
+ * and the subject hash matches Python's `casefold()` for ASCII subjects (JS has
+ * no full case folding), so one budget spans both.
  *
  * A request consumes its budget in its own committed transaction before the
  * work it guards starts, so a failed import still spends its attempt.
@@ -64,9 +65,11 @@ export async function enforceSubjectRequest(
   const expires = new Date((startedEpoch + windowSeconds) * 1000);
   const retryAfter = Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000));
   const exhausted = () =>
-    new ApiError(429, 'Workspace usage limit exceeded', {
-      headers: { 'retry-after': String(retryAfter) },
-    });
+    new ApiError(
+      429,
+      subjectKind === 'workspace' ? 'Workspace usage limit exceeded' : 'Too many requests',
+      { headers: { 'retry-after': String(retryAfter) } },
+    );
   if (amount > limit) throw exhausted();
   const subject = createHash('sha256').update(subjectValue.trim().toLowerCase()).digest('hex');
   const consumed = await db

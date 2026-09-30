@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { workspaceInvitationSchema } from '@citeladder/contracts/auth';
-import type { Selectable } from 'kysely';
+import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { WorkspaceInvitations } from '../generated/db-schema.ts';
@@ -75,7 +75,7 @@ export async function issueInvitation(
       .innerJoin('users', 'users.id', 'workspace_members.user_id')
       .select('workspace_members.id')
       .where('workspace_id', '=', workspaceId)
-      .where('users.email', '=', normalized)
+      .where(sql`lower(${sql.ref('users.email')})`, '=', normalized)
       .executeTakeFirst();
     if (member) refusal('already_a_member');
     const live = await liveInvitations(trx, workspaceId, now)
