@@ -330,14 +330,12 @@ export async function getPerformanceTable(
           .execute()
       : [];
   const peers = new Map(comparisons.map((r) => [r.dimension_key, tableMetrics(r.metrics)]));
+  const sortValue = (row: (typeof rows)[number]) =>
+    byDimensionKey ? row.dimension_key : numberOrNull(record(row.metrics)[order.key]);
   const last = rows.at(-1);
   const nextCursor =
     fetched.length > pageSize && last
-      ? encodeTableCursor(
-          fingerprint,
-          byDimensionKey ? last.dimension_key : numberOrNull(record(last.metrics)[order.key]),
-          last.id,
-        )
+      ? encodeTableCursor(fingerprint, sortValue(last), last.id)
       : null;
   return {
     dimension,

@@ -51,6 +51,8 @@ describe('query trend detection', () => {
         ...coverage,
         row('rising widgets', priorDay, 20),
         row('rising widgets', recentDay, 60),
+        // Older evidence is outside both windows, so it is not the candidate's source.
+        row('rising widgets', beforeWindows, 5),
         row('falling widgets', priorDay, 60),
         row('falling widgets', recentDay, 20),
         // Impressions before the prior window must not turn a flat query into a decline.
@@ -84,6 +86,11 @@ describe('query trend detection', () => {
         prior: 20,
         recent: 60,
       },
+    ]);
+    const rising = result.candidates.find((c) => c.topic_cluster === 'rising widgets')!;
+    expect(rising.evidence.source_metric_row_ids).toEqual([
+      `rising widgets-${priorDay}`,
+      `rising widgets-${recentDay}`,
     ]);
   });
 

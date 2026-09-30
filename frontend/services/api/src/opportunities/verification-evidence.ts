@@ -64,11 +64,15 @@ const siteEvaluators: Record<SiteCheckKind, SiteEvaluator> = {
   page_fact(ctx, analysis, check) {
     const facts = record(analysis.normalized_facts);
     const key = String(check.fact_key || '');
+    if (!Object.hasOwn(check, 'expected_value')) {
+      ctx.result.limitations.push('page_fact: no expected value');
+      return null;
+    }
     if (!Object.hasOwn(facts, key)) {
       ctx.result.limitations.push(`page_fact: ${key} unavailable`);
       return null;
     }
-    return isDeepStrictEqual(facts[key], check.expected_value ?? null);
+    return isDeepStrictEqual(facts[key], check.expected_value);
   },
 };
 function expectedRuleOutcome(expected: unknown) {

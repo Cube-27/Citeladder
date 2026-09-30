@@ -156,8 +156,9 @@ export const verifyImplementationEvents: Executor = async (task, context) => {
     let after: Declaration | undefined;
     for (;;) {
       const rows = await declarations(db, task, project, source, after);
+      // One transaction connection runs these in order; concurrency would not overlap them.
       for (const declaration of rows)
-        await recordVerification(db, task, project, source, declaration);
+        await recordVerification(db, task, project, source, declaration); // NOSONAR
       if (rows.length < p.IMPLEMENTATION_VERIFICATION_BATCH_MAX) break;
       after = rows.at(-1);
     }

@@ -105,7 +105,9 @@ function checkIngress(
   const owners = pathOwners(inputs.manifest, served, failures);
   for (const [file, route] of Object.entries(inputs.ingress)) {
     for (const [path, { stack, family }] of owners) {
-      const reached = misrouted(route, path.replaceAll(/\{[^}]+\}/gu, SAMPLE_SEGMENT), stack);
+      // The negated class cannot match the closing brace, so matching is linear.
+      const sample = path.replaceAll(/\{[^}]+\}/gu, SAMPLE_SEGMENT); // NOSONAR
+      const reached = misrouted(route, sample, stack);
       if (reached !== null)
         failures.push(
           `${file}: ${path} ('${family}') must reach only ${stack}, but reaches [${reached}]`,

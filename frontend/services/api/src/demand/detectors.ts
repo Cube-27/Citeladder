@@ -216,19 +216,22 @@ function hasTrendCoverage(rows: QueryInput[], windowEnd: string) {
   return true;
 }
 
-/** Impressions in the prior and recent comparison windows; other dates are ignored. */
+/** Impressions and rows in the prior and recent comparison windows; other dates are ignored. */
 function windowTotals(group: QueryInput[], windowEnd: string) {
   const recentStart = addDays(windowEnd, -(p.DEMAND_TREND_WINDOW_DAYS - 1));
   const priorStart = addDays(recentStart, -p.DEMAND_TREND_WINDOW_DAYS);
   let prior = 0,
     recent = 0;
+  const rows: QueryInput[] = [];
   for (const row of group) {
     if (row.observed_date >= priorStart && row.observed_date < recentStart)
       prior += row.impressions;
     else if (row.observed_date >= recentStart && row.observed_date <= windowEnd)
       recent += row.impressions;
+    else continue;
+    rows.push(row);
   }
-  return { prior, recent };
+  return { prior, recent, rows };
 }
 
 function trendType(prior: number, recent: number) {
@@ -266,11 +269,11 @@ export function detectTrends(rows: QueryInput[], windowEnd: string): Evaluation 
   );
   for (const query of [...groups.keys()].sort(compareText)) {
     const group = groups.get(query)!;
-    const { prior, recent } = windowTotals(group, windowEnd);
+    const { prior, recent, rows: evidence } = windowTotals(group, windowEnd);
     const type = trendType(prior, recent);
     if (!type) continue;
-    const pages = unique(group.filter(resolved).map((r) => r.resolved_page_url));
-    const a = aggregate(group);
+    const pages = unique(evidence.filter(resolved).map((r) => r.resolved_page_url));
+    const a = aggregate(evidence);
     candidates.push(
       queryCandidate(
         type,
