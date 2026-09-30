@@ -5,7 +5,7 @@
 // licensed for self-hosting but not redistribution, so no font binary enters
 // this public repository. .gitignore excludes public/fonts and check:policy
 // rejects a tracked font file. Builds without them (forks, Docker, e2e) still
-// render, in the metric-matched fallback faces.
+// render in fallback faces.
 //
 // Auth is whatever `gh` resolves: a developer's own login locally, and
 // GH_TOKEN (a read-only token scoped to the font repository) in delivery.
@@ -21,8 +21,8 @@ const GH_EXECUTABLE =
   process.platform === 'win32' ? String.raw`C:\Program Files\GitHub CLI\gh.exe` : '/usr/bin/gh';
 const repository = 'Cube-27/cube27-fonts';
 // Pinned so every deploy ships the same bytes; bump it to adopt a font change.
-const revision = '281c8fdfeff05669a903a2fa9d0dc221d085101e';
-const licensedFonts = ['Sentient-Variable.woff2', 'Switzer-Variable.woff2'];
+const revision = 'bed1daa89443a40f100e3f6acb730ea5f090f114';
+const licensedFonts = ['Sora-Variable.woff2', 'Switzer-Variable.woff2'];
 
 const frontendRoot = resolve(import.meta.dirname, '..');
 const target = resolve(process.argv[2] ?? join(frontendRoot, 'public', 'fonts'));

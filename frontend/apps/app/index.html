@@ -13,13 +13,13 @@
     <link rel="manifest" href="/site.webmanifest" />
     <title>CiteLadder · AI visibility with evidence you can open</title>
     <!-- Discover the fonts at first paint instead of after the stylesheet
-        loads. Switzer (text) and Sentient (headings) are not in this
+        loads. Switzer (text) and Sora (headings) are not in this
         repository: `pnpm fonts:pull` copies them into public/fonts from the
         private Cube27 font repo, and delivery does the same. A build without
-        them renders in the matched fallbacks below. -->
+        them renders in the fallbacks below. -->
     <link
       rel="preload"
-      href="/fonts/Sentient-Variable.woff2"
+      href="/fonts/Sora-Variable.woff2"
       as="font"
       type="font/woff2"
       crossorigin="anonymous"
@@ -48,8 +48,8 @@
          — enough for a preloaded, same-origin file on any connection that
          was going to succeed at all. */
       @font-face {
-        font-family: 'Sentient';
-        src: url('/fonts/Sentient-Variable.woff2') format('woff2');
+        font-family: 'Sora';
+        src: url('/fonts/Sora-Variable.woff2') format('woff2');
         /* 600 is the design ceiling: a heavier request clamps to it. */
         font-weight: 200 600;
         font-style: normal;
@@ -64,27 +64,16 @@
         font-display: fallback;
       }
 
-      /* Fallbacks matched to each face's metrics, so the swap moves as little
-         as possible. The vertical overrides are exact (the face's hhea
-         ascent/descent/line gap divided by size-adjust), so line boxes keep
-         their height whichever face renders.
+      /* The Switzer fallback matches its metrics, so the swap moves as little
+         as possible. Its vertical overrides are based on the face's hhea
+         ascent/descent/line gap divided by size-adjust.
 
          `size-adjust` is approximate, and deliberately so: it is one scale
          factor, but `src` resolves to Segoe UI on Windows, Helvetica Neue on
-         macOS and Arial elsewhere, which do not share advance widths (the
-         serif heading face falls back to Georgia, then Times New Roman). It is
+         macOS and Arial elsewhere, which do not share advance widths. It is
          the ratio of average text advance at weight 400. On a platform with
          none of them the chain falls through to the unadjusted system
          stack at the end of the theme tokens. */
-      @font-face {
-        font-family: 'Sentient Fallback';
-        src: local('Georgia'), local('Times New Roman');
-        size-adjust: 109%;
-        ascent-override: 88%;
-        descent-override: 29%;
-        line-gap-override: 7%;
-      }
-
       @font-face {
         font-family: 'Switzer Fallback';
         src: local('Segoe UI'), local('Helvetica Neue'), local('Arial');
@@ -96,7 +85,7 @@
 
       :root {
         --font-text: 'Switzer', 'Switzer Fallback';
-        --font-heading: 'Sentient', 'Sentient Fallback';
+        --font-heading: 'Sora', Arial;
       }
     </style>
   </head>
