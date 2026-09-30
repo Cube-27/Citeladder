@@ -7,6 +7,8 @@
     "start": "node src/server.ts",
     "worker": "node src/worker.ts",
     "worker:discovery": "node src/discovery-worker.ts",
+    "integration-worker": "node src/integration-worker.ts",
+    "integration-dispatcher": "node src/integration-dispatcher.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
     "check:routes": "node scripts/check-route-ownership.ts",

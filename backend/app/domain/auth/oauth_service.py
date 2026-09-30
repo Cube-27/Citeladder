@@ -1,7 +1,8 @@
 # Third-party sign-in service: verify the callback, resolve an account, mint
 # a session.
 #
-# Distinct from the integrations connect flow (`app/domain/integrations`),
+# Distinct from the integrations connect flow
+# (`frontend/services/api/src/integrations`),
 # which owns long-lived per-WORKSPACE provider grants. This module owns
 # per-USER identity only: it stores no tokens, requests no offline access, and
 # writes exactly one `UserIdentity` row.

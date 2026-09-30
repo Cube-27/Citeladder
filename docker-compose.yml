@@ -290,13 +290,11 @@ services:
     healthcheck:
       disable: true
 
-  # Integrations sync worker: claims integration_sync_runs queue rows, pages
-  # the provider data APIs (GSC/GA4/Bing) with the grant's OAuth token, and
-  # writes immutable import artifacts + derived metric rows.
-  integration-worker:
+  # TypeScript integrations workers use the same API image and Alembic schema.
+  integration-worker-ts:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: frontend/services/api/Dockerfile
     restart: unless-stopped
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
@@ -306,17 +304,14 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    command: ["python", "-m", "app.workers.integration_worker"]
+    command: ["node", "src/integration-worker.ts"]
     healthcheck:
       disable: true
 
-  # Integrations dispatcher: the one-owner periodic scheduler — enqueues a
-  # scheduled sync run per active connection per cadence (deduped by the
-  # active-window index) and retries pending_revocation grant revokes.
-  integration-dispatcher:
+  integration-dispatcher-ts:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: frontend/services/api/Dockerfile
     restart: unless-stopped
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
@@ -326,7 +321,7 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    command: ["python", "-m", "app.workers.integration_dispatcher"]
+    command: ["node", "src/integration-dispatcher.ts"]
     healthcheck:
       disable: true
 

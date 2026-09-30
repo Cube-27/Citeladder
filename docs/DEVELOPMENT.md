@@ -58,8 +58,6 @@ uv run python -m app.workers.audit_worker
 uv run python -m app.workers.audit_scheduler
 uv run python -m app.workers.site_health_worker
 uv run python -m app.workers.agent_worker
-uv run python -m app.workers.integration_worker
-uv run python -m app.workers.integration_dispatcher
 uv run python -m app.workers.analytics_worker
 ```
 
@@ -67,6 +65,14 @@ From frontend/, run the TypeScript brand-discovery worker with:
 
 ```bash
 pnpm --filter @citeladder/api exec node --experimental-strip-types src/discovery-worker.ts
+```
+
+The integrations worker and dispatcher run from the TypeScript API package:
+
+```bash
+cd frontend/services/api
+node src/integration-worker.ts
+node src/integration-dispatcher.ts
 ```
 
 Each process uses the shared durable PostgreSQL queue/lease contract and receives only the

@@ -378,11 +378,21 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
         name
         for name, service in services.items()
         if any(
-            "app.workers." in value or value.endswith("-worker.ts")
+            "app.workers." in value or value.endswith(("-worker.ts", "/worker.ts"))
             for value in _values(service.get("command", []))
         )
     ]
-    assert len(workers) == 9
+    assert set(workers) == {
+        "audit-worker",
+        "audit-scheduler",
+        "site-health-worker",
+        "brand-discovery-worker",
+        "agent-worker",
+        "analytics-worker",
+        "analytics-worker-ts",
+        "queue-sweeper",
+        "integration-worker-ts",
+    }
     assert (
         services["brand-discovery-worker"]["image"].partition(":?")[0]
         == services["api-service"]["image"].partition(":?")[0]

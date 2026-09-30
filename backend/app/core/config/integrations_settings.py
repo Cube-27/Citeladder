@@ -6,6 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.core.config.dotenv import dotenv_sources
 from app.core.config.integrations_transport import INTEGRATION_PROVIDERS
 
+INTEGRATION_FREE_HISTORY_WINDOW_DAYS = 30
+INTEGRATION_HISTORY_WINDOW_DAYS = {"unset": 30, "90d": 90, "12mo": 365, "24mo": 730}
+
 
 class IntegrationSettings(BaseSettings):
     """Env-driven sync worker knobs (``INTEGRATION_`` env prefix).
@@ -36,6 +39,9 @@ class IntegrationSettings(BaseSettings):
     # steady-state daily sync stays cheap, and a year of history is paid for
     # exactly once per connection rather than re-imported every night.
     sync_backfill_window_days: int = Field(default=365, gt=0)
+    # Scheduled scans use their own cadence so they do not poll every second
+    # while the leased import worker is idle.
+    dispatcher_interval_seconds: float = Field(default=30.0, gt=0)
     # Dispatcher tick (default daily).
     sync_cadence_seconds: float = Field(default=86400.0, gt=0)
     # Recent trailing window re-synced (with a bumped resync_seq) to pick up
@@ -44,6 +50,8 @@ class IntegrationSettings(BaseSettings):
 
     # --- Provider paging + request budget ------------------------------------
     sync_page_size: int = Field(default=25000, gt=0)
+    # Hard per-dataset guard for both provider paging and artifact resume.
+    sync_max_pages: int = Field(default=1000, gt=0)
     sync_request_timeout_seconds: float = Field(default=60.0, gt=0)
     sync_max_attempts: int = Field(default=4, gt=0)
     # Upper bound on resync_seq allocation retries after a unique conflict.

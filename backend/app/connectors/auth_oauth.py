@@ -28,13 +28,10 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from app.connectors.integrations._http import (
-    IntegrationApiError,
-    classify_status,
-    oauth_error_detail,
-)
 from app.core.config.integrations_contracts import (
+    ERROR_GRANT_AUTH_FAILED,
     ERROR_PROVIDER_API,
+    ERROR_RATE_LIMITED,
     ERROR_UNAPPROVED_ENDPOINT,
 )
 from app.core.config.oauth import (
@@ -47,10 +44,42 @@ from app.core.config.oauth import (
 # Sign-in is a foreground, user-blocking round trip; it never queues or
 # retries, so a short ceiling is the right failure mode.
 SIGNIN_REQUEST_TIMEOUT_SECONDS = 15.0
+ERROR_DETAIL_MAX_LEN = 240
 
 
-class AuthOAuthError(IntegrationApiError):
+class AuthOAuthError(RuntimeError):
     """A sign-in OAuth call failed; carries a config-owned error token."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        error_code: str,
+        retryable: bool = False,
+        retry_after_seconds: float | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+        self.retryable = retryable
+        self.retry_after_seconds = retry_after_seconds
+
+
+def _classify_status(status_code: int) -> tuple[str, bool]:
+    if status_code == 429:
+        return ERROR_RATE_LIMITED, True
+    if status_code in (401, 403):
+        return ERROR_GRANT_AUTH_FAILED, False
+    return ERROR_PROVIDER_API, status_code in (500, 502, 503, 504)
+
+
+def _oauth_error_detail(payload: object) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    parts = [
+        str(payload.get(key) or "").strip()[:ERROR_DETAIL_MAX_LEN]
+        for key in ("error", "error_description")
+    ]
+    return ": ".join(part for part in parts if part)
 
 
 @dataclass(frozen=True)
@@ -80,9 +109,9 @@ def _assert_approved_url(url: str) -> None:
 def _json_object_or_raise(response: httpx.Response, *, action: str) -> dict:
     """Validate a sign-in response and return its JSON object body."""
     if response.status_code != 200:
-        error_code, retryable = classify_status(response.status_code)
+        error_code, retryable = _classify_status(response.status_code)
         try:
-            detail = oauth_error_detail(response.json())
+            detail = _oauth_error_detail(response.json())
         except ValueError:
             detail = ""
         suffix = f" ({detail})" if detail else ""

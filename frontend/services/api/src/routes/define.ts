@@ -14,7 +14,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
 import { sessionUser } from '../auth/session.ts';
-import { activeWorkspace, projectMember } from '../auth/workspace.ts';
+import { activeWorkspace, projectMember, workspaceMember } from '../auth/workspace.ts';
 import type { WorkspaceCapability } from '../auth/workspace.ts';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
@@ -64,7 +64,9 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   headers?: z.ZodObject;
   capability?: WorkspaceCapability;
   /** Resolve the workspace from the path's `project_id` instead of `X-Workspace-Id`. */
-  authorize?: 'workspace' | 'project' | 'public';
+  authorize?: 'workspace' | 'project' | 'public' | 'workspace-path';
+  /** Routes such as OAuth callbacks whose state token is their authorization. */
+  public?: boolean;
 } & RouteBody<Path, Query, Response>;
 
 export type ProductRoute = {
@@ -142,7 +144,11 @@ function defineRoute<
   const byProject = route.authorize === 'project';
   const publicRead = route.authorize === 'public';
   if (publicRead && method !== 'get') throw new Error('Only read routes may be public');
-  const workspaceHeaders = byProject || publicRead ? z.object({}) : ACTIVE_WORKSPACE_HEADERS;
+  const byWorkspacePath = route.authorize === 'workspace-path';
+  const workspaceHeaders =
+    byProject || byWorkspacePath || publicRead || route.public
+      ? z.object({})
+      : ACTIVE_WORKSPACE_HEADERS;
   const contract: RouteContract = {
     family: route.family,
     method,
@@ -150,7 +156,7 @@ function defineRoute<
     pathParams: parameterObject(route.params.path),
     query: parameterObject(route.params.query),
     headers: route.headers ? workspaceHeaders.extend(route.headers.shape) : workspaceHeaders,
-    cookies: publicRead ? z.object({}) : SESSION_COOKIE,
+    cookies: publicRead || route.public ? z.object({}) : SESSION_COOKIE,
     ...(route.body ? { body: route.body } : {}),
     responses: {
       [status]: route.response,
@@ -159,22 +165,23 @@ function defineRoute<
   };
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
     const pattern = honoPath(route.path);
-    app.on(
-      [method.toUpperCase()],
-      [pattern],
-      ...(publicRead
-        ? []
-        : [sessionUser(config, db), byProject ? projectMember(db) : activeWorkspace(db)]),
-      async (c) => {
-        if (method !== 'get') c.get('workspace').require(route.capability ?? 'run');
-        const params = validateParams(route.params, {
-          path: c.req.param() as Record<string, string>,
-          search: new URL(c.req.url).search,
-        });
-        if (route.raw) return route.handle({ c, db }, params);
-        return c.json(await route.handle({ c, db }, params), status);
-      },
-    );
+    const handle = async (c: Context<AppEnv>) => {
+      if (method !== 'get') c.get('workspace').require(route.capability ?? 'run');
+      const params = validateParams(route.params, {
+        path: c.req.param() as Record<string, string>,
+        search: new URL(c.req.url).search,
+      });
+      if (route.raw) return route.handle({ c, db }, params);
+      return c.json(await route.handle({ c, db }, params), status);
+    };
+    if (publicRead || route.public) {
+      app.on(method.toUpperCase(), pattern, handle);
+      return;
+    }
+    let authorize = activeWorkspace(db, route.capability);
+    if (byProject) authorize = projectMember(db);
+    else if (byWorkspacePath) authorize = workspaceMember(db, route.capability);
+    app.on(method.toUpperCase(), pattern, sessionUser(config, db), authorize, handle);
   };
   return { contract, params: route.params, register };
 }

@@ -51,6 +51,7 @@ from app.core.config import dataforseo as search_config
 from app.core.config import demand as demand_config
 from app.core.config import entitlements as entitlements_config
 from app.core.config import errors as error_config
+from app.core.config import integrations_contracts as integration_contracts
 from app.core.config import jev as jev_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
@@ -172,6 +173,7 @@ from app.core.config.workspaces import (
 from app.domain.workspaces.policy import WORKSPACE_ROLES, effective_capabilities
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
+from scripts.ts_platform_integrations import integration_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 SERVICE_ROOT = FRONTEND_ROOT / "services" / "api"
@@ -202,6 +204,12 @@ EXPORTED_SETTINGS = (
     "session_cookie_name",
     "demo_mode",
     "demo_expires_at",
+    "encryption_key",
+    "frontend_url",
+    "integration_google_client_id",
+    "integration_google_client_secret",
+    "integration_microsoft_client_id",
+    "integration_microsoft_client_secret",
 )
 
 
@@ -325,6 +333,7 @@ def build_config() -> dict[str, Any]:
         "referrals": _referral_policy(),
         "traffic": traffic_policy(),
         "demand": demand_policy(),
+        "integrations": integration_policy(_setting),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
         "internal_links": {
@@ -389,6 +398,8 @@ def build_config() -> dict[str, Any]:
                 "agent_call_window_seconds",
                 "brand_logo_refresh_limit",
                 "brand_logo_refresh_window_seconds",
+                "property_discovery_limit",
+                "property_discovery_window_seconds",
             )
         },
         "entitlements": _entitlements_policy(),
@@ -692,6 +703,7 @@ ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
     opportunities_config,
     search_intelligence_config,
     commerce_config,
+    integration_contracts,
     prompts_config,
     entitlements_config,
 )

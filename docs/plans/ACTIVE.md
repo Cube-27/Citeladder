@@ -43,9 +43,9 @@
   generation and Commerce buyer-prompt generation/manual entry to TS; Python
   keeps the documented bridges for remaining callers. PR 12 moves project CRUD,
   onboarding/discovery and its worker, logo refresh and command-center reads to
-  TS; the executive PDF remains Python until PR 16. PRs 13–20 follow the
-  re-sequenced order. Deployment of PRs 3–12 and their one-week cutover soaks
-  are pending.
+  TS; the executive PDF remains Python until PR 16. PR 13 moves integrations
+  routes, connectors and workers to TS. PRs 14–20 follow the re-sequenced order.
+  Deployment of PRs 3–13 and their one-week cutover soaks are pending.
 
 - [Agent capabilities](citeladder-agent-capabilities.md)
   — foundations and MVP items 1–4 are present in #203, with handoff/evidence

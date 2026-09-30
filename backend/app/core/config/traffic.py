@@ -32,11 +32,6 @@ from app.core.config.integrations_datasets import (
     DATASET_GSC_SEARCH_APPEARANCE_DAILY,
     INTEGRATION_SYNC_EXCLUDED_DATASETS,
 )
-from app.core.config.integrations_transport import (
-    INTEGRATION_PROVIDER_BING,
-    INTEGRATION_PROVIDER_GA4,
-    INTEGRATION_PROVIDER_GSC,
-)
 
 # --- Projection window + granularity ----------------------------------------
 # Default trailing window when a request omits ``from``/``to``, and the hard
@@ -155,27 +150,6 @@ TRAFFIC_DEFAULT_SORT: Final = "-impressions"
 # at most this many persisted stat rows (+1 lookahead row for the
 # ``next_cursor``), so a response is always bounded.
 TRAFFIC_TABLE_PAGE_SIZE: Final = 50
-
-# --- Sync pass-through (``POST /projects/{id}/performance/sync``) -------------
-# The provider vocabulary of the sync fan-out: the project's ACTIVE mapped
-# connections of these providers each get one on-demand
-# ``IntegrationSyncRun``. The enqueue itself is OWNED by
-# ``domain/integrations/sync.py`` (invariant 2) — only the fan-out
-# vocabulary lives here.
-#
-# Bing is included even though no Bing dataset feeds a Performance table:
-# the fan-out is what KEEPS a connected provider's evidence current, and
-# leaving Bing out meant a connected Bing property silently never imported
-# outside its one-time backfill. Its rows land in ``IntegrationMetricRow``
-# for the Bing panel to read; the Performance surface stays
-# Search-Console-only regardless (a Bing row feeds no GSC total).
-TRAFFIC_SYNC_PROVIDERS: Final[frozenset[str]] = frozenset(
-    {
-        INTEGRATION_PROVIDER_GSC,
-        INTEGRATION_PROVIDER_GA4,
-        INTEGRATION_PROVIDER_BING,
-    }
-)
 
 # =========================================================================
 # Performance surface (the GSC-aligned read surface over this projection)

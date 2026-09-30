@@ -11,6 +11,7 @@
  * expired leases for every kind.
  */
 import { randomBytes } from 'node:crypto';
+import { waitForPoll } from './poll.ts';
 
 import { policy, type WorkerSettings } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -103,7 +104,8 @@ export class AnalyticsWorker {
         // A bad row must not kill the loop.
         logger.exception('analytics_worker_iteration_failed', error);
       }
-      if (ran === 0) await sleep(Math.max(50, this.#settings.pollIntervalSeconds * 1000), signal);
+      if (ran === 0)
+        await waitForPoll(Math.max(50, this.#settings.pollIntervalSeconds * 1000), signal);
     }
     logger.info('analytics_worker_stopped', { owner: this.owner });
   }
@@ -212,24 +214,4 @@ export class AnalyticsWorker {
       return true;
     });
   }
-}
-
-function sleep(milliseconds: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    if (signal.aborted) {
-      resolve();
-      return;
-    }
-    // The signal lives as long as the process: remove the listener however the
-    // sleep ends, or every idle poll leaves one behind.
-    const onAbort = () => {
-      clearTimeout(timer);
-      resolve();
-    };
-    const timer = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort);
-      resolve();
-    }, milliseconds);
-    signal.addEventListener('abort', onAbort, { once: true });
-  });
 }

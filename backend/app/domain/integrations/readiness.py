@@ -13,6 +13,7 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import date
 
 from sqlalchemy import and_, func, select
@@ -33,11 +34,8 @@ from app.core.config.integrations_contracts import (
     READINESS_NOT_CONNECTED,
     SYNC_KIND_BACKFILL,
 )
-from app.domain.integrations.backfill import backfill_progress_rollup
-from app.domain.integrations.schemas import (
-    IntegrationBackfillProgressResponse,
-    ProjectReadinessResponse,
-)
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
+from app.domain.integrations.schemas import ProjectReadinessResponse
 from app.models.demand import DemandSnapshot
 from app.models.integrations import (
     IntegrationConnection,
@@ -49,6 +47,52 @@ from app.models.opportunity import Opportunity
 from app.models.traffic import TrafficSnapshot
 
 __all__ = ["get_project_readiness"]
+
+
+@dataclass(frozen=True)
+class _BackfillRollup:
+    state: str
+    completed_windows: int
+    covered_through: date | None
+
+
+def _attempt_state(statuses: set[str]) -> str:
+    if TASK_STATUS_SUCCEEDED in statuses:
+        return "complete"
+    if statuses <= {"failed", "cancelled"}:
+        return "failed"
+    return "pending"
+
+
+def _connection_backfill(rows: Sequence[IntegrationSyncRun]) -> _BackfillRollup:
+    if not rows:
+        return _BackfillRollup(BACKFILL_STATE_NOT_STARTED, 0, None)
+    attempts: dict[tuple[uuid.UUID, date, date], set[str]] = defaultdict(set)
+    for run in rows:
+        attempts[(run.mapping_id, run.window_start, run.window_end)].add(run.status)
+    states = [_attempt_state(statuses) for statuses in attempts.values()]
+    completed = states.count("complete")
+    failed = states.count("failed")
+    pending = states.count("pending")
+    state = BACKFILL_STATE_COMPLETE
+    if pending:
+        state = BACKFILL_STATE_IMPORTING
+    elif failed:
+        state = BACKFILL_STATE_PARTIAL
+    windows = sorted(
+        (run.window_start, run.window_end)
+        for run in rows
+        if run.status == TASK_STATUS_SUCCEEDED
+    )
+    covered: date | None = None
+    for start, end in windows:
+        if covered is None:
+            covered = end
+        elif (start - covered).days <= 1:
+            covered = max(covered, end)
+        else:
+            break
+    return _BackfillRollup(state, completed, covered)
 
 
 async def _mapped_connections(
@@ -89,7 +133,7 @@ async def _mapped_connections(
 
 
 def _project_backfill(
-    rollups: Sequence[IntegrationBackfillProgressResponse],
+    rollups: Sequence[_BackfillRollup],
 ) -> tuple[str | None, date | None, int]:
     """Roll every mapped connection's import into ONE project-level answer.
 
@@ -195,7 +239,9 @@ async def get_project_readiness(
             (
                 await session.scalars(
                     select(IntegrationSyncRun)
+                    .where(IntegrationSyncRun.workspace_id == workspace_id)
                     .where(IntegrationSyncRun.connection_id.in_(connection_ids))
+                    .where(IntegrationSyncRun.project_id == project_id)
                     .where(IntegrationSyncRun.sync_kind == SYNC_KIND_BACKFILL)
                 )
             ).all()
@@ -208,9 +254,7 @@ async def get_project_readiness(
         # would erase it entirely.
         backfill_state, imported_through, imported_windows = _project_backfill(
             [
-                backfill_progress_rollup(
-                    connection_id=connection_id, rows=by_connection[connection_id]
-                )
+                _connection_backfill(by_connection[connection_id])
                 for connection_id in connection_ids
             ]
         )

@@ -14,6 +14,7 @@ import { promptRoutes } from './prompts.ts';
 import { internalLinkRoutes } from './internal-links.ts';
 import { projectRoutes } from './projects.ts';
 import { brandDiscoveryRoutes } from './brand-discoveries.ts';
+import { integrationRoutes } from './integrations.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...projectRoutes,
@@ -30,4 +31,5 @@ export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...commerceRoutes,
   ...brandIdentityRoutes,
   ...promptRoutes,
+  ...integrationRoutes,
 ];
