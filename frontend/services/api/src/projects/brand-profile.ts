@@ -54,7 +54,14 @@ export const brandProfileUpdate = z.object({
 });
 export type BrandProfileUpdate = z.infer<typeof brandProfileUpdate>;
 
-const storedProvenance = brandProfileSchema.shape.sources.shape.description.unwrap();
+const contractProvenance = brandProfileSchema.shape.sources.shape.description.unwrap();
+// Rows written before the onboarding writer carried the reviewer keys store
+// provenance entries without them; absent there means no reviewer and no
+// review time, so null is their truthful reading, not a fabricated one.
+const storedProvenance = contractProvenance.extend({
+  reviewed_by: contractProvenance.shape.reviewed_by.default(null),
+  reviewed_at: contractProvenance.shape.reviewed_at.default(null),
+});
 const storedSources = z.record(z.string(), storedProvenance);
 // Review times are stored as ISO text; the view renders them as ISO instants.
 const viewedSources = z.record(

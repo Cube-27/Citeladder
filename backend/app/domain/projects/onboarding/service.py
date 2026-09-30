@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -340,7 +341,7 @@ def _confirmed_competitors(
     return confirmed
 
 
-def _reviewed_profile_sources(confirmed: dict) -> dict[str, dict[str, str]]:
+def _reviewed_profile_sources(confirmed: dict) -> dict[str, dict[str, Any]]:
     """Record provenance for the brand-knowledge fields.
 
     None of these four are on the confirm screen any more -- it asks what you
@@ -350,11 +351,17 @@ def _reviewed_profile_sources(confirmed: dict) -> dict[str, dict[str, str]]:
     "Buyers searching for ..." user-confirmed would make later consumers trust
     a sentence no user ever read. They stay AI-suggested and unreviewed until
     someone actually edits them where that work belongs.
+
+    Every entry carries the full provenance shape: the TypeScript brand-profile
+    reader validates each entry against the shared contract, where the reviewer
+    and review-time keys exist and are null rather than absent.
     """
     return {
         field: {
             "origin": BRAND_PROFILE_SOURCE_AI_SUGGESTED,
             "review_state": BRAND_PROFILE_REVIEW_UNREVIEWED,
+            "reviewed_by": None,
+            "reviewed_at": None,
         }
         for field in BRAND_PROFILE_FIELDS
         if confirmed.get(field)

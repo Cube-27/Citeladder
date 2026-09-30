@@ -364,8 +364,18 @@ async def test_completion_creates_an_empty_project_atomically_and_idempotently(
         assert profile.sources["positioning"]["review_state"] == "unreviewed"
         assert profile.sources["target_audience"]["review_state"] == "unreviewed"
         assert profile.sources["target_audience"]["origin"] == "ai_suggested"
-        assert profile.sources["target_audience"].get("reviewed_by") is None
-        assert profile.sources["target_audience"].get("reviewed_at") is None
+        # The keys must exist, not merely be absent: the TypeScript
+        # brand-profile reader validates each entry against the shared
+        # provenance contract and rejects entries without them.
+        for entry in profile.sources.values():
+            assert set(entry) == {
+                "origin",
+                "review_state",
+                "reviewed_by",
+                "reviewed_at",
+            }
+            assert entry["reviewed_by"] is None
+            assert entry["reviewed_at"] is None
         assert set(profile.source_artifact_ids) == set(profile.sources)
         # The confirmed business context must survive project creation.
         assert profile.business_context["category"] == "workflow analytics platform"

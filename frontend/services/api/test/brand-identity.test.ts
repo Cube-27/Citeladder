@@ -250,6 +250,43 @@ describe('brand profile', () => {
     });
     expect(tooLong.status).toBe(422);
   });
+
+  it('reads provenance stored without the reviewer keys as unreviewed', async () => {
+    await profile();
+    // The shape the Python onboarding writer produced before it carried the
+    // reviewer keys; stored rows keep it, so the reader must accept it.
+    await db
+      .updateTable('brand_profiles')
+      .set({
+        sources: JSON.stringify({
+          description: { origin: 'ai_suggested', review_state: 'unreviewed' },
+        }),
+      })
+      .where('workspace_id', '=', t.workspaceId)
+      .where('project_id', '=', t.projectId)
+      .execute();
+    const shown = await call<BrandProfile>('/brand-profile');
+    expect(shown.status).toBe(200);
+    expect(shown.body.sources.description).toEqual({
+      origin: 'ai_suggested',
+      review_state: 'unreviewed',
+      reviewed_by: null,
+      reviewed_at: null,
+    });
+    // The first edit keeps the origin and rewrites the entry with the full
+    // provenance shape, so the stored row is healed by the next write.
+    const edited = await call<BrandProfile>('/brand-profile', {
+      method: 'PUT',
+      body: { description: 'Now reviewed.' },
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.body.sources.description).toMatchObject({
+      origin: 'ai_suggested',
+      review_state: 'edited',
+      reviewed_by: t.userId,
+      reviewed_at: expect.any(String),
+    });
+  });
 });
 
 describe('business map', () => {
