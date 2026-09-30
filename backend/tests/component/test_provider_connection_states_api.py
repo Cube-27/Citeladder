@@ -40,6 +40,7 @@ from app.domain.billing.schemas import (
 )
 from app.models.provider import ProviderConnectionTest
 from app.models.workspace import Workspace
+from tests.component.auth_helpers import invalidate_session
 from tests.component.auth_helpers import register_and_login as _register
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
@@ -297,7 +298,7 @@ async def test_states_cross_workspace_probes_never_leak(
     assert _state(owner_states, "chatgpt").state == "connected"
 
     # A different user's workspace sees none of it (invariant 5).
-    await client.post("/api/v1/auth/logout")
+    await invalidate_session(client)
     await _register(client, "states-intruder@example.com")
     intruder_states = await _get_states(client)
     assert intruder_states.workspace_id != workspace_a

@@ -1,24 +1,18 @@
 import { sql } from 'kysely';
 import { activeJobRetrySeconds, loadWorkerSettings, policy } from '../config.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
-import { hash } from '../traffic/normalization.ts';
 import { demandSourceRevision } from './source.ts';
 import type { DemandScope } from './query-evidence.ts';
-
-/** A transaction advisory lock keyed like Python's lock_subject (signed SHA256 prefix). */
-export async function advisoryXactLock(db: Database, subject: string): Promise<void> {
-  const lock = BigInt.asIntN(64, BigInt(`0x${hash(subject).slice(0, 16)}`));
-  await sql`select pg_advisory_xact_lock(${lock.toString()}::bigint)`.execute(db);
-}
 
 export async function enqueueManualDemand(
   db: Database,
   scope: DemandScope,
 ): Promise<string | null> {
-  await advisoryXactLock(db, `demand_manual:${scope.workspaceId}`);
+  await subjectXactLock(db, `demand_manual:${scope.workspaceId}`);
   const workspace = new WorkspaceScope(scope.workspaceId);
   const saved = await workspace
     .selectFrom(db, 'demand_snapshots')

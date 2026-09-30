@@ -82,12 +82,8 @@ async def test_unknown_route_404_uses_envelope(client: httpx.AsyncClient) -> Non
 async def test_legacy_http_exception_router_normalized_by_shim(
     client: httpx.AsyncClient,
 ) -> None:
-    """Unmigrated routers (auth) keep working via the compatibility shim."""
-    await _register(client)
-    invalid = await client.post(
-        "/api/v1/auth/login",
-        json={"email": _EMAIL, "password": "wrong-password"},
-    )
+    """Unmigrated router authorization keeps its normalized envelope."""
+    invalid = await client.get("/api/v1/billing/usage")
     assert invalid.status_code == 401
     body = invalid.json()
     assert isinstance(body["detail"], str)  # legacy string detail preserved

@@ -43,6 +43,7 @@ from app.models.billing import (
 from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
 from tests.billing_catalog_support import TEST_CATALOG_REVISION
 from tests.component.auth_helpers import register_and_login as _register
+from tests.component.auth_helpers import workspace_ids_for_session
 from tests.component.billing_catalog_helpers import publish_test_catalog, tax_snapshot
 from tests.component.billing_provider_helpers import (
     configure_test_provider,
@@ -255,7 +256,7 @@ async def test_activation_issues_one_period_bundle_and_projects_runtime(
         db_session, account, external_id="sub_activation"
     )
     subscription_id = subscription.id
-    workspace = (await client.get("/api/v1/workspaces")).json()[0]
+    workspace = {"id": str(account.workspace_id)}
     # This narrow period-bundle projection fixture needs a bare account so its
     # runtime assertion remains exact. The Phase 2 paid/free composition defect
     # is intentionally not normalized here.
@@ -373,7 +374,7 @@ async def test_cancellation_without_period_preserves_verified_paid_time_on_repla
     monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-terminal@example.com")
-    workspace = (await client.get("/api/v1/workspaces")).json()[0]
+    workspace = {"id": (await workspace_ids_for_session(client))[0]}
     # Isolate the paid bundle so the runtime assertion cannot pass because
     # of a free baseline allowance.
     await revoke_signup_baseline_grants(

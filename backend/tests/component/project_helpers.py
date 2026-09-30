@@ -13,12 +13,11 @@ from app.core.database import get_session
 from app.main import app
 from app.models.brand import Brand, BrandAlias, Competitor, OwnedDomain
 from app.models.project import Project
+from tests.component.auth_helpers import workspace_ids_for_session
 
 
 async def seed_project(client: httpx.AsyncClient, payload: dict) -> dict:
-    response = await client.get("/api/v1/workspaces")
-    assert response.status_code == 200
-    workspace_id = uuid.UUID(response.json()[0]["id"])
+    workspace_id = uuid.UUID((await workspace_ids_for_session(client))[0])
     async for session in app.dependency_overrides[get_session]():
         fields = {
             key: value

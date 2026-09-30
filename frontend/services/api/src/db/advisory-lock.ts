@@ -6,6 +6,8 @@
  * stacks derive the same key while they share a writer (migration section 7),
  * and `pg_advisory_xact_lock` releases it at COMMIT/ROLLBACK.
  */
+import { createHash } from 'node:crypto';
+
 import { blake2b } from '@noble/hashes/blake2.js';
 import { sql } from 'kysely';
 
@@ -39,5 +41,11 @@ export async function advisoryXactLock(
   id: string,
 ): Promise<void> {
   const key = advisoryLockKey(family, id).toString();
+  await sql`select pg_advisory_xact_lock(${key}::bigint)`.execute(db);
+}
+
+/** A lock keyed like Python's `lock_subject`: the signed 8-byte SHA-256 prefix of `subject`. */
+export async function subjectXactLock(db: Database, subject: string): Promise<void> {
+  const key = createHash('sha256').update(subject).digest().readBigInt64BE(0).toString();
   await sql`select pg_advisory_xact_lock(${key}::bigint)`.execute(db);
 }

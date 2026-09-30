@@ -33,14 +33,16 @@ export const sessionUserSchema = responseObject({
 export const authResponseSchema = responseObject({ user: sessionUserSchema });
 export const registrationResponseSchema = responseObject({ message: z.string() });
 
-// OAuth start scaffold (Phase B backend): a configured provider answers
-// `{ authorize_url, state, session_nonce }`; unconfigured providers answer
-// 503 before this schema is ever parsed. `session_nonce` is additive — older
-// backends omit it, so it parses with a default.
+// The binding nonce travels only in an HttpOnly cookie.
 export const oauthStartResponseSchema = responseObject({
   authorize_url: z.string().min(1),
   state: z.string().min(1),
-  session_nonce: z.string().default(''),
+});
+
+export const oauthProvidersResponseSchema = z.object({
+  providers: z.array(
+    z.object({ provider: z.string(), label: z.string(), configured: z.boolean() }),
+  ),
 });
 
 // Backend `WorkspaceResponse` carries the caller's membership `role` and the

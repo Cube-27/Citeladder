@@ -95,6 +95,8 @@ OAUTH_SIGNIN_ERROR_PATH: Final = "/login"
 # Scoped to the sign-in callback path so it is never sent anywhere else.
 AUTH_OAUTH_TRANSACTION_COOKIE: Final = "citeladder_auth_oauth"
 AUTH_OAUTH_TRANSACTION_COOKIE_PATH: Final = "/api/v1/auth/oauth"
+SIGNIN_REQUEST_TIMEOUT_SECONDS: Final = 15.0
+SIGNIN_RESPONSE_MAX_BYTES: Final = 65536
 
 
 def is_oauth_provider(provider: str) -> bool:

@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import { policy } from '../src/config.ts';
 import { setLogSink } from '../src/logging.ts';
 import { testConfig, testDatabase } from './support.ts';
 
@@ -42,6 +43,37 @@ describe('health and readiness', () => {
 });
 
 describe('request ids and the error envelope', () => {
+  it('rejects oversized API bodies before auth, with declared and streamed lengths', async () => {
+    const app = createApp(config, db);
+    const bytes = new Uint8Array(policy.api.request_body_max_bytes + 1);
+    const declared = await app.request('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Length': String(bytes.length) },
+      body: bytes,
+    });
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
+    const streamed = await app.request('/api/v1/auth/login', {
+      method: 'POST',
+      body: stream,
+      duplex: 'half',
+    } as RequestInit);
+    for (const response of [declared, streamed]) {
+      expect(response.status).toBe(413);
+      expect(
+        response.headers
+          .get('cache-control')
+          ?.split(',')
+          .map((value) => value.trim()),
+      ).toContain('no-store');
+      expect(await response.json()).toMatchObject({ error: { code: 'payload_too_large' } });
+    }
+  });
+
   it('echoes a safe client request id and replaces an unsafe one', async () => {
     const app = createApp(config, db);
     const kept = await app.request('/health', { headers: { 'X-Request-ID': 'client-id.1' } });

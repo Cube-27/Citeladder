@@ -1,6 +1,6 @@
 # TypeScript migration plan
 
-Status: PRs 1–12 implemented (27–30 September 2026), each at the owner's
+Status: PRs 1–14 implemented (27–30 September 2026), each at the owner's
 request. PRs 7, 8 and 9 were split at the owner's direction (7a, 7a-cleanup,
 7b; 8a, 8b; 9a, 9b), and a golden-retirement pass and contract convergence
 followed 7b. On 28 September 2026 the owner widened the objective (section 1)
@@ -169,8 +169,8 @@ total.
 | 10 | Entitlement enforcement and the prompt library | Med-High | Done |
 | 11 | Model gateway and prompt generation | High | Done |
 | 12 | Projects, onboarding and brand discovery | High | Done |
-| 13 | Integrations | High | |
-| 14 | Auth and workspaces | High | |
+| 13 | Integrations | High | Done |
+| 14 | Auth and workspaces | High | Done |
 | 15 | MCP server and OAuth provider | High | |
 | 16 | Billing and the entitlement ledger | High | |
 | 17 | Audits, providers and answer-engine connectors | High | |
@@ -705,6 +705,50 @@ Login, registration, cookie issuance, Google sign-in, members and invitations:
 attributes are identical, so Python's `api/deps.py` keeps verifying TS-issued
 sessions for the remaining Python routes. Soak with sessions from each stack
 accepted by both.
+
+The TS owner includes policy acceptance and per-membership product-tour state.
+It uses shared zod response contracts, committed PostgreSQL request budgets,
+cookie-bound OAuth state, bounded Google identity requests and transactional
+security receipts. Signup/login bootstrap creates only the ordinary free
+profile, freezes the provisioning user's registration cohort and projects
+Site Health runtime in the same transaction. The policy exporter retains
+Python config authority for Argon2 parameters, OAuth catalog, abuse limits,
+baseline grants and crawl projection settings.
+
+Ingress moves only auth and the enumerated workspace paths. Billing's
+`/workspaces/{id}/entitlements` remains Python. The Python auth, OAuth,
+workspace and rate-limit HTTP owners, Google identity connector, moved schemas,
+policy acceptance and membership/tour mutation paths are removed. Five Python
+component-test modules for those retired owners are replaced by focused TS
+auth/workspace tests, including PostgreSQL contention and receipt rollback.
+Remaining Python consumer tests seed persisted identity/session fixtures
+instead of calling retired endpoints.
+
+Cross-stack writer exceptions: the interactive account manager holds the
+workspace root before actor/target membership and invitation locks; password
+updates follow those locks. Auth bootstrap takes the shared
+`workspace.create:{user_id}` advisory lock and billing-account lock before
+the final user credential/version recheck. Both baseline writers serialize on
+the billing account and share the idempotency key. Both abuse writers use the
+same subject hash, fixed window and atomic PostgreSQL upsert. Security receipts
+are appended only in the caller's mutation transaction.
+
+| Python bridge | Remaining caller / retirement condition |
+|---|---|
+| `domain/auth/service.py`, `core/security.py`, `api/browser_cookies.py` | Operator/demo provisioning, MCP browser authorization and remaining APIs/integration OAuth; remove when the last caller moves |
+| `domain/workspaces/service.py`, `members.py`, `invitations.py` | Membership reads for remaining APIs/MCP; bootstrap and the interactive account manager; operator coverage stays in `test_account_manager.py` |
+| `domain/workspaces/policy.py` | Shared role matrix exported for TS and read by Python; transfer authority at PR 20 after Python callers retire |
+| `domain/abuse/service.py`, `domain/auth/security_events.py` | Agent, audits, integrations, MCP and operator commands; remove each bridge after its last caller moves |
+| Billing bootstrap and Site Health runtime projection | Python billing/operator writers until their owning migration slices; TS auth provisions only the shared free baseline |
+
+Departures: ownership transfer now enforces the accepted one-owned-workspace
+limit; stale owner/admin authority is rechecked under the root lock. Logout
+increments session versions atomically. Password verification is followed by
+a locked hash/version recheck; refusal rolls back any login repair. OAuth
+account/link races serialize on subject and email rather than escaping as
+uniqueness errors. The obsolete browser-visible nonce fallback is removed;
+the binding nonce travels only in the HttpOnly cookie. No deployment, live
+provider call or one-week cutover soak is part of this local implementation.
 
 ### PR 15: MCP server and OAuth provider
 

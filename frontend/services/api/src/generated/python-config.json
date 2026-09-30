@@ -141,6 +141,50 @@
       "type": "str",
       "default": "citeladder_session"
     },
+    "jwt_expire_hours": {
+      "env": [
+        "JWT_EXPIRE_HOURS"
+      ],
+      "type": "int",
+      "default": 24
+    },
+    "public_signup_enabled": {
+      "env": [
+        "PUBLIC_SIGNUP_ENABLED"
+      ],
+      "type": "bool",
+      "default": false
+    },
+    "frontend_url": {
+      "env": [
+        "FRONTEND_URL"
+      ],
+      "type": "str",
+      "default": "http://127.0.0.1:3000"
+    },
+    "trusted_proxy_cidrs": {
+      "env": [
+        "TRUSTED_PROXY_CIDRS"
+      ],
+      "type": "str",
+      "default": ""
+    },
+    "integration_google_client_id": {
+      "env": [
+        "INTEGRATION_GOOGLE_CLIENT_ID",
+        "GOOGLE_OAUTH_CLIENT_ID"
+      ],
+      "type": "str",
+      "default": ""
+    },
+    "integration_google_client_secret": {
+      "env": [
+        "INTEGRATION_GOOGLE_CLIENT_SECRET",
+        "GOOGLE_OAUTH_CLIENT_SECRET"
+      ],
+      "type": "str",
+      "default": ""
+    },
     "demo_mode": {
       "env": [
         "DEMO_MODE"
@@ -162,29 +206,6 @@
       ],
       "type": "str",
       "default": "replace-with-32-byte-minimum-secret"
-    },
-    "frontend_url": {
-      "env": [
-        "FRONTEND_URL"
-      ],
-      "type": "str",
-      "default": "http://127.0.0.1:3000"
-    },
-    "integration_google_client_id": {
-      "env": [
-        "INTEGRATION_GOOGLE_CLIENT_ID",
-        "GOOGLE_OAUTH_CLIENT_ID"
-      ],
-      "type": "str",
-      "default": ""
-    },
-    "integration_google_client_secret": {
-      "env": [
-        "INTEGRATION_GOOGLE_CLIENT_SECRET",
-        "GOOGLE_OAUTH_CLIENT_SECRET"
-      ],
-      "type": "str",
-      "default": ""
     },
     "integration_microsoft_client_id": {
       "env": [
@@ -230,7 +251,8 @@
   "api": {
     "prefix": "/api/v1",
     "readiness_timeout_seconds": 2.0,
-    "service_port": 8100
+    "service_port": 8100,
+    "request_body_max_bytes": 2097152
   },
   "errors": {
     "status_default_code": {
@@ -258,6 +280,10 @@
     ]
   },
   "workspaces": {
+    "max_owned": 1,
+    "invitation_ttl_hours": 168,
+    "max_pending_invitations": 50,
+    "tour_version": "dashboard-v1",
     "roles": {
       "owner": [
         "manage_billing",
@@ -4540,25 +4566,89 @@
     ]
   },
   "abuse": {
-    "active_job_retry_after_seconds": {
+    "login_email_limit": {
       "env": [
-        "ABUSE_ACTIVE_JOB_RETRY_AFTER_SECONDS"
-      ],
-      "type": "int",
-      "default": 60,
-      "minimum": 1
-    },
-    "bulk_import_limit": {
-      "env": [
-        "ABUSE_BULK_IMPORT_LIMIT"
+        "ABUSE_LOGIN_EMAIL_LIMIT"
       ],
       "type": "int",
       "default": 10,
       "minimum": 1
     },
-    "bulk_import_window_seconds": {
+    "login_client_limit": {
       "env": [
-        "ABUSE_BULK_IMPORT_WINDOW_SECONDS"
+        "ABUSE_LOGIN_CLIENT_LIMIT"
+      ],
+      "type": "int",
+      "default": 30,
+      "minimum": 1
+    },
+    "login_window_seconds": {
+      "env": [
+        "ABUSE_LOGIN_WINDOW_SECONDS"
+      ],
+      "type": "int",
+      "default": 300,
+      "minimum": 1
+    },
+    "register_client_limit": {
+      "env": [
+        "ABUSE_REGISTER_CLIENT_LIMIT"
+      ],
+      "type": "int",
+      "default": 20,
+      "minimum": 1
+    },
+    "register_window_seconds": {
+      "env": [
+        "ABUSE_REGISTER_WINDOW_SECONDS"
+      ],
+      "type": "int",
+      "default": 86400,
+      "minimum": 1
+    },
+    "mcp_register_burst_limit": {
+      "env": [
+        "ABUSE_MCP_REGISTER_BURST_LIMIT"
+      ],
+      "type": "int",
+      "default": 3,
+      "minimum": 1
+    },
+    "mcp_register_burst_window_seconds": {
+      "env": [
+        "ABUSE_MCP_REGISTER_BURST_WINDOW_SECONDS"
+      ],
+      "type": "int",
+      "default": 60,
+      "minimum": 1
+    },
+    "mcp_register_client_limit": {
+      "env": [
+        "ABUSE_MCP_REGISTER_CLIENT_LIMIT"
+      ],
+      "type": "int",
+      "default": 10,
+      "minimum": 1
+    },
+    "mcp_register_client_window_seconds": {
+      "env": [
+        "ABUSE_MCP_REGISTER_CLIENT_WINDOW_SECONDS"
+      ],
+      "type": "int",
+      "default": 600,
+      "minimum": 1
+    },
+    "mcp_register_global_limit": {
+      "env": [
+        "ABUSE_MCP_REGISTER_GLOBAL_LIMIT"
+      ],
+      "type": "int",
+      "default": 300,
+      "minimum": 1
+    },
+    "mcp_register_global_window_seconds": {
+      "env": [
+        "ABUSE_MCP_REGISTER_GLOBAL_WINDOW_SECONDS"
       ],
       "type": "int",
       "default": 3600,
@@ -4580,17 +4670,33 @@
       "default": 86400,
       "minimum": 1
     },
-    "brand_logo_refresh_limit": {
+    "bulk_import_limit": {
       "env": [
-        "ABUSE_BRAND_LOGO_REFRESH_LIMIT"
+        "ABUSE_BULK_IMPORT_LIMIT"
       ],
       "type": "int",
       "default": 10,
       "minimum": 1
     },
-    "brand_logo_refresh_window_seconds": {
+    "bulk_import_window_seconds": {
       "env": [
-        "ABUSE_BRAND_LOGO_REFRESH_WINDOW_SECONDS"
+        "ABUSE_BULK_IMPORT_WINDOW_SECONDS"
+      ],
+      "type": "int",
+      "default": 3600,
+      "minimum": 1
+    },
+    "provider_test_limit": {
+      "env": [
+        "ABUSE_PROVIDER_TEST_LIMIT"
+      ],
+      "type": "int",
+      "default": 20,
+      "minimum": 1
+    },
+    "provider_test_window_seconds": {
+      "env": [
+        "ABUSE_PROVIDER_TEST_WINDOW_SECONDS"
       ],
       "type": "int",
       "default": 3600,
@@ -4611,7 +4717,253 @@
       "type": "int",
       "default": 3600,
       "minimum": 1
+    },
+    "crawl_create_limit": {
+      "env": [
+        "ABUSE_CRAWL_CREATE_LIMIT"
+      ],
+      "type": "int",
+      "default": 10,
+      "minimum": 1
+    },
+    "crawl_create_window_seconds": {
+      "env": [
+        "ABUSE_CRAWL_CREATE_WINDOW_SECONDS"
+      ],
+      "type": "int",
+      "default": 86400,
+      "minimum": 1
+    },
+    "brand_logo_refresh_limit": {
+      "env": [
+        "ABUSE_BRAND_LOGO_REFRESH_LIMIT"
+      ],
+      "type": "int",
+      "default": 10,
+      "minimum": 1
+    },
+    "brand_logo_refresh_window_seconds": {
+      "env": [
+        "ABUSE_BRAND_LOGO_REFRESH_WINDOW_SECONDS"
+      ],
+      "type": "int",
+      "default": 3600,
+      "minimum": 1
+    },
+    "active_audits_per_workspace": {
+      "env": [
+        "ABUSE_ACTIVE_AUDITS_PER_WORKSPACE"
+      ],
+      "type": "int",
+      "default": 3,
+      "minimum": 1
+    },
+    "audit_tasks_per_workspace_daily": {
+      "env": [
+        "ABUSE_AUDIT_TASKS_PER_WORKSPACE_DAILY"
+      ],
+      "type": "int",
+      "default": 1500,
+      "minimum": 1
+    },
+    "active_agent_runs_per_workspace": {
+      "env": [
+        "ABUSE_ACTIVE_AGENT_RUNS_PER_WORKSPACE"
+      ],
+      "type": "int",
+      "default": 5,
+      "minimum": 1
+    },
+    "agent_runs_per_workspace_daily": {
+      "env": [
+        "ABUSE_AGENT_RUNS_PER_WORKSPACE_DAILY"
+      ],
+      "type": "int",
+      "default": 200,
+      "minimum": 1
+    },
+    "active_job_retry_after_seconds": {
+      "env": [
+        "ABUSE_ACTIVE_JOB_RETRY_AFTER_SECONDS"
+      ],
+      "type": "int",
+      "default": 60,
+      "minimum": 1
     }
+  },
+  "auth": {
+    "password": {
+      "memoryCost": 65536,
+      "timeCost": 3,
+      "parallelism": 4,
+      "outputLen": 32
+    },
+    "terms_revision": "2026-09-24",
+    "privacy_revision": "2026-09-28",
+    "oauth": {
+      "settings": {
+        "google_client_id": {
+          "env": [
+            "OAUTH_GOOGLE_CLIENT_ID"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "google_client_secret": {
+          "env": [
+            "OAUTH_GOOGLE_CLIENT_SECRET"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "google_redirect_uri": {
+          "env": [
+            "OAUTH_GOOGLE_REDIRECT_URI"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "google_enabled": {
+          "env": [
+            "OAUTH_GOOGLE_ENABLED"
+          ],
+          "type": "bool",
+          "default": false
+        },
+        "github_client_id": {
+          "env": [
+            "OAUTH_GITHUB_CLIENT_ID"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "github_client_secret": {
+          "env": [
+            "OAUTH_GITHUB_CLIENT_SECRET"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "github_redirect_uri": {
+          "env": [
+            "OAUTH_GITHUB_REDIRECT_URI"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "github_enabled": {
+          "env": [
+            "OAUTH_GITHUB_ENABLED"
+          ],
+          "type": "bool",
+          "default": false
+        },
+        "apple_client_id": {
+          "env": [
+            "OAUTH_APPLE_CLIENT_ID"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "apple_client_secret": {
+          "env": [
+            "OAUTH_APPLE_CLIENT_SECRET"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "apple_redirect_uri": {
+          "env": [
+            "OAUTH_APPLE_REDIRECT_URI"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "apple_enabled": {
+          "env": [
+            "OAUTH_APPLE_ENABLED"
+          ],
+          "type": "bool",
+          "default": false
+        },
+        "state_ttl_seconds": {
+          "env": [
+            "OAUTH_STATE_TTL_SECONDS"
+          ],
+          "type": "int",
+          "default": 600
+        }
+      },
+      "labels": {
+        "google": "Google",
+        "github": "GitHub",
+        "apple": "Apple"
+      },
+      "authorize_urls": {
+        "google": "https://accounts.google.com/o/oauth2/v2/auth",
+        "github": "https://github.com/login/oauth/authorize",
+        "apple": "https://appleid.apple.com/auth/authorize"
+      },
+      "token_urls": {
+        "google": "https://oauth2.googleapis.com/token",
+        "github": "https://github.com/login/oauth/access_token",
+        "apple": "https://appleid.apple.com/auth/token"
+      },
+      "userinfo_urls": {
+        "google": "https://openidconnect.googleapis.com/v1/userinfo"
+      },
+      "scopes": {
+        "google": "openid email profile",
+        "github": "read:user user:email",
+        "apple": "name email"
+      },
+      "implemented": [
+        "google"
+      ],
+      "approved_hosts": [
+        "accounts.google.com",
+        "oauth2.googleapis.com",
+        "openidconnect.googleapis.com"
+      ],
+      "cookie_name": "citeladder_auth_oauth",
+      "cookie_path": "/api/v1/auth/oauth",
+      "integration_cookie_name": "citeladder_integration_oauth",
+      "integration_cookie_path": "/api/v1/integrations/oauth",
+      "callback_path": "/api/v1/auth/oauth/{provider}/callback",
+      "landing_path": "/projects",
+      "error_path": "/login",
+      "timeout_seconds": 15.0,
+      "response_max_bytes": 65536
+    }
+  },
+  "site_health_runtime": {
+    "settings": {
+      "automatic_page_limit": {
+        "env": [
+          "SITE_HEALTH_AUTOMATIC_PAGE_LIMIT"
+        ],
+        "type": "int",
+        "default": 500
+      },
+      "sample_discovery_url_cap": {
+        "env": [
+          "SITE_HEALTH_SAMPLE_DISCOVERY_URL_CAP"
+        ],
+        "type": "int",
+        "default": 200
+      },
+      "sample_url_limit": {
+        "env": [
+          "SITE_HEALTH_SAMPLE_URL_LIMIT"
+        ],
+        "type": "int",
+        "default": 10
+      }
+    },
+    "full_headroom": 5,
+    "full_minimum": 100,
+    "full_mode": "full",
+    "sample_mode": "sample"
   },
   "entitlements": {
     "registry_revision": "entitlements-v3",
@@ -4707,6 +5059,15 @@
     "capacity_lock": {
       "namespace": 1128353857,
       "person": "citeladder-cap"
+    },
+    "baseline": {
+      "revision": "signup-baseline-v1",
+      "source_kind": "override",
+      "grants": {
+        "project_slots": 1,
+        "prompt_slots": 10,
+        "monitored_urls": 20
+      }
     },
     "codes": {
       "limit_exceeded": "occupancy_limit_exceeded",

@@ -5,19 +5,14 @@ import uuid
 import pytest
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 
 from app.connectors.web_evidence.contracts import FetchError
-from app.core.config import legal
-from app.domain.auth.policies import PolicyDecision, accept_policy, policy_status
 from app.domain.mcp.connections import list_connections, revoke_connection
 from app.domain.mcp.data import list_account_projects
 from app.domain.site_health.acquisition_controls import authorize_acquisition
-from app.models.mcp import McpOAuthGrant
-from app.models.policy_acceptance import PolicyAcceptance
 from app.models.project import Project
-from app.models.security_event import SecurityEvent
 from app.models.user import User
 from app.models.web_acquisition_control import WebAcquisitionControl
 from app.models.workspace import Workspace, WorkspaceMember
@@ -210,37 +205,3 @@ async def test_policy_store_outage_fails_closed_as_typed_fetch_error():
             "https://example.test/", session_factory=unavailable_store
         )
     assert exc.value.error_code == "acquisition_unavailable"
-
-
-@pytest.mark.asyncio
-async def test_acceptance_is_idempotent_and_old_revision_survives_renewal(
-    db_session, monkeypatch
-):
-    user, spaces = await _account(db_session)
-    decision = PolicyDecision(terms_revision=legal.TERMS_REVISION, accept_terms=True)
-    first = await accept_policy(db_session, user.id, spaces[0].id, decision)
-    second = await accept_policy(db_session, user.id, spaces[0].id, decision)
-    assert first.accepted_at == second.accepted_at
-    assert (await policy_status(db_session, user.id, spaces[1].id)).accepted_at is None
-    monkeypatch.setattr(legal, "TERMS_REVISION", "approved-material-change")
-    assert (await policy_status(db_session, user.id, spaces[0].id)).accepted_at is None
-    with pytest.raises(ValueError, match="Terms changed"):
-        await accept_policy(db_session, user.id, spaces[0].id, decision)
-    await accept_policy(
-        db_session,
-        user.id,
-        spaces[0].id,
-        PolicyDecision(terms_revision=legal.TERMS_REVISION, accept_terms=True),
-    )
-    assert (
-        await db_session.scalar(select(func.count()).select_from(PolicyAcceptance)) == 2
-    )
-    assert (
-        await db_session.scalar(
-            select(func.count())
-            .select_from(SecurityEvent)
-            .where(SecurityEvent.event == "policy.accept")
-        )
-        == 2
-    )
-    assert await db_session.scalar(select(func.count()).select_from(McpOAuthGrant)) == 0

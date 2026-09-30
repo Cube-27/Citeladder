@@ -98,7 +98,12 @@ schemas, and each handler's return type is checked against its schema), the rout
 API error-code union exported from the Python config that declares the codes.
 
 The service does not own policy or schema. It reads `backend/app/core/config`
-through a generated, drift-checked export and verifies Python-issued sessions;
+through a generated, drift-checked export. The auth and workspace HTTP families
+are TypeScript-owned, including session issuance, Google identity sign-in,
+membership/invitation mutations, policy acceptance and product-tour state.
+Both stacks verify the same session claims and persisted session version;
+remaining Python/operator bridges and their lock orders are recorded in
+[workspace access](workspace-access.md) and the migration plan.
 Alembic stays the only schema author, so the service holds Kysely types
 generated from the migrated schema.
 

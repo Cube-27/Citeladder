@@ -9,7 +9,7 @@
  * capability (403) and the parameters (422), as FastAPI resolves dependencies
  * before parameters.
  */
-import type { Context, Hono } from 'hono';
+import type { Context, Hono, MiddlewareHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
@@ -28,7 +28,7 @@ import {
 } from '../http/params.ts';
 import type { RouteContract } from '../openapi/routes.ts';
 
-type RouteContext = { c: Context<AppEnv>; db: Database };
+type RouteContext = { c: Context<AppEnv>; db: Database; config: ServiceConfig };
 
 /**
  * A JSON route's handler must return what its response contract accepts, so
@@ -57,16 +57,14 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   params: { path: Path; query: Query };
   response: Response;
   method?: 'get' | 'post' | 'put' | 'patch' | 'delete';
-  status?: ContentfulStatusCode;
+  status?: ContentfulStatusCode | 204;
   /** Another success status the same response is served with, such as a replay's 200. */
   alsoStatus?: ContentfulStatusCode;
   body?: z.ZodType;
   headers?: z.ZodObject;
   capability?: WorkspaceCapability;
   /** Resolve the workspace from the path's `project_id` instead of `X-Workspace-Id`. */
-  authorize?: 'workspace' | 'project' | 'public' | 'workspace-path';
-  /** Routes such as OAuth callbacks whose state token is their authorization. */
-  public?: boolean;
+  authorize?: 'workspace' | 'project' | 'workspace-path' | 'session' | 'public';
 } & RouteBody<Path, Query, Response>;
 
 export type ProductRoute = {
@@ -142,13 +140,12 @@ function defineRoute<
   const method = route.method ?? 'get';
   const status = route.status ?? 200;
   const byProject = route.authorize === 'project';
-  const publicRead = route.authorize === 'public';
-  if (publicRead && method !== 'get') throw new Error('Only read routes may be public');
-  const byWorkspacePath = route.authorize === 'workspace-path';
+  const publicRoute = route.authorize === 'public';
+  const scoped = !publicRoute && route.authorize !== 'session';
   const workspaceHeaders =
-    byProject || byWorkspacePath || publicRead || route.public
-      ? z.object({})
-      : ACTIVE_WORKSPACE_HEADERS;
+    route.authorize === undefined || route.authorize === 'workspace'
+      ? ACTIVE_WORKSPACE_HEADERS
+      : z.object({});
   const contract: RouteContract = {
     family: route.family,
     method,
@@ -156,7 +153,7 @@ function defineRoute<
     pathParams: parameterObject(route.params.path),
     query: parameterObject(route.params.query),
     headers: route.headers ? workspaceHeaders.extend(route.headers.shape) : workspaceHeaders,
-    cookies: publicRead || route.public ? z.object({}) : SESSION_COOKIE,
+    cookies: publicRoute ? z.object({}) : SESSION_COOKIE,
     ...(route.body ? { body: route.body } : {}),
     responses: {
       [status]: route.response,
@@ -165,23 +162,30 @@ function defineRoute<
   };
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
     const pattern = honoPath(route.path);
-    const handle = async (c: Context<AppEnv>) => {
-      if (method !== 'get') c.get('workspace').require(route.capability ?? 'run');
-      const params = validateParams(route.params, {
-        path: c.req.param() as Record<string, string>,
-        search: new URL(c.req.url).search,
-      });
-      if (route.raw) return route.handle({ c, db }, params);
-      return c.json(await route.handle({ c, db }, params), status);
-    };
-    if (publicRead || route.public) {
-      app.on(method.toUpperCase(), pattern, handle);
-      return;
-    }
-    let authorize = activeWorkspace(db, route.capability);
-    if (byProject) authorize = projectMember(db);
-    else if (byWorkspacePath) authorize = workspaceMember(db, route.capability);
-    app.on(method.toUpperCase(), pattern, sessionUser(config, db), authorize, handle);
+    // Writes default to `run`; the capability gate precedes parameter validation.
+    const capability = route.capability ?? (method === 'get' ? undefined : 'run');
+    const authorize: MiddlewareHandler<AppEnv>[] = [];
+    if (byProject) authorize.push(projectMember(db));
+    else if (route.authorize === 'workspace-path') authorize.push(workspaceMember(db, capability));
+    else if (scoped) authorize.push(activeWorkspace(db, capability));
+    app.on(
+      [method.toUpperCase()],
+      [pattern],
+      ...(publicRoute ? [] : [sessionUser(config, db)]),
+      ...authorize,
+      async (c) => {
+        if (byProject && capability !== undefined) c.get('workspace').require(capability);
+        const params = validateParams(route.params, {
+          path: c.req.param() as Record<string, string>,
+          search: new URL(c.req.url).search,
+        });
+        if (route.raw) return route.handle({ c, db, config }, params);
+        return c.json(
+          await route.handle({ c, db, config }, params),
+          status as ContentfulStatusCode,
+        );
+      },
+    );
   };
   return { contract, params: route.params, register };
 }
@@ -221,6 +225,7 @@ export function defineDeleteRoute<const Path extends ParamSpecs, const Query ext
   const product = defineRoute({
     ...route,
     method: 'delete',
+    status: 204,
     response: z.null(),
     raw: true,
     async handle(context, params) {

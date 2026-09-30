@@ -53,6 +53,8 @@ from app.core.config import entitlements as entitlements_config
 from app.core.config import errors as error_config
 from app.core.config import integrations_contracts as integration_contracts
 from app.core.config import jev as jev_config
+from app.core.config import legal as legal_config
+from app.core.config import oauth as oauth_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
 from app.core.config import projects as projects_config
@@ -119,6 +121,7 @@ from app.core.config.errors import (
     STATUS_DEFAULT_CODE,
 )
 from app.core.config.http import (
+    API_REQUEST_BODY_MAX_BYTES,
     IMPORT_BODY_MAX_BYTES,
     PROMPT_IMPORT_MAX_ROWS,
     PROMPT_INTENT_MAX_CHARS,
@@ -166,11 +169,11 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
 )
-from app.core.config.workspaces import (
-    CAPABILITY_DENIAL_MESSAGES,
-    CODE_WORKSPACE_ROLE_FORBIDDEN,
+from scripts.auth_policy import (
+    auth_policy,
+    site_health_runtime_policy,
+    workspace_policy,
 )
-from app.domain.workspaces.policy import WORKSPACE_ROLES, effective_capabilities
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
 from scripts.ts_platform_integrations import integration_policy
@@ -202,12 +205,15 @@ EXPORTED_SETTINGS = (
     "jwt_secret_key",
     "jwt_algorithm",
     "session_cookie_name",
+    "jwt_expire_hours",
+    "public_signup_enabled",
+    "frontend_url",
+    "trusted_proxy_cidrs",
+    "integration_google_client_id",
+    "integration_google_client_secret",
     "demo_mode",
     "demo_expires_at",
     "encryption_key",
-    "frontend_url",
-    "integration_google_client_id",
-    "integration_google_client_secret",
     "integration_microsoft_client_id",
     "integration_microsoft_client_secret",
 )
@@ -310,6 +316,7 @@ def build_config() -> dict[str, Any]:
             "prefix": API_V1_PREFIX,
             "readiness_timeout_seconds": READINESS_TIMEOUT_SECONDS,
             "service_port": TS_API_SERVICE_PORT,
+            "request_body_max_bytes": API_REQUEST_BODY_MAX_BYTES,
         },
         "errors": {
             "status_default_code": {
@@ -320,13 +327,7 @@ def build_config() -> dict[str, Any]:
             "internal_error_code": CODE_INTERNAL_ERROR,
             "retryable_statuses": sorted(RETRYABLE_STATUSES),
         },
-        "workspaces": {
-            "roles": {
-                role: list(effective_capabilities(role)) for role in WORKSPACE_ROLES
-            },
-            "forbidden_code": CODE_WORKSPACE_ROLE_FORBIDDEN,
-            "denial_messages": dict(CAPABILITY_DENIAL_MESSAGES),
-        },
+        "workspaces": workspace_policy(),
         "visibility": _visibility_policy(),
         "analytics": _analytics_policy(),
         "task_queue": _task_queue_policy(),
@@ -389,19 +390,10 @@ def build_config() -> dict[str, Any]:
             ),
         },
         "abuse": {
-            name: _setting(name, AbuseSettings)
-            for name in (
-                "active_job_retry_after_seconds",
-                "bulk_import_limit",
-                "bulk_import_window_seconds",
-                "agent_call_limit",
-                "agent_call_window_seconds",
-                "brand_logo_refresh_limit",
-                "brand_logo_refresh_window_seconds",
-                "property_discovery_limit",
-                "property_discovery_window_seconds",
-            )
+            name: _setting(name, AbuseSettings) for name in AbuseSettings.model_fields
         },
+        "auth": auth_policy(_setting),
+        "site_health_runtime": site_health_runtime_policy(_setting),
         "entitlements": _entitlements_policy(),
         "prompts": _prompts_policy(),
         "models": {
@@ -445,6 +437,15 @@ def _entitlements_policy() -> dict[str, Any]:
         "capacity_lock": {
             "namespace": ent.OCCUPANCY_LOCK_NAMESPACE,
             "person": ent.OCCUPANCY_LOCK_PERSON,
+        },
+        "baseline": {
+            "revision": ent.BASELINE_GRANT_REVISION,
+            "source_kind": ent.GRANT_SOURCE_OVERRIDE,
+            "grants": {
+                ent.KEY_PROJECT_SLOTS: ent.FREE_PROJECT_SLOTS,
+                ent.KEY_PROMPT_SLOTS: ent.FREE_PROMPT_SLOTS,
+                ent.KEY_MONITORED_URLS: ent.FREE_MONITORED_URLS,
+            },
         },
         "codes": {
             "limit_exceeded": ent.CODE_OCCUPANCY_LIMIT_EXCEEDED,
@@ -698,6 +699,8 @@ ANALYTICS_WORKER_SETTINGS = (
 # ports a route family adds that family's owning config module here.
 ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
     error_config,
+    oauth_config,
+    legal_config,
     workspace_config,
     demand_config,
     opportunities_config,

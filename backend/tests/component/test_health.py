@@ -110,7 +110,7 @@ async def test_api_responses_and_errors_are_authoritatively_no_store() -> None:
         transport=transport, base_url="http://testserver"
     ) as client:
         public_response = await client.get("/api/v1/provider-catalog")
-        error_response = await client.get("/api/v1/workspaces")
+        error_response = await client.get("/api/v1/projects")
     for response in (public_response, error_response):
         assert response.headers["cache-control"] == "private, no-store, max-age=0"
         assert response.headers["pragma"] == "no-cache"
@@ -123,7 +123,7 @@ async def test_declared_oversized_api_body_is_rejected_before_parsing() -> None:
         transport=transport, base_url="http://testserver"
     ) as client:
         response = await client.post(
-            "/api/v1/auth/login",
+            "/api/v1/provider-connections",
             content=b"{}",
             headers={"Content-Length": str(3 * 1024 * 1024)},
         )
@@ -142,7 +142,7 @@ async def test_chunked_oversized_api_body_is_stopped_while_streaming() -> None:
         transport=transport, base_url="http://testserver"
     ) as client:
         response = await client.post(
-            "/api/v1/auth/login",
+            "/api/v1/provider-connections",
             content=chunks(),
             headers={"Content-Type": "application/json"},
         )

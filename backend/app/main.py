@@ -15,11 +15,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.agent import router as agent_router
 from app.api.audit_schedules import router as audit_schedules_router
 from app.api.audits import router as audits_router
-from app.api.auth import router as auth_router
 from app.api.billing import router as billing_router
 from app.api.commerce import router as commerce_router
 from app.api.mcp_connections import router as mcp_connections_router
-from app.api.oauth import router as oauth_router
 from app.api.performance import router as performance_router
 from app.api.projects import router as projects_router
 from app.api.provider_connections import (
@@ -30,7 +28,6 @@ from app.api.search_intelligence import (
     reviews_router as search_intelligence_reviews_router,
 )
 from app.api.site_health import router as site_health_router
-from app.api.workspaces import router as workspaces_router
 from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.connectors.billing.http_client import aclose_shared_billing_clients
 from app.core.config import get_frontend_origins, settings
@@ -61,10 +58,7 @@ logger = logging.getLogger("app")
 # owns its own paths; the prefix keeps the whole surface under /api/v1.
 _ROUTERS = (
     mcp_connections_router,
-    auth_router,
     billing_router,
-    oauth_router,
-    workspaces_router,
     projects_router,
     provider_connections_router,
     provider_catalog_router,

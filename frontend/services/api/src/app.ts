@@ -6,12 +6,14 @@
  * here.
  */
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { sql } from 'kysely';
 
 import type { ServiceConfig } from './config.ts';
+import { policy } from './config.ts';
 import type { AppEnv } from './context.ts';
 import type { Database } from './db/database.ts';
-import { onError, onNotFound } from './errors.ts';
+import { ApiError, onError, onNotFound } from './errors.ts';
 import { apiNoStore } from './http/no-store.ts';
 import { getLogger } from './logging.ts';
 import { requestId } from './request-id.ts';
@@ -49,6 +51,15 @@ export function createApp(config: ServiceConfig, db: Database): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use(requestId(config.requestIdHeader));
   app.use(apiNoStore());
+  app.use(
+    '/api/*',
+    bodyLimit({
+      maxSize: policy.api.request_body_max_bytes,
+      onError: () => {
+        throw new ApiError(413, 'Request body too large');
+      },
+    }),
+  );
   app.onError(onError);
   app.notFound(onNotFound);
 

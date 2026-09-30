@@ -3,13 +3,53 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.auth.service import register_user
 from app.domain.workspaces.service import get_membership, list_workspaces_for_user
 from app.models.user import User
-from app.models.workspace import WorkspaceMember
+from app.models.workspace import WorkspaceInvitation, WorkspaceMember
 from scripts import account_manager
+
+
+@pytest.mark.asyncio
+async def test_account_manager_issues_hashed_invitation(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    async with session_factory() as setup:
+        owner = await register_user(setup, "operator-owner@example.com", "password123")
+        invitee = await register_user(
+            setup, "operator-invitee@example.com", "password123"
+        )
+        assert owner is not None
+        assert invitee is not None
+        workspace, _ = (await list_workspaces_for_user(setup, owner))[0]
+        owner_id, workspace_id = owner.id, workspace.id
+    monkeypatch.setattr(
+        account_manager,
+        "_ask",
+        lambda label: invitee.email if label == "Email" else "viewer",
+    )
+    monkeypatch.setattr(account_manager, "_confirm", lambda _label: True)
+    async with session_factory() as operator:
+        await account_manager._invite(operator, workspace_id, owner_id)
+    from hashlib import sha256
+
+    lines = capsys.readouterr().out.splitlines()
+    token = lines[-2]
+    async with session_factory() as check:
+        invitation = await check.scalar(
+            select(WorkspaceInvitation).where(
+                WorkspaceInvitation.workspace_id == workspace_id
+            )
+        )
+        assert invitation is not None
+        assert invitation.token_sha256 == sha256(token.encode()).hexdigest()
+        assert invitation.role == "viewer"
+        assert invitation.accepted_at is None
 
 
 @pytest.mark.asyncio

@@ -40,6 +40,7 @@ from app.models.workspace import WorkspaceMember
 from app.workers.audit import execution as audit_execution
 from app.workers.audit_worker import AuditWorker
 from tests.component.audit_helpers import seed_audit_fixtures
+from tests.component.auth_helpers import register_and_login
 
 # The model the PLANNER freezes for these audits. Read from the catalog rather
 # than pinned as a literal: these assertions are about provenance travelling
@@ -99,16 +100,7 @@ async def test_endpoints_serve_projections_over_http(
     # Register a real user (hashed password) so login works, then attach them
     # to the seeded workspace as a member.
     email = "b6-real@example.com"
-    reg = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert reg.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
+    await register_and_login(client, email)
 
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=2)

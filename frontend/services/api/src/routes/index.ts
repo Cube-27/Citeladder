@@ -15,10 +15,14 @@ import { internalLinkRoutes } from './internal-links.ts';
 import { projectRoutes } from './projects.ts';
 import { brandDiscoveryRoutes } from './brand-discoveries.ts';
 import { integrationRoutes } from './integrations.ts';
+import { authRoutes } from './auth.ts';
+import { workspaceRoutes } from './workspaces.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...projectRoutes,
   ...brandDiscoveryRoutes,
+  ...authRoutes,
+  ...workspaceRoutes,
   ...internalLinkRoutes,
   ...executionRoutes,
   ...aiReferralRoutes,

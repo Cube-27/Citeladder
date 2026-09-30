@@ -10,7 +10,7 @@ import {
   taskProject,
   type Executor,
 } from '../workers/executor.ts';
-import { advisoryXactLock } from './admission.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { record, strings } from '../db/json.ts';
 import { buildQueryEvidence } from './query-evidence.ts';
@@ -49,7 +49,7 @@ export const recomputeDemand: Executor = async (task, { db, maxAttempts, checkCa
   await checkCancelled('demand projection');
   await db.transaction().execute(async (trx) => {
     // Concurrent retries must publish one immutable snapshot, not fail a uniqueness race.
-    await advisoryXactLock(trx, `demand_snapshot:${scope.projectId}`);
+    await subjectXactLock(trx, `demand_snapshot:${scope.projectId}`);
     const query = await buildQueryEvidence(trx, scope);
     const traffic = await trafficSource(trx, scope);
     const inputs = await queryDetectorInputs(trx, scope, query.id);

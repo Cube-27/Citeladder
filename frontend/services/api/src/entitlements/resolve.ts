@@ -30,7 +30,7 @@ export type GrantRow = {
 export type RevocationRow = { grant_id: string; effective_from: Date };
 
 export type Entitlement =
-  | { status: 'resolved'; values: ReadonlyMap<string, number> }
+  | { status: 'resolved'; values: ReadonlyMap<string, number>; validUntil: Date | null }
   | { status: 'unresolved'; error: string };
 
 const CAPABILITIES: Record<string, { type: string; levels: number }> =
@@ -113,6 +113,44 @@ function combine(type: string, prior: number, value: number): number {
   return prior + value;
 }
 
+function selectedGrants(
+  grants: readonly GrantRow[],
+  revocations: readonly RevocationRow[],
+  subscriptionEnd: Date | null,
+  at: Date,
+) {
+  const revokedAt = revocationTimes(revocations);
+  const active = grants.filter((grant) =>
+    isActive(grant, revokedAt, subscriptionEnd, at.getTime()),
+  );
+  const bundle = primaryBundle(active);
+  return active.filter((grant) => grant.bundle_role === SUPPLEMENT || grant.bundle_id === bundle);
+}
+
+/** Earliest future change to the selected projection, including future grants. */
+export function entitlementChangeAt(
+  grants: readonly GrantRow[],
+  revocations: readonly RevocationRow[],
+  subscriptionEnd: Date | null,
+  at: Date,
+): Date | null {
+  const selected = new Set(
+    selectedGrants(grants, revocations, subscriptionEnd, at).map((grant) => grant.id),
+  );
+  const changes = grants.flatMap((grant) => [
+    grant.valid_from.getTime(),
+    ...(selected.has(grant.id) ? [expiryMs(grant, subscriptionEnd) ?? Infinity] : []),
+  ]);
+  changes.push(
+    ...revocations
+      .filter((row) => selected.has(row.grant_id))
+      .map((row) => row.effective_from.getTime()),
+    subscriptionEnd?.getTime() ?? Infinity,
+  );
+  const future = changes.filter((value) => Number.isFinite(value) && value > at.getTime());
+  return future.length ? new Date(Math.min(...future)) : null;
+}
+
 /** Capability values at `at`; throws `CorruptGrant` on any invalid row. */
 export function foldEntitlement(
   grants: readonly GrantRow[],
@@ -121,14 +159,8 @@ export function foldEntitlement(
   at: Date,
 ): Map<string, number> {
   grants.forEach(validate);
-  const revokedAt = revocationTimes(revocations);
-  const active = grants.filter((grant) =>
-    isActive(grant, revokedAt, subscriptionEnd, at.getTime()),
-  );
-  const bundle = primaryBundle(active);
   const values = new Map<string, number>();
-  for (const grant of active) {
-    if (grant.bundle_role === PRIMARY && grant.bundle_id !== bundle) continue;
+  for (const grant of selectedGrants(grants, revocations, subscriptionEnd, at)) {
     const prior = values.get(grant.key);
     values.set(
       grant.key,
@@ -190,7 +222,16 @@ export async function resolveAccountEntitlement(
       subscription?.current_period_end ?? null,
       at,
     );
-    return { status: 'resolved', values };
+    return {
+      status: 'resolved',
+      values,
+      validUntil: entitlementChangeAt(
+        grants,
+        revocations,
+        subscription?.current_period_end ?? null,
+        at,
+      ),
+    };
   } catch (error) {
     if (error instanceof CorruptGrant) return { status: 'unresolved', error: error.message };
     throw error;
