@@ -238,6 +238,8 @@ it('rejects unsafe address classes, credentials, ports and mixed DNS before conn
     'fd00:ec2::254',
     '2001:db8::1',
     '198.51.100.1',
+    '192.0.0.8',
+    '::ffff:192.0.0.8',
   ])
     expect(() => validateAddress(ip)).toThrow(FetchError);
   expect(() => websiteIdentity('https://user:secret@example.com')).toThrow();

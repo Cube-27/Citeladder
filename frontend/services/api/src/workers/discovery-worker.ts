@@ -84,6 +84,7 @@ export class DiscoveryWorker {
       await this.finish(task, owner, null, error);
     } finally {
       clearInterval(timer);
+      // The timer callback may have assigned an in-flight Promise; drain it before returning.
       if (heartbeat) await heartbeat;
     }
     return true;
@@ -240,6 +241,7 @@ export class DiscoveryWorker {
     });
   }
   async runForever(signal: AbortSignal, owner = `brand-discovery-ts:${randomUUID()}`) {
+    // Finish each task before claiming another, and await idle/error backoff to avoid busy polling.
     while (!signal.aborted) {
       try {
         if (!(await this.runOnce(owner)))

@@ -85,6 +85,7 @@ async function attach(db: Database, scope: ProjectScope, target: Target, assetId
         ),
       )
       .execute();
+  // The caller holds the project lock on one transaction connection; keep reads and writes ordered.
   for (const id of target.competitorIds) {
     const competitor = await db
       .selectFrom('competitors')
@@ -145,6 +146,7 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
   const missing: Target[] = [];
   await db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
+    // Attach cached assets serially on the same locked transaction connection.
     for (const target of targets.values()) {
       const asset = cached.find((item) => item.domain === target.domain);
       if (asset?.status === cfg.status_ready && asset.image_data) {
@@ -167,6 +169,7 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
     );
     await db.transaction().execute(async (trx) => {
       await acquireProjectLock(trx, scope.projectId);
+      // Persist each asset before reading its ID and attaching it on this transaction connection.
       for (const { target, logo } of outcomes) {
         const at = new Date();
         const values = {

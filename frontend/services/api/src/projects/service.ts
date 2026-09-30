@@ -260,6 +260,7 @@ async function replaceCollections(
     }));
     if (values.length) await db.insertInto('brand_aliases').values(values).execute();
   }
+  // One transaction connection: finish each delete before inserting its replacement rows.
   for (const [table, values] of [
     ['owned_domains', input.owned_domains],
     ['unintended_domains', input.unintended_domains],

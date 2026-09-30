@@ -283,6 +283,7 @@ export async function collectIdentityResearch(
     };
   const pages: ResearchEvidence[] = [];
   const selected = searches.slice(0, settings.identity_fetch_max_pages);
+  // Await each batch so provider requests never exceed the configured concurrency.
   for (let offset = 0; offset < selected.length; offset += settings.keenable_concurrency) {
     const fetched = await Promise.allSettled(
       selected

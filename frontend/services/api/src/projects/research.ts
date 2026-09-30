@@ -125,16 +125,25 @@ function captureMethod(kind: ResearchEvidence['source_kind']) {
     ? cfg.capture_method_external_fetch
     : cfg.capture_method_external_search;
 }
-async function suggestCompetitors(
-  gateway: ModelGateway | null | undefined,
-  identity: Identity | null,
-  input: DiscoveryInput,
-  site: ResolvedSite,
-  category: string,
-  evidence: readonly ResearchEvidence[],
-  settings: ReturnType<typeof discoverySettings>,
-  modelCalls: Record<string, unknown>[],
-) {
+async function suggestCompetitors({
+  gateway,
+  identity,
+  input,
+  site,
+  category,
+  evidence,
+  settings,
+  modelCalls,
+}: {
+  gateway: ModelGateway | null | undefined;
+  identity: Identity | null;
+  input: DiscoveryInput;
+  site: ResolvedSite;
+  category: string;
+  evidence: readonly ResearchEvidence[];
+  settings: ReturnType<typeof discoverySettings>;
+  modelCalls: Record<string, unknown>[];
+}) {
   if (!gateway || !identity) return { competitors: [], available: false };
   const schema = z.object({
     competitors: z.array(competitorInput).max(settings.competitor_suggestion_maximum),
@@ -276,16 +285,16 @@ export async function researchBrand(
       competitorState = 'failed';
     }
   }
-  const { competitors, available } = await suggestCompetitors(
+  const { competitors, available } = await suggestCompetitors({
     gateway,
     identity,
     input,
     site,
     category,
-    competitorEvidence,
+    evidence: competitorEvidence,
     settings,
     modelCalls,
-  );
+  });
   const warnings = researchWarnings(
     site.warning,
     external.state,
