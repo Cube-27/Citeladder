@@ -174,9 +174,9 @@ outputs; **Open in Agent** (or opening the output) continues the chat at
 
 ## Read tools
 
-The [tool catalog](../backend/app/domain/agent/tool_catalog.py) binds the same
-read tools [MCP](mcp.md) registers, so the two surfaces cannot advertise
-different reads. The chat's project is injected server-side: the model cannot
+The [tool catalog](../backend/app/domain/agent/tool_catalog.py) binds the retained
+Python read bridges. Hosted [MCP](mcp.md) owns its TypeScript catalogue; the Agent
+bridges retire with the runtime migration in PR 19. The chat's project is injected server-side: the model cannot
 supply `project_id`, `list_projects` is not offered, and `fetch` refuses a
 record from another project. Each call runs as the chat member through MCP's
 membership predicate, so a member who loses access reads nothing. The

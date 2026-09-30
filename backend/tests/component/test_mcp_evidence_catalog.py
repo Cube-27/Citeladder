@@ -5,19 +5,16 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from mcp.server.auth.middleware.auth_context import auth_context_var
-from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.agent import AGENT_TOOL_RESULT_MAX_CHARS
 from app.core.config.mcp import MCP_MAX_VISIBILITY_SOURCE_OFFSET
 from app.domain.agent.tool_catalog import build_agent_tools, execute_tool
 from app.domain.mcp import evidence_readers, retrieval
-from app.domain.mcp.common import _cursor_decode, _cursor_encode
+from app.domain.mcp.common import _cursor_decode, _cursor_encode, read_as_member
 from app.domain.mcp.evidence_readers import (
     read_prompt_portfolio,
     read_query_evidence,
@@ -29,21 +26,11 @@ from app.domain.mcp.evidence_readers import (
     read_visibility_sources,
 )
 from app.domain.mcp.retrieval import fetch_business_record
-from app.domain.mcp.server import mcp_server
 from app.models.audit import Audit
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
-from tests.component.mcp_helpers import read_grant
-
-TOOL_REFERENCE = json.loads(
-    (
-        Path(__file__).resolve().parents[3]
-        / "frontend/apps/marketing/src/data/mcp-tools.json"
-    ).read_text(encoding="utf-8")
-)
-
 
 async def _account(
     session: AsyncSession, label: str
@@ -68,7 +55,9 @@ async def _account(
 
 
 async def _caller(session: AsyncSession, user: User):
-    return auth_context_var.set(AuthenticatedUser(await read_grant(session, user.id)))
+    context = read_as_member(user.id)
+    context.__enter__()
+    return context
 
 
 @pytest.mark.asyncio
@@ -154,7 +143,7 @@ async def test_prompt_portfolio_pages_without_skips_and_fetches_a_document(
                 f"{first['items'][0]['record_uri']}?part=999",
             )
     finally:
-        auth_context_var.reset(token)
+        token.__exit__(None, None, None)
 
     identities = [item["id"] for item in first["items"] + second["items"]]
     assert len(identities) == len(set(identities)) == 51
@@ -195,7 +184,7 @@ async def test_saved_evidence_reads_stay_unavailable_and_tenant_scoped(
         with pytest.raises(LookupError, match="not found"):
             await read_search_intelligence(db_session, str(foreign.id))
     finally:
-        auth_context_var.reset(token)
+        token.__exit__(None, None, None)
 
     assert missing["state"] == "unavailable"
     assert missing["reason"] == "exact_query_evidence_window_not_projected"
@@ -222,7 +211,7 @@ async def test_visibility_source_cursor_rejects_invalid_offsets(
         with pytest.raises(ValueError, match="cursor is invalid"):
             _cursor_decode("a", 1)
     finally:
-        auth_context_var.reset(token)
+        token.__exit__(None, None, None)
 
 
 @pytest.mark.asyncio
@@ -285,7 +274,7 @@ async def test_site_page_and_issue_references_use_current_owner_ids(
         page_result = await read_site_pages(db_session, str(project.id))
         detail = await retrieval._resolve_site_page(AnalysisSession(), analysis_id)
     finally:
-        auth_context_var.reset(token)
+        token.__exit__(None, None, None)
 
     assert (
         page_result["items"][0]["record_uri"] == f"citeladder://site_page/{analysis_id}"
@@ -325,18 +314,4 @@ async def test_every_detailed_reader_refuses_a_foreign_project(
             with pytest.raises(LookupError, match="not found"):
                 await call
     finally:
-        auth_context_var.reset(token)
-
-
-@pytest.mark.asyncio
-async def test_generated_tool_reference_matches_registered_catalog() -> None:
-    registered = {tool.name: tool for tool in await mcp_server.list_tools()}
-    documented = {tool["name"]: tool for tool in TOOL_REFERENCE["tools"]}
-
-    assert documented.keys() == registered.keys()
-    assert all(tool["read_only"] for tool in documented.values())
-    assert "list_skills" not in documented
-    assert "get_skill" not in documented
-    for name, tool in registered.items():
-        assert documented[name]["description"] == tool.description
-        assert documented[name]["input_schema"] == tool.input_schema
+        token.__exit__(None, None, None)
