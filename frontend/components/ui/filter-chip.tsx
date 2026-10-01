@@ -29,13 +29,18 @@ export function FilterChip({
       disabled={disabled}
       className={cn(
         filterChipClasses(active),
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle',
         className,
       )}
     >
       {children}
       {typeof count === 'number' ? (
-        <span className={cn('type-badge tabular-nums', active ? 'text-accent-text' : 'text-muted')}>
+        <span
+          className={cn(
+            'type-badge tabular-nums',
+            active && !disabled ? 'text-foreground' : 'text-muted',
+          )}
+        >
           {count}
         </span>
       ) : null}

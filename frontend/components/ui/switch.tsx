@@ -39,8 +39,8 @@ export function Switch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'focus-ring inline-grid min-h-[var(--control-height-md)] min-w-[var(--control-height-md)] shrink-0 place-items-center rounded-full',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        'focus-ring group inline-grid min-h-[var(--control-height-md)] min-w-[var(--control-height-md)] shrink-0 place-items-center rounded-full',
+        'disabled:cursor-not-allowed enabled:hover:bg-hover enabled:active:bg-active',
         className,
       )}
     >
@@ -48,12 +48,16 @@ export function Switch({
         aria-hidden
         className={cn(
           'relative h-6 w-11 rounded-full border transition-colors duration-[var(--motion-normal)] ease-[var(--ease-standard)]',
-          checked ? 'border-accent bg-accent' : 'border-border-bold bg-active',
+          disabled
+            ? 'border-border-subtle bg-disabled'
+            : checked
+              ? 'border-accent bg-accent group-hover:bg-accent-hover group-active:bg-accent-active'
+              : 'border-border-bold bg-track group-hover:bg-hover group-active:bg-active',
         )}
       >
         <span
           className={cn(
-            'bg-panel border-border-strong absolute top-1/2 left-0.5 size-5 -translate-y-1/2 rounded-full border transition-transform duration-[var(--motion-normal)] ease-[var(--ease-standard)]',
+            'bg-panel border-border-strong group-disabled:bg-muted group-disabled:border-border-subtle absolute top-1/2 left-0.5 size-5 -translate-y-1/2 rounded-full border transition-transform duration-[var(--motion-normal)] ease-[var(--ease-standard)]',
             checked ? 'translate-x-5' : 'translate-x-px',
           )}
         />
