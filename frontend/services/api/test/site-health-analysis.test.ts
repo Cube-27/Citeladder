@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
 import { analyzePage } from '../src/site-health/analysis/analyze-page.ts';
 import { extractPageFacts } from '../src/site-health/analysis/facts.ts';
+import { isMetadataOrCta } from '../src/site-health/analysis/copy.ts';
+import { document, elements } from '../src/web-evidence/html.ts';
+import { extractFactsAsync, analyzePageAsync } from '../src/site-health/analysis/off-thread.ts';
+import { factSettings } from '../src/site-health/analysis/facts.ts';
 import { classify } from '../src/site-health/analysis/page-kinds.ts';
 import {
   createsIssue,
@@ -31,6 +35,53 @@ const fixtureFacts = (name: string, url: string) =>
   extractPageFacts(fixture(name), { finalUrl: url, contentType: 'text/html' });
 
 describe('page checklist', () => {
+  it('keeps interpretation off the calling loop while preserving page outcomes', async () => {
+    const body = Buffer.from(
+      '<main><h1>Widgets</h1><p>Widgets make workshop repairs easier.</p></main>',
+    );
+    const delivery = { finalUrl: 'https://example.test/page', contentType: 'text/html' };
+    let timerRan = false;
+    const timer = new Promise<void>((resolve) => {
+      setTimeout(() => {
+        timerRan = true;
+        resolve();
+      }, 0);
+    });
+    const extracted = await extractFactsAsync(body, delivery, factSettings({}));
+    expect(timerRan).toBe(true);
+    await timer;
+    const interpreted = await analyzePageAsync(extracted, context);
+    expect(interpreted).toEqual(
+      analyzePage(extractPageFacts(body, delivery, factSettings({})), context),
+    );
+  });
+
+  it.each(['février 12, 2026', 'Март १२, २०२६'])(
+    'excludes Unicode date metadata %s from prose',
+    (date) => {
+      const root = document(
+        Buffer.from(`<main><p>${date}</p><p>Useful workshop advice.</p></main>`),
+      );
+      const paragraphs = [...elements(root, 'p')];
+      expect(paragraphs.map(isMetadataOrCta)).toEqual([true, false]);
+    },
+  );
+
+  it('does not mistake a protocol-relative host for a trust path', () => {
+    const trust = (url: string) =>
+      byRule(
+        evaluatePageRules({
+          ...facts(
+            '<main><h1>Welcome</h1><p>We make useful workshop equipment for everyone.</p></main>',
+          ),
+          page_kind: 'homepage',
+          site: {},
+          links: { anchors: [{ is_internal: true, url, anchor_text: 'Browse' }] },
+        }),
+      ).get('aeo.trust_path_present')!;
+    expect(trust('//privacy.example.test/shop').outcome).toBe('missing');
+    expect(trust('//privacy.example.test/about').outcome).toBe('satisfied');
+  });
   it('omits retired style and universal schema rules', () => {
     const ids = new Set(policy.site_health.rule_catalog.map((rule) => rule.rule_id));
     for (const retired of [
@@ -197,6 +248,17 @@ describe('primary schema entity', () => {
     url: 'https://acme.test/blog',
     name: 'Acme Blog',
   };
+
+  it('binds an explicitly default-ported document to the same schema entity', () => {
+    const { rows } = listing({
+      '@context': 'https://schema.org',
+      '@type': 'Blog',
+      ...blog,
+      url: 'https://acme.test:443/blog',
+      dateModified: '2026-09-09',
+    });
+    expect(rows.get('aeo.schema_required_valid')!.outcome).toBe('satisfied');
+  });
 
   it('reads a Blog index, including its modified date and freshness', () => {
     const { page, types, rows } = listing({

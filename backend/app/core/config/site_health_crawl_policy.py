@@ -267,9 +267,13 @@ URL_VALUE_FALLBACK_TOKENS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
 )
 
 FRONTIER_PENDING: Final = "pending"
+FRONTIER_ADMITTED: Final = "admitted"
 SELECTION_SOURCE_USER: Final = "user"
 SELECTION_SOURCE_FREE_SAMPLE: Final = "free_sample"
 SELECTION_SOURCE_BOOTSTRAP: Final = "bootstrap"
+SAMPLE_ANALYSIS_SELECTION_SOURCES: Final[frozenset[str]] = frozenset(
+    {SELECTION_SOURCE_FREE_SAMPLE, SELECTION_SOURCE_BOOTSTRAP}
+)
 SELECTION_SOURCES: Final[frozenset[str]] = frozenset(
     {SELECTION_SOURCE_USER, SELECTION_SOURCE_FREE_SAMPLE, SELECTION_SOURCE_BOOTSTRAP}
 )

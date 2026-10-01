@@ -13,7 +13,7 @@ export const NEXT_ACTION =
   /\b(?:apply|book|buy|contact|get started|join|register|request|schedule|sign up|start|subscribe|talk to|try)\b/iu;
 const BYLINE_AT_START = new RegExp(`^(?:${authorship.byline_pattern})`);
 const BYLINE_SUFFIX = new RegExp(`^(?:${authorship.byline_metadata_suffix_pattern})$`, 'i');
-const SHORT_DATE = /^\w+\s+\d{1,2},\s+\d{4}$/u;
+const SHORT_DATE = /^[\p{L}\p{N}_]+\s+\p{Nd}{1,2},\s+\p{Nd}{4}$/u;
 const METADATA_TOKENS = new Set([
   'author',
   'badge',

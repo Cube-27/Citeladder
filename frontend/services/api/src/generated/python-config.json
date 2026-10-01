@@ -5907,6 +5907,11 @@
         "failed",
         "partially_completed"
       ],
+      "page_default_limit": 50,
+      "page_max_limit": 200,
+      "terminal_grace_polls": 2,
+      "export_page_size": 200,
+      "max_detail_evaluations": 200,
       "scoring_version": "sh-scoring-1",
       "rule_dimensions": [
         "aeo",
@@ -6095,6 +6100,22 @@
         "version": "sh-link-rewrite-1"
       },
       "robots_path": "/robots.txt",
+      "robots_statuses": {
+        "fetched": "fetched",
+        "access_blocked": "access_blocked",
+        "fetch_failed": "fetch_failed",
+        "not_found": "not_found"
+      },
+      "max_declared_sitemaps": 16,
+      "max_url_chars": 2048,
+      "frontier_statuses": {
+        "pending": "pending",
+        "admitted": "admitted"
+      },
+      "sample_analysis_selection_sources": [
+        "bootstrap",
+        "free_sample"
+      ],
       "llms_path": "/llms.txt",
       "sitemap_default_paths": [
         "/sitemap.xml"
@@ -6137,6 +6158,7 @@
           "accessibility_control_descriptors": 20,
           "accessibility_identifier_chars": 128,
           "url_chars": 2048,
+          "declared_sitemaps": 16,
           "anchor_text_chars": 512,
           "author_chars": 256,
           "date_chars": 64,

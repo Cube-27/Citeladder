@@ -11,12 +11,14 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
 import { enqueueCatalogProjection } from '../commerce/projection.ts';
-import { extractPageFacts } from './analysis/facts.ts';
+import { factSettings } from './analysis/facts.ts';
+import { analyzePageAsync, extractFactsAsync } from './analysis/off-thread.ts';
 import type { Facts } from './analysis/read-facts.ts';
 import {
   writeArtifact,
   writeAttempts,
   writePageAnalysis,
+  pageAnalysisContext,
   type AttemptOutcome,
 } from './analysis-rows.ts';
 import { isBotBlock } from './page-fetch.ts';
@@ -29,6 +31,7 @@ import {
   markRunning,
   owned,
   recordCrawlEvent,
+  retryAfterSeconds,
   settleTask,
   startCrawl,
   statuses,
@@ -41,7 +44,7 @@ import { canonicalIdentity } from './url-identity.ts';
 const codes = policy.site_health.page_analysis.acquisition.error_codes;
 const BODYLESS = new Set(policy.site_health.page_analysis.acquisition.bodyless_status_codes);
 const ACTIVE_TASK = [statuses.queued, statuses.leased, statuses.running, statuses.retry_wait];
-const SAMPLE_SOURCES = new Set(['free_sample', 'bootstrap']);
+const SAMPLE_SOURCES = new Set<string>(policy.site_health.crawl.sample_analysis_selection_sources);
 
 type Outcome = AttemptOutcome & {
   facts: Facts | null;
@@ -49,6 +52,7 @@ type Outcome = AttemptOutcome & {
   reusedArtifactId: string | null;
   retryable: boolean;
   errorDetail: string;
+  retryAfterSeconds?: number;
 };
 
 /** Backoff for a prerequisite recheck: doubles with the wait, clamped, never past the bound. */
@@ -189,20 +193,25 @@ async function acquire(ctx: SiteTaskContext, task: SiteTask): Promise<Outcome> {
       errorCode: failure[0],
       errorDetail: '',
       retryable: failure[1],
+      retryAfterSeconds: retryAfterSeconds(page.headers?.['retry-after']),
     };
   if (!BODYLESS.has(page.status)) await expectClassification(ctx.db, task, ctx.owner);
-  const facts = extractPageFacts(page.body, {
-    finalUrl: page.url,
-    contentType: page.contentType,
-    charset: page.charset,
-    statusCode: page.status,
-    headers: page.headers,
-    httpVersion: page.httpVersion,
-    ttfbMs: page.ttfbMs,
-    latencyMs: fetched.latencyMs,
-    wireBytes: page.wireBytes,
-    decodedBytes: page.body.length,
-  });
+  const facts = await extractFactsAsync(
+    page.body,
+    {
+      finalUrl: page.url,
+      contentType: page.contentType,
+      charset: page.charset,
+      statusCode: page.status,
+      headers: page.headers,
+      httpVersion: page.httpVersion,
+      ttfbMs: page.ttfbMs,
+      latencyMs: fetched.latencyMs,
+      wireBytes: page.wireBytes,
+      decodedBytes: page.body.length,
+    },
+    factSettings(),
+  );
   return {
     ...base,
     ...common,
@@ -237,6 +246,15 @@ async function recordProgress(trx: Database, crawl: Crawl) {
 
 /** Stage the evidence and settle the task in one transaction. */
 async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome) {
+  // Load the provisional page context and evaluate before taking quota/commit locks.
+  const scope = outcome.facts ? await loadScope(ctx.db, claimed) : null;
+  const context = scope?.task.site_url_id
+    ? await pageAnalysisContext(ctx.db, scope.crawl, {
+        ...scope.task,
+        site_url_id: scope.task.site_url_id,
+      })
+    : null;
+  const result = context && outcome.facts ? await analyzePageAsync(outcome.facts, context) : null;
   await ctx.db.transaction().execute(async (trx) => {
     const locked = await lockForCommit(trx, claimed, ctx.owner);
     if (!locked) return;
@@ -246,7 +264,15 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
       return;
     }
     let artifactId = outcome.reusedArtifactId;
-    if (outcome.facts && task.site_url_id) {
+    if (outcome.facts && task.site_url_id && result) {
+      // Setup/discovery may publish context while interpretation runs. Retry
+      // through the existing queue rather than commit rules against stale facts.
+      const currentContext = await pageAnalysisContext(trx, crawl, {
+        ...task,
+        site_url_id: task.site_url_id,
+      });
+      if (JSON.stringify(currentContext) !== JSON.stringify(context))
+        throw new Error('Page analysis context changed before commit');
       artifactId ??= await writeArtifact(trx, crawl, task, outcome.page!, outcome.facts, {
         policyVersion: ctx.fetcher.settings.policyVersion,
         latencyMs: outcome.latencyMs ?? 0,
@@ -258,6 +284,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
         { ...task, site_url_id: task.site_url_id },
         artifactId,
         outcome.facts,
+        result,
       );
       if (analysis.pageKind === 'category' || analysis.pageKind === 'product')
         await enqueueCatalogProjection(
@@ -285,6 +312,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
       retryable: outcome.retryable,
       errorCode: outcome.errorCode,
       errorDetail: outcome.errorDetail,
+      retryAfterSeconds: outcome.retryAfterSeconds,
     });
   });
 }

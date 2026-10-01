@@ -1,10 +1,13 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
 import type { FetchedPage } from '../src/projects/safe-fetch.ts';
 import { isBotBlock, SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { siteTaskSettings } from '../src/site-health/site-task.ts';
+import { crawlCounters } from '../src/site-health/reads/crawl.ts';
+import * as interpretation from '../src/site-health/analysis/off-thread.ts';
 import { hardExcluded } from '../src/site-health/url-admission.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
@@ -180,6 +183,50 @@ describe('analyze acquisition', () => {
     expect((await crawl(seed)).analyzed_url_count).toBe(2);
   });
 
+  it.each(['product', 'category', 'other'])(
+    'hands %s analyses to Commerce only for catalog pages',
+    async (kind) => {
+      const seed = await running();
+      await fixtures.businessProfile(seed, { business_model: 'retail' });
+      const path =
+        kind === 'product'
+          ? '/products/widget'
+          : kind === 'category'
+            ? '/collections/widgets'
+            : '/plain';
+      const page = await fixtures.analyzable(seed, path);
+      const body =
+        kind === 'product'
+          ? readFileSync(
+              new URL(
+                '../../../../backend/tests/fixtures/site_health/multi_main_product.html',
+                import.meta.url,
+              ),
+            )
+          : kind === 'category'
+            ? readFileSync(
+                new URL(
+                  '../../../../backend/tests/fixtures/site_health/category_faceted_canonical.html',
+                  import.meta.url,
+                ),
+              )
+            : RICH;
+      await analyze(site({ [path]: { body } }), page.taskId);
+      const [analysis] = await analyses(seed, page.siteUrlId);
+      expect(analysis!.page_kind).toBe(kind);
+      const queued = await db
+        .selectFrom('analytics_tasks')
+        .select('payload')
+        .where('workspace_id', '=', seed.workspaceId)
+        .where('project_id', '=', seed.projectId)
+        .where('task_kind', '=', 'commerce_catalog_projection')
+        .execute();
+      expect(queued.map((row) => record(row.payload).source_analysis_id)).toEqual(
+        kind === 'other' ? [] : [analysis!.id],
+      );
+    },
+  );
+
   it('waits for in-flight prerequisites without spending an attempt, then acquires past the bound', async () => {
     const seed = await running({ site_facts: null });
     const root = await fixtures.analyzable(seed, '/');
@@ -245,6 +292,47 @@ describe('analyze acquisition', () => {
 });
 
 describe('analyze failures', () => {
+  it('settles an exhausted retryable response as failed', async () => {
+    const seed = await running();
+    const page = await fixtures.analyzable(seed, '/exhausted');
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ attempt_count: 2, max_attempts: 3 })
+      .where('id', '=', page.taskId)
+      .execute();
+    await analyze(site({ '/exhausted': { status: 503 } }), page.taskId);
+    expect(await task(page.taskId)).toMatchObject({ status: 'failed', attempt_count: 3 });
+    expect((await task(page.taskId)).completed_at).not.toBeNull();
+  });
+
+  it.each(['45', '3600', 'invalid', 'http-date'])(
+    'persists a bounded retry window from Retry-After %s',
+    async (advice) => {
+      const seed = await running();
+      const page = await fixtures.analyzable(seed, '/limited');
+      const before = Date.now();
+      const header = advice === 'http-date' ? new Date(before + 45_000).toUTCString() : advice;
+      await analyze(
+        site({ '/limited': { status: 429, headers: { 'retry-after': header } } }),
+        page.taskId,
+      );
+      const settled = await task(page.taskId);
+      const settings = siteTaskSettings({});
+      const expected =
+        header === '45'
+          ? 45
+          : header === '3600'
+            ? settings.retryMax
+            : header === 'invalid'
+              ? Math.min(settings.retryBase * 2, settings.retryMax) + 0.37 * settings.retryJitter
+              : (Date.parse(header) - before) / 1000;
+      expect(settled.status).toBe('retry_wait');
+      expect(settled.available_at.getTime() - before).toBeGreaterThanOrEqual(
+        expected * 1000 - 1000,
+      );
+      expect(settled.available_at.getTime() - before).toBeLessThan(expected * 1000 + 3000);
+    },
+  );
   it.each([
     [
       'a challenge interstitial',
@@ -336,6 +424,82 @@ async function lease(taskId: string, owner: string) {
 }
 
 describe('analyze guards', () => {
+  it('retries without committing evidence when setup changes during rule evaluation', async () => {
+    const seed = await running();
+    const page = await fixtures.analyzable(seed, '/');
+    const interpret = interpretation.analyzePageAsync;
+    const changed = { robots: { fetched: true, status: 'fetched', status_code: 200 } };
+    const spy = vi
+      .spyOn(interpretation, 'analyzePageAsync')
+      .mockImplementationOnce(async (...args) => {
+        const result = await interpret(...args);
+        await db
+          .updateTable('site_crawls')
+          .set({ site_facts: JSON.stringify(changed) })
+          .where('id', '=', seed.crawlId)
+          .execute();
+        return result;
+      });
+    try {
+      const fetcher = site({ '/': { body: RICH } });
+      await analyze(fetcher, page.taskId);
+      expect((await task(page.taskId)).status).toBe('retry_wait');
+      expect(await analyses(seed, page.siteUrlId)).toEqual([]);
+      expect(await attempts(page.taskId)).toEqual([]);
+      await analyze(fetcher, page.taskId);
+      expect((await task(page.taskId)).status).toBe('succeeded');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('reports a held worker lease as active work, including while other pages await retries', async () => {
+    const seed = await running();
+    const page = await fixtures.analyzable(seed, '/held');
+    const waiting = await fixtures.analyzable(seed, '/waiting');
+    await lease(page.taskId, 'held-worker');
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({
+        status: 'retry_wait',
+        available_at: new Date(Date.now() + 60_000),
+      })
+      .where('id', '=', waiting.taskId)
+      .execute();
+    expect((await crawlCounters(db, await crawl(seed))).activity).toMatchObject({
+      state: 'working',
+      reason: 'active_work',
+      queue_depth: 2,
+    });
+  });
+
+  it('does not reuse foreign workspace evidence even when its crawl and URL match', async () => {
+    const seed = await running();
+    const foreign = await running();
+    const page = await fixtures.analyzable(seed, '/isolated');
+    const discovered = await fixtures.discover(foreign, page.hash, 'succeeded', {
+      has_html: true,
+      title: 'Foreign evidence',
+      delivery: { final_url: page.url },
+    });
+    // Inconsistent persisted references must still fail closed at the read boundary.
+    await db
+      .updateTable('site_fetch_artifacts')
+      .set({ crawl_id: seed.crawlId })
+      .where('id', '=', discovered.artifactId!)
+      .execute();
+    const requests: string[] = [];
+    await analyze(site({ '/isolated': { body: RICH } }, requests), page.taskId);
+    const settled = await task(page.taskId);
+    expect(settled.status).toBe('succeeded');
+    expect(settled.result_artifact_id).not.toBe(discovered.artifactId);
+    expect(requests).toEqual(['/robots.txt', '/isolated']);
+    const [analysis] = await analyses(seed, page.siteUrlId);
+    expect(analysis!.workspace_id).toBe(seed.workspaceId);
+    expect(analysis!.source_artifact_ids).toEqual([settled.result_artifact_id]);
+    expect(await analyses(foreign, page.siteUrlId)).toEqual([]);
+  });
+
   it('cancels before any I/O when the entitlement no longer covers a user selection, but not a free sample', async () => {
     const seed = await running();
     const user = await fixtures.analyzable(seed, '/user', { monitoredLimit: 0 });

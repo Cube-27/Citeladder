@@ -72,6 +72,36 @@ from tests.component.site_health_worker_helpers import (
 )
 
 
+@pytest.mark.asyncio
+async def test_discovery_settlement_deduplicates_links_and_self_references(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    seed = await _seed_root_only(session_factory)
+    root_task = await _discover_task(session_factory, seed.crawl_id)
+    children = await _settle_discovery_as_typescript(
+        session_factory,
+        root_task,
+        links=(
+            "https://example.com/",
+            "https://example.com/a",
+            "https://example.com/a#fragment",
+        ),
+    )
+    assert len(children) == 1
+    # A later page linking back to an already-admitted URL also creates no task.
+    assert (
+        await _settle_discovery_as_typescript(
+            session_factory,
+            children[0],
+            links=("https://example.com/", "https://example.com/a"),
+        )
+        == []
+    )
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None and crawl.admitted_url_count == 1
+
+
 async def _discover_task(
     session_factory: async_sessionmaker[AsyncSession], crawl_id: uuid.UUID
 ) -> uuid.UUID:

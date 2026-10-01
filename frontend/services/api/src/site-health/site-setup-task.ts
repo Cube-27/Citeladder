@@ -30,7 +30,6 @@ import { canonicalIdentity } from './url-identity.ts';
 
 const crawlPolicy = policy.site_health.crawl;
 const AI_CRAWLERS = policy.site_health.page_analysis.rules.ai_crawler_bots;
-const DECLARED_SITEMAPS = 16;
 
 export function setupSettings(env: Record<string, string | undefined> = process.env) {
   const spec = policy.site_health.settings;
@@ -53,12 +52,13 @@ type Robots = Awaited<ReturnType<SiteTaskContext['fetcher']['acquirer']['robots'
 
 /** How the robots.txt response reads in the dashboard: a missing file is not a failure. */
 function robotsStatus(robots: Robots | null) {
-  if (robots?.body != null) return 'fetched';
+  if (robots?.body != null) return crawlPolicy.robots_statuses.fetched;
   const status = robots?.status ?? 0;
-  if (status === 401 || status === 403) return 'access_blocked';
+  if (status === 401 || status === 403) return crawlPolicy.robots_statuses.access_blocked;
   // Unreachable, rate-limited, failing or unresolved redirects pause the crawl; other 4xx is a missing file.
-  if (status < 400 || status === 429 || status >= 500) return 'fetch_failed';
-  return 'not_found';
+  if (status < 400 || status === 429 || status >= 500)
+    return crawlPolicy.robots_statuses.fetch_failed;
+  return crawlPolicy.robots_statuses.not_found;
 }
 
 async function wellKnown(ctx: SiteTaskContext, url: string, settings: Settings) {
@@ -111,8 +111,8 @@ async function siteEvidence(
       ),
       crawler_roles: crawlPolicy.crawler_roles,
       sitemaps: (robots?.sitemaps ?? [])
-        .slice(0, DECLARED_SITEMAPS)
-        .map((url) => url.slice(0, 2048)),
+        .slice(0, crawlPolicy.max_declared_sitemaps)
+        .map((url) => url.slice(0, crawlPolicy.max_url_chars)),
     },
     llms_txt: llms,
     sitemap: { fetched: false, files: [] as string[], pending: walks },

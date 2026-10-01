@@ -481,6 +481,7 @@ export class SiteFixtures extends VisibilityFixtures {
 }
 
 export type Served = {
+  headers?: Record<string, string>;
   status?: number;
   body?: string | Buffer;
   redirect?: string;
@@ -526,6 +527,7 @@ export function recordedSite(
           url: target.href,
           status: response.status,
           contentType: served?.contentType ?? 'text/html',
+          headers: served?.headers,
           body: response.body,
         };
       url = new URL(response.redirect, target);

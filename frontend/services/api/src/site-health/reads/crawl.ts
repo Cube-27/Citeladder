@@ -331,7 +331,7 @@ export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counter
     timeout: number;
     ready: number;
     waiting: number;
-    host_waiting: number;
+    leased_live: number;
     running_live: number;
     expired: number;
     next_available_at: Date | null;
@@ -356,7 +356,7 @@ export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counter
       count(*) filter (where status = 'failed' and error_code = 'timeout')::int as timeout,
       count(*) filter (where status in ('queued','retry_wait','capacity_wait') and available_at <= now())::int as ready,
       count(*) filter (where status in ('queued','retry_wait','capacity_wait') and available_at > now())::int as waiting,
-      count(*) filter (where status = 'leased' and lease_expires_at > now())::int as host_waiting,
+      count(*) filter (where status = 'leased' and lease_expires_at > now())::int as leased_live,
       count(*) filter (where status = 'running' and lease_expires_at > now())::int as running_live,
       count(*) filter (where status in ('leased','running') and lease_expires_at <= now())::int as expired,
       min(available_at) filter (where status in ('queued','retry_wait','capacity_wait') and available_at > now()) as next_available_at
@@ -390,8 +390,7 @@ export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counter
   let reason: Counters['activity']['reason'] = 'active_work';
   if (terminal) [state, reason] = ['terminal', 'terminal'];
   else if (c.expired) [state, reason] = ['stalled', 'expired_lease'];
-  else if (c.host_waiting && !c.running_live) [state, reason] = ['waiting', 'host_gate'];
-  else if (c.waiting && !(c.ready || c.running_live))
+  else if (c.waiting && !(c.ready || c.leased_live || c.running_live))
     [state, reason] = ['waiting', 'retry_backoff'];
   return {
     discovered: countDisclosure(crawl)
@@ -412,7 +411,7 @@ export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counter
     activity: {
       state,
       reason,
-      queue_depth: c.ready + c.waiting + c.host_waiting + c.running_live + c.expired,
+      queue_depth: c.ready + c.waiting + c.leased_live + c.running_live + c.expired,
       next_available_at: iso(c.next_available_at),
     },
     by_page_kind: Object.fromEntries(kinds.rows.map((row) => [row.page_kind, row.count])),

@@ -1,13 +1,11 @@
 # Site Health deep analysis package (Task 5).
 #
-# Pure, deterministic building blocks composed by ``page_analysis`` to turn
-# one fetched page into analysis evidence that the worker persists:
+# Pure, deterministic building blocks retained for crawl finalization and
+# Python fixture consumers. The TypeScript analyzer owns new page analyses:
 #
 #   - ``parser`` — bounded HTML/delivery fact extraction (lxml, hardened).
 #   - ``structured_data`` — JSON-LD / microdata parse + required-property
 #     validation against the config-owned schema map.
-#   - ``page_analysis`` — the classification, traits, evaluation, and scoring
-#     interface used by workers and end-to-end fixture contracts.
 #   - ``rules`` — evaluate the config-owned rule catalog into explicit
 #     measurement outcomes with exact evidence + provenance.
 #   - ``scoring`` — deterministic Web Fundamentals and AEO Readiness

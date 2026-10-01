@@ -27,7 +27,7 @@ import { issueOccurrence, ruleTitle, severityRank, type IssueRow } from './rules
 
 type Paging = { limit: number; cursor: string | null };
 // A pathological artifact never balloons a detail response.
-const MAX_EVALUATIONS = 200;
+const MAX_EVALUATIONS = policy.site_health.reads.max_detail_evaluations;
 
 const pageSummary = (row: PageRow) => ({
   site_url_id: row.site_url_id,

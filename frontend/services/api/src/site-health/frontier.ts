@@ -405,7 +405,7 @@ async function storeFrontier(
           link_ordinal: item.linkOrdinal,
           rewrite_reason: item.rewriteReason,
           rewrite_version: item.rewriteVersion,
-          status: 'pending',
+          status: crawlPolicy.frontier_statuses.pending,
           created_at: now,
         })),
       )
@@ -422,7 +422,7 @@ async function pendingFrontier(trx: Database, crawl: Crawl, settings: Settings) 
     .where('workspace_id', '=', crawl.workspace_id)
     .selectAll()
     .where('crawl_id', '=', crawl.id)
-    .where('status', '=', 'pending')
+    .where('status', '=', crawlPolicy.frontier_statuses.pending)
     .orderBy('value_priority', 'desc')
     .orderBy('parent_position')
     .orderBy('link_ordinal')
@@ -549,7 +549,7 @@ async function admitDiscovery(
         },
         state.settings,
       )
-    : 'admitted';
+    : crawlPolicy.frontier_statuses.admitted;
   if (queued) state.result.admitted++;
 }
 
@@ -566,7 +566,7 @@ async function admitOne(
   if (frontierId)
     await state.trx
       .updateTable('site_discovery_frontier')
-      .set({ status: 'admitted', admitted_at: new Date() })
+      .set({ status: crawlPolicy.frontier_statuses.admitted, admitted_at: new Date() })
       .where('id', '=', frontierId)
       .where('workspace_id', '=', state.crawl.workspace_id)
       .execute();

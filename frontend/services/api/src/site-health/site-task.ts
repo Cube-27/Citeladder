@@ -45,6 +45,14 @@ const retryDelay = (settings: SiteTaskSettings, attempt: number) =>
   Math.min(settings.retryBase * 2 ** attempt, settings.retryMax) +
   ((attempt * 0.37) % 1) * settings.retryJitter;
 
+/** Server retry advice: delta seconds or an HTTP date; invalid advice uses normal backoff. */
+export function retryAfterSeconds(header: string | undefined, now = Date.now()) {
+  if (!header?.trim()) return undefined;
+  const raw = header.trim();
+  const seconds = /^\d+$/u.test(raw) ? Number(raw) : (Date.parse(raw) - now) / 1000;
+  return Number.isFinite(seconds) ? Math.max(0, seconds) : undefined;
+}
+
 /** An update of the task that applies only while this worker still holds its lease. */
 export const owned = (db: Database, task: SiteTask, owner: string) =>
   db
@@ -144,7 +152,13 @@ export async function settleTask(
   task: SiteTask,
   outcome:
     | { succeeded: true; artifactId: string | null }
-    | { succeeded: false; retryable: boolean; errorCode: string; errorDetail: string },
+    | {
+        succeeded: false;
+        retryable: boolean;
+        errorCode: string;
+        errorDetail: string;
+        retryAfterSeconds?: number;
+      },
 ) {
   const now = new Date();
   const attempt = task.attempt_count + 1;
@@ -169,14 +183,16 @@ export async function settleTask(
     return;
   }
   const retry = outcome.retryable && attempt < task.max_attempts;
+  const delay =
+    outcome.retryAfterSeconds === undefined
+      ? retryDelay(ctx.settings, attempt)
+      : Math.min(outcome.retryAfterSeconds, ctx.settings.retryMax);
   await owned(trx, task, ctx.owner)
     .set({
       ...released,
       status: retry ? statuses.retry_wait : statuses.failed,
       attempt_count: attempt,
-      available_at: new Date(
-        now.getTime() + (retry ? retryDelay(ctx.settings, attempt) * 1000 : 0),
-      ),
+      available_at: new Date(now.getTime() + (retry ? delay * 1000 : 0)),
       completed_at: retry ? null : now,
       error_code: outcome.errorCode.slice(0, 32),
       error_detail: outcome.errorDetail.slice(0, 2000),
