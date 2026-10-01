@@ -117,7 +117,7 @@ export async function saveAgentOutput(
     source_refs: [...new Set(input.refs)],
   });
 }
-async function appendRevision(
+function appendRevision(
   db: Database,
   chat: Chat,
   output: Output,
@@ -181,7 +181,7 @@ export class AgentOutputs {
   edit(scope: Scope, chatId: string, baseId: string, title: string, body: string) {
     return this.mutate(scope, chatId, async (db, chat) => {
       const current = await currentOutput(db, chat);
-      if (!current.output || !current.revision || current.revision.id !== baseId)
+      if (current.revision?.id !== baseId || !current.output)
         throw new AgentError('output_conflict');
       const payload = outputPayloadSchema.parse({ title, body, phase: current.revision.phase });
       return appendRevision(db, chat, current.output, current.revision, {

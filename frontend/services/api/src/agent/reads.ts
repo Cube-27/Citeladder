@@ -30,6 +30,11 @@ function summary(chat: Chat, output: { kind: string; phase: string } | null, lab
     created_at: iso(chat.created_at),
   });
 }
+function modelStepStatus(outcome: string, latest: boolean) {
+  if (outcome === 'dispatched') return 'working';
+  if (outcome !== 'completed') return outcome;
+  return latest ? 'processing' : 'reasoned';
+}
 export async function progress(db: Database, run: Run) {
   if (!active.includes(run.status) || run.attempt_count < 1) return [];
   const attempts = await db
@@ -58,15 +63,7 @@ export async function progress(db: Database, run: Run) {
   return attempts.map((row, index) =>
     agentRunStepSchema.parse({
       ordinal: row.ordinal,
-      status:
-        row.tool_status ??
-        (row.outcome === 'dispatched'
-          ? 'working'
-          : row.outcome === 'completed'
-            ? index === attempts.length - 1
-              ? 'processing'
-              : 'reasoned'
-            : row.outcome),
+      status: row.tool_status ?? modelStepStatus(row.outcome, index === attempts.length - 1),
       tool: row.tool_name,
       model_attempt_id: row.model_id,
       tool_attempt_id: row.tool_id,

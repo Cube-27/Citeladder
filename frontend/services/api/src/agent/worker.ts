@@ -16,13 +16,12 @@ export async function runAgentOnce(
   let heartbeat: Promise<boolean> | undefined;
   const timer = setInterval(() => {
     // One renewal at a time. Failure leaves the existing lease to expire.
-    if (!heartbeat)
-      heartbeat = queue
-        .heartbeat(lease)
-        .catch(() => false)
-        .finally(() => {
-          heartbeat = undefined;
-        });
+    heartbeat ??= queue
+      .heartbeat(lease)
+      .catch(() => false)
+      .finally(() => {
+        heartbeat = undefined;
+      });
   }, agentPolicy.heartbeat_seconds * 1000);
   try {
     await runtime.execute(lease);

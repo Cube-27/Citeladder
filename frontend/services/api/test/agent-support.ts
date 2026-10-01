@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Database } from '../src/db/database.ts';
-import { agentPolicy, type Scope, type SkillCatalog } from '../src/agent/contracts.ts';
+import type { Scope, SkillCatalog } from '../src/agent/contracts.ts';
 import { AgentStore, type FundingIdentity } from '../src/agent/store.ts';
 import { AgentQueue } from '../src/agent/queue.ts';
 import {
@@ -87,8 +87,8 @@ export function scripted(
   };
 }
 export const zeroFunding: Funding = {
-  reserve: async () => ({ reservationId: null, credits: 0, pricingRevision: '' }),
-  settle: async () => ({ credits: 0, status: 'zero_debit' }),
+  reserve: () => Promise.resolve({ reservationId: null, credits: 0, pricingRevision: '' }),
+  settle: () => Promise.resolve({ credits: 0, status: 'zero_debit' }),
 };
 export class AgentFixtures extends VisibilityFixtures {
   readonly agentDb: Database;
@@ -107,16 +107,16 @@ export class AgentFixtures extends VisibilityFixtures {
       catalog,
       registryVersion: 'test-tools-1',
       timeoutSeconds: 10,
-      admission: async () =>
-        ({
+      admission: () =>
+        Promise.resolve({
           funding_source: 'development',
           requested_model: 'test-model',
           route_id: null,
           connection_id: null,
           route_revision: null,
           credential_revision: null,
-        }) satisfies FundingIdentity,
-      context: async () => emptyPackage,
+        } satisfies FundingIdentity),
+      context: () => Promise.resolve(emptyPackage),
       ...overrides,
     });
   }
@@ -126,17 +126,17 @@ export class AgentFixtures extends VisibilityFixtures {
         name: 'read_evidence',
         description: 'Read persisted fixture evidence.',
         arguments: z.object({}).strict(),
-        read: async (received) => {
+        read: (received) => {
           if (received.projectId !== scope.projectId)
-            throw new Error('Wrong server-pinned project');
-          return {
+            return Promise.reject(new Error('Wrong server-pinned project'));
+          return Promise.resolve({
             state: 'available',
             data: { observed: 0 },
             artifactRefs: [
               { id: scope.projectId, record_uri: `citeladder://project/${scope.projectId}` },
             ],
             omissions: [],
-          };
+          });
         },
       },
     ]);
@@ -147,10 +147,12 @@ export class AgentFixtures extends VisibilityFixtures {
       tools: this.tools(scope),
       models: new ModelCalls(this.agentDb, zeroFunding),
       modelFor: () => model,
-      attachTarget: async (_db, _chat, _output, payload) => {
-        if (payload.target)
-          throw new Error('Target adapter is deliberately not configured in this fixture');
-      },
+      attachTarget: (_db, _chat, _output, payload) =>
+        payload.target
+          ? Promise.reject(
+              new Error('Target adapter is deliberately not configured in this fixture'),
+            )
+          : Promise.resolve(),
       ...overrides,
     });
   }
@@ -169,7 +171,7 @@ export class AgentFixtures extends VisibilityFixtures {
     const lease = await queue.start(claimed, 'test-worker');
     return { run, lease, queue };
   }
-  async run(id: string) {
+  run(id: string) {
     return this.agentDb
       .selectFrom('agent_runs')
       .selectAll()
@@ -177,13 +179,16 @@ export class AgentFixtures extends VisibilityFixtures {
       .executeTakeFirstOrThrow();
   }
   async cleanup() {
-    for (const scope of this.scopes) {
+    if (this.scopes.length)
       await this.agentDb
         .deleteFrom('agent_model_attempts')
-        .where('workspace_id', '=', scope.workspaceId)
+        .where(
+          'workspace_id',
+          'in',
+          this.scopes.map((scope) => scope.workspaceId),
+        )
         .execute();
-    }
     await super.cleanup();
   }
 }
-export { agentPolicy };
+export { agentPolicy } from '../src/agent/contracts.ts';

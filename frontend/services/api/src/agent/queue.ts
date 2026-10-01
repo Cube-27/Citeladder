@@ -55,8 +55,8 @@ export class AgentQueue {
     if (!Number.isFinite(leaseSeconds) || leaseSeconds <= 0)
       throw new TypeError('Invalid lease TTL');
   }
-  async claim(owner: string, workspaceIds: readonly string[]): Promise<Run | null> {
-    if (!workspaceIds.length) return null;
+  claim(owner: string, workspaceIds: readonly string[]): Promise<Run | null> {
+    if (!workspaceIds.length) return Promise.resolve(null);
     return this.db.transaction().execute(async (trx) => {
       const row = await trx
         .selectFrom('agent_runs as run')
@@ -90,6 +90,7 @@ export class AgentQueue {
           updated_at: sql<Date>`clock_timestamp()`,
         })
         .where('id', '=', row.id)
+        .where('workspace_id', '=', row.workspace_id)
         .returningAll()
         .executeTakeFirstOrThrow();
       await trx
@@ -188,10 +189,11 @@ export class AgentQueue {
         .skipLocked()
         .execute();
       for (const run of rows) {
-        await reconcile(trx, run);
+        // Ledger settlement and terminal writes share one ordered transaction.
+        await reconcile(trx, run); // NOSONAR
         const attempts = run.attempt_count;
         const exhausted = attempts >= run.max_attempts;
-        await trx
+        await trx // NOSONAR
           .updateTable('agent_runs')
           .set({
             attempt_count: attempts,

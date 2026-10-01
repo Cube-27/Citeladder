@@ -34,7 +34,7 @@ export class ModelCalls {
     this.db = db;
     this.funding = funding;
   }
-  async dispatch(lease: Lease, ordinal: number, model: AgentModel, request: ModelRequest) {
+  dispatch(lease: Lease, ordinal: number, model: AgentModel, request: ModelRequest) {
     return this.db.transaction().execute(async (trx) => {
       const run = await lockRun(trx, lease);
       if (!run.user_id) throw new AgentError('access_revoked');
@@ -229,7 +229,8 @@ export class ModelCalls {
         usage_complete: false,
         settled_at: new Date(),
       };
-      const settled = await this.funding.settle(db, updated, null);
+      // Ledger settlement and its attempt write share one ordered transaction.
+      const settled = await this.funding.settle(db, updated, null); // NOSONAR
       if (
         !Number.isSafeInteger(settled.credits) ||
         settled.credits < 0 ||
@@ -237,7 +238,7 @@ export class ModelCalls {
         (attempt.funding_source !== 'platform' && settled.credits !== 0)
       )
         throw new AgentError('funding_unavailable');
-      await db
+      await db // NOSONAR
         .updateTable('agent_model_attempts')
         .set({
           outcome: updated.outcome,
@@ -275,7 +276,8 @@ export class ModelCalls {
         .forUpdate()
         .skipLocked()
         .execute();
-      for (const run of runs) await this.reconcile(trx, run);
+      // One transaction connection: settlements run in order.
+      for (const run of runs) await this.reconcile(trx, run); // NOSONAR
       return runs.length;
     });
   }

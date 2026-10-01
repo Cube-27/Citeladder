@@ -21,12 +21,31 @@ import { lockRun, terminalize } from './queue.ts';
 import { getChat, appendMessage } from './store.ts';
 import { refused, ToolRegistry, type ToolOutcome } from './tools.ts';
 
+const TRAILING_PUNCTUATION = new Set(['.', ',', ';', ':', '!', '?']);
 export function stripUnverifiedRefs(text: string, allowed: ReadonlySet<string>) {
   return text.replace(/citeladder:\/\/[^\s<>[\]()"']+/gu, (raw) => {
-    const ref = raw.replace(/[.,;:!?]+$/u, '');
-    return allowed.has(ref) ? raw : `[unverified reference]${raw.slice(ref.length)}`;
+    let end = raw.length;
+    while (end > 0 && TRAILING_PUNCTUATION.has(raw.charAt(end - 1))) end--;
+    const ref = raw.slice(0, end);
+    return allowed.has(ref) ? raw : `[unverified reference]${raw.slice(end)}`;
   });
 }
+function failureCode(error: unknown) {
+  if (error instanceof AgentError) return error.code;
+  if (error instanceof ApiError && [403, 404].includes(error.status)) return 'access_revoked';
+  return 'provider_error';
+}
+type Budget = ReturnType<typeof budgetSchema.parse>;
+type StepRecord = { kind: string; skill_id?: string; tool?: string; status?: string };
+type TurnState = {
+  skill: Skill | undefined;
+  skillSource: string | null;
+  allowed: Set<string>;
+  steps: StepRecord[];
+  transcript: string[];
+  toolsUsed: number;
+  errors: number;
+};
 export function bounded(text: string, limit: number, marker: string) {
   return text.length <= limit
     ? text
@@ -48,7 +67,7 @@ export class AgentRuntime {
     this.db = db;
     this.deps = deps;
   }
-  private async load(lease: Lease) {
+  private load(lease: Lease) {
     return this.db.transaction().execute(async (trx) => {
       const run = await lockRun(trx, lease);
       if (!run.user_id) throw new AgentError('access_revoked');
@@ -101,97 +120,113 @@ export class AgentRuntime {
     } catch (error) {
       if (error instanceof AgentError && error.code === 'lease') return;
       if (error instanceof AgentError && error.retryable) throw error;
-      const code =
-        error instanceof AgentError
-          ? error.code
-          : error instanceof ApiError && [403, 404].includes(error.status)
-            ? 'access_revoked'
-            : 'provider_error';
-      await this.fail(lease, code);
+      await this.fail(lease, failureCode(error));
     }
   }
   private async turn(lease: Lease) {
     const turn = await this.load(lease);
     const budget = budgetSchema.parse(turn.run.budget);
     const model = this.deps.modelFor(turn.run);
-    let skill = this.deps.catalog.skills.get(
-      turn.run.requested_skill_id ?? turn.current.output?.skill_id ?? '',
-    );
-    if (turn.run.requested_skill_id && !skill) throw new AgentError('skills_changed');
-    let skillSource = turn.run.requested_skill_source ?? (skill ? 'chat' : null);
-    const allowed = contextCitations(turn.manifest);
-    const steps: { kind: string; skill_id?: string; tool?: string; status?: string }[] = [];
-    const transcript: string[] = [];
-    let toolsUsed = 0;
-    let errors = 0;
+    const state = this.initialState(turn);
     for (let ordinal = 1; ordinal <= budget.max_steps; ordinal++) {
       const request = this.prompt(
         turn,
-        skill,
-        transcript,
+        state.skill,
+        state.transcript,
         budget.max_steps - ordinal + 1,
-        budget.max_tool_calls - toolsUsed,
+        budget.max_tool_calls - state.toolsUsed,
       );
       const result = await this.deps.models.call(lease, ordinal, model, request);
-      let step: Step;
-      try {
-        step = parseStep(result.content, this.deps.catalog.skills);
-      } catch {
-        errors++;
-        if (errors >= agentPolicy.max_protocol_errors) throw new AgentError('protocol_violation');
-        transcript.push('Protocol error: return a valid structured step.');
-        continue;
-      }
-      if (step.action === 'select_skill') {
-        const selected = this.deps.catalog.skills.get(step.skillId);
-        if (!selected) throw new AgentError('protocol_violation');
-        if (!skill) {
-          skill = selected;
-          skillSource = 'model';
-          steps.push({ kind: 'skill', skill_id: skill.id });
-        }
-        transcript.push(`Selected skill: ${skill.id}`);
-      } else if (step.action === 'call_tool') {
-        const refusal = !this.deps.tools.has(step.tool)
-          ? 'unknown_tool'
-          : ordinal === budget.max_steps
-            ? 'last_step_must_respond'
-            : toolsUsed >= budget.max_tool_calls
-              ? 'tool_budget_spent'
-              : null;
-        const started = performance.now();
-        // Even reads require a current lease before starting; the result is fenced again.
-        await this.db.transaction().execute((trx) => lockRun(trx, lease));
-        const outcome = refusal
-          ? refused(refusal)
-          : await this.deps.tools.execute(
-              this.db,
-              turn.scope,
-              step.tool,
-              step.arguments,
-              AbortSignal.timeout(budget.execution_timeout_seconds * 1000),
-            );
-        if (!refusal) toolsUsed++;
-        await this.recordTool(
-          lease,
-          turn.scope,
-          ordinal,
-          step,
-          outcome,
-          Math.round(performance.now() - started),
-        );
-        outcome.refs.forEach((ref) => {
-          allowed.add(ref.id);
-          if (ref.record_uri) allowed.add(ref.record_uri);
-        });
-        steps.push({ kind: 'tool', tool: step.tool, status: outcome.status });
-        transcript.push(`Tool ${step.tool}: ${outcome.status}\n${outcome.text}`);
-      } else {
-        await this.finish(lease, turn, step, skill, skillSource, allowed, steps);
+      const step = this.parse(result.content, state);
+      if (step?.action === 'respond') {
+        await this.finish(lease, turn, step, state);
         return;
       }
+      if (step?.action === 'select_skill') this.selectSkill(step.skillId, state);
+      else if (step?.action === 'call_tool')
+        await this.callTool(lease, turn.scope, ordinal, step, budget, state);
     }
     await this.fail(lease, 'stopped_at_limit', true);
+  }
+  private initialState(turn: Awaited<ReturnType<AgentRuntime['load']>>): TurnState {
+    const skill = this.deps.catalog.skills.get(
+      turn.run.requested_skill_id ?? turn.current.output?.skill_id ?? '',
+    );
+    if (turn.run.requested_skill_id && !skill) throw new AgentError('skills_changed');
+    return {
+      skill,
+      skillSource: turn.run.requested_skill_source ?? (skill ? 'chat' : null),
+      allowed: contextCitations(turn.manifest),
+      steps: [],
+      transcript: [],
+      toolsUsed: 0,
+      errors: 0,
+    };
+  }
+  /** Returns null for a recoverable protocol error, which still spends its step. */
+  private parse(content: string, state: TurnState): Step | null {
+    try {
+      return parseStep(content, this.deps.catalog.skills);
+    } catch {
+      state.errors++;
+      if (state.errors >= agentPolicy.max_protocol_errors)
+        throw new AgentError('protocol_violation');
+      state.transcript.push('Protocol error: return a valid structured step.');
+      return null;
+    }
+  }
+  private selectSkill(skillId: string, state: TurnState) {
+    const selected = this.deps.catalog.skills.get(skillId);
+    if (!selected) throw new AgentError('protocol_violation');
+    if (!state.skill) {
+      state.skill = selected;
+      state.skillSource = 'model';
+      state.steps.push({ kind: 'skill', skill_id: selected.id });
+    }
+    state.transcript.push(`Selected skill: ${state.skill.id}`);
+  }
+  private refusal(tool: string, ordinal: number, budget: Budget, toolsUsed: number) {
+    if (!this.deps.tools.has(tool)) return 'unknown_tool';
+    if (ordinal === budget.max_steps) return 'last_step_must_respond';
+    if (toolsUsed >= budget.max_tool_calls) return 'tool_budget_spent';
+    return null;
+  }
+  private async callTool(
+    lease: Lease,
+    scope: Scope,
+    ordinal: number,
+    step: Extract<Step, { action: 'call_tool' }>,
+    budget: Budget,
+    state: TurnState,
+  ) {
+    const refusal = this.refusal(step.tool, ordinal, budget, state.toolsUsed);
+    const started = performance.now();
+    // Even reads require a current lease before starting; the result is fenced again.
+    await this.db.transaction().execute((trx) => lockRun(trx, lease));
+    const outcome = refusal
+      ? refused(refusal)
+      : await this.deps.tools.execute(
+          this.db,
+          scope,
+          step.tool,
+          step.arguments,
+          AbortSignal.timeout(budget.execution_timeout_seconds * 1000),
+        );
+    if (!refusal) state.toolsUsed++;
+    await this.recordTool(
+      lease,
+      scope,
+      ordinal,
+      step,
+      outcome,
+      Math.round(performance.now() - started),
+    );
+    outcome.refs.forEach((ref) => {
+      state.allowed.add(ref.id);
+      if (ref.record_uri) state.allowed.add(ref.record_uri);
+    });
+    state.steps.push({ kind: 'tool', tool: step.tool, status: outcome.status });
+    state.transcript.push(`Tool ${step.tool}: ${outcome.status}\n${outcome.text}`);
   }
   private prompt(
     turn: Awaited<ReturnType<AgentRuntime['load']>>,
@@ -223,12 +258,13 @@ export class AgentRuntime {
     // Preserve the latest instruction and freshest steps when working context is capped.
     const request = `\nUSER REQUEST\n${turn.request}`;
     const rawSteps = transcript.join('\n\n');
-    const stepSpace = agentPolicy.transcript_max_chars - request.length;
+    const marker = agentPolicy.transcript_truncation_marker;
+    const stepSpace = Math.max(0, agentPolicy.transcript_max_chars - request.length);
+    const keep = Math.max(0, stepSpace - marker.length);
     const recent =
       rawSteps.length <= stepSpace
         ? rawSteps
-        : agentPolicy.transcript_truncation_marker +
-          rawSteps.slice(-(stepSpace - agentPolicy.transcript_truncation_marker.length));
+        : marker.slice(0, stepSpace) + rawSteps.slice(rawSteps.length - keep);
     const space = Math.max(0, agentPolicy.transcript_max_chars - request.length - recent.length);
     const user =
       bounded(context.join('\n\n'), space, agentPolicy.context_truncation_marker) +
@@ -274,10 +310,7 @@ export class AgentRuntime {
     lease: Lease,
     turn: Awaited<ReturnType<AgentRuntime['load']>>,
     response: Extract<Step, { action: 'respond' }>,
-    skill: Skill | undefined,
-    source: string | null,
-    allowed: Set<string>,
-    steps: { kind: string; skill_id?: string; tool?: string; status?: string }[],
+    { skill, skillSource: source, allowed, steps }: TurnState,
   ) {
     return this.db.transaction().execute(async (trx) => {
       const run = await lockRun(trx, lease);

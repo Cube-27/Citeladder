@@ -123,6 +123,35 @@ export function fingerprint(value: unknown) {
     .digest('hex');
 }
 
+function requestIdentity(scope: Scope, input: TurnInput, mode: string, approvalRevision?: string) {
+  if (approvalRevision)
+    return { op: 'approve_outline', chat: input.chatId, revision: approvalRevision, mode };
+  if (input.chatId)
+    return {
+      op: 'send_message',
+      chat: input.chatId,
+      content: input.message,
+      mode,
+      skill: input.skillId ?? null,
+      mentions: input.mentionIds ?? [],
+    };
+  return {
+    op: 'create_chat',
+    project: scope.projectId,
+    content: input.message,
+    mode,
+    skill: input.skillId ?? null,
+    action: input.actionId ?? null,
+    context: input.refs ?? {},
+    mentions: input.mentionIds ?? [],
+  };
+}
+function skillSource(explicit: string | undefined, pinned: string | null, id: string | null) {
+  if (explicit) return 'user';
+  if (pinned) return 'chat';
+  return id ? 'action' : null;
+}
+
 export class AgentStore {
   readonly db: Database;
   readonly dependencies: {
@@ -150,35 +179,12 @@ export class AgentStore {
     const input = { ...raw, message: messageSchema.parse(raw.message) };
     z.string().trim().min(1).max(agentPolicy.idempotency_key_max_chars).parse(input.key);
     const mode = approvalRevision ? 'draft_from_outline' : 'turn';
-    const hash = fingerprint(
-      approvalRevision
-        ? { op: 'approve_outline', chat: input.chatId, revision: approvalRevision, mode }
-        : input.chatId
-          ? {
-              op: 'send_message',
-              chat: input.chatId,
-              content: input.message,
-              mode,
-              skill: input.skillId ?? null,
-              mentions: input.mentionIds ?? [],
-            }
-          : {
-              op: 'create_chat',
-              project: scope.projectId,
-              content: input.message,
-              mode,
-              skill: input.skillId ?? null,
-              action: input.actionId ?? null,
-              context: input.refs ?? {},
-              mentions: input.mentionIds ?? [],
-            },
-    );
+    const hash = fingerprint(requestIdentity(scope, input, mode, approvalRevision));
+    const lockKey = 'agent-enqueue:' + scope.workspaceId;
     return this.db.transaction().execute(async (trx) => {
       await authorize(trx, scope);
       // Serialize workspace keys before chat locks: identical races share the winner.
-      await sql`select pg_advisory_xact_lock(hashtextextended(${`agent-enqueue:${scope.workspaceId}`}, 0))`.execute(
-        trx,
-      );
+      await sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`.execute(trx);
       const replay = await trx
         .selectFrom('agent_runs')
         .selectAll()
@@ -307,7 +313,7 @@ export class AgentStore {
       .orderBy('revision.number', 'desc')
       .limit(1)
       .executeTakeFirst();
-    if (!latest || latest.id !== revisionId || latest.phase !== 'outline')
+    if (latest?.id !== revisionId || latest.phase !== 'outline')
       throw new AgentError('agent_outline_not_approvable');
     await db
       .updateTable('agent_output_revisions')
@@ -365,7 +371,7 @@ export class AgentStore {
       explicit ??
       chat.pinned_skill_id ??
       (actionSkill && catalog.has(actionSkill) ? actionSkill : null);
-    let source = explicit ? 'user' : chat.pinned_skill_id ? 'chat' : id ? 'action' : null;
+    let source = skillSource(explicit, chat.pinned_skill_id, id);
     if (id && !catalog.has(id)) throw new AgentError('protocol_violation');
     const output = await db
       .selectFrom('agent_outputs')
