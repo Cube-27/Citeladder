@@ -1,0 +1,75 @@
+import { z } from 'zod';
+
+/** An execution consumes frozen request policy; it never supplies a policy default. */
+export const answerRequestSchema = z.object({
+  logical_engine: z.enum(['chatgpt', 'gemini', 'claude']),
+  transport_provider: z.enum(['openai', 'google', 'anthropic']),
+  transport_model: z.string().min(1),
+  prompt: z.string().min(1),
+  system_instruction: z.string(),
+  timeout_seconds: z.number().positive(),
+  max_output_tokens: z.number().int().positive(),
+  retrieval_enabled: z.boolean(),
+  reasoning_effort: z.string(),
+  country_code: z.string(),
+  anthropic_max_uses: z.number().int().nonnegative(),
+});
+export type AnswerRequest = z.infer<typeof answerRequestSchema>;
+export type FinishReason =
+  | 'stop'
+  | 'length'
+  | 'tool_error'
+  | 'content_filter'
+  | 'cancelled'
+  | 'error'
+  | 'unknown';
+export type Usage = {
+  uncached_input_tokens: number | null;
+  cached_input_tokens: number | null;
+  output_tokens: number | null;
+  reasoning_tokens: number | null;
+  total_tokens: number | null;
+  web_search_requests: number | null;
+  provider_cost_microusd: number | null;
+};
+export type SearchEvent = {
+  sequence: number;
+  query: string;
+  call_id: string;
+  call_sequence: number;
+  query_sequence: number;
+};
+export type Citation = {
+  ordinal: number;
+  url: string;
+  title: string;
+  domain: string;
+  start_index: number | null;
+  end_index: number | null;
+  cited_text: string;
+};
+export type Answer = Pick<
+  AnswerRequest,
+  'logical_engine' | 'transport_provider' | 'transport_model'
+> & {
+  answer_text: string;
+  search_used: boolean;
+  search_events: SearchEvent[];
+  citations: Citation[];
+  finish_reason: FinishReason;
+  raw_finish_reason: string;
+  normalized_usage: Usage;
+  provider_metadata: Record<string, unknown>;
+  latency_ms: number;
+};
+export class ProviderError extends Error {
+  readonly code: string;
+  readonly retryable: boolean;
+  readonly retryAfterSeconds: number | undefined;
+  constructor(code: string, retryable = false, retryAfterSeconds?: number) {
+    super(`Provider execution failed: ${code}`);
+    this.code = code;
+    this.retryable = retryable;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
