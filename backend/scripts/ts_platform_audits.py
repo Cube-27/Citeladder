@@ -5,6 +5,7 @@ from app.core.config import (
     analysis,
     audits,
     commerce_catalog,
+    observed_competitors,
     projects,
     provider_catalog,
     source_pages,
@@ -29,6 +30,11 @@ def audit_policy(setting):
             "version": source_pages.SOURCE_PAGE_IDENTITY_VERSION,
             "verbatim": source_pages.URL_IDENTITY_VERBATIM,
             "unresolved": source_pages.URL_IDENTITY_UNRESOLVED,
+        },
+        "observed_competitors": {
+            name.lower(): sorted(value) if isinstance(value, frozenset) else value
+            for name, value in vars(observed_competitors).items()
+            if name.isupper() and isinstance(value, (str, int, frozenset))
         },
         "settings": {
             name: setting(name, audits.AuditSettings)

@@ -14,6 +14,8 @@ export type ScoringConfig = {
   brandName: string;
   brandAliases: string[];
   productsServices: string[];
+  provider: string;
+  model: string;
   ownedDomains: unknown[];
   unintendedDomains: unknown[];
   competitors: CompetitorConfig[];
@@ -55,6 +57,8 @@ export function scoringConfig(configuration: unknown): ScoringConfig {
     brandName: scalarText(config.brand_name),
     brandAliases: truthyStrings([config.brand_name, ...listOf(config.brand_aliases)]),
     productsServices: truthyStrings(listOf(config.products_services)),
+    provider: scalarText(config.provider),
+    model: scalarText(config.model),
     ownedDomains: listOf(config.owned_domains),
     unintendedDomains: listOf(config.unintended_domains),
     competitors: competitorConfigs(config),
@@ -76,7 +80,7 @@ function urlDomain(value: unknown): string {
 }
 
 /** Publisher identity from the strongest URL evidence the citation carries. */
-function citationDomain(citation: JsonObject): string {
+export function citationDomain(citation: JsonObject): string {
   const resolved = urlDomain(citation.resolved_url);
   if (resolved) return resolved;
   const annotationUrl = citation.redirect_url || citation.url;

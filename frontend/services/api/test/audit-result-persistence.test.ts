@@ -19,6 +19,7 @@ import { issueBundle } from '../src/entitlements/grants.ts';
 import { reserveUsage, ledgerBalances } from '../src/entitlements/ledger.ts';
 import { record } from '../src/db/json.ts';
 import { analyzeExecution } from '../src/analysis/execution.ts';
+import { finalizeAudit } from '../src/analysis/finalization.ts';
 
 const db = testDatabase(),
   fixtures = new VisibilityFixtures(db),
@@ -315,5 +316,63 @@ describe('atomic audit execution persistence', () => {
       consumed: 0,
       reserved: 0,
     });
+  });
+  it('finalizes actual slot coverage once and retains source IDs in run and prompt metrics', async () => {
+    const t = await seed();
+    await persistExecutionSuccess(
+      db,
+      t.context.task,
+      'worker',
+      { ...result, transport_model: t.context.task.transport_model },
+      analyzeExecution,
+    );
+    expect(await finalizeAudit(db, t.workspaceId, t.auditId, async () => {})).toBeNull();
+    // Other frozen repetitions failed; they remain in the requested denominator.
+    await db
+      .updateTable('audit_tasks')
+      .set({ status: 'failed', error_code: 'timeout', completed_at: new Date() })
+      .where('audit_id', '=', t.auditId)
+      .where('id', '!=', t.context.task.id)
+      .execute();
+    const metric = await finalizeAudit(db, t.workspaceId, t.auditId, async () => {});
+    expect(metric).toMatchObject({ total_completed: 1, total_failed: 2 });
+    expect(record(record(metric!.metrics).coverage)).toEqual({
+      requested: 3,
+      completed: 1,
+      failed: 2,
+      not_run: 0,
+      unavailable: 0,
+      rate: 1 / 3,
+    });
+    const analysis = await db
+      .selectFrom('response_analyses')
+      .selectAll()
+      .where('task_id', '=', t.context.task.id)
+      .executeTakeFirstOrThrow();
+    expect(metric!.source_analysis_ids).toEqual([analysis.id]);
+    expect(metric!.source_artifact_ids).toEqual([analysis.artifact_id]);
+    const prompt = await db
+      .selectFrom('prompt_metric_snapshots')
+      .selectAll()
+      .where('audit_id', '=', t.auditId)
+      .executeTakeFirstOrThrow();
+    expect(prompt).toMatchObject({
+      evidence_coverage: 0.3333,
+      previous_score: null,
+      decline_confirmed: false,
+      source_artifact_ids: [analysis.artifact_id],
+    });
+    expect(
+      (
+        await db
+          .selectFrom('audits')
+          .select('status')
+          .where('id', '=', t.auditId)
+          .executeTakeFirstOrThrow()
+      ).status,
+    ).toBe('partially_completed');
+    expect(await finalizeAudit(db, t.workspaceId, t.auditId, async () => {})).toBeNull();
+    const foreign = await auditTenant(db, fixtures);
+    expect(await finalizeAudit(db, foreign.workspaceId, t.auditId, async () => {})).toBeNull();
   });
 });

@@ -2907,6 +2907,29 @@
       "verbatim": "verbatim",
       "unresolved": "unresolved"
     },
+    "observed_competitors": {
+      "analyzer_version": "observed-competitor-v1",
+      "min_distinct_prompts": 2,
+      "min_distinct_engines": 2,
+      "max_candidates_per_audit": 20,
+      "excluded_research_domains": [
+        "facebook.com",
+        "instagram.com",
+        "linkedin.com",
+        "reddit.com",
+        "wikipedia.org",
+        "x.com",
+        "youtube.com"
+      ],
+      "status_pending": "pending",
+      "status_accepted": "accepted",
+      "status_rejected": "rejected",
+      "statuses": [
+        "accepted",
+        "pending",
+        "rejected"
+      ]
+    },
     "settings": {
       "max_tasks_per_audit": {
         "env": [
