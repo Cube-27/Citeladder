@@ -34,131 +34,143 @@ export function createAudit(
   runtime: AuditRuntime = auditRuntime(),
   at = new Date(),
 ) {
+  return db
+    .transaction()
+    .execute((trx) => createAuditInTransaction(trx, workspaceId, request, launch, runtime, at));
+}
+
+/** The scheduler holds its scoped occurrence row; planner and cadence advancement share that transaction. */
+export async function createAuditInTransaction(
+  trx: Database,
+  workspaceId: string,
+  request: AuditInput,
+  launch: AuditLaunch,
+  runtime: AuditRuntime,
+  at: Date,
+) {
   const input = auditInput.parse(request);
   const trigger = (launch.trigger ?? 'manual').trim().toLowerCase();
-  return db.transaction().execute(async (trx) => {
-    await subjectXactLock(trx, `audit-enqueue:${workspaceId}`);
-    if (launch.scheduleId) {
-      if (!launch.scheduledFor || trigger !== 'scheduled')
-        throw new ApiError(400, 'Scheduled launch requires its occurrence');
-      const schedule = await trx
-        .selectFrom('audit_schedules')
-        .select('id')
-        .where('id', '=', launch.scheduleId)
-        .where('workspace_id', '=', workspaceId)
-        .where('project_id', '=', input.project_id)
-        .executeTakeFirst();
-      if (!schedule) throw notFound('Audit schedule');
-      const prior = await trx
-        .selectFrom('audits')
-        .select('id')
-        .where('workspace_id', '=', workspaceId)
-        .where('project_id', '=', input.project_id)
-        .where('schedule_id', '=', launch.scheduleId)
-        .where('scheduled_for', '=', launch.scheduledFor)
-        .executeTakeFirst();
-      if (prior) return prior.id;
-    } else if (launch.scheduledFor)
-      throw new ApiError(400, 'Scheduled occurrence requires its schedule');
-    const plan = await prepareAudit(
-      trx,
-      workspaceId,
-      input,
-      runtime.audits,
-      runtime.providers,
-      trigger,
-      runtime.search,
-      at,
-    );
-    const slots = auditSlots(
-      plan.prompts.length,
-      plan.routes.map((route) => route.logical_engine),
-      plan.repetitions,
-      plan.seed,
-    );
-    await reserveAuditCapacity(trx, workspaceId, slots.length, runtime, at);
-    const funded = await admitAudit(
-      trx,
-      workspaceId,
-      plan,
-      input.credential_mode === 'funded',
-      trigger,
-      runtime,
-      at,
-    );
-    const id = randomUUID();
-    await trx
-      .insertInto('audits')
-      .values({
-        id,
-        workspace_id: workspaceId,
-        project_id: input.project_id,
-        schedule_id: launch.scheduleId ?? null,
-        scheduled_for: launch.scheduledFor ?? null,
-        status: 'draft',
-        trigger,
-        benchmark_mode: plan.mode,
-        audit_scope: input.audit_scope,
-        system_instruction: plan.systemInstruction,
-        repetitions: plan.repetitions,
-        random_seed: plan.seed,
-        configuration: JSON.stringify(plan.configuration),
-        requested_count: slots.length,
-        completed_count: 0,
-        failed_count: 0,
-        error_message: '',
-        funding_account_id: funded?.accountId ?? null,
-        funded_budget_period_start: funded?.month ?? null,
-        funded_reserved_cost_microusd: funded?.cost ?? null,
-        created_at: at,
-        updated_at: at,
-        started_at: null,
-        completed_at: null,
-        analyzer_version: '',
-        summary: null,
-        parent_audit_id: null,
-        repair_key: null,
-      })
-      .execute();
-    const snapshots = await persistSnapshots(trx, id, plan, at);
-    const provenance = await persistTasks(
-      trx,
-      { workspaceId, projectId: input.project_id },
-      id,
-      plan,
-      slots,
-      snapshots,
-      funded,
-      runtime,
-      at,
-      launch.devTestLogin ?? false,
-    );
-    await trx
-      .updateTable('audits')
-      .set({ configuration: JSON.stringify({ ...plan.configuration, ...provenance }) })
-      .where('id', '=', id)
+  await subjectXactLock(trx, `audit-enqueue:${workspaceId}`);
+  if (launch.scheduleId) {
+    if (!launch.scheduledFor || trigger !== 'scheduled')
+      throw new ApiError(400, 'Scheduled launch requires its occurrence');
+    const schedule = await trx
+      .selectFrom('audit_schedules')
+      .select('id')
+      .where('id', '=', launch.scheduleId)
       .where('workspace_id', '=', workspaceId)
-      .execute();
-    await transitionAudit(trx, workspaceId, id, 'validating', at, 'audit validating');
-    await transitionAudit(trx, workspaceId, id, 'queued', at, 'audit queued');
-    await auditEvent(
-      trx,
+      .where('project_id', '=', input.project_id)
+      .executeTakeFirst();
+    if (!schedule) throw notFound('Audit schedule');
+    const prior = await trx
+      .selectFrom('audits')
+      .select('id')
+      .where('workspace_id', '=', workspaceId)
+      .where('project_id', '=', input.project_id)
+      .where('schedule_id', '=', launch.scheduleId)
+      .where('scheduled_for', '=', launch.scheduledFor)
+      .executeTakeFirst();
+    if (prior) return prior.id;
+  } else if (launch.scheduledFor)
+    throw new ApiError(400, 'Scheduled occurrence requires its schedule');
+  const plan = await prepareAudit(
+    trx,
+    workspaceId,
+    input,
+    runtime.audits,
+    runtime.providers,
+    trigger,
+    runtime.search,
+    at,
+  );
+  const slots = auditSlots(
+    plan.prompts.length,
+    plan.routes.map((route) => route.logical_engine),
+    plan.repetitions,
+    plan.seed,
+  );
+  await reserveAuditCapacity(trx, workspaceId, slots.length, runtime, at);
+  const funded = await admitAudit(
+    trx,
+    workspaceId,
+    plan,
+    input.credential_mode === 'funded',
+    trigger,
+    runtime,
+    at,
+  );
+  const id = randomUUID();
+  await trx
+    .insertInto('audits')
+    .values({
       id,
-      auditPolicy.constants.event_audit_created,
-      'audit created',
-      { requested_count: slots.length, engines: plan.configuration.engines },
-      at,
-    );
-    await auditEvent(
-      trx,
-      id,
-      auditPolicy.constants.event_audit_queued,
-      'audit queued',
-      { task_count: slots.length },
-      at,
-    );
-    return id;
-  });
+      workspace_id: workspaceId,
+      project_id: input.project_id,
+      schedule_id: launch.scheduleId ?? null,
+      scheduled_for: launch.scheduledFor ?? null,
+      status: 'draft',
+      trigger,
+      benchmark_mode: plan.mode,
+      audit_scope: input.audit_scope,
+      system_instruction: plan.systemInstruction,
+      repetitions: plan.repetitions,
+      random_seed: plan.seed,
+      configuration: JSON.stringify(plan.configuration),
+      requested_count: slots.length,
+      completed_count: 0,
+      failed_count: 0,
+      error_message: '',
+      funding_account_id: funded?.accountId ?? null,
+      funded_budget_period_start: funded?.month ?? null,
+      funded_reserved_cost_microusd: funded?.cost ?? null,
+      created_at: at,
+      updated_at: at,
+      started_at: null,
+      completed_at: null,
+      analyzer_version: '',
+      summary: null,
+      parent_audit_id: null,
+      repair_key: null,
+    })
+    .execute();
+  const snapshots = await persistSnapshots(trx, id, plan, at);
+  const provenance = await persistTasks(
+    trx,
+    { workspaceId, projectId: input.project_id },
+    id,
+    plan,
+    slots,
+    snapshots,
+    funded,
+    runtime,
+    at,
+    launch.devTestLogin ?? false,
+  );
+  await trx
+    .updateTable('audits')
+    .set({ configuration: JSON.stringify({ ...plan.configuration, ...provenance }) })
+    .where('id', '=', id)
+    .where('workspace_id', '=', workspaceId)
+    .execute();
+  await transitionAudit(trx, workspaceId, id, 'validating', at, 'audit validating');
+  await transitionAudit(trx, workspaceId, id, 'queued', at, 'audit queued');
+  await auditEvent(
+    trx,
+    id,
+    auditPolicy.constants.event_audit_created,
+    'audit created',
+    { requested_count: slots.length, engines: plan.configuration.engines },
+    at,
+  );
+  await auditEvent(
+    trx,
+    id,
+    auditPolicy.constants.event_audit_queued,
+    'audit queued',
+    { task_count: slots.length },
+    at,
+  );
+  return id;
 }
 
 async function persistSnapshots(db: Database, auditId: string, plan: FrozenAudit, at: Date) {

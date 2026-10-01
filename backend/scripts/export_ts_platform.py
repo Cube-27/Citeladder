@@ -372,6 +372,14 @@ def build_config() -> dict[str, Any]:
             "prompt_set_name": prompts_config.ONBOARDING_PROMPT_SET_NAME,
         },
         "audit_schedules": {
+            "settings": {
+                name: _setting(name, audit_schedule_config.AuditScheduleSettings)
+                for name in audit_schedule_config.AuditScheduleSettings.model_fields
+                if name != "heartbeat_path"
+            },
+            "heartbeat_path": _setting(
+                "heartbeat_path", audit_schedule_config.AuditScheduleSettings
+            ),
             "cadences": sorted(audit_schedule_config.AUDIT_SCHEDULE_CADENCES),
             "default_timezone": audit_schedule_config.DEFAULT_AUDIT_SCHEDULE_TIMEZONE,
             "selectable_engines": sorted(SELECTABLE_ENGINES),

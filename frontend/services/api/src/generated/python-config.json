@@ -5043,6 +5043,71 @@
     "prompt_set_name": "AI Visibility"
   },
   "audit_schedules": {
+    "settings": {
+      "poll_interval_seconds": {
+        "env": [
+          "AUDIT_SCHEDULE_POLL_INTERVAL_SECONDS"
+        ],
+        "type": "float",
+        "default": 30.0,
+        "exclusive_minimum": 0
+      },
+      "lease_ttl_seconds": {
+        "env": [
+          "AUDIT_SCHEDULE_LEASE_TTL_SECONDS"
+        ],
+        "type": "float",
+        "default": 120.0,
+        "exclusive_minimum": 0
+      },
+      "claim_batch_size": {
+        "env": [
+          "AUDIT_SCHEDULE_CLAIM_BATCH_SIZE"
+        ],
+        "type": "int",
+        "default": 20,
+        "exclusive_minimum": 0
+      },
+      "min_interval_minutes": {
+        "env": [
+          "AUDIT_SCHEDULE_MIN_INTERVAL_MINUTES"
+        ],
+        "type": "int",
+        "default": 5,
+        "exclusive_minimum": 0
+      },
+      "failure_retry_seconds": {
+        "env": [
+          "AUDIT_SCHEDULE_FAILURE_RETRY_SECONDS"
+        ],
+        "type": "int",
+        "default": 300,
+        "exclusive_minimum": 0
+      },
+      "max_consecutive_failures": {
+        "env": [
+          "AUDIT_SCHEDULE_MAX_CONSECUTIVE_FAILURES"
+        ],
+        "type": "int",
+        "default": 5,
+        "exclusive_minimum": 0
+      },
+      "health_stale_seconds": {
+        "env": [
+          "AUDIT_SCHEDULE_HEALTH_STALE_SECONDS"
+        ],
+        "type": "int",
+        "default": 180,
+        "exclusive_minimum": 0
+      }
+    },
+    "heartbeat_path": {
+      "env": [
+        "AUDIT_SCHEDULE_HEARTBEAT_PATH"
+      ],
+      "type": "str",
+      "default": ".runtime/audit-scheduler-heartbeat"
+    },
     "cadences": [
       "daily",
       "every_n_minutes",
