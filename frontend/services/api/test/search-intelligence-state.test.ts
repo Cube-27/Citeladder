@@ -193,6 +193,16 @@ describe('durable paid acquisition boundaries', () => {
       uncertain_calls: 1,
     });
     expect(await state.calls().executeTakeFirst()).toMatchObject({ status: 'uncertain' });
+    await t.state.saveResponse(prep.call.id, response);
+    expect(await state.calls().executeTakeFirst()).toMatchObject({
+      status: 'uncertain',
+      response_sha256: response.hash,
+      provider_reported_cost_usd: '0.01200000',
+    });
+    expect(await state.run().executeTakeFirst()).toMatchObject({
+      status: 'uncertain',
+      provider_reported_cost_usd: '0.01200000',
+    });
   });
   it('appends bounded explicit rate-limit retries and stops when cost is unavailable', async () => {
     const t = await run(),

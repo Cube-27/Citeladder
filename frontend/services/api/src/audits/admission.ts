@@ -9,12 +9,19 @@ import { approvedEndpoint } from '../providers/connections.ts';
 import type { FrozenRoute, prepareAudit } from './freeze.ts';
 import { auditPolicy, type AuditRuntime } from './config.ts';
 import { expectedCost } from './costs.ts';
+import { getLogger } from '../logging.ts';
 
 export type FrozenAudit = Awaited<ReturnType<typeof prepareAudit>>;
-const unresolved = () =>
-  new ApiError(403, 'Billing entitlement is unavailable for this workspace', {
+const unresolved = (workspaceId: string, accountId?: string) => {
+  getLogger('api.entitlements').info(policy.billing.contracts.telemetry_entitlement_unresolved, {
+    workspace_id: workspaceId,
+    account_id: accountId ?? null,
+    operation: 'audit.admission',
+  });
+  return new ApiError(403, 'Billing entitlement is unavailable for this workspace', {
     code: 'entitlement_unresolved',
   });
+};
 export const unavailableCredential = () =>
   new ApiError(403, 'No executable credential available for this task', {
     code: 'execution_credentials_unavailable',
@@ -67,13 +74,13 @@ export async function admitAudit(
     .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
   if (!account) {
-    if (funded) throw unresolved();
+    if (funded) throw unresolved(workspaceId);
     return null;
   }
   // The account lock follows the workspace lock and serializes rate and budget admission.
   await advisoryXactLock(db, policy.entitlements.capacity_lock, account.id);
   const state = await accountState(db, workspaceId, account.id, at);
-  if (state.error) throw unresolved();
+  if (state.error) throw unresolved(workspaceId, account.id);
   if (trigger === 'manual' && state.values.has('manual_runs_per_day')) {
     const seconds = policy.entitlements.capabilities.manual_runs_per_day.rolling_window_seconds;
     const recent = await db
@@ -124,10 +131,18 @@ export async function admitAudit(
     .executeTakeFirstOrThrow();
   const ceiling =
     (BigInt(runtime.fundedBudgetMinor) * BigInt(policy.costs.microusd_per_usd)) / 100n;
-  if (BigInt(spent.amount) + cost > ceiling)
+  if (BigInt(spent.amount) + cost > ceiling) {
+    getLogger('api.entitlements').info(policy.billing.contracts.telemetry_funded_budget_exhausted, {
+      workspace_id: workspaceId,
+      account_id: account.id,
+      requested_microusd: cost.toString(),
+      spent_microusd: spent.amount,
+      ceiling_microusd: ceiling.toString(),
+    });
     throw new ApiError(403, 'The account funded monthly budget is exhausted', {
       code: 'funded_budget_exhausted',
     });
+  }
   return {
     accountId: account.id,
     cost,

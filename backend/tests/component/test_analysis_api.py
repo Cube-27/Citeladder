@@ -26,7 +26,7 @@ async def test_readers_preserve_frozen_provenance_and_workspace_isolation(db_ses
         citations=[("https://acme.com/", "acme.com", "owned")],
     )
     task.request_snapshot = {"retrieval_enabled": False}
-    task.route_snapshot = {"retrieval_enabled": True}
+    task.provider_route_snapshot = {"retrieval_enabled": True}
     audit.configuration = {"measurement_policy": {"retrieval_enabled": True}}
     db_session.add(
         MetricSnapshot(

@@ -377,7 +377,7 @@ export class AcquisitionState {
       if (!run) return;
       const call = await this.calls(trx)
         .where('id', '=', callId)
-        .where('status', '=', 'dispatched')
+        .where('status', 'in', ['dispatched', 'uncertain'])
         .forUpdate()
         .executeTakeFirst();
       if (!call || call.sanitized_response !== null) return;
@@ -403,7 +403,7 @@ export class AcquisitionState {
         .executeTakeFirst();
       if (latest)
         await this.outcome(trx, call, latest.ordinal, latest.dispatched_at, 'succeeded', null, at);
-      if (run.status === 'cancelled') {
+      if (['cancelled', 'uncertain', 'failed', 'partial'].includes(run.status)) {
         const costs = await this.calls(trx).select('provider_reported_cost_usd').execute();
         await trx
           .updateTable('search_intelligence_runs')

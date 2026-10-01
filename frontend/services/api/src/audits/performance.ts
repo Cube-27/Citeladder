@@ -23,6 +23,15 @@ function projected(costs: Selectable<ExecutionCostProjections>[]) {
   );
   return known.length ? known.reduce((sum, cost) => sum + cost, 0) : null;
 }
+function usage(
+  costs: Selectable<ExecutionCostProjections>[],
+  keys: ('uncached_input_tokens' | 'cached_input_tokens' | 'output_tokens' | 'total_tokens')[],
+) {
+  const known = costs.flatMap((cost) =>
+    keys.flatMap((key) => (cost[key] === null ? [] : [cost[key]!])),
+  );
+  return known.length ? known.reduce((sum, count) => sum + count, 0) : null;
+}
 const elapsed = (end: Date | null, start: Date) =>
   end ? Math.trunc(end.getTime() - start.getTime()) : null;
 export async function auditPerformance(db: Database, workspaceId: string, auditId: string) {
@@ -40,6 +49,10 @@ export async function auditPerformance(db: Database, workspaceId: string, auditI
     .where('t.workspace_id', '=', workspaceId)
     .where('t.audit_id', '=', auditId)
     .where('c.audit_id', '=', auditId)
+    .distinctOn('c.raw_response_artifact_id')
+    .orderBy('c.raw_response_artifact_id')
+    .orderBy('c.created_at', 'desc')
+    .orderBy('c.id', 'desc')
     .execute();
   const completed = tasks
     .flatMap((task) => (task.completed_at ? [task.completed_at] : []))
@@ -54,13 +67,9 @@ export async function auditPerformance(db: Database, workspaceId: string, auditI
     coverage: tasks.length ? summary.completed_count / tasks.length : 0,
     usage: costs.length
       ? {
-          input_tokens: costs.reduce(
-            (sum, cost) =>
-              sum + (cost.uncached_input_tokens ?? 0) + (cost.cached_input_tokens ?? 0),
-            0,
-          ),
-          output_tokens: costs.reduce((sum, cost) => sum + (cost.output_tokens ?? 0), 0),
-          total_tokens: costs.reduce((sum, cost) => sum + (cost.total_tokens ?? 0), 0),
+          input_tokens: usage(costs, ['uncached_input_tokens', 'cached_input_tokens']),
+          output_tokens: usage(costs, ['output_tokens']),
+          total_tokens: usage(costs, ['total_tokens']),
         }
       : { input_tokens: null, output_tokens: null, total_tokens: null },
     projected_cost_microusd: projected(costs),

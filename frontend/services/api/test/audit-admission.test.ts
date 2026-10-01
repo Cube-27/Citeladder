@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import * as costing from '../src/audits/costs.ts';
+import { setLogSink } from '../src/logging.ts';
 import { createAudit } from '../src/audits/creation.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
@@ -28,6 +30,85 @@ async function queued(workspaceId: string) {
   return db.selectFrom('audits').selectAll().where('workspace_id', '=', workspaceId).execute();
 }
 describe('atomic audit admission', () => {
+  it('commits platform funding holds and denies another run at the monthly budget boundary', async () => {
+    const t = await auditTenant(db, fixtures),
+      platform = await auditTenant(db, fixtures);
+    await db
+      .updateTable('provider_connections')
+      .set({ active: false })
+      .where('id', '=', t.connectionId)
+      .execute();
+    await db
+      .updateTable('workspaces')
+      .set({ is_system: true })
+      .where('id', '=', platform.workspaceId)
+      .execute();
+    await db
+      .updateTable('provider_connections')
+      .set({
+        credential_source: 'platform',
+        api_key_encrypted: '',
+        platform_credential_ref: 'test-platform',
+      })
+      .where('id', '=', platform.connectionId)
+      .execute();
+    const accountId = await billingAccount(db, t.workspaceId);
+    await grant(db, accountId, { key: 'audit_credits', value: 100 });
+    const estimate = vi.spyOn(costing, 'expectedCost').mockReturnValue({
+      token_cost_microusd: 1000,
+      search_fee_microusd: 0,
+      expected_searches: 0,
+      complete: true,
+      total_microusd: 1000,
+    });
+    const logs: string[] = [],
+      prior = setLogSink((line) => logs.push(line));
+    try {
+      const fundedRuntime = {
+        ...runtime,
+        fundedBudgetMinor: 2,
+        audits: { ...runtime.audits, audit_prompt_count: 10 },
+      };
+      const request = { ...input(t), credential_mode: 'funded' as const };
+      const id = await createAudit(db, t.workspaceId, request, {}, fundedRuntime);
+      const tasks = await db
+        .selectFrom('audit_tasks')
+        .selectAll()
+        .where('audit_id', '=', id)
+        .execute();
+      const holds = await db
+        .selectFrom('consumable_ledger')
+        .selectAll()
+        .where('workspace_id', '=', t.workspaceId)
+        .where('entry_kind', '=', 'reservation')
+        .execute();
+      expect(holds).toHaveLength(tasks.length);
+      expect(
+        tasks.every(
+          (task) => record(task.provider_route_snapshot).credential_source === 'platform',
+        ),
+      ).toBe(true);
+      expect(holds.reduce((sum, hold) => sum + hold.units, 0)).toBe(
+        tasks.reduce((sum, task) => sum + task.max_attempts, 0),
+      );
+      await expect(
+        createAudit(db, t.workspaceId, request, {}, fundedRuntime),
+      ).rejects.toMatchObject({ code: 'funded_budget_exhausted' });
+      expect(await queued(t.workspaceId)).toHaveLength(1);
+      expect(
+        logs
+          .map((line) => JSON.parse(line))
+          .some(
+            (event) =>
+              event.event === 'billing.funded_budget_exhausted' && event.account_id === accountId,
+          ),
+      ).toBe(true);
+    } finally {
+      estimate.mockRestore();
+      setLogSink(prior);
+      await db.deleteFrom('consumable_ledger').where('workspace_id', '=', t.workspaceId).execute();
+    }
+  });
   it('persists replayable slots, immutable snapshots, credential identity and queue events together', async () => {
     const t = await auditTenant(db, fixtures);
     const id = await createAudit(db, t.workspaceId, input(t), {}, runtime);

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { shuffleAuditSlots } from './slot-order.ts';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -267,7 +268,7 @@ export async function prepareAudit(
     max_run_seconds: settings.max_run_seconds,
     request_timeout_seconds: settings.audit_timeout_seconds,
     anthropic_max_uses: providerSettings.anthropicMaxUses,
-    slot_order_version: 'sha256-v1',
+    slot_order_version: 'python-mt19937-v1',
     panel_id: panelHash.slice(0, 16),
     panel_hash: panelHash,
     prompt_hashes: promptRows.map((row) => createHash('sha256').update(row.text).digest('hex')),
@@ -301,25 +302,23 @@ export async function prepareAudit(
     searchTimeoutSeconds: search.timeoutSeconds,
   };
 }
-/** New audits use a versioned seed order; historical audits keep their persisted positions. */
+/** Preserve the integer-seeded Python slot order, including unsigned 64-bit seeds. */
 export function auditSlots(
   prompts: number,
   engines: readonly Engine[],
   repetitions: number,
   seed: string,
 ) {
-  return Array.from({ length: prompts }, (_, prompt) =>
-    engines.flatMap((engine) =>
-      Array.from({ length: repetitions }, (_, repetition) => ({
-        prompt,
-        engine,
-        repetition,
-        order: createHash('sha256')
-          .update(`${seed}:${prompt}:${engine}:${repetition}`)
-          .digest('hex'),
-      })),
-    ),
-  )
-    .flat()
-    .sort((a, b) => a.order.localeCompare(b.order));
+  return shuffleAuditSlots(
+    Array.from({ length: prompts }, (_, prompt) =>
+      engines.flatMap((engine) =>
+        Array.from({ length: repetitions }, (_, repetition) => ({
+          prompt,
+          engine,
+          repetition,
+        })),
+      ),
+    ).flat(),
+    seed,
+  );
 }
