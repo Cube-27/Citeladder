@@ -32,6 +32,16 @@ export type Usage = {
   web_search_requests: number | null;
   provider_cost_microusd: number | null;
 };
+/** Persist the established granular shape, including the aliases used by historical readers. */
+export function normalizedUsage(usage: Usage) {
+  const { web_search_requests: searches, ...counts } = usage;
+  return {
+    ...counts,
+    search_requests: searches,
+    total_input_tokens: usage.uncached_input_tokens,
+    total_output_tokens: usage.output_tokens,
+  };
+}
 export type SearchEvent = {
   sequence: number;
   query: string;

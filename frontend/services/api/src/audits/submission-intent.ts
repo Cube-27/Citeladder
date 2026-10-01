@@ -26,6 +26,7 @@ export function commitSubmissionIntent(
         'last_test_status',
       ])
       .where('id', '=', context.connectionId)
+      .where('workspace_id', '=', context.connectionWorkspaceId)
       .where('credential_source', '=', context.route.credential_source)
       .where('credential_revision', '=', context.revision)
       .forShare()
