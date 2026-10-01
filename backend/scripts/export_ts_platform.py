@@ -581,6 +581,8 @@ def _search_intelligence_policy() -> dict[str, Any]:
         "backlink_kinds": sorted(si.BACKLINK_KINDS),
         "parser_version": si.PARSER_VERSION,
         "page_size": si.PROVIDER_PAGE_SIZE,
+        "provider_timeout_seconds": si.PROVIDER_TIMEOUT_SECONDS,
+        "provider_max_response_bytes": si.PROVIDER_MAX_RESPONSE_BYTES,
         "backlink_max_offset": si.BACKLINK_MAX_OFFSET,
         "keyword_acquisition_fields": dict(si.KEYWORD_ACQUISITION_FIELDS),
         "history_days": si.HISTORY_DAYS,

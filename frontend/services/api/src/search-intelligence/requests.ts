@@ -180,13 +180,14 @@ export function buildRequest(o: RequestOptions) {
   return { endpoint, payload };
 }
 /** Python's compact sorted ensure_ascii serialization preserves historical scope identities. */
-export function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+export function canonicalJson(value: unknown, ascii = true): string {
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item, ascii)).join(',')}]`;
   if (value !== null && typeof value === 'object')
     return `{${Object.entries(value)
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([k, v]) => `${canonicalJson(k)}:${canonicalJson(v)}`)
+      .map(([k, v]) => `${canonicalJson(k, ascii)}:${canonicalJson(v, ascii)}`)
       .join(',')}}`;
+  if (!ascii) return JSON.stringify(value);
   return JSON.stringify(value).replace(
     /[\u0080-\uffff]/g,
     (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`,
