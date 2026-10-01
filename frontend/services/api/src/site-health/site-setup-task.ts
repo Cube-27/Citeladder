@@ -110,9 +110,7 @@ async function siteEvidence(
         ]),
       ),
       crawler_roles: crawlPolicy.crawler_roles,
-      sitemaps: (robots?.sitemaps ?? [])
-        .slice(0, crawlPolicy.max_declared_sitemaps)
-        .map((url) => url.slice(0, crawlPolicy.max_url_chars)),
+      sitemaps: (robots?.sitemaps ?? []).slice(0, crawlPolicy.max_declared_sitemaps),
     },
     llms_txt: llms,
     sitemap: { fetched: false, files: [] as string[], pending: walks },
@@ -155,7 +153,11 @@ async function walkSitemaps(
   const walk: Walk = {
     collector: new SitemapCollector(settings.sitemap),
     files: [],
-    queued: new Set(seeds.flatMap((seed) => sitemapRef(seed) ?? [])),
+    queued: new Set(
+      seeds.flatMap((seed) =>
+        seed.length <= crawlPolicy.max_url_chars ? (sitemapRef(seed) ?? []) : [],
+      ),
+    ),
     queue: [],
   };
   walk.queue = [...walk.queued].map((url) => ({ url, depth: 0 }));

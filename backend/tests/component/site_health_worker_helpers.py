@@ -597,7 +597,9 @@ async def _settle_discovery_as_typescript(
     async with session_factory() as session:
         task = await session.get(SiteCrawlTask, task_id)
         assert task is not None
-        crawl = await session.get(SiteCrawl, task.crawl_id)
+        # Serialize admission like the real frontier, including duplicate links
+        # discovered concurrently by siblings in this fixture crawl.
+        crawl = await session.get(SiteCrawl, task.crawl_id, with_for_update=True)
         assert crawl is not None
         task.attempt_count += 1
         task.completed_at = now

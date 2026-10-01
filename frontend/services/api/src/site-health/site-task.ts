@@ -50,7 +50,7 @@ export function retryAfterSeconds(header: string | undefined, now = Date.now()) 
   if (!header?.trim()) return undefined;
   const raw = header.trim();
   const seconds = /^\d+$/u.test(raw) ? Number(raw) : (Date.parse(raw) - now) / 1000;
-  return Number.isFinite(seconds) ? Math.max(0, seconds) : undefined;
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }
 
 /** An update of the task that applies only while this worker still holds its lease. */

@@ -164,13 +164,13 @@ export async function writeAttempts(
   await db.insertInto('site_fetch_attempts').values(rows).execute();
 }
 
-/** Whether the crawl's sitemap manifest (or, for older crawls, a sitemap observation) lists the URL. */
-async function sitemapMember(db: Database, crawl: Crawl, siteUrlId: string) {
+/** The observation supporting membership in the current or legacy sitemap manifest. */
+async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string) {
   const sitemap = record(record(crawl.site_facts).sitemap);
   const urls = Array.isArray(sitemap.urls)
     ? sitemap.urls.filter((url) => typeof url === 'string')
     : null;
-  if (urls && !urls.length) return false;
+  if (urls && !urls.length) return null;
   const row = await db
     .selectFrom('site_url_observations')
     .select('id')
@@ -183,7 +183,7 @@ async function sitemapMember(db: Database, crawl: Crawl, siteUrlId: string) {
     )
     .limit(1)
     .executeTakeFirst();
-  return Boolean(row);
+  return row?.id ?? null;
 }
 
 /** Site-level facts belong to the crawl root's analysis only. */
@@ -309,10 +309,20 @@ export async function pageAnalysisContext(
   task: SiteTask & { site_url_id: string },
 ) {
   const auditTime = crawl.started_at ?? crawl.created_at;
+  const observationId = await sitemapObservation(db, crawl, task.site_url_id);
+  const siteFacts = rootSiteFacts(crawl, task);
   return {
-    sitemapMember: await sitemapMember(db, crawl, task.site_url_id),
-    siteFacts: rootSiteFacts(crawl, task),
+    sitemapMember: observationId !== null,
+    siteFacts,
     auditTime: auditTime ? new Date(auditTime).toISOString() : null,
+    // The crawl owns setup facts and audit time; the observation owns membership.
+    // Evaluation rows also retain extractor/analyzer/rule processing versions.
+    sources: {
+      sitemap_crawl_id: crawl.id,
+      sitemap_observation_id: observationId,
+      site_facts_crawl_id: siteFacts ? crawl.id : null,
+      audit_time_crawl_id: auditTime ? crawl.id : null,
+    },
   };
 }
 

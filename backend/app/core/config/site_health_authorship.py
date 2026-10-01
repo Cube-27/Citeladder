@@ -44,6 +44,16 @@ BYLINE_METADATA_SUFFIX_PATTERN: Final = (
     rf"[,;·—-]?\s*(?:(?i:published|updated)\s+)?(?:{DATE_PATTERN})[.]?"
 )
 
+# Bare month-first metadata, including Unicode month names and decimal digits.
+# A word followed by numbers is otherwise prose, not evidence of a date.
+SHORT_DATE_PATTERN: Final = (
+    r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?"
+    r"|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+    r"|janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre"
+    r"|январ[ья]|феврал[ья]|март(?:а)?|апрел[ья]|ма[йя]|июн[ья]|июл[ья]"
+    r"|август(?:а)?|сентябр[ья]|октябр[ья]|ноябр[ья]|декабр[ья])\.?\s+\d{1,2},?\s+\d{4}"
+)
+
 VISIBLE_AUTHOR_NODE_TOKENS: Final[frozenset[str]] = frozenset({"author", "byline"})
 VISIBLE_AUTHOR_HEADING_EXCLUSIONS: Final[frozenset[str]] = frozenset(
     {"about us", "contact us", "our team", "meet the team"}

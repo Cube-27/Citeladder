@@ -265,14 +265,16 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
     }
     let artifactId = outcome.reusedArtifactId;
     if (outcome.facts && task.site_url_id && result) {
-      // Setup/discovery may publish context while interpretation runs. Retry
-      // through the existing queue rather than commit rules against stale facts.
+      // Setup/discovery may publish context while interpretation runs. Interpret
+      // the new snapshot once under the crawl lock without spending another attempt.
       const currentContext = await pageAnalysisContext(trx, crawl, {
         ...task,
         site_url_id: task.site_url_id,
       });
-      if (JSON.stringify(currentContext) !== JSON.stringify(context))
-        throw new Error('Page analysis context changed before commit');
+      const currentResult =
+        JSON.stringify(currentContext) === JSON.stringify(context)
+          ? result
+          : await analyzePageAsync(outcome.facts, currentContext);
       artifactId ??= await writeArtifact(trx, crawl, task, outcome.page!, outcome.facts, {
         policyVersion: ctx.fetcher.settings.policyVersion,
         latencyMs: outcome.latencyMs ?? 0,
@@ -284,7 +286,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
         { ...task, site_url_id: task.site_url_id },
         artifactId,
         outcome.facts,
-        result,
+        currentResult,
       );
       if (analysis.pageKind === 'category' || analysis.pageKind === 'product')
         await enqueueCatalogProjection(

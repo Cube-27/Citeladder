@@ -79,6 +79,56 @@ const attempts = (taskId: string) =>
     .execute();
 
 describe('analyze acquisition', () => {
+  it('retains the sitemap observation that establishes indexing intent', async () => {
+    const seed = await running();
+    const page = await fixtures.analyzable(seed, '/sitemap-page');
+    const observationId = crypto.randomUUID();
+    await db
+      .insertInto('site_url_observations')
+      .values({
+        id: observationId,
+        workspace_id: seed.workspaceId,
+        project_id: seed.projectId,
+        crawl_id: seed.crawlId,
+        site_url_id: page.siteUrlId,
+        observed_url: page.url,
+        final_url: page.url,
+        depth: 1,
+        source_kind: 'sitemap',
+        rewrite_reason: '',
+        rewrite_version: '',
+        title: '',
+        content_type: '',
+        value_kind: 'page',
+        value_priority: 0,
+        created_at: new Date(),
+      })
+      .execute();
+    await analyze(
+      site({
+        '/sitemap-page': {
+          body: RICH.replace('</head>', '<meta name="robots" content="noindex"></head>'),
+        },
+      }),
+      page.taskId,
+    );
+    const [analysis] = await analyses(seed, page.siteUrlId);
+    const evaluation = await db
+      .selectFrom('site_rule_evaluations')
+      .select(['evidence', 'outcome', 'extractor_version'])
+      .where('analysis_id', '=', analysis!.id)
+      .where('rule_id', '=', 'technical.indexable')
+      .executeTakeFirstOrThrow();
+    expect(evaluation).toMatchObject({
+      outcome: 'missing',
+      extractor_version: policy.site_health.versions.extractor,
+    });
+    expect(record(evaluation.evidence)).toMatchObject({
+      intent_source: 'sitemap_membership',
+      context_sources: { sitemap_crawl_id: seed.crawlId, sitemap_observation_id: observationId },
+    });
+  });
+
   it('acquires, analyzes and settles the page with its evidence in one commit', async () => {
     const seed = await running({ status: 'queued', started_at: null });
     const page = await fixtures.analyzable(seed, '/rich');
@@ -305,13 +355,18 @@ describe('analyze failures', () => {
     expect((await task(page.taskId)).completed_at).not.toBeNull();
   });
 
-  it.each(['45', '3600', 'invalid', 'http-date'])(
+  it.each(['45', '3600', 'invalid', '0', 'past-date', 'http-date'])(
     'persists a bounded retry window from Retry-After %s',
     async (advice) => {
       const seed = await running();
       const page = await fixtures.analyzable(seed, '/limited');
       const before = Date.now();
-      const header = advice === 'http-date' ? new Date(before + 45_000).toUTCString() : advice;
+      const header =
+        advice === 'http-date'
+          ? new Date(before + 45_000).toUTCString()
+          : advice === 'past-date'
+            ? new Date(before - 45_000).toUTCString()
+            : advice;
       await analyze(
         site({ '/limited': { status: 429, headers: { 'retry-after': header } } }),
         page.taskId,
@@ -323,7 +378,7 @@ describe('analyze failures', () => {
           ? 45
           : header === '3600'
             ? settings.retryMax
-            : header === 'invalid'
+            : ['invalid', '0', 'past-date'].includes(advice)
               ? Math.min(settings.retryBase * 2, settings.retryMax) + 0.37 * settings.retryJitter
               : (Date.parse(header) - before) / 1000;
       expect(settled.status).toBe('retry_wait');
@@ -424,9 +479,14 @@ async function lease(taskId: string, owner: string) {
 }
 
 describe('analyze guards', () => {
-  it('retries without committing evidence when setup changes during rule evaluation', async () => {
+  it('commits current setup facts even when context changes on the final allowed attempt', async () => {
     const seed = await running();
     const page = await fixtures.analyzable(seed, '/');
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ max_attempts: 1 })
+      .where('id', '=', page.taskId)
+      .execute();
     const interpret = interpretation.analyzePageAsync;
     const changed = { robots: { fetched: true, status: 'fetched', status_code: 200 } };
     const spy = vi
@@ -443,11 +503,19 @@ describe('analyze guards', () => {
     try {
       const fetcher = site({ '/': { body: RICH } });
       await analyze(fetcher, page.taskId);
-      expect((await task(page.taskId)).status).toBe('retry_wait');
-      expect(await analyses(seed, page.siteUrlId)).toEqual([]);
-      expect(await attempts(page.taskId)).toEqual([]);
-      await analyze(fetcher, page.taskId);
-      expect((await task(page.taskId)).status).toBe('succeeded');
+      expect(await task(page.taskId)).toMatchObject({ status: 'succeeded', attempt_count: 1 });
+      const [analysis] = await analyses(seed, page.siteUrlId);
+      const evaluation = await db
+        .selectFrom('site_rule_evaluations')
+        .select(['outcome', 'evidence'])
+        .where('analysis_id', '=', analysis!.id)
+        .where('rule_id', '=', 'technical.robots_txt_present')
+        .executeTakeFirstOrThrow();
+      expect(evaluation.outcome).toBe('satisfied');
+      expect(record(evaluation.evidence).context_sources).toMatchObject({
+        site_facts_crawl_id: seed.crawlId,
+      });
+      expect(await attempts(page.taskId)).toHaveLength(1);
     } finally {
       spy.mockRestore();
     }

@@ -49,8 +49,7 @@ function robotsTxtPresent(facts: Facts): CheckResult {
     status_code: robots.status_code,
     url: text(robots.url).slice(0, 2048),
   };
-  if (robots.fetched || robots.status === policy.site_health.crawl.robots_statuses.fetched)
-    return ['satisfied', evidence];
+  if (robots.fetched) return ['satisfied', evidence];
   if (robots.status === policy.site_health.crawl.robots_statuses.not_found)
     return ['missing', evidence];
   // An unreadable file is not evidence of absence.

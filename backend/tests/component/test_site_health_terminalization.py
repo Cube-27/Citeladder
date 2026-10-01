@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -116,6 +117,30 @@ async def _discover_task(
         )
     assert task_id is not None
     return task_id
+
+
+@pytest.mark.asyncio
+async def test_discovery_settlement_serializes_shared_child_admission(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    seed = await _seed_root_only(session_factory)
+    siblings = await _settle_discovery_as_typescript(
+        session_factory,
+        await _discover_task(session_factory, seed.crawl_id),
+        links=("https://example.com/a", "https://example.com/b"),
+    )
+    results = await asyncio.gather(
+        *(
+            _settle_discovery_as_typescript(
+                session_factory, sibling, links=("https://example.com/shared",)
+            )
+            for sibling in siblings
+        )
+    )
+    assert sum(map(len, results)) == 1
+    async with session_factory() as session:
+        crawl = await session.get(SiteCrawl, seed.crawl_id)
+        assert crawl is not None and crawl.admitted_url_count == 3
 
 
 @pytest.mark.asyncio

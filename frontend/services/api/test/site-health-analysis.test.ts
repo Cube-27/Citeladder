@@ -67,6 +67,11 @@ describe('page checklist', () => {
     },
   );
 
+  it('retains prose that resembles a date without a month name', () => {
+    const root = document(Buffer.from('<main><p>Product 12, 2026</p></main>'));
+    expect(isMetadataOrCta([...elements(root, 'p')][0]!)).toBe(false);
+  });
+
   it('does not mistake a protocol-relative host for a trust path', () => {
     const trust = (url: string) =>
       byRule(
@@ -223,6 +228,7 @@ describe('page checklist', () => {
         robots: { fetched, status, status_code: code, url: 'https://example.com/robots.txt' },
       });
     expect(root(true, 'fetched', 200).outcome).toBe('satisfied');
+    expect(root(false, 'fetched', 200).outcome).toBe('unknown');
     const missing = root(false, 'not_found', 404);
     expect(missing.outcome).toBe('missing');
     expect(createsIssue(missing)).toBe(true);

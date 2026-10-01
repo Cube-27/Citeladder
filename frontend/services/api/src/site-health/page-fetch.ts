@@ -141,7 +141,7 @@ export class SitePageFetcher {
         timeoutSeconds: this.settings.acquisition.timeout,
         redirects: this.settings.acquisition.redirects,
         contentTypes: [...(options.contentTypes ?? a.html_content_types), ''],
-        headerNames: [...a.persisted_response_headers, 'retry-after'],
+        headerNames: a.persisted_response_headers,
         // Admission screens the page and every redirect hop, never robots.txt.
         admit: (hop) => {
           if (!admit(hop)) throw new FetchError(codes.url_admission_rejected);
