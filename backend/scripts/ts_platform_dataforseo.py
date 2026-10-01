@@ -6,6 +6,14 @@ from app.core.config.costs import MICRO_USD_PER_USD
 
 def dataforseo_policy(setting):
     return {
+        "strip_characters": "".join(
+            chr(point) for point in range(0x110000) if chr(point).isspace()
+        ),
+        "casefold_overrides": {
+            chr(point): chr(point).casefold()
+            for point in range(0x110000)
+            if chr(point).casefold() != chr(point).lower()
+        },
         "microusd_per_usd": MICRO_USD_PER_USD,
         "settings": {
             name: setting(name, dataforseo.DataForSeoSettings)

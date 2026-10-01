@@ -7,6 +7,17 @@ from app.core.config import app_models, dataforseo, provider_catalog
 
 def provider_policy(setting):
     return {
+        "capacity": [
+            {
+                "logical_engine": engine,
+                "transport_provider": transport,
+                **dataclasses.asdict(policy),
+            }
+            for (
+                engine,
+                transport,
+            ), policy in provider_catalog.ROUTE_CAPACITY_POLICIES.items()
+        ],
         "routes": {
             engine: dataclasses.asdict(route)
             for engine, route in provider_catalog.MEASUREMENT_ROUTES.items()
