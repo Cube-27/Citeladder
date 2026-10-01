@@ -512,12 +512,12 @@
       "opportunity_verification",
       "performance_range_projection",
       "referral_retention_sweep",
+      "search_intelligence_acquisition",
       "traffic_snapshot_refresh"
     ],
     "python_task_kinds": [
       "commerce_competitor_discovery",
       "internal_link_judgment",
-      "search_intelligence_acquisition",
       "source_page_inspection"
     ],
     "worker_settings": {

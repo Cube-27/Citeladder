@@ -360,6 +360,7 @@ ANALYTICS_TASK_KINDS: Final[frozenset[str]] = frozenset(
 # the Python sweeper for every kind.
 ANALYTICS_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
     {
+        ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
         ANALYTICS_TASK_KIND_INTERNAL_LINK_PUBLISH,
         ANALYTICS_TASK_KIND_INGEST_REFERRALS,
         ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,

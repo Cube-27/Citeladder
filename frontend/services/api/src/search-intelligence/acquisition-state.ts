@@ -18,7 +18,8 @@ type Call = Selectable<SearchIntelligenceCalls>;
 type Dataset = Selectable<SearchIntelligenceDatasets>;
 export type ResearchPlan = Record<string, unknown>;
 export type PreparedResearch =
-  | { action: 'stop' | 'skip' }
+  | { action: 'stop' }
+  | { action: 'skip' }
   | {
       action: 'dispatch' | 'publish';
       run: Run;

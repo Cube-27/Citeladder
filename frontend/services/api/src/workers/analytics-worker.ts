@@ -28,6 +28,7 @@ import { refreshOpportunities } from '../opportunities/refresh.ts';
 import { verifyImplementationEvents } from '../opportunities/verification.ts';
 import { projectCatalog } from '../commerce/projection.ts';
 import { publishInternalLinks } from '../site-health/internal-link-publish.ts';
+import { acquireResearch } from '../search-intelligence/executor.ts';
 
 const logger = getLogger('workers.analytics');
 const { statuses, terminal } = policy.task_queue;
@@ -35,6 +36,7 @@ const ERROR_DETAIL_LIMIT = 2000;
 
 /** Kind dispatch: exactly the kinds TypeScript owns. */
 export const EXECUTORS: Readonly<Record<string, Executor>> = {
+  search_intelligence_acquisition: acquireResearch,
   internal_link_publish: publishInternalLinks,
   ingest_referrals: ingestReferrals,
   classify_referrals: classifyReferrals,
