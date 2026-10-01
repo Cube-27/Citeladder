@@ -92,7 +92,7 @@ function finitePrice(value: unknown): number | null {
 }
 
 /** Currency-qualified visible amounts; grouping must be unambiguous. */
-function localizedPrice(raw: string): number | null {
+export function localizedPrice(raw: string): number | null {
   const lastDot = raw.lastIndexOf('.');
   const lastComma = raw.lastIndexOf(',');
   const separator = lastDot > lastComma ? '.' : ',';

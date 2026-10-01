@@ -3302,6 +3302,28 @@
       "parser_version": "commerce-recommendation-parser-1",
       "matcher_version": "commerce-recommendation-matcher-1",
       "formula_version": "commerce-shelf-formulas-1"
+    },
+    "commerce_shelf": {
+      "span_limit": 12,
+      "span_chars": 2000,
+      "result_limit": 8,
+      "excluded_paths": [
+        "/blog/",
+        "/news/",
+        "/article/",
+        "/search"
+      ],
+      "non_pdp_hosts": [
+        "reddit.com",
+        "youtube.com",
+        "youtu.be",
+        "medium.com"
+      ],
+      "dollar_currencies": {
+        "AU": "AUD",
+        "CA": "CAD",
+        "US": "USD"
+      }
     }
   },
   "opportunity": {

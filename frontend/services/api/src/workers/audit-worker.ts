@@ -19,6 +19,7 @@ import {
   parseScraper,
   surfaceFailure,
   type OverviewResult,
+  overviewAnswer,
 } from '../search-surfaces/parsing.ts';
 import { reconcilePage } from '../search-surfaces/reconciliation.ts';
 import {
@@ -33,6 +34,7 @@ import {
   persistExecutionFailure,
   persistExecutionSuccess,
   type DeriveExecution,
+  type ExecutionResult,
 } from '../audits/result-persistence.ts';
 import { persistOverview, persistSurfaceExchange } from '../audits/surface-persistence.ts';
 import { auditPolicy, type AuditRuntime } from '../audits/config.ts';
@@ -47,6 +49,7 @@ const reconciliationState = z.object({
 });
 type ProjectionOwners = {
   execution: DeriveExecution;
+  prepare?: (context: ExecutionContext, result: ExecutionResult) => Promise<DeriveExecution>;
   finalize: (workspaceId: string, auditId: string) => Promise<unknown>;
 };
 
@@ -245,7 +248,7 @@ export class AuditWorker {
             claimed,
             this.owner,
             answer,
-            this.#projections.execution,
+            await this.#prepare(context, answer),
             { at: this.#now() },
           );
         }
@@ -314,6 +317,11 @@ export class AuditWorker {
       );
     });
   }
+  async #prepare(context: ExecutionContext, result: ExecutionResult) {
+    return this.#projections.prepare
+      ? this.#projections.prepare(context, result)
+      : this.#projections.execution;
+  }
   async #surface(context: ExecutionContext, signal: AbortSignal) {
     const task = context.task,
       engine = task.logical_engine as SearchEngine,
@@ -352,6 +360,11 @@ export class AuditWorker {
             result as OverviewResult,
             this.#runtime,
             this.#now(),
+            true,
+            false,
+            searchPolicy.surface.successful_outcomes.includes((result as OverviewResult).outcome)
+              ? await this.#prepare(context, overviewAnswer(result as OverviewResult))
+              : this.#projections.execution,
           );
         else
           await persistExecutionSuccess(
@@ -359,7 +372,7 @@ export class AuditWorker {
             task,
             this.owner,
             result as Exclude<typeof result, OverviewResult>,
-            this.#projections.execution,
+            await this.#prepare(context, result as ExecutionResult),
             { surface: true, at: this.#now() },
           );
       } catch (error) {

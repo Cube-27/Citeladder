@@ -11,6 +11,7 @@ import {
   persistExecutionSuccess,
   appendProviderAttempt,
   settleTaskCredits,
+  type DeriveExecution,
 } from './result-persistence.ts';
 import { type AuditRuntime } from './config.ts';
 
@@ -66,6 +67,7 @@ export function persistOverview(
   at = new Date(),
   actualExchange = true,
   paidSurface = false,
+  derive: DeriveExecution = analyzeExecution,
 ) {
   if (searchPolicy.surface.successful_outcomes.includes(result.outcome))
     return persistExecutionSuccess(
@@ -75,7 +77,7 @@ export function persistOverview(
       overviewAnswer(result),
       async (trx, current, audit, artifactId) => {
         await appendObservation(trx, current, result, at);
-        await analyzeExecution(trx, current, audit, artifactId);
+        await derive(trx, current, audit, artifactId);
       },
       { surface: true, at },
     );
