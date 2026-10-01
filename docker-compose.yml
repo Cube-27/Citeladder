@@ -156,7 +156,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: frontend/services/api/Dockerfile
     restart: unless-stopped
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
@@ -167,7 +167,7 @@ services:
       migrate:
         condition: service_completed_successfully
     # Audit worker is a separate Postgres-queue process.
-    command: ["python", "-m", "app.workers.audit_worker"]
+    command: ["node", "src/audit-worker.ts"]
     # The Dockerfile HEALTHCHECK probes the web /ready endpoint, which worker
     # containers don't serve — disable it so they don't report unhealthy.
     healthcheck:
@@ -178,17 +178,19 @@ services:
   audit-scheduler:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: frontend/services/api/Dockerfile
     restart: unless-stopped
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
+    environment:
+      <<: *backend_env
+      AUDIT_SCHEDULE_HEARTBEAT_PATH: /tmp/audit-scheduler-heartbeat
     depends_on:
       db:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    command: ["python", "-m", "app.workers.audit_scheduler"]
+    command: ["node", "src/audit-scheduler.ts"]
     healthcheck:
       disable: true
 
