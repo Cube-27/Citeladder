@@ -73,7 +73,7 @@ export function Drawer({
           }}
           data-side={side}
           className={cn(
-            'drawer-panel border-border bg-elevated shadow-modal-value z-modal fixed inset-y-0 flex w-full max-w-[32.5rem] flex-col focus-ring',
+            'drawer-panel border-border bg-elevated shadow-modal z-modal fixed inset-y-0 flex w-full max-w-[32.5rem] flex-col focus-ring',
             side === 'left'
               ? 'left-0 rounded-r-[var(--radius-overlay)] border-r'
               : 'right-0 rounded-l-[var(--radius-overlay)] border-l',

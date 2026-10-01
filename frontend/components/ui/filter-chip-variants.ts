@@ -6,11 +6,12 @@ import { cn } from '@/lib/utils';
  * the base and its own state classes instead of restating the recipe.
  */
 export const chipBaseClasses =
-  'focus-ring type-badge inline-flex h-[var(--control-height-sm)] items-center gap-2 rounded-full px-3 transition-[background-color,color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)]';
+  'focus-ring type-badge inline-flex h-[var(--control-height-sm)] items-center gap-2 rounded-full px-3 transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]';
 
-export const chipRestingClasses = 'bg-panel text-secondary shadow-smudge hover:text-foreground';
+export const chipRestingClasses =
+  'bg-panel text-secondary border border-border hover:text-foreground';
 
-const chipSelectedClasses = 'bg-accent-subtle text-accent-text shadow-smudge';
+const chipSelectedClasses = 'bg-accent-subtle text-accent-text border border-border';
 
 /** Shared multi-select/filter chip recipe. */
 export function filterChipClasses(active: boolean): string {
@@ -25,7 +26,7 @@ export function filterChipClasses(active: boolean): string {
  */
 const TAG_TONE = {
   well: 'bg-well text-secondary',
-  outline: 'bg-panel text-secondary shadow-smudge',
+  outline: 'bg-panel text-secondary border border-border',
   accent: 'bg-accent-subtle text-accent-text',
 } as const;
 

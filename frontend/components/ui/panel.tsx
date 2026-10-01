@@ -43,7 +43,7 @@ const PANEL_PAD = {
  * more line on the screen carrying no information.
  */
 const PANEL_EDGE = {
-  rounded: 'rounded-[var(--radius-control)]',
+  rounded: 'rounded-[var(--radius-card)]',
   flush: '',
 } as const;
 

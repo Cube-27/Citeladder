@@ -52,7 +52,7 @@ export function Composer({
   const canSend = !disabled && !submissionDisabled && !pending && value.trim().length > 0;
   return (
     <form
-      className="focus-frame bg-input shadow-raised grid gap-1 rounded-[var(--radius-card)] p-2"
+      className="focus-frame bg-input border-border-strong grid gap-1 rounded-[var(--radius-card)] border p-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (canSend) onSubmit();

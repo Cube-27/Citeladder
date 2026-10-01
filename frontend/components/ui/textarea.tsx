@@ -3,14 +3,10 @@ import type { ComponentPropsWithoutRef, Ref } from 'react';
 import { cn } from '@/lib/utils';
 
 const textareaClasses =
-  'focus-input min-h-[var(--textarea-min-height)] w-full resize-y rounded-[var(--radius-control)] shadow-smudge bg-input p-3 text-field text-foreground transition-[box-shadow] placeholder:text-muted hover:shadow-smudge-hover aria-invalid:shadow-smudge-danger disabled:cursor-not-allowed disabled:opacity-50';
+  'focus-input min-h-[var(--textarea-min-height)] w-full resize-y rounded-[var(--radius-control)] border border-border bg-input p-3 text-field text-foreground transition-[border-color,background-color] placeholder:text-muted hover:border-border-strong aria-invalid:border-danger disabled:cursor-not-allowed disabled:opacity-50';
 
-/**
- * The composer lift — see `Input`. A brief box or agent prompt keeps its deeper
- * edge at rest and on hover, so the field the screen exists for reads as the
- * surface in front of the paper rather than as one more control on it.
- */
-const raisedClasses = 'shadow-raised hover:shadow-raised';
+/** Composer emphasis uses a stronger boundary, with no resting elevation. */
+const raisedClasses = 'border border-border-strong hover:border-border-strong';
 
 export function Textarea({
   className,

@@ -15,7 +15,7 @@ export function PricingComingSoonStrip() {
       className="relative z-10 -mt-4 mb-8 sm:-mt-6 sm:mb-12"
     >
       <Container>
-        <div className="border-accent-border/60 bg-accent-soft/70 flex flex-col items-start justify-between gap-4 rounded-[var(--radius-card)] border p-4 shadow-xs backdrop-blur-xs sm:flex-row sm:items-center sm:gap-6 sm:p-5">
+        <div className="border-accent-border/60 bg-accent-soft/70 flex flex-col items-start justify-between gap-4 rounded-[var(--radius-card)] border p-4 backdrop-blur-xs sm:flex-row sm:items-center sm:gap-6 sm:p-5">
           <div className="flex flex-col gap-1.5 sm:gap-1">
             <div className="flex items-center gap-2">
               <span className="bg-accent text-accent-fg inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide">

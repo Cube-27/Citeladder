@@ -134,7 +134,7 @@ export function IcpCategory({ profile, onChange }: IcpPart) {
               value={choices.includes(profile.category) ? '' : profile.category}
               onChange={(event) => update('category', event.target.value)}
               placeholder="e.g. ecommerce implementation agency"
-              className="max-w-md shadow-2xs"
+              className="max-w-md"
             />
           </div>
         ) : null}

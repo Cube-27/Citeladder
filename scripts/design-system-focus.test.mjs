@@ -13,12 +13,20 @@ test('focus policy rejects local outlines and ring overrides while admitting the
     assert.equal(focusRoleViolations(source, label, true).length, 1);
   }
   assert.equal(
-    focusRoleViolations('.button:focus-visible { outline: 2px solid currentColor; }', 'apps/app/src/overrides.css', true).length,
+    focusRoleViolations(
+      '.button:focus-visible { outline: 2px solid currentColor; }',
+      'apps/app/src/overrides.css',
+      true,
+    ).length,
     1,
   );
   assert.deepEqual(focusRoleViolations("const phases = { outline: 'Outline' };", label, true), []);
   assert.deepEqual(
-    focusRoleViolations('<button className="focus-ring" /><input className="focus-input" /><div className="focus-frame" />', label, true),
+    focusRoleViolations(
+      '<button className="focus-ring" /><input className="focus-input" /><div className="focus-frame" />',
+      label,
+      true,
+    ),
     [],
   );
 });

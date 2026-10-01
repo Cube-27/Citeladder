@@ -135,7 +135,7 @@ export function ChartTooltipContent({
   const measured = payload.filter((entry) => typeof entry.value === 'number');
   if (!measured.length) return null;
   return (
-    <div className="tooltip-panel bg-surface-inverse text-on-inverse shadow-elevated rounded-[var(--radius-overlay)] px-3 py-2">
+    <div className="tooltip-panel bg-surface-inverse text-on-inverse shadow-overlay rounded-[var(--radius-overlay)] px-3 py-2">
       <p className="type-badge">{label}</p>
       <ul className="grid gap-0.5">
         {measured.map((entry) => (

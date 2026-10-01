@@ -37,7 +37,7 @@ export function NavLink({
         // with a soft drop and the brand icon — never an outline or a leading
         // bar, which read as a second, competing selection mark.
         active
-          ? textRole('control', 'bg-selected shadow-selected text-foreground')
+          ? textRole('control', 'bg-selected border border-border text-foreground')
           : textRole('control', 'text-secondary hover:bg-active hover:text-foreground'),
       )}
     >

@@ -269,40 +269,13 @@
   --radius-xs: 4px;
   --radius-full: 9999px;
 
-  /* Elevation — cards use subtle bottom-weighted shadows, while dropdowns
-     and overlays retain stronger omnidirectional all-side shadows. */
-  --shadow-xs: 0 1px 2px rgb(26 31 54 / 0.06);
-  --shadow-sm: 0 1px 2px rgb(26 31 54 / 0.06);
-  /* Smudged control edge — the shared edge treatment for buttons and fields.
-     A faint full-perimeter ring fused with a soft bottom-weighted drop reads
-     as diffused graphite rather than a drawn hairline. The ring now carries the
-     weight and the drop only softens it, so a control's edge lands at roughly
-     the same strength as --color-border and a row of buttons reads as objects
-     rather than as tinted patches. Hover deepens the fuse; it never returns to
-     a crisp border. The ring rides the same ink as --shadow-xs, so the dark
-     band rebinds below re-ink it. */
-  --shadow-smudge:
-    0 0 0 1px rgb(26 31 54 / 0.16), 0 1px 2px rgb(26 31 54 / 0.04);
-  --shadow-smudge-hover:
-    0 0 0 1px rgb(26 31 54 / 0.24), 0 1px 2px rgb(26 31 54 / 0.06);
-  --shadow-smudge-danger:
-    0 0 0 1px rgb(180 35 50 / 0.42), 0 1px 2px rgb(180 35 50 / 0.12);
-  /* Composer lift. The one case where a FIELD is the page: a brief box or an
-     agent prompt that the reader is meant to type into before anything else.
-     A hair more ring than --shadow-smudge plus a wider drop, so it reads as
-     the surface in front rather than as one more control in a row. */
-  --shadow-raised:
-    0 0 0 1px rgb(26 31 54 / 0.24), 0 2px 8px -2px rgb(26 31 54 / 0.1);
-  /* Product cards carry no resting shadow; this remains for the marketing
-     previews that still use it. */
-  --shadow-card: 0 1px 2px -1px rgb(17 28 69 / 0.06);
-  /* The raised selected item (segmented control, active navigation). A soft
-     drop only: a selected item is never outlined. */
-  --shadow-selected: 0 1px 2px rgb(15 23 42 / 0.1), 0 1px 1px rgb(15 23 42 / 0.04);
-  --shadow-elevated:
+  /* Resting surfaces use boundaries; only detached surfaces cast a shadow. */
+  --shadow-*: initial;
+  --shadow-none: none;
+  --shadow-overlay:
     0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
-  --shadow-modal-value:
-    0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
+  --shadow-modal:
+    0 24px 64px rgb(26 31 54 / 0.2), 0 8px 16px rgb(26 31 54 / 0.12);
 
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
@@ -372,7 +345,6 @@
   /* The workspace pane is continuous with shell ground; cards and tables on
      it carry the elevated paper fill. The focused flow pane stays paper. */
   /* No seam: the tonal steps between rail, ground, and paper are the separation. */
-  --shadow-pane: none;
   --modal-padding: 24px;
   --empty-state-padding: 24px;
   --control-height-sm: 32px;
@@ -517,10 +489,6 @@
   --color-action-hover: #d8c9fb;
   --color-action-active: #e4dafc;
   --color-action-fg: #1b1938;
-  --shadow-smudge:
-    0 0 0 1px rgb(244 243 250 / 0.16), 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-smudge-hover:
-    0 0 0 1px rgb(244 243 250 / 0.24), 0 1px 3px rgb(0 0 0 / 0.4);
   --skeleton-base: #2b2950;
   --skeleton-highlight: #34325c;
 }
@@ -553,10 +521,6 @@
   --color-action-hover: #eef1ee;
   --color-action-active: #dfe4e0;
   --color-action-fg: #0e3030;
-  --shadow-smudge:
-    0 0 0 1px rgb(238 244 242 / 0.16), 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-smudge-hover:
-    0 0 0 1px rgb(238 244 242 / 0.24), 0 1px 3px rgb(0 0 0 / 0.4);
   --skeleton-base: #1a4545;
   --skeleton-highlight: #205050;
 }
@@ -1225,33 +1189,18 @@ input:-webkit-autofill:focus {
   --color-overlay-scrim: rgb(0 0 0 / 72%);
   --skeleton-base: #1e1e1e;
   --skeleton-highlight: #292929;
-  --shadow-smudge: 0 0 0 1px rgb(255 255 255 / 10%), 0 1px 2px rgb(0 0 0 / 25%);
-  --shadow-smudge-hover: 0 0 0 1px rgb(255 255 255 / 16%), 0 1px 2px rgb(0 0 0 / 35%);
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 16%);
-  --shadow-selected: 0 1px 2px rgb(0 0 0 / 40%);
-  --shadow-raised: 0 0 0 1px rgb(255 255 255 / 24%), 0 2px 5px rgb(0 0 0 / 35%);
-  --shadow-smudge-danger: 0 0 0 1px var(--color-danger), 0 1px 2px rgb(0 0 0 / 25%);
-  --shadow-elevated: 0 12px 32px rgb(0 0 0 / 40%);
-  --shadow-modal-value: var(--shadow-elevated);
+  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 40%);
+  --shadow-modal: 0 24px 64px rgb(0 0 0 / 60%);
 }
 
 :root[data-theme='dark'] .brand-wordmark {
   filter: brightness(0) invert(1);
 }
 
-/* Bind utilities to live theme variables inside their layer so focus
-   continues to own the composed ring and edge. */
+/* Detached surfaces resolve their elevation in the current theme. */
 @layer utilities {
-  .shadow-smudge { box-shadow: var(--shadow-smudge); }
-  .shadow-smudge-hover,
-  .hover\:shadow-smudge-hover:hover { box-shadow: var(--shadow-smudge-hover); }
-  .shadow-raised,
-  .hover\:shadow-raised:hover { box-shadow: var(--shadow-raised); }
-  .shadow-smudge-danger,
-  .hover\:shadow-smudge-danger:hover { box-shadow: var(--shadow-smudge-danger); }
-  .shadow-card { box-shadow: var(--shadow-card); }
-  .shadow-selected { box-shadow: var(--shadow-selected); }
-  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .shadow-overlay { box-shadow: var(--shadow-overlay); }
+  .shadow-modal { box-shadow: var(--shadow-modal); }
 }
 .focus-input[aria-invalid='true'],
 .focus-ring[aria-invalid='true'],
@@ -1311,7 +1260,7 @@ input:-webkit-autofill:focus {
 .app-pane {
   background: var(--color-panel);
   border-radius: var(--radius-workspace);
-  box-shadow: var(--shadow-pane);
+  box-shadow: none;
 }
 
 /* The workspace pane fills the shell rather than floating in it: it meets the
@@ -1778,7 +1727,7 @@ samp {
   padding: 0.5rem 0.875rem;
   font-size: var(--text-sm);
   font-weight: 500;
-  box-shadow: var(--shadow-elevated);
+  box-shadow: var(--shadow-overlay);
 }
 .skip-link:focus-visible {
   transform: translateY(0);

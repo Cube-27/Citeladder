@@ -33,7 +33,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             onOpenChange={(open) => {
               if (!open) setMessages((current) => current.filter((item) => item.id !== message.id));
             }}
-            className="toast-panel border-border bg-elevated shadow-elevated grid w-[min(24rem,calc(100vw-2rem))] grid-cols-[auto_1fr_auto] items-start gap-2 rounded-[var(--radius-overlay)] border p-3"
+            className="toast-panel border-border bg-elevated shadow-modal grid w-[min(24rem,calc(100vw-2rem))] grid-cols-[auto_1fr_auto] items-start gap-2 rounded-[var(--radius-overlay)] border p-3"
           >
             <CheckCircle2 className="text-success mt-0.5 size-4" aria-hidden />
             <div className="min-w-0">
@@ -56,7 +56,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             </ToastPrimitive.Close>
           </ToastPrimitive.Root>
         ))}
-        <ToastPrimitive.Viewport className="fixed right-4 bottom-4 z-[var(--z-index-toast)] grid gap-2 focus-ring" />
+        <ToastPrimitive.Viewport className="focus-ring fixed right-4 bottom-4 z-[var(--z-index-toast)] grid gap-2" />
       </ToastPrimitive.Provider>
     </ToastContext>
   );

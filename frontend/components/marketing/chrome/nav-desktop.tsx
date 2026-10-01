@@ -172,7 +172,7 @@ function DesktopDropPanel({
         maxWidth: 'calc(100vw - 2rem)',
       }}
       className={cn(
-        'bg-panel shadow-elevated absolute top-full rounded-[var(--radius-overlay)] p-3',
+        'bg-panel shadow-overlay absolute top-full rounded-[var(--radius-overlay)] p-3',
         'mt-2 overflow-hidden',
         animate && 'marketing-nav-panel',
       )}

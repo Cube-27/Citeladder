@@ -15,6 +15,8 @@ import {
   rawRadiusViolations,
   motionRoleViolations,
   focusRoleViolations,
+  shadowRoleViolations,
+  radiusRoleAdvisories,
   styleAssertionViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
@@ -32,6 +34,7 @@ const ignored = new Set([
   'playwright-report',
 ]);
 const violations = [];
+const advisories = [];
 
 function files(directory) {
   return readdirSync(directory).flatMap((name) => {
@@ -103,9 +106,11 @@ for (const path of files(root)) {
     ...productUiSourceViolations(source, label, ownsProductUi),
     ...motionRoleViolations(source, label, ownsProductUi),
     ...focusRoleViolations(source, label, ownsProductUi),
+    ...shadowRoleViolations(source, label, ownsProductUi),
     ...nestedCardViolations(source, label, ownsProductUi),
     ...productControlViolations(source, label, ownsProductUi),
   );
+  advisories.push(...radiusRoleAdvisories(source, label, ownsProductUi));
 }
 
 violations.push(
@@ -133,4 +138,5 @@ if (violations.length) {
   console.error(violations.join('\n'));
   process.exit(1);
 }
+if (advisories.length) console.warn(advisories.join('\n'));
 console.log('CiteLadder design-system policy passed.');

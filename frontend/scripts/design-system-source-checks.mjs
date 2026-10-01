@@ -19,9 +19,15 @@ export function motionRoleViolations(source, label, ownsProductUi) {
   const declarations = text.matchAll(
     /(?:animation|transition)(?:-(?:duration|delay|timing-function))?\s*:\s*['"]?([^;\n}'"]+)/g,
   );
-  const rawTiming = /\b\d*\.?\d+m?s\b|cubic-bezier\s*\(|(?<![\w-])(?:ease(?:-in(?:-out)?|-out)?|linear)(?![\w-])/;
-  const rawUtility = /\b(?:duration|delay)-(?:\d+|\[[\d.]+m?s\])|\bease-(?:in(?:-out)?|out|linear)\b/;
-  if ([...declarations].some(([, value]) => rawTiming.test(value)) || rawUtility.test(text) || /\b(?:opacity|transform|color|width|height)\s+\d*\.?\d+m?s\b/.test(text)) {
+  const rawTiming =
+    /\b\d*\.?\d+m?s\b|cubic-bezier\s*\(|(?<![\w-])(?:ease(?:-in(?:-out)?|-out)?|linear)(?![\w-])/;
+  const rawUtility =
+    /\b(?:duration|delay)-(?:\d+|\[[\d.]+m?s\])|\bease-(?:in(?:-out)?|out|linear)\b/;
+  if (
+    [...declarations].some(([, value]) => rawTiming.test(value)) ||
+    rawUtility.test(text) ||
+    /\b(?:opacity|transform|color|width|height)\s+\d*\.?\d+m?s\b/.test(text)
+  ) {
     return [`${label}: motion must consume duration and easing roles from globals.css`];
   }
   return [];
@@ -39,6 +45,50 @@ export function focusRoleViolations(source, label, ownsProductUi) {
     return [`${label}: keyboard focus belongs to focus-ring, focus-input or focus-frame`];
   }
   return [];
+}
+
+/** Detached surfaces are the only consumers of elevation. */
+export function shadowRoleViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi || label === TOKEN_CSS) return [];
+  const text = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const shadows = text.matchAll(/\bshadow-(\[[^\]]+\]|[\w-]+)/g);
+  const rawDeclaration =
+    label.endsWith('.css') &&
+    [...text.matchAll(/box-shadow\s*:\s*([^;]+);/g)].some(
+      ([, value]) => !/^(?:none|var\(--shadow-(?:none|overlay|modal)\))$/.test(value.trim()),
+    );
+  if (
+    [...shadows].some(([, role]) => !['none', 'overlay', 'modal'].includes(role)) ||
+    rawDeclaration
+  ) {
+    return [`${label}: elevation must use shadow-none, shadow-overlay or shadow-modal`];
+  }
+  return [];
+}
+
+/** Radius family mismatches are review advice because composition can be intentional. */
+export function radiusRoleAdvisories(source, label, ownsProductUi) {
+  if (!ownsProductUi || !label.endsWith('.tsx')) return [];
+  const roles = {
+    Button: 'control',
+    Input: 'control',
+    Textarea: 'control',
+    Select: 'control',
+    Card: 'card',
+    Panel: 'card',
+    Dialog: 'overlay',
+    Drawer: 'overlay',
+    DropdownContent: 'overlay',
+    Tooltip: 'overlay',
+  };
+  return jsxClassData(source, label).flatMap(({ tag, classes, line }) => {
+    const expected = roles[tag];
+    if (!expected) return [];
+    const mismatch = [
+      ...classes.matchAll(/rounded-\[var\(--radius-(control|card|overlay)\)\]/g),
+    ].some(([, role]) => role !== expected);
+    return mismatch ? [`${label}:${line}: review ${tag} radius; family role is ${expected}`] : [];
+  });
 }
 /**
  * Roles the website stylesheet must define.
