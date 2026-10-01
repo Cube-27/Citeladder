@@ -354,10 +354,10 @@ export function CommandPalette() {
                           onClick={() => runCommand(command)}
                           className={cn(
                             ROW,
-                            'transition-colors',
+                            'focus-ring transition-colors active:bg-active',
                             isActive
-                              ? 'bg-accent-subtle text-accent-text'
-                              : 'text-secondary hover:bg-background-alt',
+                              ? 'bg-selected text-foreground'
+                              : 'text-secondary hover:bg-hover hover:text-foreground',
                           )}
                         >
                           {Icon ? (

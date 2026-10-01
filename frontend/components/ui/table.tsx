@@ -14,8 +14,8 @@ import { cn } from '@/lib/utils';
  *  - data columns are centre-aligned and tabular; text columns stay left.
  *    The header centres with its values, so a column reads as one block
  *    rather than a label floating off the numbers beneath it
- *  - hover tints the row with `active`; `highlight` marks the user's own row
- *    with the same tint permanently
+ *  - hover uses the surface's hover tint; `highlight` uses the distinct
+ *    selected tint for the user's own row
  * The wrapper is scroll-capable so the sticky header pins on vertical scroll;
  * the scroll clip also keeps the pinned header inside the shell's radius. It
  * draws NO edge of its own: fill contrast against the ground is the boundary,
@@ -83,8 +83,8 @@ export function TableRow({
     <tr
       {...props}
       className={cn(
-        'hover:bg-active h-[var(--table-row-height)] transition-colors',
-        highlight && 'bg-active',
+        'hover:bg-hover active:bg-active aria-selected:bg-selected aria-selected:hover:bg-selected h-[var(--table-row-height)] transition-colors',
+        highlight && 'bg-selected hover:bg-selected',
         className,
       )}
     >
@@ -104,6 +104,7 @@ export function TableHead({
       {...props}
       className={cn(
         tableHeadClasses,
+        'aria-[sort=ascending]:text-foreground aria-[sort=descending]:text-foreground',
         'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'text-center tabular-nums',
         className,
