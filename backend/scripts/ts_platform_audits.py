@@ -2,10 +2,12 @@
 
 from app.core.config import (
     Settings,
+    analysis,
     audits,
     commerce_catalog,
     projects,
     provider_catalog,
+    source_pages,
 )
 from app.orchestration.audit_state import _ALLOWED_TRANSITIONS
 
@@ -17,6 +19,16 @@ def audit_policy(setting):
         ),
         "transitions": {
             source: sorted(targets) for source, targets in _ALLOWED_TRANSITIONS.items()
+        },
+        "analysis": {
+            name.lower(): sorted(value) if isinstance(value, frozenset) else value
+            for name, value in vars(analysis).items()
+            if name.isupper() and isinstance(value, (str, int, float, dict, frozenset))
+        },
+        "url_identity": {
+            "version": source_pages.SOURCE_PAGE_IDENTITY_VERSION,
+            "verbatim": source_pages.URL_IDENTITY_VERBATIM,
+            "unresolved": source_pages.URL_IDENTITY_UNRESOLVED,
         },
         "settings": {
             name: setting(name, audits.AuditSettings)

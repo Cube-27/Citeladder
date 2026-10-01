@@ -18,6 +18,7 @@ import { ProviderError } from '../src/answer-engines/contracts.ts';
 import { issueBundle } from '../src/entitlements/grants.ts';
 import { reserveUsage, ledgerBalances } from '../src/entitlements/ledger.ts';
 import { record } from '../src/db/json.ts';
+import { analyzeExecution } from '../src/analysis/execution.ts';
 
 const db = testDatabase(),
   fixtures = new VisibilityFixtures(db),
@@ -134,7 +135,7 @@ describe('atomic audit execution persistence', () => {
   it('commits evidence and the terminal queue state once, billing one call and releasing the remainder', async () => {
     const t = await seed(true);
     const response = { ...result, transport_model: t.context.task.transport_model };
-    const derive = async () => {};
+    const derive = analyzeExecution;
     const artifactId = await persistExecutionSuccess(
       db,
       t.context.task,
@@ -188,6 +189,27 @@ describe('atomic audit execution persistence', () => {
       attempt_count: 1,
       search_requests: 1,
     });
+    const analysis = await db
+      .selectFrom('response_analyses')
+      .selectAll()
+      .where('task_id', '=', task.id)
+      .executeTakeFirstOrThrow();
+    expect(analysis).toMatchObject({
+      artifact_id: artifactId,
+      workspace_id: t.workspaceId,
+      brand_mentioned: true,
+    });
+    expect(record(analysis.score)).toMatchObject({
+      brand_injected_in_search: null,
+      search_query_text_available: false,
+    });
+    expect(
+      await db
+        .selectFrom('brand_mentions')
+        .select(['artifact_id', 'analysis_id'])
+        .where('analysis_id', '=', analysis.id)
+        .execute(),
+    ).toEqual([{ artifact_id: artifactId, analysis_id: analysis.id }]);
   });
   it('rolls back raw evidence and billing when analysis cannot commit, and discards a stale worker result', async () => {
     const t = await seed(true),

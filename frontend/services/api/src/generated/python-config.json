@@ -2813,6 +2813,100 @@
       "failed": [],
       "cancelled": []
     },
+    "analysis": {
+      "analyzer_version": "grounded-analysis-v1",
+      "entity_assessment_version": "entity-assessment-1",
+      "scoring_rule_version": "prompt-composite-v1",
+      "prompt_score_visibility_weight": 0.6,
+      "prompt_score_competitive_weight": 0.25,
+      "prompt_score_owned_citation_weight": 0.15,
+      "prompt_decline_materiality_points": 5.0,
+      "prompt_decline_required_movements": 3,
+      "prompt_decline_window_movements": 4,
+      "prompt_decline_min_engines": 2,
+      "prompt_decline_repetition_agreement": 0.67,
+      "prompt_decline_history_candidate_limit": 20,
+      "visibility_trend_granularities": [
+        "day",
+        "month",
+        "run",
+        "week"
+      ],
+      "visibility_trend_default_granularity": "run",
+      "visibility_trend_max_points": 100,
+      "visibility_selection_max_runs": 100,
+      "visibility_evidence_default_limit": 100,
+      "visibility_evidence_max_limit": 500,
+      "ambiguous_aliases": [
+        "target"
+      ],
+      "fanout_feature_rules": {
+        "community": [
+          "reddit",
+          "forum",
+          "discussion",
+          "experiences"
+        ],
+        "review": [
+          "review",
+          "reviews",
+          "rating",
+          "ratings",
+          "customer feedback"
+        ],
+        "comparison": [
+          "vs",
+          "versus",
+          "alternative",
+          "alternatives",
+          "compare",
+          "best"
+        ],
+        "commercial": [
+          "price",
+          "prices",
+          "cheap",
+          "affordable",
+          "budget",
+          "sale",
+          "under"
+        ],
+        "local": [
+          "near me",
+          "nearby",
+          "store",
+          "sydney",
+          "melbourne",
+          "brisbane",
+          "perth"
+        ],
+        "service": [
+          "click and collect",
+          "delivery",
+          "returns",
+          "shipping"
+        ],
+        "freshness": [
+          "latest",
+          "current",
+          "today",
+          "2026"
+        ],
+        "product_evidence": [
+          "material",
+          "fabric",
+          "size",
+          "multipack",
+          "availability",
+          "stock"
+        ]
+      }
+    },
+    "url_identity": {
+      "version": "citation-identity-1",
+      "verbatim": "verbatim",
+      "unresolved": "unresolved"
+    },
     "settings": {
       "max_tasks_per_audit": {
         "env": [
