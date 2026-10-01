@@ -237,6 +237,9 @@ class SiteHealthSettings(BaseSettings):
     # long-running transaction and stall live claims; the sweeper instead
     # drains the remainder across subsequent polls.
     lease_reclaim_batch_size: int = 500
+    # One-shot TypeScript worker runs stop admitting work at this deadline.
+    # Already claimed work finishes under the acquisition/task bounds.
+    drain_budget_seconds: float = Field(default=300.0, gt=0)
     # Rows per multi-row INSERT in the crawl-finalize pass. Bounded because
     # PostgreSQL caps a statement at 65,535 bind parameters and an evaluation
     # row carries 22 columns -- a large crawl's ~3 evaluations per page would

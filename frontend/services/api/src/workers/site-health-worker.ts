@@ -16,6 +16,7 @@ import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { lockSiteTask, type Crawl } from '../site-health/task-fence.ts';
 import { TaskCancelledError } from './executor.ts';
 import { waitForPoll } from './poll.ts';
+import { recoverExpiredLeases } from '../site-health/lease-recovery.ts';
 
 type SiteExecutor = (db: Database, crawl: Crawl, task: SiteTask) => Promise<unknown>;
 const executors: Record<string, SiteExecutor> = {
@@ -43,6 +44,8 @@ export class SiteHealthWorker {
   readonly queue: TaskQueue<'site_crawl_tasks'>;
   readonly executors: Record<string, SiteExecutor>;
   readonly acquisition: SiteTaskContext;
+  #recovery: Promise<number> | null = null;
+  #nextRecovery = 0;
   constructor(
     db: Database,
     options: {
@@ -66,6 +69,10 @@ export class SiteHealthWorker {
     };
   }
   async runOnce(limit = this.settings.concurrency) {
+    await this.#recover();
+    return this.#claimAndExecute(limit);
+  }
+  async #claimAndExecute(limit: number) {
     const tasks = await this.queue.claim({
       owner: this.owner,
       kinds: policy.site_health.ts_owned_task_kinds,
@@ -74,6 +81,37 @@ export class SiteHealthWorker {
     const results = await Promise.allSettled(tasks.map((task) => this.execute(task)));
     for (const result of results) if (result.status === 'rejected') throw result.reason;
     return tasks.length;
+  }
+  async #recover() {
+    if (this.#recovery) return this.#recovery;
+    if (Date.now() < this.#nextRecovery) return 0;
+    this.#recovery = recoverExpiredLeases(this.db, this.settings.reclaimBatch)
+      .then((result) => {
+        this.#nextRecovery =
+          result.reclaimed === this.settings.reclaimBatch
+            ? 0
+            : Date.now() + Math.max(50, this.settings.poll * 1000);
+        return result.reclaimed;
+      })
+      .finally(() => {
+        this.#recovery = null;
+      });
+    return this.#recovery;
+  }
+  /** Stop new claims at the deadline; finish bounded in-flight work and close cleanly. */
+  async runUntilIdle(signal: AbortSignal, budgetSeconds = this.settings.drainBudget) {
+    if (!Number.isFinite(budgetSeconds) || budgetSeconds <= 0)
+      throw new Error('Site Health drain budget must be positive and finite');
+    const deadline = performance.now() + budgetSeconds * 1000;
+    let total = 0;
+    while (!signal.aborted && performance.now() < deadline) {
+      const recovered = await this.#recover();
+      if (signal.aborted || performance.now() >= deadline) break;
+      const count = await this.#claimAndExecute(this.settings.concurrency);
+      total += count;
+      if (!count && recovered < this.settings.reclaimBatch) break;
+    }
+    return total;
   }
   async execute(claimed: SiteTask) {
     const acquire = Object.hasOwn(acquisition, claimed.task_kind)

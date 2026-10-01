@@ -9,8 +9,7 @@ the crawl in an active status forever — no snapshot, no ``crawl.completed``
 event, and clients polling it indefinitely.
 
 These tests pin the two guarantees that close that hole:
-  - the sweeper reports the crawls whose tasks it terminalized, and the worker
-    reconciles them (``release_expired_detailed`` -> ``run_once``);
+  - the worker replays terminal settlements from the TypeScript owner;
   - a stalled crawl with no outstanding tasks is force-reconciled regardless of
     HOW it got that way (``reconcile_stalled``).
 
@@ -42,7 +41,6 @@ from app.core.config.site_health_contracts import (
     TASK_KIND_DISCOVER,
 )
 from app.core.config.site_health_runtime import (
-    SITE_CRAWL_QUEUE_SPEC,
     site_health_settings,
 )
 from app.core.config.task_queue import (
@@ -56,7 +54,6 @@ from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.events import SiteCrawlEvent
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.snapshot import SiteHealthSnapshot
-from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.site_health.lifecycle import CrawlLifecycle
 from app.workers.site_health_worker import SiteHealthWorker
 from tests.component.site_health_helpers import SiteSeed, seed_site_crawl
@@ -83,31 +80,6 @@ async def test_replay_failure_does_not_suppress_crawl_backstops(
     assert await worker.run_once() == 0
     stalled.assert_awaited_once()
     overdue.assert_awaited_once()
-
-
-async def _expire_leases(
-    session_factory: async_sessionmaker[AsyncSession], crawl_id: uuid.UUID
-) -> None:
-    async with session_factory() as session:
-        await session.execute(
-            update(SiteCrawlTask)
-            .where(SiteCrawlTask.crawl_id == crawl_id)
-            .values(lease_expires_at=datetime.now(UTC) - timedelta(minutes=5))
-        )
-        await session.commit()
-
-
-async def _exhaust_attempts(
-    session_factory: async_sessionmaker[AsyncSession], crawl_id: uuid.UUID
-) -> None:
-    """Put every task at its attempt ceiling so the sweeper FAILS it terminally."""
-    async with session_factory() as session:
-        await session.execute(
-            update(SiteCrawlTask)
-            .where(SiteCrawlTask.crawl_id == crawl_id)
-            .values(attempt_count=SiteCrawlTask.max_attempts)
-        )
-        await session.commit()
 
 
 async def _crawl(
@@ -272,73 +244,37 @@ async def test_task_reconcile_does_not_cross_workspace_boundary(
 
 
 @pytest.mark.asyncio
-async def test_sweeper_reports_crawls_whose_tasks_it_terminalized(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """``release_expired_detailed`` surfaces the owning crawl of a failed task.
-
-    Without the parent ids nothing downstream can know a reconcile is owed —
-    the sweeper's terminal write is invisible to every worker finalize.
-    """
-    async with session_factory() as session:
-        seed = await seed_site_crawl(session, task_count=2)
-
-    queue = PostgresTaskQueue(session_factory, SITE_CRAWL_QUEUE_SPEC)
-    claimed = await queue.claim(owner="site-a", limit=2)
-    assert len(claimed) == 2
-    await _exhaust_attempts(session_factory, seed.crawl_id)
-    await _expire_leases(session_factory, seed.crawl_id)
-
-    sweep = await queue.release_expired_detailed()
-
-    assert sweep.reclaimed == 2
-    assert set(sweep.failed_task_ids) == set(seed.task_ids)
-    # De-duplicated: two failed tasks of ONE crawl report that crawl once.
-    assert sweep.failed_parent_ids == (seed.crawl_id,)
-
-
-@pytest.mark.asyncio
-async def test_sweeper_retry_reclaim_reports_no_parents(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """A reclaim that returns a task to ``retry_wait`` owes no reconcile.
-
-    The task is still outstanding, so the crawl is not drained and reporting it
-    would make the worker reconcile on every sweep of a healthy busy crawl.
-    """
-    async with session_factory() as session:
-        seed = await seed_site_crawl(session, task_count=2)
-
-    queue = PostgresTaskQueue(session_factory, SITE_CRAWL_QUEUE_SPEC)
-    await queue.claim(owner="site-a", limit=2)
-    await _expire_leases(session_factory, seed.crawl_id)  # attempts NOT exhausted
-
-    sweep = await queue.release_expired_detailed()
-
-    assert sweep.reclaimed == 2
-    assert sweep.failed_task_ids == ()
-    assert sweep.failed_parent_ids == ()
-
-
-@pytest.mark.asyncio
-async def test_run_once_terminalizes_crawl_the_sweeper_drained(
+async def test_run_once_terminalizes_crawl_after_typescript_recovery(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """THE stuck-crawl regression.
 
-    The sweeper fails the crawl's last outstanding tasks at max attempts. No
+    TypeScript fails the crawl's last outstanding tasks at max attempts. No
     worker ever settles them, so before the fix nothing reconciled the crawl
     and it stayed 'running' forever.
     """
     async with session_factory() as session:
         seed = await seed_site_crawl(session, task_count=2)
 
-    queue = PostgresTaskQueue(session_factory, SITE_CRAWL_QUEUE_SPEC)
-    await queue.claim(owner="other-worker", limit=2)
-    await _exhaust_attempts(session_factory, seed.crawl_id)
-    await _expire_leases(session_factory, seed.crawl_id)
+    async with session_factory() as session:
+        now = datetime.now(UTC)
+        await session.execute(
+            update(SiteCrawlTask)
+            .where(SiteCrawlTask.crawl_id == seed.crawl_id)
+            .values(
+                status=TASK_STATUS_FAILED,
+                attempt_count=SiteCrawlTask.max_attempts,
+                lease_owner=None,
+                lease_expires_at=None,
+                heartbeat_at=None,
+                completed_at=now,
+                updated_at=now,
+                error_code="max_attempts_exceeded",
+            )
+        )
+        await session.commit()
 
-    # The maintenance pass sweeps leases and reconciles; it claims nothing.
+    # Python only replays the settlement; TypeScript owns lease recovery.
     await _worker(session_factory).run_once()
 
     async with session_factory() as session:
