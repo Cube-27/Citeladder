@@ -442,7 +442,7 @@ async def _load_events(
     history to a resuming client would duplicate everything it already
     rendered. ``limit`` bounds ONE page; callers resume with the last id they
     rendered, so a capped page is a page, never a truncated history. Mirrors
-    ``domain.site_health.service.lifecycle.load_events``.
+    TypeScript Site Health event replay.
     """
     stmt = (
         select(AuditEvent)

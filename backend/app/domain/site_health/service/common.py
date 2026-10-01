@@ -9,7 +9,6 @@ and the typed keyset-cursor decoders.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -155,19 +154,6 @@ def _decode_int_keyset(
     try:
         value_raw, id_raw = decode_keyset_cursor(cursor, scope=scope, filters=filters)
         return int(value_raw), uuid.UUID(id_raw)
-    except CursorScopeError as exc:
-        raise InvalidCursorError(str(exc)) from exc
-    except ValueError as exc:
-        raise InvalidCursorError(str(exc)) from exc
-
-
-def _decode_created_id_keyset(
-    cursor: str, *, scope: str, filters: dict
-) -> tuple[datetime, uuid.UUID]:
-    """Decode a ``(created_at, id)`` keyset cursor (400 on any failure)."""
-    try:
-        created_raw, id_raw = decode_keyset_cursor(cursor, scope=scope, filters=filters)
-        return datetime.fromisoformat(created_raw), uuid.UUID(id_raw)
     except CursorScopeError as exc:
         raise InvalidCursorError(str(exc)) from exc
     except ValueError as exc:

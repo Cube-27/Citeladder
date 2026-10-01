@@ -63,6 +63,8 @@ from app.core.config import opportunities as opportunities_config
 from app.core.config import projects as projects_config
 from app.core.config import prompts as prompts_config
 from app.core.config import search_intelligence as search_intelligence_config
+from app.core.config import site_health_contracts as site_health_config
+from app.core.config import site_health_crawl_policy as site_crawl_config
 from app.core.config import site_health_internal_links as internal_links_config
 from app.core.config import site_health_rules as web_rules
 from app.core.config import visibility_prompts as visibility_config
@@ -700,8 +702,10 @@ ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
     integration_contracts,
     prompts_config,
     entitlements_config,
+    site_health_config,
+    site_crawl_config,
 )
-_ERROR_CODE_PREFIXES = ("CODE_", "ERROR_")
+_ERROR_CODE_PREFIXES = ("CODE_", "ERROR_", "URL_EXCLUSION_")
 
 
 def error_codes(modules: Iterable[types.ModuleType] = ERROR_CODE_MODULES) -> list[str]:

@@ -1,4 +1,4 @@
-"""Site Health read paths kept for Python callers: crawls, monitored set, pages.
+"""Site Health read paths retained for Agent/MCP callers: crawl summary and pages.
 
 The workspace-scoped projections behind the list/detail endpoints. Every query
 here is bounded by the resolved workspace and (for crawl-scoped reads) by what
@@ -11,10 +11,9 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable, Sequence
-from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import and_, case, func, literal, or_, select, tuple_
+from sqlalchemy import case, func, literal, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.site_health_contracts import (
@@ -23,20 +22,14 @@ from app.core.config.site_health_contracts import (
     PAGE_ANALYSIS_STATUS_PARTIALLY_COMPLETED,
     TASK_KIND_ANALYZE,
 )
-from app.domain.entitlements.service import (
-    refresh_site_health_runtime_for_workspace,
-)
 from app.domain.site_health.failure import load_root_errors, load_root_failure_summary
 from app.domain.site_health.inventory_scope import (
     inventory_site_url_subquery,
 )
 from app.domain.site_health.normalization import encode_keyset_cursor
 from app.domain.site_health.service.common import (
-    _clamp_limit,
-    _decode_created_id_keyset,
     _decode_url_keyset,
     _load_crawl,
-    _load_project,
 )
 from app.domain.site_health.service.link_projections import (
     PAGE_SORTS,
@@ -47,7 +40,6 @@ from app.domain.site_health.service.measurement_projection import (
     page_measurement_fields,
 )
 from app.domain.site_health.service.presentation import (
-    _iso,
     _matches_page_status,
     _page_kind_matches,
     presentation_status_for,
@@ -57,7 +49,6 @@ from app.models.site_health.analysis import SiteIssue, SitePageAnalysis
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.links import SitePageLinkMetric
 from app.models.site_health.queue import SiteCrawlTask
-from app.models.site_health.runtime import SiteHealthProfile
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 
 
@@ -91,60 +82,6 @@ async def get_crawl_summary(
     return project_crawl(
         crawl, failure_summary=await _failure_summary_for(session, crawl)
     )
-
-
-async def list_crawls(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID | None,
-    limit: int | None,
-    cursor: str | None,
-) -> dict:
-    """List crawls ordered ``(created_at DESC, id DESC)`` with a keyset cursor."""
-    limit = _clamp_limit(limit)
-    scope = "crawls"
-    filters = {"project_id": str(project_id) if project_id else None}
-
-    stmt = select(SiteCrawl).where(SiteCrawl.workspace_id == workspace_id)
-    if project_id is not None:
-        # Authorize the project so a foreign id is a 404, not an empty page.
-        await _load_project(session, workspace_id=workspace_id, project_id=project_id)
-        stmt = stmt.where(SiteCrawl.project_id == project_id)
-
-    if cursor:
-        cur_created, cur_id = _decode_created_id_keyset(
-            cursor, scope=scope, filters=filters
-        )
-        # (created_at, id) DESC keyset: rows strictly "older" than the cursor.
-        stmt = stmt.where(
-            or_(
-                SiteCrawl.created_at < cur_created,
-                and_(
-                    SiteCrawl.created_at == cur_created,
-                    SiteCrawl.id < cur_id,
-                ),
-            )
-        )
-
-    stmt = stmt.order_by(SiteCrawl.created_at.desc(), SiteCrawl.id.desc()).limit(
-        limit + 1
-    )
-    rows = list((await session.scalars(stmt)).all())
-
-    next_cursor: str | None = None
-    if len(rows) > limit:
-        rows = rows[:limit]
-        last = rows[-1]
-        next_cursor = encode_keyset_cursor(
-            scope=scope,
-            filters=filters,
-            sort_values=[last.created_at.isoformat(), str(last.id)],
-        )
-    return {
-        "items": [project_crawl(row) for row in rows],
-        "next_cursor": next_cursor,
-    }
 
 
 async def _monitored_site_url_ids(
@@ -490,67 +427,3 @@ def _site_url_page_stmt(
             tuple_(SiteUrl.normalized_url, SiteUrl.id) > (cur_url, cur_id)
         )
     return stmt.order_by(SiteUrl.normalized_url.asc(), SiteUrl.id.asc()).limit(window)
-
-
-# =========================================================================
-# Monitored set
-# =========================================================================
-async def get_monitored_set(
-    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
-) -> dict:
-    """Project's persistent monitored set + selection version + workspace quota."""
-    await _load_project(session, workspace_id=workspace_id, project_id=project_id)
-    profile = await session.scalar(
-        select(SiteHealthProfile).where(SiteHealthProfile.project_id == project_id)
-    )
-    selection_version = int(profile.selection_version) if profile else 0
-
-    rows = await session.execute(
-        select(MonitoredSiteUrl, SiteUrl)
-        .join(SiteUrl, SiteUrl.id == MonitoredSiteUrl.site_url_id)
-        .where(MonitoredSiteUrl.project_id == project_id)
-        .order_by(SiteUrl.normalized_url.asc(), SiteUrl.id.asc())
-    )
-    monitored_urls: list[dict] = []
-    for membership, site_url in rows.all():
-        monitored_urls.append(
-            {
-                "site_url_id": membership.site_url_id,
-                "normalized_url": site_url.normalized_url,
-                "display_url": site_url.display_url or site_url.normalized_url,
-                "title": site_url.latest_title or None,
-                "active": membership.active,
-                "selection_source": membership.selection_source,
-                "selected_at": _iso(membership.selected_at),
-                "deselected_at": _iso(membership.deselected_at),
-            }
-        )
-
-    runtime = await refresh_site_health_runtime_for_workspace(
-        session, workspace_id=workspace_id, at=datetime.now(UTC)
-    )
-    used = await session.scalar(
-        select(func.count())
-        .select_from(MonitoredSiteUrl)
-        .where(
-            MonitoredSiteUrl.workspace_id == workspace_id,
-            MonitoredSiteUrl.active.is_(True),
-        )
-    )
-    return {
-        "project_id": project_id,
-        "selection_version": selection_version,
-        "monitored_urls": monitored_urls,
-        "quota": {
-            "used": int(used or 0),
-            "limit": int(runtime.monitored_url_limit),
-        },
-    }
-
-
-from app.domain.site_health.service.pages import (  # noqa: E402
-    get_page_detail,
-    get_pages,
-)
-
-__all__ = ["get_page_detail", "get_pages"]

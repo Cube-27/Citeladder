@@ -1,6 +1,6 @@
 """Component tests for the unified API error envelope (WS-A A1).
 
-Exercises the live HTTP boundary: the site-health and Commerce routers
+Exercises the live HTTP boundary: the retained Python routers
 raise ``ApiException``; legacy raw
 ``HTTPException`` raises (unmigrated routers + Starlette routing errors) go
 through the compatibility shim; request validation and unhandled exceptions
@@ -17,8 +17,6 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
 from app.core.telemetry import (
@@ -27,12 +25,7 @@ from app.core.telemetry import (
     set_correlation_id,
 )
 from app.main import app
-from app.models.site_health.runtime import SiteHealthProfile
-from app.models.user import User
-from app.models.workspace import WorkspaceMember
 from tests.component.auth_helpers import register_and_login
-from tests.component.project_helpers import seed_project
-from tests.component.site_health_helpers import seed_monitored_urls_allowance
 
 pytestmark = pytest.mark.asyncio
 
@@ -41,18 +34,6 @@ _EMAIL = "envelope@example.com"
 
 async def _register(client: httpx.AsyncClient, email: str = _EMAIL) -> None:
     await register_and_login(client, email)
-
-
-async def _project(client: httpx.AsyncClient, name: str = "Envelope Co") -> dict:
-    project = await seed_project(
-        client,
-        {
-            "name": name,
-            "brand_name": name,
-            "competitors": [{"name": "Rival", "aliases": [], "domains": []}],
-        },
-    )
-    return project
 
 
 def _assert_envelope(body: dict, *, code: str, retryable: bool) -> None:
@@ -94,7 +75,7 @@ async def test_legacy_http_exception_router_normalized_by_shim(
 async def test_request_validation_error_envelope(client: httpx.AsyncClient) -> None:
     """FastAPI's 422 array normalizes into sanitized field-level details."""
     await _register(client, "env-validation@example.com")
-    resp = await client.get("/api/v1/site-crawls", params={"project_id": "not-a-uuid"})
+    resp = await client.get("/api/v1/audits", params={"project_id": "not-a-uuid"})
     assert resp.status_code == 422
     body = resp.json()
     # ``detail`` is now a human string, not the raw validation array.
@@ -105,65 +86,6 @@ async def test_request_validation_error_envelope(client: httpx.AsyncClient) -> N
     assert errors[0]["loc"] == ["project_id"]
     for entry in errors:
         assert set(entry) <= {"loc", "message", "type"}
-
-
-# =========================================================================
-# site_health
-# =========================================================================
-async def test_site_health_coded_422_envelope(client: httpx.AsyncClient) -> None:
-    """Coded plan errors keep their legacy dict detail + canonical block."""
-    await _register(client, "env-site@example.com")
-    project = await _project(client, "Envelope Site")
-    # A project without a website_url fails planning with a coded 422.
-    resp = await client.post("/api/v1/site-crawls", json={"project_id": project["id"]})
-    assert resp.status_code == 422
-    body = resp.json()
-    assert body["detail"]["code"] == "invalid_root"  # legacy dict preserved
-    assert body["detail"]["message"] == body["error"]["message"]
-    _assert_envelope(body, code="invalid_root", retryable=False)
-
-
-async def test_site_health_stale_selection_version_409_envelope(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """The 409 stale_selection_version shape survives the envelope (WS-A A1)."""
-    email = "env-stale@example.com"
-    await _register(client, email)
-    project = await _project(client, "Envelope Stale")
-
-    async with session_factory() as session:
-        user = await session.scalar(select(User).where(User.email == email))
-        assert user is not None
-        member = await session.scalar(
-            select(WorkspaceMember).where(WorkspaceMember.user_id == user.id)
-        )
-        assert member is not None
-        # A positive monitored-URL allowance + a profile row so the version
-        # check is reached.
-        await seed_monitored_urls_allowance(
-            session, workspace_id=member.workspace_id, monitored_urls=50
-        )
-        session.add(
-            SiteHealthProfile(
-                workspace_id=member.workspace_id, project_id=uuid.UUID(project["id"])
-            )
-        )
-        await session.commit()
-
-    resp = await client.put(
-        f"/api/v1/projects/{project['id']}/monitored-urls",
-        json={"site_url_ids": [], "expected_selection_version": 99},
-    )
-    assert resp.status_code == 409
-    body = resp.json()
-    # Legacy coded dict keeps its exact value and type...
-    assert body["detail"]["code"] == "stale_selection_version"
-    assert body["detail"]["current_selection_version"] == 0
-    assert body["detail"]["message"] == body["error"]["message"]
-    # ...and mirrored into the canonical block + details.
-    _assert_envelope(body, code="stale_selection_version", retryable=False)
-    assert body["error"]["details"] == {"current_selection_version": 0}
 
 
 # =========================================================================

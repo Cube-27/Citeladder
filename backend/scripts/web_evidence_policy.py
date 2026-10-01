@@ -113,6 +113,7 @@ def _crawl_policy(
         "automatic_monitor_limit_key": crawl_policy.AUTOMATIC_MONITOR_LIMIT_KEY,
         "admission_policy_version": crawl_policy.URL_ADMISSION_POLICY_VERSION,
         "site_setup_priority_boost": runtime.SITE_SETUP_PRIORITY_BOOST,
+        "cancel_db_conflict_retries": runtime.CRAWL_CANCEL_DB_CONFLICT_RETRIES,
         "analyze_priority_boost": ANALYZE_PRIORITY_BOOST,
         "link_rewrite": {
             "reason": contracts.LINK_REWRITE_ENCODED_TRACKING_QUERY,

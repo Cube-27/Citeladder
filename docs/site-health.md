@@ -39,8 +39,7 @@ evidence and the task outcome together. `discover` commits its artifact, the
 URL's observation, frontier admission and the page's disposition; `site_setup`
 publishes robots and llms.txt evidence first, then commits the sitemap walk and
 its admission under the same lease. Python claims no tasks and runs no Site
-Health worker; it keeps crawl creation and the other `site-health-crawls`
-controls below.
+Health worker or crawl-control routes.
 
 The TypeScript worker also owns the crawl lifecycle, the only path to a
 terminal crawl. After a discover, site-setup or analyze task settles, it
@@ -80,9 +79,20 @@ issues, issue history, events, exports, the dashboard, Overview, AEO
 Readiness, architecture and changes. A page's presentation status is derived in
 the same query that filters and pages it. Reads resolve the workspace's Site
 Health runtime from its grants at read time and never refresh the persisted
-runtime row; billing mutations own that write. Python keeps the
-`site-health-crawls` family: crawl creation, the crawl list, URL preview,
-cancel, page rerun and the monitored set, until the crawler moves.
+runtime row. The TypeScript `site-health-crawls` family owns crawl creation,
+the crawl list, URL preview, cancellation, page rerun and the monitored set.
+Admission refreshes the runtime from current grants, then locks it before
+the profile; the project row is locked first so concurrent creates admit one
+active crawl. Selection locks the active crawl before runtime/profile to
+serialize with worker publication, and the workspace runtime lock serializes
+quota checks across projects. Billing and admission share capacity/account
+locks before runtime refresh. Creation reserves the effective page-fetch
+budget on the entitlement ledger in the same transaction as its initial tasks.
+URL preview, crawl listing and monitored-set reads render persisted evidence
+and resolve grants without refreshing runtime. A rerun from a terminal crawl
+creates one fresh analyze task under the saved profile scope; an active crawl
+allocates the next task generation. Python retains only the persisted reads
+and content hand-off used by Agent/MCP until their cutover.
 
 ## Acquisition and evidence guarantees
 

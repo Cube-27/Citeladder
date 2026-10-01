@@ -8,6 +8,7 @@
     "worker": "node src/worker.ts",
     "worker:discovery": "node src/discovery-worker.ts",
     "worker:site-health": "node src/site-health-worker.ts",
+    "seed:site-health": "node scripts/seed-site-health.ts",
     "integration-worker": "node src/integration-worker.ts",
     "integration-dispatcher": "node src/integration-dispatcher.ts",
     "billing-worker": "node src/billing-worker.ts",
