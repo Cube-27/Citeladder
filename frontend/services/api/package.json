@@ -10,6 +10,7 @@
     "worker:audit": "node src/audit-worker.ts",
     "scheduler:audit": "node src/audit-scheduler.ts",
     "maintenance:audit": "node src/audit-maintenance.ts",
+    "audit:reprice": "node src/cli/reprice-execution-costs.ts",
     "integration-worker": "node src/integration-worker.ts",
     "integration-dispatcher": "node src/integration-dispatcher.ts",
     "billing-worker": "node src/billing-worker.ts",
