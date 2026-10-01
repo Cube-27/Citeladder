@@ -207,6 +207,7 @@ def _rules_policy() -> dict[str, Any]:
 def _acquisition_policy(constants: Constants) -> dict[str, Any]:
     return {
         "error_codes": constants(acquisition, "ERROR_"),
+        "provenance": constants(acquisition, "ACQUISITION_"),
         "bot_block_body_markers": list(acquisition.BOT_BLOCK_BODY_MARKERS),
         "bot_block_marker_scan_bytes": acquisition.BOT_BLOCK_MARKER_SCAN_BYTES,
         "bodyless_status_codes": sorted(
@@ -216,6 +217,9 @@ def _acquisition_policy(constants: Constants) -> dict[str, Any]:
         "persisted_response_headers": sorted(rules.PERSISTED_RESPONSE_HEADERS),
         "hard_exclusion_path_patterns": list(
             crawl_policy.URL_HARD_EXCLUSION_PATH_PATTERNS
+        ),
+        "hard_exclusion_host_labels": sorted(
+            crawl_policy.URL_HARD_EXCLUSION_HOST_LABELS
         ),
         "hard_exclusion_query_keys": sorted(crawl_policy.URL_HARD_EXCLUSION_QUERY_KEYS),
         "hard_exclusion_extensions": sorted(crawl_policy.URL_HARD_EXCLUSION_EXTENSIONS),

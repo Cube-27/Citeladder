@@ -84,8 +84,9 @@ workspace membership and run/write capabilities. The
 buyer-prompt generation/manual entry. [CSV admission](../frontend/services/api/src/commerce/import.ts)
 and [catalog projection](../frontend/services/api/src/commerce/projection.ts)
 serialize catalog writes on the scoped project row. Projection consumes persisted
-Site Health analyses through analytics tasks enqueued by the retained
-[Python bridge](../backend/app/domain/commerce/service.py). Project and
+Site Health analyses through analytics tasks the Site Health
+[analyze executor](../frontend/services/api/src/site-health/analyze-task.ts)
+enqueues for catalog page kinds when the brand sells a catalog. Project and
 target IDs are re-authorized; an object ID alone is never a catalog boundary.
 The [workspace](../frontend/components/products/commerce-workspace.tsx) coordinates
 target selection and persisted queries. Async discovery must reach a persisted
@@ -97,7 +98,7 @@ owns the formulas; no browser aggregate or current-catalog lookup may reinterpre
 an old answer. Queue leases, bounded retries and cancellation remain with the
 shared analytics/audit workers. [TS projection tests](../frontend/services/api/test/commerce-projection.test.ts)
 and [route tests](../frontend/services/api/test/commerce.test.ts) cover the database
-owner, including the Python enqueue and audit-context boundaries. The
+owner, including the projection enqueue and audit-context boundaries. The
 [Python tests](../backend/tests/component/test_commerce_suite_api.py) retain
 generation, manual entry and discovery coverage with deterministic provider doubles.
 

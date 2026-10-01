@@ -6,6 +6,8 @@ import { getLogger } from '../logging.ts';
 import { TaskQueue, type SiteTask } from '../queue/task-queue.ts';
 import { persistLinkMetrics } from '../site-health/link-metrics.ts';
 import { persistArchitecture } from '../site-health/architecture.ts';
+import { analyzeSettings, runAnalyze, type AnalyzeContext } from '../site-health/analyze-task.ts';
+import { SitePageFetcher } from '../site-health/page-fetch.ts';
 import { runChangeIntel } from '../site-health/change-snapshot.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { lockSiteTask, type Crawl } from '../site-health/task-fence.ts';
@@ -31,12 +33,14 @@ export class SiteHealthWorker {
   readonly settings: ReturnType<typeof siteWorkerSettings>;
   readonly queue: TaskQueue<'site_crawl_tasks'>;
   readonly executors: Record<string, SiteExecutor>;
+  readonly analyze: AnalyzeContext;
   constructor(
     db: Database,
     options: {
       owner?: string;
       settings?: ReturnType<typeof siteWorkerSettings>;
       executors?: Record<string, SiteExecutor>;
+      fetcher?: SitePageFetcher;
     } = {},
   ) {
     this.db = db;
@@ -44,19 +48,36 @@ export class SiteHealthWorker {
     this.settings = options.settings ?? siteWorkerSettings();
     this.executors = options.executors ?? executors;
     this.queue = new TaskQueue(db, { leaseTtlSeconds: this.settings.lease }, 'site_crawl_tasks');
+    // One fetcher for the worker: robots caching and per-host pacing span every task.
+    this.analyze = {
+      db,
+      owner: this.owner,
+      fetcher: options.fetcher ?? new SitePageFetcher(db),
+      settings: analyzeSettings(),
+    };
   }
-  async runOnce() {
+  async runOnce(limit = this.settings.concurrency) {
     const tasks = await this.queue.claim({
       owner: this.owner,
       kinds: policy.site_health.ts_owned_task_kinds,
-      limit: this.settings.concurrency,
+      limit,
     });
     const results = await Promise.allSettled(tasks.map((task) => this.execute(task)));
     for (const result of results) if (result.status === 'rejected') throw result.reason;
     return tasks.length;
   }
   async execute(claimed: SiteTask) {
+    // Analyze acquires over the network, so it owns its transactions and marks
+    // itself running only after deciding to reuse, wait or fetch.
+    if (claimed.task_kind === 'analyze') {
+      await this.#leased(claimed, () => runAnalyze(this.analyze, claimed));
+      return;
+    }
     if (!(await this.queue.markRunning(claimed.id, this.owner))) return;
+    await this.#leased(claimed, () => this.#executeInTransaction(claimed));
+  }
+  /** Heartbeat the lease for the whole body; a failure settles the task. */
+  async #leased(claimed: SiteTask, body: () => Promise<void>) {
     const beat: { pending: Promise<unknown> | null } = { pending: null };
     const timer = setInterval(() => {
       if (beat.pending) return;
@@ -70,31 +91,7 @@ export class SiteHealthWorker {
         });
     }, this.settings.heartbeat * 1000);
     try {
-      await this.db.transaction().execute(async (trx) => {
-        const { crawl, task } = await lockSiteTask(trx, claimed, this.owner, 'fence');
-        const executor = Object.hasOwn(this.executors, task.task_kind)
-          ? this.executors[task.task_kind]
-          : undefined;
-        if (!executor) throw new Error(`Site Health task '${task.task_kind}' has no executor`);
-        await executor(trx, crawl, task);
-        await lockSiteTask(trx, claimed, this.owner, 'acknowledge');
-        await trx
-          .updateTable('site_crawl_tasks')
-          .set({
-            status: 'succeeded',
-            attempt_count: task.attempt_count + 1,
-            completed_at: new Date(),
-            updated_at: new Date(),
-            error_code: '',
-            error_detail: '',
-            lease_owner: null,
-            lease_expires_at: null,
-            heartbeat_at: null,
-          })
-          .where('id', '=', task.id)
-          .where('workspace_id', '=', task.workspace_id)
-          .execute();
-      });
+      await body();
     } catch (error) {
       if (!(error instanceof TaskCancelledError)) {
         logger.exception('site health task failed', error, { task_id: claimed.id });
@@ -104,6 +101,33 @@ export class SiteHealthWorker {
       clearInterval(timer);
       await beat.pending;
     }
+  }
+  async #executeInTransaction(claimed: SiteTask) {
+    await this.db.transaction().execute(async (trx) => {
+      const { crawl, task } = await lockSiteTask(trx, claimed, this.owner, 'fence');
+      const executor = Object.hasOwn(this.executors, task.task_kind)
+        ? this.executors[task.task_kind]
+        : undefined;
+      if (!executor) throw new Error(`Site Health task '${task.task_kind}' has no executor`);
+      await executor(trx, crawl, task);
+      await lockSiteTask(trx, claimed, this.owner, 'acknowledge');
+      await trx
+        .updateTable('site_crawl_tasks')
+        .set({
+          status: 'succeeded',
+          attempt_count: task.attempt_count + 1,
+          completed_at: new Date(),
+          updated_at: new Date(),
+          error_code: '',
+          error_detail: '',
+          lease_owner: null,
+          lease_expires_at: null,
+          heartbeat_at: null,
+        })
+        .where('id', '=', task.id)
+        .where('workspace_id', '=', task.workspace_id)
+        .execute();
+    });
   }
   async fail(claimed: SiteTask, error: unknown) {
     await this.db.transaction().execute(async (trx) => {
@@ -146,16 +170,23 @@ export class SiteHealthWorker {
         .execute();
     });
   }
+  /**
+   * Keep `concurrency` tasks in flight, each slot claiming one task as it
+   * finishes the last, so a slow page fetch never holds a whole batch.
+   */
   async runForever(signal: AbortSignal) {
     logger.info('site health worker started', { owner: this.owner });
-    while (!signal.aborted) {
-      let count = 0;
-      try {
-        count = await this.runOnce();
-      } catch (error) {
-        logger.exception('site health iteration failed', error);
+    const slot = async () => {
+      while (!signal.aborted) {
+        let count = 0;
+        try {
+          count = await this.runOnce(1);
+        } catch (error) {
+          logger.exception('site health iteration failed', error);
+        }
+        if (!count) await waitForPoll(Math.max(50, this.settings.poll * 1000), signal);
       }
-      if (!count) await waitForPoll(Math.max(50, this.settings.poll * 1000), signal);
-    }
+    };
+    await Promise.all(Array.from({ length: this.settings.concurrency }, slot));
   }
 }

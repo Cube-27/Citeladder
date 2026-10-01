@@ -271,8 +271,6 @@ function otherReason(matched: Signal[], winner: Signal | null) {
   return matched.length ? c.other_reasons.schema_only : c.other_reasons.no_signals;
 }
 
-export type PageKindAssessment = ReturnType<typeof classify>;
-
 /** Classify one page into the config taxonomy; malformed facts simply match fewer signals. */
 export function classify(finalUrl: string, facts: Facts) {
   const [matched, schemaKind] = classificationSignals(finalUrl, facts);

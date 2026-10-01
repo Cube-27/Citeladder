@@ -23,12 +23,12 @@ const DATE_TOKENS = new Set(a.visible_date_node_tokens);
 const HEADING_EXCLUSIONS = new Set(a.visible_author_heading_exclusions);
 
 /** The first "By <Name>" byline; `leading` requires it to open the text. */
-export function visibleByline(text: string, leading = false) {
+function visibleByline(text: string, leading = false) {
   const match = BYLINE.exec(text);
   if (!match || (leading && text.slice(0, match.index).trim())) return '';
   return match[0].trim();
 }
-export const visibleDate = (text: string) => DATE.exec(text)?.[0].trim() ?? '';
+const visibleDate = (text: string) => DATE.exec(text)?.[0].trim() ?? '';
 function visibleAuthorName(text: string) {
   const candidate = squash(text);
   return AUTHOR_NAME.test(candidate) ? candidate : '';

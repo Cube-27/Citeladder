@@ -46,7 +46,7 @@ from app.core.config.site_health_contracts import (
     CRAWL_TERMINAL_STATUSES,
     EXTRACTOR_VERSION,
     POST_TERMINAL_SITE_TASK_KINDS,
-    TASK_KIND_ANALYZE,
+    SITE_ACQUISITION_TASK_KINDS,
     TASK_KIND_DISCOVER,
     TASK_KIND_SITE_SETUP,
 )
@@ -91,16 +91,10 @@ from app.workers.site_health.observation_rows import (
     write_observation,
 )
 from app.workers.site_health.phases import (
-    analyze as analyze_phase,
-)
-from app.workers.site_health.phases import (
     discover as discover_phase,
 )
 from app.workers.site_health.phases import (
     site_setup as site_setup_phase,
-)
-from app.workers.site_health.phases.contracts import (
-    AnalyzeOutcome as _AnalyzeOutcome,
 )
 from app.workers.site_health.phases.contracts import (
     DiscoverOutcome as _DiscoverOutcome,
@@ -109,13 +103,12 @@ from app.workers.site_health.phases.contracts import (
     PhaseContext,
 )
 from app.workers.site_health.robots_cache import RobotsCache
-from app.workers.site_health.scheduling import (
-    WorkerLane,
-    claim_for_lane,
-    configured_lane_plan,
-)
+from app.workers.site_health.ts_analysis_reconcile import TsAnalysisReconciler
 
 logger = logging.getLogger("app.workers.site_health_worker")
+
+# TypeScript claims analysis and the post-terminal kinds (SITE_TS_OWNED_TASK_KINDS).
+_PYTHON_TASK_KINDS = tuple(sorted(SITE_ACQUISITION_TASK_KINDS))
 
 # Floor for the heartbeat cadence. The configured interval is the operative
 # value (validated positive and strictly below the lease TTL); this only stops
@@ -159,6 +152,7 @@ class SiteHealthWorker(DrainableWorkerMixin):
         self._host_gate = HostGate(delay_for=self._robots.crawl_delay)
         # Crawl terminalization (reconcile + finalize pass + snapshot).
         self._lifecycle = CrawlLifecycle(self._session_factory)
+        self._ts_analyses = TsAnalysisReconciler(self._session_factory, self._lifecycle)
         self._phase_context = PhaseContext(
             session_factory=self._session_factory,
             queue=self._queue,
@@ -190,15 +184,29 @@ class SiteHealthWorker(DrainableWorkerMixin):
         if self._owns_transport:
             await self._transport.aclose()
 
+    def _concurrency(self) -> int:
+        return max(
+            1,
+            min(
+                site_health_settings.worker_concurrency,
+                site_health_settings.global_concurrency,
+            ),
+        )
+
+    async def _claim(self, limit: int) -> list[SiteCrawlTask]:
+        """Claim acquisition work; TypeScript owns every other Site Health kind."""
+        try:
+            return await self._queue.claim(
+                owner=self.owner, limit=limit, kinds=_PYTHON_TASK_KINDS
+            )
+        except Exception:  # a DB blip must not kill the slot
+            logger.exception("site health claim failed")
+            return []
+
     async def run_once(self) -> int:
-        """Sweep leases, fill the capacity-sharing lanes once, and execute."""
+        """Sweep leases, claim one batch of acquisition work, and execute it."""
         await self._maintenance()
-        tasks = [
-            task
-            for lane in configured_lane_plan()
-            if (task := await claim_for_lane(self._queue, owner=self.owner, lane=lane))
-            is not None
-        ]
+        tasks = await self._claim(self._concurrency())
         if tasks:
             # ``return_exceptions`` waits for EVERY claimed task before any
             # failure propagates: a plain gather would re-raise on the first
@@ -219,6 +227,7 @@ class SiteHealthWorker(DrainableWorkerMixin):
         )
         for crawl_id in sweep.failed_parent_ids:
             await self._reconcile_crawl_status(crawl_id)
+        await self._ts_analyses.reconcile()
         await self._reconcile_stalled_crawls()
         await self._reconcile_overdue_crawls()
         self._host_gate.evict_idle()
@@ -239,22 +248,22 @@ class SiteHealthWorker(DrainableWorkerMixin):
         in-flight work never exceeds the configured concurrency, and the
         per-host politeness gate still bounds what any single host sees.
         """
-        lanes = configured_lane_plan()
         completed = 0
 
-        async def slot(lane: WorkerLane) -> None:
+        async def slot() -> None:
             # Each slot decides for ITSELF when to stop: one slot seeing an
             # empty queue must not make its siblings skip their next claim.
             nonlocal completed
             while True:
-                task = await claim_for_lane(self._queue, owner=self.owner, lane=lane)
-                if task is None:
+                claimed = await self._claim(1)
+                if not claimed:
                     if drain:
                         return
                     await asyncio.sleep(
                         max(0.05, site_health_settings.poll_interval_seconds)
                     )
                     continue
+                task = claimed[0]
                 try:
                     await self._execute_claimed(task)
                 except Exception:  # keep siblings running
@@ -264,17 +273,16 @@ class SiteHealthWorker(DrainableWorkerMixin):
                     )
                 completed += 1
 
-        await asyncio.gather(*(slot(lane) for lane in lanes))
+        await asyncio.gather(*(slot() for _ in range(self._concurrency())))
         return completed
 
     async def _execute_claimed(self, task: SiteCrawlTask) -> None:
         """Execute local work and pace acquisition branches by host.
 
-        Analyze normally reuses a discover artifact and the derived phases do
-        no network I/O, so only discovery takes the task-wide host slot here.
-        Analyze gates its fallback acquisition; site setup gates its evidence
-        probe and each sitemap request, allowing bounded sitemap concurrency.
-        The wait heartbeat covers discovery until its phase takes over.
+        Only discovery takes the task-wide host slot here. Site setup gates its
+        evidence probe and each sitemap request, allowing bounded sitemap
+        concurrency. The wait heartbeat covers discovery until its phase takes
+        over.
         """
         if task.task_kind != TASK_KIND_DISCOVER:
             await self._execute_task(task)
@@ -383,8 +391,6 @@ class SiteHealthWorker(DrainableWorkerMixin):
             await discover_phase.run(self._phase_context, claimed)
         elif kind == TASK_KIND_SITE_SETUP:
             await site_setup_phase.run(self._phase_context, claimed)
-        elif kind == TASK_KIND_ANALYZE:
-            await analyze_phase.run(self._phase_context, claimed)
         else:
             raise NotImplementedError(f"unknown task kind '{kind}'")
 
@@ -411,15 +417,9 @@ class SiteHealthWorker(DrainableWorkerMixin):
             ):
                 return
 
-            # Analyze resolves local artifact reuse before deciding whether it
-            # needs a host slot, so that phase marks itself running only after
-            # any network wait. Other phases retain the task-boundary mark.
-            if kind != TASK_KIND_ANALYZE:
-                if not await self._queue.mark_running(
-                    task_id=task_id, owner=self.owner
-                ):
-                    # Lease lost; another worker will retry.
-                    return
+            if not await self._queue.mark_running(task_id=task_id, owner=self.owner):
+                # Lease lost; another worker will retry.
+                return
             await self._dispatch_task(claimed)
         except Exception as exc:  # defensive: never let one task kill the loop
             logger.exception(
@@ -616,7 +616,7 @@ class SiteHealthWorker(DrainableWorkerMixin):
         *,
         crawl: SiteCrawl,
         task: SiteCrawlTask,
-        outcome: _DiscoverOutcome | _AnalyzeOutcome,
+        outcome: _DiscoverOutcome,
         succeeded: bool,
         requested_url: str,
         artifact_id: uuid.UUID | None,

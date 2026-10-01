@@ -133,7 +133,7 @@ export function regionText(node: HtmlNode, excluded: ReadonlySet<HtmlElement> = 
   return collected.join(' ');
 }
 
-export type PrimaryRegion = { node: HtmlNode; source: string };
+type PrimaryRegion = { node: HtmlNode; source: string };
 
 function candidateRank(node: HtmlElement, source: string) {
   let headings = 0;
@@ -164,7 +164,7 @@ const rankAbove = (left: number[], right: number[]) => {
  * often carry several `<main>` elements for drawers and overlays, so ties are
  * broken by page-content evidence rather than document order.
  */
-export function primaryRegion(root: HtmlNode): PrimaryRegion {
+function primaryRegion(root: HtmlNode): PrimaryRegion {
   const eligible: { node: HtmlElement; source: string }[] = [];
   for (const node of elements(root)) {
     if (!isMainLandmark(node) || !regionNodeIsVisible(node)) continue;
@@ -209,7 +209,7 @@ const identityTokens = (node: HtmlElement, names: readonly string[]) =>
       .split(/\s+/u)
       .filter(Boolean),
   );
-export function isRichTextContainer(node: HtmlElement) {
+function isRichTextContainer(node: HtmlElement) {
   if (RICH_TEXT_TAGS.has(node.tagName)) return true;
   return [...identityTokens(node, ['id', 'class', 'data-testid'])].some((token) =>
     RICH_TEXT_TOKENS.has(token),
@@ -257,7 +257,7 @@ function isCardList(candidate: HtmlElement) {
  * grids, recommendation carousels and related-post strips alike. The primary
  * region itself is never one of them.
  */
-export function cardListContainers(region: HtmlNode): HtmlElement[] {
+function cardListContainers(region: HtmlNode): HtmlElement[] {
   const containers: HtmlElement[] = [];
   let scanned = 0;
   for (const candidate of elements(region)) {

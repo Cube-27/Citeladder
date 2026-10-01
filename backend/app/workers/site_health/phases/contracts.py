@@ -41,23 +41,6 @@ class DiscoverOutcome:
     attempts: tuple[FetchCallTrace, ...] = ()
 
 
-@dataclass(slots=True)
-class AnalyzeOutcome:
-    """Bounded in-memory result of one analyze acquisition."""
-
-    result: FetchResult | None = None
-    facts: dict | None = None
-    error_code: str = ""
-    error_detail: str = ""
-    retryable: bool = False
-    latency_ms: int | None = None
-    status_code: int | None = None
-    retry_after_seconds: float | None = None
-    attempts: tuple[FetchCallTrace, ...] = ()
-    reused_artifact_id: uuid.UUID | None = None
-
-
-PhaseOutcome = DiscoverOutcome | AnalyzeOutcome
 FetcherFactory = Callable[[], SecureFetcher]
 LeaseFactory = Callable[[uuid.UUID], AbstractAsyncContextManager[None]]
 HostSlotFactory = Callable[[str], AbstractAsyncContextManager[None]]
@@ -117,7 +100,7 @@ class WriteAttempt(Protocol):
         *,
         crawl: SiteCrawl,
         task: SiteCrawlTask,
-        outcome: PhaseOutcome,
+        outcome: DiscoverOutcome,
         succeeded: bool,
         requested_url: str,
         artifact_id: uuid.UUID | None,

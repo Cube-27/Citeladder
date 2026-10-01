@@ -34,7 +34,7 @@ const PRODUCT_KEYS = [
   'category',
 ] as const;
 type ProductValues = Record<(typeof PRODUCT_KEYS)[number], string[]>;
-export type SchemaProduct = Partial<ProductValues> & { shipping?: boolean; returns?: boolean };
+type SchemaProduct = Partial<ProductValues> & { shipping?: boolean; returns?: boolean };
 export type SchemaBlock = {
   type: string;
   syntax: 'json-ld' | 'microdata';

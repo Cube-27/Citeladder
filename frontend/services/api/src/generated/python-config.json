@@ -5180,6 +5180,7 @@
       }
     ],
     "ts_owned_task_kinds": [
+      "analyze",
       "architecture",
       "change_intel",
       "link_metrics"
@@ -5616,13 +5617,6 @@
         ],
         "type": "int",
         "default": 8
-      },
-      "acquisition_lane_reserve": {
-        "env": [
-          "SITE_HEALTH_ACQUISITION_LANE_RESERVE"
-        ],
-        "type": "int",
-        "default": 2
       },
       "poll_interval_seconds": {
         "env": [
@@ -7161,6 +7155,11 @@
           "access_blocked": "access_blocked",
           "crawl_overdue": "crawl_overdue"
         },
+        "provenance": {
+          "transport_curl_cffi": "curl_cffi",
+          "transport_node": "node",
+          "trigger_initial": "initial"
+        },
         "bot_block_body_markers": [
           "cf-chl",
           "challenge-platform",
@@ -7207,6 +7206,30 @@
           "(?:^|/)(?:preview|print|share)(?:/|$)",
           "(?:^|/)(?:customer_authentication|customer_identity|account_login)(?:/|$)",
           "(?:^|/)cdn-cgi(?:/|$)"
+        ],
+        "hard_exclusion_host_labels": [
+          "account",
+          "accounts",
+          "admin",
+          "affiliates",
+          "app",
+          "auth",
+          "basket",
+          "billing",
+          "cart",
+          "checkout",
+          "login",
+          "my",
+          "orders",
+          "partners",
+          "payment",
+          "payments",
+          "portal",
+          "register",
+          "secure",
+          "signin",
+          "signup",
+          "wishlist"
         ],
         "hard_exclusion_query_keys": [
           "facet",

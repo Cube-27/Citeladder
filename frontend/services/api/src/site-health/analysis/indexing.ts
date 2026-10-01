@@ -27,12 +27,12 @@ function webUrl(value: string) {
 }
 
 /** Scheme, host and non-default port, or '' when the URL is not an absolute web URL. */
-export function canonicalOrigin(value: string) {
+function canonicalOrigin(value: string) {
   return webUrl(value)?.origin ?? '';
 }
 
 /** The comparison form: lower-cased origin, trailing slashes trimmed, tracking parameters dropped. */
-export function comparableUrl(value: string) {
+function comparableUrl(value: string) {
   const raw = value.trim();
   let url: URL;
   try {

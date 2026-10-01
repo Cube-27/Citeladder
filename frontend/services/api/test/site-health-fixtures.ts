@@ -231,6 +231,131 @@ export class SiteFixtures extends VisibilityFixtures {
     return { id, artifactId, taskId, analysisId };
   }
 
+  /** A monitored page with its queued analyze task, under a runtime entitled to analyze. */
+  async analyzable(
+    seed: SiteSeed,
+    path: string,
+    options: { source?: string; monitoredLimit?: number; createdAt?: Date } = {},
+  ) {
+    const identity = canonicalIdentity(path, seed.root);
+    const now = new Date();
+    const siteUrlId = randomUUID();
+    await this.siteDb
+      .insertInto('workspace_site_health_runtime')
+      .values({
+        id: randomUUID(),
+        workspace_id: seed.workspaceId,
+        monitored_url_limit: options.monitoredLimit ?? 50,
+        sample_url_limit: 10,
+        discovery_mode: 'full',
+        count_disclosure: true,
+        resolved_entitlement_lifecycle_version: 1,
+        resolved_registry_revision: 'fixture',
+        created_at: now,
+        updated_at: now,
+      })
+      .onConflict((oc) =>
+        oc
+          .column('workspace_id')
+          .doUpdateSet({ monitored_url_limit: options.monitoredLimit ?? 50 }),
+      )
+      .execute();
+    await this.siteDb
+      .insertInto('site_urls')
+      .values({
+        id: siteUrlId,
+        workspace_id: seed.workspaceId,
+        project_id: seed.projectId,
+        url_hash: identity.hash,
+        normalized_url: identity.url,
+        display_url: identity.url,
+        host: 'example.test',
+        item_kind: 'page',
+        depth: 0,
+        discovery_status: 'pending',
+        corpus_disposition: 'eligible',
+        disposition_reason: '',
+        disposition_version: 'fixture',
+        first_seen_at: now,
+        last_seen_at: now,
+        first_seen_crawl_id: seed.crawlId,
+        last_seen_crawl_id: seed.crawlId,
+        latest_content_type: '',
+        latest_source_kind: 'root',
+        latest_title: '',
+      })
+      .execute();
+    await this.siteDb
+      .insertInto('monitored_site_urls')
+      .values({
+        id: randomUUID(),
+        workspace_id: seed.workspaceId,
+        project_id: seed.projectId,
+        profile_id: seed.profileId,
+        site_url_id: siteUrlId,
+        active: true,
+        selection_source: options.source ?? 'user',
+        selected_at: now,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    const taskId = await this.task(seed, 'analyze');
+    await this.siteDb
+      .updateTable('site_crawl_tasks')
+      .set({
+        site_url_id: siteUrlId,
+        url_hash: identity.hash,
+        requested_url: identity.url,
+        created_at: options.createdAt ?? now,
+      })
+      .where('id', '=', taskId)
+      .execute();
+    return { siteUrlId, taskId, url: identity.url, hash: identity.hash };
+  }
+  /** A discover task for the URL hash, in `status`, with a discover artifact when it succeeded. */
+  async discover(
+    seed: SiteSeed,
+    urlHash: string,
+    status: string,
+    facts: Record<string, unknown> | null,
+  ) {
+    const taskId = await this.task(seed, 'discover');
+    await this.siteDb
+      .updateTable('site_crawl_tasks')
+      .set({ url_hash: urlHash, status })
+      .where('id', '=', taskId)
+      .execute();
+    if (!facts) return { taskId, artifactId: null };
+    const artifactId = randomUUID();
+    const now = new Date();
+    await this.siteDb
+      .insertInto('site_fetch_artifacts')
+      .values({
+        id: artifactId,
+        workspace_id: seed.workspaceId,
+        crawl_id: seed.crawlId,
+        task_id: taskId,
+        requested_url: seed.root,
+        final_url: seed.root,
+        status_code: 200,
+        content_type: 'text/html',
+        content_hash: randomUUID().replaceAll('-', ''),
+        normalized_facts: JSON.stringify(facts),
+        extractor_version: policy.site_health.versions.extractor,
+        fetched_at: now,
+        created_at: now,
+        fetch_purpose: 'discover',
+        acquisition_policy_version: 'fixture',
+        acquisition_transport: 'recorded',
+        acquisition_trigger: 'fixture',
+        http_version: 'HTTP/1.1',
+        impersonation_profile: '',
+      })
+      .execute();
+    return { taskId, artifactId };
+  }
+
   async snapshot(seed: SiteSeed, coverage = 'partial') {
     const id = randomUUID();
     const versions = policy.site_health.versions;

@@ -64,7 +64,7 @@ export type Delivery = {
   decodedBytes?: number | null;
 };
 
-export function factSettings(env: Record<string, string | undefined> = process.env) {
+function factSettings(env: Record<string, string | undefined> = process.env) {
   const spec = policy.site_health.settings;
   const number = (name: keyof typeof spec) => Number(resolveSettingSpec(spec[name], env));
   return {

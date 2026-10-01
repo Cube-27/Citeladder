@@ -54,6 +54,7 @@ from app.models.site_health.snapshot import SiteHealthSnapshot
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 from app.models.traffic import TrafficSnapshot
 from app.workers.site_health.lifecycle import CrawlLifecycle
+from app.workers.site_health.ts_analysis_reconcile import TsAnalysisReconciler
 from tests.component.site_health_helpers import seed_site_crawl
 from tests.component.site_health_worker_helpers import (
     DEFAULT_SEED_MONITORED_URLS,
@@ -61,8 +62,10 @@ from tests.component.site_health_worker_helpers import (
     _configure_crawl,
     _html,
     _rich_html,
+    _seed_analyze_ready,
     _seed_root_only,
     _seed_runtime,
+    _settle_analysis_as_typescript,
     _worker,
 )
 
@@ -570,6 +573,32 @@ async def test_crawl_not_completed_while_analyze_queued(
 
 
 @pytest.mark.asyncio
+async def test_ts_settled_analysis_is_reconciled_exactly_once(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The PR18b5 bridge replays the crawl reconcile once per settled analysis.
+
+    Its re-read overlap must not reconcile the same row again, and a row that
+    has not settled yet is left for a later pass.
+    """
+    _seed, _site_url_id, task_id = await _seed_analyze_ready(session_factory)
+    reconciled: list = []
+
+    class _Lifecycle:
+        async def reconcile_after_task(self, task: SiteCrawlTask) -> None:
+            reconciled.append(task.id)
+
+    reconciler = TsAnalysisReconciler(session_factory, _Lifecycle())  # type: ignore[arg-type]
+    await reconciler.reconcile()
+    assert task_id not in reconciled
+
+    await _settle_analysis_as_typescript(session_factory, task_id, body=_rich_html())
+    await reconciler.reconcile()
+    await reconciler.reconcile()
+    assert reconciled.count(task_id) == 1
+
+
+@pytest.mark.asyncio
 async def test_partial_analysis_failure_partially_completes(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -597,15 +626,26 @@ async def test_partial_analysis_failure_partially_completes(
             "exclude_globs": None,
             "count_disclosure": True,
         }
-        for path in ("rich", "missing"):
-            await _add_monitored_analyze_task(
-                session, seed, f"https://example.com/{path}"
-            )
+        task_ids = [
+            (
+                await _add_monitored_analyze_task(
+                    session, seed, f"https://example.com/{path}"
+                )
+            )[1]
+            for path in ("rich", "missing")
+        ]
         await session.commit()
 
-    # Only /rich is served; /missing 404s (non-retryable).
-    pages = {"/rich": _rich_html()}
-    worker = _worker(session_factory, pages, owner="partial-analyze")
+    # The TypeScript analyzer settles /rich and fails /missing with a 404;
+    # the Python crawl lifecycle reconciles both on its next maintenance pass.
+    rich_task_id, missing_task_id = task_ids
+    await _settle_analysis_as_typescript(
+        session_factory, rich_task_id, body=_rich_html()
+    )
+    await _settle_analysis_as_typescript(
+        session_factory, missing_task_id, error_code=ERROR_HTTP_4XX
+    )
+    worker = _worker(session_factory, {}, owner="partial-analyze")
     await worker.run_until_idle()
 
     async with session_factory() as session:

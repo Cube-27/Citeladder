@@ -42,7 +42,7 @@ async def _add_analyze_tasks(
                 task_kind=TASK_KIND_ANALYZE,
                 requested_url=f"https://example.com/analyze-{index}",
                 url_hash=f"analyze-{index}",
-                idempotency_key=f"{crawl_id}:{TASK_KIND_ANALYZE}:lane-{index}:0",
+                idempotency_key=f"{crawl_id}:{TASK_KIND_ANALYZE}:page-{index}:0",
                 status=TASK_STATUS_QUEUED,
                 priority=1_000,
                 randomized_position=index,
@@ -143,56 +143,39 @@ async def test_run_once_waits_for_all_claimed_tasks_before_raising(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    (
-        "discover_count",
-        "analyze_count",
-        "expected_discover",
-        "expected_analyze",
-    ),
-    ((4, 4, 1, 3), (4, 0, 4, 0), (0, 4, 0, 4)),
-    ids=(
-        "mixed-backlog-reserves-discovery",
-        "idle-processing-borrows",
-        "idle-acquisition-borrows",
-    ),
-)
-async def test_pipelined_lanes_reserve_and_borrow_capacity(
+async def test_pipelined_slots_claim_acquisition_and_leave_analysis_to_typescript(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
-    discover_count: int,
-    analyze_count: int,
-    expected_discover: int,
-    expected_analyze: int,
 ) -> None:
+    """Python owns acquisition only; analyze rows stay queued for the TS worker."""
     async with session_factory() as session:
-        seed = await seed_site_crawl(session, task_count=discover_count)
+        seed = await seed_site_crawl(session, task_count=3)
         await _add_analyze_tasks(
             session,
             crawl_id=seed.crawl_id,
             workspace_id=seed.workspace_id,
-            count=analyze_count,
+            count=3,
         )
 
-    worker = _worker(session_factory, {}, owner=f"lanes-{analyze_count}")
-    release = asyncio.Event()
-    first_wave_ready = asyncio.Event()
+    worker = _worker(session_factory, {}, owner="acquisition-only")
     started: list[str] = []
 
-    async def block_first_wave(task: SiteCrawlTask) -> None:
+    async def record(task: SiteCrawlTask) -> None:
         started.append(task.task_kind)
-        if len(started) == 4:
-            first_wave_ready.set()
-        await release.wait()
 
     monkeypatch.setattr(site_health_settings, "worker_concurrency", 4)
     monkeypatch.setattr(site_health_settings, "global_concurrency", 4)
-    monkeypatch.setattr(site_health_settings, "acquisition_lane_reserve", 1)
-    monkeypatch.setattr(worker, "_execute_claimed", block_first_wave)
+    monkeypatch.setattr(worker, "_execute_claimed", record)
 
-    run = asyncio.create_task(worker.run_pipelined(drain=True))
-    await asyncio.wait_for(first_wave_ready.wait(), timeout=5)
-    assert started.count(TASK_KIND_DISCOVER) == expected_discover
-    assert started.count(TASK_KIND_ANALYZE) == expected_analyze
-    release.set()
-    assert await asyncio.wait_for(run, timeout=5) == discover_count + analyze_count
+    assert await asyncio.wait_for(worker.run_pipelined(drain=True), timeout=5) == 3
+    assert started == [TASK_KIND_DISCOVER] * 3
+
+    async with session_factory() as session:
+        analyze_statuses = (
+            await session.scalars(
+                select(SiteCrawlTask.status).where(
+                    SiteCrawlTask.task_kind == TASK_KIND_ANALYZE
+                )
+            )
+        ).all()
+    assert analyze_statuses == [TASK_STATUS_QUEUED] * 3

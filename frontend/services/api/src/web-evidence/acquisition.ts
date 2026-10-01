@@ -54,30 +54,70 @@ export async function authorizeAcquisition(db: Database, url: URL) {
     throw new FetchError('acquisition_unavailable');
   }
 }
+type HostState = { chain: Promise<void>; last: number; active: number; waiting: (() => void)[] };
+
+/**
+ * Per-host politeness: at most `concurrency` requests in flight to one host,
+ * successive starts spaced by the delay, and an explicit cool-down after a
+ * rate limit. Starts queue behind one another rather than all sleeping
+ * against the same stale timestamp.
+ */
 export class HostPacer {
-  readonly pending = new Map<string, Promise<void>>();
-  readonly last = new Map<string, number>();
-  async slot<T>(authority: string, seconds: number, send: () => Promise<T>, signal?: AbortSignal) {
-    const previous = this.pending.get(authority) ?? Promise.resolve();
-    let release!: () => void;
-    const current = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const queued = previous.then(() => current);
-    this.pending.set(authority, queued);
-    await previous;
-    try {
+  readonly #hosts = new Map<string, HostState>();
+  readonly concurrency: number;
+  constructor(concurrency = 1) {
+    this.concurrency = Math.max(1, concurrency);
+  }
+  #host(authority: string) {
+    let state = this.#hosts.get(authority);
+    if (!state) {
+      state = { chain: Promise.resolve(), last: -Infinity, active: 0, waiting: [] };
+      this.#hosts.set(authority, state);
+    }
+    return state;
+  }
+  /** Hold the host back for `seconds` from now, e.g. after a 429. */
+  coolDown(authority: string, seconds: number) {
+    const state = this.#host(authority);
+    state.last = Math.max(state.last, performance.now() + seconds * 1000);
+  }
+  async #acquire(state: HostState, signal?: AbortSignal) {
+    while (state.active >= this.concurrency) {
+      await new Promise<void>((resolve) => {
+        state.waiting.push(resolve);
+      });
       signal?.throwIfAborted();
-      const wait = Math.max(
-        0,
-        seconds * 1000 - (performance.now() - (this.last.get(authority) ?? -Infinity)),
+    }
+    state.active++;
+  }
+  async slot<T>(authority: string, seconds: number, send: () => Promise<T>, signal?: AbortSignal) {
+    const state = this.#host(authority);
+    await this.#acquire(state, signal);
+    try {
+      const previous = state.chain;
+      let started!: () => void;
+      state.chain = previous.then(
+        () =>
+          new Promise<void>((resolve) => {
+            started = resolve;
+          }),
       );
-      if (wait) await delay(wait, undefined, { signal });
+      await previous;
+      try {
+        signal?.throwIfAborted();
+        const wait = Math.max(0, seconds * 1000 - (performance.now() - state.last));
+        if (wait) await delay(wait, undefined, { signal });
+        state.last = Math.max(state.last, performance.now());
+      } finally {
+        started();
+      }
       return await send();
     } finally {
-      this.last.set(authority, performance.now());
-      release();
-      if (this.pending.get(authority) === queued) this.pending.delete(authority);
+      state.last = Math.max(state.last, performance.now());
+      state.active--;
+      state.waiting.shift()?.();
+      if (!state.active && !state.waiting.length && state.last + seconds * 1000 < performance.now())
+        this.#hosts.delete(authority);
     }
   }
 }
@@ -109,7 +149,7 @@ type RobotsPolicy = ReturnType<typeof robotsPolicy>;
 
 export class PageAcquirer {
   readonly #cache = new Map<string, { expires: number; value: Promise<RobotsPolicy> }>();
-  readonly #pacer = new HostPacer();
+  readonly #pacer: HostPacer;
   readonly authorize: (url: URL) => Promise<void>;
   readonly fetcher: WebsiteFetcher;
   readonly settings: ReturnType<typeof acquisitionSettings>;
@@ -119,7 +159,9 @@ export class PageAcquirer {
     fetcher: WebsiteFetcher = fetchWebsite,
     settings = acquisitionSettings(),
     floor = policy.source_pages.per_host_delay_seconds,
+    concurrency = 1,
   ) {
+    this.#pacer = new HostPacer(concurrency);
     this.authorize = authorize;
     this.fetcher = fetcher;
     this.settings = settings;
@@ -158,10 +200,24 @@ export class PageAcquirer {
       return robotsPolicy(origin, 0, '', this.settings);
     }
   }
-  fetch(url: string, options: Omit<FetchOptions, 'gate' | 'authorize'>) {
+  /** Pause new requests to an origin, e.g. after it answered 429. */
+  coolDown(origin: string, seconds: number) {
+    this.#pacer.coolDown(origin, seconds);
+  }
+  /** `admit` screens each page hop (never robots.txt) before the shared authorization. */
+  fetch(
+    url: string,
+    options: Omit<FetchOptions, 'gate' | 'authorize'> & { admit?: (url: URL) => void },
+  ) {
+    const { admit, ...rest } = options;
     return this.fetcher(url, {
-      ...options,
-      authorize: this.authorize,
+      ...rest,
+      authorize: admit
+        ? async (destination) => {
+            admit(destination);
+            await this.authorize(destination);
+          }
+        : this.authorize,
       gate: async (destination, send, signal) => {
         const robots = await this.robots(destination.origin);
         if (!robots.permits(destination.href))

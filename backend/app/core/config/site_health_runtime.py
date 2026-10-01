@@ -196,12 +196,6 @@ class SiteHealthSettings(BaseSettings):
     db_conflict_base_delay_seconds: float = 0.05
     db_conflict_jitter_seconds: float = 0.2
     worker_concurrency: int = 8
-    # Number of in-process worker slots that prefer acquisition/discovery work.
-    # Remaining slots prefer analysis and persisted projections. Either side
-    # borrows the other's idle capacity, so this is a starvation guard rather
-    # than a hard per-lane ceiling. Runtime keeps at least one processing slot
-    # whenever total concurrency is greater than one.
-    acquisition_lane_reserve: int = 2
     poll_interval_seconds: float = 1.0
     # Bounded recheck when analyze observes a still-running discover task for
     # the same URL. A non-zero delay prevents a claim/defer hot loop.
@@ -431,7 +425,6 @@ class SiteHealthSettings(BaseSettings):
                 "global_concurrency",
                 "per_host_concurrency",
                 "worker_concurrency",
-                "acquisition_lane_reserve",
                 "db_conflict_max_requeues",
             ),
         )

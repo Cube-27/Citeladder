@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { importCatalog } from '../src/commerce/import.ts';
-import { projectCatalog } from '../src/commerce/projection.ts';
+import { enqueueCatalogProjection, projectCatalog } from '../src/commerce/projection.ts';
 import {
   categoryTitle,
   pageIdentity,
@@ -11,6 +11,7 @@ import {
   readFacts,
 } from '../src/commerce/projection-facts.ts';
 import { catalog } from '../src/commerce/reads.ts';
+import { record } from '../src/db/json.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { commerceIsland } from './commerce-support.ts';
 import { enqueue } from './referral-fixtures.ts';
@@ -25,10 +26,30 @@ type Seed = {
   tasks: string[];
 };
 const seeds: Seed[] = [];
+/** Python seeds the analyzed catalog pages; the TS analyzer's enqueue queues their projections. */
 async function seed() {
-  const value = await commerceIsland<Seed>('seed');
-  seeds.push(value);
-  return value;
+  const value = await commerceIsland<Omit<Seed, 'tasks'>>('seed');
+  const tasks = await projectionTasks(value);
+  const seeded = { ...value, tasks: tasks.map((task) => task.id) };
+  seeds.push(seeded);
+  return seeded;
+}
+async function projectionTasks(scope: Omit<Seed, 'tasks'>) {
+  for (const analysisId of scope.analyses) await enqueueCatalogProjection(db, scope, analysisId);
+  return db
+    .selectFrom('analytics_tasks')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('task_kind', '=', 'commerce_catalog_projection')
+    .execute();
+}
+async function businessContext(scope: Omit<Seed, 'tasks'>, context: Record<string, unknown>) {
+  await db
+    .updateTable('brand_profiles')
+    .set({ business_context: JSON.stringify(context) })
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .execute();
 }
 afterAll(async () => {
   for (const s of seeds) {
@@ -49,6 +70,21 @@ async function execute(taskId: string) {
 }
 
 describe('catalog projection PostgreSQL boundary', () => {
+  it('queues one projection per analysis only for a catalog-selling business model', async () => {
+    const scope = await commerceIsland<Omit<Seed, 'tasks'>>('seed');
+    seeds.push({ ...scope, tasks: [] });
+    await businessContext(scope, { business_model: 'b2b_saas' });
+    expect(await projectionTasks(scope)).toEqual([]);
+    await businessContext(scope, {
+      business_model: 'b2b_saas',
+      secondary_business_models: ['retail'],
+    });
+    await projectionTasks(scope);
+    const tasks = await projectionTasks(scope);
+    expect(tasks.map((task) => record(task.payload).source_analysis_id).sort()).toEqual(
+      [...scope.analyses].sort(),
+    );
+  }, 20_000);
   it.each([false, true])(
     'links category and product in either order (product first: %s), preserving evidence on retry',
     async (productFirst) => {
@@ -102,7 +138,7 @@ describe('catalog projection PostgreSQL boundary', () => {
     },
     20_000,
   );
-  it('claims the Python-enqueued projection kind, honors CSV priority in a race, and leaves discovery to Python', async () => {
+  it('claims queued projections, honors CSV priority in a race, and leaves discovery to Python', async () => {
     const s = await seed();
     const pythonTask = await enqueue(db, {
       ...s,

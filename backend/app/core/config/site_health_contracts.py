@@ -146,16 +146,16 @@ SITE_TASK_KINDS: Final[frozenset[str]] = frozenset(
     }
 )
 
-SITE_PROCESSING_TASK_KINDS: Final[frozenset[str]] = (
-    SITE_TASK_KINDS - SITE_ACQUISITION_TASK_KINDS
-)
-
-# Both stacks share the durable queue with disjoint claims during migration.
+# Both stacks share the durable queue with disjoint claims during migration:
+# TypeScript owns analysis and every post-terminal derivation, Python owns
+# acquisition until it moves.
 SITE_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
-    {TASK_KIND_CHANGE_INTEL, TASK_KIND_LINK_METRICS, TASK_KIND_ARCHITECTURE}
-)
-SITE_PYTHON_PROCESSING_TASK_KINDS: Final[frozenset[str]] = (
-    SITE_PROCESSING_TASK_KINDS - SITE_TS_OWNED_TASK_KINDS
+    {
+        TASK_KIND_ANALYZE,
+        TASK_KIND_CHANGE_INTEL,
+        TASK_KIND_LINK_METRICS,
+        TASK_KIND_ARCHITECTURE,
+    }
 )
 
 INITIAL_TASK_GENERATION: Final = 0

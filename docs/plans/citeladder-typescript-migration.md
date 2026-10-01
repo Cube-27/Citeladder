@@ -371,7 +371,6 @@ Stays Python (`commerce-python` family where routed):
 
 | Python bridge | Remaining caller |
 | --- | --- |
-| `service.enqueue_catalog_projection`, `eligibility.project_sells_catalog` | Site Health analyze phase (outside this plan) |
 | `service.require_project`, `CommerceNotFoundError` | remaining competitor and prompt entry points |
 | `price.normalized_price_value` | `shelf._parse_price_value` |
 | remaining `schemas` models | discovery/generation/manual routes |
@@ -941,8 +940,16 @@ into dependency-ordered slices:
    admission at finalization and the handoff of a crawl without usable
    analysis until 18b5. One TypeScript helper builds every Opportunity refresh
    and verification key.
-3. **18b3, page analysis:** the parser, classifier, deterministic rules and
-   scoring, with the `analyze` executor.
+3. **18b3, page analysis (implemented):** the parser, classifier,
+   deterministic rules and scoring, with the `analyze` executor. The
+   TypeScript worker claims `analyze` and commits the artifact, attempts,
+   provisional analysis, evaluations, issues and the Commerce projection
+   enqueue with the task outcome. Python claims only `discover` and
+   `site_setup`; its acquisition lane reserve is gone. Python still extracts
+   facts for discovery and runs finalization, so
+   `workers/site_health/ts_analysis_reconcile.py` replays the per-task crawl
+   reconcile for analyze rows TypeScript settled; it is deleted in 18b5 when
+   the lifecycle moves beside the analyzer.
 4. **18b4, acquisition:** the `discover` and `site_setup` executors, durable
    frontier, robots, fetch budgets and the web-evidence connector.
 5. **18b5, crawl control:** admission, URL preview, cancellation, reruns, the
@@ -973,6 +980,12 @@ the task; and comparison text is lower-cased rather than Python-casefolded,
 which changes only stored shingles. The source hash is unchanged, so a task
 retried across the cutover reuses Python's snapshot. PR 18 remains incomplete
 until 18b5 lands.
+
+Departures in 18b3: an analyzer crash settles as the worker's retryable
+`task_failed` rather than Python's terminal `crawl_task_crashed`, so
+classification reason groups name `task_failed`; and the unreferenced
+company-entity completeness rule and its vocabulary are deleted
+rather than ported.
 
 ### PR 19: Agent runtime
 

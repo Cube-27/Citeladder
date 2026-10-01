@@ -57,7 +57,6 @@ from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.snapshot import SiteHealthSnapshot
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
-from app.workers.site_health.phases import analyze as analyze_phase
 from app.workers.site_health.resolution_evidence import (
     canonical_resolution_evaluations,
 )
@@ -66,6 +65,7 @@ from tests.component.site_health_worker_helpers import (
     _rich_html,
     _seed_analyze_phase_crawl,
     _seed_analyze_ready,
+    _settle_analysis_as_typescript,
     _worker,
 )
 
@@ -257,19 +257,19 @@ async def test_terminal_reconciliation_excludes_late_system_alias_only(
             "</main></body></html>"
         ).encode()
 
-    worker = _worker(
-        session_factory,
-        {
-            "/products/widget": _page(declared_canonical=canonical),
-            "/collections/sale/products/widget": _page(
-                declared_canonical=canonical, hreflang=True
-            ),
-            "/collections/selected/products/widget": _page(
-                declared_canonical=canonical
-            ),
-        },
-        owner="late-canonical-alias",
+    bodies = (
+        _page(declared_canonical=canonical),
+        _page(declared_canonical=canonical, hreflang=True),
+        _page(declared_canonical=canonical),
     )
+    for (_site_url_id, task_id), body in zip(ids, bodies, strict=True):
+        await _settle_analysis_as_typescript(
+            session_factory,
+            task_id,
+            body=body,
+            outcomes={"technical.meta_description_present": RULE_OUTCOME_MISSING},
+        )
+    worker = _worker(session_factory, {}, owner="late-canonical-alias")
     await worker.run_until_idle()
 
     async with session_factory() as session:
@@ -650,23 +650,26 @@ async def test_terminal_snapshot_freezes_classification_cohort_and_provenance(
             urls=(article_url, other_url, failed_url),
         )
     task_ids = [task_id for _site_url_id, task_id in ids]
-    original_extract = analyze_phase.extract_page_facts
-
-    def fail_one_page(body, **kwargs):
-        if kwargs["final_url"] == failed_url:
-            raise RuntimeError("classification parser failure")
-        return original_extract(body, **kwargs)
-
-    monkeypatch.setattr(analyze_phase, "extract_page_facts", fail_one_page)
-    worker = _worker(
+    article_task_id, other_task_id, failed_task_id = task_ids
+    await _settle_analysis_as_typescript(
         session_factory,
-        {
-            "/blog/classified": _rich_html(),
-            "/unclassified": _rich_html(),
-            "/parser-failure": _rich_html(),
-        },
-        owner="classification-terminal-snapshot",
+        article_task_id,
+        body=_rich_html(),
+        page_kind="article",
+        page_kind_evidence={"classifier_version": "test"},
     )
+    await _settle_analysis_as_typescript(
+        session_factory,
+        other_task_id,
+        body=_rich_html(),
+        page_kind_evidence={"other_reason": "no_classification_signals"},
+    )
+    # The analyzer crashed after committing the classification cohort; the TS
+    # worker settles a crash as ``task_failed``.
+    await _settle_analysis_as_typescript(
+        session_factory, failed_task_id, error_code="task_failed"
+    )
+    worker = _worker(session_factory, {}, owner="classification-terminal-snapshot")
     await worker.run_until_idle()
 
     async with session_factory() as session:
@@ -687,13 +690,7 @@ async def test_terminal_snapshot_freezes_classification_cohort_and_provenance(
         assert all(task.classification_expected for task in tasks)
         failed_task = next(task for task in tasks if task.requested_url == failed_url)
         assert failed_task.status == TASK_STATUS_FAILED
-        assert failed_task.error_code == "crawl_task_crashed"
         assert set(analyses) == {article_url, other_url}
-        assert analyses[article_url].page_kind == "article"
-        assert analyses[other_url].page_kind == "other"
-        other_evidence = analyses[other_url].page_kind_evidence
-        assert other_evidence is not None
-        assert other_evidence["other_reason"] == "no_classification_signals"
         assert snapshot is not None
         assert crawl is not None
 
@@ -715,7 +712,7 @@ async def test_terminal_snapshot_freezes_classification_cohort_and_provenance(
         assert snapshot.classification_coverage == pytest.approx(1 / 3, abs=0.0001)
         assert snapshot.classification_state == "partial"
         assert snapshot.classification_reason_groups == {
-            "crawl_task_crashed": 1,
+            "task_failed": 1,
             "no_classification_signals": 1,
         }
         assert snapshot.classification_formula_version == "sh-classification-1"
@@ -734,7 +731,7 @@ async def test_terminal_snapshot_freezes_classification_cohort_and_provenance(
         assert summary["classification_coverage"] == pytest.approx(1 / 3, abs=0.0001)
         assert summary["classification_state"] == "partial"
         assert summary["classification_reason_groups"] == {
-            "crawl_task_crashed": 1,
+            "task_failed": 1,
             "no_classification_signals": 1,
         }
         assert summary["classification_formula_version"] == "sh-classification-1"
@@ -781,8 +778,9 @@ async def test_finalize_pass_hreflang_conflict_end_to_end(
         b"</body></html>"
     )
     fr_html = b"<html><head><title>FR</title></head><body><p>bonjour</p></body></html>"
-    pages = {"/rich": root_html, "/fr": fr_html}
-    worker = _worker(session_factory, pages, owner="p2-hreflang")
+    for (_site_url_id, task_id), body in zip(_ids, (root_html, fr_html), strict=True):
+        await _settle_analysis_as_typescript(session_factory, task_id, body=body)
+    worker = _worker(session_factory, {}, owner="p2-hreflang")
     await worker.run_until_idle()
 
     async with session_factory() as session:

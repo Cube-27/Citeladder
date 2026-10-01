@@ -30,13 +30,8 @@ from app.analysis.site_health.fact_regions import (
 from app.analysis.site_health.fact_signals import page_owned_content_facts
 from app.analysis.site_health.page_kinds import classify
 from app.analysis.site_health.parser import extract_page_facts
-from app.analysis.site_health.rules import evaluate_rule, rule_for
 from app.core.config import site_health_taxonomy as config
 from app.core.config.site_health_acquisition import SITE_HEALTH_MAX_HEADING_CHARS
-from app.core.config.site_health_contracts import (
-    RULE_OUTCOME_MISSING,
-    RULE_OUTCOME_SATISFIED,
-)
 
 
 @pytest.mark.parametrize(
@@ -292,12 +287,9 @@ def test_unanswered_observed_questions_stay_in_faq_evaluation() -> None:
 
     assessment = classify("https://example.test/questions", facts)
     assert assessment.page_kind == "faq"
-    facts["page_kind"] = assessment.page_kind
-    evaluation = evaluate_rule(rule_for("aeo.question_headings"), facts)
-    assert evaluation.outcome == RULE_OUTCOME_SATISFIED
-    answer = evaluate_rule(rule_for("aeo.answer_first"), facts)
-    assert answer.outcome == RULE_OUTCOME_MISSING
-    assert answer.evidence["reason"] == "question_answer_missing"
+    assert {
+        item["answer_state"] for item in facts["question_answer_relationships"]
+    } == {"missing"}
 
 
 def test_bare_auxiliary_heading_requires_question_mark() -> None:

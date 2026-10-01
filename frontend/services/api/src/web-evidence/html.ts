@@ -21,8 +21,8 @@ export function document(body: Buffer, charset = '') {
   const declared = META_CHARSET.exec(body.subarray(0, SNIFF_BYTES).toString('latin1'))?.[1];
   return parse((decoder(charset) ?? decoder(declared) ?? new TextDecoder('utf-8')).decode(body));
 }
-export const isElement = (node: HtmlNode): node is HtmlElement => 'tagName' in node;
-export const isText = (node: HtmlNode): node is HtmlText => node.nodeName === '#text';
+const isElement = (node: HtmlNode): node is HtmlElement => 'tagName' in node;
+const isText = (node: HtmlNode): node is HtmlText => node.nodeName === '#text';
 /** Elements in document order, the root first when it is one. Template content is not traversed. */
 export function* elements(root: HtmlNode, tag?: string): Generator<HtmlElement> {
   const pending: HtmlNode[] = [root];

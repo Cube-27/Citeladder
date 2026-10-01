@@ -2,9 +2,10 @@ import { sql, type Updateable } from 'kysely';
 import { z } from 'zod';
 import { commerceCategorySchema } from '@citeladder/contracts/commerce-suite';
 
-import { policy } from '../config.ts';
+import { loadWorkerSettings, policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { jsonObject } from '../db/json.ts';
+import { jsonObject, record, strings } from '../db/json.ts';
+import { enqueueTask } from '../referrals/enqueue.ts';
 import type { CommerceProducts } from '../generated/db-schema.ts';
 import type { Executor } from '../workers/executor.ts';
 import {
@@ -335,3 +336,35 @@ export const projectCatalog: Executor = async (task, { db, checkCancelled }) => 
     if (projected) await linkShelves(trx, scope, source.crawl_id, projected);
   });
 };
+
+const CATALOG_MODELS = new Set(policy.discovery.constants.commerce_business_models);
+
+/**
+ * Queue projection of a catalog page's analysis, once per analysis and
+ * projector version. Only a brand whose confirmed business model, primary or
+ * secondary, sells a catalog is projected; unknown context fails closed.
+ */
+export async function enqueueCatalogProjection(
+  db: Database,
+  scope: CommerceScope,
+  analysisId: string,
+) {
+  const profile = await db
+    .selectFrom('brand_profiles')
+    .select('business_context')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .executeTakeFirst();
+  const context = record(profile?.business_context);
+  const models = [context.business_model, ...strings(context.secondary_business_models)];
+  if (!models.some((model) => typeof model === 'string' && CATALOG_MODELS.has(model))) return;
+  await enqueueTask(db, {
+    workspaceId: scope.workspaceId,
+    projectId: scope.projectId,
+    kind: 'commerce_catalog_projection',
+    payload: { source_analysis_id: analysisId },
+    keyParts: [],
+    idempotencyKey: `commerce:project:${analysisId}:${policy.commerce.projector_version}`,
+    maxAttempts: loadWorkerSettings().taskMaxAttempts,
+  });
+}

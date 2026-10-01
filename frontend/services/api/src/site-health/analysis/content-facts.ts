@@ -157,7 +157,7 @@ function addressIdentity(scope: Owned) {
   return '';
 }
 
-export function isCtaAnchor(node: HtmlElement) {
+function isCtaAnchor(node: HtmlElement) {
   if (attribute(node, 'role').trim().toLowerCase() === 'button') return true;
   const classes = attribute(node, 'class').toLowerCase();
   return Boolean(classes) && classes.split(/[\s_-]+/u).some((token) => CTA_TOKENS.has(token));

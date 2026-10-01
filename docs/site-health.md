@@ -28,13 +28,18 @@ explicit Run new crawl
 Read endpoints only render persisted projections. They never acquire, classify,
 score, call a model/provider or repair state.
 
-During the TypeScript cutover, `site-health-worker-ts` claims `change_intel`,
-`link_metrics` and `architecture` from the existing `site_crawl_tasks` queue. Python's
-preferred and borrowed lanes exclude those kinds. The TypeScript owner locks crawl then
-task, publishes immutable derived evidence and admits successors with acknowledgement in
-one transaction; for `change_intel` that includes the analytics handoff.
-Python retains the other crawl kinds, terminal-crawl admission (including the
-analytics handoff of a crawl without usable analysis) and lease sweeping.
+During the TypeScript cutover, `site-health-worker-ts` claims `analyze`,
+`change_intel`, `link_metrics` and `architecture` from the existing
+`site_crawl_tasks` queue; the Python worker claims only `discover` and
+`site_setup`. The TypeScript owner locks crawl then task, publishes immutable
+derived evidence and admits successors with acknowledgement in one transaction;
+for `change_intel` that includes the analytics handoff. `analyze` acquires the
+page (or reuses its discover artifact) outside any transaction, then re-checks
+lease, crawl, membership and entitlement before committing its evidence, the
+Commerce projection enqueue and the task outcome together. Python retains
+discovery, site setup, finalization, terminal-crawl admission (including the
+analytics handoff of a crawl without usable analysis) and lease sweeping; its
+maintenance pass reconciles crawls after TypeScript settles an analysis.
 Source inspection and internal-link judgments run in the TypeScript analytics
 worker; their failed-task recovery also covers Python-sweeper terminalization.
 

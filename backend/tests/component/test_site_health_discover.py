@@ -21,7 +21,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.connectors.web_evidence.contracts import FetchResult
 from app.core.config.site_health_acquisition import (
     AI_CRAWLER_BOTS,
-    ERROR_BOT_BLOCKED,
     ERROR_HTTP_4XX,
     ERROR_ROBOTS_DENIED,
     ERROR_ROBOTS_UNAVAILABLE,
@@ -42,7 +41,6 @@ from app.core.config.site_health_contracts import (
     OBSERVATION_SOURCE_SITEMAP,
     RULE_OUTCOME_MISSING,
     RULE_OUTCOME_NOT_APPLICABLE,
-    SITE_TS_OWNED_TASK_KINDS,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
     TASK_KIND_SITE_SETUP,
@@ -63,7 +61,6 @@ from app.core.config.task_queue import (
 from app.domain.site_health.frontier import _store_frontier_candidates
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.schemas import AdmissionResult, FrontierCandidate
-from app.domain.site_health.service import presentation_status_for
 from app.models.site_health.acquisition import SiteFetchArtifact, SiteFetchAttempt
 from app.models.site_health.analysis import (
     SiteIssue,
@@ -80,7 +77,6 @@ from app.workers.site_health.phases.contracts import DiscoverOutcome
 from app.workers.site_health.phases.discover_stages import (
     write_sitemap_observations,
 )
-from app.workers.site_health.scheduling import claim_for_lane, configured_lane_plan
 from app.workers.site_health_worker import SiteHealthWorker
 from tests.component.site_health_helpers import seed_site_crawl
 from tests.component.site_health_worker_helpers import (
@@ -90,10 +86,10 @@ from tests.component.site_health_worker_helpers import (
     _FakeResolver,
     _html,
     _HttpxHandlerTransport,
-    _seed_analyze_ready,
     _seed_root_branches,
     _seed_root_discover,
     _seed_runtime,
+    _settle_analysis_as_typescript,
     _worker,
 )
 
@@ -206,17 +202,7 @@ async def test_progressive_analysis_keeps_discovered_page_priority(
     # Analysis of a page already in hand outranks fetching another one, so the
     # analyzed counter moves as discovery proceeds rather than only after the
     # whole discovery tree has drained.
-    processing_lane = next(
-        lane
-        for lane in configured_lane_plan()
-        if TASK_KIND_ANALYZE in lane.preferred_kinds
-    )
-    claimed = await claim_for_lane(
-        worker._queue, owner=worker.owner, lane=processing_lane
-    )
-    assert claimed is not None
-    assert claimed.task_kind == TASK_KIND_ANALYZE
-    assert claimed.priority > discover.priority
+    assert child_analyze.priority > discover.priority
 
 
 @pytest.mark.asyncio
@@ -731,10 +717,9 @@ async def test_free_sample_stops_at_ten_across_two_projects(
         )
         assert any(u in set(links_b) for u in monitored_urls)
 
-        # Auto-enqueued analyze tasks retain their discovery value priority and
-        # are now claimable and EXECUTED by the worker: the workspace-wide
-        # free-sample cap of 10 still holds (10 monitored URLs -> 10 analyze
-        # tasks total), but they are succeeded rather than left queued.
+        # Discovery hands each admitted sample URL to the TypeScript analyzer:
+        # the workspace-wide free-sample cap of 10 also bounds the analyze
+        # tasks, which stay queued because this worker owns acquisition only.
         analyze_statuses = (
             (
                 await session.execute(
@@ -747,31 +732,13 @@ async def test_free_sample_stops_at_ten_across_two_projects(
             .scalars()
             .all()
         )
-        assert analyze_statuses
-        assert all(s == TASK_STATUS_SUCCEEDED for s in analyze_statuses)
-        assert len(analyze_statuses) == 10
+        assert analyze_statuses == [TASK_STATUS_QUEUED] * 10
 
-        # Each executed analyze task produced one current terminal result. The
-        # initial immutable revisions remain reachable for provenance.
-        analysis_count = await session.scalar(
-            select(func.count())
-            .select_from(SitePageAnalysis)
-            .where(
-                SitePageAnalysis.workspace_id == seed_a.workspace_id,
-                SitePageAnalysis.is_current.is_(True),
-                SitePageAnalysis.finalized_at.is_not(None),
-            )
-        )
-        assert analysis_count == 10
-
-        # At least one crawl reached the sample cap terminal state.
+        # At least one crawl's discovery reached the sample cap.
         crawl_a = await session.get(SiteCrawl, seed_a.crawl_id)
+        crawl_b = await session.get(SiteCrawl, crawl_b_id)
         assert crawl_a is not None
-        _crawl_b = await session.get(SiteCrawl, crawl_b_id)
-        assert _crawl_b is not None
-        crawl_b = _crawl_b
-        assert crawl_a.status == CRAWL_STATUS_COMPLETED
-        assert crawl_b.status == CRAWL_STATUS_COMPLETED
+        assert crawl_b is not None
         assert DISCOVERY_STATUS_SAMPLE_COMPLETED in (
             crawl_a.discovery_status,
             crawl_b.discovery_status,
@@ -962,7 +929,6 @@ async def test_root_and_site_setup_branches_converge_durably(
 
     monkeypatch.setattr(site_health_settings, "worker_concurrency", 2)
     monkeypatch.setattr(site_health_settings, "global_concurrency", 2)
-    monkeypatch.setattr(site_health_settings, "acquisition_lane_reserve", 1)
     monkeypatch.setattr(site_setup_phase, "collect_site_evidence", blocked_site_setup)
     worker = _worker(
         session_factory,
@@ -1210,7 +1176,9 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
     # planner's discover task) so discovery, sitemap ingestion, and analysis
     # all land inside one terminalization/snapshot.
     async with session_factory() as session:
-        await _add_monitored_analyze_task(session, seed, root)
+        _root_url_id, analyze_task_id = await _add_monitored_analyze_task(
+            session, seed, root
+        )
         await session.commit()
 
     robots = (
@@ -1241,9 +1209,9 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
     requests: list[tuple[str, str]] = []
     worker = _worker(session_factory, pages, owner="p2-setup", requests=requests)
     await worker.run_until_idle()
-    # The analyze task deliberately backs off when its discover dependency is
-    # still committing; let that bounded defer mature, then drain it.
-    await asyncio.sleep(site_health_settings.analysis_dependency_retry_seconds)
+    # The TypeScript analyzer settles the root on its discover artifact; the
+    # next maintenance pass reconciles the crawl and runs finalization.
+    await _settle_analysis_as_typescript(session_factory, analyze_task_id)
     await worker.run_until_idle()
 
     async with session_factory() as session:
@@ -1252,9 +1220,9 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
         assert crawl.status == CRAWL_STATUS_COMPLETED
         assert requests.count(("GET", "/")) == 1
 
-        # The robots policy was fetched ONCE for the whole crawl (the root +
-        # both child discovers + the sitemap-tree walk + the analyze task all
-        # share the per-authority cache).
+        # The robots policy was fetched ONCE for the whole crawl (the root,
+        # both child discovers and the sitemap-tree walk share the
+        # per-authority cache).
         assert requests.count(("GET", "/robots.txt")) == 1
         assert ("GET", "/llms.txt") in requests
         assert ("GET", "/sitemap.xml") in requests
@@ -1311,18 +1279,6 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
                 )
             )
         ).scalar_one()
-        shared_artifact = await session.get(SiteFetchArtifact, analysis.artifact_id)
-        assert shared_artifact is not None
-        assert shared_artifact.fetch_purpose == "discover"
-        assert shared_artifact.normalized_facts is not None
-        analyze_task = await session.scalar(
-            select(SiteCrawlTask).where(
-                SiteCrawlTask.crawl_id == seed.crawl_id,
-                SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
-            )
-        )
-        assert analyze_task is not None
-        assert analyze_task.result_artifact_id == shared_artifact.id
         evals = {
             row.rule_id: row
             for row in (
@@ -1580,183 +1536,3 @@ async def test_plain_403_without_challenge_marker_stays_http_4xx(
             .where(SiteFetchArtifact.task_id == task.id)
         )
         assert artifact_count == 0
-
-
-@pytest.mark.asyncio
-async def test_bot_block_presents_blocked_via_bot_blocked_token(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """A challenge-marker response -> terminal ``bot_blocked`` + ``blocked``.
-
-    The analyze fetch returns 403 with a challenge-platform marker, so the
-    task fails non-retryably with ``ERROR_BOT_BLOCKED`` (never the generic
-    ``http_4xx``), persists one attempt row not linked to an artifact, writes
-    NO analyzable artifact (the blocked response lives in the trace only), and
-    presents the URL as ``blocked`` via ``POLICY_BLOCKING_ERROR_CODES``.
-    """
-    seed, _site_url_id, task_id = await _seed_analyze_ready(session_factory)
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path == "/rich":
-            return httpx.Response(
-                403,
-                headers={"content-type": "text/html"},
-                stream=_ByteStream(b"<html><body>Just a moment...</body></html>"),
-            )
-        return httpx.Response(404, stream=_ByteStream(b"not found"))
-
-    worker = SiteHealthWorker(
-        session_factory=session_factory,
-        owner="p3-blocked",
-        resolver=_FakeResolver(),
-        transport=_HttpxHandlerTransport(handler),
-    )
-    await worker.run_until_idle()
-
-    async with session_factory() as session:
-        task = await session.get(SiteCrawlTask, task_id)
-        assert task is not None
-        assert task.status == TASK_STATUS_FAILED
-        assert task.error_code == ERROR_BOT_BLOCKED
-
-        # The blocked call persists as an attempt, never linked to an artifact.
-        rows = (
-            (
-                await session.execute(
-                    select(SiteFetchAttempt)
-                    .where(SiteFetchAttempt.task_id == task_id)
-                    .order_by(SiteFetchAttempt.request_ordinal)
-                )
-            )
-            .scalars()
-            .all()
-        )
-        assert len(rows) == 1
-        assert rows[0].status_code == 403
-        assert rows[0].artifact_id is None
-        assert rows[0].outcome == FETCH_ATTEMPT_OUTCOME_ERROR
-        assert rows[0].error_code == ERROR_BOT_BLOCKED
-
-        # No analyzable artifact was created from the blocked response.
-        artifact_count = await session.scalar(
-            select(func.count())
-            .select_from(SiteFetchArtifact)
-            .where(SiteFetchArtifact.task_id == task_id)
-        )
-        assert artifact_count == 0
-        analysis_count = await session.scalar(
-            select(func.count())
-            .select_from(SitePageAnalysis)
-            .where(SitePageAnalysis.crawl_id == seed.crawl_id)
-        )
-        assert analysis_count == 0
-
-        # Presentation: the terminal ``bot_blocked`` task renders ``blocked``.
-        assert presentation_status_for(
-            analysis=None, monitored=True, latest_analyze_task=task
-        ) == ("blocked", ERROR_BOT_BLOCKED)
-
-
-@pytest.mark.asyncio
-async def test_a_cold_crawl_analyzes_as_it_discovers(
-    session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The analyzed count must rise while discovery is still running.
-
-    Discovery and analysis share one queue, and analyze tasks used to be
-    created at admission -- long before their page had been fetched. Each one
-    woke, found its own discover task still in flight, and deferred, which
-    pushed its `available_at` further back and sent it behind every task
-    queued since. A cold crawl therefore drained its whole discovery tree
-    first: 405 pages fetched against 3 analyzed in seven minutes, with the
-    analyzed counter sitting at zero long enough that the crawl read as hung
-    and got cancelled. Analysis is now handed over by the fetch itself, so it
-    interleaves.
-
-    Also pins the other half: one fetch per URL, not one per phase.
-    """
-    # One task at a time, which is where the starvation was visible: with a
-    # wide batch the queue drains in two passes and hides the ordering.
-    monkeypatch.setattr(site_health_settings, "worker_concurrency", 1)
-    root = "https://example.com/"
-    children = [f"https://example.com/products/p-{index}" for index in range(6)]
-    seed = await _seed_root_discover(session_factory, root=root)
-    async with session_factory() as session:
-        crawl = await session.get(SiteCrawl, seed.crawl_id)
-        assert crawl is not None
-        crawl.configuration = {
-            **(crawl.configuration or {}),
-            AUTOMATIC_MONITOR_LIMIT_KEY: len(children) + 1,
-        }
-        await session.commit()
-    requests: list[tuple[str, str]] = []
-    worker = _worker(
-        session_factory,
-        {
-            "/": _html(children),
-            **{f"/products/p-{index}": _html([]) for index in range(6)},
-        },
-        owner="cold-crawl",
-        requests=requests,
-    )
-
-    analyzed_after_each_run: list[int] = []
-    for _ in range(40):
-        if await worker.run_once() == 0:
-            break
-        async with session_factory() as session:
-            analyzed_after_each_run.append(
-                int(
-                    await session.scalar(
-                        select(func.count())
-                        .select_from(SiteCrawlTask)
-                        .where(
-                            SiteCrawlTask.crawl_id == seed.crawl_id,
-                            SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
-                            SiteCrawlTask.status == TASK_STATUS_SUCCEEDED,
-                        )
-                    )
-                    or 0
-                )
-            )
-
-    # Analysis begins while discovery is still running. Before the handover,
-    # every analyze task deferred behind the whole discovery tree, so this
-    # list stayed at zero until the very last runs.
-    assert analyzed_after_each_run, "the crawl did no work at all"
-    total_runs = len(analyzed_after_each_run)
-    assert analyzed_after_each_run[total_runs // 2] > 0, (
-        f"analysis had not started by the halfway point: {analyzed_after_each_run}"
-    )
-    # And every discovered page is analyzed by the end -- the root included,
-    # whose discover task carries no site_url_id of its own.
-    assert analyzed_after_each_run[-1] == len(children) + 1
-
-    # Every task is claimed exactly once. An analyze task that exists before
-    # its page has been fetched burns a claim discovering it must wait, then
-    # re-queues itself further back -- the loop that starved analysis on a
-    # real site. Handed over by the fetch, it is never claimed early, so the
-    # number of working runs equals the number of tasks with nothing to spare.
-    async with session_factory() as session:
-        task_count = int(
-            await session.scalar(
-                select(func.count())
-                .select_from(SiteCrawlTask)
-                .where(
-                    SiteCrawlTask.crawl_id == seed.crawl_id,
-                    # The TypeScript worker claims these; this Python one never will.
-                    SiteCrawlTask.task_kind.not_in(SITE_TS_OWNED_TASK_KINDS),
-                )
-            )
-            or 0
-        )
-    assert total_runs == task_count
-
-    # No page is fetched twice: the analyze phase reuses the artifact the
-    # discover phase already wrote for the same URL.
-    fetched_paths = [path for method, path in requests if method == "GET"]
-    duplicated = {path for path in fetched_paths if fetched_paths.count(path) > 1} - {
-        "/robots.txt"
-    }
-    assert not duplicated, f"pages fetched more than once: {sorted(duplicated)}"
