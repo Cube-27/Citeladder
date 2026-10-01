@@ -120,7 +120,7 @@ export function Calendar({
           type="button"
           aria-label="Previous month"
           onClick={() => setMonth((current) => addMonths(current, -1))}
-          className="hover:bg-active inline-flex size-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)]"
+          className="enabled:hover:bg-hover enabled:active:bg-active inline-flex size-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)]"
         >
           <ChevronLeft className="size-4" aria-hidden />
         </Pressable>
@@ -132,7 +132,7 @@ export function Calendar({
           type="button"
           aria-label="Next month"
           onClick={() => setMonth((current) => addMonths(current, 1))}
-          className="hover:bg-active inline-flex size-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)]"
+          className="enabled:hover:bg-hover enabled:active:bg-active inline-flex size-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)]"
         >
           <ChevronRight className="size-4" aria-hidden />
         </Pressable>
@@ -167,12 +167,13 @@ export function Calendar({
                       onClick={() => onSelect(iso)}
                       className={cn(
                         'type-body text-foreground inline-flex size-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] tabular-nums transition-colors',
-                        isSelected ? 'bg-accent text-accent-fg' : 'hover:bg-active',
+                        isSelected
+                          ? 'bg-accent text-accent-fg enabled:hover:bg-accent-hover enabled:active:bg-accent-active'
+                          : 'enabled:hover:bg-hover enabled:active:bg-active',
                         // Days spilling in from the neighbouring months stay
                         // legible but recede, so the current month reads as
                         // the subject.
                         outside && !isSelected && 'text-muted',
-                        disabled && 'pointer-events-none opacity-40',
                       )}
                     >
                       {day.getUTCDate()}

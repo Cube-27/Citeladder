@@ -335,7 +335,7 @@ function IssueGroupList({
             aria-pressed={selected}
             className={cn(
               'focus-ring grid w-[272px] shrink-0 gap-2 px-4 py-3 text-left transition-colors min-[701px]:w-full',
-              selected ? 'bg-selected text-foreground' : 'hover:bg-active',
+              selected ? 'bg-selected text-foreground' : 'hover:bg-hover active:bg-active',
             )}
           >
             <span className="flex items-center justify-between gap-3">

@@ -50,7 +50,7 @@ export function SearchField({
       endContent={
         value ? (
           <Pressable
-            className="text-muted hover:bg-well hover:text-foreground grid size-[var(--field-end-target)] place-items-center rounded-[var(--radius-control)]"
+            className="text-muted enabled:hover:bg-hover enabled:hover:text-foreground enabled:active:bg-active grid size-[var(--field-end-target)] place-items-center rounded-[var(--radius-control)]"
             disabled={props.disabled}
             onClick={() => (onClear ? onClear() : onValueChange(''))}
             aria-label="Clear search"

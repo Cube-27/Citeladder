@@ -55,9 +55,9 @@ function PropertyOption({
       aria-pressed={selected}
       className={cn(
         'flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start',
-        'focus-ring hover:bg-active',
-        'disabled:pointer-events-none disabled:opacity-60',
-        selected && 'bg-accent-soft hover:bg-accent-soft',
+        'focus-ring enabled:hover:bg-hover enabled:active:bg-active',
+        'disabled:pointer-events-none disabled:[&_.type-item-title]:text-muted',
+        selected && 'bg-selected text-foreground enabled:hover:bg-selected',
       )}
     >
       <span className="min-w-0 flex-1">

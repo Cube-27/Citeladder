@@ -141,7 +141,7 @@ export function ActionRow({
         if (!reorderPending) onDrop(Number(event.dataTransfer.getData('text/plain')), index);
       }}
       className={cn(
-        'border-border-subtle hover:bg-active grid gap-3 border-b py-3 transition-colors last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
+        'border-border-subtle hover:bg-hover active:bg-active grid gap-3 border-b py-3 transition-colors last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
         dragging && 'opacity-60',
       )}
     >
