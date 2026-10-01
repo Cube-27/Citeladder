@@ -16,10 +16,6 @@ from app.api.agent import router as agent_router
 from app.api.audits import router as audits_router
 from app.api.commerce import router as commerce_router
 from app.api.performance import router as performance_router
-from app.api.provider_connections import (
-    catalog_router as provider_catalog_router,
-)
-from app.api.provider_connections import router as provider_connections_router
 from app.api.search_intelligence import (
     reviews_router as search_intelligence_reviews_router,
 )
@@ -51,8 +47,6 @@ logger = logging.getLogger("app")
 # Explicit router stubs registered now so B2–B6 fill them in place. Each router
 # owns its own paths; the prefix keeps the whole surface under /api/v1.
 _ROUTERS = (
-    provider_connections_router,
-    provider_catalog_router,
     audits_router,
     site_health_router,
     search_intelligence_reviews_router,
@@ -69,8 +63,7 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
-        # The provider connectivity probe (/provider-connections/{id}/test) runs
-        # in this process, so the web app owns a pooled answer-engine client too.
+        # Retained Agent and analytics callers share the pooled HTTP client.
         await aclose_shared_clients()
         await dispose_engine()
 

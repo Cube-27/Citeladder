@@ -36,7 +36,6 @@ from app.core.config.provider_catalog import (
     route_policy,
     search_context,
 )
-from app.domain.providers.schemas import ProviderConnectionCreate
 
 
 class TestSurfaceModel:
@@ -220,42 +219,6 @@ class TestCredentialShape:
             unpack_credential(secret)
         assert secret not in str(excinfo.value)
 
-    def test_the_search_transport_accepts_a_pair(self) -> None:
-        payload = ProviderConnectionCreate(
-            transport_provider=TRANSPORT_DATAFORSEO,
-            api_login="user@example.com",
-            api_password="s3cret",
-        )
-        assert unpack_credential(payload.secret_material()).login == "user@example.com"
-
-    def test_the_search_transport_refuses_a_bearer_key(self) -> None:
-        with pytest.raises(ValueError, match="not a single key"):
-            ProviderConnectionCreate(
-                transport_provider=TRANSPORT_DATAFORSEO, api_key="sk-live"
-            )
-
-    def test_the_search_transport_refuses_half_a_pair(self) -> None:
-        with pytest.raises(ValueError, match="login and an API password"):
-            ProviderConnectionCreate(
-                transport_provider=TRANSPORT_DATAFORSEO, api_login="user"
-            )
-
-    def test_a_bearer_transport_refuses_a_pair(self) -> None:
-        with pytest.raises(ValueError, match="not a login and password"):
-            ProviderConnectionCreate(
-                transport_provider="openai", api_login="user", api_password="pw"
-            )
-
-    def test_a_bearer_transport_still_requires_its_key(self) -> None:
-        with pytest.raises(ValueError, match="api_key is required"):
-            ProviderConnectionCreate(transport_provider="openai")
-
-    def test_a_bearer_credential_is_stored_verbatim(self) -> None:
-        payload = ProviderConnectionCreate(
-            transport_provider="openai", api_key="  sk-live  "
-        )
-        assert payload.secret_material() == "sk-live"
-
 
 class TestSearchContextAdmission:
     """A run may not select a surface it has no vantage point for.
@@ -313,74 +276,6 @@ class TestSearchContextAdmission:
             project=self._project(serp_location_code=0),
             engines=[ENGINE_CHATGPT, "claude", "gemini"],
         )
-
-
-class TestRotationShape:
-    """A rotation in the wrong shape is refused, never silently dropped."""
-
-    def _connection(self, transport: str):
-        from app.models.provider import ProviderConnection
-
-        return ProviderConnection(transport_provider=transport, api_key_encrypted="x")
-
-    def _update(self, **values: object):
-        from app.domain.providers.schemas import ProviderConnectionUpdate
-
-        return ProviderConnectionUpdate(**values)
-
-    def test_omitting_credentials_leaves_the_stored_secret_alone(self) -> None:
-        from app.domain.providers.connection_updates import rotated_secret
-
-        assert rotated_secret(self._connection("openai"), self._update()) is None
-        assert (
-            rotated_secret(self._connection(TRANSPORT_DATAFORSEO), self._update())
-            is None
-        )
-
-    def test_a_complete_pair_rotates_the_search_credential(self) -> None:
-        from app.domain.providers.connection_updates import rotated_secret
-
-        secret = rotated_secret(
-            self._connection(TRANSPORT_DATAFORSEO),
-            self._update(api_login="u@x.com", api_password="pw"),
-        )
-        assert secret is not None
-        assert unpack_credential(secret).login == "u@x.com"
-
-    def test_half_a_pair_is_refused_by_the_schema(self) -> None:
-        # Rotating one half against a remembered other half would leave the
-        # stored credential in a state nobody entered.
-        with pytest.raises(ValueError, match="both halves"):
-            self._update(api_login="u@x.com")
-
-    def test_a_key_and_a_pair_together_are_refused_by_the_schema(self) -> None:
-        with pytest.raises(ValueError, match="not both"):
-            self._update(api_key="sk-x", api_login="u", api_password="p")
-
-    def test_a_bearer_key_sent_to_a_search_connection_is_refused_by_name(
-        self,
-    ) -> None:
-        # Silently ignoring it would report a rotation that never happened.
-        from app.domain.providers.connection_updates import (
-            CredentialShapeError,
-            rotated_secret,
-        )
-
-        connection = self._connection(TRANSPORT_DATAFORSEO)
-        payload = self._update(api_key="sk-x")
-        with pytest.raises(CredentialShapeError, match="not a single key"):
-            rotated_secret(connection, payload)
-
-    def test_a_pair_sent_to_a_bearer_connection_is_refused_by_name(self) -> None:
-        from app.domain.providers.connection_updates import (
-            CredentialShapeError,
-            rotated_secret,
-        )
-
-        connection = self._connection("openai")
-        payload = self._update(api_login="u@x.com", api_password="pw")
-        with pytest.raises(CredentialShapeError, match="not a login and password"):
-            rotated_secret(connection, payload)
 
 
 class TestFundedModeExcludesTheSearchSurface:

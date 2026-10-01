@@ -1,22 +1,17 @@
 """One credential, independent engine slots, frozen context and authorized rollout."""
 
-import uuid
-
 import pytest
 from sqlalchemy import select
 
+from app.core.config.dataforseo import pack_credential
+from app.core.config.provider_catalog import MEASUREMENT_ROUTES
 from app.core.config.provider_routes import LOGICAL_ENGINES
+from app.core.security import encrypt_secret
 from app.domain.audits.creation import create_audit
 from app.domain.audits.errors import AuditValidationError
-from app.domain.providers.schemas import ProviderConnectionCreate
-from app.domain.providers.service import (
-    ProviderConnectionNotFoundError,
-    create_connection,
-    provision_dataforseo_routes,
-)
 from app.models.audit import AuditTask
 from app.models.project import Project
-from app.models.provider import ProviderRoute
+from app.models.provider import ProviderConnection, ProviderRoute
 from tests.component.audit_helpers import _mark_connection_probed, seed_audit_fixtures
 
 
@@ -30,17 +25,28 @@ async def test_independent_slots_and_frozen_context(session_factory, engines):
         seed = await seed_audit_fixtures(
             session, prompt_count=1, engines=["chatgpt", "gemini", "claude"]
         )
-        connection = await create_connection(
-            session,
+        connection = ProviderConnection(
             workspace_id=seed.workspace_id,
-            payload=ProviderConnectionCreate(
-                transport_provider="dataforseo",
-                label="Shared account",
-                api_login="test@example.com",
-                api_password="test",  # pragma: allowlist secret
-                routes=[],
+            transport_provider="dataforseo",
+            api_key_encrypted=encrypt_secret(
+                pack_credential(login="test@example.com", password="test")
             ),
+            active=True,
         )
+        session.add(connection)
+        await session.flush()
+        for engine, route in MEASUREMENT_ROUTES.items():
+            if route.transport_provider == "dataforseo":
+                session.add(
+                    ProviderRoute(
+                        workspace_id=seed.workspace_id,
+                        connection_id=connection.id,
+                        logical_engine=engine,
+                        transport_provider="dataforseo",
+                        transport_model=route.transport_model,
+                        is_default=True,
+                    )
+                )
         _mark_connection_probed(
             session, connection=connection, engine="google_ai_overview"
         )
@@ -72,59 +78,6 @@ async def test_independent_slots_and_frozen_context(session_factory, engines):
                 assert task.provider_route_snapshot["connection_id"] == str(
                     connection.id
                 )
-
-
-@pytest.mark.asyncio
-async def test_rollout_is_idempotent_scoped_and_keeps_disabled_route(session_factory):
-    async with session_factory() as session:
-        seed = await seed_audit_fixtures(session, prompt_count=1)
-        connection = await create_connection(
-            session,
-            workspace_id=seed.workspace_id,
-            payload=ProviderConnectionCreate(
-                transport_provider="dataforseo",
-                label="Shared",
-                api_login="test@example.com",
-                api_password="test",  # pragma: allowlist secret
-                routes=[],
-            ),
-        )
-        route = next(
-            route
-            for route in connection.routes
-            if route.logical_engine == "chatgpt_search"
-        )
-        route.active = False
-        route.deactivation_reason = "operator_disabled"
-        missing = next(
-            route
-            for route in connection.routes
-            if route.logical_engine == "gemini_consumer"
-        )
-        connection.routes.remove(missing)
-        ciphertext = connection.api_key_encrypted
-        await session.commit()
-        for _ in range(2):
-            connection = await provision_dataforseo_routes(
-                session, workspace_id=seed.workspace_id, connection_id=connection.id
-            )
-            await session.commit()
-        routes = (
-            await session.scalars(
-                select(ProviderRoute).where(
-                    ProviderRoute.connection_id == connection.id
-                )
-            )
-        ).all()
-        assert len(routes) == 3
-        assert not next(
-            route for route in routes if route.logical_engine == "chatgpt_search"
-        ).active
-        assert connection.api_key_encrypted == ciphertext
-        with pytest.raises(ProviderConnectionNotFoundError):
-            await provision_dataforseo_routes(
-                session, workspace_id=uuid.uuid4(), connection_id=connection.id
-            )
 
 
 @pytest.mark.asyncio

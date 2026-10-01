@@ -34,7 +34,7 @@ export const ROUTE_OWNERSHIP = {
   'executive-report': 'typescript',
   'prompt-generation': 'typescript',
   prompts: 'typescript',
-  providers: 'python',
+  providers: 'typescript',
   'search-intelligence': 'typescript',
   'search-intelligence-reviews': 'python',
   'site-health': 'python',
@@ -52,6 +52,9 @@ export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
  * documents; the development proxy reads this list directly.
  */
 export const TYPESCRIPT_INGRESS_PATHS = [
+  '/api/v1/provider-catalog',
+  '/api/v1/provider-connections',
+  '/api/v1/provider-connections/*',
   '/api/v1/billing/invoices',
   '/api/v1/billing/invoices/*/pdf',
   '/api/v1/projects/*/reports/executive.pdf',
