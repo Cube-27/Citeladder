@@ -20,7 +20,7 @@ export type SearchRequest = {
   provider_submission_ref: string;
   request_settings: Record<string, unknown>;
 };
-export const providerTaskSchema = z
+const providerTaskSchema = z
   .object({
     id: z.string().nullable().optional(),
     status_code: z.number().int(),
@@ -29,14 +29,13 @@ export const providerTaskSchema = z
     data: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
-export const envelopeSchema = z
+const envelopeSchema = z
   .object({
     status_code: z.number().int(),
     tasks: z.array(providerTaskSchema).nullable().optional(),
   })
   .passthrough();
 export type Envelope = z.infer<typeof envelopeSchema>;
-export type ProviderTask = z.infer<typeof providerTaskSchema>;
 export class SubmissionUncertain extends ProviderError {
   readonly submission: { taskId: string | null; chargeMicrousd: number | null } | undefined;
   constructor(submission?: SubmissionUncertain['submission']) {
@@ -62,7 +61,7 @@ export function providerCharge(cost: unknown): number | null {
   const result = round(cost * searchPolicy.microusd_per_usd, 0);
   return Number.isSafeInteger(result) ? result : null;
 }
-export function providerPath(
+function providerPath(
   engine: SearchEngine,
   operation: 'task_post' | 'task_get/advanced' | 'id_list',
 ): string {

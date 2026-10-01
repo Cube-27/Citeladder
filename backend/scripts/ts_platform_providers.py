@@ -3,6 +3,7 @@
 import dataclasses
 
 from app.core.config import app_models, dataforseo, provider_catalog
+from scripts.ts_platform_constants import constants
 
 
 def provider_policy(setting):
@@ -74,11 +75,7 @@ def provider_policy(setting):
             "probe_path": dataforseo.PATH_USER_DATA,
             "success_status": dataforseo.STATUS_OK,
         },
-        "app": {
-            name.removeprefix("APP_MODEL_").lower(): sorted(value)
-            if isinstance(value, frozenset)
-            else value
-            for name, value in vars(app_models).items()
-            if name.startswith("APP_MODEL_")
-        },
+        "app": constants(
+            app_models, (str, int, float, bool, dict, frozenset), prefix="APP_MODEL_"
+        ),
     }

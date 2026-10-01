@@ -4,7 +4,7 @@ import type { CanonicalTarget } from './targets.ts';
 
 export const si = policy.search_intelligence;
 export type DatasetKind = keyof typeof si.endpoints;
-export type ResearchScope = 'exact_host' | 'domain_subdomains';
+type ResearchScope = 'exact_host' | 'domain_subdomains';
 export type RequestOptions = {
   kind: DatasetKind;
   target: CanonicalTarget;
@@ -22,7 +22,7 @@ export type RequestOptions = {
   dateTo: string;
 };
 const includes = (values: readonly string[], value: string) => values.includes(value);
-export function backlinkFilters(target: CanonicalTarget, scope: ResearchScope): unknown[] {
+function backlinkFilters(target: CanonicalTarget, scope: ResearchScope): unknown[] {
   const exclusions = [
     ['domain_from', '<>', target.registrable_domain],
     'and',

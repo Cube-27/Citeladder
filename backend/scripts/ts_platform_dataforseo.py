@@ -3,24 +3,14 @@
 from app.connectors.search_surfaces import contracts
 from app.core.config import dataforseo, llm_scraper
 from app.core.config.costs import MICRO_USD_PER_USD
+from scripts.ts_platform_constants import constants
 
 
 def dataforseo_policy(setting):
     return {
-        "strip_characters": "".join(
-            chr(point) for point in range(0x110000) if chr(point).isspace()
-        ),
-        "casefold_overrides": {
-            chr(point): chr(point).casefold()
-            for point in range(0x110000)
-            if chr(point).casefold() != chr(point).lower()
-        },
+        **_unicode_policy(),
         "microusd_per_usd": MICRO_USD_PER_USD,
-        "surface": {
-            name.lower(): sorted(value) if isinstance(value, frozenset) else value
-            for name, value in vars(contracts).items()
-            if name.isupper() and isinstance(value, (str, frozenset))
-        },
+        "surface": constants(contracts, (str, frozenset)),
         "settings": {
             name: setting(name, dataforseo.DataForSeoSettings)
             for name in (
@@ -29,13 +19,7 @@ def dataforseo_policy(setting):
                 "max_response_bytes",
             )
         },
-        "constants": {
-            name.lower(): sorted(value) if isinstance(value, frozenset) else value
-            for name, value in vars(dataforseo).items()
-            if name.isupper()
-            and not name.startswith("_")
-            and isinstance(value, (str, int, float, bool, dict, frozenset))
-        },
+        "constants": constants(dataforseo, (str, int, float, bool, dict, frozenset)),
         "scraper": {
             "products": llm_scraper.PRODUCTS,
             "request_settings": {
@@ -46,5 +30,18 @@ def dataforseo_policy(setting):
             "priority": llm_scraper.PRIORITY,
             "id_list_path": llm_scraper.PATH_ID_LIST,
             "reconcile_max_pages": llm_scraper.RECONCILE_MAX_PAGES,
+        },
+    }
+
+
+def _unicode_policy():
+    return {
+        "strip_characters": "".join(
+            chr(point) for point in range(0x110000) if chr(point).isspace()
+        ),
+        "casefold_overrides": {
+            chr(point): chr(point).casefold()
+            for point in range(0x110000)
+            if chr(point).casefold() != chr(point).lower()
         },
     }

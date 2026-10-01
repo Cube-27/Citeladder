@@ -22,7 +22,7 @@ const rate = (numerator: number, denominator: number) =>
 const count = (scores: Record<string, unknown>[], key: string) =>
   scores.filter((s) => Boolean(s[key])).length;
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
-export const meanPosition = (values: (number | null)[]) => {
+const meanPosition = (values: (number | null)[]) => {
   const known = values.filter((n): n is number => n !== null);
   return known.length ? round(sum(known) / known.length, 2) : null;
 };

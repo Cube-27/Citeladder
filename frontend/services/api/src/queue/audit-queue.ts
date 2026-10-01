@@ -12,12 +12,7 @@ const table = 'audit_tasks';
 const { claimable, statuses, terminal } = policy.task_queue;
 
 export type AuditClaimScope = { workspaceId: string; auditId: string };
-export function auditClaimStatement(
-  db: Database,
-  at: Date,
-  limit: number,
-  scope?: AuditClaimScope,
-) {
+function auditClaimStatement(db: Database, at: Date, limit: number, scope?: AuditClaimScope) {
   const candidates = db
     .selectFrom(table)
     .select([

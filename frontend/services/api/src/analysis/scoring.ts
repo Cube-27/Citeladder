@@ -111,7 +111,7 @@ export function classifyCitation(citation: JsonObject, config: ScoringConfig): C
 
 const rules = policy.audits.analysis;
 const escapeRegex = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-export function entityPresent(aliases: readonly string[], text: string): boolean {
+function entityPresent(aliases: readonly string[], text: string): boolean {
   return aliases.some((alias) => {
     if (!rules.ambiguous_aliases.includes(normalizeAlias(alias))) return namesAlias(text, alias);
     const literal = escapeRegex(alias);
@@ -127,7 +127,7 @@ function firstOffset(aliases: readonly string[], normalized: string) {
     .filter((offset): offset is number => offset !== null);
   return offsets.length ? Math.min(...offsets) : null;
 }
-export function classifyFanout(query: string) {
+function classifyFanout(query: string) {
   const normalized = query.toLowerCase();
   return Object.entries(rules.fanout_feature_rules)
     .filter(([, needles]) =>

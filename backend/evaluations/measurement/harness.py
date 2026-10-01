@@ -28,7 +28,6 @@ All thresholds, dimensions, paths and vocabularies live in
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import re
@@ -55,7 +54,6 @@ from app.core.config.measurement import (
     MEASUREMENT_PROMPT_MIN_COUNT,
     MEASUREMENT_PROMPTS_PATH,
     MEASUREMENT_ROUTE_KEYS,
-    MEASUREMENT_SCORING_SUBJECT,
     MEASUREMENT_SCRIPT_VERSION,
     MEASUREMENT_SEARCH_STATES,
     OBSERVATION_STATUS_OK,
@@ -73,13 +71,10 @@ from app.core.config.measurement import (
     route_reasoning_efforts,
 )
 from app.core.config.provider_catalog import measurement_route
+from evaluations.measurement.native_scoring import score_fixtures, scoring_item
 
 _FORBIDDEN_PATTERNS = tuple(
     re.compile(pattern, re.IGNORECASE) for pattern in FORBIDDEN_PROMPT_PATTERNS
-)
-_NATIVE_SCORER = (
-    Path(__file__).resolve().parents[3]
-    / "frontend/services/api/src/cli/score-measurement.ts"
 )
 
 
@@ -473,39 +468,14 @@ class FixtureMeasurementRunner:
         ]
         if not keys:
             return
-        items = []
-        for case, prompt in keys:
-            envelope = self._pick(case, prompt)
-            events = list(envelope.get("search_events") or [])
-            items.append(
-                {
-                    "answerText": str(envelope.get("answer_text") or ""),
-                    "promptText": prompt.text,
-                    "searchEvents": events,
-                    "citations": list(envelope.get("citations") or []),
-                    "searchUsed": case.search_enabled and bool(events),
-                }
-            )
-        process = await asyncio.create_subprocess_exec(
-            "node",
-            str(_NATIVE_SCORER),
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        output, _ = await process.communicate(
-            json.dumps(
-                {
-                    "configuration": MEASUREMENT_SCORING_SUBJECT,
-                    "items": items,
-                }
-            ).encode("utf-8")
-        )
-        if process.returncode:
-            raise MeasurementConfigurationError("Native fixture scoring failed")
-        scores = json.loads(output)
-        if not isinstance(scores, list) or len(scores) != len(keys):
-            raise MeasurementConfigurationError("Native fixture scoring count mismatch")
+        items = [
+            scoring_item(self._pick(case, prompt), case.search_enabled, prompt.text)
+            for case, prompt in keys
+        ]
+        try:
+            scores = await score_fixtures(items)
+        except ValueError as exc:
+            raise MeasurementConfigurationError(str(exc)) from exc
         self._scores.update(
             {
                 (case, prompt.prompt_id): score

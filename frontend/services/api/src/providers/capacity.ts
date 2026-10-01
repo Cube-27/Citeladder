@@ -34,7 +34,7 @@ export type CapacityDecision =
       code: string;
       poolKind: Pool['kind'];
     };
-export function routeCapacity(request: CapacityRequest): RoutePolicy {
+function routeCapacity(request: CapacityRequest): RoutePolicy {
   const row = policy.providers.capacity.find(
     (row) => row.logical_engine === request.engine && row.transport_provider === request.transport,
   );

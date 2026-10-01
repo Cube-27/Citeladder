@@ -22,7 +22,7 @@ const unresolved = (workspaceId: string, accountId?: string) => {
     code: 'entitlement_unresolved',
   });
 };
-export const unavailableCredential = () =>
+const unavailableCredential = () =>
   new ApiError(403, 'No executable credential available for this task', {
     code: 'execution_credentials_unavailable',
   });

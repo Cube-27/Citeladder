@@ -19,8 +19,8 @@ const integer = (value: unknown) =>
 const domain = (value: string) => getDomain(value) ?? '';
 const pending = (status: unknown) =>
   typeof status === 'number' && searchPolicy.constants.pending_task_status_codes.includes(status);
-export type SurfaceLink = { url: string; domain: string; title: string; element_index: number };
-export type SurfaceReference = {
+type SurfaceLink = { url: string; domain: string; title: string; element_index: number };
+type SurfaceReference = {
   url: string;
   domain: string;
   title: string;

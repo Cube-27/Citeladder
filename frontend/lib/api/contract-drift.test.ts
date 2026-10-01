@@ -48,12 +48,12 @@ describe('componentProperties', () => {
 
 describe('declaredKeysFor', () => {
   it('splits declared keys into required vs absent-tolerant', () => {
-    const keys = declaredKeysFor('auditSchema');
+    const keys = declaredKeysFor('agentRunSchema');
     expect(keys).not.toBeNull();
     expect(keys?.declared).toContain('id');
-    expect(keys?.declared).toContain('audit_scope');
+    expect(keys?.declared).toContain('progress');
     expect(keys?.required).toContain('id');
-    expect(keys?.required).not.toContain('audit_scope');
+    expect(keys?.required).not.toContain('progress');
   });
 
   it('resolves page wrappers to their object shape', () => {
@@ -63,10 +63,10 @@ describe('declaredKeysFor', () => {
 
 describe('diffContract', () => {
   it('passes when declared fields match the component properties exactly', () => {
-    const auditKeys = declaredKeysFor('auditSchema');
-    const properties = Object.fromEntries((auditKeys?.declared ?? []).map((k) => [k, {}]));
+    const runKeys = declaredKeysFor('agentRunSchema');
+    const properties = Object.fromEntries((runKeys?.declared ?? []).map((k) => [k, {}]));
     const result = diffContract(
-      specWith({ ...realComponentsExcept(['AuditResponse']), AuditResponse: { properties } }),
+      specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
     expect(result.failures).toEqual([]);
     expect(result.warnings).toEqual([]);
@@ -74,25 +74,25 @@ describe('diffContract', () => {
   });
 
   it('FAILS on a missing declared field (drift the UI needs)', () => {
-    const auditKeys = declaredKeysFor('auditSchema');
+    const runKeys = declaredKeysFor('agentRunSchema');
     const properties = Object.fromEntries(
-      (auditKeys?.declared ?? []).filter((k) => k !== 'status').map((k) => [k, {}]),
+      (runKeys?.declared ?? []).filter((k) => k !== 'status').map((k) => [k, {}]),
     );
     const result = diffContract(
-      specWith({ ...realComponentsExcept(['AuditResponse']), AuditResponse: { properties } }),
+      specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
     expect(result.failures).toHaveLength(1);
-    expect(result.failures[0]).toContain('auditSchema');
+    expect(result.failures[0]).toContain('agentRunSchema');
     expect(result.failures[0]).toContain('status');
   });
 
   it('WARNS (never fails) on additive-only backend fields', () => {
-    const auditKeys = declaredKeysFor('auditSchema');
+    const runKeys = declaredKeysFor('agentRunSchema');
     const properties = Object.fromEntries(
-      [...(auditKeys?.declared ?? []), 'brand_new_field'].map((k) => [k, {}]),
+      [...(runKeys?.declared ?? []), 'brand_new_field'].map((k) => [k, {}]),
     );
     const result = diffContract(
-      specWith({ ...realComponentsExcept(['AuditResponse']), AuditResponse: { properties } }),
+      specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
     expect(result.failures).toEqual([]);
     expect(result.warnings).toHaveLength(1);
@@ -100,24 +100,24 @@ describe('diffContract', () => {
   });
 
   it('orders additive machine keys independently of the runtime locale', () => {
-    const auditKeys = declaredKeysFor('auditSchema');
+    const runKeys = declaredKeysFor('agentRunSchema');
     const properties = Object.fromEntries(
-      [...(auditKeys?.declared ?? []), 'ä_field', 'z_field', 'A_field'].map((key) => [key, {}]),
+      [...(runKeys?.declared ?? []), 'ä_field', 'z_field', 'A_field'].map((key) => [key, {}]),
     );
     const result = diffContract(
-      specWith({ ...realComponentsExcept(['AuditResponse']), AuditResponse: { properties } }),
+      specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
-    const drift = result.drifts.find((entry) => entry.schema === 'auditSchema');
+    const drift = result.drifts.find((entry) => entry.schema === 'agentRunSchema');
     expect(drift?.additive).toEqual(['A_field', 'z_field', 'ä_field']);
   });
 
-  it('does NOT fail when an absent-tolerant scope field is missing', () => {
-    const auditKeys = declaredKeysFor('auditSchema');
+  it('does NOT fail when an absent-tolerant progress field is missing', () => {
+    const runKeys = declaredKeysFor('agentRunSchema');
     const properties = Object.fromEntries(
-      (auditKeys?.declared ?? []).filter((k) => k !== 'audit_scope').map((k) => [k, {}]),
+      (runKeys?.declared ?? []).filter((k) => k !== 'progress').map((k) => [k, {}]),
     );
     const result = diffContract(
-      specWith({ ...realComponentsExcept(['AuditResponse']), AuditResponse: { properties } }),
+      specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
     expect(result.failures).toEqual([]);
   });

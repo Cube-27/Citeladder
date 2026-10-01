@@ -11,10 +11,13 @@ import type { AppRouteInput, ConnectionCreate, ConnectionUpdate } from './inputs
 export type Connection = Selectable<ProviderConnections>;
 const invalid = (message: string) => new ApiError(400, message);
 export function tenantConnections(db: Database, workspaceId: string) {
-  return db.selectFrom('provider_connections as c')
+  return db
+    .selectFrom('provider_connections as c')
     .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
-    .selectAll('c').where('c.workspace_id', '=', workspaceId)
-    .where('w.is_system', '=', false).where('c.credential_source', '=', 'byok');
+    .selectAll('c')
+    .where('c.workspace_id', '=', workspaceId)
+    .where('w.is_system', '=', false)
+    .where('c.credential_source', '=', 'byok');
 }
 export async function getConnection(db: Database, workspaceId: string, id: string, lock = false) {
   let query = tenantConnections(db, workspaceId).where('c.id', '=', id);
@@ -25,15 +28,24 @@ export async function getConnection(db: Database, workspaceId: string, id: strin
 }
 export function requireActiveTransport(row: Connection) {
   if (!providerPolicy.transports.includes(row.transport_provider))
-    throw new ApiError(409, 'This connection uses a retired transport and is historical and read-only');
+    throw new ApiError(
+      409,
+      'This connection uses a retired transport and is historical and read-only',
+    );
 }
 export function approvedEndpoint(transport: string, baseUrl: string, settings: ProviderSettings) {
   const endpoint = settings.endpoints[transport as keyof typeof settings.endpoints];
-  if (!endpoint || (baseUrl && baseUrl.trim().replace(/\/+$/u, '') !== endpoint.trim().replace(/\/+$/u, '')))
+  if (
+    !endpoint ||
+    (baseUrl && baseUrl.trim().replace(/\/+$/u, '') !== endpoint.trim().replace(/\/+$/u, ''))
+  )
     throw invalid('Provider endpoint is not approved for this transport');
   return (baseUrl || endpoint).trim().replace(/\/+$/u, '');
 }
-function rotatedSecret(transport: string, input: Pick<ConnectionUpdate, 'api_key'|'api_login'|'api_password'>) {
+function rotatedSecret(
+  transport: string,
+  input: Pick<ConnectionUpdate, 'api_key' | 'api_login' | 'api_password'>,
+) {
   const key = input.api_key?.trim() || '';
   const login = input.api_login?.trim() || '';
   const password = input.api_password || '';
@@ -48,43 +60,91 @@ function rotatedSecret(transport: string, input: Pick<ConnectionUpdate, 'api_key
 }
 export async function connectionResponse(db: Database, row: Connection) {
   const [routes, appRoutes] = await Promise.all([
-    db.selectFrom('provider_routes').select(['id','logical_engine','transport_provider',
-      'transport_model','is_default','active']).where('workspace_id','=',row.workspace_id)
-      .where('connection_id','=',row.id).orderBy('created_at').orderBy('id').execute(),
-    db.selectFrom('provider_app_routes').selectAll().where('workspace_id','=',row.workspace_id)
-      .where('connection_id','=',row.id).orderBy('feature').execute(),
+    db
+      .selectFrom('provider_routes')
+      .select([
+        'id',
+        'logical_engine',
+        'transport_provider',
+        'transport_model',
+        'is_default',
+        'active',
+      ])
+      .where('workspace_id', '=', row.workspace_id)
+      .where('connection_id', '=', row.id)
+      .orderBy('created_at')
+      .orderBy('id')
+      .execute(),
+    db
+      .selectFrom('provider_app_routes')
+      .selectAll()
+      .where('workspace_id', '=', row.workspace_id)
+      .where('connection_id', '=', row.id)
+      .orderBy('feature')
+      .execute(),
   ]);
   return {
-    id: row.id, workspace_id: row.workspace_id, label: row.label,
+    id: row.id,
+    workspace_id: row.workspace_id,
+    label: row.label,
     transport_provider: row.transport_provider as 'openai' | 'anthropic' | 'google' | 'dataforseo',
-    base_url: row.base_url, active: row.active, api_key_set: Boolean(row.api_key_encrypted),
+    base_url: row.base_url,
+    active: row.active,
+    api_key_set: Boolean(row.api_key_encrypted),
     last_tested_at: row.last_tested_at?.toISOString() ?? null,
-    last_test_status: row.last_test_status, created_at: row.created_at.toISOString(),
+    last_test_status: row.last_test_status,
+    created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
-    routes: routes.map((route) => ({ ...route,
+    routes: routes.map((route) => ({
+      ...route,
       logical_engine: route.logical_engine as Engine,
-      transport_provider: route.transport_provider as 'openai' | 'anthropic' | 'google' | 'dataforseo',
+      transport_provider: route.transport_provider as
+        | 'openai'
+        | 'anthropic'
+        | 'google'
+        | 'dataforseo',
     })),
     app_routes: appRoutes.map((route) => ({
-      id: route.id, feature: 'agent' as const, protocol: 'openai_chat' as const,
-      model: route.model, api_base_url: route.api_base_url, active: route.active,
-      verified: route.probed_revision === route.revision &&
+      id: route.id,
+      feature: 'agent' as const,
+      protocol: 'openai_chat' as const,
+      model: route.model,
+      api_base_url: route.api_base_url,
+      active: route.active,
+      verified:
+        route.probed_revision === route.revision &&
         route.probed_credential_revision === row.credential_revision,
       probed_at: route.probed_at?.toISOString() ?? null,
     })),
   };
 }
 type RouteInput = ConnectionCreate['routes'][number];
-async function replaceRoutes(db: Database, row: Connection, requested: RouteInput[], append = false) {
-  const prior = await db.selectFrom('provider_routes').selectAll()
-    .where('workspace_id','=',row.workspace_id).where('connection_id','=',row.id).execute();
+async function replaceRoutes(
+  db: Database,
+  row: Connection,
+  requested: RouteInput[],
+  append = false,
+) {
+  const prior = await db
+    .selectFrom('provider_routes')
+    .selectAll()
+    .where('workspace_id', '=', row.workspace_id)
+    .where('connection_id', '=', row.id)
+    .execute();
   const inputs = [...requested];
   if (row.transport_provider === 'dataforseo')
     for (const [engine, route] of Object.entries(providerPolicy.routes))
-      if (route.transport_provider === 'dataforseo' && !inputs.some((item) => item.logical_engine === engine))
+      if (
+        route.transport_provider === 'dataforseo' &&
+        !inputs.some((item) => item.logical_engine === engine)
+      )
         inputs.push({ logical_engine: engine as Engine, is_default: false });
-  if (!append) await db.deleteFrom('provider_routes').where('workspace_id','=',row.workspace_id)
-    .where('connection_id','=',row.id).execute();
+  if (!append)
+    await db
+      .deleteFrom('provider_routes')
+      .where('workspace_id', '=', row.workspace_id)
+      .where('connection_id', '=', row.id)
+      .execute();
   for (const input of inputs) {
     const route = providerPolicy.routes[input.logical_engine];
     if (!route || route.transport_provider !== row.transport_provider)
@@ -92,80 +152,167 @@ async function replaceRoutes(db: Database, row: Connection, requested: RouteInpu
     const old = prior.find((item) => item.logical_engine === input.logical_engine);
     if (append && old) continue;
     const now = new Date();
-    await db.insertInto('provider_routes').values({
-      id: randomUUID(), connection_id: row.id, workspace_id: row.workspace_id,
-      logical_engine: input.logical_engine, transport_provider: route.transport_provider,
-      transport_model: route.transport_model, is_default: input.is_default,
-      active: old?.active ?? true, deactivation_reason: old?.deactivation_reason ?? '',
-      created_at: now, updated_at: now,
-    }).execute();
+    await db
+      .insertInto('provider_routes')
+      .values({
+        id: randomUUID(),
+        connection_id: row.id,
+        workspace_id: row.workspace_id,
+        logical_engine: input.logical_engine,
+        transport_provider: route.transport_provider,
+        transport_model: route.transport_model,
+        is_default: input.is_default,
+        active: old?.active ?? true,
+        deactivation_reason: old?.deactivation_reason ?? '',
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
   }
 }
-async function replaceAppRoutes(db: Database, row: Connection, inputs: AppRouteInput[],
-  actorId: string, freshKey: boolean, confirmed: boolean) {
+async function replaceAppRoutes(
+  db: Database,
+  row: Connection,
+  inputs: AppRouteInput[],
+  actorId: string,
+  freshKey: boolean,
+  confirmed: boolean,
+) {
   if (row.transport_provider === 'dataforseo' && inputs.length)
     throw invalid('DataForSEO connections host no app model');
-  const prior = await db.selectFrom('provider_app_routes').selectAll()
-    .where('workspace_id','=',row.workspace_id).where('connection_id','=',row.id).forUpdate().execute();
+  const prior = await db
+    .selectFrom('provider_app_routes')
+    .selectAll()
+    .where('workspace_id', '=', row.workspace_id)
+    .where('connection_id', '=', row.id)
+    .forUpdate()
+    .execute();
   for (const input of inputs) {
-    const conflict = await db.selectFrom('provider_app_routes').select('id')
-      .where('workspace_id','=',row.workspace_id).where('feature','=',input.feature)
-      .where('connection_id','!=',row.id).executeTakeFirst();
+    const conflict = await db
+      .selectFrom('provider_app_routes')
+      .select('id')
+      .where('workspace_id', '=', row.workspace_id)
+      .where('feature', '=', input.feature)
+      .where('connection_id', '!=', row.id)
+      .executeTakeFirst();
     if (conflict) throw invalid('App model feature already belongs to another connection');
     const old = prior.find((item) => item.feature === input.feature);
     if (old && old.api_base_url !== input.api_base_url && (!freshKey || !confirmed))
       throw invalid('Changing an app model destination requires a fresh API key and confirmation');
     const now = new Date();
     if (old) {
-      const changed = old.api_base_url !== input.api_base_url || old.model !== input.model ||
+      const changed =
+        old.api_base_url !== input.api_base_url ||
+        old.model !== input.model ||
         old.protocol !== input.protocol;
-      await db.updateTable('provider_app_routes').set({
-        api_base_url: input.api_base_url, model: input.model, protocol: input.protocol,
-        active: input.active, updated_at: now,
-        ...(changed ? { revision: randomUUID(), probed_revision: null,
-          probed_credential_revision: null, probed_at: null } : {}),
-      }).where('id','=',old.id).where('workspace_id','=',row.workspace_id).execute();
+      await db
+        .updateTable('provider_app_routes')
+        .set({
+          api_base_url: input.api_base_url,
+          model: input.model,
+          protocol: input.protocol,
+          active: input.active,
+          updated_at: now,
+          ...(changed
+            ? {
+                revision: randomUUID(),
+                probed_revision: null,
+                probed_credential_revision: null,
+                probed_at: null,
+              }
+            : {}),
+        })
+        .where('id', '=', old.id)
+        .where('workspace_id', '=', row.workspace_id)
+        .execute();
     } else {
-      await db.insertInto('provider_app_routes').values({
-        id: randomUUID(), workspace_id: row.workspace_id, connection_id: row.id,
-        feature: input.feature, model: input.model, protocol: input.protocol,
-        api_base_url: input.api_base_url, active: input.active, revision: randomUUID(),
-        probed_revision: null, probed_credential_revision: null, probed_at: null,
-        created_at: now, updated_at: now,
-      }).execute();
+      await db
+        .insertInto('provider_app_routes')
+        .values({
+          id: randomUUID(),
+          workspace_id: row.workspace_id,
+          connection_id: row.id,
+          feature: input.feature,
+          model: input.model,
+          protocol: input.protocol,
+          api_base_url: input.api_base_url,
+          active: input.active,
+          revision: randomUUID(),
+          probed_revision: null,
+          probed_credential_revision: null,
+          probed_at: null,
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
     }
-    await db.insertInto('provider_disclosures').values({
-      id: randomUUID(), workspace_id: row.workspace_id, actor_id: actorId, connection_id: row.id,
-      destination: input.api_base_url, model: input.model,
-      disclosure_revision: providerPolicy.app.disclosure_revision, acknowledged_at: now,
-    }).execute();
+    await db
+      .insertInto('provider_disclosures')
+      .values({
+        id: randomUUID(),
+        workspace_id: row.workspace_id,
+        actor_id: actorId,
+        connection_id: row.id,
+        destination: input.api_base_url,
+        model: input.model,
+        disclosure_revision: providerPolicy.app.disclosure_revision,
+        acknowledged_at: now,
+      })
+      .execute();
   }
   for (const old of prior)
     if (!inputs.some((input) => input.feature === old.feature))
-      await db.deleteFrom('provider_app_routes').where('id','=',old.id)
-        .where('workspace_id','=',row.workspace_id).execute();
+      await db
+        .deleteFrom('provider_app_routes')
+        .where('id', '=', old.id)
+        .where('workspace_id', '=', row.workspace_id)
+        .execute();
 }
 async function lockWorkspace(db: Database, id: string) {
-  const row = await db.selectFrom('workspaces').select('id').where('id','=',id)
-    .where('is_system','=',false).forUpdate().executeTakeFirst();
+  const row = await db
+    .selectFrom('workspaces')
+    .select('id')
+    .where('id', '=', id)
+    .where('is_system', '=', false)
+    .forUpdate()
+    .executeTakeFirst();
   if (!row) throw notFound('Workspace');
 }
-export async function createConnection(db: Database, workspaceId: string, actorId: string,
-  input: ConnectionCreate, encryptionKey: string, settings: ProviderSettings) {
+export async function createConnection(
+  db: Database,
+  workspaceId: string,
+  actorId: string,
+  input: ConnectionCreate,
+  encryptionKey: string,
+  settings: ProviderSettings,
+) {
   const id = await db.transaction().execute(async (trx) => {
     await lockWorkspace(trx, workspaceId);
     approvedEndpoint(input.transport_provider, input.base_url, settings);
     const secret = rotatedSecret(input.transport_provider, input);
     if (!secret) throw invalid('Credentials are required');
     const now = new Date();
-    const row = await trx.insertInto('provider_connections').values({
-      id: randomUUID(), workspace_id: workspaceId, label: input.label,
-      transport_provider: input.transport_provider, base_url: input.base_url, active: input.active,
-      api_key_encrypted: createSecretCipher(encryptionKey).encrypt(secret),
-      credential_revision: randomUUID(), credential_source: 'byok',
-      last_test_status: '', last_tested_at: null, paused_at: null, pause_until: null,
-      created_at: now, updated_at: now,
-    }).returningAll().executeTakeFirstOrThrow();
+    const row = await trx
+      .insertInto('provider_connections')
+      .values({
+        id: randomUUID(),
+        workspace_id: workspaceId,
+        label: input.label,
+        transport_provider: input.transport_provider,
+        base_url: input.base_url,
+        active: input.active,
+        api_key_encrypted: createSecretCipher(encryptionKey).encrypt(secret),
+        credential_revision: randomUUID(),
+        credential_source: 'byok',
+        last_test_status: '',
+        last_tested_at: null,
+        paused_at: null,
+        pause_until: null,
+        created_at: now,
+        updated_at: now,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
     await replaceRoutes(trx, row, input.routes);
     await replaceAppRoutes(trx, row, input.app_routes, actorId, true, true);
     await recordSecurityEvent(trx, 'credential.create', actorId, workspaceId, row.id);
@@ -173,8 +320,15 @@ export async function createConnection(db: Database, workspaceId: string, actorI
   });
   return connectionResponse(db, await getConnection(db, workspaceId, id));
 }
-export async function updateConnection(db: Database, workspaceId: string, actorId: string, id: string,
-  input: ConnectionUpdate, encryptionKey: string, settings: ProviderSettings) {
+export async function updateConnection(
+  db: Database,
+  workspaceId: string,
+  actorId: string,
+  id: string,
+  input: ConnectionUpdate,
+  encryptionKey: string,
+  settings: ProviderSettings,
+) {
   await db.transaction().execute(async (trx) => {
     await lockWorkspace(trx, workspaceId);
     const row = await getConnection(trx, workspaceId, id, true);
@@ -186,31 +340,60 @@ export async function updateConnection(db: Database, workspaceId: string, actorI
       if (destination !== previous && (!secret || !input.confirm_destination_change))
         throw invalid('Changing a provider endpoint requires a fresh API key and confirmation');
     }
-    const changed = Object.entries(input).some(([key, value]) =>
-      key !== 'confirm_destination_change' && value != null);
+    const changed = Object.entries(input).some(
+      ([key, value]) => key !== 'confirm_destination_change' && value != null,
+    );
     if (changed) {
-      await trx.updateTable('provider_connections').set({
-        label: input.label ?? row.label, active: input.active ?? row.active,
-        base_url: input.base_url ?? row.base_url, updated_at: new Date(),
-        ...(secret ? { api_key_encrypted: createSecretCipher(encryptionKey).encrypt(secret),
-          credential_revision: randomUUID(), last_tested_at: null, last_test_status: '' } : {}),
-      }).where('id','=',id).where('workspace_id','=',workspaceId).execute();
+      await trx
+        .updateTable('provider_connections')
+        .set({
+          label: input.label ?? row.label,
+          active: input.active ?? row.active,
+          base_url: input.base_url ?? row.base_url,
+          updated_at: new Date(),
+          ...(secret
+            ? {
+                api_key_encrypted: createSecretCipher(encryptionKey).encrypt(secret),
+                credential_revision: randomUUID(),
+                last_tested_at: null,
+                last_test_status: '',
+              }
+            : {}),
+        })
+        .where('id', '=', id)
+        .where('workspace_id', '=', workspaceId)
+        .execute();
       if (input.routes != null) await replaceRoutes(trx, row, input.routes);
-      if (input.app_routes != null) await replaceAppRoutes(trx, row, input.app_routes,
-        actorId, secret !== null, input.confirm_destination_change);
+      if (input.app_routes != null)
+        await replaceAppRoutes(
+          trx,
+          row,
+          input.app_routes,
+          actorId,
+          secret !== null,
+          input.confirm_destination_change,
+        );
       await recordSecurityEvent(trx, 'credential.update', actorId, workspaceId, id);
     }
   });
   return connectionResponse(db, await getConnection(db, workspaceId, id));
 }
-export async function deleteConnection(db: Database, workspaceId: string, actorId: string, id: string) {
+export async function deleteConnection(
+  db: Database,
+  workspaceId: string,
+  actorId: string,
+  id: string,
+) {
   try {
     await db.transaction().execute(async (trx) => {
       await lockWorkspace(trx, workspaceId);
       await getConnection(trx, workspaceId, id, true);
-      await trx.deleteFrom('provider_capacity_buckets').where('connection_id','=',id).execute();
-      await trx.deleteFrom('provider_connections').where('id','=',id)
-        .where('workspace_id','=',workspaceId).execute();
+      await trx.deleteFrom('provider_capacity_buckets').where('connection_id', '=', id).execute();
+      await trx
+        .deleteFrom('provider_connections')
+        .where('id', '=', id)
+        .where('workspace_id', '=', workspaceId)
+        .execute();
       await recordSecurityEvent(trx, 'credential.delete', actorId, workspaceId, id);
     });
   } catch (error) {

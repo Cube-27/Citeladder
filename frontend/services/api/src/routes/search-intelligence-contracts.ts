@@ -27,7 +27,7 @@ export const preferencesBody = z.object({
 });
 export type Preferences = z.output<typeof preferencesBody>;
 
-export const datasetSelection = z
+const datasetSelection = z
   .object({
     kind: z.enum([
       'footprint',

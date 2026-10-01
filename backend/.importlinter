@@ -87,9 +87,8 @@ ignore_imports =
 
 [importlinter:contract:connectors-are-transport-only]
 ; Connectors own outbound I/O (answer engines, web evidence) and must stay
-; usable from any layer above. The two allowances below are leaf helpers with
-; no `app` imports of their own -- `normalize_domain` and the shared DOM
-; exception set/logger -- so neither drags the analysis layer in behind it.
+; usable from any layer above. The allowance below is a leaf DOM helper
+; with no `app` imports of its own.
 name = Connectors depend on no upper layer
 type = forbidden
 source_modules =
@@ -102,7 +101,6 @@ forbidden_modules =
     app.orchestration
     app.workers
 ignore_imports =
-    app.connectors.answer_engines.normalization -> app.analysis.normalization
     app.connectors.web_evidence.brand_evidence -> app.analysis.site_health.dom
 ; Direct imports only. The transitive form of this rule is broken by chains
 ; that run through edges this policy deliberately allows (connectors -> core ->

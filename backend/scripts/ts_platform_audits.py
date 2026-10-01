@@ -1,5 +1,7 @@
 """Audit policy inputs; selection and execution remain application decisions."""
 
+from importlib.resources import files
+
 from app.core.config import (
     Settings,
     analysis,
@@ -10,7 +12,10 @@ from app.core.config import (
     provider_catalog,
     source_pages,
 )
+from app.core.config import audit_schedules as audit_schedule_config
+from app.core.config.provider_catalog import SELECTABLE_ENGINES
 from app.orchestration.audit_state import _ALLOWED_TRANSITIONS
+from scripts.ts_platform_constants import constants
 
 
 def audit_policy(setting):
@@ -22,21 +27,13 @@ def audit_policy(setting):
         "transitions": {
             source: sorted(targets) for source, targets in _ALLOWED_TRANSITIONS.items()
         },
-        "analysis": {
-            name.lower(): sorted(value) if isinstance(value, frozenset) else value
-            for name, value in vars(analysis).items()
-            if name.isupper() and isinstance(value, (str, int, float, dict, frozenset))
-        },
+        "analysis": constants(analysis, (str, int, float, dict, frozenset)),
         "url_identity": {
             "version": source_pages.SOURCE_PAGE_IDENTITY_VERSION,
             "verbatim": source_pages.URL_IDENTITY_VERBATIM,
             "unresolved": source_pages.URL_IDENTITY_UNRESOLVED,
         },
-        "observed_competitors": {
-            name.lower(): sorted(value) if isinstance(value, frozenset) else value
-            for name, value in vars(observed_competitors).items()
-            if name.isupper() and isinstance(value, (str, int, frozenset))
-        },
+        "observed_competitors": constants(observed_competitors, (str, int, frozenset)),
         "settings": {
             name: setting(name, audits.AuditSettings)
             for name in audits.AuditSettings.model_fields
@@ -47,13 +44,7 @@ def audit_policy(setting):
             "type": "str",
             "default": None,
         },
-        "constants": {
-            name.lower(): sorted(value) if isinstance(value, frozenset) else value
-            for name, value in vars(audits).items()
-            if name.isupper()
-            and not name.startswith("_")
-            and isinstance(value, (str, int, float, bool, dict, frozenset))
-        },
+        "constants": constants(audits, (str, int, float, bool, dict, frozenset)),
         "benchmark_modes": sorted(projects.BENCHMARK_MODES),
         "min_repetitions": projects.MIN_REPETITIONS,
         "max_repetitions": projects.MAX_REPETITIONS,
@@ -81,4 +72,26 @@ def audit_policy(setting):
             "non_pdp_hosts": commerce_catalog.COMMERCE_COMPETITOR_NON_PDP_HOST_SUFFIXES,
             "dollar_currencies": commerce_catalog.COMMERCE_DOLLAR_CURRENCY_BY_COUNTRY,
         },
+    }
+
+
+def audit_schedule_policy(setting):
+    return {
+        "settings": {
+            name: setting(name, audit_schedule_config.AuditScheduleSettings)
+            for name in audit_schedule_config.AuditScheduleSettings.model_fields
+            if name != "heartbeat_path"
+        },
+        "heartbeat_path": setting(
+            "heartbeat_path", audit_schedule_config.AuditScheduleSettings
+        ),
+        "cadences": sorted(audit_schedule_config.AUDIT_SCHEDULE_CADENCES),
+        "default_timezone": audit_schedule_config.DEFAULT_AUDIT_SCHEDULE_TIMEZONE,
+        "selectable_engines": sorted(SELECTABLE_ENGINES),
+        # The pinned timezone catalog shared by schedule validation and execution.
+        "timezones": sorted(files("tzdata").joinpath("zones").read_text().split()),
+        "min_interval_minutes": setting(
+            "min_interval_minutes",
+            audit_schedule_config.AuditScheduleSettings,
+        ),
     }

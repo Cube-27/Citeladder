@@ -6,8 +6,8 @@ import { localizedPrice } from './projection-facts.ts';
 
 export const shelfPolicy = auditPolicy.commerce_shelf;
 export const boundedText = (text: string, limit: number) => [...text].slice(0, limit).join('');
-export type RecommendationSpan = { text: string; rank: number | null; orderObservable: boolean };
-export function recommendationSpans(answer: string): RecommendationSpan[] {
+type RecommendationSpan = { text: string; rank: number | null; orderObservable: boolean };
+function recommendationSpans(answer: string): RecommendationSpan[] {
   const spans: RecommendationSpan[] = [];
   for (const line of answer.split(/\r\n|[\n\r\v\f\u0085\u2028\u2029]/u)) {
     const cleaned = line.trim();
@@ -117,9 +117,7 @@ export const resolvedBatchSchema = z.object({
     )
     .max(shelfPolicy.result_limit),
 });
-export type ResolvedRecommendation = z.output<
-  typeof resolvedBatchSchema
->['recommendations'][number];
+type ResolvedRecommendation = z.output<typeof resolvedBatchSchema>['recommendations'][number];
 export type ShelfResolver = { model: string; resolve(span: string): Promise<unknown> };
 export type PreparedRecommendation = {
   span: RecommendationSpan;

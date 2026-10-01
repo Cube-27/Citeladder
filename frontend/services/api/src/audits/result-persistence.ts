@@ -136,7 +136,7 @@ export async function appendProviderAttempt(
     .execute();
 }
 
-export function retryDelay(runtime: AuditRuntime, attempt: number, retryAfter?: number) {
+function retryDelay(runtime: AuditRuntime, attempt: number, retryAfter?: number) {
   const settings = runtime.audits;
   if (retryAfter !== undefined && Number.isFinite(retryAfter))
     return Math.min(Math.max(0, retryAfter), settings.retry_max_delay_seconds);

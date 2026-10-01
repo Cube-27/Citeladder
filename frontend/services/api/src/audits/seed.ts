@@ -16,7 +16,7 @@ const citation = z.object({
   end_index: z.int().nonnegative().nullable(),
   cited_text: z.string(),
 });
-export const seedInput = z
+const seedInput = z
   .object({
     workspace_id: z.uuid(),
     input: auditInput,

@@ -9,20 +9,7 @@
  */
 export const CONTRACT_SCHEMA_MAP = {
   // Auth, workspaces and projects are owned and served by the TypeScript API.
-  // Providers
-  providerConnectionSchema: 'ProviderConnectionResponse',
-  connectionTestResultSchema: 'ProviderConnectionTestResponse',
-  providerCatalogSchema: 'ProviderCatalogResponse',
-  auditSchema: 'AuditResponse',
-  executionSchema: 'AuditTaskResponse',
-  // Integrations are owned and served by the TypeScript API.
-  // Search Intelligence: the Python review route still publishes RunResponse;
-  // every other response is served by the TypeScript API.
-  searchRunSchema: 'RunResponse',
-  // Authenticated provider projection (distinct from the public catalog)
-  providerConnectionStatesSchema: 'ProviderConnectionStatesResponse',
-  providerConnectionStateEntrySchema: 'ProviderConnectionStateResponse',
-  providerProbeSchema: 'ProviderProbeResponse',
+  // Providers, audits, integrations and Search Intelligence are TypeScript-owned.
   // Agent chats, outputs and revisions
   agentRunSchema: 'RunView',
   agentRevisionSchema: 'RevisionView',
