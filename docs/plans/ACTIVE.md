@@ -2,6 +2,11 @@
 
 ## Active
 
+- [Design-system contract refresh](citeladder-design-contract-refresh.md)
+  — assigned on 1 October 2026 in `codex/design-contract-refresh`, in a separate
+  worktree from main. Implementation and local verification are in progress;
+  PR creation is explicitly deferred by the owner.
+
 - [Internal link suggestions](citeladder-internal-links.md)
   — implemented on 28 September 2026 in `codex/content-structure`; revised after
   owner review to a Website Internal links tab using JEV page-pair judgments.
