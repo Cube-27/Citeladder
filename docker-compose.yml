@@ -192,8 +192,8 @@ services:
     healthcheck:
       disable: true
 
-  # Site Health worker: claims site crawl (discover) tasks from the Postgres
-  # queue — the dedicated process app/workers/site_health_worker.py expects.
+  # Site Health crawl maintenance (Python until crawl control moves in 18b5):
+  # lease sweeping, crawl reconciliation and finalization. It claims no tasks.
   site-health-worker:
     build:
       context: .
@@ -230,7 +230,7 @@ services:
     healthcheck:
       disable: true
 
-  # Claims the TS-owned SiteCrawlTask kinds; Python retains other kinds and sweeping.
+  # Claims every SiteCrawlTask kind; Python keeps crawl finalization and sweeping.
   site-health-worker-ts:
     build:
       context: .

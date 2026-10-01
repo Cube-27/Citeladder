@@ -64,7 +64,7 @@ export type Delivery = {
   decodedBytes?: number | null;
 };
 
-function factSettings(env: Record<string, string | undefined> = process.env) {
+export function factSettings(env: Record<string, string | undefined> = process.env) {
   const spec = policy.site_health.settings;
   const number = (name: keyof typeof spec) => Number(resolveSettingSpec(spec[name], env));
   return {
@@ -509,16 +509,24 @@ function deliveryFacts(delivery: Delivery, headers: Record<string, string>) {
   };
 }
 
-/** Bounded, deterministic facts for one page; never throws on hostile markup. */
+/**
+ * Bounded, deterministic facts for one page; never throws on hostile markup.
+ * `parsed` is the whole body's tree when the caller (discovery) already has
+ * it; an oversized body is still re-parsed under the fact byte cap.
+ */
 export function extractPageFacts(
   body: Buffer,
   delivery: Delivery,
   settings = factSettings(),
+  parsed?: HtmlNode,
 ): PageFacts {
   let facts = emptyFacts();
   if (!body.length) facts.extraction.reason = 'empty_response_body';
   else {
-    const root = document(body.subarray(0, settings.maxHtmlBytes), delivery.charset);
+    const root =
+      parsed && body.length <= settings.maxHtmlBytes
+        ? parsed
+        : document(body.subarray(0, settings.maxHtmlBytes), delivery.charset);
     facts = extractDocument(root, delivery.finalUrl, settings);
     facts.extraction.truncated = body.length > settings.maxHtmlBytes;
   }

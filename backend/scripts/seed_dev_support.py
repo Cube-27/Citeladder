@@ -1,8 +1,7 @@
-"""Deterministic answer-engine and Site Health fixtures for development seeding."""
+"""Deterministic answer-engine and integration fixtures for development seeding."""
 
 from __future__ import annotations
 
-import gzip
 import hashlib
 import json
 from dataclasses import dataclass
@@ -18,14 +17,7 @@ from app.connectors.answer_engines.contracts import (
     NormalizedUsage,
     SearchEventResult,
 )
-from app.connectors.web_evidence.contracts import (
-    AcquisitionTransport,
-    FetchRequest,
-    FetchResult,
-    ResolvedTarget,
-)
 
-_PUBLIC_IP = "93.184.216.34"
 _WANDERLUST_CITATION_LABEL = "Wanderlust Gear"
 # Monitored-URL allowance granted to the demo workspace so Site Health seeds a
 # full-discovery crawl with user selection.
@@ -333,142 +325,6 @@ def _build_seed_adapter(
     return _SeedStubAdapter(
         logical_engine=logical_engine, transport_provider=transport_provider, **kwargs
     )
-
-
-# ---------------------------------------------------------------------------
-# Site Health mock HTTP transport (no network calls)
-# ---------------------------------------------------------------------------
-class _ByteStream(httpx.AsyncByteStream):
-    def __init__(self, data: bytes) -> None:
-        self._data = data
-
-    async def __aiter__(self):
-        yield self._data
-
-    async def aclose(self) -> None:
-        return None
-
-
-class _FakeResolver:
-    async def resolve(self, host: str, port: int) -> list[str]:
-        return [_PUBLIC_IP]
-
-
-def _rich_html(path: str, title: str, links: list[str]) -> bytes:
-    words = " ".join(f"word{i}" for i in range(140))
-    anchors = "".join(f'<a href="{link}">{link}</a>' for link in links)
-    return (
-        f"<html><head><title>{title}</title>"
-        f'<meta name="description" content="A detailed page about {title}.">'
-        f'<link rel="canonical" href="https://wanderlustgear.com{path}">'
-        f'<meta property="og:title" content="{title}">'
-        '<meta name="author" content="Wanderlust Editorial">'
-        '<meta property="article:published_time" content="2026-06-01T00:00:00Z">'
-        '<script type="application/ld+json">'
-        '{"@type":"Organization","name":"Wanderlust Gear Co.",'
-        '"url":"https://wanderlustgear.com","sameAs":["https://twitter.com/wanderlustgear"]}'
-        "</script></head><body>"
-        f"<h1>{title}</h1><p>{words}</p>"
-        "<h2>What makes this reliable?</h2>"
-        f"{anchors}"
-        '<a href="https://external.org/review">external review</a>'
-        "</body></html>"
-    ).encode()
-
-
-def _thin_html(title: str) -> bytes:
-    return (
-        f"<html><head><title>{title}</title></head><body><p>too short</p></body></html>"
-    ).encode()
-
-
-def _site_pages() -> dict[str, bytes | tuple[bytes, dict[str, str]]]:
-    rich = _rich_html("/", "Wanderlust Gear Co. - Home", ["/backpacks", "/reviews"])
-    backpacks = _rich_html("/backpacks", "Backpacks Catalog", ["/"])
-    reviews = _rich_html("/reviews", "Customer Reviews", ["/"])
-    thin = _thin_html("Contact")
-    return {
-        "/": (
-            gzip.compress(rich),
-            {
-                "content-encoding": "gzip",
-                "strict-transport-security": "max-age=63072000; includeSubDomains",
-            },
-        ),
-        "/backpacks": backpacks,
-        "/reviews": reviews,
-        "/contact": thin,
-    }
-
-
-class _SeedAcquisitionTransport(AcquisitionTransport):
-    """Adapt the offline page handler to the Site Health acquisition contract.
-
-    ``SiteHealthWorker``/``SecureFetcher`` consume an ``AcquisitionTransport``
-    (``fetch(request, target, ...) -> FetchResult``), not an
-    ``httpx.MockTransport``. The seeder handed over the raw ``MockTransport``,
-    so every seeded crawl fetch raised ``AttributeError`` on the missing
-    ``fetch``. Mirrors ``tests/component/site_health_worker_helpers.py``.
-    """
-
-    def __init__(self, handler) -> None:
-        self._handler = handler
-
-    async def fetch(
-        self,
-        request: FetchRequest,
-        target: ResolvedTarget,
-        *,
-        max_wire_bytes: int,
-        max_decoded_bytes: int,
-        timeout_seconds: float,
-    ) -> FetchResult:
-        del timeout_seconds
-        response = self._handler(
-            httpx.Request(request.method, target.url, headers=request.headers)
-        )
-        body = await response.aread()
-        if len(body) > max_wire_bytes or len(body) > max_decoded_bytes:
-            raise AssertionError("seed response exceeded configured crawl bounds")
-        content_type = response.headers.get("content-type", "").split(";", 1)[0]
-        return FetchResult(
-            requested_url=request.url,
-            final_url=target.url,
-            status_code=response.status_code,
-            redacted_headers=dict(response.headers),
-            content_type=content_type,
-            http_version=response.http_version or "HTTP/1.1",
-            body=body,
-            wire_bytes=len(body),
-            decoded_bytes=len(body),
-            ttfb_ms=1,
-            latency_ms=1,
-            redirect_location=response.headers.get("location", ""),
-        )
-
-    async def aclose(self) -> None:
-        return None
-
-
-def _site_transport() -> AcquisitionTransport:
-    pages = _site_pages()
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        entry = pages.get(request.url.path)
-        if entry is None:
-            return httpx.Response(
-                404,
-                headers={"content-type": "text/html"},
-                stream=_ByteStream(b"not found"),
-            )
-        if isinstance(entry, tuple):
-            body, extra_headers = entry
-            headers = {"content-type": "text/html", **extra_headers}
-        else:
-            body, headers = entry, {"content-type": "text/html"}
-        return httpx.Response(200, headers=headers, stream=_ByteStream(body))
-
-    return _SeedAcquisitionTransport(handler)
 
 
 def _gsc_rows_response(body: dict, metric_date: date) -> httpx.Response:

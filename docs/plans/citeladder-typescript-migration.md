@@ -182,7 +182,7 @@ total.
 | 15 | MCP server and OAuth provider | High | Done |
 | 16 | Billing and the entitlement ledger (16a PDF, 16b commercial/ledger) | High | Done |
 | 17 | Audits, providers and answer-engine connectors | High | 17a done |
-| 18 | Site Health and source-page inspection | High | 18a, 18b1, 18b2 done |
+| 18 | Site Health and source-page inspection | High | 18a, 18b1–18b4 done |
 | 19 | Agent runtime | High | |
 | 20 | Consolidation and policy transfer | Medium | |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
@@ -950,8 +950,20 @@ into dependency-ordered slices:
    `workers/site_health/ts_analysis_reconcile.py` replays the per-task crawl
    reconcile for analyze rows TypeScript settled; it is deleted in 18b5 when
    the lifecycle moves beside the analyzer.
-4. **18b4, acquisition:** the `discover` and `site_setup` executors, durable
-   frontier, robots, fetch budgets and the web-evidence connector.
+4. **18b4, acquisition (implemented):** the TypeScript worker claims every
+   Site Health kind. `discover` acquires the page under the crawl's scope
+   (admission screens every redirect hop), extracts links and facts from one
+   parse, and commits the artifact, observation, frontier admission, the
+   page's disposition (document, canonical alias or analysis hand-off) and
+   the task outcome together. `site_setup` publishes robots, AI-crawler
+   stance and llms.txt evidence, then walks the bounded sitemap tree
+   (fast-xml-parser replaces defusedxml) and admits it in a second commit. The
+   Python discover/site-setup phases, robots cache, host gate, sitemap and
+   robots parsers, frontier admission and their tests are deleted; the Python
+   worker is maintenance only. `ts_analysis_reconcile.py` now replays the
+   per-task reconcile for discover and site-setup rows too, and Python
+   lifecycle tests seed discovery through
+   `_settle_discovery_as_typescript`; both retire in 18b5.
 5. **18b5, crawl control:** admission, URL preview, cancellation, reruns, the
    monitored set, finalization and lease recovery; the Python Site Health
    worker retires and the TypeScript worker gains its drain mode (rule 9).
@@ -986,6 +998,32 @@ Departures in 18b3: an analyzer crash settles as the worker's retryable
 classification reason groups name `task_failed`; and the unreferenced
 company-entity completeness rule and its vocabulary are deleted
 rather than ported.
+
+Departures in 18b4: discover evidence, admission and acknowledgement commit in
+one transaction, so a reclaimed discover never finds durable evidence to
+acknowledge; a discover or site-setup crash settles as retryable
+`task_failed` rather than terminal `crawl_task_crashed`; host pacing applies
+per request through the shared pacer rather than a task-wide host slot, and a
+429 cools the host for `rate_limit_cooldown_seconds` without reading
+`Retry-After`; robots and llms.txt URLs in site facts are spelled from the
+origin, without the default port; the fetched root keeps `discovery_status`
+`completed` (its own admission upsert reset it to `running`); the crawl's
+admitted counter is incremented once, under the crawl lock; discovery locks
+the workspace runtime row without refreshing it from grants (billing owns that
+write), and a missing row grants no automatic allowance; a sitemap declaring
+any entity is refused. The Python URL policy's infrastructure-document
+exception lost its only callers and is deleted with the robots/llms/sitemap
+fetch purposes, the AI-crawler stance and robots-status tokens, the discovery
+progress event constant and the admitted-frontier status (D7.5). The dev seed's
+Site Health crawls now rely on the TypeScript worker; its mocked Python
+transport is gone.
+
+| Python bridge kept by 18b4 | Remaining caller / retirement condition |
+| --- | --- |
+| `connectors/web_evidence/{fetcher,curl_transport,url_policy,brand_evidence}.py` | Commerce competitor discovery, onboarding site resolution (Search Intelligence targets), provider route probes |
+| `analysis/site_health/parser.py` and its fact extractors | Commerce competitor discovery |
+| `domain/site_health/discovery.add_automatic_root`, `frontier_support.py` | crawl creation; 18b5 |
+| `canonical_aliases.reconcile_crawl_duplicate_aliases` | finalization; 18b5 |
 
 ### PR 19: Agent runtime
 

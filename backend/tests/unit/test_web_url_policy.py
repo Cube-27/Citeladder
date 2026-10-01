@@ -382,33 +382,6 @@ def test_value_aware_admission_returns_safe_scope_and_priority_details():
     assert external.reason_code == "out_of_scope"
 
 
-@pytest.mark.asyncio
-async def test_infrastructure_txt_exception_is_purpose_scoped():
-    resolver = _FakeResolver({"example.com": ["93.184.216.34"]})
-
-    arbitrary_page = classify_url_admission("https://example.com/notes.txt")
-    assert not arbitrary_page.accepted
-    assert arbitrary_page.reason_code == "hard_excluded_asset"
-
-    robots = await resolve_target(
-        "https://example.com/robots.txt",
-        resolver=resolver,
-        root_registrable_domain="example.com",
-        enforce_scope=True,
-        infrastructure_purpose="robots",
-    )
-    assert robots.url == "https://example.com/robots.txt"
-
-    with pytest.raises(UrlPolicyError):
-        await resolve_target(
-            "https://example.com/notes.txt",
-            resolver=resolver,
-            root_registrable_domain="example.com",
-            enforce_scope=True,
-            infrastructure_purpose="robots",
-        )
-
-
 # --- SSRF address validation ----------------------------------------------
 
 

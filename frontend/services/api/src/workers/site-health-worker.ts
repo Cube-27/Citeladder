@@ -6,7 +6,10 @@ import { getLogger } from '../logging.ts';
 import { TaskQueue, type SiteTask } from '../queue/task-queue.ts';
 import { persistLinkMetrics } from '../site-health/link-metrics.ts';
 import { persistArchitecture } from '../site-health/architecture.ts';
-import { analyzeSettings, runAnalyze, type AnalyzeContext } from '../site-health/analyze-task.ts';
+import { runAnalyze } from '../site-health/analyze-task.ts';
+import { runDiscover } from '../site-health/discover-task.ts';
+import { runSiteSetup } from '../site-health/site-setup-task.ts';
+import { siteTaskSettings, type SiteTaskContext } from '../site-health/site-task.ts';
 import { SitePageFetcher } from '../site-health/page-fetch.ts';
 import { runChangeIntel } from '../site-health/change-snapshot.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
@@ -19,6 +22,12 @@ const executors: Record<string, SiteExecutor> = {
   change_intel: runChangeIntel,
   link_metrics: persistLinkMetrics,
   architecture: persistArchitecture,
+};
+/** Kinds that acquire over the network: each owns its transactions and marks itself running. */
+const acquisition: Record<string, (ctx: SiteTaskContext, task: SiteTask) => Promise<void>> = {
+  analyze: runAnalyze,
+  discover: runDiscover,
+  site_setup: runSiteSetup,
 };
 const logger = getLogger('app.workers.site_health_worker');
 /** Uniform jitter in [0, seconds), millisecond resolution. */
@@ -33,7 +42,7 @@ export class SiteHealthWorker {
   readonly settings: ReturnType<typeof siteWorkerSettings>;
   readonly queue: TaskQueue<'site_crawl_tasks'>;
   readonly executors: Record<string, SiteExecutor>;
-  readonly analyze: AnalyzeContext;
+  readonly acquisition: SiteTaskContext;
   constructor(
     db: Database,
     options: {
@@ -49,11 +58,11 @@ export class SiteHealthWorker {
     this.executors = options.executors ?? executors;
     this.queue = new TaskQueue(db, { leaseTtlSeconds: this.settings.lease }, 'site_crawl_tasks');
     // One fetcher for the worker: robots caching and per-host pacing span every task.
-    this.analyze = {
+    this.acquisition = {
       db,
       owner: this.owner,
       fetcher: options.fetcher ?? new SitePageFetcher(db),
-      settings: analyzeSettings(),
+      settings: siteTaskSettings(),
     };
   }
   async runOnce(limit = this.settings.concurrency) {
@@ -67,10 +76,11 @@ export class SiteHealthWorker {
     return tasks.length;
   }
   async execute(claimed: SiteTask) {
-    // Analyze acquires over the network, so it owns its transactions and marks
-    // itself running only after deciding to reuse, wait or fetch.
-    if (claimed.task_kind === 'analyze') {
-      await this.#leased(claimed, () => runAnalyze(this.analyze, claimed));
+    const acquire = Object.hasOwn(acquisition, claimed.task_kind)
+      ? acquisition[claimed.task_kind]
+      : undefined;
+    if (acquire) {
+      await this.#leased(claimed, () => acquire(this.acquisition, claimed));
       return;
     }
     if (!(await this.queue.markRunning(claimed.id, this.owner))) return;

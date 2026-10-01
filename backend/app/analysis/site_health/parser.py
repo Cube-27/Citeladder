@@ -9,7 +9,7 @@
 # never a crash (subplan Persistence contract).
 # The lxml parser runs with ``no_network=True`` (never resolves an external
 # DTD/entity) and JSON-LD is parsed with the stdlib loader, so there is no XML
-# external-entity attack surface; defusedxml is used for any raw XML parse.
+# external-entity attack surface.
 from __future__ import annotations
 
 import logging

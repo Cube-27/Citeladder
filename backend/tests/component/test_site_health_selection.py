@@ -32,7 +32,6 @@ from app.core.config.site_health_contracts import (
     TASK_KIND_SITE_SETUP,
 )
 from app.core.config.site_health_crawl_policy import (
-    CORPUS_DISPOSITION_INVENTORY_ONLY,
     INVENTORY_SOURCE_CRAWL_IDS_KEY,
     SELECTION_SOURCE_FREE_SAMPLE,
     SELECTION_SOURCE_USER,
@@ -45,7 +44,6 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
     TASK_STATUS_RUNNING,
 )
-from app.domain.site_health.discovery import admit_candidates
 from app.domain.site_health.entitlements import (
     resolve_runtime,
     runtime_allows_monitored_analysis,
@@ -56,7 +54,6 @@ from app.domain.site_health.planner import (
     create_crawl,
 )
 from app.domain.site_health.rerun import rerun_page
-from app.domain.site_health.schemas import FrontierCandidate
 from app.domain.site_health.selection import (
     MonitoringNotAllowedError,
     QuotaExceededError,
@@ -813,7 +810,7 @@ async def test_paused_crawl_still_blocks_a_second_active_crawl(
 
 
 @pytest.mark.asyncio
-async def test_standard_crawl_progressively_enqueues_analyzable_pages(
+async def test_standard_crawl_seeds_site_setup_and_root_analysis(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
@@ -841,27 +838,6 @@ async def test_standard_crawl_progressively_enqueues_analyzable_pages(
             )
         )
         assert setup_tasks == 1
-        await admit_candidates(
-            session,
-            crawl=crawl,
-            candidates=[
-                FrontierCandidate(
-                    url="https://example.com/page-a",
-                    url_hash=_url_hash("https://example.com/page-a"),
-                    depth=1,
-                    source_kind="link",
-                ),
-                FrontierCandidate(
-                    url="https://example.com/guide.pdf",
-                    url_hash=_url_hash("https://example.com/guide.pdf"),
-                    depth=1,
-                    source_kind="link",
-                    disposition=CORPUS_DISPOSITION_INVENTORY_ONLY,
-                ),
-            ],
-            enqueue_children=False,
-        )
-        await session.commit()
 
     async with session_factory() as session:
         analyzed_urls = set(
@@ -873,10 +849,8 @@ async def test_standard_crawl_progressively_enqueues_analyzable_pages(
             )
         )
 
-    assert analyzed_urls == {
-        "https://example.com/",
-        "https://example.com/page-a",
-    }
+    # Discovered pages are handed their analysis by the TypeScript discover task.
+    assert analyzed_urls == {"https://example.com/"}
 
 
 @pytest.mark.asyncio

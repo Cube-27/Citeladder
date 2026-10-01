@@ -260,7 +260,6 @@ URL_VALUE_PRIORITIES: Final[dict[str, int]] = {
 }
 
 FRONTIER_PENDING: Final = "pending"
-FRONTIER_ADMITTED: Final = "admitted"
 SELECTION_SOURCE_USER: Final = "user"
 SELECTION_SOURCE_FREE_SAMPLE: Final = "free_sample"
 SELECTION_SOURCE_BOOTSTRAP: Final = "bootstrap"

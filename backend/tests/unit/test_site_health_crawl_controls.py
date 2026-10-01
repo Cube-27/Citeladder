@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import ClassVar
 
 import pytest
 from pydantic import ValidationError
@@ -19,7 +18,6 @@ from app.core.config.site_health_runtime import (
     runtime_policy_for_allowance,
     site_health_settings,
 )
-from app.domain.site_health import discovery, frontier
 from app.domain.site_health.planner import (
     CrawlPlanError,
     _allowance_discovery_budget,
@@ -27,7 +25,6 @@ from app.domain.site_health.planner import (
 from app.domain.site_health.planner_controls import resolve_controls
 from app.domain.site_health.planner_policy import frozen_configuration
 from app.domain.site_health.planner_preview import preview_rows
-from app.domain.site_health.schemas import FrontierCandidate
 
 
 def _controls_for_request(**kwargs):
@@ -220,49 +217,6 @@ def test_frozen_configuration_stamps_supplemental_page_profile_rule_version():
     )
 
     assert configuration["page_profile_rule_version"] == RULE_CATALOG_VERSION
-
-
-async def test_hard_excluded_candidate_never_reaches_enqueue_or_fetch(monkeypatch):
-    class Crawl:
-        configuration: ClassVar[dict[str, object]] = {
-            "root_registrable_domain": "example.com",
-            "include_globs": [],
-            "exclude_globs": [],
-            "requested_page_limit": 10,
-        }
-        sample_mode = False
-        admitted_url_count = 0
-
-    async def fail_if_admitted(*_args, **_kwargs):
-        raise AssertionError("hard-excluded URL reached admission/enqueue")
-
-    pending_frontier_checked = False
-
-    async def no_automatic_selection(*_args, **_kwargs):
-        return None
-
-    async def empty_pending_frontier(*_args, **_kwargs):
-        nonlocal pending_frontier_checked
-        pending_frontier_checked = True
-        return []
-
-    monkeypatch.setattr(frontier, "_upsert_site_url", fail_if_admitted)
-    monkeypatch.setattr(frontier, "_automatic_remaining", no_automatic_selection)
-    monkeypatch.setattr(frontier, "_pending_frontier", empty_pending_frontier)
-    result = await discovery.admit_candidates(
-        None,
-        crawl=Crawl(),
-        candidates=[
-            FrontierCandidate(
-                url="https://example.com/checkout",
-                url_hash="blocked",
-                depth=1,
-                source_kind="link",
-            )
-        ],
-    )
-    assert result.admitted == 0
-    assert pending_frontier_checked is True
 
 
 def test_full_discovery_cap_scales_with_the_monitored_allowance():

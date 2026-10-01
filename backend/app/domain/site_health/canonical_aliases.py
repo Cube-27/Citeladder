@@ -266,55 +266,6 @@ async def _exclude_duplicate_site_urls(
     )
 
 
-async def resolve_duplicate_of_admitted_page(
-    session: AsyncSession,
-    *,
-    crawl: SiteCrawl,
-    url_hash_value: str,
-    declared_canonical: str,
-    base_url: str,
-) -> str:
-    """Return the active admitted target of one system-managed alias edge."""
-    target_hash = _canonical_target_hash(
-        crawl=crawl,
-        url_hash_value=url_hash_value,
-        declared_canonical=declared_canonical,
-        base_url=base_url,
-    )
-    if not target_hash:
-        return ""
-    graph = _graph_for_admitted(
-        await _admitted_rows(
-            session,
-            crawl=crawl,
-            url_hashes={url_hash_value, target_hash},
-        )
-    )
-    if url_hash_value not in graph.candidate_hashes:
-        return ""
-    return target_hash if target_hash in graph.active_hashes else ""
-
-
-async def mark_duplicate_url(
-    session: AsyncSession,
-    *,
-    crawl: SiteCrawl,
-    url_hash_value: str,
-) -> None:
-    """Exclude one fetched system-managed alias and supersede its analysis."""
-    site_url_id = await session.scalar(
-        select(SiteUrl.id).where(
-            SiteUrl.workspace_id == crawl.workspace_id,
-            SiteUrl.project_id == crawl.project_id,
-            SiteUrl.url_hash == url_hash_value,
-        )
-    )
-    if site_url_id is not None:
-        await _exclude_duplicate_site_urls(
-            session, crawl=crawl, site_url_ids={site_url_id}
-        )
-
-
 async def reconcile_crawl_duplicate_aliases(
     session: AsyncSession, *, crawl: SiteCrawl
 ) -> int:
@@ -328,8 +279,4 @@ async def reconcile_crawl_duplicate_aliases(
     return len(duplicate_ids)
 
 
-__all__ = [
-    "mark_duplicate_url",
-    "reconcile_crawl_duplicate_aliases",
-    "resolve_duplicate_of_admitted_page",
-]
+__all__ = ["reconcile_crawl_duplicate_aliases"]

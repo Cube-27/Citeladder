@@ -1,0 +1,178 @@
+import { gzipSync } from 'node:zlib';
+import { describe, expect, it } from 'vitest';
+
+import { policy } from '../src/config.ts';
+import { extractPageFacts, factSettings } from '../src/site-health/analysis/facts.ts';
+import { discoveryLinks } from '../src/site-health/discover-task.ts';
+import { classifyUrlAdmission } from '../src/site-health/url-admission.ts';
+import { document } from '../src/web-evidence/html.ts';
+import { parseSitemap, SitemapCollector, SitemapParseError } from '../src/web-evidence/sitemaps.ts';
+
+const reasons = policy.site_health.crawl.exclusions;
+const scope = { domain: 'example.test' };
+
+describe('URL admission', () => {
+  it('admits the registrable domain and its subdomains, and only narrows with globs', () => {
+    expect(classifyUrlAdmission('https://blog.example.test/post', scope).accepted).toBe(true);
+    expect(classifyUrlAdmission('https://example.test.evil/post', scope).reason).toBe(
+      reasons.out_of_scope,
+    );
+    const narrowed = {
+      ...scope,
+      include: ['https://example.test/docs/*'],
+      exclude: ['*/docs/private*'],
+    };
+    expect(classifyUrlAdmission('https://example.test/docs/a/b', narrowed).accepted).toBe(true);
+    expect(classifyUrlAdmission('https://example.test/blog', narrowed).reason).toBe(
+      reasons.narrowed,
+    );
+    expect(classifyUrlAdmission('https://example.test/docs/private-x', narrowed).reason).toBe(
+      reasons.narrowed,
+    );
+  });
+
+  it('separates hard exclusions, tracking variants and documents from ordinary pages', () => {
+    expect(classifyUrlAdmission('https://example.test/search?q=x').reason).toBe(reasons.hard_query);
+    expect(classifyUrlAdmission('https://example.test/p?utm_source=x').reason).toBe(
+      reasons.tracking,
+    );
+    expect(classifyUrlAdmission('https://account.example.test/').reason).toBe(reasons.hard_host);
+    expect(classifyUrlAdmission('https://example.test/assets/app.js').reason).toBe(
+      reasons.hard_asset,
+    );
+    const pdf = classifyUrlAdmission('https://example.test/Prospectus.PDF');
+    expect(pdf).toMatchObject({
+      accepted: true,
+      disposition: 'inventory_only',
+      itemKind: 'document',
+    });
+    // Sitemaps are the one asset extension crawler infrastructure may fetch.
+    expect(classifyUrlAdmission('https://example.test/sitemap.xml').accepted).toBe(false);
+    expect(
+      classifyUrlAdmission('https://example.test/sitemap-1.xml.gz', { infrastructure: 'sitemap' })
+        .accepted,
+    ).toBe(true);
+  });
+
+  it('refuses hrefs that only look relative', () => {
+    const base = 'https://example.test/blogs/post';
+    expect(classifyUrlAdmission('twitter.com/brand', { ...scope, base }).reason).toBe(
+      reasons.invalid,
+    );
+    expect(
+      classifyUrlAdmission('allhttps://example.test/collections/all', { ...scope, base }).reason,
+    ).toBe(reasons.invalid);
+    expect(classifyUrlAdmission('index.html', { ...scope, base }).url).toBe(
+      'https://example.test/blogs/index.html',
+    );
+  });
+
+  it('orders by the most valuable kind a path names', () => {
+    const priority = (url: string) => classifyUrlAdmission(url).priority;
+    expect(classifyUrlAdmission('https://example.test/').valueKind).toBe('root');
+    expect(priority('https://example.test/products/widget')).toBeGreaterThan(
+      priority('https://example.test/blog/widget'),
+    );
+    expect(classifyUrlAdmission('https://example.test/about-us').valueKind).toBe('other');
+  });
+});
+
+describe('discovery links', () => {
+  it('keeps in-scope, canonical, first-seen links in order and repairs an encoded tracking query', () => {
+    const root = document(
+      Buffer.from(
+        '<title> Home </title><a href="#top">x</a><a href="mailto:a@b">x</a>' +
+          '<a href="/a">a</a><a href="/a#again">dup</a><a href="https://other.test/x">out</a>' +
+          '<a href="/p%3Futm_source%3Dnews">p</a><a href="/b">b</a><a href="/c">c</a>',
+      ),
+    );
+    const { title, links } = discoveryLinks(root, 'https://example.test/', scope, 3);
+    expect(title).toBe('Home');
+    expect(links.map((link) => [link.admission.url, link.ordinal, link.rewriteReason])).toEqual([
+      ['https://example.test/a', 0, ''],
+      ['https://example.test/p', 1, policy.site_health.crawl.link_rewrite.reason],
+      ['https://example.test/b', 2, ''],
+    ]);
+  });
+
+  it('reads anchors the fact extractor prunes, keeps reserved escapes, and decodes the declared charset', () => {
+    const root = document(
+      Buffer.from(
+        '<title>Café</title><a hidden href="/hidden">h</a><template><a href="/template">t</a></template>' +
+          '<a href="/items/%3Ffaq">q</a><a href="/items/%3Fsku%3D42">s</a><a href="/items/%2Fpart">p</a>',
+        'latin1',
+      ),
+      'ISO-8859-1',
+    );
+    const { title, links } = discoveryLinks(root, 'https://example.test/', scope, 10);
+    expect(title).toBe('Café');
+    expect(links.map((link) => [link.admission.url, link.rewriteReason])).toEqual([
+      ['https://example.test/hidden', ''],
+      ['https://example.test/template', ''],
+      ['https://example.test/items/%3Ffaq', ''],
+      ['https://example.test/items/%3Fsku%3D42', ''],
+      ['https://example.test/items/%2Fpart', ''],
+    ]);
+  });
+
+  it('shares one parse with fact extraction without escaping the fact byte cap', () => {
+    const prefix = '<html><body><p>within budget</p>';
+    const body = Buffer.from(`${prefix}<a href="/beyond">outside budget</a></body></html>`);
+    const root = document(body);
+    expect(discoveryLinks(root, 'https://example.test/', scope, 10).links).toHaveLength(1);
+    const settings = { ...factSettings({}), maxHtmlBytes: prefix.length };
+    const facts = extractPageFacts(body, { finalUrl: 'https://example.test/' }, settings, root);
+    expect(facts.extraction.truncated).toBe(true);
+    expect(facts.body.text).not.toContain('outside budget');
+  });
+});
+
+describe('sitemaps', () => {
+  const limits = { maxDecodedBytes: 4096, maxUrls: 3, maxIndexDepth: 1 };
+  const urlset = (...locs: string[]) =>
+    Buffer.from(
+      `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${locs
+        .map((loc) => `<url><loc> ${loc} </loc></url>`)
+        .join('')}</urlset>`,
+    );
+  it('reads page URLs and index references, and decodes gzip under the cap', () => {
+    expect(parseSitemap(urlset('https://example.test/a?x=1&amp;y=2'), 'text/xml', limits)).toEqual({
+      urls: ['https://example.test/a?x=1&y=2'],
+      refs: [],
+    });
+    const index = Buffer.from(
+      '<sitemapindex><sitemap><loc>https://example.test/s1.xml</loc></sitemap></sitemapindex>',
+    );
+    expect(parseSitemap(gzipSync(index), 'application/gzip', limits)).toEqual({
+      urls: [],
+      refs: ['https://example.test/s1.xml'],
+    });
+  });
+
+  it('refuses entity declarations, malformed XML and decompression bombs', () => {
+    const entity = Buffer.from(
+      '<!DOCTYPE x [<!ENTITY a "aaaa">]><urlset><url><loc>&a;</loc></url></urlset>',
+    );
+    expect(() => parseSitemap(entity, 'text/xml', limits)).toThrow(SitemapParseError);
+    expect(() => parseSitemap(Buffer.from('<urlset><url>'), 'text/xml', limits)).toThrow(
+      SitemapParseError,
+    );
+    const bomb = gzipSync(Buffer.alloc(limits.maxDecodedBytes * 4, 'a'));
+    expect(() => parseSitemap(bomb, 'application/gzip', limits)).toThrow(SitemapParseError);
+  });
+
+  it('caps collected URLs and stops following references at the depth bound or a loop', () => {
+    const collector = new SitemapCollector(limits);
+    const index = Buffer.from(
+      '<sitemapindex><sitemap><loc>https://example.test/root.xml</loc></sitemap>' +
+        '<sitemap><loc>https://example.test/child.xml</loc></sitemap></sitemapindex>',
+    );
+    expect(collector.add('https://example.test/root.xml', index, 'text/xml', 0)).toEqual([
+      'https://example.test/child.xml',
+    ]);
+    expect(collector.add('https://example.test/child.xml', index, 'text/xml', 1)).toEqual([]);
+    collector.add('https://example.test/u1.xml', urlset('a', 'b'), 'text/xml', 1);
+    collector.add('https://example.test/u2.xml', urlset('c', 'd'), 'text/xml', 1);
+    expect(collector.urls).toEqual(['a', 'b', 'c']);
+  });
+});

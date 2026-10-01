@@ -21,6 +21,7 @@ export type FetchOptions = {
   maxBytes: number;
   timeoutSeconds: number;
   redirects: number;
+  /** Media types a 2xx may carry; `*` accepts any. */
   contentTypes: readonly string[];
   domain?: string;
   signal?: AbortSignal;
@@ -172,7 +173,7 @@ export async function pinnedRequest(
         signal,
         headers: {
           'user-agent': policy.web_fetch.user_agent,
-          accept: options.contentTypes.join(', '),
+          accept: options.contentTypes.includes('*') ? '*/*' : options.contentTypes.join(', '),
           'accept-encoding': 'gzip, deflate, br',
         },
         // Keep the URL hostname for Host, TLS SNI and certificate verification.
@@ -198,7 +199,9 @@ export async function pinnedRequest(
           });
           return;
         }
-        if (status >= 200 && status < 300 && !options.contentTypes.includes(type)) {
+        const acceptable =
+          options.contentTypes.includes(type) || options.contentTypes.includes('*');
+        if (status >= 200 && status < 300 && !acceptable) {
           response.destroy(new FetchError('content_type'));
           return;
         }

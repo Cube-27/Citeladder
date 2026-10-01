@@ -15,7 +15,6 @@ from app.connectors.web_evidence.contracts import (
     ResolvedTarget,
 )
 from app.connectors.web_evidence.fetcher import SecureFetcher
-from app.connectors.web_evidence.fetcher_body import is_bot_block_result
 from app.core.config.site_health_acquisition import FETCH_PURPOSE_ANALYZE
 
 _PUBLIC_IP = "93.184.216.34"
@@ -283,19 +282,3 @@ async def test_transport_failure_carries_curl_trace() -> None:
     assert attempt.error_code == "timeout"
     assert attempt.acquisition is not None
     assert attempt.acquisition.transport == "curl_cffi"
-
-
-def test_challenge_script_appended_to_real_document_is_not_a_bot_block() -> None:
-    body = (
-        b"<html><main><article><h1>Privacy Policy</h1><p>Real content.</p>"
-        b"</article></main><script src='/cdn-cgi/challenge-platform/x.js'>"
-        b"</script></html>"
-    )
-    assert is_bot_block_result(_result(body=body)) is False
-
-
-def test_challenge_interstitial_is_a_bot_block() -> None:
-    result = _result(
-        body=b"<html><title>Just a moment...</title><div>cf-chl</div></html>"
-    )
-    assert is_bot_block_result(result) is True

@@ -6,9 +6,7 @@
  * lock order (runtime, membership, crawl, task) so a cancelled or lost task
  * writes nothing.
  */
-import { randomUUID } from 'node:crypto';
-
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
@@ -21,37 +19,29 @@ import {
   writePageAnalysis,
   type AttemptOutcome,
 } from './analysis-rows.ts';
-import { isBotBlock, type SitePageFetcher } from './page-fetch.ts';
+import { isBotBlock } from './page-fetch.ts';
+import {
+  ACTIVE_CRAWL,
+  cancelTask,
+  httpError,
+  loadScope,
+  markRunning,
+  owned,
+  recordCrawlEvent,
+  settleTask,
+  startCrawl,
+  statuses,
+  type SiteTaskContext,
+  type SiteTaskSettings,
+} from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
-const statuses = policy.task_queue.statuses;
 const codes = policy.site_health.page_analysis.acquisition.error_codes;
 const BODYLESS = new Set(policy.site_health.page_analysis.acquisition.bodyless_status_codes);
-const COUNT_BEARING = new Set<string>(policy.site_health.reads.event_count_bearing_keys);
-const ACTIVE_CRAWL = new Set(['draft', 'validating', 'queued', 'running', 'paused']);
 const ACTIVE_TASK = [statuses.queued, statuses.leased, statuses.running, statuses.retry_wait];
 const SAMPLE_SOURCES = new Set(['free_sample', 'bootstrap']);
 
-export function analyzeSettings(env: Record<string, string | undefined> = process.env) {
-  const spec = policy.site_health.settings;
-  const number = (name: keyof typeof spec) => Number(resolveSettingSpec(spec[name], env));
-  return {
-    dependencyRetry: number('analysis_dependency_retry_seconds'),
-    dependencyRetryMax: number('analysis_dependency_retry_max_seconds'),
-    dependencyMaxWait: number('analysis_dependency_max_wait_seconds'),
-    retryBase: number('retry_base_delay_seconds'),
-    retryMax: number('retry_max_delay_seconds'),
-    retryJitter: number('retry_jitter_seconds'),
-  };
-}
-type Settings = ReturnType<typeof analyzeSettings>;
-export type AnalyzeContext = {
-  db: Database;
-  owner: string;
-  fetcher: SitePageFetcher;
-  settings: Settings;
-};
 type Outcome = AttemptOutcome & {
   facts: Facts | null;
   page: Parameters<typeof writeArtifact>[3] | null;
@@ -61,75 +51,12 @@ type Outcome = AttemptOutcome & {
 };
 
 /** Backoff for a prerequisite recheck: doubles with the wait, clamped, never past the bound. */
-function dependencyDelay(settings: Settings, waited: number) {
+function dependencyDelay(settings: SiteTaskSettings, waited: number) {
   const base = Math.max(0, settings.dependencyRetry);
   const backoff = base
     ? Math.min(base * 2 ** Math.min(waited / base, 16), settings.dependencyRetryMax)
     : 0;
   return Math.min(backoff, Math.max(0, settings.dependencyMaxWait - waited));
-}
-/** Exponential retry backoff with deterministic jitter (the attempt number, not a random draw). */
-const retryDelay = (settings: Settings, attempt: number) =>
-  Math.min(settings.retryBase * 2 ** attempt, settings.retryMax) +
-  ((attempt * 0.37) % 1) * settings.retryJitter;
-
-const owned = (db: Database, task: SiteTask, owner: string) =>
-  db
-    .updateTable('site_crawl_tasks')
-    .where('id', '=', task.id)
-    .where('workspace_id', '=', task.workspace_id)
-    .where('lease_owner', '=', owner);
-
-async function cancel(db: Database, task: SiteTask) {
-  const now = new Date();
-  await db
-    .updateTable('site_crawl_tasks')
-    .set({
-      status: statuses.cancelled,
-      lease_owner: null,
-      lease_expires_at: null,
-      completed_at: now,
-      updated_at: now,
-      error_code: 'cancelled',
-    })
-    .where('id', '=', task.id)
-    .where('workspace_id', '=', task.workspace_id)
-    .where('status', 'not in', [statuses.succeeded, statuses.failed, statuses.cancelled])
-    .execute();
-}
-
-async function loadScope(db: Database, claimed: SiteTask) {
-  const task = await db
-    .selectFrom('site_crawl_tasks')
-    .selectAll()
-    .where('id', '=', claimed.id)
-    .where('crawl_id', '=', claimed.crawl_id)
-    .where('workspace_id', '=', claimed.workspace_id)
-    .executeTakeFirst();
-  const crawl = await db
-    .selectFrom('site_crawls')
-    .selectAll()
-    .where('id', '=', claimed.crawl_id)
-    .where('workspace_id', '=', claimed.workspace_id)
-    .executeTakeFirst();
-  return task && crawl ? { task, crawl } : null;
-}
-
-/** The first task to run moves a queued (or resumed) crawl to running. */
-async function startCrawl(db: Database, crawl: Crawl) {
-  if (crawl.status === 'running' || !['queued', 'paused'].includes(crawl.status)) return;
-  const now = new Date();
-  await db
-    .updateTable('site_crawls')
-    .set((eb) => ({
-      status: 'running',
-      started_at: eb.fn.coalesce('started_at', eb.val(now)),
-      updated_at: now,
-    }))
-    .where('id', '=', crawl.id)
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('status', 'in', ['queued', 'paused'])
-    .execute();
 }
 
 type GuardRows = {
@@ -227,24 +154,11 @@ async function setupPending(db: Database, crawl: Crawl, task: SiteTask) {
   return Boolean(row);
 }
 
-async function markRunning(db: Database, task: SiteTask, owner: string) {
-  const result = await owned(db, task, owner)
-    .set({ status: statuses.running, heartbeat_at: new Date(), updated_at: new Date() })
-    .where('status', '=', statuses.leased)
-    .executeTakeFirst();
-  return result.numUpdatedRows > 0n;
-}
 /** Commit the supported-HTML classification cohort before parsing. */
 const expectClassification = (db: Database, task: SiteTask, owner: string) =>
   owned(db, task, owner).set({ classification_expected: true, updated_at: new Date() }).execute();
 
-/** Classify a returned HTTP status: a 4xx is terminal except 429; every 5xx is retryable. */
-function httpError(status: number): [string, boolean] | null {
-  if (status >= 400 && status < 500) return [codes.http_4xx, status === 429];
-  return status >= 500 ? [codes.http_5xx, true] : null;
-}
-
-async function acquire(ctx: AnalyzeContext, task: SiteTask): Promise<Outcome> {
+async function acquire(ctx: SiteTaskContext, task: SiteTask): Promise<Outcome> {
   const fetched = await ctx.fetcher.fetch(task.requested_url);
   const base = { facts: null, page: null, reusedArtifactId: null };
   if (!fetched.ok)
@@ -325,39 +239,24 @@ async function lockForCommit(trx: Database, claimed: SiteTask, owner: string) {
 }
 
 async function recordProgress(trx: Database, crawl: Crawl) {
-  const now = new Date();
   const analyzed = crawl.analyzed_url_count + 1;
   await trx
     .updateTable('site_crawls')
-    .set({ analyzed_url_count: analyzed, updated_at: now })
+    .set({ analyzed_url_count: analyzed, updated_at: new Date() })
     .where('id', '=', crawl.id)
     .where('workspace_id', '=', crawl.workspace_id)
     .execute();
-  const disclose = record(crawl.configuration).count_disclosure === true;
-  const payload = Object.fromEntries(
-    Object.entries({ analyzed }).filter(([key]) => disclose || !COUNT_BEARING.has(key)),
-  );
-  await trx
-    .insertInto('site_crawl_events')
-    .values({
-      id: randomUUID(),
-      crawl_id: crawl.id,
-      event_type: 'analysis.progress',
-      message: 'analysis progress',
-      payload: JSON.stringify(payload),
-      created_at: now,
-    })
-    .execute();
+  await recordCrawlEvent(trx, crawl, 'analysis.progress', 'analysis progress', { analyzed });
 }
 
 /** Stage the evidence and settle the task in one transaction. */
-async function persist(ctx: AnalyzeContext, claimed: SiteTask, outcome: Outcome) {
+async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome) {
   await ctx.db.transaction().execute(async (trx) => {
     const locked = await lockForCommit(trx, claimed, ctx.owner);
     if (!locked) return;
     const { crawl, task } = locked;
     if (!locked.allowed) {
-      await cancel(trx, task);
+      await cancelTask(trx, task);
       return;
     }
     let artifactId = outcome.reusedArtifactId;
@@ -394,60 +293,34 @@ async function persist(ctx: AnalyzeContext, claimed: SiteTask, outcome: Outcome)
         artifactId,
         ctx.fetcher.settings.policyVersion,
       );
-    const now = new Date();
-    const attempt = task.attempt_count + 1;
     if (artifactId) {
       await recordProgress(trx, crawl);
-      await owned(trx, task, ctx.owner)
-        .set({
-          status: statuses.succeeded,
-          attempt_count: attempt,
-          result_artifact_id: artifactId,
-          completed_at: now,
-          updated_at: now,
-          lease_owner: null,
-          lease_expires_at: null,
-          heartbeat_at: null,
-          error_code: '',
-          error_detail: '',
-        })
-        .execute();
+      await settleTask(trx, ctx, task, { succeeded: true, artifactId });
       return;
     }
-    const retry = outcome.retryable && attempt < task.max_attempts;
-    await owned(trx, task, ctx.owner)
-      .set({
-        status: retry ? statuses.retry_wait : statuses.failed,
-        attempt_count: attempt,
-        available_at: new Date(
-          now.getTime() + (retry ? retryDelay(ctx.settings, attempt) * 1000 : 0),
-        ),
-        completed_at: retry ? null : now,
-        updated_at: now,
-        lease_owner: null,
-        lease_expires_at: null,
-        heartbeat_at: null,
-        error_code: outcome.errorCode.slice(0, 32),
-        error_detail: outcome.errorDetail.slice(0, 2000),
-      })
-      .execute();
+    await settleTask(trx, ctx, task, {
+      succeeded: false,
+      retryable: outcome.retryable,
+      errorCode: outcome.errorCode,
+      errorDetail: outcome.errorDetail,
+    });
   });
 }
 
 /** Reused evidence or a fresh acquisition; null when the task should not run now. */
 async function prepare(
-  ctx: AnalyzeContext,
+  ctx: SiteTaskContext,
   claimed: SiteTask,
 ): Promise<Outcome | 'deferred' | null> {
   const scope = await loadScope(ctx.db, claimed);
   if (!scope || !ACTIVE_CRAWL.has(scope.crawl.status)) {
-    await cancel(ctx.db, claimed);
+    await cancelTask(ctx.db, claimed);
     return null;
   }
   const { crawl, task } = scope;
   if (task.lease_owner !== ctx.owner) return null;
   if (!guardAllows(crawl, await guardRows(ctx.db, crawl, task, false))) {
-    await cancel(ctx.db, task);
+    await cancelTask(ctx.db, task);
     return null;
   }
   await startCrawl(ctx.db, crawl);
@@ -488,7 +361,7 @@ async function prepare(
   };
 }
 
-export async function runAnalyze(ctx: AnalyzeContext, claimed: SiteTask) {
+export async function runAnalyze(ctx: SiteTaskContext, claimed: SiteTask) {
   const outcome = await prepare(ctx, claimed);
   if (outcome && outcome !== 'deferred') await persist(ctx, claimed, outcome);
 }

@@ -1,35 +1,27 @@
 """Shared fixtures for the Site Health worker component tests.
 
-The worker tests were one 3,700-line module; they now mirror the worker's own
-phase split (discover / analyze / terminalization / loop).
-Everything those files build a crawl out of — the fake resolver, the stub
-transports, the HTML fixtures and the crawl seeders — lives here, so each phase
-file reads as assertions rather than setup.
+The TypeScript Site Health worker acquires and analyzes pages; these Python
+tests own what the crawl lifecycle does with the rows it persists. The HTML
+fixtures, crawl seeders and the persisted-row seams that stand in for the
+TypeScript executors live here, so each test file reads as assertions.
 """
 
 from __future__ import annotations
 
-import gzip
 import uuid
 from datetime import UTC, datetime
 
-import httpx
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.analysis.site_health.parser import extract_page_facts
 from app.analysis.site_health.rules import RuleEvaluation, creates_issue
 from app.analysis.site_health.scoring import score_analysis
-from app.connectors.web_evidence.contracts import (
-    AcquisitionTransport,
-    FetchRequest,
-    FetchResult,
-    ResolvedTarget,
-)
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY_REVISION,
 )
 from app.core.config.site_health_acquisition import (
+    FETCH_ATTEMPT_OUTCOME_ERROR,
     FETCH_PURPOSE_ANALYZE,
     FETCH_PURPOSE_DISCOVER,
 )
@@ -39,13 +31,14 @@ from app.core.config.site_health_contracts import (
     DISCOVERY_STATUS_COMPLETED,
     DISCOVERY_STATUS_RUNNING,
     EXTRACTOR_VERSION,
+    OBSERVATION_SOURCE_LINK,
+    OBSERVATION_SOURCE_ROOT,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_SATISFIED,
     SCORING_VERSION,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
-    TASK_KIND_SITE_SETUP,
 )
 from app.core.config.site_health_crawl_policy import (
     SELECTION_SOURCE_USER,
@@ -71,7 +64,7 @@ from app.domain.site_health.entitlements import (
     resolve_runtime,
 )
 from app.domain.site_health.normalization import canonical_identity
-from app.models.site_health.acquisition import SiteFetchArtifact
+from app.models.site_health.acquisition import SiteFetchArtifact, SiteFetchAttempt
 from app.models.site_health.analysis import (
     SiteIssue,
     SitePageAnalysis,
@@ -79,7 +72,7 @@ from app.models.site_health.analysis import (
 )
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
-from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
+from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
 from app.workers.site_health_worker import (
     SiteHealthWorker,
 )
@@ -87,8 +80,6 @@ from tests.component.site_health_helpers import (
     seed_monitored_urls_allowance,
     seed_site_crawl,
 )
-
-_PUBLIC_IP = "93.184.216.34"
 
 # Default monitored-URL allowance for the "paid-like" crawl seeds (mirrors the
 # old Starter limit of 50; tests that exercise the limit pass their own).
@@ -126,109 +117,11 @@ async def _seed_runtime(
     )
 
 
-class _FakeResolver:
-    async def resolve(self, host: str, port: int) -> list[str]:
-        return [_PUBLIC_IP]
-
-
 def _html(links: list[str], *, title: str = "Page") -> bytes:
     anchors = "".join(f'<a href="{u}">l</a>' for u in links)
     return (
         f"<html><head><title>{title}</title></head><body>{anchors}</body></html>"
     ).encode()
-
-
-class _ByteStream(httpx.AsyncByteStream):
-    def __init__(self, data: bytes) -> None:
-        self._data = data
-
-    async def __aiter__(self):
-        yield self._data
-
-    async def aclose(self) -> None:
-        return None
-
-
-class _HttpxHandlerTransport(AcquisitionTransport):
-    """Adapt existing offline HTTP handlers to the acquisition contract."""
-
-    def __init__(self, handler) -> None:
-        self._handler = handler
-
-    async def fetch(
-        self,
-        request: FetchRequest,
-        target: ResolvedTarget,
-        *,
-        max_wire_bytes: int,
-        max_decoded_bytes: int,
-        timeout_seconds: float,
-    ) -> FetchResult:
-        del timeout_seconds
-        response = self._handler(
-            httpx.Request(request.method, target.url, headers=request.headers)
-        )
-        body = await response.aread()
-        if len(body) > max_wire_bytes or len(body) > max_decoded_bytes:
-            raise AssertionError("offline response exceeded configured test bounds")
-        content_type = response.headers.get("content-type", "").split(";", 1)[0]
-        return FetchResult(
-            requested_url=request.url,
-            final_url=target.url,
-            status_code=response.status_code,
-            redacted_headers=dict(response.headers),
-            content_type=content_type,
-            http_version=response.http_version or "HTTP/1.1",
-            body=body,
-            wire_bytes=len(body),
-            decoded_bytes=len(body),
-            ttfb_ms=1,
-            latency_ms=1,
-            redirect_location=response.headers.get("location", ""),
-        )
-
-    async def aclose(self) -> None:
-        return None
-
-
-def _site_transport(
-    pages: dict[str, bytes | tuple[bytes, dict[str, str]]],
-    *,
-    requests: list[tuple[str, str]] | None = None,
-) -> AcquisitionTransport:
-    """A mock transport serving ``pages`` (keyed by path) as text/html.
-
-    Values are either raw body bytes (served with a bare text/html content
-    type) or a ``(body, extra_headers)`` tuple for pages that need specific
-    response headers (e.g. gzip content-encoding / HSTS). When ``requests``
-    is given, every served (method, path) is appended to it.
-
-    Any unknown path returns 404 so an out-of-scope/absent link is a clean
-    fetch failure rather than an exception.
-    """
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        if requests is not None:
-            requests.append((request.method, request.url.path))
-        entry = pages.get(request.url.path)
-        if entry is None:
-            return httpx.Response(
-                404,
-                headers={"content-type": "text/html"},
-                stream=_ByteStream(b"not found"),
-            )
-        if isinstance(entry, tuple):
-            body, extra_headers = entry
-            headers = {"content-type": "text/html", **extra_headers}
-        else:
-            body, headers = entry, {"content-type": "text/html"}
-        return httpx.Response(
-            200,
-            headers=headers,
-            stream=_ByteStream(body),
-        )
-
-    return _HttpxHandlerTransport(handler)
 
 
 async def _configure_crawl(
@@ -256,17 +149,11 @@ async def _configure_crawl(
 
 def _worker(
     session_factory: async_sessionmaker[AsyncSession],
-    pages: dict[str, bytes | tuple[bytes, dict[str, str]]],
     *,
     owner: str = "site-test",
-    requests: list[tuple[str, str]] | None = None,
 ) -> SiteHealthWorker:
-    return SiteHealthWorker(
-        session_factory=session_factory,
-        owner=owner,
-        resolver=_FakeResolver(),
-        transport=_site_transport(pages, requests=requests),
-    )
+    """The Python crawl-maintenance worker; it reconciles what TypeScript settled."""
+    return SiteHealthWorker(session_factory=session_factory, owner=owner)
 
 
 def _rich_html() -> bytes:
@@ -308,25 +195,6 @@ def _rich_html() -> bytes:
         '<a href="https://external.org/x">external</a>'
         "</body></html>"
     ).encode()
-
-
-def _rich_page() -> tuple[bytes, dict[str, str]]:
-    """The rich page served the way a well-run site serves it: gzipped and
-    with HSTS, so the delivery rules (``technical.uncompressed_html`` /
-    ``technical.hsts_present``) pass too."""
-    return (
-        gzip.compress(_rich_html()),
-        {
-            "content-encoding": "gzip",
-            "strict-transport-security": "max-age=63072000; includeSubDomains",
-        },
-    )
-
-
-def _thin_html() -> bytes:
-    """A page that FAILS several rules (no meta desc, no canonical, no h1,
-    no og, no structured data, thin text)."""
-    return b"<html><head><title>Thin</title></head><body><p>too short</p></body></html>"
 
 
 async def _add_monitored_analyze_task(
@@ -668,7 +536,7 @@ async def _seed_root_discover(
     monitored_urls: int = DEFAULT_SEED_MONITORED_URLS,
     sample_mode: bool = False,
 ):
-    """Seed an isolated QUEUED root-discover task for phase-focused tests."""
+    """Seed an isolated QUEUED root-discover task."""
     async with session_factory() as session:
         seed = await seed_site_crawl(session, task_count=0, root_url=root)
         await _seed_runtime(session, seed.workspace_id, monitored_urls=monitored_urls)
@@ -697,51 +565,162 @@ async def _seed_root_discover(
         return seed
 
 
-async def _seed_root_branches(
-    session_factory: async_sessionmaker[AsyncSession],
-    *,
-    root: str,
-    monitored_urls: int = DEFAULT_SEED_MONITORED_URLS,
-    sample_mode: bool = False,
-):
-    """Seed the planner's durable root-acquisition and site-setup branches."""
-    seed = await _seed_root_discover(
-        session_factory,
-        root=root,
-        monitored_urls=monitored_urls,
-        sample_mode=sample_mode,
-    )
-    _canonical, root_hash = canonical_identity(root)
-    async with session_factory() as session:
-        session.add(
-            SiteCrawlTask(
-                crawl_id=seed.crawl_id,
-                workspace_id=seed.workspace_id,
-                task_kind=TASK_KIND_SITE_SETUP,
-                requested_url=root,
-                url_hash=root_hash,
-                generation=0,
-                idempotency_key=(
-                    f"{seed.crawl_id}:{TASK_KIND_SITE_SETUP}:{root_hash}:0"
-                ),
-                status=TASK_STATUS_QUEUED,
-                priority=1_000,
-                randomized_position=-1,
-            )
-        )
-        await session.commit()
-    return seed
-
-
 async def _seed_root_only(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     root: str = "https://example.com/",
 ):
-    """A full-allowance root-discover seed with a default root (terminalization tests).
-
-    The same setup as :func:`_seed_root_discover`, whose ``root`` is explicit
-    because the discover tests each pin their own; these callers only care that
-    ONE root discover task exists.
-    """
+    """A full-allowance crawl with ONE queued root discover task."""
     return await _seed_root_discover(session_factory, root=root)
+
+
+async def _settle_discovery_as_typescript(
+    session_factory: async_sessionmaker[AsyncSession],
+    task_id: uuid.UUID,
+    *,
+    links: tuple[str, ...] = (),
+    status_code: int = 200,
+    error_code: str = "",
+) -> list[uuid.UUID]:
+    """Settle one discover task with the rows the TypeScript executor commits.
+
+    The executor (``frontend/services/api/src/site-health/discover-task.ts``)
+    owns acquisition, link extraction and frontier admission, with their
+    tests; these Python tests own what the crawl lifecycle does with the
+    result. A success writes the discover artifact, the URL's completed
+    identity and observation, and one queued child discover task per link.
+    ``error_code`` settles a terminal failure with its one error attempt
+    instead. Returns the child task ids.
+    """
+    now = datetime.now(UTC)
+    async with session_factory() as session:
+        task = await session.get(SiteCrawlTask, task_id)
+        assert task is not None
+        crawl = await session.get(SiteCrawl, task.crawl_id)
+        assert crawl is not None
+        task.attempt_count += 1
+        task.completed_at = now
+        if error_code:
+            task.status = TASK_STATUS_FAILED
+            task.error_code = error_code
+            session.add(
+                SiteFetchAttempt(
+                    task_id=task.id,
+                    crawl_id=crawl.id,
+                    workspace_id=crawl.workspace_id,
+                    attempt_number=task.attempt_count,
+                    method="GET",
+                    target_host="example.com",
+                    outcome=FETCH_ATTEMPT_OUTCOME_ERROR,
+                    error_code=error_code,
+                    status_code=status_code,
+                )
+            )
+            await session.commit()
+            return []
+
+        site_url = await _site_url(session, crawl, task.requested_url, task.depth)
+        site_url.discovery_status = DISCOVERY_STATUS_COMPLETED
+        artifact = SiteFetchArtifact(
+            task_id=task.id,
+            crawl_id=crawl.id,
+            workspace_id=crawl.workspace_id,
+            fetch_purpose=FETCH_PURPOSE_DISCOVER,
+            requested_url=task.requested_url,
+            final_url=task.requested_url,
+            status_code=status_code,
+            content_type="text/html",
+            extractor_version=EXTRACTOR_VERSION,
+            normalized_facts=extract_page_facts(
+                _html(list(links)),
+                final_url=task.requested_url,
+                content_type="text/html",
+                status_code=status_code,
+            ),
+        )
+        session.add(artifact)
+        await session.flush()
+        session.add(
+            SiteUrlObservation(
+                workspace_id=crawl.workspace_id,
+                project_id=crawl.project_id,
+                crawl_id=crawl.id,
+                site_url_id=site_url.id,
+                source_kind=OBSERVATION_SOURCE_ROOT
+                if task.depth == 0
+                else OBSERVATION_SOURCE_LINK,
+                source_artifact_id=artifact.id,
+                depth=task.depth,
+                observed_url=task.requested_url,
+                final_url=task.requested_url,
+                status_code=status_code,
+            )
+        )
+        children: list[SiteCrawlTask] = []
+        for link in links:
+            child_url = await _site_url(session, crawl, link, task.depth + 1)
+            session.add(
+                SiteUrlObservation(
+                    workspace_id=crawl.workspace_id,
+                    project_id=crawl.project_id,
+                    crawl_id=crawl.id,
+                    site_url_id=child_url.id,
+                    source_kind=OBSERVATION_SOURCE_LINK,
+                    depth=task.depth + 1,
+                    observed_url=child_url.normalized_url,
+                    final_url=child_url.normalized_url,
+                )
+            )
+            child = SiteCrawlTask(
+                crawl_id=crawl.id,
+                workspace_id=crawl.workspace_id,
+                site_url_id=child_url.id,
+                task_kind=TASK_KIND_DISCOVER,
+                requested_url=child_url.normalized_url,
+                url_hash=child_url.url_hash,
+                depth=task.depth + 1,
+                generation=0,
+                idempotency_key=f"{crawl.id}:{TASK_KIND_DISCOVER}:{child_url.url_hash}:0",
+                status=TASK_STATUS_QUEUED,
+            )
+            session.add(child)
+            children.append(child)
+        task.status = TASK_STATUS_SUCCEEDED
+        task.result_artifact_id = artifact.id
+        crawl.discovered_url_count += 1
+        crawl.admitted_url_count += len(links)
+        await session.flush()
+        child_ids = [child.id for child in children]
+        await session.commit()
+        return child_ids
+
+
+async def _site_url(
+    session: AsyncSession, crawl: SiteCrawl, url: str, depth: int
+) -> SiteUrl:
+    """The project's identity for ``url``, created as admission would."""
+    canonical, url_hash = canonical_identity(url)
+    site_url = await session.scalar(
+        select(SiteUrl).where(
+            SiteUrl.project_id == crawl.project_id, SiteUrl.url_hash == url_hash
+        )
+    )
+    if site_url is None:
+        now = datetime.now(UTC)
+        site_url = SiteUrl(
+            workspace_id=crawl.workspace_id,
+            project_id=crawl.project_id,
+            normalized_url=canonical,
+            url_hash=url_hash,
+            display_url=canonical,
+            host="example.com",
+            depth=depth,
+            discovery_status=DISCOVERY_STATUS_RUNNING,
+            first_seen_crawl_id=crawl.id,
+            last_seen_crawl_id=crawl.id,
+            first_seen_at=now,
+            last_seen_at=now,
+        )
+        session.add(site_url)
+        await session.flush()
+    return site_url

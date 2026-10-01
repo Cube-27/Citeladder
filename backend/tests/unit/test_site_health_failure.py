@@ -7,19 +7,11 @@ exercised by the component tests):
     retried 5xx names the attempt count, an unrecognized code still gets a
     sentence (never a bare ``http_4xx`` token — SH-5);
   - the config-owned tokens the worker, the read projections, and the UI copy
-    share (invariant 1): ``EVENT_CRAWL_FAILED``, ``ROBOTS_FETCH_STATUS_*``,
-    ``FETCH_ATTEMPT_OUTCOME_*``.
+    share (invariant 1): ``EVENT_CRAWL_FAILED``.
 """
 
 from __future__ import annotations
 
-from app.core.config.site_health_acquisition import (
-    FETCH_ATTEMPT_OUTCOME_ERROR,
-    FETCH_ATTEMPT_OUTCOME_SUCCESS,
-    ROBOTS_FETCH_STATUS_FETCH_FAILED,
-    ROBOTS_FETCH_STATUS_FETCHED,
-    ROBOTS_FETCH_STATUS_NOT_FOUND,
-)
 from app.core.config.site_health_contracts import (
     EVENT_CRAWL_COMPLETED,
     EVENT_CRAWL_FAILED,
@@ -104,22 +96,3 @@ class TestFailureConfigTokens:
         # SH-2: SSE/replay consumers must never read a failed run as completed.
         assert EVENT_CRAWL_FAILED == "crawl.failed"
         assert EVENT_CRAWL_FAILED != EVENT_CRAWL_COMPLETED
-
-    def test_robots_fetch_status_tokens(self) -> None:
-        # SH-1/B2: not_found (404 — fail-open) != fetch_failed (network/5xx).
-        assert ROBOTS_FETCH_STATUS_FETCHED == "fetched"
-        assert ROBOTS_FETCH_STATUS_NOT_FOUND == "not_found"
-        assert ROBOTS_FETCH_STATUS_FETCH_FAILED == "fetch_failed"
-
-    def test_fetch_attempt_outcome_tokens_are_config_owned(self) -> None:
-        # The writer (workers.site_health.attempt_rows) and the read projection
-        # (failure.load_root_errors) share the config-owned tokens, binding the
-        # SAME objects rather than re-declaring them (invariant 1).
-        from app.workers.site_health import attempt_rows
-
-        assert FETCH_ATTEMPT_OUTCOME_SUCCESS == "success"
-        assert FETCH_ATTEMPT_OUTCOME_ERROR == "error"
-        assert (
-            attempt_rows.FETCH_ATTEMPT_OUTCOME_SUCCESS is FETCH_ATTEMPT_OUTCOME_SUCCESS
-        )
-        assert attempt_rows.FETCH_ATTEMPT_OUTCOME_ERROR is FETCH_ATTEMPT_OUTCOME_ERROR
