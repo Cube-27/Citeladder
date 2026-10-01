@@ -75,7 +75,7 @@ async def test_legacy_http_exception_router_normalized_by_shim(
 async def test_request_validation_error_envelope(client: httpx.AsyncClient) -> None:
     """FastAPI's 422 array normalizes into sanitized field-level details."""
     await _register(client, "env-validation@example.com")
-    resp = await client.get("/api/v1/audits", params={"project_id": "not-a-uuid"})
+    resp = await client.get("/api/v1/projects/not-a-uuid/readiness")
     assert resp.status_code == 422
     body = resp.json()
     # ``detail`` is now a human string, not the raw validation array.
