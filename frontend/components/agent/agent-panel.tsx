@@ -174,7 +174,7 @@ function PanelLayout({
   return (
     <div className="flex min-h-full flex-1 flex-col gap-4">
       <div className="flex min-w-0 flex-1 flex-col gap-4">{children}</div>
-      <div className="bg-elevated z-sticky sticky bottom-0 pt-2 pb-4">{composer}</div>
+      <div className="bg-panel z-sticky sticky bottom-0 pt-2 pb-4">{composer}</div>
       {end}
     </div>
   );

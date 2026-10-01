@@ -17,6 +17,7 @@ import {
   focusRoleViolations,
   shadowRoleViolations,
   radiusRoleAdvisories,
+  tokenContractViolations,
   styleAssertionViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
@@ -114,6 +115,10 @@ for (const path of files(root)) {
 }
 
 violations.push(
+  ...tokenContractViolations(
+    readFileSync(tokenOwner, 'utf8'),
+    readFileSync(join(root, '..', 'docs', 'design.md'), 'utf8'),
+  ),
   ...websiteContractViolations(root),
   ...textContrastViolations(root),
   ...productContractViolations(root),

@@ -56,6 +56,141 @@ Marketing subpages use the semantic public canvas, centred Sora hero, quiet surf
 
 The homepage may use marketing-only geometry roles: `--radius-marketing-card` (20px), `--radius-marketing-well` (16px), `--radius-marketing-preview` (24px), and `--radius-marketing-control` (10px). The homepage shares the public container measure (`max-w-7xl` plus `--site-gutter`) with the navigation and footer. White capability and integration objects sit on neutral edges; each capability owns one identity hue (`--cl-hue-*`: visibility blue, sources green, site health indigo, demand teal, content orange, MCP pink) that `landing.css` derives into a tint for its wells and an ink for its labels, icons and bars; everything else uses the accent-tinted `--cl-well`. Identity hues never carry actions, which stay Emerald. Section heads stack a single-line heading over the lead; embedded sub-headings stay a rung below the section heading. Homepage headings use weight 500 at most. Product data and status colours retain their own meaning. These roles do not change the authenticated application's 8px `--radius-card` contract.
 
+## Token contract
+
+The surface ladder is ground → resting panel → recessed well, with `elevated`
+reserved for detached floating surfaces. State tints follow the surface they
+modify: mix primary ink into that surface at 4% for hover, 8% for selection,
+12% for pressed feedback, and 3% for disabled fill. The source surface classes
+own this derivation in `globals.css`. Selected and pressed labels use primary
+ink; dark chrome uses neutral tints rather than an accent wash.
+
+Every application-owned color token has exactly one class and purpose below.
+Light/dark values are the effective product defaults; state values show the
+panel context and rederive on input, well, track, rail and overlay surfaces.
+Public canvases and feature bands retain their separately scoped counterparts.
+`node frontend/scripts/audit-design-tokens.mjs` inventories values and current
+consumers without becoming another value authority.
+
+| Token | Class | Purpose | Position | Light | Dark |
+| --- | --- | --- | --- | --- | --- |
+| `--color-accent` | brand | Sole product action accent | Action layer | `#14532d` | `#76df9c` |
+| `--color-accent-active` | state-tint | Pressed solid action fill | Action layer | `#0b3d20` | `#b2f4c6` |
+| `--color-accent-border` | border | Boundary of a tinted action | Action layer | `#86efac` | `rgb(118 223 156 / 45%)` |
+| `--color-accent-fg` | ink | Label on solid accent | On accent fill | `#ffffff` | `#0d2618` |
+| `--color-accent-hover` | state-tint | Hovered solid action fill | Action layer | `#166534` | `#94ebb0` |
+| `--color-accent-soft` | state-tint | Quiet action or recommendation wash | Action on panel | `#f0fdf4` | `rgb(118 223 156 / 12%)` |
+| `--color-accent-subtle` | state-tint | Stronger action-selection wash | Action on panel | `#dcfce7` | `rgb(118 223 156 / 18%)` |
+| `--color-accent-text` | ink | Readable action/link text | On neutral surfaces | `#14532d` | `#86e5a6` |
+| `--color-active` | state-tint | Pressed neutral surface | Surface + 12% primary ink | `#e2e3e5` | `#303030` |
+| `--color-atmosphere-blue` | brand | atmosphere blue identity wash | Fixed mark or separate public decoration | `rgb(219 234 248 / 55%)` | `rgb(219 234 248 / 55%)` |
+| `--color-atmosphere-green` | brand | atmosphere green identity wash | Fixed mark or separate public decoration | `rgb(214 236 222 / 60%)` | `rgb(214 236 222 / 60%)` |
+| `--color-background` | surface | Page ground | Ground | `#f3f5f7` | `#111111` |
+| `--color-background-alt` | surface | Public alternating canvas or neutral inset | Ground/inset | `#f7f9fb` | `#1e1e1e` |
+| `--color-band-indigo` | surface | Public indigo feature canvas | Public ground | `#1b1938` | `#1b1938` |
+| `--color-band-teal` | surface | Public teal feature canvas | Public ground | `#0e3030` | `#0e3030` |
+| `--color-border` | border | Control, inset and overlay boundary | Between surfaces | `#d3dae4` | `#343434` |
+| `--color-border-bold` | border | Small choice-control boundary | Inside panel | `#8a95a5` | `#76766f` |
+| `--color-border-strong` | border | Emphasized or hovered boundary | Between surfaces | `#c3ccd9` | `#5c5c59` |
+| `--color-border-subtle` | border | Divider within one surface | Inside surface | `#e5e9ef` | `#272727` |
+| `--color-brand-claude` | brand | brand claude identity | Fixed mark or separate public decoration | `#d97757` | `#d97757` |
+| `--color-brand-forest` | brand | brand forest identity | Fixed mark or separate public decoration | `#16a34a` | `#16a34a` |
+| `--color-brand-gemini` | brand | brand gemini identity | Fixed mark or separate public decoration | `#4285f4` | `#4285f4` |
+| `--color-brand-google-blue` | brand | brand google blue identity | Fixed mark or separate public decoration | `#4285f4` | `#4285f4` |
+| `--color-brand-google-green` | brand | brand google green identity | Fixed mark or separate public decoration | `#34a853` | `#34a853` |
+| `--color-brand-google-red` | brand | brand google red identity | Fixed mark or separate public decoration | `#ea4335` | `#ea4335` |
+| `--color-brand-google-yellow` | brand | brand google yellow identity | Fixed mark or separate public decoration | `#fbbc05` | `#fbbc05` |
+| `--color-brand-openai` | brand | brand openai identity | Fixed mark or separate public decoration | `#10a37f` | `#10a37f` |
+| `--color-canvas-soft` | surface | Public alternating soft canvas | Public ground | `#f7f9fb` | `#161616` |
+| `--color-chart-1` | data-viz | Categorical chart series 1 | Observed data layer | `#16a34a` | `#76df9c` |
+| `--color-chart-2` | data-viz | Categorical chart series 2 | Observed data layer | `#00a9c5` | `#75cee1` |
+| `--color-chart-3` | data-viz | Categorical chart series 3 | Observed data layer | `#f59e0b` | `#efc676` |
+| `--color-chart-4` | data-viz | Categorical chart series 4 | Observed data layer | `#ff6e56` | `#f49a8b` |
+| `--color-chart-5` | data-viz | Categorical chart series 5 | Observed data layer | `#9acd32` | `#b8db73` |
+| `--color-chart-6` | data-viz | Categorical chart series 6 | Observed data layer | `#8b5cf6` | `#bca4f6` |
+| `--color-chart-7` | data-viz | Categorical chart series 7 | Observed data layer | `#14532d` | `#9ce5ba` |
+| `--color-chart-8` | data-viz | Categorical chart series 8 | Observed data layer | `#64748b` | `#a3a39d` |
+| `--color-citation-competitor` | data-viz | citation competitor evidence encoding | Observed data layer | `#00a9c5` | `#75cee1` |
+| `--color-citation-owned` | data-viz | citation owned evidence encoding | Observed data layer | `#c15f3c` | `#f49a8b` |
+| `--color-citation-third-party` | data-viz | citation third party evidence encoding | Observed data layer | `#6b6b72` | `#a3a39d` |
+| `--color-danger` | semantic-status | danger status mark | Labelled status layer | `#b42332` | `#f3979e` |
+| `--color-danger-bg` | semantic-status | danger bg | Labelled status layer | `#fff0f1` | `rgb(243 151 158 / 13%)` |
+| `--color-danger-border` | semantic-status | danger border | Labelled status layer | `#f2c6cb` | `rgb(243 151 158 / 38%)` |
+| `--color-danger-fg` | semantic-status | danger fg | Labelled status layer | `#ffffff` | `#350b10` |
+| `--color-danger-solid` | semantic-status | danger solid | Labelled status layer | `#b42332` | `#d95767` |
+| `--color-danger-solid-hover` | semantic-status | danger solid hover | Labelled status layer | `#8f1d29` | `#eb7481` |
+| `--color-danger-text` | semantic-status | danger text | Labelled status layer | `#b42332` | `#f6abb1` |
+| `--color-disabled` | state-tint | Disabled neutral control fill | Surface + 3% primary ink | `#f8f8f9` | `#20201f` |
+| `--color-elevated` | surface | Detached floating overlay | Above ground/panel | `#ffffff` | `#262626` |
+| `--color-foreground` | ink | Primary reading text | On neutral surfaces | `#0f172a` | `#d2d2d0` |
+| `--color-gsc-clicks` | data-viz | gsc clicks evidence encoding | Observed data layer | `#1a73e8` | `#8ab4f8` |
+| `--color-gsc-ctr` | data-viz | gsc ctr evidence encoding | Observed data layer | `#00897b` | `#4db6ac` |
+| `--color-gsc-impressions` | data-viz | gsc impressions evidence encoding | Observed data layer | `#673ab7` | `#c58af9` |
+| `--color-gsc-position` | data-viz | gsc position evidence encoding | Observed data layer | `#e65100` | `#ff8a65` |
+| `--color-hairline-warm` | border | Public editorial boundary | Public surfaces | `#e8e4dd` | `#343434` |
+| `--color-hover` | state-tint | Hovered neutral surface | Surface + 4% primary ink | `#f5f6f6` | `#212121` |
+| `--color-info` | semantic-status | info status mark | Labelled status layer | `#24476b` | `#8ad4e1` |
+| `--color-info-bg` | semantic-status | info bg | Labelled status layer | `#eef5fa` | `rgb(138 212 225 / 13%)` |
+| `--color-info-border` | semantic-status | info border | Labelled status layer | `#c8d9e8` | `rgb(138 212 225 / 38%)` |
+| `--color-info-text` | semantic-status | info text | Labelled status layer | `#24476b` | `#a5e2eb` |
+| `--color-input` | surface | Field interior | Inside panel boundary | `#ffffff` | `#141414` |
+| `--color-muted` | ink | Helpers, metadata and disabled labels | On reading surfaces | `#5b6678` | `#999996` |
+| `--color-neutral-bg` | surface | Neutral badge or progress track | Inside panel | `#e9edf1` | `#222222` |
+| `--color-on-inverse` | ink | Label on inverse surface | On surface-inverse | `#ffffff` | `#0d2618` |
+| `--color-overlay-scrim` | surface | Modal backdrop | Between ground and modal | `rgb(20 33 61 / 45%)` | `rgb(0 0 0 / 72%)` |
+| `--color-panel` | surface | Resting content or chrome | On ground | `#ffffff` | `#1a1a1a` |
+| `--color-panel-tonal` | surface | Tonal resting panel or control band | On ground/panel | `#f7f9fb` | `#1e1e1e` |
+| `--color-run-analyzing` | semantic-status | Persisted run analyzing mark | Labelled status layer | `#c15f3c` | `#efc676` |
+| `--color-run-cancelled` | semantic-status | Persisted run cancelled mark | Labelled status layer | `#6b6b72` | `#a3a39d` |
+| `--color-run-completed` | semantic-status | Persisted run completed mark | Labelled status layer | `#9acd32` | `#b8db73` |
+| `--color-run-draft` | semantic-status | Persisted run draft mark | Labelled status layer | `#6b6b72` | `#a3a39d` |
+| `--color-run-failed` | semantic-status | Persisted run failed mark | Labelled status layer | `#ff6e56` | `#f49a8b` |
+| `--color-run-partial` | semantic-status | Persisted run partial mark | Labelled status layer | `#f59e0b` | `#efc676` |
+| `--color-run-queued` | semantic-status | Persisted run queued mark | Labelled status layer | `#6b6b72` | `#a3a39d` |
+| `--color-run-running` | semantic-status | Persisted run running mark | Labelled status layer | `#00a9c5` | `#75cee1` |
+| `--color-score-good-ring` | data-viz | score good ring evidence encoding | Observed data layer | `#00a9c5` | `#75cee1` |
+| `--color-score-good-text` | data-viz | score good text evidence encoding | Observed data layer | `#155e75` | `#a5e2eb` |
+| `--color-score-high` | data-viz | score high evidence encoding | Observed data layer | `#9acd32` | `#b8db73` |
+| `--color-score-high-ring` | data-viz | score high ring evidence encoding | Observed data layer | `#9acd32` | `#b8db73` |
+| `--color-score-high-text` | data-viz | score high text evidence encoding | Observed data layer | `#3f6212` | `#a4edbd` |
+| `--color-score-low-ring` | data-viz | score low ring evidence encoding | Observed data layer | `#ff6e56` | `#f49a8b` |
+| `--color-score-low-text` | data-viz | score low text evidence encoding | Observed data layer | `#9a3412` | `#f6abb1` |
+| `--color-score-mid-ring` | data-viz | score mid ring evidence encoding | Observed data layer | `#f59e0b` | `#efc676` |
+| `--color-score-mid-text` | data-viz | score mid text evidence encoding | Observed data layer | `#b45309` | `#f7d99e` |
+| `--color-secondary` | ink | Secondary reading text | On neutral surfaces | `#334155` | `#c0c0be` |
+| `--color-selected` | state-tint | Selected neutral surface | Surface + 8% primary ink | `#ececee` | `#292929` |
+| `--color-selection` | state-tint | Native text selection highlight | On reading surface | `#86efac` | `rgb(118 223 156 / 35%)` |
+| `--color-selection-fg` | ink | Text within native selection | On selection highlight | `#0f172a` | `#faf9f5` |
+| `--color-sentiment-negative` | data-viz | sentiment negative evidence encoding | Observed data layer | `#ff6e56` | `#f49a8b` |
+| `--color-sentiment-negative-bg` | data-viz | sentiment negative bg evidence encoding | Observed data layer | `#fff3f0` | `rgb(243 151 158 / 13%)` |
+| `--color-sentiment-negative-text` | data-viz | sentiment negative text evidence encoding | Observed data layer | `#9a3412` | `#f6abb1` |
+| `--color-sentiment-neutral` | data-viz | sentiment neutral evidence encoding | Observed data layer | `#6b6b72` | `#a3a39d` |
+| `--color-sentiment-neutral-bg` | data-viz | sentiment neutral bg evidence encoding | Observed data layer | `#f4f4f1` | `#222222` |
+| `--color-sentiment-neutral-text` | data-viz | sentiment neutral text evidence encoding | Observed data layer | `#3a3a40` | `#c0c0be` |
+| `--color-sentiment-positive` | data-viz | sentiment positive evidence encoding | Observed data layer | `#9acd32` | `#b8db73` |
+| `--color-sentiment-positive-bg` | data-viz | sentiment positive bg evidence encoding | Observed data layer | `#f4f8ec` | `rgb(128 223 162 / 13%)` |
+| `--color-sentiment-positive-text` | data-viz | sentiment positive text evidence encoding | Observed data layer | `#3f6212` | `#a4edbd` |
+| `--color-shell` | surface | Workspace/focused-flow ground | Ground | `#f3f5f7` | `#111111` |
+| `--color-shell-alt` | surface | Stronger shell inset | Inside ground | `#e9edf1` | `#161616` |
+| `--color-sidebar` | surface | Navigation rail | Below ground | `#e9edf1` | `#0a0a0a` |
+| `--color-success` | semantic-status | success status mark | Labelled status layer | `#166534` | `#80dfa2` |
+| `--color-success-bg` | semantic-status | success bg | Labelled status layer | `#edf7ed` | `rgb(128 223 162 / 13%)` |
+| `--color-success-text` | semantic-status | success text | Labelled status layer | `#166534` | `#a4edbd` |
+| `--color-surface-inverse` | surface | Inverse floating tooltip surface | Floating overlay | `#14532d` | `#76df9c` |
+| `--color-tile-blue` | brand | tile blue identity | Fixed mark or separate public decoration | `#e0f2fe` | `#e0f2fe` |
+| `--color-tile-blue-ink` | brand | tile blue ink identity | Fixed mark or separate public decoration | `#0284c7` | `#0284c7` |
+| `--color-tile-green` | brand | tile green identity | Fixed mark or separate public decoration | `#dcfce7` | `#dcfce7` |
+| `--color-tile-green-ink` | brand | tile green ink identity | Fixed mark or separate public decoration | `#16a34a` | `#16a34a` |
+| `--color-tile-indigo` | brand | tile indigo identity | Fixed mark or separate public decoration | `#ede9fe` | `#ede9fe` |
+| `--color-tile-indigo-ink` | brand | tile indigo ink identity | Fixed mark or separate public decoration | `#4f46e5` | `#4f46e5` |
+| `--color-tile-purple` | brand | tile purple identity | Fixed mark or separate public decoration | `#ffede8` | `#ffede8` |
+| `--color-tile-purple-ink` | brand | tile purple ink identity | Fixed mark or separate public decoration | `#ea580c` | `#ea580c` |
+| `--color-track` | surface | Recessed segmented-control track | Inside control | `#e6eaf0` | `#141414` |
+| `--color-warning` | semantic-status | warning status mark | Labelled status layer | `#8a4600` | `#f2c879` |
+| `--color-warning-bg` | semantic-status | warning bg | Labelled status layer | `#fff5db` | `rgb(242 200 121 / 13%)` |
+| `--color-warning-text` | semantic-status | warning text | Labelled status layer | `#8a4600` | `#f7d99e` |
+| `--color-well` | surface | Recessed evidence or inset | Inside panel | `#e9edf1` | `#0e0e0e` |
+
 ## Typography
 
 Sora headings use normal letter spacing, without custom tracking. The homepage H1 steps down by 2px at the mobile breakpoint (540px and below).

@@ -65,7 +65,7 @@ export function CandidateReview({
 
   return (
     <section aria-labelledby="candidate-review-heading" className="grid min-w-0 gap-3">
-      <div className="bg-elevated sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 py-2">
+      <div className="bg-panel sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 py-2">
         <h3 id="candidate-review-heading" className={textRole('itemTitle')}>
           Review {plural(candidates.length, 'suggestion')}
         </h3>

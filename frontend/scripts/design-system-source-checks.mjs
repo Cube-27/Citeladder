@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { visitorKeys } from 'oxc-parser';
+import { tokenInventory } from './audit-design-tokens.mjs';
 export { textContrastViolations } from './design-system-contrast.mjs';
 
 import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './source-ast.mjs';
@@ -89,6 +90,45 @@ export function radiusRoleAdvisories(source, label, ownsProductUi) {
     ].some(([, role]) => role !== expected);
     return mismatch ? [`${label}:${line}: review ${tag} radius; family role is ${expected}`] : [];
   });
+}
+
+/** The parsed contract assigns each live token one intentional role. */
+export function tokenContractViolations(source, document) {
+  const classes = new Set([
+    'surface',
+    'state-tint',
+    'ink',
+    'border',
+    'semantic-status',
+    'brand',
+    'data-viz',
+  ]);
+  const entries = document
+    .split('\n')
+    .filter((line) => /^\| `--color-/.test(line))
+    .map((line) =>
+      line
+        .split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim().replaceAll('`', '')),
+    );
+  const live = new Set(tokenInventory(source).map(({ token }) => token));
+  const violations = [];
+  for (const token of live) {
+    const rows = entries.filter(([name]) => name === token);
+    if (
+      rows.length !== 1 ||
+      !classes.has(rows[0]?.[1]) ||
+      rows[0]?.slice(2).some((cell) => !cell)
+    ) {
+      violations.push(`docs/design.md: ${token} needs one complete token-contract row`);
+    }
+  }
+  for (const [token] of entries) {
+    if (!live.has(token))
+      violations.push(`docs/design.md: retired token ${token} remains in the contract`);
+  }
+  return violations;
 }
 /**
  * Roles the website stylesheet must define.
@@ -796,7 +836,6 @@ export function productContractViolations(root) {
     '--color-well',
     '--color-active',
     '--color-sidebar',
-    '--color-action',
     '--color-accent',
     '--color-selection',
     '--color-selection-fg',

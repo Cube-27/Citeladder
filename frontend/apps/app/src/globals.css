@@ -16,47 +16,18 @@
     var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-heading), sans-serif;
 
-  /* Palette layer. Product code consumes the semantic aliases below. */
-  --color-gray-0: #ffffff;
-  --color-gray-50: #f7f9fc;
-  --color-gray-100: #eef1f5;
-  --color-gray-200: #e4e7ec;
-  --color-gray-300: #cbd2dc;
-  --color-gray-400: #8793a3;
-  --color-gray-500: #667085;
-  --color-gray-600: #596579;
-  --color-gray-700: #30313d;
-  --color-gray-800: #1d2939;
-  --color-gray-900: #101828;
-  --color-cyan-50: #edf7f7;
-  --color-cyan-100: #ddf1f2;
-  --color-cyan-500: #00a9c5;
-  --color-cyan-700: #155e75;
-  --color-coral-50: #fff3f0;
-  --color-coral-100: #ffe4de;
-  --color-coral-500: #ff6e56;
-  --color-coral-700: #9a3412;
-  --color-lime-50: #f4f8ec;
-  --color-lime-100: #e6f0d1;
-  --color-lime-500: #9acd32;
-  --color-lime-700: #3f6212;
-  --color-amber-50: #fffbeb;
-  --color-amber-100: #fde68a;
-  --color-amber-500: #f59e0b;
-  --color-amber-700: #b45309;
-
   --color-background: #f3f5f7;
   --color-background-alt: #f7f9fb;
   --color-panel: #ffffff;
   --color-panel-tonal: #f7f9fb;
   --color-elevated: #ffffff;
   --color-well: #e9edf1;
-  --color-active: #eef1f5;
-  /* Selection. A segmented track and the selected item on it must differ at
-     a glance, so the pair is its own role rather than borrowed surfaces:
-     `track` is the recessed groove, `selected` the raised paper on it. */
+  --color-hover: color-mix(in srgb, var(--color-panel), var(--color-foreground) 4%);
+  --color-selected: color-mix(in srgb, var(--color-panel), var(--color-foreground) 8%);
+  --color-active: color-mix(in srgb, var(--color-panel), var(--color-foreground) 12%);
+  --color-disabled: color-mix(in srgb, var(--color-panel), var(--color-foreground) 3%);
+  /* Recessed selection track; state tints follow their enclosing surface. */
   --color-track: #e6eaf0;
-  --color-selected: #ffffff;
   --color-input: #ffffff;
   /* The elevation ladder is rail → ground → paper: the sidebar sits one step
      below the shell ground, and cards and tables (--color-panel) sit one step
@@ -76,9 +47,7 @@
      `[data-citeladder-section='indigo']` and `='teal'` scopes below — so
      nothing inside those bands names a dark colour itself. */
   --color-band-indigo: #1b1938;
-  --color-band-indigo-deep: #0e0c1f;
   --color-band-teal: #0e3030;
-  --color-band-teal-mid: #155555;
 
   /* The marketing canvases (docs/design.md §Marketing): the barely warm
      off-white for alternating body bands, warm hairlines for white surfaces,
@@ -87,9 +56,6 @@
      they stay out of the status ladder. */
   --color-canvas-soft: #f7f9fb;
   --color-hairline-warm: #e8e4dd;
-  --color-hairline-dark: #3f3a52;
-  --color-violet-soft: #c9b4fa;
-  --color-violet-soft-strong: #d8c9fb;
   --color-atmosphere-green: rgb(214 236 222 / 60%);
   --color-atmosphere-blue: rgb(219 234 248 / 55%);
 
@@ -115,15 +81,10 @@
   --color-border-strong: #c3ccd9;
   --color-border-bold: #8a95a5;
 
-  /* Three inks, clearly apart: `foreground` for what the reader came for
-     (titles, values), `secondary` for sentences, `muted` for labels and
-     metadata. The old fourth rung (`subtle`) sat darker than `muted`, so the
-     ladder had no order; it now resolves to `muted`. */
+  /* The three reading inks: primary, secondary and muted. */
   --color-foreground: #0f172a;
   --color-secondary: #334155;
   --color-muted: #5b6678;
-  --color-subtle: var(--color-muted);
-  --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
 
   /* Forest uses the deep shade for white-on-colour controls and text. The
@@ -136,25 +97,15 @@
   --color-accent-subtle: #dcfce7;
   --color-accent-soft: #f0fdf4;
   --color-accent-border: #86efac;
-  --color-recommendation: var(--color-accent-soft);
   --color-accent-text: #14532d;
   --color-selection: #86efac;
   --color-selection-fg: #0f172a;
 
-  --color-action: #14532d;
-  --color-action-hover: #166534;
-  --color-action-active: #0b3d20;
-  --color-action-fg: #ffffff;
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
   --color-brand-openai: #10a37f;
   --color-brand-gemini: #4285f4;
   --color-brand-claude: #d97757;
-  --color-brand-perplexity: #20808d;
-  --color-brand-copilot-violet: #7f52ff;
-  --color-brand-copilot-blue: #1a73e8;
-  --color-brand-copilot-cyan: #00a4ef;
-  --color-brand-copilot-green: #35c759;
 
   --color-brand-google-blue: #4285f4;
   --color-brand-google-green: #34a853;
@@ -164,11 +115,9 @@
   /* Status — app-only evidence families. */
   --color-success: #166534;
   --color-success-bg: #edf7ed;
-  --color-success-border: #cce8cc;
   --color-success-text: #166534;
   --color-warning: #8a4600;
   --color-warning-bg: #fff5db;
-  --color-warning-border: #f0dfab;
   --color-warning-text: #8a4600;
   --color-danger: #b42332;
   --color-danger-solid: #b42332;
@@ -197,12 +146,6 @@
   --color-tile-purple-ink: #ea580c;
   --color-tile-green: #dcfce7;
   --color-tile-green-ink: #16a34a;
-  /* Marketing preview-only states preserve the authored illustration palette
-     without leaking raw framework colours into component code. */
-  --color-preview-success-dot: oklch(69.6% 0.17 162.48);
-  --color-preview-success: oklch(59.6% 0.145 163.225);
-  --color-preview-success-strong: oklch(50.8% 0.118 165.612);
-
   --color-sentiment-positive: #9acd32;
   --color-sentiment-positive-bg: #f4f8ec;
   --color-sentiment-positive-text: #3f6212;
@@ -217,7 +160,6 @@
   --color-citation-owned: #c15f3c;
   --color-citation-competitor: #00a9c5;
   --color-citation-third-party: #6b6b72;
-  --color-citation-third-party-text: #3a3a40;
 
   --color-run-draft: #6b6b72;
   --color-run-queued: #6b6b72;
@@ -239,8 +181,7 @@
   --color-score-high-text: #3f6212;
   --color-score-high-ring: #9acd32;
 
-  /* Charts keep categorical identities, with forest as the first product
-     series. Generic series alias the chart ladder so the two cannot drift. */
+  /* Charts keep categorical identities, with forest as the first product series. */
   --color-chart-1: #16a34a;
   --color-chart-2: #00a9c5;
   --color-chart-3: #f59e0b;
@@ -253,12 +194,6 @@
   --color-gsc-impressions: #673ab7;
   --color-gsc-ctr: #00897b;
   --color-gsc-position: #e65100;
-  --color-series-1: var(--color-chart-1);
-  --color-series-2: var(--color-chart-2);
-  --color-series-3: var(--color-chart-3);
-  --color-series-4: var(--color-chart-4);
-  --color-series-5: var(--color-chart-5);
-  --color-series-other: var(--color-chart-8);
   --color-overlay-scrim: rgb(20 33 61 / 45%);
 
   /* Tailwind's default radius scale is cleared so the ladder cannot be
@@ -318,6 +253,7 @@
 
 :root {
   color-scheme: light;
+  --state-surface: var(--color-panel);
   --sidebar-width: 240px;
   --compact-topbar-height: 56px;
   --sticky-header-offset: 0px;
@@ -385,8 +321,26 @@
   --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
   --skeleton-base: #eef2f6;
   --skeleton-highlight: #ffffff;
-  --value-placeholder: var(--color-subtle);
+  --value-placeholder: var(--color-muted);
 }
+
+/* State tints are derived from the surface receiving the interaction. */
+:where(.bg-background, .bg-panel, .bg-panel-tonal, .bg-background-alt, .bg-well,
+  .bg-input, .bg-elevated, .bg-sidebar, .bg-track) {
+  --color-hover: color-mix(in srgb, var(--state-surface), var(--color-foreground) 4%);
+  --color-selected: color-mix(in srgb, var(--state-surface), var(--color-foreground) 8%);
+  --color-active: color-mix(in srgb, var(--state-surface), var(--color-foreground) 12%);
+  --color-disabled: color-mix(in srgb, var(--state-surface), var(--color-foreground) 3%);
+}
+.bg-background { --state-surface: var(--color-background); }
+.bg-panel { --state-surface: var(--color-panel); }
+.bg-panel-tonal { --state-surface: var(--color-panel-tonal); }
+.bg-background-alt { --state-surface: var(--color-background-alt); }
+.bg-well { --state-surface: var(--color-well); }
+.bg-input { --state-surface: var(--color-input); }
+.bg-elevated { --state-surface: var(--color-elevated); }
+.bg-sidebar { --state-surface: var(--color-sidebar); }
+.bg-track { --state-surface: var(--color-track); }
 
 .cl-landing {
   --cl-paper: var(--color-panel);
@@ -466,12 +420,10 @@
   --color-foreground: #f4f3fa;
   --color-secondary: #d6d3e8;
   --color-muted: #a5a1c2;
-  --color-subtle: #8d89ad;
   --color-panel: #242244;
   --color-elevated: #242244;
   --color-well: #2b2950;
   --color-background-alt: #2b2950;
-  --color-active: #34325c;
   --color-input: #242244;
   --color-border-subtle: #34325c;
   --color-border: #43406e;
@@ -485,10 +437,6 @@
   --color-accent-soft: rgb(201 180 250 / 8%);
   --color-accent-border: rgb(201 180 250 / 30%);
   --color-selection: rgb(201 180 250 / 30%);
-  --color-action: #c9b4fa;
-  --color-action-hover: #d8c9fb;
-  --color-action-active: #e4dafc;
-  --color-action-fg: #1b1938;
   --skeleton-base: #2b2950;
   --skeleton-highlight: #34325c;
 }
@@ -498,12 +446,10 @@
   --color-foreground: #eef4f2;
   --color-secondary: #cfdedb;
   --color-muted: #9db8b2;
-  --color-subtle: #8aa6a0;
   --color-panel: #143b3b;
   --color-elevated: #143b3b;
   --color-well: #1a4545;
   --color-background-alt: #1a4545;
-  --color-active: #205050;
   --color-input: #143b3b;
   --color-border-subtle: #205050;
   --color-border: #2a5b5b;
@@ -517,10 +463,6 @@
   --color-accent-soft: rgb(238 244 242 / 8%);
   --color-accent-border: rgb(238 244 242 / 30%);
   --color-selection: rgb(255 255 255 / 25%);
-  --color-action: #ffffff;
-  --color-action-hover: #eef1ee;
-  --color-action-active: #dfe4e0;
-  --color-action-fg: #0e3030;
   --skeleton-base: #1a4545;
   --skeleton-highlight: #205050;
 }
@@ -1041,18 +983,14 @@ input:-webkit-autofill:focus {
   --color-foreground: #0f172a;
   --color-secondary: #1e293b;
   --color-muted: #3a4658;
-  --color-subtle: #4b5a6e;
   --color-background-alt: #f8fafc;
   --color-canvas-soft: #f7f9fb;
-  --color-active: #f1f5f9;
   --color-border: #e2e8f0;
   --color-border-subtle: #f1f5f9;
   --color-border-strong: #cbd5e1;
   --color-hairline-warm: #e2e8f0;
   --color-band-indigo: #131028;
-  --color-band-indigo-deep: #0d0a1c;
   --color-band-teal: #0c2626;
-  --color-band-teal-mid: #114747;
 }
 
 /* Product light inherits the white-paper palette from @theme. Public
@@ -1089,7 +1027,6 @@ input:-webkit-autofill:focus {
   --color-panel-tonal: #1e1e1e;
   --color-elevated: #262626;
   --color-well: #0e0e0e;
-  --color-active: #232323;
   --color-input: #141414;
   --color-sidebar: #0a0a0a;
   --color-shell: #111111;
@@ -1099,9 +1036,7 @@ input:-webkit-autofill:focus {
   --color-foreground: #d2d2d0;
   --color-secondary: #c0c0be;
   --color-muted: #999996;
-  --color-subtle: var(--color-muted);
   --color-track: #141414;
-  --color-selected: #333333;
   --color-border-subtle: #272727;
   --color-border: #343434;
   --color-border-strong: #5c5c59;
@@ -1117,20 +1052,13 @@ input:-webkit-autofill:focus {
   --color-accent-border: rgb(118 223 156 / 45%);
   --color-selection: rgb(118 223 156 / 35%);
   --color-selection-fg: #faf9f5;
-  --color-action: var(--color-accent);
-  --color-action-hover: var(--color-accent-hover);
-  --color-action-active: var(--color-accent-active);
-  --color-action-fg: var(--color-accent-fg);
-  --color-recommendation: var(--color-accent-soft);
   --color-surface-inverse: #76df9c;
   --color-on-inverse: #0d2618;
   --color-success: #80dfa2;
   --color-success-bg: rgb(128 223 162 / 13%);
-  --color-success-border: rgb(128 223 162 / 38%);
   --color-success-text: #a4edbd;
   --color-warning: #f2c879;
   --color-warning-bg: rgb(242 200 121 / 13%);
-  --color-warning-border: rgb(242 200 121 / 38%);
   --color-warning-text: #f7d99e;
   --color-danger: #f3979e;
   --color-danger-solid: #d95767;
@@ -1156,7 +1084,6 @@ input:-webkit-autofill:focus {
   --color-citation-owned: var(--color-chart-4);
   --color-citation-competitor: var(--color-chart-2);
   --color-citation-third-party: var(--color-chart-8);
-  --color-citation-third-party-text: var(--color-secondary);
   --color-run-draft: var(--color-chart-8);
   --color-run-queued: var(--color-chart-8);
   --color-run-running: var(--color-chart-2);

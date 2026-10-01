@@ -12,12 +12,7 @@ const LIGHT_SURFACE_TOKENS = [
   '--color-active',
   '--color-sidebar',
 ];
-const NEUTRAL_TEXT_TOKENS = [
-  '--color-foreground',
-  '--color-secondary',
-  '--color-muted',
-  '--color-subtle',
-];
+const NEUTRAL_TEXT_TOKENS = ['--color-foreground', '--color-secondary', '--color-muted'];
 
 const isHex = (value) => /^#[0-9a-f]{6}$/i.test(value ?? '');
 
@@ -26,7 +21,7 @@ function escapeRegExp(value) {
 }
 
 /** Resolve inherited tokens and repeated scoped overrides before checking contrast. */
-function resolvePalette(source, selector) {
+export function resolvePalette(source, selector) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const declarations = (scope) => {
     const blocks = clean.matchAll(new RegExp(escapeRegExp(scope) + '\\s*\\{([^{}]*)\\}', 'g'));
@@ -39,6 +34,7 @@ function resolvePalette(source, selector) {
   };
   const values = new Map([
     ...declarations('@theme'),
+    ...declarations(':root'),
     ...(selector === ":root[data-theme='dark']"
       ? declarations(':root:not([data-public-surface])')
       : []),
@@ -49,7 +45,28 @@ function resolvePalette(source, selector) {
     seen.add(token);
     const value = values.get(token);
     const alias = value?.match(/^var\((--[\w-]+)\)$/)?.[1];
-    return alias ? resolve(alias, seen) : value;
+    if (alias) return resolve(alias, seen);
+    const mix = value?.match(/^color-mix\(in srgb, var\((--[\w-]+)\), var\((--[\w-]+)\) (\d+)%\)$/);
+    if (!mix) return value;
+    const first = resolve(mix[1], new Set(seen));
+    const second = resolve(mix[2], new Set(seen));
+    if (!isHex(first) || !isHex(second)) return undefined;
+    const ratio = Number(mix[3]) / 100;
+    return (
+      '#' +
+      first
+        .slice(1)
+        .match(/../g)
+        .map((channel, index) =>
+          Math.round(
+            Number.parseInt(channel, 16) * (1 - ratio) +
+              Number.parseInt(second.slice(1).match(/../g)[index], 16) * ratio,
+          )
+            .toString(16)
+            .padStart(2, '0'),
+        )
+        .join('')
+    );
   };
   return new Map([...values.keys()].map((token) => [token, resolve(token)]));
 }
@@ -71,17 +88,11 @@ function contrastRatio(first, second) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-/** Pairs the design system deliberately keeps off-limits for body text. */
-const isExemptPair = (textToken, surfaceToken) =>
-  textToken === '--color-subtle' &&
-  ['--color-panel-tonal', '--color-active'].includes(surfaceToken);
-
 function neutralTextViolations(source, scope, cssLabel) {
   const palette = resolvePalette(source, scope);
   const violations = [];
   for (const textToken of NEUTRAL_TEXT_TOKENS) {
     for (const surfaceToken of LIGHT_SURFACE_TOKENS) {
-      if (isExemptPair(textToken, surfaceToken)) continue;
       const ink = palette.get(textToken);
       const surface = palette.get(surfaceToken);
       if (!isHex(ink) || !isHex(surface)) {
