@@ -298,6 +298,7 @@ export async function prepareAudit(
     seed,
     systemInstruction,
     recoveryDeadlineHours: search.recoveryDeadlineHours,
+    searchTimeoutSeconds: search.timeoutSeconds,
   };
 }
 /** New audits use a versioned seed order; historical audits keep their persisted positions. */

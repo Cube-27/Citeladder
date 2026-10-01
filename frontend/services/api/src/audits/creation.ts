@@ -190,6 +190,7 @@ function frozenSearch(plan: FrozenAudit, engine: Engine) {
   if (!['google_ai_overview', 'chatgpt_search', 'gemini_consumer'].includes(engine)) return null;
   const scraper = engine === 'chatgpt_search' || engine === 'gemini_consumer';
   return {
+    timeout_seconds: plan.searchTimeoutSeconds,
     location_code: plan.project.serp_location_code,
     language_code: plan.project.serp_language_code || searchPolicy.constants.default_language_code,
     device: plan.project.serp_device || searchPolicy.constants.default_device,

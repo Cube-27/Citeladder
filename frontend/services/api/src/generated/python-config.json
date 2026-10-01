@@ -1830,6 +1830,17 @@
     "history_window_capability_key": "history_window"
   },
   "providers": {
+    "errors": {
+      "timeout": "timeout",
+      "connection": "connection",
+      "rate_limit": "rate_limit",
+      "server": "server_error",
+      "client": "client_error",
+      "auth": "auth_failure",
+      "parse": "parse_error",
+      "unknown": "unknown",
+      "invalid_surface": "invalid_surface"
+    },
     "capacity": [
       {
         "logical_engine": "claude",
@@ -1896,6 +1907,79 @@
         "max_concurrency": 1
       }
     ],
+    "platform_credentials": {
+      "openai": {
+        "reference": {
+          "env": [
+            "PROVIDER_PLATFORM_OPENAI_CREDENTIAL_REF"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "secret": {
+          "env": [
+            "PROVIDER_PLATFORM_OPENAI_API_KEY"
+          ],
+          "type": "str",
+          "default": ""
+        }
+      },
+      "google": {
+        "reference": {
+          "env": [
+            "PROVIDER_PLATFORM_GOOGLE_CREDENTIAL_REF"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "secret": {
+          "env": [
+            "PROVIDER_PLATFORM_GOOGLE_API_KEY"
+          ],
+          "type": "str",
+          "default": ""
+        }
+      },
+      "anthropic": {
+        "reference": {
+          "env": [
+            "PROVIDER_PLATFORM_ANTHROPIC_CREDENTIAL_REF"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "secret": {
+          "env": [
+            "PROVIDER_PLATFORM_ANTHROPIC_API_KEY"
+          ],
+          "type": "str",
+          "default": ""
+        }
+      }
+    },
+    "platform_dataforseo": {
+      "platform_credential_ref": {
+        "env": [
+          "DATAFORSEO_PLATFORM_CREDENTIAL_REF"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "api_login": {
+        "env": [
+          "DATAFORSEO_API_LOGIN"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "api_password": {
+        "env": [
+          "DATAFORSEO_API_PASSWORD"
+        ],
+        "type": "str",
+        "default": ""
+      }
+    },
     "routes": {
       "chatgpt": {
         "logical_engine": "chatgpt",

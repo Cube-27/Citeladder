@@ -7,6 +7,11 @@ from app.core.config import app_models, dataforseo, provider_catalog
 
 def provider_policy(setting):
     return {
+        "errors": {
+            name.removeprefix("ERROR_").lower(): value
+            for name, value in vars(provider_catalog).items()
+            if name.startswith("ERROR_") and isinstance(value, str)
+        },
         "capacity": [
             {
                 "logical_engine": engine,
@@ -18,6 +23,23 @@ def provider_policy(setting):
                 transport,
             ), policy in provider_catalog.ROUTE_CAPACITY_POLICIES.items()
         ],
+        "platform_credentials": {
+            transport: {
+                "reference": setting(
+                    f"platform_{transport}_credential_ref",
+                    provider_catalog.ProviderCatalogSettings,
+                ),
+                "secret": setting(
+                    f"platform_{transport}_api_key",
+                    provider_catalog.ProviderCatalogSettings,
+                ),
+            }
+            for transport in ("openai", "google", "anthropic")
+        },
+        "platform_dataforseo": {
+            name: setting(name, dataforseo.DataForSeoSettings)
+            for name in ("platform_credential_ref", "api_login", "api_password")
+        },
         "routes": {
             engine: dataclasses.asdict(route)
             for engine, route in provider_catalog.MEASUREMENT_ROUTES.items()
