@@ -79,7 +79,10 @@ export class AnalyticsWorker {
 
   /** Claim one row of a TypeScript-owned kind and run it; the count run. */
   async runOnce(): Promise<number> {
-    await compensateTerminalTasks(this.#db);
+    // Compensation is secondary: its failure must not block claiming new work.
+    await compensateTerminalTasks(this.#db).catch((error: unknown) =>
+      logger.exception('analytics_terminal_compensation_failed', error),
+    );
     const rows = await this.#queue.claim({
       owner: this.owner,
       kinds: policy.analytics.ts_owned_task_kinds,

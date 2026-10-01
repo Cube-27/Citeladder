@@ -94,6 +94,7 @@ from app.core.config.analytics import (
     ANALYTICS_SNAPSHOT_WINDOW_DAYS,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
     ANALYTICS_TERMINAL_COMPENSATION_BATCH,
+    ANALYTICS_TERMINAL_COMPENSATION_MAX_FAILURES,
     ANALYTICS_TS_OWNED_TASK_KINDS,
     ERROR_EXECUTOR_NOT_WIRED,
     MATCH_SIGNAL_REFERRER,
@@ -614,6 +615,9 @@ def _analytics_policy() -> dict[str, Any]:
         "executor_not_wired_error": ERROR_EXECUTOR_NOT_WIRED,
         "retry_error": ERROR_UNKNOWN,
         "terminal_compensation_batch": ANALYTICS_TERMINAL_COMPENSATION_BATCH,
+        "terminal_compensation_max_failures": (
+            ANALYTICS_TERMINAL_COMPENSATION_MAX_FAILURES
+        ),
     }
 
 

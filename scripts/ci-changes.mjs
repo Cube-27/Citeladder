@@ -54,6 +54,7 @@ function isApiService(path) {
     (path.startsWith('backend/app/core/') && path.endsWith('.py')) ||
     path === 'backend/app/domain/workspaces/policy.py' ||
     path === 'backend/scripts/export_ts_platform.py' ||
+    /^backend\/scripts\/(?:ts_platform_[a-z_]+|[a-z_]+_policy)\.py$/u.test(path) ||
     path === 'backend/pyproject.toml' ||
     path === 'backend/uv.lock'
   );

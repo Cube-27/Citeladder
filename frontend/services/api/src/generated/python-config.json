@@ -564,7 +564,8 @@
     },
     "executor_not_wired_error": "executor_not_wired",
     "retry_error": "unknown",
-    "terminal_compensation_batch": 100
+    "terminal_compensation_batch": 100,
+    "terminal_compensation_max_failures": 5
   },
   "task_queue": {
     "statuses": {

@@ -3,7 +3,7 @@ import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 import { assessArchetype } from './archetypes.ts';
-import { canonicalIdentity } from './url-identity.ts';
+import { canonicalUrl } from './url-identity.ts';
 
 export type ArchitecturePage = {
   id: string;
@@ -100,11 +100,7 @@ function depthSummary(pages: ArchitecturePage[]) {
   };
 }
 function absolute(raw: unknown, base: string) {
-  try {
-    return typeof raw === 'string' && raw ? canonicalIdentity(raw, base).url : '';
-  } catch {
-    return '';
-  }
+  return canonicalUrl(raw, base) ?? '';
 }
 function relationshipUrls(page: ArchitecturePage) {
   const breadcrumbs = record(page.facts.commerce).breadcrumb_links;

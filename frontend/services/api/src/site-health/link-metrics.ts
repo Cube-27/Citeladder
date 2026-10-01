@@ -98,27 +98,30 @@ function resolveMaxAttempts() {
 }
 export async function persistLinkMetrics(db: Database, crawl: Crawl) {
   const metrics = buildLinkMetrics(await linkPages(db, crawl), crawl.root_url);
+  const rows = metrics.map((metric) => ({
+    ...metric,
+    id: randomUUID(),
+    workspace_id: crawl.workspace_id,
+    project_id: crawl.project_id,
+    crawl_id: crawl.id,
+    extractor_version: crawl.extractor_version,
+    formula_version: policy.site_health.link_metrics.formula_version,
+    created_at: new Date(),
+    anchor_diagnostics: JSON.stringify(metric.anchor_diagnostics),
+    top_inbound: JSON.stringify(metric.top_inbound),
+    top_outbound: JSON.stringify(metric.top_outbound),
+  }));
+  // Chunked only to stay under PostgreSQL's 65535 bind-parameter limit.
+  const chunk = rows.length ? Math.floor(65_535 / Object.keys(rows[0]!).length) : 1;
   let inserted = 0;
-  for (const metric of metrics) {
-    const row = await db
+  for (let start = 0; start < rows.length; start += chunk) {
+    const written = await db
       .insertInto('site_page_link_metrics')
-      .values({
-        ...metric,
-        id: randomUUID(),
-        workspace_id: crawl.workspace_id,
-        project_id: crawl.project_id,
-        crawl_id: crawl.id,
-        extractor_version: crawl.extractor_version,
-        formula_version: policy.site_health.link_metrics.formula_version,
-        created_at: new Date(),
-        anchor_diagnostics: JSON.stringify(metric.anchor_diagnostics),
-        top_inbound: JSON.stringify(metric.top_inbound),
-        top_outbound: JSON.stringify(metric.top_outbound),
-      })
+      .values(rows.slice(start, start + chunk))
       .onConflict((conflict) => conflict.constraint('uq_site_page_link_metric').doNothing())
       .returning('id')
-      .executeTakeFirst();
-    if (row) inserted += 1;
+      .execute();
+    inserted += written.length;
   }
   await enqueueArchitecture(db, crawl);
   return inserted;

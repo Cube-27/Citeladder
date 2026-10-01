@@ -4,6 +4,7 @@ import { record, strings } from '../db/json.ts';
 import { routePageKind } from '../site-health/routes.ts';
 import type { ExtractedPage } from './extract.ts';
 import { publicUrl } from '../projects/safe-fetch.ts';
+import { aliasOffset, normalizeAlias } from '../analysis/aliases.ts';
 
 const p = policy.source_pages;
 type Passage = { text: string; char_start: number; char_end: number; entity_ref: string };
@@ -16,12 +17,6 @@ export type Presence = {
   first_offset: number | null;
   passage_refs: number[];
 };
-const normalized = (s: string) =>
-  s
-    .toLowerCase()
-    .replaceAll('&', ' and ')
-    .replaceAll(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
 export function urlFormat(value: string): { format: string; method: string } {
   let url: URL;
   try {
@@ -84,7 +79,7 @@ function entity(
         text: text.slice(start, end).trim(),
         char_start: start,
         char_end: end,
-        entity_ref: `${kind}:${normalized(name)}`,
+        entity_ref: `${kind}:${normalizeAlias(name)}`,
       });
     }
     return {
@@ -97,10 +92,11 @@ function entity(
       passage_refs: refs,
     };
   }
-  const haystack = ` ${normalized(text)} `;
-  const offset = candidates
-    .map((alias) => haystack.indexOf(` ${normalized(alias)} `))
-    .find((index) => index >= 0);
+  // Spelling variants ("Best&Less", "BestandLess") offset into normalized text,
+  // which cannot be quoted, so a hit is ambiguous rather than present.
+  const haystack = normalizeAlias(text);
+  const offsets = candidates.flatMap((alias) => aliasOffset(haystack, alias) ?? []);
+  const offset = offsets.length ? Math.min(...offsets) : undefined;
   const sufficient =
     page.facts.parsed && !page.facts.text_truncated && page.extracted_chars >= p.min_coverage_chars;
   return {

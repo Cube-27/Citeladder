@@ -2,10 +2,9 @@ import type { Database } from '../db/database.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { TaskCancelledError } from '../workers/executor.ts';
 
-/** Called inside the mutation transaction, before project/page locks. */
-export async function fenceInspectionTask(db: Database, task?: QueueTask) {
-  if (!task) return;
-  const owned = await db
+/** Lock the task row while this worker still holds its live lease. */
+export function lockOwnedTask(db: Database, task: QueueTask) {
+  return db
     .selectFrom('analytics_tasks')
     .select('id')
     .where('id', '=', task.id)
@@ -16,5 +15,11 @@ export async function fenceInspectionTask(db: Database, task?: QueueTask) {
     .where('lease_expires_at', '>', new Date())
     .forUpdate()
     .executeTakeFirst();
-  if (!owned) throw new TaskCancelledError('Source-page inspection no longer owns its lease');
+}
+
+/** Called inside the mutation transaction, before project/page locks. */
+export async function fenceInspectionTask(db: Database, task?: QueueTask) {
+  if (task && !(await lockOwnedTask(db, task))) {
+    throw new TaskCancelledError('Source-page inspection no longer owns its lease');
+  }
 }

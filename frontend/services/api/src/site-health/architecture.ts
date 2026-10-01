@@ -3,20 +3,13 @@ import { randomUUID } from 'node:crypto';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { canonicalIdentity } from './url-identity.ts';
+import { canonicalUrl } from './url-identity.ts';
 import { buildArchitecture, type ArchitecturePage } from './architecture-model.ts';
 import { architectureRules } from './architecture-rules.ts';
 import type { Crawl } from './task-fence.ts';
 
 function string(value: unknown) {
   return typeof value === 'string' ? value : '';
-}
-function canonical(value: string) {
-  try {
-    return canonicalIdentity(value).url;
-  } catch {
-    return '';
-  }
 }
 function indexability(outcome: string): boolean | null {
   if (outcome === 'satisfied') return true;
@@ -87,7 +80,7 @@ async function architecturePages(db: Database, crawl: Crawl) {
       .map((row) => [row.analysis_id, indexability(row.outcome)]),
   );
   const pages: ArchitecturePage[] = selected.flatMap((row) => {
-    const url = canonical(row.final_url || row.normalized_url);
+    const url = canonicalUrl(row.final_url || row.normalized_url) ?? '';
     if (!url) return [];
     const facts = record(row.normalized_facts);
     return [

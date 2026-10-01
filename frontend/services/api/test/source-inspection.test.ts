@@ -99,7 +99,7 @@ it('synchronizes canonical citation recurrence idempotently and serializes concu
     .execute();
   const claims = await Promise.all([claimPages(db, own.scope), claimPages(db, own.scope)]);
   expect(claims.flat()).toHaveLength(1);
-  expect(await spendRedirect(db, own.scope, 'https://redirect.test/token')).toBe(false);
+  expect(await spendRedirect(db, own.scope, 'https://redirect.test/token')).toBe('exhausted');
   const foreign = await fixtures.tenant();
   await expect(
     claimPages(db, { workspaceId: foreign.workspaceId, projectId: own.projectId }),
@@ -598,9 +598,40 @@ it('recovers an expired page lease and ignores old spend while charging redirect
     .execute();
   expect(await claimPages(db, own.scope, now, [page.id])).toHaveLength(1);
   const token = 'https://redirect.test/long-token';
-  expect(await spendRedirect(db, own.scope, token, now)).toBe(true);
-  expect(await spendRedirect(db, own.scope, token, now)).toBe(false);
+  expect(await spendRedirect(db, own.scope, token, now)).toBe('charged');
+  expect(await spendRedirect(db, own.scope, token, now)).toBe('duplicate');
   expect(await claimPages(db, own.scope, now, [page.id])).toEqual([]);
+});
+
+it('admits never-inspected pages before stale ones and reuses a recent reading', async () => {
+  const urls = [
+    'https://publisher.test/stale',
+    'https://publisher.test/new',
+    'https://publisher.test/fresh',
+  ];
+  const own = await seed(urls);
+  await syncPages(db, own.scope, own.audit);
+  const ids = new Map(
+    (
+      await db
+        .selectFrom('source_pages')
+        .select(['id', 'canonical_url'])
+        .where('project_id', '=', own.projectId)
+        .execute()
+    ).map((row) => [row.canonical_url, row.id]),
+  );
+  const state = (url: string, values: Record<string, unknown>) =>
+    db.updateTable('source_pages').set(values).where('id', '=', ids.get(url)!).execute();
+  const now = new Date();
+  await state(urls[0]!, {
+    inspection_state: 'stale',
+    recurrence_count: 99,
+    last_inspected_at: null,
+  });
+  await state(urls[1]!, { inspection_state: 'not_inspected', recurrence_count: 1 });
+  await state(urls[2]!, { inspection_state: 'inspected', last_inspected_at: now });
+  const claims = await claimPages(db, own.scope, now, [...ids.values()]);
+  expect(claims.map((claim) => claim.url)).toEqual([urls[1], urls[0]]);
 });
 
 it('selects candidate-audit evidence and keeps missing owned relevance explicitly unknown', async () => {

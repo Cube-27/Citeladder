@@ -5,13 +5,27 @@ import { policy } from '../config.ts';
 import { compareIdentityText } from '../analysis/comparison.ts';
 import { publicUrl } from '../projects/safe-fetch.ts';
 
+// Serialization matches Python `url_policy.canonicalize`, which shares the
+// `url_hash` keyspace: unreserved escapes decode, other escapes uppercase,
+// the path re-quotes with its safe set and query pairs encode as `quote_plus`.
+const UNRESERVED = /[A-Za-z0-9\-._~]/u;
+const PATH_SAFE = /[A-Za-z0-9/%:@!$&'()*+,;=~\-._]/u;
+const escapeByte = (char: string) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`;
+const quote = (value: string) => encodeURIComponent(value).replaceAll(/[!'()*]/gu, escapeByte);
+const quotePlus = (value: string) => quote(value).replaceAll('%20', '+');
+
+function canonicalPath(pathname: string) {
+  const decoded = pathname.replaceAll(/%([0-9a-f]{2})/giu, (_raw, hex: string) => {
+    const char = String.fromCharCode(parseInt(hex, 16));
+    return UNRESERVED.test(char) ? char : `%${hex.toUpperCase()}`;
+  });
+  return Array.from(decoded, (char) => (PATH_SAFE.test(char) ? char : quote(char))).join('');
+}
+
 export function canonicalIdentity(value: string, base?: string) {
   const url = publicUrl(value, base);
   url.hostname = url.hostname.replace(/\.$/u, '');
-  url.pathname = url.pathname.replaceAll(/%([0-9a-f]{2})/giu, (raw, hex: string) => {
-    const char = String.fromCharCode(parseInt(hex, 16));
-    return /[a-z0-9\-._~]/iu.test(char) ? char : raw;
-  });
+  url.pathname = canonicalPath(url.pathname);
   const ignored = new Set([
     ...policy.site_health.tracking_params,
     ...policy.site_health.ignored_query_keys,
@@ -19,13 +33,21 @@ export function canonicalIdentity(value: string, base?: string) {
   const pairs = [...url.searchParams]
     .filter(([key]) => !ignored.has(key.toLowerCase()))
     .sort((a, b) => compareIdentityText(a[0], b[0]) || compareIdentityText(a[1], b[1]));
-  url.search = '';
-  for (const [key, value] of pairs) url.searchParams.append(key, value);
+  url.search = pairs.map(([key, item]) => `${quotePlus(key)}=${quotePlus(item)}`).join('&');
   return {
     url: url.href,
     hash: createHash('sha256').update(url.href).digest('hex'),
     domain: getDomain(url.hostname) ?? url.hostname,
   };
+}
+/** The canonical URL, or null when the value is not a public URL. */
+export function canonicalUrl(value: unknown, base?: string): string | null {
+  if (typeof value !== 'string' || !value) return null;
+  try {
+    return canonicalIdentity(value, base).url;
+  } catch {
+    return null;
+  }
 }
 export function citationIdentity(value: string) {
   try {

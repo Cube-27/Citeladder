@@ -178,7 +178,7 @@ own terms:
 | `earned_page_research_source` | `source_resolved` | The page was read with sufficient coverage and yielded a verdict against the current roster. |
 
 The comparison itself is pure
-(`analysis/opportunities/placement_outcome.py`) and runs when an inspection
+(`frontend/services/api/src/analysis/opportunities/placement-outcome.ts`) and runs when an inspection
 batch commits, against the reading that batch just took. A reading judged
 against a different roster is not comparable and is not compared, which is the
 rule the TypeScript refresh's prior-reading lookup

@@ -2,8 +2,8 @@
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
-import { canonicalIdentity } from './url-identity.ts';
-import { anchorDiagnostics } from './link-anchors.ts';
+import { canonicalUrl as canonical } from './url-identity.ts';
+import { anchorDestinations, anchorDiagnostics } from './link-anchors.ts';
 
 export type LinkPage = {
   id: string;
@@ -27,13 +27,6 @@ export type LinkEdge = {
   anchors: { text: string; region: string }[];
 };
 const p = policy.site_health.link_metrics;
-function canonical(url: string, base?: string) {
-  try {
-    return canonicalIdentity(url, base).url;
-  } catch {
-    return null;
-  }
-}
 function aliasesFor(pages: LinkPage[]) {
   const result = new Map<string, string>();
   for (const page of pages) {
@@ -208,6 +201,7 @@ export function buildLinkMetrics(
   );
   const sources = [...new Set(pages.map((page) => page.artifactId))].sort(compareText);
   const byId = new Map(pages.map((page) => [page.id, page]));
+  const destinations = anchorDestinations(outgoing);
   return pages.map((page) => {
     const outs = outgoing.get(page.id)!;
     const ins = inbound.get(page.id)!;
@@ -225,7 +219,7 @@ export function buildLinkMetrics(
       top_inbound: neighbours(ins, true, limit),
       top_outbound: neighbours(outs, false, limit),
       source_artifact_ids: sources,
-      anchor_diagnostics: anchorDiagnostics(outs, byId, outgoing),
+      anchor_diagnostics: anchorDiagnostics(outs, byId, destinations),
     };
   });
 }

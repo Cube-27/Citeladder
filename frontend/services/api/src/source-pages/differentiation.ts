@@ -130,7 +130,7 @@ function sourceFacts(id: string, facts: unknown): ComparisonPage {
     domains: strings(raw.outbound_domains),
   };
 }
-function ownedFacts(id: string, facts: unknown, host: string): ComparisonPage {
+export function ownedFacts(id: string, facts: unknown, host: string): ComparisonPage {
   const raw = record(facts);
   const ownedDomain = getDomain(host) ?? host;
   const headings = Array.isArray(raw.primary_heading_outline)

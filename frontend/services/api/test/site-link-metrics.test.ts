@@ -267,6 +267,31 @@ it('rolls back partial evidence and handoff on failure and spends one bounded at
     .executeTakeFirstOrThrow();
   expect(record(crawl.site_facts)).toEqual({});
 });
+it('lets the heartbeat extend the lease while an executor holds the task fence', async () => {
+  const seed = await fixtures.crawl();
+  const id = await fixtures.task(seed);
+  let beat: unknown;
+  const worker: SiteHealthWorker = new SiteHealthWorker(db, {
+    owner: 'beat',
+    settings,
+    executors: {
+      link_metrics: async () => {
+        const blocked = new Promise((resolve) => {
+          setTimeout(() => resolve('blocked'), 2000);
+        });
+        beat = await Promise.race([worker.queue.heartbeat(id, 'beat'), blocked]);
+      },
+    },
+  });
+  expect(await worker.runOnce()).toBe(1);
+  expect(beat).toBe(true);
+  const task = await db
+    .selectFrom('site_crawl_tasks')
+    .select('status')
+    .where('id', '=', id)
+    .executeTakeFirstOrThrow();
+  expect(task.status).toBe('succeeded');
+});
 it('requeues database contention without spending a page attempt and fences expired heartbeats', async () => {
   const seed = await fixtures.crawl();
   const id = await fixtures.task(seed);

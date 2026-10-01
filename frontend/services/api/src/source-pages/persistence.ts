@@ -8,6 +8,7 @@ import { acquireProjectLock } from '../prompts/locks.ts';
 import type { SourceScope } from './admission.ts';
 import type { ExtractedPage } from './extract.ts';
 import type { assessPage } from './assessment.ts';
+import { lockOwnedTask } from './task-fence.ts';
 
 export type FetchOutcome = {
   outcome: 'inspected' | 'blocked' | 'failed';
@@ -41,18 +42,7 @@ export async function recordInspection(
   assessment?: ReturnType<typeof assessPage>,
 ) {
   return db.transaction().execute(async (trx) => {
-    const owned = await trx
-      .selectFrom('analytics_tasks')
-      .select('id')
-      .where('id', '=', task.id)
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('status', '=', 'running')
-      .where('lease_owner', '=', task.lease_owner)
-      .where('lease_expires_at', '>', new Date())
-      .forUpdate()
-      .executeTakeFirst();
-    if (!owned) return null;
+    if (!(await lockOwnedTask(trx, task))) return null;
     const audit = await trx
       .selectFrom('audits')
       .select('id')

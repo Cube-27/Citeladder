@@ -83,7 +83,7 @@ async function publish(db: Database, task: QueueTask, revision: string, terminal
       projectId: run.project_id,
       kind: 'internal_link_publish',
       payload: { run_id: run.id },
-      keyParts: [run.id, `${task.id}:${revision}`],
+      keyParts: [run.project_id, run.id, `${task.id}:${revision}`],
       maxAttempts: task.max_attempts,
     });
   });
@@ -189,13 +189,13 @@ async function judge(
       },
     }));
   } catch (error) {
-    const reason = signal.aborted
-      ? 'deadline_exceeded'
-      : error instanceof ModelError
-        ? error.status
-          ? providerErrorCode(error.status)
-          : error.code
-        : 'provider_error';
+    // Only a provider fault or the job deadline settles as uncertain; any
+    // other fault fails the task so it retries and terminal compensation runs.
+    let reason = 'deadline_exceeded';
+    if (!signal.aborted) {
+      if (!(error instanceof ModelError)) throw error;
+      reason = error.status ? providerErrorCode(error.status) : error.code;
+    }
     return request.candidates.map(({ id }) => ({ id, evidence: { state: 'uncertain', reason } }));
   }
 }

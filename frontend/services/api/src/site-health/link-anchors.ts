@@ -58,11 +58,8 @@ function diagnoses(text: string, target: LinkPage | undefined, destinations: Set
     });
   return rows;
 }
-export function anchorDiagnostics(
-  edges: LinkEdge[],
-  pages: Map<string, LinkPage>,
-  outgoing: Map<string, LinkEdge[]>,
-) {
+/** Site-wide destinations per normalized anchor text; build once per graph. */
+export function anchorDestinations(outgoing: Map<string, LinkEdge[]>) {
   const destinations = new Map<string, Set<string>>();
   for (const sourceEdges of outgoing.values())
     for (const edge of sourceEdges)
@@ -73,6 +70,13 @@ export function anchorDiagnostics(
         urls.add(edge.targetUrl);
         destinations.set(text, urls);
       }
+  return destinations;
+}
+export function anchorDiagnostics(
+  edges: LinkEdge[],
+  pages: Map<string, LinkPage>,
+  destinations: Map<string, Set<string>>,
+) {
   const grouped = new Map<string, Diagnostic>();
   for (const edge of edges)
     for (const fact of edge.anchors) {

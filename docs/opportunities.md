@@ -163,7 +163,7 @@ verification result without rewriting the original declaration.
 
 An inspection batch compares every pending check against the reading it just
 committed, through the pure comparator in
-[placement_outcome.py](../backend/app/analysis/opportunities/placement_outcome.py).
+[placement-outcome.ts](../frontend/services/api/src/analysis/opportunities/placement-outcome.ts).
 The comparison is for the SPECIFIC declared change: a correction that named a
 missing outbound link is satisfied by the page linking to us, not by the brand
 appearing somewhere in the prose. A reading judged against a different entity
@@ -227,6 +227,6 @@ Python-producer/TypeScript-worker/Python-reader boundary;
 [Action PostgreSQL tests](../frontend/services/api/test/actions.test.ts) cover
 declaration admission, concurrent replay, workspace isolation, frozen checks and
 the TypeScript-declaration/Python-inspection boundary. The
-[placement tests](../backend/tests/component/test_placement_checks.py) exercise
-inspection and recheck admission against seeded declarations. The pending integrations
+[source-inspection tests](../frontend/services/api/test/source-inspection.test.ts)
+exercise placement settlement and recheck admission against seeded declarations. The pending integrations
 follow-up may improve these read surfaces; it is not a second action store.

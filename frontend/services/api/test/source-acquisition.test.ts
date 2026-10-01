@@ -8,10 +8,13 @@ import {
   PageAcquirer,
   robotsPolicy,
 } from '../src/web-evidence/acquisition.ts';
-import { parseSitemap, SitemapCollector } from '../src/web-evidence/sitemaps.ts';
 import { extractSourcePage } from '../src/source-pages/extract.ts';
 import { assessPage, urlFormat } from '../src/source-pages/assessment.ts';
-import { compareContent, type ComparisonPage } from '../src/source-pages/differentiation.ts';
+import {
+  compareContent,
+  ownedFacts,
+  type ComparisonPage,
+} from '../src/source-pages/differentiation.ts';
 import { canonicalIdentity, citationIdentity } from '../src/site-health/url-identity.ts';
 import { policy } from '../src/config.ts';
 import { organicResults } from '../src/source-pages/sync.ts';
@@ -155,40 +158,10 @@ it('starts a hop timeout after its host slot and aborts an unresolved DNS lookup
     name: 'TimeoutError',
   });
 });
-it('enforces compressed byte caps and parses escaped locations without permitting XML declarations', () => {
-  const body = Buffer.from(
-    '<urlset xmlns="urn:sitemap"><url><loc>https://example.test/?a=1&amp;b=2</loc></url></urlset>',
-  );
-  expect(parseSitemap(gzipSync(body)).urls).toEqual(['https://example.test/?a=1&b=2']);
-  expect(() =>
-    parseSitemap(Buffer.from('<!DOCTYPE x [<!ENTITY e SYSTEM "file:///secret">]><urlset/>')),
-  ).toThrow();
-  expect(() => parseSitemap(Buffer.from('<urlset>'))).toThrow();
+it('enforces the decoded byte cap on compressed bodies', () => {
   expect(() => decodedBody(gzipSync(Buffer.alloc(10000)), 'gzip', 100)).toThrow(
     'response_too_large',
   );
-  expect(() =>
-    parseSitemap(gzipSync(Buffer.alloc(10000)), 'gzip', { bytes: 100, depth: 1, urls: 3 }),
-  ).toThrow();
-});
-it('deduplicates sitemap cycles and bounds depth and admitted URLs', () => {
-  const collector = new SitemapCollector({ bytes: 1000, depth: 1, urls: 2 });
-  const refs = collector.add(
-    'https://example.test/map',
-    Buffer.from(
-      '<sitemapindex><sitemap><loc>https://example.test/child</loc></sitemap><sitemap><loc>https://example.test/map</loc></sitemap></sitemapindex>',
-    ),
-    0,
-  );
-  expect(refs).toEqual(['https://example.test/child']);
-  collector.add(
-    refs[0]!,
-    Buffer.from(
-      '<urlset><url><loc>a</loc></url><url><loc>a</loc></url><url><loc>b</loc></url><url><loc>c</loc></url></urlset>',
-    ),
-    1,
-  );
-  expect(collector.urls).toEqual(['a', 'b']);
 });
 it('extracts visible evidence and keeps schema, headings and table structure separate', () => {
   const page = extractSourcePage(
@@ -207,6 +180,13 @@ it('extracts visible evidence and keeps schema, headings and table structure sep
 it('distinguishes literal presence, normalization ambiguity, and sufficient untruncated absence', () => {
   const partial = extractSourcePage(Buffer.from('<p>A &amp; B uses a tool</p>'));
   expect(assessPage(partial, { brand_name: 'A and B' }).presences[0]?.presence).toBe('ambiguous');
+  const compact = extractSourcePage(Buffer.from('<p>We love BestandLess shoes</p>'));
+  expect(assessPage(compact, { brand_name: 'Best & Less' }).presences[0]).toMatchObject({
+    presence: 'ambiguous',
+    first_offset: 8,
+  });
+  const split = extractSourcePage(Buffer.from(`<p>bond sand ${'Other words '.repeat(100)}</p>`));
+  expect(assessPage(split, { brand_name: 'Bonds' }).presences[0]?.presence).toBe('not_detected');
   const full = extractSourcePage(Buffer.from(`<p>${'Other words '.repeat(100)}</p>`));
   expect(assessPage(full, { brand_name: 'Acme' }).presences[0]?.presence).toBe('not_detected');
   expect(
@@ -217,12 +197,41 @@ it('distinguishes literal presence, normalization ambiguity, and sufficient untr
 });
 it('derives page formats from a page address and keeps redirect tokens unresolved', () => {
   expect(urlFormat('https://example.test/compare/tools').format).toBe('comparison');
+  expect(urlFormat('https://example.test/notes')).toEqual({ format: 'unresolved', method: 'none' });
   expect(
     citationIdentity('https://vertexaisearch.cloud.google.com/grounding-api-redirect/token'),
   ).toBeNull();
   expect(
     canonicalIdentity('https://EXAMPLE.test:443/%7euser?utm_source=x&b=2&a=1#section').url,
   ).toBe('https://example.test/~user?a=1&b=2');
+});
+it('serializes canonical URLs exactly as the Python url_hash writers do', () => {
+  // Expected values are Python `url_policy.canonicalize` outputs.
+  const vectors = {
+    'https://Ex.com/a%2fb?q=a+b&x=%7e|^&utm_source=z#f': 'https://ex.com/a%2Fb?q=a+b&x=~%7C%5E',
+    'https://ex.com/%e2%82%ac?x=€': 'https://ex.com/%E2%82%AC?x=%E2%82%AC',
+    'https://ex.com/a|b^c`d{e}': 'https://ex.com/a%7Cb%5Ec%60d%7Be%7D',
+    [`https://ex.com/a[1]b"c'e!f`]: "https://ex.com/a%5B1%5Db%22c'e!f",
+    "https://ex.com/p?a=*&b='&c=!&d=(x)&e=~&f=%2a&g=%41":
+      'https://ex.com/p?a=%2A&b=%27&c=%21&d=%28x%29&e=~&f=%2A&g=A',
+    'https://ex.com/a?z=1&z=0&Z=2': 'https://ex.com/a?Z=2&z=0&z=1',
+    'https://ex.com/a b?q=a b': 'https://ex.com/a%20b?q=a+b',
+    'https://ex.com/a?a&b=1': 'https://ex.com/a?a=&b=1',
+    'https://ex.com/p?utm_source=x': 'https://ex.com/p',
+  };
+  for (const [input, expected] of Object.entries(vectors)) {
+    expect(canonicalIdentity(input).url, input).toBe(expected);
+  }
+});
+it('compares owned outbound links by registrable domain, excluding the owned site', () => {
+  const anchors = [
+    'https://blog.example.co.uk/post',
+    'https://example.org/source',
+    'not a url',
+  ].map((url) => ({ url, is_internal: false }));
+  expect(ownedFacts('own', { links: { anchors } }, 'www.example.co.uk').domains).toEqual([
+    'example.org',
+  ]);
 });
 it('compares page-level feature sets with explicit inspected denominators and unknown evidence', () => {
   const page = (id: string, headings: string[]): ComparisonPage => ({

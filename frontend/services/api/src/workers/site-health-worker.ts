@@ -67,13 +67,13 @@ export class SiteHealthWorker {
     }, this.settings.heartbeat * 1000);
     try {
       await this.db.transaction().execute(async (trx) => {
-        const { crawl, task } = await lockSiteTask(trx, claimed, this.owner);
+        const { crawl, task } = await lockSiteTask(trx, claimed, this.owner, 'fence');
         const executor = Object.hasOwn(this.executors, task.task_kind)
           ? this.executors[task.task_kind]
           : undefined;
         if (!executor) throw new Error(`Site Health task '${task.task_kind}' has no executor`);
         await executor(trx, crawl, task);
-        await lockSiteTask(trx, claimed, this.owner);
+        await lockSiteTask(trx, claimed, this.owner, 'acknowledge');
         await trx
           .updateTable('site_crawl_tasks')
           .set({

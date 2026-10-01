@@ -108,9 +108,9 @@ PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS: Final[tuple[str, ...]] = (
 )
 
 # --- Prompt write serialization and dedupe identity -------------------------
-# Transaction-scoped advisory-lock families (``domain/prompts/locks.py``): a
-# personalized BLAKE2b of the namespace and the entity UUID. The TypeScript
-# prompt and Opportunity writers derive the same keys from the policy export.
+# Transaction-scoped advisory-lock families: a personalized BLAKE2b of the
+# namespace and the entity UUID, derived by the TypeScript prompt, Opportunity
+# and source-page admission writers from the policy export.
 PROMPT_LOCK_PERSON: Final = "citeladder-locks"
 PROJECT_LOCK_NAMESPACE: Final = 0x50524F4A  # "PROJ"
 PROMPT_SET_LOCK_NAMESPACE: Final = 0x50524F4D  # "PROM"

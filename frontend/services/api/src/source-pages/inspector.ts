@@ -5,7 +5,13 @@ import { record } from '../db/json.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
-import { taskProject, payloadString, type Executor } from '../workers/executor.ts';
+import {
+  TaskCancelledError,
+  taskProject,
+  payloadString,
+  type Executor,
+} from '../workers/executor.ts';
+import { getLogger } from '../logging.ts';
 import { FetchError, type FetchedPage, type WebsiteFetcher } from '../projects/safe-fetch.ts';
 import { PageAcquirer, authorizeAcquisition } from '../web-evidence/acquisition.ts';
 import { citationIdentity } from '../site-health/url-identity.ts';
@@ -20,6 +26,7 @@ import { settlePlacements } from './placement-settlement.ts';
 import { fenceInspectionTask } from './task-fence.ts';
 
 const p = policy.source_pages;
+const logger = getLogger('app.workers.source_pages');
 const opportunity = policy.opportunity.opportunities;
 function auditId(task: QueueTask) {
   const id = parseUuid(payloadString(task, 'audit_id'));
@@ -123,7 +130,9 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
     const prefetched = new Map<string, FetchedPage>();
     for (const token of tokens) {
       await checkCancelled('redirect admission');
-      if (!(await spendRedirect(db, scope, token, new Date(), task))) break;
+      const spent = await spendRedirect(db, scope, token, new Date(), task);
+      if (spent === 'exhausted') break;
+      if (spent === 'duplicate') continue;
       let result: FetchedPage;
       try {
         result = await acquirer.fetch(token, options);
@@ -146,14 +155,16 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       result: FetchedPage | FetchOutcome,
     ) => {
       await checkCancelled('source-page publication');
-      const fetched = 'body' in result ? fetchedOutcome(url, result) : result;
-      const extracted =
-        fetched.outcome === 'inspected' && 'body' in result
-          ? extractSourcePage(result.body, result.charset)
-          : undefined;
-      const assessment = extracted ? assessPage(extracted, configuration) : undefined;
-      if (
-        await recordInspection(
+      // One page's failure must not discard its siblings' readings; its claim
+      // lease lapses and a later inspection retries it.
+      try {
+        const fetched = 'body' in result ? fetchedOutcome(url, result) : result;
+        const extracted =
+          fetched.outcome === 'inspected' && 'body' in result
+            ? extractSourcePage(result.body, result.charset)
+            : undefined;
+        const assessment = extracted ? assessPage(extracted, configuration) : undefined;
+        const recorded = await recordInspection(
           db,
           task,
           scope,
@@ -164,9 +175,12 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
           roster,
           extracted,
           assessment,
-        )
-      )
-        inspected.push(id);
+        );
+        if (recorded) inspected.push(id);
+      } catch (error) {
+        if (error instanceof TaskCancelledError) throw error;
+        logger.exception('source-page persistence failed', error, { source_page_id: id });
+      }
     };
     for (const [hash, result] of prefetched) {
       const page = await db

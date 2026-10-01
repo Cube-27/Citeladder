@@ -43,22 +43,22 @@ async function spend(
     .returning('id')
     .executeTakeFirst();
 }
+/** Charge one redirect token: `charged` to follow it, `duplicate` if already paid. */
 export async function spendRedirect(
   db: Database,
   scope: SourceScope,
   url: string,
   now = new Date(),
   task?: QueueTask,
-) {
+): Promise<'charged' | 'duplicate' | 'exhausted'> {
   return db.transaction().execute(async (trx) => {
     await fenceInspectionTask(trx, task);
     await requireScope(trx, scope);
     await acquireProjectLock(trx, scope.projectId);
-    if (!(await remaining(trx, scope, now))) return false;
+    if (!(await remaining(trx, scope, now))) return 'exhausted';
     const digest = createHash('sha256').update(url).digest('hex');
-    return Boolean(
-      await spend(trx, scope, 'redirect', `redirect:${scope.projectId}:${digest}`, null, now),
-    );
+    const key = `redirect:${scope.projectId}:${digest}`;
+    return (await spend(trx, scope, 'redirect', key, null, now)) ? 'charged' : 'duplicate';
   });
 }
 export async function claimPages(

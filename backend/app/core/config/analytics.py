@@ -383,6 +383,9 @@ ANALYTICS_PYTHON_TASK_KINDS: Final[frozenset[str]] = (
 # permanent-until-deploy condition, so the worker never retries it.
 ERROR_EXECUTOR_NOT_WIRED: Final = "executor_not_wired"
 ANALYTICS_TERMINAL_COMPENSATION_BATCH: Final = 100
+# Failed compensation attempts before a terminal task is abandoned (logged and
+# marked compensated) so a permanently failing row cannot recur every poll.
+ANALYTICS_TERMINAL_COMPENSATION_MAX_FAILURES: Final = 5
 
 
 class AnalyticsSettings(BaseSettings):

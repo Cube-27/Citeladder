@@ -8,6 +8,7 @@ import {
   compensateInternalLinks,
 } from '../src/site-health/internal-link-judgments.ts';
 import { compensateTerminalTasks } from '../src/workers/terminal-compensation.ts';
+import { ModelError } from '../src/models/http.ts';
 import { enqueueTask } from '../src/referrals/enqueue.ts';
 import { seedProject } from './referral-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
@@ -196,6 +197,28 @@ describe('internal link judgment execution', () => {
     ]);
   });
 
+  it('settles provider faults as uncertain and fails the task on any other fault', async () => {
+    const provider = await seed(1);
+    const unavailable = vi.fn(async () => {
+      throw new ModelError('connection');
+    });
+    await internalLinkJudge(() => ({ model: 'fixture', decide: unavailable }))(
+      provider.task,
+      context,
+    );
+    expect((await events(provider.id, 'outcome')).map((e) => e.evidence)).toEqual([
+      { state: 'uncertain', reason: 'connection' },
+    ]);
+    const broken = await seed(1);
+    const defect = vi.fn(async () => {
+      throw new TypeError('defect');
+    });
+    await expect(
+      internalLinkJudge(() => ({ model: 'fixture', decide: defect }))(broken.task, context),
+    ).rejects.toThrow('defect');
+    expect(await events(broken.id, 'outcome')).toHaveLength(0);
+  });
+
   it('fences stale leases and cancelled runs, and denies viewers before sending', async () => {
     const { id, task } = await seed(1);
     const decide = vi.fn(async () => ({ model: 'fixture', answers: {} }));
@@ -221,6 +244,38 @@ describe('internal link judgment execution', () => {
     expect((await events(denied.id, 'outcome')).map((e) => e.evidence)).toEqual([
       { state: 'unavailable', reason: 'permission_unavailable' },
     ]);
+  });
+
+  it('abandons a permanently failing terminal compensation after the failure bound', async () => {
+    const { id, task } = await seed(1);
+    await db
+      .updateTable('site_internal_link_runs')
+      .set({ manifest: JSON.stringify({ candidates: [{ id: 'not-a-uuid' }] }) })
+      .where('id', '=', id)
+      .execute();
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'failed', lease_owner: null, lease_expires_at: null })
+      .where('id', '=', task.id)
+      .execute();
+    const payload = async () =>
+      record(
+        (
+          await db
+            .selectFrom('analytics_tasks')
+            .select('payload')
+            .where('id', '=', task.id)
+            .executeTakeFirstOrThrow()
+        ).payload,
+      );
+    const limit = policy.analytics.terminal_compensation_max_failures;
+    for (let attempt = 1; attempt < limit; attempt += 1) await compensateTerminalTasks(db);
+    expect(await payload()).toMatchObject({ terminal_compensation_failures: limit - 1 });
+    expect((await payload()).terminal_compensated_at).toBeUndefined();
+    await compensateTerminalTasks(db);
+    await compensateTerminalTasks(db);
+    expect(await payload()).toMatchObject({ terminal_compensation_failures: limit });
+    expect((await payload()).terminal_compensated_at).toEqual(expect.any(String));
   });
 
   it('terminal recovery settles unfinished pairs idempotently after lease sweep', async () => {
