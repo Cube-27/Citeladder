@@ -46,10 +46,9 @@ export async function writeArtifact(
   task: SiteTask,
   page: FetchedPage,
   facts: Facts | null,
-  policyVersion: string,
-  latencyMs: number,
-  purpose: 'analyze' | 'discover' = 'analyze',
+  fetch: { policyVersion: string; latencyMs: number; purpose: 'analyze' | 'discover' },
 ) {
+  const { policyVersion, latencyMs, purpose } = fetch;
   const id = randomUUID();
   const now = new Date();
   await db

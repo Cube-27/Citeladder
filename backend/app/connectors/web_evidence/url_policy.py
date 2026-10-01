@@ -72,6 +72,7 @@ from app.core.config.site_health_crawl_policy import (
     URL_HARD_EXCLUSION_PATH_PATTERNS,
     URL_HARD_EXCLUSION_QUERY_KEYS,
     URL_IDENTITY_IGNORED_QUERY_KEYS,
+    URL_VALUE_FALLBACK_TOKENS,
     URL_VALUE_PRIORITIES,
 )
 from app.core.config.site_health_rules import (
@@ -216,10 +217,9 @@ def page_value_kind(url: str) -> str:
     ):
         if kind != "root" and kind.replace("_", "-") in path:
             return kind
-    if any(token in path for token in ("product", "/p/", "shop")):
-        return "product"
-    if any(token in path for token in ("blog", "article", "news")):
-        return "article"
+    for kind, tokens in URL_VALUE_FALLBACK_TOKENS:
+        if any(token in path for token in tokens):
+            return kind
     return "other"
 
 

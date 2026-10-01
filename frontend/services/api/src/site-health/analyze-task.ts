@@ -25,6 +25,7 @@ import {
   cancelTask,
   httpError,
   loadScope,
+  lockRunningTask,
   markRunning,
   owned,
   recordCrawlEvent,
@@ -218,24 +219,9 @@ async function lockForCommit(trx: Database, claimed: SiteTask, owner: string) {
   const scope = await loadScope(trx, claimed);
   if (!scope) return null;
   const rows = await guardRows(trx, scope.crawl, scope.task, true);
-  const crawl = await trx
-    .selectFrom('site_crawls')
-    .selectAll()
-    .where('id', '=', claimed.crawl_id)
-    .where('workspace_id', '=', claimed.workspace_id)
-    .forNoKeyUpdate()
-    .executeTakeFirst();
-  const task = await trx
-    .selectFrom('site_crawl_tasks')
-    .selectAll()
-    .where('id', '=', claimed.id)
-    .where('workspace_id', '=', claimed.workspace_id)
-    .where('lease_owner', '=', owner)
-    .where('status', '=', statuses.running)
-    .forUpdate()
-    .executeTakeFirst();
-  if (!crawl || !task) return null;
-  return { crawl, task, allowed: guardAllows(crawl, rows) };
+  const locked = await lockRunningTask(trx, claimed, owner);
+  if (!locked) return null;
+  return { ...locked, allowed: guardAllows(locked.crawl, rows) };
 }
 
 async function recordProgress(trx: Database, crawl: Crawl) {
@@ -256,20 +242,16 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
     if (!locked) return;
     const { crawl, task } = locked;
     if (!locked.allowed) {
-      await cancelTask(trx, task);
+      await cancelTask(trx, task, ctx.owner);
       return;
     }
     let artifactId = outcome.reusedArtifactId;
     if (outcome.facts && task.site_url_id) {
-      artifactId ??= await writeArtifact(
-        trx,
-        crawl,
-        task,
-        outcome.page!,
-        outcome.facts,
-        ctx.fetcher.settings.policyVersion,
-        outcome.latencyMs ?? 0,
-      );
+      artifactId ??= await writeArtifact(trx, crawl, task, outcome.page!, outcome.facts, {
+        policyVersion: ctx.fetcher.settings.policyVersion,
+        latencyMs: outcome.latencyMs ?? 0,
+        purpose: 'analyze',
+      });
       const analysis = await writePageAnalysis(
         trx,
         crawl,
@@ -314,13 +296,13 @@ async function prepare(
 ): Promise<Outcome | 'deferred' | null> {
   const scope = await loadScope(ctx.db, claimed);
   if (!scope || !ACTIVE_CRAWL.has(scope.crawl.status)) {
-    await cancelTask(ctx.db, claimed);
+    await cancelTask(ctx.db, claimed, ctx.owner);
     return null;
   }
   const { crawl, task } = scope;
   if (task.lease_owner !== ctx.owner) return null;
   if (!guardAllows(crawl, await guardRows(ctx.db, crawl, task, false))) {
-    await cancelTask(ctx.db, task);
+    await cancelTask(ctx.db, task, ctx.owner);
     return null;
   }
   await startCrawl(ctx.db, crawl);

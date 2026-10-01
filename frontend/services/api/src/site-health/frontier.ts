@@ -16,10 +16,10 @@ import { record } from '../db/json.ts';
 import type { WorkspaceSiteHealthRuntime } from '../generated/db-schema.ts';
 import { compareText } from '../text-order.ts';
 import { classifyUrlAdmission, type Admission, type Scope } from './url-admission.ts';
+import { ACTIVE_CRAWL } from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
 
 const crawlPolicy = policy.site_health.crawl;
-const ACTIVE_CRAWL = ['draft', 'validating', 'queued', 'running', 'paused'];
 type Runtime = Selectable<WorkspaceSiteHealthRuntime>;
 
 function frontierSettings(env: Record<string, string | undefined> = process.env) {
@@ -114,7 +114,7 @@ function frontierLimit(crawl: Crawl, settings: Settings) {
   return Number(record(crawl.configuration).max_frontier_urls) || settings.maxFrontier;
 }
 
-export async function lockRuntime(trx: Database, workspaceId: string) {
+export function lockRuntime(trx: Database, workspaceId: string) {
   return trx
     .selectFrom('workspace_site_health_runtime')
     .selectAll()
@@ -206,7 +206,7 @@ async function enqueueSiteTask(
       ${task.position ?? 0}, ${settings.maxAttempts}, 0, 0, now(), now(), now(), '', '', false
     FROM site_crawls c
     WHERE c.id = ${crawl.id}::uuid AND c.workspace_id = ${crawl.workspace_id}::uuid
-      AND c.status = ANY(${ACTIVE_CRAWL})
+      AND c.status = ANY(${[...ACTIVE_CRAWL]})
     ON CONFLICT (crawl_id, task_kind, url_hash, generation) DO UPDATE
       SET priority = excluded.priority,
           available_at = least(site_crawl_tasks.available_at, now())
@@ -259,7 +259,12 @@ async function observe(
   crawl: Crawl,
   siteUrlId: string,
   item: Candidate,
-  options: { analyze: boolean; afterDiscovery?: boolean; source: string },
+  options: {
+    analyze: boolean;
+    afterDiscovery?: boolean;
+    source: string;
+    artifactId?: string | null;
+  },
   settings: Settings,
 ) {
   const activated = options.analyze
@@ -281,6 +286,7 @@ async function observe(
       depth: item.depth,
       observed_url: item.url,
       final_url: item.url,
+      source_artifact_id: options.artifactId ?? null,
       content_type: '',
       title: '',
       created_at: new Date(),
@@ -361,30 +367,28 @@ async function storeFrontier(
   if (!eligible.length) return;
   const existing = await trx
     .selectFrom('site_discovery_frontier')
-    .where('workspace_id', '=', crawl.workspace_id)
     .select((eb) => eb.fn.countAll<string>().as('count'))
+    .where('workspace_id', '=', crawl.workspace_id)
     .where('crawl_id', '=', crawl.id)
     .executeTakeFirstOrThrow();
   const capacity = Math.max(0, frontierLimit(crawl, settings) - Number(existing.count));
   if (!capacity) return;
-  const known = new Set<string>();
-  for (let offset = 0; offset < eligible.length; offset += settings.batch) {
-    const rows = await trx
-      .selectFrom('site_discovery_frontier')
-      .where('workspace_id', '=', crawl.workspace_id)
-      .where('workspace_id', '=', crawl.workspace_id)
-      .select('url_hash')
-      .where('crawl_id', '=', crawl.id)
-      .where('url_hash', '=', (eb) =>
-        eb.fn.any(eb.val(eligible.slice(offset, offset + settings.batch).map((item) => item.hash))),
-      )
-      .execute();
-    for (const row of rows) known.add(row.url_hash);
-  }
+  // One array parameter, so a sitemap-sized batch stays clear of the driver's bind limit.
+  const known = new Set(
+    (
+      await trx
+        .selectFrom('site_discovery_frontier')
+        .select('url_hash')
+        .where('workspace_id', '=', crawl.workspace_id)
+        .where('crawl_id', '=', crawl.id)
+        .where('url_hash', '=', (eb) => eb.fn.any(eb.val(eligible.map((item) => item.hash))))
+        .execute()
+    ).map((row) => row.url_hash),
+  );
   const fresh = eligible.filter((item) => !known.has(item.hash)).slice(0, capacity);
   const now = new Date();
   for (let offset = 0; offset < fresh.length; offset += settings.batch)
-    await trx
+    await trx // NOSONAR: batches bound each insert's bind parameters, in order in one transaction.
       .insertInto('site_discovery_frontier')
       .values(
         fresh.slice(offset, offset + settings.batch).map((item) => ({
@@ -456,99 +460,159 @@ export type AdmissionResult = {
   sampleCapped: boolean;
   siteUrlIds: Map<string, string>;
 };
+type AdmissionOptions = {
+  enqueueChildren?: boolean;
+  sourceArtifactId?: string;
+  settings?: Settings;
+};
+type Admitting = {
+  trx: Database;
+  crawl: Crawl;
+  settings: Settings;
+  enqueueChildren: boolean;
+  artifactId: string | undefined;
+  remaining: number | null;
+  result: AdmissionResult;
+};
+
+/** A sample admits its candidates directly; a full crawl persists them and takes the frontier's best. */
+async function admissionBatch(
+  trx: Database,
+  crawl: Crawl,
+  candidates: Candidate[],
+  settings: Settings,
+): Promise<{ frontierId: string | null; item: Candidate }[]> {
+  if (crawl.sample_mode)
+    return orderedUnique(candidates)
+      .filter((item) => allowed(item, crawl, settings))
+      .slice(0, settings.batch)
+      .map((item) => ({ frontierId: null, item }));
+  await storeFrontier(trx, crawl, candidates, settings);
+  return pendingFrontier(trx, crawl, settings);
+}
+
+/** A sample observes the URL and, while its allowance lasts, monitors and analyzes it. */
+async function admitSample(state: Admitting, siteUrlId: string, item: Candidate) {
+  const automatic =
+    Number(record(state.crawl.configuration)[crawlPolicy.automatic_monitor_limit_key]) || 0;
+  const [activated, observed] = await observe(
+    state.trx,
+    state.crawl,
+    siteUrlId,
+    item,
+    {
+      analyze: item.disposition === 'analyze' && (state.remaining ?? 0) > 0,
+      source: automatic > 0 ? 'bootstrap' : 'free_sample',
+      artifactId: state.artifactId,
+    },
+    state.settings,
+  );
+  if (activated && state.remaining !== null) state.remaining--;
+  if (observed) state.result.admitted++;
+}
+
+/** A full crawl selects the URL while its automatic allowance lasts and queues its discovery. */
+async function admitDiscovery(
+  state: Admitting,
+  siteUrlId: string,
+  item: Candidate,
+  position: number,
+) {
+  if (item.disposition === 'analyze' && (state.remaining ?? 0) > 0) {
+    const [activated] = await observe(
+      state.trx,
+      state.crawl,
+      siteUrlId,
+      item,
+      {
+        analyze: true,
+        afterDiscovery: state.enqueueChildren,
+        source: 'bootstrap',
+        artifactId: state.artifactId,
+      },
+      state.settings,
+    );
+    if (activated) state.remaining!--;
+  }
+  const queued = state.enqueueChildren
+    ? await enqueueSiteTask(
+        state.trx,
+        state.crawl,
+        {
+          kind: 'discover',
+          siteUrlId,
+          url: item.url,
+          hash: item.hash,
+          depth: item.depth,
+          priority: item.priority,
+          position,
+        },
+        state.settings,
+      )
+    : 'admitted';
+  if (queued) state.result.admitted++;
+}
+
+async function admitOne(
+  state: Admitting,
+  { frontierId, item }: { frontierId: string | null; item: Candidate },
+  position: number,
+) {
+  const siteUrlId = await upsertSiteUrl(state.trx, state.crawl, item);
+  state.result.siteUrlIds.set(item.hash, siteUrlId);
+  state.result.observed++;
+  if (state.crawl.sample_mode) await admitSample(state, siteUrlId, item);
+  else await admitDiscovery(state, siteUrlId, item, position);
+  if (frontierId)
+    await state.trx
+      .updateTable('site_discovery_frontier')
+      .set({ status: 'admitted', admitted_at: new Date() })
+      .where('id', '=', frontierId)
+      .where('workspace_id', '=', state.crawl.workspace_id)
+      .execute();
+}
 
 /**
  * Admit one batch. A full crawl persists it to the frontier and admits the
  * frontier's best pending rows, queueing child discovery; a sample crawl
- * admits directly until its workspace-wide allowance is spent. `crawl` must
- * carry the live admitted count; the caller adds `admitted` to it.
+ * admits directly until its workspace-wide allowance is spent. Callers hold the
+ * workspace runtime lock and add `admitted` to the crawl's count.
  */
 export async function admitCandidates(
   trx: Database,
   crawl: Crawl,
   candidates: Candidate[],
   runtime: Runtime | undefined,
-  options: { enqueueChildren?: boolean; settings?: Settings } = {},
+  options: AdmissionOptions = {},
 ): Promise<AdmissionResult> {
   const settings = options.settings ?? frontierSettings();
-  const enqueueChildren = options.enqueueChildren ?? true;
-  let remaining = await automaticRemaining(trx, crawl, runtime);
-  const result: AdmissionResult = {
-    admitted: 0,
-    observed: 0,
-    sampleCapped: false,
-    siteUrlIds: new Map(),
+  // Budgets read the count only after the caller's runtime lock, which serializes every admission
+  // of the workspace: a sibling commit that raised it is visible by now.
+  const live = await trx
+    .selectFrom('site_crawls')
+    .select('admitted_url_count')
+    .where('id', '=', crawl.id)
+    .where('workspace_id', '=', crawl.workspace_id)
+    .executeTakeFirstOrThrow();
+  const current = { ...crawl, admitted_url_count: live.admitted_url_count };
+  const state: Admitting = {
+    trx,
+    crawl: current,
+    settings,
+    enqueueChildren: options.enqueueChildren ?? true,
+    artifactId: options.sourceArtifactId,
+    remaining: await automaticRemaining(trx, current, runtime),
+    result: { admitted: 0, observed: 0, sampleCapped: false, siteUrlIds: new Map() },
   };
-  let batch: { frontierId: string | null; item: Candidate }[];
-  if (crawl.sample_mode)
-    batch = orderedUnique(candidates)
-      .filter((item) => allowed(item, crawl, settings))
-      .slice(0, settings.batch)
-      .map((item) => ({ frontierId: null, item }));
-  else {
-    await storeFrontier(trx, crawl, candidates, settings);
-    batch = await pendingFrontier(trx, crawl, settings);
+  const ceiling = Math.min(requestedTarget(current, settings), frontierLimit(current, settings));
+  const batch = await admissionBatch(trx, current, candidates, settings);
+  for (const [position, entry] of batch.entries()) {
+    if (current.admitted_url_count + state.result.admitted >= ceiling) break;
+    await admitOne(state, entry, position); // NOSONAR: admission is order-dependent (budgets, allowance).
   }
-  const automaticLimit =
-    Number(record(crawl.configuration)[crawlPolicy.automatic_monitor_limit_key]) || 0;
-  for (const [position, { frontierId, item }] of batch.entries()) {
-    const total = crawl.admitted_url_count + result.admitted;
-    if (total >= requestedTarget(crawl, settings) || total >= frontierLimit(crawl, settings)) break;
-    const siteUrlId = await upsertSiteUrl(trx, crawl, item);
-    result.siteUrlIds.set(item.hash, siteUrlId);
-    result.observed++;
-    const selects = item.disposition === 'analyze' && remaining !== null && remaining > 0;
-    if (crawl.sample_mode) {
-      const [activated, observed] = await observe(
-        trx,
-        crawl,
-        siteUrlId,
-        item,
-        { analyze: selects, source: automaticLimit > 0 ? 'bootstrap' : 'free_sample' },
-        settings,
-      );
-      if (activated && remaining !== null) remaining--;
-      if (observed) result.admitted++;
-    } else {
-      if (selects) {
-        const [activated] = await observe(
-          trx,
-          crawl,
-          siteUrlId,
-          item,
-          { analyze: true, afterDiscovery: enqueueChildren, source: 'bootstrap' },
-          settings,
-        );
-        if (activated) remaining!--;
-      }
-      const queued = enqueueChildren
-        ? await enqueueSiteTask(
-            trx,
-            crawl,
-            {
-              kind: 'discover',
-              siteUrlId,
-              url: item.url,
-              hash: item.hash,
-              depth: item.depth,
-              priority: item.priority,
-              position,
-            },
-            settings,
-          )
-        : 'admitted';
-      if (queued) result.admitted++;
-    }
-    if (frontierId)
-      await trx
-        .updateTable('site_discovery_frontier')
-        .set({ status: 'admitted', admitted_at: new Date() })
-        .where('id', '=', frontierId)
-        .where('workspace_id', '=', crawl.workspace_id)
-        .execute();
-  }
-  result.sampleCapped = crawl.sample_mode && remaining !== null && remaining <= 0;
-  return result;
+  state.result.sampleCapped =
+    current.sample_mode && state.remaining !== null && state.remaining <= 0;
+  return state.result;
 }
 
 /** Queue analysis for a URL whose discover artifact now exists, if it is still an active member. */

@@ -16,7 +16,8 @@ import uuid
 from collections import OrderedDict
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import all_, literal, select
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.site_health_contracts import (
@@ -61,18 +62,23 @@ class TsAnalysisReconciler:
                             SiteCrawlTask.task_kind.in_(_CRAWL_TASK_KINDS),
                             SiteCrawlTask.status.in_(sorted(TASK_TERMINAL_STATUSES)),
                             SiteCrawlTask.updated_at > self._watermark - _OVERLAP,
+                            # Excluded in SQL, so a window full of replayed rows
+                            # cannot pin the watermark below newer settlements.
+                            SiteCrawlTask.id
+                            != all_(
+                                literal(list(self._seen), ARRAY(UUID(as_uuid=True)))
+                            ),
                         )
                         .order_by(SiteCrawlTask.updated_at)
                         .limit(site_health_settings.stalled_crawl_reconcile_batch)
                     )
                 ).all()
             )
-        settled = [row for row in rows if row.id not in self._seen]
-        for task in settled:
+        for task in rows:
             await self._lifecycle.reconcile_after_task(task)
             self._seen[task.id] = None
         while len(self._seen) > _MAX_REMEMBERED:
             self._seen.popitem(last=False)
         if rows:
             self._watermark = max(self._watermark, rows[-1].updated_at)
-        return len(settled)
+        return len(rows)

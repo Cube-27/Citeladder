@@ -38,6 +38,7 @@ from app.core.config.site_health_contracts import (
     TASK_KIND_CHANGE_INTEL,
     TASK_KIND_DISCOVER,
 )
+from app.core.config.site_health_runtime import site_health_settings
 from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
@@ -627,6 +628,35 @@ async def test_ts_settled_analysis_is_reconciled_exactly_once(
     await reconciler.reconcile()
     await reconciler.reconcile()
     assert reconciled.count(task_id) == 1
+
+
+@pytest.mark.asyncio
+async def test_ts_reconcile_advances_past_a_batch_of_replayed_rows(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Rows already replayed never refill the batch and pin the watermark."""
+    monkeypatch.setattr(site_health_settings, "stalled_crawl_reconcile_batch", 1)
+    task_ids = []
+    for _ in range(2):
+        _seed, _site_url_id, task_id = await _seed_analyze_ready(session_factory)
+        await _settle_analysis_as_typescript(
+            session_factory, task_id, body=_rich_html()
+        )
+        task_ids.append(task_id)
+    reconciled: list = []
+
+    class _Lifecycle:
+        async def reconcile_after_task(self, task: SiteCrawlTask) -> None:
+            reconciled.append(task.id)
+
+    reconciler = TsAnalysisReconciler(session_factory, _Lifecycle())  # type: ignore[arg-type]
+    # Other tests' settlements may share the window; each pass must still advance.
+    for _ in range(200):
+        if set(task_ids) <= set(reconciled):
+            break
+        await reconciler.reconcile()
+    assert set(task_ids) <= set(reconciled)
 
 
 @pytest.mark.asyncio

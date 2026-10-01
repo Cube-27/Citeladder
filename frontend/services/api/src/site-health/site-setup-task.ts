@@ -12,7 +12,7 @@ import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
-import { SitemapCollector, SitemapParseError } from '../web-evidence/sitemaps.ts';
+import { SitemapCollector, SitemapParseError, sitemapRef } from '../web-evidence/sitemaps.ts';
 import { admitCandidates, candidate, crawlScope, lockRuntime, type Candidate } from './frontier.ts';
 import {
   Abandoned,
@@ -152,34 +152,64 @@ async function walkSitemaps(
   seeds: string[],
   settings: Settings,
 ) {
-  const collector = new SitemapCollector(settings.sitemap);
-  const files: string[] = [];
-  const queued = new Set(seeds);
-  const queue = [...queued].map((url) => ({ url, depth: 0 }));
+  const walk: Walk = {
+    collector: new SitemapCollector(settings.sitemap),
+    files: [],
+    queued: new Set(seeds.flatMap((seed) => sitemapRef(seed) ?? [])),
+    queue: [],
+  };
+  walk.queue = [...walk.queued].map((url) => ({ url, depth: 0 }));
   let attempted = 0;
-  while (queue.length && attempted < settings.maxDocuments) {
-    // A full collector cannot gain a URL from any further document.
-    if (collector.urls.length >= settings.sitemap.maxUrls) break;
-    const wave = queue.splice(0, Math.min(settings.concurrency, settings.maxDocuments - attempted));
+  // A full collector cannot gain a URL from any further document.
+  while (
+    walk.queue.length &&
+    attempted < settings.maxDocuments &&
+    walk.collector.urls.length < settings.sitemap.maxUrls
+  ) {
+    const wave = walk.queue.splice(
+      0,
+      Math.min(settings.concurrency, settings.maxDocuments - attempted),
+    );
     attempted += wave.length;
-    const pages = await Promise.all(wave.map(({ url }) => sitemapDocument(ctx, url, settings)));
-    for (const [index, { url, depth }] of wave.entries()) {
-      const page = pages[index];
-      if (!page) continue;
-      files.push(url);
-      let refs: string[] = [];
-      try {
-        refs = collector.add(url, page.body, page.contentType, depth);
-      } catch (error) {
-        if (!(error instanceof SitemapParseError)) throw error;
-      }
-      for (const ref of refs)
-        if (!queued.has(ref)) {
-          queued.add(ref);
-          queue.push({ url: ref, depth: depth + 1 });
-        }
-    }
+    // Waves are bounded and sequential: a wave's references feed the next one.
+    const pages = await Promise.all(wave.map(({ url }) => sitemapDocument(ctx, url, settings))); // NOSONAR
+    for (const [index, entry] of wave.entries()) collect(walk, entry, pages[index] ?? null);
   }
+  return {
+    files: walk.files.slice(0, settings.maxDocuments),
+    urls: admittedUrls(walk.collector, crawl, settings),
+  };
+}
+
+type Walk = {
+  collector: SitemapCollector;
+  files: string[];
+  queued: Set<string>;
+  queue: { url: string; depth: number }[];
+};
+
+/** Record one fetched document and queue its unseen child references. */
+function collect(
+  walk: Walk,
+  { url, depth }: { url: string; depth: number },
+  page: Awaited<ReturnType<typeof sitemapDocument>>,
+) {
+  if (!page) return;
+  walk.files.push(url);
+  let refs: string[] = [];
+  try {
+    refs = walk.collector.add(url, page.body, page.contentType, depth);
+  } catch (error) {
+    if (!(error instanceof SitemapParseError)) throw error;
+  }
+  for (const ref of refs.filter((item) => !walk.queued.has(item))) {
+    walk.queued.add(ref);
+    walk.queue.push({ url: ref, depth: depth + 1 });
+  }
+}
+
+/** The collected URLs that pass the crawl's admission, canonical and unique, up to the cap. */
+function admittedUrls(collector: SitemapCollector, crawl: Crawl, settings: Settings) {
   const scope = crawlScope(crawl);
   const urls: string[] = [];
   const seen = new Set<string>();
@@ -190,7 +220,7 @@ async function walkSitemaps(
     seen.add(admission.hash);
     urls.push(admission.url);
   }
-  return { files: files.slice(0, settings.maxDocuments), urls };
+  return urls;
 }
 
 /** Sitemap URLs as depth-1 candidates in sitemap document order. */
@@ -253,7 +283,7 @@ async function observeSitemapUrls(
       : [];
   });
   for (let offset = 0; offset < rows.length; offset += settings.batch)
-    await trx
+    await trx // NOSONAR: batches bound each insert's bind parameters, in order in one transaction.
       .insertInto('site_url_observations')
       .values(rows.slice(offset, offset + settings.batch))
       .onConflict((conflict) => conflict.columns(['crawl_id', 'site_url_id']).doNothing())
@@ -261,11 +291,11 @@ async function observeSitemapUrls(
 }
 
 /** Run `body` inside a transaction that holds crawl and task; false when the lease or crawl was lost. */
-async function underLease(
+function underLease(
   ctx: SiteTaskContext,
   claimed: SiteTask,
   body: (trx: Database, crawl: Crawl, task: SiteTask) => Promise<void>,
-) {
+): Promise<boolean> {
   return ctx.db
     .transaction()
     .execute(async (trx) => {
@@ -292,7 +322,7 @@ async function persist(
     .transaction()
     .execute(async (trx) => {
       const live = await loadScope(trx, claimed);
-      if (!live || live.task.lease_owner !== ctx.owner) throw new Abandoned();
+      if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
       const { crawl } = live;
       let admitted = 0;
       const exact = record(crawl.configuration).input_mode === 'exact_urls';

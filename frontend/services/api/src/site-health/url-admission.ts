@@ -43,25 +43,47 @@ export type Admission = {
   itemKind: string;
 };
 
-/** Python `fnmatch` semantics: `*` spans `/`, `?` is one character, `[!…]` negates. */
+const escapeRegExp = (text: string) => text.replaceAll(/[\\^$.*+?()[\]{}|/]/gu, String.raw`\$&`);
+
+/** One bracket set from `[`'s position: its regex source and where it ends, or null when unclosed. */
+function bracketSet(glob: string, open: number) {
+  let end = open + 1;
+  if (glob[end] === '!') end++;
+  // A `]` right after `[` or `[!` is a member, not the close.
+  if (glob[end] === ']') end++;
+  const close = glob.indexOf(']', end);
+  if (close < 0) return null;
+  let set = glob
+    .slice(open + 1, close)
+    .replaceAll('\\', String.raw`\\`)
+    .replaceAll(']', String.raw`\]`);
+  if (set.startsWith('!')) set = `^${set.slice(1)}`;
+  else if (set.startsWith('^')) set = String.raw`\^` + set.slice(1);
+  return { source: `[${set}]`, close };
+}
+
+/**
+ * Python `fnmatch` semantics: `*` spans `/`, `?` is one character, `[!…]`
+ * negates. A glob that still cannot compile (a reversed range) matches only
+ * itself, literally, rather than failing the task.
+ */
 function globPattern(glob: string) {
   let source = '';
-  for (let index = 0; index < glob.length; index++) {
+  let index = 0;
+  while (index < glob.length) {
     const char = glob[index]!;
+    const set = char === '[' ? bracketSet(glob, index) : null;
     if (char === '*') source += '.*';
     else if (char === '?') source += '.';
-    else if (char === '[') {
-      const close = glob.indexOf(']', index + 2);
-      if (close < 0) source += String.raw`\[`;
-      else {
-        let set = glob.slice(index + 1, close).replaceAll('\\', String.raw`\\`);
-        if (set.startsWith('!')) set = `^${set.slice(1)}`;
-        source += `[${set}]`;
-        index = close;
-      }
-    } else source += char.replaceAll(/[.*+?^${}()|[\]\\/-]/gu, String.raw`\$&`);
+    else if (set) source += set.source;
+    else source += escapeRegExp(char);
+    index = (set?.close ?? index) + 1;
   }
-  return new RegExp(`^${source}$`, 'su');
+  try {
+    return new RegExp(`^${source}$`, 'su');
+  } catch {
+    return new RegExp(`^${escapeRegExp(glob)}$`, 'su');
+  }
 }
 const globs = (values: readonly string[] | null | undefined) =>
   (values ?? [])
@@ -95,9 +117,10 @@ function valueKind(url: string) {
   if (path === '/') return 'root';
   const named = VALUE_KINDS.find((kind) => path.includes(kind.replaceAll('_', '-')));
   if (named) return named;
-  if (['product', '/p/', 'shop'].some((token) => path.includes(token))) return 'product';
-  if (['blog', 'article', 'news'].some((token) => path.includes(token))) return 'article';
-  return 'other';
+  const fallback = (crawl.value_fallback_tokens as [string, string[]][]).find(([, tokens]) =>
+    tokens.some((token) => path.includes(token)),
+  );
+  return fallback ? fallback[0] : 'other';
 }
 
 /**

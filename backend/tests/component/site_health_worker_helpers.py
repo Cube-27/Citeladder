@@ -666,6 +666,7 @@ async def _settle_discovery_as_typescript(
                     crawl_id=crawl.id,
                     site_url_id=child_url.id,
                     source_kind=OBSERVATION_SOURCE_LINK,
+                    source_artifact_id=artifact.id,
                     depth=task.depth + 1,
                     observed_url=child_url.normalized_url,
                     final_url=child_url.normalized_url,
@@ -702,7 +703,9 @@ async def _site_url(
     canonical, url_hash = canonical_identity(url)
     site_url = await session.scalar(
         select(SiteUrl).where(
-            SiteUrl.project_id == crawl.project_id, SiteUrl.url_hash == url_hash
+            SiteUrl.workspace_id == crawl.workspace_id,
+            SiteUrl.project_id == crawl.project_id,
+            SiteUrl.url_hash == url_hash,
         )
     )
     if site_url is None:

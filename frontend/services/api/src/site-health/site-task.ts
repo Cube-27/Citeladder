@@ -5,6 +5,7 @@
  * acquires outside any transaction and settles its task with its evidence.
  */
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -52,7 +53,8 @@ export const owned = (db: Database, task: SiteTask, owner: string) =>
     .where('workspace_id', '=', task.workspace_id)
     .where('lease_owner', '=', owner);
 
-export async function cancelTask(db: Database, task: SiteTask) {
+/** Cancel the task while this worker still holds it; a reclaimed lease belongs to someone else. */
+export async function cancelTask(db: Database, task: SiteTask, owner: string) {
   const now = new Date();
   await db
     .updateTable('site_crawl_tasks')
@@ -66,6 +68,7 @@ export async function cancelTask(db: Database, task: SiteTask) {
     })
     .where('id', '=', task.id)
     .where('workspace_id', '=', task.workspace_id)
+    .where('lease_owner', '=', owner)
     .where('status', 'not in', [statuses.succeeded, statuses.failed, statuses.cancelled])
     .execute();
 }
@@ -111,7 +114,7 @@ export async function startCrawl(db: Database, crawl: Crawl) {
 export async function prepareTask(ctx: SiteTaskContext, claimed: SiteTask) {
   const scope = await loadScope(ctx.db, claimed);
   if (!scope || !ACTIVE_CRAWL.has(scope.crawl.status)) {
-    await cancelTask(ctx.db, claimed);
+    await cancelTask(ctx.db, claimed, ctx.owner);
     return null;
   }
   if (scope.task.lease_owner !== ctx.owner) return null;
@@ -226,6 +229,8 @@ export async function lockRunningTask(trx: Database, claimed: SiteTask, owner: s
     .where('workspace_id', '=', claimed.workspace_id)
     .where('lease_owner', '=', owner)
     .where('status', '=', statuses.running)
+    // An expired lease is the sweeper's to reclaim; late writes stay fenced.
+    .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
     .forUpdate()
     .executeTakeFirst();
   if (!crawl || !task) return null;

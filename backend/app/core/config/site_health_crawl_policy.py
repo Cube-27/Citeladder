@@ -259,6 +259,13 @@ URL_VALUE_PRIORITIES: Final[dict[str, int]] = {
     "other": 20,
 }
 
+# Path tokens that still rank a URL when no value-priority kind names it,
+# tried in order after the kinds themselves.
+URL_VALUE_FALLBACK_TOKENS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
+    ("product", ("product", "/p/", "shop")),
+    ("article", ("blog", "article", "news")),
+)
+
 FRONTIER_PENDING: Final = "pending"
 SELECTION_SOURCE_USER: Final = "user"
 SELECTION_SOURCE_FREE_SAMPLE: Final = "free_sample"

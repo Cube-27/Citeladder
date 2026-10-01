@@ -31,6 +31,18 @@ describe('URL admission', () => {
     );
   });
 
+  it('translates fnmatch globs, including hyphens and literal brackets, without throwing', () => {
+    const admitted = (path: string, include: string[]) =>
+      classifyUrlAdmission(`https://example.test${path}`, { ...scope, include }).accepted;
+    expect(admitted('/blog-posts/a', ['*/blog-posts/*'])).toBe(true);
+    // A `]` right after `[` or `[!` is a set member, not the close.
+    expect(admitted('/axb', ['*/a[]x]b'])).toBe(true);
+    expect(admitted('/ayb', ['*/a[!]x]b'])).toBe(true);
+    expect(admitted('/axb', ['*/a[!]x]b'])).toBe(false);
+    // A reversed range cannot compile; the glob then matches only itself.
+    expect(admitted('/x', ['*[z-a]*'])).toBe(false);
+  });
+
   it('separates hard exclusions, tracking variants and documents from ordinary pages', () => {
     expect(classifyUrlAdmission('https://example.test/search?q=x').reason).toBe(reasons.hard_query);
     expect(classifyUrlAdmission('https://example.test/p?utm_source=x').reason).toBe(
@@ -174,5 +186,10 @@ describe('sitemaps', () => {
     collector.add('https://example.test/u1.xml', urlset('a', 'b'), 'text/xml', 1);
     collector.add('https://example.test/u2.xml', urlset('c', 'd'), 'text/xml', 1);
     expect(collector.urls).toEqual(['a', 'b', 'c']);
+    // A fragment or spelling variant of a visited sitemap is the same document.
+    const again = Buffer.from(
+      '<sitemapindex><sitemap><loc>https://EXAMPLE.test/root.xml#top</loc></sitemap></sitemapindex>',
+    );
+    expect(collector.add('https://example.test/other.xml', again, 'text/xml', 0)).toEqual([]);
   });
 });

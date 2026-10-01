@@ -6037,6 +6037,24 @@
         "trust": 40,
         "other": 20
       },
+      "value_fallback_tokens": [
+        [
+          "product",
+          [
+            "product",
+            "/p/",
+            "shop"
+          ]
+        ],
+        [
+          "article",
+          [
+            "blog",
+            "article",
+            "news"
+          ]
+        ]
+      ],
       "exclusions": {
         "hard_path": "hard_excluded_path",
         "hard_asset": "hard_excluded_asset",

@@ -94,28 +94,37 @@ export function discoveryLinks(root: HtmlNode, baseUrl: string, scope: Scope, ma
   const seen = new Set<string>();
   for (const anchor of anchors(root)) {
     if (links.length >= maxLinks) break;
-    const href = attribute(anchor, 'href').trim();
-    const lowered = href.toLowerCase();
-    if (!href || NON_NAVIGABLE.some((prefix) => lowered.startsWith(prefix))) continue;
-    const rewritten = rewriteHref(href);
-    let target = href;
-    try {
-      // A rewritten href is canonicalized first, which drops the repaired tracking query.
-      if (rewritten) target = canonicalIdentity(rewritten, baseUrl).url;
-    } catch {
-      continue;
-    }
-    const admission = classifyUrlAdmission(target, { ...scope, base: baseUrl });
-    if (!admission.accepted || !admission.url || seen.has(admission.hash)) continue;
-    seen.add(admission.hash);
-    links.push({
-      admission: { ...admission, url: admission.url },
-      ordinal: links.length,
-      rewriteReason: rewritten ? crawlPolicy.link_rewrite.reason : '',
-      rewriteVersion: rewritten ? crawlPolicy.link_rewrite.version : '',
-    });
+    const link = admitHref(attribute(anchor, 'href').trim(), baseUrl, scope);
+    if (!link || seen.has(link.admission.hash)) continue;
+    seen.add(link.admission.hash);
+    links.push({ ...link, ordinal: links.length });
   }
   return { title, links };
+}
+
+/** One href's admission under the crawl scope, or null when it names no admissible page. */
+function admitHref(
+  href: string,
+  baseUrl: string,
+  scope: Scope,
+): Omit<DiscoveredLink, 'ordinal'> | null {
+  const lowered = href.toLowerCase();
+  if (!href || NON_NAVIGABLE.some((prefix) => lowered.startsWith(prefix))) return null;
+  const rewritten = rewriteHref(href);
+  let target = href;
+  try {
+    // A rewritten href is canonicalized first, which drops the repaired tracking query.
+    if (rewritten) target = canonicalIdentity(rewritten, baseUrl).url;
+  } catch {
+    return null;
+  }
+  const admission = classifyUrlAdmission(target, { ...scope, base: baseUrl });
+  if (!admission.accepted || !admission.url) return null;
+  return {
+    admission: { ...admission, url: admission.url },
+    rewriteReason: rewritten ? crawlPolicy.link_rewrite.reason : '',
+    rewriteVersion: rewritten ? crawlPolicy.link_rewrite.version : '',
+  };
 }
 
 type Discovery = { title: string; links: DiscoveredLink[] };
@@ -363,23 +372,18 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
     .transaction()
     .execute(async (trx) => {
       const live = await loadScope(trx, claimed);
-      if (!live || live.task.lease_owner !== ctx.owner) throw new Abandoned();
+      if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
       const { crawl, task } = live;
       let artifactId: string | null = null;
       let admitted = 0;
       let sampleCapped = false;
       const { page, discovery } = outcome;
       if (page && discovery) {
-        artifactId = await writeArtifact(
-          trx,
-          crawl,
-          task,
-          page,
-          outcome.facts,
-          ctx.fetcher.settings.policyVersion,
-          outcome.latencyMs ?? 0,
-          'discover',
-        );
+        artifactId = await writeArtifact(trx, crawl, task, page, outcome.facts, {
+          policyVersion: ctx.fetcher.settings.policyVersion,
+          latencyMs: outcome.latencyMs ?? 0,
+          purpose: 'discover',
+        });
         await writeObservation(trx, crawl, task, page, discovery, artifactId);
         // The runtime lock is the first rung of the Site Health lock order; taken late to keep it short.
         const runtime = await lockRuntime(trx, crawl.workspace_id);
@@ -389,7 +393,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
           crawl,
           candidatesFor(task, discovery, exact),
           runtime,
-          { enqueueChildren: !exact },
+          { enqueueChildren: !exact, sourceArtifactId: artifactId },
         );
         admitted = admission.admitted;
         sampleCapped = admission.sampleCapped;

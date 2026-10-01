@@ -99,6 +99,10 @@ def _crawl_policy(
     """What the TypeScript discovery, site setup and frontier admission read."""
     return {
         "value_priorities": crawl_policy.URL_VALUE_PRIORITIES,
+        "value_fallback_tokens": [
+            [kind, list(tokens)]
+            for kind, tokens in crawl_policy.URL_VALUE_FALLBACK_TOKENS
+        ],
         "exclusions": constants(crawl_policy, "URL_EXCLUSION_"),
         "inventory_document_extensions": sorted(
             crawl_policy.INVENTORY_DOCUMENT_EXTENSIONS

@@ -270,7 +270,10 @@ describe('discover', () => {
     expect(await crawlRow(seed)).toMatchObject({ admitted_url_count: 0, discovered_url_count: 0 });
   });
 
-  it('writes nothing when the lease is lost during the fetch', async () => {
+  it.each([
+    ['lost', { lease_owner: 'another-worker' }],
+    ['expired', { lease_expires_at: new Date(Date.now() - 1000) }],
+  ])('writes nothing when the lease is %s during the fetch', async (_label, values) => {
     const seed = await crawl();
     const root = await queued(seed, 'discover');
     const site = worker({
@@ -279,7 +282,7 @@ describe('discover', () => {
         onFetch: async () =>
           void (await db
             .updateTable('site_crawl_tasks')
-            .set({ lease_owner: 'another-worker' })
+            .set(values)
             .where('id', '=', root)
             .execute()),
       },

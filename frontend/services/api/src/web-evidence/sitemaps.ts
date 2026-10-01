@@ -57,6 +57,17 @@ export function parseSitemap(body: Buffer, contentType: string, limits: SitemapL
   return { urls, refs: isIndex ? [...refs, ...take(children.url)].slice(0, limits.maxUrls) : refs };
 }
 
+/** A sitemap reference as one fetchable identity (WHATWG-normalized, no fragment), or null. */
+export function sitemapRef(value: string) {
+  try {
+    const url = new URL(value.trim());
+    url.hash = '';
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A bounded walk over one site's sitemap tree; it never fetches anything itself. */
 export class SitemapCollector {
   readonly urls: string[] = [];
@@ -67,11 +78,12 @@ export class SitemapCollector {
   }
   /** Ingest one fetched document; return the unvisited child references still within depth. */
   add(source: string, body: Buffer, contentType: string, depth: number) {
-    this.#visited.add(source);
+    this.#visited.add(sitemapRef(source) ?? source);
     const document = parseSitemap(body, contentType, this.limits);
     const room = Math.max(0, this.limits.maxUrls - this.urls.length);
     this.urls.push(...document.urls.slice(0, room));
     if (depth >= this.limits.maxIndexDepth) return [];
-    return [...new Set(document.refs)].filter((ref) => !this.#visited.has(ref));
+    const refs = document.refs.flatMap((ref) => sitemapRef(ref) ?? []);
+    return [...new Set(refs)].filter((ref) => !this.#visited.has(ref));
   }
 }
