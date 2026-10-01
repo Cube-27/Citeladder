@@ -12,9 +12,11 @@ function evaluation(
   const rule = policy.site_health.rule_catalog.find((item) => item.rule_id === id);
   if (!rule) throw new Error(`Architecture rule '${id}' is absent from its catalog`);
   const unavailable = requiresComplete && coverage !== 'complete';
+  let outcome = rows.length ? 'missing' : 'satisfied';
+  if (unavailable) outcome = 'unknown';
   return {
     rule,
-    outcome: unavailable ? 'unknown' : rows.length ? 'missing' : 'satisfied',
+    outcome,
     reason: unavailable ? 'coverage_not_complete' : '',
     evidence: unavailable
       ? { reason: 'coverage_not_complete', coverage_state: coverage }

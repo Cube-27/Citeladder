@@ -1,7 +1,7 @@
 /** Conservative structure over a bounded observed crawl; no inferred missing pages. */
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
-import { compareText } from '../text-order.ts';
+import { compareText, stripTrailing } from '../text-order.ts';
 import { assessArchetype } from './archetypes.ts';
 import { canonicalUrl } from './url-identity.ts';
 
@@ -27,11 +27,8 @@ function normalized(value: string) {
 function median(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
-  return sorted.length
-    ? sorted.length % 2
-      ? sorted[middle]!
-      : (sorted[middle - 1]! + sorted[middle]!) / 2
-    : null;
+  if (!sorted.length) return null;
+  return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }
 function kindRow(kind: string, members: ArchitecturePage[]) {
   const signatures = new Map<string, number>();
@@ -118,10 +115,15 @@ function relationshipUrls(page: ArchitecturePage) {
   const parts = blocks.map((block) => absolute(block.is_part_of_url, page.url)).filter(Boolean);
   return { visible, explicit: [...schema, ...parts] };
 }
+function parentSource(breadcrumb: unknown, explicit: unknown, parent: unknown) {
+  if (breadcrumb) return 'breadcrumb';
+  if (explicit) return 'explicit_structure';
+  return parent ? 'url_parent' : 'unknown';
+}
 function pathParent(url: string) {
   try {
     const parsed = new URL(url);
-    const path = parsed.pathname.replace(/\/+$/u, '');
+    const path = stripTrailing(parsed.pathname, '/');
     if (!path) return '';
     parsed.pathname = path.slice(0, path.lastIndexOf('/')) || '/';
     parsed.search = '';
@@ -154,13 +156,7 @@ function hierarchyRow(
     title: page.title,
     page_kind: page.kind,
     parent_site_url_id: breadcrumb ?? explicit ?? parent,
-    parent_source: breadcrumb
-      ? 'breadcrumb'
-      : explicit
-        ? 'explicit_structure'
-        : parent
-          ? 'url_parent'
-          : 'unknown',
+    parent_source: parentSource(breadcrumb, explicit, parent),
     breadcrumb_parent_site_url_id: breadcrumb,
     explicit_parent_site_url_id: explicit,
     depth_from_home: page.depth,

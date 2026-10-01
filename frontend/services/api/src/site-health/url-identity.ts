@@ -10,13 +10,13 @@ import { publicUrl } from '../projects/safe-fetch.ts';
 // the path re-quotes with its safe set and query pairs encode as `quote_plus`.
 const UNRESERVED = /[A-Za-z0-9\-._~]/u;
 const PATH_SAFE = /[A-Za-z0-9/%:@!$&'()*+,;=~\-._]/u;
-const escapeByte = (char: string) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`;
+const escapeByte = (char: string) => `%${char.codePointAt(0)!.toString(16).toUpperCase()}`;
 const quote = (value: string) => encodeURIComponent(value).replaceAll(/[!'()*]/gu, escapeByte);
 const quotePlus = (value: string) => quote(value).replaceAll('%20', '+');
 
 function canonicalPath(pathname: string) {
   const decoded = pathname.replaceAll(/%([0-9a-f]{2})/giu, (_raw, hex: string) => {
-    const char = String.fromCharCode(parseInt(hex, 16));
+    const char = String.fromCodePoint(Number.parseInt(hex, 16));
     return UNRESERVED.test(char) ? char : `%${hex.toUpperCase()}`;
   });
   return Array.from(decoded, (char) => (PATH_SAFE.test(char) ? char : quote(char))).join('');

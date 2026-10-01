@@ -9,6 +9,7 @@ import {
   actionDeclarationSchema,
 } from '@citeladder/contracts/actions';
 import { searchConsoleState } from '../src/opportunities/measurement-legs.ts';
+import { settlePlacements } from '../src/source-pages/placement-settlement.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
@@ -388,13 +389,24 @@ describe('Action routes', () => {
         .where('id', '=', body.id)
         .execute(),
     ).rejects.toMatchObject({ code: '23514' });
-    const observation = await actionFixture<{ state: string; snapshot_id: string }>(
+    const observation = await actionFixture<{ snapshot_id: string; observed_at: string }>(
       'observe',
       s.workspace_id,
       s.project_id,
       earned.page_id,
     );
-    expect(observation.state).toBe('satisfied');
+    await settlePlacements(
+      db,
+      { workspaceId: s.workspace_id, projectId: s.project_id },
+      new Date(observation.observed_at),
+    );
+    expect(
+      await db
+        .selectFrom('placement_checks')
+        .select(['state', 'observation_snapshot_id'])
+        .where('id', '=', check.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ state: 'satisfied', observation_snapshot_id: observation.snapshot_id });
     const detail = await detailBody(await request(s, actionPath(s, 'earned')));
     expect(detail.declaration?.legs[0]).toMatchObject({ state: 'observed', source_id: check.id });
   });

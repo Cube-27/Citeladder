@@ -72,35 +72,47 @@ export function anchorDestinations(outgoing: Map<string, LinkEdge[]>) {
       }
   return destinations;
 }
+type Diagnosis = ReturnType<typeof diagnoses>[number];
+function group(
+  grouped: Map<string, Diagnostic>,
+  spec: Diagnosis,
+  text: string,
+  targetUrl: string,
+  region: string,
+  urls: Set<string>,
+) {
+  const alignment = spec.kind === 'low_lexical_alignment';
+  const key = JSON.stringify([spec.kind, text, alignment ? targetUrl : '']);
+  const row = grouped.get(key) ?? {
+    kind: spec.kind,
+    anchor_text: text,
+    occurrences: 0,
+    destination_count: alignment ? 1 : urls.size,
+    destinations: alignment ? [targetUrl] : [...urls].sort(compareText),
+    regions: new Set<string>(),
+    title_coverage: spec.title,
+    h1_coverage: spec.h1,
+  };
+  row.occurrences += 1;
+  row.regions.add(region);
+  grouped.set(key, row);
+}
 export function anchorDiagnostics(
   edges: LinkEdge[],
   pages: Map<string, LinkPage>,
   destinations: Map<string, Set<string>>,
 ) {
   const grouped = new Map<string, Diagnostic>();
-  for (const edge of edges)
+  for (const edge of edges) {
+    const target = edge.target ? pages.get(edge.target) : undefined;
     for (const fact of edge.anchors) {
       const text = normalized(fact.text);
       if (!text) continue;
       const urls = destinations.get(text)!;
-      for (const spec of diagnoses(text, edge.target ? pages.get(edge.target) : undefined, urls)) {
-        const alignment = spec.kind === 'low_lexical_alignment';
-        const key = JSON.stringify([spec.kind, text, alignment ? edge.targetUrl : '']);
-        const row = grouped.get(key) ?? {
-          kind: spec.kind,
-          anchor_text: text,
-          occurrences: 0,
-          destination_count: alignment ? 1 : urls.size,
-          destinations: alignment ? [edge.targetUrl] : [...urls].sort(compareText),
-          regions: new Set<string>(),
-          title_coverage: spec.title,
-          h1_coverage: spec.h1,
-        };
-        row.occurrences += 1;
-        row.regions.add(fact.region);
-        grouped.set(key, row);
-      }
+      for (const spec of diagnoses(text, target, urls))
+        group(grouped, spec, text, edge.targetUrl, fact.region, urls);
     }
+  }
   return [...grouped]
     .sort(([a], [b]) => compareText(a, b))
     .map(([, row]) => ({ ...row, regions: [...row.regions].sort(compareText) }));

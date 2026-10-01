@@ -1,5 +1,6 @@
 /** Exact quoted matches and explicit abstention when an extraction cannot establish absence. */
 import { policy } from '../config.ts';
+import { scalarText } from '../text-order.ts';
 import { record, strings } from '../db/json.ts';
 import { routePageKind } from '../site-health/routes.ts';
 import type { ExtractedPage } from './extract.ts';
@@ -51,6 +52,24 @@ function pageFormat(page: ExtractedPage) {
       return { format: format!, method: 'heading_evidence' };
   return { format: 'unresolved', method: 'none' };
 }
+/** Quote each literal match until the page's passage cap; returns the new passage indexes. */
+function quote(text: string, matches: RegExpExecArray[], ref: string, passages: Passage[]) {
+  const refs: number[] = [];
+  for (const match of matches) {
+    if (passages.length >= p.max_passages) break;
+    const half = Math.max(0, Math.floor((p.passage_chars - match[0].length) / 2));
+    const start = Math.max(0, match.index - half);
+    const end = Math.min(text.length, match.index + match[0].length + half);
+    refs.push(passages.length);
+    passages.push({
+      text: text.slice(start, end).trim(),
+      char_start: start,
+      char_end: end,
+      entity_ref: ref,
+    });
+  }
+  return refs;
+}
 function entity(
   page: ExtractedPage,
   kind: string,
@@ -63,25 +82,11 @@ function entity(
     (s) => s.length >= p.min_alias_chars,
   );
   for (const alias of candidates) {
-    const escaped = alias.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-    const matches = [
-      ...text.matchAll(new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, 'giu')),
-    ];
+    const escaped = alias.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
+    const word = String.raw`[\p{L}\p{N}_]`;
+    const matches = [...text.matchAll(new RegExp(`(?<!${word})${escaped}(?!${word})`, 'giu'))];
     if (!matches.length) continue;
-    const refs: number[] = [];
-    for (const match of matches) {
-      if (passages.length >= p.max_passages) break;
-      const half = Math.max(0, Math.floor((p.passage_chars - match[0].length) / 2));
-      const start = Math.max(0, match.index - half);
-      const end = Math.min(text.length, match.index + match[0].length + half);
-      refs.push(passages.length);
-      passages.push({
-        text: text.slice(start, end).trim(),
-        char_start: start,
-        char_end: end,
-        entity_ref: `${kind}:${normalizeAlias(name)}`,
-      });
-    }
+    const refs = quote(text, matches, `${kind}:${normalizeAlias(name)}`, passages);
     return {
       entity_kind: kind,
       entity_name: name,
@@ -99,10 +104,12 @@ function entity(
   const offset = offsets.length ? Math.min(...offsets) : undefined;
   const sufficient =
     page.facts.parsed && !page.facts.text_truncated && page.extracted_chars >= p.min_coverage_chars;
+  let presence = sufficient ? 'not_detected' : 'partial';
+  if (offset !== undefined) presence = 'ambiguous';
   return {
     entity_kind: kind,
     entity_name: name,
-    presence: offset !== undefined ? 'ambiguous' : sufficient ? 'not_detected' : 'partial',
+    presence,
     match_method: offset !== undefined ? 'normalized_alias' : 'none',
     match_count: offset !== undefined ? 1 : 0,
     first_offset: offset ?? null,
@@ -112,13 +119,13 @@ function entity(
 export function assessPage(page: ExtractedPage, configuration: unknown) {
   const config = record(configuration);
   const passages: Passage[] = [];
-  const brand = String(config.brand_name ?? '').trim();
+  const brand = scalarText(config.brand_name).trim();
   const presences: Presence[] = brand
     ? [entity(page, 'brand', brand, strings(config.brand_aliases), passages)]
     : [];
   for (const raw of Array.isArray(config.competitors) ? config.competitors : []) {
     const competitor = record(raw);
-    const name = String(competitor.name ?? '').trim();
+    const name = scalarText(competitor.name).trim();
     if (name)
       presences.push(entity(page, 'competitor', name, strings(competitor.aliases), passages));
   }

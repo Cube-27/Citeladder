@@ -94,21 +94,23 @@ function fetchedOutcome(url: string, result: FetchedPage): FetchOutcome {
     redirects: result.redirects,
     headers: result.headers,
     robots: 'allowed',
-    reason: !ok ? 'status_rejected' : !readable ? 'non_html' : undefined,
+    reason: rejection(ok, readable),
   };
+}
+function rejection(ok: boolean, readable: boolean) {
+  if (!ok) return 'status_rejected';
+  return readable ? undefined : 'non_html';
 }
 function failedOutcome(url: string, error: unknown): FetchOutcome {
   const code = error instanceof FetchError ? error.code : 'transport_error';
-  const blocked = code === 'robots_disallowed';
+  if (code === 'robots_disallowed') {
+    return { outcome: 'blocked', requestedUrl: url, robots: 'disallowed', reason: code };
+  }
   return {
-    outcome: blocked ? 'blocked' : 'failed',
+    outcome: 'failed',
     requestedUrl: url,
-    robots: blocked ? 'disallowed' : code === 'robots_unavailable' ? 'unavailable' : undefined,
-    reason: blocked
-      ? 'robots_disallowed'
-      : code === 'content_type'
-        ? 'non_html'
-        : code.slice(0, 48),
+    robots: code === 'robots_unavailable' ? 'unavailable' : undefined,
+    reason: code === 'content_type' ? 'non_html' : code.slice(0, 48),
   };
 }
 export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {

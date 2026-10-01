@@ -46,11 +46,9 @@ function aliasesFor(pages: LinkPage[]) {
   return result;
 }
 function relTokens(raw: unknown) {
-  const values = Array.isArray(raw)
-    ? raw
-    : typeof raw === 'string'
-      ? raw.replaceAll(',', ' ').split(/\s+/u)
-      : [];
+  let values: unknown[] = [];
+  if (Array.isArray(raw)) values = raw;
+  else if (typeof raw === 'string') values = raw.replaceAll(',', ' ').split(/\s+/u);
   return new Set(
     values
       .filter((value): value is string => typeof value === 'string')

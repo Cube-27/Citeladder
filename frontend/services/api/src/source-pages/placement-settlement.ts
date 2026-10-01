@@ -1,7 +1,9 @@
-import { sql } from 'kysely';
+import { sql, type Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
+import { scalarText } from '../text-order.ts';
 import type { Database } from '../db/database.ts';
+import type { PlacementChecks } from '../generated/db-schema.ts';
 import { record, strings } from '../db/json.ts';
 import {
   evaluatePlacement,
@@ -50,6 +52,32 @@ async function reading(
     headings: strings(facts.headings),
   };
 }
+type DueCheck = Selectable<PlacementChecks>;
+/** Judge one due check against its newest reading; null when that reading is unreadable. */
+async function verdictFor(db: Database, scope: SourceScope, check: DueCheck, snapshotId: string) {
+  const observation = await reading(db, scope, check.source_page_id, snapshotId);
+  if (!observation) return null;
+  const baseline = check.baseline_snapshot_id
+    ? await reading(
+        db,
+        scope,
+        check.source_page_id,
+        check.baseline_snapshot_id,
+        check.baseline_roster_version ?? undefined,
+      )
+    : null;
+  const detail = record(check.expected_detail);
+  return evaluatePlacement(
+    {
+      expected_change: check.expected_change,
+      brand_name: scalarText(detail.brand_name),
+      owned_domains: strings(detail.owned_domains),
+      discrepancies: strings(detail.discrepancies),
+    },
+    baseline,
+    observation,
+  );
+}
 export async function settlePlacements(
   db: Database,
   scope: SourceScope,
@@ -85,28 +113,8 @@ export async function settlePlacements(
         .orderBy('id', 'desc')
         .executeTakeFirst();
       if (!snapshot) continue;
-      const observation = await reading(trx, scope, check.source_page_id, snapshot.id);
-      if (!observation) continue;
-      const baseline = check.baseline_snapshot_id
-        ? await reading(
-            trx,
-            scope,
-            check.source_page_id,
-            check.baseline_snapshot_id,
-            check.baseline_roster_version ?? undefined,
-          )
-        : null;
-      const detail = record(check.expected_detail);
-      const verdict = evaluatePlacement(
-        {
-          expected_change: check.expected_change,
-          brand_name: String(detail.brand_name ?? ''),
-          owned_domains: strings(detail.owned_domains),
-          discrepancies: strings(detail.discrepancies),
-        },
-        baseline,
-        observation,
-      );
+      const verdict = await verdictFor(trx, scope, check, snapshot.id);
+      if (!verdict) continue;
       const attempts = check.attempts + 1;
       const retry =
         verdict.state === p.PLACEMENT_STATE_UNMET ||

@@ -8,6 +8,7 @@ import { record } from '../db/json.ts';
 import type { SourceScope } from './admission.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { fenceInspectionTask } from './task-fence.ts';
+import { compareText, scalarText } from '../text-order.ts';
 
 const p = policy.content_differentiation;
 const stopWords = new Set(p.stop_words);
@@ -30,12 +31,14 @@ export type ComparisonPage = {
 function features(page: ComparisonPage) {
   return {
     heading_topics: new Set(
-      page.headings.map((heading) => [...lexicalTokens(heading)].sort().join(' ')).filter(Boolean),
+      page.headings
+        .map((heading) => [...lexicalTokens(heading)].sort(compareText).join(' '))
+        .filter(Boolean),
     ),
     table_structures: new Set(
       page.tables.map(
         (headers) =>
-          `table:${[...lexicalTokens(headers.join(' '))].sort().join(' ') || 'unlabelled'}`,
+          `table:${[...lexicalTokens(headers.join(' '))].sort(compareText).join(' ') || 'unlabelled'}`,
       ),
     ),
     outbound_sources: new Set(page.domains.filter(Boolean).map((domain) => domain.toLowerCase())),
@@ -64,8 +67,8 @@ export function compareContent(
       selected_result_count: candidateIds.length,
       inspected_page_count: denominator,
       unusable_page_count: Math.max(0, candidateIds.length - denominator),
-      candidate_ids: [...new Set(candidateIds)].sort(),
-      snapshot_ids: [...new Set(snapshotIds)].sort(),
+      candidate_ids: [...new Set(candidateIds)].sort(compareText),
+      snapshot_ids: [...new Set(snapshotIds)].sort(compareText),
       search_context: record(context),
     },
     parity: [] as Entry[],
@@ -83,21 +86,7 @@ export function compareContent(
     base.state = 'insufficient_evidence';
     return base;
   }
-  const own = features(owned!);
-  const threshold = Math.max(1, Math.ceil(denominator * p.most_pages_ratio));
-  for (const feature of Object.keys(own).sort() as (keyof typeof own)[]) {
-    const counts = new Map<string, number>();
-    for (const page of compared)
-      for (const value of features(page)[feature]) counts.set(value, (counts.get(value) ?? 0) + 1);
-    for (const [value, count] of [...counts].sort(([a], [b]) => a.localeCompare(b))) {
-      if (count >= threshold)
-        (own[feature].has(value) ? base.parity : base.gaps).push(
-          entry(feature, value, count, denominator),
-        );
-    }
-    for (const value of [...own[feature]].sort())
-      if (!counts.has(value)) base.unique_contributions.push(entry(feature, value, 0, denominator));
-  }
+  classify(owned!, compared, base);
   base.parity = base.parity.slice(0, p.max_feature_values);
   base.gaps = base.gaps.slice(0, p.max_feature_values);
   base.unique_contributions = base.unique_contributions.slice(0, p.max_feature_values);
@@ -106,6 +95,28 @@ export function compareContent(
     'Heading, table and outbound-domain structure are descriptive evidence, not quality or causation.',
   ];
   return base;
+}
+/** Split feature values into parity, gaps and unique owned contributions. */
+function classify(
+  owned: ComparisonPage,
+  compared: ComparisonPage[],
+  into: { parity: Entry[]; gaps: Entry[]; unique_contributions: Entry[] },
+) {
+  const own = features(owned);
+  const denominator = compared.length;
+  const threshold = Math.max(1, Math.ceil(denominator * p.most_pages_ratio));
+  for (const feature of (Object.keys(own) as (keyof typeof own)[]).sort(compareText)) {
+    const counts = new Map<string, number>();
+    for (const page of compared)
+      for (const value of features(page)[feature]) counts.set(value, (counts.get(value) ?? 0) + 1);
+    for (const [value, count] of [...counts].sort(([a], [b]) => compareText(a, b))) {
+      if (count < threshold) continue;
+      const target = own[feature].has(value) ? into.parity : into.gaps;
+      target.push(entry(feature, value, count, denominator));
+    }
+    for (const value of [...own[feature]].sort(compareText))
+      if (!counts.has(value)) into.unique_contributions.push(entry(feature, value, 0, denominator));
+  }
 }
 type Entry = {
   feature: string;
@@ -244,7 +255,7 @@ export async function refreshDifferentiation(
           const page = ownedFacts(row.id, row.normalized_facts, row.host);
           const raw = record(row.normalized_facts);
           const available = lexicalTokens(
-            `${String(raw.title || row.latest_title)} ${page.headings.join(' ')} ${String(raw.primary_content_text || '')}`,
+            `${scalarText(raw.title) || row.latest_title} ${page.headings.join(' ')} ${scalarText(raw.primary_content_text)}`,
           );
           return {
             row,

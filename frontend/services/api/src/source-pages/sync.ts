@@ -11,29 +11,35 @@ import { urlFormat } from './assessment.ts';
 import type { SourceScope } from './admission.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { fenceInspectionTask } from './task-fence.ts';
+import { compareText } from '../text-order.ts';
 
+type OrganicResult = { url: string; title: string; rank: number };
+/** One organic SERP item with a public page identity and a valid rank, or null. */
+function organicRow(raw: unknown, fallbackRank: number): OrganicResult | null {
+  const item = record(raw);
+  if (item.type !== 'organic' || typeof item.url !== 'string') return null;
+  const rank = item.rank_absolute ?? item.rank_group ?? fallbackRank;
+  if (typeof rank !== 'number' || !Number.isSafeInteger(rank) || rank < 1) return null;
+  if (!citationIdentity(item.url)) return null;
+  const title = typeof item.title === 'string' ? item.title.slice(0, 1000) : '';
+  return { url: item.url, title, rank };
+}
 export function organicResults(payload: unknown) {
   const results = record(payload).result;
-  const rows: { url: string; title: string; rank: number }[] = [];
+  const rows: OrganicResult[] = [];
   const seen = new Set<string>();
   for (const result of Array.isArray(results) ? results : []) {
     const items = record(result).items;
     for (const raw of Array.isArray(items) ? items : []) {
-      const item = record(raw);
-      if (item.type !== 'organic' || typeof item.url !== 'string' || seen.has(item.url)) continue;
-      const rank = item.rank_absolute ?? item.rank_group ?? rows.length + 1;
-      if (typeof rank !== 'number' || !Number.isSafeInteger(rank) || rank < 1) continue;
-      const identity = citationIdentity(item.url);
-      if (!identity) continue;
-      seen.add(item.url);
-      rows.push({
-        url: item.url,
-        title: typeof item.title === 'string' ? item.title.slice(0, 1000) : '',
-        rank,
-      });
+      const url = record(raw).url;
+      if (typeof url === 'string' && seen.has(url)) continue;
+      const row = organicRow(raw, rows.length + 1);
+      if (!row) continue;
+      seen.add(row.url);
+      rows.push(row);
     }
   }
-  return rows.sort((a, b) => a.rank - b.rank || a.url.localeCompare(b.url));
+  return rows.sort((a, b) => a.rank - b.rank || compareText(a.url, b.url));
 }
 type PageInput = {
   url: string;

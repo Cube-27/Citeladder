@@ -1,5 +1,5 @@
 /** Disjoint SiteCrawlTask claims, heartbeat, and atomic evidence/successor acknowledgement. */
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
@@ -17,6 +17,8 @@ const executors: Record<string, SiteExecutor> = {
   architecture: persistArchitecture,
 };
 const logger = getLogger('app.workers.site_health_worker');
+/** Uniform jitter in [0, seconds), millisecond resolution. */
+const jitter = (seconds: number) => randomInt(Math.max(1, Math.round(seconds * 1000))) / 1000;
 function conflict(error: unknown) {
   const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
   return typeof code === 'string' && ['40001', '40P01', '55P03'].includes(code);
@@ -53,16 +55,16 @@ export class SiteHealthWorker {
   }
   async execute(claimed: SiteTask) {
     if (!(await this.queue.markRunning(claimed.id, this.owner))) return;
-    let heartbeat: Promise<unknown> | null = null;
+    const beat: { pending: Promise<unknown> | null } = { pending: null };
     const timer = setInterval(() => {
-      if (heartbeat) return;
-      heartbeat = this.queue
+      if (beat.pending) return;
+      beat.pending = this.queue
         .heartbeat(claimed.id, this.owner)
         .catch((error: unknown) =>
           logger.exception('heartbeat failed; retrying', error, { task_id: claimed.id }),
         )
         .finally(() => {
-          heartbeat = null;
+          beat.pending = null;
         });
     }, this.settings.heartbeat * 1000);
     try {
@@ -98,7 +100,7 @@ export class SiteHealthWorker {
       }
     } finally {
       clearInterval(timer);
-      if (heartbeat) await heartbeat;
+      await beat.pending;
     }
   }
   async fail(claimed: SiteTask, error: unknown) {
@@ -117,9 +119,9 @@ export class SiteHealthWorker {
       const attempt = task.attempt_count + Number(!contention);
       const retry = contention ? conflicts <= settings.conflictMax : attempt < task.max_attempts;
       const delay = contention
-        ? settings.conflictBase + Math.random() * settings.conflictJitter
+        ? settings.conflictBase + jitter(settings.conflictJitter)
         : Math.min(settings.retryMax, settings.retryBase * 2 ** Math.max(0, attempt - 1)) +
-          Math.random() * settings.retryJitter;
+          jitter(settings.retryJitter);
       const now = new Date();
       await trx
         .updateTable('site_crawl_tasks')

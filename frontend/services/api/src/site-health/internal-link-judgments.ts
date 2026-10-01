@@ -103,11 +103,8 @@ async function prepare(db: Database, task: QueueTask, client: JevClient | null) 
     const capabilities =
       membership &&
       policy.workspaces.roles[membership.role as keyof typeof policy.workspaces.roles];
-    const reason = !capabilities?.includes('run')
-      ? 'permission_unavailable'
-      : !client
-        ? 'provider_unconfigured'
-        : '';
+    let reason = client ? '' : 'provider_unconfigured';
+    if (!capabilities?.includes('run')) reason = 'permission_unavailable';
     const events = await trx
       .selectFrom('site_internal_link_events')
       .select(['candidate_id', 'kind'])
