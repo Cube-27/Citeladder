@@ -145,7 +145,8 @@ services:
     command: ["node", "--experimental-strip-types", "src/discovery-worker.ts"]
   agent-worker:
     <<: *backend
-    command: ["python", "-m", "app.workers.agent_worker"]
+    image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}
+    command: ["node", "--experimental-strip-types", "src/agent-worker.ts"]
   analytics-worker:
     <<: *backend
     command: ["python", "-m", "app.workers.analytics_worker"]

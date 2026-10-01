@@ -171,11 +171,51 @@ export const agentSearchReferenceSchema = z.object({
     .max(100)
     .refine((ids) => new Set(ids).size === ids.length, 'Row IDs must be unique'),
 });
-export const agentContextRefsSchema = z.object({
-  target_site_url_id: uuid().optional(),
-  target_url: z.string().optional(),
-  opportunity_id: uuid().optional(),
-  demand_signal_id: uuid().optional(),
-  site_health_reference: agentSiteHealthReferenceSchema.optional(),
-  search_intelligence_reference: agentSearchReferenceSchema.optional(),
-});
+export const agentContextRefsSchema = z
+  .object({
+    target_site_url_id: uuid().nullish(),
+    target_url: z.string().max(2048).nullish(),
+    opportunity_id: uuid().nullish(),
+    demand_signal_id: uuid().nullish(),
+    site_health_reference: agentSiteHealthReferenceSchema.nullish(),
+    search_intelligence_reference: agentSearchReferenceSchema.nullish(),
+  })
+  .strict();
+
+/** Request bounds come from the policy owner; the shared wire shape lives here. */
+export function agentRequestSchemas(bounds: {
+  message_max_chars: number;
+  mentions_max: number;
+  output_title_max_chars: number;
+  output_body_max_chars: number;
+  instructions_max_chars: number;
+}) {
+  const message = z.string().max(bounds.message_max_chars).trim().min(1);
+  const skill = z.string().max(64).nullish();
+  const mentions = z
+    .array(uuid())
+    .max(bounds.mentions_max)
+    .refine((ids) => new Set(ids).size === ids.length, 'Mentioned Actions must be unique')
+    .default([]);
+  return {
+    create: z
+      .object({
+        message,
+        skill_id: skill,
+        action_id: uuid().nullish(),
+        context: agentContextRefsSchema.default({}),
+        mentions,
+      })
+      .strict(),
+    message: z.object({ message, skill_id: skill, mentions }).strict(),
+    edit: z
+      .object({
+        base_revision_id: uuid(),
+        title: z.string().max(bounds.output_title_max_chars).trim().min(1),
+        body: z.string().max(bounds.output_body_max_chars).trim().min(1),
+      })
+      .strict(),
+    approve: z.object({ revision_id: uuid() }).strict(),
+    instructions: z.object({ text: z.string().max(bounds.instructions_max_chars) }).strict(),
+  };
+}

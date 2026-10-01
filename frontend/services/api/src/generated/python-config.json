@@ -597,7 +597,8 @@
       "failed",
       "succeeded"
     ],
-    "max_attempts_error": "max_attempts_exceeded"
+    "max_attempts_error": "max_attempts_exceeded",
+    "max_drain_batches": 1000
   },
   "referrals": {
     "rule_version": "ai-referral-rules-1",
@@ -13137,7 +13138,7 @@
     }
   },
   "agent": {
-    "runtime_version": "agent-runtime-2",
+    "runtime_version": "agent-runtime-ts-3",
     "protocol_version": "agent-protocol-1",
     "context_manifest_version": "agent-context-1",
     "max_steps": 8,
@@ -13167,6 +13168,7 @@
     "revision_list_max": 100,
     "differentiation_report_limit": 10,
     "worker_poll_seconds": 1.0,
+    "recovery_batch_size": 100,
     "heartbeat_seconds": 20.0
   },
   "agent_skills": {

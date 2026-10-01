@@ -254,7 +254,7 @@ services:
   agent-worker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: frontend/services/api/Dockerfile
     restart: unless-stopped
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
@@ -264,7 +264,7 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    command: ["python", "-m", "app.workers.agent_worker"]
+    command: ["node", "--experimental-strip-types", "src/agent-worker.ts"]
     healthcheck:
       disable: true
 

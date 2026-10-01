@@ -35,17 +35,12 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.agent import AGENT_QUEUE_SPEC
 from app.core.config.analytics import ANALYTICS_QUEUE_SPEC
 from app.core.config.brand_discovery import BRAND_DISCOVERY_QUEUE_SPEC
 from app.core.config.integrations_clients import INTEGRATION_QUEUE_SPEC
 from app.core.config.task_queue import PostgresQueueSpec
 from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
-from app.domain.agent.model_calls import (
-    agent_reclaim_accounting,
-    reconcile_stale_cancelled_model_attempts,
-)
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.parent_reconcilers import PARENT_RECONCILERS
 
@@ -56,7 +51,6 @@ logger = logging.getLogger("app.workers.queue_sweeper")
 # forgetting one is a stranded row, not a crash -- hence the list is explicit
 # rather than discovered by reflection.
 _CANDIDATE_QUEUES: tuple[PostgresQueueSpec, ...] = (
-    AGENT_QUEUE_SPEC,
     ANALYTICS_QUEUE_SPEC,
     BRAND_DISCOVERY_QUEUE_SPEC,
     INTEGRATION_QUEUE_SPEC,
@@ -86,9 +80,6 @@ class QueueSweeper:
                 PostgresTaskQueue(
                     self._session_factory,
                     spec,
-                    reclaim_accounting=(
-                        agent_reclaim_accounting if spec is AGENT_QUEUE_SPEC else None
-                    ),
                 ),
             )
             for spec in specs
@@ -96,7 +87,6 @@ class QueueSweeper:
 
     async def run_once(self) -> int:
         """One pass over every queue. Returns the total rows reclaimed."""
-        await reconcile_stale_cancelled_model_attempts(self._session_factory)
         reclaimed = 0
         for spec, queue in self._queues:
             name = spec.model.__tablename__

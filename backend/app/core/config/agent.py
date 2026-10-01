@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 # =========================================================================
 # Stamped on every run so a turn names the runtime that produced it
 # (invariant 5). Skill and registry versions are stamped separately.
-AGENT_RUNTIME_VERSION: Final = "agent-runtime-2"
+AGENT_RUNTIME_VERSION: Final = "agent-runtime-ts-3"
 AGENT_PROTOCOL_VERSION: Final = "agent-protocol-1"
 AGENT_CONTEXT_MANIFEST_VERSION: Final = "agent-context-1"
 
@@ -114,6 +114,8 @@ CODE_AGENT_FUNDING_UNAVAILABLE: Final = "agent_funding_unavailable"
 CODE_AGENT_IDEMPOTENCY_CONFLICT: Final = "agent_idempotency_conflict"
 CODE_AGENT_OUTLINE_NOT_APPROVABLE: Final = "agent_outline_not_approvable"
 CODE_AGENT_SKILL_KIND_CONFLICT: Final = "agent_skill_kind_conflict"
+CODE_AGENT_OUTPUT_CONFLICT: Final = "agent_output_conflict"
+CODE_AGENT_CONTEXT_CONFLICT: Final = "agent_context_conflict"
 
 # Terminal run error codes.
 ERROR_STOPPED_AT_LIMIT: Final = "stopped_at_limit"
@@ -266,6 +268,7 @@ def admission_budget() -> dict[str, int | float]:
 # Worker cadence. A turn is several model calls, so the lease is renewed by a
 # heartbeat for as long as the turn runs; one call can never outlive it.
 AGENT_WORKER_POLL_SECONDS: Final = 1.0
+AGENT_RECOVERY_BATCH_SIZE: Final = 100
 AGENT_HEARTBEAT_SECONDS: Final = 20.0
 
 

@@ -2,6 +2,7 @@ import {
   performanceDashboardSchema,
   performanceRangeTaskSchema,
   performanceTablePageSchema,
+  projectReadinessSchema,
 } from '@citeladder/contracts/performance';
 import { z } from 'zod';
 
@@ -12,6 +13,7 @@ import { enqueueTask, taskKey } from '../referrals/enqueue.ts';
 import { customWindow, getPerformance, getPerformanceTable } from '../traffic/performance.ts';
 import { record } from '../db/json.ts';
 import { defineGetRoute, definePostRoute } from './define.ts';
+import { readProjectReadiness } from '../integrations/readiness.ts';
 
 const root = '/api/v1/projects/{project_id}/performance';
 const projectPath = { project_id: { scalar: { kind: 'uuid' }, required: true } } as const;
@@ -30,6 +32,17 @@ function taskResponse(task: { id: string; status: string; payload: unknown }) {
 }
 
 export const performanceRoutes = [
+  defineGetRoute({
+    family: 'readiness',
+    path: '/api/v1/projects/{project_id}/readiness',
+    params: { path: projectPath, query: {} },
+    response: projectReadinessSchema,
+    async handle({ db, c }, { path }) {
+      const scope = { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id };
+      await requireProject(db, c.get('workspace'), scope.projectId);
+      return projectReadinessSchema.parse(await readProjectReadiness(db, scope));
+    },
+  }),
   defineGetRoute({
     family,
     path: root,

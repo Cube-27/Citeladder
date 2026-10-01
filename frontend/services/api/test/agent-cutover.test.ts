@@ -1,0 +1,220 @@
+import { randomUUID } from 'node:crypto';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import { sql } from 'kysely';
+import { createApp } from '../src/app.ts';
+import { createAgentBindings } from '../src/agent/bindings.ts';
+import * as bindingsOwner from '../src/agent/bindings.ts';
+import { ModelCalls } from '../src/agent/model-calls.ts';
+import { AgentWorker } from '../src/workers/agent-worker.ts';
+import { AgentFixtures, scripted, deliverable, zeroFunding } from './agent-support.ts';
+import { sessionToken, testConfig, testDatabase } from './support.ts';
+import {
+  agentTurnAcceptedSchema,
+  agentChatDetailSchema,
+  agentRevisionsPageSchema,
+  agentChatsPageSchema,
+} from '@citeladder/contracts/agent';
+
+describe('served Agent cutover on PostgreSQL', () => {
+  const db = testDatabase(),
+    fixtures = new AgentFixtures(db),
+    config = testConfig(),
+    app = createApp(config, db);
+  afterAll(async () => {
+    vi.restoreAllMocks();
+    await fixtures.cleanup();
+    await db.destroy();
+  });
+  async function setup() {
+    const scope = await fixtures.scope(),
+      bindings = await createAgentBindings(db, {});
+    bindings.store.dependencies.admission = fixtures.store().dependencies.admission;
+    bindings.runtime.deps.models = new ModelCalls(db, zeroFunding);
+    bindings.runtime.deps.modelFor = () => scripted([deliverable('outline')]);
+    bindings.models = bindings.runtime.deps.models;
+    vi.spyOn(bindingsOwner, 'agentBindings').mockResolvedValue(bindings);
+    const token = await sessionToken({ sub: scope.userId, ver: 0 });
+    const headers = {
+      cookie: `${config.session.cookieName}=${token}`,
+      'X-Workspace-Id': scope.workspaceId,
+      'Content-Type': 'application/json',
+    };
+    return {
+      scope,
+      bindings,
+      headers,
+      worker: new AgentWorker(db, bindings, 'cutover-test-worker', scope.workspaceId),
+    };
+  }
+  it('serves instructions, a queued outline, optimistic edits, restoration and archive without model calls on reads', async () => {
+    const { scope, headers, worker } = await setup();
+    const instructions = `/api/v1/projects/${scope.projectId}/agent/instructions`;
+    expect(
+      (
+        await app.request(instructions, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ text: 'Use reviewed facts' }),
+        })
+      ).status,
+    ).toBe(200);
+    const response = await app.request(`/api/v1/projects/${scope.projectId}/agent/chats`, {
+      method: 'POST',
+      headers: { ...headers, 'Idempotency-Key': randomUUID() },
+      body: JSON.stringify({
+        message: 'Écrivez un plan',
+        skill_id: 'content_create',
+        context: { target_url: null },
+      }),
+    });
+    expect(response.status).toBe(202);
+    const accepted = agentTurnAcceptedSchema.parse(await response.json()),
+      chat = `/api/v1/agent/chats/${accepted.chat_id}`;
+    const before = await app.request(chat, { headers });
+    expect(before.status).toBe(200);
+    expect(agentChatDetailSchema.parse(await before.json()).latest_run?.status).toBe('queued');
+    expect(await worker.runUntilIdle()).toBe(1);
+    const detail = agentChatDetailSchema.parse(await (await app.request(chat, { headers })).json());
+    expect(detail.latest_run?.status).toBe('succeeded');
+    expect(detail.output?.latest_revision?.phase).toBe('outline');
+    const revisionId = detail.output!.latest_revision!.id;
+    const edit = { base_revision_id: revisionId, title: 'Revised title', body: 'Reviewed outline' };
+    const edited = await app.request(`${chat}/output/revisions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(edit),
+    });
+    expect(edited.status).toBe(201);
+    expect(
+      (
+        await app.request(`${chat}/output/revisions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(edit),
+        })
+      ).status,
+    ).toBe(409);
+    expect(
+      (
+        await app.request(`${chat}/output/revisions/${revisionId}/restore`, {
+          method: 'POST',
+          headers,
+        })
+      ).status,
+    ).toBe(201);
+    expect(
+      agentRevisionsPageSchema.parse(
+        await (await app.request(`${chat}/output/revisions`, { headers })).json(),
+      ).items,
+    ).toHaveLength(3);
+    expect((await app.request(chat, { method: 'DELETE', headers })).status).toBe(204);
+    const list = await app.request(`/api/v1/projects/${scope.projectId}/agent/chats`, { headers });
+    expect(agentChatsPageSchema.parse(await list.json()).items).toEqual([]);
+  });
+  it('refuses a non-ASCII Python-era key explicitly, while current-runtime replays share the original run', async () => {
+    const { scope, headers } = await setup(),
+      key = randomUUID();
+    const path = `/api/v1/projects/${scope.projectId}/agent/chats`;
+    const request = {
+      method: 'POST',
+      headers: { ...headers, 'Idempotency-Key': key },
+      body: JSON.stringify({ message: 'Réécrivez 東京' }),
+    };
+    const first = agentTurnAcceptedSchema.parse(await (await app.request(path, request)).json());
+    expect(
+      agentTurnAcceptedSchema.parse(await (await app.request(path, request)).json()).run.id,
+    ).toBe(first.run.id);
+    await db
+      .updateTable('agent_runs')
+      .set({
+        runtime_version: 'agent-runtime-2',
+        request_fingerprint: 'historical-python-fingerprint',
+      })
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('id', '=', first.run.id)
+      .execute();
+    const replay = await app.request(path, request);
+    expect(replay.status).toBe(409);
+    expect(await replay.json()).toMatchObject({
+      error: { code: 'agent_idempotency_conflict', details: { reason: 'legacy_runtime' } },
+    });
+  });
+  it('recovers an expired claim before draining, fences cancellation and refuses foreign chat reads', async () => {
+    const { scope, bindings, headers, worker } = await setup();
+    const run = await bindings.store.enqueue(scope, {
+      message: 'Write a plan',
+      key: randomUUID(),
+      skillId: 'content_create',
+    });
+    const claimed = await bindings.queue.claim('lost-worker', [scope.workspaceId]);
+    expect(claimed?.id).toBe(run.id);
+    await db
+      .updateTable('agent_runs')
+      .set({ lease_expires_at: sql<Date>`clock_timestamp() - interval '1 second'` })
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('id', '=', run.id)
+      .execute();
+    expect(await worker.runUntilIdle()).toBe(1);
+    expect((await fixtures.run(run.id)).status).toBe('succeeded');
+    const next = await bindings.store.enqueue(scope, {
+      message: 'Continue',
+      key: randomUUID(),
+      chatId: run.chat_id,
+    });
+    const dispatch = await bindings.queue.claim('cancel-worker', [scope.workspaceId]);
+    const lease = await bindings.queue.start(dispatch!, 'cancel-worker');
+    const model = scripted([]);
+    const attempt = await bindings.models.dispatch(lease, 1, model, {
+      system: 'Use facts',
+      user: 'Continue',
+      schema: {},
+    });
+    expect(
+      (
+        await app.request(`/api/v1/agent/chats/${run.chat_id}/runs/${next.id}/cancel`, {
+          method: 'POST',
+          headers,
+        })
+      ).status,
+    ).toBe(200);
+    expect(await worker.runUntilIdle()).toBe(0);
+    await db
+      .updateTable('agent_model_attempts')
+      .set({ deadline_at: sql<Date>`clock_timestamp() - interval '1 hour'` })
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('id', '=', attempt.id)
+      .execute();
+    expect(await worker.runUntilIdle()).toBe(0);
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select(['outcome', 'settlement_status'])
+        .where('id', '=', attempt.id)
+        .executeTakeFirst(),
+    ).toMatchObject({ outcome: 'recovered_unknown', settlement_status: 'zero_debit' });
+    const other = await fixtures.scope();
+    const foreignHeaders = {
+      ...headers,
+      'X-Workspace-Id': other.workspaceId,
+      cookie: `${config.session.cookieName}=${await sessionToken({ sub: other.userId, ver: 0 })}`,
+    };
+    expect(
+      (await app.request(`/api/v1/agent/chats/${run.chat_id}`, { headers: foreignHeaders })).status,
+    ).toBe(404);
+    expect(
+      (
+        await app.request(`/api/v1/projects/${scope.projectId}/readiness`, {
+          headers: foreignHeaders,
+        })
+      ).status,
+    ).toBe(404);
+    const readiness = await app.request(`/api/v1/projects/${scope.projectId}/readiness`, {
+      headers,
+    });
+    expect(readiness.status).toBe(200);
+    expect(await readiness.json()).toMatchObject({
+      stage: 'not_connected',
+      has_performance_snapshot: false,
+    });
+  });
+});

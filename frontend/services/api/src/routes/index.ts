@@ -25,8 +25,10 @@ import { billingRoutes } from './billing.ts';
 import { auditScheduleRoutes } from './audit-schedules.ts';
 import { auditRoutes } from './audits.ts';
 import { providerRoutes } from './providers.ts';
+import { agentRoutes } from './agent.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
+  ...agentRoutes,
   ...providerRoutes,
   ...MCP_CONNECTION_ROUTES,
   ...billingRoutes,

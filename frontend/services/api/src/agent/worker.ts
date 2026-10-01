@@ -2,7 +2,7 @@ import { agentPolicy, AgentError } from './contracts.ts';
 import { AgentQueue } from './queue.ts';
 import { AgentRuntime } from './runtime.ts';
 
-/** Bounded worker unit, deliberately absent from compose/CLI/ingress in 19a. */
+/** One bounded turn; the process owner handles recovery and drain policy. */
 export async function runAgentOnce(
   queue: AgentQueue,
   runtime: AgentRuntime,

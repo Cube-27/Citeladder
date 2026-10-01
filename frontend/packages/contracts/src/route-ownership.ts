@@ -11,7 +11,7 @@ export type RouteStack = 'python' | 'typescript';
 
 export const ROUTE_OWNERSHIP = {
   actions: 'typescript',
-  agent: 'python',
+  agent: 'typescript',
   'ai-referrals': 'typescript',
   'audit-schedules': 'typescript',
   audits: 'typescript',
@@ -29,7 +29,7 @@ export const ROUTE_OWNERSHIP = {
   opportunities: 'typescript',
   performance: 'typescript',
   'performance-sync': 'typescript',
-  readiness: 'python',
+  readiness: 'typescript',
   projects: 'typescript',
   'executive-report': 'typescript',
   'prompt-generation': 'typescript',
@@ -53,6 +53,9 @@ export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
  * documents; the development proxy reads this list directly.
  */
 export const TYPESCRIPT_INGRESS_PATHS = [
+  '/api/v1/agent/*',
+  '/api/v1/projects/*/agent/*',
+  '/api/v1/projects/*/readiness',
   '/api/v1/provider-catalog',
   '/api/v1/provider-connections',
   '/api/v1/provider-connections/*',

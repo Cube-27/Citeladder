@@ -59,7 +59,7 @@ export type RuntimeDependencies = {
   attachTarget: AttachTarget;
 };
 
-/** Executes exactly one already-owned turn. Production registration waits for 19b. */
+/** Executes exactly one already-owned turn, fenced at every durable boundary. */
 export class AgentRuntime {
   readonly db: Database;
   readonly deps: RuntimeDependencies;

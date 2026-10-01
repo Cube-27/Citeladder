@@ -7,6 +7,7 @@
     "start": "node src/server.ts",
     "worker": "node src/worker.ts",
     "worker:discovery": "node src/discovery-worker.ts",
+    "worker:agent": "node src/agent-worker.ts",
     "worker:audit": "node src/audit-worker.ts",
     "scheduler:audit": "node src/audit-scheduler.ts",
     "maintenance:audit": "node src/audit-maintenance.ts",
