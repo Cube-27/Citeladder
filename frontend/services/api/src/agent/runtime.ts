@@ -142,9 +142,10 @@ export class AgentRuntime {
         await this.finish(lease, turn, step, state);
         return;
       }
+      // Sequential by design: each step's prompt depends on the previous committed result.
       if (step?.action === 'select_skill') this.selectSkill(step.skillId, state);
       else if (step?.action === 'call_tool')
-        await this.callTool(lease, turn.scope, ordinal, step, budget, state);
+        await this.callTool(lease, turn.scope, ordinal, step, budget, state); // NOSONAR
     }
     await this.fail(lease, 'stopped_at_limit', true);
   }
