@@ -364,9 +364,9 @@ describe('crawl-control HTTP contracts', () => {
     const tenant = await fixtures.tenant({ websiteUrl: '' });
     const root = await request(tenant, '/site-crawls', 'POST', { project_id: tenant.projectId });
     expect(root.status).toBe(422);
-    const body = await root.json();
+    const body = record(await root.json());
     expect(body).toMatchObject({
-      detail: { code: 'invalid_root', message: body.error.message },
+      detail: { code: 'invalid_root', message: record(body.error).message },
       error: { code: 'invalid_root', retryable: false },
     });
     const invalid = await request(tenant, '/site-crawls?project_id=not-a-uuid');
@@ -472,6 +472,19 @@ describe('crawl-control HTTP contracts', () => {
       },
     });
     expect(oversized.status).toBe(422);
+    vi.stubEnv('SITE_HEALTH_MAX_PREVIEW_ROWS', '2');
+    for (const [count, truncated] of [
+      [2, false],
+      [3, true],
+    ] as const) {
+      const boundary = await request(seed, '/site-crawls/url-preview', 'POST', {
+        project_id: seed.projectId,
+        content: Array.from({ length: count }, (_, index) => `${seed.root}${index}`),
+      });
+      const preview = record(await boundary.json());
+      expect(preview.truncated).toBe(truncated);
+      expect(preview.items).toHaveLength(2);
+    }
   });
 
   it('lists by descending keyset with workspace/project/cursor isolation and count redaction', async () => {
@@ -516,11 +529,11 @@ describe('crawl-control HTTP contracts', () => {
     expect(selected.quota.used).toBe(1);
     const stale = await update([], 1);
     expect(stale.status).toBe(409);
-    const staleBody = await stale.json();
+    const staleBody = record(await stale.json());
     expect(staleBody).toMatchObject({
       detail: {
         code: 'stale_selection_version',
-        message: staleBody.error.message,
+        message: record(staleBody.error).message,
         current_selection_version: 2,
       },
       error: {

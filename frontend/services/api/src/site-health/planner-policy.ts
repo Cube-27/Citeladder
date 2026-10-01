@@ -241,7 +241,8 @@ export async function previewCrawlUrls(
   const seen = new Set<string>();
   const counts = { accepted: 0, duplicate: 0, rejected: 0 };
   const maximum = Number(crawlSetting('max_preview_rows'));
-  const rows = previewRows(request.content, request.input_format).slice(0, maximum);
+  const parsed = previewRows(request.content, request.input_format);
+  const rows = parsed.slice(0, maximum);
   const items = rows.map((raw, index) => {
     const decision = classifyUrlAdmission(raw, scope);
     const duplicate = decision.accepted && decision.url !== null && seen.has(decision.url);
@@ -262,7 +263,7 @@ export async function previewCrawlUrls(
   });
   return {
     items,
-    truncated: rows.length >= maximum,
+    truncated: parsed.length > maximum,
     counts,
     policy_version: policy.site_health.crawl.admission_policy_version,
   };

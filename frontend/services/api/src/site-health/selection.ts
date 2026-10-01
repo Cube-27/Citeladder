@@ -289,7 +289,8 @@ export async function bulkMonitoredSet(
       ),
     );
   if (input.query?.trim()) {
-    const pattern = `%${input.query.trim().replaceAll(/[\\%_]/gu, String.raw`\$&`)}%`;
+    const escapedQuery = input.query.trim().replaceAll(/[\\%_]/gu, String.raw`\$&`);
+    const pattern = `%${escapedQuery}%`;
     query = query.where((eb) =>
       eb.or([eb('u.normalized_url', 'ilike', pattern), eb('u.display_url', 'ilike', pattern)]),
     );
