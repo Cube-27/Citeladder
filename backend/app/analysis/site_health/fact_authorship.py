@@ -87,7 +87,7 @@ def _visible_responsible_publisher(text: str) -> str:
     match = re.search(authorship_config.VISIBLE_PUBLISHER_PATTERN, text)
     if match is None:
         return ""
-    return str(match.group("publisher") or "").strip().rstrip(".,;:")
+    return str(match.group(1) or "").strip().rstrip(".,;:")
 
 
 def _visible_author_candidate(text: str, tag: str, has_author_tokens: bool) -> str:
