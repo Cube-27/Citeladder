@@ -181,6 +181,7 @@ from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
 from scripts.ts_platform_billing import billing_policy, entitlements_policy
+from scripts.ts_platform_dataforseo import dataforseo_policy
 from scripts.ts_platform_integrations import integration_policy
 from scripts.ts_platform_providers import provider_policy
 
@@ -346,6 +347,7 @@ def build_config() -> dict[str, Any]:
         "demand": demand_policy(),
         "integrations": integration_policy(_setting),
         "providers": provider_policy(_setting),
+        "dataforseo": dataforseo_policy(_setting),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
         "internal_links": {

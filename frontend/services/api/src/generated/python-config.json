@@ -2076,6 +2076,131 @@
       "success_detail": "Connection succeeded"
     }
   },
+  "dataforseo": {
+    "microusd_per_usd": 1000000,
+    "settings": {
+      "request_timeout_seconds": {
+        "env": [
+          "DATAFORSEO_REQUEST_TIMEOUT_SECONDS"
+        ],
+        "type": "float",
+        "default": 60.0
+      },
+      "recovery_deadline_hours": {
+        "env": [
+          "DATAFORSEO_RECOVERY_DEADLINE_HOURS"
+        ],
+        "type": "float",
+        "default": 72.0,
+        "exclusive_minimum": 0
+      }
+    },
+    "constants": {
+      "dataforseo_base_url": "https://api.dataforseo.com",
+      "path_user_data": "/v3/appendix/user_data",
+      "path_task_post": "/v3/serp/google/organic/task_post",
+      "path_task_get_advanced": "/v3/serp/google/organic/task_get/advanced",
+      "path_tasks_ready": "/v3/serp/google/organic/tasks_ready",
+      "path_id_list": "/v3/serp/id_list",
+      "status_ok": 20000,
+      "status_task_created": 20100,
+      "status_task_handed": 40601,
+      "status_task_in_queue": 40602,
+      "pending_task_status_codes": [
+        40601,
+        40602
+      ],
+      "status_task_execution_failed": 40103,
+      "status_unauthorized": 40100,
+      "status_payment_required": 40200,
+      "status_invalid_field": 40501,
+      "terminal_failure_status_codes": [
+        40100,
+        40103,
+        40200,
+        40501
+      ],
+      "accepted_submission_status_codes": [
+        20000,
+        20100
+      ],
+      "first_poll_delay_seconds": 15.0,
+      "poll_interval_seconds": 60.0,
+      "poll_ceiling": 30,
+      "reconcile_window_hours": 24,
+      "reconcile_page_size": 1000,
+      "reconcile_window_lag_seconds": 60,
+      "batch_size": 100,
+      "tag_max_chars": 255,
+      "keyword_max_chars": 700,
+      "default_depth": 10,
+      "load_async_ai_overview": true,
+      "observed_standard_task_cost_microusd": 1200,
+      "async_ai_overview_surcharge_microusd": 600,
+      "device_desktop": "desktop",
+      "device_mobile": "mobile",
+      "supported_devices": [
+        "desktop",
+        "mobile"
+      ],
+      "os_for_device": {
+        "desktop": "windows",
+        "mobile": "android"
+      },
+      "location_codes": {
+        "US": 2840,
+        "GB": 2826,
+        "AU": 2036,
+        "CA": 2124,
+        "IN": 2356,
+        "NZ": 2554,
+        "IE": 2372,
+        "SG": 2702,
+        "ZA": 2710,
+        "DE": 2276,
+        "FR": 2250,
+        "NL": 2528,
+        "AE": 2784
+      },
+      "supported_location_codes": [
+        2036,
+        2124,
+        2250,
+        2276,
+        2356,
+        2372,
+        2528,
+        2554,
+        2702,
+        2710,
+        2784,
+        2826,
+        2840
+      ],
+      "language_codes": [
+        "de",
+        "en",
+        "es",
+        "fr",
+        "it",
+        "nl",
+        "pt"
+      ],
+      "default_location_code": 2840,
+      "default_language_code": "en",
+      "default_device": "desktop"
+    },
+    "scraper": {
+      "products": {
+        "chatgpt_search": "chat_gpt",
+        "gemini_consumer": "gemini"
+      },
+      "keyword_max_chars": 2000,
+      "priority": 1,
+      "id_list_path": "/v3/ai_optimization/id_list",
+      "reconcile_max_pages": 10
+    }
+  },
   "opportunity": {
     "opportunities": {
       "DEMAND_SIGNAL_CANNIBALIZATION": "query_cannibalization",
