@@ -89,7 +89,8 @@ total.
 
 - **D1 Layout.** Single pnpm workspace rooted at `frontend/`, with
   `frontend/packages/contracts` and `frontend/services/api`.
-- **D2 Runtime.** Node 22+ with Hono.
+- **D2 Runtime.** Node 26 with Hono. CI, the Workers deploys, every image and
+  `engines` use the same major (aligned 1 October 2026).
 - **D3 Query layer.** Kysely with types generated from the Alembic-migrated
   schema (CI diffs them).
 - **D4 Schema.** Alembic stays the sole schema author (invariant 17). The TS
