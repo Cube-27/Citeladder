@@ -39,9 +39,20 @@ evidence and the task outcome together. `discover` commits its artifact, the
 URL's observation, frontier admission and the page's disposition; `site_setup`
 publishes robots and llms.txt evidence first, then commits the sitemap walk and
 its admission under the same lease. Python claims no tasks: it retains crawl
-creation, finalization, terminal-crawl admission (including the analytics
-handoff of a crawl without usable analysis) and lease sweeping, and its
+creation, finalization and terminal-crawl admission (including the analytics
+handoff of a crawl without usable analysis), and its
 maintenance pass reconciles crawls after TypeScript settles a task.
+TypeScript alone recovers expired `site_crawl_tasks` leases in bounded,
+oldest-first `SKIP LOCKED` batches before claiming work. Recovery spends one
+attempt, releases the lease, and either makes the task due immediately or
+fails it at its attempt ceiling. Terminal recovery updates the settlement
+watermark so the Python lifecycle replay sees it; the stalled backstop survives
+process restarts. The Python global sweeper excludes this queue.
+`node src/site-health-worker.ts --drain` processes due work and successors until
+idle or `SITE_HEALTH_DRAIN_BUDGET_SECONDS` stops new claims (default 300 seconds).
+Already claimed work finishes under its existing task/acquisition bounds,
+then the process closes its database pool and exits successfully. The default
+entry point keeps the long-polling loop for Compose.
 Analyze tasks extract facts and evaluate rules in Node worker threads before
 taking commit locks. The commit rechecks the page's site/sitemap context;
 changed context is interpreted once under the crawl lock without spending another attempt.

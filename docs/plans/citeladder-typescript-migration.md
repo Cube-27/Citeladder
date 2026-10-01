@@ -967,6 +967,16 @@ into dependency-ordered slices:
 5. **18b5, crawl control:** admission, URL preview, cancellation, reruns, the
    monitored set, finalization and lease recovery; the Python Site Health
    worker retires and the TypeScript worker gains its drain mode (rule 9).
+   Delivery starts with **18b5a, lease recovery and drain (implemented)**, transferring
+   expired SiteCrawlTask recovery to TypeScript and removing both Python
+   reclaim paths. Python's task-settlement replay and stalled/overdue backstops
+   retain lifecycle ownership until the remaining cutover. **18b5b** moves the
+   atomic `site-health-crawls` control family, admission, finalization and
+   lifecycle backstops together, then retires the Python Site Health worker
+   and replay/test seams. Cancellation and finalization share the snapshot
+   writer, so they cut over together. The remaining inventory is about 17–21
+   Python application files plus 8–12 direct test files; re-count against D7.3
+   and keep each PR below 100 total files.
 
 Departures in 18b1: reads resolve the Site Health runtime from the account's
 grants instead of refreshing `workspace_site_health_runtime` (a read never

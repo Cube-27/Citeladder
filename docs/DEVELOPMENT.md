@@ -279,6 +279,12 @@ repository root, `node scripts/quality.mjs --mode check --scope api` checks type
 schema authority, export freshness and route ownership (`pnpm check:routes` against
 FastAPI's exported OpenAPI and every ingress Caddyfile); CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
+The Site Health TypeScript worker supports one-shot processing from
+`frontend/services/api/` with `node src/site-health-worker.ts --drain`.
+`SITE_HEALTH_DRAIN_BUDGET_SECONDS` (default 300) bounds admission of new work;
+claimed tasks finish before exit. Without `--drain`, it long-polls for Compose.
+It also recovers expired Site Health leases; the Python maintenance worker
+still replays task settlements and finalizes crawls until PR 18b5 is complete.
 `docker compose up analytics-worker-ts` (or `node src/worker.ts` in
 `frontend/services/api`) runs the TypeScript analytics worker, which claims the
 kinds in `ANALYTICS_TS_OWNED_TASK_KINDS`; the Python `analytics_worker` above no
