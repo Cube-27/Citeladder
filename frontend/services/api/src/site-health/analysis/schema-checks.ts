@@ -1,4 +1,5 @@
 /** Page-kind schema expectations: the page's primary entity, its properties and visible match. */
+import { stripTrailing } from '../../text-order.ts';
 import { passFail } from './delivery-checks.ts';
 import { resolveCanonical, type CheckResult } from './indexing.ts';
 import { analysisPolicy } from './policy.ts';
@@ -52,7 +53,7 @@ function documentUrl(value: unknown) {
     return '';
   }
   if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) return '';
-  const path = url.pathname === '/' ? '/' : url.pathname.replace(/\/+$/u, '');
+  const path = url.pathname === '/' ? '/' : stripTrailing(url.pathname, '/');
   return `${url.protocol}//${url.host}${path}${url.search}`;
 }
 function documentUrls(facts: Facts) {

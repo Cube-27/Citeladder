@@ -26,11 +26,17 @@ const facts = analysisPolicy.facts;
 // Table bounds are the source-page differentiation policy, shared by design.
 const tableBounds = policy.content_differentiation;
 const HEADINGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
-const PROVIDER =
-  /^(?<provider>[A-Z][A-Za-z0-9&'.-]*(?:\s+[A-Z][A-Za-z0-9&'.-]*){0,5})\s+(?:provides?|offers?|delivers?|builds?|manages?|measures?|turns?|brings\s+together|helps?|enables?|specializes\s+in)\s+/u;
-const PROVIDER_NAME = /^[A-Z][A-Za-z0-9&'.-]*(?:\s+[A-Z][A-Za-z0-9&'.-]*){0,5}$/u;
-const CAPABILITY =
-  /\b(?:provides?|offers?|delivers?|builds?|manages?|specializes\s+in)\s+(?<capability>[^.,;]{3,160}?)(?=\s+(?:for|so|that|to)\b|[.,;]|$)/iu;
+// A capitalized name of up to six words, then a provider verb. Every
+// quantifier is bounded, so matching stays linear in the sentence length.
+const NAME = String.raw`[A-Z][A-Za-z0-9&'.-]*(?:\s+[A-Z][A-Za-z0-9&'.-]*){0,5}`;
+const OFFER_VERBS = String.raw`provides?|offers?|delivers?|builds?|manages?|specializes\s+in`;
+const PROVIDER_VERBS = String.raw`${OFFER_VERBS}|measures?|turns?|brings\s+together|helps?|enables?`;
+const PROVIDER = new RegExp(String.raw`^(?<provider>${NAME})\s+(?:${PROVIDER_VERBS})\s+`, 'u');
+const PROVIDER_NAME = new RegExp(`^${NAME}$`, 'u');
+const CAPABILITY = new RegExp(
+  String.raw`\b(?:${OFFER_VERBS})\s+(?<capability>[^.,;]{3,160}?)(?=\s+(?:for|so|that|to)\b|[.,;]|$)`,
+  'iu',
+);
 const AUDIENCE_OR_OUTCOME = [
   /\bfor\s+(?<value>[^.,;]{3,160})/iu,
   /\b(?:helps?|enables?|lets?)\s+(?<value>[^.,;]{3,160})/iu,

@@ -83,9 +83,10 @@ export class HostPacer {
   }
   async #acquire(state: HostState, signal?: AbortSignal) {
     while (state.active >= this.concurrency) {
-      await new Promise<void>((resolve) => {
+      const freed = new Promise<void>((resolve) => {
         state.waiting.push(resolve);
       });
+      await freed; // NOSONAR: wait for a slot, then re-check; waiters resume one at a time.
       signal?.throwIfAborted();
     }
     state.active++;

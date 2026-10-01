@@ -9,6 +9,7 @@ import {
   type HtmlElement,
   type HtmlNode,
 } from '../../web-evidence/html.ts';
+import { scalarText } from '../../text-order.ts';
 import { isMetadataOrCta } from './copy.ts';
 import { analysisPolicy, limits, regionPolicy, squash } from './policy.ts';
 import { pageOwned } from './regions.ts';
@@ -27,7 +28,7 @@ const ANSWER_TAGS = new Set(['p', 'dd', 'div', 'span', 'li']);
 const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'dt']);
 const AUXILIARY = 'is|are|was|were|do|does|did|can|could|will|would|should|has|have';
 const QUESTION_FORM = new RegExp(
-  `^(?:(?:what|why|how|where|when|who|which)\\s+(?:${AUXILIARY})\\b|(?:${AUXILIARY})\\s+.+\\?$)`,
+  String.raw`^(?:(?:what|why|how|where|when|who|which)\s+(?:${AUXILIARY})\b|(?:${AUXILIARY})\s+.+\?$)`,
   'u',
 );
 const DEFINITION_PREFIXES = ['definition ', 'definition of ', 'meaning of ', 'define '];
@@ -51,7 +52,7 @@ export function observedQuestionCount(value: unknown) {
   const questions = new Set<string>();
   for (const item of value) {
     if (typeof item !== 'object' || item === null) continue;
-    const question = String((item as { question?: unknown }).question ?? '');
+    const question = scalarText((item as { question?: unknown }).question);
     if (isAnswerHeading(question)) questions.add(squash(question.toLowerCase()));
   }
   questions.delete('');
@@ -95,9 +96,9 @@ function* followingInScope(heading: HtmlElement, scope: Scope): Generator<HtmlEl
       continue;
     }
     if (!seen) continue;
-    const chain = [...ancestors(node)];
-    if (chain.includes(heading)) continue;
-    if (answerScope !== scope.region && !chain.includes(answerScope as HtmlElement)) return;
+    const chain = new Set(ancestors(node));
+    if (chain.has(heading)) continue;
+    if (answerScope !== scope.region && !chain.has(answerScope as HtmlElement)) return;
     yield node;
   }
 }

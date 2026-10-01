@@ -104,6 +104,23 @@ function canonicalDeclarations(root: HtmlNode) {
   return declarations;
 }
 
+/** The channel and authored value a `mailto:`/`tel:` href declares, or null. */
+function contactHref(href: string) {
+  const lowered = href.toLowerCase();
+  let channel = '';
+  if (lowered.startsWith('mailto:')) channel = 'email';
+  else if (lowered.startsWith('tel:')) channel = 'phone';
+  if (!channel) return null;
+  const raw = href.slice(channel === 'email' ? 7 : 4).split('?')[0]!;
+  let decoded = raw;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    // A malformed escape keeps the authored value.
+  }
+  return { channel, value: decoded.trim().slice(0, limits.contact_value_chars) };
+}
+
 /** Declared contact points from `mailto:`/`tel:` hrefs; body-text matches are not declarations. */
 function contactPoints(root: HtmlNode) {
   const points: { channel: string; value: string }[] = [];
@@ -111,20 +128,9 @@ function contactPoints(root: HtmlNode) {
   for (const anchor of elements(root, 'a')) {
     if (points.length >= limits.contact_points) break;
     if (!regionNodeIsVisible(anchor)) continue;
-    const href = attribute(anchor, 'href').trim();
-    const lowered = href.toLowerCase();
-    let channel = '';
-    if (lowered.startsWith('mailto:')) channel = 'email';
-    else if (lowered.startsWith('tel:')) channel = 'phone';
-    if (!channel) continue;
-    const raw = href.slice(channel === 'email' ? 7 : 4).split('?')[0]!;
-    let decoded = raw;
-    try {
-      decoded = decodeURIComponent(raw);
-    } catch {
-      // A malformed escape keeps the authored value.
-    }
-    const value = decoded.trim().slice(0, limits.contact_value_chars);
+    const declared = contactHref(attribute(anchor, 'href').trim());
+    if (!declared) continue;
+    const { channel, value } = declared;
     const key = `${channel}|${value.toLowerCase()}`;
     if (!value || seen.has(key)) continue;
     seen.add(key);

@@ -1,6 +1,6 @@
 /** URL evidence uses the same config-owned catalog for owned and external pages. */
 import { policy } from '../config.ts';
-import { stripTrailing } from '../text-order.ts';
+import { stripLeading, stripTrailing } from '../text-order.ts';
 
 const MAX_PATH_CHARS = policy.site_health.page_analysis.facts.limits.path_chars;
 const slugPatterns = policy.site_health.slug_patterns.map(
@@ -30,10 +30,10 @@ export function documentUrl(value: string): URL | null {
  * the semantic segment nearest the root; config order breaks ties.
  */
 export function routeSignal(path: string): { kind: string; pattern: string } | null {
-  const slug = path
-    .replaceAll(/[/_+.]+/gu, '-')
-    .replace(/^-+|-+$/gu, '')
-    .replaceAll(/-{2,}/gu, '-');
+  const slug = stripLeading(stripTrailing(path.replaceAll(/[/_+.]+/gu, '-'), '-'), '-').replaceAll(
+    /-{2,}/gu,
+    '-',
+  );
   if (slug)
     for (const [kind, pattern] of slugPatterns)
       if (pattern.test(slug)) return { kind, pattern: pattern.source };

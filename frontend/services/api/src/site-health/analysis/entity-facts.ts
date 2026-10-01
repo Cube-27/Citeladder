@@ -13,6 +13,7 @@ import {
   type HtmlElement,
   type HtmlNode,
 } from '../../web-evidence/html.ts';
+import { stripTrailing } from '../../text-order.ts';
 import { analysisPolicy, limits, regionPolicy, squash } from './policy.ts';
 import {
   CHROME_REGIONS,
@@ -268,8 +269,7 @@ function isResultCount(node: HtmlElement, blob: string) {
 }
 
 function isEmptyState(node: HtmlElement, blob: string) {
-  const parts = squash(textContent(node).toLowerCase())
-    .replace(/[.!]+$/u, '')
+  const parts = stripTrailing(squash(textContent(node).toLowerCase()), '.!')
     .split(' ')
     .filter(Boolean);
   const counted = parts.length === 2 && parts[0] === '0' && EMPTY_NOUNS.has(parts[1]!);

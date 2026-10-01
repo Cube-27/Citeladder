@@ -41,7 +41,7 @@ function companyProfileIntent(finalUrl: string, facts: Facts) {
   const title = haystack(facts);
   const normalized = [...segments, title].join(' ').replaceAll('-', ' ');
   const excluded = t.company_profile.excluded_terms.some((term) =>
-    new RegExp(`(?<![\\p{L}\\p{N}_])${escapePattern(term)}(?![\\p{L}\\p{N}_])`, 'u').test(
+    new RegExp(String.raw`(?<![\p{L}\p{N}_])${escapePattern(term)}(?![\p{L}\p{N}_])`, 'u').test(
       normalized,
     ),
   );

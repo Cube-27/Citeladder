@@ -12,6 +12,7 @@ import {
   type HtmlElement,
   type HtmlNode,
 } from '../../web-evidence/html.ts';
+import { scalarText, stripTrailing } from '../../text-order.ts';
 import { analysisPolicy, limits, squash } from './policy.ts';
 
 const sd = analysisPolicy.structured_data;
@@ -59,12 +60,11 @@ export type SchemaBlock = {
   breadcrumb_items?: string[];
   product: SchemaProduct;
 };
-type Json = unknown;
-type JsonObject = Record<string, Json>;
+type JsonObject = Record<string, unknown>;
 
-const isObject = (value: Json): value is JsonObject =>
+const isObject = (value: unknown): value is JsonObject =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
-const isEmpty = (value: Json) =>
+const isEmpty = (value: unknown) =>
   value === null ||
   value === undefined ||
   value === '' ||
@@ -74,20 +74,20 @@ const emptyProductValues = (): ProductValues =>
   Object.fromEntries(PRODUCT_KEYS.map((key) => [key, []])) as unknown as ProductValues;
 
 /** `"https://schema.org/Article"` and `"Article"` name the same type. */
-function cleanType(value: Json): string {
+function cleanType(value: unknown): string {
   if (typeof value !== 'string') return '';
-  let token = value.trim().replace(/\/+$/u, '');
+  let token = stripTrailing(value.trim(), '/');
   if (token.includes('/')) token = token.slice(token.lastIndexOf('/') + 1);
   if (token.includes('#')) token = token.slice(token.lastIndexOf('#') + 1);
   return token;
 }
-const cleanTypes = (value: Json) => [
+const cleanTypes = (value: unknown) => [
   ...new Set((Array.isArray(value) ? value : [value]).map(cleanType).filter(Boolean)),
 ];
 
-function* jsonObjects(node: Json, depth = 0): Generator<JsonObject> {
+function* jsonObjects(node: unknown, depth = 0): Generator<JsonObject> {
   if (depth > limits.jsonld_depth) return;
-  let children: Json[] = [];
+  let children: unknown[] = [];
   if (Array.isArray(node)) children = node;
   else if (isObject(node)) {
     yield node;
@@ -98,7 +98,7 @@ function* jsonObjects(node: Json, depth = 0): Generator<JsonObject> {
 }
 
 /** A dotted one-level path; a list collapses to its first object. */
-function pathValue(object: Json, path: string): Json {
+function pathValue(object: unknown, path: string): unknown {
   let current = object;
   for (const segment of path.split('.')) {
     if (Array.isArray(current)) current = current.find(isObject);
@@ -109,7 +109,7 @@ function pathValue(object: Json, path: string): Json {
   return current;
 }
 
-function firstString(value: Json): string {
+function firstString(value: unknown): string {
   if (typeof value === 'string') return value.trim();
   if (isObject(value)) return firstString(value.name);
   if (Array.isArray(value))
@@ -120,7 +120,7 @@ function firstString(value: Json): string {
   return '';
 }
 /** One explicit relationship URL (`@id` or `url`), never guessed from a name. */
-function relationshipUrl(value: Json): string {
+function relationshipUrl(value: unknown): string {
   if (typeof value === 'string') return value.trim();
   if (isObject(value)) return relationshipUrl(value['@id'] || value.url);
   if (Array.isArray(value))
@@ -132,7 +132,7 @@ function relationshipUrl(value: Json): string {
 }
 const bounded = (value: string, max: number) => value.slice(0, max);
 
-function breadcrumbItems(value: Json) {
+function breadcrumbItems(value: unknown) {
   const urls: string[] = [];
   for (const entry of Array.isArray(value) ? value : [value]) {
     if (!isObject(entry)) continue;
@@ -144,7 +144,7 @@ function breadcrumbItems(value: Json) {
 }
 
 /** Stable scalar evidence strings, deduplicated and bounded. */
-function values(value: Json): string[] {
+function values(value: unknown): string[] {
   const found: string[] = [];
   if (Array.isArray(value)) for (const item of value) found.push(...values(item));
   else if (isObject(value))
@@ -152,13 +152,13 @@ function values(value: Json): string[] {
       const text = firstString(value[key]);
       if (text) found.push(text);
     }
-  else if (value !== null && value !== undefined && value !== '') found.push(String(value).trim());
+  else found.push(scalarText(value).trim());
   return [
     ...new Set(found.filter(Boolean).map((item) => bounded(item, sd.product_max_value_chars))),
   ].slice(0, sd.product_max_values);
 }
 
-function firstObject(value: Json): JsonObject {
+function firstObject(value: unknown): JsonObject {
   if (Array.isArray(value)) return value.find(isObject) ?? {};
   return isObject(value) ? value : {};
 }
@@ -235,7 +235,7 @@ export function jsonLdBlocks(raw: string[], maxBlocks: number): SchemaBlock[] {
   for (const body of raw) {
     const text = body.trim();
     if (!text) continue;
-    let parsed: Json;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(text);
     } catch {
@@ -271,7 +271,7 @@ const MICRODATA_PRODUCT_TARGETS: Record<string, keyof ProductValues> = {
 const declaresProduct = (node: HtmlElement) =>
   attribute(node, 'itemtype')
     .split(/\s+/u)
-    .some((value) => value.replace(/\/+$/u, '').split('/').at(-1) === 'Product');
+    .some((value) => stripTrailing(value, '/').split('/').at(-1) === 'Product');
 
 function microdataValue(node: HtmlElement) {
   for (const name of ['content', 'href', 'datetime', 'value', 'src']) {
@@ -294,15 +294,18 @@ function microdataProduct(product: HtmlElement): ProductValues {
     if (property === product || !hasAttribute(property, 'itemprop')) continue;
     if (nestedProductProperty(product, property)) continue;
     const value = microdataValue(property);
-    if (!value) continue;
-    for (const name of attribute(property, 'itemprop').split(/\s+/u)) {
-      const target = MICRODATA_PRODUCT_TARGETS[name];
-      const bucket = target ? found[target] : undefined;
-      if (bucket && !bucket.includes(value) && bucket.length < sd.product_max_values)
-        bucket.push(value.slice(0, sd.product_max_value_chars));
-    }
+    if (value) addMicrodataValue(found, attribute(property, 'itemprop'), value);
   }
   return found;
+}
+/** File one property value under each product field its `itemprop` names. */
+function addMicrodataValue(found: ProductValues, itemprop: string, value: string) {
+  for (const name of itemprop.split(/\s+/u)) {
+    const target = MICRODATA_PRODUCT_TARGETS[name];
+    const bucket = target ? found[target] : undefined;
+    if (bucket && !bucket.includes(value) && bucket.length < sd.product_max_values)
+      bucket.push(value.slice(0, sd.product_max_value_chars));
+  }
 }
 
 /** Microdata stays shallow: each recognized `itemtype` is a block, Products carry their properties. */

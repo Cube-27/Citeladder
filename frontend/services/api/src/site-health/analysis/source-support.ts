@@ -8,6 +8,7 @@ import {
   textContent,
   type HtmlElement,
 } from '../../web-evidence/html.ts';
+import { stripLeading, stripTrailing } from '../../text-order.ts';
 import { analysisPolicy, limits, regionPolicy, squash } from './policy.ts';
 import { pageOwned, type PageScope } from './regions.ts';
 
@@ -90,7 +91,7 @@ function recordAnchor(
 /** A heading opens a references or methodology section; a peer or higher heading closes it. */
 function nextSection(node: HtmlElement, current: { name: string; level: number }) {
   const level = Number(node.tagName[1]);
-  const heading = squash(textContent(node).toLowerCase()).replace(/^:+|:+$/gu, '');
+  const heading = stripLeading(stripTrailing(squash(textContent(node).toLowerCase()), ':'), ':');
   if (SECTION_HEADINGS.has(heading))
     return {
       name: heading === 'methodology' ? 'methodology_section' : 'references_section',

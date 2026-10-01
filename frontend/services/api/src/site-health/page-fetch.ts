@@ -5,6 +5,7 @@
  * use the Site Health fetch-error vocabulary the read API classifies.
  */
 import { policy, resolveSettingSpec } from '../config.ts';
+import { stripTrailing } from '../text-order.ts';
 import type { Database } from '../db/database.ts';
 import {
   FetchError,
@@ -56,7 +57,7 @@ export function hardExcluded(url: URL) {
   const keys = [...url.searchParams.keys()].map((key) => key.toLowerCase());
   if (keys.some((key) => QUERY_EXCLUSIONS.has(key) || TRACKING.has(key))) return true;
   if (HOST_EXCLUSIONS.has(url.hostname.toLowerCase().split('.')[0]!)) return true;
-  const path = url.pathname.toLowerCase().replace(/\/+$/u, '') || '/';
+  const path = stripTrailing(url.pathname.toLowerCase(), '/') || '/';
   return (
     PATH_EXCLUSIONS.some((pattern) => pattern.test(path)) ||
     EXTENSIONS.some((extension) => path.endsWith(extension)) ||

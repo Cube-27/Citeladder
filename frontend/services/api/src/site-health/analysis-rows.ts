@@ -8,6 +8,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
+import { scalarText } from '../text-order.ts';
 import type { FetchCall, FetchedPage } from '../projects/safe-fetch.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
 import { analyzePage } from './analysis/analyze-page.ts';
@@ -129,9 +130,7 @@ export async function writeAttempts(
   const rows = outcome.calls.length
     ? outcome.calls.map((call, index) => {
         const final = index === outcome.calls.length - 1;
-        let error = '';
-        if (call.error) error = outcome.errorCode;
-        else if (final && !outcome.succeeded) error = outcome.errorCode;
+        const error = call.error || (final && !outcome.succeeded) ? outcome.errorCode : '';
         const failed = Boolean(error) || (call.status !== null && call.status >= 400);
         return {
           ...common,
@@ -225,7 +224,7 @@ async function refreshUrlState(
     .updateTable('site_url_observations')
     .set({
       status_code: typeof delivery.status_code === 'number' ? delivery.status_code : null,
-      final_url: String(delivery.final_url ?? '').slice(0, 2048),
+      final_url: scalarText(delivery.final_url).slice(0, 2048),
       content_type: contentType.slice(0, 128),
       title: title.slice(0, 1024),
       source_artifact_id: artifactId,

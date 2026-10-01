@@ -243,8 +243,10 @@ function winningSignal(matched: Signal[]) {
   const best = Math.min(...eligible.map((item) => tierIndex(item.tier)));
   const top = eligible.filter((item) => tierIndex(item.tier) === best);
   if (new Set(top.map((item) => item.page_kind)).size > 1) return null;
-  return top.reduce((winner, item) =>
-    SIGNAL_ORDER.indexOf(item.signal) < SIGNAL_ORDER.indexOf(winner.signal) ? item : winner,
+  return top.reduce(
+    (winner, item) =>
+      SIGNAL_ORDER.indexOf(item.signal) < SIGNAL_ORDER.indexOf(winner.signal) ? item : winner,
+    top[0]!,
   );
 }
 

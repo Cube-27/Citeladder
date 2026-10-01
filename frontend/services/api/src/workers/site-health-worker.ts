@@ -180,7 +180,7 @@ export class SiteHealthWorker {
       while (!signal.aborted) {
         let count = 0;
         try {
-          count = await this.runOnce(1);
+          count = await this.runOnce(1); // NOSONAR: each slot claims its next task only after finishing the last.
         } catch (error) {
           logger.exception('site health iteration failed', error);
         }

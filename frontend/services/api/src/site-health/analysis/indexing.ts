@@ -45,7 +45,8 @@ function comparableUrl(value: string) {
   const query = new URLSearchParams(
     [...url.searchParams].filter(([key]) => !TRACKING.has(key.toLowerCase())),
   ).toString();
-  return `${url.protocol}//${url.host.toLowerCase()}${path}${query ? `?${query}` : ''}`;
+  const search = query ? `?${query}` : '';
+  return `${url.protocol}//${url.host.toLowerCase()}${path}${search}`;
 }
 
 function canonicalIntent(facts: Facts, evidence: Record<string, unknown>) {

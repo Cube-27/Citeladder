@@ -8,6 +8,7 @@ import {
   type HtmlElement,
   type HtmlNode,
 } from '../../web-evidence/html.ts';
+import { stripTrailing } from '../../text-order.ts';
 import { analysisPolicy, limits, regionPolicy, squash } from './policy.ts';
 import { outsideContainers, regionNodeIsVisible, type PageScope } from './regions.ts';
 import type { SchemaBlock } from './structured-data.ts';
@@ -80,8 +81,7 @@ function observedAuthor(node: HtmlElement, text: string, tokens: Set<string>) {
   let author = '';
   if (['p', 'small', 'span'].includes(node.tagName))
     author =
-      (PUBLISHER.exec(text)?.[1] ?? '').trim().replace(/[.,;:]+$/u, '') ||
-      visibleByline(text, true);
+      stripTrailing((PUBLISHER.exec(text)?.[1] ?? '').trim(), '.,;:') || visibleByline(text, true);
   const authorTokens = [...tokens].some((token) => AUTHOR_TOKENS.has(token));
   if (!author && (authorTokens || ['h1', 'h2', 'h3'].includes(node.tagName)))
     author = authorCandidate(text, node.tagName, authorTokens);
