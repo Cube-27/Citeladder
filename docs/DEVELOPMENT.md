@@ -34,7 +34,7 @@ repository check script includes the documentation build.
 |------|---------|-------|
 | Python | 3.12+ | Backend |
 | [`uv`](https://docs.astral.sh/uv/) | latest | Backend dependency + venv manager |
-| Node.js | 22+ | Frontend. 22 is the supported minimum and CI version. The local Compose marketing Worker image uses Node 26 to run Wrangler; protected production delivery uses Cloudflare Workers. |
+| Node.js | 26+ | Frontend and TypeScript services. 26 is the supported minimum and CI version; protected production delivery uses Cloudflare Workers. |
 | pnpm | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json). |
 | PostgreSQL | 15+ | Via Docker or local |
 | Docker + Compose | latest | Local stack |
@@ -54,7 +54,6 @@ work and never performs provider calls or long-running crawl/sync/generation wor
 
 ```bash
 cd backend
-uv run python -m app.workers.site_health_worker
 uv run python -m app.workers.agent_worker
 uv run python -m app.workers.analytics_worker
 ```
@@ -286,6 +285,13 @@ repository root, `node scripts/quality.mjs --mode check --scope api` checks type
 schema authority, export freshness and route ownership (`pnpm check:routes` against
 FastAPI's exported OpenAPI and every ingress Caddyfile); CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
+The Site Health TypeScript worker supports one-shot processing from
+`frontend/services/api/` with `node src/site-health-worker.ts --drain`.
+`SITE_HEALTH_DRAIN_BUDGET_SECONDS` (default 300) bounds admission of new work;
+claimed tasks finish before exit. Without `--drain`, it long-polls for Compose.
+It is the only Site Health worker: it recovers expired leases, reconciles and
+finalizes crawls, and every pass (including a drain over an empty queue) runs
+the stalled, overdue and cancelled-crawl backstops.
 `docker compose up analytics-worker-ts` (or `node src/worker.ts` in
 `frontend/services/api`) runs the TypeScript analytics worker, which claims the
 kinds in `ANALYTICS_TS_OWNED_TASK_KINDS`; the Python `analytics_worker` above no
@@ -426,6 +432,11 @@ and verify the target/environment first. Run the commands below from `backend/`
 unless stated otherwise. Use `--help` when arguments are not shown here.
 
 Seed local demo data (**development or disposable database only**):
+
+The host-side seeder requires Node 26 and installed frontend dependencies. It
+invokes `frontend/services/api/scripts/seed-site-health.ts` for crawl admission
+and monitored selection against the same local development database; the
+TypeScript Site Health worker must be running to acquire and finish the crawls.
 
 ```bash
 APP_ENV=development uv run python -m scripts.seed_dev_data

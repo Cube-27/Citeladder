@@ -53,9 +53,9 @@
   PR 17b implements the remaining audit admission, execution, scheduling,
   maintenance, provider and Search Intelligence owners in committed slices.
   PR 18a moves source inspection and the first Site Health phases. PR 18b is
-  split into five slices; 18b1 moves every Site Health read route to TS and
-  18b2 moves change intelligence and its analytics handoff.
-  PRs 19–20 follow the re-sequenced order.
+  implemented through 18b5c: TypeScript owns Site Health reads, acquisition,
+  analysis, lifecycle, drain mode and crawl controls; Python retains Agent/MCP
+  persisted-read bridges until PR 19. PRs 19–20 follow the re-sequenced order.
   Deployment of implemented cutovers is pending; the owner dropped the one-week
   soak while there are no customers (smoke tests instead). On 1 October 2026
   the owner accepted a low-cost hosting phase (PRs 21–24: scale-to-zero Cloud

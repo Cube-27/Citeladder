@@ -2,8 +2,7 @@
  * The `site-health` family: persisted crawl, page, issue, event and snapshot
  * reads, and their exports. Every lookup is filtered by the active workspace,
  * so a foreign id is a 404; nothing here fetches, scores or repairs state.
- * Crawl creation, cancellation, reruns and the monitored set are the Python
- * `site-health-crawls` family until the crawler moves.
+ * The TypeScript `site-health-crawls` family owns creation and crawl controls.
  */
 import {
   aeoReadinessSchema,
@@ -59,7 +58,10 @@ const text = { scalar: { kind: 'str' } } as const;
 const crawlPath = { crawl_id: uuid } as const;
 const projectPath = { project_id: uuid } as const;
 const paging = {
-  limit: { scalar: { kind: 'int', ge: 1, le: 200 }, default: 50 },
+  limit: {
+    scalar: { kind: 'int', ge: 1, le: policy.site_health.reads.page_max_limit },
+    default: policy.site_health.reads.page_default_limit,
+  },
   cursor: text,
 } as const;
 const pageFilters = {

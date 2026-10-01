@@ -146,17 +146,8 @@ SITE_TASK_KINDS: Final[frozenset[str]] = frozenset(
     }
 )
 
-SITE_PROCESSING_TASK_KINDS: Final[frozenset[str]] = (
-    SITE_TASK_KINDS - SITE_ACQUISITION_TASK_KINDS
-)
-
-# Both stacks share the durable queue with disjoint claims during migration.
-SITE_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
-    {TASK_KIND_CHANGE_INTEL, TASK_KIND_LINK_METRICS, TASK_KIND_ARCHITECTURE}
-)
-SITE_PYTHON_PROCESSING_TASK_KINDS: Final[frozenset[str]] = (
-    SITE_PROCESSING_TASK_KINDS - SITE_TS_OWNED_TASK_KINDS
-)
+# TypeScript owns every task kind, crawl control, finalization and lease recovery.
+SITE_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = SITE_TASK_KINDS
 
 INITIAL_TASK_GENERATION: Final = 0
 
@@ -374,13 +365,17 @@ CODE_CRAWL_ALREADY_ACTIVE: Final = "crawl_already_active"
 
 CODE_ADVANCED_CONTROLS_UNAVAILABLE: Final = "advanced_controls_unavailable"
 
+CODE_INVALID_CRAWL_REQUEST: Final = "invalid_crawl_request"
+CODE_INVALID_ROOT: Final = "invalid_root"
+CODE_DISCOVERY_LIMIT_EXCEEDED: Final = "discovery_limit_exceeded"
+CODE_INVALID_SELECTION: Final = "invalid_selection"
+CODE_RERUN_NOT_ALLOWED: Final = "rerun_not_allowed"
+
 EVENT_CRAWL_CREATED: Final = "crawl.created"
 
 EVENT_CRAWL_QUEUED: Final = "crawl.queued"
 
 EVENT_CRAWL_RUNNING: Final = "crawl.running"
-
-EVENT_DISCOVERY_PROGRESS: Final = "discovery.progress"
 
 EVENT_ANALYSIS_PROGRESS: Final = "analysis.progress"
 

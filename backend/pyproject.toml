@@ -9,14 +9,12 @@ dependencies = [
   "asyncpg>=0.30.0,<1",
   "cryptography>=50.0.0,<51",
   "curl-cffi>=0.11,<1",
-  "defusedxml>=0.7.1,<1",
   "email-validator>=2.3.0,<3",
   "fastapi>=0.116.0,<1",
   "httpx>=0.28.1,<1",
   "joserfc>=1.6.8,<2",
   "logfire[fastapi,httpx,sqlalchemy,system-metrics]>=4.20.0,<6",
   "lxml>=6.1.0,<7",
-  "protego>=0.7.0,<1",
   # Imported directly by ~30 modules but declared nowhere until the `deptry`
   # gate found it: both arrived only because FastAPI/pydantic-settings happened
   # to pull them in, so a FastAPI bump narrowing either range would have broken
@@ -57,7 +55,6 @@ dev = [
   "pytest-cov>=7.0.0,<8",
   "radon==6.0.1",
   "ruff>=0.6.0,<1",
-  "types-defusedxml>=0.7.0,<1",
   "vulture==2.16",
 ]
 

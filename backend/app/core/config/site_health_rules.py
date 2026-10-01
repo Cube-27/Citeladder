@@ -551,6 +551,7 @@ PERSISTED_RESPONSE_HEADERS: Final[frozenset[str]] = frozenset(
         "x-frame-options",
         "referrer-policy",
         "x-robots-tag",
+        "retry-after",
     }
 )
 

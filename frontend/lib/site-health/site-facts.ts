@@ -4,17 +4,17 @@
  * The SINGLE place that narrows the untyped `site_facts` record (zod
  * `z.record(z.string(), z.unknown()).nullable()`, mirroring the backend's
  * `dict | None`) into the display view the dashboard "AI crawler access"
- * panel renders. The worker builds the blob in `_crawl_setup`
- * (backend/app/workers/site_health_worker.py ~940–1026) and persists it on
- * `SiteCrawl.site_facts`; it is never Free-redacted:
+ * panel renders. The `site_setup` task builds the blob
+ * (frontend/services/api/src/site-health/site-setup-task.ts) and persists it
+ * on `SiteCrawl.site_facts`; it is never Free-redacted:
  *
  *   robots   = { fetched, status, url, status_code, ai_crawlers: {bot: stance}, sitemaps }
  *   llms_txt = { fetched, url, status_code, present }
  *   sitemap  = { fetched, files }
  *
- * `robots.status` is the B2 fetch classification (`ROBOTS_FETCH_STATUS_*`
- * tokens): `fetched` / `not_found` (HTTP 404 — the site simply HAS no
- * robots.txt) / `fetch_failed` (network error / 5xx — genuinely unreadable).
+ * `robots.status` is the B2 fetch classification: `fetched` / `not_found`
+ * (HTTP 404 — the site simply HAS no robots.txt) / `fetch_failed` (network
+ * error / 5xx — genuinely unreadable) / `access_blocked` (401/403).
  * No transport, no React.
  */
 

@@ -135,9 +135,6 @@ services:
     <<: *backend
     image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}
     command: ["node", "src/audit-maintenance.ts"]
-  site-health-worker:
-    <<: *backend
-    command: ["python", "-m", "app.workers.site_health_worker"]
   site-health-worker-ts:
     <<: *backend
     image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}

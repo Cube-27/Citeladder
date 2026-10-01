@@ -12,7 +12,7 @@ from app.core.config.site_health_archetypes import (
 )
 from app.models.site_health.architecture import SiteObservedArchitecture
 from app.models.site_health.snapshot import SiteHealthSnapshot
-from tests.component.site_health_worker_helpers import _seed_analyze_phase_crawl
+from tests.component.site_health_crawl_seed import _seed_analyze_phase_crawl
 
 
 @pytest.mark.asyncio

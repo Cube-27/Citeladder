@@ -82,7 +82,6 @@ def enforce_admission(
         root_registrable_domain=root_registrable_domain,
         include_globs=include_globs,
         exclude_globs=exclude_globs,
-        infrastructure_purpose=purpose,
     )
     if (
         purpose in _ADMISSION_ENFORCED_PURPOSES
@@ -266,7 +265,6 @@ class SecureFetcher:
                 include_globs=include_globs,
                 exclude_globs=exclude_globs,
                 enforce_scope=enforce_scope,
-                infrastructure_purpose=purpose,
             )
         except UrlAdmissionRejected as exc:
             # Our own admission policy, not a network risk. Kept distinct from

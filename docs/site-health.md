@@ -28,13 +28,48 @@ explicit Run new crawl
 Read endpoints only render persisted projections. They never acquire, classify,
 score, call a model/provider or repair state.
 
-During the TypeScript cutover, `site-health-worker-ts` claims `change_intel`,
-`link_metrics` and `architecture` from the existing `site_crawl_tasks` queue. Python's
-preferred and borrowed lanes exclude those kinds. The TypeScript owner locks crawl then
-task, publishes immutable derived evidence and admits successors with acknowledgement in
-one transaction; for `change_intel` that includes the analytics handoff.
-Python retains the other crawl kinds, terminal-crawl admission (including the
-analytics handoff of a crawl without usable analysis) and lease sweeping.
+During the TypeScript cutover, `site-health-worker-ts` claims every
+`site_crawl_tasks` kind: `discover`, `site_setup`, `analyze`, `change_intel`,
+`link_metrics` and `architecture`. The TypeScript owner locks crawl then task,
+publishes immutable derived evidence and admits successors with acknowledgement
+in one transaction; for `change_intel` that includes the analytics handoff. The
+network-bound kinds acquire outside any transaction, then re-check lease and
+crawl (and, for `analyze`, membership and entitlement) before committing their
+evidence and the task outcome together. `discover` commits its artifact, the
+URL's observation, frontier admission and the page's disposition; `site_setup`
+publishes robots and llms.txt evidence first, then commits the sitemap walk and
+its admission under the same lease. Python claims no tasks and runs no Site
+Health worker or crawl-control routes.
+
+The TypeScript worker also owns the crawl lifecycle, the only path to a
+terminal crawl. After a discover, site-setup or analyze task settles, it
+reconciles the crawl under the crawl row lock: counters, the discovery and
+analysis sub-states and, once that work drains, terminalization. A successful
+analysis while sibling work remains skips the lock and only refreshes the
+provisional summary on cadence. A still-queued row skips it too. Terminal
+lease recovery reconciles the affected crawls. Each worker pass, including a
+drain over an empty queue, runs three backstops: stalled crawls (active, no
+outstanding work, no write for `stalled_crawl_reconcile_seconds`), overdue
+crawls (outstanding tasks fail with `crawl_overdue` and the same transaction
+reconciles) and cancelled crawls. Cancellation commits only the stop, task
+cancellation and fetch settlement, so Stop stays short under a busy crawl. The
+worker then publishes the cancelled run's final revisions, snapshot and
+successors under the crawl lock. It selects only crawls with a completed
+analysis or classification-expected task on an active monitored page, so a
+cancel with no measurement evidence keeps a null summary.
+
+TypeScript alone recovers expired `site_crawl_tasks` leases in bounded,
+oldest-first `SKIP LOCKED` batches before claiming work. Recovery spends one
+attempt, releases the lease, and either makes the task due immediately or
+fails it at its attempt ceiling. The Python global sweeper excludes this queue.
+`node src/site-health-worker.ts --drain` processes due work and successors until
+idle or `SITE_HEALTH_DRAIN_BUDGET_SECONDS` stops new claims (default 300 seconds).
+Already claimed work finishes under its existing task/acquisition bounds,
+then the process closes its database pool and exits successfully. The default
+entry point keeps the long-polling loop for Compose.
+Analyze tasks extract facts and evaluate rules in Node worker threads before
+taking commit locks. The commit rechecks the page's site/sitemap context;
+changed context is interpreted once under the crawl lock without spending another attempt.
 Source inspection and internal-link judgments run in the TypeScript analytics
 worker; their failed-task recovery also covers Python-sweeper terminalization.
 
@@ -44,14 +79,25 @@ issues, issue history, events, exports, the dashboard, Overview, AEO
 Readiness, architecture and changes. A page's presentation status is derived in
 the same query that filters and pages it. Reads resolve the workspace's Site
 Health runtime from its grants at read time and never refresh the persisted
-runtime row; billing mutations own that write. Python keeps the
-`site-health-crawls` family: crawl creation, the crawl list, URL preview,
-cancel, page rerun and the monitored set, until the crawler moves.
+runtime row. The TypeScript `site-health-crawls` family owns crawl creation,
+the crawl list, URL preview, cancellation, page rerun and the monitored set.
+Admission refreshes the runtime from current grants, then locks it before
+the profile; the project row is locked first so concurrent creates admit one
+active crawl. Selection locks the active crawl before runtime/profile to
+serialize with worker publication, and the workspace runtime lock serializes
+quota checks across projects. Billing and admission share capacity/account
+locks before runtime refresh. Creation reserves the effective page-fetch
+budget on the entitlement ledger in the same transaction as its initial tasks.
+URL preview, crawl listing and monitored-set reads render persisted evidence
+and resolve grants without refreshing runtime. A rerun from a terminal crawl
+creates one fresh analyze task under the saved profile scope; an active crawl
+allocates the next task generation. Python retains only the persisted reads
+and content hand-off used by Agent/MCP until their cutover.
 
 ## Acquisition and evidence guarantees
 
-The curl transport sends `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)`
-and no longer impersonates a browser. The robots.txt response decides access:
+The Node transport sends `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)`
+and does not impersonate a browser. The robots.txt response decides access:
 
 | robots.txt result | Crawl behavior |
 |---|---|
@@ -83,8 +129,9 @@ requires the audit plan's remaining authorization/robots/pacing acceptance.
 - Crawls begin only from an explicit user request.
 - PostgreSQL is the queue. Tasks use leases, heartbeats, retries, idempotency and
   `FOR UPDATE SKIP LOCKED`; claims commit before network I/O.
-- The URL-policy, fetcher and curl transport owners retain SSRF checks, DNS
-  pinning, redirect revalidation, TLS validation, response limits and redaction.
+- The URL admission policy and the pinned website transport own SSRF checks,
+  DNS pinning, redirect revalidation (scope and hard exclusions apply to every
+  page hop, never to robots.txt), TLS validation and response limits.
 - Fetch attempts and artifacts are append-only. `normalized_facts` remains the
   bounded evidence store; Site Health does not persist a second raw-HTML copy.
 - Artifacts identify crawl, task, capture time, final URL, region and extractor
@@ -343,7 +390,8 @@ actual indexing or engine eligibility.
 Analyze tasks append an initial `SitePageAnalysis` with facts, classification,
 traits and source evaluation IDs. Its scores and `finalized_at` are null.
 
-Once work drains, the existing crawl lock owns the only publication sequence:
+Once work drains, the crawl lock owns the only publication sequence
+([lifecycle](../frontend/services/api/src/site-health/lifecycle.ts)):
 
 1. fence active work and resolve aliases;
 2. evaluate bounded finalize checks from persisted evidence;

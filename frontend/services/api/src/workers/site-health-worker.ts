@@ -1,4 +1,9 @@
-/** Disjoint SiteCrawlTask claims, heartbeat, and atomic evidence/successor acknowledgement. */
+/**
+ * Disjoint SiteCrawlTask claims, heartbeat, atomic evidence/successor
+ * acknowledgement, and the crawl lifecycle: each settled discovery or analysis
+ * task is reconciled, and every pass runs the stalled, overdue and cancelled
+ * crawl backstops.
+ */
 import { randomInt, randomUUID } from 'node:crypto';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -6,17 +11,37 @@ import { getLogger } from '../logging.ts';
 import { TaskQueue, type SiteTask } from '../queue/task-queue.ts';
 import { persistLinkMetrics } from '../site-health/link-metrics.ts';
 import { persistArchitecture } from '../site-health/architecture.ts';
+import { runAnalyze } from '../site-health/analyze-task.ts';
+import { runDiscover } from '../site-health/discover-task.ts';
+import { runSiteSetup } from '../site-health/site-setup-task.ts';
+import { siteTaskSettings, type SiteTaskContext } from '../site-health/site-task.ts';
+import { SitePageFetcher } from '../site-health/page-fetch.ts';
 import { runChangeIntel } from '../site-health/change-snapshot.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { lockSiteTask, type Crawl } from '../site-health/task-fence.ts';
 import { TaskCancelledError } from './executor.ts';
 import { waitForPoll } from './poll.ts';
+import { recoverExpiredLeases } from '../site-health/lease-recovery.ts';
+import {
+  publishCancelledCrawls,
+  reconcileAfterTask,
+  reconcileCrawl,
+  reconcileOverdue,
+  reconcileStalled,
+  ScoreRefreshCadence,
+} from '../site-health/lifecycle.ts';
 
 type SiteExecutor = (db: Database, crawl: Crawl, task: SiteTask) => Promise<unknown>;
 const executors: Record<string, SiteExecutor> = {
   change_intel: runChangeIntel,
   link_metrics: persistLinkMetrics,
   architecture: persistArchitecture,
+};
+/** Kinds that acquire over the network: each owns its transactions and marks itself running. */
+const acquisition: Record<string, (ctx: SiteTaskContext, task: SiteTask) => Promise<void>> = {
+  analyze: runAnalyze,
+  discover: runDiscover,
+  site_setup: runSiteSetup,
 };
 const logger = getLogger('app.workers.site_health_worker');
 /** Uniform jitter in [0, seconds), millisecond resolution. */
@@ -31,12 +56,19 @@ export class SiteHealthWorker {
   readonly settings: ReturnType<typeof siteWorkerSettings>;
   readonly queue: TaskQueue<'site_crawl_tasks'>;
   readonly executors: Record<string, SiteExecutor>;
+  readonly acquisition: SiteTaskContext;
+  readonly #cadence: ScoreRefreshCadence;
+  #recovery: Promise<number> | null = null;
+  #nextRecovery = 0;
+  #maintenance: Promise<void> | null = null;
+  #nextMaintenance = 0;
   constructor(
     db: Database,
     options: {
       owner?: string;
       settings?: ReturnType<typeof siteWorkerSettings>;
       executors?: Record<string, SiteExecutor>;
+      fetcher?: SitePageFetcher;
     } = {},
   ) {
     this.db = db;
@@ -44,19 +76,116 @@ export class SiteHealthWorker {
     this.settings = options.settings ?? siteWorkerSettings();
     this.executors = options.executors ?? executors;
     this.queue = new TaskQueue(db, { leaseTtlSeconds: this.settings.lease }, 'site_crawl_tasks');
+    this.#cadence = new ScoreRefreshCadence(this.settings.scoreRefresh);
+    // One fetcher for the worker: robots caching and per-host pacing span every task.
+    this.acquisition = {
+      db,
+      owner: this.owner,
+      fetcher: options.fetcher ?? new SitePageFetcher(db),
+      settings: siteTaskSettings(),
+    };
   }
-  async runOnce() {
+  async runOnce(limit = this.settings.concurrency) {
+    await this.#recover();
+    await this.#maintain();
+    return this.#claimAndExecute(limit);
+  }
+  async #claimAndExecute(limit: number) {
     const tasks = await this.queue.claim({
       owner: this.owner,
       kinds: policy.site_health.ts_owned_task_kinds,
-      limit: this.settings.concurrency,
+      limit,
     });
     const results = await Promise.allSettled(tasks.map((task) => this.execute(task)));
     for (const result of results) if (result.status === 'rejected') throw result.reason;
     return tasks.length;
   }
+  async #recover() {
+    // Another slot owns the in-flight pass; this slot keeps claiming instead of waiting.
+    if (this.#recovery) return 0;
+    if (Date.now() < this.#nextRecovery) return 0;
+    this.#recovery = recoverExpiredLeases(this.db, this.settings.reclaimBatch)
+      .then(async (result) => {
+        this.#nextRecovery =
+          result.reclaimed === this.settings.reclaimBatch
+            ? 0
+            : Date.now() + Math.max(50, this.settings.poll * 1000);
+        // A lease recovered at its attempt ceiling settles a task no executor will reconcile.
+        for (const crawl of result.failedCrawls) {
+          const reconcile = () => reconcileCrawl(this.db, crawl.workspaceId, crawl.crawlId);
+          // One crawl lock at a time, each in its own transaction.
+          await this.#guard('recovered crawl reconcile failed', reconcile); // NOSONAR
+        }
+        return result.reclaimed;
+      })
+      .finally(() => {
+        this.#recovery = null;
+      });
+    return this.#recovery;
+  }
+  /** Crawl backstops, at most once per poll interval across this worker's slots. */
+  async #maintain() {
+    if (this.#maintenance) return;
+    if (Date.now() < this.#nextMaintenance) return;
+    const lifecycle = this.settings.lifecycle;
+    this.#maintenance = (async () => {
+      await this.#guard('stalled crawl reconcile failed', () =>
+        reconcileStalled(this.db, lifecycle),
+      );
+      await this.#guard('overdue crawl reconcile failed', () =>
+        reconcileOverdue(this.db, lifecycle),
+      );
+      await this.#guard('cancelled crawl publication failed', () =>
+        publishCancelledCrawls(this.db, lifecycle.batch),
+      );
+    })().finally(() => {
+      this.#nextMaintenance = Date.now() + Math.max(50, this.settings.poll * 1000);
+      this.#maintenance = null;
+    });
+    return this.#maintenance;
+  }
+  /** One failed backstop must not suppress the others or the claim loop. */
+  async #guard(message: string, body: () => Promise<unknown>) {
+    try {
+      await body();
+    } catch (error) {
+      logger.exception(message, error);
+    }
+  }
+  /** Stop new claims at the deadline; finish bounded in-flight work and close cleanly. */
+  async runUntilIdle(signal: AbortSignal, budgetSeconds = this.settings.drainBudget) {
+    if (!Number.isFinite(budgetSeconds) || budgetSeconds <= 0)
+      throw new Error('Site Health drain budget must be positive and finite');
+    const deadline = performance.now() + budgetSeconds * 1000;
+    let total = 0;
+    while (!signal.aborted && performance.now() < deadline) {
+      const recovered = await this.#recover();
+      // Maintenance runs even on an empty queue, so a drain still finalizes stalled crawls.
+      await this.#maintain();
+      if (signal.aborted || performance.now() >= deadline) break;
+      const count = await this.#claimAndExecute(this.settings.concurrency);
+      total += count;
+      if (!count && recovered < this.settings.reclaimBatch) break;
+    }
+    return total;
+  }
   async execute(claimed: SiteTask) {
+    const acquire = Object.hasOwn(acquisition, claimed.task_kind)
+      ? acquisition[claimed.task_kind]
+      : undefined;
+    if (acquire) {
+      await this.#leased(claimed, () => acquire(this.acquisition, claimed));
+      // After the settlement commits; the stalled backstop covers a crash in between.
+      await this.#guard('site health crawl reconcile failed', () =>
+        reconcileAfterTask(this.db, claimed, this.#cadence),
+      );
+      return;
+    }
     if (!(await this.queue.markRunning(claimed.id, this.owner))) return;
+    await this.#leased(claimed, () => this.#executeInTransaction(claimed));
+  }
+  /** Heartbeat the lease for the whole body; a failure settles the task. */
+  async #leased(claimed: SiteTask, body: () => Promise<void>) {
     const beat: { pending: Promise<unknown> | null } = { pending: null };
     const timer = setInterval(() => {
       if (beat.pending) return;
@@ -70,31 +199,7 @@ export class SiteHealthWorker {
         });
     }, this.settings.heartbeat * 1000);
     try {
-      await this.db.transaction().execute(async (trx) => {
-        const { crawl, task } = await lockSiteTask(trx, claimed, this.owner, 'fence');
-        const executor = Object.hasOwn(this.executors, task.task_kind)
-          ? this.executors[task.task_kind]
-          : undefined;
-        if (!executor) throw new Error(`Site Health task '${task.task_kind}' has no executor`);
-        await executor(trx, crawl, task);
-        await lockSiteTask(trx, claimed, this.owner, 'acknowledge');
-        await trx
-          .updateTable('site_crawl_tasks')
-          .set({
-            status: 'succeeded',
-            attempt_count: task.attempt_count + 1,
-            completed_at: new Date(),
-            updated_at: new Date(),
-            error_code: '',
-            error_detail: '',
-            lease_owner: null,
-            lease_expires_at: null,
-            heartbeat_at: null,
-          })
-          .where('id', '=', task.id)
-          .where('workspace_id', '=', task.workspace_id)
-          .execute();
-      });
+      await body();
     } catch (error) {
       if (!(error instanceof TaskCancelledError)) {
         logger.exception('site health task failed', error, { task_id: claimed.id });
@@ -104,6 +209,33 @@ export class SiteHealthWorker {
       clearInterval(timer);
       await beat.pending;
     }
+  }
+  async #executeInTransaction(claimed: SiteTask) {
+    await this.db.transaction().execute(async (trx) => {
+      const { crawl, task } = await lockSiteTask(trx, claimed, this.owner, 'fence');
+      const executor = Object.hasOwn(this.executors, task.task_kind)
+        ? this.executors[task.task_kind]
+        : undefined;
+      if (!executor) throw new Error(`Site Health task '${task.task_kind}' has no executor`);
+      await executor(trx, crawl, task);
+      await lockSiteTask(trx, claimed, this.owner, 'acknowledge');
+      await trx
+        .updateTable('site_crawl_tasks')
+        .set({
+          status: 'succeeded',
+          attempt_count: task.attempt_count + 1,
+          completed_at: new Date(),
+          updated_at: new Date(),
+          error_code: '',
+          error_detail: '',
+          lease_owner: null,
+          lease_expires_at: null,
+          heartbeat_at: null,
+        })
+        .where('id', '=', task.id)
+        .where('workspace_id', '=', task.workspace_id)
+        .execute();
+    });
   }
   async fail(claimed: SiteTask, error: unknown) {
     await this.db.transaction().execute(async (trx) => {
@@ -146,16 +278,23 @@ export class SiteHealthWorker {
         .execute();
     });
   }
+  /**
+   * Keep `concurrency` tasks in flight, each slot claiming one task as it
+   * finishes the last, so a slow page fetch never holds a whole batch.
+   */
   async runForever(signal: AbortSignal) {
     logger.info('site health worker started', { owner: this.owner });
-    while (!signal.aborted) {
-      let count = 0;
-      try {
-        count = await this.runOnce();
-      } catch (error) {
-        logger.exception('site health iteration failed', error);
+    const slot = async () => {
+      while (!signal.aborted) {
+        let count = 0;
+        try {
+          count = await this.runOnce(1); // NOSONAR: each slot claims its next task only after finishing the last.
+        } catch (error) {
+          logger.exception('site health iteration failed', error);
+        }
+        if (!count) await waitForPoll(Math.max(50, this.settings.poll * 1000), signal);
       }
-      if (!count) await waitForPoll(Math.max(50, this.settings.poll * 1000), signal);
-    }
+    };
+    await Promise.all(Array.from({ length: this.settings.concurrency }, slot));
   }
 }

@@ -18,6 +18,12 @@ from app.core.config.site_health_crawl_policy import (
 )
 from app.core.config.task_queue import ERROR_MAX_ATTEMPTS, PostgresQueueSpec
 
+READ_PAGE_DEFAULT_LIMIT: Final = 50
+READ_PAGE_MAX_LIMIT: Final = 200
+READ_TERMINAL_GRACE_POLLS: Final = 2
+READ_EXPORT_PAGE_SIZE: Final = 200
+READ_MAX_DETAIL_EVALUATIONS: Final = 200
+
 
 def _require_non_empty(settings: object, names: tuple[str, ...]) -> None:
     for name in names:
@@ -196,12 +202,6 @@ class SiteHealthSettings(BaseSettings):
     db_conflict_base_delay_seconds: float = 0.05
     db_conflict_jitter_seconds: float = 0.2
     worker_concurrency: int = 8
-    # Number of in-process worker slots that prefer acquisition/discovery work.
-    # Remaining slots prefer analysis and persisted projections. Either side
-    # borrows the other's idle capacity, so this is a starvation guard rather
-    # than a hard per-lane ceiling. Runtime keeps at least one processing slot
-    # whenever total concurrency is greater than one.
-    acquisition_lane_reserve: int = 2
     poll_interval_seconds: float = 1.0
     # Bounded recheck when analyze observes a still-running discover task for
     # the same URL. A non-zero delay prevents a claim/defer hot loop.
@@ -236,11 +236,9 @@ class SiteHealthSettings(BaseSettings):
     # long-running transaction and stall live claims; the sweeper instead
     # drains the remainder across subsequent polls.
     lease_reclaim_batch_size: int = 500
-    # Rows per multi-row INSERT in the crawl-finalize pass. Bounded because
-    # PostgreSQL caps a statement at 65,535 bind parameters and an evaluation
-    # row carries 22 columns -- a large crawl's ~3 evaluations per page would
-    # otherwise build one statement past that ceiling and fail outright.
-    finalize_insert_batch_size: int = 500
+    # One-shot TypeScript worker runs stop admitting work at this deadline.
+    # Already claimed work finishes under the acquisition/task bounds.
+    drain_budget_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
     # Backstop for crawl terminalization. A crawl normally goes terminal from a
     # task's finalize; any path that drains the last non-terminal task without
     # running one (a sweeper reclaim at max attempts, a killed process between
@@ -431,7 +429,6 @@ class SiteHealthSettings(BaseSettings):
                 "global_concurrency",
                 "per_host_concurrency",
                 "worker_concurrency",
-                "acquisition_lane_reserve",
                 "db_conflict_max_requeues",
             ),
         )

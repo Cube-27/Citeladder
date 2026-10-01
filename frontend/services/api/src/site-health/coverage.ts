@@ -1,0 +1,117 @@
+/** Conservative crawl coverage from saved discovery state; never acquisition on a read. */
+import { sql } from 'kysely';
+import type { Database } from '../db/database.ts';
+import { record } from '../db/json.ts';
+import type { Crawl } from './task-fence.ts';
+
+export type CoverageSignals = {
+  sampleMode: boolean;
+  inputMode: string;
+  cancelled: boolean;
+  discoveryStatus: string;
+  requestedPageLimit: number;
+  frontierLimit: number;
+  admittedUrlCount: number;
+  observationCount: number;
+  pendingFrontierCount: number;
+  discoveryTaskCount: number;
+  failedDiscoveryTaskCount: number;
+};
+
+const BOUNDED_DISCOVERY = new Set(['cancelled', 'sample_completed', 'stopped']);
+
+/** A limit, a pending frontier or an explicit bound cut discovery short. */
+function partialReasons(signals: CoverageSignals) {
+  const reasons: string[] = [];
+  if (signals.requestedPageLimit > 0 && signals.admittedUrlCount >= signals.requestedPageLimit)
+    reasons.push('requested_page_limit_reached');
+  if (signals.frontierLimit > 0 && signals.admittedUrlCount >= signals.frontierLimit)
+    reasons.push('frontier_limit_reached');
+  if (signals.pendingFrontierCount > 0) reasons.push('frontier_not_exhausted');
+  const bounded =
+    signals.sampleMode ||
+    signals.inputMode !== 'auto' ||
+    signals.cancelled ||
+    BOUNDED_DISCOVERY.has(signals.discoveryStatus) ||
+    !signals.discoveryTaskCount;
+  if (bounded) reasons.push('discovery_bounded_or_stopped');
+  return reasons;
+}
+
+/** Discovery that failed, observed nothing or never completed proves nothing about coverage. */
+function unknownReasons(signals: CoverageSignals) {
+  const reasons: string[] = [];
+  if (signals.failedDiscoveryTaskCount) reasons.push('discovery_failed');
+  if (!signals.observationCount) reasons.push('no_observed_urls');
+  if (signals.discoveryStatus !== 'completed') reasons.push('discovery_not_completed');
+  return reasons;
+}
+
+/**
+ * The safest state the frozen facts support: `partial` when discovery was cut
+ * short, `unknown` when it failed or never completed, and `complete` only for
+ * an exhausted frontier.
+ */
+export function assessCoverage(signals: CoverageSignals) {
+  const partial = partialReasons(signals);
+  const unknown = partial.length ? [] : unknownReasons(signals);
+  let state = 'complete';
+  if (partial.length) state = 'partial';
+  else if (unknown.length) state = 'unknown';
+  const reasons = state === 'complete' ? ['frontier_exhausted'] : [...partial, ...unknown];
+  return {
+    state,
+    evidence: {
+      reasons,
+      requested_page_limit: signals.requestedPageLimit,
+      frontier_limit: signals.frontierLimit,
+      admitted_url_count: signals.admittedUrlCount,
+      observation_count: signals.observationCount,
+      pending_frontier_count: signals.pendingFrontierCount,
+      discovery_task_count: signals.discoveryTaskCount,
+      failed_discovery_task_count: signals.failedDiscoveryTaskCount,
+    },
+  };
+}
+
+export async function crawlCoverage(db: Database, crawl: Crawl) {
+  const discovery = await db
+    .selectFrom('site_crawl_tasks')
+    .select([
+      sql<number>`count(*)::int`.as('total'),
+      sql<number>`count(*) filter (where status = 'failed')::int`.as('failed'),
+    ])
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('crawl_id', '=', crawl.id)
+    .where('task_kind', '=', 'discover')
+    .executeTakeFirstOrThrow();
+  const frontier = await db
+    .selectFrom('site_discovery_frontier')
+    .select(sql<number>`count(*)::int`.as('count'))
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('crawl_id', '=', crawl.id)
+    .where('status', '=', 'pending')
+    .executeTakeFirstOrThrow();
+  const observations = await db
+    .selectFrom('site_url_observations')
+    .select(sql<number>`count(*)::int`.as('count'))
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('project_id', '=', crawl.project_id)
+    .where('crawl_id', '=', crawl.id)
+    .executeTakeFirstOrThrow();
+  const config = record(crawl.configuration);
+  return assessCoverage({
+    sampleMode: crawl.sample_mode,
+    inputMode:
+      typeof config.input_mode === 'string' && config.input_mode ? config.input_mode : 'auto',
+    cancelled: crawl.status === 'cancelled',
+    discoveryStatus: crawl.discovery_status,
+    requestedPageLimit: Number(crawl.discovery_requested_count || config.requested_page_limit || 0),
+    frontierLimit: Number(config.max_frontier_urls || 0),
+    admittedUrlCount: crawl.admitted_url_count,
+    observationCount: observations.count,
+    pendingFrontierCount: frontier.count,
+    discoveryTaskCount: discovery.total,
+    failedDiscoveryTaskCount: discovery.failed,
+  });
+}

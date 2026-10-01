@@ -48,26 +48,19 @@ from app.domain.billing.bootstrap import ensure_workspace_billing
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.opportunities.queue import enqueue_opportunity_refresh
-from app.domain.site_health.planner import create_crawl
-from app.domain.site_health.selection import (
-    BULK_SELECT_MODE_ALL,
-    bulk_select_monitored_set,
-)
 from app.models.analytics import AnalyticsTask
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.site_health.crawl import SiteCrawl
 from app.models.user import User
-from app.workers.site_health_worker import SiteHealthWorker
 from scripts.seed_dev_support import (
     SEED_MONITORED_URL_ALLOWANCE,
-    _FakeResolver,
-    _site_transport,
     seed_answer,
 )
 
 logger = logging.getLogger("seed_dev_data")
-NATIVE_API_ROOT = Path(__file__).resolve().parents[2] / "frontend" / "services" / "api"
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+NATIVE_API_ROOT = _REPOSITORY_ROOT / "frontend" / "services" / "api"
 
 #: Every engine the primary project audits across.
 #
@@ -82,6 +75,8 @@ ALL_ENGINES = [ENGINE_CHATGPT, ENGINE_CLAUDE, ENGINE_GEMINI]
 
 #: How long the seeder waits for the TypeScript analytics worker to refresh.
 SEED_REFRESH_TIMEOUT_SECONDS = 120
+#: How long the seeder waits for the TypeScript Site Health worker per crawl.
+SEED_CRAWL_TIMEOUT_SECONDS = 600
 _REFRESH_TERMINAL = (TASK_STATUS_SUCCEEDED, TASK_STATUS_FAILED, TASK_STATUS_CANCELLED)
 
 
@@ -115,12 +110,10 @@ async def seed_monitored_urls_grant(
     )
 
 
-async def drain_site_crawl(
-    worker: SiteHealthWorker, *, workspace_id: uuid.UUID, crawl_id: uuid.UUID
-) -> None:
-    """Drain delayed host-gated tasks until the selected crawl terminalizes."""
-    for _ in range(120):
-        await worker.run_until_idle()
+async def wait_for_site_crawl(*, workspace_id: uuid.UUID, crawl_id: uuid.UUID) -> None:
+    """Wait for the TypeScript Site Health worker to terminalize the crawl."""
+    deadline = asyncio.get_running_loop().time() + SEED_CRAWL_TIMEOUT_SECONDS
+    while asyncio.get_running_loop().time() < deadline:
         async with SessionLocal() as session:
             status = await session.scalar(
                 select(SiteCrawl.status).where(
@@ -135,8 +128,11 @@ async def drain_site_crawl(
                     f"{crawl_id} ({status})"
                 )
             return
-        await asyncio.sleep(0.25)
-    raise RuntimeError(f"seed Site Health crawl did not terminalize: {crawl_id}")
+        await asyncio.sleep(1)
+    raise RuntimeError(
+        f"seed Site Health crawl did not terminalize in {SEED_CRAWL_TIMEOUT_SECONDS}s: "
+        f"{crawl_id}; is the TypeScript Site Health worker running?"
+    )
 
 
 async def _run_audit(
@@ -233,24 +229,46 @@ async def run_seed_audits(
 
 
 async def _plan_and_drain_crawl(
-    worker: SiteHealthWorker,
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     random_seed: str,
     label: str,
 ) -> uuid.UUID:
-    async with SessionLocal() as session:
-        crawl = await create_crawl(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            random_seed=random_seed,
-        )
-        crawl_id = crawl.id
-    await drain_site_crawl(worker, workspace_id=workspace_id, crawl_id=crawl_id)
+    crawl_id = await _site_health_control(
+        operation="create",
+        workspace_id=str(workspace_id),
+        project_id=str(project_id),
+        seed=random_seed,
+    )
+    await wait_for_site_crawl(workspace_id=workspace_id, crawl_id=crawl_id)
     logger.info("Completed %s %s", label, crawl_id)
     return crawl_id
+
+
+async def _site_health_control(**payload: str) -> uuid.UUID:
+    """Invoke the TypeScript owner on this local dev database, without HTTP."""
+    process = await asyncio.create_subprocess_exec(
+        "node",
+        str(NATIVE_API_ROOT / "scripts" / "seed-site-health.ts"),
+        cwd=NATIVE_API_ROOT,
+        env={
+            **os.environ,
+            "DATABASE_URL": settings.database_url,
+            "APP_ENV": "development",
+            "CITELADDER_DISABLE_DOTENV": "1",
+        },
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, _stderr = await process.communicate(json.dumps(payload).encode())
+    if process.returncode:
+        # Do not echo subprocess output: driver errors can contain credentials.
+        raise RuntimeError(
+            f"TypeScript Site Health seed control failed ({process.returncode})"
+        )
+    return uuid.UUID(json.loads(stdout)["id"])
 
 
 async def run_site_health_crawls(
@@ -258,14 +276,14 @@ async def run_site_health_crawls(
 ) -> uuid.UUID:
     """Discover, select every URL as monitored, then run two analysis crawls.
 
-    Runs the REAL crawl planner (``create_crawl``) and the REAL
-    ``SiteHealthWorker`` (against a mocked transport), mirroring the production
+    Runs the REAL crawl planner (``create_crawl``) while the TypeScript Site
+    Health worker (which must be running) acquires, analyzes and terminalizes
+    the crawl, mirroring the production
     "discover -> select monitored URLs -> recrawl analyzes" flow; a hand-built
     crawl/task never goes through that selection gate.
 
     The second analysis crawl supplies the immediate comparable A/B pair the
-    Website Changes projection needs. The deterministic transport is unchanged
-    between the two, so it is also the clean-stack zero-false-regression proof.
+    Website Changes projection needs.
     Returns that crawl's id.
     """
     async with SessionLocal() as session:
@@ -278,39 +296,26 @@ async def run_site_health_crawls(
         # to a sample crawl, so no monitored analysis flow is seeded at all.
         await session.commit()
 
-    worker = SiteHealthWorker(
-        session_factory=SessionLocal,
-        owner="seed-site-worker",
-        resolver=_FakeResolver(),
-        transport=_site_transport(),
-    )
     discovery_crawl_id = await _plan_and_drain_crawl(
-        worker,
         workspace_id=workspace_id,
         project_id=project_id,
         random_seed="99",
         label="site health discovery crawl",
     )
-    async with SessionLocal() as session:
-        await bulk_select_monitored_set(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            crawl_id=discovery_crawl_id,
-            mode=BULK_SELECT_MODE_ALL,
-            expected_selection_version=0,
-        )
-        await session.commit()
+    await _site_health_control(
+        operation="select",
+        workspace_id=str(workspace_id),
+        project_id=str(project_id),
+        crawl_id=str(discovery_crawl_id),
+    )
 
     await _plan_and_drain_crawl(
-        worker,
         workspace_id=workspace_id,
         project_id=project_id,
         random_seed="100",
         label="site health analysis crawl",
     )
     return await _plan_and_drain_crawl(
-        worker,
         workspace_id=workspace_id,
         project_id=project_id,
         random_seed="101",

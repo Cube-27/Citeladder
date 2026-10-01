@@ -7,6 +7,10 @@ export function siteWorkerSettings(env: Record<string, string | undefined> = pro
   const heartbeat = number('heartbeat_interval_seconds');
   if (heartbeat <= 0 || lease <= heartbeat)
     throw new Error('Site Health heartbeat must be shorter than its lease');
+  // Python's model validators enforce these; the exported specs carry only types.
+  for (const name of ['lease_reclaim_batch_size', 'stalled_crawl_reconcile_batch'] as const)
+    if (!Number.isSafeInteger(number(name)) || number(name) <= 0)
+      throw new Error(`Site Health ${name} must be a positive integer`);
   return {
     lease,
     heartbeat,
@@ -19,8 +23,22 @@ export function siteWorkerSettings(env: Record<string, string | undefined> = pro
     conflictMax: number('db_conflict_max_requeues'),
     conflictBase: number('db_conflict_base_delay_seconds'),
     conflictJitter: number('db_conflict_jitter_seconds'),
+    reclaimBatch: number('lease_reclaim_batch_size'),
+    drainBudget: number('drain_budget_seconds'),
+    lifecycle: {
+      stalledSeconds: number('stalled_crawl_reconcile_seconds'),
+      overdueSeconds: number('overdue_crawl_seconds'),
+      batch: number('stalled_crawl_reconcile_batch'),
+    },
+    scoreRefresh: {
+      pageInterval: number('live_score_refresh_page_interval'),
+      pageFraction: number('live_score_refresh_page_fraction'),
+      minIntervalSeconds: number('live_score_refresh_min_interval_seconds'),
+      maxTrackedCrawls: number('live_score_refresh_max_tracked_crawls'),
+    },
   };
 }
+export type SiteWorkerSettings = ReturnType<typeof siteWorkerSettings>;
 
 /** What the read API needs: export and event-stream bounds, and the advanced-controls flag. */
 export function siteReadSettings(env: Record<string, string | undefined> = process.env) {

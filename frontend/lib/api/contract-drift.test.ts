@@ -57,7 +57,7 @@ describe('declaredKeysFor', () => {
   });
 
   it('resolves page wrappers to their object shape', () => {
-    expect(declaredKeysFor('siteCrawlListPageSchema')?.declared).toContain('items');
+    expect(declaredKeysFor('agentChatsPageSchema')?.declared).toContain('items');
   });
 });
 

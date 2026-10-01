@@ -15,7 +15,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.agent import router as agent_router
 from app.api.commerce import router as commerce_router
 from app.api.performance import router as performance_router
-from app.api.site_health import router as site_health_router
 from app.core.config import get_frontend_origins, settings
 from app.core.config.api import API_V1_PREFIX, READINESS_TIMEOUT_SECONDS
 from app.core.database import SessionLocal, dispose_engine
@@ -42,7 +41,6 @@ logger = logging.getLogger("app")
 # Explicit router stubs registered now so B2–B6 fill them in place. Each router
 # owns its own paths; the prefix keeps the whole surface under /api/v1.
 _ROUTERS = (
-    site_health_router,
     performance_router,
     agent_router,
     commerce_router,

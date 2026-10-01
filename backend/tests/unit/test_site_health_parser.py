@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 
 from app.analysis.site_health import fact_source_support
-from app.analysis.site_health.dom import node_text, xpath
+from app.analysis.site_health.dom import _safe_parser_encoding, node_text, xpath
 from app.analysis.site_health.page_kinds import classify
 from app.analysis.site_health.parser import extract_page_facts
 from app.analysis.site_health.structured_data import (
@@ -1943,3 +1943,14 @@ def test_malformed_source_href_skips_only_that_anchor(monkeypatch) -> None:
         "data.example.org",
         "data.example.net",
     ]
+
+
+def test_safe_parser_encoding_valid():
+    assert _safe_parser_encoding("UTF-8") == "utf-8"
+    assert _safe_parser_encoding("ISO-8859-1") == "iso-8859-1"
+
+
+def test_safe_parser_encoding_bogus_returns_none():
+    assert _safe_parser_encoding("totally-not-a-charset") is None
+    assert _safe_parser_encoding("") is None
+    assert _safe_parser_encoding("   ") is None

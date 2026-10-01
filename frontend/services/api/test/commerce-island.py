@@ -10,8 +10,6 @@ import uuid
 from sqlalchemy import select
 
 from app.core.database import SessionLocal, engine
-from app.domain.commerce.service import enqueue_catalog_projection
-from app.models.analytics import AnalyticsTask
 from app.models.brand import Brand, BrandProfile
 from app.models.commerce import CommerceCompetitorCandidate, CommercePromptTarget
 from app.models.prompt import Prompt, PromptSet
@@ -98,23 +96,10 @@ async def seed():
             session.add(analysis)
             await session.flush()
             analysis_ids.append(str(analysis.id))
-            await enqueue_catalog_projection(
-                session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                source_analysis_id=analysis.id,
-            )
         await session.commit()
         user_id = await session.scalar(
             select(WorkspaceMember.user_id).where(
                 WorkspaceMember.workspace_id == seed.workspace_id
-            )
-        )
-        tasks = list(
-            await session.scalars(
-                select(AnalyticsTask).where(
-                    AnalyticsTask.workspace_id == seed.workspace_id
-                )
             )
         )
         return {
@@ -122,7 +107,6 @@ async def seed():
             "projectId": str(seed.project_id),
             "userId": str(user_id),
             "analyses": analysis_ids,
-            "tasks": [str(t.id) for t in tasks],
         }
 
 

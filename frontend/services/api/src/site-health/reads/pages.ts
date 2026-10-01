@@ -11,7 +11,6 @@ import type { Database } from '../../db/database.ts';
 import { record, strings } from '../../db/json.ts';
 import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import { notFound } from '../../errors.ts';
-import { compareText } from '../../text-order.ts';
 import { loadCrawl, rootFailure, type Crawl } from './crawl.ts';
 import {
   currentIssueFilter,
@@ -23,11 +22,11 @@ import {
   type PageRowFilters,
   type PageSort,
 } from './page-rows.ts';
-import { issueOccurrence, ruleTitle, severityRank, type IssueRow } from './rules.ts';
+import { issueOccurrence, ruleTitle, severityOrder, type IssueRow } from './rules.ts';
 
 type Paging = { limit: number; cursor: string | null };
 // A pathological artifact never balloons a detail response.
-const MAX_EVALUATIONS = 200;
+const MAX_EVALUATIONS = policy.site_health.reads.max_detail_evaluations;
 
 const pageSummary = (row: PageRow) => ({
   site_url_id: row.site_url_id,
@@ -234,7 +233,11 @@ export async function pageDetail(
       ? workspace
           .selectFrom(db, 'site_rule_evaluations')
           .selectAll()
-          .where('id', 'in', evaluationIds)
+          .where((eb) => eb('id', '=', eb.fn.any(eb.val(evaluationIds))))
+          .orderBy(severityOrder('severity'))
+          .orderBy(sql`rule_id collate "C"`)
+          .orderBy('id')
+          .limit(MAX_EVALUATIONS)
           .execute()
       : [],
   ]);
@@ -281,33 +284,27 @@ export async function pageDetail(
     facts: pageFacts(facts),
     delivery: deliveryFacts(facts, analysis?.decoded_bytes ?? null),
     issues: issues.map((issue) => issueOccurrence(issue, page)),
-    evaluations: evaluations
-      .sort(
-        (a, b) =>
-          severityRank(a.severity) - severityRank(b.severity) || compareText(a.rule_id, b.rule_id),
-      )
-      .slice(0, MAX_EVALUATIONS)
-      .map((evaluation) => ({
-        id: evaluation.id,
-        rule_id: evaluation.rule_id,
-        title: ruleTitle(evaluation.rule_id),
-        dimension: evaluation.dimension,
-        category: evaluation.category,
-        severity: evaluation.severity,
-        finding_class: evaluation.finding_class,
-        outcome: evaluation.outcome,
-        display_applicability: evaluation.display_applicability,
-        score_applicability: evaluation.score_applicability,
-        checklist_membership: strings(evaluation.score_roles).length > 0,
-        reason_code: evaluation.reason_code,
-        score_roles: strings(evaluation.score_roles),
-        aeo_pillar: evaluation.readiness_dimension,
-        weight: evaluation.weight,
-        evidence: record(evaluation.evidence),
-        analyzer_version: evaluation.analyzer_version,
-        rule_version: evaluation.rule_version,
-        created_at: evaluation.created_at.toISOString(),
-      })),
+    evaluations: evaluations.map((evaluation) => ({
+      id: evaluation.id,
+      rule_id: evaluation.rule_id,
+      title: ruleTitle(evaluation.rule_id),
+      dimension: evaluation.dimension,
+      category: evaluation.category,
+      severity: evaluation.severity,
+      finding_class: evaluation.finding_class,
+      outcome: evaluation.outcome,
+      display_applicability: evaluation.display_applicability,
+      score_applicability: evaluation.score_applicability,
+      checklist_membership: strings(evaluation.score_roles).length > 0,
+      reason_code: evaluation.reason_code,
+      score_roles: strings(evaluation.score_roles),
+      aeo_pillar: evaluation.readiness_dimension,
+      weight: evaluation.weight,
+      evidence: record(evaluation.evidence),
+      analyzer_version: evaluation.analyzer_version,
+      rule_version: evaluation.rule_version,
+      created_at: evaluation.created_at.toISOString(),
+    })),
     artifact_id: analysis?.artifact_id ?? null,
     extractor_version: crawl.extractor_version,
     analyzer_version: crawl.analyzer_version,

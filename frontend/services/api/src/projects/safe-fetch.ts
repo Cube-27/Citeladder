@@ -21,12 +21,27 @@ export type FetchOptions = {
   maxBytes: number;
   timeoutSeconds: number;
   redirects: number;
+  /** Media types a 2xx may carry; `*` accepts any. */
   contentTypes: readonly string[];
   domain?: string;
   signal?: AbortSignal;
   maxDecodedBytes?: number;
   gate?: <T>(url: URL, send: () => Promise<T>, signal: AbortSignal) => Promise<T>;
   authorize?: (url: URL) => Promise<void>;
+  /** Response headers kept on the result; defaults to the evidence allowlist. */
+  headerNames?: readonly string[];
+  /** Observes every network call, including failed ones, in call order. */
+  onCall?: (call: FetchCall) => void;
+};
+/** One real network call made while serving a fetch; redirects make several. */
+export type FetchCall = {
+  url: string;
+  status: number | null;
+  error: unknown;
+  wireBytes: number | null;
+  decodedBytes: number | null;
+  ttfbMs: number | null;
+  latencyMs: number;
 };
 export type FetchedPage = {
   url: string;
@@ -36,6 +51,11 @@ export type FetchedPage = {
   charset?: string;
   headers?: Record<string, string>;
   redirects?: string[];
+  /** Each followed redirect with the status that issued it. */
+  redirectChain?: { from: string; to: string; status: number }[];
+  httpVersion?: string;
+  wireBytes?: number;
+  ttfbMs?: number;
 };
 type TransportResult = {
   status: number;
@@ -44,7 +64,19 @@ type TransportResult = {
   body: Buffer;
   charset?: string;
   headers?: Record<string, string>;
+  httpVersion?: string;
+  wireBytes?: number;
+  ttfbMs?: number;
 };
+const EVIDENCE_HEADERS = [
+  'content-type',
+  'content-length',
+  'content-encoding',
+  'x-robots-tag',
+  'link',
+  'last-modified',
+  'strict-transport-security',
+];
 export type WebsiteFetcher = (url: string, options: FetchOptions) => Promise<FetchedPage>;
 type Dns = (host: string) => Promise<readonly { address: string; family: number }[]>;
 
@@ -130,6 +162,7 @@ export async function pinnedRequest(
   options: FetchOptions,
   signal: AbortSignal,
 ) {
+  const started = performance.now();
   return new Promise<TransportResult>((resolve, reject) => {
     const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(
       url,
@@ -140,7 +173,7 @@ export async function pinnedRequest(
         signal,
         headers: {
           'user-agent': policy.web_fetch.user_agent,
-          accept: options.contentTypes.join(', '),
+          accept: options.contentTypes.includes('*') ? '*/*' : options.contentTypes.join(', '),
           'accept-encoding': 'gzip, deflate, br',
         },
         // Keep the URL hostname for Host, TLS SNI and certificate verification.
@@ -148,6 +181,7 @@ export async function pinnedRequest(
       },
       (response) => {
         response.on('error', reject);
+        const ttfbMs = Math.round(performance.now() - started);
         const status = response.statusCode ?? 0;
         const type = String(response.headers['content-type'] ?? '')
           .split(';')[0]!
@@ -155,10 +189,19 @@ export async function pinnedRequest(
           .toLowerCase();
         if (status >= 300 && status < 400 && response.headers.location) {
           response.destroy();
-          resolve({ status, location: response.headers.location, type, body: Buffer.alloc(0) });
+          resolve({
+            status,
+            location: response.headers.location,
+            type,
+            body: Buffer.alloc(0),
+            httpVersion: response.httpVersion,
+            ttfbMs,
+          });
           return;
         }
-        if (status >= 200 && status < 300 && !options.contentTypes.includes(type)) {
+        const acceptable =
+          options.contentTypes.includes(type) || options.contentTypes.includes('*');
+        if (status >= 200 && status < 300 && !acceptable) {
           response.destroy(new FetchError('content_type'));
           return;
         }
@@ -178,6 +221,9 @@ export async function pinnedRequest(
               status,
               location: undefined,
               type,
+              httpVersion: response.httpVersion,
+              wireBytes: bytes,
+              ttfbMs,
               body: decodedBody(
                 Buffer.concat(chunks),
                 String(response.headers['content-encoding'] ?? ''),
@@ -188,15 +234,7 @@ export async function pinnedRequest(
                   String(response.headers['content-type'] ?? ''),
                 )?.[1] ?? '',
               headers: Object.fromEntries(
-                [
-                  'content-type',
-                  'content-length',
-                  'content-encoding',
-                  'x-robots-tag',
-                  'link',
-                  'last-modified',
-                  'strict-transport-security',
-                ].flatMap((key) =>
+                (options.headerNames ?? EVIDENCE_HEADERS).flatMap((key) =>
                   typeof response.headers[key] === 'string' ? [[key, response.headers[key]]] : [],
                 ),
               ),
@@ -223,6 +261,7 @@ export function createWebsiteFetcher(
     const signal = options.signal ? AbortSignal.any([timeout, options.signal]) : timeout;
     let url = publicUrl(value);
     const redirects: string[] = [];
+    const redirectChain: { from: string; to: string; status: number }[] = [];
     for (let hop = 0; hop <= options.redirects; hop++) {
       signal.throwIfAborted();
       if (options.domain && getDomain(url.hostname) !== options.domain)
@@ -240,7 +279,31 @@ export function createWebsiteFetcher(
           : await abortable(dns(host), hopSignal);
         if (!addresses.length) throw new FetchError('dns_resolution_failed');
         for (const target of addresses) validateAddress(target.address);
-        return send(url, addresses[0]!, options, hopSignal);
+        const started = performance.now();
+        try {
+          const response = await send(url, addresses[0]!, options, hopSignal);
+          options.onCall?.({
+            url: url.href,
+            status: response.status,
+            error: null,
+            wireBytes: response.wireBytes ?? null,
+            decodedBytes: response.location ? null : response.body.length,
+            ttfbMs: response.ttfbMs ?? null,
+            latencyMs: Math.round(performance.now() - started),
+          });
+          return response;
+        } catch (error) {
+          options.onCall?.({
+            url: url.href,
+            status: null,
+            error,
+            wireBytes: null,
+            decodedBytes: null,
+            ttfbMs: null,
+            latencyMs: Math.round(performance.now() - started),
+          });
+          throw error;
+        }
       };
       const result = options.gate ? await options.gate(url, sendHop, signal) : await sendHop();
       if (!result.location)
@@ -252,9 +315,15 @@ export function createWebsiteFetcher(
           charset: result.charset,
           headers: result.headers,
           redirects,
+          redirectChain,
+          httpVersion: result.httpVersion,
+          wireBytes: result.wireBytes,
+          ttfbMs: result.ttfbMs,
         };
+      const from = url.href;
       url = publicUrl(result.location, url.href);
       redirects.push(url.href);
+      redirectChain.push({ from, to: url.href, status: result.status });
     }
     throw new FetchError('redirect_limit');
   };
