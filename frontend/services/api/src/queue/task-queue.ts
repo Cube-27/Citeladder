@@ -7,7 +7,8 @@
  * sets (`ANALYTICS_TS_OWNED_TASK_KINDS`), so this module must make exactly the
  * same promises: a claim locks eligible rows `FOR UPDATE SKIP LOCKED`, commits
  * before the caller does any work, and gives each workspace one task before
- * any workspace gets a second. Lease expiry stays with the Python sweeper.
+ * any workspace gets a second. Site Health owns its lease recovery; analytics
+ * leases still expire through the Python sweeper.
  */
 import { randomUUID } from 'node:crypto';
 

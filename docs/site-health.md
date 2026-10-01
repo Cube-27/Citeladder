@@ -38,10 +38,36 @@ crawl (and, for `analyze`, membership and entitlement) before committing their
 evidence and the task outcome together. `discover` commits its artifact, the
 URL's observation, frontier admission and the page's disposition; `site_setup`
 publishes robots and llms.txt evidence first, then commits the sitemap walk and
-its admission under the same lease. Python claims no tasks: it retains crawl
-creation, finalization, terminal-crawl admission (including the analytics
-handoff of a crawl without usable analysis) and lease sweeping, and its
-maintenance pass reconciles crawls after TypeScript settles a task.
+its admission under the same lease. Python claims no tasks and runs no Site
+Health worker; it keeps crawl creation and the other `site-health-crawls`
+controls below.
+
+The TypeScript worker also owns the crawl lifecycle, the only path to a
+terminal crawl. After a discover, site-setup or analyze task settles, it
+reconciles the crawl under the crawl row lock: counters, the discovery and
+analysis sub-states and, once that work drains, terminalization. A successful
+analysis while sibling work remains skips the lock and only refreshes the
+provisional summary on cadence. A still-queued row skips it too. Terminal
+lease recovery reconciles the affected crawls. Each worker pass, including a
+drain over an empty queue, runs three backstops: stalled crawls (active, no
+outstanding work, no write for `stalled_crawl_reconcile_seconds`), overdue
+crawls (outstanding tasks fail with `crawl_overdue` and the same transaction
+reconciles) and cancelled crawls. Cancellation commits only the stop, task
+cancellation and fetch settlement, so Stop stays short under a busy crawl. The
+worker then publishes the cancelled run's final revisions, snapshot and
+successors under the crawl lock. It selects only crawls with a completed
+analysis or classification-expected task on an active monitored page, so a
+cancel with no measurement evidence keeps a null summary.
+
+TypeScript alone recovers expired `site_crawl_tasks` leases in bounded,
+oldest-first `SKIP LOCKED` batches before claiming work. Recovery spends one
+attempt, releases the lease, and either makes the task due immediately or
+fails it at its attempt ceiling. The Python global sweeper excludes this queue.
+`node src/site-health-worker.ts --drain` processes due work and successors until
+idle or `SITE_HEALTH_DRAIN_BUDGET_SECONDS` stops new claims (default 300 seconds).
+Already claimed work finishes under its existing task/acquisition bounds,
+then the process closes its database pool and exits successfully. The default
+entry point keeps the long-polling loop for Compose.
 Analyze tasks extract facts and evaluate rules in Node worker threads before
 taking commit locks. The commit rechecks the page's site/sitemap context;
 changed context is interpreted once under the crawl lock without spending another attempt.
@@ -354,7 +380,8 @@ actual indexing or engine eligibility.
 Analyze tasks append an initial `SitePageAnalysis` with facts, classification,
 traits and source evaluation IDs. Its scores and `finalized_at` are null.
 
-Once work drains, the existing crawl lock owns the only publication sequence:
+Once work drains, the crawl lock owns the only publication sequence
+([lifecycle](../frontend/services/api/src/site-health/lifecycle.ts)):
 
 1. fence active work and resolve aliases;
 2. evaluate bounded finalize checks from persisted evidence;

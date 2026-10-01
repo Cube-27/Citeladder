@@ -385,7 +385,6 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert set(workers) == {
         "audit-worker",
         "audit-scheduler",
-        "site-health-worker",
         "brand-discovery-worker",
         "agent-worker",
         "analytics-worker",

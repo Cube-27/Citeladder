@@ -7,7 +7,8 @@ strands rows: a worker killed after ``mark_running`` leaves its row at
 is the one that just died. Commerce competitor discovery showed this as a
 workspace polling "Discovery for this category is running" indefinitely.
 
-So this process sweeps EVERY queue, owns none of them, and runs no executors.
+This process sweeps queues whose recovery still belongs to Python and runs no
+executors. Site Health recovery belongs to the TypeScript worker.
 Its reclaim path is bounded, ``SKIP LOCKED`` (so it never contends with a live
 worker holding its row), and already the single writer of the reclaim
 transition. Running it alongside the real workers is therefore safe rather
@@ -39,7 +40,6 @@ from app.core.config.analytics import ANALYTICS_QUEUE_SPEC
 from app.core.config.audits import AUDIT_QUEUE_SPEC
 from app.core.config.brand_discovery import BRAND_DISCOVERY_QUEUE_SPEC
 from app.core.config.integrations_clients import INTEGRATION_QUEUE_SPEC
-from app.core.config.site_health_runtime import SITE_CRAWL_QUEUE_SPEC
 from app.core.config.task_queue import PostgresQueueSpec
 from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
@@ -52,8 +52,8 @@ from app.workers.parent_reconcilers import PARENT_RECONCILERS
 
 logger = logging.getLogger("app.workers.queue_sweeper")
 
-# Every durable queue in the system. A queue missing from this list keeps the
-# old behaviour (reclaimed only by its own live worker), so the cost of
+# Every durable queue whose recovery belongs to Python. A missing queue keeps
+# the old behaviour (reclaimed only by its own live worker), so the cost of
 # forgetting one is a stranded row, not a crash -- hence the list is explicit
 # rather than discovered by reflection.
 _CANDIDATE_QUEUES: tuple[PostgresQueueSpec, ...] = (
@@ -62,7 +62,6 @@ _CANDIDATE_QUEUES: tuple[PostgresQueueSpec, ...] = (
     AUDIT_QUEUE_SPEC,
     BRAND_DISCOVERY_QUEUE_SPEC,
     INTEGRATION_QUEUE_SPEC,
-    SITE_CRAWL_QUEUE_SPEC,
 )
 
 SWEPT_QUEUES: tuple[PostgresQueueSpec, ...] = _CANDIDATE_QUEUES

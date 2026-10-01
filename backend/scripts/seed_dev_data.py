@@ -22,10 +22,10 @@ dataset covering every major surface of the app:
     ``tests/component/test_analysis_api.py::_run_completed_audit``.
   - A second, smaller audit on the second project so the dashboard/audit
     list has more than one entry.
-  - A completed Site Health crawl (via the real ``SiteHealthWorker`` against
-    a mocked HTTP transport) with pages ranging from rich/healthy to thin/
-    unhealthy, producing page analyses, rule evaluations, issues, and a
-    crawl-level snapshot.
+  - Completed Site Health crawls, planned here and run to terminal by the
+    TypeScript Site Health worker (which must be running and able to reach
+    the seeded site), producing page analyses, rule evaluations, issues, and
+    a crawl-level snapshot.
   - Provider grants and imports are not seeded here; integrations now run
     through the TypeScript routes and PostgreSQL workers.
 

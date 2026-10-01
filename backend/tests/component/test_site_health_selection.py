@@ -42,7 +42,6 @@ from app.core.config.site_health_runtime import (
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
     TASK_STATUS_QUEUED,
-    TASK_STATUS_RUNNING,
 )
 from app.domain.site_health.entitlements import (
     resolve_runtime,
@@ -60,12 +59,6 @@ from app.domain.site_health.selection import (
     SelectionValidationError,
     StaleSelectionVersionError,
     replace_monitored_set,
-)
-from app.domain.site_health.task_guards import (
-    crawl_is_active,
-    evaluate_task_guard,
-    lease_is_owned,
-    monitored_is_active,
 )
 from app.models.project import Project
 from app.models.site_health.crawl import SiteCrawl
@@ -496,99 +489,6 @@ async def test_remove_readd_allocates_next_generation(
 
 
 # =========================================================================
-# Remove mid-fetch: worker guard rejects a deactivated membership
-# =========================================================================
-@pytest.mark.asyncio
-async def test_remove_mid_fetch_guard_blocks_persistence(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        seed = await _seed_workspace(
-            session,
-            projects=[{"name": "a", "url_count": 1, "with_active_crawl": True}],
-        )
-    proj = seed.projects[0]
-    target = proj.site_url_ids[0]
-
-    async with session_factory() as session:
-        await replace_monitored_set(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=proj.project_id,
-            site_url_ids=[target],
-            expected_selection_version=0,
-        )
-        await session.commit()
-
-    # Simulate a worker that claimed + is running the analyze task.
-    async with session_factory() as session:
-        task = (
-            (
-                await session.execute(
-                    select(SiteCrawlTask).where(SiteCrawlTask.crawl_id == proj.crawl_id)
-                )
-            )
-            .scalars()
-            .first()
-        )
-        assert task is not None
-        task.status = TASK_STATUS_RUNNING
-        task.lease_owner = "worker-1"
-        await session.commit()
-
-    # User removes the URL mid-fetch.
-    async with session_factory() as session:
-        await replace_monitored_set(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=proj.project_id,
-            site_url_ids=[],
-            expected_selection_version=1,
-        )
-        await session.commit()
-
-    # Before persistence, the worker re-loads rows and evaluates the guard.
-    async with session_factory() as session:
-        crawl = await session.get(SiteCrawl, proj.crawl_id)
-        task = (
-            (
-                await session.execute(
-                    select(SiteCrawlTask).where(
-                        SiteCrawlTask.crawl_id == proj.crawl_id,
-                        SiteCrawlTask.status == TASK_STATUS_RUNNING,
-                    )
-                )
-            )
-            .scalars()
-            .first()
-        )
-        monitored = (
-            (
-                await session.execute(
-                    select(MonitoredSiteUrl).where(
-                        MonitoredSiteUrl.project_id == proj.project_id,
-                        MonitoredSiteUrl.site_url_id == target,
-                    )
-                )
-            )
-            .scalars()
-            .first()
-        )
-        runtime = await resolve_runtime(session, seed.workspace_id)
-
-        decision = evaluate_task_guard(
-            crawl=crawl,
-            task=task,
-            monitored=monitored,
-            runtime=runtime,
-            owner="worker-1",
-        )
-    assert not decision.ok
-    assert decision.reason == "not_actively_monitored"
-    assert not monitored_is_active(monitored)
-
-
-# =========================================================================
 # Zero-allowance -> full-allowance sample conversion + quota accounting
 # =========================================================================
 @pytest.mark.asyncio
@@ -690,38 +590,6 @@ async def test_downgrade_blocks_user_row_but_allows_sample(
     assert not runtime_allows_monitored_analysis(
         None, selection_source=SELECTION_SOURCE_FREE_SAMPLE
     )
-
-
-@pytest.mark.asyncio
-async def test_guard_helpers_lease_and_crawl(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        seed = await _seed_workspace(
-            session,
-            projects=[{"name": "a", "url_count": 1, "with_active_crawl": True}],
-        )
-    proj = seed.projects[0]
-    async with session_factory() as session:
-        crawl = await session.get(SiteCrawl, proj.crawl_id)
-        assert crawl_is_active(crawl)
-        crawl.status = TASK_STATUS_CANCELLED
-        assert not crawl_is_active(crawl)
-        assert not crawl_is_active(None)
-
-    # Lease ownership.
-    task = SiteCrawlTask(
-        crawl_id=proj.crawl_id,
-        workspace_id=seed.workspace_id,
-        task_kind=TASK_KIND_ANALYZE,
-        url_hash="h",
-        idempotency_key="k",
-        status=TASK_STATUS_RUNNING,
-        lease_owner="worker-1",
-    )
-    assert lease_is_owned(task, owner="worker-1")
-    assert not lease_is_owned(task, owner="worker-2")
-    assert not lease_is_owned(None, owner="worker-1")
 
 
 # =========================================================================

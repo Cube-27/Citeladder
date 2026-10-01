@@ -56,7 +56,6 @@ work and never performs provider calls or long-running crawl/sync/generation wor
 cd backend
 uv run python -m app.workers.audit_worker
 uv run python -m app.workers.audit_scheduler
-uv run python -m app.workers.site_health_worker
 uv run python -m app.workers.agent_worker
 uv run python -m app.workers.analytics_worker
 ```
@@ -279,6 +278,13 @@ repository root, `node scripts/quality.mjs --mode check --scope api` checks type
 schema authority, export freshness and route ownership (`pnpm check:routes` against
 FastAPI's exported OpenAPI and every ingress Caddyfile); CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
+The Site Health TypeScript worker supports one-shot processing from
+`frontend/services/api/` with `node src/site-health-worker.ts --drain`.
+`SITE_HEALTH_DRAIN_BUDGET_SECONDS` (default 300) bounds admission of new work;
+claimed tasks finish before exit. Without `--drain`, it long-polls for Compose.
+It is the only Site Health worker: it recovers expired leases, reconciles and
+finalizes crawls, and every pass (including a drain over an empty queue) runs
+the stalled, overdue and cancelled-crawl backstops.
 `docker compose up analytics-worker-ts` (or `node src/worker.ts` in
 `frontend/services/api`) runs the TypeScript analytics worker, which claims the
 kinds in `ANALYTICS_TS_OWNED_TASK_KINDS`; the Python `analytics_worker` above no

@@ -2,8 +2,8 @@
 #
 # Owns the atomic, versioned full-set replacement of a project's monitored
 # selection and the shared locking/enqueue primitives the per-page rerun
-# (``rerun``) and the recrawl seeding (``monitored_seeding``) reuse. The pure
-# worker-side guard functions live in ``task_guards``.
+# (``rerun``) and the recrawl seeding (``monitored_seeding``) reuse. The
+# TypeScript analyzer re-checks membership before I/O and before persistence.
 #
 # The monitored set is a persistent, project-level projection
 # (``MonitoredSiteUrl``) whose active rows are counted WORKSPACE-WIDE against
@@ -320,9 +320,9 @@ async def _cancel_pending_analyze_tasks(
 ) -> list[uuid.UUID]:
     """Cancel ONLY queued/retry ``analyze`` tasks for removed URLs.
 
-    A running/leased task is NOT cancelled here — the worker's own guard
-    (``evaluate_task_guard``) discards its result cooperatively before I/O and
-    before persistence. Succeeded/failed tasks keep their immutable evidence.
+    A running/leased task is NOT cancelled here — the analyzer's membership
+    re-check discards its result cooperatively before I/O and before
+    persistence. Succeeded/failed tasks keep their immutable evidence.
     """
     hashes = list(dict.fromkeys(url_hashes))
     if not hashes:

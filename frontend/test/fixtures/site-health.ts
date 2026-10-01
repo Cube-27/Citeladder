@@ -21,8 +21,8 @@ const SITE_HEALTH_WORKSPACE = '33333333-3333-4333-8333-333333333333';
 const SITE_HEALTH_PROFILE = '55555555-5555-4555-8555-555555555555';
 
 /**
- * The bounded site-facts blob the worker persists (`_crawl_setup` in
- * backend/app/workers/site_health_worker.py): robots AI-crawler stance,
+ * The bounded site-facts blob the worker persists (the `site_setup` task in
+ * frontend/services/api/src/site-health/site-setup-task.ts): robots AI-crawler stance,
  * llms.txt probe, sitemap file list. The backend always emits the key.
  */
 export type SiteFactsFixture = {

@@ -967,6 +967,26 @@ into dependency-ordered slices:
 5. **18b5, crawl control:** admission, URL preview, cancellation, reruns, the
    monitored set, finalization and lease recovery; the Python Site Health
    worker retires and the TypeScript worker gains its drain mode (rule 9).
+   The re-count found about 40 application and 16 test files to retire, over
+   D7.3's budget and the 100-file review limit, so 18b5 ships as two PRs.
+   **18b5b, crawl lifecycle (implemented)** combines lease recovery with the
+   drain mode (rule 9) and adds the lifecycle. The TypeScript worker
+   reconciles each settled discover, site-setup or analyze task, and terminal
+   lease recovery reconciles its crawls. Every pass, drains included, runs the
+   stalled, overdue and cancelled-crawl backstops. Finalization covers alias
+   reconcile, cross-page checks, final revisions, the snapshot and score
+   summary, fetch settlement, successor admission and the no-evidence
+   analytics handoff. The Python Site Health worker, `ts_analysis_reconcile.py`,
+   both `_settle_*_as_typescript` seams, the snapshot/summary/scoring modules
+   and the worker guard helpers retire with their tests (23 application and 9
+   test files).
+   Cancellation is the seam between the two PRs. Python's cancel commits only
+   the stop. The TypeScript worker then publishes the cancelled run's evidence
+   under the crawl lock, so the snapshot keeps one writer.
+   **18b5c, crawl control** moves the `site-health-crawls` family (admission
+   with monitored seeding and `add_automatic_root`, URL preview, cancel, page
+   rerun, the crawl list and the monitored set), then retires the Python
+   routes, planner, selection and frontier bridges.
 
 Departures in 18b1: reads resolve the Site Health runtime from the account's
 grants instead of refreshing `workspace_site_health_runtime` (a read never
@@ -1018,12 +1038,31 @@ progress event constant and the admitted-frontier status (D7.5). The dev seed's
 Site Health crawls now rely on the TypeScript worker; its mocked Python
 transport is gone.
 
+Departures in 18b5b:
+- **Cancellation.** Cancel commits the stop, task cancellation and fetch
+  settlement only. The worker publishes the cancelled run's final revisions,
+  snapshot and successors under the crawl lock within a poll interval.
+  Python wrote them in a best-effort second transaction of the request, and
+  pressing Stop again was its only retry.
+- **Overdue crawls.** The watchdog fails a crawl's outstanding tasks and
+  reconciles it in one transaction; Python committed the failures first.
+- **`paused`.** Nothing writes this status, and the lifecycle leaves a paused
+  crawl untouched. Python reconciled its counters and could persist a snapshot
+  without terminalizing it.
+- **Resolution evidence.** Each attempt is joined to its own artifact; Python
+  joined every artifact of the task to every attempt.
+- **Final revision `audit_time`.** It is serialized as `Z` UTC rather than
+  `+00:00`.
+- **Repeated canonical.** A canonical declared several times identically
+  resolves its target; Python left it unresolved (`unknown`) although the
+  integrity check counted one canonical.
+
 | Python bridge kept by 18b4 | Remaining caller / retirement condition |
 | --- | --- |
 | `connectors/web_evidence/{fetcher,curl_transport,url_policy,brand_evidence}.py` | Commerce competitor discovery, onboarding site resolution (Search Intelligence targets), provider route probes |
 | `analysis/site_health/parser.py` and its fact extractors | Commerce competitor discovery |
-| `domain/site_health/discovery.add_automatic_root`, `frontier_support.py` | crawl creation; 18b5 |
-| `canonical_aliases.reconcile_crawl_duplicate_aliases` | finalization; 18b5 |
+| `domain/site_health/discovery.add_automatic_root`, `frontier_support.py` | crawl creation; 18b5c |
+| `canonical_aliases.reconcile_crawl_duplicate_aliases` | retired in 18b5b (TypeScript finalization) |
 
 ### PR 19: Agent runtime
 
@@ -1073,8 +1112,8 @@ guards.
   `approved_at` (inputs to Python discovery, prompt context and audit freezing).
 - The terminal-crawl analytics handoff keys: verification `site_crawl:<crawl>`,
   Opportunity refresh and the Demand revision (`<trigger>:<id>`, first 24
-  characters). Python's no-evidence finalization and the TypeScript
-  `change_intel` executor both write them until 18b5.
+  characters). TypeScript alone writes them since 18b5b (the `change_intel`
+  executor and no-evidence finalization).
 - The stored business map (`business_context.business_map`: offerings, entries
   with origin, review state, reviewer and source, and exclusions) and the brand
   profile `sources` provenance, read by Python prompt generation.

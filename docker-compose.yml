@@ -192,25 +192,6 @@ services:
     healthcheck:
       disable: true
 
-  # Site Health crawl maintenance (Python until crawl control moves in 18b5):
-  # lease sweeping, crawl reconciliation and finalization. It claims no tasks.
-  site-health-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["python", "-m", "app.workers.site_health_worker"]
-    healthcheck:
-      disable: true
-
   # Persisted onboarding discovery: one secure homepage request, structured
   # application-model research, then deterministic industry-library fallback.
   brand-discovery-worker:
@@ -230,7 +211,8 @@ services:
     healthcheck:
       disable: true
 
-  # Claims every SiteCrawlTask kind; Python keeps crawl finalization and sweeping.
+  # Claims every SiteCrawlTask kind, recovers expired leases and owns the crawl
+  # lifecycle (reconcile, stalled/overdue backstops, finalization).
   site-health-worker-ts:
     build:
       context: .

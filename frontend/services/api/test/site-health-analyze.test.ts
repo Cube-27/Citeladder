@@ -132,6 +132,8 @@ describe('analyze acquisition', () => {
   it('acquires, analyzes and settles the page with its evidence in one commit', async () => {
     const seed = await running({ status: 'queued', started_at: null });
     const page = await fixtures.analyzable(seed, '/rich');
+    // Outstanding sibling work keeps the crawl (and this provisional analysis) open.
+    await fixtures.analyzable(seed, '/later');
     const requests: string[] = [];
     await analyze(site({ '/rich': { body: RICH } }, requests), page.taskId);
 
@@ -207,6 +209,7 @@ describe('analyze acquisition', () => {
   it('reuses the discover artifact without refetching, and a rerun supersedes the current analysis', async () => {
     const seed = await running();
     const page = await fixtures.analyzable(seed, '/');
+    await fixtures.analyzable(seed, '/later');
     const facts = {
       has_html: true,
       title: 'Home',

@@ -236,7 +236,7 @@ async function refreshUrlState(
     .execute();
 }
 
-async function insertEvaluations(
+export async function insertEvaluations(
   db: Database,
   crawl: Crawl,
   analysisId: string,
