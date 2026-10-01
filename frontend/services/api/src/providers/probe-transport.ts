@@ -20,6 +20,7 @@ export type ProbeRequest = {
   timeoutSeconds: number;
   maxBytes: number;
   customerDestination: boolean;
+  signal?: AbortSignal;
 };
 export type ProbeTransport = (input: ProbeRequest) => Promise<{ status: number; body: unknown }>;
 export const sendProbe: ProbeTransport = async (input) => {
@@ -32,7 +33,11 @@ export const sendProbe: ProbeTransport = async (input) => {
     url.password
   )
     throw new ProbeError('invalid_url');
-  const signal = AbortSignal.timeout(input.timeoutSeconds * 1000);
+  const signal = AbortSignal.any([
+    AbortSignal.timeout(input.timeoutSeconds * 1000),
+    ...(input.signal ? [input.signal] : []),
+  ]);
+  if (signal.aborted) throw new ProbeError('timeout');
   const host = url.hostname.replaceAll(/[[\]]/gu, '');
   const addresses = await new Promise<{ address: string; family: number }[]>((resolve, reject) => {
     const aborted = () => reject(new ProbeError('timeout'));

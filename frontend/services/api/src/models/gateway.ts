@@ -85,11 +85,16 @@ export function createModelGateway(
   }
   let legacyCap = false;
   const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
-  const url = endpointUrl(settings.baseUrl, '/chat/completions');
-  async function complete(system: string, user: string) {
+  const url = settings.baseUrl.endsWith('/chat/completions')
+    ? settings.baseUrl
+    : endpointUrl(settings.baseUrl, '/chat/completions');
+  async function complete(system: string, user: string, signal?: AbortSignal) {
     const started = performance.now();
     // Retries share one call's timeout, the envelope of a single provider call.
-    const deadline = AbortSignal.timeout(settings.timeoutSeconds * 1000);
+    const deadline = AbortSignal.any([
+      AbortSignal.timeout(settings.timeoutSeconds * 1000),
+      ...(signal ? [signal] : []),
+    ]);
     const send = (legacy: boolean) =>
       postModel(
         url,
@@ -129,10 +134,25 @@ export function createModelGateway(
       input_tokens: ['input_tokens', 'prompt_tokens'],
       output_tokens: ['output_tokens', 'completion_tokens'],
       total_tokens: ['total_tokens'],
+      cached_input_tokens: ['cached_input_tokens'],
+      reasoning_tokens: ['reasoning_tokens'],
     })) {
       for (const alias of aliases) {
-        const value = body.usage?.[alias];
-        if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
+        const details =
+          target === 'cached_input_tokens'
+            ? body.usage?.prompt_tokens_details
+            : target === 'reasoning_tokens'
+              ? body.usage?.completion_tokens_details
+              : undefined;
+        const nested =
+          details && typeof details === 'object'
+            ? Reflect.get(
+                details,
+                target === 'cached_input_tokens' ? 'cached_tokens' : 'reasoning_tokens',
+              )
+            : undefined;
+        const value = body.usage?.[alias] ?? nested;
+        if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
           usage[target] = value;
           break;
         }
@@ -155,6 +175,19 @@ export function createModelGateway(
     model: settings.model,
     baseUrlHost: endpoint.hostname,
     complete,
+    async completeStructured(
+      system: string,
+      user: string,
+      schema: Record<string, unknown>,
+      signal?: AbortSignal,
+    ) {
+      const result = await complete(
+        system,
+        `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`,
+        signal,
+      );
+      return { ...result, content: unfenced(result.content) };
+    },
     async structured<T>(system: string, user: string, schema: z.ZodType<T>) {
       const result = await complete(
         system,

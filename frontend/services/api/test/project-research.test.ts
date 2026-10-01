@@ -358,6 +358,7 @@ it('bounds model attempts and records failed research without fabricating identi
     model: 'test-model',
     baseUrlHost: 'model.example',
     complete: vi.fn(),
+    completeStructured: vi.fn(),
     structured,
   };
   const result = await researchBrand(

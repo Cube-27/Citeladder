@@ -8,7 +8,7 @@ import { accountState, drawOrder } from './state.ts';
 import { digest } from '../billing/contracts.ts';
 import { getLogger } from '../logging.ts';
 
-class LedgerError extends Error {}
+export class LedgerError extends Error {}
 export type Subject =
   | { kind: 'audit'; id: string; workspaceId: string; auditId: string }
   | { kind: 'agent' | 'site_crawl'; id: string; workspaceId: string };

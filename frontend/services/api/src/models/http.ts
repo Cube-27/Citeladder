@@ -93,6 +93,7 @@ export async function postModel(
       });
       if (!policy.retryStatus(response.status) || attempt + 1 === policy.attempts) return response;
     } catch (error) {
+      if (error instanceof ModelError && error.code !== 'connection') throw error;
       if (signal?.aborted) throw new ModelError('connection');
       const timedOut = error instanceof Error && error.name === 'TimeoutError';
       if ((!timedOut && !policy.retryConnection) || attempt + 1 === policy.attempts) {

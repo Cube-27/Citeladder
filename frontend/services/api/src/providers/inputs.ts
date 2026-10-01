@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { logicalEngineSchema, transportProviderSchema } from '@citeladder/contracts/providers';
 import { providerPolicy } from './config.ts';
 
-function appModelUrl(value: string): string {
+export function appModelUrl(value: string): string {
   const url = new URL(value.trim());
   if (
     url.protocol !== 'https:' ||

@@ -229,6 +229,13 @@
       ],
       "type": "str",
       "default": "dev@citeladder.com"
+    },
+    "dev_login_password": {
+      "env": [
+        "DEV_LOGIN_PASSWORD"
+      ],
+      "type": "str",
+      "default": ""
     }
   },
   "development_env_names": [
@@ -13149,5 +13156,52 @@
     "differentiation_report_limit": 10,
     "worker_poll_seconds": 1.0,
     "heartbeat_seconds": 20.0
+  },
+  "agent_skills": {
+    "groups": [
+      "strategy",
+      "demand",
+      "owned_site",
+      "visibility",
+      "content"
+    ],
+    "output_kinds": [
+      "plan",
+      "measurement",
+      "research",
+      "prompt_portfolio",
+      "page_edits",
+      "link_plan",
+      "technical_fix",
+      "diagnosis",
+      "earned_brief",
+      "content"
+    ],
+    "outline_first_kinds": [
+      "content",
+      "prompt_portfolio"
+    ],
+    "format_kinds": [
+      "content"
+    ],
+    "description_max_chars": 320,
+    "body_max_chars": 14000,
+    "vocabularies": {
+      "buyer_stages": [
+        "awareness",
+        "consideration",
+        "decision",
+        "implementation"
+      ],
+      "prompt_intents": [
+        "learn",
+        "solve",
+        "compare",
+        "recommend",
+        "validate",
+        "buy",
+        "implement"
+      ]
+    }
   }
 }

@@ -269,6 +269,13 @@ keyed `agent`.
 
 ## Coverage
 
+The inactive TypeScript adapters in
+[`src/agent`](../frontend/services/api/src/agent/) bind the existing billing
+ledger and provider owners. Its skill loader reads these same packaged files,
+expands the exported vocabularies and fingerprints the actual model inputs.
+The TypeScript image includes them as read-only assets. Python remains the
+served Agent owner until the atomic 19b cutover.
+
 The [runtime component suite](../backend/tests/component/test_agent_runtime.py)
 drives the real worker, runtime, tool catalog and persistence with a scripted
 model. It covers evidence-backed Action-linked outputs, follow-up revision of a
