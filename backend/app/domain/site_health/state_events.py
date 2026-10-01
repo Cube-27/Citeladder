@@ -43,30 +43,10 @@ from app.core.config.site_health_contracts import (
     DISCOVERY_STATUS_RUNNING,
     DISCOVERY_STATUS_SAMPLE_COMPLETED,
     DISCOVERY_STATUS_STOPPED,
+    EVENT_COUNT_BEARING_KEYS,
 )
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.events import SiteCrawlEvent
-
-# Keys that carry (or could reconstruct) a full-site total/frontier/overflow
-# signal. For a Free sample crawl these are removed from every event payload so
-# the count-disclosure contract holds even through the events stream.
-_TOTAL_BEARING_KEYS: frozenset[str] = frozenset(
-    {
-        "total_url_count",
-        "total",
-        "frontier_size",
-        "frontier",
-        "overflow",
-        "overflow_count",
-        "discarded",
-        "discarded_count",
-        "has_more_site_urls",
-        "estimated_total",
-        "sitemap_url_count",
-        "discovered_url_count",
-        "discovered_total",
-    }
-)
 
 
 class InvalidSiteCrawlTransition(ValueError):
@@ -202,7 +182,9 @@ def redact_event_payload(
     if count_disclosure:
         return dict(payload)
     return {
-        key: value for key, value in payload.items() if key not in _TOTAL_BEARING_KEYS
+        key: value
+        for key, value in payload.items()
+        if key not in EVENT_COUNT_BEARING_KEYS
     }
 
 

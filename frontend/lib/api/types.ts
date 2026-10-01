@@ -94,7 +94,6 @@ import type {
   urlPreviewResponseSchema,
   siteHealthDashboardSchema,
   siteHealthOverviewSchema,
-  siteHealthContentHandoffSchema,
   siteHealthEntitlementSchema,
   siteIssueDetailSchema,
   siteIssueSchema,
@@ -191,7 +190,6 @@ export type PageDetail = z.infer<typeof pageDetailSchema>;
 export type RerunPageResponse = z.infer<typeof rerunPageResponseSchema>;
 export type SiteHealthDashboard = z.infer<typeof siteHealthDashboardSchema>;
 export type SiteHealthOverview = z.infer<typeof siteHealthOverviewSchema>;
-export type SiteHealthContentHandoff = z.infer<typeof siteHealthContentHandoffSchema>;
 export type AeoReadiness = z.infer<typeof aeoReadinessSchema>;
 export type CoverageState = z.infer<typeof coverageStateSchema>;
 export type ArchitecturePageKind = z.infer<typeof architecturePageKindSchema>;

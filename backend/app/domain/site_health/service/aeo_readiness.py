@@ -1,4 +1,4 @@
-"""Immutable AEO Readiness read model and bounded Content handoff evidence."""
+"""Bounded Content hand-off evidence for one page's readiness gap (Agent bridge)."""
 
 from __future__ import annotations
 
@@ -10,100 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.site_health_contracts import (
     RULE_OUTCOME_MISSING,
     RULE_OUTCOME_PARTIAL,
-    SCORING_VERSION,
 )
 from app.core.config.site_health_measurement import (
     CONTENT_ADDRESSABLE_CHECK_FIELDS,
     CONTENT_ADDRESSABLE_CHECK_IDS,
-    PRESENTATION_VERSION,
-    PROFILE_VERSION,
-    SCHEMA_CONTRACT_VERSION,
 )
 from app.domain.site_health.aeo_readiness_projection import rule_guidance
 from app.domain.site_health.service.common import (
     SiteHealthNotFoundError,
-    resolve_usable_crawl,
 )
-from app.domain.site_health.service.issue_listing import remediation_route_for
 from app.models.site_health.analysis import SitePageAnalysis, SiteRuleEvaluation
-from app.models.site_health.snapshot import SiteHealthSnapshot
 from app.models.site_health.urls import SiteUrl
-
-
-def _unavailable(crawl_id: uuid.UUID | None = None) -> dict:
-    return {
-        "state": "not_measured",
-        "crawl_id": crawl_id,
-        "score": None,
-        "coverage": None,
-        "profile_version": PROFILE_VERSION,
-        "schema_contract_version": SCHEMA_CONTRACT_VERSION,
-        "scoring_version": SCORING_VERSION,
-        "presentation_version": PRESENTATION_VERSION,
-        "analyzer_version": "",
-        "source_analysis_ids": [],
-        "analysis_count": 0,
-        "affected_page_count": 0,
-        "dimensions": [],
-        "limitations": ["AEO Readiness appears after persisted page analysis."],
-    }
-
-
-async def get_aeo_readiness(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    crawl_id: uuid.UUID | None = None,
-) -> dict:
-    """Return only the immutable diagnostic frozen with the selected snapshot."""
-    crawl = await resolve_usable_crawl(
-        session, workspace_id=workspace_id, project_id=project_id, crawl_id=crawl_id
-    )
-    if crawl is None:
-        return _unavailable()
-    descriptor = await session.scalar(
-        select(SiteHealthSnapshot.aeo_readiness_diagnostic).where(
-            SiteHealthSnapshot.workspace_id == workspace_id,
-            SiteHealthSnapshot.project_id == project_id,
-            SiteHealthSnapshot.crawl_id == crawl.id,
-        )
-    )
-    if isinstance(descriptor, dict) and descriptor:
-        return _current_actions(descriptor)
-    return _unavailable(crawl.id)
-
-
-def _current_actions(descriptor: dict) -> dict:
-    """Refresh action availability without changing the frozen measurements."""
-
-    def action(check: dict) -> dict:
-        rule_id = check["rule_id"]
-        return {
-            **check,
-            "content_addressable": rule_id in CONTENT_ADDRESSABLE_CHECK_IDS,
-            "remediation_route": remediation_route_for(rule_id),
-        }
-
-    return {
-        **descriptor,
-        "dimensions": [
-            {
-                **dimension,
-                "checks": [action(check) for check in dimension["checks"]],
-                "evidence_pages": [
-                    {
-                        **page,
-                        "failed_checks": [
-                            action(check) for check in page["failed_checks"]
-                        ],
-                    }
-                    for page in dimension["evidence_pages"]
-                ],
-            }
-            for dimension in descriptor["dimensions"]
-        ],
-    }
 
 
 def _allowed_content_checkpoints(dimension: str, checkpoint_ids: list[str]) -> set[str]:
@@ -273,4 +190,4 @@ def _content_handoff_payload(
     }
 
 
-__all__ = ["get_aeo_readiness", "get_content_handoff"]
+__all__ = ["get_content_handoff"]

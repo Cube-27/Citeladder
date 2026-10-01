@@ -194,6 +194,15 @@ MEASURED_AT_SITE_SCOPE_REASON: Final = "measured_at_site_scope"
 
 TECHNICAL_MEASURED_MIN_COVERAGE: Final = 0.80
 
+# A defect's impact band by severity (unknown severities rank 0).
+DEFECT_IMPACT_BANDS: Final[dict[str, int]] = {
+    "critical": 4,
+    "high": 3,
+    "medium": 2,
+    "low": 1,
+    "info": 0,
+}
+
 READINESS_DIMENSION_WEIGHTS: Final[dict[str, float]] = {
     "answerability": 0.20,
     "structure": 0.15,

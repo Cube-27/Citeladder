@@ -37,6 +37,16 @@ Python retains the other crawl kinds, terminal-crawl admission and lease sweepin
 Source inspection and internal-link judgments run in the TypeScript analytics
 worker; their failed-task recovery also covers Python-sweeper terminalization.
 
+The TypeScript service serves every Site Health read route (`site-health`
+family): the entitlement view, crawl detail, inventory, pages, page detail,
+issues, issue history, events, exports, the dashboard, Overview, AEO
+Readiness, architecture and changes. A page's presentation status is derived in
+the same query that filters and pages it. Reads resolve the workspace's Site
+Health runtime from its grants at read time and never refresh the persisted
+runtime row; billing mutations own that write. Python keeps the
+`site-health-crawls` family: crawl creation, the crawl list, URL preview,
+cancel, page rerun and the monitored set, until the crawler moves.
+
 ## Acquisition and evidence guarantees
 
 The curl transport sends `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)`

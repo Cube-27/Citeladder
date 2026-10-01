@@ -1,4 +1,4 @@
-"""Site Health entitlement, crawl, inventory, and selection routes.
+"""Site Health crawl lifecycle and monitored-URL selection routes.
 
 Every route is workspace-authorized through ``_WorkspaceDep``. Coded planner,
 planner and selection failures are mapped here onto their stable HTTP
@@ -22,10 +22,8 @@ from app.domain.site_health.api_schemas import (
     CrawlListPage,
     CrawlResponse,
     CreateCrawlRequest,
-    InventoryPage,
     MonitoredUrlsResponse,
     ReplaceMonitoredRequest,
-    SiteHealthEntitlementResponse,
     UrlPreviewRequest,
     UrlPreviewResponse,
 )
@@ -95,16 +93,6 @@ def _crawl_requested_page_limit(payload: CreateCrawlRequest) -> int | None:
     if payload.discovery_count is not None:
         return payload.discovery_count
     return payload.requested_page_limit
-
-
-@router.get("/entitlements", response_model=SiteHealthEntitlementResponse)
-async def get_entitlements_endpoint(
-    ctx: _WorkspaceDep, session: _SessionDep
-) -> SiteHealthEntitlementResponse:
-    # Read-only: the runtime projection refreshes lazily but the read commits
-    # nothing (no seed commit).
-    view = await service.get_entitlement_view(session, workspace_id=ctx.workspace_id)
-    return SiteHealthEntitlementResponse.model_validate(view)
 
 
 @router.post(
@@ -197,19 +185,6 @@ async def list_crawls_endpoint(
     return CrawlListPage.model_validate(page)
 
 
-@router.get("/site-crawls/{crawl_id}", response_model=CrawlResponse)
-async def get_crawl_endpoint(
-    crawl_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
-) -> CrawlResponse:
-    try:
-        crawl = await service.get_crawl_summary(
-            session, workspace_id=ctx.workspace_id, crawl_id=crawl_id
-        )
-    except SiteHealthNotFoundError as exc:
-        raise _not_found(str(exc)) from exc
-    return CrawlResponse.model_validate(crawl)
-
-
 @router.post("/site-crawls/{crawl_id}/cancel", response_model=CrawlResponse)
 async def cancel_crawl_endpoint(
     crawl_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
@@ -221,37 +196,6 @@ async def cancel_crawl_endpoint(
     except SiteHealthNotFoundError as exc:
         raise _not_found(str(exc)) from exc
     return CrawlResponse.model_validate(crawl)
-
-
-@router.get("/site-crawls/{crawl_id}/inventory", response_model=InventoryPage)
-async def get_inventory_endpoint(
-    crawl_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
-    cursor: Annotated[str | None, Query()] = None,
-    query: Annotated[str | None, Query()] = None,
-    status_filter: Annotated[str | None, Query(alias="status")] = None,
-    monitored: Annotated[bool | None, Query()] = None,
-    page_kind: Annotated[str | None, Query()] = None,
-) -> InventoryPage:
-    try:
-        page = await service.get_inventory(
-            session,
-            workspace_id=ctx.workspace_id,
-            crawl_id=crawl_id,
-            limit=limit,
-            cursor=cursor,
-            query=query,
-            status=status_filter,
-            monitored=monitored,
-            page_kind=page_kind,
-        )
-    except SiteHealthNotFoundError as exc:
-        raise _not_found(str(exc)) from exc
-    except InvalidCursorError as exc:
-        raise _bad_cursor(exc) from exc
-    return InventoryPage.model_validate(page)
 
 
 @router.get(

@@ -50,9 +50,14 @@
   commercial mutations, settlement, leased recovery, receipt issuance and the
   typed entitlement ledger to TS, keeping Python worker/operator bridges for
   their assigned migrations. PR 17a moves audit schedule management to TS;
-  Python retains the scheduler until funded audit admission moves. PRs 17–20
-  otherwise follow the re-sequenced order.
-  Deployment of implemented cutovers and their one-week soaks are pending.
+  Python retains the scheduler until funded audit admission moves. PR 18b is
+  split into five slices; 18b1 moves every Site Health read route to TS.
+  PRs 17–20 otherwise follow the re-sequenced order.
+  Deployment of implemented cutovers is pending; the owner dropped the one-week
+  soak while there are no customers (smoke tests instead). On 1 October 2026
+  the owner accepted a low-cost hosting phase (PRs 21–24: scale-to-zero Cloud
+  Run in us-central1, free-tier PostgreSQL VM). From PR 18b on, workers gain a
+  drain-and-exit mode.
 
 - [Agent capabilities](citeladder-agent-capabilities.md)
   — foundations and MVP items 1–4 are present in #203, with handoff/evidence
