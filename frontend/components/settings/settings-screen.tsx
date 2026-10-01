@@ -273,7 +273,7 @@ export function SettingsScreen() {
               {/* Only what the header above does NOT already state. Email, role
                   and status were each rendered twice — once in the identity row
                   and again as a detail row. */}
-              <dl className="border-border-subtle mt-[var(--card-padding-large)] border-t">
+              <dl className="border-border-subtle mt-[var(--card-padding)] border-t">
                 {createdLabel ? (
                   <DetailRow label="Account created" numeric>
                     {createdLabel}

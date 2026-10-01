@@ -49,7 +49,7 @@ export function Checkbox({
       disabled={disabled}
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
-      className="focus-ring group grid min-h-[var(--control-height)] min-w-[var(--control-height)] shrink-0 place-items-center rounded-[var(--radius-control)] disabled:cursor-not-allowed disabled:opacity-60"
+      className="focus-ring group grid min-h-[var(--control-height-md)] min-w-[var(--control-height-md)] shrink-0 place-items-center rounded-[var(--radius-control)] disabled:cursor-not-allowed disabled:opacity-60"
     >
       <span className="border-border-bold bg-input group-data-[state=checked]:border-accent group-data-[state=checked]:bg-accent group-data-[state=indeterminate]:border-accent group-data-[state=indeterminate]:bg-accent text-accent-fg grid size-4 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--motion-fast)]">
         <CheckboxPrimitive.Indicator>

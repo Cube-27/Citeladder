@@ -126,7 +126,7 @@ function CatalogRow({
           // A top-level row without children still reserves the expander's
           // width so its label lines up with its expandable siblings; a nested
           // row is already indented and needs no such placeholder.
-          !nested && <span className="size-[var(--control-height)] shrink-0" aria-hidden />
+          !nested && <span className="size-[var(--control-height-md)] shrink-0" aria-hidden />
         )}
         <Checkbox
           aria-label={`Select ${entry.label} for bulk actions`}

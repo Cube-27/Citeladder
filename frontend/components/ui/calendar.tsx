@@ -120,7 +120,7 @@ export function Calendar({
           type="button"
           aria-label="Previous month"
           onClick={() => setMonth((current) => addMonths(current, -1))}
-          className="hover:bg-active inline-flex size-8 items-center justify-center rounded-[var(--radius-control)]"
+          className="hover:bg-active inline-flex size-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)]"
         >
           <ChevronLeft className="size-4" aria-hidden />
         </Pressable>
@@ -132,7 +132,7 @@ export function Calendar({
           type="button"
           aria-label="Next month"
           onClick={() => setMonth((current) => addMonths(current, 1))}
-          className="hover:bg-active inline-flex size-8 items-center justify-center rounded-[var(--radius-control)]"
+          className="hover:bg-active inline-flex size-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)]"
         >
           <ChevronRight className="size-4" aria-hidden />
         </Pressable>
@@ -166,7 +166,7 @@ export function Calendar({
                       disabled={disabled}
                       onClick={() => onSelect(iso)}
                       className={cn(
-                        'type-body text-foreground inline-flex size-8 items-center justify-center rounded-[var(--radius-control)] tabular-nums transition-colors',
+                        'type-body text-foreground inline-flex size-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] tabular-nums transition-colors',
                         isSelected ? 'bg-accent text-accent-fg' : 'hover:bg-active',
                         // Days spilling in from the neighbouring months stay
                         // legible but recede, so the current month reads as

@@ -122,7 +122,7 @@ export function PagesTable({
     router(projectHref(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`));
   };
   return (
-    <Table className="min-w-[72rem]">
+    <Table className="table-dense min-w-[72rem]">
       <TableHeader>
         <TableRow>
           <TableHead numeric className="w-10">

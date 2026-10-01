@@ -257,7 +257,7 @@
   --sidebar-width: 240px;
   --compact-topbar-height: 56px;
   --sticky-header-offset: 0px;
-  --nav-item-height: 36px;
+  --nav-item-height: var(--control-height-md);
   /* Sidebar rhythm. The rail's four bands share one inset so no band invents
      its own; the group gap is small because the section label carries the
      separation between groups. */
@@ -275,22 +275,21 @@
   --page-section-gap: 24px;
   --workspace-gap: 16px;
   --compact-gap: 12px;
-  --card-padding: 20px;
-  --card-padding-compact: 12px;
-  --card-padding-large: 20px;
+  --card-padding: 16px;
   /* The workspace pane is continuous with shell ground; cards and tables on
      it carry the elevated paper fill. The focused flow pane stays paper. */
   /* No seam: the tonal steps between rail, ground, and paper are the separation. */
   --modal-padding: 24px;
   --empty-state-padding: 24px;
-  --control-height-sm: 32px;
-  --control-height: 36px;
-  --control-height-lg: 40px;
-  --field-height: 36px;
-  --field-end-target: 24px;
-  --field-height-lg: 44px;
+  --control-height-sm: 28px;
+  --control-height-md: 32px;
+  --control-height-lg: 36px;
+  --field-end-target: var(--control-height-sm);
+  --menu-item-height: 32px;
+  --badge-height-sm: 20px;
+  --badge-height-md: 24px;
   --textarea-min-height: 112px;
-  --tab-height: 40px;
+  --tab-height: var(--control-height-md);
   --tab-gap: 24px;
   /* The page grammar's rows. Every route draws the same bands in the same
      order, each closed by a full-bleed hairline: identity, then tabs, then
@@ -300,10 +299,11 @@
   --page-header-padding-top: 24px;
   --page-header-padding-bottom: 24px;
   --page-header-gap: 16px;
-  --table-row-height: 44px;
-  --table-header-height: 36px;
+  --table-row-height: 36px;
+  --table-row-height-dense: 32px;
+  --table-header-height: var(--control-height-md);
   --table-cell-padding-x: 12px;
-  --table-cell-padding-y: 12px;
+  --table-cell-padding-y: 0px;
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
   --radius-control: 6px;
   --radius-card: 8px;
@@ -1214,25 +1214,14 @@ input:-webkit-autofill:focus {
   }
 }
 
-@media (min-width: 701px) and (pointer: fine) {
-  [data-page-band='control'] {
-    --control-height: var(--control-height-sm);
-    --field-height: var(--control-height-sm);
-  }
+/* Dense page toolbars keep every trigger at the same role in all viewports. */
+[data-page-band='control'] {
+  --control-height-md: var(--control-height-sm);
 }
 
-@media (max-width: 700px), (pointer: coarse) {
-  :root {
-    --control-height-sm: 44px;
-    --control-height: 44px;
-    --control-height-lg: 44px;
-    --field-height: 44px;
-    --field-end-target: 44px;
-    --tab-height: 44px;
-  }
-  :root [data-flow-surface] {
-    --control-height-sm: 44px;
-  }
+.table-dense {
+  --table-row-height: var(--table-row-height-dense);
+  --badge-height-md: var(--badge-height-sm);
 }
 
 @media (max-width: 700px) {

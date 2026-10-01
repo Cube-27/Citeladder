@@ -67,7 +67,7 @@ export function Select<T extends string>({
         aria-required={required || undefined}
         id={id}
         className={cn(
-          'focus-ring bg-input text-foreground data-[placeholder]:text-muted flex h-[var(--control-height)] min-w-0 items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 text-field border border-border transition-[border-color,background-color] hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger',
+          'focus-ring bg-input text-foreground data-[placeholder]:text-muted flex h-[var(--control-height-md)] min-w-0 items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 text-field border border-border transition-[border-color,background-color] hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger',
           className,
         )}
       >
@@ -86,7 +86,7 @@ export function Select<T extends string>({
             'max-h-[min(20rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)]',
           )}
         >
-          <SelectPrimitive.ScrollUpButton className="text-muted flex h-7 items-center justify-center">
+          <SelectPrimitive.ScrollUpButton className="text-muted flex h-[var(--menu-item-height)] items-center justify-center">
             <ChevronUp className="size-4" aria-hidden />
           </SelectPrimitive.ScrollUpButton>
           <SelectPrimitive.Viewport>
@@ -95,7 +95,7 @@ export function Select<T extends string>({
                 key={option.value}
                 value={radixValue(option.value) ?? EMPTY_VALUE}
                 disabled={option.disabled}
-                className={cn(menuItemVariants(), 'cursor-default py-2 pr-8 pl-3 select-none')}
+                className={cn(menuItemVariants(), 'cursor-default py-1 pr-8 pl-3 select-none')}
               >
                 <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
                 <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex items-center">
@@ -104,7 +104,7 @@ export function Select<T extends string>({
               </SelectPrimitive.Item>
             ))}
           </SelectPrimitive.Viewport>
-          <SelectPrimitive.ScrollDownButton className="text-muted flex h-7 items-center justify-center">
+          <SelectPrimitive.ScrollDownButton className="text-muted flex h-[var(--menu-item-height)] items-center justify-center">
             <ChevronDown className="size-4" aria-hidden />
           </SelectPrimitive.ScrollDownButton>
         </SelectPrimitive.Content>

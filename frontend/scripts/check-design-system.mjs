@@ -18,6 +18,7 @@ import {
   shadowRoleViolations,
   radiusRoleAdvisories,
   tokenContractViolations,
+  densityRoleViolations,
   styleAssertionViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
@@ -108,6 +109,7 @@ for (const path of files(root)) {
     ...motionRoleViolations(source, label, ownsProductUi),
     ...focusRoleViolations(source, label, ownsProductUi),
     ...shadowRoleViolations(source, label, ownsProductUi),
+    ...densityRoleViolations(source, label, ownsProductUi),
     ...nestedCardViolations(source, label, ownsProductUi),
     ...productControlViolations(source, label, ownsProductUi),
   );

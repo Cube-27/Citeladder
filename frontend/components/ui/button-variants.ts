@@ -24,11 +24,11 @@ export const buttonVariants = cva(
       },
       size: {
         sm: 'h-[var(--control-height-sm)] px-3',
-        md: 'h-[var(--control-height)] px-3',
+        md: 'h-[var(--control-height-md)] px-3',
         lg: 'h-[var(--control-height-lg)] px-4',
         marketing: 'min-h-12 px-5 text-base',
-        icon: 'size-[var(--control-height)] px-0',
-        iconRound: 'size-[var(--control-height)] rounded-full px-0',
+        icon: 'size-[var(--control-height-md)] px-0',
+        iconRound: 'size-[var(--control-height-md)] rounded-full px-0',
       },
     },
     defaultVariants: {

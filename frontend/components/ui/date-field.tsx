@@ -53,7 +53,7 @@ export function DateField({
   return (
     <div
       className={cn(
-        'focus-frame bg-input flex h-[var(--control-height)] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 transition-[border-color,background-color]',
+        'focus-frame bg-input flex h-[var(--control-height-md)] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 transition-[border-color,background-color]',
         // Invalid fields retain their semantic boundary on hover.
         isInvalid
           ? 'border border-danger hover:border-danger'
@@ -81,7 +81,7 @@ export function DateField({
             type="button"
             aria-label={`${ariaLabel}: open calendar`}
             disabled={disabled}
-            className="text-muted hover:text-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
+            className="text-muted hover:text-foreground inline-flex size-[var(--control-height-sm)] shrink-0 items-center justify-center rounded-[var(--radius-control)]"
           >
             <CalendarDays className="size-4" aria-hidden />
           </Pressable>

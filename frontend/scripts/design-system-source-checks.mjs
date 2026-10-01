@@ -130,6 +130,19 @@ export function tokenContractViolations(source, document) {
   }
   return violations;
 }
+
+/** Control owners consume the size ladder; glyph dimensions remain intrinsic. */
+export function densityRoleViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi || !label.startsWith('components/ui/')) return [];
+  const text = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  if (
+    /--(?:control-height|field-height(?:-lg)?)(?=\))/.test(text) ||
+    /\b(?:min-h|h|size)-(?:9|11|\[(?:20|36|44)px\])(?![\w.])/.test(text)
+  ) {
+    return [`${label}: control heights must consume named density roles`];
+  }
+  return [];
+}
 /**
  * Roles the website stylesheet must define.
  *
@@ -825,7 +838,12 @@ export function productContractViolations(root) {
     '--page-section-gap',
     '--card-padding',
     '--modal-padding',
-    '--control-height',
+    '--control-height-sm',
+    '--control-height-md',
+    '--menu-item-height',
+    '--table-row-height-dense',
+    '--badge-height-sm',
+    '--badge-height-md',
     '--control-height-lg',
     '--radius-control',
     '--radius-card',

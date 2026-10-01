@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
  * the base and its own state classes instead of restating the recipe.
  */
 export const chipBaseClasses =
-  'focus-ring type-badge inline-flex h-[var(--control-height-sm)] items-center gap-2 rounded-full px-3 transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]';
+  'focus-ring type-badge inline-flex h-[var(--badge-height-md)] items-center gap-2 rounded-full px-3 transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]';
 
 export const chipRestingClasses =
   'bg-panel text-secondary border border-border hover:text-foreground';
@@ -34,7 +34,7 @@ export type TagTone = keyof typeof TAG_TONE;
 
 export function tagClasses(tone: TagTone = 'well', className?: string) {
   return cn(
-    'type-badge inline-flex items-center gap-1 rounded-xs px-2 py-0.5',
+    'type-badge inline-flex min-h-[var(--badge-height-sm)] items-center gap-1 rounded-xs px-2 py-0.5',
     TAG_TONE[tone],
     className,
   );

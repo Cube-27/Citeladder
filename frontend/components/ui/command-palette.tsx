@@ -56,7 +56,7 @@ type Command = {
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
 const ROW =
-  'type-control flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 text-left h-9';
+  'type-control flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 text-left min-h-[var(--menu-item-height)]';
 
 function subscribeToPlatform() {
   return () => {};
@@ -317,7 +317,7 @@ export function CommandPalette() {
                 aria-activedescendant={
                   results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
                 }
-                className="type-body text-foreground placeholder:text-muted h-11 min-w-0 flex-1 bg-transparent"
+                className="type-body text-foreground placeholder:text-muted h-[var(--control-height-md)] min-w-0 flex-1 bg-transparent"
               />
               <kbd className="bg-well text-muted type-badge shrink-0 rounded-xs px-1 py-0.5 tabular-nums">
                 esc

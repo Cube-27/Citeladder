@@ -39,7 +39,7 @@ export function Switch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'focus-ring inline-grid min-h-[var(--control-height)] min-w-[var(--control-height)] shrink-0 place-items-center rounded-full',
+        'focus-ring inline-grid min-h-[var(--control-height-md)] min-w-[var(--control-height-md)] shrink-0 place-items-center rounded-full',
         'disabled:cursor-not-allowed disabled:opacity-60',
         className,
       )}

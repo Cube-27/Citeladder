@@ -94,7 +94,7 @@ function RadioRow<T extends string>({ option }: Readonly<{ option: RadioOption<T
     <RadioGroupPrimitive.Item
       value={option.value}
       disabled={option.disabled}
-      className="group focus-ring hover:bg-background-alt data-[state=checked]:text-accent-text text-foreground type-control flex min-h-9 w-full items-center justify-between gap-3 rounded-[var(--radius-control)] px-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
+      className="group focus-ring hover:bg-background-alt data-[state=checked]:text-accent-text text-foreground type-control flex min-h-[var(--menu-item-height)] w-full items-center justify-between gap-3 rounded-[var(--radius-control)] px-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
     >
       <span className="min-w-0">{option.label}</span>
       <span

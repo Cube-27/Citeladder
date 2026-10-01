@@ -26,9 +26,9 @@ const PANEL_TONE = {
 
 const PANEL_PAD = {
   none: '',
-  compact: 'p-[var(--card-padding-compact)]',
+  compact: 'p-[var(--card-padding)]',
   default: 'p-[var(--card-padding)]',
-  large: 'p-[var(--card-padding-large)]',
+  large: 'p-[var(--card-padding)]',
 } as const;
 
 /**

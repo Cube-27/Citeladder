@@ -28,7 +28,7 @@ export function ExecutionsTable({
   onSelectEvidence,
 }: Readonly<{ executions: Execution[]; onSelectEvidence: (execution: Execution) => void }>) {
   return (
-    <Table>
+    <Table className="table-dense">
       <TableHeader>
         <TableRow>
           <TableHead>Prompt</TableHead>

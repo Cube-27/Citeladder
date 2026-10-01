@@ -48,7 +48,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             </div>
             <ToastPrimitive.Close asChild>
               <Pressable
-                className="text-muted hover:bg-well grid size-6 w-6 place-items-center"
+                className="text-muted hover:bg-well grid size-[var(--control-height-sm)] place-items-center"
                 aria-label="Dismiss notification"
               >
                 <X className="size-3.5" aria-hidden />
