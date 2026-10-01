@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { policy } from '../config.ts';
+import { getLogger } from '../logging.ts';
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import { ownedAuditTask, type AuditTask } from '../queue/audit-queue.ts';
 import { releaseTerminalTaskCredits } from './result-persistence.ts';
@@ -324,7 +325,15 @@ export class AuditMaintenance {
       .execute();
     for (const audit of inspectionOwing)
       parents.set(audit.id, { workspaceId: audit.workspace_id, auditId: audit.id });
-    for (const parent of parents.values()) await this.finalize(parent.workspaceId, parent.auditId);
+    for (const parent of parents.values()) {
+      try {
+        await this.finalize(parent.workspaceId, parent.auditId);
+      } catch {
+        getLogger('workers.audit').info('audit_maintenance_finalize_failed', {
+          audit_id: parent.auditId,
+        });
+      }
+    }
     return reclaimed;
   }
 }

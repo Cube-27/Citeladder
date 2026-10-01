@@ -131,6 +131,10 @@ services:
       <<: *backend_environment
       AUDIT_SCHEDULE_HEARTBEAT_PATH: /tmp/audit-scheduler-heartbeat
     command: ["node", "src/audit-scheduler.ts"]
+  audit-maintenance:
+    <<: *backend
+    image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}
+    command: ["node", "src/audit-maintenance.ts"]
   site-health-worker:
     <<: *backend
     command: ["python", "-m", "app.workers.site_health_worker"]

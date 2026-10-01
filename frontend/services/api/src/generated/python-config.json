@@ -4926,6 +4926,7 @@
     "page_size": 1000,
     "provider_timeout_seconds": 90.0,
     "provider_max_response_bytes": 8388608,
+    "maintenance_batch_size": 100,
     "backlink_max_offset": 20000,
     "keyword_acquisition_fields": {
       "volume": "keyword_info.search_volume",

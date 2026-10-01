@@ -10,6 +10,7 @@ import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
 import { ProviderError } from '../src/answer-engines/contracts.ts';
+import { reconcileResearch } from '../src/search-intelligence/maintenance.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -112,6 +113,32 @@ const response = {
   cost: '0.012',
 };
 describe('durable paid acquisition boundaries', () => {
+  it('reconciles exhausted analytics leases using saved receipts while keeping missing receipts uncertain', async () => {
+    const saved = await run(),
+      lost = await run();
+    for (const t of [saved, lost]) {
+      const prep = dispatched(await t.state.prepare(t.plans[0]!, 0));
+      await t.state.dispatch(prep);
+      if (t === saved) await t.state.saveResponse(prep.call.id, response);
+      await db
+        .updateTable('analytics_tasks')
+        .set({ status: 'failed', lease_owner: null, lease_expires_at: null })
+        .where('id', '=', t.task.id)
+        .execute();
+    }
+    await reconcileResearch(db);
+    expect(await saved.state.run().executeTakeFirst()).toMatchObject({
+      status: 'partial',
+      completed_calls: 1,
+      received_rows: 1,
+    });
+    expect(await lost.state.run().executeTakeFirst()).toMatchObject({
+      status: 'uncertain',
+      uncertain_calls: 1,
+    });
+    await reconcileResearch(db);
+    expect(await saved.state.run().executeTakeFirst()).toMatchObject({ completed_calls: 1 });
+  });
   it('recovers a saved response with exact row provenance and settles it once', async () => {
     const t = await run(),
       plan = t.plans[0]!,

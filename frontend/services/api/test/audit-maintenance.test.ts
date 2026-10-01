@@ -20,6 +20,24 @@ const db = testDatabase(),
   runtime = auditRuntime({});
 const taskIds: string[] = [],
   workspaces: string[] = [];
+it('continues recovery for other audits when one persisted parent cannot finalize', async () => {
+  const first = await seed(),
+    second = await seed();
+  for (const t of [first, second])
+    await db
+      .updateTable('audit_tasks')
+      .set({ status: 'failed', completed_at: new Date() })
+      .where('audit_id', '=', t.auditId)
+      .where('workspace_id', '=', t.workspaceId)
+      .execute();
+  const visited: string[] = [];
+  await new AuditMaintenance(db, async (_workspace, id) => {
+    visited.push(id);
+    if (id === first.auditId) throw new Error('Broken projection fixture');
+  }).runOnce();
+  expect(visited).toContain(first.auditId);
+  expect(visited).toContain(second.auditId);
+});
 afterEach(async () => {
   if (taskIds.length) {
     await db.deleteFrom('execution_cost_projections').where('task_id', 'in', taskIds).execute();

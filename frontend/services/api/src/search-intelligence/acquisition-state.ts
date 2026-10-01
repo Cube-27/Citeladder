@@ -72,6 +72,17 @@ export class AcquisitionState {
       .forUpdate()
       .executeTakeFirst();
   }
+  async terminalTask(db: Database) {
+    return db
+      .selectFrom('analytics_tasks')
+      .select('id')
+      .where('workspace_id', '=', this.task.workspace_id)
+      .where('project_id', '=', this.task.project_id)
+      .where('id', '=', this.task.id)
+      .where('status', 'in', ['failed', 'cancelled'])
+      .forUpdate()
+      .executeTakeFirst();
+  }
   async connection(db: Database, run: Run) {
     const member = await db
       .selectFrom('workspace_members')
@@ -432,10 +443,21 @@ export class AcquisitionState {
         .execute();
     });
   }
-  async publish(plan: ResearchPlan, callId: string, later: ResearchPlan[], at = new Date()) {
+  async publish(
+    plan: ResearchPlan,
+    callId: string,
+    later: ResearchPlan[],
+    at = new Date(),
+    terminalTask = false,
+  ) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
-      if (!run || run.status !== 'running' || !(await this.owned(trx, at))) return true;
+      if (
+        !run ||
+        !['running', 'queued'].includes(run.status) ||
+        !(terminalTask ? await this.terminalTask(trx) : await this.owned(trx, at))
+      )
+        return true;
       const call = await this.calls(trx)
         .where('id', '=', callId)
         .where('status', '=', 'dispatched')
