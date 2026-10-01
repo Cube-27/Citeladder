@@ -4,6 +4,7 @@ import { providerErrorCode } from '../models/http.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
 import { type ProviderSettings } from '../providers/config.ts';
 import { ProviderError } from '../answer-engines/contracts.ts';
+import { round } from '../analysis/round.ts';
 
 export const searchPolicy = policy.dataforseo;
 export type SearchEngine = 'google_ai_overview' | 'chatgpt_search' | 'gemini_consumer';
@@ -18,17 +19,21 @@ export type SearchRequest = {
   provider_submission_ref: string;
   request_settings: Record<string, unknown>;
 };
-export const providerTaskSchema = z.object({
-  id: z.string().nullable().optional(),
-  status_code: z.number().int(),
-  cost: z.number().nonnegative().nullable().optional(),
-  result: z.array(z.unknown()).nullable().optional(),
-  data: z.record(z.string(), z.unknown()).optional(),
-});
-export const envelopeSchema = z.object({
-  status_code: z.number().int(),
-  tasks: z.array(providerTaskSchema).nullable().optional(),
-});
+export const providerTaskSchema = z
+  .object({
+    id: z.string().nullable().optional(),
+    status_code: z.number().int(),
+    cost: z.number().nonnegative().nullable().optional(),
+    result: z.array(z.unknown()).nullable().optional(),
+    data: z.record(z.string(), z.unknown()).optional(),
+  })
+  .passthrough();
+export const envelopeSchema = z
+  .object({
+    status_code: z.number().int(),
+    tasks: z.array(providerTaskSchema).nullable().optional(),
+  })
+  .passthrough();
 export type Envelope = z.infer<typeof envelopeSchema>;
 export type ProviderTask = z.infer<typeof providerTaskSchema>;
 export class SubmissionUncertain extends ProviderError {
@@ -52,9 +57,9 @@ export function searchSettings(env: Record<string, string | undefined> = process
   return { timeoutSeconds, recoveryDeadlineHours };
 }
 export function providerCharge(cost: unknown): number | null {
-  return typeof cost === 'number' && Number.isFinite(cost) && cost >= 0
-    ? Math.round(cost * searchPolicy.microusd_per_usd)
-    : null;
+  if (typeof cost !== 'number' || !Number.isFinite(cost) || cost < 0) return null;
+  const result = round(cost * searchPolicy.microusd_per_usd, 0);
+  return Number.isSafeInteger(result) ? result : null;
 }
 export function providerPath(
   engine: SearchEngine,

@@ -1,5 +1,6 @@
 """Policy export for the paid submission and free retrieval boundary."""
 
+from app.connectors.search_surfaces import contracts
 from app.core.config import dataforseo, llm_scraper
 from app.core.config.costs import MICRO_USD_PER_USD
 
@@ -15,6 +16,11 @@ def dataforseo_policy(setting):
             if chr(point).casefold() != chr(point).lower()
         },
         "microusd_per_usd": MICRO_USD_PER_USD,
+        "surface": {
+            name.lower(): sorted(value) if isinstance(value, frozenset) else value
+            for name, value in vars(contracts).items()
+            if name.isupper() and isinstance(value, (str, frozenset))
+        },
         "settings": {
             name: setting(name, dataforseo.DataForSeoSettings)
             for name in ("request_timeout_seconds", "recovery_deadline_hours")

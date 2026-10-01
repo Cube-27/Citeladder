@@ -2542,6 +2542,33 @@
       "ﬗ": "մխ"
     },
     "microusd_per_usd": 1000000,
+    "surface": {
+      "outcome_ai_overview_present": "ai_overview_present",
+      "outcome_no_ai_overview": "no_ai_overview",
+      "outcome_provider_error": "provider_error",
+      "outcome_parser_error": "parser_error",
+      "outcome_execution_failure": "execution_failure",
+      "terminal_outcomes": [
+        "ai_overview_present",
+        "execution_failure",
+        "no_ai_overview",
+        "parser_error",
+        "provider_error"
+      ],
+      "successful_outcomes": [
+        "ai_overview_present",
+        "no_ai_overview"
+      ],
+      "result_still_pending": "still_pending",
+      "error_poll_ceiling_exceeded": "poll_ceiling_exceeded",
+      "error_submission_unreconciled": "submission_unreconciled",
+      "error_credential_unavailable": "credential_unavailable_for_retrieval",
+      "execution_failure_codes": [
+        "credential_unavailable_for_retrieval",
+        "poll_ceiling_exceeded",
+        "submission_unreconciled"
+      ]
+    },
     "settings": {
       "request_timeout_seconds": {
         "env": [

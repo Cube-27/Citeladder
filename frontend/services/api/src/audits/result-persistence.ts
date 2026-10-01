@@ -214,7 +214,14 @@ export function persistExecutionFailure(
   owner: string,
   error: ProviderError,
   runtime: AuditRuntime,
-  options: { preCall?: boolean; surface?: boolean; context?: ExecutionContext; at?: Date } = {},
+  options: {
+    preCall?: boolean;
+    surface?: boolean;
+    context?: ExecutionContext;
+    at?: Date;
+    recordAttempt?: boolean;
+    evidence?: (db: Database, task: AuditTask, audit: Selectable<Audits>) => Promise<void>;
+  } = {},
 ) {
   const at = options.at ?? new Date();
   return db.transaction().execute(async (trx) => {
@@ -235,7 +242,8 @@ export function persistExecutionFailure(
       .where('workspace_id', '=', claimed.workspace_id)
       .returningAll()
       .executeTakeFirstOrThrow();
-    await appendProviderAttempt(trx, task, at, { error });
+    if (options.recordAttempt !== false) await appendProviderAttempt(trx, task, at, { error });
+    await options.evidence?.(trx, task, locked.audit);
     await settleTaskCredits(trx, task, !options.preCall && !options.surface, !retry, at);
     if (error.code === 'auth_failure' && options.context)
       await pauseExecutionCredential(trx, options.context, runtime, at);
