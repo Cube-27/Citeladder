@@ -551,7 +551,7 @@ export class AuditWorker {
           ? {
               ...surfaceFailure('submission_unreconciled'),
               outcome: 'provider_error',
-              error_code: '',
+              error_code: error?.code ?? code,
             }
           : surfaceFailure(code);
       await persistOverview(

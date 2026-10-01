@@ -113,6 +113,51 @@ const response = {
   cost: '0.012',
 };
 describe('durable paid acquisition boundaries', () => {
+  it.each([null, '1.00'])(
+    'closes collecting datasets when a saved receipt stops the run (cost %s)',
+    async (cost) => {
+      const t = await run(),
+        plan = t.plans[0]!,
+        prep = dispatched(await t.state.prepare(plan, 0));
+      await t.state.dispatch(prep);
+      const limit = Number((plan.request as Record<string, unknown>).limit);
+      const task = response.body.tasks[0]!;
+      await t.state.saveResponse(prep.call.id, {
+        ...response,
+        cost,
+        body: {
+          ...response.body,
+          tasks: [
+            {
+              ...task,
+              result: [
+                {
+                  items: Array.from({ length: limit }, (_, i) => ({
+                    keyword_data: { keyword: `shoes ${i}`, keyword_info: { search_volume: 12 } },
+                    ranked_serp_element: {
+                      url: 'https://www.example.com/shoes',
+                      rank_group: i + 1,
+                    },
+                  })),
+                },
+              ],
+            },
+          ],
+        },
+      });
+      expect(await t.state.publish(plan, prep.call.id, [plan])).toBe(true);
+      expect(
+        await db
+          .selectFrom('search_intelligence_datasets')
+          .select(['status', 'coverage', 'unique_rows_saved'])
+          .where('id', '=', prep.dataset.id)
+          .executeTakeFirst(),
+      ).toEqual({ status: 'failed', coverage: 'unknown', unique_rows_saved: limit });
+      expect((await t.state.run().executeTakeFirstOrThrow()).status).toBe(
+        cost === null ? 'uncertain' : 'partial',
+      );
+    },
+  );
   it('reconciles exhausted analytics leases using saved receipts while keeping missing receipts uncertain', async () => {
     const saved = await run(),
       lost = await run();
@@ -193,6 +238,13 @@ describe('durable paid acquisition boundaries', () => {
       uncertain_calls: 1,
     });
     expect(await state.calls().executeTakeFirst()).toMatchObject({ status: 'uncertain' });
+    expect(
+      await db
+        .selectFrom('search_intelligence_datasets')
+        .select(['status', 'coverage'])
+        .where('id', '=', prep.dataset.id)
+        .executeTakeFirst(),
+    ).toEqual({ status: 'failed', coverage: 'unknown' });
     await t.state.saveResponse(prep.call.id, response);
     expect(await state.calls().executeTakeFirst()).toMatchObject({
       status: 'uncertain',

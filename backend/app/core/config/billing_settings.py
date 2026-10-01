@@ -65,6 +65,8 @@ class BillingSettings(BaseSettings):
 
     # Funded admission budget (minor USD units). The SOLE commercial amount
     # kept here; expected execution costs live in ``config/costs.py``.
+    # Admission quotes consume this ceiling even after cancellation; unused task
+    # credits are released separately, without re-opening the cost ceiling.
     funded_monthly_budget_minor: int = 50_000
     # DEFERRED trial terms. Retained only as future catalog copy and as
     # grant-algebra/API fixtures: they never enable checkout (the catalog

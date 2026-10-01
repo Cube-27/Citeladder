@@ -272,7 +272,7 @@ class DataForSeoSettings(BaseSettings):
 
     ``platform_*`` credentials are DECLARED but unused on the execution path:
     the shipped credential model is BYOK, resolved through
-    ``resolve_execution_credentials``. They exist so platform funding can be
+    the TypeScript audit admission owner. They exist so platform funding can be
     switched on later without a migration or a second code path, and so
     development can verify provider behaviour against a real account.
     """

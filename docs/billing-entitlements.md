@@ -120,7 +120,7 @@ explicit-target, reasoned, dry-run-reviewed administrative operations.
 and the [ledger](../frontend/services/api/src/entitlements/ledger.ts) own the
 migrated billing boundary. Python
 [metering](../backend/app/domain/entitlements/metered.py) and its
-[ledger bridge](../backend/app/domain/entitlements/ledger.py) still serve audit, Agent and
+[ledger bridge](../backend/app/domain/entitlements/ledger.py) still serve Agent and
 Site Health accounting. Reservation, release, debit and refund retain typed parent
 identity, allocation order, fingerprints and dispatch provenance. An Agent run
 holds one reservation per model step, so each debit carries that step's
@@ -132,12 +132,14 @@ usage. Customer BYOK consumes no platform credits and never silently falls back.
 [Site Health fetch budget](../backend/app/domain/site_health/fetch_budget.py)
 reserves a crawl's page budget at creation and settles analyzed pages on every
 terminal path; accounts without a page-fetch grant are not metered there.
-These Python metering, grant-write, resolver and admission bridges retire with
-their audit, Site Health and Agent callers in migration PRs 17–19. Until then
-Python is the only production ledger writer: the two stacks' request
-fingerprints are not byte-compatible, so a subject's reservations, debits and
-releases must stay with one stack. Each migration moves a caller's ledger
-writes whole; it never retries a Python-written key from TypeScript. Operator
+Audit reservations, debits and releases now use the TypeScript ledger owner.
+Its audit fingerprints reproduce the Python format so persisted Python audit
+entries can be replayed idempotently. Audit entries from the earlier TypeScript
+format are incompatible and fail closed on replay; they require fresh disposable
+pre-launch data rather than rewriting immutable history. No reset is implicit.
+Remaining Python metering, grant-write, resolver and admission bridges retire
+with their Site Health and Agent callers in migration PRs 18–19. Each migration
+moves a subject's ledger writes whole, preserving one writing stack. Operator
 catalog publication, grant correction and plan verification remain Python-owned;
 the read-only Razorpay plan reader has no checkout or settlement methods and
 retires when that operator CLI migrates.

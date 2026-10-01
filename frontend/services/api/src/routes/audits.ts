@@ -10,7 +10,7 @@ import { auditEventSchema } from '@citeladder/contracts/audit-events';
 import { configEnvironment } from '../config.ts';
 import { readBody } from '../http/body.ts';
 import { createAudit } from '../audits/creation.ts';
-import { auditInput } from '../audits/inputs.ts';
+import { auditCreateInput, auditInput } from '../audits/inputs.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { estimateAudit, estimateInput } from '../audits/estimate.ts';
 import {
@@ -59,14 +59,14 @@ export const auditRoutes = [
     params: empty,
     status: 201,
     capability: 'run',
-    body: auditInput,
+    body: auditCreateInput,
     response: auditSchema,
     async handle({ c, db, config }) {
       const workspace = c.get('workspace').workspaceId;
       const id = await createAudit(
         db,
         workspace,
-        await readBody(c, auditInput),
+        auditInput.parse(await readBody(c, auditCreateInput)),
         {},
         auditRuntime(configEnvironment(config)),
       );

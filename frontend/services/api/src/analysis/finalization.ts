@@ -13,6 +13,7 @@ import { frozenComparisonKey } from './comparison.ts';
 import { persistObservedCompetitors } from './observed-competitors.ts';
 import { round } from './round.ts';
 import { getLogger } from '../logging.ts';
+import { compareText } from '../text-order.ts';
 
 type ScopedTask = Selectable<AuditTasks> & { cohort: string };
 function coverage(tasks: ScopedTask[], completed: number) {
@@ -197,7 +198,7 @@ export async function finalizeAudit(
       };
     });
     const config = scoringConfig(audit.configuration),
-      engines = [...new Set(tasks.map((t) => t.logical_engine))].sort();
+      engines = [...new Set(tasks.map((t) => t.logical_engine))].sort(compareText);
     const organic = cohortMetrics(
       rows,
       tasks,

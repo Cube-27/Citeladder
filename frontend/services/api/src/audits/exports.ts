@@ -5,6 +5,7 @@ import { rowsToCsv } from '../analysis/opportunities/exports.ts';
 import { engineSnapshots } from '../visibility/runs.ts';
 import { authorizedAudit } from './reads.ts';
 import { round } from '../analysis/round.ts';
+import { compareText } from '../text-order.ts';
 
 const columns = [
   'audit_id',
@@ -123,7 +124,7 @@ export async function exportAudit(
     : classes.length === 1 && classes[0]![0] === 'non_branded'
       ? 'All prompts are unaided/non-branded.'
       : `Mixed panel: ${classes
-          .sort()
+          .sort(([left], [right]) => compareText(left, right))
           .map(([key, count]) => `${key}=${count}`)
           .join(', ')}.`;
   const lines = [`# AI Search Visibility Audit — ${brand}`, '', '## Methodology', ''];

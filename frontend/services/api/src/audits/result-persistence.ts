@@ -236,7 +236,7 @@ export function persistExecutionSuccess(
   });
 }
 
-/** Pre-call rejection is recorded but never billed. Only actual paid calls advance debits. */
+/** Pre-call rejection terminalizes the task without inventing a provider attempt or debit. */
 export function persistExecutionFailure(
   db: Database,
   claimed: AuditTask,
@@ -258,7 +258,9 @@ export function persistExecutionFailure(
   return db.transaction().execute(async (trx) => {
     const locked = await ownedAuditTask(trx, claimed, owner, at);
     if (!locked) return null;
-    const attempt = locked.task.attempt_count + (options.surface && !options.paidSurface ? 0 : 1);
+    const attempt =
+      locked.task.attempt_count +
+      (options.preCall || (options.surface && !options.paidSurface) ? 0 : 1);
     const retry =
       !options.preCall && !options.surface && error.retryable && attempt < locked.task.max_attempts;
     const failureArtifactId = options.scraperFailure ? randomUUID() : null;
@@ -313,7 +315,7 @@ export function persistExecutionFailure(
       .where('workspace_id', '=', claimed.workspace_id)
       .returningAll()
       .executeTakeFirstOrThrow();
-    if (options.recordAttempt !== false)
+    if (!options.preCall && options.recordAttempt !== false)
       await appendProviderAttempt(trx, task, at, {
         error,
         ...(failureArtifactId ? { artifactId: failureArtifactId } : {}),

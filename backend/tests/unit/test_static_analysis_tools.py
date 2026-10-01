@@ -127,8 +127,8 @@ class TestArchitecturePolicy:
         for name in ("api-is-a-leaf", "workers-are-a-leaf", "core-is-the-floor"):
             assert "allow_indirect_imports" not in contracts[name]
 
-    def test_recorded_exceptions_stay_at_three(self) -> None:
-        """Named warts, not a widening rule. Adding a fourth is a decision."""
+    def test_recorded_exceptions_stay_at_two(self) -> None:
+        """Only the two retained boundary exceptions remain after audit cutover."""
         ignored = [
             line.strip()
             for contract in self._contracts().values()
@@ -137,7 +137,6 @@ class TestArchitecturePolicy:
         ]
 
         assert sorted(ignored) == [
-            "app.connectors.answer_engines.normalization -> app.analysis.normalization",
             "app.connectors.web_evidence.brand_evidence"
             " -> app.analysis.site_health.dom",
             "app.models.prompt -> app.domain.prompts.normalization",

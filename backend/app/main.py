@@ -16,7 +16,6 @@ from app.api.agent import router as agent_router
 from app.api.commerce import router as commerce_router
 from app.api.performance import router as performance_router
 from app.api.site_health import router as site_health_router
-from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.core.config import get_frontend_origins, settings
 from app.core.config.api import API_V1_PREFIX, READINESS_TIMEOUT_SECONDS
 from app.core.database import SessionLocal, dispose_engine
@@ -57,8 +56,6 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
-        # Retained Agent and analytics callers share the pooled HTTP client.
-        await aclose_shared_clients()
         await dispose_engine()
 
 

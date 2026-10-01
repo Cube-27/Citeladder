@@ -76,10 +76,22 @@ describe('audit HTTP family cutover', () => {
       `attachment; filename="audit-${t.auditId}.csv"`,
     );
     expect((await request(viewer, t.workspaceId, `/${t.auditId}/metrics`)).status).toBe(404);
-    const created = await request(t.userId, t.workspaceId, '', 'POST', { ...body, repetitions: 1 });
+    // An extra HTTP funding selector cannot change manual BYOK admission.
+    const created = await request(t.userId, t.workspaceId, '', 'POST', {
+      ...body,
+      repetitions: 1,
+      credential_mode: 'funded',
+    });
     expect(created.status).toBe(201);
     const run = (await created.json()) as { id: string };
+    const funding = await db
+      .selectFrom('audits')
+      .select('funding_account_id')
+      .where('id', '=', run.id)
+      .executeTakeFirstOrThrow();
+    expect(funding.funding_account_id).toBeNull();
     expect((await request(t.userId, t.workspaceId, `/${run.id}/cancel`, 'POST')).status).toBe(200);
+    expect((await request(t.userId, t.workspaceId, `/${run.id}/cancel`, 'POST')).status).toBe(409);
   });
   it('drains terminal stream pages and uses the same validated envelopes and safe resume cursor as JSON', async () => {
     const t = await seed(),

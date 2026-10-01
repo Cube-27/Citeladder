@@ -406,7 +406,7 @@ migrations remain covered by static policy gates.
 `pnpm check:policy`. Seven contracts pin the directions that hold today: the API
 and the workers are leaves nothing imports, `core` depends on no business logic,
 and `models`, `connectors`, `orchestration` and `analysis` do not reach up.
-Three known warts are recorded as named `ignore_imports` lines rather than
+Two remaining warts are recorded as named `ignore_imports` lines rather than
 softened rules -- a wart with a name cannot quietly become two.
 
 ### Suppressions

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { providerErrorCode } from '../models/http.ts';
+import { providerErrorCode, transientStatus } from '../models/http.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
 import { providerPolicy, type ProviderSettings } from '../providers/config.ts';
 import { answerRequestSchema, ProviderError, type AnswerRequest } from './contracts.ts';
@@ -109,7 +109,7 @@ export async function executeAnswer(
           : Math.max(0, (Date.parse(raw) - Date.now()) / 1000);
     throw new ProviderError(
       providerErrorCode(response.status),
-      response.status === 429 || response.status >= 500,
+      transientStatus(response.status),
       after !== undefined && Number.isFinite(after) ? after : undefined,
     );
   }

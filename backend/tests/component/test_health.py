@@ -123,7 +123,7 @@ async def test_declared_oversized_api_body_is_rejected_before_parsing() -> None:
         transport=transport, base_url="http://testserver"
     ) as client:
         response = await client.post(
-            "/api/v1/provider-connections",
+            "/api/v1/projects/00000000-0000-0000-0000-000000000001/agent/chats",
             content=b"{}",
             headers={"Content-Length": str(3 * 1024 * 1024)},
         )
@@ -142,7 +142,7 @@ async def test_chunked_oversized_api_body_is_stopped_while_streaming() -> None:
         transport=transport, base_url="http://testserver"
     ) as client:
         response = await client.post(
-            "/api/v1/provider-connections",
+            "/api/v1/projects/00000000-0000-0000-0000-000000000001/agent/chats",
             content=chunks(),
             headers={"Content-Type": "application/json"},
         )

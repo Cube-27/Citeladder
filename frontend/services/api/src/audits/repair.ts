@@ -5,6 +5,7 @@ import { record } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { auditPolicy } from './config.ts';
 import { auditEvent, transitionAudit } from './state.ts';
+import { compareText } from '../text-order.ts';
 
 export const repairInput = z.object({
   provider: z.string().nullish(),
@@ -73,7 +74,7 @@ export async function createRepairAudit(
       .update(
         tasks
           .map((task) => task.id)
-          .sort()
+          .sort(compareText)
           .join('|'),
       )
       .digest('hex');
@@ -210,7 +211,7 @@ export async function createRepairAudit(
       'repair audit created',
       {
         requested_count: tasks.length,
-        engines: [...new Set(tasks.map((task) => task.logical_engine))].sort(),
+        engines: [...new Set(tasks.map((task) => task.logical_engine))].sort(compareText),
       },
       at,
     );

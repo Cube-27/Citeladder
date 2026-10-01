@@ -1,8 +1,8 @@
 /**
  * Search Intelligence: readiness, run confirmation and cancellation, saved
  * preferences, published dataset rows, content handoff and citation matches.
- * Authorized by the project in the path; review creation stays Python
- * (`search-intelligence-reviews`) because it resolves competitor websites.
+ * Authorized by the project in the path; native review creation resolves
+ * competitor websites before freezing the bounded acquisition plan.
  */
 import {
   searchDatasetPageSchema,

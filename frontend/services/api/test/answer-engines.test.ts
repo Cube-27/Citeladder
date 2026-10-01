@@ -3,6 +3,7 @@ import { providerPolicy, providerSettings } from '../src/providers/config.ts';
 import { answerRequestSchema, type AnswerRequest } from '../src/answer-engines/contracts.ts';
 import { answerPayload, executeAnswer } from '../src/answer-engines/execute.ts';
 import { parseAnswer, usageCount } from '../src/answer-engines/parse.ts';
+import { scoreExecution, scoringConfig } from '../src/analysis/scoring.ts';
 
 function request(engine: 'chatgpt' | 'gemini' | 'claude', retrieval = true): AnswerRequest {
   const route = providerPolicy.routes[engine];
@@ -21,6 +22,42 @@ function request(engine: 'chatgpt' | 'gemini' | 'claude', retrieval = true): Ans
   });
 }
 describe('frozen answer-engine execution', () => {
+  it.each([undefined, { query: 'Acme options' }])(
+    'keeps count-only OpenAI searches distinct from query text (%j)',
+    (action) => {
+      const result = parseAnswer(
+        { status: 'completed', output: [{ type: 'web_search_call', action }] },
+        request('chatgpt'),
+      );
+      const score = scoreExecution({
+        config: scoringConfig({ brand_name: 'Acme' }),
+        answerText: result.answer_text,
+        promptText: 'Which options fit?',
+        citations: result.citations,
+        searchEvents: result.search_events,
+        searchUsed: result.search_used,
+        queryTextAvailable: Boolean(result.provider_metadata.query_text_available),
+      });
+      expect(score.search_query_text_available).toBe(Boolean(action));
+      expect(score.brand_injected_in_search).toBe(action ? true : null);
+    },
+  );
+  it.each([500, 502, 503, 504, 501, 505, 507])(
+    'only retries transient HTTP %s failures',
+    async (status) => {
+      await expect(
+        executeAnswer(
+          request('chatgpt'),
+          { secret: 'test', base_url: '' },
+          providerSettings({}),
+          async () => new Response('', { status }),
+        ),
+      ).rejects.toMatchObject({
+        code: 'server_error',
+        retryable: [500, 502, 503, 504].includes(status),
+      });
+    },
+  );
   it.each(['chatgpt', 'gemini', 'claude'] as const)(
     'runs %s with fresh policy and no tools when retrieval is off',
     async (engine) => {
@@ -113,6 +150,7 @@ describe('frozen answer-engine execution', () => {
         cached_input_tokens: 10,
         output_tokens: 23,
         reasoning_tokens: 7,
+        total_tokens: 70,
         web_search_requests: 2,
       },
     });
@@ -197,7 +235,9 @@ describe('frozen answer-engine execution', () => {
               {
                 type: 'web_search_result_location',
                 url: 'https://publisher.example/',
-                cited_text: 'Evidence',
+                cited_text: ' Evidence ',
+                start_index: 0,
+                end_index: 6,
               },
             ],
           },
@@ -223,7 +263,7 @@ describe('frozen answer-engine execution', () => {
       },
     });
     expect(result.citations[0]).toMatchObject({
-      cited_text: 'Evidence',
+      cited_text: ' Evidence ',
       start_index: null,
       end_index: null,
     });

@@ -51,7 +51,7 @@ async function seed(funded = false) {
     {},
     runtime,
   );
-  const [claimed] = await queue.claim('worker');
+  const [claimed] = await queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId });
   const running = await queue.markRunning(claimed!, 'worker');
   const context = await loadExecutionContext(
     db,
@@ -311,7 +311,14 @@ describe('atomic audit execution persistence', () => {
         runtime,
         { preCall: true },
       ),
-    ).toEqual({ retry: false, attempt: 1 });
+    ).toEqual({ retry: false, attempt: 0 });
+    expect(
+      await db
+        .selectFrom('provider_attempts')
+        .select('id')
+        .where('task_id', '=', t.context.task.id)
+        .execute(),
+    ).toEqual([]);
     expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
       consumed: 0,
       reserved: 0,

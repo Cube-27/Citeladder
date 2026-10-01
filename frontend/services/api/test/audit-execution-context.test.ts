@@ -65,7 +65,7 @@ async function seed(surface = false) {
     {},
     runtime,
   );
-  const [task] = await queue.claim('worker');
+  const [task] = await queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId: id });
   expect(task?.audit_id).toBe(id);
   return { ...t, connectionId, task: task! };
 }

@@ -87,7 +87,12 @@ async function seed(surface = false) {
     .execute();
   return { ...t, auditId, task: all[0]! };
 }
-function worker(send: typeof fetch, settings = runtime, now?: () => Date) {
+function worker(
+  scope: { workspaceId: string; auditId: string },
+  send: typeof fetch,
+  settings = runtime,
+  now?: () => Date,
+) {
   return new AuditWorker(
     db,
     settings,
@@ -96,7 +101,7 @@ function worker(send: typeof fetch, settings = runtime, now?: () => Date) {
       execution: analyzeExecution,
       finalize: (workspaceId, auditId) => finalizeAudit(db, workspaceId, auditId, async () => {}),
     },
-    { owner: 'worker', send, env: {}, ...(now ? { now } : {}) },
+    { owner: 'worker', taskScope: scope, send, env: {}, ...(now ? { now } : {}) },
   );
 }
 async function ready(id: string) {
@@ -110,10 +115,56 @@ async function stored(id: string) {
   return db.selectFrom('audit_tasks').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
 }
 describe('leased audit worker phases', () => {
+  it.each([
+    { elapsed: 60, liveLimit: 600, expired: true },
+    { elapsed: 61, liveLimit: 600, expired: true },
+    { elapsed: 59, liveLimit: 1, expired: false },
+  ])(
+    'uses the frozen run deadline at $elapsed seconds (live limit $liveLimit)',
+    async ({ elapsed, liveLimit, expired }) => {
+      const t = await seed(),
+        at = new Date();
+      const audit = await db
+        .selectFrom('audits')
+        .select('configuration')
+        .where('id', '=', t.auditId)
+        .executeTakeFirstOrThrow();
+      await db
+        .updateTable('audits')
+        .set({
+          status: 'running',
+          started_at: new Date(at.getTime() - elapsed * 1000),
+          configuration: JSON.stringify({ ...record(audit.configuration), max_run_seconds: 60 }),
+        })
+        .where('id', '=', t.auditId)
+        .execute();
+      let calls = 0;
+      await worker(
+        t,
+        async () => {
+          calls++;
+          return Response.json({
+            status: 'completed',
+            output: [
+              { type: 'message', content: [{ type: 'output_text', text: 'Acme Running.' }] },
+            ],
+          });
+        },
+        { ...runtime, audits: { ...runtime.audits, max_run_seconds: liveLimit } },
+        () => at,
+      ).runOnce();
+      expect(calls).toBe(expired ? 0 : 1);
+      expect(await stored(t.task.id)).toMatchObject(
+        expired
+          ? { status: 'failed', error_code: 'run_deadline_exceeded', attempt_count: 0 }
+          : { status: 'succeeded', attempt_count: 1 },
+      );
+    },
+  );
   it('makes one direct call per lease, persists a retry, and retains both actual attempts on success', async () => {
     const t = await seed();
     let calls = 0;
-    const w = worker(async () => {
+    const w = worker(t, async () => {
       calls++;
       if (calls === 1) throw new TypeError('transport failed');
       return Response.json({
@@ -157,6 +208,7 @@ describe('leased audit worker phases', () => {
       methods: string[] = [];
     let tick = Date.now();
     const w = worker(
+      t,
       async (input, options) => {
         const url = String(input);
         methods.push(`${options?.method} ${url}`);
@@ -248,6 +300,7 @@ describe('leased audit worker phases', () => {
     const t = await seed();
     let calls = 0;
     const w = worker(
+      t,
       async () => {
         calls++;
         throw new Error('Unexpected dispatch');
@@ -282,7 +335,7 @@ describe('leased audit worker phases', () => {
       })
       .where('id', '=', t.task.id)
       .execute();
-    const w = worker(async () => {
+    const w = worker(t, async () => {
       calls++;
       throw new Error('Unexpected provider call');
     });

@@ -331,6 +331,23 @@ describe('provider credential custody', () => {
     expect(receipt.error_code).toBe('revision_changed');
   });
 
+  it('classifies an unreadable credential as authentication failure before sending a probe', async () => {
+    const row = await create();
+    let calls = 0;
+    const result = await probeConnection(
+      db,
+      workspace,
+      row.id,
+      'different-test-key',
+      settings,
+      async () => {
+        calls++;
+        throw new Error('Unexpected probe');
+      },
+    );
+    expect(result).toMatchObject({ status: 'failed', error_code: 'auth_failure' });
+    expect(calls).toBe(0);
+  });
   it('DataForSEO tests only credential liveness and honors body-level auth failures', async () => {
     const row = await create({
       transport_provider: 'dataforseo',
@@ -381,8 +398,6 @@ describe('provider credential custody', () => {
   });
 
   it('enforces credential administration at the HTTP boundary', async () => {
-    const member = await fixtures.user();
-    await fixtures.member(workspace, member, 'member');
     const app = createApp(config, db);
     const request = (session: string, method: string, path = '/api/v1/provider-connections') =>
       app.request(path, {
@@ -396,9 +411,18 @@ describe('provider credential custody', () => {
           ? { body: JSON.stringify({ transport_provider: 'openai', api_key: 'test-key' }) }
           : {}),
       });
-    const memberToken = await sessionToken({ sub: member, ver: 0 });
-    expect((await request(memberToken, 'POST')).status).toBe(403);
-    expect((await request(memberToken, 'GET')).status).toBe(200);
+    for (const [role, permitted] of [
+      ['owner', true],
+      ['admin', true],
+      ['member', false],
+      ['viewer', false],
+    ] as const) {
+      const user = role === 'owner' ? actor : await fixtures.user();
+      if (role !== 'owner') await fixtures.member(workspace, user, role);
+      const roleToken = await sessionToken({ sub: user, ver: 0 });
+      expect((await request(roleToken, 'POST')).status).toBe(permitted ? 201 : 403);
+      expect((await request(roleToken, 'GET')).status).toBe(200);
+    }
     const foreign = await createConnection(
       db,
       await fixtures.ownedWorkspace(await fixtures.user()),

@@ -18,6 +18,13 @@ import {
 } from './probe-transport.ts';
 
 const object = z.record(z.string(), z.unknown());
+function probeSecret(encrypted: string, key: string) {
+  try {
+    return createSecretCipher(key).decrypt(encrypted);
+  } catch {
+    throw new ProbeError('auth_failure');
+  }
+}
 const textBlock = z.object({ type: z.string(), text: z.string().optional() });
 function requireAnswer(transport: string, body: unknown): string | undefined {
   const parsed = object.parse(body);
@@ -82,7 +89,7 @@ export async function probeConnection(
     let errorCode = '';
     let model = item.model;
     try {
-      const secret = createSecretCipher(encryptionKey).decrypt(connection.api_key_encrypted);
+      const secret = probeSecret(connection.api_key_encrypted, encryptionKey);
       const request = probeRequest(
         connection.base_url,
         transport,

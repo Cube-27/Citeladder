@@ -236,6 +236,9 @@ configuration and relevant versions. benchmark_mode is prompt framing, not a
 provider policy. Funding/occupancy is checked by
 [billing and entitlements](billing-entitlements.md). A provider-free estimate
 does not authorize execution or establish measured cost.
+Manual HTTP launch uses customer credentials; funded admission is reserved for
+trusted billing/trial callers. Cancelled funded runs release unused task credits
+but retain their admission quote against the monthly funded cost ceiling.
 
 The [audit worker](../frontend/services/api/src/workers/audit-worker.ts) claims PostgreSQL
 tasks with leases, commits before I/O and records immutable response artifacts,

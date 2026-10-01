@@ -55,12 +55,15 @@ function citation(
   const title = text(annotation.title);
   if (!url && !(transport !== 'anthropic' && title)) return;
   const chars = Array.from(typeof block.text === 'string' ? block.text : '');
-  let start = counter(annotation, 'start_index', 'startIndex');
-  let end = counter(annotation, 'end_index', 'endIndex');
-  let citedText = transport === 'anthropic' ? text(annotation.cited_text) : '';
-  if (start !== null && end !== null && start < end && end <= chars.length)
+  let start = transport === 'anthropic' ? null : counter(annotation, 'start_index', 'startIndex');
+  let end = transport === 'anthropic' ? null : counter(annotation, 'end_index', 'endIndex');
+  let citedText =
+    transport === 'anthropic' && typeof annotation.cited_text === 'string'
+      ? annotation.cited_text
+      : '';
+  if (start !== null && end !== null && start < end && end <= chars.length) {
     citedText = chars.slice(start, end).join('');
-  else {
+  } else {
     start = null;
     end = null;
   }
@@ -271,6 +274,7 @@ export function parseAnswer(payload: unknown, request: AnswerRequest, latencyMs 
       raw_finish_reason: rawFinish,
       usage,
       search_events: searchEvents,
+      query_text_available: transport !== 'google' && searchEvents.some((event) => event.query),
       citations,
     },
   };

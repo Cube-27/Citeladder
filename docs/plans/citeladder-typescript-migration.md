@@ -872,7 +872,8 @@ second implementation. The merged PR 18a worker registrations remain intact.
 | Search Intelligence readiness, targets and dataset DTOs | Remaining Agent/MCP read projections; remove with their PR 19 callers |
 | Frozen evidence helpers in `domain/analysis/evidence.py` | Remaining MCP execution readers; remove with their migration |
 | Answer finish-reason and search-surface constants | Python models/policy exports; retire when schema/config authority moves in PR 20 |
-| Shared HTTP/error helpers | Remaining Agent/model connectors; retire with their final caller |
+| `domain/providers/app_routes.py` route resolution and pause predicate | Retained Agent model connectors; remove with their final caller in PR 19 |
+| Shared model HTTP/error helpers | Remaining Agent/model connectors; retire with their final caller. The unused answer-engine pool, audit credential resolver and DataForSEO identity module are retired |
 
 Funding denies unverified expected-cost catalogs, including the currently empty
 platform catalog. Unknown provider cost remains unknown. Submission uncertainty

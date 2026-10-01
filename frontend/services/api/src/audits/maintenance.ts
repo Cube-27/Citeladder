@@ -91,7 +91,7 @@ export async function cancelAudit(
       .executeTakeFirst();
     if (!audit) throw notFound('Audit');
     if (!auditPolicy.constants.audit_active_statuses.includes(audit.status))
-      throw new ApiError(400, 'Only active audits can be cancelled');
+      throw new ApiError(409, 'Only active audits can be cancelled');
     await transitionAudit(trx, workspaceId, auditId, 'cancelled', at, 'audit cancelled');
     const tasks = await trx
       .updateTable('audit_tasks')
@@ -312,11 +312,8 @@ export class AuditMaintenance {
               .select('t.id')
               .whereRef('t.workspace_id', '=', 'a.workspace_id')
               .whereRef('t.project_id', '=', 'a.project_id')
-              .where(
-                't.idempotency_key',
-                '=',
-                sql<string>`'analytics:source_page_inspection:' || a.project_id::text || ':' || a.id::text`,
-              ),
+              .where('t.task_kind', '=', 'source_page_inspection')
+              .where(sql<boolean>`t.payload->>'audit_id' = a.id::text`),
           ),
         ),
       )

@@ -13,6 +13,7 @@ import {
 import { catalog } from '../src/commerce/reads.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { commerceIsland } from './commerce-support.ts';
+import { freezeCommerceContext } from '../src/commerce/audit-context.ts';
 import { enqueue } from './referral-fixtures.ts';
 import { testDatabase } from './support.ts';
 
@@ -139,15 +140,13 @@ describe('catalog projection PostgreSQL boundary', () => {
       id,
       'category',
     );
-    // The retained Python consumer reads TS projections, with provenance.
+    // Native audit admission reads the projected catalog with provenance.
     await db
       .updateTable('commerce_prompt_targets')
       .set({ approved_at: new Date() })
       .where('prompt_id', '=', seeded.promptId)
       .execute();
-    const frozen = await commerceIsland<{
-      targets: { products: { price: number; field_sources: Record<string, unknown> }[] }[];
-    }>('freeze', s.workspaceId, s.projectId, seeded.promptId);
+    const frozen = await freezeCommerceContext(db, s, [seeded.promptId]);
     expect(frozen.targets[0]!.products[0]).toMatchObject({
       price: 44,
       field_sources: { name: { kind: 'csv' } },

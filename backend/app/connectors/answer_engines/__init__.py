@@ -1,1 +1,1 @@
-"""Shared provider errors, HTTP pooling and persisted vocabulary bridges."""
+"""Shared provider errors and persisted vocabulary bridges."""

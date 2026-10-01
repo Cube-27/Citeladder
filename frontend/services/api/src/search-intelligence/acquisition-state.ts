@@ -123,6 +123,7 @@ export class AcquisitionState {
           .where('id', '=', run.id)
           .where('workspace_id', '=', run.workspace_id)
           .execute();
+        await this.closeCollecting(trx, at);
         return null;
       }
       await trx
@@ -152,6 +153,7 @@ export class AcquisitionState {
           .where('id', '=', run.id)
           .where('workspace_id', '=', run.workspace_id)
           .execute();
+        await this.closeCollecting(trx, at);
         return { action: 'stop' };
       }
       const target = record(plan.target),
@@ -277,6 +279,7 @@ export class AcquisitionState {
           .where('id', '=', run.id)
           .where('workspace_id', '=', run.workspace_id)
           .execute();
+        await this.closeCollecting(trx, at);
         return { action: 'stop' };
       }
       return {
@@ -528,6 +531,7 @@ export class AcquisitionState {
           .where('id', '=', run.id)
           .where('workspace_id', '=', run.workspace_id)
           .execute();
+        await this.closeCollecting(trx, at);
         return true;
       }
       for (const row of normalized.rows)
@@ -604,6 +608,7 @@ export class AcquisitionState {
         .where('id', '=', run.id)
         .where('workspace_id', '=', run.workspace_id)
         .execute();
+      if (stopped) await this.closeCollecting(trx, at);
       return stopped;
     });
   }
@@ -664,6 +669,7 @@ export class AcquisitionState {
           .where('id', '=', run.id)
           .where('workspace_id', '=', run.workspace_id)
           .execute();
+      if (uncertain) await this.closeCollecting(trx, at);
       return {
         stop: uncertain,
         wait: retry
@@ -683,6 +689,7 @@ export class AcquisitionState {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
       if (!run || run.status !== 'running' || !(await this.owned(trx, at))) return;
+      await this.closeCollecting(trx, at);
       const datasets = await trx
         .selectFrom('search_intelligence_datasets')
         .select(['status', 'coverage'])
@@ -700,5 +707,16 @@ export class AcquisitionState {
         .where('workspace_id', '=', run.workspace_id)
         .execute();
     });
+  }
+  /** A terminal run cannot leave a dataset waiting for another paid dispatch. */
+  closeCollecting(db: Database, at: Date) {
+    return db
+      .updateTable('search_intelligence_datasets')
+      .set({ status: 'failed', coverage: 'unknown', collection_ended_at: at })
+      .where('workspace_id', '=', this.task.workspace_id)
+      .where('project_id', '=', this.task.project_id)
+      .where('run_id', '=', this.runId)
+      .where('status', '=', 'collecting')
+      .execute();
   }
 }
