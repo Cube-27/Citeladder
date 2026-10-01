@@ -2,6 +2,9 @@ import { randomUUID } from 'node:crypto';
 import type { Database } from '../db/database.ts';
 
 type SecurityEvent =
+  | 'credential.create'
+  | 'credential.update'
+  | 'credential.delete'
   | 'auth.login'
   | 'auth.google_login'
   | 'auth.logout'
