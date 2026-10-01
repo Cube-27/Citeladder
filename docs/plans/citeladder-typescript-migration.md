@@ -183,7 +183,7 @@ total.
 | 16 | Billing and the entitlement ledger (16a PDF, 16b commercial/ledger) | High | Done |
 | 17 | Audits, providers and answer-engine connectors | High | 17a done; 17b implemented |
 | 18 | Site Health and source-page inspection | High | 18a, 18b1–18b4 done |
-| 19 | Agent runtime | High | |
+| 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a implemented; 19b pending |
 | 20 | Consolidation and policy transfer | Medium | |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
@@ -1103,8 +1103,57 @@ Departures in 18b5c:
 
 ### PR 19: Agent runtime
 
-The Agent tool catalog, runs and outputs, retiring the remaining Opportunity,
-visibility, traffic and demand bridges its tools call.
+**19a — independent runtime core.** Implemented from main `ef44035a` without
+PR 17/18 branch changes. The inactive `frontend/services/api/src/agent` owner
+uses the existing Agent schema and shared response contracts for chats/messages,
+admission, runs, leases/heartbeats, retries/recovery, committed model dispatch
+and receipt orchestration, context manifests, a server-pinned read-tool
+registry, bounded structured turns and immutable output revisions. Reply,
+revision and success commit together under the lease and chat locks. Edits and
+restores serialize with admission; outline approval and draft admission can
+commit atomically. Persisted reads include progress and precise keyset paging.
+No schema, ingress, production worker registration or ownership cutover occurs.
+Python Agent/MCP and entitlement/provider/Site Health bridges remain intact.
+
+The core has required typed adapter seams rather than a second implementation
+of unresolved owners. Test adapters exercise PostgreSQL transactions without
+provider I/O. Missing adapter configuration cannot silently choose platform
+funding, discard named origins or fabricate a tool result. Existing stable
+workspace authorization, queue vocabulary, generated table types, model receipt
+types and Agent browser contracts are reused. Agent bounds are exported from
+their Python config authority; the existing two-error protocol limit now lives
+there too, with unchanged Python behavior.
+
+Departures within the inactive core: lease fencing includes attempt identity
+even when a worker name is reused; PostgreSQL time governs lease eligibility;
+transcript bounds retain the latest request and freshest steps; unverified
+record references are also removed from output titles; JSON is validated at
+persisted boundaries; keys and nested references use canonical JavaScript JSON
+for request fingerprints (no Python JSON emulation). These are not changes to
+the currently served Python Agent. PR 19b must account for pre-cutover replay
+keys, including non-ASCII fingerprints, rather than silently reinterpret them.
+
+#### PR 19b deferred dependencies
+
+19b is separately authorized work. Resolve the owners that actually exist at
+that time; 19a neither assumes their final interfaces nor implements substitutes.
+
+| Required work / seam | Retained owner and cutover condition |
+|---|---|
+| Funding and abuse admission (`Admission`) | Keep Python Agent capability, exact customer route selection, development-login eligibility, account capacity and daily usage admission. Bind to stable TS billing/entitlement owners and the final provider owner only when available; no entitlement/provider bridge retirement in 19a. |
+| Per-step funding (`Funding.reserve/settle`) | Bind exact route/key revisions, capability and development identity rechecks; published and historical Agent credit rates/caps; reservation, debit and release through the existing ledger. Preserve zero BYOK debit and no platform fallback. Pricing/destination validation remains in existing Python owners until this adapter is ready. The 19a tests prove dispatch/receipt fencing and the required finite-hold contract, not a production ledger adapter. |
+| Model destination (`AgentModel`, `modelFor`) | Connect platform and customer structured transports, schema negotiation, endpoint/credential validation, timeout signals and retry classification to the final provider owner. The existing TS generation gateway has a different structured-call interface; 19a reuses its receipt type without changing that gateway or copying the PR 17 provider work. |
+| Skill catalog (`SkillCatalog`) | Bind the existing packaged skill methodologies, operating contract, vocabulary expansion, content formats and content fingerprint. Keep Python packaging and skill-loader tests until the TS loader and deployment assets are complete. No copied skill bodies or guessed catalog version in 19a. |
+| Content context (`ContextReader`) | Bind reviewed business facts through their migrated owner; authorize typed Opportunity, Demand, target page, Site Health and Search Intelligence origins; preserve omissions, exact artifact IDs, processing versions, target conflict rules and bounded related-page selection. Action mentions and versioned instructions are implemented in the core. Crawl/page/handoff adapters wait for the actual PR 18 evidence owners; no parallel parser, Site Health reader or knowledge store. |
+| Read-tool bindings (`ToolRegistry`) | Adapt the final TS MCP catalogue, with project selection/list_projects excluded and live member authorization retained; complete Agent-only list_actions/get_action/list_content_differentiation. Bind stable visibility, traffic, demand, prompts, integration and search reads to their existing owners. Audit/provider/Site Health tools wait for the actual PR 17/18 owners. No tool migration or Python MCP bridge deletion in 19a. |
+| Output targets (`AttachTarget`) | Bind the existing Action attachment/convergence owner with its project advisory lock and target validation. Preserve unusable-target behavior, attached-Action identity and format validation. Prompt portfolio review and explicit implementation declaration remain owner commands, never Agent write tools. |
+| API completion and activation | Finish request validators, skills/instructions/revision endpoints, browser context DTO projection, handoffs and error mapping. Atomically update the Agent manifest family and every ingress; register the TS worker only after the Python claimant is excluded. Until then Python owns every served Agent path. |
+| Recovery and operations | Bind retry-delay configuration and bounded expiry/cancelled-dispatch reconciliation to the shared sweeper/worker ownership decision; preserve dashboards' telemetry names, worker draining and deployment assets. A rollback must restore a single writer without data repair. Deployment and cutover smoke tests (rule 7) remain separate release work. |
+| Python bridge retirement | Inventory all remaining callers at cutover, then delete Python Agent runtime/API/worker and only the Opportunity, visibility, traffic, demand, MCP, entitlement/provider and Site Health bridges whose last callers actually moved. Retain schema/models/Alembic and any shared sweeper/policy owners still required. |
+
+The repository remains deployable with Python Agent production ownership if
+19b never lands. PR 19 is incomplete until adapter completion, focused owner
+tests, bridge inventory/removals and the atomic activation are delivered.
 
 ### PR 20: Consolidation and policy transfer
 

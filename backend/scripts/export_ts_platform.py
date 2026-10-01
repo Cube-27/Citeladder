@@ -163,6 +163,7 @@ from app.core.config.provider_catalog import (
 from app.core.config.site_health_acquisition import SITE_HEALTH_USER_AGENT
 from app.core.config.task_queue import (
     ERROR_MAX_ATTEMPTS,
+    TASK_ACTIVE_STATUSES,
     TASK_CLAIMABLE_STATUSES,
     TASK_STATUS_CANCELLED,
     TASK_STATUS_FAILED,
@@ -436,6 +437,16 @@ def build_config() -> dict[str, Any]:
                 if name.startswith("JEV_")
             },
         },
+        "agent": _agent_policy(),
+    }
+
+
+def _agent_policy() -> dict[str, str | int | float]:
+    """Agent core bounds and versions; destinations remain model-owner settings."""
+    return {
+        name.removeprefix("AGENT_").lower(): value
+        for name, value in vars(agent_config).items()
+        if name.startswith("AGENT_") and isinstance(value, (str, int, float))
     }
 
 
@@ -630,6 +641,7 @@ def _task_queue_policy() -> dict[str, Any]:
             "cancelled": TASK_STATUS_CANCELLED,
         },
         "claimable": sorted(TASK_CLAIMABLE_STATUSES),
+        "active": sorted(TASK_ACTIVE_STATUSES),
         "terminal": sorted(TASK_TERMINAL_STATUSES),
         "max_attempts_error": ERROR_MAX_ATTEMPTS,
     }

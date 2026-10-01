@@ -30,6 +30,30 @@ endpoint validation and verified-route checks remain with the provider owner.
 
 ## Chats, runs and outputs
 
+### TypeScript runtime foundation (PR 19a)
+
+[`frontend/services/api/src/agent`](../frontend/services/api/src/agent/) contains
+the inactive TypeScript core for the existing Agent tables: transactional chat
+admission, append-only messages, leased runs, committed model/tool attempts,
+bounded structured turns, persisted reads and output revisions. It uses the
+existing workspace policy, generated database types, shared Agent response
+contracts and Python-owned Agent policy export. No route, worker entrypoint,
+compose service, ingress matcher or ownership record activates it. Python
+remains the sole production Agent writer and its worker and sweeper continue
+unchanged if the migration stops here.
+
+The core requires explicit adapters for funding/capacity admission, persisted
+content context, a versioned skill catalog, registered read tools, model
+destinations and transactional Action attachment. None has a permissive
+default. Dispatch and settlement are separate committed transactions; receipt
+settlement survives cancellation and lease loss, while replies and revisions
+remain fenced. Recovery requires the accounting callback in the same
+transaction as retry/reclaim. The bounded worker unit receives an explicit
+workspace set and retry-delay policy; it has no autonomous polling entrypoint.
+The [PR 19b dependency inventory](plans/citeladder-typescript-migration.md#pr-19b-deferred-dependencies)
+owns adapter completion and the future atomic cutover. The TypeScript core is
+tested with scripted adapters and real PostgreSQL, not live providers.
+
 The [Agent API](../backend/app/api/agent.py) translates authorized requests
 into the [service](../backend/app/domain/agent/service.py). Every chat is pinned
 to one project and is the saved unit of work; there is no separate saved-work

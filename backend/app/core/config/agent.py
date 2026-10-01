@@ -34,12 +34,14 @@ if TYPE_CHECKING:
 # (invariant 5). Skill and registry versions are stamped separately.
 AGENT_RUNTIME_VERSION: Final = "agent-runtime-2"
 AGENT_PROTOCOL_VERSION: Final = "agent-protocol-1"
+AGENT_CONTEXT_MANIFEST_VERSION: Final = "agent-context-1"
 
 # One run is one agent turn: a bounded loop of structured model steps. A step
 # either calls one read tool or responds. Every bound is frozen onto the run at
 # admission, so a config change never alters a turn already queued.
 AGENT_MAX_STEPS: Final = 8
 AGENT_MAX_TOOL_CALLS: Final = 6
+AGENT_MAX_PROTOCOL_ERRORS: Final = 2
 # A run's attempts at the whole turn (a lost lease or retryable provider error).
 AGENT_RUN_MAX_ATTEMPTS: Final = 3
 # Per-chat bound on user turns, so one conversation cannot grow without end.

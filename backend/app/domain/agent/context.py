@@ -13,12 +13,15 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Sequence
-from typing import Any, Final
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.agent import AGENT_CONTEXT_PACKAGE_MAX_CHARS
+from app.core.config.agent import (
+    AGENT_CONTEXT_MANIFEST_VERSION,
+    AGENT_CONTEXT_PACKAGE_MAX_CHARS,
+)
 from app.domain.agent.context_builder import (
     ContentContext,
     ContentContextNotFoundError,
@@ -30,8 +33,6 @@ from app.domain.agent.context_refs import (
 )
 from app.models.agent import AgentChat, AgentInstructionRevision
 from app.models.opportunity import Action
-
-AGENT_CONTEXT_MANIFEST_VERSION: Final = "agent-context-1"
 
 
 def _uuid(value: object) -> uuid.UUID | None:
