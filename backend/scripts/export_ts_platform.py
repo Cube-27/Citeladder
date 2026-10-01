@@ -45,6 +45,7 @@ from app.core.config import (
 )
 from app.core.config import agent as agent_config
 from app.core.config import audit_schedules as audit_schedule_config
+from app.core.config import audits as audit_config
 from app.core.config import brand_discovery as discovery_config
 from app.core.config import brand_evidence as evidence_config
 from app.core.config import brand_logos as brand_logo_config
@@ -180,6 +181,7 @@ from scripts.auth_policy import (
 from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
+from scripts.ts_platform_audits import audit_policy
 from scripts.ts_platform_billing import billing_policy, entitlements_policy
 from scripts.ts_platform_costs import costs_policy
 from scripts.ts_platform_dataforseo import dataforseo_policy
@@ -350,6 +352,7 @@ def build_config() -> dict[str, Any]:
         "providers": provider_policy(_setting),
         "dataforseo": dataforseo_policy(_setting),
         "costs": costs_policy(),
+        "audits": audit_policy(_setting),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
         "internal_links": {
@@ -685,6 +688,7 @@ ANALYTICS_WORKER_SETTINGS = (
 # generic envelope vocabulary and the workspace authorization codes. A PR that
 # ports a route family adds that family's owning config module here.
 ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
+    audit_config,
     error_config,
     oauth_config,
     legal_config,

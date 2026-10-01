@@ -16,7 +16,11 @@ export function providerSettings(env: Record<string, string | undefined> = proce
     timeoutSeconds: Number(resolveSettingSpec(spec.test_timeout_seconds, env)),
     outputTokens: Number(resolveSettingSpec(spec.test_max_output_tokens, env)),
     anthropicVersion: String(resolveSettingSpec(spec.anthropic_version, env)),
-    dataforseoTimeout: Number(resolveSettingSpec(providerPolicy.dataforseo.test_timeout_seconds, env)),
+    anthropicMaxUses: Number(resolveSettingSpec(spec.anthropic_max_uses, env)),
+    keyGraceDays: Number(resolveSettingSpec(spec.byok_key_grace_days, env)),
+    dataforseoTimeout: Number(
+      resolveSettingSpec(providerPolicy.dataforseo.test_timeout_seconds, env),
+    ),
   };
 }
 export type ProviderSettings = ReturnType<typeof providerSettings>;
