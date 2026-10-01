@@ -31,7 +31,6 @@ from app.core.config.task_queue import (
 )
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.site_health.snapshot import persist_crawl_snapshot
-from app.domain.site_health.terminal_refresh import enqueue_terminal_analytics_refresh
 from app.models.analytics import AnalyticsTask
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.analysis import (
@@ -491,30 +490,6 @@ async def test_cancel_crawl_persists_partial_snapshot_from_completed_analyses(
             ).all()
         )
         assert opportunity_tasks == []
-
-        change_snapshot_id = uuid.uuid4()
-        await enqueue_terminal_analytics_refresh(
-            session, crawl=crawl, change_snapshot_id=change_snapshot_id
-        )
-        await session.commit()
-        verification = await session.scalar(
-            select(AnalyticsTask).where(
-                AnalyticsTask.project_id == seed.project_id,
-                AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
-            )
-        )
-        assert verification is not None
-        opportunity = await session.scalar(
-            select(AnalyticsTask).where(
-                AnalyticsTask.project_id == seed.project_id,
-                AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
-            )
-        )
-        assert opportunity is not None
-        assert opportunity.payload == {
-            "trigger_kind": "site_change",
-            "trigger_id": str(change_snapshot_id),
-        }
 
     # The rollup runs in its own best-effort transaction AFTER the transition
     # commits, so it can fail on its own. Nothing else recomputes a cancelled

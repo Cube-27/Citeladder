@@ -1008,7 +1008,6 @@
     ],
     "PERFORMANCE_DEFAULT_COMPARE": "none",
     "PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS": 364,
-    "implementation_verifier_version": "implementation-verifier-1",
     "dimension_key_separator": " | ",
     "dimension_arity": {
       "gsc_page_daily": 2,
@@ -1066,11 +1065,6 @@
       "retry_wait",
       "running",
       "submission_uncertain"
-    ],
-    "opportunity_versions": [
-      "opp-analyzer-1",
-      "opp-rules-2",
-      "opp-formula-1"
     ],
     "stop_words": [
       "a",
@@ -5187,6 +5181,7 @@
     ],
     "ts_owned_task_kinds": [
       "architecture",
+      "change_intel",
       "link_metrics"
     ],
     "versions": {
@@ -6028,13 +6023,57 @@
         "profile": "sh-profiles-1",
         "schema_contract": "sh-schema-1",
         "presentation": "sh-presentation-1"
-      },
-      "changes": {
-        "analyzer_version": "site-change-v2",
-        "default_limit": 50,
-        "max_limit": 200,
-        "unavailable_state": "unavailable"
       }
+    },
+    "change_intel": {
+      "analyzer_version": "site-change-v2",
+      "max_pages": 5000,
+      "max_crawl_candidates": 50,
+      "default_limit": 50,
+      "max_limit": 200,
+      "state_available": "available",
+      "state_unavailable": "unavailable",
+      "state_non_comparable": "non_comparable",
+      "class_improvement": "improvement",
+      "class_neutral": "neutral-change",
+      "class_regression": "potential-regression",
+      "class_critical": "critical-regression",
+      "classes": [
+        "critical-regression",
+        "improvement",
+        "neutral-change",
+        "potential-regression"
+      ],
+      "fields": [
+        "title",
+        "meta_description",
+        "h1",
+        "canonical",
+        "robots_noindex",
+        "json_ld_present",
+        "internal_link_count",
+        "http_status",
+        "redirect_target"
+      ],
+      "max_observations": 50000,
+      "field_rules": {
+        "title": "technical.title_present",
+        "meta_description": "technical.meta_description_present",
+        "h1": "technical.single_h1",
+        "canonical": "technical.canonical_present",
+        "robots_noindex": "technical.indexable",
+        "json_ld_present": "aeo.structured_data_present"
+      },
+      "reason_no_previous_crawl": "no_previous_comparable_crawl",
+      "reason_scope_mismatch": "crawl_scope_mismatch",
+      "reason_version_mismatch": "analysis_version_mismatch",
+      "reason_no_usable_evidence": "no_usable_page_evidence",
+      "change_field": "content_change",
+      "shingle_size": 5,
+      "max_shingles": 2000,
+      "substantial_delta_ratio": 0.3,
+      "cosmetic_delta_ceiling": 0.03,
+      "substantial_section_changes": 2
     }
   },
   "brand_identity": {

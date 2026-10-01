@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import type { Insertable } from 'kysely';
 import type { Database } from '../src/db/database.ts';
+import type { SiteCrawls } from '../src/generated/db-schema.ts';
 import { policy } from '../src/config.ts';
 import { canonicalIdentity } from '../src/site-health/url-identity.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -15,7 +17,6 @@ export class SiteFixtures extends VisibilityFixtures {
     const tenant = await this.tenant({ websiteUrl: 'https://example.test/' });
     const root = 'https://example.test/';
     const profileId = randomUUID();
-    const crawlId = randomUUID();
     const now = new Date();
     await this.siteDb
       .insertInto('site_health_profiles')
@@ -31,17 +32,24 @@ export class SiteFixtures extends VisibilityFixtures {
         updated_at: now,
       })
       .execute();
+    const seed = { ...tenant, root, profileId, crawlId: '' };
+    return { ...seed, crawlId: await this.sibling(seed, { status }) };
+  }
+  /** Another crawl of the seed's project; `values` override the completed defaults. */
+  async sibling(seed: SiteSeed, values: Partial<Insertable<SiteCrawls>> = {}) {
+    const crawlId = randomUUID();
+    const now = new Date();
     const versions = policy.site_health.versions;
     await this.siteDb
       .insertInto('site_crawls')
       .values({
         id: crawlId,
-        workspace_id: tenant.workspaceId,
-        project_id: tenant.projectId,
-        profile_id: profileId,
-        root_url: root,
+        workspace_id: seed.workspaceId,
+        project_id: seed.projectId,
+        profile_id: seed.profileId,
+        root_url: seed.root,
         random_seed: 'fixture',
-        status,
+        status: 'completed',
         discovery_status: 'completed',
         analysis_status: 'completed',
         sample_mode: false,
@@ -61,9 +69,10 @@ export class SiteFixtures extends VisibilityFixtures {
         created_at: now,
         updated_at: now,
         completed_at: now,
+        ...values,
       })
       .execute();
-    return { ...tenant, root, profileId, crawlId };
+    return crawlId;
   }
   async task(
     seed: SiteSeed,
@@ -104,36 +113,37 @@ export class SiteFixtures extends VisibilityFixtures {
     seed: SiteSeed,
     path: string,
     facts: Record<string, unknown>,
-    options: { current?: boolean; status?: string } = {},
+    options: { current?: boolean; status?: string; siteUrlId?: string; observed?: boolean } = {},
   ) {
     const identity = canonicalIdentity(path, seed.root);
     const now = new Date();
-    const id = randomUUID();
-    await this.siteDb
-      .insertInto('site_urls')
-      .values({
-        id,
-        workspace_id: seed.workspaceId,
-        project_id: seed.projectId,
-        url_hash: identity.hash,
-        normalized_url: identity.url,
-        display_url: identity.url,
-        host: 'example.test',
-        item_kind: 'page',
-        depth: 0,
-        discovery_status: 'completed',
-        corpus_disposition: 'eligible',
-        disposition_reason: '',
-        disposition_version: 'fixture',
-        first_seen_at: now,
-        last_seen_at: now,
-        first_seen_crawl_id: seed.crawlId,
-        last_seen_crawl_id: seed.crawlId,
-        latest_content_type: 'text/html',
-        latest_source_kind: 'root',
-        latest_title: '',
-      })
-      .execute();
+    const id = options.siteUrlId ?? randomUUID();
+    if (!options.siteUrlId)
+      await this.siteDb
+        .insertInto('site_urls')
+        .values({
+          id,
+          workspace_id: seed.workspaceId,
+          project_id: seed.projectId,
+          url_hash: identity.hash,
+          normalized_url: identity.url,
+          display_url: identity.url,
+          host: 'example.test',
+          item_kind: 'page',
+          depth: 0,
+          discovery_status: 'completed',
+          corpus_disposition: 'eligible',
+          disposition_reason: '',
+          disposition_version: 'fixture',
+          first_seen_at: now,
+          last_seen_at: now,
+          first_seen_crawl_id: seed.crawlId,
+          last_seen_crawl_id: seed.crawlId,
+          latest_content_type: 'text/html',
+          latest_source_kind: 'root',
+          latest_title: '',
+        })
+        .execute();
     const taskId = await this.task(seed, 'analyze');
     const artifactId = randomUUID();
     await this.siteDb
@@ -165,6 +175,29 @@ export class SiteFixtures extends VisibilityFixtures {
       .set({ status: 'succeeded', site_url_id: id, result_artifact_id: artifactId })
       .where('id', '=', taskId)
       .execute();
+    if (options.observed)
+      await this.siteDb
+        .insertInto('site_url_observations')
+        .values({
+          id: randomUUID(),
+          workspace_id: seed.workspaceId,
+          project_id: seed.projectId,
+          crawl_id: seed.crawlId,
+          site_url_id: id,
+          source_kind: 'link',
+          observed_url: identity.url,
+          final_url: identity.url,
+          status_code: 200,
+          content_type: 'text/html',
+          depth: 0,
+          title: '',
+          rewrite_reason: '',
+          rewrite_version: '',
+          value_kind: '',
+          value_priority: 0,
+          created_at: now,
+        })
+        .execute();
     const analysisId = randomUUID();
     await this.siteDb
       .insertInto('site_page_analyses')

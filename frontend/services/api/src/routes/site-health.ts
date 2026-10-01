@@ -68,7 +68,7 @@ const pageFilters = {
   page_kind: text,
 } as const;
 const download = z.unknown();
-const changeLimit = policy.site_health.reads.changes;
+const changeLimit = policy.site_health.change_intel;
 
 /** A cursor from another scope, filter set or tampering is a 400. */
 async function withCursor<T>(read: Promise<T>): Promise<T> {

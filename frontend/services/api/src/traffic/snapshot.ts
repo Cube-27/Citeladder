@@ -8,6 +8,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
+import { enqueueImplementationVerification } from '../opportunities/enqueue.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import { addDays } from '../referrals/projection.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
@@ -309,19 +310,23 @@ function executor(displayOnly: boolean): Executor {
     };
     await checkCancelled('snapshot write');
     await db.transaction().execute(async (trx) => {
+      const verifying: string[] = [];
       for (const target of targets) {
         const snapshotId = await persist(trx, task, target, coverage, displayOnly);
-        if (snapshotId && target.verifies)
-          await enqueueTask(trx, {
+        if (snapshotId && target.verifies) verifying.push(snapshotId);
+      }
+      await Promise.all(
+        verifying.map((snapshotId) =>
+          enqueueImplementationVerification(trx, {
             workspaceId: task.workspace_id,
             projectId,
-            kind: 'opportunity_verification',
-            payload: { trigger_kind: 'traffic_snapshot', trigger_id: snapshotId },
-            keyParts: [],
-            idempotencyKey: `implementation-verification:traffic_snapshot:${snapshotId}:${p.implementation_verifier_version}:${task.id}`,
+            triggerKind: 'traffic_snapshot',
+            triggerId: snapshotId,
+            revision: task.id,
             maxAttempts,
-          });
-      }
+          }),
+        ),
+      );
       if (!displayOnly)
         await enqueueTask(trx, {
           workspaceId: task.workspace_id,
