@@ -5,7 +5,7 @@ import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { usageCount } from '../answer-engines/parse.ts';
 
-const costPolicy = policy.costs;
+export const costPolicy = policy.costs;
 export type RouteIdentity = {
   logical_engine: string;
   transport_provider: string;
