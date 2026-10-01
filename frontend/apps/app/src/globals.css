@@ -895,6 +895,12 @@ body {
   }
 }
 
+/* Primary metadata ink keeps current/pressed navigation readable on its tint. */
+.focus-ring[aria-current='page'] .type-caption,
+a.focus-ring:active .type-caption {
+  color: var(--color-foreground);
+}
+
 /* Keyboard focus is owned here. Composed fields ring their frame; other
    controls ring only the element receiving focus. Filled actions use their
    high-contrast label ink and an inset outline so clipping cannot hide it. */
