@@ -2,25 +2,26 @@ import { cva } from 'class-variance-authority';
 
 /** Shared controls use action roles and explicit hairline boundaries. */
 export const buttonVariants = cva(
-  'focus-ring type-control inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] no-underline transition-[transform,background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
+  'focus-ring type-control inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] no-underline transition-[transform,background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle aria-disabled:pointer-events-none aria-disabled:bg-disabled aria-disabled:text-muted aria-disabled:border-border-subtle aria-pressed:bg-selected aria-pressed:text-foreground aria-pressed:not-disabled:hover:bg-selected data-[state=open]:bg-selected data-[state=open]:text-foreground data-[state=open]:not-disabled:hover:bg-selected',
   {
     variants: {
       variant: {
         primary:
-          'bg-accent text-accent-fg border border-transparent hover:bg-accent-hover active:bg-accent-active',
+          'bg-accent text-accent-fg border border-transparent not-disabled:hover:bg-accent-hover active:bg-accent-active',
         accent:
-          'bg-accent-soft text-accent-text border border-accent-border hover:bg-accent hover:text-accent-fg active:bg-accent-hover',
+          'bg-accent-soft text-accent-text border border-accent-border not-disabled:hover:bg-accent not-disabled:hover:text-accent-fg active:bg-accent-hover',
         secondary:
-          'bg-input text-foreground border border-border hover:bg-background-alt hover:border-border-strong active:bg-well',
+          'bg-input text-foreground border border-border not-disabled:hover:bg-hover not-disabled:hover:border-border-strong active:bg-active',
         tonal:
-          'bg-accent-subtle text-accent-text border border-border hover:bg-accent-border active:bg-accent-border',
-        neutral: 'bg-background-alt text-foreground shadow-none hover:bg-well active:bg-active',
+          'bg-accent-subtle text-accent-text border border-border not-disabled:hover:bg-accent-border active:bg-accent-border',
+        neutral:
+          'bg-background-alt text-foreground shadow-none not-disabled:hover:bg-hover active:bg-active',
         ghost:
-          'bg-transparent text-secondary shadow-none hover:bg-background-alt hover:text-foreground active:bg-well',
+          'bg-transparent text-secondary shadow-none not-disabled:hover:bg-hover not-disabled:hover:text-foreground active:bg-active',
         destructive:
-          'bg-danger-solid text-danger-fg shadow-none hover:bg-danger-solid-hover active:bg-danger-solid-hover',
+          'bg-danger-solid text-danger-fg shadow-none not-disabled:hover:bg-danger-solid-hover active:bg-danger-solid-hover',
         destructiveGhost:
-          'bg-transparent text-danger-text shadow-none hover:bg-danger-bg active:bg-danger-bg',
+          'bg-transparent text-danger-text shadow-none not-disabled:hover:bg-danger-bg active:bg-danger-bg',
       },
       size: {
         sm: 'h-[var(--control-height-sm)] px-3',

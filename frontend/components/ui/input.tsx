@@ -4,10 +4,10 @@ import { cn } from '@/lib/utils';
 
 /** Fields share a hairline boundary and the central keyboard outline. */
 export const inputClasses =
-  'focus-input h-[var(--control-height-md)] w-full rounded-[var(--radius-control)] border border-border bg-input px-3 text-field text-foreground leading-[calc(var(--control-height-md)_-_2px)] transition-[border-color,background-color] placeholder:text-muted hover:border-border-strong aria-invalid:border-danger disabled:cursor-not-allowed disabled:opacity-50';
+  'focus-input h-[var(--control-height-md)] w-full rounded-[var(--radius-control)] border border-border bg-input px-3 text-field text-foreground leading-[calc(var(--control-height-md)_-_2px)] transition-[border-color,background-color] placeholder:text-muted enabled:hover:border-border-strong aria-invalid:border-danger disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle';
 
 /** Preserve the composer emphasis through a stronger boundary. */
-const raisedClasses = 'border border-border-strong hover:border-border-strong';
+const raisedClasses = 'border border-border-strong enabled:hover:border-border-strong';
 
 /**
  * The roomier field used on the standalone auth and onboarding screens, where a
@@ -66,11 +66,11 @@ export function Input({
   return (
     <div
       className={cn(
-        'focus-frame bg-input has-[[aria-invalid=true]]:border-danger flex h-[var(--control-height-md)] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 border border-border transition-[border-color,background-color] hover:border-border-strong',
+        'focus-frame bg-input has-[[aria-invalid=true]]:border-danger flex h-[var(--control-height-md)] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 border border-border transition-[border-color,background-color] has-[:enabled]:hover:border-border-strong',
         size === 'lg' && 'h-[var(--control-height-lg)] px-3',
         size === 'compact' && 'h-[var(--control-height-sm)]',
         raised && raisedClasses,
-        props.disabled && 'cursor-not-allowed opacity-50',
+        props.disabled && 'cursor-not-allowed bg-disabled text-muted border-border-subtle',
         endContentFlush && 'pe-1',
         containerClassName,
       )}
@@ -81,7 +81,7 @@ export function Input({
       <input
         ref={ref}
         className={cn(
-          'placeholder:text-muted min-w-0 flex-1 self-stretch bg-transparent text-field text-foreground disabled:cursor-not-allowed',
+          'placeholder:text-muted min-w-0 flex-1 self-stretch bg-transparent text-field text-foreground disabled:cursor-not-allowed disabled:text-muted',
           // Match the frame's control height so selections fill the pill.
           adornedLineHeights[size],
           className,

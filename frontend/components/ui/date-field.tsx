@@ -57,8 +57,8 @@ export function DateField({
         // Invalid fields retain their semantic boundary on hover.
         isInvalid
           ? 'border border-danger hover:border-danger'
-          : 'border border-border hover:border-border-strong',
-        disabled && 'cursor-not-allowed opacity-50',
+          : 'border border-border has-[:enabled]:hover:border-border-strong',
+        disabled && 'cursor-not-allowed bg-disabled border-border-subtle',
         className,
       )}
     >
@@ -73,7 +73,7 @@ export function DateField({
         disabled={disabled}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="text-foreground placeholder:text-muted text-field min-w-0 flex-1 bg-transparent tabular-nums"
+        className="text-foreground disabled:text-muted placeholder:text-muted text-field min-w-0 flex-1 bg-transparent tabular-nums"
       />
       <DropdownPrimitive.Root open={open} onOpenChange={setOpen}>
         <DropdownPrimitive.Trigger asChild>
@@ -81,7 +81,7 @@ export function DateField({
             type="button"
             aria-label={`${ariaLabel}: open calendar`}
             disabled={disabled}
-            className="text-muted hover:text-foreground inline-flex size-[var(--control-height-sm)] shrink-0 items-center justify-center rounded-[var(--radius-control)]"
+            className="text-muted enabled:hover:text-foreground enabled:hover:bg-hover enabled:active:bg-active data-[state=open]:bg-selected inline-flex size-[var(--control-height-sm)] shrink-0 items-center justify-center rounded-[var(--radius-control)]"
           >
             <CalendarDays className="size-4" aria-hidden />
           </Pressable>

@@ -214,6 +214,14 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
   await expect(field).toBeVisible();
   for (const theme of ['light', 'dark']) {
     if (theme === 'dark') await page.getByRole('button', { name: /Switch to dark theme/ }).click();
+    await field.evaluate((node) => {
+      node.removeAttribute('aria-invalid');
+      node.blur();
+    });
+    const ordinaryEdge = await field.evaluate(async (node) => {
+      await Promise.all(node.getAnimations().map((animation) => animation.finished));
+      return getComputedStyle(node).borderColor;
+    });
     // Isolate the primitive's rendering contract from form validation policy.
     await field.evaluate((node) => {
       node.setAttribute('aria-invalid', 'true');
@@ -223,6 +231,7 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
       await Promise.all(node.getAnimations().map((animation) => animation.finished));
       return getComputedStyle(node).borderColor;
     });
+    expect(edge).not.toBe(ordinaryEdge);
     expect(await field.evaluate((node) => getComputedStyle(node).borderStyle)).not.toBe('none');
     await field.focus();
     const focused = await field.evaluate(async (node) => {

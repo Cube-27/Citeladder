@@ -913,7 +913,8 @@ body {
   outline-offset: -2px;
 }
 
-.focus-frame :focus-visible {
+.focus-frame :focus-visible,
+.focus-frame :is(.focus-ring, .focus-input):focus-visible {
   outline: none;
 }
 
@@ -936,6 +937,7 @@ body {
 }
 
 @media (forced-colors: active) {
+  .focus-ring:is([data-button-variant='primary'], [data-button-variant='destructive']):focus-visible,
   :focus-visible,
   .focus-ring:focus-visible,
   .focus-input:focus-visible,
