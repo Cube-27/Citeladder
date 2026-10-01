@@ -36,8 +36,12 @@ export function motionRoleViolations(source, label, ownsProductUi) {
 
 /** Feature recipes cannot suppress or replace the shared keyboard outline. */
 export function focusRoleViolations(source, label, ownsProductUi) {
-  if (!ownsProductUi || label === TOKEN_CSS) return [];
+  if (label === TOKEN_CSS) return [];
   const text = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  if (/var\(--(?:color-focus(?:-ring)?|focus-ring)\)/.test(text)) {
+    return [`${label}: retired focus/glow tokens must migrate to the shared outline`];
+  }
+  if (!ownsProductUi) return [];
   if (
     /\b(?:focus(?:-visible)?:)?outline-(?:none|\d|\[)|\bfocus(?:-visible)?:ring-/.test(text) ||
     (label.endsWith('.css') &&

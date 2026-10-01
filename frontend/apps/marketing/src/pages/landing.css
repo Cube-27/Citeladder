@@ -27,11 +27,6 @@
 :where(.cl-landing) a {
   text-decoration: none;
 }
-.cl-landing :is(a, button, summary):focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 0;
-  box-shadow: var(--focus-ring);
-}
 .cl-wrap {
   /* Same measure as the shared public Container, nav and footer. */
   width: 100%;

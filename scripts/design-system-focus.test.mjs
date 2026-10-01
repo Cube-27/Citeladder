@@ -30,3 +30,15 @@ test('focus policy rejects local outlines and ring overrides while admitting the
     [],
   );
 });
+
+test('retired common focus tokens are rejected on separately owned public surfaces', () => {
+  const label = 'apps/marketing/src/pages/example.css';
+  assert.equal(
+    focusRoleViolations('.action { outline-color: var(--color-focus); }', label, false).length,
+    1,
+  );
+  assert.deepEqual(
+    focusRoleViolations('.action { color: var(--color-accent); }', label, false),
+    [],
+  );
+});
