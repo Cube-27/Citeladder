@@ -11,6 +11,7 @@ import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/res
 import { categoryByName, newProduct, addMembership } from '../src/commerce/catalog-store.ts';
 import { prepareShelfExecution } from '../src/commerce/shelf.ts';
 import { finalizeCommerceShelf, shelfMetrics } from '../src/commerce/shelf-metrics.ts';
+import { auditProjections } from '../src/audits/projections.ts';
 import {
   observedPrice,
   prepareRecommendations,
@@ -145,7 +146,7 @@ describe('frozen Commerce shelf projections', () => {
       runtime,
     );
     const queue = new AuditQueue(db, 120),
-      [claim] = await queue.claim('shelf-worker');
+      [claim] = await queue.claim('shelf-worker', 1, { workspaceId: t.workspaceId, auditId });
     const running = await queue.markRunning(claim!, 'shelf-worker');
     const task = running!.task;
     tasks.push(task.id);
@@ -277,5 +278,39 @@ describe('frozen Commerce shelf projections', () => {
     expect(new Set(snapshots[0]!.source_observation_ids as string[])).toEqual(
       new Set(observations.map((row) => row.id)),
     );
+    // Recreate the older writer boundary: the answer committed without shelf derivation.
+    await db.deleteFrom('commerce_shelf_snapshots').where('audit_id', '=', auditId).execute();
+    await db
+      .deleteFrom('commerce_observation_citations')
+      .where(
+        'observation_id',
+        'in',
+        observations.map((row) => row.id),
+      )
+      .execute();
+    await db
+      .deleteFrom('commerce_recommendation_observations')
+      .where('audit_id', '=', auditId)
+      .execute();
+    const projections = auditProjections(db, null, {});
+    await projections.finalize(t.workspaceId, auditId);
+    const recovered = await db
+      .selectFrom('commerce_shelf_snapshots')
+      .selectAll()
+      .where('workspace_id', '=', t.workspaceId)
+      .where('audit_id', '=', auditId)
+      .execute();
+    expect(recovered).toHaveLength(1);
+    expect(recovered[0]).toMatchObject({ product_visibility: 1, successful_execution_count: 1 });
+    const recoveredObservations = await db
+      .selectFrom('commerce_recommendation_observations')
+      .select('artifact_id')
+      .where('audit_id', '=', auditId)
+      .execute();
+    expect(recoveredObservations.length).toBeGreaterThan(0);
+    expect(new Set(recoveredObservations.map((row) => row.artifact_id))).toEqual(
+      new Set([artifactId]),
+    );
+    await projections.finalize(t.workspaceId, auditId);
   });
 });

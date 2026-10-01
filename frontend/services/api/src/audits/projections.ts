@@ -9,6 +9,7 @@ import type { ExecutionResult } from './result-persistence.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
+import { prepareSavedShelf } from '../commerce/shelf-recovery.ts';
 
 /** Compose existing deterministic analysis, bounded shelf preparation and persisted downstream work. */
 export function auditProjections(
@@ -21,7 +22,16 @@ export function auditProjections(
     prepare: (context: ExecutionContext, result: ExecutionResult) =>
       prepareShelfExecution(db, context.task, result, resolver),
     finalize: async (workspaceId: string, auditId: string) => {
-      const result = await finalizeAudit(db, workspaceId, auditId, finalizeCommerceShelf);
+      const prepared = await prepareSavedShelf(db, workspaceId, auditId, resolver);
+      const result = await finalizeAudit(
+        db,
+        workspaceId,
+        auditId,
+        finalizeCommerceShelf,
+        new Date(),
+        (trx, task, audit, artifactId) =>
+          (prepared.get(task.id) ?? analyzeExecution)(trx, task, audit, artifactId),
+      );
       const audit = await db
         .selectFrom('audits')
         .select(['project_id', 'status'])

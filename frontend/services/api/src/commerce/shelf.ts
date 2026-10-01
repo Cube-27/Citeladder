@@ -46,7 +46,7 @@ function configuredResolver(): ShelfResolver | undefined {
 export async function prepareShelfExecution(
   db: Database,
   task: AuditTask,
-  result: ExecutionResult,
+  result: Pick<ExecutionResult, 'answer_text'>,
   resolver: ShelfResolver | null | undefined = undefined,
 ): Promise<DeriveExecution> {
   const audit = await db

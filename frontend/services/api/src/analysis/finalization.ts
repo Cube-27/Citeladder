@@ -69,6 +69,7 @@ export async function finalizeAudit(
   auditId: string,
   commerce: (db: Database, audit: Selectable<Audits>) => Promise<void>,
   at = new Date(),
+  derive: typeof analyzeExecution = analyzeExecution,
 ) {
   return db.transaction().execute(async (trx) => {
     const audit = await trx
@@ -133,7 +134,7 @@ export async function finalizeAudit(
     else if (audit.status !== 'analyzing') return null;
     for (const task of tasks.filter((t) => t.status === 'succeeded')) {
       if (!task.result_artifact_id) throw new Error('Successful task has no immutable artifact');
-      await analyzeExecution(trx, task, audit, task.result_artifact_id);
+      await derive(trx, task, audit, task.result_artifact_id);
     }
     const analyses = await trx
       .selectFrom('response_analyses')
