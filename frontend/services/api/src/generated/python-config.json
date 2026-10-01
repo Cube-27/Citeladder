@@ -2206,6 +2206,14 @@
         ],
         "type": "int",
         "default": 7
+      },
+      "max_response_bytes": {
+        "env": [
+          "PROVIDER_MAX_RESPONSE_BYTES"
+        ],
+        "type": "int",
+        "default": 8388608,
+        "exclusive_minimum": 0
       }
     },
     "probe_prompt": "Reply with the single word: ok.",
@@ -2584,6 +2592,14 @@
         ],
         "type": "float",
         "default": 72.0,
+        "exclusive_minimum": 0
+      },
+      "max_response_bytes": {
+        "env": [
+          "DATAFORSEO_MAX_RESPONSE_BYTES"
+        ],
+        "type": "int",
+        "default": 8388608,
         "exclusive_minimum": 0
       }
     },

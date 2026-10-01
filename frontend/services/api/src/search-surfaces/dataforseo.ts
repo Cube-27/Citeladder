@@ -5,6 +5,7 @@ import { approvedEndpoint } from '../providers/connections.ts';
 import { type ProviderSettings } from '../providers/config.ts';
 import { ProviderError } from '../answer-engines/contracts.ts';
 import { round } from '../analysis/round.ts';
+import { boundedJson } from '../providers/response.ts';
 
 export const searchPolicy = policy.dataforseo;
 export type SearchEngine = 'google_ai_overview' | 'chatgpt_search' | 'gemini_consumer';
@@ -132,6 +133,9 @@ export function createDataforseoClient(
     throw new ProviderError('auth_failure');
   }
   const base = approvedEndpoint('dataforseo', credential.base_url, providerSettings);
+  const maxBytes = Number(
+    resolveSettingSpec(searchPolicy.settings.max_response_bytes, process.env),
+  );
   const authorization = `Basic ${Buffer.from(`${pair.login}:${pair.password}`).toString('base64')}`;
   async function call(
     path: string,
@@ -161,9 +165,15 @@ export function createDataforseoClient(
         response.status === 429 || response.status >= 500,
       );
     }
+    let responsePayload: unknown;
     try {
-      return envelopeSchema.parse(await response.json());
-    } catch {
+      responsePayload = await boundedJson(response, maxBytes, signal);
+      const status = z.object({ status_code: z.number().int() }).parse(responsePayload).status_code;
+      if (!searchPolicy.constants.accepted_submission_status_codes.includes(status))
+        throw rejectStatus(status);
+      return envelopeSchema.parse(responsePayload);
+    } catch (error) {
+      if (error instanceof ProviderError) throw error;
       throw new ProviderError(signal.aborted ? 'timeout' : 'parse_error', signal.aborted);
     }
   }

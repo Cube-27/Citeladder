@@ -62,6 +62,7 @@ def provider_policy(setting):
                 "test_max_output_tokens",
                 "anthropic_max_uses",
                 "byok_key_grace_days",
+                "max_response_bytes",
             )
         },
         "probe_prompt": provider_catalog.PROBE_PROMPT,

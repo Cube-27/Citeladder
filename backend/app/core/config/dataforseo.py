@@ -287,6 +287,7 @@ class DataForSeoSettings(BaseSettings):
     api_password: SecretStr = SecretStr("")
     # HTTP timeout for one submission or one poll.
     request_timeout_seconds: float = 60.0
+    max_response_bytes: int = Field(default=8_388_608, gt=0)
     # Shorter timeout for the non-billable connectivity probe.
     test_timeout_seconds: float = 20.0
     recovery_deadline_hours: float = Field(default=72.0, gt=0, lt=24 * 28)

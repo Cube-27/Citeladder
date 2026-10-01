@@ -4,6 +4,7 @@ import { approvedEndpoint } from '../providers/connections.ts';
 import { providerPolicy, type ProviderSettings } from '../providers/config.ts';
 import { answerRequestSchema, ProviderError, type AnswerRequest } from './contracts.ts';
 import { parseAnswer } from './parse.ts';
+import { boundedJson } from '../providers/response.ts';
 
 export function answerPayload(request: AnswerRequest): Record<string, unknown> {
   answerRequestSchema.parse(request);
@@ -114,7 +115,7 @@ export async function executeAnswer(
   }
   let payload: unknown;
   try {
-    payload = await response.json();
+    payload = await boundedJson(response, settings.maxResponseBytes, signal);
   } catch {
     throw new ProviderError(signal.aborted ? 'timeout' : 'parse_error', signal.aborted);
   }

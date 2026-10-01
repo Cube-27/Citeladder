@@ -74,7 +74,7 @@ describe('DataForSEO paid submission boundary', () => {
         Response.json({
           status_code: 40100,
           status_message: 'must-not-echo',
-          tasks: [{ status_code: 20100, id: 'not-accepted' }],
+          tasks: 'malformed-task-stub',
         }),
       ).submit('google_ai_overview', request),
     ).rejects.toMatchObject({

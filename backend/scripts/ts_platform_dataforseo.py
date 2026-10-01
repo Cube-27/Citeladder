@@ -23,7 +23,11 @@ def dataforseo_policy(setting):
         },
         "settings": {
             name: setting(name, dataforseo.DataForSeoSettings)
-            for name in ("request_timeout_seconds", "recovery_deadline_hours")
+            for name in (
+                "request_timeout_seconds",
+                "recovery_deadline_hours",
+                "max_response_bytes",
+            )
         },
         "constants": {
             name.lower(): sorted(value) if isinstance(value, frozenset) else value

@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.dataforseo import (
@@ -692,6 +692,7 @@ class ProviderCatalogSettings(BaseSettings):
     max_output_tokens: int = 800
     # HTTP client timeout for a single provider call.
     request_timeout_seconds: float = 60.0
+    max_response_bytes: int = Field(default=8_388_608, gt=0)
     # Shorter timeout for the lightweight connectivity probe.
     test_timeout_seconds: float = 20.0
     # --- Connectivity-probe request policy (invariant 1) -----------------

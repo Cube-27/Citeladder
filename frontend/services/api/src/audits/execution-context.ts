@@ -191,7 +191,7 @@ export function directRequest(context: ExecutionContext) {
     country_code: config.country_code ?? '',
     anthropic_max_uses: config.anthropic_max_uses ?? 0,
   });
-  if (!parsed.success) throw new ProviderError('parse');
+  if (!parsed.success) throw new ProviderError('parse_error');
   return parsed.data;
 }
 export function frozenSurfaceRequest(

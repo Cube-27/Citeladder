@@ -18,6 +18,7 @@ export function providerSettings(env: Record<string, string | undefined> = proce
     anthropicVersion: String(resolveSettingSpec(spec.anthropic_version, env)),
     anthropicMaxUses: Number(resolveSettingSpec(spec.anthropic_max_uses, env)),
     keyGraceDays: Number(resolveSettingSpec(spec.byok_key_grace_days, env)),
+    maxResponseBytes: Number(resolveSettingSpec(spec.max_response_bytes, env)),
     dataforseoTimeout: Number(
       resolveSettingSpec(providerPolicy.dataforseo.test_timeout_seconds, env),
     ),

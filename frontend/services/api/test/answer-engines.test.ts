@@ -268,6 +268,29 @@ describe('frozen answer-engine execution', () => {
     ).rejects.toMatchObject({ code: 'server_error', retryable: true });
   });
 
+  it('cancels an oversized successful response and reports only the safe parser error', async () => {
+    let cancelled = false;
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"private":"secret"}'));
+        },
+        cancel() {
+          cancelled = true;
+        },
+      }),
+    );
+    await expect(
+      executeAnswer(
+        request('claude'),
+        { secret: 'test-secret', base_url: '' },
+        { ...providerSettings({}), maxResponseBytes: 4 },
+        async () => response,
+      ),
+    ).rejects.toMatchObject({ code: 'parse_error', retryable: false });
+    expect(cancelled).toBe(true);
+  });
+
   it.each([true, -1, 1.5, '', '1.5', 'NaN', {}, null])(
     'keeps malformed usage %j unknown',
     (value) => {
