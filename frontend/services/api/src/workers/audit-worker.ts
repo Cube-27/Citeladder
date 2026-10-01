@@ -63,6 +63,8 @@ export class AuditWorker {
   readonly #key: string;
   readonly #projections: ProjectionOwners;
   readonly #send: typeof fetch;
+  readonly #executeAnswer: typeof executeAnswer;
+  readonly #taskScope: { workspaceId: string; auditId: string } | undefined;
   readonly #now: () => Date;
   readonly #env: Record<string, string | undefined>;
   readonly #maintenance: AuditMaintenance;
@@ -75,6 +77,8 @@ export class AuditWorker {
     options: {
       owner?: string;
       send?: typeof fetch;
+      execute?: typeof executeAnswer;
+      taskScope?: { workspaceId: string; auditId: string };
       now?: () => Date;
       env?: Record<string, string | undefined>;
     } = {},
@@ -84,6 +88,8 @@ export class AuditWorker {
     this.#key = encryptionKey;
     this.#projections = projections;
     this.#send = options.send ?? globalThis.fetch;
+    this.#executeAnswer = options.execute ?? executeAnswer;
+    this.#taskScope = options.taskScope;
     this.#now = options.now ?? (() => new Date());
     this.#env = options.env ?? process.env;
     this.owner = options.owner ?? `audit-worker-ts-${randomBytes(6).toString('hex')}`;
@@ -96,7 +102,11 @@ export class AuditWorker {
       this.#lastSweep = at.getTime();
       await this.#maintenance.runOnce(at);
     }
-    const tasks = await this.#queue.claim(this.owner, this.#runtime.audits.worker_concurrency);
+    const tasks = await this.#queue.claim(
+      this.owner,
+      this.#runtime.audits.worker_concurrency,
+      this.#taskScope,
+    );
     await Promise.all(tasks.map((task) => this.#execute(task, signal)));
     return tasks.length;
   }
@@ -242,7 +252,7 @@ export class AuditWorker {
           dispatchStarted = true;
           let answer;
           try {
-            answer = await executeAnswer(
+            answer = await this.#executeAnswer(
               request,
               { secret: context.secret, base_url: context.endpoint },
               this.#runtime.providers,

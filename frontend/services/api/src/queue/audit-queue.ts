@@ -11,7 +11,13 @@ export type AuditTask = Selectable<AuditTasks>;
 const table = 'audit_tasks';
 const { claimable, statuses, terminal } = policy.task_queue;
 
-export function auditClaimStatement(db: Database, at: Date, limit: number) {
+export type AuditClaimScope = { workspaceId: string; auditId: string };
+export function auditClaimStatement(
+  db: Database,
+  at: Date,
+  limit: number,
+  scope?: AuditClaimScope,
+) {
   const candidates = db
     .selectFrom(table)
     .select([
@@ -22,6 +28,9 @@ export function auditClaimStatement(db: Database, at: Date, limit: number) {
     ])
     .where('status', 'in', claimable)
     .where('available_at', '<=', at)
+    .$if(Boolean(scope), (query) =>
+      query.where('workspace_id', '=', scope!.workspaceId).where('audit_id', '=', scope!.auditId),
+    )
     .as('candidates');
   return (
     db
@@ -36,6 +45,11 @@ export function auditClaimStatement(db: Database, at: Date, limit: number) {
       // READ COMMITTED rechecks these predicates on the locked relation after a concurrent update.
       .where('audit_tasks.status', 'in', claimable)
       .where('audit_tasks.available_at', '<=', at)
+      .$if(Boolean(scope), (query) =>
+        query
+          .where('audit_tasks.workspace_id', '=', scope!.workspaceId)
+          .where('audit_tasks.audit_id', '=', scope!.auditId),
+      )
       .orderBy('candidates.workspace_position')
       .orderBy(sql`turns.last_claimed_at asc nulls first`)
       .orderBy('audit_tasks.priority', 'desc')
@@ -107,11 +121,11 @@ export class AuditQueue {
     this.now = now;
   }
   /** The claim and fairness cursor commit before any provider dispatch. */
-  claim(owner: string, limit = 1): Promise<AuditTask[]> {
+  claim(owner: string, limit = 1, scope?: AuditClaimScope): Promise<AuditTask[]> {
     if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('Invalid audit claim limit');
     const at = this.now();
     return this.db.transaction().execute(async (trx) => {
-      const locked = await auditClaimStatement(trx, at, limit).execute();
+      const locked = await auditClaimStatement(trx, at, limit, scope).execute();
       if (!locked.length) return [];
       const rows = await trx
         .updateTable(table)

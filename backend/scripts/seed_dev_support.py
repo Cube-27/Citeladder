@@ -7,17 +7,10 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date
+from typing import Any
 
 import httpx
 
-from app.connectors.answer_engines.contracts import (
-    AnswerEngineRequest,
-    AnswerEngineResponse,
-    CitationResult,
-    FinishReason,
-    NormalizedUsage,
-    SearchEventResult,
-)
 from app.connectors.web_evidence.contracts import (
     AcquisitionTransport,
     FetchRequest,
@@ -188,150 +181,120 @@ def _prompt_bucket(prompt: str) -> int:
     return int(digest.hexdigest(), 16) % 3
 
 
-_seed_audit_generation = 0
-
-
-def set_seed_audit_generation(value: int) -> None:
-    global _seed_audit_generation
-    _seed_audit_generation = value
-
-
 def _citation_span(answer: str, cited_text: str) -> tuple[int, int]:
     start = answer.index(cited_text)
     return start, start + len(cited_text)
 
 
-class _SeedStubAdapter:
-    def __init__(
-        self, *, logical_engine: str, transport_provider: str, **_: object
-    ) -> None:
-        self.logical_engine = logical_engine
-        self.transport_provider = transport_provider
-        self.generation = _seed_audit_generation
-
-    async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
-        prompt = request.prompt
-        summit, voyager = DEMO_PRODUCT_SPECS
-        alpine = DEMO_COMPETITOR_PRODUCT_SPEC
-        # Deterministic variety: bucket 0 is a real "lost" query (no brand
-        # mention, competitor product only), bucket 1 mentions the brand and
-        # ranks both own products above the competitor product, bucket 2
-        # mentions the brand and its own products only. Every product pick
-        # keeps its price + buyer-destination URL on the mention's own line
-        # and close behind it: the analyzer's price/destination extraction
-        # scans a line-clipped window centered on the mention
-        # (PRODUCT_PRICE_WINDOW_CHARS=160, PRODUCT_ATTRIBUTE_WINDOW_CHARS=200).
-        bucket = min(2, _prompt_bucket(prompt) + self.generation)
-        if bucket == 0:
-            answer = (
-                f"For '{prompt}', popular options include TrailBlaze Packs and "
-                "Summit Gear. Both offer solid warranties. Two packs come up "
-                "most often:\n"
-                f"1. {alpine.name} - ${alpine.price:.2f} ({alpine.url}) - "
-                "two-year warranty, a 45-liter alpine pack.\n"
-                "2. Summit Gear Ridgeline 50 - $159.99, a lightweight 50-liter "
-                "pack for weekend trips."
-            )
-            start, end = _citation_span(answer, "TrailBlaze Packs")
-            citations: tuple[CitationResult, ...] = (
-                CitationResult(
-                    ordinal=0,
-                    url="https://trailblazepacks.com/",
-                    title="TrailBlaze Packs",
-                    domain="trailblazepacks.com",
-                    start_index=start,
-                    end_index=end,
-                    cited_text="TrailBlaze Packs",
-                ),
-            )
-        elif bucket == 1:
-            answer = (
-                f"When it comes to '{prompt}', Wanderlust Gear Co. is a strong "
-                "choice thanks to its lifetime warranty, and TrailBlaze Packs is "
-                "a solid alternative for budget shoppers. The top picks:\n"
-                f"1. {summit.name} - ${summit.price:.2f} ({summit.url}) - "
-                "lifetime warranty, a 40-liter trail pack.\n"
-                f"2. {voyager.name} - ${voyager.price:.2f} ({voyager.url}) - "
-                "lower price, a carry-on sized 25-liter pack.\n"
-                f"3. {alpine.name} - ${alpine.price:.2f} ({alpine.url}) - "
-                "two-year warranty, a 45-liter alpine alternative."
-            )
-            wanderlust_start, wanderlust_end = _citation_span(
-                answer, _WANDERLUST_CITATION_LABEL
-            )
-            trailblaze_start, trailblaze_end = _citation_span(
-                answer, "TrailBlaze Packs"
-            )
-            citations = (
-                CitationResult(
-                    ordinal=0,
-                    url="https://wanderlustgear.com/backpacks",
-                    title="Wanderlust Gear - Backpacks",
-                    domain="wanderlustgear.com",
-                    start_index=wanderlust_start,
-                    end_index=wanderlust_end,
-                    cited_text=_WANDERLUST_CITATION_LABEL,
-                ),
-                CitationResult(
-                    ordinal=1,
-                    url="https://trailblazepacks.com/",
-                    title="TrailBlaze Packs",
-                    domain="trailblazepacks.com",
-                    start_index=trailblaze_start,
-                    end_index=trailblaze_end,
-                    cited_text="TrailBlaze Packs",
-                ),
-            )
-        else:
-            answer = (
-                f"'{prompt}' - Wanderlust Gear Co. consistently ranks well in "
-                "outdoor gear roundups for durability and customer service. Two "
-                "packs stand out:\n"
-                f"1. {summit.name} - ${summit.price:.2f} ({summit.url}) - "
-                "lifetime warranty, the brand's 40-liter trail pack.\n"
-                f"2. {voyager.name} - ${voyager.price:.2f} ({voyager.url}) - "
-                "lower price, a compact 25-liter carry-on for weekend travel."
-            )
-            start, end = _citation_span(answer, _WANDERLUST_CITATION_LABEL)
-            citations = (
-                CitationResult(
-                    ordinal=0,
-                    url="https://wanderlustgear.com/reviews",
-                    title="Wanderlust Gear Reviews",
-                    domain="wanderlustgear.com",
-                    start_index=start,
-                    end_index=end,
-                    cited_text=_WANDERLUST_CITATION_LABEL,
-                ),
-            )
-        return AnswerEngineResponse(
-            logical_engine=self.logical_engine,
-            transport_provider=self.transport_provider,
-            transport_model=request.model,
-            answer_text=answer,
-            search_used=True,
-            search_events=(SearchEventResult(sequence=0, query=prompt),),
-            citations=citations,
-            provider_metadata={"query_text_available": True},
-            # The typed usage contract (what the live parsers emit); the
-            # cache/reasoning splits and provider cost are unknown for a
-            # fixture, so they stay null rather than a fabricated zero.
-            normalized_usage=NormalizedUsage(
-                uncached_input_tokens=12,
-                output_tokens=48,
-                total_tokens=60,
-                web_search_requests=1,
-            ),
-            finish_reason=FinishReason.STOP,
-            latency_ms=850,
+def seed_answer(prompt: str, generation: int = 0) -> dict[str, Any]:
+    summit, voyager = DEMO_PRODUCT_SPECS
+    alpine = DEMO_COMPETITOR_PRODUCT_SPEC
+    # Deterministic variety: bucket 0 is a real "lost" query (no brand
+    # mention, competitor product only), bucket 1 mentions the brand and
+    # ranks both own products above the competitor product, bucket 2
+    # mentions the brand and its own products only. Every product pick
+    # keeps its price + buyer-destination URL on the mention's own line
+    # and close behind it: the analyzer's price/destination extraction
+    # scans a line-clipped window centered on the mention
+    # (PRODUCT_PRICE_WINDOW_CHARS=160, PRODUCT_ATTRIBUTE_WINDOW_CHARS=200).
+    bucket = min(2, _prompt_bucket(prompt) + generation)
+    if bucket == 0:
+        answer = (
+            f"For '{prompt}', popular options include TrailBlaze Packs and "
+            "Summit Gear. Both offer solid warranties. Two packs come up "
+            "most often:\n"
+            f"1. {alpine.name} - ${alpine.price:.2f} ({alpine.url}) - "
+            "two-year warranty, a 45-liter alpine pack.\n"
+            "2. Summit Gear Ridgeline 50 - $159.99, a lightweight 50-liter "
+            "pack for weekend trips."
         )
-
-
-def _build_seed_adapter(
-    *, logical_engine: str, transport_provider: str, **kwargs: object
-):
-    return _SeedStubAdapter(
-        logical_engine=logical_engine, transport_provider=transport_provider, **kwargs
+        start, end = _citation_span(answer, "TrailBlaze Packs")
+        citations: tuple[dict[str, Any], ...] = (
+            dict(
+                ordinal=0,
+                url="https://trailblazepacks.com/",
+                title="TrailBlaze Packs",
+                domain="trailblazepacks.com",
+                start_index=start,
+                end_index=end,
+                cited_text="TrailBlaze Packs",
+            ),
+        )
+    elif bucket == 1:
+        answer = (
+            f"When it comes to '{prompt}', Wanderlust Gear Co. is a strong "
+            "choice thanks to its lifetime warranty, and TrailBlaze Packs is "
+            "a solid alternative for budget shoppers. The top picks:\n"
+            f"1. {summit.name} - ${summit.price:.2f} ({summit.url}) - "
+            "lifetime warranty, a 40-liter trail pack.\n"
+            f"2. {voyager.name} - ${voyager.price:.2f} ({voyager.url}) - "
+            "lower price, a carry-on sized 25-liter pack.\n"
+            f"3. {alpine.name} - ${alpine.price:.2f} ({alpine.url}) - "
+            "two-year warranty, a 45-liter alpine alternative."
+        )
+        wanderlust_start, wanderlust_end = _citation_span(
+            answer, _WANDERLUST_CITATION_LABEL
+        )
+        trailblaze_start, trailblaze_end = _citation_span(answer, "TrailBlaze Packs")
+        citations = (
+            dict(
+                ordinal=0,
+                url="https://wanderlustgear.com/backpacks",
+                title="Wanderlust Gear - Backpacks",
+                domain="wanderlustgear.com",
+                start_index=wanderlust_start,
+                end_index=wanderlust_end,
+                cited_text=_WANDERLUST_CITATION_LABEL,
+            ),
+            dict(
+                ordinal=1,
+                url="https://trailblazepacks.com/",
+                title="TrailBlaze Packs",
+                domain="trailblazepacks.com",
+                start_index=trailblaze_start,
+                end_index=trailblaze_end,
+                cited_text="TrailBlaze Packs",
+            ),
+        )
+    else:
+        answer = (
+            f"'{prompt}' - Wanderlust Gear Co. consistently ranks well in "
+            "outdoor gear roundups for durability and customer service. Two "
+            "packs stand out:\n"
+            f"1. {summit.name} - ${summit.price:.2f} ({summit.url}) - "
+            "lifetime warranty, the brand's 40-liter trail pack.\n"
+            f"2. {voyager.name} - ${voyager.price:.2f} ({voyager.url}) - "
+            "lower price, a compact 25-liter carry-on for weekend travel."
+        )
+        start, end = _citation_span(answer, _WANDERLUST_CITATION_LABEL)
+        citations = (
+            dict(
+                ordinal=0,
+                url="https://wanderlustgear.com/reviews",
+                title="Wanderlust Gear Reviews",
+                domain="wanderlustgear.com",
+                start_index=start,
+                end_index=end,
+                cited_text=_WANDERLUST_CITATION_LABEL,
+            ),
+        )
+    return dict(
+        answer_text=answer,
+        search_used=True,
+        search_events=(dict(sequence=0, query=prompt),),
+        citations=citations,
+        provider_metadata={"query_text_available": True},
+        # The typed usage contract (what the live parsers emit); the
+        # cache/reasoning splits and provider cost are unknown for a
+        # fixture, so they stay null rather than a fabricated zero.
+        normalized_usage=dict(
+            uncached_input_tokens=12,
+            output_tokens=48,
+            total_tokens=60,
+            web_search_requests=1,
+        ),
+        finish_reason="stop",
+        latency_ms=850,
     )
 
 
