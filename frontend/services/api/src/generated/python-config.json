@@ -576,6 +576,15 @@
       "retry_wait",
       "submission_uncertain"
     ],
+    "active": [
+      "awaiting_provider_result",
+      "capacity_wait",
+      "leased",
+      "queued",
+      "retry_wait",
+      "running",
+      "submission_uncertain"
+    ],
     "terminal": [
       "cancelled",
       "failed",
@@ -13108,5 +13117,37 @@
       "duplicate_none": "none",
       "duplicate_none_description": "No listed prompt asks the same thing"
     }
+  },
+  "agent": {
+    "runtime_version": "agent-runtime-2",
+    "protocol_version": "agent-protocol-1",
+    "context_manifest_version": "agent-context-1",
+    "max_steps": 8,
+    "max_tool_calls": 6,
+    "max_protocol_errors": 2,
+    "run_max_attempts": 3,
+    "chat_turn_limit": 60,
+    "tool_result_max_chars": 12000,
+    "context_package_max_chars": 24000,
+    "transcript_max_chars": 90000,
+    "transcript_truncation_marker": "\n\n[earlier steps truncated]\n\n",
+    "context_truncation_marker": "\n\n[context and output truncated]\n\n",
+    "progress_version": "agent-progress-1",
+    "history_max_messages": 12,
+    "history_message_max_chars": 4000,
+    "message_max_chars": 8000,
+    "mentions_max": 5,
+    "instructions_max_chars": 4000,
+    "output_title_max_chars": 255,
+    "output_body_max_chars": 100000,
+    "reply_max_chars": 12000,
+    "chat_title_max_chars": 60,
+    "idempotency_key_max_chars": 128,
+    "list_default_limit": 30,
+    "list_max_limit": 100,
+    "revision_list_max": 100,
+    "differentiation_report_limit": 10,
+    "worker_poll_seconds": 1.0,
+    "heartbeat_seconds": 20.0
   }
 }

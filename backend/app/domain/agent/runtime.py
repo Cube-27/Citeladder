@@ -26,6 +26,7 @@ from app.connectors.agent.gateway import ModelGateway
 from app.connectors.app_model_config import AppModelRouteConfig
 from app.core.config.agent import (
     AGENT_HISTORY_MAX_MESSAGES,
+    AGENT_MAX_PROTOCOL_ERRORS,
     ERROR_ACCESS_REVOKED,
     ERROR_OUTPUT_CONFLICT,
     ERROR_PROTOCOL,
@@ -97,7 +98,7 @@ from app.models.agent import (
 )
 
 # A model that keeps breaking the protocol is stopped rather than paid for.
-_MAX_PROTOCOL_ERRORS = 2
+_MAX_PROTOCOL_ERRORS = AGENT_MAX_PROTOCOL_ERRORS
 
 GatewayFactory = Callable[[AppModelRouteConfig | None], ModelGateway]
 
