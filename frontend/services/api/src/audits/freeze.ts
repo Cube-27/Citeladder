@@ -6,6 +6,7 @@ import { providerPolicy, type Engine, type ProviderSettings } from '../providers
 import { approvedEndpoint } from '../providers/connections.ts';
 import { auditPolicy, auditSettings } from './config.ts';
 import type { AuditInput } from './inputs.ts';
+import { freezeCommerceContext } from '../commerce/audit-context.ts';
 import {
   searchPayload,
   searchPolicy,
@@ -263,6 +264,15 @@ export async function prepareAudit(
         { ...route, ...auditPolicy.route_policies[route.logical_engine] },
       ]),
     ),
+    ...(input.audit_scope === 'commerce'
+      ? {
+          commerce_measurement: await freezeCommerceContext(
+            db,
+            { workspaceId, projectId: project.id },
+            prompts.map((prompt) => prompt.id),
+          ),
+        }
+      : {}),
   };
   return {
     project,
