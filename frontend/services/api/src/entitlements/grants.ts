@@ -18,20 +18,20 @@ export async function lockAccount(db: Database, workspaceId: string, accountId: 
     .executeTakeFirstOrThrow();
 }
 
-/** Mutation-only projection, in the transaction that appends billing evidence. */
-export async function refreshRuntime(
-  db: Database,
-  workspaceId: string,
-  accountId: string,
-  at: Date,
+/**
+ * The Site Health runtime an account state resolves to. An unresolved or
+ * missing account gets the sample runtime: no monitored allowance, no count
+ * disclosure.
+ */
+export function runtimeProjection(
+  state: { error: string | null; values: ReadonlyMap<string, number> } | null,
 ) {
-  const state = await accountState(db, workspaceId, accountId, at);
-  const allowance = state.error ? 0 : (state.values.get('monitored_urls') ?? 0);
+  const allowance = !state || state.error ? 0 : (state.values.get('monitored_urls') ?? 0);
   const cfg = policy.site_health_runtime;
   const setting = (key: keyof typeof cfg.settings) =>
     resolveSettingSpec(cfg.settings[key]) as number;
   const full = allowance > 0;
-  const projection = {
+  return {
     discovery_mode: full ? cfg.full_mode : cfg.sample_mode,
     discovery_url_cap: full
       ? Math.min(
@@ -42,6 +42,19 @@ export async function refreshRuntime(
     sample_url_limit: full ? 0 : setting('sample_url_limit'),
     monitored_url_limit: allowance,
     count_disclosure: full,
+  };
+}
+
+/** Mutation-only projection, in the transaction that appends billing evidence. */
+export async function refreshRuntime(
+  db: Database,
+  workspaceId: string,
+  accountId: string,
+  at: Date,
+) {
+  const state = await accountState(db, workspaceId, accountId, at);
+  const projection = {
+    ...runtimeProjection(state),
     resolved_registry_revision: policy.entitlements.registry_revision,
     resolved_entitlement_lifecycle_version: state.account.entitlement_lifecycle_version,
     resolved_valid_until: state.error ? null : state.validUntil,

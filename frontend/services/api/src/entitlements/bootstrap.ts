@@ -1,9 +1,10 @@
 /** Public auth provisions only the configured free baseline. Billing owns other grants. */
 import { randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { Users } from '../generated/db-schema.ts';
+import { runtimeProjection } from './grants.ts';
 import { resolveAccountEntitlement } from './resolve.ts';
 
 async function projectRuntime(
@@ -14,23 +15,13 @@ async function projectRuntime(
   now: Date,
 ) {
   const resolved = await resolveAccountEntitlement(db, { workspaceId, accountId }, now);
-  const allowance =
-    resolved.status === 'resolved' ? (resolved.values.get('monitored_urls') ?? 0) : 0;
-  const cfg = policy.site_health_runtime;
-  const setting = (name: keyof typeof cfg.settings) =>
-    resolveSettingSpec(cfg.settings[name]) as number;
-  const full = allowance > 0;
+  const runtime = runtimeProjection(
+    resolved.status === 'resolved'
+      ? { error: null, values: resolved.values }
+      : { error: resolved.error, values: new Map() },
+  );
   const projection = {
-    discovery_mode: full ? cfg.full_mode : cfg.sample_mode,
-    discovery_url_cap: full
-      ? Math.min(
-          setting('automatic_page_limit'),
-          Math.max(cfg.full_minimum, allowance * cfg.full_headroom),
-        )
-      : setting('sample_discovery_url_cap'),
-    sample_url_limit: full ? 0 : setting('sample_url_limit'),
-    monitored_url_limit: allowance,
-    count_disclosure: full,
+    ...runtime,
     resolved_registry_revision: policy.entitlements.registry_revision,
     resolved_entitlement_lifecycle_version: version,
     resolved_valid_until: resolved.status === 'resolved' ? resolved.validUntil : null,
@@ -49,7 +40,7 @@ async function projectRuntime(
         .where(sql<boolean>`(workspace_site_health_runtime.discovery_mode, workspace_site_health_runtime.discovery_url_cap,
       workspace_site_health_runtime.sample_url_limit, workspace_site_health_runtime.monitored_url_limit,
       workspace_site_health_runtime.count_disclosure) IS DISTINCT FROM
-      (${projection.discovery_mode}, ${projection.discovery_url_cap}, ${projection.sample_url_limit}, ${allowance}, ${full})`),
+      (${runtime.discovery_mode}, ${runtime.discovery_url_cap}, ${runtime.sample_url_limit}, ${runtime.monitored_url_limit}, ${runtime.count_disclosure})`),
     )
     .execute();
 }

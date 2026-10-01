@@ -142,7 +142,7 @@ async def get_pages(
     fetch_size = _scan_window(limit, over_fetch=over_fetch)
 
     monitored_ids = await _monitored_site_url_ids(session, project_id=project_id)
-    # Same durable Starter inventory scope as get_inventory. Analysis, tasks,
+    # The durable Starter inventory scope. Analysis, tasks,
     # issues, and scores below remain current-crawl-only, so inherited rows
     # show as not selected rather than borrowing old evidence.
     stmt = _site_url_page_stmt(

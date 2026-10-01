@@ -288,6 +288,27 @@ RULE_OUTCOMES: Final[frozenset[str]] = frozenset(
     }
 )
 
+# Event payload keys that carry (or could reconstruct) a full-site
+# total/frontier/overflow signal. A crawl without count disclosure drops them
+# from every event, so the events stream cannot leak a hidden total.
+EVENT_COUNT_BEARING_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "total_url_count",
+        "total",
+        "frontier_size",
+        "frontier",
+        "overflow",
+        "overflow_count",
+        "discarded",
+        "discarded_count",
+        "has_more_site_urls",
+        "estimated_total",
+        "sitemap_url_count",
+        "discovered_url_count",
+        "discovered_total",
+    }
+)
+
 SEVERITY_CRITICAL: Final = "critical"
 
 SEVERITY_HIGH: Final = "high"
