@@ -14,7 +14,7 @@ export const ROUTE_OWNERSHIP = {
   agent: 'python',
   'ai-referrals': 'typescript',
   'audit-schedules': 'typescript',
-  audits: 'python',
+  audits: 'typescript',
   auth: 'typescript',
   billing: 'typescript',
   'billing-documents': 'typescript',
