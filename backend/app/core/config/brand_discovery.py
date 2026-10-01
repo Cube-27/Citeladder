@@ -128,11 +128,6 @@ COMMERCE_BUSINESS_MODELS: Final[frozenset[str]] = frozenset(
 )
 
 
-def sells_a_catalog(business_model: str) -> bool:
-    """Whether this business has products and shelves to project at all."""
-    return business_model in COMMERCE_BUSINESS_MODELS
-
-
 CAPTURE_METHOD_CRAWLER: Final = "secure_crawler"
 CAPTURE_METHOD_APPLICATION_MODEL: Final = "application_model"
 CAPTURE_METHOD_EXTERNAL_SEARCH: Final = "external_search"

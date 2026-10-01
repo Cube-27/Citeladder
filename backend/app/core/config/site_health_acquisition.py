@@ -149,6 +149,9 @@ ROBOTS_FETCH_STATUS_ACCESS_BLOCKED: Final = "access_blocked"
 
 ACQUISITION_TRANSPORT_CURL_CFFI: Final = "curl_cffi"
 
+# The TypeScript analyzer acquires pages with Node's pinned HTTP transport.
+ACQUISITION_TRANSPORT_NODE: Final = "node"
+
 ACQUISITION_TRIGGER_INITIAL: Final = "initial"
 
 BOT_BLOCK_BODY_MARKERS: Final[tuple[str, ...]] = (

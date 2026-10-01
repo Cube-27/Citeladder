@@ -13,7 +13,7 @@ from app.core.config.site_health_acquisition import (
 from app.models.site_health.acquisition import SiteFetchAttempt
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
-from app.workers.site_health.phases.contracts import AnalyzeOutcome, DiscoverOutcome
+from app.workers.site_health.phases.contracts import DiscoverOutcome
 
 
 def acquisition_values(
@@ -64,7 +64,7 @@ def diagnostic_attempt(
     *,
     crawl: SiteCrawl,
     task: SiteCrawlTask,
-    outcome: DiscoverOutcome | AnalyzeOutcome,
+    outcome: DiscoverOutcome,
     succeeded: bool,
     requested_url: str,
     artifact_id: uuid.UUID | None,
@@ -96,7 +96,7 @@ def traced_attempt(
     *,
     crawl: SiteCrawl,
     task: SiteCrawlTask,
-    outcome: DiscoverOutcome | AnalyzeOutcome,
+    outcome: DiscoverOutcome,
     entry: FetchCallTrace,
     succeeded: bool,
     is_final: bool,

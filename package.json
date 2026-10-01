@@ -10,7 +10,7 @@
   },
   "packageManager": "pnpm@12.4.2",
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "scripts": {
     "setup": "pnpm run setup:frontend && pnpm run setup:backend",

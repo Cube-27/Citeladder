@@ -11,11 +11,15 @@ from __future__ import annotations
 
 import gzip
 import uuid
+from datetime import UTC, datetime
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.analysis.site_health.parser import extract_page_facts
+from app.analysis.site_health.rules import RuleEvaluation, creates_issue
+from app.analysis.site_health.scoring import score_analysis
 from app.connectors.web_evidence.contracts import (
     AcquisitionTransport,
     FetchRequest,
@@ -25,11 +29,19 @@ from app.connectors.web_evidence.contracts import (
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY_REVISION,
 )
+from app.core.config.site_health_acquisition import (
+    FETCH_PURPOSE_ANALYZE,
+    FETCH_PURPOSE_DISCOVER,
+)
 from app.core.config.site_health_contracts import (
     ANALYZER_VERSION,
+    APPLICABILITY_CRAWL_FINALIZE,
     DISCOVERY_STATUS_COMPLETED,
     DISCOVERY_STATUS_RUNNING,
     EXTRACTOR_VERSION,
+    PAGE_ANALYSIS_STATUS_COMPLETED,
+    RULE_OUTCOME_NOT_APPLICABLE,
+    RULE_OUTCOME_SATISFIED,
     SCORING_VERSION,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
@@ -38,18 +50,33 @@ from app.core.config.site_health_contracts import (
 from app.core.config.site_health_crawl_policy import (
     SELECTION_SOURCE_USER,
 )
+from app.core.config.site_health_measurement import (
+    AEO_CHECK_PILLAR,
+    WEB_CHECK_IDS,
+    public_check_membership,
+)
+from app.core.config.site_health_rule_types import RULE_SCOPE_PAGE
+from app.core.config.site_health_rules import SITE_HEALTH_RULES_BY_ID
 from app.core.config.site_health_runtime import (
     runtime_policy_for_allowance,
 )
+from app.core.config.site_health_taxonomy import PAGE_KIND_OTHER
 from app.core.config.task_queue import (
+    TASK_STATUS_FAILED,
     TASK_STATUS_QUEUED,
+    TASK_STATUS_SUCCEEDED,
 )
 from app.domain.site_health.entitlements import (
     apply_runtime_policy,
     resolve_runtime,
 )
 from app.domain.site_health.normalization import canonical_identity
-from app.models.site_health.analysis import SitePageAnalysis
+from app.models.site_health.acquisition import SiteFetchArtifact
+from app.models.site_health.analysis import (
+    SiteIssue,
+    SitePageAnalysis,
+    SiteRuleEvaluation,
+)
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
@@ -433,6 +460,205 @@ async def _seed_analyze_ready(
             session, root=root, monitored_urls=monitored_urls, urls=(root,)
         )
         return seed, site_url_id, analyze_task_id
+
+
+_SCORED_PAGE_CHECK_IDS = tuple(sorted(WEB_CHECK_IDS | set(AEO_CHECK_PILLAR)))
+
+
+def _page_evaluation(rule_id: str, outcome: str) -> RuleEvaluation:
+    rule = SITE_HEALTH_RULES_BY_ID[rule_id]
+    score_roles, pillar = public_check_membership(rule_id, PAGE_KIND_OTHER)
+    applicable = outcome != RULE_OUTCOME_NOT_APPLICABLE
+    return RuleEvaluation(
+        rule_id=rule_id,
+        rule_version=rule.rule_version,
+        dimension=rule.dimension,
+        category=rule.category,
+        severity=rule.severity,
+        finding_class=rule.finding_class,
+        weight=float(rule.weight),
+        outcome=outcome,
+        description=rule.description,
+        remediation=rule.remediation,
+        display_applicability=applicable,
+        score_applicability=applicable and bool(score_roles),
+        score_roles=score_roles,
+        readiness_dimension=pillar,
+        scope=rule.scope,
+    )
+
+
+async def _settle_analysis_as_typescript(
+    session_factory: async_sessionmaker[AsyncSession],
+    task_id: uuid.UUID,
+    *,
+    body: bytes = b"",
+    page_kind: str = PAGE_KIND_OTHER,
+    page_kind_evidence: dict | None = None,
+    outcomes: dict[str, str] | None = None,
+    error_code: str = "",
+    classification_expected: bool = True,
+) -> uuid.UUID | None:
+    """Settle one analyze task with the rows the TypeScript analyzer commits.
+
+    The analyzer (``frontend/services/api/src/site-health/analyze-task.ts``)
+    owns per-page analysis and its tests; these Python tests own what the crawl
+    lifecycle does with the persisted result. Like the analyzer, a success
+    reuses the URL's discover artifact when one exists, otherwise appends an
+    analyze artifact for ``body``; it writes a provisional current analysis
+    with one evaluation per scored per-page check (``SATISFIED`` unless
+    overridden in ``outcomes``; crawl-finalize checks are left to
+    finalization) and their issues. ``error_code`` settles a failure instead.
+    Returns the artifact the task settled on.
+    """
+    now = datetime.now(UTC)
+    async with session_factory() as session:
+        task = await session.get(SiteCrawlTask, task_id)
+        assert task is not None and task.site_url_id is not None
+        crawl = await session.get(SiteCrawl, task.crawl_id)
+        assert crawl is not None
+        task.attempt_count += 1
+        task.completed_at = now
+        task.classification_expected = classification_expected
+        if error_code:
+            task.status = TASK_STATUS_FAILED
+            task.error_code = error_code
+            await session.commit()
+            return None
+
+        artifact = await session.scalar(
+            select(SiteFetchArtifact)
+            .join(SiteCrawlTask, SiteCrawlTask.id == SiteFetchArtifact.task_id)
+            .where(
+                SiteFetchArtifact.crawl_id == crawl.id,
+                SiteFetchArtifact.fetch_purpose == FETCH_PURPOSE_DISCOVER,
+                SiteFetchArtifact.normalized_facts.is_not(None),
+                SiteCrawlTask.url_hash == task.url_hash,
+            )
+            .order_by(SiteFetchArtifact.fetched_at.desc())
+            .limit(1)
+        )
+        if artifact is None:
+            artifact = SiteFetchArtifact(
+                task_id=task.id,
+                crawl_id=crawl.id,
+                workspace_id=crawl.workspace_id,
+                fetch_purpose=FETCH_PURPOSE_ANALYZE,
+                requested_url=task.requested_url,
+                final_url=task.requested_url,
+                status_code=200,
+                content_type="text/html",
+                extractor_version=EXTRACTOR_VERSION,
+                normalized_facts=extract_page_facts(
+                    body,
+                    final_url=task.requested_url,
+                    content_type="text/html",
+                    status_code=200,
+                ),
+            )
+            session.add(artifact)
+            await session.flush()
+
+        evaluations = [
+            _page_evaluation(
+                rule_id, (outcomes or {}).get(rule_id, RULE_OUTCOME_SATISFIED)
+            )
+            for rule_id in _SCORED_PAGE_CHECK_IDS
+            if SITE_HEALTH_RULES_BY_ID[rule_id].scope == RULE_SCOPE_PAGE
+            and SITE_HEALTH_RULES_BY_ID[rule_id].applicability_key
+            != APPLICABILITY_CRAWL_FINALIZE
+        ]
+        scores = score_analysis(evaluations, page_kind=page_kind)
+        await session.execute(
+            update(SitePageAnalysis)
+            .where(
+                SitePageAnalysis.crawl_id == crawl.id,
+                SitePageAnalysis.site_url_id == task.site_url_id,
+                SitePageAnalysis.is_current.is_(True),
+            )
+            .values(is_current=False)
+        )
+        analysis = SitePageAnalysis(
+            workspace_id=crawl.workspace_id,
+            project_id=crawl.project_id,
+            crawl_id=crawl.id,
+            site_url_id=task.site_url_id,
+            artifact_id=artifact.id,
+            status=PAGE_ANALYSIS_STATUS_COMPLETED,
+            web_fundamentals_score=scores.web_fundamentals_score,
+            web_fundamentals_coverage=scores.web_fundamentals_coverage,
+            web_fundamentals_state=scores.web_fundamentals_state,
+            technical_earned_weight=scores.technical_earned_weight,
+            technical_determinate_weight=scores.technical_determinate_weight,
+            technical_expected_weight=scores.technical_expected_weight,
+            technical_critical_complete=scores.technical_critical_complete,
+            aeo_readiness_score=scores.aeo_readiness_score,
+            aeo_measurement_coverage=scores.aeo_measurement_coverage,
+            aeo_measurement_state=scores.aeo_measurement_state,
+            aeo_measurement_reason=scores.aeo_measurement_reason,
+            readiness_dimensions=[
+                item.to_dict() for item in scores.readiness_dimensions
+            ],
+            analyzer_version=ANALYZER_VERSION,
+            scoring_version=scores.scoring_version,
+            page_kind=page_kind,
+            page_kind_evidence=page_kind_evidence,
+            source_artifact_ids=[artifact.id],
+            is_current=True,
+        )
+        session.add(analysis)
+        await session.flush()
+        rows = [
+            SiteRuleEvaluation(
+                workspace_id=crawl.workspace_id,
+                analysis_id=analysis.id,
+                source_artifact_id=artifact.id,
+                rule_id=evaluation.rule_id,
+                rule_version=evaluation.rule_version,
+                dimension=evaluation.dimension,
+                category=evaluation.category,
+                severity=evaluation.severity,
+                finding_class=evaluation.finding_class,
+                scope=evaluation.scope,
+                weight=evaluation.weight,
+                outcome=evaluation.outcome,
+                display_applicability=evaluation.display_applicability,
+                score_applicability=evaluation.score_applicability,
+                score_roles=list(evaluation.score_roles),
+                readiness_dimension=evaluation.readiness_dimension,
+                evidence={},
+                supporting_artifact_ids=[artifact.id],
+            )
+            for evaluation in evaluations
+        ]
+        session.add_all(rows)
+        await session.flush()
+        analysis.source_evaluation_ids = [row.id for row in rows]
+        session.add_all(
+            SiteIssue(
+                workspace_id=crawl.workspace_id,
+                project_id=crawl.project_id,
+                crawl_id=crawl.id,
+                site_url_id=task.site_url_id,
+                analysis_id=analysis.id,
+                evaluation_id=row.id,
+                source_artifact_id=artifact.id,
+                rule_id=evaluation.rule_id,
+                dimension=evaluation.dimension,
+                category=evaluation.category,
+                severity=evaluation.severity,
+                finding_class=evaluation.finding_class,
+                description=evaluation.description,
+                remediation=evaluation.remediation,
+            )
+            for row, evaluation in zip(rows, evaluations, strict=True)
+            if creates_issue(evaluation)
+        )
+        task.status = TASK_STATUS_SUCCEEDED
+        task.result_artifact_id = artifact.id
+        crawl.analyzed_url_count += 1
+        await session.commit()
+        return artifact.id
 
 
 async def _seed_root_discover(

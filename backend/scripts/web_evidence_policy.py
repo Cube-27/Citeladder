@@ -28,6 +28,7 @@ from app.core.config.site_health_page_profiles import (
     ISSUE_HISTORY_TIMELINE_MAX_CRAWLS,
 )
 from app.core.config.site_health_runtime import SiteHealthSettings
+from scripts.site_health_analysis_policy import page_analysis_policy
 from scripts.site_health_policy import architecture_policy
 
 
@@ -78,6 +79,7 @@ def web_evidence_policy(
             "tracking_params": sorted(rules.TRACKING_QUERY_PARAMS),
             "ignored_query_keys": sorted(URL_IDENTITY_IGNORED_QUERY_KEYS),
             "reads": _read_policy(),
+            "page_analysis": page_analysis_policy(constants),
             "change_intel": {
                 **constants(change_intel, "CHANGE_"),
                 **constants(change_intel, "CONTENT_"),
