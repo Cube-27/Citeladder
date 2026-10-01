@@ -20,6 +20,7 @@ import { workspaceRoutes } from './workspaces.ts';
 import { MCP_CONNECTION_ROUTES } from './mcp-connections.ts';
 import { billingDocumentRoutes } from './billing-documents.ts';
 import { billingRoutes } from './billing.ts';
+import { auditScheduleRoutes } from './audit-schedules.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...MCP_CONNECTION_ROUTES,
@@ -42,4 +43,5 @@ export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...brandIdentityRoutes,
   ...promptRoutes,
   ...integrationRoutes,
+  ...auditScheduleRoutes,
 ];

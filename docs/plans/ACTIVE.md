@@ -49,7 +49,9 @@
   receipt reads and both PDF exports to TS and retires reportlab; 16b moves
   commercial mutations, settlement, leased recovery, receipt issuance and the
   typed entitlement ledger to TS, keeping Python worker/operator bridges for
-  their assigned migrations. PRs 17–20 follow the re-sequenced order.
+  their assigned migrations. PR 17a moves audit schedule management to TS;
+  Python retains the scheduler until funded audit admission moves. PRs 17–20
+  otherwise follow the re-sequenced order.
   Deployment of implemented cutovers and their one-week soaks are pending.
 
 - [Agent capabilities](citeladder-agent-capabilities.md)

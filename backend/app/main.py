@@ -13,7 +13,6 @@ from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.agent import router as agent_router
-from app.api.audit_schedules import router as audit_schedules_router
 from app.api.audits import router as audits_router
 from app.api.commerce import router as commerce_router
 from app.api.performance import router as performance_router
@@ -55,7 +54,6 @@ _ROUTERS = (
     provider_connections_router,
     provider_catalog_router,
     audits_router,
-    audit_schedules_router,
     site_health_router,
     search_intelligence_reviews_router,
     performance_router,

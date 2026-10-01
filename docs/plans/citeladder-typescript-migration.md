@@ -172,8 +172,8 @@ total.
 | 13 | Integrations | High | Done |
 | 14 | Auth and workspaces | High | Done |
 | 15 | MCP server and OAuth provider | High | Done |
-| 16 | Billing and the entitlement ledger (16a PDF, 16b commercial/ledger) | High | 16a done; 16b pending |
-| 17 | Audits, providers and answer-engine connectors | High | |
+| 16 | Billing and the entitlement ledger (16a PDF, 16b commercial/ledger) | High | Done |
+| 17 | Audits, providers and answer-engine connectors | High | 17a done |
 | 18 | Site Health and source-page inspection | High | |
 | 19 | Agent runtime | High | |
 | 20 | Consolidation and policy transfer | Medium | |
@@ -829,6 +829,33 @@ owner's live sign-off. Deployment, provider acceptance and the cutover soak
 are pending.
 
 ### PR 17: Audits, providers and answer-engine connectors
+
+**17a: schedule management.** TypeScript owns all five methods in the
+`audit-schedules` family, using the existing shared browser response contract.
+The Python router, CRUD service and wire schemas are removed; their persistence
+and request-validation coverage moves to focused TypeScript/PostgreSQL tests.
+Scheduler cadence/lease/planning tests remain Python. Policy remains in
+`core/config/audit_schedules.py` and is exported for TypeScript, including the
+configured minimum interval and the selectable engine catalog.
+
+The Python scheduler is retained until audit admission and the worker move.
+It writes schedule lease and run-state columns; TypeScript manages the stored
+user request. Scheduler claim/finalize and TypeScript update/delete operations
+lock the schedule row, with no network I/O under that lock. This named temporary
+cross-stack writer exception ends with the scheduler cutover. Schema models
+remain Python as planned.
+
+Departures: required patch fields reject explicit null rather than reaching a
+NOT NULL database failure; timezone text and
+interval integers are bounded by their database columns. Timezones must
+name a zone in the pinned tzdata set the retained scheduler loads (exported with
+the policy) and are stored in its exact spelling; numeric UTC offsets are rejected. Partial edits validate the merged locked row;
+omitted scope and scheduler state remain unchanged.
+
+Split under D7's retirement budget: the audit, provider and acquisition scope
+exceeds it, so the remaining slices (scheduler, funded admission through the
+16b ledger, worker, providers and connectors) follow in dependency order.
+17a performs no deployment, provider call or cutover soak.
 
 Audit creation, schedules, the scheduler, funded admission, the audit worker,
 BYOK providers, answer-engine and search-surface connectors, and the

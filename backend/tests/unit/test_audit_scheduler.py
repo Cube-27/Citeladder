@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from pydantic import ValidationError
 
 from app.core.config.audit_schedules import (
     CADENCE_DAILY,
@@ -13,7 +12,6 @@ from app.core.config.audit_schedules import (
     CADENCE_WEEKLY,
     DEFAULT_AUDIT_SCHEDULE_TIMEZONE,
 )
-from app.domain.audits.schedule_schemas import AuditScheduleCreate
 from app.models.audit_schedule import AuditSchedule
 from app.workers.audit_scheduler import next_run_after
 
@@ -49,15 +47,6 @@ def test_daily_schedule_preserves_local_wall_clock_after_dst() -> None:
     )
     next_run = next_run_after(schedule, after=datetime(2026, 3, 8, 13, tzinfo=UTC))
     assert next_run == datetime(2026, 3, 9, 13, tzinfo=UTC)
-
-
-def test_every_n_minutes_requires_configured_interval() -> None:
-    with pytest.raises(ValidationError, match="interval_minutes is required"):
-        AuditScheduleCreate(
-            prompt_set_id="00000000-0000-0000-0000-000000000003",
-            cadence=CADENCE_EVERY_N_MINUTES,
-            engines=["chatgpt"],
-        )
 
 
 @pytest.mark.parametrize(
