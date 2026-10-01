@@ -45,7 +45,7 @@ async function requirePromptSet(db: Database, scope: ScheduleScope, id: string) 
   if (!set) throw new ApiError(422, 'Prompt set not found for project');
 }
 
-export async function createSchedule(db: Database, scope: ScheduleScope, input: ScheduleCreate) {
+export function createSchedule(db: Database, scope: ScheduleScope, input: ScheduleCreate) {
   return db.transaction().execute(async (trx) => {
     await requirePromptSet(trx, scope, input.prompt_set_id);
     const now = new Date();
@@ -86,7 +86,14 @@ export async function readSchedule(db: Database, scope: ScheduleScope, id: strin
   return view(row);
 }
 
-export async function updateSchedule(
+/** An omitted next run re-arms a schedule being enabled with nothing pending. */
+function nextRunPatch(input: ScheduleUpdate, current: Row, now: Date) {
+  if (input.next_run_at === undefined)
+    return input.enabled === true && current.next_run_at === null ? { next_run_at: now } : {};
+  return { next_run_at: input.next_run_at === null ? null : new Date(input.next_run_at) };
+}
+
+export function updateSchedule(
   db: Database,
   scope: ScheduleScope,
   id: string,
@@ -102,7 +109,7 @@ export async function updateSchedule(
     const message = scheduleIntervalIssue({ ...current, ...input });
     if (message) throw new ApiError(422, message);
     if (input.prompt_set_id !== undefined) await requirePromptSet(trx, scope, input.prompt_set_id);
-    const { engines, next_run_at: nextRunAt, ...fields } = input;
+    const { engines, next_run_at: _nextRunAt, ...fields } = input;
     const now = new Date();
     const row = await trx
       .updateTable('audit_schedules')
@@ -112,11 +119,7 @@ export async function updateSchedule(
           ? {}
           : { timezone: canonicalTimezone(input.timezone) ?? input.timezone }),
         ...(engines === undefined ? {} : { engines: JSON.stringify(engines) }),
-        ...(nextRunAt === undefined
-          ? input.enabled === true && current.next_run_at === null
-            ? { next_run_at: now }
-            : {}
-          : { next_run_at: nextRunAt === null ? null : new Date(nextRunAt) }),
+        ...nextRunPatch(input, current, now),
         updated_at: now,
       })
       .where('id', '=', id)

@@ -23,6 +23,7 @@ import typing
 from collections.abc import Iterable
 from datetime import datetime
 from decimal import Decimal
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -364,6 +365,8 @@ def build_config() -> dict[str, Any]:
             "cadences": sorted(audit_schedule_config.AUDIT_SCHEDULE_CADENCES),
             "default_timezone": audit_schedule_config.DEFAULT_AUDIT_SCHEDULE_TIMEZONE,
             "selectable_engines": sorted(SELECTABLE_ENGINES),
+            # The pinned tzdata zones the retained scheduler's ZoneInfo can load.
+            "timezones": sorted(files("tzdata").joinpath("zones").read_text().split()),
             "min_interval_minutes": _setting(
                 "min_interval_minutes",
                 audit_schedule_config.AuditScheduleSettings,

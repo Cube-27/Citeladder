@@ -235,7 +235,8 @@ describe('schedule input decisions', () => {
     ['Asia/Kolkata', 'Asia/Kolkata'],
     ['Etc/UTC', 'Etc/UTC'],
     ['utc', 'UTC'],
-    ['asia/kolkata', null],
+    ['Asia/KOLKATA', 'Asia/Kolkata'],
+    ['not/a_zone', null],
   ])('stores timezone %s as %s', (value, stored) => {
     expect(canonicalTimezone(value)).toBe(stored);
   });
