@@ -45,10 +45,10 @@ export async function writeArtifact(
   crawl: Crawl,
   task: SiteTask,
   page: FetchedPage,
-  facts: Facts,
-  policyVersion: string,
-  latencyMs: number,
+  facts: Facts | null,
+  fetch: { policyVersion: string; latencyMs: number; purpose: 'analyze' | 'discover' },
 ) {
+  const { policyVersion, latencyMs, purpose } = fetch;
   const id = randomUUID();
   const now = new Date();
   await db
@@ -58,7 +58,7 @@ export async function writeArtifact(
       task_id: task.id,
       crawl_id: crawl.id,
       workspace_id: crawl.workspace_id,
-      fetch_purpose: 'analyze',
+      fetch_purpose: purpose,
       requested_url: task.requested_url,
       final_url: page.url,
       redirect_chain: JSON.stringify(
@@ -79,7 +79,7 @@ export async function writeArtifact(
       decoded_bytes: page.body.length,
       ...provenance(policyVersion),
       extractor_version: extractorVersion(crawl),
-      normalized_facts: JSON.stringify(facts),
+      normalized_facts: facts ? JSON.stringify(facts) : null,
       fetched_at: now,
       created_at: now,
     })

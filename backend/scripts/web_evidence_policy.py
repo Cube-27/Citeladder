@@ -14,6 +14,7 @@ from app.core.config import site_health_acquisition as acquisition
 from app.core.config import site_health_answer_shapes as answer_shapes
 from app.core.config import site_health_archetypes as archetypes
 from app.core.config import site_health_contracts as contracts
+from app.core.config import site_health_crawl_policy as crawl_policy
 from app.core.config import site_health_link_metrics as links
 from app.core.config import site_health_measurement as measurement
 from app.core.config import site_health_rules as rules
@@ -27,7 +28,10 @@ from app.core.config.site_health_crawl_policy import (
 from app.core.config.site_health_page_profiles import (
     ISSUE_HISTORY_TIMELINE_MAX_CRAWLS,
 )
-from app.core.config.site_health_runtime import SiteHealthSettings
+from app.core.config.site_health_runtime import (
+    ANALYZE_PRIORITY_BOOST,
+    SiteHealthSettings,
+)
 from scripts.site_health_analysis_policy import page_analysis_policy
 from scripts.site_health_policy import architecture_policy
 
@@ -79,11 +83,47 @@ def web_evidence_policy(
             "tracking_params": sorted(rules.TRACKING_QUERY_PARAMS),
             "ignored_query_keys": sorted(URL_IDENTITY_IGNORED_QUERY_KEYS),
             "reads": _read_policy(),
+            "crawl": _crawl_policy(constants),
             "page_analysis": page_analysis_policy(constants),
             "change_intel": {
                 **constants(change_intel, "CHANGE_"),
                 **constants(change_intel, "CONTENT_"),
             },
+        },
+    }
+
+
+def _crawl_policy(
+    constants: Callable[[types.ModuleType, str], dict[str, Any]],
+) -> dict[str, Any]:
+    """What the TypeScript discovery, site setup and frontier admission read."""
+    return {
+        "value_priorities": crawl_policy.URL_VALUE_PRIORITIES,
+        "value_fallback_tokens": [
+            [kind, list(tokens)]
+            for kind, tokens in crawl_policy.URL_VALUE_FALLBACK_TOKENS
+        ],
+        "exclusions": constants(crawl_policy, "URL_EXCLUSION_"),
+        "inventory_document_extensions": sorted(
+            crawl_policy.INVENTORY_DOCUMENT_EXTENSIONS
+        ),
+        "document_media_types": sorted(crawl_policy.DOCUMENT_MEDIA_TYPES),
+        "disposition_version": crawl_policy.CORPUS_DISPOSITION_VERSION,
+        "automatic_monitor_limit_key": crawl_policy.AUTOMATIC_MONITOR_LIMIT_KEY,
+        "analyze_priority_boost": ANALYZE_PRIORITY_BOOST,
+        "link_rewrite": {
+            "reason": contracts.LINK_REWRITE_ENCODED_TRACKING_QUERY,
+            "version": contracts.LINK_REWRITE_VERSION,
+        },
+        "robots_path": acquisition.ROBOTS_TXT_PATH,
+        "llms_path": acquisition.LLMS_TXT_PATH,
+        "sitemap_default_paths": list(acquisition.SITEMAP_DEFAULT_PATHS),
+        "sitemap_content_types": sorted(rules.SITEMAP_CONTENT_TYPES),
+        "sitemap_path_suffixes": list(acquisition.SITEMAP_PATH_SUFFIXES),
+        "crawler_roles": {
+            "search_citation": list(acquisition.SEARCH_CITATION_CRAWLER_BOTS),
+            "training": list(acquisition.TRAINING_CRAWLER_BOTS),
+            "user_triggered": list(acquisition.USER_TRIGGERED_FETCHER_BOTS),
         },
     }
 

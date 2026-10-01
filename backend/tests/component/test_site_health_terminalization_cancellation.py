@@ -44,69 +44,7 @@ from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 from tests.component.site_health_helpers import seed_site_crawl
 from tests.component.site_health_worker_helpers import (
     _seed_analyze_ready,
-    _worker,
 )
-
-
-@pytest.mark.asyncio
-async def test_claim_preparation_rejects_foreign_workspace(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        seed = await seed_site_crawl(session, task_count=1)
-        task = await session.scalar(
-            select(SiteCrawlTask).where(SiteCrawlTask.crawl_id == seed.crawl_id)
-        )
-        assert task is not None
-        task_id, task_kind = task.id, task.task_kind
-        await session.commit()
-
-    worker = _worker(session_factory, {}, owner="foreign-workspace-boundary")
-    prepared = await worker._prepare_claimed_task(
-        task_id=task_id,
-        crawl_id=seed.crawl_id,
-        workspace_id=uuid.uuid4(),
-        kind=task_kind,
-    )
-    assert prepared is False
-
-    async with session_factory() as session:
-        task = await session.get(SiteCrawlTask, task_id)
-        assert task is not None
-        assert task.status == TASK_STATUS_CANCELLED
-
-
-@pytest.mark.asyncio
-async def test_running_crawl_preparation_does_not_wait_for_crawl_write_lock(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """A sitemap persistence lock must not terminally fail a sibling page."""
-    async with session_factory() as session:
-        seed = await seed_site_crawl(session, task_count=1)
-        task = await session.scalar(
-            select(SiteCrawlTask).where(SiteCrawlTask.crawl_id == seed.crawl_id)
-        )
-        assert task is not None
-        task_id, task_kind = task.id, task.task_kind
-
-    worker = _worker(session_factory, {}, owner="running-crawl-read-boundary")
-    async with session_factory() as blocker:
-        locked_crawl = await blocker.scalar(
-            select(SiteCrawl).where(SiteCrawl.id == seed.crawl_id).with_for_update()
-        )
-        assert locked_crawl is not None
-
-        prepared = await asyncio.wait_for(
-            worker._prepare_claimed_task(
-                task_id=task_id,
-                crawl_id=seed.crawl_id,
-                workspace_id=seed.workspace_id,
-                kind=task_kind,
-            ),
-            timeout=1.0,
-        )
-
-    assert prepared is True
 
 
 @pytest.mark.asyncio

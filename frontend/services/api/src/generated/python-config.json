@@ -5183,7 +5183,9 @@
       "analyze",
       "architecture",
       "change_intel",
-      "link_metrics"
+      "discover",
+      "link_metrics",
+      "site_setup"
     ],
     "versions": {
       "extractor": "sh-extractor-2",
@@ -6017,6 +6019,112 @@
         "profile": "sh-profiles-1",
         "schema_contract": "sh-schema-1",
         "presentation": "sh-presentation-1"
+      }
+    },
+    "crawl": {
+      "value_priorities": {
+        "root": 100,
+        "product": 90,
+        "comparison": 85,
+        "service": 80,
+        "local": 80,
+        "category": 70,
+        "pricing": 70,
+        "article": 60,
+        "guide": 60,
+        "faq": 60,
+        "docs": 60,
+        "trust": 40,
+        "other": 20
+      },
+      "value_fallback_tokens": [
+        [
+          "product",
+          [
+            "product",
+            "/p/",
+            "shop"
+          ]
+        ],
+        [
+          "article",
+          [
+            "blog",
+            "article",
+            "news"
+          ]
+        ]
+      ],
+      "exclusions": {
+        "hard_path": "hard_excluded_path",
+        "hard_asset": "hard_excluded_asset",
+        "hard_query": "hard_excluded_query",
+        "out_of_scope": "out_of_scope",
+        "narrowed": "narrowed",
+        "invalid": "invalid_url",
+        "duplicate": "duplicate",
+        "page_kind": "page_kind_filtered",
+        "tracking": "tracking_url",
+        "hard_host": "hard_excluded_host"
+      },
+      "inventory_document_extensions": [
+        ".doc",
+        ".docx",
+        ".md",
+        ".pdf",
+        ".ppt",
+        ".pptx",
+        ".xls",
+        ".xlsx"
+      ],
+      "document_media_types": [
+        "application/msword",
+        "application/pdf",
+        "application/vnd.ms-excel",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/markdown"
+      ],
+      "disposition_version": "sh-disposition-1",
+      "automatic_monitor_limit_key": "automatic_monitor_limit",
+      "analyze_priority_boost": 1000,
+      "link_rewrite": {
+        "reason": "encoded_tracking_query_delimiter",
+        "version": "sh-link-rewrite-1"
+      },
+      "robots_path": "/robots.txt",
+      "llms_path": "/llms.txt",
+      "sitemap_default_paths": [
+        "/sitemap.xml"
+      ],
+      "sitemap_content_types": [
+        "application/gzip",
+        "application/x-gzip",
+        "application/xml",
+        "text/xml"
+      ],
+      "sitemap_path_suffixes": [
+        ".xml",
+        ".xml.gz"
+      ],
+      "crawler_roles": {
+        "search_citation": [
+          "Googlebot",
+          "Bingbot",
+          "OAI-SearchBot",
+          "PerplexityBot"
+        ],
+        "training": [
+          "GPTBot",
+          "ClaudeBot",
+          "Google-Extended"
+        ],
+        "user_triggered": [
+          "ChatGPT-User",
+          "Perplexity-User"
+        ]
       }
     },
     "page_analysis": {

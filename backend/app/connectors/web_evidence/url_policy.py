@@ -48,8 +48,6 @@ from app.connectors.web_evidence.contracts import (
 from app.core.config.site_health_acquisition import (
     ERROR_DNS_RESOLUTION_FAILED,
     ERROR_SSRF_BLOCKED,
-    INFRASTRUCTURE_FETCH_EXACT_PATHS,
-    INFRASTRUCTURE_FETCH_PATH_SUFFIXES,
     SITE_HEALTH_MAX_URL_CHARS,
 )
 from app.core.config.site_health_crawl_policy import (
@@ -74,6 +72,7 @@ from app.core.config.site_health_crawl_policy import (
     URL_HARD_EXCLUSION_PATH_PATTERNS,
     URL_HARD_EXCLUSION_QUERY_KEYS,
     URL_IDENTITY_IGNORED_QUERY_KEYS,
+    URL_VALUE_FALLBACK_TOKENS,
     URL_VALUE_PRIORITIES,
 )
 from app.core.config.site_health_rules import (
@@ -204,27 +203,6 @@ def _is_hard_excluded_asset(path: str) -> bool:
     )
 
 
-def _is_infrastructure_asset_exception(
-    path: str, infrastructure_purpose: str | None
-) -> bool:
-    """Allow only configured crawler infrastructure documents.
-
-    The exception is intentionally evaluated only for the asset-extension
-    rule. Transactional paths, query exclusions, canonicalization, scope, DNS
-    pinning, and redirect validation continue to apply unchanged.
-    """
-    if infrastructure_purpose is None:
-        return False
-    normalized = path.lower().rstrip("/") or "/"
-    if normalized in INFRASTRUCTURE_FETCH_EXACT_PATHS.get(
-        infrastructure_purpose, frozenset()
-    ):
-        return True
-    return normalized.endswith(
-        INFRASTRUCTURE_FETCH_PATH_SUFFIXES.get(infrastructure_purpose, ())
-    )
-
-
 def page_value_kind(url: str) -> str:
     """Classify URL value deterministically for admission ordering only."""
     path = urlsplit(url).path.lower().rstrip("/") or "/"
@@ -239,10 +217,9 @@ def page_value_kind(url: str) -> str:
     ):
         if kind != "root" and kind.replace("_", "-") in path:
             return kind
-    if any(token in path for token in ("product", "/p/", "shop")):
-        return "product"
-    if any(token in path for token in ("blog", "article", "news")):
-        return "article"
+    for kind, tokens in URL_VALUE_FALLBACK_TOKENS:
+        if any(token in path for token in tokens):
+            return kind
     return "other"
 
 
@@ -254,19 +231,14 @@ def _query_rejection(query: str) -> str | None:
     return None
 
 
-def _canonical_rejection(
-    canonical: str, *, infrastructure_purpose: str | None
-) -> str | None:
+def _canonical_rejection(canonical: str) -> str | None:
     parts = urlsplit(canonical)
     path = parts.path
     if _host_is_hard_excluded(parts.hostname or ""):
         return URL_EXCLUSION_HARD_HOST
     if _path_is_hard_excluded(path):
         return URL_EXCLUSION_HARD_PATH
-    infrastructure_asset = _is_infrastructure_asset_exception(
-        path, infrastructure_purpose
-    )
-    if _is_hard_excluded_asset(path) and not infrastructure_asset:
+    if _is_hard_excluded_asset(path):
         return URL_EXCLUSION_HARD_ASSET
     if len(canonical) > SITE_HEALTH_MAX_URL_CHARS:
         return URL_EXCLUSION_INVALID
@@ -280,7 +252,6 @@ def classify_url_admission(
     include_globs: list[str] | None = None,
     exclude_globs: list[str] | None = None,
     base_url: str | None = None,
-    infrastructure_purpose: str | None = None,
 ) -> UrlAdmission:
     """Return the single policy decision for any candidate URL.
 
@@ -295,9 +266,7 @@ def classify_url_admission(
         if query_rejection:
             return UrlAdmission(False, None, query_rejection, "other", 0)
         canonical = canonicalize(resolved)
-        canonical_rejection = _canonical_rejection(
-            canonical, infrastructure_purpose=infrastructure_purpose
-        )
+        canonical_rejection = _canonical_rejection(canonical)
         if canonical_rejection:
             return UrlAdmission(False, None, canonical_rejection, "other", 0)
     except UrlPolicyError:
@@ -669,7 +638,6 @@ async def resolve_target(
     include_globs: list[str] | None = None,
     exclude_globs: list[str] | None = None,
     enforce_scope: bool = True,
-    infrastructure_purpose: str | None = None,
 ) -> ResolvedTarget:
     """Canonicalize, scope-check, resolve DNS, SSRF-validate, and pin an IP.
 
@@ -683,7 +651,6 @@ async def resolve_target(
         root_registrable_domain=root_registrable_domain if enforce_scope else None,
         include_globs=include_globs,
         exclude_globs=exclude_globs,
-        infrastructure_purpose=infrastructure_purpose,
     )
     if not admission.accepted or admission.canonical_url is None:
         raise UrlAdmissionRejected(
@@ -692,10 +659,8 @@ async def resolve_target(
         )
     canonical = admission.canonical_url
     if enforce_scope and root_registrable_domain:
-        # Admission above already applied the hard page policy (including the
-        # narrow infrastructure-document exception). Recheck only scope and
-        # configured narrowing here so redirects cannot escape either without
-        # accidentally treating robots.txt/llms.txt as page assets again.
+        # Admission above already applied the hard page policy. Recheck scope
+        # and configured narrowing so a redirect cannot escape either.
         if not is_in_scope(canonical, root_registrable_domain) or not narrow(
             canonical,
             include_globs=include_globs,

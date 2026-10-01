@@ -3,6 +3,12 @@ import type { Insertable } from 'kysely';
 import type { Database } from '../src/db/database.ts';
 import type { SiteCrawls } from '../src/generated/db-schema.ts';
 import { policy } from '../src/config.ts';
+import {
+  FetchError,
+  type FetchedPage,
+  type FetchOptions,
+  type WebsiteFetcher,
+} from '../src/projects/safe-fetch.ts';
 import { canonicalIdentity } from '../src/site-health/url-identity.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -472,4 +478,58 @@ export class SiteFixtures extends VisibilityFixtures {
       .execute();
     return profile;
   }
+}
+
+export type Served = {
+  status?: number;
+  body?: string | Buffer;
+  redirect?: string;
+  contentType?: string;
+  onFetch?: () => Promise<void>;
+};
+/**
+ * A recorded site (keyed by path) behind the real acquirer: robots and pacing
+ * run through the gate, every hop is authorized, and each call is reported
+ * like the transport does. `requests` collects the paths actually sent.
+ */
+export function recordedSite(
+  pages: Record<string, Served>,
+  requests: string[] = [],
+): WebsiteFetcher {
+  return async (value: string, options: FetchOptions): Promise<FetchedPage> => {
+    let url = new URL(value);
+    for (let hop = 0; hop <= options.redirects; hop++) {
+      await options.authorize?.(url);
+      const target = url;
+      const served = pages[target.pathname];
+      const send = async () => {
+        requests.push(target.pathname);
+        await served?.onFetch?.();
+        const status = served?.status ?? (served ? 200 : 404);
+        const body = Buffer.from(served?.body ?? '');
+        options.onCall?.({
+          url: target.href,
+          status,
+          error: null,
+          wireBytes: body.length,
+          decodedBytes: body.length,
+          ttfbMs: 1,
+          latencyMs: 1,
+        });
+        return { status, body, redirect: served?.redirect };
+      };
+      const response = options.gate
+        ? await options.gate(target, send, AbortSignal.timeout(5000))
+        : await send();
+      if (!response.redirect)
+        return {
+          url: target.href,
+          status: response.status,
+          contentType: served?.contentType ?? 'text/html',
+          body: response.body,
+        };
+      url = new URL(response.redirect, target);
+    }
+    throw new FetchError('redirect_limit');
+  };
 }

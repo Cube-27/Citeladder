@@ -1,7 +1,7 @@
 """Site Health crawl terminalization: the paths that bypass a task's finalize.
 
-A crawl goes terminal ONLY inside ``_reconcile_crawl_status``, which normally
-runs in the ``finally`` of ``_execute_task``. Intermediate successful analysis
+A crawl goes terminal ONLY inside the locked lifecycle reconcile, which
+normally runs after a task settles. Intermediate successful analysis
 may now pass a strict read-only gate, but every lifecycle boundary still takes
 the authoritative reconciliation path. Anything that drains a crawl's last
 non-terminal task WITHOUT running a worker's finalize therefore used to strand
@@ -12,14 +12,13 @@ These tests pin the two guarantees that close that hole:
   - the sweeper reports the crawls whose tasks it terminalized, and the worker
     reconciles them (``release_expired_detailed`` -> ``run_once``);
   - a stalled crawl with no outstanding tasks is force-reconciled regardless of
-    HOW it got that way (``_reconcile_stalled_crawls``).
+    HOW it got that way (``reconcile_stalled``).
 
 Requires a real Postgres.
 """
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -310,8 +309,8 @@ async def test_run_once_terminalizes_crawl_the_sweeper_drained(
     """THE stuck-crawl regression.
 
     The sweeper fails the crawl's last outstanding tasks at max attempts. No
-    worker ever runs ``_execute_task`` for them, so before the fix nothing
-    called ``_reconcile_crawl_status`` and the crawl stayed 'running' forever.
+    worker ever settles them, so before the fix nothing reconciled the crawl
+    and it stayed 'running' forever.
     """
     async with session_factory() as session:
         seed = await seed_site_crawl(session, task_count=2)
@@ -321,8 +320,8 @@ async def test_run_once_terminalizes_crawl_the_sweeper_drained(
     await _exhaust_attempts(session_factory, seed.crawl_id)
     await _expire_leases(session_factory, seed.crawl_id)
 
-    # No claimable work remains, so this loop does nothing BUT sweep + reconcile.
-    assert await _worker(session_factory).run_once() == 0
+    # The maintenance pass sweeps leases and reconciles; it claims nothing.
+    await _worker(session_factory).run_once()
 
     async with session_factory() as session:
         statuses = set(
@@ -372,7 +371,7 @@ async def test_stalled_crawl_with_no_tasks_is_reconciled(
 
     # Through the real loop, not the helper directly: the backstop is only
     # worth anything if ``run_once`` actually reaches it.
-    assert await _worker(session_factory).run_once() == 0
+    await _worker(session_factory).run_once()
 
     crawl = await _crawl(session_factory, seed.crawl_id)
     assert crawl.status not in CRAWL_ACTIVE_STATUSES
@@ -543,47 +542,6 @@ async def test_standard_crawl_completes_when_advanced_controls_are_available(
 
 
 @pytest.mark.asyncio
-async def test_leased_heartbeats_across_the_whole_body(
-    session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """``_leased`` must keep beating for the PERSIST phase, not just the fetch.
-
-    The persist phase takes the crawl row ``FOR UPDATE`` (contending with every
-    sibling task's finalize) before it acknowledges the queue row. While it ran
-    unheartbeated, a slow write outlived the lease, the sweeper reclaimed the
-    task and — at max attempts — failed it terminally, stranding the crawl.
-    """
-    async with session_factory() as session:
-        seed = await seed_site_crawl(session, task_count=1)
-    task_id = seed.task_ids[0]
-
-    worker = _worker(session_factory)
-    beats: list[uuid.UUID] = []
-
-    async def _record(*, task_id: uuid.UUID, owner: str) -> bool:
-        beats.append(task_id)
-        return True
-
-    monkeypatch.setattr(worker._queue, "heartbeat", _record)
-    # The loop takes the configured interval down to a 50ms floor, so this
-    # exercises real beats without spending real seconds of wall clock.
-    monkeypatch.setattr(site_health_settings, "heartbeat_interval_seconds", 0.1)
-
-    async with worker._phase_context.leased(task_id):
-        # Stand in for the fetch + the persist that follows it.
-        await asyncio.sleep(0.35)
-
-    assert beats, "no heartbeat fired inside the leased body"
-    assert set(beats) == {task_id}
-
-    # And it stops on exit: the lease must not be held past the body.
-    settled = len(beats)
-    await asyncio.sleep(0.35)
-    assert len(beats) == settled, "heartbeat outlived the leased body"
-
-
-@pytest.mark.asyncio
 async def test_finalize_of_a_still_queued_task_takes_no_crawl_lock(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -635,7 +593,7 @@ async def test_overdue_crawl_wedged_on_a_live_task_is_terminalized(
         )
         await session.commit()  # task stays QUEUED: the crawl never drains
 
-    assert await _worker(session_factory).run_once() == 0
+    await _worker(session_factory).run_once()
 
     crawl = await _crawl(session_factory, seed.crawl_id)
     assert crawl.status not in CRAWL_ACTIVE_STATUSES

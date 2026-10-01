@@ -146,17 +146,9 @@ SITE_TASK_KINDS: Final[frozenset[str]] = frozenset(
     }
 )
 
-# Both stacks share the durable queue with disjoint claims during migration:
-# TypeScript owns analysis and every post-terminal derivation, Python owns
-# acquisition until it moves.
-SITE_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
-    {
-        TASK_KIND_ANALYZE,
-        TASK_KIND_CHANGE_INTEL,
-        TASK_KIND_LINK_METRICS,
-        TASK_KIND_ARCHITECTURE,
-    }
-)
+# The TypeScript Site Health worker claims every task kind. Python keeps crawl
+# creation, finalization and lease sweeping until crawl control moves (18b5).
+SITE_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = SITE_TASK_KINDS
 
 INITIAL_TASK_GENERATION: Final = 0
 
@@ -379,8 +371,6 @@ EVENT_CRAWL_CREATED: Final = "crawl.created"
 EVENT_CRAWL_QUEUED: Final = "crawl.queued"
 
 EVENT_CRAWL_RUNNING: Final = "crawl.running"
-
-EVENT_DISCOVERY_PROGRESS: Final = "discovery.progress"
 
 EVENT_ANALYSIS_PROGRESS: Final = "analysis.progress"
 

@@ -81,23 +81,9 @@ FETCH_PURPOSE_DISCOVER: Final = "discover"
 
 FETCH_PURPOSE_ANALYZE: Final = "analyze"
 
-FETCH_PURPOSE_ROBOTS: Final = "robots"
-
-FETCH_PURPOSE_SITEMAP: Final = "sitemap"
-
-FETCH_PURPOSE_LLMS: Final = "llms"
-
-INFRASTRUCTURE_FETCH_EXACT_PATHS: Final[dict[str, frozenset[str]]] = {
-    FETCH_PURPOSE_ROBOTS: frozenset({"/robots.txt"}),
-    FETCH_PURPOSE_LLMS: frozenset({"/llms.txt"}),
-    FETCH_PURPOSE_SITEMAP: frozenset(),
-}
-
-INFRASTRUCTURE_FETCH_PATH_SUFFIXES: Final[dict[str, tuple[str, ...]]] = {
-    FETCH_PURPOSE_ROBOTS: (),
-    FETCH_PURPOSE_LLMS: (),
-    FETCH_PURPOSE_SITEMAP: (".xml", ".xml.gz"),
-}
+# Sitemaps are crawler infrastructure: the one asset extension site setup may
+# fetch. Every other page exclusion still applies to them.
+SITEMAP_PATH_SUFFIXES: Final[tuple[str, ...]] = (".xml", ".xml.gz")
 
 SITE_HEALTH_USER_AGENT: Final = (
     "CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)"
@@ -133,19 +119,6 @@ AI_CRAWLER_BOTS: Final[tuple[str, ...]] = tuple(
         )
     )
 )
-
-AI_CRAWLER_STANCE_ALLOW: Final = "allow"
-
-AI_CRAWLER_STANCE_BLOCK: Final = "block"
-
-ROBOTS_FETCH_STATUS_FETCHED: Final = "fetched"
-
-ROBOTS_FETCH_STATUS_NOT_FOUND: Final = "not_found"
-
-ROBOTS_FETCH_STATUS_FETCH_FAILED: Final = "fetch_failed"
-
-# robots.txt answered 401/403: an access control, not an outage.
-ROBOTS_FETCH_STATUS_ACCESS_BLOCKED: Final = "access_blocked"
 
 ACQUISITION_TRANSPORT_CURL_CFFI: Final = "curl_cffi"
 

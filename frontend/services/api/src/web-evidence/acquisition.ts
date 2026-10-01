@@ -130,13 +130,20 @@ export function robotsPolicy(
 ) {
   const unavailable = status === 429 || status >= 500 || status === 0;
   const restricted = status === 401 || status === 403;
-  const robots = robotsParser(`${origin}/robots.txt`, status === 200 ? body : '');
+  const fetched = status >= 200 && status < 300;
+  const robots = robotsParser(`${origin}/robots.txt`, fetched ? body : '');
   const declared = robots.getCrawlDelay(policy.web_fetch.user_agent);
   const seconds = declared === undefined ? settings.defaultDelay : Math.max(0, declared);
   return {
+    status,
+    /** The policy text when robots.txt answered 2xx, else null. */
+    body: fetched ? body : null,
     unavailable,
     restricted,
     delay: seconds,
+    /** Whether the publisher's rules admit `agent`, for reporting another crawler's stance. */
+    allows: (url: string, agent: string) =>
+      !fetched || !body.trim() || robots.isAllowed(url, agent) !== false,
     sitemaps: robots.getSitemaps(),
     permits: (url: string) =>
       !unavailable &&

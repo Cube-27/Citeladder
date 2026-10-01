@@ -269,7 +269,7 @@ async def test_terminal_reconciliation_excludes_late_system_alias_only(
             body=body,
             outcomes={"technical.meta_description_present": RULE_OUTCOME_MISSING},
         )
-    worker = _worker(session_factory, {}, owner="late-canonical-alias")
+    worker = _worker(session_factory, owner="late-canonical-alias")
     await worker.run_until_idle()
 
     async with session_factory() as session:
@@ -669,7 +669,7 @@ async def test_terminal_snapshot_freezes_classification_cohort_and_provenance(
     await _settle_analysis_as_typescript(
         session_factory, failed_task_id, error_code="task_failed"
     )
-    worker = _worker(session_factory, {}, owner="classification-terminal-snapshot")
+    worker = _worker(session_factory, owner="classification-terminal-snapshot")
     await worker.run_until_idle()
 
     async with session_factory() as session:
@@ -780,7 +780,7 @@ async def test_finalize_pass_hreflang_conflict_end_to_end(
     fr_html = b"<html><head><title>FR</title></head><body><p>bonjour</p></body></html>"
     for (_site_url_id, task_id), body in zip(_ids, (root_html, fr_html), strict=True):
         await _settle_analysis_as_typescript(session_factory, task_id, body=body)
-    worker = _worker(session_factory, {}, owner="p2-hreflang")
+    worker = _worker(session_factory, owner="p2-hreflang")
     await worker.run_until_idle()
 
     async with session_factory() as session:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -37,6 +38,7 @@ from app.core.config.site_health_contracts import (
     TASK_KIND_CHANGE_INTEL,
     TASK_KIND_DISCOVER,
 )
+from app.core.config.site_health_runtime import site_health_settings
 from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
@@ -60,14 +62,30 @@ from tests.component.site_health_worker_helpers import (
     DEFAULT_SEED_MONITORED_URLS,
     _add_monitored_analyze_task,
     _configure_crawl,
-    _html,
     _rich_html,
     _seed_analyze_ready,
     _seed_root_only,
     _seed_runtime,
     _settle_analysis_as_typescript,
+    _settle_discovery_as_typescript,
     _worker,
 )
+
+
+async def _discover_task(
+    session_factory: async_sessionmaker[AsyncSession], crawl_id: uuid.UUID
+) -> uuid.UUID:
+    """The crawl's root discover task."""
+    async with session_factory() as session:
+        task_id = await session.scalar(
+            select(SiteCrawlTask.id).where(
+                SiteCrawlTask.crawl_id == crawl_id,
+                SiteCrawlTask.task_kind == TASK_KIND_DISCOVER,
+                SiteCrawlTask.depth == 0,
+            )
+        )
+    assert task_id is not None
+    return task_id
 
 
 @pytest.mark.asyncio
@@ -76,9 +94,14 @@ async def test_fully_failed_root_terminalizes_crawl_as_failed(
 ) -> None:
     """A root that 404s (no URL discovered) fails the crawl + discovery."""
     seed = await _seed_root_only(session_factory)
-    # Empty page map -> the root "/" resolves to a 404 (non-retryable http_4xx).
-    worker = _worker(session_factory, {}, owner="fail-root")
-    await worker.run_until_idle()
+    # The root answered 404: TypeScript settles it as a terminal http_4xx.
+    await _settle_discovery_as_typescript(
+        session_factory,
+        await _discover_task(session_factory, seed.crawl_id),
+        status_code=404,
+        error_code=ERROR_HTTP_4XX,
+    )
+    await _worker(session_factory, owner="fail-root").run_until_idle()
 
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, seed.crawl_id)
@@ -104,9 +127,13 @@ async def test_fully_failed_root_surfaces_humanized_failure_and_failed_event(
     failure summary INSTEAD of the misleading ``crawl.completed``.
     """
     seed = await _seed_root_only(session_factory)
-    # Empty page map -> the root "/" resolves to a 404 (non-retryable http_4xx).
-    worker = _worker(session_factory, {}, owner="fail-root-surface")
-    await worker.run_until_idle()
+    await _settle_discovery_as_typescript(
+        session_factory,
+        await _discover_task(session_factory, seed.crawl_id),
+        status_code=404,
+        error_code=ERROR_HTTP_4XX,
+    )
+    await _worker(session_factory, owner="fail-root-surface").run_until_idle()
 
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, seed.crawl_id)
@@ -180,8 +207,10 @@ async def test_legitimately_empty_plan_keeps_analysis_completed_event(
     """
     seed = await _seed_root_only(session_factory)
     # Root serves a linkless page: discovery succeeds, nothing else to do.
-    worker = _worker(session_factory, {"/": _html([])}, owner="empty-plan")
-    await worker.run_until_idle()
+    await _settle_discovery_as_typescript(
+        session_factory, await _discover_task(session_factory, seed.crawl_id)
+    )
+    await _worker(session_factory, owner="empty-plan").run_until_idle()
 
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, seed.crawl_id)
@@ -211,9 +240,15 @@ async def test_partial_failure_terminalizes_crawl_as_partially_completed(
     """Root succeeds but a child 404s -> partially_completed / completed."""
     seed = await _seed_root_only(session_factory)
     # Root serves one in-scope child link; the child path is absent (-> 404).
-    pages = {"/": _html(["https://example.com/missing"])}
-    worker = _worker(session_factory, pages, owner="partial-root")
-    await worker.run_until_idle()
+    [child] = await _settle_discovery_as_typescript(
+        session_factory,
+        await _discover_task(session_factory, seed.crawl_id),
+        links=("https://example.com/missing",),
+    )
+    await _settle_discovery_as_typescript(
+        session_factory, child, status_code=404, error_code=ERROR_HTTP_4XX
+    )
+    await _worker(session_factory, owner="partial-root").run_until_idle()
 
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, seed.crawl_id)
@@ -556,14 +591,11 @@ async def test_crawl_not_completed_while_analyze_queued(
         )
         await session.commit()
 
-    pages = {"/rich": _rich_html()}
-    # Only claim discover so the analyze row stays non-terminal.
-    worker = _worker(session_factory, pages, owner="disc-only")
-    tasks = await worker._queue.claim(
-        owner=worker.owner, limit=8, kinds=[TASK_KIND_DISCOVER]
+    # Discovery settles while the analyze row stays leased elsewhere.
+    await _settle_discovery_as_typescript(
+        session_factory, await _discover_task(session_factory, seed.crawl_id)
     )
-    for t in tasks:
-        await worker._execute_task(t)
+    await _worker(session_factory, owner="disc-only").run_until_idle()
 
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, seed.crawl_id)
@@ -596,6 +628,35 @@ async def test_ts_settled_analysis_is_reconciled_exactly_once(
     await reconciler.reconcile()
     await reconciler.reconcile()
     assert reconciled.count(task_id) == 1
+
+
+@pytest.mark.asyncio
+async def test_ts_reconcile_advances_past_a_batch_of_replayed_rows(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Rows already replayed never refill the batch and pin the watermark."""
+    monkeypatch.setattr(site_health_settings, "stalled_crawl_reconcile_batch", 1)
+    task_ids = []
+    for _ in range(2):
+        _seed, _site_url_id, task_id = await _seed_analyze_ready(session_factory)
+        await _settle_analysis_as_typescript(
+            session_factory, task_id, body=_rich_html()
+        )
+        task_ids.append(task_id)
+    reconciled: list = []
+
+    class _Lifecycle:
+        async def reconcile_after_task(self, task: SiteCrawlTask) -> None:
+            reconciled.append(task.id)
+
+    reconciler = TsAnalysisReconciler(session_factory, _Lifecycle())  # type: ignore[arg-type]
+    # Other tests' settlements may share the window; each pass must still advance.
+    for _ in range(200):
+        if set(task_ids) <= set(reconciled):
+            break
+        await reconciler.reconcile()
+    assert set(task_ids) <= set(reconciled)
 
 
 @pytest.mark.asyncio
@@ -645,8 +706,7 @@ async def test_partial_analysis_failure_partially_completes(
     await _settle_analysis_as_typescript(
         session_factory, missing_task_id, error_code=ERROR_HTTP_4XX
     )
-    worker = _worker(session_factory, {}, owner="partial-analyze")
-    await worker.run_until_idle()
+    await _worker(session_factory, owner="partial-analyze").run_until_idle()
 
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, seed.crawl_id)

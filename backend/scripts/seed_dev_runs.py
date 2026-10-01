@@ -62,8 +62,6 @@ from app.workers.site_health_worker import SiteHealthWorker
 from scripts.seed_dev_support import (
     SEED_MONITORED_URL_ALLOWANCE,
     _build_seed_adapter,
-    _FakeResolver,
-    _site_transport,
     set_seed_audit_generation,
 )
 
@@ -258,14 +256,14 @@ async def run_site_health_crawls(
 ) -> uuid.UUID:
     """Discover, select every URL as monitored, then run two analysis crawls.
 
-    Runs the REAL crawl planner (``create_crawl``) and the REAL
-    ``SiteHealthWorker`` (against a mocked transport), mirroring the production
+    Runs the REAL crawl planner (``create_crawl``) and drives the Python
+    crawl maintenance while the TypeScript Site Health worker (which must be
+    running) acquires and analyzes the pages, mirroring the production
     "discover -> select monitored URLs -> recrawl analyzes" flow; a hand-built
     crawl/task never goes through that selection gate.
 
     The second analysis crawl supplies the immediate comparable A/B pair the
-    Website Changes projection needs. The deterministic transport is unchanged
-    between the two, so it is also the clean-stack zero-false-regression proof.
+    Website Changes projection needs.
     Returns that crawl's id.
     """
     async with SessionLocal() as session:
@@ -281,8 +279,6 @@ async def run_site_health_crawls(
     worker = SiteHealthWorker(
         session_factory=SessionLocal,
         owner="seed-site-worker",
-        resolver=_FakeResolver(),
-        transport=_site_transport(),
     )
     discovery_crawl_id = await _plan_and_drain_crawl(
         worker,

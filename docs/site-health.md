@@ -28,18 +28,20 @@ explicit Run new crawl
 Read endpoints only render persisted projections. They never acquire, classify,
 score, call a model/provider or repair state.
 
-During the TypeScript cutover, `site-health-worker-ts` claims `analyze`,
-`change_intel`, `link_metrics` and `architecture` from the existing
-`site_crawl_tasks` queue; the Python worker claims only `discover` and
-`site_setup`. The TypeScript owner locks crawl then task, publishes immutable
-derived evidence and admits successors with acknowledgement in one transaction;
-for `change_intel` that includes the analytics handoff. `analyze` acquires the
-page (or reuses its discover artifact) outside any transaction, then re-checks
-lease, crawl, membership and entitlement before committing its evidence, the
-Commerce projection enqueue and the task outcome together. Python retains
-discovery, site setup, finalization, terminal-crawl admission (including the
-analytics handoff of a crawl without usable analysis) and lease sweeping; its
-maintenance pass reconciles crawls after TypeScript settles an analysis.
+During the TypeScript cutover, `site-health-worker-ts` claims every
+`site_crawl_tasks` kind: `discover`, `site_setup`, `analyze`, `change_intel`,
+`link_metrics` and `architecture`. The TypeScript owner locks crawl then task,
+publishes immutable derived evidence and admits successors with acknowledgement
+in one transaction; for `change_intel` that includes the analytics handoff. The
+network-bound kinds acquire outside any transaction, then re-check lease and
+crawl (and, for `analyze`, membership and entitlement) before committing their
+evidence and the task outcome together. `discover` commits its artifact, the
+URL's observation, frontier admission and the page's disposition; `site_setup`
+publishes robots and llms.txt evidence first, then commits the sitemap walk and
+its admission under the same lease. Python claims no tasks: it retains crawl
+creation, finalization, terminal-crawl admission (including the analytics
+handoff of a crawl without usable analysis) and lease sweeping, and its
+maintenance pass reconciles crawls after TypeScript settles a task.
 Source inspection and internal-link judgments run in the TypeScript analytics
 worker; their failed-task recovery also covers Python-sweeper terminalization.
 
@@ -55,8 +57,8 @@ cancel, page rerun and the monitored set, until the crawler moves.
 
 ## Acquisition and evidence guarantees
 
-The curl transport sends `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)`
-and no longer impersonates a browser. The robots.txt response decides access:
+The Node transport sends `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)`
+and does not impersonate a browser. The robots.txt response decides access:
 
 | robots.txt result | Crawl behavior |
 |---|---|
@@ -88,8 +90,9 @@ requires the audit plan's remaining authorization/robots/pacing acceptance.
 - Crawls begin only from an explicit user request.
 - PostgreSQL is the queue. Tasks use leases, heartbeats, retries, idempotency and
   `FOR UPDATE SKIP LOCKED`; claims commit before network I/O.
-- The URL-policy, fetcher and curl transport owners retain SSRF checks, DNS
-  pinning, redirect revalidation, TLS validation, response limits and redaction.
+- The URL admission policy and the pinned website transport own SSRF checks,
+  DNS pinning, redirect revalidation (scope and hard exclusions apply to every
+  page hop, never to robots.txt), TLS validation and response limits.
 - Fetch attempts and artifacts are append-only. `normalized_facts` remains the
   bounded evidence store; Site Health does not persist a second raw-HTML copy.
 - Artifacts identify crawl, task, capture time, final URL, region and extractor

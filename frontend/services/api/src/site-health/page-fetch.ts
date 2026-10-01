@@ -5,7 +5,6 @@
  * use the Site Health fetch-error vocabulary the read API classifies.
  */
 import { policy, resolveSettingSpec } from '../config.ts';
-import { stripTrailing } from '../text-order.ts';
 import type { Database } from '../db/database.ts';
 import {
   FetchError,
@@ -19,14 +18,10 @@ import {
   authorizeAcquisition,
   PageAcquirer,
 } from '../web-evidence/acquisition.ts';
+import { hardExcluded } from './url-admission.ts';
 
 const a = policy.site_health.page_analysis.acquisition;
 const codes = a.error_codes;
-const PATH_EXCLUSIONS = a.hard_exclusion_path_patterns.map((pattern) => new RegExp(pattern));
-const HOST_EXCLUSIONS = new Set(a.hard_exclusion_host_labels);
-const QUERY_EXCLUSIONS = new Set(a.hard_exclusion_query_keys);
-const TRACKING = new Set(policy.site_health.tracking_params);
-const EXTENSIONS = a.hard_exclusion_extensions;
 const BOT_MARKERS = a.bot_block_body_markers.map((marker) => marker.toLowerCase());
 const RETRYABLE = new Set([codes.timeout, codes.connection_failed]);
 const FETCH_ERROR_CODES: Record<string, string> = {
@@ -50,19 +45,6 @@ export function siteFetchSettings(env: Record<string, string | undefined> = proc
     maxDecodedBytes: Number(value('max_response_decoded_bytes')),
     policyVersion: String(value('acquisition_policy_version')),
   };
-}
-
-/** Whether a URL names a non-content endpoint the crawler never fetches, even by redirect. */
-export function hardExcluded(url: URL) {
-  const keys = [...url.searchParams.keys()].map((key) => key.toLowerCase());
-  if (keys.some((key) => QUERY_EXCLUSIONS.has(key) || TRACKING.has(key))) return true;
-  if (HOST_EXCLUSIONS.has(url.hostname.toLowerCase().split('.')[0]!)) return true;
-  const path = stripTrailing(url.pathname.toLowerCase(), '/') || '/';
-  return (
-    PATH_EXCLUSIONS.some((pattern) => pattern.test(path)) ||
-    EXTENSIONS.some((extension) => path.endsWith(extension)) ||
-    url.href.length > policy.site_health.page_analysis.facts.limits.url_chars
-  );
 }
 
 /** A challenge interstitial rather than the page: terminal, since retrying cannot pass it. */
@@ -137,7 +119,16 @@ export class SitePageFetcher {
     return { ok: false, code, detail, retryable: false, calls: [], latencyMs: null };
   }
 
-  async fetch(requested: string): Promise<SiteFetchResult | SiteFetchFailure> {
+  /**
+   * `admit` screens the page and every redirect hop (default: the hard
+   * exclusions); discovery narrows it to the crawl's scope. `contentTypes`
+   * defaults to HTML.
+   */
+  async fetch(
+    requested: string,
+    options: { admit?: (hop: URL) => boolean; contentTypes?: readonly string[] } = {},
+  ): Promise<SiteFetchResult | SiteFetchFailure> {
+    const admit = options.admit ?? ((hop: URL) => !hardExcluded(hop));
     const url = new URL(requested);
     const denied = await this.#robotsDenial(url);
     if (denied) return denied;
@@ -149,11 +140,11 @@ export class SitePageFetcher {
         maxDecodedBytes: this.settings.maxDecodedBytes,
         timeoutSeconds: this.settings.acquisition.timeout,
         redirects: this.settings.acquisition.redirects,
-        contentTypes: [...a.html_content_types, ''],
+        contentTypes: [...(options.contentTypes ?? a.html_content_types), ''],
         headerNames: a.persisted_response_headers,
-        // Hard exclusions screen the page and every redirect hop, not robots.txt.
+        // Admission screens the page and every redirect hop, never robots.txt.
         admit: (hop) => {
-          if (hardExcluded(hop)) throw new FetchError(codes.url_admission_rejected);
+          if (!admit(hop)) throw new FetchError(codes.url_admission_rejected);
         },
         onCall: (call) => calls.push(call),
       });

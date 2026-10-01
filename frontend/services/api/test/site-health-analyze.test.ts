@@ -2,18 +2,14 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
-import { FetchError, type FetchedPage, type FetchOptions } from '../src/projects/safe-fetch.ts';
-import { analyzeSettings } from '../src/site-health/analyze-task.ts';
-import {
-  hardExcluded,
-  isBotBlock,
-  SitePageFetcher,
-  siteFetchSettings,
-} from '../src/site-health/page-fetch.ts';
+import type { FetchedPage } from '../src/projects/safe-fetch.ts';
+import { isBotBlock, SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
+import { siteTaskSettings } from '../src/site-health/site-task.ts';
+import { hardExcluded } from '../src/site-health/url-admission.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { testDatabase } from './support.ts';
-import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
+import { recordedSite, SiteFixtures, type Served, type SiteSeed } from './site-health-fixtures.ts';
 
 const db = testDatabase();
 const fixtures = new SiteFixtures(db);
@@ -38,56 +34,8 @@ const RICH =
   "<html lang='en'><head><title>Rich page about widgets</title><meta name='description' content='Widgets.'></head>" +
   '<body><main><h1>Widgets</h1><p>Widgets are useful tools for small workshops.</p></main></body></html>';
 
-type Served = {
-  status?: number;
-  body?: string;
-  redirect?: string;
-  contentType?: string;
-  onFetch?: () => Promise<void>;
-};
-/**
- * A recorded site behind the real acquirer: robots and pacing run through the
- * gate, every hop is authorized, and each call is reported like the transport does.
- */
-function site(pages: Record<string, Served>, requests: string[] = []) {
-  const fetcher = async (value: string, options: FetchOptions): Promise<FetchedPage> => {
-    let url = new URL(value);
-    for (let hop = 0; hop <= options.redirects; hop++) {
-      await options.authorize?.(url);
-      const target = url;
-      const served = pages[target.pathname];
-      const send = async () => {
-        requests.push(target.pathname);
-        await served?.onFetch?.();
-        const status = served?.status ?? (served ? 200 : 404);
-        const body = Buffer.from(served?.body ?? '');
-        options.onCall?.({
-          url: target.href,
-          status,
-          error: null,
-          wireBytes: body.length,
-          decodedBytes: body.length,
-          ttfbMs: 1,
-          latencyMs: 1,
-        });
-        return { status, body, redirect: served?.redirect };
-      };
-      const response = options.gate
-        ? await options.gate(target, send, AbortSignal.timeout(5000))
-        : await send();
-      if (!response.redirect)
-        return {
-          url: target.href,
-          status: response.status,
-          contentType: served?.contentType ?? 'text/html',
-          body: response.body,
-        };
-      url = new URL(response.redirect, target);
-    }
-    throw new FetchError('redirect_limit');
-  };
-  return new SitePageFetcher(db, fetcher, fetchSettings);
-}
+const site = (pages: Record<string, Served>, requests: string[] = []) =>
+  new SitePageFetcher(db, recordedSite(pages, requests), fetchSettings);
 /** Lease exactly these tasks to one worker and execute them, as its claim would. */
 async function analyze(fetcher: SitePageFetcher, ...taskIds: string[]) {
   const worker = new SiteHealthWorker(db, {
@@ -251,7 +199,7 @@ describe('analyze acquisition', () => {
     await analyze(fetcher, otherRoot.taskId);
     expect((await task(otherRoot.taskId)).status).toBe('queued');
 
-    const old = new Date(Date.now() - (analyzeSettings({}).dependencyMaxWait + 60) * 1000);
+    const old = new Date(Date.now() - (siteTaskSettings({}).dependencyMaxWait + 60) * 1000);
     await db
       .updateTable('site_crawl_tasks')
       .set({ created_at: old, available_at: new Date() })

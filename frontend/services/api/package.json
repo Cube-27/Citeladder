@@ -26,6 +26,7 @@
     "@noble/hashes": "^2.4.0",
     "@node-rs/argon2": "^2.2.1",
     "csv-parse": "^7.0.3",
+    "fast-xml-parser": "^5.11.2",
     "fontkit": "^2.0.4",
     "hono": "^4.13.10",
     "ipaddr.js": "^2.5.0",
