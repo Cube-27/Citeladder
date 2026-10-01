@@ -65,6 +65,14 @@ CODE_REVIEW_EXPIRED: Final = "review_expired"
 CODE_PRICING_CHANGED: Final = "pricing_changed"
 CODE_CONNECTION_CHANGED: Final = "connection_changed"
 CODE_ACQUISITION_IN_PROGRESS: Final = "acquisition_in_progress"
+CODE_UNSUPPORTED_TARGET: Final = "unsupported_target"
+CODE_UNSUPPORTED_MARKET: Final = "unsupported_market"
+CODE_UNSUPPORTED_SCOPE: Final = "unsupported_scope"
+CODE_UNSUPPORTED_ORDER: Final = "unsupported_order"
+CODE_COMPETITOR_NOT_FOUND: Final = "competitor_not_found"
+CODE_TARGET_CHANGED: Final = "target_changed"
+CODE_DATAFORSEO_CONNECTION_REQUIRED: Final = "dataforseo_connection_required"
+CODE_DATAFORSEO_CONNECTION_AMBIGUOUS: Final = "dataforseo_connection_ambiguous"
 
 LABS_TASK_USD: Final = Decimal("0.012")
 LABS_ITEM_USD: Final = Decimal("0.00012")
