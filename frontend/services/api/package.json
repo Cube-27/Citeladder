@@ -7,6 +7,7 @@
     "start": "node src/server.ts",
     "worker": "node src/worker.ts",
     "worker:discovery": "node src/discovery-worker.ts",
+    "worker:site-health": "node src/site-health-worker.ts",
     "integration-worker": "node src/integration-worker.ts",
     "integration-dispatcher": "node src/integration-dispatcher.ts",
     "billing-worker": "node src/billing-worker.ts",
@@ -33,6 +34,7 @@
     "parse5": "^8.0.1",
     "pdfkit": "^0.20.2",
     "pg": "^8.23.0",
+    "robots-parser": "^3.0.1",
     "tldts": "^7.4.16",
     "zod": "^4.6.5"
   },

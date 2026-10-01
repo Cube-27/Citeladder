@@ -291,11 +291,10 @@ lock (`citeladder-locks` person, exported in policy).
 | --- | --- |
 | `domain/opportunities/actions.py` reads and attach; `analysis/opportunities/actions.py` (`page_group_key`, `select_approach`) | Agent tool catalog and output attachment |
 | `domain/opportunities/action_status.py` | effective-status reads for Agent, MCP, command center |
-| `domain/opportunities/placement_checks.py` | TS creates checks; Python source-page inspector settles and reschedules them |
-| `domain/opportunities/verification.py` | enqueue only: Site Health terminal refresh, source-page inspector |
+| `domain/opportunities/verification.py` | enqueue only: Site Health terminal refresh |
 | `queries.py`, `projection.py`, `schemas.py` (`OpportunityItem`, `VerificationEventView`), `content_handoff` | command center, Agent, dev seed |
 | `common.py`, `errors.py` | remaining Python owners |
-| `analysis/opportunities/page_predicates`, `placement_outcome`, `source_patterns` | placement checks, source-page inspection, analysis service |
+| `analysis/opportunities/source_patterns` | analysis service |
 | `analysis/comparison`, `csv_cells`, `normalization`, `site_health/indexing` | many Python callers, including Site Health |
 
 The dev seeder enqueues the refresh and waits, bounded, for the TS worker.
@@ -585,9 +584,7 @@ links. Discovery queue execution moves in PR 12.
 | Python bridge | Remaining caller / retirement condition |
 | --- | --- |
 | `connectors/agent/*`, `connectors/app_model*.py` | Agent, Commerce shelf and providers; retire after those callers move |
-| `connectors/jev.py` | Internal-links worker; its retry cap now comes from shared JEV config |
 | `prompts/normalization.py` | Prompt model and analysis; retire with their final Python caller |
-| `prompts/locks.py` project lock | Source-page admission; unused prompt-set acquisition removed |
 | `entitlements/enforcement.py` | Agent and remaining admission callers; retain until their owners move |
 
 Lock order and shared writers:
@@ -868,6 +865,59 @@ review creation).
 `connectors/web_evidence` and source-page inspection, with Node replacements
 for robots, sitemaps and HTML parsing. Decide here whether crawl fetching
 needs TLS impersonation; if so, keep only a Python fetch service (section 2).
+
+D7 splits this retirement into dependency-ordered slices. PR 18a moves the
+`internal_link_judgment` and `source_page_inspection` analytics kinds, source
+extraction/presence, content differentiation, and placement settlement. It
+retires their Python writers and terminal-compensation hooks. Python keeps
+citation identity and source projections for answer analysis, report listing
+for Agent tools, and shared web acquisition for the remaining Site Health
+crawler. The core crawl task kinds, page analysis, change intelligence and Site
+Health route family are assigned to pending PR 18b; PR 18 is not complete here.
+
+Node pinned acquisition identifies CiteLadder's crawler and checks robots and
+durable suppression at each hop. The existing owner does not require browser
+TLS impersonation, so the moved source inspector needs no Python fetch service.
+
+Departures in 18a: a truncated extraction cannot establish absence; a positive
+literal match without retained quotation space abstains as ambiguous; headings
+retain DOM order; an organic-only admission no longer consumes the citation
+recurrence marker; placement settlement and its verification enqueue commit
+atomically; `content_hash` is re-derived by the TS extractor, so the first TS
+reading of a Python-inspected page may differ once; canonical URLs collapse
+dot segments (otherwise serialized exactly as Python's `url_hash` writers);
+terminal compensation retries until it succeeds, rotating a failing row behind
+untried ones. TS heartbeat and mark-running refuse an expired lease instead of
+reviving it; the sweeper reclaims it and late writes stay fenced. Replaced Python tests move to focused TypeScript and PostgreSQL
+coverage; schema integrity and Python bridge tests remain.
+
+PR 18a also adds the TypeScript SiteCrawlTask lease worker and moves `link_metrics`.
+Both Python worker lanes exclude that kind. Metrics and the architecture
+successor commit with acknowledgement under crawl/task locks. Link metrics and
+architecture admit only evidence stamped with the crawl's analyzer/extractor
+versions, and anchor lexical alignment is unknown, not 0.0, when the target has
+no usable title/H1 tokens.
+Python retains terminal-crawl metric admission and its schema-isolation tests;
+graph decisions, persistence, cancellation and queue concurrency move to TS tests.
+PR 18a moves observed architecture and its root-anchored findings. Both Python
+lanes exclude `architecture`; its Python writer, phase and queue admission helper
+are retired. Python retains the persisted architecture reader and schema-isolation
+coverage. Native tests cover hierarchy evidence priority, cycles, incomplete
+coverage, archetype abstention, exact source IDs and replay. Architecture now
+bounds source admission to 500 current-version pages (selected in SQL by
+normalized URL before canonicalization), downgrades capped coverage,
+reads relationships from the parser's structured-data blocks, and rejects numeric
+strings as confidence.
+
+**PR 18b — pending:** move change-intelligence comparison and immutable snapshots
+with their atomic analytics handoff; the page parser, classifier, deterministic
+rules and scoring; the `discover`, `site_setup` and `analyze` executors; durable
+frontier, robots, fetch budgets, crawl admission, cancellation, finalization and
+lease recovery; and all 27 Site Health API operations with their contracts and
+route ownership. Retire replaced Python writers and acquisition paths after
+their callers move. Retain the read-only Agent/MCP, source-identity and entitlement
+bridges until their external callers migrate. PR 18 remains incomplete until 18b
+lands.
 
 ### PR 19: Agent runtime
 

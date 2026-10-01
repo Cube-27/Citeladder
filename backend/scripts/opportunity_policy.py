@@ -32,7 +32,7 @@ from app.core.config.site_health_contracts import (
 )
 from app.core.config.site_health_rule_types import FINDING_CLASS_DEFECT
 from app.core.config.site_health_rules import TRACKING_QUERY_PARAMS
-from app.domain.source_pages.persistence import OUTCOME_INSPECTED
+from app.core.config.source_pages import INSPECTION_INSPECTED as OUTCOME_INSPECTED
 
 
 def _value(value: Any) -> Any:

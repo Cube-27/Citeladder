@@ -150,6 +150,14 @@ SITE_PROCESSING_TASK_KINDS: Final[frozenset[str]] = (
     SITE_TASK_KINDS - SITE_ACQUISITION_TASK_KINDS
 )
 
+# Both stacks share the durable queue with disjoint claims during migration.
+SITE_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
+    {TASK_KIND_LINK_METRICS, TASK_KIND_ARCHITECTURE}
+)
+SITE_PYTHON_PROCESSING_TASK_KINDS: Final[frozenset[str]] = (
+    SITE_PROCESSING_TASK_KINDS - SITE_TS_OWNED_TASK_KINDS
+)
+
 INITIAL_TASK_GENERATION: Final = 0
 
 OBSERVATION_SOURCE_ROOT: Final = "root"

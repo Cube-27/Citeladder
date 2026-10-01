@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from app.core.config.site_health_contracts import (
     SITE_TASK_KINDS,
+    SITE_TS_OWNED_TASK_KINDS,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
     TASK_KIND_SITE_SETUP,
@@ -25,7 +26,8 @@ def test_lane_plan_reserves_acquisition_and_processing_capacity() -> None:
     assert len(acquisition) == 2
     assert len(processing) == 6
     assert all(
-        set(lane.preferred_kinds) | set(lane.borrow_kinds) == SITE_TASK_KINDS
+        set(lane.preferred_kinds) | set(lane.borrow_kinds)
+        == SITE_TASK_KINDS - SITE_TS_OWNED_TASK_KINDS
         for lane in lanes
     )
 

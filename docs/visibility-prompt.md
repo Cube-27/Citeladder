@@ -118,7 +118,7 @@ Drafts are written in the project's `language_code`, using English when it is bl
 `evidence_refs`, copied into `generation_evidence` on accept.
 
 The [quality judge](../frontend/services/api/src/prompts/generation-quality.ts) runs
-through the [JEV connector](../backend/app/connectors/jev.py) when
+through the [JEV connector](../frontend/services/api/src/models/jev.ts) when
 `JEV_API_KEY` is set (blank is off; the TypeSafe subprocessor and privacy
 revision was published on 28 September 2026 and production carries the key).
 It judges the admitted draft pool within the configured call cap: yes/no fit, buyer relevance, decision value,

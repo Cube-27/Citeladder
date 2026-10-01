@@ -14,8 +14,7 @@ from app.models.project import Project
 from app.models.site_health.analysis import SitePageAnalysis
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.analysis.site_health.parser import extract_page_facts
-from app.domain.opportunities.placement_checks import evaluate_placement_checks
-from app.models.source_pages import PlacementCheck, SourcePage, SourcePageEntityPresence, SourcePageSnapshot
+from app.models.source_pages import SourcePage, SourcePageEntityPresence, SourcePageSnapshot
 from tests.component.opportunity_helpers import _seed_scenario, seed_action_for, seed_live_set
 
 
@@ -105,11 +104,8 @@ async def observe(workspace, project, page_id):
         session.add(SourcePageEntityPresence(**scope, source_page_id=page.id, snapshot_id=snapshot.id,
                                             entity_kind="brand", entity_name="Acme", presence="present",
                                             match_method="exact_alias", match_count=2, roster_version="roster-fixed"))
-        await session.flush()
-        await evaluate_placement_checks(session, **scope, now=moment)
         await session.commit()
-        check = await session.scalar(select(PlacementCheck).where(PlacementCheck.source_page_id == page.id))
-        return {"state": check.state, "snapshot_id": str(check.observation_snapshot_id)}
+        return {"snapshot_id": str(snapshot.id), "observed_at": moment.isoformat()}
 
 
 async def main():

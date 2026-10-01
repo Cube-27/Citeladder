@@ -47,10 +47,8 @@ from app.core.config.site_health_contracts import (
     EXTRACTOR_VERSION,
     POST_TERMINAL_SITE_TASK_KINDS,
     TASK_KIND_ANALYZE,
-    TASK_KIND_ARCHITECTURE,
     TASK_KIND_CHANGE_INTEL,
     TASK_KIND_DISCOVER,
-    TASK_KIND_LINK_METRICS,
     TASK_KIND_SITE_SETUP,
 )
 from app.core.config.site_health_runtime import (
@@ -97,16 +95,10 @@ from app.workers.site_health.phases import (
     analyze as analyze_phase,
 )
 from app.workers.site_health.phases import (
-    architecture as architecture_phase,
-)
-from app.workers.site_health.phases import (
     change_intel as change_intel_phase,
 )
 from app.workers.site_health.phases import (
     discover as discover_phase,
-)
-from app.workers.site_health.phases import (
-    link_metrics as link_metrics_phase,
 )
 from app.workers.site_health.phases import (
     site_setup as site_setup_phase,
@@ -399,10 +391,6 @@ class SiteHealthWorker(DrainableWorkerMixin):
             await analyze_phase.run(self._phase_context, claimed)
         elif kind == TASK_KIND_CHANGE_INTEL:
             await change_intel_phase.run(self._phase_context, claimed)
-        elif kind == TASK_KIND_LINK_METRICS:
-            await link_metrics_phase.run(self._phase_context, claimed)
-        elif kind == TASK_KIND_ARCHITECTURE:
-            await architecture_phase.run(self._phase_context, claimed)
         else:
             raise NotImplementedError(f"unknown task kind '{kind}'")
 
