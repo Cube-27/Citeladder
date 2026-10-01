@@ -18,6 +18,7 @@ from app.core.config import site_health_crawl_policy as crawl_policy
 from app.core.config import site_health_link_metrics as links
 from app.core.config import site_health_measurement as measurement
 from app.core.config import site_health_rules as rules
+from app.core.config import site_health_runtime as runtime
 from app.core.config import site_health_taxonomy as taxonomy
 from app.core.config import source_pages
 from app.core.config.lexical import STOP_WORDS
@@ -116,6 +117,13 @@ def _crawl_policy(
             "version": contracts.LINK_REWRITE_VERSION,
         },
         "robots_path": acquisition.ROBOTS_TXT_PATH,
+        "robots_statuses": constants(acquisition, "ROBOTS_STATUS_"),
+        "max_declared_sitemaps": acquisition.SITE_HEALTH_MAX_DECLARED_SITEMAPS,
+        "max_url_chars": acquisition.SITE_HEALTH_MAX_URL_CHARS,
+        "frontier_statuses": constants(crawl_policy, "FRONTIER_"),
+        "sample_analysis_selection_sources": sorted(
+            crawl_policy.SAMPLE_ANALYSIS_SELECTION_SOURCES
+        ),
         "llms_path": acquisition.LLMS_TXT_PATH,
         "sitemap_default_paths": list(acquisition.SITEMAP_DEFAULT_PATHS),
         "sitemap_content_types": sorted(rules.SITEMAP_CONTENT_TYPES),
@@ -132,6 +140,11 @@ def _read_policy() -> dict[str, Any]:
     """What the TypeScript Site Health read API projects from."""
     return {
         "terminal_crawl_statuses": sorted(contracts.CRAWL_TERMINAL_STATUSES),
+        "page_default_limit": runtime.READ_PAGE_DEFAULT_LIMIT,
+        "page_max_limit": runtime.READ_PAGE_MAX_LIMIT,
+        "terminal_grace_polls": runtime.READ_TERMINAL_GRACE_POLLS,
+        "export_page_size": runtime.READ_EXPORT_PAGE_SIZE,
+        "max_detail_evaluations": runtime.READ_MAX_DETAIL_EVALUATIONS,
         "scoring_version": contracts.SCORING_VERSION,
         "rule_dimensions": sorted(contracts.RULE_DIMENSIONS),
         "failing_outcomes": sorted(contracts.RULE_FAILING_OUTCOMES),

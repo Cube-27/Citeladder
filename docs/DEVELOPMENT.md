@@ -34,7 +34,7 @@ repository check script includes the documentation build.
 |------|---------|-------|
 | Python | 3.12+ | Backend |
 | [`uv`](https://docs.astral.sh/uv/) | latest | Backend dependency + venv manager |
-| Node.js | 22+ | Frontend. 22 is the supported minimum and CI version. The local Compose marketing Worker image uses Node 26 to run Wrangler; protected production delivery uses Cloudflare Workers. |
+| Node.js | 26+ | Frontend and TypeScript services. 26 is the supported minimum and CI version; protected production delivery uses Cloudflare Workers. |
 | pnpm | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json). |
 | PostgreSQL | 15+ | Via Docker or local |
 | Docker + Compose | latest | Local stack |

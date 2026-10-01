@@ -14,6 +14,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.site_health_runtime import (
+    MIN_WORKER_POLL_SECONDS,
     SITE_CRAWL_QUEUE_SPEC,
     site_health_settings,
 )
@@ -52,7 +53,11 @@ class SiteHealthWorker(DrainableWorkerMixin):
         )
         for crawl_id in sweep.failed_parent_ids:
             await self._lifecycle.reconcile(crawl_id)
-        reconciled = await self._ts_tasks.reconcile()
+        reconciled = 0
+        try:
+            reconciled = await self._ts_tasks.reconcile()
+        except Exception:  # a failed replay must not suppress the crawl backstops
+            logger.exception("site health task reconciliation failed")
         await self._lifecycle.reconcile_stalled()
         await self._lifecycle.reconcile_overdue()
         return reconciled
@@ -64,7 +69,9 @@ class SiteHealthWorker(DrainableWorkerMixin):
                 await self.run_once()
             except Exception:  # maintenance must not kill the worker
                 logger.exception("site health maintenance failed")
-            await asyncio.sleep(max(0.05, site_health_settings.poll_interval_seconds))
+            await asyncio.sleep(
+                max(MIN_WORKER_POLL_SECONDS, site_health_settings.poll_interval_seconds)
+            )
 
 
 def main() -> None:  # pragma: no cover - process entrypoint

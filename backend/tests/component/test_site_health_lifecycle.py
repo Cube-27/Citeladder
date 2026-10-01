@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select, update
@@ -65,6 +66,23 @@ from tests.component.site_health_worker_helpers import _seed_analyze_phase_crawl
 def _worker(session_factory: async_sessionmaker[AsyncSession]) -> SiteHealthWorker:
     """A worker with no transport: these tests never let it reach a fetch."""
     return SiteHealthWorker(session_factory=session_factory, owner="lifecycle-test")
+
+
+@pytest.mark.asyncio
+async def test_replay_failure_does_not_suppress_crawl_backstops(
+    session_factory: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker = _worker(session_factory)
+    stalled = AsyncMock()
+    overdue = AsyncMock()
+    monkeypatch.setattr(
+        worker._ts_tasks, "reconcile", AsyncMock(side_effect=RuntimeError("bad row"))
+    )
+    monkeypatch.setattr(worker._lifecycle, "reconcile_stalled", stalled)
+    monkeypatch.setattr(worker._lifecycle, "reconcile_overdue", overdue)
+    assert await worker.run_once() == 0
+    stalled.assert_awaited_once()
+    overdue.assert_awaited_once()
 
 
 async def _expire_leases(

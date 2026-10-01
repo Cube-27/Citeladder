@@ -5907,6 +5907,11 @@
         "failed",
         "partially_completed"
       ],
+      "page_default_limit": 50,
+      "page_max_limit": 200,
+      "terminal_grace_polls": 2,
+      "export_page_size": 200,
+      "max_detail_evaluations": 200,
       "scoring_version": "sh-scoring-1",
       "rule_dimensions": [
         "aeo",
@@ -6095,6 +6100,22 @@
         "version": "sh-link-rewrite-1"
       },
       "robots_path": "/robots.txt",
+      "robots_statuses": {
+        "fetched": "fetched",
+        "access_blocked": "access_blocked",
+        "fetch_failed": "fetch_failed",
+        "not_found": "not_found"
+      },
+      "max_declared_sitemaps": 16,
+      "max_url_chars": 2048,
+      "frontier_statuses": {
+        "pending": "pending",
+        "admitted": "admitted"
+      },
+      "sample_analysis_selection_sources": [
+        "bootstrap",
+        "free_sample"
+      ],
       "llms_path": "/llms.txt",
       "sitemap_default_paths": [
         "/sitemap.xml"
@@ -6137,6 +6158,7 @@
           "accessibility_control_descriptors": 20,
           "accessibility_identifier_chars": 128,
           "url_chars": 2048,
+          "declared_sitemaps": 16,
           "anchor_text_chars": 512,
           "author_chars": 256,
           "date_chars": 64,
@@ -6235,6 +6257,7 @@
           "visible_publisher_pattern": "\\b(?i:maintained|published)\\s+(?i:by)\\s+(?:(?i:the)\\s+)?([A-Z](?:[\\wÀ-ÖØ-öø-ɏ'’&-]|\\.(?=[\\wÀ-ÖØ-öø-ɏ'’&-]))*(?:\\s+(?:[A-Z](?:[\\wÀ-ÖØ-öø-ɏ'’&-]|\\.(?=[\\wÀ-ÖØ-öø-ɏ'’&-]))*|team|for|of|and|the)){0,4})(?=\\s*(?:\\s+(?i:from)\\b|[.,;]|$))",
           "date_pattern": "(?:\\b\\d{4}-\\d{2}-\\d{2}\\b|\\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?\\s+\\d{1,2},?\\s+\\d{4}\\b|\\b\\d{1,2}\\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?,?\\s+\\d{4}\\b)",
           "byline_metadata_suffix_pattern": "[,;·—-]?\\s*(?:(?i:published|updated)\\s+)?(?:(?:\\b\\d{4}-\\d{2}-\\d{2}\\b|\\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?\\s+\\d{1,2},?\\s+\\d{4}\\b|\\b\\d{1,2}\\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?,?\\s+\\d{4}\\b))[.]?",
+          "short_date_pattern": "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|январ[ья]|феврал[ья]|март(?:а)?|апрел[ья]|ма[йя]|июн[ья]|июл[ья]|август(?:а)?|сентябр[ья]|октябр[ья]|ноябр[ья]|декабр[ья])\\.?\\s+\\d{1,2},?\\s+\\d{4}",
           "visible_author_node_tokens": [
             "author",
             "byline"
@@ -7297,6 +7320,7 @@
           "expires",
           "last-modified",
           "referrer-policy",
+          "retry-after",
           "server",
           "strict-transport-security",
           "vary",

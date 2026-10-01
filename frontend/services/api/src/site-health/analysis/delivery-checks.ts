@@ -1,4 +1,5 @@
 /** HTTP delivery, automated-consumer access and Web Fundamentals checks over persisted facts. */
+import { policy } from '../../config.ts';
 import { analysisPolicy } from './policy.ts';
 import { count, list, record, records, text, textList, type Facts } from './read-facts.ts';
 import type { CheckResult } from './indexing.ts';
@@ -48,8 +49,9 @@ function robotsTxtPresent(facts: Facts): CheckResult {
     status_code: robots.status_code,
     url: text(robots.url).slice(0, 2048),
   };
-  if (robots.fetched || robots.status === 'fetched') return ['satisfied', evidence];
-  if (robots.status === 'not_found') return ['missing', evidence];
+  if (robots.fetched) return ['satisfied', evidence];
+  if (robots.status === policy.site_health.crawl.robots_statuses.not_found)
+    return ['missing', evidence];
   // An unreadable file is not evidence of absence.
   return ['not_applicable', { ...evidence, reason: 'robots_not_fetched' }];
 }

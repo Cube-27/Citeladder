@@ -11,7 +11,7 @@ import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import type { FetchCall, FetchedPage } from '../projects/safe-fetch.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
-import { analyzePage } from './analysis/analyze-page.ts';
+import type { analyzePage } from './analysis/analyze-page.ts';
 import { createsIssue, type RuleEvaluation } from './analysis/rules.ts';
 import type { Facts } from './analysis/read-facts.ts';
 import type { Crawl } from './task-fence.ts';
@@ -164,13 +164,13 @@ export async function writeAttempts(
   await db.insertInto('site_fetch_attempts').values(rows).execute();
 }
 
-/** Whether the crawl's sitemap manifest (or, for older crawls, a sitemap observation) lists the URL. */
-async function sitemapMember(db: Database, crawl: Crawl, siteUrlId: string) {
+/** The observation supporting membership in the current or legacy sitemap manifest. */
+async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string) {
   const sitemap = record(record(crawl.site_facts).sitemap);
   const urls = Array.isArray(sitemap.urls)
     ? sitemap.urls.filter((url) => typeof url === 'string')
     : null;
-  if (urls && !urls.length) return false;
+  if (urls && !urls.length) return null;
   const row = await db
     .selectFrom('site_url_observations')
     .select('id')
@@ -183,7 +183,7 @@ async function sitemapMember(db: Database, crawl: Crawl, siteUrlId: string) {
     )
     .limit(1)
     .executeTakeFirst();
-  return Boolean(row);
+  return row?.id ?? null;
 }
 
 /** Site-level facts belong to the crawl root's analysis only. */
@@ -302,25 +302,40 @@ async function insertEvaluations(
   if (issues.length) await db.insertInto('site_issues').values(issues).execute();
 }
 
-/**
- * Supersede the page's current analysis and append this one with its
- * evaluations and issues. The row is this page's provisional result:
- * finalization later folds in the cross-page checks and appends the final one.
- */
+/** The provisional context to load before CPU-bound interpretation and recheck at commit. */
+export async function pageAnalysisContext(
+  db: Database,
+  crawl: Crawl,
+  task: SiteTask & { site_url_id: string },
+) {
+  const auditTime = crawl.started_at ?? crawl.created_at;
+  const observationId = await sitemapObservation(db, crawl, task.site_url_id);
+  const siteFacts = rootSiteFacts(crawl, task);
+  return {
+    sitemapMember: observationId !== null,
+    siteFacts,
+    auditTime: auditTime ? new Date(auditTime).toISOString() : null,
+    // The crawl owns setup facts and audit time; the observation owns membership.
+    // Evaluation rows also retain extractor/analyzer/rule processing versions.
+    sources: {
+      sitemap_crawl_id: crawl.id,
+      sitemap_observation_id: observationId,
+      site_facts_crawl_id: siteFacts ? crawl.id : null,
+      audit_time_crawl_id: auditTime ? crawl.id : null,
+    },
+  };
+}
+
+/** Append the precomputed provisional result; finalization adds cross-page checks later. */
 export async function writePageAnalysis(
   db: Database,
   crawl: Crawl,
   task: SiteTask & { site_url_id: string },
   artifactId: string,
   facts: Facts,
+  result: ReturnType<typeof analyzePage>,
 ) {
   const siteUrlId = task.site_url_id;
-  const auditTime = crawl.started_at ?? crawl.created_at;
-  const result = analyzePage(facts, {
-    sitemapMember: await sitemapMember(db, crawl, siteUrlId),
-    siteFacts: rootSiteFacts(crawl, task),
-    auditTime: auditTime ? new Date(auditTime).toISOString() : null,
-  });
   await refreshUrlState(db, crawl, siteUrlId, artifactId, facts);
   await db
     .updateTable('site_page_analyses')

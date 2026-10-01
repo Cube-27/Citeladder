@@ -401,6 +401,24 @@ describe('site setup', () => {
     const walked = record((await crawlRow(full)).site_facts);
     expect(walked.sitemap).toEqual({ fetched: true, files: [url('/index.xml')], urls: [] });
   });
+
+  it('preserves an overlong sitemap declaration without fetching a truncated URL', async () => {
+    const declared = url(`/${'a'.repeat(policy.site_health.crawl.max_url_chars)}.xml`);
+    const seed = await crawl();
+    const setup = await queued(seed, 'site_setup');
+    const requests: string[] = [];
+    await run(
+      worker(
+        { '/robots.txt': { ...robots, body: `User-agent: *\nSitemap: ${declared}\n` } },
+        requests,
+      ),
+      setup,
+    );
+    const facts = record((await crawlRow(seed)).site_facts);
+    expect(record(facts.robots).sitemaps).toEqual([declared]);
+    expect(requests).toEqual(['/robots.txt', '/llms.txt']);
+    expect(facts.sitemap).toMatchObject({ fetched: false, files: [], urls: [] });
+  });
 });
 
 describe('frontier admission', () => {

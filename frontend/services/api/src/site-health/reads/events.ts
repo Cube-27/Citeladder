@@ -21,7 +21,7 @@ import { countDisclosure, isTerminal, loadCrawl, type Crawl } from './crawl.ts';
 const logger = getLogger('app.site_health.events');
 const COUNT_BEARING = new Set<string>(policy.site_health.reads.event_count_bearing_keys);
 // Polls after the crawl turns terminal, so its final events still arrive.
-const TERMINAL_GRACE_POLLS = 2;
+const TERMINAL_GRACE_POLLS = policy.site_health.reads.terminal_grace_polls;
 
 type EventRow = {
   id: string;

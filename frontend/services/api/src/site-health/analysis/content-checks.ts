@@ -170,7 +170,7 @@ function trustPath(facts: Facts): CheckResult {
     .flatMap((anchor) => {
       const url = text(anchor.url);
       const label = text(anchor.anchor_text);
-      const path = url.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/iu, '').split(/[?#]/u)[0] ?? '';
+      const path = url.replace(/^(?:[a-z][a-z0-9+.-]*:)?\/\/[^/]*/iu, '').split(/[?#]/u)[0] ?? '';
       return [...termsOf(path), ...termsOf(label)].some((term) => TRUST_TOKENS.has(term))
         ? [{ url: url.slice(0, 512), label: label.slice(0, 128) }]
         : [];

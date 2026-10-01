@@ -10,6 +10,12 @@ export type PageContext = {
   /** Only the crawl root carries site-level facts (robots.txt, llms.txt). */
   siteFacts: Facts | null;
   auditTime: string | null;
+  sources?: {
+    sitemap_crawl_id: string;
+    sitemap_observation_id: string | null;
+    site_facts_crawl_id: string | null;
+    audit_time_crawl_id: string | null;
+  };
 };
 
 export function analyzePage(facts: Facts, context: PageContext) {
@@ -25,7 +31,13 @@ export function analyzePage(facts: Facts, context: PageContext) {
     ...(context.siteFacts ? { site: context.siteFacts } : {}),
     ...(context.auditTime ? { audit_time: context.auditTime } : {}),
   };
-  const evaluations = evaluatePageRules(evaluationFacts);
+  const evaluations = evaluatePageRules(evaluationFacts).map((evaluation) => ({
+    ...evaluation,
+    evidence: {
+      ...evaluation.evidence,
+      ...(context.sources ? { context_sources: context.sources } : {}),
+    },
+  }));
   return {
     assessment,
     traits,

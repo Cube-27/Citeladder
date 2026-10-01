@@ -42,6 +42,9 @@ its admission under the same lease. Python claims no tasks: it retains crawl
 creation, finalization, terminal-crawl admission (including the analytics
 handoff of a crawl without usable analysis) and lease sweeping, and its
 maintenance pass reconciles crawls after TypeScript settles a task.
+Analyze tasks extract facts and evaluate rules in Node worker threads before
+taking commit locks. The commit rechecks the page's site/sitemap context;
+changed context is interpreted once under the crawl lock without spending another attempt.
 Source inspection and internal-link judgments run in the TypeScript analytics
 worker; their failed-task recovery also covers Python-sweeper terminalization.
 

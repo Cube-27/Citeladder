@@ -4,6 +4,7 @@ import {
   architectureSchema,
   changeSummarySchema,
   pagesPageSchema,
+  pageDetailSchema,
   siteCrawlEventSchema,
   siteHealthDashboardSchema,
   siteHealthEntitlementSchema,
@@ -157,6 +158,41 @@ const byUrl = (items: { normalized_url: string; analysis_status: string; error_c
   Object.fromEntries(items.map((item) => [new URL(item.normalized_url).pathname, item]));
 
 describe('page projections', () => {
+  it('bounds detail evaluations in severity and rule order, including the highest severity at the end', async () => {
+    const seed = await fixtures.crawl();
+    const target = await page(seed, '/bounded');
+    const baseId = await fixtures.evaluation(seed, target, 'technical.https', 'satisfied');
+    const base = await db
+      .selectFrom('site_rule_evaluations')
+      .selectAll()
+      .where('id', '=', baseId)
+      .executeTakeFirstOrThrow();
+    const rows = Array.from(
+      { length: policy.site_health.reads.max_detail_evaluations + 1 },
+      (_, i) => ({
+        ...base,
+        id: randomUUID(),
+        rule_id: `fixture.${String(i).padStart(4, '0')}`,
+        severity: i === policy.site_health.reads.max_detail_evaluations ? 'critical' : 'low',
+      }),
+    );
+    await db.insertInto('site_rule_evaluations').values(rows).execute();
+    await db
+      .updateTable('site_page_analyses')
+      .set({ source_evaluation_ids: rows.map((row) => row.id).reverse() })
+      .where('id', '=', target.analysisId)
+      .execute();
+    const detail = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/pages/${target.id}`,
+      pageDetailSchema,
+    );
+    expect(detail.evaluations.map((row) => row.id)).toEqual([
+      rows.at(-1)!.id,
+      ...rows.slice(0, policy.site_health.reads.max_detail_evaluations - 1).map((row) => row.id),
+    ]);
+  });
+
   it('derive presentation status in SQL, so a status filter pages without gaps', async () => {
     const seed = await fixtures.crawl('running');
     await page(seed, '/');

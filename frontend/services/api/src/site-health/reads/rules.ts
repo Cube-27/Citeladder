@@ -1,5 +1,6 @@
 /** The rule catalog as the read API presents it: labels, routes, ranks and group identity. */
 import { policy } from '../../config.ts';
+import { sql } from 'kysely';
 import { record } from '../../db/json.ts';
 import { compareText } from '../../text-order.ts';
 import { uuidV5 } from '../../uuid-v5.ts';
@@ -13,6 +14,14 @@ const SEVERITY_RANK = new Map(
 );
 const UNRANKED = 99;
 export const severityRank = (severity: string) => SEVERITY_RANK.get(severity) ?? UNRANKED;
+
+/** The same severity order at the database boundary, before limiting rows. */
+export const severityOrder = (column: string) => sql<number>`case ${sql.ref(column)}
+  ${sql.join(
+    [...SEVERITY_RANK].map(([severity, rank]) => sql`when ${severity} then ${rank}`),
+    sql` `,
+  )}
+  else ${UNRANKED} end`;
 
 /** The current catalog label; a retired or unknown rule shows its id. */
 export const ruleTitle = (ruleId: string) => RULES.get(ruleId)?.display_label ?? ruleId;

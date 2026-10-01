@@ -76,7 +76,7 @@ const VIEWS = {
 
 export type TableView = keyof typeof VIEWS;
 export const TABLE_VIEWS = Object.keys(VIEWS) as TableView[];
-const EXPORT_PAGE = 200;
+const EXPORT_PAGE = policy.site_health.reads.export_page_size;
 
 /** Rows of one table view, at most `max_export_items`, and whether more were left out. */
 async function tableRows(db: Database, workspaceId: string, crawlId: string, view: TableView) {

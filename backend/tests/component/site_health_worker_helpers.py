@@ -12,6 +12,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.analysis.site_health.parser import extract_page_facts
@@ -596,7 +597,9 @@ async def _settle_discovery_as_typescript(
     async with session_factory() as session:
         task = await session.get(SiteCrawlTask, task_id)
         assert task is not None
-        crawl = await session.get(SiteCrawl, task.crawl_id)
+        # Serialize admission like the real frontier, including duplicate links
+        # discovered concurrently by siblings in this fixture crawl.
+        crawl = await session.get(SiteCrawl, task.crawl_id, with_for_update=True)
         assert crawl is not None
         task.attempt_count += 1
         task.completed_at = now
@@ -640,8 +643,9 @@ async def _settle_discovery_as_typescript(
         )
         session.add(artifact)
         await session.flush()
-        session.add(
-            SiteUrlObservation(
+        await session.execute(
+            insert(SiteUrlObservation)
+            .values(
                 workspace_id=crawl.workspace_id,
                 project_id=crawl.project_id,
                 crawl_id=crawl.id,
@@ -655,9 +659,23 @@ async def _settle_discovery_as_typescript(
                 final_url=task.requested_url,
                 status_code=status_code,
             )
+            .on_conflict_do_nothing(index_elements=["crawl_id", "site_url_id"])
         )
         children: list[SiteCrawlTask] = []
+        known_hashes = set(
+            await session.scalars(
+                select(SiteCrawlTask.url_hash).where(
+                    SiteCrawlTask.workspace_id == crawl.workspace_id,
+                    SiteCrawlTask.crawl_id == crawl.id,
+                    SiteCrawlTask.task_kind == TASK_KIND_DISCOVER,
+                )
+            )
+        )
         for link in links:
+            _, link_hash = canonical_identity(link)
+            if link_hash in known_hashes:
+                continue
+            known_hashes.add(link_hash)
             child_url = await _site_url(session, crawl, link, task.depth + 1)
             session.add(
                 SiteUrlObservation(
@@ -689,7 +707,7 @@ async def _settle_discovery_as_typescript(
         task.status = TASK_STATUS_SUCCEEDED
         task.result_artifact_id = artifact.id
         crawl.discovered_url_count += 1
-        crawl.admitted_url_count += len(links)
+        crawl.admitted_url_count += len(children)
         await session.flush()
         child_ids = [child.id for child in children]
         await session.commit()

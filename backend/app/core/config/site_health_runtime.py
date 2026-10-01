@@ -18,6 +18,13 @@ from app.core.config.site_health_crawl_policy import (
 )
 from app.core.config.task_queue import ERROR_MAX_ATTEMPTS, PostgresQueueSpec
 
+READ_PAGE_DEFAULT_LIMIT: Final = 50
+READ_PAGE_MAX_LIMIT: Final = 200
+READ_TERMINAL_GRACE_POLLS: Final = 2
+READ_EXPORT_PAGE_SIZE: Final = 200
+READ_MAX_DETAIL_EVALUATIONS: Final = 200
+MIN_WORKER_POLL_SECONDS: Final = 0.05
+
 
 def _require_non_empty(settings: object, names: tuple[str, ...]) -> None:
     for name in names:
