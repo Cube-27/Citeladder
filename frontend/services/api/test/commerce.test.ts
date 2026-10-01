@@ -11,6 +11,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { commerceIsland } from './commerce-support.ts';
+import { freezeCommerceContext } from '../src/commerce/audit-context.ts';
 import { enqueue } from './referral-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -216,12 +217,7 @@ describe('decisions and persisted reads', () => {
       body: { decision: 'approved' },
     });
     await call(`/buyer-prompts/${ids.promptId}`, { method: 'PATCH', body: { approved: true } });
-    const context = await commerceIsland<{
-      targets: {
-        products: { id: string; price: number }[];
-        approved_competitors: { id: string }[];
-      }[];
-    }>('freeze', t.workspaceId, t.projectId, ids.promptId);
+    const context = await freezeCommerceContext(db, t, [ids.promptId]);
     expect(context.targets[0]!.products[0]).toMatchObject({ id: productId, price: 19.25 });
     expect(context.targets[0]!.approved_competitors.map((row) => row.id)).toEqual([
       ids.candidateId,

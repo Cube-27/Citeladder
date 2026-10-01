@@ -15,6 +15,13 @@ export type Subject =
 type Entry = Selectable<ConsumableLedger>;
 const logger = getLogger('api.entitlements');
 
+/** Python's persisted audit ledger hashes compact JSON with sorted ASCII keys. */
+function auditFingerprint(value: Record<string, string | number>) {
+  return digest(
+    Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
+  );
+}
+
 function verifySubject(db: Database, subject: Subject) {
   if (subject.kind === 'audit') {
     return db
@@ -69,7 +76,17 @@ export async function reserveUsage(
   if (!(await verifySubject(db, subject))) throw new LedgerError('subject_not_found');
   await advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
   const state = await accountState(db, subject.workspaceId, accountId, at);
-  const fingerprint = digest({ accountId, subject, units, capability });
+  const fingerprint =
+    subject.kind === 'audit'
+      ? auditFingerprint({
+          account_id: accountId,
+          capability_key: capability,
+          subject_kind: 'audit',
+          audit_id: subject.auditId,
+          task_id: subject.id,
+          units,
+        })
+      : digest({ accountId, subject, units, capability });
   const prior = await db
     .selectFrom('consumable_ledger')
     .selectAll()
@@ -233,7 +250,10 @@ export async function debitUsage(
     throw new LedgerError('debit_units_invalid');
   const { rows, holds, released } = await reservation(db, workspaceId, accountId, reservationId);
   if (holds[0]!.subject_id !== subjectId) throw new LedgerError('reservation_subject_mismatch');
-  const fingerprint = digest({ reservationId, subjectId, attempt, dispatchKey, units });
+  const fingerprint =
+    holds[0]!.subject_kind === 'audit'
+      ? auditFingerprint({ reservation_id: reservationId, subject_id: subjectId, attempt, units })
+      : digest({ reservationId, subjectId, attempt, dispatchKey, units });
   const prior = rows.find(
     (row) =>
       row.entry_kind === 'debit' &&

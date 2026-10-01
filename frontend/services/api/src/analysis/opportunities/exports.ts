@@ -14,7 +14,8 @@ const columns = [
   'created_at',
 ];
 
-export const rowsToCsv = (items: Record<string, unknown>[]) => tableCsv(columns, items);
+export const rowsToCsv = (items: Record<string, unknown>[], selectedColumns = columns) =>
+  tableCsv(selectedColumns, items);
 
 export const rowsToMarkdown = (items: Record<string, unknown>[]) =>
   tableMarkdown('CiteLadder — Opportunities', columns, items);

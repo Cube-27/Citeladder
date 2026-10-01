@@ -11,12 +11,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.connectors.app_model_config import AppModelRouteConfig
 from app.core.config.app_models import APP_FEATURES
 from app.core.security import decrypt_secret
-from app.domain.providers.credentials import connection_paused
 from app.models.provider import ProviderAppRoute, ProviderConnection
 
 
 class AppModelRouteUnavailableError(RuntimeError):
     """No exact, active, probed customer route exists; never fallback."""
+
+
+def connection_paused(connection: ProviderConnection, *, at: datetime) -> bool:
+    """An indefinite pause stays paused; an elapsed deadline permits resolution."""
+    if connection.paused_at is None:
+        return False
+    return connection.pause_until is None or connection.pause_until > at
 
 
 async def has_configured_app_model_route(

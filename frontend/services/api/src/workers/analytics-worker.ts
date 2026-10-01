@@ -29,6 +29,7 @@ import { refreshOpportunities } from '../opportunities/refresh.ts';
 import { verifyImplementationEvents } from '../opportunities/verification.ts';
 import { projectCatalog } from '../commerce/projection.ts';
 import { publishInternalLinks } from '../site-health/internal-link-publish.ts';
+import { acquireResearch } from '../search-intelligence/executor.ts';
 import { internalLinkJudge } from '../site-health/internal-link-judgments.ts';
 import { sourcePageInspector } from '../source-pages/inspector.ts';
 
@@ -38,6 +39,7 @@ const ERROR_DETAIL_LIMIT = 2000;
 
 /** Kind dispatch: exactly the kinds TypeScript owns. */
 export const EXECUTORS: Readonly<Record<string, Executor>> = {
+  search_intelligence_acquisition: acquireResearch,
   source_page_inspection: sourcePageInspector(),
   internal_link_judgment: internalLinkJudge(),
   internal_link_publish: publishInternalLinks,

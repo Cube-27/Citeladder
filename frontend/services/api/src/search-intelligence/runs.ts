@@ -1,11 +1,11 @@
 /**
  * Run confirmation, cancellation and saved preferences.
  *
- * Python creates a `reviewed` run with its frozen call plan and quote, and
- * the Python analytics worker executes it once queued. Confirmation is the
+ * Native review creation freezes the call plan and quote, and the TypeScript
+ * analytics worker executes it once queued. Confirmation is the
  * only step that commits the workspace to paid calls, so it re-checks the
  * review under the project lock and enqueues the acquisition in the same
- * transaction. Both stacks write `search_intelligence_runs` under its row lock.
+ * transaction. Every mutation takes the `search_intelligence_runs` row lock.
  */
 import { asApiErrorCode, type ApiErrorCode } from '@citeladder/contracts/error-codes';
 

@@ -10,7 +10,7 @@ const dateFields = new WeakMap<z.ZodType, Set<string>>();
 function datesOf(schema: z.ZodType): Set<string> {
   let fields = dateFields.get(schema);
   if (!fields) {
-    const properties = z.toJSONSchema(schema).properties ?? {};
+    const properties = z.toJSONSchema(schema, { io: 'input' }).properties ?? {};
     fields = new Set(
       Object.entries(properties)
         .filter(([, field]) => typeof field === 'object' && field.format === 'date')

@@ -181,7 +181,7 @@ total.
 | 14 | Auth and workspaces | High | Done |
 | 15 | MCP server and OAuth provider | High | Done |
 | 16 | Billing and the entitlement ledger (16a PDF, 16b commercial/ledger) | High | Done |
-| 17 | Audits, providers and answer-engine connectors | High | 17a done |
+| 17 | Audits, providers and answer-engine connectors | High | 17a done; 17b implemented |
 | 18 | Site Health and source-page inspection | High | 18a, 18b1–18b4 done |
 | 19 | Agent runtime | High | |
 | 20 | Consolidation and policy transfer | Medium | |
@@ -842,33 +842,56 @@ are pending.
 `audit-schedules` family, using the existing shared browser response contract.
 The Python router, CRUD service and wire schemas are removed; their persistence
 and request-validation coverage moves to focused TypeScript/PostgreSQL tests.
-Scheduler cadence/lease/planning tests remain Python. Policy remains in
+At the 17a boundary, scheduler cadence/lease/planning tests remained Python.
+Policy remains in
 `core/config/audit_schedules.py` and is exported for TypeScript, including the
 configured minimum interval and the selectable engine catalog.
 
-The Python scheduler is retained until audit admission and the worker move.
-It writes schedule lease and run-state columns; TypeScript manages the stored
-user request. Scheduler claim/finalize and TypeScript update/delete operations
-lock the schedule row, with no network I/O under that lock. This named temporary
-cross-stack writer exception ends with the scheduler cutover. Schema models
-remain Python as planned.
+17a temporarily retained the Python scheduler as the schedule lease/run-state
+writer. PR 17b ends that cross-stack writer exception: native scheduling and
+admission lock the schedule row without provider I/O. Schema models remain
+Python as planned.
 
 Departures: required patch fields reject explicit null rather than reaching a
 NOT NULL database failure; timezone text and
 interval integers are bounded by their database columns. Timezones must
-name a zone in the pinned tzdata set the retained scheduler loads (exported with
+name a zone in the pinned tzdata set (exported with
 the policy) and are stored in its exact spelling; numeric UTC offsets are rejected. Partial edits validate the merged locked row;
 omitted scope and scheduler state remain unchanged.
 
-Split under D7's retirement budget: the audit, provider and acquisition scope
-exceeds it, so the remaining slices (scheduler, funded admission through the
-16b ledger, worker, providers and connectors) follow in dependency order.
-17a performs no deployment, provider call or cutover soak.
+**17b: remaining PR 17 scope.** The owner explicitly assigned everything left
+after 17a to one branch, overriding D7's normal file budget for this PR.
+Dependency-ordered commits move provider custody/probes, direct answer engines,
+DataForSEO paid submission and free reconciliation, frozen admission and funded
+settlement, queue/capacity leases, immutable execution evidence and native
+analysis, Commerce shelf derivation, audit reads/exports/repair, scheduling,
+independent maintenance, and Search Intelligence reviews/acquisition.
+Local/GCP runtime commands, development audit seeding and execution repricing
+use the native owners. The offline measurement harness batches synthetic
+fixtures through the production native scorer without provider or database I/O.
 
-Audit creation, schedules, the scheduler, funded admission, the audit worker,
-BYOK providers, answer-engine and search-surface connectors, and the
-DataForSEO two-phase park/poll (including Search Intelligence acquisition and
-review creation).
+Retired Python audit routes, admission/worker/scheduler modules, direct and
+DataForSEO transports, audit analysis, Commerce shelf writers, Search
+Intelligence writers and their superseded tests. Mixed Python consumer tests
+seed persisted fixtures; they retain authorization, evidence and schema coverage.
+Replacements use native contract and PostgreSQL tests rather than retaining a
+second implementation. The merged PR 18a worker registrations remain intact.
+
+| Retained bridge | Caller and removal condition |
+|---|---|
+| Identity/citation helpers in `analysis/scoring.py` and `position.py` | MCP AIO persisted reads; remove with the PR 19 consumer |
+| Search Intelligence readiness, targets and dataset DTOs | Remaining Agent/MCP read projections; remove with their PR 19 callers |
+| Frozen evidence helpers in `domain/analysis/evidence.py` | Remaining MCP execution readers; remove with their migration |
+| Answer finish-reason and search-surface constants | Python models/policy exports; retire when schema/config authority moves in PR 20 |
+| `domain/providers/app_routes.py` route resolution and pause predicate | Retained Agent model connectors; remove with their final caller in PR 19 |
+| Shared model HTTP/error helpers | Remaining Agent/model connectors; retire with their final caller. The unused answer-engine pool, audit credential resolver and DataForSEO identity module are retired |
+
+Funding denies unverified expected-cost catalogs, including the currently empty
+platform catalog. Unknown provider cost remains unknown. Submission uncertainty
+never authorizes a second paid request; late receipts preserve evidence without
+reviving a terminal run. Historical integer-seeded slot ordering remains stable.
+Neither 17a nor 17b performs deployment, live provider calls or the cutover soak;
+those external acceptance gates remain pending.
 
 ### PR 18: Site Health and source-page inspection
 

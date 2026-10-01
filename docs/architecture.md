@@ -76,8 +76,9 @@ durable-memory promotion retain their explicit user-decision boundaries.
 
 Python (FastAPI, SQLAlchemy, Alembic) owns every route family and task kind
 except those assigned to TypeScript: route families by the manifest, analytics
-task kinds by `ANALYTICS_TS_OWNED_TASK_KINDS`. Every worker process is Python
-except the TypeScript analytics worker, which claims exactly those kinds.
+task kinds by `ANALYTICS_TS_OWNED_TASK_KINDS`. TypeScript also owns audit
+execution, audit scheduling and maintenance, discovery, integration and billing
+workers, and the migrated Site Health phases.
 `frontend/services/api` is the TypeScript API service (Node, Hono, Kysely)
 introduced by the [TypeScript migration](plans/citeladder-typescript-migration.md).
 It serves the read-only `executions`, `ai-referrals` and `visibility` families
@@ -87,8 +88,10 @@ workspace exactly as `require_active_workspace` does. The same image runs the
 TypeScript analytics worker (`src/worker.ts`), which claims the AI Referrals
 chain's kinds (`ingest_referrals`, `classify_referrals`,
 `ai_referrals_snapshot_refresh`, `referral_retention_sweep`) through a port of
-the PostgreSQL queue claim; the Python analytics worker claims the other kinds,
-and the Python sweeper still expires leases for every queue. Each route family, task
+the PostgreSQL queue claim. Its registered kinds also include Search Intelligence
+acquisition and source inspection; the Python analytics worker claims the other
+kinds. Native audit maintenance owns audit lease expiry and funding recovery;
+the Python sweeper retains the remaining queue reconciliation. Each route family, task
 kind and table has exactly one writing stack. For route families (OpenAPI tags)
 the record is the manifest in `frontend/packages/contracts/src/route-ownership.ts`;
 the route-ownership gate (`frontend/services/api/scripts/check-route-ownership.ts`)

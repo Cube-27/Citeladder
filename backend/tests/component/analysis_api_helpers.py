@@ -4,21 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.connectors.answer_engines.contracts import (
-    AnswerEngineRequest,
-    AnswerEngineResponse,
-    CitationResult,
-    NormalizedUsage,
-    SearchEventResult,
-)
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
-    AUDIT_TRIGGER_MANUAL,
-    audit_settings,
 )
 from app.core.config.provider_catalog import (
     ENGINE_GEMINI,
@@ -26,7 +15,6 @@ from app.core.config.provider_catalog import (
     measurement_route,
 )
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
-from app.domain.audits.creation import create_audit
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -40,132 +28,12 @@ from app.models.audit import (
     AuditTask,
     RawResponseArtifact,
 )
-from app.workers.audit import execution as audit_execution
-from app.workers.audit_worker import AuditWorker
-from tests.component.audit_helpers import seed_audit_fixtures
 
 # The model the PLANNER freezes for these audits. Read from the catalog rather
 # than pinned as a literal: these assertions are about provenance travelling
 # intact from the frozen route to the projection, not about which Gemini build
 # is current, and a literal here goes stale on every model-version bump.
 GEMINI_MODEL = measurement_route(ENGINE_GEMINI).transport_model
-
-_BRAND = "Acme Corp"
-_COMPETITOR = "Globex"
-_PARTITION_IDENTITIES = [
-    ("model-a", True, (60.0, 80.0)),
-    ("model-b", True, (100.0, 0.0)),
-    ("model-a", False, (10.0, 30.0)),
-]
-
-
-class _StubAdapter:
-    """In-memory answer-engine stand-in: mentions the brand + cites owned +
-    competitor domains so the analysis has signal to aggregate (no network)."""
-
-    logical_engine = ENGINE_GEMINI
-    transport_provider = TRANSPORT_GOOGLE
-
-    def __init__(self, **_: object) -> None:
-        # No-op: stub holds no state; accepts and ignores adapter build kwargs.
-        pass
-
-    async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
-        return AnswerEngineResponse(
-            logical_engine=self.logical_engine,
-            transport_provider=self.transport_provider,
-            transport_model=request.model,
-            answer_text=(
-                f"Acme Corp is a great option for {request.prompt}. "
-                "Globex is an alternative."
-            ),
-            search_used=request.retrieval_enabled,
-            search_events=(
-                (SearchEventResult(sequence=0, query=request.prompt),)
-                if request.retrieval_enabled
-                else ()
-            ),
-            citations=(
-                CitationResult(
-                    ordinal=0,
-                    url="https://acme.com/",
-                    title="Acme",
-                    domain="acme.com",
-                    start_index=0,
-                    end_index=4,
-                    cited_text="Acme",
-                ),
-                CitationResult(
-                    ordinal=1,
-                    url="https://globex.com/",
-                    title="Globex",
-                    domain="globex.com",
-                    start_index=0,
-                    end_index=6,
-                    cited_text="Globex",
-                ),
-            ),
-            provider_metadata={"query_text_available": True},
-            normalized_usage=NormalizedUsage(
-                uncached_input_tokens=10, output_tokens=20, total_tokens=30
-            ),
-            latency_ms=5,
-        )
-
-
-@pytest.fixture
-def _stub_adapter(monkeypatch: pytest.MonkeyPatch):
-    def _build(**_: object) -> _StubAdapter:
-        return _StubAdapter()
-
-    monkeypatch.setattr(audit_execution, "build_adapter", _build)
-    monkeypatch.setattr(audit_settings, "min_request_interval_seconds", 0.0)
-    monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
-
-
-async def _run_completed_audit(
-    session_factory: async_sessionmaker[AsyncSession],
-):
-    async with session_factory() as session:
-        seed = await seed_audit_fixtures(session, prompt_count=2)
-    async with session_factory() as session:
-        audit = await create_audit(
-            session,
-            trigger=AUDIT_TRIGGER_MANUAL,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            engines=seed.engines,
-            prompt_set_id=seed.prompt_set_id,
-            repetitions=2,
-            random_seed="1",
-        )
-    worker = AuditWorker(session_factory=session_factory, owner="w-b6")
-    await worker.run_until_idle()
-    return seed, audit
-
-
-class _UsageStubAdapter(_StubAdapter):
-    """Like the base stub but reports canonical typed provider usage."""
-
-    async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
-        response = await super().execute(request)
-        return AnswerEngineResponse(
-            logical_engine=response.logical_engine,
-            transport_provider=response.transport_provider,
-            transport_model=response.transport_model,
-            answer_text=response.answer_text,
-            search_used=response.search_used,
-            search_events=response.search_events,
-            citations=response.citations,
-            provider_metadata=dict(response.provider_metadata),
-            normalized_usage=NormalizedUsage(
-                uncached_input_tokens=100,
-                output_tokens=50,
-                total_tokens=150,
-                provider_cost_microusd=250_000,
-            ),
-            latency_ms=response.latency_ms,
-        )
 
 
 async def _seed_evidence_execution(

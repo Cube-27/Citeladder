@@ -18,6 +18,7 @@ const BASE_AUDIT: Audit = {
   id: '11111111-1111-4111-8111-111111111111',
   workspace_id: '22222222-2222-4222-8222-222222222222',
   project_id: '33333333-3333-4333-8333-333333333333',
+  parent_audit_id: null,
   status: 'running',
   benchmark_mode: 'consumer_like',
   audit_scope: 'brand',

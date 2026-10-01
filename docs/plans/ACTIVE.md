@@ -50,11 +50,12 @@
   commercial mutations, settlement, leased recovery, receipt issuance and the
   typed entitlement ledger to TS, keeping Python worker/operator bridges for
   their assigned migrations. PR 17a moves audit schedule management to TS;
-  Python retains the scheduler until funded audit admission moves. PR 18b is
+  PR 17b implements the remaining audit admission, execution, scheduling,
+  maintenance, provider and Search Intelligence owners in committed slices.
+  PR 18a moves source inspection and the first Site Health phases. PR 18b is
   implemented through 18b5c: TypeScript owns Site Health reads, acquisition,
-  analysis, lifecycle, drain mode and crawl controls. The crawl-control PR is
-  awaiting CI/merge; Python retains Agent/MCP persisted-read bridges until PR 19.
-  PRs 17–20 otherwise follow the re-sequenced order.
+  analysis, lifecycle, drain mode and crawl controls; Python retains Agent/MCP
+  persisted-read bridges until PR 19. PRs 19–20 follow the re-sequenced order.
   Deployment of implemented cutovers is pending; the owner dropped the one-week
   soak while there are no customers (smoke tests instead). On 1 October 2026
   the owner accepted a low-cost hosting phase (PRs 21–24: scale-to-zero Cloud

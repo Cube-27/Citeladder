@@ -1,0 +1,97 @@
+"""Audit policy inputs; selection and execution remain application decisions."""
+
+from importlib.resources import files
+
+from app.core.config import (
+    Settings,
+    analysis,
+    audits,
+    commerce_catalog,
+    observed_competitors,
+    projects,
+    provider_catalog,
+    source_pages,
+)
+from app.core.config import audit_schedules as audit_schedule_config
+from app.core.config.provider_catalog import SELECTABLE_ENGINES
+from app.orchestration.audit_state import _ALLOWED_TRANSITIONS
+from scripts.ts_platform_constants import constants
+
+
+def audit_policy(setting):
+    shelf_result_limit = commerce_catalog.COMMERCE_RECOMMENDATION_RESOLVER_RESULT_LIMIT
+    return {
+        "dev_test_allow_platform": setting(
+            "dev_test_login_allow_platform_credentials", Settings
+        ),
+        "transitions": {
+            source: sorted(targets) for source, targets in _ALLOWED_TRANSITIONS.items()
+        },
+        "analysis": constants(analysis, (str, int, float, dict, frozenset)),
+        "url_identity": {
+            "version": source_pages.SOURCE_PAGE_IDENTITY_VERSION,
+            "verbatim": source_pages.URL_IDENTITY_VERBATIM,
+            "unresolved": source_pages.URL_IDENTITY_UNRESOLVED,
+        },
+        "observed_competitors": constants(observed_competitors, (str, int, frozenset)),
+        "settings": {
+            name: setting(name, audits.AuditSettings)
+            for name in audits.AuditSettings.model_fields
+            if name != "audit_prompt_count"
+        },
+        "prompt_count": {
+            "env": ["AUDIT_AUDIT_PROMPT_COUNT"],
+            "type": "str",
+            "default": None,
+        },
+        "constants": constants(audits, (str, int, float, bool, dict, frozenset)),
+        "benchmark_modes": sorted(projects.BENCHMARK_MODES),
+        "min_repetitions": projects.MIN_REPETITIONS,
+        "max_repetitions": projects.MAX_REPETITIONS,
+        "selectable_engines": sorted(provider_catalog.SELECTABLE_ENGINES),
+        "route_policies": {
+            engine: {
+                "reasoning_effort": row.reasoning_effort,
+                "reasoning_pinnable": row.reasoning_pinnable,
+                "representative_status": row.representative_status,
+                "batch_enabled": row.batch_enabled,
+            }
+            for engine, row in provider_catalog.ROUTE_POLICIES.items()
+        },
+        "commerce_versions": {
+            "template_version": commerce_catalog.COMMERCE_PROMPT_TEMPLATE_VERSION,
+            "parser_version": commerce_catalog.COMMERCE_RECOMMENDATION_PARSER_VERSION,
+            "matcher_version": commerce_catalog.COMMERCE_RECOMMENDATION_MATCHER_VERSION,
+            "formula_version": commerce_catalog.COMMERCE_SHELF_FORMULA_VERSION,
+        },
+        "commerce_shelf": {
+            "span_limit": commerce_catalog.COMMERCE_RECOMMENDATION_RESOLVER_SPAN_LIMIT,
+            "span_chars": commerce_catalog.COMMERCE_RECOMMENDATION_RESOLVER_SPAN_CHARS,
+            "result_limit": shelf_result_limit,
+            "excluded_paths": commerce_catalog.COMMERCE_COMPETITOR_EXCLUDED_PATH_TOKENS,
+            "non_pdp_hosts": commerce_catalog.COMMERCE_COMPETITOR_NON_PDP_HOST_SUFFIXES,
+            "dollar_currencies": commerce_catalog.COMMERCE_DOLLAR_CURRENCY_BY_COUNTRY,
+        },
+    }
+
+
+def audit_schedule_policy(setting):
+    return {
+        "settings": {
+            name: setting(name, audit_schedule_config.AuditScheduleSettings)
+            for name in audit_schedule_config.AuditScheduleSettings.model_fields
+            if name != "heartbeat_path"
+        },
+        "heartbeat_path": setting(
+            "heartbeat_path", audit_schedule_config.AuditScheduleSettings
+        ),
+        "cadences": sorted(audit_schedule_config.AUDIT_SCHEDULE_CADENCES),
+        "default_timezone": audit_schedule_config.DEFAULT_AUDIT_SCHEDULE_TIMEZONE,
+        "selectable_engines": sorted(SELECTABLE_ENGINES),
+        # The pinned timezone catalog shared by schedule validation and execution.
+        "timezones": sorted(files("tzdata").joinpath("zones").read_text().split()),
+        "min_interval_minutes": setting(
+            "min_interval_minutes",
+            audit_schedule_config.AuditScheduleSettings,
+        ),
+    }

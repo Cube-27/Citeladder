@@ -14,6 +14,12 @@ projection and shared PDF renderer; receipt list/download reads are also
 TypeScript-owned. Ingress routing is
 checked against the shared route-ownership manifest.
 
+Audit admission, providers and answer-engine transports, immutable execution
+persistence, scoring, funded settlement, scheduling and maintenance are native
+TypeScript owners. Search Intelligence review and acquisition use the same
+native provider custody and PostgreSQL capacity boundary. Python retains schema
+models, exported policy and read bridges required by remaining Agent/MCP callers.
+
 ## Layers and extension
 
 | Layer | Responsibility |
@@ -32,7 +38,8 @@ own scoring or entitlement decisions; workers coordinate domain operations
 rather than restating them. Business logic does not move into generic utilities
 for convenience.
 
-Python 3.12, async SQLAlchemy/asyncpg and Pydantic settings are the runtime base.
+Python 3.12, async SQLAlchemy/asyncpg and Pydantic settings own the remaining
+Python runtime; Node 24, Hono and Kysely own the native service and workers.
 Compose names the API service web; the frontend's server-only proxy destination
 is http://web:8000. Browser calls remain same-origin /api/v1.
 Fernet-encrypted provider/OAuth secrets and least-privilege worker environments

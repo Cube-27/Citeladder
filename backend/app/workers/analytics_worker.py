@@ -38,7 +38,6 @@ from app.core.config.analytics import (
     ANALYTICS_PYTHON_TASK_KINDS,
     ANALYTICS_QUEUE_SPEC,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
-    ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
     ERROR_EXECUTOR_NOT_WIRED,
     analytics_settings,
 )
@@ -52,7 +51,6 @@ from app.core.config.task_queue import (
 from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
 from app.domain.commerce.competitors import run_competitor_discovery
-from app.domain.demand.search_intelligence.executor import execute_search_intelligence
 from app.models.analytics import AnalyticsTask
 from app.orchestration.executor_errors import CapacityWaitError, TerminalExecutorError
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
@@ -83,7 +81,6 @@ type AnalyticsExecutor = Callable[
 # TypeScript analytics worker (TypeScript migration PRs 4-7).
 EXECUTORS: dict[str, AnalyticsExecutor] = {
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY: run_competitor_discovery,
-    ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE: execute_search_intelligence,
 }
 
 

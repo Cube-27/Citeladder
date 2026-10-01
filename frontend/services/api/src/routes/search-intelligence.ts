@@ -1,8 +1,8 @@
 /**
  * Search Intelligence: readiness, run confirmation and cancellation, saved
  * preferences, published dataset rows, content handoff and citation matches.
- * Authorized by the project in the path; review creation stays Python
- * (`search-intelligence-reviews`) because it resolves competitor websites.
+ * Authorized by the project in the path; native review creation resolves
+ * competitor websites before freezing the bounded acquisition plan.
  */
 import {
   searchDatasetPageSchema,
@@ -16,6 +16,9 @@ import { z } from 'zod';
 
 import type { AppEnv } from '../context.ts';
 import { readBody } from '../http/body.ts';
+import { configEnvironment, policy, resolveSettingSpec } from '../config.ts';
+import { ApiError } from '../errors.ts';
+import { createReview } from '../search-intelligence/reviews.ts';
 import { deriveCitationMatches } from '../search-intelligence/citations.ts';
 import {
   contentHandoff,
@@ -32,6 +35,7 @@ import {
   contentHandoffBody,
   contentHandoffResponse,
   preferencesBody,
+  reviewBody,
 } from './search-intelligence-contracts.ts';
 
 const family = 'search-intelligence';
@@ -52,6 +56,30 @@ const scopeOf = (c: Context<AppEnv>, projectId: string): Scope => ({
 });
 
 export const searchIntelligenceRoutes = [
+  definePostRoute({
+    family: 'search-intelligence-reviews',
+    authorize,
+    path: `${root}/reviews`,
+    capability: 'run',
+    status: 201,
+    params: { path: projectPath, query: {} },
+    body: reviewBody,
+    headers: z.object({ 'Idempotency-Key': z.string().min(1).max(160) }),
+    response: searchRunSchema,
+    async handle({ c, db, config }, { path }) {
+      const key = c.req.header('Idempotency-Key');
+      if (!key || key.length > 160)
+        throw new ApiError(422, 'A bounded Idempotency-Key is required');
+      return createReview(
+        db,
+        scopeOf(c, path.project_id),
+        c.get('user').id,
+        key,
+        await readBody(c, reviewBody),
+        String(resolveSettingSpec(policy.settings.encryption_key, configEnvironment(config))),
+      );
+    },
+  }),
   defineGetRoute({
     family,
     authorize,

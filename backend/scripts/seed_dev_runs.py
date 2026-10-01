@@ -16,12 +16,10 @@ script nobody can run on the day they need it.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import logging
 import os
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -30,7 +28,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
-from app.core.config.audits import AUDIT_TRIGGER_SYSTEM, audit_settings
 from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
@@ -47,24 +44,23 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.core.database import SessionLocal
-from app.domain.audits.creation import create_audit
 from app.domain.billing.bootstrap import ensure_workspace_billing
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.opportunities.queue import enqueue_opportunity_refresh
 from app.models.analytics import AnalyticsTask
+from app.models.project import Project
+from app.models.prompt import Prompt, PromptSet
 from app.models.site_health.crawl import SiteCrawl
 from app.models.user import User
-from app.workers.audit import execution as audit_execution
-from app.workers.audit_worker import AuditWorker
 from scripts.seed_dev_support import (
     SEED_MONITORED_URL_ALLOWANCE,
-    _build_seed_adapter,
-    set_seed_audit_generation,
+    seed_answer,
 )
 
 logger = logging.getLogger("seed_dev_data")
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+NATIVE_API_ROOT = _REPOSITORY_ROOT / "frontend" / "services" / "api"
 
 #: Every engine the primary project audits across.
 #
@@ -82,34 +78,6 @@ SEED_REFRESH_TIMEOUT_SECONDS = 120
 #: How long the seeder waits for the TypeScript Site Health worker per crawl.
 SEED_CRAWL_TIMEOUT_SECONDS = 600
 _REFRESH_TERMINAL = (TASK_STATUS_SUCCEEDED, TASK_STATUS_FAILED, TASK_STATUS_CANCELLED)
-
-
-@contextlib.contextmanager
-def seeded_adapter() -> Iterator[None]:
-    """Swap in the deterministic adapter and un-throttle the audit worker.
-
-    All three knobs are module singletons, so every exit path has to restore
-    them. The two audit stages each carried a hand-written ``try``/``finally``
-    doing this, which is two copies of one invariant that can drift apart.
-
-    The patch target is ``app.workers.audit.execution``, which is where the
-    factory is actually resolved. The seeder patched
-    ``app.workers.audit_worker.build_adapter`` -- an attribute that stopped
-    existing when the execution path was split out -- so the stub never took
-    effect and seeded audits called real providers with fake dev keys.
-    """
-    original_build_adapter = audit_execution.build_adapter
-    original_min_interval = audit_settings.min_request_interval_seconds
-    original_heartbeat = audit_settings.heartbeat_interval_seconds
-    audit_execution.build_adapter = _build_seed_adapter
-    audit_settings.min_request_interval_seconds = 0.0
-    audit_settings.heartbeat_interval_seconds = 3600.0
-    try:
-        yield
-    finally:
-        audit_execution.build_adapter = original_build_adapter
-        audit_settings.min_request_interval_seconds = original_min_interval
-        audit_settings.heartbeat_interval_seconds = original_heartbeat
 
 
 async def seed_monitored_urls_grant(
@@ -177,23 +145,52 @@ async def _run_audit(
     repetitions: int,
     prompt_set_id: uuid.UUID | None = None,
     prompt_ids: list[uuid.UUID] | None = None,
+    generation: int = 0,
 ) -> uuid.UUID:
     """Plan one audit through the real planner, then drain it to completion."""
     async with SessionLocal() as session:
-        audit = await create_audit(
-            session,
-            trigger=AUDIT_TRIGGER_SYSTEM,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            engines=engines,
-            prompt_set_id=prompt_set_id,
-            prompt_ids=prompt_ids,
-            repetitions=repetitions,
-            random_seed=random_seed,
+        query = (
+            select(Prompt.text)
+            .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
+            .join(Project, Project.id == PromptSet.project_id)
+            .where(Project.workspace_id == workspace_id, Project.id == project_id)
         )
-        audit_id = audit.id
-    await AuditWorker(session_factory=SessionLocal, owner=owner).run_until_idle()
-    logger.info("Completed audit %s for project %s", audit_id, project_id)
+        if prompt_ids:
+            query = query.where(Prompt.id.in_(prompt_ids))
+        elif prompt_set_id:
+            query = query.where(Prompt.prompt_set_id == prompt_set_id)
+        texts = list((await session.scalars(query)).all())
+    request = {
+        "workspace_id": str(workspace_id),
+        "input": {
+            "project_id": str(project_id),
+            "prompt_set_id": str(prompt_set_id) if prompt_set_id else None,
+            "prompt_ids": [str(value) for value in prompt_ids or []],
+            "engines": engines,
+            "repetitions": repetitions,
+            "random_seed": random_seed,
+        },
+        "answers": {text: seed_answer(text, generation) for text in texts},
+    }
+    process = await asyncio.create_subprocess_exec(
+        "node",
+        "src/cli/seed-audit.ts",
+        cwd=NATIVE_API_ROOT,
+        env={
+            **os.environ,
+            "APP_ENV": settings.app_env,
+            "DATABASE_URL": settings.database_url,
+            "ENCRYPTION_KEY": settings.encryption_key,
+        },
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    output, _errors = await process.communicate(json.dumps(request).encode())
+    if process.returncode:
+        raise RuntimeError("Native development audit failed")
+    audit_id = uuid.UUID(json.loads(output.decode().splitlines()[-1])["audit_id"])
+    logger.info("Completed audit %s for project %s via %s", audit_id, project_id, owner)
     return audit_id
 
 
@@ -210,25 +207,24 @@ async def run_seed_audits(
 
     Returns the primary project's audit id, which the action set is built from.
     """
-    with seeded_adapter():
-        audit1_id = await _run_audit(
-            workspace_id=workspace_id,
-            project_id=project_id,
-            engines=ALL_ENGINES,
-            owner="seed-worker-1",
-            random_seed="42",
-            repetitions=2,
-            prompt_ids=active_prompt_ids,
-        )
-        await _run_audit(
-            workspace_id=agency_workspace_id,
-            project_id=project2_id,
-            engines=[ENGINE_GEMINI],
-            owner="seed-worker-2",
-            random_seed="7",
-            repetitions=1,
-            prompt_set_id=prompt_set2_id,
-        )
+    audit1_id = await _run_audit(
+        workspace_id=workspace_id,
+        project_id=project_id,
+        engines=ALL_ENGINES,
+        owner="seed-worker-1",
+        random_seed="42",
+        repetitions=2,
+        prompt_ids=active_prompt_ids,
+    )
+    await _run_audit(
+        workspace_id=agency_workspace_id,
+        project_id=project2_id,
+        engines=[ENGINE_GEMINI],
+        owner="seed-worker-2",
+        random_seed="7",
+        repetitions=1,
+        prompt_set_id=prompt_set2_id,
+    )
     return audit1_id
 
 
@@ -254,8 +250,8 @@ async def _site_health_control(**payload: str) -> uuid.UUID:
     """Invoke the TypeScript owner on this local dev database, without HTTP."""
     process = await asyncio.create_subprocess_exec(
         "node",
-        str(_REPOSITORY_ROOT / "frontend/services/api/scripts/seed-site-health.ts"),
-        cwd=_REPOSITORY_ROOT / "frontend/services/api",
+        str(NATIVE_API_ROOT / "scripts" / "seed-site-health.ts"),
+        cwd=NATIVE_API_ROOT,
         env={
             **os.environ,
             "DATABASE_URL": settings.database_url,
@@ -400,21 +396,17 @@ async def run_actions_and_comparison(
     )
 
     comparison_audit_id = audit_id
-    with seeded_adapter():
-        try:
-            for generation, random_seed in ((1, "43"), (2, "44")):
-                set_seed_audit_generation(generation)
-                comparison_audit_id = await _run_audit(
-                    workspace_id=workspace_id,
-                    project_id=project_id,
-                    engines=ALL_ENGINES,
-                    owner=f"seed-worker-comparison-{generation}",
-                    random_seed=random_seed,
-                    repetitions=2,
-                    prompt_ids=active_prompt_ids,
-                )
-        finally:
-            set_seed_audit_generation(0)
+    for generation, random_seed in ((1, "43"), (2, "44")):
+        comparison_audit_id = await _run_audit(
+            workspace_id=workspace_id,
+            project_id=project_id,
+            engines=ALL_ENGINES,
+            owner=f"seed-worker-comparison-{generation}",
+            random_seed=random_seed,
+            repetitions=2,
+            prompt_ids=active_prompt_ids,
+            generation=generation,
+        )
 
     await _refresh_opportunities(
         workspace_id=workspace_id,

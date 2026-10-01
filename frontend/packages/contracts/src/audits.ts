@@ -49,6 +49,7 @@ export const auditSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   project_id: uuid(),
+  parent_audit_id: uuid().nullable().default(null),
   status: auditStatusSchema,
   benchmark_mode: z.string(),
   audit_scope: z.enum(['brand', 'commerce']).default('brand'),
@@ -126,6 +127,48 @@ export const auditEstimateSchema = responseObject({
   cost_status: z.enum(['complete', 'partial', 'unknown']),
   estimated_total_cost_microusd: z.number().int().nullable(),
   engines: z.array(auditEngineEstimateSchema),
+});
+
+export const auditPerformanceSchema = responseObject({
+  audit_id: uuid(),
+  queue_wait_ms: z.number().int().nullable(),
+  total_run_duration_ms: z.number().int().nullable(),
+  time_to_first_result_ms: z.number().int().nullable(),
+  execution_count: z.number().int(),
+  completed_count: z.number().int(),
+  failed_count: z.number().int(),
+  coverage: z.number(),
+  retry_count: z.number().int(),
+  search_calls: z.number().int(),
+  usage: responseObject({
+    input_tokens: z.number().int().nullable(),
+    output_tokens: z.number().int().nullable(),
+    total_tokens: z.number().int().nullable(),
+  }),
+  projected_cost_microusd: z.number().int().nullable(),
+  engines: z.array(
+    responseObject({
+      logical_engine: z.string(),
+      execution_count: z.number().int(),
+      completed_count: z.number().int(),
+      failed_count: z.number().int(),
+      retry_count: z.number().int(),
+      search_calls: z.number().int(),
+      average_provider_latency_ms: z.number().nullable(),
+      projected_cost_microusd: z.number().int().nullable(),
+    }),
+  ),
+});
+export const auditMetricsSchema = responseObject({
+  audit_id: uuid(),
+  project_id: uuid(),
+  analyzer_version: z.string(),
+  scoring_rule_version: z.string(),
+  total_completed: z.number().int(),
+  total_failed: z.number().int(),
+  visibility_score: z.number(),
+  metrics: z.record(z.string(), z.unknown()),
+  created_at: z.string(),
 });
 
 // Deterministic citation classification (B6 `_classification`, invariant 4):

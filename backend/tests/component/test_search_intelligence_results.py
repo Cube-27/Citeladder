@@ -1,542 +1,144 @@
-"""Paid response accounting and review scope regressions at the database boundary."""
+"""Persisted Search Intelligence bridges for MCP and Agent readers."""
 
 import uuid
-from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 
-from app.connectors.answer_engines.errors import ProviderError
-from app.connectors.search_intelligence_dataforseo import ResearchResponse
-from app.core.config.dataforseo import pack_credential
-from app.core.config.provider_catalog import (
-    ERROR_CONNECTION,
-    ERROR_RATE_LIMIT,
-    ERROR_TIMEOUT,
+from app.domain.agent.context_refs import SearchIntelligenceReference
+from app.domain.agent.search_intelligence_context import (
+    SearchIntelligenceEvidenceNotFound,
+    search_intelligence_context,
 )
-from app.core.security import encrypt_secret
-from app.domain.demand.search_intelligence import executor, service
-from app.models.brand import Competitor
-from app.models.project import Project
+from app.domain.demand.search_intelligence import service
 from app.models.provider import ProviderConnection
 from app.models.search_intelligence import (
-    SearchIntelligenceCall,
     SearchIntelligenceDataset,
-    SearchIntelligenceDispatchAttempt,
+    SearchIntelligenceRow,
     SearchIntelligenceRun,
 )
-from app.orchestration import provider_capacity
-from app.orchestration.executor_errors import CapacityWaitError
-from app.orchestration.provider_capacity import CapacityDecision
-from tests.component.auth_helpers import register_and_login
-from tests.component.project_helpers import seed_project
-from tests.component.search_intelligence_helpers import queue_confirmed_run
+from app.models.workspace import WorkspaceMember
+from tests.component.audit_helpers import seed_audit_fixtures
 
 
-async def connected_project(client, db_session):
-    await register_and_login(client, "search-results@example.com")
-    project = await seed_project(
-        client, {"name": "Results", "website_url": "https://www.example.com"}
+@pytest.fixture
+async def published_dataset(db_session):
+    seed = await seed_audit_fixtures(db_session, prompt_count=1)
+    member = await db_session.scalar(
+        select(WorkspaceMember).where(WorkspaceMember.workspace_id == seed.workspace_id)
     )
-    db_session.add(
-        ProviderConnection(
-            workspace_id=uuid.UUID(project["workspace_id"]),
-            label="DataForSEO",
-            transport_provider="dataforseo",
-            api_key_encrypted=encrypt_secret(
-                pack_credential(login="test@example.com", password="test-only")
-            ),
-            active=True,
-            last_test_status="ok",
+    connection = await db_session.scalar(
+        select(ProviderConnection).where(
+            ProviderConnection.workspace_id == seed.workspace_id
         )
     )
-    await db_session.commit()
-    return project, f"/api/v1/projects/{project['id']}/search-intelligence"
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("rate_limits", [1, 3])
-async def test_explicit_429_retries_with_durable_attempts(
-    client, db_session, session_factory, monkeypatch, rate_limits
-):
-    _, base = await connected_project(client, db_session)
-    review = await client.post(
-        f"{base}/reviews",
-        headers={"Idempotency-Key": f"429-{rate_limits}"},
-        json={
-            "location_code": 2036,
-            "language_code": "en",
-            "reuse_recent": False,
-            "datasets": [{"kind": "ranking_keywords", "depth": 1}],
-        },
+    run = SearchIntelligenceRun(
+        workspace_id=seed.workspace_id,
+        project_id=seed.project_id,
+        actor_user_id=member.user_id,
+        connection_id=connection.id,
+        connection_revision=connection.credential_revision,
+        account_identity="fixture",
+        idempotency_key="persisted-reader",
+        frozen_scope={},
+        call_plan=[],
+        estimated_cost_usd=Decimal("0"),
+        planned_calls=0,
+        planned_rows=3,
+        expires_at=datetime.now(UTC),
+        status="succeeded",
     )
-    assert review.status_code == 201, review.text
-    run_id = uuid.UUID(review.json()["id"])
-    task = await queue_confirmed_run(session_factory, run_id)
-
-    rate_error = ProviderError(
-        "rate limited",
-        error_code=ERROR_RATE_LIMIT,
-        retryable=True,
-        retry_after_seconds=12,
+    db_session.add(run)
+    await db_session.flush()
+    dataset = SearchIntelligenceDataset(
+        workspace_id=seed.workspace_id,
+        project_id=seed.project_id,
+        run_id=run.id,
+        dataset_kind="organic_pages",
+        scope_hash="fixture",
+        target_domain="example.com",
+        target_hostname="www.example.com",
+        target_origin="https://www.example.com",
+        status="published",
+        coverage="complete",
+        provider_filters={"research_scope": "domain_subdomains"},
+        published_at=datetime.now(UTC),
+        unique_rows_saved=3,
     )
-    result = ResearchResponse(
-        {"tasks": [{"result": [{"items": [], "total_count": 0}]}]},
-        "retry-response",
-        "task",
-        Decimal("0.01"),
-    )
-    paid = AsyncMock(side_effect=[*[rate_error] * rate_limits, result])
-    monkeypatch.setattr(executor, "execute_live", paid)
-    acquire = AsyncMock(return_value=CapacityDecision(True))
-    monkeypatch.setattr(executor, "acquire_provider_capacity", acquire)
-    monkeypatch.setattr(executor, "release_provider_capacity", AsyncMock())
-    for index in range(rate_limits):
-        if index < 2:
-            with pytest.raises(CapacityWaitError):
-                await executor.execute_search_intelligence(session_factory, task)
-        else:
-            await executor.execute_search_intelligence(session_factory, task)
-    if rate_limits == 1:
-        await executor.execute_search_intelligence(session_factory, task)
-    async with session_factory() as session:
-        run = await session.get(SearchIntelligenceRun, run_id)
-        call = await session.scalar(
-            select(SearchIntelligenceCall).where(
-                SearchIntelligenceCall.run_id == run_id
-            )
+    db_session.add(dataset)
+    await db_session.flush()
+    rows = [
+        SearchIntelligenceRow(
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            dataset_id=dataset.id,
+            provider_row_key=f"row:{index}",
+            row_kind="organic_pages",
+            keyword=keyword,
+            url=f"https://www.example.com/{keyword}",
+            etv=value,
+            auxiliary={"organic_keywords": 12},
         )
-        evidence = list(
-            (
-                await session.scalars(
-                    select(SearchIntelligenceDispatchAttempt)
-                    .where(
-                        SearchIntelligenceDispatchAttempt.call_id == call.id,
-                        SearchIntelligenceDispatchAttempt.workspace_id
-                        == call.workspace_id,
-                        SearchIntelligenceDispatchAttempt.project_id == call.project_id,
-                    )
-                    .order_by(SearchIntelligenceDispatchAttempt.ordinal)
-                )
-            ).all()
-        )
-    if rate_limits == 1:
-        assert run.status == "succeeded"
-        assert run.provider_reported_cost_usd == Decimal("0.01")
-        assert [(a.ordinal, a.status) for a in evidence if a.phase == "dispatch"] == [
-            (1, "dispatched"),
-            (2, "dispatched"),
-        ]
-        assert [(a.ordinal, a.status) for a in evidence if a.phase == "outcome"] == [
-            (1, "rate_limited"),
-            (2, "succeeded"),
-        ]
-        async with session_factory() as session:
-            session.add(
-                SearchIntelligenceDispatchAttempt(
-                    workspace_id=uuid.uuid4(),
-                    project_id=call.project_id,
-                    call_id=call.id,
-                    ordinal=99,
-                    phase="dispatch",
-                )
-            )
-            with pytest.raises(IntegrityError):
-                await session.commit()
-    else:
-        assert run.status == "partial"
-        assert run.provider_reported_cost_usd is None
-        assert [a.status for a in evidence if a.phase == "dispatch"] == [
-            "dispatched"
-        ] * 3
-        assert [a.status for a in evidence if a.phase == "outcome"] == [
-            "rate_limited"
-        ] * 3
-        assert paid.await_count == 3
-    assert [
-        call.kwargs["request"].attempt_number for call in acquire.await_args_list
-    ] == list(range(1, len(evidence) // 2 + 1))
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("failure", [ERROR_CONNECTION, ERROR_TIMEOUT, "crash"])
-async def test_lost_live_call_stays_uncertain_without_resend(
-    client, db_session, session_factory, monkeypatch, failure
-):
-    _, base = await connected_project(client, db_session)
-    review = await client.post(
-        f"{base}/reviews",
-        headers={"Idempotency-Key": "lost-call"},
-        json={
-            "location_code": 2036,
-            "language_code": "en",
-            "reuse_recent": False,
-            "datasets": [{"kind": "ranking_keywords", "depth": 1}],
-        },
-    )
-    run_id = uuid.UUID(review.json()["id"])
-    task = await queue_confirmed_run(session_factory, run_id)
-    monkeypatch.setattr(
-        executor,
-        "acquire_provider_capacity",
-        AsyncMock(return_value=CapacityDecision(True)),
-    )
-    monkeypatch.setattr(executor, "release_provider_capacity", AsyncMock())
-    error = (
-        RuntimeError("worker crashed")
-        if failure == "crash"
-        else ProviderError("send failed", error_code=failure, retryable=False)
-    )
-    sent = AsyncMock(side_effect=error)
-    monkeypatch.setattr(executor, "execute_live", sent)
-    if failure == "crash":
-        with pytest.raises(RuntimeError, match="worker crashed"):
-            await executor.execute_search_intelligence(session_factory, task)
-    else:
-        await executor.execute_search_intelligence(session_factory, task)
-    await executor.execute_search_intelligence(session_factory, task)
-    async with session_factory() as session:
-        run = await session.get(SearchIntelligenceRun, run_id)
-        call = await session.scalar(
-            select(SearchIntelligenceCall).where(
-                SearchIntelligenceCall.run_id == run_id
-            )
-        )
-        attempt = await session.scalar(
-            select(SearchIntelligenceDispatchAttempt).where(
-                SearchIntelligenceDispatchAttempt.call_id == call.id,
-                SearchIntelligenceDispatchAttempt.workspace_id == call.workspace_id,
-                SearchIntelligenceDispatchAttempt.project_id == call.project_id,
-                SearchIntelligenceDispatchAttempt.phase == "outcome",
-            )
-        )
-    assert run.status == "uncertain"
-    assert call.status == "uncertain"
-    assert attempt.status == "uncertain"
-    sent.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("kind", "result", "coverage", "status"),
-    [
-        (
-            "footprint",
-            {
-                "items": [
-                    {
-                        "subdomain": "www.example.com",
-                        "metrics": {"organic": {"count": 4233, "etv": 8632.703566}},
-                    }
-                ],
-                "total_count": 1,
-            },
-            "complete",
-            "succeeded",
-        ),
-        (
-            "backlink_summary",
-            {"backlinks": 0, "referring_main_domains": 0},
-            "complete",
-            "succeeded",
-        ),
-        ("backlink_summary", None, "unknown", "partial"),
-        ("ranking_keywords", {"items": [], "total_count": 0}, "empty", "succeeded"),
-        (
-            "ranking_keywords",
-            {
-                "items": [
-                    {
-                        "keyword_data": {"keyword": "outside"},
-                        "ranked_serp_element": {
-                            "serp_item": {"url": "https://other.test/page"}
-                        },
-                    }
-                ]
-            },
-            "unknown",
-            "partial",
-        ),
-    ],
-)
-async def test_saved_response_preserves_cost_and_result_state(
-    client, db_session, session_factory, monkeypatch, kind, result, coverage, status
-):
-    _, base = await connected_project(client, db_session)
-    review = await client.post(
-        f"{base}/reviews",
-        headers={"Idempotency-Key": "result"},
-        json={
-            "location_code": 2036,
-            "language_code": "en",
-            "reuse_recent": False,
-            "datasets": [{"kind": kind, "depth": 1}],
-        },
-    )
-    assert review.status_code == 201, review.text
-    run_id = uuid.UUID(review.json()["id"])
-    task = await queue_confirmed_run(session_factory, run_id)
-    body = {"tasks": [{"result": [result] if result is not None else None}]}
-    paid_call = AsyncMock(
-        return_value=ResearchResponse(body, "saved-response", "task", Decimal("0.01"))
-    )
-    monkeypatch.setattr(executor, "execute_live", paid_call)
-    await executor.execute_search_intelligence(session_factory, task)
-    async with session_factory() as session:
-        run = await session.get(SearchIntelligenceRun, run_id)
-        dataset = await session.scalar(
-            select(SearchIntelligenceDataset).where(
-                SearchIntelligenceDataset.run_id == run_id
-            )
-        )
-        call = await session.scalar(
-            select(SearchIntelligenceCall).where(
-                SearchIntelligenceCall.run_id == run_id
-            )
-        )
-        assert run.status == status
-        assert run.provider_reported_cost_usd == Decimal("0.01")
-        assert dataset.coverage == coverage
-        assert call.sanitized_response == body
-        assert call.dataset_id == dataset.id
-        if kind == "footprint":
-            assert dataset.summary["organic_keywords"] == 4233
-            assert dataset.raw_rows_received == 1
-            assert dataset.unique_rows_saved == 0
-    paid_call.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_review_inherits_market_and_freezes_resolved_competitor(
-    client, db_session, monkeypatch
-):
-    project, base = await connected_project(client, db_session)
-    row = await db_session.get(Project, uuid.UUID(project["id"]))
-    row.serp_location_code = 2036
-    row.serp_language_code = "en"
-    competitor = Competitor(project_id=row.id, name="Rival", domains=["example.org"])
-    db_session.add(competitor)
-    await db_session.commit()
-
-    async def resolve(target):
-        return replace(
-            target, hostname="www.example.org", origin="https://www.example.org"
-        )
-
-    resolver = AsyncMock(side_effect=resolve)
-    monkeypatch.setattr(service, "resolve_competitor", resolver)
-    readiness = await service.readiness(
-        db_session, workspace_id=row.workspace_id, project_id=row.id
-    )
-    assert readiness.preferences.location_code == 2036
-    resolver.assert_not_awaited()
-    payload = {
-        "research_scope": "exact_host",
-        "datasets": [
-            {"kind": "footprint", "competitor_id": str(competitor.id)},
-            {
-                "kind": "shared_keywords",
-                "competitor_id": str(competitor.id),
-                "depth": 100,
-            },
-        ],
-    }
-    review = await client.post(
-        f"{base}/reviews", headers={"Idempotency-Key": "resolved"}, json=payload
-    )
-    assert review.status_code == 201, review.text
-    plan = review.json()["call_plan"]
-    assert plan[0]["request"]["location_code"] == 2036
-    assert plan[0]["request"]["filters"] == ["subdomain", "=", "www.example.org"]
-    assert plan[1]["request"]["pages"]["1"] == "https://www.example.org/*"
-    repeat = await client.post(
-        f"{base}/reviews", headers={"Idempotency-Key": "resolved"}, json=payload
-    )
-    assert repeat.json()["id"] == review.json()["id"]
-    resolver.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("change", ["remove", "invalidate", "origin"])
-async def test_roster_edit_during_resolution_requires_new_review(
-    client, db_session, session_factory, monkeypatch, change
-):
-    project, base = await connected_project(client, db_session)
-    competitor = Competitor(
-        project_id=uuid.UUID(project["id"]), name="Rival", domains=["example.org"]
-    )
-    db_session.add(competitor)
-    await db_session.commit()
-    competitor_id = competitor.id
-
-    async def resolve(target):
-        # Independent transaction while the review has released its transaction.
-        async with session_factory() as writer:
-            row = await writer.get(Competitor, competitor_id)
-            if change == "remove":
-                await writer.delete(row)
-            else:
-                row.domains = [
-                    "blog.example.org" if change == "invalidate" else "www.example.org"
-                ]
-            await writer.commit()
-        return target
-
-    monkeypatch.setattr(service, "resolve_competitor", resolve)
-    paid = AsyncMock(side_effect=AssertionError("unreviewed paid call"))
-    monkeypatch.setattr(executor, "execute_live", paid)
-    response = await client.post(
-        f"{base}/reviews",
-        headers={"Idempotency-Key": "roster-race"},
-        json={"datasets": [{"kind": "footprint", "competitor_id": str(competitor_id)}]},
-    )
-    assert response.status_code == 422
-    assert "target_changed" in response.text
-    async with session_factory() as reader:
-        assert (
-            await reader.scalar(
-                select(SearchIntelligenceRun).where(
-                    SearchIntelligenceRun.project_id == uuid.UUID(project["id"])
-                )
-            )
-            is None
-        )
-    paid.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_new_datasets_publish_exact_call_provenance_and_saved_filters(
-    client, db_session, session_factory, monkeypatch
-):
-    _, base = await connected_project(client, db_session)
-    capacity_time = [datetime(2026, 9, 20, tzinfo=UTC)]
-    monkeypatch.setattr(provider_capacity, "_utcnow", lambda: capacity_time[0])
-    monkeypatch.setattr(service, "_utcnow", lambda: datetime(2026, 9, 20, tzinfo=UTC))
-    response = await client.post(
-        f"{base}/reviews",
-        headers={"Idempotency-Key": "new-datasets"},
-        json={
-            "location_code": 2036,
-            "language_code": "en",
-            "datasets": [
-                {"kind": "organic_pages", "depth": 100},
-                {"kind": "backlinks", "depth": 100, "grouping": "one_per_domain"},
-                {"kind": "backlink_history"},
-            ],
-        },
-    )
-    assert response.status_code == 201, response.text
-    reviewed = response.json()
-    assert reviewed["frozen_scope"]["research_scope"] == "domain_subdomains"
-    assert reviewed["call_plan"][1]["request"]["mode"] == "one_per_domain"
-    assert reviewed["call_plan"][2]["request"]["date_to"] == "2026-09-19"
-    fixtures = {
-        "relevant_pages": {
-            "items": [
-                {
-                    "page_address": "https://shop.example.com/one",
-                    "metrics": {"organic": {"count": 22, "etv": 100.25}},
-                },
-                {
-                    "page_address": "https://example.com/needle",
-                    "metrics": {"organic": {"count": 12, "etv": 50}},
-                },
-                {
-                    "page_address": "https://example.com/needle-two",
-                    "metrics": {"organic": {"count": 2, "etv": None}},
-                },
-            ],
-            "total_count": 3,
-        },
-        "backlinks": {
-            "items": [
-                {
-                    "url_from": "https://external.test/a",
-                    "domain_from": "external.test",
-                    "url_to": "https://shop.example.com/one",
-                    "anchor": "=SUM(A1)",
-                    "rank": 65,
-                    "page_from_rank": 40,
-                    "dofollow": False,
-                    "links_count": 3,
-                    "first_seen": "2026-08-01 00:00:00 +00:00",
-                }
-            ],
-            "total_count": 800,
-        },
-        "history": {
-            "items": [
-                {
-                    "date": "2026-06-30 00:00:00 +00:00",
-                    "backlinks": 100,
-                    "referring_domains": 40,
-                    "new_backlinks": 5,
-                },
-                {
-                    "date": "2026-08-31 00:00:00 +00:00",
-                    "backlinks": 120,
-                    "referring_domains": 45,
-                    "lost_backlinks": 2,
-                },
+        for index, (keyword, value) in enumerate(
+            [
+                ("needle", Decimal("4")),
+                ("needle-two", None),
+                ("unrelated", Decimal("9")),
             ]
-        },
-    }
+        )
+    ]
+    db_session.add_all(rows)
+    await db_session.commit()
+    return dataset, rows
 
-    async def live(**kwargs):
-        capacity_time[0] += timedelta(seconds=2)
-        result = fixtures[kwargs["endpoint"].split("/")[-2]]
-        return ResearchResponse(
-            {"tasks": [{"result": [result]}]},
-            "response",
-            "task",
-            Decimal("0.001"),
+
+async def test_saved_filters_bind_cursor_and_keep_unknown_values(
+    db_session, published_dataset
+):
+    dataset, _ = published_dataset
+    page = dict(
+        workspace_id=dataset.workspace_id,
+        project_id=dataset.project_id,
+        dataset_id=dataset.id,
+        limit=1,
+        sort="etv",
+    )
+    metadata, rows, cursor = await service.dataset_page(
+        db_session, cursor=None, search="needle", **page
+    )
+    assert metadata["filtered_saved_count"] == 2
+    assert metadata["research_scope"] == "domain_subdomains"
+    assert rows[0]["url"].endswith("/needle")
+    assert rows[0]["organic_keywords"] == 12
+    assert cursor
+    with pytest.raises(service.SearchIntelligenceError, match="cursor"):
+        await service.dataset_page(
+            db_session, cursor=cursor, search="different", **page
+        )
+    _, second, _ = await service.dataset_page(
+        db_session, cursor=cursor, search="needle", **page
+    )
+    assert second[0]["url"].endswith("needle-two")
+    assert second[0]["etv"] is None
+    with pytest.raises(service.SearchIntelligenceError, match="not found"):
+        await service.dataset_page(
+            db_session, cursor=None, **{**page, "workspace_id": uuid.uuid4()}
         )
 
-    paid = AsyncMock(side_effect=live)
-    monkeypatch.setattr(executor, "execute_live", paid)
-    run_id = uuid.UUID(reviewed["id"])
-    task = await queue_confirmed_run(session_factory, run_id)
-    await executor.execute_search_intelligence(session_factory, task)
-    # The MCP readers' Python bridges read what the executor published.
-    async with session_factory() as reader:
-        saved = (
-            await service.readiness(
-                reader, workspace_id=task.workspace_id, project_id=task.project_id
-            )
-        ).datasets
-        assert {item.dataset_kind for item in saved} == {
-            "organic_pages",
-            "backlinks",
-            "backlink_history",
-        }
-        assert all(item.research_scope == "domain_subdomains" for item in saved)
-        organic = next(item for item in saved if item.dataset_kind == "organic_pages")
-        page = {
-            "workspace_id": task.workspace_id,
-            "project_id": task.project_id,
-            "dataset_id": organic.id,
-            "limit": 1,
-            "sort": "etv",
-        }
-        dataset, rows, cursor = await service.dataset_page(
-            reader, cursor=None, search="needle", **page
+
+async def test_agent_resolves_only_selected_rows_within_workspace(
+    db_session, published_dataset
+):
+    dataset, rows = published_dataset
+    reference = SearchIntelligenceReference(dataset_id=dataset.id, row_ids=[rows[1].id])
+    evidence = await search_intelligence_context(
+        db_session, dataset.workspace_id, dataset.project_id, reference
+    )
+    assert "needle-two" in evidence
+    assert "unrelated" not in evidence
+    with pytest.raises(SearchIntelligenceEvidenceNotFound):
+        await search_intelligence_context(
+            db_session, uuid.uuid4(), dataset.project_id, reference
         )
-        assert dataset["filtered_saved_count"] == 2
-        assert rows[0]["url"].endswith("/needle")
-        assert rows[0]["call_id"] is not None
-        assert rows[0]["organic_keywords"] == 12
-        assert cursor
-        with pytest.raises(service.SearchIntelligenceError, match="cursor"):
-            await service.dataset_page(
-                reader, cursor=cursor, search="different", **page
-            )
-        _, second, _ = await service.dataset_page(
-            reader, cursor=cursor, search="needle", **page
-        )
-        assert second[0]["url"].endswith("needle-two")
-        assert second[0]["etv"] is None
-    assert paid.await_count == 3

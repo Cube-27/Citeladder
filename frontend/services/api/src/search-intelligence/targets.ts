@@ -12,7 +12,7 @@ import type { z } from 'zod';
 
 import { stripTrailing } from '../text-order.ts';
 
-type CanonicalTarget = z.output<typeof searchTargetSchema>;
+export type CanonicalTarget = z.output<typeof searchTargetSchema>;
 
 /** The target for one saved website value, or null when it cannot be one. */
 function targetOf(

@@ -7,10 +7,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.config.search_intelligence import (
-    BACKLINK_MAX_OFFSET,
     DEFAULT_DEPTHS,
     DEFAULT_RESEARCH_SCOPE,
     MAX_SAFE_DEPTH,
@@ -53,71 +52,6 @@ class SearchIntelligencePreferences(BaseModel):
             if isinstance(depth, bool) or not 1 <= depth <= MAX_SAFE_DEPTH:
                 raise ValueError(f"depth must be between 1 and {MAX_SAFE_DEPTH}")
         return value
-
-
-class DatasetSelection(BaseModel):
-    kind: DatasetKind
-    competitor_id: uuid.UUID | None = None
-    depth: int = Field(default=1, ge=1, le=MAX_SAFE_DEPTH)
-    seed: str = Field(default="", max_length=700)
-    grouping: Literal["as_is", "one_per_domain"] = "as_is"
-    order: Literal["volume", "traffic", "position", "difficulty", "cpc"] = "volume"
-    min_volume: int | None = Field(default=None, ge=0)
-
-    @model_validator(mode="after")
-    def validate_acquisition(self) -> DatasetSelection:
-        keyword_kind = self.kind in {
-            "ranking_keywords",
-            "missing_keywords",
-            "shared_keywords",
-            "keyword_suggestions",
-        }
-        if not keyword_kind and (self.order != "volume" or self.min_volume is not None):
-            raise ValueError(
-                "acquisition order and minimum volume require a keyword dataset"
-            )
-        if self.kind == "keyword_suggestions" and self.order in {"traffic", "position"}:
-            raise ValueError(
-                "suggestions have no observed position or traffic ordering"
-            )
-        if self.kind == "backlinks" and self.depth > BACKLINK_MAX_OFFSET + 1000:
-            raise ValueError("backlinks depth exceeds the supported offset range")
-        return self
-
-    @model_validator(mode="after")
-    def validate_shape(self) -> DatasetSelection:
-        comparison = self.kind in {"missing_keywords", "shared_keywords"}
-        competitor_allowed = comparison or self.kind in {
-            "footprint",
-            "backlink_summary",
-            "referring_domains",
-            "destination_pages",
-            "organic_pages",
-            "backlinks",
-            "backlink_history",
-        }
-        if comparison and self.competitor_id is None:
-            raise ValueError("comparison datasets require one competitor")
-        if self.competitor_id is not None and not competitor_allowed:
-            raise ValueError("this dataset does not support a competitor target")
-        if self.kind == "keyword_suggestions" and not self.seed.strip():
-            raise ValueError("keyword suggestions require one seed")
-        if self.kind != "keyword_suggestions" and self.seed:
-            raise ValueError("seed is valid only for keyword suggestions")
-        return self
-
-
-class ReviewCreate(BaseModel):
-    research_scope: ResearchScope | None = None
-    action: RunAction = "analysis"
-    owned_target_id: str | None = None
-    connection_id: uuid.UUID | None = None
-    location_code: int | None = Field(default=None, gt=0)
-    language_code: str = Field(default="", max_length=16)
-    reuse_recent: bool = True
-    save_as_defaults: bool = False
-    datasets: list[DatasetSelection] = Field(min_length=1, max_length=25)
-    previous_run_id: uuid.UUID | None = None
 
 
 class TargetResponse(BaseModel):

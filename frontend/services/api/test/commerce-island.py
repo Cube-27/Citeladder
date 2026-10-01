@@ -10,7 +10,6 @@ import uuid
 from sqlalchemy import select
 
 from app.core.database import SessionLocal, engine
-from app.domain.commerce.audit_context import freeze_commerce_context
 from app.models.brand import Brand, BrandProfile
 from app.models.commerce import CommerceCompetitorCandidate, CommercePromptTarget
 from app.models.prompt import Prompt, PromptSet
@@ -153,18 +152,8 @@ async def prompt(workspace, project, product, kind="product"):
         return {"promptId": str(row.id), "candidateId": str(candidate.id)}
 
 
-async def freeze(workspace, project, prompt_id):
-    async with SessionLocal() as session:
-        return await freeze_commerce_context(
-            session,
-            workspace_id=uuid.UUID(workspace),
-            project_id=uuid.UUID(project),
-            prompt_ids=[uuid.UUID(prompt_id)],
-        )
-
-
 async def main():
-    functions = {"seed": seed, "prompt": prompt, "freeze": freeze}
+    functions = {"seed": seed, "prompt": prompt}
     result = await functions[sys.argv[1]](*sys.argv[2:])
     print(json.dumps(result))
     await engine.dispose()

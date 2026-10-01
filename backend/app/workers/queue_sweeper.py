@@ -37,7 +37,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.agent import AGENT_QUEUE_SPEC
 from app.core.config.analytics import ANALYTICS_QUEUE_SPEC
-from app.core.config.audits import AUDIT_QUEUE_SPEC
 from app.core.config.brand_discovery import BRAND_DISCOVERY_QUEUE_SPEC
 from app.core.config.integrations_clients import INTEGRATION_QUEUE_SPEC
 from app.core.config.task_queue import PostgresQueueSpec
@@ -59,7 +58,6 @@ logger = logging.getLogger("app.workers.queue_sweeper")
 _CANDIDATE_QUEUES: tuple[PostgresQueueSpec, ...] = (
     AGENT_QUEUE_SPEC,
     ANALYTICS_QUEUE_SPEC,
-    AUDIT_QUEUE_SPEC,
     BRAND_DISCOVERY_QUEUE_SPEC,
     INTEGRATION_QUEUE_SPEC,
 )

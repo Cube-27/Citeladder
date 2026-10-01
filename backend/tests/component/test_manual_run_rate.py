@@ -14,7 +14,6 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.audits import (
@@ -27,7 +26,6 @@ from app.core.config.entitlements import (
     CODE_MANUAL_RUN_RATE_EXCEEDED,
     KEY_MANUAL_RUNS_PER_DAY,
 )
-from app.domain.audits.creation import create_audit
 from app.domain.entitlements.enforcement import (
     RateAdmissionDecision,
     evaluate_manual_run_admission,
@@ -36,7 +34,6 @@ from app.domain.entitlements.types import GrantSpec
 from app.models.audit import Audit
 from app.models.project import Project
 from app.models.workspace import Workspace
-from tests.component.audit_helpers import seed_audit_fixtures
 from tests.component.occupancy_helpers import (
     seed_account_workspace,
     seed_occupancy_grants,
@@ -259,67 +256,3 @@ async def test_non_manual_triggers_are_never_gated(
             assert decision.allowed is True
             assert decision.allowance is None
             assert decision.used == 0
-
-
-@pytest.mark.asyncio
-async def test_create_audit_applies_the_decision(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    from app.domain.entitlements.enforcement import RateAdmissionDeniedError
-
-    async with session_factory() as session:
-        seed = await seed_audit_fixtures(session, prompt_count=1)
-        await seed_occupancy_grants(
-            session,
-            workspace_id=seed.workspace_id,
-            grants=(GrantSpec(key=KEY_MANUAL_RUNS_PER_DAY, value=1),),
-        )
-        await session.commit()
-        # First manual run consumes the single allowance.
-        await create_audit(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            engines=seed.engines,
-            trigger=AUDIT_TRIGGER_MANUAL,
-            prompt_set_id=seed.prompt_set_id,
-            repetitions=1,
-            random_seed="1",
-        )
-        # Second manual run is denied by the typed decision; nothing inserts.
-        with pytest.raises(RateAdmissionDeniedError) as exc_info:
-            await create_audit(
-                session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                engines=seed.engines,
-                trigger=AUDIT_TRIGGER_MANUAL,
-                prompt_set_id=seed.prompt_set_id,
-                repetitions=1,
-                random_seed="2",
-            )
-        await session.rollback()
-        assert exc_info.value.code == CODE_MANUAL_RUN_RATE_EXCEEDED
-        assert exc_info.value.details["allowance"] == 1
-        assert exc_info.value.details["remaining"] == 0
-        assert exc_info.value.details["reset_at"] is not None
-        # A non-manual caller passes its own trigger and is not rate-gated.
-        trial = await create_audit(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            engines=seed.engines,
-            trigger=AUDIT_TRIGGER_TRIAL,
-            prompt_set_id=seed.prompt_set_id,
-            repetitions=1,
-            random_seed="3",
-        )
-        assert trial.trigger == AUDIT_TRIGGER_TRIAL
-        audits = list(
-            (
-                await session.scalars(
-                    select(Audit).where(Audit.workspace_id == seed.workspace_id)
-                )
-            ).all()
-        )
-        assert len(audits) == 2

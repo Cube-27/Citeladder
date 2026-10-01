@@ -88,12 +88,10 @@ from scripts.seed_dev_runs import (
 from scripts.seed_dev_support import (
     PROMPT_SPECS,
     _prompt_bucket,
-    _SeedStubAdapter,
 )
 
 __all__ = [
     "PROMPT_SPECS",
-    "_SeedStubAdapter",
     "_prompt_bucket",
 ]
 

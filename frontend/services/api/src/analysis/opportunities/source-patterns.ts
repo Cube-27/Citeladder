@@ -16,6 +16,15 @@ function isGoogleSearchSurface(domain: string): boolean {
     (suffix.length === 2 && p._PUBLIC_SECOND_LEVEL_LABELS.includes(suffix[0]!))
   );
 }
+export function classifySourceOrigin(domain: string): string {
+  const normalized = domain
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./u, '');
+  return isGoogleSearchSurface(normalized) || p.GOOGLE_OWNED_PLATFORM_DOMAINS.includes(normalized)
+    ? p.SOURCE_ORIGIN_GOOGLE_OWNED
+    : p.SOURCE_ORIGIN_EXTERNAL;
+}
 /** `SOURCE_CLASS_ORDER.index`, which raises for a class outside the taxonomy. */
 function classRank(kind: string): number {
   const rank = p.SOURCE_CLASS_ORDER.indexOf(kind);

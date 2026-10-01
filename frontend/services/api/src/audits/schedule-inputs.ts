@@ -8,7 +8,7 @@ const timezones = new Map(
   policy.audit_schedules.timezones.map((name) => [name.toLowerCase(), name]),
 );
 
-/** The tzdata spelling the retained Python scheduler loads (case-sensitively), or null. */
+/** The case-sensitive timezone spelling from the exported tzdata catalog, or null. */
 export function canonicalTimezone(value: string): string | null {
   return timezones.get(value.toLowerCase()) ?? null;
 }

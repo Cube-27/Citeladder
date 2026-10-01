@@ -1,0 +1,176 @@
+import { randomBytes } from 'node:crypto';
+import { sql } from 'kysely';
+import type { Database } from '../db/database.ts';
+import { strings } from '../db/json.ts';
+import { policy, resolveSettingSpec } from '../config.ts';
+import { createAuditInTransaction } from '../audits/creation.ts';
+import { auditInput } from '../audits/inputs.ts';
+import type { AuditRuntime } from '../audits/config.ts';
+import { nextRunAfter } from '../audits/schedule-cadence.ts';
+import { getLogger } from '../logging.ts';
+import { waitForPoll } from './poll.ts';
+
+export function schedulerSettings(env: Record<string, string | undefined> = process.env) {
+  return Object.fromEntries(
+    Object.entries(policy.audit_schedules.settings).map(([name, spec]) => [
+      name,
+      Number(resolveSettingSpec(spec, env)),
+    ]),
+  ) as Record<keyof typeof policy.audit_schedules.settings, number>;
+}
+type ScheduleClaim = { id: string; workspaceId: string; projectId: string; scheduledFor: Date };
+const logger = getLogger('workers.audit_scheduler');
+export class AuditScheduler {
+  readonly db: Database;
+  readonly runtime: AuditRuntime;
+  readonly settings: ReturnType<typeof schedulerSettings>;
+  readonly owner: string;
+  readonly now: () => Date;
+  constructor(
+    db: Database,
+    runtime: AuditRuntime,
+    settings = schedulerSettings(),
+    options: { owner?: string; now?: () => Date } = {},
+  ) {
+    this.db = db;
+    this.runtime = runtime;
+    this.settings = settings;
+    this.owner = options.owner ?? `audit-scheduler-ts-${randomBytes(6).toString('hex')}`;
+    this.now = options.now ?? (() => new Date());
+  }
+  async claimDue(at: Date): Promise<ScheduleClaim[]> {
+    return this.db.transaction().execute(async (trx) => {
+      const schedules = await trx
+        .selectFrom('audit_schedules')
+        .selectAll()
+        .where('enabled', '=', true)
+        .where('next_run_at', '<=', at)
+        .where((eb) =>
+          eb.or([eb('lease_expires_at', 'is', null), eb('lease_expires_at', '<=', at)]),
+        )
+        .orderBy('next_run_at')
+        .orderBy('id')
+        .limit(this.settings.claim_batch_size)
+        .forUpdate()
+        .skipLocked()
+        .execute();
+      if (schedules.length)
+        await trx
+          .updateTable('audit_schedules')
+          .set({
+            lease_owner: this.owner,
+            lease_expires_at: new Date(at.getTime() + this.settings.lease_ttl_seconds * 1000),
+            updated_at: at,
+          })
+          .where(
+            'id',
+            'in',
+            schedules.map((schedule) => schedule.id),
+          )
+          .execute();
+      return schedules.map((schedule) => ({
+        id: schedule.id,
+        workspaceId: schedule.workspace_id,
+        projectId: schedule.project_id,
+        scheduledFor: schedule.next_run_at!,
+      }));
+    });
+  }
+  async planClaim(claim: ScheduleClaim, at = this.now()) {
+    return this.db.transaction().execute(async (trx) => {
+      const schedule = await trx
+        .selectFrom('audit_schedules')
+        .selectAll()
+        .where('workspace_id', '=', claim.workspaceId)
+        .where('project_id', '=', claim.projectId)
+        .where('id', '=', claim.id)
+        .where('lease_owner', '=', this.owner)
+        .where('lease_expires_at', '>', at)
+        .forUpdate()
+        .executeTakeFirst();
+      if (!schedule) return false;
+      const release = { lease_owner: null, lease_expires_at: null, updated_at: at };
+      if (!schedule.enabled || schedule.next_run_at?.getTime() !== claim.scheduledFor.getTime()) {
+        await trx
+          .updateTable('audit_schedules')
+          .set(release)
+          .where('id', '=', schedule.id)
+          .where('workspace_id', '=', claim.workspaceId)
+          .execute();
+        return false;
+      }
+      await sql`savepoint schedule_planning`.execute(trx);
+      try {
+        await createAuditInTransaction(
+          trx,
+          schedule.workspace_id,
+          auditInput.parse({
+            project_id: schedule.project_id,
+            prompt_set_id: schedule.prompt_set_id,
+            engines: strings(schedule.engines),
+            repetitions: schedule.repetitions,
+            benchmark_mode: schedule.benchmark_mode,
+            audit_scope: schedule.audit_scope,
+          }),
+          { trigger: 'scheduled', scheduleId: schedule.id, scheduledFor: claim.scheduledFor },
+          this.runtime,
+          at,
+        );
+        const next = nextRunAfter(schedule, at);
+        await trx
+          .updateTable('audit_schedules')
+          .set({
+            ...release,
+            last_run_at: at,
+            next_run_at: next,
+            enabled: next !== null,
+            failure_count: 0,
+            last_error: '',
+            last_failure_at: null,
+          })
+          .where('id', '=', schedule.id)
+          .where('workspace_id', '=', claim.workspaceId)
+          .execute();
+        await sql`release savepoint schedule_planning`.execute(trx);
+        return true;
+      } catch {
+        await sql`rollback to savepoint schedule_planning`.execute(trx);
+        await sql`release savepoint schedule_planning`.execute(trx);
+        const failures = schedule.failure_count + 1;
+        await trx
+          .updateTable('audit_schedules')
+          .set({
+            ...release,
+            failure_count: failures,
+            last_error: 'audit_planning_failed',
+            last_failure_at: at,
+            enabled: failures < this.settings.max_consecutive_failures,
+            next_run_at: new Date(at.getTime() + this.settings.failure_retry_seconds * 1000),
+          })
+          .where('id', '=', schedule.id)
+          .where('workspace_id', '=', claim.workspaceId)
+          .execute();
+        logger.info('scheduled_audit_planning_failed', { schedule_id: schedule.id });
+        return false;
+      }
+    });
+  }
+  async runOnce(at = this.now()) {
+    const claims = await this.claimDue(at);
+    let created = 0;
+    for (const claim of claims) if (await this.planClaim(claim, this.now())) created++;
+    return created;
+  }
+  async runForever(signal: AbortSignal, heartbeat: (at: Date) => Promise<void>) {
+    logger.info('audit_scheduler_started', { owner: this.owner });
+    while (!signal.aborted) {
+      try {
+        await this.runOnce();
+        await heartbeat(this.now());
+      } catch {
+        logger.info('audit_scheduler_tick_failed', { owner: this.owner });
+      }
+      await waitForPoll(this.settings.poll_interval_seconds * 1000, signal);
+    }
+  }
+}

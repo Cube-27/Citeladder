@@ -11,21 +11,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import isfinite
-from typing import TYPE_CHECKING, Any, Final, TypeGuard
+from typing import Any, Final, TypeGuard
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-if TYPE_CHECKING:
-    # Type-only: config never imports a model at runtime (circular import).
-    from app.models.audit import AuditTask
 
 from app.core.config.projects import (
     BENCHMARK_MODE_CONSUMER_LIKE,
     BENCHMARK_MODE_CONTROLLED_LOCALIZED,
-)
-from app.core.config.task_queue import (
-    ERROR_MAX_ATTEMPTS,
-    PostgresQueueSpec,
 )
 
 # --- Audit lifecycle statuses --------------------------------------------
@@ -41,6 +33,7 @@ AUDIT_STATUS_COMPLETED: Final = "completed"
 AUDIT_STATUS_PARTIALLY_COMPLETED: Final = "partially_completed"
 AUDIT_STATUS_FAILED: Final = "failed"
 AUDIT_STATUS_CANCELLED: Final = "cancelled"
+AUDIT_LEASE_SWEEP_BATCH_SIZE: Final = 500
 
 AUDIT_TERMINAL_STATUSES: Final[frozenset[str]] = frozenset(
     {
@@ -514,50 +507,3 @@ def measurement_policy_from_configuration(
         answer_instruction=str(frozen["answer_instruction"]),
         max_attempts=int(frozen["max_attempts"]),
     )
-
-
-def _audit_model() -> type[AuditTask]:
-    # Imported lazily so this config module never imports a model at import
-    # time (would create a config <-> models circular import).
-    from app.models.audit import AuditTask
-
-    return AuditTask
-
-
-def _audit_claim_order(model: type[AuditTask]) -> tuple:
-    # Deterministic claim order: priority, then FIFO by availability, then the
-    # frozen randomized slot position. Preserves the exact original audit
-    # ordering (see the pre-genericization ``PostgresTaskQueue.claim``).
-    return (
-        model.priority.desc(),
-        model.available_at.asc(),
-        model.randomized_position.asc(),
-    )
-
-
-# The audit queue spec: parameterizes the generic ``PostgresTaskQueue`` over
-# ``AuditTask`` with the audit lease TTL + claim order, preserving current
-# audit queue semantics exactly.
-def _holds_unreconciled_submission(task: Any) -> bool:
-    """True when this row died holding a PAID submission it never recorded.
-
-    The committed submission intent is the only evidence either way, and it
-    is enough. A task carrying a ref but no provider task id either never
-    reached the POST, or reached it and lost the answer — and those two are
-    indistinguishable from here, so it must be reconciled rather than
-    resubmitted. Guessing "probably never landed" is the guess that charges
-    the customer twice.
-    """
-    return bool(
-        getattr(task, "provider_submission_ref", "")
-        and not getattr(task, "provider_task_id", "")
-    )
-
-
-AUDIT_QUEUE_SPEC: Final[PostgresQueueSpec[AuditTask]] = PostgresQueueSpec(
-    model_ref=_audit_model,
-    lease_ttl=lambda: audit_settings.lease_ttl_seconds,
-    claim_order=_audit_claim_order,
-    max_attempts_error=ERROR_MAX_ATTEMPTS,
-    unreconciled_submission=_holds_unreconciled_submission,
-)

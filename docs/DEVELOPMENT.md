@@ -54,8 +54,6 @@ work and never performs provider calls or long-running crawl/sync/generation wor
 
 ```bash
 cd backend
-uv run python -m app.workers.audit_worker
-uv run python -m app.workers.audit_scheduler
 uv run python -m app.workers.agent_worker
 uv run python -m app.workers.analytics_worker
 ```
@@ -76,6 +74,15 @@ node src/integration-dispatcher.ts
 
 Each process uses the shared durable PostgreSQL queue/lease contract and receives only the
 configuration/secrets required by its owner.
+
+Audit execution, scheduling and independent lease/funding maintenance run with
+Node 24 from `frontend/services/api/`:
+
+```bash
+pnpm worker:audit
+pnpm scheduler:audit
+pnpm maintenance:audit
+```
 
 ## Frontend setup
 
@@ -405,7 +412,7 @@ migrations remain covered by static policy gates.
 `pnpm check:policy`. Seven contracts pin the directions that hold today: the API
 and the workers are leaves nothing imports, `core` depends on no business logic,
 and `models`, `connectors`, `orchestration` and `analysis` do not reach up.
-Three known warts are recorded as named `ignore_imports` lines rather than
+Two remaining warts are recorded as named `ignore_imports` lines rather than
 softened rules -- a wart with a name cannot quietly become two.
 
 ### Suppressions
@@ -446,11 +453,17 @@ Measurement and billing/operator utilities:
 
 ```bash
 uv run python -m scripts.measure_answer_engine_matrix --help
-uv run python -m scripts.reprice_execution_costs --help
 uv run python -m scripts.billing_admin --help
 uv run python -m scripts.provision_platform_provider_connections --help
 uv run python -m scripts.provision_razorpay_plans --help
 ```
+
+The offline measurement harness batches fixtures through the native scorer;
+install the frontend dependencies with pnpm and use Node 24 before running it.
+Fixture results remain synthetic and cannot satisfy a live acceptance gate.
+Execution repricing is native: from `frontend/`, run
+`pnpm --filter @citeladder/api audit:reprice --help`. Preview is the default;
+applying a versioned cost projection requires an explicit operator action.
 
 Billing reconciliation is TypeScript-owned. From `frontend/`, run
 `pnpm --filter @citeladder/api billing-worker` for one bounded sweep or add

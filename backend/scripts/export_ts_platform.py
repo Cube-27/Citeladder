@@ -23,7 +23,6 @@ import typing
 from collections.abc import Iterable
 from datetime import datetime
 from decimal import Decimal
-from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -44,11 +43,10 @@ from app.core.config import (
     Settings,
 )
 from app.core.config import agent as agent_config
-from app.core.config import audit_schedules as audit_schedule_config
+from app.core.config import audits as audit_config
 from app.core.config import brand_discovery as discovery_config
 from app.core.config import brand_evidence as evidence_config
 from app.core.config import brand_logos as brand_logo_config
-from app.core.config import brand_profile as brand_profile_config
 from app.core.config import commerce_catalog as commerce_config
 from app.core.config import dataforseo as search_config
 from app.core.config import demand as demand_config
@@ -58,10 +56,10 @@ from app.core.config import integrations_contracts as integration_contracts
 from app.core.config import jev as jev_config
 from app.core.config import legal as legal_config
 from app.core.config import oauth as oauth_config
-from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
 from app.core.config import projects as projects_config
 from app.core.config import prompts as prompts_config
+from app.core.config import provider_catalog as provider_config
 from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import site_health_contracts as site_health_config
 from app.core.config import site_health_crawl_policy as site_crawl_config
@@ -144,7 +142,6 @@ from app.core.config.integrations_datasets import (
 )
 from app.core.config.jev import QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE
 from app.core.config.projects import (
-    MAX_PROJECT_COMPETITORS,
     PROMPT_INTENTS,
     PROMPT_ORIGIN_GENERATED,
     PROMPT_ORIGIN_IMPORTED,
@@ -159,7 +156,6 @@ from app.core.config.prompts import (
 from app.core.config.provider_catalog import (
     ERROR_UNKNOWN,
     LOGICAL_ENGINES,
-    SELECTABLE_ENGINES,
     TEST_STATUS_OK,
     TRANSPORT_DATAFORSEO,
     is_search_surface,
@@ -185,8 +181,13 @@ from scripts.auth_policy import (
 from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
+from scripts.ts_platform_audits import audit_policy, audit_schedule_policy
 from scripts.ts_platform_billing import billing_policy, entitlements_policy
+from scripts.ts_platform_costs import costs_policy
+from scripts.ts_platform_dataforseo import dataforseo_policy
+from scripts.ts_platform_identity import brand_identity_policy
 from scripts.ts_platform_integrations import integration_policy
+from scripts.ts_platform_providers import provider_policy
 from scripts.web_evidence_policy import web_evidence_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
@@ -350,6 +351,10 @@ def build_config() -> dict[str, Any]:
         "traffic": traffic_policy(),
         "demand": demand_policy(),
         "integrations": integration_policy(_setting),
+        "providers": provider_policy(_setting),
+        "dataforseo": dataforseo_policy(_setting),
+        "costs": costs_policy(),
+        "audits": audit_policy(_setting),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
         "internal_links": {
@@ -358,7 +363,7 @@ def build_config() -> dict[str, Any]:
             if name.startswith("INTERNAL_LINKS_")
         },
         **web_evidence_policy(_prefixed_constants, _setting),
-        "brand_identity": _brand_identity_policy(),
+        "brand_identity": brand_identity_policy(),
         "projects": {
             "default_benchmark_mode": projects_config.DEFAULT_BENCHMARK_MODE,
             "default_repetitions": projects_config.DEFAULT_REPETITIONS,
@@ -368,17 +373,7 @@ def build_config() -> dict[str, Any]:
             "language_codes": sorted(search_config.LANGUAGE_CODES),
             "prompt_set_name": prompts_config.ONBOARDING_PROMPT_SET_NAME,
         },
-        "audit_schedules": {
-            "cadences": sorted(audit_schedule_config.AUDIT_SCHEDULE_CADENCES),
-            "default_timezone": audit_schedule_config.DEFAULT_AUDIT_SCHEDULE_TIMEZONE,
-            "selectable_engines": sorted(SELECTABLE_ENGINES),
-            # The pinned tzdata zones the retained scheduler's ZoneInfo can load.
-            "timezones": sorted(files("tzdata").joinpath("zones").read_text().split()),
-            "min_interval_minutes": _setting(
-                "min_interval_minutes",
-                audit_schedule_config.AuditScheduleSettings,
-            ),
-        },
+        "audit_schedules": audit_schedule_policy(_setting),
         "discovery": _discovery_policy(),
         "brand_evidence": _prefixed_constants(evidence_config, "BRAND_EVIDENCE_"),
         "brand_logos": _prefixed_constants(brand_logo_config, "BRAND_LOGO_"),
@@ -527,32 +522,6 @@ def _prompts_policy() -> dict[str, Any]:
     }
 
 
-def _brand_identity_policy() -> dict[str, Any]:
-    """Bounds and tokens for brand-profile, business-map and suggestion writes."""
-    profile = brand_profile_config
-    return {
-        "profile_fields": list(profile.BRAND_PROFILE_FIELDS),
-        "profile_text_max_chars": profile.BRAND_PROFILE_TEXT_MAX_CHARS,
-        "profile_product_max_chars": profile.BRAND_PROFILE_PRODUCT_MAX_CHARS,
-        "profile_products_max_count": profile.BRAND_PROFILE_PRODUCTS_MAX_COUNT,
-        "profile_source_manual": profile.BRAND_PROFILE_SOURCE_MANUAL,
-        "profile_review_confirmed": profile.BRAND_PROFILE_REVIEW_CONFIRMED,
-        "profile_review_edited": profile.BRAND_PROFILE_REVIEW_EDITED,
-        "map_value_max_chars": profile.BUSINESS_MAP_VALUE_MAX_CHARS,
-        "map_max_entries_per_dimension": (
-            profile.BUSINESS_MAP_MAX_ENTRIES_PER_DIMENSION
-        ),
-        "map_max_exclusions": profile.BUSINESS_MAP_MAX_EXCLUSIONS,
-        "max_project_competitors": MAX_PROJECT_COMPETITORS,
-        "suggestion_pending": observed_config.STATUS_PENDING,
-        "suggestion_accepted": observed_config.STATUS_ACCEPTED,
-        "logo_ready": brand_logo_config.BRAND_LOGO_STATUS_READY,
-        "logo_cache_max_age_seconds": (
-            brand_logo_config.BRAND_LOGO_CACHE_MAX_AGE_SECONDS
-        ),
-    }
-
-
 def _search_intelligence_policy() -> dict[str, Any]:
     """What Search Intelligence confirms, reads and sorts by."""
     si = search_intelligence_config
@@ -564,6 +533,31 @@ def _search_intelligence_policy() -> dict[str, Any]:
         "default_research_scope": si.DEFAULT_RESEARCH_SCOPE,
         "default_depths": dict(si.DEFAULT_DEPTHS),
         "max_depth": si.MAX_SAFE_DEPTH,
+        "endpoints": dict(si.ENDPOINTS),
+        "broad_endpoints": dict(si.BROAD_ENDPOINTS),
+        "list_kinds": sorted(si.LIST_KINDS),
+        "labs_kinds": sorted(si.LABS_KINDS),
+        "backlink_kinds": sorted(si.BACKLINK_KINDS),
+        "parser_version": si.PARSER_VERSION,
+        "page_size": si.PROVIDER_PAGE_SIZE,
+        "provider_timeout_seconds": si.PROVIDER_TIMEOUT_SECONDS,
+        "provider_max_response_bytes": si.PROVIDER_MAX_RESPONSE_BYTES,
+        "maintenance_batch_size": si.MAINTENANCE_BATCH_SIZE,
+        "backlink_max_offset": si.BACKLINK_MAX_OFFSET,
+        "keyword_acquisition_fields": dict(si.KEYWORD_ACQUISITION_FIELDS),
+        "history_days": si.HISTORY_DAYS,
+        "history_max_observations": si.HISTORY_MAX_OBSERVATIONS,
+        "reuse_days": si.REUSE_DAYS,
+        "review_ttl_seconds": si.REVIEW_TTL_SECONDS,
+        "rate_limit_retries": si.RATE_LIMIT_RETRIES,
+        "rate_limit_default_wait_seconds": si.RATE_LIMIT_DEFAULT_WAIT_SECONDS,
+        "rate_limit_max_wait_seconds": si.RATE_LIMIT_MAX_WAIT_SECONDS,
+        "rates": {
+            "labs_task": str(si.LABS_TASK_USD),
+            "labs_item": str(si.LABS_ITEM_USD),
+            "backlinks_request": str(si.BACKLINKS_REQUEST_USD),
+            "backlinks_row": str(si.BACKLINKS_ROW_USD),
+        },
         "row_sort_fields": sorted(si.ROW_SORT_FIELDS),
         "auxiliary_sort_fields": sorted(si.AUXILIARY_SORT_FIELDS),
     }
@@ -691,6 +685,8 @@ ANALYTICS_WORKER_SETTINGS = (
 # generic envelope vocabulary and the workspace authorization codes. A PR that
 # ports a route family adds that family's owning config module here.
 ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
+    audit_config,
+    provider_config,
     error_config,
     oauth_config,
     legal_config,
@@ -710,13 +706,16 @@ _ERROR_CODE_PREFIXES = ("CODE_", "ERROR_", "URL_EXCLUSION_")
 
 def error_codes(modules: Iterable[types.ModuleType] = ERROR_CODE_MODULES) -> list[str]:
     """Every ``CODE_*``/``ERROR_*`` string constant the modules declare."""
+    from app.domain.entitlements.types import STATUS_ENTITLEMENT_UNRESOLVED
+
     codes = {
         value
         for module in modules
         for name, value in vars(module).items()
         if name.startswith(_ERROR_CODE_PREFIXES) and isinstance(value, str)
     }
-    return sorted(codes)
+    # Funded/manual admission reuses the resolver's unresolved status as its code.
+    return sorted(codes | {STATUS_ENTITLEMENT_UNRESOLVED})
 
 
 def render_error_codes() -> str:

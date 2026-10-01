@@ -41,12 +41,12 @@
     // The TypeScript API service (docs/architecture.md). Its generated inputs
     // are consumed wholesale, so unused generated table types are expected.
     "services/api": {
+      // Python operator tools invoke these offline native entrypoints directly.
+      "entry": ["src/cli/score-measurement.ts", "src/cli/seed-audit.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
       "ignore": ["src/generated/**"],
     },
   },
-  // Wrangler writes generated dev bundles under .wrangler/tmp (gitignored).
-  "ignore": ["**/.wrangler/**"],
   "ignoreDependencies": [
     // Resolved through a computed path in check-jscpd.mjs, which static analysis cannot follow.
     "jscpd",

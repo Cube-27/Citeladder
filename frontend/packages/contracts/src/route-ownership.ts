@@ -14,7 +14,7 @@ export const ROUTE_OWNERSHIP = {
   agent: 'python',
   'ai-referrals': 'typescript',
   'audit-schedules': 'typescript',
-  audits: 'python',
+  audits: 'typescript',
   auth: 'typescript',
   billing: 'typescript',
   'billing-documents': 'typescript',
@@ -34,9 +34,9 @@ export const ROUTE_OWNERSHIP = {
   'executive-report': 'typescript',
   'prompt-generation': 'typescript',
   prompts: 'typescript',
-  providers: 'python',
+  providers: 'typescript',
   'search-intelligence': 'typescript',
-  'search-intelligence-reviews': 'python',
+  'search-intelligence-reviews': 'typescript',
   'site-health': 'typescript',
   'site-health-crawls': 'typescript',
   'site-health-internal-links': 'typescript',
@@ -53,6 +53,9 @@ export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
  * documents; the development proxy reads this list directly.
  */
 export const TYPESCRIPT_INGRESS_PATHS = [
+  '/api/v1/provider-catalog',
+  '/api/v1/provider-connections',
+  '/api/v1/provider-connections/*',
   '/api/v1/billing/invoices',
   '/api/v1/billing/invoices/*/pdf',
   '/api/v1/projects/*/reports/executive.pdf',
@@ -177,6 +180,7 @@ export const TYPESCRIPT_INGRESS_PATHS = [
   '/api/v1/projects/*/actions',
   '/api/v1/actions/*',
   '/api/v1/projects/*/search-intelligence',
+  '/api/v1/projects/*/search-intelligence/reviews',
   '/api/v1/projects/*/search-intelligence/preferences',
   '/api/v1/projects/*/search-intelligence/runs',
   '/api/v1/projects/*/search-intelligence/runs/*',

@@ -272,7 +272,7 @@ class DataForSeoSettings(BaseSettings):
 
     ``platform_*`` credentials are DECLARED but unused on the execution path:
     the shipped credential model is BYOK, resolved through
-    ``resolve_execution_credentials``. They exist so platform funding can be
+    the TypeScript audit admission owner. They exist so platform funding can be
     switched on later without a migration or a second code path, and so
     development can verify provider behaviour against a real account.
     """
@@ -287,6 +287,7 @@ class DataForSeoSettings(BaseSettings):
     api_password: SecretStr = SecretStr("")
     # HTTP timeout for one submission or one poll.
     request_timeout_seconds: float = 60.0
+    max_response_bytes: int = Field(default=8_388_608, gt=0)
     # Shorter timeout for the non-billable connectivity probe.
     test_timeout_seconds: float = 20.0
     recovery_deadline_hours: float = Field(default=72.0, gt=0, lt=24 * 28)

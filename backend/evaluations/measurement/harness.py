@@ -18,9 +18,9 @@ Honesty contract — read before changing anything here:
   implies a zero provider search fee.
 * **Wall time is never relabelled TTFT.** ``ttft_ms`` stays ``None`` unless the
   envelope carried a real first-token timestamp.
-* Mention/citation counts come from the existing deterministic scorer
-  (``app/analysis/scoring.py``); no second scoring implementation exists here
-  (invariant 2).
+* Mention/citation counts come from the native deterministic scorer through
+  ``frontend/services/api/src/cli/score-measurement.ts``. The offline bridge
+  batches fixtures without provider calls or a second scoring implementation.
 
 All thresholds, dimensions, paths and vocabularies live in
 ``app/core/config/measurement.py`` (invariant 1).
@@ -38,7 +38,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-from app.analysis.scoring import ScoringConfig, score_execution
 from app.core.config.measurement import (
     COST_STATUS_COMPLETE,
     COST_STATUS_PARTIAL,
@@ -55,7 +54,6 @@ from app.core.config.measurement import (
     MEASUREMENT_PROMPT_MIN_COUNT,
     MEASUREMENT_PROMPTS_PATH,
     MEASUREMENT_ROUTE_KEYS,
-    MEASUREMENT_SCORING_SUBJECT,
     MEASUREMENT_SCRIPT_VERSION,
     MEASUREMENT_SEARCH_STATES,
     OBSERVATION_STATUS_OK,
@@ -73,6 +71,7 @@ from app.core.config.measurement import (
     route_reasoning_efforts,
 )
 from app.core.config.provider_catalog import measurement_route
+from evaluations.measurement.native_scoring import score_fixtures, scoring_item
 
 _FORBIDDEN_PATTERNS = tuple(
     re.compile(pattern, re.IGNORECASE) for pattern in FORBIDDEN_PROMPT_PATTERNS
@@ -367,6 +366,8 @@ async def run_matrix(
             f"ceiling {measurement_settings.max_observations}"
         )
     observations: list[MeasurementObservation] = []
+    if isinstance(runner, FixtureMeasurementRunner):
+        await runner.prepare(cases, prompts)
     for case in cases:
         supported = is_reasoning_effort_supported(case.route_key, case.reasoning_effort)
         for prompt in prompts:
@@ -455,7 +456,32 @@ class FixtureMeasurementRunner:
         self._resolve = fixture_dir_resolver
         self._loaded: dict[tuple[str, bool], dict[str, Any]] = {}
         self._hashes: dict[str, str] = {}
-        self._scoring = ScoringConfig.from_project(dict(MEASUREMENT_SCORING_SUBJECT))
+        self._scores: dict[tuple[MeasurementCase, str], dict[str, Any]] = {}
+
+    async def prepare(self, cases, prompts) -> None:
+        """Score a bounded fixture sweep in one call to the production native owner."""
+        keys = [
+            (case, prompt)
+            for case in cases
+            for prompt in prompts
+            if is_reasoning_effort_supported(case.route_key, case.reasoning_effort)
+        ]
+        if not keys:
+            return
+        items = [
+            scoring_item(self._pick(case, prompt), case.search_enabled, prompt.text)
+            for case, prompt in keys
+        ]
+        try:
+            scores = await score_fixtures(items)
+        except ValueError as exc:
+            raise MeasurementConfigurationError(str(exc)) from exc
+        self._scores.update(
+            {
+                (case, prompt.prompt_id): score
+                for (case, prompt), score in zip(keys, scores, strict=True)
+            }
+        )
 
     def fixture_hashes(self) -> dict[str, str]:
         return dict(self._hashes)
@@ -495,11 +521,13 @@ class FixtureMeasurementRunner:
         self, case: MeasurementCase, prompt: MeasurementPrompt
     ) -> MeasurementObservation:
         envelope = self._pick(case, prompt)
+        if (case, prompt.prompt_id) not in self._scores:
+            await self.prepare([case], [prompt])
         return build_observation(
             case=case,
             prompt=prompt,
             envelope=envelope,
-            scoring=self._scoring,
+            score=self._scores[(case, prompt.prompt_id)],
             note="synthetic fixture replay; not a provider measurement",
         )
 
@@ -509,23 +537,14 @@ def build_observation(
     case: MeasurementCase,
     prompt: MeasurementPrompt,
     envelope: dict[str, Any],
-    scoring: ScoringConfig,
+    score: dict[str, Any],
     note: str = "",
 ) -> MeasurementObservation:
     """Derive one observation from a normalized provider envelope."""
     transport_provider, transport_model = route_identity(case.route_key)
     search_events = list(envelope.get("search_events") or [])
-    citations = list(envelope.get("citations") or [])
     timing = dict(envelope.get("timing") or {})
     usage = dict(envelope.get("usage") or {})
-    score = score_execution(
-        answer_text=str(envelope.get("answer_text") or ""),
-        search_events=search_events,
-        citations=citations,
-        search_used=case.search_enabled and bool(search_events),
-        config=scoring,
-        prompt_text=prompt.text,
-    )
     finish_reason = str(envelope.get("finish_reason") or "").strip()
     if not finish_reason:
         raise MeasurementConfigurationError(

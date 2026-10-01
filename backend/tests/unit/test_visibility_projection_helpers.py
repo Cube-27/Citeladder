@@ -10,13 +10,11 @@ from __future__ import annotations
 import base64
 import json
 import uuid
-from copy import deepcopy
 from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select
 
-from app.analysis.comparison import frozen_comparison_key
 from app.domain.analysis.errors import TrendQueryError
 from app.domain.analysis.evidence import _normalize_events
 from app.domain.analysis.evidence_selection import apply_cursor, encode_cursor
@@ -47,43 +45,6 @@ def test_normalize_events_preserves_empty_query() -> None:
 def test_normalize_events_non_list_is_empty() -> None:
     assert _normalize_events(None) == []
     assert _normalize_events({"query": "x"}) == []
-
-
-def test_frozen_identity_requires_known_inputs_and_preserves_boundaries() -> None:
-    configuration = {
-        "brand_name": "Acme",
-        "brand_aliases": [],
-        "owned_domains": ["acme.com"],
-        "competitors": [{"name": "Rival"}],
-        "country_code": "US",
-        "language_code": "en",
-        "benchmark_mode": "consumer_like",
-        "panel_hash": "panel-a",
-        "engine_routes": {
-            "gemini": {"transport_provider": "google", "transport_model": "model-a"}
-        },
-        "measurement_policy": {
-            "retrieval_enabled": True,
-            "max_output_tokens": 1000,
-            "answer_instruction": "Answer",
-        },
-    }
-    key = frozen_comparison_key(configuration)
-    assert key is not None
-    assert frozen_comparison_key({}) is None
-    for field, value in [
-        ("panel_hash", "panel-b"),
-        ("competitors", []),
-        ("language_code", "fr"),
-    ]:
-        changed = {**configuration, field: value}
-        assert frozen_comparison_key(changed) != key
-    changed = deepcopy(configuration)
-    changed["engine_routes"]["gemini"]["transport_model"] = "model-b"
-    assert frozen_comparison_key(changed) != key
-    operational = deepcopy(configuration)
-    operational["measurement_policy"]["timeout_seconds"] = 90
-    assert frozen_comparison_key(operational) == key
 
 
 @pytest.mark.parametrize(
