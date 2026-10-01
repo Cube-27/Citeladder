@@ -4,7 +4,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { utcText } from '../db/timestamps.ts';
-import { McpInputError, type McpPrincipal } from './types.ts';
+import { McpInputError, type EvidencePrincipal } from './types.ts';
 import { mcpPolicy } from './config.ts';
 
 /** Roles whose capabilities include reading workspace evidence. */
@@ -14,8 +14,22 @@ export const READ_ROLES = Object.entries(policy.workspaces.roles)
 
 export async function authorizedWorkspaceIds(
   db: Database,
-  principal: McpPrincipal,
+  principal: EvidencePrincipal,
 ): Promise<string[]> {
+  if ('kind' in principal) {
+    const member = await db
+      .selectFrom('workspace_members as m')
+      .innerJoin('workspaces as w', 'w.id', 'm.workspace_id')
+      .innerJoin('users as u', 'u.id', 'm.user_id')
+      .select('m.workspace_id')
+      .where('m.user_id', '=', principal.userId)
+      .where('m.workspace_id', '=', principal.workspaceId)
+      .where('m.role', 'in', READ_ROLES)
+      .where('w.is_system', '=', false)
+      .where('u.is_active', '=', true)
+      .executeTakeFirst();
+    return member ? [member.workspace_id] : [];
+  }
   const rows = await db
     .selectFrom('workspace_members as member')
     .innerJoin('workspaces as workspace', 'workspace.id', 'member.workspace_id')
@@ -34,9 +48,15 @@ export async function authorizedWorkspaceIds(
     .execute();
   return rows.map((row) => row.workspace_id);
 }
-export async function authorizeProject(db: Database, principal: McpPrincipal, projectId: string) {
+export async function authorizeProject(
+  db: Database,
+  principal: EvidencePrincipal,
+  projectId: string,
+) {
   const id = parseUuid(projectId);
   if (!id) throw new McpInputError('project_id must be a UUID');
+  if ('kind' in principal && principal.projectId !== id)
+    throw new McpInputError('Project is fixed by the caller');
   const workspaces = await authorizedWorkspaceIds(db, principal);
   const row = workspaces.length
     ? await db
@@ -77,7 +97,7 @@ export const pagination = (
 });
 export async function listAccountProjects(
   db: Database,
-  principal: McpPrincipal,
+  principal: EvidencePrincipal,
   limit: number,
   cursor: string | null,
 ) {
@@ -99,6 +119,7 @@ export async function listAccountProjects(
     ])
     .select(utcText(sql.ref('p.created_at')).as('cursor_at'))
     .where('p.workspace_id', 'in', workspaces);
+  if ('kind' in principal) query = query.where('p.id', '=', principal.projectId);
   if (cursor) {
     const [at, id] = decodeCursor(cursor, 2);
     if (!parseUuid(id) || !at || Number.isNaN(Date.parse(at)))
@@ -124,12 +145,17 @@ export async function listAccountProjects(
 }
 export async function searchBusinessContext(
   db: Database,
-  principal: McpPrincipal,
+  principal: EvidencePrincipal,
   query: string,
   projectId: string | null,
   limit: number,
   origin: string,
 ) {
+  if ('kind' in principal) {
+    if (projectId && projectId !== principal.projectId)
+      throw new McpInputError('Project is fixed by the caller');
+    projectId = principal.projectId;
+  }
   const normalized = query.trim();
   if (!normalized) throw new McpInputError('query must not be empty');
   if (projectId) await authorizeProject(db, principal, projectId);

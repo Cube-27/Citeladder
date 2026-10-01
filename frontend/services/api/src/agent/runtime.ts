@@ -353,12 +353,16 @@ export class AgentRuntime {
             skill,
             payload: {
               ...response.output,
+              format_id: this.deps.catalog.formats?.has(response.output.format_id ?? '')
+                ? response.output.format_id
+                : null,
               title: stripUnverifiedRefs(response.output.title, allowed),
               body: stripUnverifiedRefs(response.output.body, allowed),
             },
             baseRevisionId: turn.current.revision?.id ?? null,
             runId: run.id,
             messageId: message.id,
+            userId: turn.scope.userId,
             refs,
           },
           this.deps.attachTarget,

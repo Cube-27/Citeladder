@@ -56,6 +56,7 @@ export type AttachTarget = (
   chat: Chat,
   output: Output,
   payload: OutputPayload,
+  userId: string,
 ) => Promise<void>;
 export async function saveAgentOutput(
   db: Database,
@@ -66,6 +67,7 @@ export async function saveAgentOutput(
     baseRevisionId: string | null;
     runId: string;
     messageId: string;
+    userId: string;
     refs: string[];
   },
   attach: AttachTarget,
@@ -99,7 +101,7 @@ export async function saveAgentOutput(
       })
       .returningAll()
       .executeTakeFirstOrThrow());
-  await attach(db, chat, output, payload);
+  await attach(db, chat, output, payload, input.userId);
   await db
     .updateTable('agent_outputs')
     .set({ phase, updated_at: now, format_id: payload.format_id ?? output.format_id })

@@ -1,5 +1,7 @@
 /** Adapter orchestration; entitlement resolution, rates and ledger remain owned elsewhere. */
 import { sql } from 'kysely';
+import { ZodError } from 'zod';
+import { getLogger } from '../logging.ts';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
@@ -15,6 +17,19 @@ import type { Funding } from './model-calls.ts';
 import type { GatewaySettings } from '../models/gateway.ts';
 
 type Settings = ReturnType<typeof agentSettings>;
+async function historicalRate(db: Database, model: string, revision: string) {
+  try {
+    return (await agentCreditRate(db, model, revision)).rate;
+  } catch (error) {
+    if (error instanceof ZodError || (error instanceof ApiError && error.status === 503)) {
+      getLogger('app.domain.agent.model_calls').warning('agent.historical_rate_unavailable', {
+        pricing_revision: revision,
+      });
+      return null;
+    }
+    throw error;
+  }
+}
 async function rateFor(db: Database, model: string) {
   try {
     return await agentCreditRate(db, model);
@@ -169,14 +184,7 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
       if (attempt.funding_source !== 'platform') return { credits: 0, status: 'zero_debit' };
       if (!attempt.reservation_id) throw new AgentError('funding_unavailable');
       // Missing historical terms close against the exact dispatch hold; never today’s policy.
-      const saved = await db
-        .selectFrom('billing_catalog_revisions')
-        .select('id')
-        .where('revision', '=', attempt.pricing_revision)
-        .executeTakeFirst();
-      const rate = saved
-        ? (await agentCreditRate(db, attempt.requested_model, attempt.pricing_revision)).rate
-        : null;
+      const rate = await historicalRate(db, attempt.requested_model, attempt.pricing_revision);
       const charged = rate && result ? chargeCredits(rate, result.usage) : null;
       const credits = Math.min(
         Number(attempt.reserved_credits),

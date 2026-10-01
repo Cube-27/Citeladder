@@ -106,14 +106,13 @@ export function createModelGateway(
   const secure =
     endpoint.protocol === 'https:' ||
     (endpoint.protocol === 'http:' && LOOPBACK_HOSTS.has(endpoint.hostname));
-  if (endpoint.username || endpoint.password || !secure) {
+  if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !secure) {
     throw new ModelError('not_configured');
   }
   let legacyCap = false;
   const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
-  const url = settings.baseUrl.endsWith('/chat/completions')
-    ? settings.baseUrl
-    : endpointUrl(settings.baseUrl, '/chat/completions');
+  const base = endpoint.href.replace(/\/+$/u, '');
+  const url = base.endsWith('/chat/completions') ? base : endpointUrl(base, '/chat/completions');
   async function complete(system: string, user: string, signal?: AbortSignal) {
     const started = performance.now();
     // Retries share one call's timeout, the envelope of a single provider call.

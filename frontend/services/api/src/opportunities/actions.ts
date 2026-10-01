@@ -1,4 +1,4 @@
-/** Persisted Action reads and explicit workflow decisions. Agent attach stays Python. */
+/** Persisted Action reads, target attachment and explicit workflow decisions. */
 import { randomUUID } from 'node:crypto';
 import {
   actionDetailSchema,
@@ -22,8 +22,100 @@ import { OPPORTUNITY_COLUMNS, projectItem } from './projection.ts';
 import { requireProject } from './reads.ts';
 import type { Scope } from './sources.ts';
 import { declarationView } from './declaration-view.ts';
+import { acquireProjectLock } from '../prompts/locks.ts';
+import { normalizeDomain } from '../analysis/domains.ts';
+import { pageGroupKey, selectApproach } from '../analysis/opportunities/actions.ts';
 
 const a = policy.opportunity.actions;
+export class ActionTargetError extends Error {}
+
+async function targetIdentity(db: Database, scope: Scope, kind: string, target: string) {
+  const project = await db
+    .selectFrom('projects')
+    .select('website_url')
+    .where('id', '=', scope.projectId)
+    .where('workspace_id', '=', scope.workspaceId)
+    .executeTakeFirst();
+  if (!project) throw notFound('Project');
+  if (kind === a.TARGET_PLANNED_PAGE) {
+    const slug = target
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/gu, '-')
+      .replace(/^-|-$/gu, '');
+    if (!slug) throw new ActionTargetError('A planned page needs a topic');
+    return { key: `planned:${slug.slice(0, a.PLANNED_PAGE_TOPIC_MAX_CHARS)}`, url: null };
+  }
+  let url: URL;
+  try {
+    url = new URL(target);
+  } catch {
+    throw new ActionTargetError('Page target must be an absolute URL');
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password)
+    throw new ActionTargetError('Invalid page target');
+  const owned = await db
+    .selectFrom('owned_domains as d')
+    .innerJoin('projects as p', 'p.id', 'd.project_id')
+    .select('d.domain')
+    .where('p.workspace_id', '=', scope.workspaceId)
+    .where('p.id', '=', scope.projectId)
+    .execute();
+  const hosts = new Set(
+    [project.website_url, ...owned.map((row) => row.domain)].map(normalizeDomain),
+  );
+  if (!hosts.has(normalizeDomain(url.hostname)))
+    throw new ActionTargetError('Page target is outside the owned domains');
+  return { key: pageGroupKey(target), url: target };
+}
+/** Caller owns the transaction. Refresh and attachments share its project lock. */
+export async function attachOrCreateAction(
+  db: Database,
+  scope: Scope,
+  kind: string,
+  rawTarget: string,
+  userId: string | null,
+) {
+  if (!a.AGENT_TARGET_KINDS.includes(kind)) throw new ActionTargetError('Unsupported Agent target');
+  const target = rawTarget.trim();
+  await acquireProjectLock(db, scope.projectId);
+  const identity = await targetIdentity(db, scope, kind, target);
+  const now = new Date();
+  await db
+    .insertInto('actions')
+    .values({
+      id: randomUUID(),
+      workspace_id: scope.workspaceId,
+      project_id: scope.projectId,
+      group_key: identity.key,
+      target_kind: kind,
+      target_label: target.slice(0, a.ACTION_LABEL_MAX_CHARS),
+      target_url: identity.url,
+      origin: a.ACTION_ORIGIN_AGENT,
+      families: '[]',
+      approach: '',
+      skill_id:
+        kind === a.TARGET_PAGE ? selectApproach([], kind).skill_id : a.AGENT_ORIGIN_DEFAULT_SKILL,
+      diagnosis: '{}',
+      member_opportunity_ids: '[]',
+      created_by_user_id: userId,
+      created_at: now,
+      updated_at: now,
+      status: a.ACTION_STATUS_OPEN,
+      target_prompt_id: null,
+      priority_score: null,
+      opportunity_snapshot_id: null,
+      evidence_cleared_at: null,
+    })
+    .onConflict((oc) => oc.constraint('uq_actions_project_group').doNothing())
+    .execute();
+  return db
+    .selectFrom('actions')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('group_key', '=', identity.key)
+    .executeTakeFirstOrThrow();
+}
 export type ActionRow = Selectable<Actions>;
 const jsonList = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const stringList = (value: unknown): string[] =>

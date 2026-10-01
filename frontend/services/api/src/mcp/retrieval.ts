@@ -10,7 +10,7 @@ import { getExecutionEvidence } from '../visibility/execution.ts';
 import { authorizedWorkspaceIds, authorizeProject } from './data.ts';
 import { projectBusinessContext } from './evidence.ts';
 import { mcpPolicy } from './config.ts';
-import { McpInputError, type Evidence, type McpPrincipal } from './types.ts';
+import { McpInputError, type Evidence, type EvidencePrincipal } from './types.ts';
 
 type Descriptor = { table: keyof DB; columns: readonly string[]; title: string };
 function descriptor<T extends keyof DB>(
@@ -357,7 +357,7 @@ function jsonValue(value: unknown): unknown {
 
 async function resolveRecord(
   db: Database,
-  principal: McpPrincipal,
+  principal: EvidencePrincipal,
   kind: Kind,
   id: string,
 ): Promise<{ record: Evidence; title: string; projectId: string; observedAt: unknown }> {
@@ -725,7 +725,7 @@ export function retrievalDocument(
 
 export async function fetchRecord(
   db: Database,
-  principal: McpPrincipal,
+  principal: EvidencePrincipal,
   value: string,
   origin: string,
 ): Promise<Evidence> {

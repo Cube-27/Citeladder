@@ -41,7 +41,7 @@ describe('configured model gateway', () => {
       }),
     ]);
     const gateway = createModelGateway(
-      { ...settings, baseUrl: 'https://model.test/v1/chat/completions' },
+      { ...settings, baseUrl: 'https://model.test/v1/chat/completions/' },
       io,
     );
     expect((await gateway.completeStructured('s', 'u', {})).usage).toEqual({
@@ -51,6 +51,9 @@ describe('configured model gateway', () => {
       reasoning_tokens: 3,
     });
     expect(String(io.fetch.mock.calls[0]![0])).toBe('https://model.test/v1/chat/completions');
+    expect(() =>
+      createModelGateway({ ...settings, baseUrl: 'https://model.test/v1?secret=value' }, io),
+    ).toThrow('not_configured');
     const abort = new AbortController();
     abort.abort();
     const cancelled = {

@@ -229,6 +229,37 @@ describe('Agent funding through the production ledger and providers', () => {
       }),
     ).toBe(20);
   });
+  it('closes the admitted finite hold when historical pricing terms are unreadable', async () => {
+    const { scope, accountId, grantId } = await tenant();
+    const { run: saved, lease } = await run(scope);
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    const model = await agentModels(db, 'fixture-cipher', platform)(saved);
+    const attempt = await calls.dispatch(lease, 1, model, { system: 's', user: 'u', schema: {} });
+    const catalog = await db
+      .selectFrom('billing_catalog_revisions')
+      .select('payload')
+      .where('revision', '=', attempt.pricing_revision)
+      .executeTakeFirstOrThrow();
+    const payload = JSON.parse(JSON.stringify(catalog.payload));
+    payload.ai_credit_policy = { version: 'broken', rates: [{ ...rate, call_credit_cap: false }] };
+    await db
+      .updateTable('billing_catalog_revisions')
+      .set({ payload: JSON.stringify(payload) })
+      .where('revision', '=', attempt.pricing_revision)
+      .execute();
+    await calls.receipt(scope.workspaceId, attempt.id, result('{}'));
+    expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: 20,
+    });
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select('settlement_status')
+        .where('id', '=', attempt.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ settlement_status: 'unknown_policy' });
+  });
   it('serializes concurrent dispatch holds against the same finite credit balance', async () => {
     const { scope, accountId, grantId } = await tenant(20);
     const first = await run(scope),
