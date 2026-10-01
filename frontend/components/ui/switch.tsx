@@ -47,13 +47,13 @@ export function Switch({
       <span
         aria-hidden
         className={cn(
-          'relative h-6 w-11 rounded-full border transition-colors duration-200 ease-out',
+          'relative h-6 w-11 rounded-full border transition-colors duration-[var(--motion-normal)] ease-[var(--ease-standard)]',
           checked ? 'border-accent bg-accent' : 'border-border-bold bg-active',
         )}
       >
         <span
           className={cn(
-            'bg-panel border-border-strong absolute top-1/2 left-0.5 size-5 -translate-y-1/2 rounded-full border transition-transform duration-200 ease-out',
+            'bg-panel border-border-strong absolute top-1/2 left-0.5 size-5 -translate-y-1/2 rounded-full border transition-transform duration-[var(--motion-normal)] ease-[var(--ease-standard)]',
             checked ? 'translate-x-5' : 'translate-x-px',
           )}
         />

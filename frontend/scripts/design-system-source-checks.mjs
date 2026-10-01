@@ -11,6 +11,21 @@ const EDITORIAL_SIZE = /\btext-(?:2xs|xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)\b/;
 const WEBSITE_CSS = 'apps/app/src/website-type.css';
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const LANDING_CSS = 'apps/marketing/src/pages/landing.css';
+
+/** Only motion declarations and utilities are policy: measured durations are data. */
+export function motionRoleViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi || label === TOKEN_CSS || label === WEBSITE_CSS) return [];
+  const text = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const declarations = text.matchAll(
+    /(?:animation|transition)(?:-(?:duration|delay|timing-function))?\s*:\s*['"]?([^;\n}'"]+)/g,
+  );
+  const rawTiming = /\b\d*\.?\d+m?s\b|cubic-bezier\s*\(|(?<![\w-])(?:ease(?:-in(?:-out)?|-out)?|linear)(?![\w-])/;
+  const rawUtility = /\b(?:duration|delay)-(?:\d+|\[[\d.]+m?s\])|\bease-(?:in(?:-out)?|out|linear)\b/;
+  if ([...declarations].some(([, value]) => rawTiming.test(value)) || rawUtility.test(text) || /\b(?:opacity|transform|color|width|height)\s+\d*\.?\d+m?s\b/.test(text)) {
+    return [`${label}: motion must consume duration and easing roles from globals.css`];
+  }
+  return [];
+}
 /**
  * Roles the website stylesheet must define.
  *

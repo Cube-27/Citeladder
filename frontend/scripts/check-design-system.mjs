@@ -13,6 +13,7 @@ import {
   standalonePlaceholderViolations,
   textContrastViolations,
   rawRadiusViolations,
+  motionRoleViolations,
   styleAssertionViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
@@ -99,6 +100,7 @@ for (const path of files(root)) {
     ...editorialTypographyViolations(source, label, ownsWebsiteEditorialCopy),
     ...standalonePlaceholderViolations(source, label, ownsProductUi),
     ...productUiSourceViolations(source, label, ownsProductUi),
+    ...motionRoleViolations(source, label, ownsProductUi),
     ...nestedCardViolations(source, label, ownsProductUi),
     ...productControlViolations(source, label, ownsProductUi),
   );

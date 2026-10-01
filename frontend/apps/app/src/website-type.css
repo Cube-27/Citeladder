@@ -306,7 +306,7 @@
   line-height: 1.25rem;
   font-weight: 500;
   text-decoration: none;
-  transition: color var(--transition-fast) var(--ease-standard);
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .flow-exit:hover {

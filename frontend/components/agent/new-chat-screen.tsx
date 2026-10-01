@@ -179,7 +179,7 @@ function NewChat({
 }
 
 /** Distance and timing of the composer's slide to the bottom on send. */
-const LAUNCH_EASE = 'transform 320ms var(--ease-standard), opacity 200ms ease-out';
+const LAUNCH_EASE = 'transform var(--motion-slow) var(--ease-standard), opacity var(--motion-normal) var(--ease-exit)';
 const LAUNCH_BOTTOM_GAP_PX = 16;
 
 /**

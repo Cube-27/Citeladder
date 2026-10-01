@@ -20,7 +20,7 @@ import { cva } from 'class-variance-authority';
  * spacing overrides.
  */
 export const buttonVariants = cva(
-  'focus-ring type-control inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] no-underline transition-[transform,background-color,color,box-shadow] duration-[120ms] ease-out active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
+  'focus-ring type-control inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] no-underline transition-[transform,background-color,color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
   {
     variants: {
       variant: {

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
  * the base and its own state classes instead of restating the recipe.
  */
 export const chipBaseClasses =
-  'focus-ring type-badge inline-flex h-[var(--control-height-sm)] items-center gap-2 rounded-full px-3 transition-[background-color,color,box-shadow] duration-[250ms] ease-standard';
+  'focus-ring type-badge inline-flex h-[var(--control-height-sm)] items-center gap-2 rounded-full px-3 transition-[background-color,color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)]';
 
 export const chipRestingClasses = 'bg-panel text-secondary shadow-smudge hover:text-foreground';
 

@@ -333,11 +333,12 @@
 
   /* Restrained enterprise motion: quick controls, slightly longer spatial
      transitions, one shared easing curve. */
-  --transition-fast: 140ms;
-  --transition-base: 200ms;
-  --transition-slow: 280ms;
-  --ease-standard: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-fast: 110ms;
+  --motion-normal: 150ms;
+  --motion-slow: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0.38, 0.9);
+  --ease-enter: cubic-bezier(0, 0, 0.38, 0.9);
+  --ease-exit: cubic-bezier(0.2, 0, 1, 0.9);
   --z-index-sticky: 20;
   --z-index-overlay: 40;
   --z-index-modal: 50;
@@ -1321,7 +1322,7 @@ input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
 
 .loading-delayed {
   opacity: 0;
-  animation: citeladder-loading-appear 120ms ease-out 300ms forwards;
+  animation: citeladder-loading-appear var(--motion-fast) var(--ease-enter) 300ms forwards;
 }
 
 /* Paper, not screen. A fractal-noise tile at a few percent over the marketing
@@ -1444,14 +1445,14 @@ samp {
 
 .menu-panel {
   transition:
-    opacity var(--transition-fast) var(--ease-standard),
-    transform var(--transition-fast) var(--ease-standard);
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .menu-panel[data-state="closed"] {
   opacity: 0;
   transform: translateY(-2px);
-  transition-duration: 140ms;
+  transition-duration: var(--motion-normal);
 }
 
 @keyframes drawer-overlay-in {
@@ -1517,19 +1518,19 @@ samp {
 }
 
 .drawer-overlay[data-state="open"] {
-  animation: drawer-overlay-in 180ms var(--ease-standard) both;
+  animation: drawer-overlay-in var(--motion-slow) var(--ease-standard) both;
 }
 
 .drawer-overlay[data-state="closed"] {
-  animation: drawer-overlay-out 180ms var(--ease-standard) both;
+  animation: drawer-overlay-out var(--motion-normal) var(--ease-standard) both;
 }
 
 .drawer-panel[data-state="open"] {
-  animation: drawer-panel-in var(--transition-base) var(--ease-drawer) both;
+  animation: drawer-panel-in var(--motion-slow) var(--ease-enter) both;
 }
 
 .drawer-panel[data-state="closed"] {
-  animation: drawer-panel-out var(--transition-base) var(--ease-standard) both;
+  animation: drawer-panel-out var(--motion-slow) var(--ease-standard) both;
 }
 
 .drawer-panel[data-side="left"][data-state="open"] {
@@ -1578,7 +1579,7 @@ samp {
     var(--skeleton-highlight),
     transparent
   );
-  animation: skeleton-shimmer 1.2s var(--ease-standard) infinite;
+  animation: skeleton-shimmer calc(var(--motion-slow) * 5) var(--ease-standard) infinite;
 }
 
 @media (min-width: 768px) {
@@ -1620,7 +1621,7 @@ samp {
   inset: 0;
   border-radius: inherit;
   background: inherit;
-  animation: activity-ping 1.8s var(--ease-standard) infinite;
+  animation: activity-ping calc(var(--motion-slow) * 7.5) var(--ease-standard) infinite;
 }
 
 @keyframes activity-ping {
@@ -1652,13 +1653,13 @@ samp {
   inset: -0.25rem;
   border-radius: var(--radius-full);
   border: 1px solid currentcolor;
-  animation: activity-check-ring 520ms var(--ease-standard) both;
+  animation: activity-check-ring var(--motion-slow) var(--ease-standard) both;
 }
 
 .activity-check svg path {
   stroke-dasharray: 24;
   stroke-dashoffset: 24;
-  animation: activity-check-draw 260ms var(--ease-standard) 80ms both;
+  animation: activity-check-draw var(--motion-normal) var(--ease-enter) var(--motion-fast) both;
 }
 
 @keyframes activity-check-draw {

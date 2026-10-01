@@ -112,7 +112,7 @@ function ProgressBar({
       </div>
       <div className="bg-well h-1.5 w-full overflow-hidden rounded-full">
         <div
-          className="bg-accent h-full transition-[width] duration-300"
+          className="bg-accent h-full transition-[width] duration-[var(--motion-normal)]"
           style={{ width: `${percent}%` }}
         />
       </div>

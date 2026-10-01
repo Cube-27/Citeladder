@@ -32,7 +32,7 @@ export function NavLink({
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-[var(--radius-control)] px-3 transition-colors duration-150',
+        'group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-[var(--radius-control)] px-3 transition-colors duration-[var(--motion-fast)]',
         // Navigation takes the control role. The active row is raised paper
         // with a soft drop and the brand icon — never an outline or a leading
         // bar, which read as a second, competing selection mark.
@@ -43,7 +43,7 @@ export function NavLink({
     >
       <Icon
         className={cn(
-          'size-4 shrink-0 transition-colors duration-150',
+          'size-4 shrink-0 transition-colors duration-[var(--motion-fast)]',
           active ? 'text-brand-forest' : 'text-muted group-hover:text-foreground',
         )}
         aria-hidden

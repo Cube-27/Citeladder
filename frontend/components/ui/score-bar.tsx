@@ -31,7 +31,7 @@ export function ScoreBar({
       <div aria-hidden className="bg-active h-2 w-full overflow-hidden rounded-full">
         <div
           className={cn(
-            'h-full rounded-full transition-[width] duration-[800ms] ease-out motion-reduce:transition-none',
+            'h-full rounded-full transition-[width] duration-[var(--motion-slow)] ease-[var(--ease-standard)] motion-reduce:transition-none',
             scoreBandFill[scoreBand(clamped)],
           )}
           style={{ width: swept ? `${clamped}%` : 0 }}

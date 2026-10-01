@@ -16,7 +16,7 @@ import { scoreBand, scoreBandStroke, scoreBandText } from './score-band';
  * numerals with a larger `size`/`strokeWidth`. The numeral stays
  * `aria-hidden`; the ring's svg keeps the accessible label either way.
  *
- * The arc sweeps to its value over 800ms on mount. `motion-reduce` drops the
+ * The arc sweeps to its value with the slow motion role on mount. `motion-reduce` drops the
  * transition so the ring simply appears at its final value.
  */
 const NUMERAL_SIZE_CLASS: Record<'md' | 'lg' | 'hero', string> = {
@@ -95,7 +95,7 @@ export function ScoreRing({
           strokeDasharray={circumference}
           strokeDashoffset={swept ? dashOffset : circumference}
           className={cn(
-            'transition-[stroke-dashoffset] duration-[800ms] ease-out motion-reduce:transition-none',
+            'transition-[stroke-dashoffset] duration-[var(--motion-slow)] ease-[var(--ease-standard)] motion-reduce:transition-none',
             scoreBandStroke[band],
           )}
         />
