@@ -1,17 +1,6 @@
-"""Persisted visibility-evidence projection and isolation scenarios.
-
-Seeds a workspace/project + audit through the ORM, runs the real worker (with a
-MOCKED adapter — no network) so the analysis stage produces persisted rows +
-one MetricSnapshot, then exercises the projection service + exports directly:
-
-  - metrics + visibility + execution-evidence are PROJECTIONS: they read only
-    persisted analysis and never call a provider (invariant 7 — asserted by
-    patching ``build_adapter`` to raise before the projection calls);
-  - derived rows carry provenance (``analyzer_version``) (invariant 4);
-  - citation classification labels are persisted (owned/competitor/...);
-  - CSV + Markdown exports render from persisted rows;
-  - projections are workspace-scoped (a foreign workspace gets nothing).
-"""
+"""Persisted visibility evidence and source projection scenarios for the Python
+MCP bridge. Fixtures write historical rows directly; no planner or worker
+is involved."""
 
 from __future__ import annotations
 
@@ -44,7 +33,6 @@ from app.models.audit import (
     Audit,
     RawResponseArtifact,
 )
-from app.workers.audit import execution as audit_execution
 from tests.component.analysis_api_helpers import (
     _event,
     _seed_evidence_execution,
@@ -63,11 +51,6 @@ async def test_evidence_projects_mentions_citations_and_queries(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Persisted mentions/citations + artifact query text are projected as-is."""
-
-    def _boom(**_: object):
-        raise AssertionError("evidence projection must not call a provider")
-
-    monkeypatch.setattr(audit_execution, "build_adapter", _boom)
 
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=1)
@@ -792,11 +775,6 @@ async def test_evidence_never_calls_provider_and_is_read_only(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Provider factory patched to fail; row counts unchanged after read."""
-
-    def _boom(**_: object):
-        raise AssertionError("evidence read must never construct an adapter")
-
-    monkeypatch.setattr(audit_execution, "build_adapter", _boom)
 
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=1)

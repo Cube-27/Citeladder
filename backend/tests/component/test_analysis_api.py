@@ -1,331 +1,71 @@
-"""Analysis metrics, visibility, provenance, and export projections."""
+"""Persisted visibility readers retained for MCP through migration PR 19."""
 
-from __future__ import annotations
+import uuid
+from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.analysis.exports import audit_to_csv, audit_to_markdown
-from app.core.config.audits import (
-    AUDIT_STATUS_COMPLETED,
-    AUDIT_TRIGGER_MANUAL,
-    audit_settings,
-)
-from app.core.config.provider_catalog import (
-    ENGINE_GEMINI,
-    measurement_route,
-)
 from app.domain.analysis.errors import AnalysisNotFoundError
-from app.domain.analysis.evidence import (
-    get_execution_evidence,
-    load_export_bundle,
-)
+from app.domain.analysis.evidence import get_execution_evidence
 from app.domain.analysis.metrics import get_metrics
-from app.domain.audits.creation import create_audit
-from app.models.analysis import (
-    BrandMention,
-    Citation,
-    CompetitorMention,
-    MetricSnapshot,
-    ResponseAnalysis,
-)
-from app.models.audit import (
-    RawResponseArtifact,
-)
-from app.workers.audit import execution as audit_execution
-from tests.component.analysis_api_helpers import (
-    _run_completed_audit,
-    _UsageStubAdapter,
-)
-from tests.component.analysis_api_helpers import (
-    _stub_adapter as _stub_adapter,
-)
+from app.models.analysis import MetricSnapshot
+from app.models.audit import Audit
+from tests.component.analysis_api_helpers import _seed_evidence_execution
 from tests.component.audit_helpers import seed_audit_fixtures
 
-# The model the PLANNER freezes for these audits. Read from the catalog rather
-# than pinned as a literal: these assertions are about provenance travelling
-# intact from the frozen route to the projection, not about which Gemini build
-# is current, and a literal here goes stale on every model-version bump.
-GEMINI_MODEL = measurement_route(ENGINE_GEMINI).transport_model
 
-
-async def test_benchmark_fixture_persists_grounded_search_evidence(
-    session_factory: async_sessionmaker[AsyncSession],
-    _stub_adapter,
-) -> None:
-    _seed, audit = await _run_completed_audit(session_factory)
-
-    async with session_factory() as session:
-        artifacts = list(
-            (
-                await session.scalars(
-                    select(RawResponseArtifact).where(
-                        RawResponseArtifact.audit_id == audit.id
-                    )
-                )
-            ).all()
-        )
-
-    assert artifacts
-    assert all(artifact.search_used is True for artifact in artifacts)
-    assert all(artifact.search_events for artifact in artifacts)
-
-
-@pytest.mark.asyncio
-async def test_metrics_are_projections(
-    session_factory: async_sessionmaker[AsyncSession],
-    _stub_adapter,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    seed, audit = await _run_completed_audit(session_factory)
-
-    # After finalize the projections must never touch a provider: make the
-    # adapter factory explode so any provider call during a projection fails.
-    def _boom(**_: object):
-        raise AssertionError("projection must not call a provider (invariant 7)")
-
-    monkeypatch.setattr(audit_execution, "build_adapter", _boom)
-
-    async with session_factory() as session:
-        # Audit reached COMPLETED with a populated snapshot.
-        refreshed = await session.get(type(audit), audit.id)
-        assert refreshed is not None
-        assert refreshed.status == AUDIT_STATUS_COMPLETED
-
-        metrics = await get_metrics(
-            session, workspace_id=seed.workspace_id, audit_id=audit.id
-        )
-        assert metrics.total_completed == 4
-        # Composite: mentions 60 + qualified owned citations 15 + position 12.5.
-        assert metrics.visibility_score == 87.5
-        assert metrics.analyzer_version
-        assert "share_of_voice" in metrics.metrics
-        assert metrics.metrics["sentiment"] is None
-        # Position is derived from mention offsets, so a run that named the
-        # brand has one.
-        assert metrics.metrics["avg_position"] is not None
-
-
-@pytest.mark.asyncio
-async def test_provenance_and_citation_classification_persisted(
-    session_factory: async_sessionmaker[AsyncSession],
-    _stub_adapter,
-) -> None:
-    _seed, audit = await _run_completed_audit(session_factory)
-
-    async with session_factory() as session:
-        analyses = list(
-            (
-                await session.scalars(
-                    select(ResponseAnalysis).where(
-                        ResponseAnalysis.audit_id == audit.id
-                    )
-                )
-            ).all()
-        )
-        assert len(analyses) == 4
-        # Every derived row references its artifact + analyzer version (inv. 4).
-        for analysis in analyses:
-            assert analysis.analyzer_version
-            assert analysis.scoring_rule_version
-            assert analysis.artifact_id is not None
-
-        # Brand + competitor mentions recorded with provenance.
-        brand_count = await session.scalar(
-            select(func.count())
-            .select_from(BrandMention)
-            .where(BrandMention.audit_id == audit.id)
-        )
-        comp_count = await session.scalar(
-            select(func.count())
-            .select_from(CompetitorMention)
-            .where(CompetitorMention.audit_id == audit.id)
-        )
-        assert brand_count == 4  # brand mentioned in all 4
-        assert comp_count == 4  # Globex mentioned in all 4
-
-        # Citation classification: owned (acme.com) + competitor (globex.com).
-        citations = list(
-            (
-                await session.scalars(
-                    select(Citation).where(Citation.audit_id == audit.id)
-                )
-            ).all()
-        )
-        assert all(c.analyzer_version for c in citations)
-        owned = [c for c in citations if c.classification == "owned"]
-        competitor = [c for c in citations if c.classification == "competitor"]
-        assert owned
-        assert all(c.is_owned for c in owned)
-        assert competitor
-        assert all(c.matched_competitor == "Globex" for c in competitor)
-
-
-@pytest.mark.asyncio
-async def test_execution_evidence_projection(
-    session_factory: async_sessionmaker[AsyncSession],
-    _stub_adapter,
-) -> None:
-    seed, audit = await _run_completed_audit(session_factory)
-
-    async with session_factory() as session:
-        analysis = await session.scalar(
-            select(ResponseAnalysis).where(ResponseAnalysis.audit_id == audit.id)
-        )
-        assert analysis is not None
-        # Keyed on the execution (AuditTask) id, matching the id clients get
-        # from GET /audits/{id}/executions — not the internal analysis id.
-        evidence = await get_execution_evidence(
-            session,
-            workspace_id=seed.workspace_id,
-            task_id=analysis.task_id,
-        )
-        assert evidence.brand_mentioned is True
-        assert evidence.citation_count == 2
-        assert len(evidence.citations) == 2
-        assert "Globex" in evidence.competitors_mentioned
-        # id/task_id are the execution id; analysis_id is the internal id.
-        assert evidence.id == analysis.task_id
-        assert evidence.task_id == analysis.task_id
-        assert evidence.analysis_id == analysis.id
-        # Execution-level provenance: the exact singular model plus the frozen
-        # mode/retrieval state the call executed under (inv. 4/7, 10).
-        assert evidence.transport_model == GEMINI_MODEL
-        assert evidence.retrieval_enabled is True
-        assert "mode" not in evidence.model_dump()
-        # Per-answer position: the brand's rank among the brands this answer
-        # named. Tone still has no scoring stage.
-        assert evidence.sentiment is None
-        assert evidence.avg_position == 1.0
-
-        # A foreign workspace cannot read the evidence (invariant 5).
-        import uuid
-
-        with pytest.raises(AnalysisNotFoundError):
-            await get_execution_evidence(
-                session,
-                workspace_id=uuid.uuid4(),
-                task_id=analysis.task_id,
-            )
-
-
-@pytest.mark.asyncio
-async def test_exports_render_from_persisted_rows(
-    session_factory: async_sessionmaker[AsyncSession],
-    _stub_adapter,
-) -> None:
-    seed, audit = await _run_completed_audit(session_factory)
-
-    async with session_factory() as session:
-        loaded_audit, tasks = await load_export_bundle(
-            session, workspace_id=seed.workspace_id, audit_id=audit.id
-        )
-        assert len(tasks) == 4
-
-        csv_body = audit_to_csv(loaded_audit, tasks)
-        assert "audit_id,prompt_index" in csv_body.splitlines()[0]
-        # One header + one row per execution.
-        assert len(csv_body.strip().splitlines()) == 1 + 4
-
-        md_body = audit_to_markdown(loaded_audit, tasks)
-        assert "# AI Search Visibility Audit" in md_body
-        assert "## Headline Metrics" in md_body
-        assert "## Methodology" in md_body
-
-
-@pytest.mark.asyncio
-async def test_metrics_not_found_for_unanalyzed_audit(
-    session_factory: async_sessionmaker[AsyncSession],
-    _stub_adapter,
-) -> None:
-    # Seed + create but DON'T run the worker -> no MetricSnapshot yet.
-    async with session_factory() as session:
-        seed = await seed_audit_fixtures(session, prompt_count=1)
-    async with session_factory() as session:
-        audit = await create_audit(
-            session,
-            trigger=AUDIT_TRIGGER_MANUAL,
+async def test_readers_preserve_frozen_provenance_and_workspace_isolation(db_session):
+    seed = await seed_audit_fixtures(db_session, prompt_count=1)
+    audit, _, task, analysis = await _seed_evidence_execution(
+        db_session,
+        workspace_id=seed.workspace_id,
+        project_id=seed.project_id,
+        completed_at=datetime.now(UTC),
+        brand_mentions=[("Acme Corp", 0)],
+        competitor_mentions=["Globex"],
+        citations=[("https://acme.com/", "acme.com", "owned")],
+    )
+    task.request_snapshot = {"retrieval_enabled": False}
+    task.route_snapshot = {"retrieval_enabled": True}
+    audit.configuration = {"measurement_policy": {"retrieval_enabled": True}}
+    db_session.add(
+        MetricSnapshot(
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
-            engines=seed.engines,
-            prompt_set_id=seed.prompt_set_id,
-            repetitions=1,
-            random_seed="1",
+            audit_id=audit.id,
+            analyzer_version=analysis.analyzer_version,
+            scoring_rule_version="fixture",
+            total_completed=1,
+            visibility_score=73,
+            metrics={"avg_position": None},
+            source_analysis_ids=[str(analysis.id)],
+            source_artifact_ids=[str(analysis.artifact_id)],
         )
-    async with session_factory() as session:
-        with pytest.raises(AnalysisNotFoundError):
-            await get_metrics(
-                session, workspace_id=seed.workspace_id, audit_id=audit.id
-            )
-
-
-@pytest.mark.asyncio
-async def test_snapshot_records_source_provenance(
-    session_factory: async_sessionmaker[AsyncSession],
-    _stub_adapter,
-) -> None:
-    """The MetricSnapshot traces back to the exact evidence set (invariant 4).
-
-    ``source_analysis_ids`` must equal the succeeded tasks' analysis ids and
-    ``source_artifact_ids`` their raw response artifacts.
-    """
-    _seed, audit = await _run_completed_audit(session_factory)
-
-    async with session_factory() as session:
-        analyses = list(
-            (
-                await session.scalars(
-                    select(ResponseAnalysis).where(
-                        ResponseAnalysis.audit_id == audit.id
-                    )
-                )
-            ).all()
-        )
-        snapshot = await session.scalar(
-            select(MetricSnapshot).where(MetricSnapshot.audit_id == audit.id)
-        )
-        assert snapshot is not None
-        assert snapshot.source_analysis_ids is not None
-        assert snapshot.source_artifact_ids is not None
-        expected_analysis_ids = {str(a.id) for a in analyses}
-        expected_artifact_ids = {
-            str(a.artifact_id) for a in analyses if a.artifact_id is not None
-        }
-        assert set(snapshot.source_analysis_ids) == expected_analysis_ids
-        assert set(snapshot.source_artifact_ids) == expected_artifact_ids
-        # Every succeeded analysis has an artifact in this fixture.
-        assert len(snapshot.source_artifact_ids) == len(analyses)
-
-
-async def test_aggregation_preserves_provider_usage(
-    session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Persisted provider usage flows into the aggregate (not dropped as zero).
-
-    Regression: immutable artifact usage was dropped while rebuilding the
-    aggregate, so token/cost metrics were always zero.
-    """
-    monkeypatch.setattr(
-        audit_execution, "build_adapter", lambda **_: _UsageStubAdapter()
     )
-    monkeypatch.setattr(audit_settings, "min_request_interval_seconds", 0.0)
-    monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
+    await db_session.commit()
+    metrics = await get_metrics(
+        db_session, workspace_id=seed.workspace_id, audit_id=audit.id
+    )
+    assert metrics.visibility_score == 73
+    assert metrics.metrics["avg_position"] is None
+    evidence = await get_execution_evidence(
+        db_session, workspace_id=seed.workspace_id, task_id=task.id
+    )
+    assert evidence.analysis_id == analysis.id
+    assert evidence.retrieval_enabled is False
+    assert [c.url for c in evidence.citations] == ["https://acme.com/"]
+    for reader, key in [
+        (get_metrics, {"audit_id": audit.id}),
+        (get_execution_evidence, {"task_id": task.id}),
+    ]:
+        with pytest.raises(AnalysisNotFoundError):
+            await reader(db_session, workspace_id=uuid.uuid4(), **key)
 
-    seed, audit = await _run_completed_audit(session_factory)
 
-    async with session_factory() as session:
-        metrics = await get_metrics(
-            session, workspace_id=seed.workspace_id, audit_id=audit.id
-        )
-        token_usage = metrics.metrics["token_usage"]
-        # 4 executions * 100/50 tokens each.
-        assert token_usage["input_tokens"] == 400
-        assert token_usage["output_tokens"] == 200
-        assert token_usage["total_tokens"] == 600
-
-        cost = metrics.metrics["cost"]
-        # 4 executions * $0.25 provider-reported each — previously always zero
-        # because artifact usage was dropped when rebuilding the aggregate.
-        assert cost["provider_reported_cost_usd"] == pytest.approx(1.0)
+async def test_unanalyzed_run_has_no_metric_snapshot(db_session):
+    seed = await seed_audit_fixtures(db_session, prompt_count=1)
+    audit = Audit(workspace_id=seed.workspace_id, project_id=seed.project_id)
+    db_session.add(audit)
+    await db_session.commit()
+    with pytest.raises(AnalysisNotFoundError):
+        await get_metrics(db_session, workspace_id=seed.workspace_id, audit_id=audit.id)

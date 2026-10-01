@@ -20,7 +20,6 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.audits import AUDIT_TRIGGER_MANUAL
 from app.core.config.billing_contracts import (
     TELEMETRY_CONSUMABLE_CREDITS_EXHAUSTED,
 )
@@ -31,7 +30,6 @@ from app.core.config.entitlements import (
     LEDGER_ENTRY_RESERVATION,
 )
 from app.core.config.provider_catalog import ENGINE_CLAUDE
-from app.domain.audits.creation import create_audit
 from app.domain.entitlements.ledger import (
     FundedCreditsExhaustedError,
     Reservation,
@@ -45,7 +43,7 @@ from app.domain.entitlements.service import resolve_account_entitlement
 from app.domain.entitlements.types import GrantSpec
 from app.models.audit import Audit, AuditTask
 from app.models.billing import AccountGrant, BillingAccount, ConsumableLedger
-from tests.component.audit_helpers import seed_audit_fixtures
+from tests.component.audit_helpers import seed_audit_fixtures, seed_persisted_run
 from tests.component.log_capture import capture_log_messages
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
@@ -70,20 +68,12 @@ async def _seed(
         )
     assert account is not None
     await session.commit()
-    audit = await create_audit(
-        session,
-        workspace_id=seed.workspace_id,
-        project_id=seed.project_id,
-        engines=seed.engines,
-        trigger=AUDIT_TRIGGER_MANUAL,
-        prompt_set_id=seed.prompt_set_id,
-        repetitions=1,
-        random_seed="1",
-    )
+    audit = await seed_persisted_run(session, seed)
     task_id = await session.scalar(
         select(AuditTask.id).where(AuditTask.audit_id == audit.id)
     )
     assert task_id is not None
+    await session.commit()
     return account, seed.workspace_id, audit.id, task_id
 
 

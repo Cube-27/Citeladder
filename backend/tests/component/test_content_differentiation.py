@@ -7,10 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.audits import AUDIT_TRIGGER_MANUAL
 from app.domain.agent.tool_catalog import build_agent_tools, execute_tool
-from app.domain.audits.creation import create_audit
-from app.domain.audits.reads import list_tasks
 from app.domain.content_differentiation import _load_candidates
 from app.models.audit import Audit, AuditTask
 from app.models.content_differentiation import (
@@ -19,7 +16,7 @@ from app.models.content_differentiation import (
 )
 from app.models.source_pages import SourcePage
 from app.models.workspace import WorkspaceMember
-from tests.component.audit_helpers import Seed, seed_audit_fixtures
+from tests.component.audit_helpers import Seed, seed_audit_fixtures, seed_persisted_run
 
 
 @pytest.mark.asyncio
@@ -28,26 +25,14 @@ async def test_page_refresh_loads_every_candidate_of_affected_historical_tasks(
 ) -> None:
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=2)
-        previous = await create_audit(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            engines=seed.engines,
-            trigger=AUDIT_TRIGGER_MANUAL,
-            prompt_set_id=seed.prompt_set_id,
-            repetitions=1,
-        )
-        current = await create_audit(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            engines=seed.engines,
-            trigger=AUDIT_TRIGGER_MANUAL,
-            prompt_set_id=seed.prompt_set_id,
-            repetitions=1,
-        )
-        tasks = await list_tasks(
-            session, workspace_id=seed.workspace_id, audit_id=previous.id
+        previous = await seed_persisted_run(session, seed, task_count=2)
+        current = await seed_persisted_run(session, seed, task_count=2)
+        tasks = list(
+            (
+                await session.scalars(
+                    select(AuditTask).where(AuditTask.audit_id == previous.id)
+                )
+            ).all()
         )
         pages = [
             SourcePage(
@@ -102,20 +87,10 @@ async def test_audit_and_source_page_project_ownership_is_enforced(
     async with session_factory() as session:
         first = await seed_audit_fixtures(session, prompt_count=1)
         second = await seed_audit_fixtures(session, prompt_count=1)
-        audit = await create_audit(
-            session,
-            workspace_id=first.workspace_id,
-            project_id=first.project_id,
-            engines=first.engines,
-            trigger=AUDIT_TRIGGER_MANUAL,
-            prompt_set_id=first.prompt_set_id,
-            repetitions=1,
+        audit = await seed_persisted_run(session, first, task_count=2)
+        task = await session.scalar(
+            select(AuditTask).where(AuditTask.audit_id == audit.id)
         )
-        task = (
-            await list_tasks(
-                session, workspace_id=first.workspace_id, audit_id=audit.id
-            )
-        )[0]
         await session.commit()
 
     async with session_factory() as session:
@@ -146,18 +121,8 @@ async def test_audit_and_source_page_project_ownership_is_enforced(
 
 
 async def _seed_report(session: AsyncSession, seed: Seed) -> uuid.UUID:
-    audit = await create_audit(
-        session,
-        workspace_id=seed.workspace_id,
-        project_id=seed.project_id,
-        engines=seed.engines,
-        trigger=AUDIT_TRIGGER_MANUAL,
-        prompt_set_id=seed.prompt_set_id,
-        repetitions=1,
-    )
-    task = (
-        await list_tasks(session, workspace_id=seed.workspace_id, audit_id=audit.id)
-    )[0]
+    audit = await seed_persisted_run(session, seed, task_count=2)
+    task = await session.scalar(select(AuditTask).where(AuditTask.audit_id == audit.id))
     report = ContentDifferentiationReport(
         workspace_id=seed.workspace_id,
         project_id=seed.project_id,

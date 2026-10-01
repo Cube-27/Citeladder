@@ -16,7 +16,6 @@ import pytest
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.audits import AUDIT_QUEUE_SPEC, AUDIT_TRIGGER_MANUAL
 from app.core.config.site_health_runtime import (
     SITE_CRAWL_QUEUE_SPEC,
 )
@@ -24,10 +23,8 @@ from app.core.config.task_queue import (
     TASK_CLAIMABLE_STATUSES,
     TASK_STATUS_LEASED,
 )
-from app.domain.audits.creation import create_audit
 from app.models.site_health.queue import SiteCrawlTask
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
-from tests.component.audit_helpers import seed_audit_fixtures
 from tests.component.site_health_helpers import seed_site_crawl
 
 
@@ -89,39 +86,3 @@ async def test_site_queue_sweeper_reclaims_expired_lease(
     # the sweeper returns reclaimed rows to a claimable status.
     assert all(r.status in TASK_CLAIMABLE_STATUSES for r in rows)
     assert all(r.lease_owner is None for r in rows)
-
-
-@pytest.mark.asyncio
-async def test_audit_and_site_queues_never_cross_claim(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    # Seed one queued audit (6 tasks) and one queued site crawl (5 tasks) in
-    # the same schema.
-    async with session_factory() as session:
-        audit_seed = await seed_audit_fixtures(session, prompt_count=6)
-    async with session_factory() as session:
-        await create_audit(
-            session,
-            trigger=AUDIT_TRIGGER_MANUAL,
-            workspace_id=audit_seed.workspace_id,
-            project_id=audit_seed.project_id,
-            engines=audit_seed.engines,
-            prompt_set_id=audit_seed.prompt_set_id,
-            repetitions=1,
-            random_seed="1",
-        )
-    async with session_factory() as session:
-        site_seed = await seed_site_crawl(session, task_count=5)
-
-    audit_queue = PostgresTaskQueue(session_factory, AUDIT_QUEUE_SPEC)
-    site_queue = PostgresTaskQueue(session_factory, SITE_CRAWL_QUEUE_SPEC)
-
-    audit_claimed = await audit_queue.claim(owner="audit-w", limit=100)
-    site_claimed = await site_queue.claim(owner="site-w", limit=100)
-
-    # Each queue only ever sees its own model's rows.
-    assert len(audit_claimed) == 6
-    assert len(site_claimed) == 5
-    assert {t.id for t in site_claimed} == set(site_seed.task_ids)
-    audit_ids = {t.id for t in audit_claimed}
-    assert audit_ids.isdisjoint(site_seed.task_ids)

@@ -9,12 +9,12 @@ from typing import cast
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.config.analysis import (
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     VISIBILITY_EVIDENCE_MAX_LIMIT,
 )
+from app.core.config.audits import MEASUREMENT_POLICY_KEY
 from app.core.config.prompts import (
     ORGANIC_PROMPT_COHORTS,
     PROMPT_COHORT_CORE,
@@ -28,7 +28,7 @@ from app.domain.analysis.evidence_selection import (
     encode_cursor,
     scope_digest,
 )
-from app.domain.analysis.projection_common import _AUDIT_NOT_FOUND, _DASHBOARD_STATUSES
+from app.domain.analysis.projection_common import _DASHBOARD_STATUSES
 from app.domain.analysis.schemas import (
     CitationEvidence,
     EvidencePromptOption,
@@ -44,7 +44,6 @@ from app.domain.analysis.selection import (
     to_utc,
     validate_engine_and_range,
 )
-from app.domain.audits.schemas import execution_frozen_provenance
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -60,6 +59,42 @@ type EvidenceRow = tuple[
     Audit,
     RawResponseArtifact | None,
 ]
+
+
+def frozen_retrieval_enabled(*snapshots: dict | None) -> bool | None:
+    """First frozen ``retrieval_enabled`` across snapshots; None if unrecorded."""
+    for snapshot in snapshots:
+        if isinstance(snapshot, dict):
+            retrieval_enabled = snapshot.get("retrieval_enabled")
+            if retrieval_enabled is not None:
+                return bool(retrieval_enabled)
+    return None
+
+
+def audit_frozen_retrieval_enabled(configuration: dict | None) -> bool | None:
+    """Retrieval state from the audit's frozen measurement-policy block."""
+    frozen = (configuration or {}).get(MEASUREMENT_POLICY_KEY)
+    if not isinstance(frozen, dict):
+        return None
+    return frozen_retrieval_enabled(frozen)
+
+
+def execution_frozen_provenance(
+    *,
+    request_snapshot: dict | None,
+    route_snapshot: dict | None,
+    audit_configuration: dict | None = None,
+) -> bool | None:
+    """Frozen retrieval state for one execution.
+
+    The frozen task request snapshot (what the call executed under) wins,
+    then the planner's frozen route snapshot, then the audit's frozen policy
+    block. Live config is never consulted (invariants 4/7).
+    """
+    retrieval = frozen_retrieval_enabled(request_snapshot, route_snapshot)
+    if retrieval is None:
+        retrieval = audit_frozen_retrieval_enabled(audit_configuration)
+    return retrieval
 
 
 async def get_visibility_evidence(
@@ -362,30 +397,6 @@ async def get_execution_evidence(
         ),
         created_at=analysis.created_at,
     )
-
-
-async def load_export_bundle(
-    session: AsyncSession, *, workspace_id: uuid.UUID, audit_id: uuid.UUID
-) -> tuple[Audit, list[AuditTask]]:
-    """Load the audit + its execution rows for CSV/MD export (invariant 7)."""
-    audit = await session.scalar(
-        select(Audit)
-        .options(selectinload(Audit.engine_snapshots))
-        .where(Audit.id == audit_id, Audit.workspace_id == workspace_id)
-    )
-    if audit is None:
-        raise AnalysisNotFoundError(_AUDIT_NOT_FOUND)
-    tasks = list(
-        (
-            await session.scalars(
-                select(AuditTask)
-                .where(AuditTask.audit_id == audit_id)
-                .where(AuditTask.workspace_id == workspace_id)
-                .order_by(AuditTask.prompt_index.asc(), AuditTask.repetition.asc())
-            )
-        ).all()
-    )
-    return audit, tasks
 
 
 # --- Execution-evidence projection helpers (pure, read-only, invariant 7) --

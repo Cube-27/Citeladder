@@ -262,3 +262,52 @@ def _transport_for(engine: str) -> str:
         return transports[engine]
     except KeyError:
         raise ValueError(f"Unsupported engine: {engine!r}") from None
+
+
+async def seed_persisted_run(session: AsyncSession, seed: Seed, *, task_count: int = 1):
+    """Persist historical queue rows for retained readers; no planner or worker."""
+    from app.models.audit import (
+        Audit,
+        AuditEngineSnapshot,
+        AuditPromptSnapshot,
+        AuditTask,
+    )
+
+    audit = Audit(workspace_id=seed.workspace_id, project_id=seed.project_id)
+    session.add(audit)
+    await session.flush()
+    route = measurement_route(seed.engines[0])
+    engine = AuditEngineSnapshot(
+        audit_id=audit.id,
+        logical_engine=seed.engines[0],
+        transport_provider=route.transport_provider,
+        transport_model=route.transport_model,
+    )
+    session.add(engine)
+    await session.flush()
+    tasks = []
+    for index in range(task_count):
+        prompt = AuditPromptSnapshot(
+            audit_id=audit.id, prompt_index=index, text="fixture"
+        )
+        session.add(prompt)
+        await session.flush()
+        task = AuditTask(
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            audit_id=audit.id,
+            prompt_snapshot_id=prompt.id,
+            engine_snapshot_id=engine.id,
+            prompt_index=index,
+            repetition=0,
+            randomized_position=index,
+            logical_engine=seed.engines[0],
+            transport_provider=route.transport_provider,
+            transport_model=route.transport_model,
+            prompt_text=prompt.text,
+            idempotency_key=f"fixture:{audit.id}:{index}",
+        )
+        session.add(task)
+        tasks.append(task)
+    await session.flush()
+    return audit

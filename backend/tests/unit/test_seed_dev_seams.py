@@ -1,20 +1,5 @@
-"""The two seams the development seeder monkeypatches or implements.
-
-Both were broken and silently so. ``seed_dev_data`` patched
-``app.workers.audit_worker.build_adapter``, an attribute that stopped existing
-when the execution path moved to ``app.workers.audit.execution``; the
-assignment created a new attribute nobody read, so seeded audits ran against
-real providers with fake dev keys. Separately it handed ``SiteHealthWorker`` a
-raw ``httpx.MockTransport`` where an ``AcquisitionTransport`` is required, so
-every seeded crawl fetch would have raised ``AttributeError`` on the missing
-``fetch``.
-
-Nothing failed loudly in either case, because ``scripts/`` was outside the type
-gate. It is inside it now, and these tests exercise both seams end to end: the
-adapter one by driving the real ``_build_adapter_or_fail`` and checking WHICH
-factory it reached, the transport one by calling ``fetch`` and checking what
-comes back.
-"""
+"""Site Health fixture transport seams retained by the development seeder.
+Native audit fixture execution is covered by the TypeScript audit seed test."""
 
 from __future__ import annotations
 

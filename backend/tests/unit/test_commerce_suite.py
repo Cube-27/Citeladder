@@ -4,39 +4,18 @@ import uuid
 from types import SimpleNamespace
 
 import pytest
-from pydantic import ValidationError
 
 from app.connectors import commerce_competitors as competitor_connector
-from app.connectors.agent.gateway import FakeModelGateway
 from app.connectors.commerce_competitors import CompetitorProviderUnavailable
 from app.domain.commerce import competitors
-from app.domain.commerce.audit_context import (
-    CommerceContextError,
-    freeze_commerce_context,
-)
 from app.domain.commerce.competitors import (
     _discovery_query,
     _host,
-    _precheck,
     _validated_results,
 )
 from app.domain.commerce.schemas import (
     CommerceTarget,
-    RecommendationSpan,
 )
-from app.domain.commerce.shelf import (
-    _ai_observed_candidate,
-    _frozen_catalog,
-    _frozen_target_ids,
-    _match_product,
-    _merchant,
-    _price,
-    _resolve_span,
-    _resolved_product_url,
-    _ResolvedRecommendation,
-    _spans,
-)
-from app.domain.commerce.shelf_metrics import _first_position_rate
 
 
 @pytest.mark.asyncio
@@ -86,275 +65,32 @@ async def test_tavily_connector_is_explicitly_optional(
 
 
 @pytest.mark.asyncio
-async def test_audit_context_batches_target_evidence_queries() -> None:
-    workspace_id = uuid.uuid4()
-    project_id = uuid.uuid4()
-    product_id = uuid.uuid4()
-    category_id = uuid.uuid4()
-    product_target = SimpleNamespace(
-        id=uuid.uuid4(), target_kind="product", target_id=product_id
-    )
-    category_target = SimpleNamespace(
-        id=uuid.uuid4(), target_kind="category", target_id=category_id
-    )
-    product = SimpleNamespace(
-        id=product_id,
-        canonical_url="https://shop.test/p",
-        name="Trail Runner",
-        brand="Acme",
-        sku=None,
-        gtin=None,
-        mpn=None,
-        price=None,
-        currency="",
-        attributes={},
-        field_sources={},
-    )
-    category = SimpleNamespace(id=category_id, name="Running shoes")
-    candidate = SimpleNamespace(
-        id=uuid.uuid4(),
-        target_kind="category",
-        target_id=category_id,
-        canonical_url="https://rival.test/p",
-        product_name="Rival Runner",
-        brand_name="Rival",
-    )
-
-    class Rows:
-        def __init__(self, rows: list) -> None:
-            self.rows = rows
-
-        def all(self) -> list:
-            return self.rows
-
-        def __iter__(self):
-            return iter(self.rows)
-
-    class Session:
-        def __init__(self) -> None:
-            self.scalar_results = iter(
-                [
-                    Rows([product_target, category_target]),
-                    Rows([product]),
-                    Rows([category]),
-                    Rows([candidate]),
-                ]
-            )
-            self.scalar_calls = 0
-            self.execute_calls = 0
-
-        async def scalars(self, *_: object) -> Rows:
-            self.scalar_calls += 1
-            return next(self.scalar_results)
-
-        async def execute(self, *_: object) -> Rows:
-            self.execute_calls += 1
-            return Rows([(category_id, product)])
-
-    session = Session()
-
-    context = await freeze_commerce_context(
-        session,  # type: ignore[arg-type]
-        workspace_id=workspace_id,
-        project_id=project_id,
-        prompt_ids=[uuid.uuid4(), uuid.uuid4()],
-    )
-
-    assert session.scalar_calls == 4
-    assert session.execute_calls == 1
-    assert context["targets"][0]["products"][0]["id"] == str(product_id)
-    assert context["targets"][1]["category"]["name"] == "Running shoes"
-
-
-@pytest.mark.asyncio
-async def test_audit_context_rejects_a_target_without_frozen_product_evidence() -> None:
-    target = SimpleNamespace(
-        id=uuid.uuid4(), target_kind="product", target_id=uuid.uuid4()
-    )
-
-    class Rows:
-        def __init__(self, rows: list) -> None:
-            self.rows = rows
-
-        def all(self) -> list:
-            return self.rows
-
-        def __iter__(self):
-            return iter(self.rows)
-
-    class Session:
-        def __init__(self) -> None:
-            self.results = iter((Rows([target]), Rows([]), Rows([])))
-
-        async def scalars(self, *_: object) -> Rows:
-            return next(self.results)
-
-    with pytest.raises(CommerceContextError, match="no active product evidence"):
-        await freeze_commerce_context(
-            Session(),  # type: ignore[arg-type]
-            workspace_id=uuid.uuid4(),
-            project_id=uuid.uuid4(),
-            prompt_ids=[uuid.uuid4()],
-        )
-
-
-def test_recommendation_parser_preserves_order_observability() -> None:
-    spans = _spans("1. Acme One $19 https://shop.test/one\n- Rival Two")
-    assert [(row.rank, row.order_observable) for row in spans] == [
-        (1, True),
-        (None, False),
-    ]
-    assert _price(spans[0].text) == (19.0, "")
-    assert _price(spans[0].text, locale="en-US") == (19.0, "USD")
-    assert _merchant(spans[0].text) == (
-        "https://shop.test/one",
-        "shop.test",
-    )
-
-
-def test_unstructured_answer_remains_an_unordered_observation_span() -> None:
-    assert _spans("Acme One is a useful option") == [
-        type(_spans("")[0])(
-            text="Acme One is a useful option",
-            rank=None,
-            order_observable=False,
-        )
-    ]
-
-
-def test_unstructured_answer_is_split_into_bounded_unordered_spans() -> None:
-    spans = _spans("Acme One is useful. Rival Two is cheaper; Third is compact.")
-
-    assert [row.text for row in spans] == [
-        "Acme One is useful.",
-        "Rival Two is cheaper",
-        "Third is compact.",
-    ]
-    assert all(row.rank is None and not row.order_observable for row in spans)
-
-
-@pytest.mark.asyncio
-async def test_structured_resolver_is_bounded_and_malformed_output_abstains() -> None:
-    span = _spans("A retailer recommends Rival Runner.")[0]
-    gateway = FakeModelGateway(
-        '{"recommendations":[{"title":"Rival Runner","brand":"Rival",'
-        '"product_url":"https://rival.test/products/runner",'
-        '"merchant_url":"https://merchant.test/buy"}]}'
-    )
-
-    resolved = await _resolve_span(span, gateway=gateway)
-
-    assert resolved is not None
-    assert resolved[0].product_url == "https://rival.test/products/runner"
-    assert resolved[0].merchant_url == "https://merchant.test/buy"
-    assert gateway.calls[0]["schema_name"] == "commerce_recommendation_resolution"
-    assert await _resolve_span(span, gateway=FakeModelGateway("not-json")) is None
-    assert await _resolve_span(span, gateway=None) is None
-
-
-@pytest.mark.asyncio
-async def test_merchant_only_resolution_never_creates_a_competitor() -> None:
-    resolved = _ResolvedRecommendation(
-        title="Rival Runner", merchant_url="https://merchant.test/buy"
-    )
-    target = SimpleNamespace()
-
-    assert (
-        await _ai_observed_candidate(
-            SimpleNamespace(),  # type: ignore[arg-type]
-            target=target,  # type: ignore[arg-type]
-            resolved=resolved,
-            span=_spans("Rival Runner at a merchant")[0],
-            citations=[],
-        )
-        is None
-    )
-
-
-def test_social_or_citation_url_cannot_become_competitor_identity() -> None:
-    citation = SimpleNamespace(url="https://publisher.test/reviews/runner")
-
-    assert _resolved_product_url("https://reddit.com/r/shoes/123", citations=[]) is None
-    assert (
-        _resolved_product_url(
-            "https://publisher.test/reviews/runner",
-            citations=[citation],  # type: ignore[list-item]
-        )
-        is None
-    )
-
-
-def test_matching_uses_frozen_measurement_product_evidence() -> None:
-    product_id = uuid.uuid4()
-    products, candidates = _frozen_catalog(
-        {
-            "products": [
-                {
-                    "id": str(product_id),
-                    "canonical_url": "https://owned.test/frozen-runner",
-                    "name": "Frozen Runner",
-                    "brand": "Acme",
-                    "sku": "FROZEN-1",
-                    "attributes": {"colour": "blue"},
-                }
-            ],
-            "approved_competitors": [],
-        }
-    )
-
-    matched, confidence = _match_product("Try Frozen Runner", products)
-
-    assert candidates == []
-    assert matched is not None
-    assert matched.id == product_id
-    assert confidence == 1.0
-
-
-def test_recommendation_spans_retain_continuation_lines() -> None:
-    spans = _spans(
-        "1. Trail Runner\nPrice $1.234,56 at https://shop.test/runner\n"
-        "- City Runner\nAvailable in blue"
-    )
-    assert spans[0].text.endswith("https://shop.test/runner")
-    assert spans[1].text.endswith("Available in blue")
-
-
-@pytest.mark.parametrize(
-    ("text", "locale", "expected"),
-    [
-        ("€1.234,56", "de-DE", (1234.56, "EUR")),
-        ("USD 1,234.56", "en-US", (1234.56, "USD")),
-        ("$1.234", "en-AU", (1234.0, "AUD")),
-        ("$19.99", "en-CA", (19.99, "CAD")),
-        ("$19.99", "en-GB", (19.99, "")),
-        ("USD 12,34,56", "en-US", (None, "USD")),
-    ],
-)
-def test_price_parsing_is_locale_safe(
-    text: str, locale: str, expected: tuple[float | None, str]
+async def test_marketplace_hosts_are_never_competitors(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert _price(text, locale=locale) == expected
+    """Poshmark and Stylight listings were returned as competing brands."""
 
+    async def verify(url: str, fetcher: object, *, target_kind: str) -> bool:
+        assert target_kind == "product"
+        return True
 
-def test_rank_is_present_exactly_when_order_is_observable() -> None:
-    RecommendationSpan(title="One", rank=1, order_observable=True)
-    RecommendationSpan(title="One", rank=None, order_observable=False)
-    with pytest.raises(ValidationError):
-        RecommendationSpan(title="One", rank=1, order_observable=False)
-    with pytest.raises(ValidationError):
-        RecommendationSpan(title="One", rank=None, order_observable=True)
+    monkeypatch.setattr(competitors, "_verify_url", verify)
+    results = [
+        {"url": "https://poshmark.com/listing/tee", "title": "Daydreamer | Poshmark"},
+        {"url": "https://www.stylight.com/red-clothing", "title": "Red Clothing"},
+        {"url": "https://rival.test/p", "title": "Rival"},
+    ]
 
-
-def test_nested_collection_product_url_is_not_excluded() -> None:
-    checked = _precheck(
-        {
-            "url": "https://rival.test/collections/shoes/products/trail-runner",
-            "title": "Trail Runner",
-        },
-        owned_hosts=set(),
+    outcomes, survivors = await _validated_results(
+        results, owned_hosts={"owned.test"}, target_kind="product"
     )
 
-    assert checked is not None
+    assert [row[0] for row in survivors] == ["https://rival.test/p"]
+    assert [row["validation_outcome"] for row in outcomes] == [
+        "excluded_marketplace",
+        "excluded_marketplace",
+        "accepted",
+    ]
 
 
 @pytest.mark.asyncio
@@ -471,48 +207,6 @@ def test_discovery_queries_distinguish_product_and_category_targets() -> None:
         )
         == "buy Trail Runner trail shoe blue price AUD 75 to 200 online store"
     )
-
-
-def test_first_position_win_requires_an_explicit_rank_one() -> None:
-    owned_at_two = SimpleNamespace(rank=2, classification="owned")
-    owned_at_one = SimpleNamespace(rank=1, classification="owned")
-    assert _first_position_rate([[owned_at_two], [owned_at_one]]) == 0.5
-
-
-def test_frozen_target_ids_ignore_malformed_values() -> None:
-    valid = "7d071880-9984-4c80-8596-f8f946030429"
-    assert _frozen_target_ids({"prompt_target_ids": [valid, "bad", None]}) == [
-        uuid.UUID(valid)
-    ]
-
-
-@pytest.mark.asyncio
-async def test_marketplace_hosts_are_never_competitors(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Poshmark and Stylight listings were returned as competing brands."""
-
-    async def verify(url: str, fetcher: object, *, target_kind: str) -> bool:
-        assert target_kind == "product"
-        return True
-
-    monkeypatch.setattr(competitors, "_verify_url", verify)
-    results = [
-        {"url": "https://poshmark.com/listing/tee", "title": "Daydreamer | Poshmark"},
-        {"url": "https://www.stylight.com/red-clothing", "title": "Red Clothing"},
-        {"url": "https://rival.test/p", "title": "Rival"},
-    ]
-
-    outcomes, survivors = await _validated_results(
-        results, owned_hosts={"owned.test"}, target_kind="product"
-    )
-
-    assert [row[0] for row in survivors] == ["https://rival.test/p"]
-    assert [row["validation_outcome"] for row in outcomes] == [
-        "excluded_marketplace",
-        "excluded_marketplace",
-        "accepted",
-    ]
 
 
 @pytest.mark.asyncio
