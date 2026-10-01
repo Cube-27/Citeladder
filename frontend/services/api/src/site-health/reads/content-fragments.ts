@@ -4,20 +4,22 @@ import { policy } from '../../config.ts';
 import type { Database } from '../../db/database.ts';
 import { record, strings } from '../../db/json.ts';
 import { lexicalTokens } from '../../analysis/lexical.ts';
-import { compareText } from '../../text-order.ts';
+import { compareText, scalarText, stripTrailing } from '../../text-order.ts';
 import type { Scope } from '../../opportunities/sources.ts';
 
 const p = policy.agent_context;
 export const comparableUrl = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//u, '')
-    .replace(/\/+$/u, '');
+  stripTrailing(
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//u, ''),
+    '/',
+  );
 function clean(value: unknown, cap = p.content_context_field_max_chars) {
-  return [...String(value ?? '')]
+  return [...scalarText(value)]
     .filter((character) => {
-      const code = character.charCodeAt(0);
+      const code = character.codePointAt(0)!;
       return code > 159 || (code > 31 && code < 127) || code === 9 || code === 10;
     })
     .join('')
@@ -99,16 +101,14 @@ function score(row: PageRow, terms: Set<string>, target: string, monitored: Set<
   const facts = record(row.normalized_facts),
     headings = record(facts.headings);
   const overlap = (value: unknown) =>
-    [...lexicalTokens(String(value ?? ''), 3)].filter((term) => terms.has(term)).length;
+    [...lexicalTokens(scalarText(value), 3)].filter((term) => terms.has(term)).length;
   return (
     p.content_score_title * overlap(facts.title) +
     p.content_score_h1 * overlap(strings(headings.h1_texts).join(' ')) +
     p.content_score_h2 * overlap(strings(headings.h2_texts).join(' ')) +
     p.content_score_url * overlap(row.normalized_url) +
     p.content_score_body *
-      overlap(
-        String(record(facts.body).text ?? '').slice(0, p.content_context_per_page_body_chars),
-      ) +
+      overlap(scalarText(record(facts.body).text).slice(0, p.content_context_per_page_body_chars)) +
     (monitored.has(row.site_url_id) ? p.content_score_monitored : 0)
   );
 }
@@ -213,7 +213,10 @@ export async function selectContentFragments(
   const home = (row: PageRow) =>
     comparableUrl(row.normalized_url) === comparableUrl(profile?.root_url ?? '') ||
     comparableUrl(row.normalized_url) === (profile?.root_host ?? '');
-  const tier = (row: PageRow) => (home(row) ? 0 : monitored.has(row.site_url_id) ? 1 : 2);
+  const tier = (row: PageRow) => {
+    if (home(row)) return 0;
+    return monitored.has(row.site_url_id) ? 1 : 2;
+  };
   const background = (row: PageRow) =>
     home(row) &&
     !(

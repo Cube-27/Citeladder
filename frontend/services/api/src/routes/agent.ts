@@ -76,16 +76,15 @@ async function mapped<T>(action: () => Promise<T>) {
           details: { reason: 'legacy_runtime' },
         },
       );
-    const code =
-      error.code === 'output_conflict'
-        ? 'agent_output_conflict'
-        : error.code === 'protocol_violation'
-          ? 'validation_error'
-          : error.code;
     throw new ApiError(409, 'Agent request conflicts with the current state', {
-      code: asApiErrorCode(code),
+      code: asApiErrorCode(conflictCode(error.code)),
     });
   }
+}
+function conflictCode(code: string) {
+  if (code === 'output_conflict') return 'agent_output_conflict';
+  if (code === 'protocol_violation') return 'validation_error';
+  return code;
 }
 export const agentRoutes = [
   defineGetRoute({

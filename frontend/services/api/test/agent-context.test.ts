@@ -98,4 +98,48 @@ describe('Agent persisted context binding', () => {
     });
     expect(context.related_site_block).toBe('');
   });
+  it('resolves an exact readiness gap to finalized evidence and refuses a conflicting target', async () => {
+    const seed = await fixtures.crawl();
+    const page = await fixtures.page(seed, '/product', { title: 'Product' }),
+      other = await fixtures.page(seed, '/other', { title: 'Other' });
+    const evaluationId = await fixtures.evaluation(
+      seed,
+      page,
+      'technical.title_present',
+      'missing',
+    );
+    await db
+      .updateTable('site_page_analyses')
+      .set({ finalized_at: new Date(), source_artifact_ids: [page.artifactId] })
+      .where('workspace_id', '=', seed.workspaceId)
+      .where('id', '=', page.analysisId)
+      .execute();
+    const ref = {
+      project_id: seed.projectId,
+      crawl_id: seed.crawlId,
+      site_url_id: page.id,
+      source_analysis_id: page.analysisId,
+      dimension: 'metadata',
+      checkpoint_ids: ['technical.title_present'],
+    };
+    const context = await readAgentContext(db, seed, { site_health_reference: ref }, 'Fix title');
+    expect(context.summary.site_health_reference).toMatchObject({
+      source_analysis_id: page.analysisId,
+      source_evaluation_ids: [evaluationId],
+      source_artifact_ids: [page.artifactId],
+      target_fields: ['title'],
+    });
+    await expect(
+      readAgentContext(
+        db,
+        seed,
+        { site_health_reference: ref, target_site_url_id: other.id },
+        'Fix title',
+      ),
+    ).rejects.toMatchObject({ code: 'agent_context_conflict' });
+    const foreign = await fixtures.crawl();
+    await expect(
+      readAgentContext(db, foreign, { site_health_reference: ref }, 'Fix title'),
+    ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
+  });
 });

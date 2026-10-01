@@ -26,54 +26,67 @@ function owned(candidate: unknown, website: string) {
     return '';
   }
 }
+async function resolveOrigins(
+  db: Parameters<ContextReader>[0],
+  scope: Parameters<ContextReader>[1],
+  refs: z.infer<typeof agentContextRefsSchema>,
+) {
+  const project = await db
+    .selectFrom('projects')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('id', '=', scope.projectId)
+    .executeTakeFirst();
+  if (!project) throw new AgentError('agent_context_unavailable');
+  const target = refs.target_site_url_id
+    ? await db
+        .selectFrom('site_urls')
+        .selectAll()
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('id', '=', refs.target_site_url_id)
+        .executeTakeFirst()
+    : null;
+  if (refs.target_site_url_id && !target) throw new AgentError('agent_context_unavailable');
+  const opportunity = refs.opportunity_id
+    ? await getOpportunity(db, scope.workspaceId, refs.opportunity_id)
+    : null;
+  if (opportunity && opportunity.project_id !== scope.projectId)
+    throw new AgentError('agent_context_unavailable');
+  const demand = refs.demand_signal_id
+    ? await readDemandOrigin(db, scope, refs.demand_signal_id)
+    : null;
+  const site = refs.site_health_reference
+    ? await siteHandoff(db, scope, refs.site_health_reference)
+    : null;
+  if (target && site && target.id !== site.site_url_id)
+    throw new AgentError('agent_context_conflict');
+  const search = refs.search_intelligence_reference
+    ? await searchHandoff(
+        db,
+        { workspace: new WorkspaceScope(scope.workspaceId), projectId: scope.projectId },
+        refs.search_intelligence_reference.dataset_id,
+        refs.search_intelligence_reference.row_ids,
+      )
+    : null;
+  const targetUrl =
+    target?.normalized_url ||
+    refs.target_url?.trim() ||
+    site?.normalized_url ||
+    owned(opportunity?.target_url, project.website_url) ||
+    owned(demand?.signal.page_url, project.website_url) ||
+    '';
+  return { project, target, opportunity, demand, site, search, targetUrl };
+}
+
 export const readAgentContext: ContextReader = async (db, scope, raw, request) => {
   try {
     const refs = agentContextRefsSchema.parse(raw);
-    const project = await db
-      .selectFrom('projects')
-      .selectAll()
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('id', '=', scope.projectId)
-      .executeTakeFirst();
-    if (!project) throw new AgentError('agent_context_unavailable');
-    const target = refs.target_site_url_id
-      ? await db
-          .selectFrom('site_urls')
-          .selectAll()
-          .where('workspace_id', '=', scope.workspaceId)
-          .where('project_id', '=', scope.projectId)
-          .where('id', '=', refs.target_site_url_id)
-          .executeTakeFirst()
-      : null;
-    if (refs.target_site_url_id && !target) throw new AgentError('agent_context_unavailable');
-    const opportunity = refs.opportunity_id
-      ? await getOpportunity(db, scope.workspaceId, refs.opportunity_id)
-      : null;
-    if (opportunity && opportunity.project_id !== scope.projectId)
-      throw new AgentError('agent_context_unavailable');
-    const demand = refs.demand_signal_id
-      ? await readDemandOrigin(db, scope, refs.demand_signal_id)
-      : null;
-    const site = refs.site_health_reference
-      ? await siteHandoff(db, scope, refs.site_health_reference)
-      : null;
-    if (target && site && target.id !== site.site_url_id)
-      throw new AgentError('agent_context_conflict');
-    const search = refs.search_intelligence_reference
-      ? await searchHandoff(
-          db,
-          { workspace: new WorkspaceScope(scope.workspaceId), projectId: scope.projectId },
-          refs.search_intelligence_reference.dataset_id,
-          refs.search_intelligence_reference.row_ids,
-        )
-      : null;
-    const targetUrl =
-      target?.normalized_url ||
-      refs.target_url?.trim() ||
-      site?.normalized_url ||
-      owned(opportunity?.target_url, project.website_url) ||
-      owned(demand?.signal.page_url, project.website_url) ||
-      '';
+    const { project, target, opportunity, demand, site, search, targetUrl } = await resolveOrigins(
+      db,
+      scope,
+      refs,
+    );
     const query = [request, opportunity?.target_theme, demand?.signal.topic_cluster]
       .filter(Boolean)
       .join(' ');

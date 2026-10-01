@@ -20,12 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
-    ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
     ANALYTICS_TS_OWNED_TASK_KINDS,
 )
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.analytics.enqueue import enqueue_post_sync_projections
-from app.domain.opportunities.verification import enqueue_implementation_verification
 from app.models.analytics import AnalyticsTask
 from app.models.integrations import IntegrationConnection
 from app.workers.analytics_worker import AnalyticsWorker
@@ -46,26 +44,6 @@ async def test_python_leaves_every_typescript_kind_queued(
         workspace_id, project_id = await seed_workspace_project(session)
         ids = []
         for kind in ANALYTICS_TS_OWNED_TASK_KINDS:
-            if kind == ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION:
-                trigger_id = uuid.uuid4()
-                for _ in range(2):
-                    await enqueue_implementation_verification(
-                        session,
-                        workspace_id=workspace_id,
-                        project_id=project_id,
-                        trigger_kind="audit",
-                        trigger_id=trigger_id,
-                    )
-                verification = (
-                    await session.scalars(
-                        select(AnalyticsTask).where(
-                            AnalyticsTask.workspace_id == workspace_id,
-                            AnalyticsTask.task_kind == kind,
-                        )
-                    )
-                ).one()
-                ids.append(verification.id)
-                continue
             row = AnalyticsTask(
                 workspace_id=workspace_id,
                 project_id=project_id,

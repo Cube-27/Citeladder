@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
+import { stripTrailing } from '../text-order.ts';
 import {
   defaultTransport,
   endpointUrl,
@@ -111,7 +112,7 @@ export function createModelGateway(
   }
   let legacyCap = false;
   const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
-  const base = endpoint.href.replace(/\/+$/u, '');
+  const base = stripTrailing(endpoint.href, '/');
   const url = base.endsWith('/chat/completions') ? base : endpointUrl(base, '/chat/completions');
   async function complete(system: string, user: string, signal?: AbortSignal) {
     const started = performance.now();

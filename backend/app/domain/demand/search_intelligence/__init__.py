@@ -1,1 +1,0 @@
-"""Search Intelligence domain owner."""

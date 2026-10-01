@@ -1,4 +1,4 @@
-"""Python producers/readers exercised by the TypeScript refresh's PostgreSQL test."""
+"""ORM seed and retained development enqueue fixtures for the TS refresh tests."""
 
 import asyncio
 import json
@@ -6,7 +6,6 @@ import sys
 import uuid
 
 from app.core.database import SessionLocal, engine
-from app.domain.opportunities import actions, queries
 from app.domain.opportunities.queue import enqueue_opportunity_refresh
 from app.models.analysis import Citation, ResponseAnalysis
 from tests.component.opportunity_helpers import _seed_scenario
@@ -25,20 +24,6 @@ async def seed():
             )
         await session.commit()
         return {key: str(value) for key, value in scn.__dict__.items()}
-
-
-async def attach(workspace, project, user):
-    async with SessionLocal() as session:
-        action = await actions.attach_or_create_action(
-            session,
-            workspace_id=uuid.UUID(workspace),
-            project_id=uuid.UUID(project),
-            target_kind="page",
-            target="https://ACME.test/b",
-            user_id=uuid.UUID(user),
-        )
-        await session.commit()
-        return {"id": str(action.id), "origin": action.origin}
 
 
 async def cite(workspace, analysis):
@@ -64,30 +49,9 @@ async def cite(workspace, analysis):
         return {}
 
 
-async def read(workspace, project):
-    """What the retained Python readers see of the TypeScript refresh."""
-    scope = {"workspace_id": uuid.UUID(workspace), "project_id": uuid.UUID(project)}
-    async with SessionLocal() as session:
-        page = await queries.list_opportunities(session, **scope)
-        listed, _ = await actions.list_actions(session, **scope)
-        return {
-            "opportunities": [
-                {
-                    "rule_id": item["rule_id"],
-                    "priority_score": item["priority_score"],
-                    "action_id": str(item["action_id"]),
-                }
-                for item in page["items"]
-            ],
-            "actions": sorted(str(row.id) for row, _status in listed),
-        }
-
-
 PHASES = {
     "seed": seed,
-    "attach": attach,
     "cite": cite,
-    "read": read,
 }
 
 

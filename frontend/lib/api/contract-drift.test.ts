@@ -20,7 +20,14 @@ import {
   diffContract,
   type OpenApiSpec,
 } from './contract-drift';
-import { CONTRACT_SCHEMA_MAP } from './contract-schema-map';
+import type { ContractSchemaName } from './contract-schema-map';
+
+// These fixtures exercise the drift algorithm independently of served owners.
+const fixtureMappings = {
+  agentRunSchema: 'RunView',
+  agentChatsPageSchema: 'ChatsPage',
+} as const;
+const diffFixture = (spec: OpenApiSpec) => diffContract(spec, fixtureMappings);
 
 function specWith(components: Record<string, unknown>): OpenApiSpec {
   return { components: { schemas: components } } as OpenApiSpec;
@@ -65,7 +72,7 @@ describe('diffContract', () => {
   it('passes when declared fields match the component properties exactly', () => {
     const runKeys = declaredKeysFor('agentRunSchema');
     const properties = Object.fromEntries((runKeys?.declared ?? []).map((k) => [k, {}]));
-    const result = diffContract(
+    const result = diffFixture(
       specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
     expect(result.failures).toEqual([]);
@@ -78,7 +85,7 @@ describe('diffContract', () => {
     const properties = Object.fromEntries(
       (runKeys?.declared ?? []).filter((k) => k !== 'status').map((k) => [k, {}]),
     );
-    const result = diffContract(
+    const result = diffFixture(
       specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
     expect(result.failures).toHaveLength(1);
@@ -91,7 +98,7 @@ describe('diffContract', () => {
     const properties = Object.fromEntries(
       [...(runKeys?.declared ?? []), 'brand_new_field'].map((k) => [k, {}]),
     );
-    const result = diffContract(
+    const result = diffFixture(
       specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
     expect(result.failures).toEqual([]);
@@ -104,7 +111,7 @@ describe('diffContract', () => {
     const properties = Object.fromEntries(
       [...(runKeys?.declared ?? []), 'ä_field', 'z_field', 'A_field'].map((key) => [key, {}]),
     );
-    const result = diffContract(
+    const result = diffFixture(
       specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
     const drift = result.drifts.find((entry) => entry.schema === 'agentRunSchema');
@@ -116,15 +123,15 @@ describe('diffContract', () => {
     const properties = Object.fromEntries(
       (runKeys?.declared ?? []).filter((k) => k !== 'progress').map((k) => [k, {}]),
     );
-    const result = diffContract(
+    const result = diffFixture(
       specWith({ ...realComponentsExcept(['RunView']), RunView: { properties } }),
     );
     expect(result.failures).toEqual([]);
   });
 
   it('fails on an unresolved mapping (the guard must stay maintainable)', () => {
-    const result = diffContract(specWith({}));
-    expect(result.unresolved).toHaveLength(Object.keys(CONTRACT_SCHEMA_MAP).length);
+    const result = diffFixture(specWith({}));
+    expect(result.unresolved).toHaveLength(Object.keys(fixtureMappings).length);
     expect(result.failures).toHaveLength(result.unresolved.length);
   });
 });
@@ -135,9 +142,9 @@ describe('diffContract', () => {
  */
 function realComponentsExcept(exclude: string[]): Record<string, unknown> {
   const components: Record<string, unknown> = {};
-  for (const [name, component] of Object.entries(CONTRACT_SCHEMA_MAP)) {
+  for (const [name, component] of Object.entries(fixtureMappings)) {
     if (exclude.includes(component)) continue;
-    const keys = declaredKeysFor(name as keyof typeof CONTRACT_SCHEMA_MAP);
+    const keys = declaredKeysFor(name as ContractSchemaName);
     components[component] = {
       properties: Object.fromEntries((keys?.declared ?? []).map((k) => [k, {}])),
     };

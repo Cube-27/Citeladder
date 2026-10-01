@@ -151,6 +151,11 @@ export const agentInstructionsSchema = responseObject({
   created_at: z.string().nullable(),
 });
 
+function compareCheckpoints(left: string, right: string) {
+  if (left < right) return -1;
+  return left > right ? 1 : 0;
+}
+
 export const agentSiteHealthReferenceSchema = z.object({
   project_id: uuid(),
   crawl_id: uuid(),
@@ -161,7 +166,7 @@ export const agentSiteHealthReferenceSchema = z.object({
     .array(z.string().max(64))
     .min(1)
     .max(16)
-    .transform((ids) => [...new Set(ids)].sort()),
+    .transform((ids) => [...new Set(ids)].sort(compareCheckpoints)),
 });
 export const agentSearchReferenceSchema = z.object({
   dataset_id: uuid(),

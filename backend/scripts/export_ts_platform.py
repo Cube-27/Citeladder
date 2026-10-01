@@ -752,17 +752,12 @@ def render_error_codes() -> str:
     return "\n".join(lines) + "\n"
 
 
-def _render(payload: dict[str, Any]) -> str:
-    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
-
-
 def build_artifacts() -> dict[Path, str]:
     """Every artifact path mapped to its exact expected contents."""
-    artifacts = {
-        CONFIG_PATH: _render(build_config()),
+    return {
+        CONFIG_PATH: json.dumps(build_config(), indent=2, ensure_ascii=False) + "\n",
         ERROR_CODES_PATH: render_error_codes(),
     }
-    return artifacts
 
 
 def _stale_paths(artifacts: dict[Path, str]) -> list[Path]:

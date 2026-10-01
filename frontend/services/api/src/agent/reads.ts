@@ -145,14 +145,7 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
         evidence_refs: revisionRefs(message.evidence_refs),
       }),
     ),
-    latest_run: run
-      ? agentRunSchema.parse({
-          ...run,
-          created_at: iso(run.created_at),
-          completed_at: iso(run.completed_at),
-          progress: await progress(db, run),
-        })
-      : null,
+    latest_run: run ? runView(run, await progress(db, run)) : null,
     output: current.output
       ? agentOutputSchema.parse({
           ...current.output,

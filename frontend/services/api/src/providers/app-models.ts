@@ -43,8 +43,7 @@ export async function resolveAppRoute(db: Database, workspaceId: string, at = ne
   const row = active[0];
   if (
     active.length !== 1 ||
-    !row ||
-    !row.encryptedKey ||
+    !row?.encryptedKey ||
     row.protocol !== 'openai_chat' ||
     !row.probed_at ||
     row.probed_revision !== row.routeRevision ||

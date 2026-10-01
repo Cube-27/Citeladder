@@ -1,9 +1,10 @@
-/** The real post-connect chain crosses Python enqueue/readers and both workers. */
+/** Post-connect crosses the retained Python enqueue and TypeScript projections. */
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { afterAll, expect, it } from 'vitest';
 import { loadWorkerSettings } from '../src/config.ts';
+import { readProjectReadiness } from '../src/integrations/readiness.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { Fixtures, testDatabase } from './support.ts';
 import { seedImport } from './referral-fixtures.ts';
@@ -61,19 +62,15 @@ it('takes a first connect through both workers to analysis_ready without provide
       process.env[key] ? [[key, process.env[key]!]] : [],
     ),
   );
-  const run = async (phase: string, cursor = '') => {
+  const run = async (phase: string) => {
     const result = await promisify(execFile)(
       python,
       [
         '-c',
         `
 import asyncio, json, uuid
-from datetime import date
 from app.core.database import SessionLocal, engine
 from app.domain.analytics.enqueue import enqueue_post_sync_projections
-from app.domain.integrations.readiness import get_project_readiness
-from app.domain.traffic.performance import get_performance_dashboard, get_performance_table
-from app.domain.demand.query_evidence_reads import latest_query_evidence_snapshot, list_query_evidence
 from app.workers.analytics_worker import AnalyticsWorker
 async def main():
     async with SessionLocal() as session:
@@ -81,17 +78,7 @@ async def main():
             await enqueue_post_sync_projections(session, project_id=uuid.UUID('${t.projectId}'), import_artifact_ids=[uuid.UUID('${gsc.artifactId}'), uuid.UUID('${ga4.artifactId}')])
             await session.commit()
     count = await AnalyticsWorker(session_factory=SessionLocal, owner='cold-connect-python').run_until_idle()
-    async with SessionLocal() as session:
-        readiness = await get_project_readiness(session, workspace_id=uuid.UUID('${t.workspaceId}'), project_id=uuid.UUID('${t.projectId}'))
-        result = {'ran': count, 'readiness': readiness.model_dump(mode='json')}
-        if '${phase}' == 'finish':
-            scope = dict(workspace_id=uuid.UUID('${t.workspaceId}'), project_id=uuid.UUID('${t.projectId}'))
-            dashboard = await get_performance_dashboard(session, **scope, range_token='month')
-            table = await get_performance_table(session, **scope, snapshot_id=dashboard.selected.snapshot_id, cursor='${cursor}' or None)
-            query = await latest_query_evidence_snapshot(session, **scope, window_start=date.fromisoformat('${WINDOW[0]}'), window_end=date.fromisoformat('${WINDOW[1]}'))
-            page = await list_query_evidence(session, snapshot=query, limit=2)
-            result.update(dashboard=dashboard.model_dump(mode='json'), table=table.model_dump(mode='json'), query_ids=[str(r.id) for r in page.rows], query_cursor=page.next_cursor)
-        print(json.dumps(result))
+    print(json.dumps({'ran': count}))
     await engine.dispose()
 asyncio.run(main())
 `,
@@ -117,19 +104,21 @@ asyncio.run(main())
   const dashboard = await request('performance?range=month');
   const tablePath = `performance/table?snapshot_id=${dashboard.body.selected.snapshot_id}`;
   const first = await request(tablePath);
-  const completed = await run('finish', first.body.next_cursor!);
-  expect(completed.dashboard).toEqual(dashboard.body);
-  expect(completed.table).toEqual(
-    (await request(`${tablePath}&cursor=${encodeURIComponent(first.body.next_cursor!)}`)).body,
-  );
+  expect(first.body.items.length).toBeGreaterThan(0);
   const queries = await request(
     `demand/query-evidence?window_start=${WINDOW[0]}&window_end=${WINDOW[1]}&limit=2`,
   );
-  expect(completed.query_ids).toEqual(queries.body.items.map((r) => r.id));
-  expect(completed.query_cursor).toBe(queries.body.next_cursor);
+  expect(queries.body.items).toHaveLength(2);
+  const next = await request(
+    `demand/query-evidence?window_start=${WINDOW[0]}&window_end=${WINDOW[1]}&limit=2&cursor=${encodeURIComponent(queries.body.next_cursor!)}`,
+  );
+  expect(next.body.items).toHaveLength(2);
+  expect(
+    next.body.items.some((row) => queries.body.items.some((first) => first.id === row.id)),
+  ).toBe(false);
   // The TS worker drains the whole chain, Opportunity refresh included.
-  expect(completed.ran).toBe(0);
-  expect(completed.readiness).toMatchObject({
+  expect((await run('finish')).ran).toBe(0);
+  expect(await readProjectReadiness(db, t)).toMatchObject({
     stage: 'analysis_ready',
     connection_count: 2,
     providers: ['ga4', 'gsc'],

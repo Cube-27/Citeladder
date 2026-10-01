@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { verifyImplementationEvents } from '../src/opportunities/verification.ts';
+import { enqueueImplementationVerification } from '../src/opportunities/enqueue.ts';
 import {
   buildVerificationResult,
   type Declaration,
@@ -73,11 +74,30 @@ async function python(phase: string, workspace = '') {
 let own: Seed;
 let foreign: Seed;
 let taskTemplate: QueueTask;
+async function seed() {
+  const created = (await python('seed')) as Seed;
+  seeds.push(created);
+  await db.transaction().execute(async (trx) => {
+    for (const [triggerKind, triggerId] of [
+      ['site_crawl', created.crawlId],
+      ['audit', created.auditId],
+      ['traffic_snapshot', created.trafficId],
+      ['source_page_inspection', created.auditId],
+    ]) {
+      await enqueueImplementationVerification(trx, {
+        workspaceId: created.workspaceId,
+        projectId: created.projectId,
+        triggerKind: triggerKind!,
+        triggerId: triggerId!,
+        maxAttempts: loadWorkerSettings({}).taskMaxAttempts,
+      });
+    }
+  });
+  return created;
+}
 beforeAll(async () => {
-  own = (await python('seed')) as Seed;
-  seeds.push(own);
-  foreign = (await python('seed')) as Seed;
-  seeds.push(foreign);
+  own = await seed();
+  foreign = await seed();
   taskTemplate = await db
     .selectFrom('analytics_tasks')
     .selectAll()
@@ -114,7 +134,7 @@ async function declaration(id: string): Promise<Declaration> {
     declared_implemented_at: row.declared_implemented_at.toISOString(),
   };
 }
-it('Python enqueues, TS claims every verification trigger, and Python reads append-only results', async () => {
+it('TS claims every verification trigger and model reads retain append-only results', async () => {
   const tasks = await db
     .selectFrom('analytics_tasks')
     .select(['status', 'error_detail'])

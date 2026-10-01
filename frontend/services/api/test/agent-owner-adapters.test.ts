@@ -6,6 +6,8 @@ import { agentTools } from '../src/agent/tool-adapters.ts';
 import { attachAgentTarget } from '../src/agent/target-adapter.ts';
 import { attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { readChat } from '../src/agent/reads.ts';
+import { loadSkillCatalog } from '../src/agent/skills.ts';
+import { agentSettings } from '../src/agent/config.ts';
 
 describe('Agent bindings to the evidence and Action owners', () => {
   const db = testDatabase(),
@@ -15,6 +17,17 @@ describe('Agent bindings to the evidence and Action owners', () => {
     await db.destroy();
   });
   const signal = () => AbortSignal.timeout(5000);
+  it('offers every read tool referenced by the packaged model methodologies', async () => {
+    const packaged = await loadSkillCatalog(agentSettings({}).skillsDirectory);
+    const named = new Set(
+      [packaged.operatingContract, ...[...packaged.skills.values()].map((skill) => skill.body)]
+        .flatMap((body) => [...body.matchAll(/`((?:read|list|get)_[a-z_]+)`/gu)])
+        .map((match) => match[1]!),
+    );
+    const offered = agentTools(db);
+    expect(named.size).toBeGreaterThan(0);
+    expect([...named].filter((name) => !offered.has(name))).toEqual([]);
+  });
   it('pins shared MCP reads and fetches to one project and rechecks the member', async () => {
     const scope = await fixtures.scope(),
       foreign = await fixtures.scope();

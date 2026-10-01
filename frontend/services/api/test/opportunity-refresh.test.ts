@@ -1,6 +1,6 @@
 /**
- * The Opportunity refresh and routes against real PostgreSQL: Python enqueues
- * and reads, TypeScript claims, recomputes and serves.
+ * Opportunity refresh and routes against real PostgreSQL. Model fixtures seed
+ * evidence; the retained Python producer enqueues and TypeScript owns execution.
  *
  * Ported from the Python recompute suites this refresh retired
  * (`test_opportunities_service*.py`, `test_actions.py`), plus the queue,
@@ -14,7 +14,7 @@ import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/app.ts';
-import { updateActionStatus } from '../src/opportunities/actions.ts';
+import { updateActionStatus, attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { recomputeOpportunities, refreshOpportunities } from '../src/opportunities/refresh.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
@@ -42,10 +42,6 @@ type Seed = {
   crawl_id: string;
   issue_structured_id: string;
   issue_thin_id: string;
-};
-type PythonRead = {
-  opportunities: { rule_id: string; priority_score: number; action_id: string }[];
-  actions: string[];
 };
 const seeds: Seed[] = [];
 
@@ -160,7 +156,7 @@ afterAll(async () => {
 });
 
 describe('opportunity_refresh', () => {
-  it('claims the one Python-enqueued task and persists exact provenance Python reads back', async () => {
+  it('claims the one Python-enqueued task and persists exact provenance', async () => {
     const tasks = await db
       .selectFrom('analytics_tasks')
       .select(['status', 'attempt_count', 'error_code'])
@@ -205,12 +201,6 @@ describe('opportunity_refresh', () => {
       source_issue_ids: [own.issue_thin_id],
     });
     expect(rows.every((row) => row.action_id !== null)).toBe(true);
-
-    const read = await python<PythonRead>('read', own.workspace_id, own.project_id);
-    expect(read.opportunities.map((row) => [row.rule_id, row.action_id])).toEqual(
-      rows.map((row) => [row.rule_id, row.action_id]),
-    );
-    expect(read.actions).toEqual([...new Set(rows.map((row) => row.action_id!))].sort());
   });
 
   it('replays a claimed refresh as a no-op when the snapshot is current', async () => {
@@ -361,12 +351,11 @@ describe('opportunity_refresh', () => {
 
   it('adopts an Agent-created page Action instead of opening a second one', async () => {
     const s = await seed();
-    const agent = await python<{ id: string; origin: string }>(
-      'attach',
-      s.workspace_id,
-      s.project_id,
-      s.user_id,
-    );
+    const agent = await db
+      .transaction()
+      .execute((trx) =>
+        attachOrCreateAction(trx, scope(s), 'page', 'https://ACME.test/b', s.user_id),
+      );
 
     await recomputeOpportunities(db, scope(s));
 

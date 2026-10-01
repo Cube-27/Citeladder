@@ -59,7 +59,7 @@ export async function contentHandoff(db: Database, scope: Scope, ref: ContentRef
     dimension: 'metadata',
     checkpoint_ids: evaluations.map((row) => row.rule_id),
     normalized_url: analysis.normalized_url,
-    suggested_skill_id: 'content_page',
+    suggested_skill_id: 'content_create',
     finding_class: evaluations[0]!.finding_class,
     observed_evidence: evaluations.map((row) => record(row.evidence)),
     source_evaluation_ids: evaluations.map((row) => row.id),

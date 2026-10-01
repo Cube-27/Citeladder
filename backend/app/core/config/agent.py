@@ -15,17 +15,12 @@
 # swapping env values.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import Final
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.dotenv import dotenv_sources
-from app.core.config.task_queue import ERROR_MAX_ATTEMPTS, PostgresQueueSpec
-
-if TYPE_CHECKING:
-    # Type-only: config never imports a model at runtime (circular import).
-    from app.models.agent import AgentRun
 
 # =========================================================================
 # Agent runtime policy (chats, runs, outputs)
@@ -252,46 +247,8 @@ class DefaultAgentSettings(BaseSettings):
 default_agent_settings = DefaultAgentSettings()
 
 
-def admission_budget() -> dict[str, int | float]:
-    """The step, tool and time envelope a run freezes at admission.
-
-    The per-call timeout is frozen with the step budgets so a configuration
-    change never alters a turn already queued.
-    """
-    return {
-        "max_steps": AGENT_MAX_STEPS,
-        "max_tool_calls": AGENT_MAX_TOOL_CALLS,
-        "execution_timeout_seconds": default_agent_settings.execution_timeout_seconds,
-    }
-
-
 # Worker cadence. A turn is several model calls, so the lease is renewed by a
 # heartbeat for as long as the turn runs; one call can never outlive it.
 AGENT_WORKER_POLL_SECONDS: Final = 1.0
 AGENT_RECOVERY_BATCH_SIZE: Final = 100
 AGENT_HEARTBEAT_SECONDS: Final = 20.0
-
-
-def _agent_run_model() -> type[AgentRun]:
-    from app.models.agent import AgentRun
-
-    return AgentRun
-
-
-def _agent_claim_order(model: type[AgentRun]) -> tuple:
-    return (
-        model.priority.desc(),
-        model.available_at.asc(),
-        model.randomized_position.asc(),
-    )
-
-
-AGENT_QUEUE_SPEC: Final[PostgresQueueSpec[AgentRun]] = PostgresQueueSpec(
-    model_ref=_agent_run_model,
-    lease_ttl=lambda: (
-        default_agent_settings.execution_timeout_seconds
-        + default_agent_settings.lease_margin_seconds
-    ),
-    claim_order=_agent_claim_order,
-    max_attempts_error=ERROR_MAX_ATTEMPTS,
-)

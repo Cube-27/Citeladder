@@ -9,7 +9,6 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import select
 
 from app.core.database import SessionLocal, engine
-from app.domain.opportunities.verification import enqueue_implementation_verification
 from app.models.analysis import MetricSnapshot
 from app.models.audit import Audit
 from app.models.opportunity import (
@@ -164,15 +163,6 @@ async def seed():
                 session.add(check)
                 await session.flush()
                 ids["placement_check"] = str(check.id)
-        for kind, source in [
-            ("site_crawl", scn.crawl_id),
-            ("audit", scn.audit_id),
-            ("traffic_snapshot", traffic.id),
-            ("source_page_inspection", scn.audit_id),
-        ]:
-            await enqueue_implementation_verification(
-                session, **scope, trigger_kind=kind, trigger_id=source
-            )
         await session.commit()
         return {
             "workspaceId": str(scn.workspace_id),

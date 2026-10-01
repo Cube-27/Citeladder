@@ -66,7 +66,7 @@ owns the AI Referrals chain (ingest, classify, snapshot refresh, retention),
 Traffic snapshot refresh, Performance range projection and Demand snapshot refresh.
 Each domain owns its derived projection.
 
-[Performance](../backend/app/domain/traffic/performance.py) reads persisted
+[Performance](../frontend/services/api/src/traffic/performance.ts) reads persisted
 TrafficSnapshot and PerformanceDimensionStat rows. GSC date-only gsc_day_daily
 is the source of headline totals and daily series: dimensional datasets cannot
 be added together into a total because provider privacy filtering differs.
@@ -120,7 +120,7 @@ inputs converge idempotently; changed source/window/version appends and
 supersedes. Build bounds apply in SQL before materialization; read cursors bind
 to the immutable snapshot. Numeric limits live in owning configuration.
 
-[Page equivalence](../backend/app/domain/demand/page_equivalence.py) resolves
+[Page equivalence](../frontend/services/api/src/demand/page-equivalence.ts) resolves
 cross-source URLs separately from crawler identity. Exact normalized matches
 are exact; persisted redirect/canonical evidence may prove resolved. Sitemap
 and preferred-origin hints rank candidates but do not prove a join. Heuristic-only

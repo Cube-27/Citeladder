@@ -3,6 +3,65 @@ import type { Database } from '../db/database.ts';
 import { compareText } from '../text-order.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Scope } from '../opportunities/sources.ts';
+import { isoDateText } from '../db/timestamps.ts';
+
+type BackfillWindow = {
+  connection_id: string;
+  mapping_id: string | null;
+  window_start: string;
+  window_end: string;
+  status: string;
+};
+function connectionRollup(windows: BackfillWindow[], id: string) {
+  const attempts = new Map<string, { start: string; end: string; statuses: Set<string> }>();
+  for (const run of windows.filter((row) => row.connection_id === id)) {
+    const start = run.window_start,
+      end = run.window_end;
+    const key = `${run.mapping_id}:${start}:${end}`;
+    const item = attempts.get(key) ?? { start, end, statuses: new Set<string>() };
+    item.statuses.add(run.status);
+    attempts.set(key, item);
+  }
+  const all = [...attempts.values()];
+  const completed = all.filter((row) => row.statuses.has('succeeded'));
+  const failed = all.filter(
+    (row) =>
+      !row.statuses.has('succeeded') &&
+      [...row.statuses].every((status) => status === 'failed' || status === 'cancelled'),
+  );
+  let through: string | null = null;
+  for (const row of completed) {
+    if (through !== null && Date.parse(row.start) > Date.parse(through) + 86_400_000) break;
+    if (through === null || row.end > through) through = row.end;
+  }
+  let state = 'complete';
+  if (!all.length) state = 'not_started';
+  else if (all.length - completed.length - failed.length) state = 'importing';
+  else if (failed.length) state = 'partial';
+  return { state, completed: completed.length, through };
+}
+function backfillState(rollups: ReturnType<typeof connectionRollup>[]) {
+  if (!rollups.length) return null;
+  if (rollups.every((row) => row.state === 'not_started')) return 'not_started';
+  if (rollups.some((row) => row.state === 'importing')) return 'importing';
+  if (rollups.every((row) => row.state === 'complete')) return 'complete';
+  return 'partial';
+}
+function readinessStage(
+  connected: boolean,
+  backfill: string | null,
+  performance: boolean,
+  demand: boolean,
+  imported: boolean,
+) {
+  if (!connected) return 'not_connected';
+  if (backfill === null || backfill === 'not_started') {
+    return performance ? 'core_data_ready' : 'connected';
+  }
+  if (backfill === 'importing') return 'importing';
+  if (performance) return demand ? 'analysis_ready' : 'core_data_ready';
+  return imported ? 'importing' : 'import_failed';
+}
 
 /**
  * Project grain: one connection's unrelated project imports are not coverage.
@@ -39,7 +98,11 @@ export async function readProjectReadiness(db: Database, scope: Scope) {
   const windows = live.length
     ? await workspace
         .selectFrom(db, 'integration_sync_runs')
-        .select(['connection_id', 'mapping_id', 'window_start', 'window_end', 'status'])
+        .select(['connection_id', 'mapping_id', 'status'])
+        .select([
+          isoDateText(sql.ref('window_start')).as('window_start'),
+          isoDateText(sql.ref('window_end')).as('window_end'),
+        ])
         .where('project_id', '=', scope.projectId)
         .where(
           'mapping_id',
@@ -51,53 +114,8 @@ export async function readProjectReadiness(db: Database, scope: Scope) {
         .orderBy('window_end')
         .execute()
     : [];
-  const day = (value: Date) => value.toISOString().slice(0, 10);
-  const rollups = connectionIds.map((id) => {
-    const attempts = new Map<string, { start: string; end: string; statuses: Set<string> }>();
-    for (const run of windows.filter((row) => row.connection_id === id)) {
-      const start = day(run.window_start),
-        end = day(run.window_end),
-        key = `${run.mapping_id}:${start}:${end}`;
-      const item = attempts.get(key) ?? { start, end, statuses: new Set<string>() };
-      item.statuses.add(run.status);
-      attempts.set(key, item);
-    }
-    const all = [...attempts.values()];
-    const completed = all.filter((row) => row.statuses.has('succeeded'));
-    const failed = all.filter(
-      (row) =>
-        !row.statuses.has('succeeded') &&
-        [...row.statuses].every((status) => status === 'failed' || status === 'cancelled'),
-    );
-    const pending = all.length - completed.length - failed.length;
-    let through: string | null = null;
-    for (const row of completed) {
-      if (through !== null && Date.parse(row.start) > Date.parse(through) + 86_400_000) break;
-      if (through === null || row.end > through) through = row.end;
-    }
-    return {
-      state:
-        all.length === 0
-          ? 'not_started'
-          : pending
-            ? 'importing'
-            : failed.length
-              ? 'partial'
-              : 'complete',
-      completed: completed.length,
-      through,
-    };
-  });
-  const backfill =
-    rollups.length === 0
-      ? null
-      : rollups.every((row) => row.state === 'not_started')
-        ? 'not_started'
-        : rollups.some((row) => row.state === 'importing')
-          ? 'importing'
-          : rollups.every((row) => row.state === 'complete')
-            ? 'complete'
-            : 'partial';
+  const rollups = connectionIds.map((id) => connectionRollup(windows, id));
+  const backfill = backfillState(rollups);
   const covered = rollups.map((row) => row.through);
   const importedThrough =
     covered.length && covered.every((value) => value !== null)
@@ -121,21 +139,13 @@ export async function readProjectReadiness(db: Database, scope: Scope) {
     .where('project_id', '=', scope.projectId)
     .where('superseded_at', 'is', null)
     .executeTakeFirstOrThrow();
-  const stage = !connectionIds.length
-    ? 'not_connected'
-    : backfill === null || backfill === 'not_started'
-      ? performance
-        ? 'core_data_ready'
-        : 'connected'
-      : backfill === 'importing'
-        ? 'importing'
-        : performance
-          ? demand
-            ? 'analysis_ready'
-            : 'core_data_ready'
-          : rollups.some((row) => row.completed > 0)
-            ? 'importing'
-            : 'import_failed';
+  const stage = readinessStage(
+    connectionIds.length > 0,
+    backfill,
+    !!performance,
+    !!demand,
+    rollups.some((row) => row.completed > 0),
+  );
   return {
     project_id: scope.projectId,
     providers: [...new Set(live.map((row) => row.provider))].sort(compareText),
