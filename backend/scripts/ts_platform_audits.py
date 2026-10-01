@@ -1,10 +1,23 @@
 """Audit policy inputs; selection and execution remain application decisions."""
 
-from app.core.config import audits, commerce_catalog, projects, provider_catalog
+from app.core.config import (
+    Settings,
+    audits,
+    commerce_catalog,
+    projects,
+    provider_catalog,
+)
+from app.orchestration.audit_state import _ALLOWED_TRANSITIONS
 
 
 def audit_policy(setting):
     return {
+        "dev_test_allow_platform": setting(
+            "dev_test_login_allow_platform_credentials", Settings
+        ),
+        "transitions": {
+            source: sorted(targets) for source, targets in _ALLOWED_TRANSITIONS.items()
+        },
         "settings": {
             name: setting(name, audits.AuditSettings)
             for name in audits.AuditSettings.model_fields

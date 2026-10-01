@@ -63,6 +63,7 @@ from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
 from app.core.config import projects as projects_config
 from app.core.config import prompts as prompts_config
+from app.core.config import provider_catalog as provider_config
 from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import site_health_internal_links as internal_links_config
 from app.core.config import site_health_rules as web_rules
@@ -689,6 +690,7 @@ ANALYTICS_WORKER_SETTINGS = (
 # ports a route family adds that family's owning config module here.
 ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
     audit_config,
+    provider_config,
     error_config,
     oauth_config,
     legal_config,
@@ -706,13 +708,16 @@ _ERROR_CODE_PREFIXES = ("CODE_", "ERROR_")
 
 def error_codes(modules: Iterable[types.ModuleType] = ERROR_CODE_MODULES) -> list[str]:
     """Every ``CODE_*``/``ERROR_*`` string constant the modules declare."""
+    from app.domain.entitlements.types import STATUS_ENTITLEMENT_UNRESOLVED
+
     codes = {
         value
         for module in modules
         for name, value in vars(module).items()
         if name.startswith(_ERROR_CODE_PREFIXES) and isinstance(value, str)
     }
-    return sorted(codes)
+    # Funded/manual admission reuses the resolver's unresolved status as its code.
+    return sorted(codes | {STATUS_ENTITLEMENT_UNRESOLVED})
 
 
 def render_error_codes() -> str:

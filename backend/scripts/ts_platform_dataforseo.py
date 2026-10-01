@@ -20,6 +20,10 @@ def dataforseo_policy(setting):
         },
         "scraper": {
             "products": llm_scraper.PRODUCTS,
+            "request_settings": {
+                engine: llm_scraper.request_settings(engine)
+                for engine in llm_scraper.PRODUCTS
+            },
             "keyword_max_chars": llm_scraper.KEYWORD_MAX_CHARS,
             "priority": llm_scraper.PRIORITY,
             "id_list_path": llm_scraper.PATH_ID_LIST,

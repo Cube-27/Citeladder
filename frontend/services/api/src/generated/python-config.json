@@ -2209,6 +2209,15 @@
         "chatgpt_search": "chat_gpt",
         "gemini_consumer": "gemini"
       },
+      "request_settings": {
+        "chatgpt_search": {
+          "priority": 1,
+          "force_web_search": true
+        },
+        "gemini_consumer": {
+          "priority": 1
+        }
+      },
       "keyword_max_chars": 2000,
       "priority": 1,
       "id_list_path": "/v3/ai_optimization/id_list",
@@ -2311,6 +2320,49 @@
     "expected_costs": []
   },
   "audits": {
+    "dev_test_allow_platform": {
+      "env": [
+        "DEV_TEST_LOGIN_ALLOW_PLATFORM_CREDENTIALS"
+      ],
+      "type": "bool",
+      "default": false
+    },
+    "transitions": {
+      "draft": [
+        "cancelled",
+        "validating"
+      ],
+      "validating": [
+        "cancelled",
+        "failed",
+        "queued"
+      ],
+      "queued": [
+        "cancelled",
+        "running"
+      ],
+      "running": [
+        "analyzing",
+        "cancelled",
+        "failed",
+        "partially_completed"
+      ],
+      "analyzing": [
+        "cancelled",
+        "failed",
+        "partially_completed",
+        "reporting"
+      ],
+      "reporting": [
+        "completed",
+        "failed",
+        "partially_completed"
+      ],
+      "completed": [],
+      "partially_completed": [],
+      "failed": [],
+      "cancelled": []
+    },
     "settings": {
       "max_tasks_per_audit": {
         "env": [

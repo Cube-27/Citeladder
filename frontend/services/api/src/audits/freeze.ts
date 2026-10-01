@@ -32,6 +32,9 @@ export async function prepareAudit(
   search = searchSettings(),
   at = new Date(),
 ) {
+  trigger = trigger.trim().toLowerCase();
+  if (!auditPolicy.constants.audit_triggers.includes(trigger))
+    throw invalid(`Unsupported trigger: ${trigger}`);
   const project = await db
     .selectFrom('projects')
     .selectAll()
@@ -223,7 +226,17 @@ export async function prepareAudit(
     prompt_intent: prompt.prompt_intent,
     cohort: prompt.cohort,
   }));
-  const panelHash = createHash('sha256').update(JSON.stringify(promptRows)).digest('hex');
+  // Preserve the existing panel identity (Python sorted keys, UTF-8, default separators).
+  const panelJson = `[${promptRows
+    .map(
+      (row) =>
+        `{${Object.entries(row)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([key, value]) => `${JSON.stringify(key)}: ${JSON.stringify(value)}`)
+          .join(', ')}}`,
+    )
+    .join(', ')}]`;
+  const panelHash = createHash('sha256').update(panelJson).digest('hex');
   let seed: string;
   if (input.random_seed?.trim() && !/^[+-]?\d+$/u.test(input.random_seed.trim()))
     throw invalid('random_seed must be an integer');
