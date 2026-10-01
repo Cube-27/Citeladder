@@ -983,10 +983,14 @@ into dependency-ordered slices:
    Cancellation is the seam between the two PRs. Python's cancel commits only
    the stop. The TypeScript worker then publishes the cancelled run's evidence
    under the crawl lock, so the snapshot keeps one writer.
-   **18b5c, crawl control** moves the `site-health-crawls` family (admission
+   **18b5c, crawl control (implemented)** moves the `site-health-crawls` family (admission
    with monitored seeding and `add_automatic_root`, URL preview, cancel, page
    rerun, the crawl list and the monitored set), then retires the Python
    routes, planner, selection and frontier bridges.
+   The final retirement is 17 application and 7 test files, below D7.3's
+   approximately 50-file budget. Python's dev seeder invokes a local TypeScript
+   CLI for creation and bulk selection; it retires when the Python seeder moves.
+   Agent/MCP persisted-read bridges remain until PR 19.
 
 Departures in 18b1: reads resolve the Site Health runtime from the account's
 grants instead of refreshing `workspace_site_health_runtime` (a read never
@@ -1057,11 +1061,21 @@ Departures in 18b5b:
   resolves its target; Python left it unresolved (`unknown`) although the
   integrity check counted one canonical.
 
+Departures in 18b5c:
+- Monitored-set reads resolve grants without writing the runtime projection.
+- Admission refreshes grants while holding the shared capacity/account lock,
+  then locks runtime and profile. Selection/rerun lock project and active crawl
+  before runtime/profile, preventing races with worker publication.
+- Bulk selection treats `%` and `_` as literal search text, matching inventory.
+  Its normalized/display-URL filter is retained.
+- Crawl-list cursors are bound to workspace as well as project; Python-issued
+  cursors are rejected after the cutover.
+
 | Python bridge kept by 18b4 | Remaining caller / retirement condition |
 | --- | --- |
 | `connectors/web_evidence/{fetcher,curl_transport,url_policy,brand_evidence}.py` | Commerce competitor discovery, onboarding site resolution (Search Intelligence targets), provider route probes |
 | `analysis/site_health/parser.py` and its fact extractors | Commerce competitor discovery |
-| `domain/site_health/discovery.add_automatic_root`, `frontier_support.py` | crawl creation; 18b5c |
+| `domain/site_health/discovery.add_automatic_root`, `frontier_support.py` | retired in 18b5c (TypeScript crawl admission) |
 | `canonical_aliases.reconcile_crawl_duplicate_aliases` | retired in 18b5b (TypeScript finalization) |
 
 ### PR 19: Agent runtime

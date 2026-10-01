@@ -6117,6 +6117,7 @@
       "automatic_monitor_limit_key": "automatic_monitor_limit",
       "admission_policy_version": "sh-url-admission-1",
       "site_setup_priority_boost": 1000,
+      "cancel_db_conflict_retries": 3,
       "analyze_priority_boost": 1000,
       "link_rewrite": {
         "reason": "encoded_tracking_query_delimiter",

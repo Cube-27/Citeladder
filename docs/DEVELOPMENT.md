@@ -426,6 +426,11 @@ unless stated otherwise. Use `--help` when arguments are not shown here.
 
 Seed local demo data (**development or disposable database only**):
 
+The host-side seeder requires Node 26 and installed frontend dependencies. It
+invokes `frontend/services/api/scripts/seed-site-health.ts` for crawl admission
+and monitored selection against the same local development database; the
+TypeScript Site Health worker must be running to acquire and finish the crawls.
+
 ```bash
 APP_ENV=development uv run python -m scripts.seed_dev_data
 ```

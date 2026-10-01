@@ -36,11 +36,7 @@ export const CONTRACT_SCHEMA_MAP = {
   agentSkillSchema: 'SkillView',
   agentSkillCatalogSchema: 'SkillCatalog',
   agentInstructionsSchema: 'InstructionsView',
-  // Site Health crawl mutations; its reads are served by the TypeScript API.
-  siteCrawlSchema: 'CrawlResponse',
-  siteCrawlListPageSchema: 'CrawlListPage',
-  monitoredUrlsResponseSchema: 'MonitoredUrlsResponse',
-  rerunPageResponseSchema: 'RerunPageResponse',
+  // Site Health controls and reads are owned and served by the TypeScript API.
 } as const;
 
 export type ContractSchemaName = keyof typeof CONTRACT_SCHEMA_MAP;

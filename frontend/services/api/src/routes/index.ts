@@ -13,6 +13,7 @@ import { brandIdentityRoutes } from './brand-identity.ts';
 import { promptRoutes } from './prompts.ts';
 import { internalLinkRoutes } from './internal-links.ts';
 import { siteHealthRoutes } from './site-health.ts';
+import { siteHealthCrawlRoutes } from './site-health-crawls.ts';
 import { projectRoutes } from './projects.ts';
 import { brandDiscoveryRoutes } from './brand-discoveries.ts';
 import { integrationRoutes } from './integrations.ts';
@@ -33,6 +34,7 @@ export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...billingDocumentRoutes,
   ...internalLinkRoutes,
   ...siteHealthRoutes,
+  ...siteHealthCrawlRoutes,
   ...executionRoutes,
   ...aiReferralRoutes,
   ...visibilityRoutes,

@@ -123,6 +123,31 @@ export function lockRuntime(trx: Database, workspaceId: string) {
     .executeTakeFirst();
 }
 
+/** Explicit admission seeds root analysis independently of the root discover. */
+export async function addAutomaticRoot(trx: Database, crawl: Crawl, runtime: Runtime) {
+  const remaining = await automaticRemaining(trx, crawl, runtime);
+  if (remaining === null || remaining <= 0) return;
+  const decision = classifyUrlAdmission(crawl.root_url, crawlScope(crawl));
+  if (!decision.accepted || !decision.url) return;
+  const item = candidate(decision, {
+    url: decision.url,
+    hash: decision.hash,
+    depth: 0,
+    sourceKind: 'root',
+    parentPosition: 0,
+    linkOrdinal: 0,
+  });
+  const siteUrlId = await upsertSiteUrl(trx, crawl, item);
+  await observe(
+    trx,
+    crawl,
+    siteUrlId,
+    item,
+    { analyze: true, source: 'bootstrap' },
+    frontierSettings(),
+  );
+}
+
 /** Conflict-safe identity upsert; a new sighting resets an earlier crawl's document or alias disposition. */
 async function upsertSiteUrl(trx: Database, crawl: Crawl, item: Candidate) {
   const now = new Date();
