@@ -126,9 +126,6 @@ services:
   audit-scheduler:
     <<: *backend
     command: ["python", "-m", "app.workers.audit_scheduler"]
-  site-health-worker:
-    <<: *backend
-    command: ["python", "-m", "app.workers.site_health_worker"]
   site-health-worker-ts:
     <<: *backend
     image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}

@@ -1,4 +1,4 @@
-/** Site Health's sole expired-lease writer. Lifecycle replay observes terminal recoveries. */
+/** Site Health's sole expired-lease writer; the worker reconciles crawls whose tasks it fails. */
 import { policy } from '../config.ts';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
@@ -41,7 +41,7 @@ export async function recoverExpiredLeases(db: Database, batchSize: number, now 
           'in',
           expired.map((task) => task.id),
         )
-        .returning(['id', 'crawl_id', 'attempt_count', 'status'])
+        .returning(['id', 'crawl_id', 'workspace_id', 'attempt_count', 'status'])
         .execute();
     })
     .then((rows) => {
@@ -58,10 +58,16 @@ export async function recoverExpiredLeases(db: Database, batchSize: number, now 
           reclaimed: rows.length,
           failed: failed.length,
         });
+      const crawls = new Map(
+        failed.map((task) => [
+          task.crawl_id,
+          { crawlId: task.crawl_id, workspaceId: task.workspace_id },
+        ]),
+      );
       return {
         reclaimed: rows.length,
         failedTaskIds: failed.map((task) => task.id),
-        failedCrawlIds: [...new Set(failed.map((task) => task.crawl_id))],
+        failedCrawls: [...crawls.values()],
       };
     });
 }

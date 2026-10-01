@@ -1,4 +1,9 @@
-/** Disjoint SiteCrawlTask claims, heartbeat, and atomic evidence/successor acknowledgement. */
+/**
+ * Disjoint SiteCrawlTask claims, heartbeat, atomic evidence/successor
+ * acknowledgement, and the crawl lifecycle: each settled discovery or analysis
+ * task is reconciled, and every pass runs the stalled, overdue and cancelled
+ * crawl backstops.
+ */
 import { randomInt, randomUUID } from 'node:crypto';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -17,6 +22,14 @@ import { lockSiteTask, type Crawl } from '../site-health/task-fence.ts';
 import { TaskCancelledError } from './executor.ts';
 import { waitForPoll } from './poll.ts';
 import { recoverExpiredLeases } from '../site-health/lease-recovery.ts';
+import {
+  publishCancelledCrawls,
+  reconcileAfterTask,
+  reconcileCrawl,
+  reconcileOverdue,
+  reconcileStalled,
+  ScoreRefreshCadence,
+} from '../site-health/lifecycle.ts';
 
 type SiteExecutor = (db: Database, crawl: Crawl, task: SiteTask) => Promise<unknown>;
 const executors: Record<string, SiteExecutor> = {
@@ -44,8 +57,11 @@ export class SiteHealthWorker {
   readonly queue: TaskQueue<'site_crawl_tasks'>;
   readonly executors: Record<string, SiteExecutor>;
   readonly acquisition: SiteTaskContext;
+  readonly #cadence: ScoreRefreshCadence;
   #recovery: Promise<number> | null = null;
   #nextRecovery = 0;
+  #maintenance: Promise<void> | null = null;
+  #nextMaintenance = 0;
   constructor(
     db: Database,
     options: {
@@ -60,6 +76,7 @@ export class SiteHealthWorker {
     this.settings = options.settings ?? siteWorkerSettings();
     this.executors = options.executors ?? executors;
     this.queue = new TaskQueue(db, { leaseTtlSeconds: this.settings.lease }, 'site_crawl_tasks');
+    this.#cadence = new ScoreRefreshCadence(this.settings.scoreRefresh);
     // One fetcher for the worker: robots caching and per-host pacing span every task.
     this.acquisition = {
       db,
@@ -70,6 +87,7 @@ export class SiteHealthWorker {
   }
   async runOnce(limit = this.settings.concurrency) {
     await this.#recover();
+    await this.#maintain();
     return this.#claimAndExecute(limit);
   }
   async #claimAndExecute(limit: number) {
@@ -86,17 +104,51 @@ export class SiteHealthWorker {
     if (this.#recovery) return this.#recovery;
     if (Date.now() < this.#nextRecovery) return 0;
     this.#recovery = recoverExpiredLeases(this.db, this.settings.reclaimBatch)
-      .then((result) => {
+      .then(async (result) => {
         this.#nextRecovery =
           result.reclaimed === this.settings.reclaimBatch
             ? 0
             : Date.now() + Math.max(50, this.settings.poll * 1000);
+        // A lease recovered at its attempt ceiling settles a task no executor will reconcile.
+        for (const crawl of result.failedCrawls)
+          await this.#guard('recovered crawl reconcile failed', () =>
+            reconcileCrawl(this.db, crawl.workspaceId, crawl.crawlId),
+          );
         return result.reclaimed;
       })
       .finally(() => {
         this.#recovery = null;
       });
     return this.#recovery;
+  }
+  /** Crawl backstops, at most once per poll interval across this worker's slots. */
+  async #maintain() {
+    if (this.#maintenance) return this.#maintenance;
+    if (Date.now() < this.#nextMaintenance) return;
+    const lifecycle = this.settings.lifecycle;
+    this.#maintenance = (async () => {
+      await this.#guard('stalled crawl reconcile failed', () =>
+        reconcileStalled(this.db, lifecycle),
+      );
+      await this.#guard('overdue crawl reconcile failed', () =>
+        reconcileOverdue(this.db, lifecycle),
+      );
+      await this.#guard('cancelled crawl publication failed', () =>
+        publishCancelledCrawls(this.db, lifecycle.batch),
+      );
+    })().finally(() => {
+      this.#nextMaintenance = Date.now() + Math.max(50, this.settings.poll * 1000);
+      this.#maintenance = null;
+    });
+    return this.#maintenance;
+  }
+  /** One failed backstop must not suppress the others or the claim loop. */
+  async #guard(message: string, body: () => Promise<unknown>) {
+    try {
+      await body();
+    } catch (error) {
+      logger.exception(message, error);
+    }
   }
   /** Stop new claims at the deadline; finish bounded in-flight work and close cleanly. */
   async runUntilIdle(signal: AbortSignal, budgetSeconds = this.settings.drainBudget) {
@@ -106,6 +158,8 @@ export class SiteHealthWorker {
     let total = 0;
     while (!signal.aborted && performance.now() < deadline) {
       const recovered = await this.#recover();
+      // Maintenance runs even on an empty queue, so a drain still finalizes stalled crawls.
+      await this.#maintain();
       if (signal.aborted || performance.now() >= deadline) break;
       const count = await this.#claimAndExecute(this.settings.concurrency);
       total += count;
@@ -119,6 +173,10 @@ export class SiteHealthWorker {
       : undefined;
     if (acquire) {
       await this.#leased(claimed, () => acquire(this.acquisition, claimed));
+      // After the settlement commits; the stalled backstop covers a crash in between.
+      await this.#guard('site health crawl reconcile failed', () =>
+        reconcileAfterTask(this.db, claimed, this.#cadence),
+      );
       return;
     }
     if (!(await this.queue.markRunning(claimed.id, this.owner))) return;

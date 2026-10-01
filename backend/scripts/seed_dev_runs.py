@@ -58,7 +58,6 @@ from app.models.site_health.crawl import SiteCrawl
 from app.models.user import User
 from app.workers.audit import execution as audit_execution
 from app.workers.audit_worker import AuditWorker
-from app.workers.site_health_worker import SiteHealthWorker
 from scripts.seed_dev_support import (
     SEED_MONITORED_URL_ALLOWANCE,
     _build_seed_adapter,
@@ -80,6 +79,8 @@ ALL_ENGINES = [ENGINE_CHATGPT, ENGINE_CLAUDE, ENGINE_GEMINI]
 
 #: How long the seeder waits for the TypeScript analytics worker to refresh.
 SEED_REFRESH_TIMEOUT_SECONDS = 120
+#: How long the seeder waits for the TypeScript Site Health worker per crawl.
+SEED_CRAWL_TIMEOUT_SECONDS = 600
 _REFRESH_TERMINAL = (TASK_STATUS_SUCCEEDED, TASK_STATUS_FAILED, TASK_STATUS_CANCELLED)
 
 
@@ -141,12 +142,10 @@ async def seed_monitored_urls_grant(
     )
 
 
-async def drain_site_crawl(
-    worker: SiteHealthWorker, *, workspace_id: uuid.UUID, crawl_id: uuid.UUID
-) -> None:
-    """Drain delayed host-gated tasks until the selected crawl terminalizes."""
-    for _ in range(120):
-        await worker.run_until_idle()
+async def wait_for_site_crawl(*, workspace_id: uuid.UUID, crawl_id: uuid.UUID) -> None:
+    """Wait for the TypeScript Site Health worker to terminalize the crawl."""
+    deadline = asyncio.get_running_loop().time() + SEED_CRAWL_TIMEOUT_SECONDS
+    while asyncio.get_running_loop().time() < deadline:
         async with SessionLocal() as session:
             status = await session.scalar(
                 select(SiteCrawl.status).where(
@@ -161,8 +160,11 @@ async def drain_site_crawl(
                     f"{crawl_id} ({status})"
                 )
             return
-        await asyncio.sleep(0.25)
-    raise RuntimeError(f"seed Site Health crawl did not terminalize: {crawl_id}")
+        await asyncio.sleep(1)
+    raise RuntimeError(
+        f"seed Site Health crawl did not terminalize in {SEED_CRAWL_TIMEOUT_SECONDS}s: "
+        f"{crawl_id}; is the TypeScript Site Health worker running?"
+    )
 
 
 async def _run_audit(
@@ -231,7 +233,6 @@ async def run_seed_audits(
 
 
 async def _plan_and_drain_crawl(
-    worker: SiteHealthWorker,
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
@@ -246,7 +247,7 @@ async def _plan_and_drain_crawl(
             random_seed=random_seed,
         )
         crawl_id = crawl.id
-    await drain_site_crawl(worker, workspace_id=workspace_id, crawl_id=crawl_id)
+    await wait_for_site_crawl(workspace_id=workspace_id, crawl_id=crawl_id)
     logger.info("Completed %s %s", label, crawl_id)
     return crawl_id
 
@@ -256,9 +257,9 @@ async def run_site_health_crawls(
 ) -> uuid.UUID:
     """Discover, select every URL as monitored, then run two analysis crawls.
 
-    Runs the REAL crawl planner (``create_crawl``) and drives the Python
-    crawl maintenance while the TypeScript Site Health worker (which must be
-    running) acquires and analyzes the pages, mirroring the production
+    Runs the REAL crawl planner (``create_crawl``) while the TypeScript Site
+    Health worker (which must be running) acquires, analyzes and terminalizes
+    the crawl, mirroring the production
     "discover -> select monitored URLs -> recrawl analyzes" flow; a hand-built
     crawl/task never goes through that selection gate.
 
@@ -276,12 +277,7 @@ async def run_site_health_crawls(
         # to a sample crawl, so no monitored analysis flow is seeded at all.
         await session.commit()
 
-    worker = SiteHealthWorker(
-        session_factory=SessionLocal,
-        owner="seed-site-worker",
-    )
     discovery_crawl_id = await _plan_and_drain_crawl(
-        worker,
         workspace_id=workspace_id,
         project_id=project_id,
         random_seed="99",
@@ -299,14 +295,12 @@ async def run_site_health_crawls(
         await session.commit()
 
     await _plan_and_drain_crawl(
-        worker,
         workspace_id=workspace_id,
         project_id=project_id,
         random_seed="100",
         label="site health analysis crawl",
     )
     return await _plan_and_drain_crawl(
-        worker,
         workspace_id=workspace_id,
         project_id=project_id,
         random_seed="101",

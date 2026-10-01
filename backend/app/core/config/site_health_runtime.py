@@ -23,7 +23,6 @@ READ_PAGE_MAX_LIMIT: Final = 200
 READ_TERMINAL_GRACE_POLLS: Final = 2
 READ_EXPORT_PAGE_SIZE: Final = 200
 READ_MAX_DETAIL_EVALUATIONS: Final = 200
-MIN_WORKER_POLL_SECONDS: Final = 0.05
 
 
 def _require_non_empty(settings: object, names: tuple[str, ...]) -> None:
@@ -240,11 +239,6 @@ class SiteHealthSettings(BaseSettings):
     # One-shot TypeScript worker runs stop admitting work at this deadline.
     # Already claimed work finishes under the acquisition/task bounds.
     drain_budget_seconds: float = Field(default=300.0, gt=0)
-    # Rows per multi-row INSERT in the crawl-finalize pass. Bounded because
-    # PostgreSQL caps a statement at 65,535 bind parameters and an evaluation
-    # row carries 22 columns -- a large crawl's ~3 evaluations per page would
-    # otherwise build one statement past that ceiling and fail outright.
-    finalize_insert_batch_size: int = 500
     # Backstop for crawl terminalization. A crawl normally goes terminal from a
     # task's finalize; any path that drains the last non-terminal task without
     # running one (a sweeper reclaim at max attempts, a killed process between

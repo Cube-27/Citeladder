@@ -90,3 +90,113 @@ export async function markDuplicate(trx: Database, crawl: Crawl, hash: string) {
     .where('is_current', '=', true)
     .execute();
 }
+
+/** Resolve whole-crawl chains and cycles before removing any representative. */
+export async function reconcileDuplicateAliases(db: Database, crawl: Crawl) {
+  const rows = await db
+    .selectFrom('site_urls as u')
+    .innerJoin('site_url_observations as o', (join) =>
+      join
+        .onRef('o.site_url_id', '=', 'u.id')
+        .onRef('o.workspace_id', '=', 'u.workspace_id')
+        .onRef('o.project_id', '=', 'u.project_id')
+        .on('o.crawl_id', '=', crawl.id),
+    )
+    .innerJoin('monitored_site_urls as m', (join) =>
+      join
+        .onRef('m.site_url_id', '=', 'u.id')
+        .onRef('m.workspace_id', '=', 'u.workspace_id')
+        .onRef('m.project_id', '=', 'u.project_id'),
+    )
+    .select(['u.url_hash', 'm.active', 'm.selection_source'])
+    .distinct()
+    .where('u.workspace_id', '=', crawl.workspace_id)
+    .where('u.project_id', '=', crawl.project_id)
+    .execute();
+  const admitted = new Set(rows.map((row) => row.url_hash));
+  const active = new Set(rows.filter((row) => row.active).map((row) => row.url_hash));
+  const protectedHashes = new Set(
+    rows.filter((row) => row.active && row.selection_source === 'user').map((row) => row.url_hash),
+  );
+  const artifacts = await db
+    .selectFrom('site_crawl_tasks as t')
+    .innerJoin('site_fetch_artifacts as a', (join) =>
+      join
+        .onRef('a.task_id', '=', 't.id')
+        .onRef('a.workspace_id', '=', 't.workspace_id')
+        .onRef('a.crawl_id', '=', 't.crawl_id'),
+    )
+    .select(['t.url_hash', 'a.final_url', 'a.normalized_facts'])
+    .where('t.workspace_id', '=', crawl.workspace_id)
+    .where('t.crawl_id', '=', crawl.id)
+    .orderBy('a.fetched_at')
+    .orderBy('a.id')
+    .execute();
+  const known = new Set<string>();
+  const edges = new Map<string, string>();
+  for (const artifact of artifacts) {
+    if (!admitted.has(artifact.url_hash)) continue;
+    known.add(artifact.url_hash);
+    const target = targetHash(
+      crawl,
+      artifact.url_hash,
+      String(record(artifact.normalized_facts).canonical_url ?? ''),
+      artifact.final_url,
+    );
+    if (admitted.has(target)) edges.set(artifact.url_hash, target);
+    else edges.delete(artifact.url_hash);
+  }
+  const duplicates = resolveDuplicateAliases({ edges, known, active, protectedHashes });
+  for (const source of duplicates) await markDuplicate(db, crawl, source);
+  return duplicates.length;
+}
+
+export type AliasGraph = {
+  /** Fetched page hash → the admitted hash its declared canonical names. */
+  edges: Map<string, string>;
+  /** Admitted hashes this crawl fetched. */
+  known: Set<string>;
+  active: Set<string>;
+  /** Active user selections: never excluded, and a chain stops at one. */
+  protectedHashes: Set<string>;
+};
+
+/** Where one alias chain ends: a protected page, a fetched sink, or a cycle's deterministic member. */
+function representative(graph: AliasGraph, source: string) {
+  const path: string[] = [];
+  let current = source;
+  while (true) {
+    if (current !== source && graph.protectedHashes.has(current)) return current;
+    const cycleStart = path.indexOf(current);
+    if (cycleStart >= 0) {
+      // Protected beats merely active and the lowest hash breaks the tie, so a
+      // cycle resolves the same way whichever member the walk entered it from.
+      const cycle = path.slice(cycleStart).sort();
+      return (
+        cycle.find((hash) => graph.protectedHashes.has(hash)) ??
+        cycle.find((hash) => graph.active.has(hash)) ??
+        ''
+      );
+    }
+    if (!graph.known.has(current)) return '';
+    path.push(current);
+    const next = graph.edges.get(current);
+    if (!next) return graph.active.has(current) ? current : '';
+    current = next;
+  }
+}
+
+/**
+ * The system-selected pages to exclude as duplicates, resolved over whole
+ * chains and cycles before any representative is removed: a page whose own
+ * representative is itself being excluded is kept this pass.
+ */
+export function resolveDuplicateAliases(graph: AliasGraph) {
+  const resolved = new Map<string, string>();
+  for (const source of [...graph.active].sort()) {
+    if (graph.protectedHashes.has(source)) continue;
+    const target = representative(graph, source);
+    if (target !== source && graph.active.has(target)) resolved.set(source, target);
+  }
+  return [...resolved].filter(([, target]) => !resolved.has(target)).map(([source]) => source);
+}

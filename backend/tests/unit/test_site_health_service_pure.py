@@ -20,7 +20,6 @@ import pytest
 from app.core.config.site_health_acquisition import (
     ERROR_ROBOTS_DENIED,
     ERROR_SSRF_BLOCKED,
-    ERROR_URL_ADMISSION_REJECTED,
 )
 from app.core.config.site_health_contracts import (
     PAGE_ANALYSIS_STATUS_COMPLETED,
@@ -45,8 +44,6 @@ from app.domain.site_health.service import (
     display_label_for,
     presentation_status_for,
 )
-from app.domain.site_health.snapshot import _eligibility_state
-from app.domain.site_health.web_fundamentals_projection import _area_state
 from app.models.site_health.analysis import SitePageAnalysis
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
@@ -54,20 +51,6 @@ from app.models.site_health.queue import SiteCrawlTask
 # --------------------------------------------------------------------------
 # Keyset cursors
 # --------------------------------------------------------------------------
-
-
-def test_web_fundamentals_na_only_area_is_not_measured() -> None:
-    state, coverage = _area_state([SimpleNamespace(outcome="not_applicable")])
-
-    assert state == "not_measured"
-    assert coverage is None
-
-
-def test_web_fundamentals_partial_outcome_remains_unresolved() -> None:
-    state, coverage = _area_state([SimpleNamespace(outcome="partial")])
-
-    assert state == "limited_evidence"
-    assert coverage == 0.0
 
 
 def test_fingerprint_is_stable_and_ignores_empty_values() -> None:
@@ -402,32 +385,3 @@ def test_score_summary_without_breakdown_projects_empty_map() -> None:
 
 def test_score_summary_none_when_absent() -> None:
     assert _score_summary(cast(SiteCrawl, _crawl_with_summary(None))) is None
-
-
-def test_admission_rejection_is_excluded_from_search_eligibility() -> None:
-    task = SimpleNamespace(
-        status=TASK_STATUS_FAILED,
-        error_code=ERROR_URL_ADMISSION_REJECTED,
-    )
-    assert _eligibility_state("unknown", "unknown", "unknown", "unknown", task) == (
-        "excluded",
-        "excluded",
-    )
-
-
-def test_robots_denial_remains_an_observed_blocker() -> None:
-    task = SimpleNamespace(status=TASK_STATUS_FAILED, error_code=ERROR_ROBOTS_DENIED)
-    assert _eligibility_state("missing", "unknown", "unknown", "unknown", task) == (
-        "blocked",
-        "blocked",
-    )
-
-
-def test_search_eligibility_uses_only_public_representation_and_indexability() -> None:
-    task = SimpleNamespace(status=TASK_STATUS_SUCCEEDED, error_code=None)
-    assert _eligibility_state(
-        "satisfied", "satisfied", "unknown", "not_applicable", task
-    ) == ("eligible", "audited")
-    assert _eligibility_state(
-        "satisfied", "unknown", "satisfied", "satisfied", task
-    ) == ("unknown", "pending")

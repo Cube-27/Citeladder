@@ -21,8 +21,20 @@ export function siteWorkerSettings(env: Record<string, string | undefined> = pro
     conflictJitter: number('db_conflict_jitter_seconds'),
     reclaimBatch: number('lease_reclaim_batch_size'),
     drainBudget: number('drain_budget_seconds'),
+    lifecycle: {
+      stalledSeconds: number('stalled_crawl_reconcile_seconds'),
+      overdueSeconds: number('overdue_crawl_seconds'),
+      batch: number('stalled_crawl_reconcile_batch'),
+    },
+    scoreRefresh: {
+      pageInterval: number('live_score_refresh_page_interval'),
+      pageFraction: number('live_score_refresh_page_fraction'),
+      minIntervalSeconds: number('live_score_refresh_min_interval_seconds'),
+      maxTrackedCrawls: number('live_score_refresh_max_tracked_crawls'),
+    },
   };
 }
+export type SiteWorkerSettings = ReturnType<typeof siteWorkerSettings>;
 
 /** What the read API needs: export and event-stream bounds, and the advanced-controls flag. */
 export function siteReadSettings(env: Record<string, string | undefined> = process.env) {

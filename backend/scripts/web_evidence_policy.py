@@ -111,6 +111,8 @@ def _crawl_policy(
         "document_media_types": sorted(crawl_policy.DOCUMENT_MEDIA_TYPES),
         "disposition_version": crawl_policy.CORPUS_DISPOSITION_VERSION,
         "automatic_monitor_limit_key": crawl_policy.AUTOMATIC_MONITOR_LIMIT_KEY,
+        "admission_policy_version": crawl_policy.URL_ADMISSION_POLICY_VERSION,
+        "site_setup_priority_boost": runtime.SITE_SETUP_PRIORITY_BOOST,
         "analyze_priority_boost": ANALYZE_PRIORITY_BOOST,
         "link_rewrite": {
             "reason": contracts.LINK_REWRITE_ENCODED_TRACKING_QUERY,
@@ -164,9 +166,27 @@ def _read_policy() -> dict[str, Any]:
         "issue_history_max_crawls": ISSUE_HISTORY_TIMELINE_MAX_CRAWLS,
         "inventory_source_crawl_ids_key": INVENTORY_SOURCE_CRAWL_IDS_KEY,
         "coverage_complete_state": links.COVERAGE_STATE_COMPLETE,
+        "coverage_formula_version": links.COVERAGE_FORMULA_VERSION,
+        "classification_formula_version": measurement.CLASSIFICATION_FORMULA_VERSION,
+        "overview_trend_point_limit": (
+            measurement.SITE_HEALTH_OVERVIEW_TREND_POINT_LIMIT
+        ),
+        "web_fundamentals_areas": list(measurement.WEB_FUNDAMENTALS_AREAS),
+        "eligibility_critical_checkpoints": list(
+            measurement.SEARCH_ELIGIBILITY_CRITICAL_CHECKPOINTS_1
+        ),
+        "aeo_max_evaluations": contracts.AEO_READINESS_MAX_EVALUATIONS,
+        "aeo_max_evidence_pages": (
+            contracts.AEO_READINESS_MAX_EVIDENCE_PAGES_PER_DIMENSION
+        ),
         "content_addressable_check_ids": sorted(
             measurement.CONTENT_ADDRESSABLE_CHECK_IDS
         ),
+        "partial_reasons": {
+            "discovery": contracts.CRAWL_PARTIAL_REASON_DISCOVERY,
+            "analysis": contracts.CRAWL_PARTIAL_REASON_ANALYSIS,
+            "both": contracts.CRAWL_PARTIAL_REASON_BOTH,
+        },
         "measurement_versions": {
             "profile": measurement.PROFILE_VERSION,
             "schema_contract": measurement.SCHEMA_CONTRACT_VERSION,

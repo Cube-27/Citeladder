@@ -64,7 +64,7 @@ it('reclaims retryable leases, spends one attempt, and fences the old owner afte
     .execute();
 });
 
-it('terminal recovery preserves committed evidence and stamps the lifecycle replay watermark', async () => {
+it('terminal recovery preserves committed evidence and names the crawl to reconcile', async () => {
   const seed = await fixtures.crawl('running');
   const page = await fixtures.page(seed, '/', { title: 'Persisted' });
   await expired(page.taskId, 2);
@@ -73,7 +73,7 @@ it('terminal recovery preserves committed evidence and stamps the lifecycle repl
   expect(result).toEqual({
     reclaimed: 1,
     failedTaskIds: [page.taskId],
-    failedCrawlIds: [seed.crawlId],
+    failedCrawls: [{ crawlId: seed.crawlId, workspaceId: seed.workspaceId }],
   });
   expect(await row(page.taskId)).toMatchObject({
     status: 'failed',
