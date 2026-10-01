@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
   reserveUsage,
@@ -231,6 +231,64 @@ describe('shared consumable ledger', () => {
         }),
       ),
     ).rejects.toThrow('subject_not_found');
+  });
+  it('replays reservations and settled attempts written by the Python audit owner', async () => {
+    const t = await tenant(3);
+    if (t.subject.kind !== 'audit') throw new Error('Expected audit subject');
+    const key = randomUUID();
+    const request = {
+      accountId: t.accountId,
+      subject: t.subject,
+      capability: 'audit_credits',
+      units: 3,
+      key,
+      at: t.at,
+    };
+    const reservationId = await db.transaction().execute((trx) => reserveUsage(trx, request));
+    // The historical writer serializes these keys in this exact order.
+    const hash = (json: string) => createHash('sha256').update(json).digest('hex');
+    const reservationFingerprint = hash(
+      `{"account_id":"${t.accountId}","audit_id":"${t.subject.auditId}","capability_key":"audit_credits","subject_kind":"audit","task_id":"${t.subject.id}","units":3}`,
+    );
+    await db
+      .updateTable('consumable_ledger')
+      .set({ request_fingerprint: reservationFingerprint })
+      .where('reservation_id', '=', reservationId)
+      .execute();
+    expect(await db.transaction().execute((trx) => reserveUsage(trx, request))).toBe(reservationId);
+    const debit = {
+      workspaceId: t.workspaceId,
+      accountId: t.accountId,
+      reservationId,
+      subjectId: t.subject.id,
+      attempt: 1,
+      units: 1,
+      key: 'historical-attempt',
+      dispatchKey: '1',
+      at: t.at,
+    };
+    await db.transaction().execute((trx) => debitUsage(trx, debit));
+    const settlementFingerprint = hash(
+      `{"attempt":1,"reservation_id":"${reservationId}","subject_id":"${t.subject.id}","units":1}`,
+    );
+    await db
+      .updateTable('consumable_ledger')
+      .set({ request_fingerprint: settlementFingerprint })
+      .where('reservation_id', '=', reservationId)
+      .where('entry_kind', '=', 'debit')
+      .execute();
+    await db
+      .transaction()
+      .execute((trx) =>
+        debitUsage(trx, { ...debit, key: 'new-worker-replay', dispatchKey: 'attempt-1' }),
+      );
+    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
+      consumed: 1,
+      reserved: 2,
+    });
+    await expect(
+      db.transaction().execute((trx) => debitUsage(trx, { ...debit, units: 2 })),
+    ).rejects.toThrow('idempotency_key_reused');
   });
   it('consumes frozen holds after revocation, releases once, and caps immutable refunds', async () => {
     const t = await tenant(4);
