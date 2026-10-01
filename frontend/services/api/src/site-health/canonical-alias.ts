@@ -4,9 +4,11 @@
  * rather than analyzed twice. The whole-crawl alias graph (cycles,
  * representatives) is resolved again at finalization.
  */
+import { sql } from 'kysely';
 import { getDomain } from 'tldts';
 
 import { policy } from '../config.ts';
+import { compareText, scalarText } from '../text-order.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { deactivateSystemMemberships } from './frontier.ts';
@@ -64,9 +66,10 @@ export async function duplicateOf(
   return destination?.active ? target : '';
 }
 
-/** Exclude one fetched alias, release its system membership and retire its current analysis. */
-export async function markDuplicate(trx: Database, crawl: Crawl, hash: string) {
-  const url = await trx
+/** Exclude fetched aliases, release their system memberships and retire their current analyses. */
+export async function markDuplicates(trx: Database, crawl: Crawl, hashes: string[]) {
+  if (!hashes.length) return;
+  const urls = await trx
     .updateTable('site_urls')
     .set({
       corpus_disposition: 'exclude',
@@ -75,18 +78,19 @@ export async function markDuplicate(trx: Database, crawl: Crawl, hash: string) {
     })
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
-    .where('url_hash', '=', hash)
+    .where('url_hash', '=', sql<string>`any(${hashes}::text[])`)
     .returning('id')
-    .executeTakeFirst();
-  if (!url) return;
-  await deactivateSystemMemberships(trx, crawl, [url.id]);
+    .execute();
+  if (!urls.length) return;
+  const ids = urls.map((url) => url.id);
+  await deactivateSystemMemberships(trx, crawl, ids);
   await trx
     .updateTable('site_page_analyses')
     .set({ is_current: false })
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('crawl_id', '=', crawl.id)
-    .where('site_url_id', '=', url.id)
+    .where('site_url_id', '=', sql<string>`any(${ids}::uuid[])`)
     .where('is_current', '=', true)
     .execute();
 }
@@ -140,14 +144,14 @@ export async function reconcileDuplicateAliases(db: Database, crawl: Crawl) {
     const target = targetHash(
       crawl,
       artifact.url_hash,
-      String(record(artifact.normalized_facts).canonical_url ?? ''),
+      scalarText(record(artifact.normalized_facts).canonical_url),
       artifact.final_url,
     );
     if (admitted.has(target)) edges.set(artifact.url_hash, target);
     else edges.delete(artifact.url_hash);
   }
   const duplicates = resolveDuplicateAliases({ edges, known, active, protectedHashes });
-  for (const source of duplicates) await markDuplicate(db, crawl, source);
+  await markDuplicates(db, crawl, duplicates);
   return duplicates.length;
 }
 
@@ -171,7 +175,7 @@ function representative(graph: AliasGraph, source: string) {
     if (cycleStart >= 0) {
       // Protected beats merely active and the lowest hash breaks the tie, so a
       // cycle resolves the same way whichever member the walk entered it from.
-      const cycle = path.slice(cycleStart).sort();
+      const cycle = path.slice(cycleStart).sort(compareText);
       return (
         cycle.find((hash) => graph.protectedHashes.has(hash)) ??
         cycle.find((hash) => graph.active.has(hash)) ??
@@ -193,7 +197,7 @@ function representative(graph: AliasGraph, source: string) {
  */
 export function resolveDuplicateAliases(graph: AliasGraph) {
   const resolved = new Map<string, string>();
-  for (const source of [...graph.active].sort()) {
+  for (const source of [...graph.active].sort(compareText)) {
     if (graph.protectedHashes.has(source)) continue;
     const target = representative(graph, source);
     if (target !== source && graph.active.has(target)) resolved.set(source, target);

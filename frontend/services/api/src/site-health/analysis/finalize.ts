@@ -1,5 +1,6 @@
 /** Cross-page checks use only the persisted acquisition evidence supplied by the caller. */
 import { policy } from '../../config.ts';
+import { scalarText } from '../../text-order.ts';
 import type { RuleEvaluation } from './rules.ts';
 
 const limits = policy.site_health.page_analysis.facts.limits;
@@ -32,11 +33,17 @@ export function finalizeEvaluation(
     evidence,
     display_applicability: outcome !== 'not_applicable',
     score_applicability: roles.length > 0 && outcome !== 'not_applicable',
-    reason_code: String(evidence.reason ?? ''),
+    reason_code: scalarText(evidence.reason),
     score_roles: roles,
     readiness_dimension: '',
     readiness_weight: 0,
   };
+}
+
+/** Incomplete coverage without an observed failure stays unknown, never a pass. */
+function entityOutcome(failures: number, checked: number, total: number) {
+  if (failures) return failures === checked ? 'missing' : 'partial';
+  return checked < total ? 'unknown' : 'satisfied';
 }
 
 export function entitySetEvaluation(
@@ -62,13 +69,7 @@ export function entitySetEvaluation(
       total_count: total,
       checked_count: 0,
     });
-  const outcome = !failures
-    ? checked < total
-      ? 'unknown'
-      : 'satisfied'
-    : failures === checked
-      ? 'missing'
-      : 'partial';
+  const outcome = entityOutcome(failures, checked, total);
   return finalizeEvaluation(ruleId, outcome, {
     total_count: total,
     checked_count: checked,

@@ -274,7 +274,7 @@ async function reconcileLockedCrawl(db: Database, crawl: Crawl) {
   await terminalize(db, crawl, summary, fullyFailed, discoveryPartial);
 }
 
-async function lockCrawl(db: Database, workspaceId: string, crawlId: string) {
+function lockCrawl(db: Database, workspaceId: string, crawlId: string) {
   return db
     .selectFrom('site_crawls')
     .selectAll()
@@ -391,6 +391,27 @@ export async function reconcileAfterTask(
 }
 
 /**
+ * Run one backstop's per-crawl work in order. A crawl that fails is logged and
+ * skipped so the rest of the batch still settles; it is retried next pass.
+ * Returns how many crawls the work acted on (`false` means it skipped one).
+ */
+async function eachCrawl<T extends { id: string }>(
+  crawls: T[],
+  failure: string,
+  work: (crawl: T) => Promise<unknown>,
+) {
+  let acted = 0;
+  for (const crawl of crawls)
+    try {
+      // One crawl lock at a time: a bounded batch never holds several crawl rows.
+      if ((await work(crawl)) !== false) acted++; // NOSONAR
+    } catch (error) {
+      logger.exception(failure, error, { crawl_id: crawl.id });
+    }
+  return acted;
+}
+
+/**
  * The terminalization backstop: an active crawl with no outstanding work and
  * no write for the stall threshold. Any route that drains a crawl's last task
  * without reconciling it (a process killed between acknowledgement and
@@ -420,11 +441,10 @@ export async function reconcileStalled(db: Database, settings: SiteWorkerSetting
     .orderBy('c.updated_at')
     .limit(settings.batch)
     .execute();
-  for (const crawl of stalled) {
+  return eachCrawl(stalled, 'stalled crawl reconcile failed', async (crawl) => {
     logger.warning('reconciling stalled crawl with no outstanding tasks', { crawl_id: crawl.id });
     await reconcileCrawl(db, crawl.workspace_id, crawl.id);
-  }
-  return stalled.length;
+  });
 }
 
 /**
@@ -445,8 +465,7 @@ export async function reconcileOverdue(db: Database, settings: SiteWorkerSetting
     .orderBy('created_at')
     .limit(settings.batch)
     .execute();
-  let terminalized = 0;
-  for (const candidate of candidates) {
+  return eachCrawl(candidates, 'overdue crawl reconcile failed', async (candidate) => {
     const abandoned = await db.transaction().execute(async (trx) => {
       const crawl = await lockCrawl(trx, candidate.workspace_id, candidate.id);
       if (!crawl || !ACTIVE.includes(crawl.status)) return null;
@@ -472,14 +491,13 @@ export async function reconcileOverdue(db: Database, settings: SiteWorkerSetting
       await reconcileLockedCrawl(trx, crawl);
       return failed.length;
     });
-    if (abandoned === null) continue;
-    terminalized++;
+    if (abandoned === null) return false;
     logger.warning('terminalized overdue crawl', {
       crawl_id: candidate.id,
       abandoned_tasks: abandoned,
     });
-  }
-  return terminalized;
+    return true;
+  });
 }
 
 /**
@@ -500,7 +518,8 @@ export async function publishCancelledCrawls(db: Database, batch: number) {
         exists(
           selectFrom('site_health_snapshots as s')
             .select('s.id')
-            .whereRef('s.crawl_id', '=', 'c.id'),
+            .whereRef('s.crawl_id', '=', 'c.id')
+            .whereRef('s.workspace_id', '=', 'c.workspace_id'),
         ),
       ),
     )
@@ -522,12 +541,13 @@ export async function publishCancelledCrawls(db: Database, batch: number) {
     .orderBy('c.completed_at', 'desc')
     .limit(batch)
     .execute();
-  for (const target of pending)
-    await db.transaction().execute(async (trx) => {
+  return eachCrawl(pending, 'cancelled crawl publication failed', (target) =>
+    db.transaction().execute(async (trx) => {
       const crawl = await lockCrawl(trx, target.workspace_id, target.id);
-      if (crawl?.status !== 'cancelled') return;
+      if (crawl?.status !== 'cancelled') return false;
       await publishFinalPageAnalyses(trx, crawl);
       if (await persistCrawlSnapshot(trx, crawl)) await enqueueSuccessors(trx, crawl);
-    });
-  return pending.length;
+      return true;
+    }),
+  );
 }

@@ -238,7 +238,7 @@ class SiteHealthSettings(BaseSettings):
     lease_reclaim_batch_size: int = 500
     # One-shot TypeScript worker runs stop admitting work at this deadline.
     # Already claimed work finishes under the acquisition/task bounds.
-    drain_budget_seconds: float = Field(default=300.0, gt=0)
+    drain_budget_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
     # Backstop for crawl terminalization. A crawl normally goes terminal from a
     # task's finalize; any path that drains the last non-terminal task without
     # running one (a sweeper reclaim at max attempts, a killed process between

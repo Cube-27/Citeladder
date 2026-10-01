@@ -3,6 +3,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { issueImpact } from './reads/rules.ts';
 import type { Crawl } from './task-fence.ts';
+import { compareText } from '../text-order.ts';
 
 export async function snapshotIssues(db: Database, crawl: Crawl, evaluationIds: string[]) {
   const rows = await db
@@ -68,7 +69,7 @@ export async function snapshotIssues(db: Database, crawl: Crawl, evaluationIds: 
         category: row.category,
         description: row.description,
         remediation: row.remediation,
-        score_roles: [...roles].sort(),
+        score_roles: [...roles].toSorted(compareText),
         affected_pages: urls.size,
         eligibility_blocker: row.rule_id === 'technical.indexable',
         impact_band: impact.band,
@@ -81,7 +82,7 @@ export async function snapshotIssues(db: Database, crawl: Crawl, evaluationIds: 
         b.impact_band - a.impact_band ||
         Number(b.finding_class === 'defect') - Number(a.finding_class === 'defect') ||
         b.affected_pages - a.affected_pages ||
-        (a.rule_id < b.rule_id ? -1 : a.rule_id > b.rule_id ? 1 : 0),
+        compareText(a.rule_id, b.rule_id),
     );
   return {
     issue_count: rows.length,

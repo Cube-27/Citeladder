@@ -24,7 +24,7 @@ import {
 } from '../web-evidence/html.ts';
 import { extractPageFacts, factSettings, type PageFacts } from './analysis/facts.ts';
 import { writeArtifact, writeAttempts, type AttemptOutcome } from './analysis-rows.ts';
-import { duplicateOf, markDuplicate } from './canonical-alias.ts';
+import { duplicateOf, markDuplicates } from './canonical-alias.ts';
 import {
   admitCandidates,
   candidate,
@@ -356,7 +356,7 @@ async function dispose(
     declaredCanonical: declared,
     baseUrl: page.url || task.requested_url,
   });
-  if (alias) await markDuplicate(trx, crawl, task.url_hash);
+  if (alias) await markDuplicates(trx, crawl, [task.url_hash]);
   else if (!isDocument)
     await enqueueDiscoveredAnalysis(trx, crawl, {
       siteUrlId: task.site_url_id,

@@ -18,37 +18,47 @@ export type CoverageSignals = {
   failedDiscoveryTaskCount: number;
 };
 
-const BOUNDED_DISCOVERY = ['cancelled', 'sample_completed', 'stopped'];
+const BOUNDED_DISCOVERY = new Set(['cancelled', 'sample_completed', 'stopped']);
 
-/**
- * The safest state the frozen facts support: `partial` when a limit, a
- * pending frontier or an explicit bound cut discovery short; `unknown` when
- * discovery failed or never completed; `complete` only for an exhausted
- * frontier.
- */
-export function assessCoverage(signals: CoverageSignals) {
+/** A limit, a pending frontier or an explicit bound cut discovery short. */
+function partialReasons(signals: CoverageSignals) {
   const reasons: string[] = [];
   if (signals.requestedPageLimit > 0 && signals.admittedUrlCount >= signals.requestedPageLimit)
     reasons.push('requested_page_limit_reached');
   if (signals.frontierLimit > 0 && signals.admittedUrlCount >= signals.frontierLimit)
     reasons.push('frontier_limit_reached');
   if (signals.pendingFrontierCount > 0) reasons.push('frontier_not_exhausted');
-  if (
+  const bounded =
     signals.sampleMode ||
     signals.inputMode !== 'auto' ||
     signals.cancelled ||
-    BOUNDED_DISCOVERY.includes(signals.discoveryStatus) ||
-    !signals.discoveryTaskCount
-  )
-    reasons.push('discovery_bounded_or_stopped');
-  let state = 'partial';
-  if (!reasons.length) {
-    if (signals.failedDiscoveryTaskCount) reasons.push('discovery_failed');
-    if (!signals.observationCount) reasons.push('no_observed_urls');
-    if (signals.discoveryStatus !== 'completed') reasons.push('discovery_not_completed');
-    state = reasons.length ? 'unknown' : 'complete';
-    if (!reasons.length) reasons.push('frontier_exhausted');
-  }
+    BOUNDED_DISCOVERY.has(signals.discoveryStatus) ||
+    !signals.discoveryTaskCount;
+  if (bounded) reasons.push('discovery_bounded_or_stopped');
+  return reasons;
+}
+
+/** Discovery that failed, observed nothing or never completed proves nothing about coverage. */
+function unknownReasons(signals: CoverageSignals) {
+  const reasons: string[] = [];
+  if (signals.failedDiscoveryTaskCount) reasons.push('discovery_failed');
+  if (!signals.observationCount) reasons.push('no_observed_urls');
+  if (signals.discoveryStatus !== 'completed') reasons.push('discovery_not_completed');
+  return reasons;
+}
+
+/**
+ * The safest state the frozen facts support: `partial` when discovery was cut
+ * short, `unknown` when it failed or never completed, and `complete` only for
+ * an exhausted frontier.
+ */
+export function assessCoverage(signals: CoverageSignals) {
+  const partial = partialReasons(signals);
+  const unknown = partial.length ? [] : unknownReasons(signals);
+  let state = 'complete';
+  if (partial.length) state = 'partial';
+  else if (unknown.length) state = 'unknown';
+  const reasons = state === 'complete' ? ['frontier_exhausted'] : [...partial, ...unknown];
   return {
     state,
     evidence: {

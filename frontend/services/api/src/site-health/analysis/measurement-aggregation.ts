@@ -1,18 +1,18 @@
 /** Equal-page aggregation; a page with more checks never gets more influence. */
 import { policy } from '../../config.ts';
-import { scoreAnalysis } from './scoring.ts';
+import { compareText } from '../../text-order.ts';
+import { readinessReason, scoreAnalysis } from './scoring.ts';
 import type { RuleEvaluation } from './rules.ts';
 
 type Measurement = ReturnType<typeof scoreAnalysis>;
 export type MeasuredPage = { id: string; page_kind: string; evaluations: RuleEvaluation[] };
 const mean = (values: number[]) =>
   values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-const state = (scored: number, expected: number, unresolved: boolean) =>
-  !scored || !expected
-    ? 'not_measured'
-    : scored < expected || unresolved
-      ? 'limited_evidence'
-      : 'measured';
+/** Scored-page coverage does not imply that every scored page's checks resolved. */
+function state(scored: number, expected: number, unresolved: boolean) {
+  if (!scored || !expected) return 'not_measured';
+  return scored < expected || unresolved ? 'limited_evidence' : 'measured';
+}
 
 function role(pages: Measurement[], role: 'web' | 'aeo') {
   const scores = pages
@@ -59,7 +59,7 @@ export function aggregateMeasurements(rows: MeasuredPage[]) {
       expected_points: applicable.length,
       determinate_checkpoint_ids: [
         ...new Set(applicable.flatMap((pillar) => pillar.determinate_checkpoint_ids)),
-      ].sort(),
+      ].sort(compareText),
       reason: measurement === 'measured' ? '' : 'unresolved_checks',
       unresolved_count: unresolved,
     };
@@ -79,7 +79,7 @@ export function aggregateMeasurements(rows: MeasuredPage[]) {
 
 export function aggregateByPageKind(rows: MeasuredPage[]) {
   return Object.fromEntries(
-    [...new Set(rows.map((row) => row.page_kind))].sort().map((kind) => {
+    [...new Set(rows.map((row) => row.page_kind))].sort(compareText).map((kind) => {
       const aggregate = aggregateMeasurements(rows.filter((row) => row.page_kind === kind));
       const {
         readiness_dimensions: dimensions,
@@ -90,16 +90,12 @@ export function aggregateByPageKind(rows: MeasuredPage[]) {
       const applicable = dimensions.some(
         (dimension) => dimension.dimension_applicability === 'applicable',
       );
-      const reason =
-        scores.aeo_readiness_score !== null
-          ? scores.aeo_measurement_state === 'measured'
-            ? ''
-            : 'unresolved_checks'
-          : applicable
-            ? 'unresolved_checks'
-            : kind === 'other'
-              ? 'page_purpose_unresolved'
-              : 'no_applicable_checks';
+      const reason = readinessReason(
+        scores.aeo_readiness_score,
+        scores.aeo_measurement_state,
+        applicable,
+        kind,
+      );
       return [kind, { ...scores, analyzed_count: analyzed, aeo_measurement_reason: reason }];
     }),
   );

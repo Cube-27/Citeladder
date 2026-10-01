@@ -7,6 +7,10 @@ export function siteWorkerSettings(env: Record<string, string | undefined> = pro
   const heartbeat = number('heartbeat_interval_seconds');
   if (heartbeat <= 0 || lease <= heartbeat)
     throw new Error('Site Health heartbeat must be shorter than its lease');
+  // Python's model validators enforce these; the exported specs carry only types.
+  for (const name of ['lease_reclaim_batch_size', 'stalled_crawl_reconcile_batch'] as const)
+    if (!Number.isSafeInteger(number(name)) || number(name) <= 0)
+      throw new Error(`Site Health ${name} must be a positive integer`);
   return {
     lease,
     heartbeat,

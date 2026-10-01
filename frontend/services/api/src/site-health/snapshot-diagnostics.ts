@@ -3,16 +3,29 @@ import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 import type { MeasurementProjection } from './score-summary.ts';
 import type { Crawl } from './task-fence.ts';
+import { compareText } from '../text-order.ts';
 
 const reads = policy.site_health.reads;
 const catalog = new Map(policy.site_health.rule_catalog.map((row) => [row.rule_id, row]));
 type Evaluation = MeasurementProjection['evaluations'][number];
 const failing = (row: Evaluation) => reads.failing_outcomes.includes(row.outcome);
-const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 /** An entity check's own failure count: a finite number or a digit string, otherwise none. */
 function reportedFailures(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
   return typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : 0;
+}
+/** Failing pages, the site once, or each entity check's own reported failures. */
+function failingEntities(scope: string, failures: Evaluation[]) {
+  if (scope === 'page') return new Set(failures.map((row) => row.analysis_id)).size;
+  if (scope === 'site') return Number(failures.length > 0);
+  return failures.reduce(
+    (sum, row) => sum + Math.max(1, reportedFailures(record(row.evidence).failure_count)),
+    0,
+  );
+}
+function measurementState(determinate: number, applicable: number) {
+  if (!applicable) return 'not_measured';
+  return determinate === applicable ? 'measured' : 'limited_evidence';
 }
 const counts = (rows: Evaluation[]) =>
   Object.fromEntries(
@@ -56,8 +69,8 @@ export function readinessDiagnostic(
       .sort(
         (a, b) =>
           b[1].length - a[1].length ||
-          compare(pages.get(a[0])!.normalized_url, pages.get(b[0])!.normalized_url) ||
-          compare(a[0], b[0]),
+          compareText(pages.get(a[0])!.normalized_url, pages.get(b[0])!.normalized_url) ||
+          compareText(a[0], b[0]),
       )
       .slice(0, reads.aeo_max_evidence_pages)
       .map(([id, failures]) => ({
@@ -65,7 +78,7 @@ export function readinessDiagnostic(
         source_analysis_id: id,
         normalized_url: pages.get(id)!.normalized_url,
         failed_checks: failures
-          .sort((a, b) => compare(a.rule_id, b.rule_id))
+          .toSorted((a, b) => compareText(a.rule_id, b.rule_id))
           .map((row) => {
             const rule = catalog.get(row.rule_id)!;
             return {
@@ -79,7 +92,7 @@ export function readinessDiagnostic(
             };
           }),
       }));
-    const checkpointIds = [...new Set(relevant.map((row) => row.rule_id))].sort();
+    const checkpointIds = [...new Set(relevant.map((row) => row.rule_id))].toSorted(compareText);
     const failurePages = new Set(pageRows.filter(failing).map((row) => row.analysis_id)).size;
     return {
       ...dimension,
@@ -98,16 +111,7 @@ export function readinessDiagnostic(
         const scope = group[0]!.scope;
         const failures = group.filter(failing);
         const rule = catalog.get(id)!;
-        const failureCount =
-          scope === 'page'
-            ? new Set(failures.map((row) => row.analysis_id)).size
-            : scope === 'site'
-              ? Number(failures.length > 0)
-              : failures.reduce(
-                  (sum, row) =>
-                    sum + Math.max(1, reportedFailures(record(row.evidence).failure_count)),
-                  0,
-                );
+        const failureCount = failingEntities(scope, failures);
         return {
           rule_id: id,
           scope,
@@ -188,11 +192,7 @@ export function webDiagnostic(projection: MeasurementProjection) {
     }
     return {
       key: area,
-      state: !applicable.length
-        ? 'not_measured'
-        : applicable.length === determinate.length
-          ? 'measured'
-          : 'limited_evidence',
+      state: measurementState(determinate.length, applicable.length),
       coverage: applicable.length
         ? Math.round((determinate.length / applicable.length) * 10000) / 10000
         : null,
@@ -206,11 +206,10 @@ export function webDiagnostic(projection: MeasurementProjection) {
   });
   const measured = areas.filter((area) => area.state !== 'not_measured');
   return {
-    state: !measured.length
-      ? 'not_measured'
-      : measured.every((area) => area.state === 'measured')
-        ? 'measured'
-        : 'limited_evidence',
+    state: measurementState(
+      measured.filter((area) => area.state === 'measured').length,
+      measured.length,
+    ),
     areas,
     field_data: {
       state: 'unavailable',

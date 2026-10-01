@@ -109,7 +109,7 @@ function weightedReadiness(dimensions: ReadinessDimension[]) {
   return { score: weightedScore / scoredWeight, coverage, state };
 }
 
-function readinessReason(
+export function readinessReason(
   score: number | null,
   state: string,
   anyApplicable: boolean,

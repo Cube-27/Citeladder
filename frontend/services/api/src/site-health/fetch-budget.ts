@@ -11,6 +11,12 @@ import type { Database } from '../db/database.ts';
 import { debitUsage, releaseUsage } from '../entitlements/ledger.ts';
 import type { Crawl } from './task-fence.ts';
 
+/** Units a ledger row still holds: reservations add, releases free, debits are consumption. */
+function heldUnits(row: { entry_kind: string; units: number }) {
+  if (row.entry_kind === 'reservation') return row.units;
+  return row.entry_kind === 'release' ? -row.units : 0;
+}
+
 export async function settleCrawlFetches(db: Database, crawl: Crawl) {
   const reservation = await db
     .selectFrom('consumable_ledger')
@@ -28,16 +34,7 @@ export async function settleCrawlFetches(db: Database, crawl: Crawl) {
     .where('workspace_id', '=', crawl.workspace_id)
     .where('reservation_id', '=', reservation.reservation_id)
     .execute();
-  const outstanding = entries.reduce(
-    (sum, row) =>
-      sum +
-      (row.entry_kind === 'reservation'
-        ? row.units
-        : row.entry_kind === 'release'
-          ? -row.units
-          : 0),
-    0,
-  );
+  const outstanding = entries.reduce((sum, row) => sum + heldUnits(row), 0);
   if (outstanding <= 0) return;
   // The succeeded analyze tasks are the authority; the crawl's counter may lag.
   const analyzed = await db

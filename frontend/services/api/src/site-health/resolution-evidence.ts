@@ -9,6 +9,7 @@ import {
   finalizeEvaluation,
 } from './analysis/finalize.ts';
 import type { RuleEvaluation } from './analysis/rules.ts';
+import { compareText } from '../text-order.ts';
 
 export type Resolution = {
   status: number | null;
@@ -82,10 +83,10 @@ export function canonicalResolution(
   finalUrl: string,
   resolutions: Map<string, Resolution>,
 ) {
-  const target =
-    declarations.length === 1 && declarations[0]!.trim()
-      ? (canonicalUrl(declarations[0]!, finalUrl) ?? '')
-      : '';
+  // The same unique, trimmed set canonicalIntegrity judges: a repeated identical
+  // declaration is one canonical, so its target still resolves.
+  const unique = [...new Set(declarations.map((value) => value.trim()).filter(Boolean))];
+  const target = unique.length === 1 ? (canonicalUrl(unique[0]!, finalUrl) ?? '') : '';
   const resolution = resolutions.get(target);
   const limited = resolution?.status === 429;
   const evaluation = canonicalIntegrity({
@@ -148,7 +149,7 @@ export function resolutionSet(
     resolution_source_ids: [
       ...new Set([...checked, ...limited].flatMap((url) => sourceIds(resolutions.get(url)!))),
     ]
-      .sort()
+      .toSorted(compareText)
       .slice(0, limit),
   };
   if (!sitemap) {

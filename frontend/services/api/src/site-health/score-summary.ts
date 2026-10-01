@@ -6,6 +6,12 @@ import { record } from '../db/json.ts';
 import { aggregateMeasurements, aggregateByPageKind } from './analysis/measurement-aggregation.ts';
 import { persistedEvaluation } from './terminal-analysis.ts';
 import type { Crawl } from './task-fence.ts';
+import { compareText, scalarText } from '../text-order.ts';
+
+function classificationState(classified: number, expected: number) {
+  if (!expected) return 'not_measured';
+  return classified === expected ? 'complete' : 'partial';
+}
 
 export async function loadMeasurementProjection(db: Database, crawl: Crawl) {
   await db
@@ -92,9 +98,8 @@ export async function loadMeasurementProjection(db: Database, crawl: Crawl) {
     kinds[row.page_kind] = (kinds[row.page_kind] ?? 0) + 1;
     if (row.page_kind === 'other') {
       other++;
-      const reason = String(
-        record(row.page_kind_evidence).other_reason || 'page_purpose_unresolved',
-      );
+      const reason =
+        scalarText(record(row.page_kind_evidence).other_reason) || 'page_purpose_unresolved';
       reasons[reason] = (reasons[reason] ?? 0) + 1;
     } else classified++;
   }
@@ -117,17 +122,13 @@ export async function loadMeasurementProjection(db: Database, crawl: Crawl) {
     classification_coverage: expected.length
       ? Math.round((classified / expected.length) * 10000) / 10000
       : null,
-    classification_state: !expected.length
-      ? 'not_measured'
-      : classified === expected.length
-        ? 'complete'
-        : 'partial',
+    classification_state: classificationState(classified, expected.length),
     classification_reason_groups: reasons,
     classification_formula_version: policy.site_health.reads.classification_formula_version,
-    classification_source_analysis_ids: analysisIds.sort(),
-    classification_source_artifact_ids: [...artifactIds].sort(),
-    classification_source_task_ids: expected.map((row) => row.id).sort(),
-    scored_page_kind_set: Object.keys(kinds).sort(),
+    classification_source_analysis_ids: analysisIds.toSorted(compareText),
+    classification_source_artifact_ids: [...artifactIds].toSorted(compareText),
+    classification_source_task_ids: expected.map((row) => row.id).toSorted(compareText),
+    scored_page_kind_set: Object.keys(kinds).toSorted(compareText),
     scored_page_count_by_kind: kinds,
   };
   return {

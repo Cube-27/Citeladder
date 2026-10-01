@@ -6,7 +6,7 @@ import { getLogger } from '../logging.ts';
 
 const logger = getLogger('app.workers.site_health_worker');
 
-export async function recoverExpiredLeases(db: Database, batchSize: number, now = new Date()) {
+export function recoverExpiredLeases(db: Database, batchSize: number, now = new Date()) {
   return db
     .transaction()
     .execute(async (trx) => {

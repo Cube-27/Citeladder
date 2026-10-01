@@ -1053,6 +1053,9 @@ Departures in 18b5b:
   joined every artifact of the task to every attempt.
 - **Final revision `audit_time`.** It is serialized as `Z` UTC rather than
   `+00:00`.
+- **Repeated canonical.** A canonical declared several times identically
+  resolves its target; Python left it unresolved (`unknown`) although the
+  integrity check counted one canonical.
 
 | Python bridge kept by 18b4 | Remaining caller / retirement condition |
 | --- | --- |

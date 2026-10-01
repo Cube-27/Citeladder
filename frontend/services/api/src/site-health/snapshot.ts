@@ -13,6 +13,7 @@ import { readinessDiagnostic, webDiagnostic } from './snapshot-diagnostics.ts';
 import { snapshotEligibility } from './snapshot-eligibility.ts';
 import { snapshotIssues } from './snapshot-issues.ts';
 import type { Crawl } from './task-fence.ts';
+import { compareText } from '../text-order.ts';
 
 const reads = policy.site_health.reads;
 const versions = reads.measurement_versions;
@@ -22,6 +23,17 @@ const metrics = [
   ['aeo_readiness_score', 'AEO Readiness'],
   ['aeo_measurement_coverage', 'AEO coverage'],
 ] as const;
+
+function comparisonReason(comparable: boolean, compositionChanged: boolean) {
+  if (!comparable) return 'no_comparable_snapshot';
+  return compositionChanged ? 'cohort_composition_changed' : 'comparable_snapshot';
+}
+
+function direction(delta: number | null) {
+  if (delta === null) return 'unavailable';
+  if (delta > 0) return 'increased';
+  return delta < 0 ? 'decreased' : 'unchanged';
+}
 
 async function history(db: Database, crawl: Crawl, projection: MeasurementProjection, now: Date) {
   const rows = await db
@@ -49,18 +61,14 @@ async function history(db: Database, crawl: Crawl, projection: MeasurementProjec
   const changed = keys.some((key) => previousCounts[key] !== currentCounts[key]);
   const common = {
     state: previous ? 'measured' : 'unavailable',
-    reason: !previous
-      ? 'no_comparable_snapshot'
-      : changed
-        ? 'cohort_composition_changed'
-        : 'comparable_snapshot',
+    reason: comparisonReason(Boolean(previous), changed),
     cohort_composition: {
       added_page_kinds: Object.keys(currentCounts)
         .filter((key) => !(key in previousCounts))
-        .sort(),
+        .toSorted(compareText),
       removed_page_kinds: Object.keys(previousCounts)
         .filter((key) => !(key in currentCounts))
-        .sort(),
+        .toSorted(compareText),
       previous_page_count_by_kind: previousCounts,
       current_page_count_by_kind: currentCounts,
     },
@@ -92,14 +100,7 @@ async function history(db: Database, crawl: Crawl, projection: MeasurementProjec
           previous: before,
           current,
           delta,
-          direction:
-            delta === null
-              ? 'unavailable'
-              : delta > 0
-                ? 'increased'
-                : delta < 0
-                  ? 'decreased'
-                  : 'unchanged',
+          direction: direction(delta),
         };
       }),
     },

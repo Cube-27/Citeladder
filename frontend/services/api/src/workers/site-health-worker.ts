@@ -101,7 +101,8 @@ export class SiteHealthWorker {
     return tasks.length;
   }
   async #recover() {
-    if (this.#recovery) return this.#recovery;
+    // Another slot owns the in-flight pass; this slot keeps claiming instead of waiting.
+    if (this.#recovery) return 0;
     if (Date.now() < this.#nextRecovery) return 0;
     this.#recovery = recoverExpiredLeases(this.db, this.settings.reclaimBatch)
       .then(async (result) => {
@@ -110,10 +111,11 @@ export class SiteHealthWorker {
             ? 0
             : Date.now() + Math.max(50, this.settings.poll * 1000);
         // A lease recovered at its attempt ceiling settles a task no executor will reconcile.
-        for (const crawl of result.failedCrawls)
-          await this.#guard('recovered crawl reconcile failed', () =>
-            reconcileCrawl(this.db, crawl.workspaceId, crawl.crawlId),
-          );
+        for (const crawl of result.failedCrawls) {
+          const reconcile = () => reconcileCrawl(this.db, crawl.workspaceId, crawl.crawlId);
+          // One crawl lock at a time, each in its own transaction.
+          await this.#guard('recovered crawl reconcile failed', reconcile); // NOSONAR
+        }
         return result.reclaimed;
       })
       .finally(() => {
@@ -123,7 +125,7 @@ export class SiteHealthWorker {
   }
   /** Crawl backstops, at most once per poll interval across this worker's slots. */
   async #maintain() {
-    if (this.#maintenance) return this.#maintenance;
+    if (this.#maintenance) return;
     if (Date.now() < this.#nextMaintenance) return;
     const lifecycle = this.settings.lifecycle;
     this.#maintenance = (async () => {

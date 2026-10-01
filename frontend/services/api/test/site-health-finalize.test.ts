@@ -261,3 +261,20 @@ describe('live score refresh cadence', () => {
     expect([off.admits('crawl', 0), off.admits('crawl', 0)]).toEqual([true, true]);
   });
 });
+
+it('resolves a canonical declared more than once as the one canonical it names', () => {
+  const ok: Resolution = {
+    status: 200,
+    finalUrl: 'https://example.test/a',
+    redirected: false,
+    taskId: 'task',
+    attemptId: 'attempt',
+    artifactId: null,
+  };
+  const result = canonicalResolution(
+    ['/a', ' /a '],
+    'https://example.test/page',
+    new Map([['https://example.test/a', ok]]),
+  );
+  expect(result.outcome).toBe('satisfied');
+});

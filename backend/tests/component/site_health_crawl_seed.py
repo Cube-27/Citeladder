@@ -7,6 +7,7 @@ these rows only give the Python model tests a realistic tenancy to violate.
 from __future__ import annotations
 
 import uuid
+from urllib.parse import urlsplit
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,7 +44,7 @@ async def _add_monitored_analyze_task(
         normalized_url=canonical,
         url_hash=url_hash,
         display_url=canonical,
-        host="example.com",
+        host=urlsplit(canonical).hostname or "",
         depth=0,
     )
     session.add(site_url)
