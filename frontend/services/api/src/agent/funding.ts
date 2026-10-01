@@ -108,7 +108,7 @@ export function agentAdmission(settings: Settings, platform: GatewaySettings): A
     await enforceWorkspaceRequest(db, scope.workspaceId, {
       operation: 'agent.runs',
       limit: settings.dailyLimit,
-      windowSeconds: 86400,
+      windowSeconds: settings.dailyWindowSeconds,
     });
     return funding;
   };

@@ -44,14 +44,15 @@ export async function agentCreditRate(db: Database, model: string, revision?: st
 }
 export function chargeCredits(rate: CreditRate, usage: Record<string, unknown>): number | null {
   const token = (name: string, fallback?: number) => {
-    const parsed = units.safeParse(usage[name] ?? fallback);
+    const parsed = units.safeParse(Object.hasOwn(usage, name) ? usage[name] : fallback);
     return parsed.success ? parsed.data : null;
   };
   const input = token('input_tokens'),
     output = token('output_tokens');
   const cached = token('cached_input_tokens', 0),
     reasoning = token('reasoning_tokens', 0);
-  if (input === null || output === null || cached === null || reasoning === null) return null;
+  if (input === null || output === null || cached === null || reasoning === null || cached > input)
+    return null;
   const numerator =
     BigInt(Math.max(0, input - cached)) * BigInt(rate.input_credits_per_million) +
     BigInt(cached) * BigInt(rate.cached_input_credits_per_million) +

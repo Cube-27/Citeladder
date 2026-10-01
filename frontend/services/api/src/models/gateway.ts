@@ -68,6 +68,32 @@ function unfenced(content: string) {
   return text.trim();
 }
 
+function normalizedUsage(raw: Record<string, unknown> | undefined) {
+  const usage: Record<string, number | null> = {};
+  const nested = (name: string, field: string) => {
+    const details = raw?.[name];
+    return details && typeof details === 'object' ? Reflect.get(details, field) : undefined;
+  };
+  const fallback: Record<string, unknown> = {
+    cached_input_tokens: nested('prompt_tokens_details', 'cached_tokens'),
+    reasoning_tokens: nested('completion_tokens_details', 'reasoning_tokens'),
+  };
+  for (const [target, aliases] of Object.entries({
+    input_tokens: ['input_tokens', 'prompt_tokens'],
+    output_tokens: ['output_tokens', 'completion_tokens'],
+    total_tokens: ['total_tokens'],
+    cached_input_tokens: ['cached_input_tokens'],
+    reasoning_tokens: ['reasoning_tokens'],
+  })) {
+    const alias = aliases.find((name) => raw && Object.hasOwn(raw, name));
+    const value = alias ? raw?.[alias] : fallback[target];
+    if (value !== undefined)
+      usage[target] =
+        typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
+  }
+  return usage;
+}
+
 export function createModelGateway(
   settings = gatewaySettings(),
   transport: Transport = defaultTransport,
@@ -129,35 +155,7 @@ export function createModelGateway(
     const parsed = completion.safeParse(await modelJson(response));
     if (!parsed.success) throw new ModelError('parse');
     const body = parsed.data;
-    const usage: Record<string, number> = {};
-    for (const [target, aliases] of Object.entries({
-      input_tokens: ['input_tokens', 'prompt_tokens'],
-      output_tokens: ['output_tokens', 'completion_tokens'],
-      total_tokens: ['total_tokens'],
-      cached_input_tokens: ['cached_input_tokens'],
-      reasoning_tokens: ['reasoning_tokens'],
-    })) {
-      for (const alias of aliases) {
-        const details =
-          target === 'cached_input_tokens'
-            ? body.usage?.prompt_tokens_details
-            : target === 'reasoning_tokens'
-              ? body.usage?.completion_tokens_details
-              : undefined;
-        const nested =
-          details && typeof details === 'object'
-            ? Reflect.get(
-                details,
-                target === 'cached_input_tokens' ? 'cached_tokens' : 'reasoning_tokens',
-              )
-            : undefined;
-        const value = body.usage?.[alias] ?? nested;
-        if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
-          usage[target] = value;
-          break;
-        }
-      }
-    }
+    const usage = normalizedUsage(body.usage);
     const latency = Math.round(performance.now() - started);
     logger.info('default agent call ok', { latency_ms: latency, model: settings.model });
     return {

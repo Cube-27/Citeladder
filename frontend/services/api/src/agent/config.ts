@@ -6,7 +6,7 @@ export function agentSettings(env: Record<string, string | undefined> = process.
   const setting = (name: keyof typeof specs) => resolveSettingSpec(specs[name], env);
   return {
     skillsDirectory:
-      env.AGENT_SKILLS_DIRECTORY ||
+      String(setting('skills_directory')) ||
       fileURLToPath(
         new URL('../../../../../backend/app/core/config/agent_skills/', import.meta.url),
       ),
@@ -18,6 +18,7 @@ export function agentSettings(env: Record<string, string | undefined> = process.
     devPasswordConfigured: Boolean(resolveSettingSpec(policy.settings.dev_login_password, env)),
     activeLimit: Number(resolveSettingSpec(policy.abuse.active_agent_runs_per_workspace, env)),
     dailyLimit: Number(resolveSettingSpec(policy.abuse.agent_runs_per_workspace_daily, env)),
+    dailyWindowSeconds: Number(resolveSettingSpec(policy.abuse.agent_call_window_seconds, env)),
     retryAfterSeconds: Number(resolveSettingSpec(policy.abuse.active_job_retry_after_seconds, env)),
   };
 }

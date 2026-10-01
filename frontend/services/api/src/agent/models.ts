@@ -1,4 +1,5 @@
 import type { Database } from '../db/database.ts';
+import { policy } from '../config.ts';
 import { createModelGateway, type GatewaySettings } from '../models/gateway.ts';
 import { defaultTransport, type Transport } from '../models/http.ts';
 import {
@@ -11,14 +12,13 @@ import { sendProbe, type ProbeTransport } from '../providers/probe-transport.ts'
 import { AgentError, type Run } from './contracts.ts';
 import type { AgentModel } from './model-calls.ts';
 
+const defaultTransports = { platform: defaultTransport, customer: sendProbe };
+
 export function agentModels(
   db: Database,
   encryptionKey: string,
   platform: GatewaySettings,
-  transports: { platform: Transport; customer: ProbeTransport } = {
-    platform: defaultTransport,
-    customer: sendProbe,
-  },
+  transports: { platform: Transport; customer: ProbeTransport } = defaultTransports,
 ) {
   return async (run: Run): Promise<AgentModel> => {
     let gateway;
@@ -38,7 +38,7 @@ export function agentModels(
         gateway = createAppModelGateway(
           route,
           encryptionKey,
-          { ...platform, attempts: 1 },
+          { ...platform, attempts: policy.agent.provider_max_attempts },
           transports.customer,
         );
       } catch (error) {
@@ -47,7 +47,10 @@ export function agentModels(
       }
     } else {
       if (run.requested_model !== platform.model) throw new AgentError('model_changed');
-      gateway = createModelGateway({ ...platform, attempts: 1 }, transports.platform);
+      gateway = createModelGateway(
+        { ...platform, attempts: policy.agent.provider_max_attempts },
+        transports.platform,
+      );
     }
     return {
       model: gateway.model,

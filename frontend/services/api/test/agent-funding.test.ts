@@ -217,6 +217,12 @@ describe('Agent funding through the production ledger and providers', () => {
     expect(chargeCredits(rate, { input_tokens: 0, output_tokens: 0 })).toBe(1);
     expect(chargeCredits(rate, { input_tokens: true, output_tokens: 0 })).toBeNull();
     expect(
+      chargeCredits(rate, { input_tokens: 20, output_tokens: 10, cached_input_tokens: null }),
+    ).toBeNull();
+    expect(
+      chargeCredits(rate, { input_tokens: 20, output_tokens: 10, cached_input_tokens: 21 }),
+    ).toBeNull();
+    expect(
       chargeCredits(rate, {
         input_tokens: Number.MAX_SAFE_INTEGER,
         output_tokens: Number.MAX_SAFE_INTEGER,

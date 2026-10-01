@@ -72,6 +72,18 @@ function retryDelay(response: Response | undefined, attempt: number, policy: Ret
   );
 }
 
+function requireRetryableConnection(
+  error: unknown,
+  policy: RetryPolicy,
+  last: boolean,
+  signal?: AbortSignal,
+) {
+  if (error instanceof ModelError && error.code !== 'connection') throw error;
+  if (signal?.aborted) throw new ModelError('connection');
+  const timedOut = error instanceof Error && error.name === 'TimeoutError';
+  if ((!timedOut && !policy.retryConnection) || last) throw new ModelError('connection');
+}
+
 /** No provider body, credential, or customer text enters an error. */
 export async function postModel(
   url: string,
@@ -93,12 +105,7 @@ export async function postModel(
       });
       if (!policy.retryStatus(response.status) || attempt + 1 === policy.attempts) return response;
     } catch (error) {
-      if (error instanceof ModelError && error.code !== 'connection') throw error;
-      if (signal?.aborted) throw new ModelError('connection');
-      const timedOut = error instanceof Error && error.name === 'TimeoutError';
-      if ((!timedOut && !policy.retryConnection) || attempt + 1 === policy.attempts) {
-        throw new ModelError('connection');
-      }
+      requireRetryableConnection(error, policy, attempt + 1 === policy.attempts, signal);
     }
     await response?.body?.cancel();
     await backoff(transport, retryDelay(response, attempt, policy), signal);

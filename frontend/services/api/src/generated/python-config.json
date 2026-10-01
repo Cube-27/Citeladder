@@ -12863,6 +12863,13 @@
         "default": 16384,
         "exclusive_minimum": 0
       },
+      "skills_directory": {
+        "env": [
+          "SKILLS_DIRECTORY"
+        ],
+        "type": "str",
+        "default": ""
+      },
       "execution_timeout_seconds": {
         "env": [
           "DEFAULT_AGENT_EXECUTION_TIMEOUT_SECONDS"
@@ -13133,6 +13140,7 @@
     "max_tool_calls": 6,
     "max_protocol_errors": 2,
     "run_max_attempts": 3,
+    "provider_max_attempts": 1,
     "chat_turn_limit": 60,
     "tool_result_max_chars": 12000,
     "context_package_max_chars": 24000,

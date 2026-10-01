@@ -44,6 +44,8 @@ AGENT_MAX_TOOL_CALLS: Final = 6
 AGENT_MAX_PROTOCOL_ERRORS: Final = 2
 # A run's attempts at the whole turn (a lost lease or retryable provider error).
 AGENT_RUN_MAX_ATTEMPTS: Final = 3
+# Each Agent dispatch owns one ledger hold; turn retries acquire another hold.
+AGENT_PROVIDER_MAX_ATTEMPTS: Final = 1
 # Per-chat bound on user turns, so one conversation cannot grow without end.
 AGENT_CHAT_TURN_LIMIT: Final = 60
 # HTTP attempts per default-model call made by TS prompt generation.
@@ -179,6 +181,7 @@ class DefaultAgentSettings(BaseSettings):
             "DEFAULT_AGENT_MAX_OUTPUT_TOKENS", "default_agent_max_output_tokens"
         ),
     )
+    skills_directory: str = Field(default="", validation_alias="AGENT_SKILLS_DIRECTORY")
     execution_timeout_seconds: float = Field(
         default=210.0,
         gt=0,

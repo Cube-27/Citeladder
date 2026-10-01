@@ -4,6 +4,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { z } from 'zod';
 import { policy } from '../config.ts';
+import { compareText } from '../text-order.ts';
 import type { Skill, SkillCatalog } from './contracts.ts';
 
 const p = policy.agent_skills;
@@ -32,59 +33,68 @@ function expand(body: string) {
   });
 }
 async function markdownFiles(root: string): Promise<string[]> {
-  const files: string[] = [];
-  for (const entry of await readdir(root, { withFileTypes: true })) {
-    const path = join(root, entry.name);
-    if (entry.isDirectory()) files.push(...(await markdownFiles(path)));
-    else if (entry.isFile() && entry.name.endsWith('.md')) files.push(path);
+  const files = await Promise.all(
+    (await readdir(root, { withFileTypes: true })).map(async (entry) => {
+      const path = join(root, entry.name);
+      if (entry.isDirectory()) return markdownFiles(path);
+      return entry.isFile() && entry.name.endsWith('.md') ? [path] : [];
+    }),
+  );
+  return files.flat().sort(compareText);
+}
+function contentFormats(body: string) {
+  const [preamble = '', ...sections] = body.split(/\n(?=## )/u);
+  const formats = new Map<string, { id: string; label: string; body: string }>();
+  for (const section of sections) {
+    const heading = /^## ([a-z_]+) — (.+)\n/u.exec(section);
+    if (!heading || formats.has(heading[1]!)) throw new TypeError('Invalid content format');
+    const text = section.slice(heading[0].length).trim();
+    if (!text) throw new TypeError('Empty content format');
+    formats.set(heading[1]!, { id: heading[1]!, label: heading[2]!.trim(), body: text });
   }
-  return files.sort();
+  return { formatPreamble: preamble.slice(preamble.indexOf('\n') + 1).trim(), formats };
+}
+function parseSkill(path: string, body: string): CatalogSkill {
+  const match = /^---\n([\s\S]*?)\n---\n([\s\S]+)$/u.exec(body);
+  if (!match) throw new TypeError(`Missing skill frontmatter: ${path}`);
+  const values: Record<string, string> = {};
+  for (const line of match[1]!.split('\n')) {
+    const field = /^([a-z_]+): (.+)$/u.exec(line);
+    if (!field || Object.hasOwn(values, field[1]!))
+      throw new TypeError(`Invalid skill metadata: ${path}`);
+    values[field[1]!] = field[2]!;
+  }
+  const parsed = metadata.parse(values);
+  if (path !== `skills/${parsed.id}/SKILL.md`) throw new TypeError('Skill directory must match id');
+  const methodology = match[2]!.trim();
+  if (!methodology || methodology.length > p.body_max_chars)
+    throw new TypeError('Invalid skill body');
+  return {
+    ...parsed,
+    outputKind: parsed.output_kind,
+    body: methodology,
+    outlineFirst: p.outline_first_kinds.includes(parsed.output_kind),
+  };
 }
 export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
   const digest = createHash('sha256');
   const skills: CatalogSkill[] = [];
   let operatingContract = '';
   let formatPreamble = '';
-  const formats = new Map<string, { id: string; label: string; body: string }>();
-  for (const file of await markdownFiles(root)) {
-    const path = relative(root, file).split(sep).join('/');
-    const body = expand((await readFile(file, 'utf8')).replaceAll('\r\n', '\n'));
+  let formats: PackagedCatalog['formats'] = new Map();
+  const inputs = await Promise.all(
+    (await markdownFiles(root)).map(async (file) => ({
+      path: relative(root, file).split(sep).join('/'),
+      body: expand((await readFile(file, 'utf8')).replaceAll('\r\n', '\n')),
+    })),
+  );
+  for (const { path, body } of inputs) {
     digest.update(path).update('\0').update(body).update('\0');
     if (path === 'operating_contract.md') operatingContract = body;
     else if (path === 'content_formats.md') {
-      const [preamble = '', ...sections] = body.split(/\n(?=## )/u);
-      formatPreamble = preamble.slice(preamble.indexOf('\n') + 1).trim();
-      for (const section of sections) {
-        const heading = /^## ([a-z_]+) — (.+)\n/u.exec(section);
-        if (!heading || formats.has(heading[1]!)) throw new TypeError('Invalid content format');
-        formats.set(heading[1]!, {
-          id: heading[1]!,
-          label: heading[2]!.trim(),
-          body: section.slice(heading[0].length).trim(),
-        });
-      }
+      ({ formatPreamble, formats } = contentFormats(body));
     } else if (/^skills\/[^/]+\/SKILL\.md$/u.test(path)) {
-      const match = /^---\n([\s\S]*?)\n---\n([\s\S]+)$/u.exec(body);
-      if (!match) throw new TypeError(`Missing skill frontmatter: ${path}`);
-      const values: Record<string, string> = {};
-      for (const line of match[1]!.split('\n')) {
-        const field = /^([a-z_]+): (.+)$/u.exec(line);
-        if (!field || Object.hasOwn(values, field[1]!))
-          throw new TypeError(`Invalid skill metadata: ${path}`);
-        values[field[1]!] = field[2]!;
-      }
-      const parsed = metadata.parse(values);
-      if (path !== `skills/${parsed.id}/SKILL.md`)
-        throw new TypeError('Skill directory must match id');
-      const methodology = match[2]!.trim();
-      if (!methodology || methodology.length > p.body_max_chars)
-        throw new TypeError('Invalid skill body');
-      skills.push({
-        ...parsed,
-        outputKind: parsed.output_kind,
-        body: methodology,
-        outlineFirst: p.outline_first_kinds.includes(parsed.output_kind),
-      });
+      skills.push(parseSkill(path, body));
     }
   }
   if (!skills.length || !operatingContract.trim() || !formats.size)
@@ -97,7 +107,7 @@ export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
   return {
     version: `agent-skills-${digest.digest('hex').slice(0, 16)}`,
     operatingContract,
-    skills: new Map(skills.sort((a, b) => a.order - b.order).map((skill) => [skill.id, skill])),
+    skills: new Map(skills.toSorted((a, b) => a.order - b.order).map((skill) => [skill.id, skill])),
     formatPreamble,
     formats,
   };
