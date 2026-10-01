@@ -4,7 +4,10 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
-import { enqueueTask } from '../referrals/enqueue.ts';
+import {
+  enqueueImplementationVerification,
+  enqueueOpportunityRefresh,
+} from '../opportunities/enqueue.ts';
 import {
   TaskCancelledError,
   taskProject,
@@ -27,7 +30,6 @@ import { fenceInspectionTask } from './task-fence.ts';
 
 const p = policy.source_pages;
 const logger = getLogger('app.workers.source_pages');
-const opportunity = policy.opportunity.opportunities;
 function auditId(task: QueueTask) {
   const id = parseUuid(payloadString(task, 'audit_id'));
   if (!id) throw new Error('Source-page inspection requires audit_id');
@@ -54,24 +56,9 @@ async function handoff(
 ) {
   await db.transaction().execute(async (trx) => {
     await fenceInspectionTask(trx, task);
-    await enqueueTask(trx, {
-      kind: 'opportunity_refresh',
-      workspaceId: scope.workspaceId,
-      projectId: scope.projectId,
-      keyParts: [],
-      maxAttempts,
-      idempotencyKey: `opportunity:audit:${audit}:${opportunity.ANALYZER_VERSION}:${opportunity.RULE_VERSION}:${opportunity.FORMULA_VERSION}`,
-      payload: { trigger_kind: 'audit', trigger_id: audit },
-    });
-    await enqueueTask(trx, {
-      kind: 'opportunity_verification',
-      workspaceId: scope.workspaceId,
-      projectId: scope.projectId,
-      keyParts: [],
-      maxAttempts,
-      idempotencyKey: `implementation-verification:audit:${audit}:${opportunity.IMPLEMENTATION_VERIFIER_VERSION}:terminal`,
-      payload: { trigger_kind: 'audit', trigger_id: audit },
-    });
+    const trigger = { ...scope, triggerKind: 'audit', triggerId: audit, maxAttempts };
+    await enqueueOpportunityRefresh(trx, trigger);
+    await enqueueImplementationVerification(trx, trigger);
   });
 }
 export async function compensateInspection(db: Database, task: QueueTask) {
@@ -220,18 +207,13 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
     await handoff(db, scope, audit.id, task.max_attempts, task);
     const now = new Date();
     await settlePlacements(db, scope, now, task, async (trx) => {
-      await enqueueTask(trx, {
-        kind: 'opportunity_verification',
-        workspaceId: scope.workspaceId,
-        projectId: scope.projectId,
-        keyParts: [],
+      await enqueueImplementationVerification(trx, {
+        ...scope,
+        triggerKind: 'source_page_inspection',
+        triggerId: audit.id,
+        revision: task.id,
+        payload: { settled_since: now.toISOString() },
         maxAttempts: task.max_attempts,
-        idempotencyKey: `implementation-verification:source_page_inspection:${audit.id}:${opportunity.IMPLEMENTATION_VERIFIER_VERSION}:${task.id}`,
-        payload: {
-          trigger_kind: 'source_page_inspection',
-          trigger_id: audit.id,
-          settled_since: now.toISOString(),
-        },
       });
     });
   };

@@ -78,6 +78,10 @@ def web_evidence_policy(
             "tracking_params": sorted(rules.TRACKING_QUERY_PARAMS),
             "ignored_query_keys": sorted(URL_IDENTITY_IGNORED_QUERY_KEYS),
             "reads": _read_policy(),
+            "change_intel": {
+                **constants(change_intel, "CHANGE_"),
+                **constants(change_intel, "CONTENT_"),
+            },
         },
     }
 
@@ -112,11 +116,5 @@ def _read_policy() -> dict[str, Any]:
             "profile": measurement.PROFILE_VERSION,
             "schema_contract": measurement.SCHEMA_CONTRACT_VERSION,
             "presentation": measurement.PRESENTATION_VERSION,
-        },
-        "changes": {
-            "analyzer_version": change_intel.CHANGE_ANALYZER_VERSION,
-            "default_limit": change_intel.CHANGE_DEFAULT_LIMIT,
-            "max_limit": change_intel.CHANGE_MAX_LIMIT,
-            "unavailable_state": change_intel.CHANGE_STATE_UNAVAILABLE,
         },
     }

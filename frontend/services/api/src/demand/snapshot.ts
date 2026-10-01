@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { policy } from '../config.ts';
-import { enqueueTask } from '../referrals/enqueue.ts';
+import { enqueueOpportunityRefresh } from '../opportunities/enqueue.ts';
 import {
   payloadWindow,
   payloadString,
@@ -29,13 +29,11 @@ const p = policy.demand;
 async function downstream(db: Database, task: QueueTask, id: string, maxAttempts: number) {
   const kind = payloadString(task, 'downstream_trigger_kind') ?? 'demand_snapshot';
   const triggerId = payloadString(task, 'downstream_trigger_id') ?? id;
-  await enqueueTask(db, {
+  await enqueueOpportunityRefresh(db, {
     workspaceId: task.workspace_id,
     projectId: requireProject(task),
-    kind: 'opportunity_refresh',
-    payload: { trigger_kind: kind, trigger_id: triggerId },
-    keyParts: [],
-    idempotencyKey: ['opportunity', kind, triggerId, ...p.opportunity_versions].join(':'),
+    triggerKind: kind,
+    triggerId,
     maxAttempts,
   });
 }

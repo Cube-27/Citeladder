@@ -51,7 +51,8 @@
   typed entitlement ledger to TS, keeping Python worker/operator bridges for
   their assigned migrations. PR 17a moves audit schedule management to TS;
   Python retains the scheduler until funded audit admission moves. PR 18b is
-  split into five slices; 18b1 moves every Site Health read route to TS.
+  split into five slices; 18b1 moves every Site Health read route to TS and
+  18b2 moves change intelligence and its analytics handoff.
   PRs 17–20 otherwise follow the re-sequenced order.
   Deployment of implemented cutovers is pending; the owner dropped the one-week
   soak while there are no customers (smoke tests instead). On 1 October 2026

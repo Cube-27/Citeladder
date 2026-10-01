@@ -1,8 +1,6 @@
-"""Exactly-once downstream refresh DAG for usable terminal crawl evidence."""
+"""Exactly-once analytics handoff for a terminal crawl without usable analysis."""
 
 from __future__ import annotations
-
-import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,22 +14,17 @@ from app.models.traffic import TrafficSnapshot
 
 
 async def enqueue_terminal_analytics_refresh(
-    session: AsyncSession,
-    *,
-    crawl: SiteCrawl,
-    change_snapshot_id: uuid.UUID | None,
+    session: AsyncSession, *, crawl: SiteCrawl
 ) -> None:
-    """Enqueue analytics after change persistence or crawl-evidence abstention.
+    """Enqueue analytics for a terminal crawl that produced no usable analysis.
 
-    Every enqueue is transactionally idempotent on the crawl identity. Traffic
-    evidence selects Demand as the predecessor and carries the crawl trigger
-    through to Demand's eventual Opportunity enqueue. Site-only projects enqueue
-    Opportunities directly. A terminal crawl with no usable HTML analysis uses
-    its crawl identity so prior Site Opportunities can be superseded without
-    inventing a graph snapshot.
+    The crawl identity is the trigger so prior Site Opportunities can be
+    superseded without inventing a change snapshot. A crawl with usable
+    analysis queues ``change_intel``; the TypeScript executor performs the
+    same handoff with its change snapshot. Traffic evidence selects Demand as
+    the predecessor and carries the trigger to Demand's Opportunity enqueue.
+    Every enqueue is transactionally idempotent on the crawl identity.
     """
-    trigger_kind = "site_change" if change_snapshot_id else "site_crawl"
-    trigger_id = change_snapshot_id or crawl.id
     await enqueue_implementation_verification(
         session,
         workspace_id=crawl.workspace_id,
@@ -60,17 +53,17 @@ async def enqueue_terminal_analytics_refresh(
             project_id=crawl.project_id,
             window_start=traffic.window_start,
             window_end=traffic.window_end,
-            source_revision=f"{trigger_kind}:{trigger_id}",
-            downstream_trigger_kind=trigger_kind,
-            downstream_trigger_id=trigger_id,
+            source_revision=f"site_crawl:{crawl.id}",
+            downstream_trigger_kind="site_crawl",
+            downstream_trigger_id=crawl.id,
         )
         return
     await enqueue_opportunity_refresh(
         session,
         workspace_id=crawl.workspace_id,
         project_id=crawl.project_id,
-        trigger_kind=trigger_kind,
-        trigger_id=trigger_id,
+        trigger_kind="site_crawl",
+        trigger_id=crawl.id,
     )
 
 

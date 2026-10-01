@@ -181,7 +181,7 @@ total.
 | 15 | MCP server and OAuth provider | High | Done |
 | 16 | Billing and the entitlement ledger (16a PDF, 16b commercial/ledger) | High | Done |
 | 17 | Audits, providers and answer-engine connectors | High | 17a done |
-| 18 | Site Health and source-page inspection | High | 18a, 18b1 done |
+| 18 | Site Health and source-page inspection | High | 18a, 18b1, 18b2 done |
 | 19 | Agent runtime | High | |
 | 20 | Consolidation and policy transfer | Medium | |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
@@ -932,8 +932,14 @@ into dependency-ordered slices:
    rerun and the monitored set. MCP's page read uses the same page query.
    Python keeps the page reads and content hand-off the Agent and MCP bridges
    call until PR 19.
-2. **18b2, change intelligence:** comparison and immutable snapshots with
-   their atomic analytics handoff.
+2. **18b2, change intelligence (implemented).** The TypeScript Site Health
+   worker claims `change_intel`: it selects the comparable predecessor,
+   compares persisted page evidence, appends the immutable snapshot and its
+   observations, and performs the analytics handoff (implementation
+   verification, then Demand or Opportunities). Python keeps `change_intel`
+   admission at finalization and the handoff of a crawl without usable
+   analysis until 18b5. One TypeScript helper builds every Opportunity refresh
+   and verification key.
 3. **18b3, page analysis:** the parser, classifier, deterministic rules and
    scoring, with the `analyze` executor.
 4. **18b4, acquisition:** the `discover` and `site_setup` executors, durable
@@ -954,7 +960,18 @@ link-metric version filter and the current-analysis issue count. The grouped
 issue-history view, the single change-observation route and the Site Health
 content-handoff route had no caller and are deleted; the Agent keeps the
 hand-off as a Python bridge. Cursors issued by Python are not accepted after
-the cutover. PR 18 remains incomplete until 18b5 lands.
+the cutover.
+
+Departures in 18b2: the snapshot, its analytics handoff and the task's
+acknowledgement commit in one transaction (Python acknowledged the task after
+committing, so a crash between them re-ran the task); rule evaluations load
+through one array parameter rather than one bind per evaluation id, which a
+large crawl could push past the driver's parameter limit; the page join scopes artifacts, URLs and observations
+to the workspace; an implementation event's malformed target id no longer fails
+the task; and comparison text is lower-cased rather than Python-casefolded,
+which changes only stored shingles. The source hash is unchanged, so a task
+retried across the cutover reuses Python's snapshot. PR 18 remains incomplete
+until 18b5 lands.
 
 ### PR 19: Agent runtime
 
@@ -1002,6 +1019,10 @@ guards.
 - Commerce catalog IDs, canonical URLs, prices, attributes, provenance and
   memberships; candidate `state`/`decision_at`; Prompt `enabled` and target
   `approved_at` (inputs to Python discovery, prompt context and audit freezing).
+- The terminal-crawl analytics handoff keys: verification `site_crawl:<crawl>`,
+  Opportunity refresh and the Demand revision (`<trigger>:<id>`, first 24
+  characters). Python's no-evidence finalization and the TypeScript
+  `change_intel` executor both write them until 18b5.
 - The stored business map (`business_context.business_map`: offerings, entries
   with origin, review state, reviewer and source, and exclusions) and the brand
   profile `sources` provenance, read by Python prompt generation.

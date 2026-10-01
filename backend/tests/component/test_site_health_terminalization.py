@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -391,13 +390,8 @@ async def test_completed_crawl_refreshes_demand_when_traffic_exists(
         )
         await session.flush()
 
-        change_snapshot_id = uuid.uuid4()
-        await enqueue_terminal_analytics_refresh(
-            session, crawl=crawl, change_snapshot_id=change_snapshot_id
-        )
-        await enqueue_terminal_analytics_refresh(
-            session, crawl=crawl, change_snapshot_id=change_snapshot_id
-        )
+        await enqueue_terminal_analytics_refresh(session, crawl=crawl)
+        await enqueue_terminal_analytics_refresh(session, crawl=crawl)
         await session.commit()
 
     async with session_factory() as session:
@@ -419,8 +413,8 @@ async def test_completed_crawl_refreshes_demand_when_traffic_exists(
             for task in tasks
             if task.task_kind == ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH
         )
-        assert demand_task.payload["downstream_trigger_kind"] == "site_change"
-        assert demand_task.payload["downstream_trigger_id"] == str(change_snapshot_id)
+        assert demand_task.payload["downstream_trigger_kind"] == "site_crawl"
+        assert demand_task.payload["downstream_trigger_id"] == str(seed.crawl_id)
 
 
 @pytest.mark.asyncio

@@ -368,13 +368,13 @@ async function changeSnapshot(
 function changeSummary(snapshot: ChangeSnapshot | undefined) {
   if (snapshot === undefined)
     return {
-      state: reads.changes.unavailable_state,
+      state: policy.site_health.change_intel.state_unavailable,
       reason_code: 'no_persisted_change_snapshot',
       snapshot_id: null,
       crawl_a_id: null,
       crawl_b_id: null,
       complete_pair: false,
-      analyzer_version: reads.changes.analyzer_version,
+      analyzer_version: policy.site_health.change_intel.analyzer_version,
       page_analyzer_version: '',
       extractor_version: '',
       source_analysis_ids: [],
