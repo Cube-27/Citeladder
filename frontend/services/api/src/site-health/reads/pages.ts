@@ -11,6 +11,7 @@ import type { Database } from '../../db/database.ts';
 import { record, strings } from '../../db/json.ts';
 import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import { notFound } from '../../errors.ts';
+import { compareText } from '../../text-order.ts';
 import { loadCrawl, rootFailure, type Crawl } from './crawl.ts';
 import {
   currentIssueFilter,
@@ -283,8 +284,7 @@ export async function pageDetail(
     evaluations: evaluations
       .sort(
         (a, b) =>
-          severityRank(a.severity) - severityRank(b.severity) ||
-          (a.rule_id < b.rule_id ? -1 : a.rule_id > b.rule_id ? 1 : 0),
+          severityRank(a.severity) - severityRank(b.severity) || compareText(a.rule_id, b.rule_id),
       )
       .slice(0, MAX_EVALUATIONS)
       .map((evaluation) => ({

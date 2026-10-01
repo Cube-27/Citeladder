@@ -16,6 +16,7 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
+import { containsPattern } from '../db/like.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { policy } from '../config.ts';
 import { preferencesBody } from '../routes/search-intelligence-contracts.ts';
@@ -174,10 +175,6 @@ function sortKey(sort: string): RawBuilder<unknown> {
   if (ROW_SORT_FIELDS.has(sort)) return sql.ref(sort);
   throw new ApiError(422, 'Dataset sort is unsupported', { code: asApiErrorCode('invalid_sort') });
 }
-
-/** User text matched literally: `%`, `_` and `\` are not wildcards. */
-const ESCAPED_MATCH = String.raw`\$&`;
-const containsPattern = (text: string) => `%${text.replaceAll(/[\\%_]/gu, ESCAPED_MATCH)}%`;
 
 function matchingRows(
   db: Database,

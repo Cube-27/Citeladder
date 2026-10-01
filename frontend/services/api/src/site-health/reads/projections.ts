@@ -24,6 +24,7 @@ import {
   InvalidCursorError,
 } from '../../http/keyset-cursor.ts';
 import { parseUuid } from '../../http/uuid.ts';
+import { scalarText } from '../../text-order.ts';
 import type { SiteChangeSnapshots } from '../../generated/db-schema.ts';
 import { loadCrawl, loadProject, resolveUsableCrawl, type Crawl } from './crawl.ts';
 import { issueImpact, remediationRoute, ruleScoreRoles } from './rules.ts';
@@ -41,7 +42,7 @@ const NO_COMPARABLE = {
   current_page_count_by_kind: {},
 };
 
-async function snapshotFor(db: Database, crawl: Crawl) {
+function snapshotFor(db: Database, crawl: Crawl) {
   return new WorkspaceScope(crawl.workspace_id)
     .selectFrom(db, 'site_health_snapshots')
     .selectAll()
@@ -139,11 +140,11 @@ export async function overview(
       .map(record)
       .filter((issue) => Object.keys(issue).length > 0)
       .map((issue) => {
-        const ruleId = String(issue.rule_id ?? '');
+        const ruleId = scalarText(issue.rule_id);
         const impact = issueImpact(
           ruleId,
-          String(issue.finding_class ?? ''),
-          String(issue.severity ?? ''),
+          scalarText(issue.finding_class),
+          scalarText(issue.severity),
         );
         return {
           score_roles: ruleScoreRoles(ruleId),
@@ -312,7 +313,7 @@ export async function architecture(
     page_kinds: list(model.page_kinds)
       .map(record)
       .map((row) => ({
-        page_kind: String(row.page_kind || 'other'),
+        page_kind: scalarText(row.page_kind) || 'other',
         page_count: typeof row.page_count === 'number' ? row.page_count : 0,
         median_depth: row.median_depth ?? null,
         indexable_count: typeof row.indexable_count === 'number' ? row.indexable_count : 0,
@@ -323,12 +324,12 @@ export async function architecture(
     nodes: list(model.hierarchy)
       .map(record)
       .map((row) => ({
-        site_url_id: String(row.site_url_id ?? ''),
-        url: String(row.url ?? ''),
-        title: String(row.title ?? ''),
-        page_kind: String(row.page_kind ?? ''),
-        parent_site_url_id: row.parent_site_url_id ? String(row.parent_site_url_id) : null,
-        parent_source: String(row.parent_source || 'unknown'),
+        site_url_id: scalarText(row.site_url_id),
+        url: scalarText(row.url),
+        title: scalarText(row.title),
+        page_kind: scalarText(row.page_kind),
+        parent_site_url_id: scalarText(row.parent_site_url_id) || null,
+        parent_source: scalarText(row.parent_source) || 'unknown',
         depth_from_home: row.depth_from_home ?? null,
       })),
     internal_linking: { orphan_pages: [], ...linking, orphan_page_count: orphans },
@@ -357,10 +358,8 @@ async function changeSnapshot(
     .selectAll()
     .where('project_id', '=', projectId);
   if (pair.a !== null && pair.b !== null) {
-    for (const id of [pair.a, pair.b]) {
-      const crawl = await loadCrawl(db, workspaceId, id);
-      if (crawl.project_id !== projectId) throw notFound('Crawl');
-    }
+    const crawls = await Promise.all([pair.a, pair.b].map((id) => loadCrawl(db, workspaceId, id)));
+    if (crawls.some((crawl) => crawl.project_id !== projectId)) throw notFound('Crawl');
     query = query.where('crawl_a_id', '=', pair.a).where('crawl_b_id', '=', pair.b);
   }
   return query.orderBy('created_at', 'desc').orderBy('id', 'desc').executeTakeFirst();

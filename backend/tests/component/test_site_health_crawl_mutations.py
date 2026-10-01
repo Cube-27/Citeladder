@@ -131,6 +131,7 @@ async def test_stale_monitored_selection_conflict_409(
             )
         ).all()
         url_ids = [str(u.id) for u in rows]
+        assert len(url_ids) >= 2
     headers = {"X-Workspace-Id": str(scn.workspace_id)}
 
     # First replacement at version 0 succeeds and bumps to version 1.

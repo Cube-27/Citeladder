@@ -1,8 +1,8 @@
 /** The rule catalog as the read API presents it: labels, routes, ranks and group identity. */
-import { createHash } from 'node:crypto';
-
 import { policy } from '../../config.ts';
 import { record } from '../../db/json.ts';
+import { compareText } from '../../text-order.ts';
+import { uuidV5 } from '../../uuid-v5.ts';
 
 const reads = policy.site_health.reads;
 const RULES = new Map(policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule]));
@@ -22,7 +22,7 @@ export const remediationRoute = (ruleId: string) =>
   RULES.get(ruleId)?.remediation_route ?? reads.unknown_rule_remediation_route;
 
 export const ruleScoreRoles = (ruleId: string) =>
-  [...(RULES.get(ruleId)?.score_roles ?? [])].sort();
+  [...(RULES.get(ruleId)?.score_roles ?? [])].sort(compareText);
 
 /** A defect's band by severity; an advisory's by its readiness dimension's weight. */
 export function issueImpact(ruleId: string, findingClass: string, severity: string) {
@@ -40,18 +40,6 @@ export function issueImpact(ruleId: string, findingClass: string, severity: stri
     band: Math.max(1, Math.round(weight * 10)),
     label: `${label} · ${Math.round(weight * 100)}%`,
   };
-}
-
-/** RFC 4122 version-5 UUID of `name` in the `namespace` UUID. */
-function uuidV5(namespace: string, name: string): string {
-  const hash = createHash('sha1')
-    .update(Buffer.from(namespace.replaceAll('-', ''), 'hex'))
-    .update(name, 'utf8')
-    .digest();
-  hash[6] = (hash[6]! & 0x0f) | 0x50;
-  hash[8] = (hash[8]! & 0x3f) | 0x80;
-  const hex = hash.subarray(0, 16).toString('hex');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 /**

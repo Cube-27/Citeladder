@@ -22,7 +22,9 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../../http/keyset-cursor.ts';
+import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
+import { compareText } from '../../text-order.ts';
 import { loadCrawl, type Crawl } from './crawl.ts';
 import { requireAdmitted } from './pages.ts';
 import {
@@ -49,11 +51,14 @@ export type IssueFilters = {
 };
 
 /** Evaluation ids of the crawl's current, finalized analyses (optionally one page kind). */
-const currentEvaluations = (crawl: Crawl, pageKind: string | null = null) => sql`(
+function currentEvaluations(crawl: Crawl, pageKind: string | null = null) {
+  const kindFilter = pageKind ? sql`and a.page_kind = ${pageKind}` : sql``;
+  return sql`(
   select unnest(a.source_evaluation_ids) from site_page_analyses a
   where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
     and a.is_current and a.finalized_at is not null
-    ${pageKind ? sql`and a.page_kind = ${pageKind}` : sql``})`;
+    ${kindFilter})`;
+}
 
 /** Issues of the crawl's current analyses. */
 const currentIssues = (crawl: Crawl) =>
@@ -76,8 +81,7 @@ function issueWhere(
     clauses.push(sql`i.evaluation_id in ${currentEvaluations(crawl, filters.pageKind)}`);
   if (filters.findingClass) clauses.push(sql`i.finding_class = ${filters.findingClass}`);
   if (filters.query) {
-    const pattern = `%${filters.query.trim().replaceAll(/[\\%_]/gu, (c) => `\\${c}`)}%`;
-    clauses.push(sql`i.rule_id ilike ${pattern}`);
+    clauses.push(sql`i.rule_id ilike ${containsPattern(filters.query.trim())}`);
   }
   return sql.join(clauses, sql` and `);
 }
@@ -107,11 +111,7 @@ const groupKey = (group: { severity: string; rule_id: string; group_id: string }
   [severityRank(group.severity), group.rule_id, group.group_id] as const;
 
 function compareKeys(a: readonly [number, string, string], b: readonly [number, string, string]) {
-  return (
-    a[0] - b[0] ||
-    (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0) ||
-    (a[2] < b[2] ? -1 : a[2] > b[2] ? 1 : 0)
-  );
+  return a[0] - b[0] || compareText(a[1], b[1]) || compareText(a[2], b[2]);
 }
 const compareGroups = (a: Group, b: Group) => compareKeys(groupKey(a), groupKey(b));
 

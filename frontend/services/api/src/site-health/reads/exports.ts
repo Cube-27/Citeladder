@@ -6,6 +6,7 @@
 import { policy } from '../../config.ts';
 import type { Database } from '../../db/database.ts';
 import { tableCsv, tableMarkdown } from '../../http/table-export.ts';
+import { compareText } from '../../text-order.ts';
 import { siteReadSettings } from '../runtime.ts';
 import { loadCrawl } from './crawl.ts';
 import { issues, pageKindsByRule } from './issues.ts';
@@ -146,7 +147,7 @@ type Node = {
 };
 
 const byUrl = (a: Node, b: Node) =>
-  a.url < b.url ? -1 : a.url > b.url ? 1 : a.site_url_id < b.site_url_id ? -1 : 1;
+  compareText(a.url, b.url) || compareText(a.site_url_id, b.site_url_id);
 
 /**
  * Children by parent, where every node no root reaches becomes a root: its
@@ -178,7 +179,7 @@ function rootedTree(nodes: Node[]) {
     }
   }
   roots.push(...nodes.filter((node) => !reached.has(node.site_url_id)));
-  children.set(null, roots.sort(byUrl));
+  children.set(null, roots.toSorted(byUrl));
   return children;
 }
 
@@ -204,8 +205,10 @@ function treeLines(
     if (!node.site_url_id || seen.has(node.site_url_id)) return;
     seen.add(node.site_url_id);
     const label = node.page_kind ? `${node.url}  [${node.page_kind}]` : node.url;
-    lines.push(`${prefix}${last ? '`-- ' : '|-- '}${label}`);
-    lines.push(...treeLines(node.site_url_id, children, prefix + (last ? '    ' : '|   '), seen));
+    lines.push(
+      `${prefix}${last ? '`-- ' : '|-- '}${label}`,
+      ...treeLines(node.site_url_id, children, prefix + (last ? '    ' : '|   '), seen),
+    );
   });
   return lines;
 }

@@ -34,7 +34,7 @@ export function tableMarkdown(
 ): string {
   const escape = (value: unknown) =>
     cell(value)
-      .replaceAll('\\', '\\\\')
+      .replaceAll('\\', String.raw`\\`)
       .replaceAll('|', '\\|')
       .replaceAll('\n', ' ')
       .replaceAll('\r', ' ');

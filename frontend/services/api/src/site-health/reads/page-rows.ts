@@ -17,6 +17,7 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../../http/keyset-cursor.ts';
+import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { inventoryCrawlIds, isTerminal, type Crawl } from './crawl.ts';
 
@@ -112,11 +113,16 @@ export const measurementFields = (row: PageRow) => ({
  * Issues of a page's current analysis: its own evaluations plus the
  * architecture findings attached to it.
  */
-export const currentIssueFilter = (issue: string, analysis: string) =>
-  sql`(${sql.ref(`${issue}.evaluation_id`)} = any(${sql.ref(`${analysis}.source_evaluation_ids`)})
-    or (${sql.ref(`${issue}.analysis_id`)} = ${sql.ref(`${analysis}.id`)} and exists(
+export function currentIssueFilter(issue: string, analysis: string) {
+  const evaluation = sql.ref(issue + '.evaluation_id');
+  const sources = sql.ref(analysis + '.source_evaluation_ids');
+  const issueAnalysis = sql.ref(issue + '.analysis_id');
+  const analysisId = sql.ref(analysis + '.id');
+  return sql`(${evaluation} = any(${sources})
+    or (${issueAnalysis} = ${analysisId} and exists(
       select 1 from site_rule_evaluations e
-      where e.id = ${sql.ref(`${issue}.evaluation_id`)} and e.source_architecture_id is not null)))`;
+      where e.id = ${evaluation} and e.source_architecture_id is not null)))`;
+}
 
 function statusFilter(status: string | null | undefined) {
   if (!status) return sql``;
@@ -140,7 +146,7 @@ export async function pageRows(
   const lineage = inventoryCrawlIds(crawl);
   const unmonitoredStatus = isTerminal(crawl) ? 'not_measured' : 'pending';
   const search = filters.query?.trim().toLowerCase();
-  const pattern = search ? `%${search.replaceAll(/[\\%_]/gu, (c) => `\\${c}`)}%` : null;
+  const pattern = search ? containsPattern(search) : null;
   let keyset = sql``;
   if (after) {
     const value =

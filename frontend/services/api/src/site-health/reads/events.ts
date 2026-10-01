@@ -88,6 +88,12 @@ export function eventStream(
       let last = after;
       let terminalPolls = 0;
       const deadline = Date.now() + settings.sseMaxSeconds * 1000;
+      // A crawl deleted mid-stream ends the stream.
+      const reload = (id: string) =>
+        loadCrawl(db, workspaceId, id).catch((error: unknown) => {
+          if (error instanceof ApiError && error.status === 404) return null;
+          throw error;
+        });
       try {
         let current: Crawl | null = crawl;
         while (current && !signal.aborted) {
@@ -103,11 +109,8 @@ export function eventStream(
           if (events.length === settings.maxEventPage) continue;
           if (isTerminal(current) && ++terminalPolls >= TERMINAL_GRACE_POLLS) break;
           if (Date.now() >= deadline) break;
-          await sleep(settings.ssePollSeconds * 1000, undefined, { signal }).catch(() => {});
-          current = await loadCrawl(db, workspaceId, current.id).catch((error: unknown) => {
-            if (error instanceof ApiError && error.status === 404) return null;
-            throw error;
-          });
+          await sleep(settings.ssePollSeconds * 1000, undefined, { signal }).catch(() => {}); // NOSONAR: polls are sequential.
+          current = await reload(current.id); // NOSONAR: polls are sequential.
         }
         controller.close();
       } catch (error) {
