@@ -20,6 +20,30 @@ const timestampColumns = () => [
   isoDateText(sql.ref('window_end')).as('end'),
   utcText(sql.ref('created_at')).as('at'),
 ];
+/** One explicit persisted origin, including its exact parent and processing versions. */
+export async function readDemandOrigin(
+  db: Database,
+  scope: Pick<DemandScope, 'workspaceId' | 'projectId'>,
+  id: string,
+) {
+  const signal = await db
+    .selectFrom('demand_signals')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', id)
+    .executeTakeFirst();
+  if (!signal) throw notFound('Demand signal');
+  const snapshot = await db
+    .selectFrom('demand_snapshots')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', signal.snapshot_id)
+    .executeTakeFirst();
+  if (!snapshot) throw notFound('Demand snapshot');
+  return { signal, snapshot };
+}
 export async function latestDemand(db: Database, workspaceId: string, projectId: string) {
   const scope = new WorkspaceScope(workspaceId);
   const snapshot = await scope

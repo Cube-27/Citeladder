@@ -182,7 +182,7 @@ from scripts.auth_policy import (
 from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
-from scripts.ts_platform_agent import agent_skill_policy
+from scripts.ts_platform_agent import agent_context_policy, agent_skill_policy
 from scripts.ts_platform_audits import audit_policy, audit_schedule_policy
 from scripts.ts_platform_billing import billing_policy, entitlements_policy
 from scripts.ts_platform_costs import costs_policy
@@ -441,6 +441,7 @@ def build_config() -> dict[str, Any]:
         },
         "agent": _agent_policy(),
         "agent_skills": agent_skill_policy(),
+        "agent_context": agent_context_policy(),
     }
 
 

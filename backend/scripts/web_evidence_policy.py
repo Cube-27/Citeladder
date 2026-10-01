@@ -183,6 +183,9 @@ def _read_policy() -> dict[str, Any]:
         "content_addressable_check_ids": sorted(
             measurement.CONTENT_ADDRESSABLE_CHECK_IDS
         ),
+        "content_addressable_check_fields": (
+            measurement.CONTENT_ADDRESSABLE_CHECK_FIELDS
+        ),
         "partial_reasons": {
             "discovery": contracts.CRAWL_PARTIAL_REASON_DISCOVERY,
             "analysis": contracts.CRAWL_PARTIAL_REASON_ANALYSIS,

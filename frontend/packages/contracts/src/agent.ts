@@ -150,3 +150,32 @@ export const agentInstructionsSchema = responseObject({
   text: z.string(),
   created_at: z.string().nullable(),
 });
+
+export const agentSiteHealthReferenceSchema = z.object({
+  project_id: uuid(),
+  crawl_id: uuid(),
+  site_url_id: uuid(),
+  source_analysis_id: uuid(),
+  dimension: z.string().min(1).max(32),
+  checkpoint_ids: z
+    .array(z.string().max(64))
+    .min(1)
+    .max(16)
+    .transform((ids) => [...new Set(ids)].sort()),
+});
+export const agentSearchReferenceSchema = z.object({
+  dataset_id: uuid(),
+  row_ids: z
+    .array(uuid())
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, 'Row IDs must be unique'),
+});
+export const agentContextRefsSchema = z.object({
+  target_site_url_id: uuid().optional(),
+  target_url: z.string().optional(),
+  opportunity_id: uuid().optional(),
+  demand_signal_id: uuid().optional(),
+  site_health_reference: agentSiteHealthReferenceSchema.optional(),
+  search_intelligence_reference: agentSearchReferenceSchema.optional(),
+});

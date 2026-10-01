@@ -138,6 +138,32 @@ export async function loadProfile(
 export async function readBrandProfile(db: Database, scope: ProjectScope): Promise<BrandProfile> {
   return view(await loadProfile(db, scope));
 }
+/** Optional grounding projection; missing memory stays unavailable and provenance stays attached. */
+export async function readBrandMemory(db: Database, scope: ProjectScope) {
+  const row = await db
+    .selectFrom('brand_profiles')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .executeTakeFirst();
+  if (!row) return null;
+  const profile = view(row),
+    business = { ...profile.business_context },
+    sources = { ...jsonObject(business.field_sources ?? {}, 'business_context.field_sources') };
+  if ('business_type' in business) {
+    if (
+      !('buyer_type' in business) ||
+      (sources.business_type === 'reviewed' && sources.buyer_type !== 'reviewed')
+    ) {
+      business.buyer_type = business.business_type;
+      if (sources.business_type !== undefined) sources.buyer_type = sources.business_type;
+    }
+    delete business.business_type;
+    delete sources.business_type;
+  }
+  delete business.business_map;
+  return { ...profile, business_context: { ...business, field_sources: sources } };
+}
 
 /**
  * Apply a person's edits. Each supplied field keeps its original origin, is
