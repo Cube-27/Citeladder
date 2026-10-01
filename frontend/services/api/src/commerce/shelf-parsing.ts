@@ -12,8 +12,8 @@ function recommendationSpans(answer: string): RecommendationSpan[] {
   for (const line of answer.split(/\r\n|[\n\r\v\f\u0085\u2028\u2029]/u)) {
     const cleaned = line.trim();
     if (!cleaned) continue;
-    const ordered = /^(\d{1,2})[.)]\s+(.+)$/u.exec(cleaned);
-    const bullet = /^[-*•]\s+(.+)$/u.exec(cleaned);
+    const ordered = /^(\d{1,2})[.)]\s+(\S.*)$/u.exec(cleaned);
+    const bullet = /^[-*•]\s+(\S.*)$/u.exec(cleaned);
     if (ordered)
       spans.push({ text: ordered[2]!.trim(), rank: Number(ordered[1]), orderObservable: true });
     else if (bullet) spans.push({ text: bullet[1]!.trim(), rank: null, orderObservable: false });
@@ -22,7 +22,8 @@ function recommendationSpans(answer: string): RecommendationSpan[] {
   if (spans.length) return spans.slice(0, shelfPolicy.span_limit);
   const prose = answer
     .trim()
-    .split(/(?<=[.!?])\s+|\s*;\s*/u)
+    .split(/(?<=[.!?])\s+|;/u)
+    .map((text) => text.trim())
     .filter(Boolean);
   return (prose.length ? prose : ['']).slice(0, shelfPolicy.span_limit).map((text) => ({
     text: boundedText(text.trim(), shelfPolicy.span_chars),

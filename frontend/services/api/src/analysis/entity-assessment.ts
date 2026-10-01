@@ -54,21 +54,20 @@ function assessment(name: string, aliases: readonly string[], answer: string, ki
     .slice(endOffset, endOffset + 45)
     .join('')
     .toLowerCase();
+  const afterPredicate = after.replace(/^\W+/u, '').replace(/^(?:is|are|was|were)\s*/u, '');
   let state = 'mentioned';
   if (
     /(?:avoid|do not recommend|not recommended|recommend against)(?:\s+(?:the|a|an|this|that))*\s*$/u.test(
       before,
     ) ||
-    /^\W*(?:is|are|was|were)?\s*(?:not recommended|best avoided|not a good (?:choice|pick|fit))\b/u.test(
-      after,
-    )
+    /^(?:not recommended|best avoided|not a good (?:choice|pick|fit))\b/u.test(afterPredicate)
   )
     state = 'recommended_against';
   else if (
     /(?:recommend|recommended|top pick|best choice|choose)(?:\s+(?:the|a|an|this|that))*\s*$/u.test(
       before,
     ) ||
-    /^\W*(?:is|are|was|were)?\s*(?:recommended|the top pick|the best choice)\b/u.test(after)
+    /^(?:recommended|the top pick|the best choice)\b/u.test(afterPredicate)
   )
     state = 'recommended';
   else if (

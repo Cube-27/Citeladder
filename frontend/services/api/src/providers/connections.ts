@@ -5,6 +5,7 @@ import type { ProviderConnections } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
+import { stripTrailing } from '../text-order.ts';
 import { providerPolicy, type Engine, type ProviderSettings } from './config.ts';
 import type { AppRouteInput, ConnectionCreate, ConnectionUpdate } from './inputs.ts';
 
@@ -37,10 +38,10 @@ export function approvedEndpoint(transport: string, baseUrl: string, settings: P
   const endpoint = settings.endpoints[transport as keyof typeof settings.endpoints];
   if (
     !endpoint ||
-    (baseUrl && baseUrl.trim().replace(/\/+$/u, '') !== endpoint.trim().replace(/\/+$/u, ''))
+    (baseUrl && stripTrailing(baseUrl.trim(), '/') !== stripTrailing(endpoint.trim(), '/'))
   )
     throw invalid('Provider endpoint is not approved for this transport');
-  return (baseUrl || endpoint).trim().replace(/\/+$/u, '');
+  return stripTrailing((baseUrl || endpoint).trim(), '/');
 }
 function rotatedSecret(
   transport: string,

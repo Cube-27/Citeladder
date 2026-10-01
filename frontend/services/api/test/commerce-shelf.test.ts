@@ -48,6 +48,19 @@ const emptyTarget: FrozenShelfTarget = {
   approved_competitors: [],
 };
 describe('frozen Commerce shelf projections', () => {
+  it('retains list rank and prose boundaries across long whitespace runs', async () => {
+    const gap = ' '.repeat(20_000);
+    const listed = await prepareRecommendations(`1.${gap}Product A\n-${gap}Product B`, emptyTarget);
+    expect(listed.map(({ span }) => [span.text, span.rank, span.orderObservable])).toEqual([
+      ['Product A', 1, true],
+      ['Product B', null, false],
+    ]);
+    const prose = await prepareRecommendations(
+      `Product A${gap};${gap}; Product B. Product C`,
+      emptyTarget,
+    );
+    expect(prose.map(({ span }) => span.text)).toEqual(['Product A', 'Product B.', 'Product C']);
+  });
   it('preserves uncertainty and withholds invented rank for multi-product model extraction', async () => {
     const unresolved = await prepareRecommendations('1. Unclear product', emptyTarget, {
       model: 'fixture',

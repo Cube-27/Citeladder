@@ -1,10 +1,9 @@
 /** Classify citation ownership from the audit's frozen scoring configuration. */
-import { scalarText } from '../text-order.ts';
+import { compareText, scalarText } from '../text-order.ts';
 import { domainMatches, isGroundingRedirect, normalizeDomain } from './domains.ts';
 import { normalizeAlias, namesAlias, firstAliasOffset } from './aliases.ts';
 import { brandPosition } from './position.ts';
 import { policy } from '../config.ts';
-import { compareText } from '../text-order.ts';
 
 type JsonObject = Record<string, unknown>;
 

@@ -124,7 +124,7 @@ export async function exportAudit(
     : classes.length === 1 && classes[0]![0] === 'non_branded'
       ? 'All prompts are unaided/non-branded.'
       : `Mixed panel: ${classes
-          .sort(([left], [right]) => compareText(left, right))
+          .toSorted(([left], [right]) => compareText(left, right))
           .map(([key, count]) => `${key}=${count}`)
           .join(', ')}.`;
   const lines = [`# AI Search Visibility Audit — ${brand}`, '', '## Methodology', ''];

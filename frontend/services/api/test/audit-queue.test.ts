@@ -34,20 +34,29 @@ async function seed() {
 describe('audit queue leases against PostgreSQL', () => {
   it('gives each workspace a turn and concurrent claims never share a task', async () => {
     const one = await seed(),
-      two = await seed();
-    const fair = await queue.claim('fair', 2);
+      two = await seed(),
+      foreign = await seed();
+    const scopes = [one, two].map(({ workspaceId, auditId }) => ({ workspaceId, auditId }));
+    const fair = await queue.claim('fair', 2, scopes);
     expect(new Set(fair.map((task) => task.workspace_id))).toEqual(
       new Set([one.workspaceId, two.workspaceId]),
     );
     const claimed = (
-      await Promise.all(['worker-a', 'worker-b'].map((owner) => queue.claim(owner, 3)))
+      await Promise.all(['worker-a', 'worker-b'].map((owner) => queue.claim(owner, 3, scopes)))
     ).flat();
     expect(claimed).toHaveLength(4);
     expect(new Set([...fair, ...claimed].map((task) => task.id)).size).toBe(6);
+    const foreignTasks = await db
+      .selectFrom('audit_tasks')
+      .select('status')
+      .where('workspace_id', '=', foreign.workspaceId)
+      .where('audit_id', '=', foreign.auditId)
+      .execute();
+    expect(foreignTasks.map((task) => task.status)).toEqual(['queued', 'queued', 'queued']);
   });
   it('rejects another owner, an expired lease and a cancelled parent before execution', async () => {
     const t = await seed();
-    const [task] = await queue.claim('worker');
+    const [task] = await queue.claim('worker', 1, t);
     expect(await queue.markRunning(task!, 'other')).toBeNull();
     expect(await queue.heartbeat(task!, 'other')).toBe(false);
     const running = await queue.markRunning(task!, 'worker');
@@ -55,7 +64,7 @@ describe('audit queue leases against PostgreSQL', () => {
     at = new Date(at.getTime() + 121000);
     expect(await queue.heartbeat(task!, 'worker')).toBe(false);
     expect(await queue.markRunning(task!, 'worker')).toBeNull();
-    const [another] = await queue.claim('worker');
+    const [another] = await queue.claim('worker', 1, t);
     await db
       .updateTable('audits')
       .set({ status: 'cancelled' })
@@ -64,8 +73,8 @@ describe('audit queue leases against PostgreSQL', () => {
     expect(await queue.markRunning(another!, 'worker')).toBeNull();
   });
   it('parks a committed external submission and reclaims its due poll without spending an attempt', async () => {
-    await seed();
-    const [task] = await queue.claim('worker');
+    const t = await seed();
+    const [task] = await queue.claim('worker', 1, t);
     const ready = new Date(at.getTime() + 30000);
     await db.transaction().execute(async (trx) => {
       const locked = await ownedAuditTask(trx, task!, 'worker', at);
@@ -81,10 +90,10 @@ describe('audit queue leases against PostgreSQL', () => {
         .execute();
       await parkAuditTask(trx, locked!.task, 'awaiting_provider_result', ready, at);
     });
-    await queue.claim('drain', 3); // Other ready slots may progress while this task waits.
-    expect(await queue.claim('poller')).toEqual([]);
+    await queue.claim('drain', 3, t); // Other ready slots may progress while this task waits.
+    expect(await queue.claim('poller', 1, t)).toEqual([]);
     at = ready;
-    const [poll] = await queue.claim('poller');
+    const [poll] = await queue.claim('poller', 1, t);
     expect(poll).toMatchObject({
       id: task!.id,
       provider_task_id: 'paid-task',

@@ -76,6 +76,14 @@ describe('frozen deterministic execution scoring', () => {
     expect(firstAliasOffset('DuranDuran', normalizeAlias('Duran DuranDuran'))).toBe(6);
   });
   it('retains first-mention recommendation limits and raw Unicode evidence spans', () => {
+    for (const tense of ['', 'is ', 'are ', 'was ', 'were ']) {
+      expect(assessEntities(`Rival ... ${tense}not recommended.`, config)[1]!.state).toBe(
+        'recommended_against',
+      );
+      expect(assessEntities(`Rival ... ${tense}recommended.`, config)[1]!.state).toBe(
+        'recommended',
+      );
+    }
     const rows = assessEntities(
       '😀 Consider Best&Less. Later we recommend Best and Less. Rival is not recommended.',
       config,

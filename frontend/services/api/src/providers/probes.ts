@@ -252,7 +252,7 @@ function probeRequest(
     return {
       ...common,
       timeoutSeconds: settings.dataforseoTimeout,
-      url: `${url.replace(/\/+$/u, '')}${providerPolicy.dataforseo.probe_path}`,
+      url: `${url}${providerPolicy.dataforseo.probe_path}`,
       headers: {
         authorization: `Basic ${Buffer.from(`${pair.login}:${pair.password}`).toString('base64')}`,
       },

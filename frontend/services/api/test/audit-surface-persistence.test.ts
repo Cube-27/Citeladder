@@ -53,7 +53,7 @@ async function seed() {
     runtime.providers,
     async () => ({ status: 200, body: { status_code: 20000, tasks: [] } }),
   );
-  await createAudit(
+  const auditId = await createAudit(
     db,
     t.workspaceId,
     auditInput.parse({
@@ -64,7 +64,7 @@ async function seed() {
     {},
     runtime,
   );
-  const [task] = await queue.claim('worker');
+  const [task] = await queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId });
   await queue.markRunning(task!, 'worker');
   tasks.push(task!.id);
   const context = await loadExecutionContext(

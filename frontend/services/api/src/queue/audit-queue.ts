@@ -12,7 +12,13 @@ const table = 'audit_tasks';
 const { claimable, statuses, terminal } = policy.task_queue;
 
 export type AuditClaimScope = { workspaceId: string; auditId: string };
-function auditClaimStatement(db: Database, at: Date, limit: number, scope?: AuditClaimScope) {
+function auditClaimStatement(
+  db: Database,
+  at: Date,
+  limit: number,
+  scope?: AuditClaimScope | AuditClaimScope[],
+) {
+  const scopes = Array.isArray(scope) ? scope : scope ? [scope] : [];
   const candidates = db
     .selectFrom(table)
     .select([
@@ -24,7 +30,13 @@ function auditClaimStatement(db: Database, at: Date, limit: number, scope?: Audi
     .where('status', 'in', claimable)
     .where('available_at', '<=', at)
     .$if(Boolean(scope), (query) =>
-      query.where('workspace_id', '=', scope!.workspaceId).where('audit_id', '=', scope!.auditId),
+      query.where((eb) =>
+        eb.or(
+          scopes.map(({ workspaceId, auditId }) =>
+            eb.and([eb('workspace_id', '=', workspaceId), eb('audit_id', '=', auditId)]),
+          ),
+        ),
+      ),
     )
     .as('candidates');
   return (
@@ -40,11 +52,6 @@ function auditClaimStatement(db: Database, at: Date, limit: number, scope?: Audi
       // READ COMMITTED rechecks these predicates on the locked relation after a concurrent update.
       .where('audit_tasks.status', 'in', claimable)
       .where('audit_tasks.available_at', '<=', at)
-      .$if(Boolean(scope), (query) =>
-        query
-          .where('audit_tasks.workspace_id', '=', scope!.workspaceId)
-          .where('audit_tasks.audit_id', '=', scope!.auditId),
-      )
       .orderBy('candidates.workspace_position')
       .orderBy(sql`turns.last_claimed_at asc nulls first`)
       .orderBy('audit_tasks.priority', 'desc')
@@ -116,7 +123,11 @@ export class AuditQueue {
     this.now = now;
   }
   /** The claim and fairness cursor commit before any provider dispatch. */
-  claim(owner: string, limit = 1, scope?: AuditClaimScope): Promise<AuditTask[]> {
+  claim(
+    owner: string,
+    limit = 1,
+    scope?: AuditClaimScope | AuditClaimScope[],
+  ): Promise<AuditTask[]> {
     if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('Invalid audit claim limit');
     const at = this.now();
     return this.db.transaction().execute(async (trx) => {

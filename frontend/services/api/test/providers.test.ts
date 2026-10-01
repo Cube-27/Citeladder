@@ -8,6 +8,7 @@ import {
   provisionRoutes,
   updateConnection,
   deleteConnection,
+  approvedEndpoint,
 } from '../src/providers/connections.ts';
 import { providerSettings } from '../src/providers/config.ts';
 import { createConnectionInput, updateConnectionInput } from '../src/providers/inputs.ts';
@@ -49,6 +50,14 @@ const create = (input: Record<string, unknown> = {}) =>
   );
 
 describe('provider credential custody', () => {
+  it('normalizes trailing separators without widening the approved destination', () => {
+    const separators = '/'.repeat(20_000);
+    const endpoint = settings.endpoints.dataforseo;
+    expect(approvedEndpoint('dataforseo', ` ${endpoint}${separators} `, settings)).toBe(endpoint);
+    expect(() =>
+      approvedEndpoint('dataforseo', `${endpoint}/other${separators}`, settings),
+    ).toThrow('Provider endpoint is not approved');
+  });
   it('refuses unsafe destinations and incomplete or mixed credential shapes before storing anything', async () => {
     for (const input of [
       { transport_provider: 'dataforseo', api_key: 'key' },
