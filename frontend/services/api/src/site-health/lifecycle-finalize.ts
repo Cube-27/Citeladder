@@ -122,7 +122,7 @@ async function rootEvaluations(
   ];
 }
 
-async function pendingAnalyses(db: Database, crawl: Crawl) {
+function pendingAnalyses(db: Database, crawl: Crawl) {
   return db
     .selectFrom('site_page_analyses as p')
     .innerJoin('site_fetch_artifacts as a', (join) =>
