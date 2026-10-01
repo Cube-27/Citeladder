@@ -31,7 +31,7 @@ from app.core.config.errors import CODE_INVALID_CURSOR, CODE_NOT_FOUND
 from app.core.errors import ApiException
 from app.domain.site_health.service import InvalidCursorError
 
-router = APIRouter(prefix="", tags=["site-health"])
+router = APIRouter(prefix="", tags=["site-health-crawls"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 

@@ -50,7 +50,6 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
     TASK_STATUS_SUCCEEDED,
 )
-from app.domain.site_health.service.lifecycle import load_events
 from app.models.analytics import AnalyticsTask
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.crawl import SiteCrawl
@@ -772,73 +771,3 @@ async def test_stalled_backstop_can_be_disabled(
 
     crawl = await _crawl(session_factory, seed.crawl_id)
     assert crawl.status == CRAWL_STATUS_RUNNING
-
-
-# =========================================================================
-# Event replay keyset (the SSE resume anchor)
-# =========================================================================
-async def _add_event(
-    session: AsyncSession, *, crawl_id: uuid.UUID, event_type: str
-) -> SiteCrawlEvent:
-    event = SiteCrawlEvent(crawl_id=crawl_id, event_type=event_type, message="")
-    session.add(event)
-    await session.flush()
-    return event
-
-
-@pytest.mark.asyncio
-async def test_load_events_resumes_after_the_anchor(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """``after`` returns strictly the events past the anchor, in order."""
-    async with session_factory() as session:
-        seed = await seed_site_crawl(session)
-        first = await _add_event(session, crawl_id=seed.crawl_id, event_type="a")
-        second = await _add_event(session, crawl_id=seed.crawl_id, event_type="b")
-        third = await _add_event(session, crawl_id=seed.crawl_id, event_type="c")
-        await session.commit()
-        ordered = sorted(
-            (first, second, third), key=lambda row: (row.created_at, row.id)
-        )
-        anchor_id = ordered[0].id
-        last_id = ordered[-1].id
-        expected_ids = [row.id for row in ordered[1:]]
-
-    async with session_factory() as session:
-        rows = await load_events(session, crawl_id=seed.crawl_id, after=anchor_id)
-        assert [row.id for row in rows] == expected_ids
-
-        # No anchor replays everything.
-        assert len(await load_events(session, crawl_id=seed.crawl_id)) == 3
-
-        # The LAST event as anchor leaves nothing to send.
-        assert await load_events(session, crawl_id=seed.crawl_id, after=last_id) == []
-
-
-@pytest.mark.asyncio
-async def test_load_events_stale_or_foreign_anchor_replays_nothing(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """An anchor this crawl does not own must NOT replay the whole history.
-
-    The keyset compares against a scalar subquery, so an unknown anchor makes
-    both comparisons NULL and the page comes back empty. Replaying instead
-    would duplicate every event a resuming client already rendered.
-    """
-    async with session_factory() as session:
-        seed = await seed_site_crawl(session)
-        other = await seed_site_crawl(session)
-        await _add_event(session, crawl_id=seed.crawl_id, event_type="a")
-        foreign = await _add_event(session, crawl_id=other.crawl_id, event_type="a")
-        await session.commit()
-        foreign_id = foreign.id
-
-    async with session_factory() as session:
-        # An id that exists, but on another crawl.
-        assert (
-            await load_events(session, crawl_id=seed.crawl_id, after=foreign_id) == []
-        )
-        # An id that does not exist at all.
-        assert (
-            await load_events(session, crawl_id=seed.crawl_id, after=uuid.uuid4()) == []
-        )

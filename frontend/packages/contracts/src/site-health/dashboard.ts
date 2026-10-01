@@ -381,29 +381,6 @@ export const siteHealthOverviewSchema = responseObject({
   limitations: z.array(z.string()),
 });
 
-export const siteHealthContentHandoffSchema = responseObject({
-  project_id: uuid(),
-  crawl_id: uuid(),
-  site_url_id: uuid(),
-  source_analysis_id: uuid(),
-  dimension: z.string(),
-  checkpoint_ids: z.array(z.string()),
-  suggested_skill_id: z.string(),
-  finding_class: z.string(),
-  observed_evidence: z.array(z.record(z.string(), z.unknown())),
-  source_evaluation_ids: z.array(uuid()),
-  source_artifact_ids: z.array(uuid()),
-  target_fields: z.array(z.string()),
-  captured_values: z.array(z.string()),
-  expected_capability: z.array(z.string()),
-  remediation: z.array(z.string()),
-  page_kind: z.string(),
-  page_traits: z.array(z.string()),
-  normalized_url: z.string(),
-  scoring_policy_version: z.literal('1'),
-  limitations: z.array(z.string()),
-});
-
 // Stable coded failures (plan §API contract). The frontend keys UX (upgrade
 // prompt, quota feedback, stale-revision refetch, retry copy) off these codes.
 export const siteHealthErrorCodeSchema = z.enum([

@@ -23,18 +23,10 @@ export const CONTRACT_SCHEMA_MAP = {
   agentSkillSchema: 'SkillView',
   agentSkillCatalogSchema: 'SkillCatalog',
   agentInstructionsSchema: 'InstructionsView',
-  // Site health
+  // Site Health crawl mutations; its reads are served by the TypeScript API.
   siteCrawlSchema: 'CrawlResponse',
   siteCrawlListPageSchema: 'CrawlListPage',
-  siteHealthDashboardSchema: 'DashboardResponse',
-  siteHealthEntitlementSchema: 'SiteHealthEntitlementResponse',
   monitoredUrlsResponseSchema: 'MonitoredUrlsResponse',
-  inventoryPageSchema: 'InventoryPage',
-  pagesPageSchema: 'PagesPage',
-  pageDetailSchema: 'PageDetail',
-  siteIssuesPageSchema: 'SiteIssuesPage',
-  siteIssueDetailSchema: 'SiteIssueDetail',
-  issueHistoryPageSchema: 'IssueHistoryPage',
   rerunPageResponseSchema: 'RerunPageResponse',
 } as const;
 

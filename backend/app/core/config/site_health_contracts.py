@@ -152,7 +152,7 @@ SITE_PROCESSING_TASK_KINDS: Final[frozenset[str]] = (
 
 # Both stacks share the durable queue with disjoint claims during migration.
 SITE_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
-    {TASK_KIND_LINK_METRICS, TASK_KIND_ARCHITECTURE}
+    {TASK_KIND_CHANGE_INTEL, TASK_KIND_LINK_METRICS, TASK_KIND_ARCHITECTURE}
 )
 SITE_PYTHON_PROCESSING_TASK_KINDS: Final[frozenset[str]] = (
     SITE_PROCESSING_TASK_KINDS - SITE_TS_OWNED_TASK_KINDS
@@ -285,6 +285,27 @@ RULE_OUTCOMES: Final[frozenset[str]] = frozenset(
         RULE_OUTCOME_UNKNOWN,
         RULE_OUTCOME_NOT_APPLICABLE,
         RULE_OUTCOME_ERROR,
+    }
+)
+
+# Event payload keys that carry (or could reconstruct) a full-site
+# total/frontier/overflow signal. A crawl without count disclosure drops them
+# from every event, so the events stream cannot leak a hidden total.
+EVENT_COUNT_BEARING_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "total_url_count",
+        "total",
+        "frontier_size",
+        "frontier",
+        "overflow",
+        "overflow_count",
+        "discarded",
+        "discarded_count",
+        "has_more_site_urls",
+        "estimated_total",
+        "sitemap_url_count",
+        "discovered_url_count",
+        "discovered_total",
     }
 )
 

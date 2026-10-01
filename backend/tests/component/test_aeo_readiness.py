@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from copy import deepcopy
 from datetime import UTC, datetime
 
 import httpx
@@ -28,6 +27,7 @@ from app.domain.site_health.aeo_readiness_projection import (
     build_aeo_readiness_descriptor,
 )
 from app.domain.site_health.overview_snapshot import build_overview_history
+from app.domain.site_health.service import SiteHealthNotFoundError, get_content_handoff
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.analysis import SitePageAnalysis, SiteRuleEvaluation
 from app.models.site_health.crawl import SiteCrawl
@@ -320,24 +320,20 @@ async def _seed_readiness(session: AsyncSession, *, email: str):
     return scenario, analysis, snapshot
 
 
-async def test_readiness_reconciles_persisted_measurement_and_page_evidence(
+async def test_readiness_descriptor_reconciles_measurement_and_page_evidence(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     await _register(client, "readiness@example.com")
     async with session_factory() as session:
-        scenario, analysis, _snapshot = await _seed_readiness(
+        _scenario, analysis, snapshot = await _seed_readiness(
             session, email="readiness@example.com"
         )
+    async with session_factory() as session:
+        stored = await session.get(SiteHealthSnapshot, snapshot.id)
+        assert stored is not None
 
-    response = await client.get(
-        f"/api/v1/projects/{scenario.project_id}/site-health/aeo-readiness",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-        params={"crawl_id": scenario.crawl_id},
-    )
-
-    assert response.status_code == 200
-    body = response.json()
+    body = stored.aeo_readiness_diagnostic
     assert body["state"] == "limited_evidence"
     assert body["profile_version"] == PROFILE_VERSION
     assert body["analysis_count"] == 1
@@ -345,10 +341,6 @@ async def test_readiness_reconciles_persisted_measurement_and_page_evidence(
     assert body["affected_page_count"] == 1
     assert body["limitations"][0] == (
         "Readiness evidence is limited; review dimension coverage below."
-    )
-    assert all(
-        "PR2" not in limitation and "PR3" not in limitation
-        for limitation in body["limitations"]
     )
     assert len(body["dimensions"]) == 7
     answerability = next(
@@ -358,194 +350,6 @@ async def test_readiness_reconciles_persisted_measurement_and_page_evidence(
     assert answerability["failing_page_count"] == 1
     assert answerability["evidence_truncated"] is False
     assert answerability["evidence_pages"][0]["source_analysis_id"] == str(analysis.id)
-    # Answerability is an editorial gap, not one a Content draft can write.
-    # The flag now comes from the single config set the hand-off endpoint
-    # authorizes against, so a rendered "Improve with Content" action and a
-    # servable hand-off cannot disagree — which is what made every such button
-    # answer 404. These pages are editorial work for the Agent instead.
-    assert (
-        answerability["evidence_pages"][0]["failed_checks"][0]["content_addressable"]
-        is False
-    )
-
-
-async def test_readiness_does_not_drift_after_terminal_snapshot(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    await _register(client, "immutable-readiness@example.com")
-    async with session_factory() as session:
-        scenario, analysis, _snapshot = await _seed_readiness(
-            session, email="immutable-readiness@example.com"
-        )
-
-    endpoint = f"/api/v1/projects/{scenario.project_id}/site-health/aeo-readiness"
-    request = {
-        "headers": {"X-Workspace-Id": str(scenario.workspace_id)},
-        "params": {"crawl_id": scenario.crawl_id},
-    }
-    before = await client.get(endpoint, **request)
-    assert before.status_code == 200
-
-    async with session_factory() as session:
-        current_analysis = await session.get(SitePageAnalysis, analysis.id)
-        assert current_analysis is not None
-        current_analysis.readiness_dimensions = []
-        evaluations = list(
-            await session.scalars(
-                select(SiteRuleEvaluation).where(
-                    SiteRuleEvaluation.analysis_id == analysis.id
-                )
-            )
-        )
-        for evaluation in evaluations:
-            evaluation.outcome = RULE_OUTCOME_SATISFIED
-            evaluation.evidence = {"mutated_after_snapshot": True}
-        await session.commit()
-
-    after = await client.get(endpoint, **request)
-    assert after.status_code == 200
-    assert after.json() == before.json()
-
-
-async def test_overview_reads_the_same_persisted_snapshot(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    await _register(client, "overview@example.com")
-    async with session_factory() as session:
-        scenario, _analysis, snapshot = await _seed_readiness(
-            session, email="overview@example.com"
-        )
-
-    response = await client.get(
-        f"/api/v1/projects/{scenario.project_id}/site-health/overview",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-        params={"crawl_id": scenario.crawl_id},
-    )
-
-    assert response.status_code == 200
-    body = response.json()
-    assert len(snapshot.top_issues) == 6
-    assert body["snapshot_id"] == str(snapshot.id)
-    assert body["search_eligibility"] == "eligible"
-    assert body["web_fundamentals_score"] == 100.0
-    assert body["aeo_measurement_state"] == "limited_evidence"
-    assert body["classified_page_count"] == 1
-    assert body["other_page_count"] == 0
-    assert body["classification_error_page_count"] == 0
-    assert body["classification_expected_page_count"] == 1
-    assert body["classification_coverage"] == 1.0
-    assert body["classification_state"] == "complete"
-    assert body["classification_reason_groups"] == {}
-    assert body["classification_formula_version"] == CLASSIFICATION_FORMULA_VERSION
-    assert body["classification_source_analysis_ids"] == [
-        str(value) for value in snapshot.classification_source_analysis_ids
-    ]
-    assert body["classification_source_artifact_ids"] == [
-        str(value) for value in snapshot.classification_source_artifact_ids
-    ]
-    assert body["classification_source_task_ids"] == [
-        str(value) for value in snapshot.classification_source_task_ids
-    ]
-    assert body["scored_page_kind_set"] == ["faq"]
-    assert body["scored_page_count_by_kind"] == {"faq": 1}
-    assert body["audited_page_count"] == 1
-    assert body["selected_page_count"] == 1
-    assert body["issue_count"] == 7
-    assert body["technical_defect_count"] == 2
-    assert body["technical_defect_affected_page_count"] == 1
-    assert body["aeo_readiness_gap_count"] == 5
-    assert body["aeo_readiness_gap_affected_page_count"] == 1
-    assert body["severity_counts"] == {"high": 2, "medium": 5}
-    assert body["category_counts"] == {"technical": 2, "content": 5}
-    assert body["measured_check_count"] == 3
-    assert body["expected_check_count"] == 4
-    assert len(body["top_issues"]) == 5
-    assert body["top_issues"][-1]["rule_id"] == "technical.fixture_5"
-    assert body["aeo_dimensions"][0]["label"] == "Answerability"
-    assert "answers its question" in body["aeo_dimensions"][0]["description"]
-    assert body["trend"]["series"] == [{"label": "2026-08-30", "value": 75.0}]
-    assert body["trend"]["cohort_composition"] == {
-        "added_page_kinds": ["faq"],
-        "removed_page_kinds": [],
-        "previous_page_count_by_kind": {},
-        "current_page_count_by_kind": {"faq": 1},
-    }
-    assert len(body["change_summary"]["metrics"]) == 4
-    assert (
-        body["change_summary"]["cohort_composition"]
-        == body["trend"]["cohort_composition"]
-    )
-
-
-async def test_overview_backfills_legacy_issue_and_null_history_fields(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    await _register(client, "legacy-overview@example.com")
-    async with session_factory() as session:
-        scenario, _analysis, snapshot = await _seed_readiness(
-            session, email="legacy-overview@example.com"
-        )
-        legacy_issue = {
-            **snapshot.top_issues[0],
-            "rule_id": "technical.indexable",
-            "finding_class": "defect",
-            "severity": "critical",
-        }
-        for field in ("score_roles", "impact_band", "impact_label"):
-            legacy_issue.pop(field, None)
-        complete_issue = {
-            **snapshot.top_issues[1],
-            "score_roles": [],
-            "impact_band": 99,
-            "impact_label": "Frozen",
-        }
-        snapshot.top_issues = [legacy_issue, complete_issue]
-        snapshot.trend = None
-        snapshot.change_summary = None
-        await session.commit()
-
-    response = await client.get(
-        f"/api/v1/projects/{scenario.project_id}/site-health/overview",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-        params={"crawl_id": scenario.crawl_id},
-    )
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["top_issues"][0]["score_roles"] == [
-        "aeo_readiness",
-        "web_fundamentals",
-    ]
-    assert body["top_issues"][0]["impact_band"] == 4
-    assert body["top_issues"][0]["impact_label"] == "Critical"
-    assert body["top_issues"][1]["impact_band"] == 99
-    assert body["top_issues"][1]["impact_label"] == "Frozen"
-    assert body["trend"] == {
-        "state": "unavailable",
-        "reason": "no_comparable_snapshot",
-        "metric": "aeo_readiness_score",
-        "series": [],
-        "cohort_composition": {
-            "added_page_kinds": [],
-            "removed_page_kinds": [],
-            "previous_page_count_by_kind": {},
-            "current_page_count_by_kind": {},
-        },
-    }
-    assert body["change_summary"] == {
-        "state": "unavailable",
-        "reason": "no_comparable_snapshot",
-        "metrics": [],
-        "cohort_composition": {
-            "added_page_kinds": [],
-            "removed_page_kinds": [],
-            "previous_page_count_by_kind": {},
-            "current_page_count_by_kind": {},
-        },
-    }
 
 
 async def test_overview_history_requires_the_complete_measurement_identity(
@@ -633,91 +437,48 @@ async def test_content_handoff_returns_exact_authorized_gap(
         scenario, analysis, _snapshot = await _seed_readiness(
             session, email="handoff@example.com"
         )
-
-    response = await client.get(
-        f"/api/v1/projects/{scenario.project_id}/site-health/content-handoff",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-        params={
+        request = {
+            "workspace_id": scenario.workspace_id,
+            "project_id": scenario.project_id,
             "crawl_id": scenario.crawl_id,
             "site_url_id": scenario.monitored_url_id,
-            "source_analysis_id": analysis.id,
             "dimension": "metadata",
-            "checkpoint_ids": ["technical.meta_description_present"],
-        },
-    )
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["source_analysis_id"] == str(analysis.id)
-    assert body["checkpoint_ids"] == ["technical.meta_description_present"]
-    assert body["suggested_skill_id"] == "content_page"
-    assert body["observed_evidence"] == [{"meta_description": ""}]
-    assert body["target_fields"] == ["meta_description"]
-    assert body["normalized_url"].endswith("/a")
-    assert body["scoring_policy_version"] == "1"
-
-    # Current-revision links omit the assertion and discard unsupported requests.
-    params = {
-        "crawl_id": scenario.crawl_id,
-        "site_url_id": scenario.monitored_url_id,
-        "dimension": "metadata",
-        "checkpoint_ids": ["technical.meta_description_present", "aeo.answer_first"],
-    }
-    current = await client.get(
-        f"/api/v1/projects/{scenario.project_id}/site-health/content-handoff",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-        params=params,
-    )
-    assert current.status_code == 200
-    assert current.json() == body
-    unrelated = await client.get(
-        f"/api/v1/projects/{scenario.project_id}/site-health/content-handoff",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-        params={**params, "source_analysis_id": str(uuid.uuid4())},
-    )
-    assert unrelated.status_code == 404
-
-
-async def test_legacy_readiness_refreshes_actions_without_rewriting_evidence(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    await _register(client, "legacy-readiness@example.com")
-    async with session_factory() as session:
-        scenario, _analysis, snapshot = await _seed_readiness(
-            session, email="legacy-readiness@example.com"
+        }
+        body = await get_content_handoff(
+            session,
+            **request,
+            source_analysis_id=analysis.id,
+            checkpoint_ids=["technical.meta_description_present"],
         )
-        legacy = deepcopy(snapshot.aeo_readiness_diagnostic)
-        for dimension in legacy["dimensions"]:
-            for check in dimension["checks"]:
-                check.pop("remediation_route", None)
-            for page in dimension["evidence_pages"]:
-                for check in page["failed_checks"]:
-                    check.pop("remediation_route", None)
-                    check["content_addressable"] = True
-        snapshot.aeo_readiness_diagnostic = legacy
-        await session.commit()
 
-    response = await client.get(
-        f"/api/v1/projects/{scenario.project_id}/site-health/aeo-readiness",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-        params={"crawl_id": scenario.crawl_id},
-    )
-    assert response.status_code == 200
-    body = response.json()
-    answer = next(row for row in body["dimensions"] if row["key"] == "answerability")
-    check = answer["evidence_pages"][0]["failed_checks"][0]
-    assert check["remediation_route"] == "agent"
-    assert check["content_addressable"] is False
-    assert body["score"] == legacy["score"]
-    assert body["source_analysis_ids"] == legacy["source_analysis_ids"]
-    async with session_factory() as session:
-        stored = await session.get(SiteHealthSnapshot, snapshot.id)
-        assert stored is not None
-        assert stored.aeo_readiness_diagnostic == legacy
+        assert body["source_analysis_id"] == analysis.id
+        assert body["checkpoint_ids"] == ["technical.meta_description_present"]
+        assert body["suggested_skill_id"] == "content_page"
+        assert body["observed_evidence"] == [{"meta_description": ""}]
+        assert body["target_fields"] == ["meta_description"]
+        assert body["normalized_url"].endswith("/a")
+        assert body["scoring_policy_version"] == "1"
+
+        # Current-revision requests omit the assertion and drop unsupported ids.
+        current = await get_content_handoff(
+            session,
+            **request,
+            checkpoint_ids=[
+                "technical.meta_description_present",
+                "aeo.answer_first",
+            ],
+        )
+        assert current == body
+        with pytest.raises(SiteHealthNotFoundError):
+            await get_content_handoff(
+                session,
+                **request,
+                source_analysis_id=uuid.uuid4(),
+                checkpoint_ids=["technical.meta_description_present"],
+            )
 
 
-async def test_measurement_reads_are_workspace_isolated(
+async def test_content_handoff_is_workspace_isolated(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -729,22 +490,14 @@ async def test_measurement_reads_are_workspace_isolated(
         )
         foreign = await _seed_scenario(session, email="readiness-foreign@example.com")
 
-    headers = {"X-Workspace-Id": str(foreign.workspace_id)}
-    readiness = await client.get(
-        f"/api/v1/projects/{owner.project_id}/site-health/aeo-readiness",
-        headers=headers,
-    )
-    handoff = await client.get(
-        f"/api/v1/projects/{owner.project_id}/site-health/content-handoff",
-        headers=headers,
-        params={
-            "crawl_id": owner.crawl_id,
-            "site_url_id": owner.monitored_url_id,
-            "source_analysis_id": analysis.id,
-            "dimension": "answerability",
-            "checkpoint_ids": ["aeo.answer_first"],
-        },
-    )
-
-    assert readiness.status_code == 404
-    assert handoff.status_code == 404
+        with pytest.raises(SiteHealthNotFoundError):
+            await get_content_handoff(
+                session,
+                workspace_id=foreign.workspace_id,
+                project_id=owner.project_id,
+                crawl_id=owner.crawl_id,
+                site_url_id=owner.monitored_url_id,
+                source_analysis_id=analysis.id,
+                dimension="metadata",
+                checkpoint_ids=["technical.meta_description_present"],
+            )

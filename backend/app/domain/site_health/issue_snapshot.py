@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.site_health_contracts import AEO_READINESS_DIMENSION_LABELS
 from app.core.config.site_health_measurement import (
     AEO_CHECK_PILLAR,
+    DEFECT_IMPACT_BANDS,
     READINESS_DIMENSION_WEIGHTS,
 )
 from app.core.config.site_health_rule_types import (
@@ -23,14 +24,6 @@ from app.core.config.site_health_rule_types import (
 from app.core.config.site_health_rules import SITE_HEALTH_RULES_BY_ID
 from app.models.site_health.analysis import SiteIssue, SiteRuleEvaluation
 from app.models.site_health.crawl import SiteCrawl
-
-_DEFECT_IMPACT_BANDS = {
-    "critical": 4,
-    "high": 3,
-    "medium": 2,
-    "low": 1,
-    "info": 0,
-}
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,7 +40,7 @@ class IssueSnapshot:
 
 def issue_impact(rule_id: str, finding_class: str, severity: str) -> tuple[int, str]:
     if finding_class == FINDING_CLASS_DEFECT:
-        return _DEFECT_IMPACT_BANDS.get(severity, 0), severity.replace("_", " ").title()
+        return DEFECT_IMPACT_BANDS.get(severity, 0), severity.replace("_", " ").title()
     rule = SITE_HEALTH_RULES_BY_ID.get(rule_id)
     pillar = AEO_CHECK_PILLAR.get(rule_id)
     if finding_class != FINDING_CLASS_ADVISORY or rule is None or pillar is None:

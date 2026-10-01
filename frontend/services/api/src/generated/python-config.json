@@ -358,15 +358,7 @@
         "code"
       ],
       "unused_client_prune_batch": 100,
-      "api_request_body_max_bytes": 2097152,
-      "inventory_source_crawl_ids_key": "inventory_source_crawl_ids",
-      "policy_blocking_error_codes": [
-        "access_blocked",
-        "bot_blocked",
-        "robots_denied",
-        "robots_unavailable",
-        "ssrf_blocked"
-      ]
+      "api_request_body_max_bytes": 2097152
     },
     "terms_revision": "2026-09-24"
   },
@@ -1016,7 +1008,6 @@
     ],
     "PERFORMANCE_DEFAULT_COMPARE": "none",
     "PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS": 364,
-    "implementation_verifier_version": "implementation-verifier-1",
     "dimension_key_separator": " | ",
     "dimension_arity": {
       "gsc_page_daily": 2,
@@ -1074,11 +1065,6 @@
       "retry_wait",
       "running",
       "submission_uncertain"
-    ],
-    "opportunity_versions": [
-      "opp-analyzer-1",
-      "opp-rules-2",
-      "opp-formula-1"
     ],
     "stop_words": [
       "a",
@@ -6774,6 +6760,7 @@
     ],
     "ts_owned_task_kinds": [
       "architecture",
+      "change_intel",
       "link_metrics"
     ],
     "versions": {
@@ -7495,7 +7482,178 @@
     "ignored_query_keys": [
       "variant",
       "variant_id"
-    ]
+    ],
+    "reads": {
+      "terminal_crawl_statuses": [
+        "cancelled",
+        "completed",
+        "failed",
+        "partially_completed"
+      ],
+      "scoring_version": "sh-scoring-1",
+      "rule_dimensions": [
+        "aeo",
+        "technical"
+      ],
+      "failing_outcomes": [
+        "missing",
+        "partial"
+      ],
+      "event_count_bearing_keys": [
+        "discarded",
+        "discarded_count",
+        "discovered_total",
+        "discovered_url_count",
+        "estimated_total",
+        "frontier",
+        "frontier_size",
+        "has_more_site_urls",
+        "overflow",
+        "overflow_count",
+        "sitemap_url_count",
+        "total",
+        "total_url_count"
+      ],
+      "aeo_dimension_labels": {
+        "answerability": "Answerability",
+        "structure": "Structure",
+        "evidence": "Evidence",
+        "machine-readability": "Machine readability",
+        "provenance": "Provenance",
+        "freshness": "Freshness",
+        "crawlability": "Crawlability"
+      },
+      "aeo_dimension_descriptions": {
+        "answerability": "Whether a page answers its question directly, near the top, without hiding the answer behind a click.",
+        "structure": "Whether headings and structured data describe the page accurately enough for an answer engine to quote the right part.",
+        "evidence": "Whether claims are backed by sources a reader can follow.",
+        "machine-readability": "Whether the page states what it is in machine-readable form, rather than leaving an engine to infer it from prose.",
+        "provenance": "Whether a responsible creator or publisher is identified.",
+        "freshness": "Whether the page says when it was written or last updated.",
+        "crawlability": "Whether an answer engine can reach and read the page at all — the checks that make every other dimension moot when they fail."
+      },
+      "policy_blocking_error_codes": [
+        "access_blocked",
+        "bot_blocked",
+        "robots_denied",
+        "robots_unavailable",
+        "ssrf_blocked"
+      ],
+      "corpus_exclusion_error_codes": [
+        "robots_denied",
+        "url_admission_rejected"
+      ],
+      "non_error_terminal_codes": [
+        "access_blocked",
+        "bot_blocked",
+        "robots_denied",
+        "robots_unavailable",
+        "ssrf_blocked",
+        "url_admission_rejected"
+      ],
+      "fetch_attempt_error_outcome": "error",
+      "defect_impact_bands": {
+        "critical": 4,
+        "high": 3,
+        "medium": 2,
+        "low": 1,
+        "info": 0
+      },
+      "readiness_dimension_weights": {
+        "answerability": 0.2,
+        "structure": 0.15,
+        "evidence": 0.15,
+        "machine-readability": 0.2,
+        "provenance": 0.1,
+        "freshness": 0.05,
+        "crawlability": 0.15
+      },
+      "aeo_check_pillar": {
+        "technical.indexable": "crawlability",
+        "search.crawler_access": "crawlability",
+        "search.snippet_access": "crawlability",
+        "aeo.product_answer_facts": "answerability",
+        "aeo.listing_answer_set": "answerability",
+        "aeo.answer_first": "answerability",
+        "aeo.heading_hierarchy": "structure",
+        "aeo.listing_item_facts": "structure",
+        "aeo.question_headings": "structure",
+        "aeo.source_support_present": "evidence",
+        "aeo.product_evidence_facts": "evidence",
+        "aeo.structured_data_present": "machine-readability",
+        "aeo.schema_required_valid": "machine-readability",
+        "aeo.schema_matches_content": "machine-readability",
+        "aeo.open_graph_present": "machine-readability",
+        "aeo.server_rendered_content": "machine-readability",
+        "aeo.product_brand_identity": "provenance",
+        "aeo.visible_attribution": "provenance",
+        "aeo.content_date_present": "freshness",
+        "aeo.offer_freshness_signal": "freshness"
+      },
+      "unknown_rule_remediation_route": "code",
+      "issue_history_max_crawls": 24,
+      "inventory_source_crawl_ids_key": "inventory_source_crawl_ids",
+      "coverage_complete_state": "complete",
+      "content_addressable_check_ids": [
+        "technical.meta_description_present",
+        "technical.title_present"
+      ],
+      "measurement_versions": {
+        "profile": "sh-profiles-1",
+        "schema_contract": "sh-schema-1",
+        "presentation": "sh-presentation-1"
+      }
+    },
+    "change_intel": {
+      "analyzer_version": "site-change-v2",
+      "max_pages": 5000,
+      "max_crawl_candidates": 50,
+      "default_limit": 50,
+      "max_limit": 200,
+      "state_available": "available",
+      "state_unavailable": "unavailable",
+      "state_non_comparable": "non_comparable",
+      "class_improvement": "improvement",
+      "class_neutral": "neutral-change",
+      "class_regression": "potential-regression",
+      "class_critical": "critical-regression",
+      "classes": [
+        "critical-regression",
+        "improvement",
+        "neutral-change",
+        "potential-regression"
+      ],
+      "fields": [
+        "title",
+        "meta_description",
+        "h1",
+        "canonical",
+        "robots_noindex",
+        "json_ld_present",
+        "internal_link_count",
+        "http_status",
+        "redirect_target"
+      ],
+      "max_observations": 50000,
+      "field_rules": {
+        "title": "technical.title_present",
+        "meta_description": "technical.meta_description_present",
+        "h1": "technical.single_h1",
+        "canonical": "technical.canonical_present",
+        "robots_noindex": "technical.indexable",
+        "json_ld_present": "aeo.structured_data_present"
+      },
+      "reason_no_previous_crawl": "no_previous_comparable_crawl",
+      "reason_scope_mismatch": "crawl_scope_mismatch",
+      "reason_version_mismatch": "analysis_version_mismatch",
+      "reason_no_usable_evidence": "no_usable_page_evidence",
+      "change_field": "content_change",
+      "shingle_size": 5,
+      "max_shingles": 2000,
+      "substantial_delta_ratio": 0.3,
+      "cosmetic_delta_ceiling": 0.03,
+      "substantial_section_changes": 2
+    }
   },
   "brand_identity": {
     "profile_fields": [

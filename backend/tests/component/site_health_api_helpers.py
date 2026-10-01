@@ -11,29 +11,21 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.site_health_acquisition import (
-    ERROR_HTTP_5XX,
-    FETCH_ATTEMPT_OUTCOME_ERROR,
-)
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
-    CRAWL_STATUS_FAILED,
     INITIAL_TASK_GENERATION,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     RULE_OUTCOME_MISSING,
     TASK_KIND_ANALYZE,
-    TASK_KIND_DISCOVER,
 )
 from app.core.config.site_health_crawl_policy import (
     SELECTION_SOURCE_USER,
 )
 from app.core.config.task_queue import (
-    TASK_STATUS_FAILED,
     TASK_STATUS_SUCCEEDED,
 )
-from app.domain.site_health.service.issues import issue_group_id
 from app.models.project import Project
-from app.models.site_health.acquisition import SiteFetchArtifact, SiteFetchAttempt
+from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.analysis import (
     SiteIssue,
     SitePageAnalysis,
@@ -65,7 +57,6 @@ class Scenario:
     crawl_id: uuid.UUID
     monitored_url_id: uuid.UUID
     issue_url_id: uuid.UUID
-    canonical_issue_id: uuid.UUID
 
 
 async def _seed_scenario(session: AsyncSession, *, email: str) -> Scenario:
@@ -332,271 +323,4 @@ async def _seed_scenario(session: AsyncSession, *, email: str) -> Scenario:
         crawl_id=crawl.id,
         monitored_url_id=url_a.id,
         issue_url_id=url_b.id,
-        canonical_issue_id=issue_group_id(crawl.id, "technical.title_present"),
-    )
-
-
-async def _add_second_crawl(
-    session: AsyncSession,
-    scn: Scenario,
-    *,
-    admit_slugs: tuple[str, ...],
-) -> SiteCrawl:
-    """Seed a later crawl for the same project that admits only ``admit_slugs``.
-
-    Reuses the project's existing ``SiteUrl`` rows (a downgrade re-crawls the
-    same site) but records a ``SiteUrlObservation`` only for the requested
-    slugs, so the crawl's admitted set is a strict subset of the project's
-    historical catalog.
-    """
-    profile = await session.scalar(
-        select(SiteHealthProfile).where(SiteHealthProfile.project_id == scn.project_id)
-    )
-    assert profile is not None
-    crawl = SiteCrawl(
-        workspace_id=scn.workspace_id,
-        project_id=scn.project_id,
-        profile_id=profile.id,
-        status=CRAWL_STATUS_COMPLETED,
-        root_url=profile.root_url,
-        random_seed="2",
-        admitted_url_count=len(admit_slugs),
-        analyzed_url_count=0,
-        failed_url_count=0,
-        rule_catalog_version="v1",
-    )
-    session.add(crawl)
-    await session.flush()
-
-    for depth, slug in enumerate(admit_slugs):
-        normalized = f"{profile.root_url}{slug}"
-        su = await session.scalar(
-            select(SiteUrl).where(
-                SiteUrl.project_id == scn.project_id,
-                SiteUrl.normalized_url == normalized,
-            )
-        )
-        assert su is not None
-        session.add(
-            SiteUrlObservation(
-                workspace_id=scn.workspace_id,
-                project_id=scn.project_id,
-                crawl_id=crawl.id,
-                site_url_id=su.id,
-                source_kind="root" if depth == 0 else "link",
-                depth=depth,
-                observed_url=su.normalized_url,
-                final_url=su.normalized_url,
-                status_code=200,
-                content_type="text/html",
-                title=su.latest_title or "",
-            )
-        )
-    await session.commit()
-    return crawl
-
-
-async def _seed_issue_for_url(
-    session: AsyncSession,
-    scn: Scenario,
-    *,
-    crawl_id: uuid.UUID,
-    site_url_id: uuid.UUID,
-    rule_id: str,
-    dimension: str = "technical",
-    category: str = "meta",
-    severity: str = "critical",
-) -> uuid.UUID:
-    """Seed a full analyze task + artifact + analysis + evaluation + issue.
-
-    ``SiteIssue`` requires non-null ``analysis_id`` / ``evaluation_id`` /
-    ``source_artifact_id`` (and ``evaluation_id`` is unique), so an extra issue
-    cannot be a bare row — it needs its own supporting rows, exactly like the
-    base scenario. Returns the new issue id.
-    """
-    su = await session.get(SiteUrl, site_url_id)
-    assert su is not None
-    task = SiteCrawlTask(
-        crawl_id=crawl_id,
-        workspace_id=scn.workspace_id,
-        task_kind=TASK_KIND_ANALYZE,
-        requested_url=su.normalized_url,
-        url_hash=su.url_hash,
-        site_url_id=su.id,
-        generation=INITIAL_TASK_GENERATION,
-        idempotency_key=f"{crawl_id}:analyze:{su.id}:{rule_id}",
-        status=TASK_STATUS_SUCCEEDED,
-    )
-    session.add(task)
-    await session.flush()
-    artifact = SiteFetchArtifact(
-        task_id=task.id,
-        crawl_id=crawl_id,
-        workspace_id=scn.workspace_id,
-        fetch_purpose="analyze",
-        requested_url=su.normalized_url,
-        final_url=su.normalized_url,
-        status_code=200,
-        content_type="text/html",
-        decoded_bytes=1024,
-        normalized_facts={"has_html": True},
-    )
-    session.add(artifact)
-    await session.flush()
-    analysis = SitePageAnalysis(
-        workspace_id=scn.workspace_id,
-        project_id=scn.project_id,
-        crawl_id=crawl_id,
-        site_url_id=su.id,
-        artifact_id=artifact.id,
-        status=PAGE_ANALYSIS_STATUS_COMPLETED,
-        analyzer_version="v1",
-        scoring_version="v1",
-    )
-    session.add(analysis)
-    await session.flush()
-    evaluation = SiteRuleEvaluation(
-        workspace_id=scn.workspace_id,
-        analysis_id=analysis.id,
-        source_artifact_id=artifact.id,
-        rule_id=rule_id,
-        dimension=dimension,
-        category=category,
-        severity=severity,
-        weight=1.0,
-        outcome=RULE_OUTCOME_MISSING,
-        evidence={"observed": "missing"},
-        analyzer_version="v1",
-        rule_version="v1",
-    )
-    session.add(evaluation)
-    await session.flush()
-    issue = SiteIssue(
-        workspace_id=scn.workspace_id,
-        project_id=scn.project_id,
-        crawl_id=crawl_id,
-        site_url_id=su.id,
-        analysis_id=analysis.id,
-        evaluation_id=evaluation.id,
-        source_artifact_id=artifact.id,
-        rule_id=rule_id,
-        dimension=dimension,
-        category=category,
-        severity=severity,
-        evidence={"observed": "missing"},
-        remediation="Fix it.",
-        analyzer_version="v1",
-        rule_version="v1",
-    )
-    session.add(issue)
-    analysis.source_evaluation_ids = [evaluation.id]
-    analysis.source_artifact_ids = [artifact.id]
-    analysis.finalized_at = datetime.now(UTC)
-    await session.flush()
-    return issue.id
-
-
-async def _seed_failed_crawl(session: AsyncSession, *, email: str) -> Scenario:
-    """Seed a FAILED crawl whose root fetch lost 3 retried calls (HTTP 500).
-
-    The evidence shape the worker persists for a fully-failed crawl: a
-    terminally failed root discover task plus one ``SiteFetchAttempt`` error
-    row per REAL network call — and NO SiteUrl rows at all (a root failure
-    never admits a page).
-    """
-    root = "https://broken.test/"
-    workspace = Workspace(name="Broken WS")
-    session.add(workspace)
-    await session.flush()
-
-    user = await session.scalar(select(User).where(User.email == email))
-    assert user is not None
-    session.add(
-        WorkspaceMember(workspace_id=workspace.id, user_id=user.id, role="owner")
-    )
-
-    project = Project(
-        workspace_id=workspace.id,
-        name="Broken Site",
-        brand_name="Broken",
-        country_code="AU",
-        language_code="en-AU",
-        benchmark_mode="consumer_like",
-        default_repetitions=1,
-        website_url=root,
-    )
-    session.add(project)
-    await session.flush()
-
-    profile = SiteHealthProfile(
-        workspace_id=workspace.id,
-        project_id=project.id,
-        root_url=root,
-        root_host="broken.test",
-        registrable_domain="broken.test",
-    )
-    session.add(profile)
-    await session.flush()
-
-    crawl = SiteCrawl(
-        workspace_id=workspace.id,
-        project_id=project.id,
-        profile_id=profile.id,
-        status=CRAWL_STATUS_FAILED,
-        discovery_status="failed",
-        analysis_status="failed",
-        root_url=root,
-        random_seed="1",
-        discovered_url_count=0,
-        admitted_url_count=0,
-        analyzed_url_count=0,
-        failed_url_count=1,
-        inventory_complete=False,
-        rule_catalog_version="v1",
-        error_message="The site returned HTTP 500 after 3 attempts",
-    )
-    session.add(crawl)
-    await session.flush()
-
-    task = SiteCrawlTask(
-        crawl_id=crawl.id,
-        workspace_id=workspace.id,
-        task_kind=TASK_KIND_DISCOVER,
-        requested_url=root,
-        url_hash=_hash(root),
-        generation=INITIAL_TASK_GENERATION,
-        idempotency_key=f"{crawl.id}:discover:root:0",
-        status=TASK_STATUS_FAILED,
-        depth=0,
-        attempt_count=3,
-        error_code=ERROR_HTTP_5XX,
-        error_detail="the server returned HTTP 500",
-    )
-    session.add(task)
-    await session.flush()
-
-    for attempt_number in (1, 2, 3):
-        session.add(
-            SiteFetchAttempt(
-                task_id=task.id,
-                crawl_id=crawl.id,
-                workspace_id=workspace.id,
-                attempt_number=attempt_number,
-                request_ordinal=0,
-                method="GET",
-                target_host="broken.test",
-                outcome=FETCH_ATTEMPT_OUTCOME_ERROR,
-                error_code=ERROR_HTTP_5XX,
-                status_code=500,
-                latency_ms=100 * attempt_number,
-            )
-        )
-    await session.commit()
-    return Scenario(
-        workspace_id=workspace.id,
-        project_id=project.id,
-        crawl_id=crawl.id,
-        monitored_url_id=uuid.uuid4(),  # unused by these tests
-        issue_url_id=uuid.uuid4(),
-        canonical_issue_id=uuid.uuid4(),
     )

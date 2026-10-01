@@ -1,4 +1,4 @@
-"""Site Health read paths: entitlement, crawls, inventory, pages, page detail.
+"""Site Health read paths kept for Python callers: crawls, monitored set, pages.
 
 The workspace-scoped projections behind the list/detail endpoints. Every query
 here is bounded by the resolved workspace and (for crawl-scoped reads) by what
@@ -17,25 +17,15 @@ from typing import Any
 from sqlalchemy import and_, case, func, literal, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_FAILED,
-    CRAWL_TERMINAL_STATUSES,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     PAGE_ANALYSIS_STATUS_PARTIALLY_COMPLETED,
     TASK_KIND_ANALYZE,
 )
-from app.core.config.site_health_runtime import (
-    site_health_settings,
-)
-from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.service import (
-    refresh_site_health_runtime_for_account,
     refresh_site_health_runtime_for_workspace,
-    resolve_workspace_entitlement,
 )
-from app.domain.entitlements.types import STATUS_RESOLVED
-from app.domain.site_health.entitlements import resolve_runtime
 from app.domain.site_health.failure import load_root_errors, load_root_failure_summary
 from app.domain.site_health.inventory_scope import (
     inventory_site_url_subquery,
@@ -69,73 +59,6 @@ from app.models.site_health.links import SitePageLinkMetric
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.runtime import SiteHealthProfile
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
-
-
-# =========================================================================
-# Entitlement view
-# =========================================================================
-async def get_entitlement_view(
-    session: AsyncSession, *, workspace_id: uuid.UUID
-) -> dict:
-    """Project the workspace Site Health entitlement into the neutral contract.
-
-    Thin wrapper kept at the frozen complexity budget; the projection lives in
-    ``_site_health_entitlement_view``.
-    """
-    return await _site_health_entitlement_view(
-        session, workspace_id=workspace_id, at=datetime.now(UTC)
-    )
-
-
-async def _site_health_entitlement_view(
-    session: AsyncSession, *, workspace_id: uuid.UUID, at: datetime
-) -> dict:
-    """Resolve the account at an explicit ``at`` and project the neutral DTO.
-
-    Sources ``resolver_status`` / ``contributing_grant_ids`` from the
-    ``ResolvedEntitlement`` (never the runtime row) and lazily refreshes the
-    runtime projection. ``unresolved`` yields a zero monitored limit, the
-    neutral sample limit, no disclosure, and empty grant IDs. The read
-    commits nothing.
-    """
-    account_id = await billing_account_id_for(session, workspace_id)
-    if account_id is None:
-        entitlement = await resolve_workspace_entitlement(
-            session, workspace_id=workspace_id, at=at
-        )
-        row = await refresh_site_health_runtime_for_workspace(
-            session, workspace_id=workspace_id, at=at
-        )
-    else:
-        entitlement = await refresh_site_health_runtime_for_account(
-            session, account_id=account_id, at=at
-        )
-        row = await resolve_runtime(session, workspace_id)
-    resolved = entitlement.status == STATUS_RESOLVED
-    capability = entitlement.capability(KEY_MONITORED_URLS)
-    if not resolved:
-        access_mode = "unresolved"
-    elif row.monitored_url_limit > 0:
-        access_mode = "full"
-    else:
-        access_mode = "sample"
-    return {
-        "workspace_id": row.workspace_id,
-        "access_mode": access_mode,
-        "sample_url_limit": int(row.sample_url_limit),
-        "monitored_url_limit": int(row.monitored_url_limit) if resolved else 0,
-        "count_disclosure": bool(row.count_disclosure) if resolved else False,
-        "resolver_status": entitlement.status,
-        "registry_revision": entitlement.registry_revision,
-        "entitlement_lifecycle_version": int(entitlement.entitlement_lifecycle_version),
-        "valid_until": entitlement.valid_until,
-        "contributing_grant_ids": (
-            list(capability.contributing_grant_ids)
-            if resolved and capability is not None
-            else []
-        ),
-        "advanced_controls_enabled": site_health_settings.advanced_controls_enabled,
-    }
 
 
 # =========================================================================
@@ -402,32 +325,6 @@ def _page_keyset_result(
     return items, None
 
 
-def _inventory_summary_row(
-    row: SiteUrl,
-    analysis: SitePageAnalysis | None,
-    _presentation_status: str,
-    _error_code: str | None,
-    *,
-    monitored_ids: set[uuid.UUID],
-    issue_counts: dict[uuid.UUID, int],
-) -> dict:
-    """Render the bounded inventory projection for one persisted SiteUrl."""
-    return {
-        **page_measurement_fields(analysis),
-        "site_url_id": row.id,
-        "normalized_url": row.normalized_url,
-        "display_url": row.display_url or row.normalized_url,
-        "title": row.latest_title or None,
-        "content_type": row.latest_content_type or None,
-        "source": row.latest_source_kind or None,
-        "depth": row.depth,
-        "monitored": row.id in monitored_ids,
-        "first_seen_at": _iso(row.first_seen_at),
-        "last_seen_at": _iso(row.last_seen_at),
-        "issue_count": issue_counts.get(row.id, 0) if analysis is not None else None,
-    }
-
-
 def _pages_summary_row(
     row: SiteUrl,
     analysis: SitePageAnalysis | None,
@@ -463,134 +360,6 @@ def _pages_summary_row(
         "error_code": error_code,
         "issue_count": issue_counts.get(row.id, 0) if analysis is not None else None,
     }
-
-
-# =========================================================================
-# Inventory (keyset (normalized_url, id) over SiteUrl)
-# =========================================================================
-async def get_inventory(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    crawl_id: uuid.UUID,
-    limit: int | None,
-    cursor: str | None,
-    query: str | None = None,
-    status: str | None = None,
-    monitored: bool | None = None,
-    page_kind: str | None = None,
-) -> dict:
-    """Keyset inventory for a crawl's project, ordered ``(normalized_url, id)``.
-
-    Filters by substring ``query`` (normalized/display url), a per-URL
-    presentation ``status``, the ``monitored`` flag, and a ``page_kind``
-    exact match against the latest analysis's classified type (v2 P1 —
-    semantics in ``_page_kind_matches``). The cursor is bound to the
-    endpoint + filter fingerprint so a filter change invalidates it.
-    Nullable latest-analysis summaries are attached per row.
-    """
-    crawl = await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
-    limit = _clamp_limit(limit)
-    project_id = crawl.project_id
-    scope = "inventory"
-    filters = {
-        "crawl_id": str(crawl_id),
-        "query": (query or "").strip().lower() or None,
-        "status": status or None,
-        "monitored": (str(monitored) if monitored is not None else None),
-        "page_kind": page_kind or None,
-    }
-
-    search: list[Any] = []
-    if query:
-        pattern = f"%{query.strip().lower()}%"
-        search.append(
-            or_(
-                func.lower(SiteUrl.normalized_url).like(pattern),
-                func.lower(SiteUrl.display_url).like(pattern),
-            )
-        )
-
-    analysis_filters, derived_status = _analysis_page_filters(
-        crawl_id=crawl_id, status=status, page_kind=page_kind
-    )
-    # Task-derived statuses are applied in Python from the presentation state,
-    # so only those filters still require a widened scan window.
-    over_fetch = derived_status is not None
-    fetch_size = _scan_window(limit, over_fetch=over_fetch)
-
-    monitored_ids = await _monitored_site_url_ids(session, project_id=project_id)
-    # A Starter recrawl reads its explicitly frozen earlier full inventories
-    # while new observations stream in. Sample crawls ignore inherited ids, so
-    # a Free/downgraded run cannot expose the earlier Starter catalog.
-    stmt = _site_url_page_stmt(
-        crawl,
-        monitored=monitored,
-        monitored_ids=monitored_ids,
-        cursor=cursor,
-        scope=scope,
-        filters=filters,
-        limit=limit,
-        over_fetch=over_fetch,
-        extra_where=[*search, *analysis_filters],
-        sort="url",
-    )
-    if stmt is None:
-        return {"items": [], "next_cursor": None}
-    rows = [
-        (row, sort_value) for row, sort_value in (await session.execute(stmt)).all()
-    ]
-
-    site_ids = [row.id for row, _ in rows]
-    sort_values = {row.id: sort_value for row, sort_value in rows}
-    analyses = await _latest_analysis_by_site_url(
-        session, crawl_id=crawl_id, site_url_ids=site_ids
-    )
-    tasks = await _latest_analyze_task_by_site_url(
-        session, crawl_id=crawl_id, site_url_ids=site_ids
-    )
-    issue_counts = await _issue_counts_by_site_url(
-        session, crawl_id=crawl_id, site_url_ids=site_ids
-    )
-
-    def project_inventory_row(
-        row: SiteUrl,
-        analysis: SitePageAnalysis | None,
-        presentation_status: str,
-        error_code: str | None,
-    ) -> dict:
-        return _inventory_summary_row(
-            row,
-            analysis,
-            presentation_status,
-            error_code,
-            monitored_ids=monitored_ids,
-            issue_counts=issue_counts,
-        )
-
-    items, last_scanned = _matching_page_summaries(
-        rows,
-        analyses=analyses,
-        tasks=tasks,
-        monitored_ids=monitored_ids,
-        status=derived_status,
-        page_kind=None,
-        limit=limit,
-        project=project_inventory_row,
-        terminal=crawl.status in CRAWL_TERMINAL_STATUSES,
-    )
-    items, next_cursor = _page_keyset_result(
-        items,
-        scanned_sort_values=sort_values,
-        last_scanned=last_scanned,
-        scanned_row_count=len(rows),
-        fetch_size=fetch_size,
-        limit=limit,
-        sparse_filter=over_fetch,
-        scope=scope,
-        filters=filters,
-    )
-    return {"items": items, "next_cursor": next_cursor}
 
 
 def _scan_window(limit: int, *, over_fetch: bool) -> int:
@@ -673,11 +442,8 @@ def _site_url_page_stmt(
 ):
     """The shared keyset page over a crawl's SiteUrls, as ``(row, sort_value)``.
 
-    ``get_inventory`` and ``get_pages`` differ only in their row projection —
-    the scope subquery, monitored filter, cursor predicate, ordering and
-    over-fetch were an identical 37-line block in both (the audit's top
-    duplication finding). Returns ``None`` when the filters select nothing, so
-    callers short-circuit to an empty page.
+    Returns ``None`` when the filters select nothing, so callers short-circuit
+    to an empty page.
 
     ``over_fetch`` widens the fetch when a status/page_kind filter is applied
     in Python from the derived presentation status, so a filtered page can

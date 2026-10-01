@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.site_health_contracts import (
@@ -46,7 +46,6 @@ from app.domain.site_health.score_summary import (
     load_crawl_measurement_projection,
     refresh_live_score_summary,
 )
-from app.domain.site_health.service.issues import get_issues
 from app.domain.site_health.snapshot import persist_crawl_snapshot
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.analysis import (
@@ -341,16 +340,25 @@ async def test_terminal_reconciliation_excludes_late_system_alias_only(
             )
         )
         assert persisted_alias_issues
-        alias_issue_projection = await get_issues(
-            session,
-            workspace_id=seed.workspace_id,
-            crawl_id=seed.crawl_id,
-            limit=50,
-            cursor=None,
-            site_url_id=site_url_ids[1],
+        # The crawl's issues are those of its current, finalized analyses; the
+        # excluded alias contributes none of its persisted issues.
+        current_evaluation_ids = select(
+            func.unnest(SitePageAnalysis.source_evaluation_ids)
+        ).where(
+            SitePageAnalysis.crawl_id == seed.crawl_id,
+            SitePageAnalysis.is_current.is_(True),
+            SitePageAnalysis.finalized_at.is_not(None),
         )
-        assert alias_issue_projection["items"] == []
-        assert alias_issue_projection["summary"]["occurrence_count"] == 0
+        current_alias_issues = list(
+            await session.scalars(
+                select(SiteIssue.id).where(
+                    SiteIssue.crawl_id == seed.crawl_id,
+                    SiteIssue.site_url_id == site_url_ids[1],
+                    SiteIssue.evaluation_id.in_(current_evaluation_ids),
+                )
+            )
+        )
+        assert current_alias_issues == []
 
 
 @pytest.mark.asyncio

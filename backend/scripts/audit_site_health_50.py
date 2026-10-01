@@ -14,6 +14,7 @@ import hashlib
 import importlib
 import json
 import re
+import uuid
 from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -30,7 +31,6 @@ from app.connectors.web_evidence.resolver import SystemDnsResolver
 from app.core.config.site_health_acquisition import FETCH_PURPOSE_ANALYZE
 from app.core.database import engine
 from app.domain.site_health.acquisition_controls import authorize_acquisition
-from app.domain.site_health.service.issues import issue_group_id
 
 _reporting = importlib.import_module(
     "scripts.site_health_audit_reporting"
@@ -59,6 +59,12 @@ CORRECTED_REPLAY_RULE_IDS = frozenset(
         "web.accessibility_form_names",
     }
 )
+
+
+def issue_group_id(crawl_id: uuid.UUID, rule_id: str, finding_class: str) -> uuid.UUID:
+    """The Site Health API's stable issue group id (UUID5 within the crawl)."""
+    suffix = "" if finding_class == "defect" else f":{finding_class}"
+    return uuid.uuid5(crawl_id, f"site-issue-group:{rule_id}{suffix}")
 
 
 def _json(value: Any) -> str:

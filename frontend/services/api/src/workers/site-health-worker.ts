@@ -6,6 +6,7 @@ import { getLogger } from '../logging.ts';
 import { TaskQueue, type SiteTask } from '../queue/task-queue.ts';
 import { persistLinkMetrics } from '../site-health/link-metrics.ts';
 import { persistArchitecture } from '../site-health/architecture.ts';
+import { runChangeIntel } from '../site-health/change-snapshot.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { lockSiteTask, type Crawl } from '../site-health/task-fence.ts';
 import { TaskCancelledError } from './executor.ts';
@@ -13,6 +14,7 @@ import { waitForPoll } from './poll.ts';
 
 type SiteExecutor = (db: Database, crawl: Crawl, task: SiteTask) => Promise<unknown>;
 const executors: Record<string, SiteExecutor> = {
+  change_intel: runChangeIntel,
   link_metrics: persistLinkMetrics,
   architecture: persistArchitecture,
 };

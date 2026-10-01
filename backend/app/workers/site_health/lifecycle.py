@@ -517,9 +517,7 @@ class CrawlLifecycle(CrawlFinalizeMixin):
             await enqueue_change_refresh(session, crawl=crawl)
             await enqueue_link_metric_refresh(session, crawl=crawl)
         else:
-            await enqueue_terminal_analytics_refresh(
-                session, crawl=crawl, change_snapshot_id=None
-            )
+            await enqueue_terminal_analytics_refresh(session, crawl=crawl)
 
     async def reconcile_stalled(self) -> int:
         """Force-reconcile active crawls that have no outstanding work left.

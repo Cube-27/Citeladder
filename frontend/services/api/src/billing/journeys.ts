@@ -9,6 +9,7 @@ import { workspaceAccount } from './purchases.ts';
 import { catalog } from './catalog.ts';
 import { conflict, digest } from './contracts.ts';
 import { policy } from '../config.ts';
+import { uuidV5 } from '../uuid-v5.ts';
 
 export const claimRequest = z
   .object({
@@ -21,16 +22,7 @@ export const claimRequest = z
 
 /** RFC 9562 v5 identity persists across catalog revisions and both stacks. */
 function campaignId(key: string) {
-  // RFC 9562 UUIDv5 is defined over SHA-1; this is an identifier, not a secret.
-  const bytes = createHash('sha1') // NOSONAR
-    .update(Buffer.from('5f0ae2be21f34c0ba312b1d946f32921', 'hex'))
-    .update(key)
-    .digest()
-    .subarray(0, 16);
-  bytes[6] = (bytes[6]! & 15) | 80;
-  bytes[8] = (bytes[8]! & 63) | 128;
-  const hex = bytes.toString('hex');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  return uuidV5('5f0ae2be-21f3-4c0b-a312-b1d946f32921', key);
 }
 
 export async function offerRead(db: Database, workspaceId: string, now: Date) {

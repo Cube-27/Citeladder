@@ -19,25 +19,6 @@ export const siteHealthKeys = {
     ['site-health', 'dashboard', projectId, crawlId ?? 'latest'] as const,
   overview: (projectId: string, crawlId?: string) =>
     ['site-health', 'overview', projectId, crawlId ?? 'latest'] as const,
-  contentHandoff: (
-    projectId: string,
-    crawlId: string,
-    siteUrlId: string,
-    sourceAnalysisId: string | undefined,
-    dimension: string,
-    checkpointIds: string[],
-  ) =>
-    [
-      'site-health',
-      'content-handoff',
-      projectId,
-      crawlId,
-      siteUrlId,
-      sourceAnalysisId ?? 'current',
-      dimension,
-      [...checkpointIds].sort((left, right) => left.localeCompare(right)),
-    ] as const,
-  contentHandoffUnavailable: () => ['site-health', 'content-handoff', 'unavailable'] as const,
   aeoReadiness: (projectId: string, crawlId?: string) =>
     ['site-health', 'aeo-readiness', projectId, crawlId ?? 'latest'] as const,
   architecture: (projectId: string, crawlId?: string) =>

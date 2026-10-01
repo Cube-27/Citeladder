@@ -6,8 +6,9 @@ request. PRs 7, 8 and 9 were split at the owner's direction (7a, 7a-cleanup,
 followed 7b. On 28 September 2026 the owner widened the objective (section 1)
 and brought the former out-of-scope island into the plan (section 2, D7); PR 10
 recorded that change and re-sequenced PRs 11–20 so that each PR first moves
-what unlocks the next ones. Deployment and the one-week error-rate/latency soak
-are pending for every cutover from PR 3 on. This is not execution
+what unlocks the next ones. Deployment is pending for every cutover from PR 3
+on; on 1 October 2026 the owner dropped the one-week soak while there are no
+customers, so cutovers are accepted on smoke tests (rule 7). This is not execution
 authorization: each later PR runs only when individually assigned.
 
 ## 1. Objective
@@ -148,10 +149,16 @@ total.
 6. **Invariants unchanged:** workspace authorization (non-member → 404), reads
    never acquire or repair, commit-before-network-I/O, distinct unknown states,
    append-only evidence. Providers use recorded fixtures only.
-7. **Telemetry.** Span and attribute names used by dashboards survive the move;
-   each cutover soaks one week comparing error rate and latency.
+7. **Telemetry.** Span and attribute names used by dashboards survive the move.
+   While there are no customers, a cutover is accepted on smoke tests of its
+   route families and workers; there is no one-week soak (owner, 1 October 2026).
+   Earlier PR sections that mention a soak are superseded by this rule.
 8. **Record departures.** Where Python behavior was a defect or accident, fix it
    and list the departure in the PR's section.
+9. **Workers can drain and exit (from PR 18b, owner, 1 October 2026).** Every
+   new or moved TypeScript worker exposes a bounded drain mode: claim and run
+   due work until its queue is empty or a time budget expires, then exit 0.
+   The long-polling loop stays for local compose. Section 9 depends on this.
 
 ## 6. PR sequence
 
@@ -174,9 +181,13 @@ total.
 | 15 | MCP server and OAuth provider | High | Done |
 | 16 | Billing and the entitlement ledger (16a PDF, 16b commercial/ledger) | High | Done |
 | 17 | Audits, providers and answer-engine connectors | High | 17a done; 17b implemented |
-| 18 | Site Health and source-page inspection | High | |
+| 18 | Site Health and source-page inspection | High | 18a, 18b1, 18b2 done |
 | 19 | Agent runtime | High | |
 | 20 | Consolidation and policy transfer | Medium | |
+| 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
+| 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
+| 23 | Database move and HTTP cutover (section 9) | High | Proposed |
+| 24 | Retire the Mumbai deployment (section 9) | Low | Proposed |
 
 Order rationale: each PR moves the owner that blocks the most later paths.
 Entitlements (10) unblock every slot-consuming write; the model gateway (11)
@@ -932,15 +943,58 @@ normalized URL before canonicalization), downgrades capped coverage,
 reads relationships from the parser's structured-data blocks, and rejects numeric
 strings as confidence.
 
-**PR 18b — pending:** move change-intelligence comparison and immutable snapshots
-with their atomic analytics handoff; the page parser, classifier, deterministic
-rules and scoring; the `discover`, `site_setup` and `analyze` executors; durable
-frontier, robots, fetch budgets, crawl admission, cancellation, finalization and
-lease recovery; and all 27 Site Health API operations with their contracts and
-route ownership. Retire replaced Python writers and acquisition paths after
-their callers move. Retain the read-only Agent/MCP, source-identity and entitlement
-bridges until their external callers migrate. PR 18 remains incomplete until 18b
-lands.
+**PR 18b** is split under D7's retirement budget (about 126 application files)
+into dependency-ordered slices:
+
+1. **18b1, read API (implemented).** TypeScript serves the `site-health`
+   family: the entitlement view, crawl detail, inventory, pages, page detail,
+   issues, issue detail, issue history, events (JSON replay and SSE), CSV and
+   Markdown exports, the dashboard, Overview, AEO Readiness, architecture and
+   changes. Python's remaining crawl mutations are retagged
+   `site-health-crawls`: crawl creation and list, URL preview, cancel, page
+   rerun and the monitored set. MCP's page read uses the same page query.
+   Python keeps the page reads and content hand-off the Agent and MCP bridges
+   call until PR 19.
+2. **18b2, change intelligence (implemented).** The TypeScript Site Health
+   worker claims `change_intel`: it selects the comparable predecessor,
+   compares persisted page evidence, appends the immutable snapshot and its
+   observations, and performs the analytics handoff (implementation
+   verification, then Demand or Opportunities). Python keeps `change_intel`
+   admission at finalization and the handoff of a crawl without usable
+   analysis until 18b5. One TypeScript helper builds every Opportunity refresh
+   and verification key.
+3. **18b3, page analysis:** the parser, classifier, deterministic rules and
+   scoring, with the `analyze` executor.
+4. **18b4, acquisition:** the `discover` and `site_setup` executors, durable
+   frontier, robots, fetch budgets and the web-evidence connector.
+5. **18b5, crawl control:** admission, URL preview, cancellation, reruns, the
+   monitored set, finalization and lease recovery; the Python Site Health
+   worker retires and the TypeScript worker gains its drain mode (rule 9).
+
+Departures in 18b1: reads resolve the Site Health runtime from the account's
+grants instead of refreshing `workspace_site_health_runtime` (a read never
+writes); presentation status is derived in SQL, so status-filtered pages are
+always full instead of advancing a sparse scan cursor; a page's issue count is
+its current analysis's issues, matching page detail (it counted every issue of
+the URL in the crawl); the issues export's first column is the group id (the
+`id` column was always empty); inventory search escapes LIKE wildcards; issue
+groups load in one query rather than one per rule; MCP's page read gains the
+link-metric version filter and the current-analysis issue count. The grouped
+issue-history view, the single change-observation route and the Site Health
+content-handoff route had no caller and are deleted; the Agent keeps the
+hand-off as a Python bridge. Cursors issued by Python are not accepted after
+the cutover.
+
+Departures in 18b2: the snapshot, its analytics handoff and the task's
+acknowledgement commit in one transaction (Python acknowledged the task after
+committing, so a crash between them re-ran the task); rule evaluations load
+through one array parameter rather than one bind per evaluation id, which a
+large crawl could push past the driver's parameter limit; the page join scopes artifacts, URLs and observations
+to the workspace; an implementation event's malformed target id no longer fails
+the task; and comparison text is lower-cased rather than Python-casefolded,
+which changes only stored shingles. The source hash is unchanged, so a task
+retried across the cutover reuses Python's snapshot. PR 18 remains incomplete
+until 18b5 lands.
 
 ### PR 19: Agent runtime
 
@@ -988,6 +1042,10 @@ guards.
 - Commerce catalog IDs, canonical URLs, prices, attributes, provenance and
   memberships; candidate `state`/`decision_at`; Prompt `enabled` and target
   `approved_at` (inputs to Python discovery, prompt context and audit freezing).
+- The terminal-crawl analytics handoff keys: verification `site_crawl:<crawl>`,
+  Opportunity refresh and the Demand revision (`<trigger>:<id>`, first 24
+  characters). Python's no-evidence finalization and the TypeScript
+  `change_intel` executor both write them until 18b5.
 - The stored business map (`business_context.business_map`: offerings, entries
   with origin, review state, reviewer and source, and exclusions) and the brand
   profile `sources` provenance, read by Python prompt generation.
@@ -999,3 +1057,76 @@ guards.
 - Crypto interop (JOSE in PR 14, Fernet in PR 13, argon2 in PR 14).
 - Dashboards keyed on logfire attributes going dark after a cutover.
 - Compose and GCP compose drifting from the ownership manifest.
+
+## 9. Low-cost hosting (PRs 21–24, proposed 1 October 2026)
+
+Status: direction accepted by the owner on 1 October 2026. Each PR still runs
+only when individually assigned.
+
+**Objective.** The product has no customers yet. The current deployment
+costs about ₹6,000 a month: one Mumbai e2-standard-2 runs PostgreSQL, Caddy and
+about 15 Python and TypeScript processes around the clock, with a balanced disk
+and a static IP. The target is under ₹500 a month in fixed hosting, excluding
+provider usage (JEV, DataForSEO, models) and the domain. Marketing, docs and
+the app stay available, and the app serves a few concurrent users. GCP and
+Cloudflare remain the only platforms.
+
+**Target.**
+
+```text
+Cloudflare Workers (free): marketing, docs, app shell; /api/* proxy
+        │  origin token header
+        ▼
+Cloud Run us-central1 (scale to zero)
+  api       service, min 0 / max 2, DB pool ≤ 4
+  runner    job: drains every TypeScript worker lane, then exits
+  migrate   job: alembic upgrade head (Python image), run on deploy
+Cloud Scheduler: one tick job (sweep leases, enqueue due schedules/syncs, drain)
+        │  Direct VPC egress (private IP)
+        ▼
+Compute Engine e2-micro us-central1 (free tier): PostgreSQL 16 only,
+30 GB pd-standard, small max_connections, swap
+```
+
+**Rules.**
+
+- Nothing except PostgreSQL runs continuously. Nothing except PostgreSQL runs
+  on the VM.
+- Application logic stays out of Cloudflare Workers (10 ms CPU on the free
+  plan). No Hyperdrive and no tunnel: Cloudflare never connects to PostgreSQL.
+- The API keeps commit-before-network-I/O: a write that enqueues work commits,
+  then starts a runner execution. Leases make duplicate executions harmless,
+  so starts are not deduplicated. The tick recovers any missed start.
+- Cloud Run's raw URL rejects requests without the origin token. Caddy
+  enforces this today, so the API service takes over the check.
+- Scale-up changes sizes, not services: raise Cloud Run limits, resize the VM,
+  or move PostgreSQL to Cloud SQL with a dump and a connection-string change.
+
+**PR 21: Scale-to-zero runner.** One `runner` entry point drains every
+TypeScript lane in one process with a shared, small pool and a time budget,
+then exits. One `tick` entry point performs the periodic work that the
+dispatcher, scheduler and sweeper loops do today. The API starts a runner
+execution after committing work. Requires PR 20: no Python process remains at
+runtime except the migration.
+
+**PR 22: Foundation.** Terraform for a new us-central1 environment beside the
+current one: the e2-micro PostgreSQL VM without a public address, the
+Cloud Run API service, runner and migrate jobs, the scheduler tick, Secret
+Manager wiring, a US backup bucket with short retention, an Artifact Registry
+cleanup policy, and budget alerts at ₹500 a month and about ₹20 a day.
+
+**PR 23: Move and cut over.** Back up the Mumbai database, restore it on the
+new VM, run the migrate job and smoke-test each route family, the runner and
+the tick. Point the app Worker's `ORIGIN_UPSTREAM` at Cloud Run. Stop the
+Mumbai VM after the smoke tests pass, and keep its final backup.
+
+**PR 24: Retire Mumbai.** Delete the e2-standard-2, its disk, static IP,
+Caddy and origin configuration, and the `compose.gcp.yml` path. After seven
+days, check billing by SKU and remove anything unexpectedly non-zero.
+
+**Owner decisions (1 October 2026).** us-central1 is accepted despite about
+250 ms more per API round trip from India. The owner stops the Mumbai VM
+manually if needed; no PR stops it before PR 23. Cutovers need no soak (rule 7).
+The free tier is confirmed for one e2-micro with 30 GB standard disk in
+us-central1. The database VM has no public address regardless, and the first
+week's billing by SKU confirms nothing else is charged.

@@ -21,3 +21,16 @@ export function siteWorkerSettings(env: Record<string, string | undefined> = pro
     conflictJitter: number('db_conflict_jitter_seconds'),
   };
 }
+
+/** What the read API needs: export and event-stream bounds, and the advanced-controls flag. */
+export function siteReadSettings(env: Record<string, string | undefined> = process.env) {
+  const spec = policy.site_health.settings;
+  const value = (name: keyof typeof spec) => resolveSettingSpec(spec[name], env);
+  return {
+    advancedControls: value('advanced_controls_enabled') === true,
+    maxExportItems: Number(value('max_export_items')),
+    maxEventPage: Number(value('max_event_page')),
+    ssePollSeconds: Number(value('sse_poll_interval_seconds')),
+    sseMaxSeconds: Number(value('sse_max_duration_seconds')),
+  };
+}

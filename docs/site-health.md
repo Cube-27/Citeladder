@@ -28,14 +28,25 @@ explicit Run new crawl
 Read endpoints only render persisted projections. They never acquire, classify,
 score, call a model/provider or repair state.
 
-During the TypeScript cutover, `site-health-worker-ts` claims `link_metrics` and
-`architecture` from the existing `site_crawl_tasks` queue. Python's preferred and borrowed
-lanes exclude those kinds. The TypeScript owner locks crawl then task, publishes
-immutable derived evidence and admits successors with acknowledgement in one
-transaction.
-Python retains the other crawl kinds, terminal-crawl admission and lease sweeping.
+During the TypeScript cutover, `site-health-worker-ts` claims `change_intel`,
+`link_metrics` and `architecture` from the existing `site_crawl_tasks` queue. Python's
+preferred and borrowed lanes exclude those kinds. The TypeScript owner locks crawl then
+task, publishes immutable derived evidence and admits successors with acknowledgement in
+one transaction; for `change_intel` that includes the analytics handoff.
+Python retains the other crawl kinds, terminal-crawl admission (including the
+analytics handoff of a crawl without usable analysis) and lease sweeping.
 Source inspection and internal-link judgments run in the TypeScript analytics
 worker; their failed-task recovery also covers Python-sweeper terminalization.
+
+The TypeScript service serves every Site Health read route (`site-health`
+family): the entitlement view, crawl detail, inventory, pages, page detail,
+issues, issue history, events, exports, the dashboard, Overview, AEO
+Readiness, architecture and changes. A page's presentation status is derived in
+the same query that filters and pages it. Reads resolve the workspace's Site
+Health runtime from its grants at read time and never refresh the persisted
+runtime row; billing mutations own that write. Python keeps the
+`site-health-crawls` family: crawl creation, the crawl list, URL preview,
+cancel, page rerun and the monitored set, until the crawler moves.
 
 ## Acquisition and evidence guarantees
 
@@ -270,7 +281,11 @@ TypeScript. Live rollout still requires editor-reviewed calibration; fixture tes
 
 ### Change intelligence
 
-Change Intelligence compares bounded primary-text shingles and heading outlines
+Change Intelligence compares a terminal crawl with the newest earlier crawl of the
+same origin, scope and analyzer/extractor versions; without one it records the
+immediate predecessor's exact non-comparable boundary. Each snapshot is immutable,
+keyed by its exact source analyses and artifacts, and supersedes the project's
+previous snapshot. It compares bounded primary-text shingles and heading outlines
 under extractor/analyzer provenance. Content change and modification-date
 consistency are separate outputs. Only complete, compatible text coverage may
 promote metadata-inconsistency or cosmetic-refresh actions; legacy, truncated or
