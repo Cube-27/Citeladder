@@ -80,8 +80,9 @@ while position metrics use only explicitly ordered recommendations.
 The [TypeScript Commerce API](../frontend/services/api/src/routes/commerce.ts)
 authorizes persisted reads, CSV imports and explicit decisions using active
 workspace membership and run/write capabilities. The
-[Python API](../backend/app/api/commerce.py) retains competitor discovery and
-buyer-prompt generation/manual entry. [CSV admission](../frontend/services/api/src/commerce/import.ts)
+[Python API](../backend/app/api/commerce.py) retains competitor discovery.
+Buyer-prompt generation and manual entry use the TypeScript owner.
+[CSV admission](../frontend/services/api/src/commerce/import.ts)
 and [catalog projection](../frontend/services/api/src/commerce/projection.ts)
 serialize catalog writes on the scoped project row. Projection consumes persisted
 Site Health analyses through analytics tasks enqueued by the retained
@@ -91,15 +92,17 @@ The [workspace](../frontend/components/products/commerce-workspace.tsx) coordina
 target selection and persisted queries. Async discovery must reach a persisted
 terminal state before an empty candidate list is interpreted as its result.
 
-[Audit context](../backend/app/domain/commerce/audit_context.py) freezes target
-identity before shared audit execution. [Shelf metrics](../backend/app/domain/commerce/shelf_metrics.py)
+[Audit context](../frontend/services/api/src/commerce/audit-context.ts) freezes target
+identity before shared audit execution. [Shelf metrics](../frontend/services/api/src/commerce/shelf-metrics.ts)
 owns the formulas; no browser aggregate or current-catalog lookup may reinterpret
 an old answer. Queue leases, bounded retries and cancellation remain with the
 shared analytics/audit workers. [TS projection tests](../frontend/services/api/test/commerce-projection.test.ts)
 and [route tests](../frontend/services/api/test/commerce.test.ts) cover the database
-owner, including the Python enqueue and audit-context boundaries. The
+owner and the retained Python enqueue boundary. Native
+[shelf tests](../frontend/services/api/test/commerce-shelf.test.ts) cover frozen
+catalog identity, recommendations and source provenance. The
 [Python tests](../backend/tests/component/test_commerce_suite_api.py) retain
-generation, manual entry and discovery coverage with deterministic provider doubles.
+competitor discovery coverage with deterministic provider doubles.
 
 The retired [rebuild record](archive/plans/commerce-suite-atomic-rebuild.md)
 retains unverified manual migration/crawl/CSV, reference-evaluation, Tavily and

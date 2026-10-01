@@ -1,6 +1,8 @@
-"""Persisted identity and citation classification for Python source inspection
-and MCP AIO reads. Audit scoring is native; these read helpers retire with
-those consumers in migration PRs 18 and 19."""
+"""Persisted identity and citation classification for MCP AIO reads.
+
+Audit scoring is native; these read helpers retire with the remaining MCP
+consumer in migration PR 19.
+"""
 
 from __future__ import annotations
 

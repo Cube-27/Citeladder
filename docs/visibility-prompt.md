@@ -221,11 +221,11 @@ same rule to drafted and proposed text.
 
 ## Audit admission and execution
 
-The [audit API](../backend/app/api/audits.py),
-[creation owner](../backend/app/domain/audits/creation.py) and
+The [audit API](../frontend/services/api/src/routes/audits.ts),
+[creation owner](../frontend/services/api/src/audits/creation.ts) and
 [schedule-management owner](../frontend/services/api/src/audits/schedules.ts)
 persist explicit measurement requests. The TypeScript API owns the complete
-project audit-schedules route family; the Python scheduler invokes the shared
+project audit-schedules route family; the TypeScript scheduler invokes the shared
 audit admission path when a stored schedule becomes due. Users select logical
 engines and repetitions, not transport
 measurement modes. Every brand/Commerce/manual/scheduled/repaired audit uses
@@ -237,7 +237,7 @@ provider policy. Funding/occupancy is checked by
 [billing and entitlements](billing-entitlements.md). A provider-free estimate
 does not authorize execution or establish measured cost.
 
-The [audit worker](../backend/app/workers/audit_worker.py) claims PostgreSQL
+The [audit worker](../frontend/services/api/src/workers/audit-worker.ts) claims PostgreSQL
 tasks with leases, commits before I/O and records immutable response artifacts,
 attempts and citation evidence. Cancellation, retries and reconciliation use
 the existing audit/task state owners; failed answers remain failures, not
@@ -247,10 +247,12 @@ different projections.
 Schedule patches validate cadence and interval against the current locked row;
 omitted values retain the persisted scope and configuration. Nullable scheduling
 fields may be cleared, while required fields reject null. Reads do not advance
-or repair schedules. Until funded admission moves after the TypeScript ledger,
-the Python scheduler remains the sole lease/run-state writer. Its claim and
-finalize operations and TypeScript updates/deletes serialize on the schedule
-row; this temporary shared-table boundary retires with the scheduler cutover.
+or repair schedules. The [native scheduler](../frontend/services/api/src/workers/audit-scheduler.ts)
+owns leases and run state; claim, finalize and schedule edits serialize on the
+schedule row. The [maintenance owner](../frontend/services/api/src/audits/maintenance.ts)
+independently reconciles expired leases and unused funding. DataForSEO submission
+intent commits before the paid request; uncertain submissions remain uncertain
+and are never automatically resubmitted. Known task IDs use free result polling.
 
 Manual launch offers six independent engines: ChatGPT Search (`chatgpt_search`),
 Gemini (`gemini_consumer`), Google AI Overview, ChatGPT API, Gemini API, and
