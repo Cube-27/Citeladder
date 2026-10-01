@@ -158,6 +158,23 @@ export function frozenConfiguration(
   return configuration;
 }
 
+function previewChunkBytes(value: unknown, pending: unknown[]) {
+  if (Array.isArray(value)) {
+    for (const item of value) pending.push(item);
+    return 2 + Math.max(0, value.length - 1);
+  }
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value);
+    let bytes = 2 + Math.max(0, entries.length - 1);
+    for (const [key, item] of entries) {
+      bytes += Buffer.byteLength(JSON.stringify(key)) + 1;
+      pending.push(item);
+    }
+    return bytes;
+  }
+  return Buffer.byteLength(JSON.stringify(value) ?? 'null');
+}
+
 /** Count bounded JSON chunks without constructing one potentially huge encoding. */
 function ensurePreviewSize(content: unknown) {
   const maximum = Number(crawlSetting('max_preview_input_bytes'));
@@ -168,19 +185,7 @@ function ensurePreviewSize(content: unknown) {
   const pending = [content];
   let bytes = 0;
   while (pending.length) {
-    const value = pending.pop();
-    if (Array.isArray(value)) {
-      bytes += 2 + Math.max(0, value.length - 1);
-      if (bytes > maximum) crawlError('preview input is too large');
-      for (const item of value) pending.push(item);
-    } else if (value && typeof value === 'object') {
-      const entries = Object.entries(value);
-      bytes += 2 + Math.max(0, entries.length - 1);
-      for (const [key, item] of entries) {
-        bytes += Buffer.byteLength(JSON.stringify(key)) + 1;
-        pending.push(item);
-      }
-    } else bytes += Buffer.byteLength(JSON.stringify(value) ?? 'null');
+    bytes += previewChunkBytes(pending.pop(), pending);
     if (bytes > maximum) crawlError('preview input is too large');
   }
 }
@@ -196,7 +201,8 @@ function previewRows(content: unknown, format: string): string[] {
       value && typeof value === 'object' ? String(value.url ?? '') : String(value),
     );
   }
-  const raw = String(content ?? '');
+  if (typeof content !== 'string') crawlError('preview input must be text or a URL list');
+  const raw = content;
   if (format === 'json') {
     let decoded: unknown;
     try {

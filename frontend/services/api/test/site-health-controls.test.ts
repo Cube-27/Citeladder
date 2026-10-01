@@ -360,6 +360,22 @@ describe('crawl control admission', () => {
 });
 
 describe('crawl-control HTTP contracts', () => {
+  it('preserves coded plan errors and sanitizes invalid query identifiers', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: '' });
+    const root = await request(tenant, '/site-crawls', 'POST', { project_id: tenant.projectId });
+    expect(root.status).toBe(422);
+    const body = await root.json();
+    expect(body).toMatchObject({
+      detail: { code: 'invalid_root', message: body.error.message },
+      error: { code: 'invalid_root', retryable: false },
+    });
+    const invalid = await request(tenant, '/site-crawls?project_id=not-a-uuid');
+    expect(invalid.status).toBe(422);
+    expect(await invalid.json()).toMatchObject({
+      error: { code: 'validation_error', retryable: false },
+    });
+  });
+
   it('authorizes every foreign project/crawl/page before exposing evidence or writing', async () => {
     const owner = await fixtures.crawl();
     const foreign = await fixtures.crawl();
@@ -498,7 +514,21 @@ describe('crawl-control HTTP contracts', () => {
       await (await update([page.id, page.id], 1)).json(),
     );
     expect(selected.quota.used).toBe(1);
-    expect((await update([], 1)).status).toBe(409);
+    const stale = await update([], 1);
+    expect(stale.status).toBe(409);
+    const staleBody = await stale.json();
+    expect(staleBody).toMatchObject({
+      detail: {
+        code: 'stale_selection_version',
+        message: staleBody.error.message,
+        current_selection_version: 2,
+      },
+      error: {
+        code: 'stale_selection_version',
+        retryable: false,
+        details: { current_selection_version: 2 },
+      },
+    });
     expect((await update([randomUUID()], 2)).status).toBe(422);
     await update([], 2);
     await update([page.id], 3);

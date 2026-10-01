@@ -164,29 +164,31 @@ async function seedMonitored(db: Database, crawl: Crawl) {
     0,
     Number(record(crawl.configuration).requested_page_limit) - current.count,
   );
-  let position = 0;
-  for (const url of rows) {
-    if (!classifyUrlAdmission(url.normalized_url, crawlScope(crawl)).accepted) continue;
-    await seedObservation(db, crawl, url);
-    if (position >= budget) break;
-    await enqueueCrawlTask(db, crawl, {
-      kind: 'analyze',
-      url: url.normalized_url,
-      siteUrlId: url.id,
-      position,
-      delay: Math.min(
-        position * Number(crawlSetting('monitored_seed_stagger_seconds')),
-        Number(crawlSetting('monitored_seed_stagger_max_seconds')),
-      ),
-    });
-    position++;
-  }
+  const admitted = rows.filter(
+    (url) => classifyUrlAdmission(url.normalized_url, crawlScope(crawl)).accepted,
+  );
+  // Preserve the boundary observation even when no further task fits the budget.
+  await Promise.all(admitted.slice(0, budget + 1).map((url) => seedObservation(db, crawl, url)));
+  await Promise.all(
+    admitted.slice(0, budget).map((url, position) =>
+      enqueueCrawlTask(db, crawl, {
+        kind: 'analyze',
+        url: url.normalized_url,
+        siteUrlId: url.id,
+        position,
+        delay: Math.min(
+          position * Number(crawlSetting('monitored_seed_stagger_seconds')),
+          Number(crawlSetting('monitored_seed_stagger_max_seconds')),
+        ),
+      }),
+    ),
+  );
 }
 
 type Runtime = Selectable<WorkspaceSiteHealthRuntime>;
 type Profile = Selectable<SiteHealthProfiles>;
 
-async function insertCrawl(
+function insertCrawl(
   db: Database,
   input: {
     workspaceId: string;
@@ -250,7 +252,7 @@ async function creationEvents(db: Database, crawl: Crawl, rerunSiteUrlId?: strin
   await recordCrawlEvent(db, crawl, 'crawl.queued', 'crawl queued', {});
 }
 
-async function refreshProfile(
+function refreshProfile(
   db: Database,
   workspaceId: string,
   projectId: string,
@@ -366,9 +368,11 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     0,
     budget.limit,
   );
-  let position = 0;
-  for (const url of new Set(initial))
-    await enqueueCrawlTask(db, crawl, { kind: 'discover', url, position: position++ });
+  await Promise.all(
+    [...new Set(initial)].map((url, position) =>
+      enqueueCrawlTask(db, crawl, { kind: 'discover', url, position }),
+    ),
+  );
   await enqueueCrawlTask(db, crawl, {
     kind: 'site_setup',
     url: root,

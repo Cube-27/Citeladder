@@ -171,36 +171,38 @@ export async function replaceMonitoredSet(
     .where('project_id', '=', projectId)
     .where('site_url_id', '=', sql<string>`any(${removed}::uuid[])`)
     .execute();
-  for (const id of requested) {
-    const prior = byUrl.get(id);
-    await db
-      .insertInto('monitored_site_urls')
-      .values({
-        id: randomUUID(),
-        workspace_id: workspaceId,
-        project_id: projectId,
-        profile_id: profile.id,
-        site_url_id: id,
-        active: true,
-        selection_source: 'user',
-        selecting_membership_id: version,
-        selected_at: now,
-        created_at: now,
-        updated_at: now,
-      })
-      .onConflict((conflict) =>
-        conflict
-          .columns(['project_id', 'site_url_id'])
-          .doUpdateSet({
-            active: true,
-            selection_source: 'user',
-            deselected_at: null,
-            ...(!prior?.active ? { selected_at: now, selecting_membership_id: version } : {}),
-          })
-          .where('monitored_site_urls.workspace_id', '=', workspaceId),
-      )
-      .execute();
-  }
+  await Promise.all(
+    requested.map(async (id) => {
+      const prior = byUrl.get(id);
+      await db
+        .insertInto('monitored_site_urls')
+        .values({
+          id: randomUUID(),
+          workspace_id: workspaceId,
+          project_id: projectId,
+          profile_id: profile.id,
+          site_url_id: id,
+          active: true,
+          selection_source: 'user',
+          selecting_membership_id: version,
+          selected_at: now,
+          created_at: now,
+          updated_at: now,
+        })
+        .onConflict((conflict) =>
+          conflict
+            .columns(['project_id', 'site_url_id'])
+            .doUpdateSet({
+              active: true,
+              selection_source: 'user',
+              deselected_at: null,
+              ...(!prior?.active ? { selected_at: now, selecting_membership_id: version } : {}),
+            })
+            .where('monitored_site_urls.workspace_id', '=', workspaceId),
+        )
+        .execute();
+    }),
+  );
   await db
     .updateTable('site_health_profiles')
     .set({ selection_version: version, updated_at: now })
@@ -224,23 +226,25 @@ export async function replaceMonitoredSet(
     .where('site_url_id', '=', sql<string>`any(${removed}::uuid[])`)
     .where('status', 'in', ['queued', 'retry_wait'])
     .execute();
-  for (const [position, url] of added.entries()) {
-    const previous = await db
-      .selectFrom('site_crawl_tasks')
-      .select((eb) => eb.fn.max<number>('generation').as('generation'))
-      .where('workspace_id', '=', workspaceId)
-      .where('crawl_id', '=', crawl.id)
-      .where('task_kind', '=', 'analyze')
-      .where('url_hash', '=', url.url_hash)
-      .executeTakeFirstOrThrow();
-    await enqueueCrawlTask(db, crawl, {
-      kind: 'analyze',
-      url: url.normalized_url,
-      siteUrlId: url.id,
-      position,
-      generation: (previous.generation ?? -1) + 1,
-    });
-  }
+  await Promise.all(
+    added.map(async (url, position) => {
+      const previous = await db
+        .selectFrom('site_crawl_tasks')
+        .select((eb) => eb.fn.max<number>('generation').as('generation'))
+        .where('workspace_id', '=', workspaceId)
+        .where('crawl_id', '=', crawl.id)
+        .where('task_kind', '=', 'analyze')
+        .where('url_hash', '=', url.url_hash)
+        .executeTakeFirstOrThrow();
+      await enqueueCrawlTask(db, crawl, {
+        kind: 'analyze',
+        url: url.normalized_url,
+        siteUrlId: url.id,
+        position,
+        generation: (previous.generation ?? -1) + 1,
+      });
+    }),
+  );
 }
 
 export async function bulkMonitoredSet(
@@ -285,7 +289,7 @@ export async function bulkMonitoredSet(
       ),
     );
   if (input.query?.trim()) {
-    const pattern = `%${input.query.trim().replaceAll(/[\\%_]/gu, '\\$&')}%`;
+    const pattern = `%${input.query.trim().replaceAll(/[\\%_]/gu, String.raw`\$&`)}%`;
     query = query.where((eb) =>
       eb.or([eb('u.normalized_url', 'ilike', pattern), eb('u.display_url', 'ilike', pattern)]),
     );

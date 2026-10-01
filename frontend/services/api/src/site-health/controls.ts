@@ -54,7 +54,7 @@ export async function listCrawls(
   };
 }
 
-async function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
+function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
   return db.transaction().execute(async (trx) => {
     const crawl = await trx
       .selectFrom('site_crawls')
@@ -104,23 +104,30 @@ async function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
 }
 
 /** Replay the entire stop transaction after bounded PostgreSQL lock conflicts. */
-export async function cancelCrawl(db: Database, workspaceId: string, crawlId: string) {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await cancelOnce(db, workspaceId, crawlId);
-      return;
-    } catch (error) {
-      const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
-      if (
-        attempt >= policy.site_health.crawl.cancel_db_conflict_retries ||
-        typeof code !== 'string' ||
-        !['40001', '40P01', '55P03'].includes(code)
-      )
-        throw error;
-      const delay =
-        Number(crawlSetting('db_conflict_base_delay_seconds')) +
-        (((attempt + 1) * 0.37) % 1) * Number(crawlSetting('db_conflict_jitter_seconds'));
-      await setTimeout(delay * 1000);
-    }
+export function cancelCrawl(db: Database, workspaceId: string, crawlId: string) {
+  return cancelWithRetry(db, workspaceId, crawlId, 0);
+}
+
+async function cancelWithRetry(
+  db: Database,
+  workspaceId: string,
+  crawlId: string,
+  attempt: number,
+): Promise<void> {
+  try {
+    await cancelOnce(db, workspaceId, crawlId);
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
+    if (
+      attempt >= policy.site_health.crawl.cancel_db_conflict_retries ||
+      typeof code !== 'string' ||
+      !['40001', '40P01', '55P03'].includes(code)
+    )
+      throw error;
+    const delay =
+      Number(crawlSetting('db_conflict_base_delay_seconds')) +
+      (((attempt + 1) * 0.37) % 1) * Number(crawlSetting('db_conflict_jitter_seconds'));
+    await setTimeout(delay * 1000);
+    await cancelWithRetry(db, workspaceId, crawlId, attempt + 1);
   }
 }
