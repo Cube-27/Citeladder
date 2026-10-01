@@ -7,6 +7,9 @@ from app.core.config import app_models, dataforseo, provider_catalog
 
 def provider_policy(setting):
     return {
+        "scraper_reconciliation_capacity_engine": (
+            provider_catalog.SCRAPER_RECONCILIATION_CAPACITY_ENGINE
+        ),
         "errors": {
             name.removeprefix("ERROR_").lower(): value
             for name, value in vars(provider_catalog).items()

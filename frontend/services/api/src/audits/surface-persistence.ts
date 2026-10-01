@@ -65,6 +65,7 @@ export function persistOverview(
   runtime: AuditRuntime,
   at = new Date(),
   actualExchange = true,
+  paidSurface = false,
 ) {
   if (searchPolicy.surface.successful_outcomes.includes(result.outcome))
     return persistExecutionSuccess(
@@ -88,6 +89,7 @@ export function persistOverview(
       surface: true,
       at,
       recordAttempt: actualExchange,
+      paidSurface,
       evidence: async (trx, current) => {
         await appendObservation(trx, current, result, at);
       },
@@ -105,6 +107,7 @@ type SurfaceExchange = {
   delaySeconds: number;
   uncertain?: boolean;
   paid?: boolean;
+  resetPoll?: boolean;
 };
 /** Paid intent already committed. This phase records the exchange and parks without spending the retry budget. */
 export function persistSurfaceExchange(
@@ -119,7 +122,10 @@ export function persistSurfaceExchange(
     if (!locked) return false;
     const metadata = { ...record(locked.task.provider_metadata) };
     if (exchange.raw !== undefined) metadata.provider_submission_payload = exchange.raw;
-    if (exchange.chargeMicrousd != null)
+    if (
+      exchange.chargeMicrousd != null &&
+      typeof metadata.provider_submission_cost_microusd !== 'number'
+    )
       metadata.provider_submission_cost_microusd = exchange.chargeMicrousd;
     if (exchange.reconciliation !== undefined) metadata.reconciliation = exchange.reconciliation;
     const task = await trx
@@ -127,7 +133,9 @@ export function persistSurfaceExchange(
       .set({
         provider_metadata: JSON.stringify(metadata),
         provider_task_id: exchange.taskId ?? locked.task.provider_task_id,
-        provider_poll_count: locked.task.provider_poll_count + (exchange.poll ? 1 : 0),
+        provider_poll_count: exchange.resetPoll
+          ? 0
+          : locked.task.provider_poll_count + (exchange.poll ? 1 : 0),
         attempt_count: locked.task.attempt_count + (exchange.paid ? 1 : 0),
         updated_at: at,
       })

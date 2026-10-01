@@ -220,6 +220,8 @@ export function persistExecutionFailure(
     context?: ExecutionContext;
     at?: Date;
     recordAttempt?: boolean;
+    scraperFailure?: { outcome: string; raw?: unknown };
+    paidSurface?: boolean;
     evidence?: (db: Database, task: AuditTask, audit: Selectable<Audits>) => Promise<void>;
   } = {},
 ) {
@@ -227,9 +229,46 @@ export function persistExecutionFailure(
   return db.transaction().execute(async (trx) => {
     const locked = await ownedAuditTask(trx, claimed, owner, at);
     if (!locked) return null;
-    const attempt = locked.task.attempt_count + (options.surface ? 0 : 1);
+    const attempt = locked.task.attempt_count + (options.surface && !options.paidSurface ? 0 : 1);
     const retry =
       !options.preCall && !options.surface && error.retryable && attempt < locked.task.max_attempts;
+    const failureArtifactId = options.scraperFailure ? randomUUID() : null;
+    const metadata: Record<string, unknown> = {
+      ...record(locked.task.provider_metadata),
+      ...(options.scraperFailure
+        ? {
+            scraper_outcome: options.scraperFailure.outcome,
+            raw_response: options.scraperFailure.raw ?? {},
+          }
+        : {}),
+    };
+    if (failureArtifactId)
+      await trx
+        .insertInto('raw_response_artifacts')
+        .values({
+          id: failureArtifactId,
+          audit_id: claimed.audit_id,
+          task_id: claimed.id,
+          logical_engine: claimed.logical_engine,
+          transport_provider: claimed.transport_provider,
+          transport_model: claimed.transport_model,
+          answer_text: '',
+          search_used: false,
+          search_events: null,
+          citations: null,
+          finish_reason: 'unknown',
+          raw_finish_reason: '',
+          latency_ms: null,
+          provider_metadata: JSON.stringify(metadata),
+          usage:
+            typeof metadata.provider_submission_cost_microusd === 'number'
+              ? JSON.stringify({
+                  provider_cost_microusd: metadata.provider_submission_cost_microusd,
+                })
+              : null,
+          created_at: at,
+        })
+        .execute();
     const task = await trx
       .updateTable('audit_tasks')
       .set({
@@ -237,14 +276,28 @@ export function persistExecutionFailure(
         error_code: error.code,
         error_detail: `Provider execution failed: ${error.code}`,
         updated_at: at,
+        ...(failureArtifactId
+          ? { result_artifact_id: failureArtifactId, provider_metadata: JSON.stringify(metadata) }
+          : {}),
       })
       .where('id', '=', claimed.id)
       .where('workspace_id', '=', claimed.workspace_id)
       .returningAll()
       .executeTakeFirstOrThrow();
-    if (options.recordAttempt !== false) await appendProviderAttempt(trx, task, at, { error });
+    if (options.recordAttempt !== false)
+      await appendProviderAttempt(trx, task, at, {
+        error,
+        ...(failureArtifactId ? { artifactId: failureArtifactId } : {}),
+      });
+    if (failureArtifactId) await appendCostProjection(trx, task.workspace_id, failureArtifactId);
     await options.evidence?.(trx, task, locked.audit);
-    await settleTaskCredits(trx, task, !options.preCall && !options.surface, !retry, at);
+    await settleTaskCredits(
+      trx,
+      task,
+      Boolean(options.paidSurface) || (!options.preCall && !options.surface),
+      !retry,
+      at,
+    );
     if (error.code === 'auth_failure' && options.context)
       await pauseExecutionCredential(trx, options.context, runtime, at);
     if (retry)

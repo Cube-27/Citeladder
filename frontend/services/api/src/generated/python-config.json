@@ -1830,6 +1830,7 @@
     "history_window_capability_key": "history_window"
   },
   "providers": {
+    "scraper_reconciliation_capacity_engine": "llm_scraper_reconciliation",
     "errors": {
       "timeout": "timeout",
       "connection": "connection",

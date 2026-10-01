@@ -121,6 +121,7 @@ export function createDataforseoClient(
   providerSettings: ProviderSettings,
   timeoutSeconds: number,
   send: typeof fetch = globalThis.fetch,
+  externalSignal?: AbortSignal,
 ) {
   let pair: { login: string; password: string };
   try {
@@ -137,7 +138,10 @@ export function createDataforseoClient(
     payload?: unknown,
     timeout = timeoutSeconds,
   ): Promise<Envelope> {
-    const signal = AbortSignal.timeout(timeout * 1000);
+    const signal = AbortSignal.any([
+      AbortSignal.timeout(timeout * 1000),
+      ...(externalSignal ? [externalSignal] : []),
+    ]);
     let response: Response;
     try {
       response = await send(`${base}${path}`, {
