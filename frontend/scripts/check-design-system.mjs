@@ -14,6 +14,7 @@ import {
   textContrastViolations,
   rawRadiusViolations,
   motionRoleViolations,
+  focusRoleViolations,
   styleAssertionViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
@@ -101,6 +102,7 @@ for (const path of files(root)) {
     ...standalonePlaceholderViolations(source, label, ownsProductUi),
     ...productUiSourceViolations(source, label, ownsProductUi),
     ...motionRoleViolations(source, label, ownsProductUi),
+    ...focusRoleViolations(source, label, ownsProductUi),
     ...nestedCardViolations(source, label, ownsProductUi),
     ...productControlViolations(source, label, ownsProductUi),
   );

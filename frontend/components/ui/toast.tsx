@@ -56,7 +56,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             </ToastPrimitive.Close>
           </ToastPrimitive.Root>
         ))}
-        <ToastPrimitive.Viewport className="fixed right-4 bottom-4 z-[var(--z-index-toast)] grid gap-2 outline-none" />
+        <ToastPrimitive.Viewport className="fixed right-4 bottom-4 z-[var(--z-index-toast)] grid gap-2 focus-ring" />
       </ToastPrimitive.Provider>
     </ToastContext>
   );

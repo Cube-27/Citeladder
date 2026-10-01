@@ -138,8 +138,6 @@
   --color-accent-border: #86efac;
   --color-recommendation: var(--color-accent-soft);
   --color-accent-text: #14532d;
-  --color-focus: var(--color-brand-forest);
-  --color-focus-ring: rgb(22 163 74 / 20%);
   --color-selection: #86efac;
   --color-selection-fg: #0f172a;
 
@@ -413,7 +411,6 @@
   --site-gutter: 20px;
   --section-y: 56px;
   --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
-  --focus-ring: 0 0 0 3px var(--color-focus-ring);
   --skeleton-base: #eef2f6;
   --skeleton-highlight: #ffffff;
   --value-placeholder: var(--color-subtle);
@@ -515,8 +512,6 @@
   --color-accent-subtle: rgb(201 180 250 / 12%);
   --color-accent-soft: rgb(201 180 250 / 8%);
   --color-accent-border: rgb(201 180 250 / 30%);
-  --color-focus: #c9b4fa;
-  --color-focus-ring: rgb(201 180 250 / 38%);
   --color-selection: rgb(201 180 250 / 30%);
   --color-action: #c9b4fa;
   --color-action-hover: #d8c9fb;
@@ -553,8 +548,6 @@
   --color-accent-subtle: rgb(238 244 242 / 12%);
   --color-accent-soft: rgb(238 244 242 / 8%);
   --color-accent-border: rgb(238 244 242 / 30%);
-  --color-focus: #ffffff;
-  --color-focus-ring: rgb(255 255 255 / 40%);
   --color-selection: rgb(255 255 255 / 25%);
   --color-action: #ffffff;
   --color-action-hover: #eef1ee;
@@ -994,62 +987,54 @@ body {
   }
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
+/* Keyboard focus is owned here. Composed fields ring their frame; other
+   controls ring only the element receiving focus. Filled actions use their
+   high-contrast label ink and an inset outline so clipping cannot hide it. */
+:focus-visible,
+.focus-ring:focus-visible,
 .focus-input:focus-visible,
 .focus-frame:has(:focus-visible) {
-  border-color: var(--color-focus);
-  outline: 2px solid var(--color-focus);
-  outline-offset: -1px;
-  /* Keep the smudged edge under the focus glow: box-shadow does not compose
-     across rules, so focus restates the edge instead of replacing it. */
-  box-shadow: var(--focus-ring), var(--shadow-smudge);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.focus-ring:is([data-button-variant='primary'], [data-button-variant='destructive']):focus-visible {
+  outline-color: currentColor;
+  outline-offset: -2px;
+}
+
+.focus-ring:is([aria-current], [aria-selected='true'], [data-state='active']):focus-visible {
+  outline-offset: -2px;
 }
 
 .focus-frame :focus-visible {
   outline: none;
 }
 
-/* The shared focus treatment for pressable things that are not text fields:
-   buttons, tabs, menu items, chips, sidebar rows, cards you can click. It was
-   consumed in ~40 places before it existed anywhere, so every one of those
-   fell back to the global `:focus-visible` outline with its 3px offset — a
-   detached ring that clipped inside scroll containers and overlapped
-   neighbours in dense rows. Defining it here is what makes the treatment
-   uniform rather than per-route.
-
-   The design contract asks for accent on the element's own border plus one
-   attached soft glow, with no gap and no second floating ring, so the offset
-   outline is pulled back to the edge and the glow is the same `--focus-ring`
-   token the field recipe above uses. Both are theme-scoped variables, so the
-   purple and teal section rebinds carry through untouched. */
-.focus-ring:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 0;
-  box-shadow: var(--focus-ring);
+:disabled:focus-visible,
+[aria-disabled='true']:focus-visible,
+[data-disabled]:focus-visible,
+.focus-ring:is(:disabled, [aria-disabled='true'], [data-disabled]):focus-visible,
+.focus-input:is(:disabled, [aria-disabled='true'], [data-disabled]):focus-visible,
+.focus-frame:has(:disabled):not(:has(:enabled:focus-visible)) {
+  outline: none;
 }
 
-/* Deliberately NOT `:has(:focus-visible)`. Several consumers are containers
-   that hold their own focusable controls — `TabPanel` carries this class and
-   wraps whole forms — so matching on a focused descendant would ring the
-   entire panel and, worse, suppress the outline on the input the reader is
-   actually typing in. The element that receives focus is the element that
-   shows it. Composed controls whose frame owns the ring use `.focus-frame`
-   above, which opts in explicitly. */
+@media (prefers-contrast: more) {
+  :focus-visible,
+  .focus-ring:focus-visible,
+  .focus-input:focus-visible,
+  .focus-frame:has(:focus-visible) {
+    outline-style: dotted;
+  }
+}
 
-/* Forced-colours mode drops both the accent border and the glow, because
-   neither survives the system palette. `outline` is the one property the mode
-   keeps painting, so the state stays visible there on its own terms. */
 @media (forced-colors: active) {
-  .focus-ring:focus-visible {
-    outline: 2px solid Highlight;
+  :focus-visible,
+  .focus-ring:focus-visible,
+  .focus-input:focus-visible,
+  .focus-frame:has(:focus-visible) {
+    outline-color: Highlight;
   }
 }
 
@@ -1070,17 +1055,6 @@ input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset;
   caret-color: var(--color-foreground);
   transition: background-color 9999s ease-out;
-}
-
-/* Plain fields draw their edge with a shadow; keep it alongside autofill paint. */
-input.focus-input:-webkit-autofill,
-input.focus-input:-webkit-autofill:hover {
-  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--shadow-smudge);
-}
-
-input.focus-input:-webkit-autofill:focus-visible {
-  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--focus-ring),
-    var(--shadow-smudge);
 }
 
 /* The public surface prints on white, not the app's tinted paper canvas. Its
@@ -1177,8 +1151,6 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-accent-subtle: rgb(118 223 156 / 18%);
   --color-accent-soft: rgb(118 223 156 / 12%);
   --color-accent-border: rgb(118 223 156 / 45%);
-  --color-focus: #94ebb0;
-  --color-focus-ring: rgb(148 235 176 / 35%);
   --color-selection: rgb(118 223 156 / 35%);
   --color-selection-fg: #faf9f5;
   --color-action: var(--color-accent);
@@ -1284,25 +1256,12 @@ input.focus-input:-webkit-autofill:focus-visible {
 .focus-input[aria-invalid='true'],
 .focus-ring[aria-invalid='true'],
 .focus-frame:has([aria-invalid='true']) {
-  box-shadow: var(--shadow-smudge-danger);
-}
-.focus-input[aria-invalid='true']:focus-visible,
-.focus-ring[aria-invalid='true']:focus-visible,
-.focus-frame:has([aria-invalid='true']):has(:focus-visible) {
-  box-shadow: var(--focus-ring), var(--shadow-smudge-danger);
-}
-input.focus-input[aria-invalid='true']:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--shadow-smudge-danger);
-}
-input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
-  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--focus-ring), var(--shadow-smudge-danger);
+  border: 1px solid var(--color-danger);
 }
 @media (forced-colors: active) {
   .focus-input[aria-invalid='true'],
   .focus-ring[aria-invalid='true'],
-  .focus-frame:has([aria-invalid='true']) { border: 1px solid Mark; }
-  .focus-input:focus-visible,
-  .focus-frame:has(:focus-visible) { outline-color: Highlight; }
+  .focus-frame:has([aria-invalid='true']) { border-color: Mark; }
 }
 
 /* A spinner is a promise that the wait is long enough to be worth explaining.
@@ -1802,11 +1761,7 @@ samp {
 }
 
 
-@media (forced-colors: active) {
-  :focus-visible {
-    outline: 3px solid ButtonText;
-  }
-}
+
 
 /* Skip link — the first tab stop on every route (app/layout.tsx). Off-screen
    until focused, then it lands as a normal control against the panel fill. */

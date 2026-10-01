@@ -26,6 +26,20 @@ export function motionRoleViolations(source, label, ownsProductUi) {
   }
   return [];
 }
+
+/** Feature recipes cannot suppress or replace the shared keyboard outline. */
+export function focusRoleViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi || label === TOKEN_CSS) return [];
+  const text = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  if (
+    /\b(?:focus(?:-visible)?:)?outline-(?:none|\d|\[)|\bfocus(?:-visible)?:ring-/.test(text) ||
+    (label.endsWith('.css') &&
+      /(?:^|[;{])\s*outline(?:-offset|-color|-style|-width)?\s*:/.test(text))
+  ) {
+    return [`${label}: keyboard focus belongs to focus-ring, focus-input or focus-frame`];
+  }
+  return [];
+}
 /**
  * Roles the website stylesheet must define.
  *
@@ -734,8 +748,6 @@ export function productContractViolations(root) {
     '--color-sidebar',
     '--color-action',
     '--color-accent',
-    '--color-focus',
-    '--color-focus-ring',
     '--color-selection',
     '--color-selection-fg',
   ];

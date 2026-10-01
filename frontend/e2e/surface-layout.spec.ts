@@ -221,18 +221,18 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
     });
     const edge = await field.evaluate(async (node) => {
       await Promise.all(node.getAnimations().map((animation) => animation.finished));
-      return getComputedStyle(node).boxShadow;
+      return getComputedStyle(node).borderColor;
     });
-    expect(edge).not.toBe('none');
+    expect(await field.evaluate((node) => getComputedStyle(node).borderStyle)).not.toBe('none');
     await field.focus();
     const focused = await field.evaluate(async (node) => {
       await Promise.all(node.getAnimations().map((animation) => animation.finished));
       return {
-        shadow: getComputedStyle(node).boxShadow,
+        edge: getComputedStyle(node).borderColor,
         outline: getComputedStyle(node).outlineStyle,
       };
     });
-    expect(focused.shadow).toContain(edge);
+    expect(focused.edge).toBe(edge);
     expect(focused.outline).not.toBe('none');
   }
   await page.emulateMedia({ forcedColors: 'active' });

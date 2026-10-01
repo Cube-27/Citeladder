@@ -165,7 +165,7 @@ export function TabPanel({
       value={value}
       forceMount={forceMount}
       hidden={activeValue !== value}
-      className={cn('outline-none', className)}
+      className={cn('focus-ring', className)}
     >
       {children}
     </TabsPrimitive.Content>

@@ -101,7 +101,7 @@ export function Input({
       <input
         ref={ref}
         className={cn(
-          'placeholder:text-muted min-w-0 flex-1 self-stretch bg-transparent text-field text-foreground outline-none disabled:cursor-not-allowed',
+          'placeholder:text-muted min-w-0 flex-1 self-stretch bg-transparent text-field text-foreground disabled:cursor-not-allowed',
           // Match the frame's control height so selections fill the pill.
           adornedLineHeights[size],
           className,
