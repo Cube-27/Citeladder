@@ -151,7 +151,7 @@ export class AuditQueue {
       return locked.map((task) => byId.get(task.id)!);
     });
   }
-  markRunning(claimed: AuditTask, owner: string) {
+  markRunning(claimed: AuditTask, owner: string, startTask = true) {
     const at = this.now();
     return this.db.transaction().execute(async (trx) => {
       const locked = await ownedAuditTask(trx, claimed, owner, at);
@@ -176,7 +176,11 @@ export class AuditQueue {
       }
       const task = await trx
         .updateTable(table)
-        .set({ status: statuses.running, heartbeat_at: at, updated_at: at })
+        .set({
+          status: startTask ? statuses.running : statuses.leased,
+          heartbeat_at: at,
+          updated_at: at,
+        })
         .where('id', '=', claimed.id)
         .where('workspace_id', '=', claimed.workspace_id)
         .returningAll()

@@ -24,6 +24,31 @@ export type DeriveExecution = (
   artifactId: string,
 ) => Promise<void>;
 
+/** Release from durable, scoped ledger proof even if a legacy task's funding snapshot is damaged. */
+export async function releaseTerminalTaskCredits(db: Database, task: AuditTask, at: Date) {
+  const holds = await db
+    .selectFrom('consumable_ledger')
+    .select(['reservation_id', 'billing_account_id'])
+    .distinct()
+    .where('workspace_id', '=', task.workspace_id)
+    .where('audit_id', '=', task.audit_id)
+    .where('subject_kind', '=', 'audit')
+    .where('subject_id', '=', task.id)
+    .where('capability_key', '=', 'audit_credits')
+    .where('entry_kind', '=', 'reservation')
+    .orderBy('billing_account_id')
+    .orderBy('reservation_id')
+    .execute();
+  for (const hold of holds)
+    await releaseUsage(db, {
+      workspaceId: task.workspace_id,
+      accountId: hold.billing_account_id,
+      reservationId: hold.reservation_id,
+      key: `audit:${task.id}:terminal`,
+      at,
+    });
+}
+
 /** Reservations belong to this workspace, audit and task; never infer a hold from an ID alone. */
 export async function settleTaskCredits(
   db: Database,
@@ -32,6 +57,10 @@ export async function settleTaskCredits(
   terminal: boolean,
   at: Date,
 ) {
+  if (!billable) {
+    if (terminal) await releaseTerminalTaskCredits(db, task, at);
+    return;
+  }
   const route = record(task.provider_route_snapshot);
   if (route.credential_source === 'byok') return;
   const funding = z

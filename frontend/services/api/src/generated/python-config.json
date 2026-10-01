@@ -3164,6 +3164,7 @@
       "audit_status_partially_completed": "partially_completed",
       "audit_status_failed": "failed",
       "audit_status_cancelled": "cancelled",
+      "audit_lease_sweep_batch_size": 500,
       "audit_terminal_statuses": [
         "cancelled",
         "completed",

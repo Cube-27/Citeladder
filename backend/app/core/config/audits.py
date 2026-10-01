@@ -41,6 +41,7 @@ AUDIT_STATUS_COMPLETED: Final = "completed"
 AUDIT_STATUS_PARTIALLY_COMPLETED: Final = "partially_completed"
 AUDIT_STATUS_FAILED: Final = "failed"
 AUDIT_STATUS_CANCELLED: Final = "cancelled"
+AUDIT_LEASE_SWEEP_BATCH_SIZE: Final = 500
 
 AUDIT_TERMINAL_STATUSES: Final[frozenset[str]] = frozenset(
     {

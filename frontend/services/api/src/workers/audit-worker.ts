@@ -39,6 +39,7 @@ import {
 import { persistOverview, persistSurfaceExchange } from '../audits/surface-persistence.ts';
 import { auditPolicy, type AuditRuntime } from '../audits/config.ts';
 import { auditEvent } from '../audits/state.ts';
+import { AuditMaintenance, repairOwnedCompletion } from '../audits/maintenance.ts';
 import { waitForPoll } from './poll.ts';
 
 const logger = getLogger('workers.audit');
@@ -64,6 +65,8 @@ export class AuditWorker {
   readonly #send: typeof fetch;
   readonly #now: () => Date;
   readonly #env: Record<string, string | undefined>;
+  readonly #maintenance: AuditMaintenance;
+  #lastSweep = -Infinity;
   constructor(
     db: Database,
     runtime: AuditRuntime,
@@ -85,8 +88,14 @@ export class AuditWorker {
     this.#env = options.env ?? process.env;
     this.owner = options.owner ?? `audit-worker-ts-${randomBytes(6).toString('hex')}`;
     this.#queue = new AuditQueue(db, runtime.audits.lease_ttl_seconds, this.#now);
+    this.#maintenance = new AuditMaintenance(db, projections.finalize);
   }
   async runOnce(signal?: AbortSignal) {
+    const at = this.#now();
+    if (at.getTime() - this.#lastSweep >= this.#runtime.audits.poll_interval_seconds * 1000) {
+      this.#lastSweep = at.getTime();
+      await this.#maintenance.runOnce(at);
+    }
     const tasks = await this.#queue.claim(this.owner, this.#runtime.audits.worker_concurrency);
     await Promise.all(tasks.map((task) => this.#execute(task, signal)));
     return tasks.length;
@@ -127,8 +136,9 @@ export class AuditWorker {
     let context: ExecutionContext | null = null,
       dispatchStarted = false;
     try {
-      // Starting the parent here lets pre-call terminal rejection publish final progress too.
-      const running = await this.#queue.markRunning(claimed, this.owner);
+      if (await repairOwnedCompletion(this.#db, claimed, this.owner, this.#now())) return;
+      // Start the parent now; publish task running only after acquiring provider capacity.
+      const running = await this.#queue.markRunning(claimed, this.owner, false);
       if (!running) return;
       claimed = running.task;
       const expiredRecovery = surfaceRecoveryDeadline(
@@ -183,7 +193,11 @@ export class AuditWorker {
         !recovery &&
         context.audit.started_at &&
         this.#now().getTime() - context.audit.started_at.getTime() >=
-          this.#runtime.audits.max_run_seconds * 1000
+          Number(
+            record(context.audit.configuration).max_run_seconds ??
+              this.#runtime.audits.max_run_seconds,
+          ) *
+            1000
       ) {
         if (surface) await this.#failSurface(claimed, context, 'poll_ceiling_exceeded', false);
         else
@@ -221,6 +235,7 @@ export class AuditWorker {
           .transaction()
           .execute((trx) => ownedAuditTask(trx, claimed, this.owner, this.#now()));
         if (!live || dispatchSignal.aborted) return;
+        if (!(await this.#queue.markRunning(claimed, this.owner))) return;
         if (surface) await this.#surface(context, dispatchSignal);
         else {
           const request = directRequest(context);
