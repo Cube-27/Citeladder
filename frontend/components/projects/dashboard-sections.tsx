@@ -253,7 +253,7 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
 function Track({ data }: Readonly<{ data: CommandCenter }>) {
   const delta = data.track.citation_share.delta;
   let deltaTone = 'text-muted';
-  if (delta !== null) deltaTone = delta >= 0 ? 'text-success' : 'text-danger';
+  if (delta !== null) deltaTone = 'text-secondary';
   return (
     <Card
       aria-labelledby="citation-share-track"

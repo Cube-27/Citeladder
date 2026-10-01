@@ -177,10 +177,10 @@
   --color-danger-bg: #fff0f1;
   --color-danger-border: #f2c6cb;
   --color-danger-text: #b42332;
-  --color-info: var(--color-accent-text);
-  --color-info-bg: var(--color-accent-soft);
-  --color-info-border: var(--color-accent-border);
-  --color-info-text: var(--color-accent-text);
+  --color-info: #24476b;
+  --color-info-bg: #eef5fa;
+  --color-info-border: #c8d9e8;
+  --color-info-text: #24476b;
   --color-neutral-bg: #eef1f5;
 
   /* Marketing icon tiles — the pastel colour carriers for public-section
@@ -1285,13 +1285,6 @@ input:-webkit-autofill:focus {
     border-radius: 0;
     box-shadow: none;
   }
-}
-
-:root:not([data-theme='dark']) [data-app-surface] {
-  --color-info: #24476b;
-  --color-info-bg: #eef5fa;
-  --color-info-border: #c8d9e8;
-  --color-info-text: #24476b;
 }
 
 @media (min-width: 701px) and (pointer: fine) {

@@ -104,7 +104,7 @@ function MemberRow({
             aria-hidden
             className={textRole(
               'label',
-              'type-caption bg-accent text-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full uppercase',
+              'type-caption bg-well text-secondary flex size-7 shrink-0 items-center justify-center rounded-full uppercase',
             )}
           >
             {emailInitials(member.email)}

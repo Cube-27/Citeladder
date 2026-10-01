@@ -144,7 +144,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             <DropdownItem onSelect={() => router(newProjectDestination(activeWorkspaceId))}>
               <span
                 aria-hidden
-                className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
+                className="bg-well text-secondary flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
               >
                 <Plus className="size-4" />
               </span>

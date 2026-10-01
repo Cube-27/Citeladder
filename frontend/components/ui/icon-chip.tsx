@@ -2,14 +2,7 @@ import type { ComponentPropsWithoutRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
-/**
- * IconChip — a 40px accent-tinted well squared off to the control radius,
- * centered around a lucide icon (icon itself stays `size-6` at the call site).
- * Discs read as decoration; a square well reads as part of the grid, which is
- * what an editorial layout wants. The fill is `bg-accent-subtle` against the
- * paper canvas, and the icon paints `text-accent-text` on it. Purely
- * decorative — the surrounding copy carries the meaning.
- */
+/** A neutral icon well; status-bearing callers supply their semantic tone. */
 export function IconChip({
   children,
   className,
@@ -20,7 +13,7 @@ export function IconChip({
       {...props}
       aria-hidden="true"
       className={cn(
-        'bg-accent-subtle text-accent-text flex size-10 items-center justify-center rounded-[var(--radius-control)]',
+        'bg-well text-secondary flex size-10 items-center justify-center rounded-[var(--radius-card)]',
         className,
       )}
     >

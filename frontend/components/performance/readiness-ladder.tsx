@@ -77,14 +77,14 @@ function stageIndex(stage: ProjectReadinessStage): number {
 function StepMark({ state }: Readonly<{ state: 'done' | 'active' | 'pending' }>) {
   if (state === 'done') {
     return (
-      <span className="bg-accent text-accent-fg inline-flex size-5 shrink-0 items-center justify-center rounded-full">
+      <span className="bg-success-bg text-success-text inline-flex size-5 shrink-0 items-center justify-center rounded-full">
         <Check className="size-3" aria-hidden />
       </span>
     );
   }
   if (state === 'active') {
     return (
-      <span className="border-accent text-accent-text inline-flex size-5 shrink-0 items-center justify-center rounded-full border">
+      <span className="border-info-border text-info-text inline-flex size-5 shrink-0 items-center justify-center rounded-full border">
         <Spinner size="sm" />
       </span>
     );

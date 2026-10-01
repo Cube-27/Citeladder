@@ -253,13 +253,7 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
                     <span className={textRole('itemTitle')}>{issue.issue_title}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
-                    <Badge
-                      className={cn(
-                        issue.dimension === 'aeo' ? 'text-accent-text' : 'text-info-text',
-                      )}
-                    >
-                      {dimensionLabel(issue.dimension)}
-                    </Badge>
+                    <Badge>{dimensionLabel(issue.dimension)}</Badge>
                     <Badge variant="status" value={severityBadgeValue(issue.severity)}>
                       {severityLabel(issue.severity)}
                     </Badge>

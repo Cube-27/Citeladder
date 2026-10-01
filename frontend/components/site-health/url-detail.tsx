@@ -22,7 +22,6 @@ import {
 } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { cn } from '@/lib/utils';
 
 import { UrlDetailView } from './url-detail-view';
 import { textRole } from '@/components/ui/typography';
@@ -218,9 +217,7 @@ function HistoryRows({ rows }: Readonly<{ rows: IssueHistoryPage['items'] }>) {
             </span>
           </span>
           <span className="flex shrink-0 items-center gap-2">
-            <Badge className={cn(row.dimension === 'aeo' ? 'text-accent-text' : 'text-info-text')}>
-              {dimensionLabel(row.dimension)}
-            </Badge>
+            <Badge>{dimensionLabel(row.dimension)}</Badge>
             <Badge variant="status" value={severityBadgeValue(row.severity)}>
               {severityLabel(row.severity)}
             </Badge>

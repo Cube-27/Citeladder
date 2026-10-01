@@ -77,12 +77,12 @@ const SIGNAL_TYPE_META: Readonly<
   },
   emerging_query: {
     label: 'Emerging',
-    tone: 'success',
+    tone: 'neutral',
     definition: 'Impressions rose across the last two 14-day windows.',
   },
   declining_query: {
     label: 'Declining',
-    tone: 'danger',
+    tone: 'neutral',
     definition: 'Impressions fell across the last two 14-day windows.',
   },
   branded_query_performance: {

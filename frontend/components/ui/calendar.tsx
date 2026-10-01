@@ -167,7 +167,7 @@ export function Calendar({
                       onClick={() => onSelect(iso)}
                       className={cn(
                         'type-body text-foreground inline-flex size-8 items-center justify-center rounded-[var(--radius-control)] tabular-nums transition-colors',
-                        isSelected ? 'bg-accent text-on-accent' : 'hover:bg-active',
+                        isSelected ? 'bg-accent text-accent-fg' : 'hover:bg-active',
                         // Days spilling in from the neighbouring months stay
                         // legible but recede, so the current month reads as
                         // the subject.

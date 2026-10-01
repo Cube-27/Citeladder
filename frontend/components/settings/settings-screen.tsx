@@ -256,7 +256,7 @@ export function SettingsScreen() {
                   // disabled chip beside the address it belongs to.
                   className={textRole(
                     'itemTitle',
-                    'bg-accent text-accent-fg flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
+                    'bg-well text-secondary flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
                   )}
                 >
                   {emailInitials(user.email)}

@@ -17,9 +17,7 @@ export function IssueMetadata({ issue }: Readonly<{ issue: SiteIssue }>) {
       <span className="text-muted" aria-hidden>
         ·
       </span>
-      <span className={issue.dimension === 'aeo' ? 'text-accent-text' : 'text-info-text'}>
-        {dimensionLabel(issue.dimension)}
-      </span>
+      <span className="text-secondary">{dimensionLabel(issue.dimension)}</span>
     </span>
   );
 }

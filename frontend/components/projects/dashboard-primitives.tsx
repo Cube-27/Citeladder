@@ -21,9 +21,9 @@ export function metricValue(value: number | null, suffix = '') {
 }
 
 /** No comparable run is not a bad one, so it stays muted rather than red. */
-function deltaToneClass(delta: number | null, positive: boolean): string {
+function deltaToneClass(delta: number | null): string {
   if (delta === null) return 'text-muted';
-  return positive ? 'text-success' : 'text-danger';
+  return 'text-secondary';
 }
 
 export function deltaLabel(delta: number | null, inverse = false) {
@@ -45,7 +45,6 @@ export function StateMetric({
   suffix?: string;
   inverse?: boolean;
 }>) {
-  const positive = delta !== null && (inverse ? delta < 0 : delta > 0);
   return (
     <div
       className={cn(
@@ -59,7 +58,7 @@ export function StateMetric({
         label={availabilityLabel('not_measured')}
       />
       {/* A missing value has no change to report; the section states why once. */}
-      <p className={cn(textRole('delta'), deltaToneClass(delta, positive))}>
+      <p className={cn(textRole('delta'), deltaToneClass(delta))}>
         {value === null ? '\u00a0' : deltaLabel(delta, inverse)}
       </p>
     </div>
@@ -83,12 +82,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
         <div key={row.label} className="grid min-w-0 gap-2">
           <div className="flex items-center justify-between gap-2">
             <span className={textRole('label', 'capitalize')}>{row.label}</span>
-            <span
-              className={cn(
-                textRole('delta'),
-                row.direction === 'positive' ? 'text-success' : 'text-danger',
-              )}
-            >
+            <span className={cn(textRole('delta'), 'text-secondary')}>
               {row.delta !== null ? (
                 <>
                   {row.delta > 0 ? '+' : ''}
@@ -105,7 +99,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
               style={{ height: `${Math.max(6, ((row.previous ?? 0) / ceiling) * 56)}px` }}
             />
             <span
-              className="bg-accent w-6 rounded-t-xs transition-[height]"
+              className="bg-chart-1 w-6 rounded-t-xs transition-[height]"
               style={{ height: `${Math.max(6, ((row.current ?? 0) / ceiling) * 56)}px` }}
             />
           </div>

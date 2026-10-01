@@ -247,7 +247,7 @@ export function LaunchDialogView({
         <BatchField batches={batches} batchIndex={batchIndex} setBatchIndex={setBatchIndex} />
         <fieldset className="grid gap-2">
           <legend className={textRole('label')}>
-            Engines <span className="text-danger">*</span>
+            Engines <span className="text-muted">*</span>
           </legend>
           {noEngines ? (
             <div className="grid gap-2">
