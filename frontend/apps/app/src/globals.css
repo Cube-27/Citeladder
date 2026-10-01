@@ -944,6 +944,12 @@ body {
   .focus-frame:has(:focus-visible) {
     outline-color: Highlight;
   }
+
+  /* The radio dot is a filled span, which otherwise collapses to Canvas. */
+  [role='radio'][data-state='checked'] [data-state='checked'] > span {
+    background-color: CanvasText;
+    forced-color-adjust: none;
+  }
 }
 
 ::selection {
