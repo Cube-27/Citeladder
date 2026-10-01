@@ -2,7 +2,7 @@
 
 > Canonical visual and interaction contract for marketing, authentication, onboarding, and the authenticated application. This is the only design-system document.
 
-Existing owners govern production workflows. Visual work must not change factual copy, data, feature claims, scripted preview content, transactions, or explicit confirmation gates without approval. Unresolved instructions from the supplied contract are recorded at the end; consolidation does not decide them.
+Existing owners govern production workflows. Visual work must not change factual copy, data, feature claims, scripted preview content, transactions, or explicit confirmation gates without approval. Product decisions remain with the owning feature contract.
 
 Tests verify shared ownership, accessibility, and product correctness—not exact classes, fonts, pixels, or CSS recipes as a second visual authority.
 
@@ -38,19 +38,19 @@ Consume semantic roles, never page-local values.
 | Role | Tokens and values | Use |
 | --- | --- | --- |
 | Ground and rail | `background`, `shell` `#F3F5F7`; `sidebar` `#E9EDF1` | Neutral workspace ground and the lower sidebar rail in light mode |
-| Structure | `panel-tonal`, `background-alt` `#F7F9FB`; `well`, `active` `#E9EDF1` | Insets, wells, tonal panels; hover/selected states |
+| Structure | `panel-tonal`, `background-alt` `#F7F9FB`; `well` `#E9EDF1` | Tonal panels and recessed wells |
 | Paper | `panel`, `input`, `elevated` `#FFFFFF` | Work surfaces, inputs, semantic objects, overlays |
-| Ink | `foreground` `#0F172A`; `secondary` `#334155`; `muted` `#5B6678` | Three clearly separated inks: titles and values; sentences; labels and metadata. The former fourth rung, `subtle`, resolves to `muted` and is retired. |
+| Ink | `foreground` `#0F172A`; `secondary` `#334155`; `muted` `#5B6678` | Three clearly separated inks: titles and values; sentences; labels and metadata. The former fourth rung, `subtle`, is deleted; metadata consumes `muted`. |
 | Boundaries | `border-subtle` `#E5E9EF`; `border` `#D3DAE4`; `border-strong` `#C3CCD9`; `border-bold` `#8A95A5` | `border-subtle` divides rows or peers *inside* one surface; `border` bounds controls, inset white panels and overlays, and divides a table header from its rows; `border-strong` is deliberate emphasis; `border-bold` bounds inputs. Default cards and table wrappers use fill contrast instead. |
-| Selection | `track` `#E6EAF0`; `selected` `#FFFFFF`; `shadow-selected` | The recessed groove of a segmented control and the raised paper of the selected item on it or in navigation. |
-| Interaction | Emerald: forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC`. | Primary actions on every surface, links, tabs, selection, active navigation, focus, first chart series |
-| Evidence | success, warning, error, info, `chart-secondary`, `chart-grid` | Persisted status/data, always labelled or paired with an icon |
+| Neutral states | `hover`, `selected`, `active`, `disabled` | Surface mixed with primary ink at 4%, 8%, 12%, and 3%; the selected state is distinct from hover. `track` is the recessed segmented-control surface. |
+| Interaction | Emerald: forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC`. | Primary actions, links, tab underlines, checked indicators and focus; navigation and filter selection use neutral tints |
+| Evidence | `success`, `warning`, `danger`, `info`; `chart-1..8`, `chart-grid` | Status families carry labelled status; data-viz roles carry measurements |
 
-Hierarchy is carried by boundary and tone, not by elevation: the app's rail, ground and paper are distinct fills, while an inset box may use an edge. Shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips) and for the raised selected item (`shadow-selected`). A `Card` has no resting shadow.
+Hierarchy is carried by boundary and tone, not by elevation: the app's rail, ground and paper are distinct fills, while an inset box may use an edge. Shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips). A `Card` has no resting shadow.
 
-**Borders.** A line may draw the edge of an inset white panel, status card, overlay, control or field, or divide rows and peers inside one surface (including the full-width rule closing each page band). Default cards and table wrappers have no outer border: their paper fill separates them from workspace ground. Selection is fill plus `shadow-selected`, never an outline or a leading bar. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space, not by a rule above or around them. The workspace pane has no seam against the ground. Lines use a token at full strength, never an alpha-faded colour.
+**Borders.** A line may draw the edge of an inset white panel, status card, overlay, control or field, or divide rows and peers inside one surface (including the full-width rule closing each page band). Default cards and table wrappers have no outer border: their paper fill separates them from workspace ground. Selection uses a distinct neutral tint and the family's indicator, without a resting shadow. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space, not by a rule above or around them. The workspace pane has no seam against the ground. Lines use a token at full strength, never an alpha-faded colour.
 
-Reading text must meet 4.5:1 contrast. `subtle` metadata belongs on reading surfaces; active/tonal surfaces use `muted` or `ink` to retain contrast. Cyan, coral, lime, and amber express evidence/status, not route decoration. Never communicate meaning through colour alone.
+Reading text must meet 4.5:1 contrast. Use primary ink on selected surfaces when secondary ink would lose contrast. Accent denotes action, never success or positive metric deltas. Success, warning, danger and info denote their corresponding statuses; danger also denotes destructive intent. Metrics use data-viz or neutral signed/directional treatments. Decorative icons and category labels use neutral ink. Dark mode keeps colour concentrated in actions and meaningful evidence. Never communicate meaning through colour alone.
 
 Marketing subpages use the semantic public canvas, centred Sora hero, quiet surface bands, and the shared full-width dark footer. The homepage uses a white canvas with distinct neutral bands and capability-tinted wells, with scoped aliases resolving to shared semantic roles. The owner-scoped `[data-public-surface]` rebind deepens light-mode inks and strengthens hairlines. Use divided hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews.
 
@@ -242,13 +242,13 @@ The ladder is strictly ordered: a section title never out-sizes the page title a
 | Sidebar | 240px | 224px |
 | Compact topbar | — | 56px |
 | Content gutter | 32px | 24px / 16px |
-| Navigation row | 36px | 44px minimum target |
-| Control | 32 / 36 / 40px | 44px minimum target |
-| Table row | 44px | Labelled record |
+| Navigation row / tabs | 32px | 32px |
+| Control (small / default / large) | 28 / 32 / 36px | 28 / 32 / 36px |
+| Table row (standard / dense) | 36 / 32px | Same roles or labelled record layout |
 
 Data columns and their headers are centre-aligned and tabular; text columns stay left-aligned. The header centres with its values so a column reads as one block — a sort glyph pushed to the padding edge leaves the label sitting off the numbers by its own width. This resolves the table-header precedence question previously recorded as unresolved: the shared `numeric` flag on `TableHead`/`TableCell` owns both alignment and tabular figures, and call sites do not re-declare either.
 
-Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 20, page gutter 32, section to section 24.
+Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 16, page gutter 32, section to section 24.
 
 | Geometry role | Value | Use |
 | --- | --- | --- |
@@ -260,7 +260,7 @@ Analytical content caps at 1392px; form-first workflow content caps at 1040px wh
 
 Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 24px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed.
 
-Marketing subpages and the homepage use `--section-y`: 56px base, 80px from 768px, 96px from 1280px. Adjacent homepage sections of the same tone share one rhythm rather than stacking both paddings. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and selection chips 36px desktop/44px touch. The flow shell owns its scrolling main region and action bar.
+Marketing subpages and the homepage use `--section-y`: 56px base, 80px from 768px, 96px from 1280px. Adjacent homepage sections of the same tone share one rhythm rather than stacking both paddings. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and shared compact controls on every viewport. The flow shell owns its scrolling main region and action bar.
 
 ### Availability vocabulary
 
@@ -383,9 +383,9 @@ JavaScript. No decorative motion or alternate design system is introduced.
 
 ### Controls
 
-Shared buttons use the 6px control radius and the `control` type role: app heights 32px compact, 36px default, 40px large; touch targets at least 44px. App buttons have no decorative inset border. Marketing primary buttons use the same solid-forest `primary` variant, minimum 44px (`min-h-[2.75rem]`), and shared hover ramp. Secondary, neutral, ghost, and danger variants remain shared.
+Shared buttons use the 6px control radius and the `control` type role. Small controls use `--control-height-sm` (28px), defaults use `--control-height-md` (32px), and large page actions use `--control-height-lg` (36px), on every viewport. Page control bands rebind the default role to small so buttons and all select-family triggers align. Marketing's separately owned `marketing` Button size remains 48px minimum; marketing primitives retain their own public geometry.
 
-Controls need direct labels, immediate pressed feedback, and visible focus: accent on their own border plus one attached soft glow, no gap or second floating ring. Inputs use semantic input/border roles; labels stay beside controls, helpers explain constraints, and errors provide recovery. Placeholder-only labels are forbidden. Composed inputs have one shared-frame focus ring, not an additional native-input outline.
+Controls need direct labels, immediate pressed feedback and central keyboard focus. `.focus-ring`, `.focus-input` and `.focus-frame` use a 2px accent outline with 1px outside offset; filled primary/destructive actions use their high-contrast label ink with a -2px inset offset, also used for selected tabs and current navigation. All treatments key on `:focus-visible`. Composed fields ring their frame once. Disabled controls have no outline. Higher contrast uses a dotted outline; forced colours use system Highlight. Invalid controls retain a danger border during focus, paired by the form owner with `aria-invalid` and descriptive recovery text. Placeholder-only labels are forbidden. Glow and bespoke component focus recipes are retired.
 
 ### Charts
 
@@ -397,11 +397,11 @@ Every chart is `aria-hidden` and carries a written description instead. A null p
 
 ### Panels, badges, and evidence
 
-Structural sections remain open or tonal. `Card` is a white semantic object with the shared card radius, 20px padding, and no resting border or shadow; its fill separates it from workspace ground. Its `recommendation` tone (accent-soft fill, accent-border edge) marks the page's single next action, and the `danger` tone retains its status edge. Bare `Table` wrappers use the same paper fill and card radius, with a hairline below the header; a table inside a card shares its fill. Cards in one row share their height, and a row is either all cards or all open bands, never both. `Card` sets no display mode; opt into aligned-footer layouts at call sites without breaking sticky scrolling. Never nest a `Card` inside another `Card`, modal, drawer, or sheet.
+Structural sections remain open or tonal. `Card` is a white semantic object with the shared card radius, 16px padding, and no resting border or shadow; its fill separates it from workspace ground. Its `recommendation` tone (accent-soft fill, accent-border edge) marks the page's single next action, and the `danger` tone retains its status edge. Bare `Table` wrappers use the same paper fill and card radius, with a hairline below the header; a table inside a card shares its fill. Cards in one row share their height, and a row is either all cards or all open bands, never both. `Card` sets no display mode; opt into aligned-footer layouts at call sites without breaking sticky scrolling. Never nest a `Card` inside another `Card`, modal, drawer, or sheet.
 
 For a filled, padded box inside a card/section, use `panelClasses({ tone, pad })` from `components/ui/panel.tsx`. Only its white `panel` tone draws an edge; `well`, `tonal` and `accent` are separated by their fill. Drawer field groups/lists use unboxed sections/rows. Multi-category editors use shared underline tabs and one linear field flow, not dashboard grids.
 
-Badges pair labels with state marks. Evidence rows identify source, measurement context, and an action opening the persisted record. Loading/empty states preserve layout and explain absence through the availability vocabulary.
+Badges pair labels with state marks. Tags use the 20px small badge minimum, badges/filter chips the 24px default. Dense tables rebind badges to the small role. Menu rows use a 32px minimum and may grow for option detail; card/panel padding is 16px. Checkbox/radio marks and switch tracks retain intrinsic glyph geometry inside labelled or role-sized targets. Evidence rows identify source, measurement context, and an action opening the persisted record. Loading/empty states preserve layout and explain absence through the availability vocabulary.
 
 Confirmed first-use analytical states omit filters, charts, and table reservations that cannot change or explain the result. Keep controls that can recover a filtered or uncovered state, and render persisted measured zero or partial-provider evidence through its normal measurement surface.
 
@@ -413,17 +413,33 @@ The contents panels include H2/H3 entries, omit leading step-number prefixes fro
 
 ### Navigation and overlays
 
-- **Navigation:** the active app location is raised paper (`selected` fill, `shadow-selected`) with a dark label and brand-green icon — no border and no leading mark. Hover uses the `active` fill. Preserve icon/label contrast and avoid translation. Page controls sit on a tonal band; identity and tab navigation bands stay on paper. Selected tab underlines use brand green.
-- **Menus:** shared panel/item recipes, `shadow-elevated`, 12px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
-- **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal-value` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-elevated` and the same 12px radius. Features own no shadow recipes.
-- **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the recessed `track` for compact single-select changes; the selected item is raised paper with `shadow-selected` and dark ink, unselected items are muted. Segment labels use the `badge` role (12/16, 500) so a page's filter row stays one row. Tabs and segments stay on a single row and scroll when labels exceed the available width; keyboard focus reveals the focused option. Filled tabs share spare width without shrinking below their labels; shared UI filter pills handle independent/multi-select filters.
+- **Navigation:** current locations use `selected` fill with primary label/icon ink; hover uses `hover`, pressed feedback uses `active`. Preserve contrast and avoid translation. Page controls sit on a tonal band; identity and tab navigation bands stay on paper. Selected tabs use the theme's accent underline.
+- **Menus:** shared panel/item recipes, `shadow-overlay`, 12px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
+- **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-overlay` and the same 12px radius. Features own no shadow recipes.
+- **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the recessed `track` for compact single-select changes; selected items use neutral `selected` tint and primary ink; unselected items use secondary ink and the distinct hover tint. Segment labels use the `badge` role (12/16, 500) so a page's filter row stays one row. Tabs and segments stay on a single row and scroll when labels exceed the available width; keyboard focus reveals the focused option. Filled tabs share spare width without shrinking below their labels; shared UI filter pills handle independent/multi-select filters.
 - **Analytical loading:** interval changes retain prior analytical content while the new persisted projection loads. Mark the region busy with compact feedback; no replacement skeleton or labels describing data not yet received.
 
-HeroUI is a reference for state completeness, not an installed dependency.
+### Component state contract
+
+| Family | Rest, hover and pressed | Selection or checked | Disabled and invalid |
+| --- | --- | --- | --- |
+| Buttons | Semantic action fills; secondary/ghost neutral hover and active tints | Toggle/open triggers use selected tint | Neutral disabled fill and muted ink; pending content sizes within the button |
+| Fields | Input surface, stronger enabled hover border, central outline | Text selection remains browser-native | Disabled neutral fill; invalid danger edge with owner-provided error text |
+| Select family / menus | Shared menu-height, hover and pressed tints | Selected tint and check/ARIA selection, distinct from highlight | Muted disabled rows; existing field invalid contracts retained |
+| Tabs / segments | Neutral hover and pressed tints | Tabs have accent underline; segments selected tint | Muted disabled controls; roving keyboard model retained |
+| Tables | Standard 36px or opt-in dense 32px rows, hover/pressed tints | Highlight/selected tint; sorted headers use primary ink and existing sort indicator | Existing semantic table contracts retained |
+| Navigation / palette | Neutral hover and pressed tints | Current/active selection uses neutral tint and primary ink | Existing entitlement availability retained |
+| Checkbox / radio / switch | Neutral unchecked surface and hover feedback | Accent check/dot/track; checkbox indeterminate mark | Neutral disabled fill; radio dot remains visible in forced colours |
+| Filter chips / badges | Chip hover/pressed tints; badges static | Chips selected tint with pressed semantics | Neutral disabled chips |
+| Alerts / read errors / toast | Labelled status icon/text; actionable controls follow shared states | Info/success/warning/danger meanings remain distinct | Toast's existing success-only API remains; errors use existing read-error/alert owners |
+
+Focus uses the central recipe for every interactive family. Invalid states apply where the existing component API supports validation; this refresh does not add props or validation policy to choice/navigation/status owners.
+
+Only `shadow-none`, `shadow-overlay` and `shadow-modal` are available to product consumers. Resting cards, tables and navigation have no shadow; detached menus/popovers/tooltips/palette use overlay, dialogs/drawers/floating toast use modal. Radius families are control 6px, card/well 8px, overlay 12px, xs 4px for intrinsic sub-elements and full for true pills/dots/avatars. Workspace and scoped marketing radii retain their existing owners.
 
 ## Motion and accessibility
 
-Authenticated and marketing routes use shared CSS feedback without a general-purpose animation runtime. Pointer-opened menus use a 150–180ms fade/shift; keyboard command interfaces open immediately. Drawers use interruptible 220–260ms right-side transitions; press feedback begins on pointer-down. Authenticated route content and tab indicators update immediately without opacity transitions.
+Product and shared-control motion consumes the centralized roles: `--motion-fast` 110ms for hover/micro-feedback, `--motion-normal` 150ms for menus/tooltips, `--motion-slow` 240ms for dialogs/drawers/toasts. Implicit Tailwind transitions inherit the fast duration and standard easing. Standard easing is cubic-bezier(0.2, 0, 0.38, 0.9), enter is (0, 0, 0.38, 0.9), exit is (0.2, 0, 1, 0.9). Repeating activity/shimmer cycles derive from these roles. Keyboard command interfaces and route/tab content update immediately; press feedback begins on pointer-down. Separately owned marketing choreography and onboarding research's 220ms/60ms reveal/stagger remain scoped. Functional delays (tooltip delay, toast dwell, first-load reveal delay) remain independent from motion duration. Browser autofill's paint-suppression timing is a technical exception.
 
 Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window walkthrough; native CSS scroll fade/rise reveals that never hide server-rendered content after hydration; master-detail continuity/domain-owned measured expansion; onboarding research results resolving below factual activity with a 220ms fade/rise and 60ms stagger.
 

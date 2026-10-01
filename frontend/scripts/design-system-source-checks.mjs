@@ -825,7 +825,7 @@ export function productContractViolations(root) {
   const css = readFileSync(join(root, ...TOKEN_CSS.split('/')), 'utf8');
   const websiteCss = readFileSync(join(root, ...WEBSITE_CSS.split('/')), 'utf8');
   // Every role the product builds on has to be defined somewhere. The value is
-  // the design system's to choose: pinning `--color-action` to a literal hex
+  // the design system's to choose: pinning `--color-accent` to a literal hex
   // meant a rebrand failed a test rather than a review.
   const requiredTokens = [
     '--text-xs',

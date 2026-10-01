@@ -4,8 +4,9 @@
 
 - [Design-system contract refresh](citeladder-design-contract-refresh.md)
   — assigned on 1 October 2026 in `codex/design-contract-refresh`, in a separate
-  worktree from main. Implementation and local verification are in progress;
-  PR creation is explicitly deferred by the owner.
+  worktree from main. Implementation is complete locally in committed slices;
+  PR creation and publication are explicitly deferred by the owner. CI and
+  merge remain pending.
 
 - [Internal link suggestions](citeladder-internal-links.md)
   — implemented on 28 September 2026 in `codex/content-structure`; revised after
