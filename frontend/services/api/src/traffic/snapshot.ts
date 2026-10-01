@@ -310,18 +310,23 @@ function executor(displayOnly: boolean): Executor {
     };
     await checkCancelled('snapshot write');
     await db.transaction().execute(async (trx) => {
+      const verifying: string[] = [];
       for (const target of targets) {
         const snapshotId = await persist(trx, task, target, coverage, displayOnly);
-        if (snapshotId && target.verifies)
-          await enqueueImplementationVerification(trx, {
+        if (snapshotId && target.verifies) verifying.push(snapshotId);
+      }
+      await Promise.all(
+        verifying.map((snapshotId) =>
+          enqueueImplementationVerification(trx, {
             workspaceId: task.workspace_id,
             projectId,
             triggerKind: 'traffic_snapshot',
             triggerId: snapshotId,
             revision: task.id,
             maxAttempts,
-          });
-      }
+          }),
+        ),
+      );
       if (!displayOnly)
         await enqueueTask(trx, {
           workspaceId: task.workspace_id,

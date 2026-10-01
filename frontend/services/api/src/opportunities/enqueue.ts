@@ -51,10 +51,11 @@ export function enqueueImplementationVerification(
     workspaceId: trigger.workspaceId,
     projectId: trigger.projectId,
     kind: 'opportunity_verification',
+    // Extra payload never overrides the trigger the key names.
     payload: {
+      ...trigger.payload,
       trigger_kind: trigger.triggerKind,
       trigger_id: trigger.triggerId,
-      ...trigger.payload,
     },
     keyParts: [],
     idempotencyKey: [

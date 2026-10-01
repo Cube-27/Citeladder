@@ -1,5 +1,6 @@
 /** Pure deterministic comparison of two explicitly comparable crawls' page evidence. */
 import { isDeepStrictEqual } from 'node:util';
+import { compareText } from '../text-order.ts';
 import { policy } from '../config.ts';
 
 const p = policy.site_health.change_intel;
@@ -38,6 +39,9 @@ export type ChangeObservation = {
 };
 type ContentRecord = Record<string, unknown>;
 
+/** A declared check may name a rule outcome by its pass/fail alias. */
+const OUTCOME_ALIASES: Record<string, string> = { pass: 'satisfied', fail: 'missing' };
+
 export const expectedKey = (siteUrlId: string, field: string) => `${siteUrlId} ${field}`;
 
 function ruleClass(before: RuleState | undefined, after: RuleState | undefined) {
@@ -73,12 +77,11 @@ function expectedLink(
   field: string,
 ): Pick<ChangeObservation, 'expected' | 'implementation_event_id'> {
   const item = expected.get(expectedKey(after.siteUrlId, field));
+  const declared = item?.expectedValue;
   const value =
-    item?.expectedValue === 'pass'
-      ? 'satisfied'
-      : item?.expectedValue === 'fail'
-        ? 'missing'
-        : item?.expectedValue;
+    typeof declared === 'string' && Object.hasOwn(OUTCOME_ALIASES, declared)
+      ? OUTCOME_ALIASES[declared]
+      : declared;
   const rule = after.rules[field];
   const matches =
     item !== undefined &&
@@ -90,20 +93,47 @@ function expectedLink(
 }
 
 // ISO 8601 as Python's datetime.fromisoformat reads it; a value without an offset is UTC.
-const ISO_DATE =
-  /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?)?(?:Z|[+-]\d{2}:?\d{2})?$/;
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
+const ISO_TIME = /^[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?/;
+const ISO_OFFSET = /^(?:Z|[+-]\d{2}:?\d{2})$/;
 function instant(value: unknown): number | null {
-  if (typeof value !== 'string' || !ISO_DATE.test(value)) return null;
-  const date = (value.length === 10 ? `${value}T00:00:00` : value.replace(' ', 'T')).replace(
-    /([+-]\d{2})(\d{2})$/,
-    '$1:$2',
-  );
-  const zoned = /(?:Z|[+-]\d{2}:\d{2})$/.test(date) ? date : `${date}Z`;
-  const time = Date.parse(zoned);
-  return Number.isNaN(time) ? null : time;
+  if (typeof value !== 'string') return null;
+  const day = ISO_DAY.exec(value)?.[0];
+  if (!day) return null;
+  const time = ISO_TIME.exec(value.slice(day.length))?.[0] ?? '';
+  const offset = value.slice(day.length + time.length);
+  if (offset && (!time || !ISO_OFFSET.test(offset))) return null;
+  const zone = !offset || offset === 'Z' ? 'Z' : `${offset.slice(0, 3)}:${offset.slice(-2)}`;
+  const parsed = Date.parse(`${day}T${time.slice(1) || '00:00:00'}${zone}`);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 const stringSet = (value: unknown) =>
   new Set(Array.isArray(value) ? value.map((item) => JSON.stringify(item)) : []);
+const missingFrom = (from: Set<unknown>, other: Set<unknown>) =>
+  [...from].filter((item) => !other.has(item)).length;
+
+function contentCoverage(before: ContentRecord, after: ContentRecord): [string, string | null] {
+  if (before.extractor_version !== after.extractor_version)
+    return ['unknown', 'extractor_incompatible'];
+  if (before.coverage === 'partial' || after.coverage === 'partial')
+    return ['partial', 'truncation_established'];
+  if (before.coverage === 'complete' && after.coverage === 'complete') return ['complete', null];
+  return ['unknown', 'completeness_unproven'];
+}
+function contentClassification(coverage: string, delta: number, added: number, removed: number) {
+  if (coverage !== 'complete') return 'insufficient_evidence';
+  if (delta >= p.substantial_delta_ratio || added + removed >= p.substantial_section_changes)
+    return 'substantial_change';
+  if (delta > p.cosmetic_delta_ceiling || added || removed) return 'minor_change';
+  return 'unchanged';
+}
+/** Whether the modification date moved exactly when the text did. */
+function metadataConsistency(before: ContentRecord, after: ContentRecord, contentMoved: boolean) {
+  const modifiedBefore = instant(before.modified);
+  const modifiedAfter = instant(after.modified);
+  if (modifiedBefore === null || modifiedAfter === null) return 'unknown';
+  return (modifiedBefore !== modifiedAfter) === contentMoved ? 'consistent' : 'inconsistent';
+}
 function contentResult(before: ContentRecord, after: ContentRecord) {
   const beforeShingles = new Set(Array.isArray(before.shingles) ? before.shingles : []);
   const afterShingles = new Set(Array.isArray(after.shingles) ? after.shingles : []);
@@ -112,36 +142,15 @@ function contentResult(before: ContentRecord, after: ContentRecord) {
   const delta = union.size ? 1 - shared / union.size : 0;
   const beforeSections = stringSet(before.heading_outline);
   const afterSections = stringSet(after.heading_outline);
-  const added = [...afterSections].filter((item) => !beforeSections.has(item)).length;
-  const removed = [...beforeSections].filter((item) => !afterSections.has(item)).length;
-  const [coverage, reason] =
-    before.extractor_version !== after.extractor_version
-      ? ['unknown', 'extractor_incompatible']
-      : before.coverage === 'partial' || after.coverage === 'partial'
-        ? ['partial', 'truncation_established']
-        : before.coverage === 'complete' && after.coverage === 'complete'
-          ? ['complete', null]
-          : ['unknown', 'completeness_unproven'];
-  const classification =
-    coverage !== 'complete'
-      ? 'insufficient_evidence'
-      : delta >= p.substantial_delta_ratio || added + removed >= p.substantial_section_changes
-        ? 'substantial_change'
-        : delta > p.cosmetic_delta_ceiling || added || removed
-          ? 'minor_change'
-          : 'unchanged';
-  const modifiedBefore = instant(before.modified);
-  const modifiedAfter = instant(after.modified);
-  const contentMoved = classification === 'substantial_change' || classification === 'minor_change';
-  const consistency =
-    coverage !== 'complete' || modifiedBefore === null || modifiedAfter === null
-      ? 'unknown'
-      : (modifiedBefore !== modifiedAfter) === contentMoved
-        ? 'consistent'
-        : 'inconsistent';
+  const added = missingFrom(afterSections, beforeSections);
+  const removed = missingFrom(beforeSections, afterSections);
+  const [coverage, reason] = contentCoverage(before, after);
+  const classification = contentClassification(coverage, delta, added, removed);
+  const moved = classification === 'substantial_change' || classification === 'minor_change';
   return {
     content_change_classification: classification,
-    metadata_consistency: consistency,
+    metadata_consistency:
+      coverage === 'complete' ? metadataConsistency(before, after, moved) : 'unknown',
     content_delta_ratio: Math.round(delta * 1e6) / 1e6,
     content_delta_measure: 'measured_text_divergence_over_compared_portion',
     sections_added: added,
@@ -237,7 +246,7 @@ export function compareCrawls(
   const pagesA = new Map(crawlA.map((page) => [page.siteUrlId, page]));
   const pagesB = new Map(crawlB.map((page) => [page.siteUrlId, page]));
   const ids = (from: Map<string, ChangePage>, present: boolean, other: Map<string, ChangePage>) =>
-    [...from.keys()].filter((id) => other.has(id) === present).sort();
+    [...from.keys()].filter((id) => other.has(id) === present).sort(compareText);
   const observations: ChangeObservation[] = [];
   for (const id of ids(pagesA, true, pagesB)) {
     const before = pagesA.get(id)!;

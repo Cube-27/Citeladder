@@ -9,6 +9,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
+import { compareText, scalarText } from '../text-order.ts';
 import {
   compareCrawls,
   expectedKey,
@@ -47,7 +48,7 @@ function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value !== null && typeof value === 'object')
     return `{${Object.keys(value)
-      .sort()
+      .sort(compareText)
       .map(
         (key) => `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`,
       )
@@ -170,10 +171,17 @@ async function evaluations(db: Database, workspaceId: string, rows: PageRow[]) {
   return byAnalysis;
 }
 
-const text = (value: unknown) => (value ? String(value) : '');
+/** Whether the stored text is the whole primary content, by its extraction provenance. */
+function textCoverage(facts: Record<string, unknown>, content: string): [string, string | null] {
+  if (!content.trim()) return ['unknown', 'no_usable_text'];
+  if (!('primary_content_truncated' in facts && 'primary_content_pre_truncation_length' in facts))
+    return ['unknown', 'legacy_completeness_unknown'];
+  if (facts.primary_content_truncated) return ['partial', 'primary_content_truncated'];
+  return ['complete', null];
+}
 /** Shingled primary content with the extraction's completeness provenance. */
 export function contentRecord(facts: Record<string, unknown>, extractorVersion: string) {
-  const content = text(facts.primary_content_text);
+  const content = scalarText(facts.primary_content_text);
   const words = content.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
   const size = Math.min(p.shingle_size, words.length);
   const shingles = size
@@ -182,18 +190,10 @@ export function contentRecord(facts: Record<string, unknown>, extractorVersion: 
           words.slice(0, words.length - size + 1).map((_, i) => words.slice(i, i + size).join(' ')),
         ),
       ]
-        .sort()
+        .sort(compareText)
         .slice(0, p.max_shingles)
     : [];
-  const provenance =
-    'primary_content_truncated' in facts && 'primary_content_pre_truncation_length' in facts;
-  const [coverage, reason] = !content.trim()
-    ? ['unknown', 'no_usable_text']
-    : !provenance
-      ? ['unknown', 'legacy_completeness_unknown']
-      : facts.primary_content_truncated
-        ? ['partial', 'primary_content_truncated']
-        : ['complete', null];
+  const [coverage, reason] = textCoverage(facts, content);
   return {
     shingles,
     heading_outline: Array.isArray(facts.primary_heading_outline)
@@ -232,10 +232,10 @@ function changePage(row: PageRow, rules: Map<string, Evaluation> | undefined): C
     rules: states,
     intendedIndexable,
     fields: {
-      title: text(facts.title),
-      meta_description: text(facts.meta_description),
+      title: scalarText(facts.title),
+      meta_description: scalarText(facts.meta_description),
       h1: Array.isArray(record(facts.headings).h1_texts) ? record(facts.headings).h1_texts : [],
-      canonical: text(facts.canonical_url),
+      canonical: scalarText(facts.canonical_url),
       robots_noindex: Boolean(record(facts.robots).noindex),
       json_ld_present: Boolean(record(facts.structured_data).has_json_ld),
       // Extracted internal anchors, without scheduling reachability probes.
@@ -256,12 +256,30 @@ async function pages(db: Database, crawl: Crawl) {
 
 function checkField(check: Record<string, unknown>): [string | null, unknown] {
   if (check.kind === 'page_fact') {
-    const field = text(check.fact_key);
+    const field = scalarText(check.fact_key);
     return [FACT_FIELDS.has(field) ? field : null, check.expected_value];
   }
   if (check.kind === 'site_rule')
-    return [RULE_FIELDS.get(text(check.rule_id)) ?? null, check.expected_outcome];
+    return [RULE_FIELDS.get(scalarText(check.rule_id)) ?? null, check.expected_outcome];
   return [null, null];
+}
+const uuidText = (value: unknown) => scalarText(value).toLowerCase();
+/** A check's target page; an untargeted check applies to a single-target event's page. */
+function checkTarget(check: Record<string, unknown>, targets: Set<string>) {
+  if (check.target_site_url_id != null) return uuidText(check.target_site_url_id);
+  return targets.size === 1 ? [...targets][0]! : null;
+}
+/** The field a check now satisfies on its target page, keyed for linkage. */
+function satisfiedCheck(raw: unknown, targets: Set<string>, byUrl: Map<string, ChangePage>) {
+  const check = record(raw);
+  const target = checkTarget(check, targets);
+  const page = target && targets.has(target) ? byUrl.get(target) : undefined;
+  const [field, value] = checkField(check);
+  if (!page || !field) return null;
+  const rule = page.rules[field];
+  const actual = check.kind === 'site_rule' && rule ? rule.outcome : page.fields[field];
+  if (!isDeepStrictEqual(actual, value)) return null;
+  return { key: expectedKey(page.siteUrlId, field), value: page.fields[field] };
 }
 /** Declared implementations whose checks crawl B's evidence now satisfies; the newest wins. */
 async function expectedChanges(db: Database, crawlA: Crawl, crawlB: Crawl, pagesB: ChangePage[]) {
@@ -278,28 +296,13 @@ async function expectedChanges(db: Database, crawlA: Crawl, crawlB: Crawl, pages
     .orderBy('id', 'desc')
     .execute();
   const byUrl = new Map(pagesB.map((page) => [page.siteUrlId, page]));
+  const list = (value: unknown) => (Array.isArray(value) ? value : []);
   for (const event of events) {
-    const targets = new Set(
-      (Array.isArray(event.target_site_url_ids) ? event.target_site_url_ids : []).map((id) =>
-        text(id).toLowerCase(),
-      ),
-    );
-    for (const raw of Array.isArray(event.expected_checks) ? event.expected_checks : []) {
-      const check = record(raw);
-      const target =
-        check.target_site_url_id == null
-          ? targets.size === 1
-            ? [...targets][0]!
-            : null
-          : text(check.target_site_url_id).toLowerCase();
-      const page = target && targets.has(target) ? byUrl.get(target) : undefined;
-      const [field, value] = checkField(check);
-      if (!page || !field) continue;
-      const rule = page.rules[field];
-      const actual = check.kind === 'site_rule' && rule ? rule.outcome : page.fields[field];
-      const key = expectedKey(page.siteUrlId, field);
-      if (isDeepStrictEqual(actual, value) && !expected.has(key))
-        expected.set(key, { eventId: event.id, expectedValue: page.fields[field] });
+    const targets = new Set(list(event.target_site_url_ids).map(uuidText));
+    for (const raw of list(event.expected_checks)) {
+      const match = satisfiedCheck(raw, targets, byUrl);
+      if (match && !expected.has(match.key))
+        expected.set(match.key, { eventId: event.id, expectedValue: match.value });
     }
   }
   return expected;
@@ -322,7 +325,7 @@ function sourceHash(crawlA: Crawl | null, crawlB: Crawl, all: ChangePage[]) {
   // Fixed-width UUID pairs: joined-string order is tuple order.
   const sources = all
     .map((page) => [page.analysisId, page.artifactId])
-    .sort((x, y) => (x.join() < y.join() ? -1 : x.join() > y.join() ? 1 : 0));
+    .sort((x, y) => compareText(x.join(), y.join()));
   return sha256(JSON.stringify({ crawl_a_id: crawlA?.id ?? null, crawl_b_id: crawlB.id, sources }));
 }
 
@@ -344,11 +347,11 @@ async function insertObservations(
   }));
   // Chunked only to stay under PostgreSQL's 65535 bind-parameter limit.
   const chunk = rows.length ? Math.floor(65_535 / Object.keys(rows[0]!).length) : 1;
-  for (let start = 0; start < rows.length; start += chunk)
-    await db
-      .insertInto('site_change_observations')
-      .values(rows.slice(start, start + chunk))
-      .execute();
+  for (let start = 0; start < rows.length; start += chunk) {
+    const batch = rows.slice(start, start + chunk);
+    // One transaction connection runs one statement at a time.
+    await db.insertInto('site_change_observations').values(batch).execute(); // NOSONAR
+  }
 }
 
 /** Build, or return unchanged, the immutable comparison of crawl B with its predecessor. */
@@ -406,8 +409,8 @@ async function persistChangeSnapshot(db: Database, crawlB: Crawl): Promise<strin
       root_origin: rootOrigin(crawlB),
       crawl_scope_hash: crawlScopeHash(crawlB),
       source_hash: hash,
-      source_analysis_ids: [...new Set(all.map((page) => page.analysisId))].sort(),
-      source_artifact_ids: [...new Set(all.map((page) => page.artifactId))].sort(),
+      source_analysis_ids: [...new Set(all.map((page) => page.analysisId))].sort(compareText),
+      source_artifact_ids: [...new Set(all.map((page) => page.artifactId))].sort(compareText),
       analyzer_version: p.analyzer_version,
       page_analyzer_version: crawlB.analyzer_version,
       extractor_version: crawlB.extractor_version,
