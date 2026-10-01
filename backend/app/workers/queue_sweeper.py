@@ -22,19 +22,15 @@ in exactly the case (their worker is gone) it exists for. So the sweep uses
 ``release_expired_detailed`` and hands the reported parents to the domain
 reconciler registered in ``parent_reconcilers``.
 
-The same applies one level down, to a TASK that owes work it never ran. An
-analytics source-page inspection owes the Opportunity refresh that audit
-terminalization queued it INSTEAD of, and this process is the one most likely
-to terminalize it -- its worker having died is the case this sweeper exists
-for. So a terminal reclaim also runs the queue's hook from
-``terminal_compensation``.
+The TypeScript analytics worker scans failed tasks for durable compensation,
+including rows terminalized here. Its recovery therefore survives either
+worker or sweeper winning the lease-reclaim race.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -52,7 +48,6 @@ from app.domain.agent.model_calls import (
 )
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.parent_reconcilers import PARENT_RECONCILERS
-from app.workers.terminal_compensation import TERMINAL_TASK_HOOKS
 
 logger = logging.getLogger("app.workers.queue_sweeper")
 
@@ -120,7 +115,6 @@ class QueueSweeper:
         """Reclaim one queue, settling what a terminal reclaim left owing."""
         sweep = await queue.release_expired_detailed()
         name = spec.model.__tablename__
-        await self._compensate(name, sweep.failed_task_ids)
         if spec.parent_id_attr is None or not sweep.failed_parent_ids:
             return sweep.reclaimed
         reconcile = PARENT_RECONCILERS.get(name)
@@ -139,13 +133,6 @@ class QueueSweeper:
             extra={"queue": name, "parents": len(sweep.failed_parent_ids)},
         )
         return sweep.reclaimed
-
-    async def _compensate(self, name: str, task_ids: tuple[uuid.UUID, ...]) -> None:
-        """Run the work the tasks this pass terminalized still owe."""
-        hook = TERMINAL_TASK_HOOKS.get(name)
-        if hook is None or not task_ids:
-            return
-        await hook(self._session_factory, list(task_ids))
 
     async def run_forever(self) -> None:  # pragma: no cover - process loop
         logger.info("queue sweeper started", extra={"queues": len(self._queues)})

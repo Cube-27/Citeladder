@@ -22,25 +22,34 @@ export function normalizeAlias(value: string): string {
     .replaceAll(/\s+/gu, ' ');
 }
 
-/** Whether normalized `text` contains `compact` as one or more whole tokens. */
-function containsCompact(text: string, compact: string): boolean {
+/** Offset in normalized `text` of the first whole-token run spelling `compact`. */
+function compactOffset(text: string, compact: string): number | null {
   const tokens = text.split(' ');
-  return tokens.some((_, start) => {
+  let offset = 0;
+  for (const [start, first] of tokens.entries()) {
     let candidate = '';
     for (const token of tokens.slice(start)) {
       candidate += token;
-      if (candidate === compact) return true;
+      if (candidate === compact) return offset;
       if (candidate.length >= compact.length) break;
     }
-    return false;
-  });
+    offset += first.length + 1;
+  }
+  return null;
+}
+
+/**
+ * Offset of `name` in already-normalized text, or null. A whole-word match is
+ * also a whole-token compact match, so this is Python's `first_alias_offset`.
+ */
+export function aliasOffset(normalizedText: string, name: string): number | null {
+  const compact = normalizeAlias(name).replaceAll(' ', '');
+  return compact && normalizedText ? compactOffset(normalizedText, compact) : null;
 }
 
 /** Whether `text` names `name`; separator-free and spaced spellings are the same name. */
 export function namesAlias(text: string, name: string): boolean {
-  const compact = normalizeAlias(name).replaceAll(' ', '');
-  const normalized = normalizeAlias(text);
-  return Boolean(compact && normalized) && containsCompact(normalized, compact);
+  return aliasOffset(normalizeAlias(text), name) !== null;
 }
 
 /** Code-point offset in the normalized answer, matching persisted Python ranks. */

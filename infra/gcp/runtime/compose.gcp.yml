@@ -138,6 +138,10 @@ services:
   site-health-worker:
     <<: *backend
     command: ["python", "-m", "app.workers.site_health_worker"]
+  site-health-worker-ts:
+    <<: *backend
+    image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}
+    command: ["node", "--experimental-strip-types", "src/site-health-worker.ts"]
   brand-discovery-worker:
     <<: *backend
     image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}

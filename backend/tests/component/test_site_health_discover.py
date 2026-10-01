@@ -42,6 +42,7 @@ from app.core.config.site_health_contracts import (
     OBSERVATION_SOURCE_SITEMAP,
     RULE_OUTCOME_MISSING,
     RULE_OUTCOME_NOT_APPLICABLE,
+    SITE_TS_OWNED_TASK_KINDS,
     TASK_KIND_ANALYZE,
     TASK_KIND_DISCOVER,
     TASK_KIND_SITE_SETUP,
@@ -1742,7 +1743,11 @@ async def test_a_cold_crawl_analyzes_as_it_discovers(
             await session.scalar(
                 select(func.count())
                 .select_from(SiteCrawlTask)
-                .where(SiteCrawlTask.crawl_id == seed.crawl_id)
+                .where(
+                    SiteCrawlTask.crawl_id == seed.crawl_id,
+                    # The TypeScript worker claims these; this Python one never will.
+                    SiteCrawlTask.task_kind.not_in(SITE_TS_OWNED_TASK_KINDS),
+                )
             )
             or 0
         )

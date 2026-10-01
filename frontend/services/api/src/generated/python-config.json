@@ -507,18 +507,18 @@
       "commerce_catalog_projection",
       "demand_snapshot_refresh",
       "ingest_referrals",
+      "internal_link_judgment",
       "internal_link_publish",
       "opportunity_refresh",
       "opportunity_verification",
       "performance_range_projection",
       "referral_retention_sweep",
       "search_intelligence_acquisition",
+      "source_page_inspection",
       "traffic_snapshot_refresh"
     ],
     "python_task_kinds": [
-      "commerce_competitor_discovery",
-      "internal_link_judgment",
-      "source_page_inspection"
+      "commerce_competitor_discovery"
     ],
     "worker_settings": {
       "lease_ttl_seconds": {
@@ -563,7 +563,9 @@
       }
     },
     "executor_not_wired_error": "executor_not_wired",
-    "retry_error": "unknown"
+    "retry_error": "unknown",
+    "terminal_compensation_batch": 100,
+    "terminal_compensation_max_failures": 5
   },
   "task_queue": {
     "statuses": {
@@ -3166,10 +3168,8 @@
       "default": null
     },
     "constants": {
-      "type_checking": false,
       "benchmark_mode_consumer_like": "consumer_like",
       "benchmark_mode_controlled_localized": "controlled_localized",
-      "error_max_attempts": "max_attempts_exceeded",
       "audit_status_draft": "draft",
       "audit_status_validating": "validating",
       "audit_status_queued": "queued",
@@ -5072,6 +5072,2431 @@
     "anchor_instructions": "Which supplied source placement for `{target}` best supports this inline link under the rubric? Select none if no placement qualifies.",
     "no_placement_description": "No supplied source placement supports a useful inline link to this destination"
   },
+  "source_pages": {
+    "identity_version": "citation-identity-1",
+    "inspector_version": "source-page-inspector-1",
+    "extractor_version": "source-page-extractor-2",
+    "presence_version": "source-page-presence-1",
+    "format_version": "source-page-format-1",
+    "passage_chars": 300,
+    "max_passages": 8,
+    "max_text_chars": 400000,
+    "max_headings": 24,
+    "max_outbound_domains": 64,
+    "max_structured_types": 16,
+    "title_max_chars": 500,
+    "min_coverage_chars": 600,
+    "request_timeout_seconds": 15,
+    "hop_timeout_seconds": 30,
+    "max_redirects": 5,
+    "max_wire_bytes": 3000000,
+    "max_decoded_bytes": 10000000,
+    "per_host_delay_seconds": 1.0,
+    "fetch_concurrency": 4,
+    "allowed_content_types": [
+      "text/html",
+      "application/xhtml+xml"
+    ],
+    "budget_window_hours": 24,
+    "budget_per_window": 120,
+    "batch_max": 25,
+    "stale_after_hours": 336,
+    "max_redirects_per_domain": 3,
+    "claim_lease_minutes": 30,
+    "reuse_within_hours": 12,
+    "schema_formats": [
+      [
+        "discussionforumposting",
+        "discussion"
+      ],
+      [
+        "qapage",
+        "discussion"
+      ],
+      [
+        "videoobject",
+        "video"
+      ],
+      [
+        "itemlist",
+        "listicle"
+      ],
+      [
+        "faqpage",
+        "reference"
+      ],
+      [
+        "newsarticle",
+        "article"
+      ],
+      [
+        "blogposting",
+        "article"
+      ],
+      [
+        "article",
+        "article"
+      ]
+    ],
+    "heading_formats": [
+      [
+        "\\bvs\\.?\\b|\\bversus\\b|\\bcompared?\\s+to\\b",
+        "comparison"
+      ],
+      [
+        "\\balternatives?\\b|\\bcompetitors?\\b",
+        "comparison"
+      ],
+      [
+        "\\bbest\\b|\\btop\\s+\\d+\\b|\\b\\d+\\s+best\\b",
+        "listicle"
+      ],
+      [
+        "\\breviews?\\b|\\bhands[- ]on\\b",
+        "review"
+      ],
+      [
+        "\\bdirectory\\b|\\bprofile\\b|\\blistings?\\b",
+        "directory"
+      ],
+      [
+        "\\bforum\\b|\\bthread\\b|\\bdiscussion\\b",
+        "discussion"
+      ]
+    ],
+    "schema_max_depth": 12,
+    "min_alias_chars": 3,
+    "redirect_hosts": [
+      "vertexaisearch.cloud.google.com",
+      "grounding-api-redirect"
+    ],
+    "kind_formats": {
+      "homepage": "homepage",
+      "comparison": "comparison",
+      "alternative": "alternative",
+      "listicle": "listicle",
+      "how_to": "how_to",
+      "guide": "how_to",
+      "article": "article",
+      "case_study_review": "review",
+      "category": "category",
+      "product": "product",
+      "pricing": "product",
+      "service": "product",
+      "docs": "reference",
+      "faq": "reference",
+      "local": "profile",
+      "about_contact": "profile"
+    },
+    "url_formats": [
+      [
+        "(^|-)(forum|forums|thread|threads|discussion|discussions|comments|questions|answers)(-|$)|(^|-)r-[a-z0-9_]+(-|$)",
+        "discussion"
+      ],
+      [
+        "(^|-)(profile|profiles|vendor|vendors|listing|listings|directory|supplier|suppliers)(-|$)",
+        "profile"
+      ]
+    ],
+    "format_method_strength": [
+      "structured_data",
+      "heading_evidence",
+      "url_pattern",
+      "none"
+    ]
+  },
+  "content_differentiation": {
+    "stop_words": [
+      "a",
+      "about",
+      "an",
+      "and",
+      "any",
+      "are",
+      "best",
+      "but",
+      "can",
+      "content",
+      "create",
+      "for",
+      "from",
+      "get",
+      "give",
+      "guide",
+      "has",
+      "have",
+      "how",
+      "in",
+      "into",
+      "is",
+      "its",
+      "make",
+      "more",
+      "new",
+      "not",
+      "of",
+      "on",
+      "our",
+      "out",
+      "page",
+      "post",
+      "some",
+      "that",
+      "the",
+      "their",
+      "them",
+      "then",
+      "there",
+      "these",
+      "they",
+      "this",
+      "to",
+      "top",
+      "use",
+      "using",
+      "want",
+      "was",
+      "were",
+      "what",
+      "when",
+      "where",
+      "which",
+      "who",
+      "why",
+      "will",
+      "with",
+      "write",
+      "writing",
+      "you",
+      "your"
+    ],
+    "formula_version": "content-differentiation-1",
+    "result_limit": 10,
+    "min_inspected_pages": 3,
+    "min_source_chars": 200,
+    "most_pages_ratio": 0.6,
+    "max_owned_page_candidates": 1000,
+    "max_feature_values": 100,
+    "max_tables": 50,
+    "max_table_headers": 12
+  },
+  "site_health": {
+    "architecture": {
+      "formula_version": "sh-architecture-2",
+      "hub_page_kinds": [
+        "category",
+        "docs",
+        "homepage"
+      ],
+      "detail_page_kinds": [
+        "alternative",
+        "article",
+        "comparison",
+        "guide",
+        "how_to",
+        "listicle",
+        "local",
+        "product",
+        "service"
+      ],
+      "excessive_depth_min": 5,
+      "duplicate_metadata_min_urls": 3,
+      "duplicate_metadata_rate": 0.5,
+      "unhubbed_page_kind_min_urls": 3,
+      "max_pages": 500,
+      "max_evidence_items": 25,
+      "page_kind_collapse_min": 8,
+      "max_breadcrumb_items": 16
+    },
+    "archetypes": {
+      "policy_version": "sh-archetypes-1",
+      "commerce": "commerce",
+      "software": "software",
+      "services": "services",
+      "other": "other",
+      "source_onboarding": "onboarding_profile",
+      "source_abstained": "abstained",
+      "business_model_confidence_floor": 0.65,
+      "contradiction_min_pages": 5,
+      "contradiction_share": 0.6,
+      "by_business_model": {
+        "b2b_saas": "software",
+        "d2c_product": "commerce",
+        "education_provider": "services",
+        "healthcare_provider": "services",
+        "local_service": "services",
+        "marketplace": "commerce",
+        "professional_service": "services",
+        "regulated_finance": "services",
+        "retail": "commerce"
+      },
+      "contradicting_page_kinds": {
+        "commerce": [
+          "comparison",
+          "docs",
+          "service"
+        ],
+        "services": [
+          "category",
+          "docs",
+          "product"
+        ],
+        "software": [
+          "category",
+          "product"
+        ]
+      },
+      "corroborating_page_kinds": {
+        "commerce": [
+          "category",
+          "product"
+        ],
+        "services": [
+          "about_contact",
+          "local",
+          "service"
+        ],
+        "software": [
+          "comparison",
+          "docs",
+          "pricing",
+          "service"
+        ]
+      }
+    },
+    "common_structures": {
+      "commerce": [
+        {
+          "key": "products",
+          "label": "Product pages",
+          "local_market_only": false,
+          "page_kinds": [
+            "product"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "categories",
+          "label": "Category pages",
+          "local_market_only": false,
+          "page_kinds": [
+            "category"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "shipping_returns",
+          "label": "Shipping / returns",
+          "local_market_only": false,
+          "page_kinds": [],
+          "path_segments": [
+            "refund-policy",
+            "returns",
+            "shipping",
+            "shipping-policy"
+          ]
+        },
+        {
+          "key": "contact",
+          "label": "Contact",
+          "local_market_only": false,
+          "page_kinds": [],
+          "path_segments": [
+            "contact",
+            "contact-us"
+          ]
+        },
+        {
+          "key": "help_hub",
+          "label": "Help / FAQ hub",
+          "local_market_only": false,
+          "page_kinds": [
+            "faq"
+          ],
+          "path_segments": [
+            "faq",
+            "help",
+            "support"
+          ]
+        },
+        {
+          "key": "editorial",
+          "label": "Editorial content",
+          "local_market_only": false,
+          "page_kinds": [
+            "alternative",
+            "article",
+            "comparison",
+            "guide",
+            "how_to",
+            "listicle"
+          ],
+          "path_segments": []
+        }
+      ],
+      "software": [
+        {
+          "key": "pricing",
+          "label": "Pricing",
+          "local_market_only": false,
+          "page_kinds": [
+            "pricing"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "features",
+          "label": "Product / feature pages",
+          "local_market_only": false,
+          "page_kinds": [
+            "service"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "docs",
+          "label": "Documentation",
+          "local_market_only": false,
+          "page_kinds": [
+            "docs"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "contact",
+          "label": "About / contact",
+          "local_market_only": false,
+          "page_kinds": [
+            "about_contact"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "comparison",
+          "label": "Comparison pages",
+          "local_market_only": false,
+          "page_kinds": [
+            "comparison"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "editorial",
+          "label": "Editorial content",
+          "local_market_only": false,
+          "page_kinds": [
+            "alternative",
+            "article",
+            "comparison",
+            "guide",
+            "how_to",
+            "listicle"
+          ],
+          "path_segments": []
+        }
+      ],
+      "services": [
+        {
+          "key": "services",
+          "label": "Service pages",
+          "local_market_only": false,
+          "page_kinds": [
+            "service"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "contact",
+          "label": "About / contact",
+          "local_market_only": false,
+          "page_kinds": [
+            "about_contact"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "trust",
+          "label": "Trust / policy pages",
+          "local_market_only": false,
+          "page_kinds": [
+            "trust_policy"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "locations",
+          "label": "Location pages",
+          "local_market_only": true,
+          "page_kinds": [
+            "local"
+          ],
+          "path_segments": []
+        },
+        {
+          "key": "guides",
+          "label": "Guides",
+          "local_market_only": false,
+          "page_kinds": [
+            "alternative",
+            "article",
+            "comparison",
+            "guide",
+            "how_to",
+            "listicle"
+          ],
+          "path_segments": []
+        }
+      ],
+      "other": []
+    },
+    "rule_catalog": [
+      {
+        "applicability_key": "has_html",
+        "category": "metadata",
+        "content_addressable": true,
+        "description": "Page has a non-empty <title>.",
+        "dimension": "technical",
+        "display_label": "Missing page title",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Add a concise, descriptive <title> element to the page.",
+        "remediation_route": "content",
+        "rule_id": "technical.title_present",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "metadata",
+        "content_addressable": true,
+        "description": "Page has a non-empty meta description.",
+        "dimension": "technical",
+        "display_label": "Missing meta description",
+        "display_label_variants": {},
+        "finding_class": "advisory",
+        "kind_evidence": "expectation",
+        "remediation": "Add a meta description summarizing the page content.",
+        "remediation_route": "content",
+        "rule_id": "technical.meta_description_present",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 2.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "Page declares a canonical URL.",
+        "dimension": "technical",
+        "display_label": "Missing canonical URL",
+        "display_label_variants": {},
+        "finding_class": "advisory",
+        "kind_evidence": "expectation",
+        "remediation": "Add a <link rel=\"canonical\"> pointing at the preferred URL.",
+        "remediation_route": "code",
+        "rule_id": "technical.canonical_present",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 2.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "always",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "Page is not blocked from indexing by a robots meta noindex.",
+        "dimension": "technical",
+        "display_label": "Page blocked from indexing",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Remove the noindex directive if the page should be indexed.",
+        "remediation_route": "code",
+        "rule_id": "technical.indexable",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals",
+          "aeo_readiness"
+        ],
+        "severity": "critical",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 4.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "always",
+        "category": "security",
+        "content_addressable": false,
+        "description": "Final URL is served over HTTPS.",
+        "dimension": "technical",
+        "display_label": "Not served over HTTPS",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Serve the page over HTTPS and redirect HTTP to HTTPS.",
+        "remediation_route": "code",
+        "rule_id": "technical.https",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_html:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+        "category": "structured_data",
+        "content_addressable": false,
+        "description": "Page includes JSON-LD or microdata structured data.",
+        "dimension": "aeo",
+        "display_label": "Missing structured data",
+        "display_label_variants": {},
+        "finding_class": "advisory",
+        "kind_evidence": "expectation",
+        "remediation": "Add schema.org structured data (JSON-LD preferred).",
+        "remediation_route": "code",
+        "rule_id": "aeo.structured_data_present",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "metadata",
+        "content_addressable": false,
+        "description": "Page declares Open Graph title/description metadata.",
+        "dimension": "aeo",
+        "display_label": "Missing Open Graph metadata",
+        "display_label_variants": {},
+        "finding_class": "advisory",
+        "kind_evidence": "expectation",
+        "remediation": "Add og:title and og:description meta tags.",
+        "remediation_route": "code",
+        "rule_id": "aeo.open_graph_present",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [],
+        "severity": "low",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "Canonical declarations agree on a valid same-origin URL whose target resolves successfully.",
+        "dimension": "technical",
+        "display_label": "Canonical URL conflict",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Declare one canonical URL with the same scheme, host and effective port as the page, and ensure its target is reachable.",
+        "remediation_route": "code",
+        "rule_id": "technical.canonical_integrity",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.5,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "always",
+        "category": "security",
+        "content_addressable": false,
+        "description": "Response sends a Strict-Transport-Security header.",
+        "dimension": "technical",
+        "display_label": "Missing HSTS header",
+        "display_label_variants": {},
+        "finding_class": "diagnostic",
+        "kind_evidence": "expectation",
+        "remediation": "Serve Strict-Transport-Security on HTTPS responses to enforce secure transport.",
+        "remediation_route": "code",
+        "rule_id": "technical.hsts_present",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [],
+        "severity": "low",
+        "triggered_by": "",
+        "web_fundamentals_area": "security",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "always",
+        "category": "performance",
+        "content_addressable": false,
+        "description": "Time to first byte is within the recommended band (<= 800 ms).",
+        "dimension": "technical",
+        "display_label": "Slow time to first byte",
+        "display_label_variants": {},
+        "finding_class": "diagnostic",
+        "kind_evidence": "expectation",
+        "remediation": "Reduce server response time (caching, CDN, faster origin).",
+        "remediation_route": "code",
+        "rule_id": "technical.ttfb_band",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [],
+        "severity": "low",
+        "triggered_by": "",
+        "web_fundamentals_area": "lab",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "always",
+        "category": "performance",
+        "content_addressable": false,
+        "description": "HTML response is served compressed (gzip/deflate/br).",
+        "dimension": "technical",
+        "display_label": "HTML served uncompressed",
+        "display_label_variants": {},
+        "finding_class": "diagnostic",
+        "kind_evidence": "expectation",
+        "remediation": "Enable gzip or brotli compression for HTML responses.",
+        "remediation_route": "code",
+        "rule_id": "technical.uncompressed_html",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [],
+        "severity": "low",
+        "triggered_by": "",
+        "web_fundamentals_area": "lab",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "content",
+        "content_addressable": false,
+        "description": "Informative images declare alternative text.",
+        "dimension": "technical",
+        "display_label": "Images missing alt attributes",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Add alt text to informative images; use alt=\"\" for decoration.",
+        "remediation_route": "code",
+        "rule_id": "web.accessibility_image_alt",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "accessibility",
+        "weight": 2.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "content",
+        "content_addressable": false,
+        "description": "Some form controls do not expose an accessible name.",
+        "dimension": "technical",
+        "display_label": "Form controls missing accessible names",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Associate each form control with a label or ARIA name.",
+        "remediation_route": "code",
+        "rule_id": "web.accessibility_form_names",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "accessibility",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "content",
+        "content_addressable": false,
+        "description": "The full-document heading hierarchy skips one or more levels.",
+        "dimension": "technical",
+        "display_label": "Full-document heading hierarchy",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Do not skip heading levels when structuring page sections.",
+        "remediation_route": "code",
+        "rule_id": "web.accessibility_heading_order",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "accessibility",
+        "weight": 2.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "content",
+        "content_addressable": false,
+        "description": "The HTML document declares its language.",
+        "dimension": "technical",
+        "display_label": "Document language missing",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Set a valid lang attribute on the html element.",
+        "remediation_route": "code",
+        "rule_id": "web.accessibility_document_language",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "accessibility",
+        "weight": 2.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "content",
+        "content_addressable": false,
+        "description": "The document declares a mobile viewport.",
+        "dimension": "technical",
+        "display_label": "Mobile viewport missing",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Add a responsive viewport meta declaration.",
+        "remediation_route": "code",
+        "rule_id": "web.mobile_viewport",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "mobile",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "security",
+        "content_addressable": false,
+        "description": "HTTPS pages do not reference absolute HTTP assets.",
+        "dimension": "technical",
+        "display_label": "Mixed-content assets found",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Serve every page asset over HTTPS.",
+        "remediation_route": "code",
+        "rule_id": "web.security_mixed_content",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "security",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "site_root",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "Site serves a robots.txt file. Its absence does not prevent crawling of publicly accessible pages.",
+        "dimension": "technical",
+        "display_label": "robots.txt missing",
+        "display_label_variants": {},
+        "finding_class": "advisory",
+        "kind_evidence": "expectation",
+        "remediation": "Publish /robots.txt to state crawl directives for search engines and AI crawlers.",
+        "remediation_route": "code",
+        "rule_id": "technical.robots_txt_present",
+        "rule_version": "sh-rules-1",
+        "scope": "site",
+        "score_roles": [],
+        "severity": "low",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 0.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "site_root",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "robots.txt records the configured AI-agent role stances.",
+        "dimension": "technical",
+        "display_label": "AI-agent robots policy requires review",
+        "display_label_variants": {},
+        "finding_class": "diagnostic",
+        "kind_evidence": "expectation",
+        "remediation": "Review search/citation, training, and user-triggered agent policy separately; do not infer citation access from a training bot.",
+        "remediation_route": "code",
+        "rule_id": "technical.ai_crawler_access",
+        "rule_version": "sh-rules-1",
+        "scope": "site",
+        "score_roles": [],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 0.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "site_root",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "robots.txt permits configured search and citation crawlers.",
+        "dimension": "aeo",
+        "display_label": "Search or citation crawlers blocked",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Allow the search and citation crawler roles you expect to surface the site; manage training and user-triggered agents separately.",
+        "remediation_route": "code",
+        "rule_id": "search.crawler_access",
+        "rule_version": "sh-rules-1",
+        "scope": "site",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "Page directives permit useful search and answer snippets.",
+        "dimension": "aeo",
+        "display_label": "Search snippets blocked",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Remove nosnippet or max-snippet:0 when this intended-public page should be eligible for search and answer citations.",
+        "remediation_route": "code",
+        "rule_id": "search.snippet_access",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "site_root",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "Site serves an optional llms.txt discovery file at the root.",
+        "dimension": "aeo",
+        "display_label": "Optional llms.txt not present",
+        "display_label_variants": {},
+        "finding_class": "diagnostic",
+        "kind_evidence": "expectation",
+        "remediation": "Publish /llms.txt only when it supports your chosen workflow.",
+        "remediation_route": "code",
+        "rule_id": "aeo.llms_txt_present",
+        "rule_version": "sh-rules-1",
+        "scope": "site",
+        "score_roles": [],
+        "severity": "low",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 0.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+        "category": "content",
+        "content_addressable": false,
+        "description": "The primary-content heading hierarchy skips one or more levels.",
+        "dimension": "aeo",
+        "display_label": "Primary-content heading hierarchy",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Use sequential heading levels to express content hierarchy.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.heading_hierarchy",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "site_root",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "Organization markup identifies the site with a name and URL.",
+        "dimension": "aeo",
+        "display_label": "Organization identity incomplete",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Add Organization name and URL on the site root.",
+        "remediation_route": "code",
+        "rule_id": "aeo.organization_identity",
+        "rule_version": "sh-rules-1",
+        "scope": "site",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "site_root",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "The site root links to an about, contact, or policy surface.",
+        "dimension": "aeo",
+        "display_label": "No crawlable trust path",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Expose crawlable trust and contact paths from the site root.",
+        "remediation_route": "code",
+        "rule_id": "aeo.trust_path_present",
+        "rule_version": "sh-rules-1",
+        "scope": "site",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:alternative|article|comparison|guide|how_to|listicle|docs|case_study_review",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "Editorial content exposes a published or modified date.",
+        "dimension": "aeo",
+        "display_label": "Missing content date",
+        "display_label_variants": {},
+        "finding_class": "advisory",
+        "kind_evidence": "expectation",
+        "remediation": "Add a visible or machine-readable publication/update date.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.content_date_present",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:product",
+        "category": "content",
+        "content_addressable": false,
+        "description": "Product pages expose identity, offer, availability, and variants when applicable.",
+        "dimension": "aeo",
+        "display_label": "Critical product answer facts missing",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Expose the required product answer facts in visible content or structured data.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.product_answer_facts",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": {
+          "threshold": "all_required_and_applicable",
+          "atoms": [
+            {
+              "condition": "",
+              "name": "identity",
+              "required": true
+            },
+            {
+              "condition": "",
+              "name": "offer",
+              "required": true
+            },
+            {
+              "condition": "",
+              "name": "availability",
+              "required": true
+            },
+            {
+              "condition": "page_trait:has_variants",
+              "name": "variants",
+              "required": false
+            }
+          ]
+        }
+      },
+      {
+        "applicability_key": "page_kind_content:product",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "Product pages expose a stable SKU, GTIN, or MPN signal.",
+        "dimension": "aeo",
+        "display_label": "Product identifier missing",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Expose a stable product identifier visibly or in Product markup.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.product_evidence_facts",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:product",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "Product pages identify the brand or manufacturer.",
+        "dimension": "aeo",
+        "display_label": "Product brand identity missing",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Expose the product brand or manufacturer in Product markup.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.product_brand_identity",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:product",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "Product pages expose dated, currency-qualified Offer evidence.",
+        "dimension": "aeo",
+        "display_label": "Offer freshness signal missing",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Expose a currency and an updated timestamp with Offer data.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.offer_freshness_signal",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:category",
+        "category": "content",
+        "content_addressable": false,
+        "description": "Category pages expose a collection purpose and crawlable item set.",
+        "dimension": "aeo",
+        "display_label": "Collection answer set incomplete",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Add a clear H1 and crawlable links to collection items.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.listing_answer_set",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": {
+          "threshold": "all_required",
+          "atoms": [
+            {
+              "condition": "",
+              "name": "collection_purpose",
+              "required": true
+            },
+            {
+              "condition": "",
+              "name": "item_set",
+              "required": true
+            }
+          ]
+        }
+      },
+      {
+        "applicability_key": "page_kind_content:category",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "Category items expose crawlable labels and targets.",
+        "dimension": "aeo",
+        "display_label": "Category item facts missing",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Render item names and crawlable product links in the collection.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.listing_item_facts",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "A successful HTTP response does not contain error-page content.",
+        "dimension": "technical",
+        "display_label": "Soft error page",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Return the correct error status for missing or failed resources.",
+        "remediation_route": "code",
+        "rule_id": "technical.soft_error",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "web_fundamentals"
+        ],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_html:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+        "category": "structured_data",
+        "content_addressable": false,
+        "description": "Expected-type structured data carries every required property for the page type.",
+        "dimension": "aeo",
+        "display_label": "Required schema properties missing",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "triggered",
+        "remediation": "Add the missing required properties to the schema markup.",
+        "remediation_route": "code",
+        "rule_id": "aeo.schema_required_valid",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "high",
+        "triggered_by": "aeo.structured_data_present",
+        "web_fundamentals_area": "",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_html:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+        "category": "structured_data",
+        "content_addressable": false,
+        "description": "Expected-type structured data carries the recommended properties for the page type.",
+        "dimension": "aeo",
+        "display_label": "Recommended schema properties missing",
+        "display_label_variants": {},
+        "finding_class": "advisory",
+        "kind_evidence": "triggered",
+        "remediation": "Add the recommended properties to strengthen the schema markup.",
+        "remediation_route": "code",
+        "rule_id": "aeo.schema_recommended_present",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "low",
+        "triggered_by": "aeo.structured_data_present",
+        "web_fundamentals_area": "",
+        "weight": 0.5,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+        "category": "structured_data",
+        "content_addressable": false,
+        "description": "Structured-data names match the visible <title>/h1 content (bounded cross-check).",
+        "dimension": "aeo",
+        "display_label": "Schema markup does not match visible content",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "triggered",
+        "remediation": "Align schema name/headline values with the visible page content.",
+        "remediation_route": "code",
+        "rule_id": "aeo.schema_matches_content",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "aeo.structured_data_present",
+        "web_fundamentals_area": "",
+        "weight": 1.5,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:alternative|article|comparison|guide|how_to|listicle|case_study_review",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "Authored content exposes a visible creator name and linked profile.",
+        "dimension": "aeo",
+        "display_label": "Visible creator attribution incomplete",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Add a visible creator byline linked to a stable profile or biography.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.visible_attribution",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.5,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:alternative|article|comparison|guide|how_to|listicle|case_study_review|docs",
+        "category": "citability",
+        "content_addressable": false,
+        "description": "Research-sensitive claims attach sources through a bounded references, methodology, citation-marker, or attribution relation.",
+        "dimension": "aeo",
+        "display_label": "Claim support sources missing",
+        "display_label_variants": {},
+        "finding_class": "advisory",
+        "kind_evidence": "expectation",
+        "remediation": "Attach authoritative sources to the claims they support using a references or methodology section, citation markers, or nearby attribution.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.source_support_present",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "low",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind_content:faq",
+        "category": "content",
+        "content_addressable": false,
+        "description": "The first block under the first heading is a substantive answer/definitional paragraph.",
+        "dimension": "aeo",
+        "display_label": "No answer-first content structure",
+        "display_label_variants": {},
+        "finding_class": "advisory",
+        "kind_evidence": "expectation",
+        "remediation": "Open each section with a direct answer before elaborating.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.answer_first",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 2.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "page_kind:faq",
+        "category": "content",
+        "content_addressable": false,
+        "description": "Each page-owned FAQ question has an associated server-rendered answer.",
+        "dimension": "aeo",
+        "display_label": "FAQ question-answer structure is incomplete",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Associate every visible FAQ question with its answer using native details, headings, or valid accordion controls.",
+        "remediation_route": "agent",
+        "rule_id": "aeo.question_headings",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [
+          "aeo_readiness"
+        ],
+        "severity": "low",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "has_html",
+        "category": "content",
+        "content_addressable": false,
+        "description": "Key text is present in the server-rendered HTML (not a script-only shell).",
+        "dimension": "aeo",
+        "display_label": "Content not present in server HTML",
+        "display_label_variants": {},
+        "finding_class": "diagnostic",
+        "kind_evidence": "expectation",
+        "remediation": "Server-render or pre-render primary content so crawlers can extract it without executing JavaScript.",
+        "remediation_route": "code",
+        "rule_id": "aeo.server_rendered_content",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 2.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "Crawlable internal links resolve without an HTTP error.",
+        "dimension": "technical",
+        "display_label": "Broken internal links",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Repair or remove internal links whose targets return errors.",
+        "remediation_route": "code",
+        "rule_id": "technical.broken_internal_link",
+        "rule_version": "sh-rules-1",
+        "scope": "graph",
+        "score_roles": [],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "Sitemap-listed URLs resolve without an HTTP error.",
+        "dimension": "technical",
+        "display_label": "Unreachable sitemap URLs",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Remove unreachable sitemap URLs or restore their resources.",
+        "remediation_route": "code",
+        "rule_id": "technical.sitemap_url_unreachable",
+        "rule_version": "sh-rules-1",
+        "scope": "page",
+        "score_roles": [],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 3.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "Sitemap URLs are reachable through internal links (not sitemap-only orphans).",
+        "dimension": "technical",
+        "display_label": "Sitemap orphan URLs",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Link sitemap-listed pages from crawlable internal navigation.",
+        "remediation_route": "code",
+        "rule_id": "technical.sitemap_orphan",
+        "rule_version": "sh-rules-1",
+        "scope": "cluster",
+        "score_roles": [],
+        "severity": "low",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 1.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "indexability",
+        "content_addressable": false,
+        "description": "Hreflang alternates carry reciprocal return tags.",
+        "dimension": "technical",
+        "display_label": "Hreflang return-tag conflict",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Add return hreflang annotations on every alternate page so clusters are reciprocal.",
+        "remediation_route": "code",
+        "rule_id": "technical.hreflang_conflict",
+        "rule_version": "sh-rules-1",
+        "scope": "cluster",
+        "score_roles": [],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 2.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "architecture",
+        "content_addressable": false,
+        "description": "Some observed pages require five or more clicks from the homepage.",
+        "dimension": "technical",
+        "display_label": "Pages buried too deeply",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Add or strengthen hub links so important pages are easier to reach.",
+        "remediation_route": "code",
+        "rule_id": "architecture.excessive_depth",
+        "rule_version": "sh-rules-1",
+        "scope": "graph",
+        "score_roles": [],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 0.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "architecture",
+        "content_addressable": false,
+        "description": "Visible breadcrumbs contradict explicit structural relationships.",
+        "dimension": "technical",
+        "display_label": "Breadcrumb hierarchy conflict",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Align visible breadcrumbs with BreadcrumbList or isPartOf relationships.",
+        "remediation_route": "code",
+        "rule_id": "architecture.breadcrumb_hierarchy_conflict",
+        "rule_version": "sh-rules-1",
+        "scope": "graph",
+        "score_roles": [],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 0.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "architecture",
+        "content_addressable": false,
+        "description": "An observed page kind repeats title and description metadata across pages.",
+        "dimension": "technical",
+        "display_label": "Duplicate metadata within a page kind",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Give each page metadata that describes its distinct purpose.",
+        "remediation_route": "code",
+        "rule_id": "architecture.duplicate_metadata_in_page_kind",
+        "rule_version": "sh-rules-1",
+        "scope": "cluster",
+        "score_roles": [],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 0.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "architecture",
+        "content_addressable": false,
+        "description": "Some observed non-home pages have no internal inbound links.",
+        "dimension": "technical",
+        "display_label": "Orphan pages",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Link orphaned pages from a relevant crawlable hub or contextual page.",
+        "remediation_route": "code",
+        "rule_id": "architecture.orphan_pages",
+        "rule_version": "sh-rules-1",
+        "scope": "graph",
+        "score_roles": [],
+        "severity": "high",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 0.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "architecture",
+        "content_addressable": false,
+        "description": "Some observed detail pages have no conservative structural parent.",
+        "dimension": "technical",
+        "display_label": "Detail pages without a clear parent",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Connect detail pages to a clear category, section, or hub parent.",
+        "remediation_route": "code",
+        "rule_id": "architecture.parentless_detail_pages",
+        "rule_version": "sh-rules-1",
+        "scope": "graph",
+        "score_roles": [],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 0.0,
+        "composite_contract": null
+      },
+      {
+        "applicability_key": "crawl_finalize",
+        "category": "architecture",
+        "content_addressable": false,
+        "description": "A large observed detail page kind has no crawlable hub.",
+        "dimension": "technical",
+        "display_label": "Page kind without an observed hub",
+        "display_label_variants": {},
+        "finding_class": "defect",
+        "kind_evidence": "expectation",
+        "remediation": "Create or expose a hub that links to the related detail pages.",
+        "remediation_route": "code",
+        "rule_id": "architecture.unhubbed_page_kind",
+        "rule_version": "sh-rules-1",
+        "scope": "graph",
+        "score_roles": [],
+        "severity": "medium",
+        "triggered_by": "",
+        "web_fundamentals_area": "",
+        "weight": 0.0,
+        "composite_contract": null
+      }
+    ],
+    "ts_owned_task_kinds": [
+      "architecture",
+      "link_metrics"
+    ],
+    "versions": {
+      "extractor": "sh-extractor-2",
+      "analyzer": "sh-analyzer-1",
+      "rules": "sh-rules-1",
+      "architecture": "sh-architecture-2",
+      "archetype": "sh-archetypes-1"
+    },
+    "link_metrics": {
+      "formula_version": "sh-link-metrics-3",
+      "top_neighbour_limit": 10,
+      "generic_texts": [
+        "click here",
+        "learn more",
+        "read more",
+        "view more",
+        "view product"
+      ],
+      "repeated_destination_min": 2,
+      "low_alignment_coverage_max": 0.5,
+      "damping_factor": 0.85,
+      "max_iterations": 100,
+      "convergence_epsilon": 1e-12,
+      "repeated_anchor_factor": 0.1,
+      "edge_weights": [
+        {
+          "main": true,
+          "follow": true,
+          "weight": 1.0
+        },
+        {
+          "main": false,
+          "follow": true,
+          "weight": 0.35
+        },
+        {
+          "main": true,
+          "follow": false,
+          "weight": 0.15
+        },
+        {
+          "main": false,
+          "follow": false,
+          "weight": 0.05
+        }
+      ]
+    },
+    "settings": {
+      "advanced_controls_enabled": {
+        "env": [
+          "SITE_HEALTH_ADVANCED_CONTROLS_ENABLED"
+        ],
+        "type": "bool",
+        "default": false
+      },
+      "automatic_page_limit": {
+        "env": [
+          "SITE_HEALTH_AUTOMATIC_PAGE_LIMIT"
+        ],
+        "type": "int",
+        "default": 500
+      },
+      "max_requested_page_limit": {
+        "env": [
+          "SITE_HEALTH_MAX_REQUESTED_PAGE_LIMIT"
+        ],
+        "type": "int",
+        "default": 500
+      },
+      "max_advanced_requested_page_limit": {
+        "env": [
+          "SITE_HEALTH_MAX_ADVANCED_REQUESTED_PAGE_LIMIT"
+        ],
+        "type": "int",
+        "default": 500
+      },
+      "max_discovery_urls": {
+        "env": [
+          "SITE_HEALTH_MAX_DISCOVERY_URLS"
+        ],
+        "type": "int",
+        "default": 50000
+      },
+      "max_analysis_urls": {
+        "env": [
+          "SITE_HEALTH_MAX_ANALYSIS_URLS"
+        ],
+        "type": "int",
+        "default": 50000
+      },
+      "max_preview_rows": {
+        "env": [
+          "SITE_HEALTH_MAX_PREVIEW_ROWS"
+        ],
+        "type": "int",
+        "default": 500
+      },
+      "max_preview_input_bytes": {
+        "env": [
+          "SITE_HEALTH_MAX_PREVIEW_INPUT_BYTES"
+        ],
+        "type": "int",
+        "default": 262144
+      },
+      "max_seed_urls": {
+        "env": [
+          "SITE_HEALTH_MAX_SEED_URLS"
+        ],
+        "type": "int",
+        "default": 500
+      },
+      "max_narrowing_globs": {
+        "env": [
+          "SITE_HEALTH_MAX_NARROWING_GLOBS"
+        ],
+        "type": "int",
+        "default": 100
+      },
+      "max_glob_length": {
+        "env": [
+          "SITE_HEALTH_MAX_GLOB_LENGTH"
+        ],
+        "type": "int",
+        "default": 512
+      },
+      "sample_url_limit": {
+        "env": [
+          "SITE_HEALTH_SAMPLE_URL_LIMIT"
+        ],
+        "type": "int",
+        "default": 10
+      },
+      "sample_discovery_url_cap": {
+        "env": [
+          "SITE_HEALTH_SAMPLE_DISCOVERY_URL_CAP"
+        ],
+        "type": "int",
+        "default": 200
+      },
+      "max_frontier_urls": {
+        "env": [
+          "SITE_HEALTH_MAX_FRONTIER_URLS"
+        ],
+        "type": "int",
+        "default": 50000
+      },
+      "max_crawl_depth": {
+        "env": [
+          "SITE_HEALTH_MAX_CRAWL_DEPTH"
+        ],
+        "type": "int",
+        "default": 20
+      },
+      "admission_batch_size": {
+        "env": [
+          "SITE_HEALTH_ADMISSION_BATCH_SIZE"
+        ],
+        "type": "int",
+        "default": 200
+      },
+      "inventory_history_crawl_limit": {
+        "env": [
+          "SITE_HEALTH_INVENTORY_HISTORY_CRAWL_LIMIT"
+        ],
+        "type": "int",
+        "default": 20
+      },
+      "global_concurrency": {
+        "env": [
+          "SITE_HEALTH_GLOBAL_CONCURRENCY"
+        ],
+        "type": "int",
+        "default": 8
+      },
+      "per_host_concurrency": {
+        "env": [
+          "SITE_HEALTH_PER_HOST_CONCURRENCY"
+        ],
+        "type": "int",
+        "default": 6
+      },
+      "per_host_delay_seconds": {
+        "env": [
+          "SITE_HEALTH_PER_HOST_DELAY_SECONDS"
+        ],
+        "type": "float",
+        "default": 0.15
+      },
+      "rate_limit_cooldown_seconds": {
+        "env": [
+          "SITE_HEALTH_RATE_LIMIT_COOLDOWN_SECONDS"
+        ],
+        "type": "float",
+        "default": 5.0
+      },
+      "default_crawl_delay_seconds": {
+        "env": [
+          "SITE_HEALTH_DEFAULT_CRAWL_DELAY_SECONDS"
+        ],
+        "type": "float",
+        "default": 0.0
+      },
+      "max_crawl_delay_seconds": {
+        "env": [
+          "SITE_HEALTH_MAX_CRAWL_DELAY_SECONDS"
+        ],
+        "type": "float",
+        "default": 30.0
+      },
+      "request_timeout_seconds": {
+        "env": [
+          "SITE_HEALTH_REQUEST_TIMEOUT_SECONDS"
+        ],
+        "type": "float",
+        "default": 20.0
+      },
+      "max_redirects": {
+        "env": [
+          "SITE_HEALTH_MAX_REDIRECTS"
+        ],
+        "type": "int",
+        "default": 5
+      },
+      "max_response_wire_bytes": {
+        "env": [
+          "SITE_HEALTH_MAX_RESPONSE_WIRE_BYTES"
+        ],
+        "type": "int",
+        "default": 5000000
+      },
+      "max_response_decoded_bytes": {
+        "env": [
+          "SITE_HEALTH_MAX_RESPONSE_DECODED_BYTES"
+        ],
+        "type": "int",
+        "default": 20000000
+      },
+      "max_html_bytes": {
+        "env": [
+          "SITE_HEALTH_MAX_HTML_BYTES"
+        ],
+        "type": "int",
+        "default": 5000000
+      },
+      "acquisition_policy_version": {
+        "env": [
+          "SITE_HEALTH_ACQUISITION_POLICY_VERSION"
+        ],
+        "type": "str",
+        "default": "sh-acquisition-1"
+      },
+      "max_sitemap_index_depth": {
+        "env": [
+          "SITE_HEALTH_MAX_SITEMAP_INDEX_DEPTH"
+        ],
+        "type": "int",
+        "default": 3
+      },
+      "max_sitemap_urls": {
+        "env": [
+          "SITE_HEALTH_MAX_SITEMAP_URLS"
+        ],
+        "type": "int",
+        "default": 5000
+      },
+      "max_sitemap_decoded_bytes": {
+        "env": [
+          "SITE_HEALTH_MAX_SITEMAP_DECODED_BYTES"
+        ],
+        "type": "int",
+        "default": 8000000
+      },
+      "max_sitemap_documents": {
+        "env": [
+          "SITE_HEALTH_MAX_SITEMAP_DOCUMENTS"
+        ],
+        "type": "int",
+        "default": 32
+      },
+      "sitemap_fetch_concurrency": {
+        "env": [
+          "SITE_HEALTH_SITEMAP_FETCH_CONCURRENCY"
+        ],
+        "type": "int",
+        "default": 4,
+        "minimum": 1
+      },
+      "max_sitemap_admitted_urls": {
+        "env": [
+          "SITE_HEALTH_MAX_SITEMAP_ADMITTED_URLS"
+        ],
+        "type": "int",
+        "default": 5000
+      },
+      "robots_max_decoded_bytes": {
+        "env": [
+          "SITE_HEALTH_ROBOTS_MAX_DECODED_BYTES"
+        ],
+        "type": "int",
+        "default": 512000
+      },
+      "llms_txt_max_decoded_bytes": {
+        "env": [
+          "SITE_HEALTH_LLMS_TXT_MAX_DECODED_BYTES"
+        ],
+        "type": "int",
+        "default": 262144
+      },
+      "robots_cache_ttl_seconds": {
+        "env": [
+          "SITE_HEALTH_ROBOTS_CACHE_TTL_SECONDS"
+        ],
+        "type": "float",
+        "default": 86400.0
+      },
+      "robots_unreachable_recheck_seconds": {
+        "env": [
+          "SITE_HEALTH_ROBOTS_UNREACHABLE_RECHECK_SECONDS"
+        ],
+        "type": "float",
+        "default": 300.0
+      },
+      "robots_cache_max_authorities": {
+        "env": [
+          "SITE_HEALTH_ROBOTS_CACHE_MAX_AUTHORITIES"
+        ],
+        "type": "int",
+        "default": 2048
+      },
+      "curl_session_pool_idle_seconds": {
+        "env": [
+          "SITE_HEALTH_CURL_SESSION_POOL_IDLE_SECONDS"
+        ],
+        "type": "float",
+        "default": 90.0
+      },
+      "curl_session_pool_max_entries": {
+        "env": [
+          "SITE_HEALTH_CURL_SESSION_POOL_MAX_ENTRIES"
+        ],
+        "type": "int",
+        "default": 64
+      },
+      "max_links_per_page": {
+        "env": [
+          "SITE_HEALTH_MAX_LINKS_PER_PAGE"
+        ],
+        "type": "int",
+        "default": 2000
+      },
+      "max_structured_data_blocks": {
+        "env": [
+          "SITE_HEALTH_MAX_STRUCTURED_DATA_BLOCKS"
+        ],
+        "type": "int",
+        "default": 100
+      },
+      "max_text_chars": {
+        "env": [
+          "SITE_HEALTH_MAX_TEXT_CHARS"
+        ],
+        "type": "int",
+        "default": 200000
+      },
+      "lease_ttl_seconds": {
+        "env": [
+          "SITE_HEALTH_LEASE_TTL_SECONDS"
+        ],
+        "type": "float",
+        "default": 120.0
+      },
+      "heartbeat_interval_seconds": {
+        "env": [
+          "SITE_HEALTH_HEARTBEAT_INTERVAL_SECONDS"
+        ],
+        "type": "float",
+        "default": 30.0
+      },
+      "max_attempts": {
+        "env": [
+          "SITE_HEALTH_MAX_ATTEMPTS"
+        ],
+        "type": "int",
+        "default": 4
+      },
+      "retry_base_delay_seconds": {
+        "env": [
+          "SITE_HEALTH_RETRY_BASE_DELAY_SECONDS"
+        ],
+        "type": "float",
+        "default": 2.0
+      },
+      "retry_max_delay_seconds": {
+        "env": [
+          "SITE_HEALTH_RETRY_MAX_DELAY_SECONDS"
+        ],
+        "type": "float",
+        "default": 60.0
+      },
+      "retry_jitter_seconds": {
+        "env": [
+          "SITE_HEALTH_RETRY_JITTER_SECONDS"
+        ],
+        "type": "float",
+        "default": 1.5
+      },
+      "db_conflict_max_requeues": {
+        "env": [
+          "SITE_HEALTH_DB_CONFLICT_MAX_REQUEUES"
+        ],
+        "type": "int",
+        "default": 20
+      },
+      "db_conflict_base_delay_seconds": {
+        "env": [
+          "SITE_HEALTH_DB_CONFLICT_BASE_DELAY_SECONDS"
+        ],
+        "type": "float",
+        "default": 0.05
+      },
+      "db_conflict_jitter_seconds": {
+        "env": [
+          "SITE_HEALTH_DB_CONFLICT_JITTER_SECONDS"
+        ],
+        "type": "float",
+        "default": 0.2
+      },
+      "worker_concurrency": {
+        "env": [
+          "SITE_HEALTH_WORKER_CONCURRENCY"
+        ],
+        "type": "int",
+        "default": 8
+      },
+      "acquisition_lane_reserve": {
+        "env": [
+          "SITE_HEALTH_ACQUISITION_LANE_RESERVE"
+        ],
+        "type": "int",
+        "default": 2
+      },
+      "poll_interval_seconds": {
+        "env": [
+          "SITE_HEALTH_POLL_INTERVAL_SECONDS"
+        ],
+        "type": "float",
+        "default": 1.0
+      },
+      "analysis_dependency_retry_seconds": {
+        "env": [
+          "SITE_HEALTH_ANALYSIS_DEPENDENCY_RETRY_SECONDS"
+        ],
+        "type": "float",
+        "default": 1.0
+      },
+      "analysis_dependency_retry_max_seconds": {
+        "env": [
+          "SITE_HEALTH_ANALYSIS_DEPENDENCY_RETRY_MAX_SECONDS"
+        ],
+        "type": "float",
+        "default": 15.0
+      },
+      "analysis_dependency_max_wait_seconds": {
+        "env": [
+          "SITE_HEALTH_ANALYSIS_DEPENDENCY_MAX_WAIT_SECONDS"
+        ],
+        "type": "float",
+        "default": 180.0
+      },
+      "monitored_seed_stagger_seconds": {
+        "env": [
+          "SITE_HEALTH_MONITORED_SEED_STAGGER_SECONDS"
+        ],
+        "type": "float",
+        "default": 0.25
+      },
+      "monitored_seed_stagger_max_seconds": {
+        "env": [
+          "SITE_HEALTH_MONITORED_SEED_STAGGER_MAX_SECONDS"
+        ],
+        "type": "float",
+        "default": 30.0
+      },
+      "lease_reclaim_batch_size": {
+        "env": [
+          "SITE_HEALTH_LEASE_RECLAIM_BATCH_SIZE"
+        ],
+        "type": "int",
+        "default": 500
+      },
+      "finalize_insert_batch_size": {
+        "env": [
+          "SITE_HEALTH_FINALIZE_INSERT_BATCH_SIZE"
+        ],
+        "type": "int",
+        "default": 500
+      },
+      "stalled_crawl_reconcile_seconds": {
+        "env": [
+          "SITE_HEALTH_STALLED_CRAWL_RECONCILE_SECONDS"
+        ],
+        "type": "float",
+        "default": 240.0
+      },
+      "stalled_crawl_reconcile_batch": {
+        "env": [
+          "SITE_HEALTH_STALLED_CRAWL_RECONCILE_BATCH"
+        ],
+        "type": "int",
+        "default": 50
+      },
+      "overdue_crawl_seconds": {
+        "env": [
+          "SITE_HEALTH_OVERDUE_CRAWL_SECONDS"
+        ],
+        "type": "float",
+        "default": 3600.0
+      },
+      "live_score_refresh_page_interval": {
+        "env": [
+          "SITE_HEALTH_LIVE_SCORE_REFRESH_PAGE_INTERVAL"
+        ],
+        "type": "int",
+        "default": 10
+      },
+      "live_score_refresh_page_fraction": {
+        "env": [
+          "SITE_HEALTH_LIVE_SCORE_REFRESH_PAGE_FRACTION"
+        ],
+        "type": "float",
+        "default": 0.1,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "live_score_refresh_min_interval_seconds": {
+        "env": [
+          "SITE_HEALTH_LIVE_SCORE_REFRESH_MIN_INTERVAL_SECONDS"
+        ],
+        "type": "float",
+        "default": 5.0
+      },
+      "live_score_refresh_max_tracked_crawls": {
+        "env": [
+          "SITE_HEALTH_LIVE_SCORE_REFRESH_MAX_TRACKED_CRAWLS"
+        ],
+        "type": "int",
+        "default": 256
+      },
+      "max_export_items": {
+        "env": [
+          "SITE_HEALTH_MAX_EXPORT_ITEMS"
+        ],
+        "type": "int",
+        "default": 20000
+      },
+      "sse_poll_interval_seconds": {
+        "env": [
+          "SITE_HEALTH_SSE_POLL_INTERVAL_SECONDS"
+        ],
+        "type": "float",
+        "default": 2.0
+      },
+      "sse_max_duration_seconds": {
+        "env": [
+          "SITE_HEALTH_SSE_MAX_DURATION_SECONDS"
+        ],
+        "type": "float",
+        "default": 300.0
+      },
+      "max_event_page": {
+        "env": [
+          "SITE_HEALTH_MAX_EVENT_PAGE"
+        ],
+        "type": "int",
+        "default": 1000
+      }
+    },
+    "route_patterns": [
+      [
+        "article",
+        "^/(?:[^/]+/)*?(blogs?|news|articles?)(/|$)"
+      ],
+      [
+        "product",
+        "^/(?:[^/]+/)*?(products?|p)(/|$)"
+      ],
+      [
+        "category",
+        "^/(?:[^/]+/)*?(category|categories|collections?|catalog|shop|offers?|offers-list|deals?|search|q)(/|$)"
+      ],
+      [
+        "service",
+        "^/(?:[^/]+/)*?(services?|solutions?)(/|$)"
+      ],
+      [
+        "local",
+        "^/(?:[^/]+/)*?(locations?|stores?|offices?)(/|$)"
+      ],
+      [
+        "guide",
+        "^/(?:[^/]+/)*?(guides?|care-guide|how-to|tutorials?)(/|$)"
+      ],
+      [
+        "comparison",
+        "^/(?:[^/]+/)*?(compare|comparisons?|vs)(/|$)"
+      ],
+      [
+        "pricing",
+        "^/(?:[^/]+/)*?(pricing|plans)(/|$)"
+      ],
+      [
+        "faq",
+        "^/(?:[^/]+/)*?faqs?(/|$)"
+      ],
+      [
+        "docs",
+        "^/(?!.*(?:/|^)faqs?(?:/|$))(?:[^/]+/)*?(docs|documentation|reference|api|help|support)(/|$)"
+      ],
+      [
+        "about_contact",
+        "^/(?:[^/]+/)*?(about|about-us|company|our-story|contact|contact-us|request-demo|book-demo)(/|$)"
+      ],
+      [
+        "case_study_review",
+        "^/(?:[^/]+/)*?(case-study|case-studies|customers?|reviews?|testimonials?)(/|$)"
+      ],
+      [
+        "trust_policy",
+        "^/(?:[^/]+/)*?(privacy|privacy-policy|terms|terms-conditions|terms-of-service|cookies?|refund|returns?|returns-exchanges|shipping-policy|security|trust|policies?|legal)(/|$)"
+      ]
+    ],
+    "slug_patterns": [
+      [
+        "comparison",
+        "(^|-)(vs|versus|compared-to|comparison)(-|$)"
+      ],
+      [
+        "alternative",
+        "(^|-)(alternatives?|competitors?|substitutes?)(-|$)"
+      ],
+      [
+        "how_to",
+        "(^|-)(how-to|tutorials?)(-|$)"
+      ],
+      [
+        "listicle",
+        "(^|-)(best(?!-sell)|top-\\d+|\\d+-best)(-|$)"
+      ]
+    ],
+    "homepage_paths": [
+      "",
+      "/ar",
+      "/da",
+      "/de",
+      "/de-de",
+      "/default.aspx",
+      "/default.html",
+      "/en",
+      "/en-au",
+      "/en-ca",
+      "/en-gb",
+      "/en-us",
+      "/es",
+      "/es-es",
+      "/es-mx",
+      "/fi",
+      "/fr",
+      "/fr-ca",
+      "/fr-fr",
+      "/hi",
+      "/home",
+      "/home.html",
+      "/id",
+      "/index",
+      "/index.asp",
+      "/index.aspx",
+      "/index.htm",
+      "/index.html",
+      "/index.php",
+      "/it",
+      "/it-it",
+      "/ja",
+      "/ja-jp",
+      "/ko",
+      "/ko-kr",
+      "/nl",
+      "/nl-nl",
+      "/no",
+      "/pl",
+      "/pt",
+      "/pt-br",
+      "/ru",
+      "/sv",
+      "/th",
+      "/tr",
+      "/vi",
+      "/zh",
+      "/zh-cn",
+      "/zh-tw"
+    ],
+    "tracking_params": [
+      "_hsenc",
+      "_hsmi",
+      "fbclid",
+      "gclid",
+      "intpromo",
+      "mc_cid",
+      "mc_eid",
+      "msclkid",
+      "ref",
+      "ref_src",
+      "utm_campaign",
+      "utm_content",
+      "utm_medium",
+      "utm_source",
+      "utm_term"
+    ],
+    "ignored_query_keys": [
+      "variant",
+      "variant_id"
+    ]
+  },
   "brand_identity": {
     "profile_fields": [
       "description",
@@ -6836,6 +9261,7 @@
     ]
   },
   "web_fetch": {
+    "user_agent": "CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)",
     "ports": [
       80,
       443

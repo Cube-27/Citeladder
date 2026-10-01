@@ -18,9 +18,9 @@ Honesty contract — read before changing anything here:
   implies a zero provider search fee.
 * **Wall time is never relabelled TTFT.** ``ttft_ms`` stays ``None`` unless the
   envelope carried a real first-token timestamp.
-* Mention/citation counts come from the existing deterministic scorer
-  (``app/analysis/scoring.py``); no second scoring implementation exists here
-  (invariant 2).
+* Mention/citation counts come from the native deterministic scorer through
+  ``frontend/services/api/src/cli/score-measurement.ts``. The offline bridge
+  batches fixtures without provider calls or a second scoring implementation.
 
 All thresholds, dimensions, paths and vocabularies live in
 ``app/core/config/measurement.py`` (invariant 1).
@@ -28,6 +28,7 @@ All thresholds, dimensions, paths and vocabularies live in
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import re
@@ -38,7 +39,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-from app.analysis.scoring import ScoringConfig, score_execution
 from app.core.config.measurement import (
     COST_STATUS_COMPLETE,
     COST_STATUS_PARTIAL,
@@ -76,6 +76,10 @@ from app.core.config.provider_catalog import measurement_route
 
 _FORBIDDEN_PATTERNS = tuple(
     re.compile(pattern, re.IGNORECASE) for pattern in FORBIDDEN_PROMPT_PATTERNS
+)
+_NATIVE_SCORER = (
+    Path(__file__).resolve().parents[3]
+    / "frontend/services/api/src/cli/score-measurement.ts"
 )
 
 
@@ -367,6 +371,8 @@ async def run_matrix(
             f"ceiling {measurement_settings.max_observations}"
         )
     observations: list[MeasurementObservation] = []
+    if isinstance(runner, FixtureMeasurementRunner):
+        await runner.prepare(cases, prompts)
     for case in cases:
         supported = is_reasoning_effort_supported(case.route_key, case.reasoning_effort)
         for prompt in prompts:
@@ -455,7 +461,57 @@ class FixtureMeasurementRunner:
         self._resolve = fixture_dir_resolver
         self._loaded: dict[tuple[str, bool], dict[str, Any]] = {}
         self._hashes: dict[str, str] = {}
-        self._scoring = ScoringConfig.from_project(dict(MEASUREMENT_SCORING_SUBJECT))
+        self._scores: dict[tuple[MeasurementCase, str], dict[str, Any]] = {}
+
+    async def prepare(self, cases, prompts) -> None:
+        """Score a bounded fixture sweep in one call to the production native owner."""
+        keys = [
+            (case, prompt)
+            for case in cases
+            for prompt in prompts
+            if is_reasoning_effort_supported(case.route_key, case.reasoning_effort)
+        ]
+        if not keys:
+            return
+        items = []
+        for case, prompt in keys:
+            envelope = self._pick(case, prompt)
+            events = list(envelope.get("search_events") or [])
+            items.append(
+                {
+                    "answerText": str(envelope.get("answer_text") or ""),
+                    "promptText": prompt.text,
+                    "searchEvents": events,
+                    "citations": list(envelope.get("citations") or []),
+                    "searchUsed": case.search_enabled and bool(events),
+                }
+            )
+        process = await asyncio.create_subprocess_exec(
+            "node",
+            str(_NATIVE_SCORER),
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        output, _ = await process.communicate(
+            json.dumps(
+                {
+                    "configuration": MEASUREMENT_SCORING_SUBJECT,
+                    "items": items,
+                }
+            ).encode("utf-8")
+        )
+        if process.returncode:
+            raise MeasurementConfigurationError("Native fixture scoring failed")
+        scores = json.loads(output)
+        if not isinstance(scores, list) or len(scores) != len(keys):
+            raise MeasurementConfigurationError("Native fixture scoring count mismatch")
+        self._scores.update(
+            {
+                (case, prompt.prompt_id): score
+                for (case, prompt), score in zip(keys, scores, strict=True)
+            }
+        )
 
     def fixture_hashes(self) -> dict[str, str]:
         return dict(self._hashes)
@@ -495,11 +551,13 @@ class FixtureMeasurementRunner:
         self, case: MeasurementCase, prompt: MeasurementPrompt
     ) -> MeasurementObservation:
         envelope = self._pick(case, prompt)
+        if (case, prompt.prompt_id) not in self._scores:
+            await self.prepare([case], [prompt])
         return build_observation(
             case=case,
             prompt=prompt,
             envelope=envelope,
-            scoring=self._scoring,
+            score=self._scores[(case, prompt.prompt_id)],
             note="synthetic fixture replay; not a provider measurement",
         )
 
@@ -509,23 +567,14 @@ def build_observation(
     case: MeasurementCase,
     prompt: MeasurementPrompt,
     envelope: dict[str, Any],
-    scoring: ScoringConfig,
+    score: dict[str, Any],
     note: str = "",
 ) -> MeasurementObservation:
     """Derive one observation from a normalized provider envelope."""
     transport_provider, transport_model = route_identity(case.route_key)
     search_events = list(envelope.get("search_events") or [])
-    citations = list(envelope.get("citations") or [])
     timing = dict(envelope.get("timing") or {})
     usage = dict(envelope.get("usage") or {})
-    score = score_execution(
-        answer_text=str(envelope.get("answer_text") or ""),
-        search_events=search_events,
-        citations=citations,
-        search_used=case.search_enabled and bool(search_events),
-        config=scoring,
-        prompt_text=prompt.text,
-    )
     finish_reason = str(envelope.get("finish_reason") or "").strip()
     if not finish_reason:
         raise MeasurementConfigurationError(

@@ -33,7 +33,9 @@ Reads render persisted projections. Neither the Sources inventory nor a page
 detail fetches, enqueues or repairs. Inspection is either automatic selection
 or an explicit authorized command, never a side effect of looking.
 
-The inspector supplies a per-request gate to `SecureFetcher`: each URL,
+The TypeScript `source-pages/inspector.ts` owns the `source_page_inspection`
+analytics kind. Its `PageAcquirer` supplies a per-request gate to the pinned
+Node website fetcher: each URL,
 including same-host and cross-host redirects, must pass its destination's
 robots rules before the transport downloads it. Pacing honors the larger of
 the source-inspection floor and the declared crawl delay. Unsupported delays
@@ -100,9 +102,16 @@ that comes from the full captured evidence through the source projection.
 Audit completion is independent of inspection. A blocked publisher never turns
 a successfully measured answer into a failed audit. Because terminalization
 enqueues inspection INSTEAD of the Opportunity refresh, that refresh is owed on
-every terminal outcome; the queue's terminal compensation in `AnalyticsWorker`
-fires it on both failing paths, including the lease sweep, which runs no
-executor code.
+every terminal outcome. The TypeScript analytics worker scans failed tasks for
+idempotent compensation, including tasks the Python lease sweeper terminalized.
+Placement settlement commits its verification enqueue in the same transaction.
+
+`source-pages/differentiation.ts` writes comparison reports after inspection.
+The Python report listing remains a read-only bridge for Agent tools until the
+Agent migration. Citation identity and source projections also remain Python
+bridges for answer analysis until its callers move. The shared robots, sitemap,
+and HTML acquisition code remains for the Python Site Health crawler until its
+own cutover.
 
 ## The four page-keyed actions
 
@@ -169,7 +178,7 @@ own terms:
 | `earned_page_research_source` | `source_resolved` | The page was read with sufficient coverage and yielded a verdict against the current roster. |
 
 The comparison itself is pure
-(`analysis/opportunities/placement_outcome.py`) and runs when an inspection
+(`frontend/services/api/src/analysis/opportunities/placement-outcome.ts`) and runs when an inspection
 batch commits, against the reading that batch just took. A reading judged
 against a different roster is not comparable and is not compared, which is the
 rule the TypeScript refresh's prior-reading lookup

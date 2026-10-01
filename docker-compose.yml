@@ -249,6 +249,24 @@ services:
     healthcheck:
       disable: true
 
+  # Claims the TS-owned SiteCrawlTask kinds; Python retains other kinds and sweeping.
+  site-health-worker-ts:
+    build:
+      context: .
+      dockerfile: frontend/services/api/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ${CITELADDER_ENV_FILE:-.env}
+    environment: *backend_env
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["node", "--experimental-strip-types", "src/site-health-worker.ts"]
+    healthcheck:
+      disable: true
+
   # Agent worker: claims agent runs (one chat turn each) and runs the bounded
   # tool-use loop over the shared read-tool registry.
   agent-worker:

@@ -175,3 +175,59 @@ SOURCE_PAGE_CLAIM_LEASE_MINUTES: Final = 30
 # already read in this run -- from a redirect body, say -- stays claimable and
 # is fetched and charged a second time for the same reading.
 SOURCE_PAGE_REUSE_WITHIN_HOURS: Final = 12
+
+# Page-format evidence catalogs, shared by the Node inspection owner.
+SOURCE_PAGE_SCHEMA_FORMATS: Final = (
+    ("discussionforumposting", PAGE_FORMAT_DISCUSSION),
+    ("qapage", PAGE_FORMAT_DISCUSSION),
+    ("videoobject", PAGE_FORMAT_VIDEO),
+    ("itemlist", PAGE_FORMAT_LISTICLE),
+    ("faqpage", PAGE_FORMAT_REFERENCE),
+    ("newsarticle", PAGE_FORMAT_ARTICLE),
+    ("blogposting", PAGE_FORMAT_ARTICLE),
+    ("article", PAGE_FORMAT_ARTICLE),
+)
+SOURCE_PAGE_HEADING_FORMATS: Final = (
+    (r"\bvs\.?\b|\bversus\b|\bcompared?\s+to\b", PAGE_FORMAT_COMPARISON),
+    (r"\balternatives?\b|\bcompetitors?\b", PAGE_FORMAT_COMPARISON),
+    (r"\bbest\b|\btop\s+\d+\b|\b\d+\s+best\b", PAGE_FORMAT_LISTICLE),
+    (r"\breviews?\b|\bhands[- ]on\b", PAGE_FORMAT_REVIEW),
+    (r"\bdirectory\b|\bprofile\b|\blistings?\b", PAGE_FORMAT_DIRECTORY),
+    (r"\bforum\b|\bthread\b|\bdiscussion\b", PAGE_FORMAT_DISCUSSION),
+)
+SOURCE_PAGE_SCHEMA_MAX_DEPTH: Final = 12
+SOURCE_PAGE_MIN_ALIAS_CHARS: Final = 3
+SOURCE_PAGE_REDIRECT_HOSTS: Final = (
+    "vertexaisearch.cloud.google.com",
+    "grounding-api-redirect",
+)
+SOURCE_PAGE_KIND_FORMATS: Final = {
+    "homepage": PAGE_FORMAT_HOMEPAGE,
+    "comparison": PAGE_FORMAT_COMPARISON,
+    "alternative": PAGE_FORMAT_ALTERNATIVE,
+    "listicle": PAGE_FORMAT_LISTICLE,
+    "how_to": PAGE_FORMAT_HOW_TO,
+    "guide": PAGE_FORMAT_HOW_TO,
+    "article": PAGE_FORMAT_ARTICLE,
+    "case_study_review": PAGE_FORMAT_REVIEW,
+    "category": PAGE_FORMAT_CATEGORY,
+    "product": PAGE_FORMAT_PRODUCT,
+    "pricing": PAGE_FORMAT_PRODUCT,
+    "service": PAGE_FORMAT_PRODUCT,
+    "docs": PAGE_FORMAT_REFERENCE,
+    "faq": PAGE_FORMAT_REFERENCE,
+    "local": PAGE_FORMAT_PROFILE,
+    "about_contact": PAGE_FORMAT_PROFILE,
+}
+SOURCE_PAGE_URL_FORMATS: Final = (
+    (
+        r"(^|-)(forum|forums|thread|threads|discussion|discussions|comments"
+        r"|questions|answers)(-|$)|(^|-)r-[a-z0-9_]+(-|$)",
+        PAGE_FORMAT_DISCUSSION,
+    ),
+    (
+        r"(^|-)(profile|profiles|vendor|vendors|listing|listings|directory"
+        r"|supplier|suppliers)(-|$)",
+        PAGE_FORMAT_PROFILE,
+    ),
+)

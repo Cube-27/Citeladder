@@ -11,6 +11,7 @@
  * expired leases for every kind.
  */
 import { randomBytes } from 'node:crypto';
+import { compensateTerminalTasks } from './terminal-compensation.ts';
 import { waitForPoll } from './poll.ts';
 
 import { policy, type WorkerSettings } from '../config.ts';
@@ -29,6 +30,8 @@ import { verifyImplementationEvents } from '../opportunities/verification.ts';
 import { projectCatalog } from '../commerce/projection.ts';
 import { publishInternalLinks } from '../site-health/internal-link-publish.ts';
 import { acquireResearch } from '../search-intelligence/executor.ts';
+import { internalLinkJudge } from '../site-health/internal-link-judgments.ts';
+import { sourcePageInspector } from '../source-pages/inspector.ts';
 
 const logger = getLogger('workers.analytics');
 const { statuses, terminal } = policy.task_queue;
@@ -37,6 +40,8 @@ const ERROR_DETAIL_LIMIT = 2000;
 /** Kind dispatch: exactly the kinds TypeScript owns. */
 export const EXECUTORS: Readonly<Record<string, Executor>> = {
   search_intelligence_acquisition: acquireResearch,
+  source_page_inspection: sourcePageInspector(),
+  internal_link_judgment: internalLinkJudge(),
   internal_link_publish: publishInternalLinks,
   ingest_referrals: ingestReferrals,
   classify_referrals: classifyReferrals,
@@ -76,6 +81,10 @@ export class AnalyticsWorker {
 
   /** Claim one row of a TypeScript-owned kind and run it; the count run. */
   async runOnce(): Promise<number> {
+    // Compensation is secondary: its failure must not block claiming new work.
+    await compensateTerminalTasks(this.#db).catch((error: unknown) =>
+      logger.exception('analytics_terminal_compensation_failed', error),
+    );
     const rows = await this.#queue.claim({
       owner: this.owner,
       kinds: policy.analytics.ts_owned_task_kinds,

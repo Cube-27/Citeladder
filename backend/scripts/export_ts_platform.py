@@ -95,6 +95,8 @@ from app.core.config.analytics import (
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_WINDOW_DAYS,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
+    ANALYTICS_TERMINAL_COMPENSATION_BATCH,
+    ANALYTICS_TERMINAL_COMPENSATION_MAX_FAILURES,
     ANALYTICS_TS_OWNED_TASK_KINDS,
     ERROR_EXECUTOR_NOT_WIRED,
     MATCH_SIGNAL_REFERRER,
@@ -162,6 +164,7 @@ from app.core.config.provider_catalog import (
     TRANSPORT_DATAFORSEO,
     is_search_surface,
 )
+from app.core.config.site_health_acquisition import SITE_HEALTH_USER_AGENT
 from app.core.config.task_queue import (
     ERROR_MAX_ATTEMPTS,
     TASK_CLAIMABLE_STATUSES,
@@ -188,6 +191,7 @@ from scripts.ts_platform_costs import costs_policy
 from scripts.ts_platform_dataforseo import dataforseo_policy
 from scripts.ts_platform_integrations import integration_policy
 from scripts.ts_platform_providers import provider_policy
+from scripts.web_evidence_policy import web_evidence_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 SERVICE_ROOT = FRONTEND_ROOT / "services" / "api"
@@ -361,6 +365,7 @@ def build_config() -> dict[str, Any]:
             for name, value in vars(internal_links_config).items()
             if name.startswith("INTERNAL_LINKS_")
         },
+        **web_evidence_policy(_prefixed_constants, _setting),
         "brand_identity": _brand_identity_policy(),
         "projects": {
             "default_benchmark_mode": projects_config.DEFAULT_BENCHMARK_MODE,
@@ -394,6 +399,7 @@ def build_config() -> dict[str, Any]:
         "brand_evidence": _prefixed_constants(evidence_config, "BRAND_EVIDENCE_"),
         "brand_logos": _prefixed_constants(brand_logo_config, "BRAND_LOGO_"),
         "web_fetch": {
+            "user_agent": SITE_HEALTH_USER_AGENT,
             "ports": sorted(web_rules.ALLOWED_URL_PORTS),
             "schemes": sorted(web_rules.ALLOWED_URL_SCHEMES),
         },
@@ -651,6 +657,10 @@ def _analytics_policy() -> dict[str, Any]:
         },
         "executor_not_wired_error": ERROR_EXECUTOR_NOT_WIRED,
         "retry_error": ERROR_UNKNOWN,
+        "terminal_compensation_batch": ANALYTICS_TERMINAL_COMPENSATION_BATCH,
+        "terminal_compensation_max_failures": (
+            ANALYTICS_TERMINAL_COMPENSATION_MAX_FAILURES
+        ),
     }
 
 

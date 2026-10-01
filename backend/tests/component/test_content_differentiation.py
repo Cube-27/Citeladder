@@ -8,76 +8,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.agent.tool_catalog import build_agent_tools, execute_tool
-from app.domain.content_differentiation import _load_candidates
 from app.models.audit import Audit, AuditTask
 from app.models.content_differentiation import (
-    ContentDifferentiationCandidate,
     ContentDifferentiationReport,
 )
 from app.models.source_pages import SourcePage
 from app.models.workspace import WorkspaceMember
 from tests.component.audit_helpers import Seed, seed_audit_fixtures, seed_persisted_run
-
-
-@pytest.mark.asyncio
-async def test_page_refresh_loads_every_candidate_of_affected_historical_tasks(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        seed = await seed_audit_fixtures(session, prompt_count=2)
-        previous = await seed_persisted_run(session, seed, task_count=2)
-        current = await seed_persisted_run(session, seed, task_count=2)
-        tasks = list(
-            (
-                await session.scalars(
-                    select(AuditTask).where(AuditTask.audit_id == previous.id)
-                )
-            ).all()
-        )
-        pages = [
-            SourcePage(
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                url_hash=uuid.uuid4().hex,
-                canonical_url=f"https://example.org/{index}",
-            )
-            for index in range(3)
-        ]
-        session.add_all(pages)
-        await session.flush()
-        session.add_all(
-            ContentDifferentiationCandidate(
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                audit_id=previous.id,
-                audit_task_id=task.id,
-                source_page_id=page.id,
-                query_text="example",
-                rank=rank,
-            )
-            for task, page, rank in (
-                (tasks[0], pages[0], 1),
-                (tasks[0], pages[1], 2),
-                (tasks[1], pages[2], 1),
-            )
-        )
-        await session.commit()
-
-    async with session_factory() as session:
-        rows = await _load_candidates(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            audit_id=current.id,
-            source_page_ids={pages[0].id},
-        )
-
-    assert [
-        (candidate.audit_task_id, candidate.source_page_id) for candidate, _, _ in rows
-    ] == [
-        (tasks[0].id, pages[0].id),
-        (tasks[0].id, pages[1].id),
-    ]
 
 
 @pytest.mark.asyncio

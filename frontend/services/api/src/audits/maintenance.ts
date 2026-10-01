@@ -201,7 +201,7 @@ export class AuditMaintenance {
                     task.error_code ||
                     (audit.status === 'cancelled'
                       ? 'cancelled'
-                      : auditPolicy.constants.error_max_attempts),
+                      : policy.task_queue.max_attempts_error),
                   error_detail: task.error_detail || 'lease expired after max attempts exhausted',
                 }
               : {}),

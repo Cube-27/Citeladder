@@ -78,6 +78,7 @@ test('the TypeScript API service runs for its code and every Python input it is 
     'migrations/versions/0001_initial.py',
     'backend/app/core/config/errors.py',
     'backend/app/domain/workspaces/policy.py',
+    'backend/scripts/site_health_policy.py',
     'frontend/packages/contracts/src/route-ownership.ts',
     'backend/app/api/projects.py',
     'frontend/local-compose-routes.caddy',
@@ -88,6 +89,7 @@ test('the TypeScript API service runs for its code and every Python input it is 
   }
   for (const path of [
     'backend/app/analysis/costs.py',
+    'backend/scripts/seed_dev_data.py',
     'backend/app/core/config/agent_skills/skills/gsc_optimize/SKILL.md',
     'frontend/components/card.tsx',
   ]) {

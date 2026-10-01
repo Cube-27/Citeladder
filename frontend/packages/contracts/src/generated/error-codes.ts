@@ -48,7 +48,6 @@ export const API_ERROR_CODES = [
   "mapping_active_owner_conflict",
   "mapping_property_not_owned",
   "mapping_provider_mismatch",
-  "max_attempts_exceeded",
   "method_not_allowed",
   "not_found",
   "oauth_callback_not_implemented",
