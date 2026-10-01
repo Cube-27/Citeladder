@@ -125,43 +125,39 @@ export async function createRepairAudit(
       })
       .execute();
     const clones = new Map<string, string>();
-    for (const prompt of prompts.filter((prompt) =>
-      tasks.some((task) => task.prompt_snapshot_id === prompt.id),
-    )) {
-      const cloneId = randomUUID();
-      clones.set(prompt.id, cloneId);
-      await trx
-        .insertInto('audit_prompt_snapshots')
-        .values({
+    const promptClones = prompts
+      .filter((prompt) => tasks.some((task) => task.prompt_snapshot_id === prompt.id))
+      .map((prompt) => {
+        const cloneId = randomUUID();
+        clones.set(prompt.id, cloneId);
+        return {
           ...prompt,
           id: cloneId,
           audit_id: id,
           created_at: at,
           generation_evidence:
             prompt.generation_evidence === null ? null : JSON.stringify(prompt.generation_evidence),
-        })
-        .execute();
-    }
+        };
+      });
+    await trx.insertInto('audit_prompt_snapshots').values(promptClones).execute();
     const engines = await trx
       .selectFrom('audit_engine_snapshots')
       .selectAll()
       .where('audit_id', '=', parent.id)
       .execute();
     const engineClones = new Map<string, string>();
-    for (const engine of engines.filter((engine) =>
-      tasks.some((task) => task.engine_snapshot_id === engine.id),
-    )) {
-      const cloneId = randomUUID();
-      engineClones.set(engine.id, cloneId);
-      await trx
-        .insertInto('audit_engine_snapshots')
-        .values({ ...engine, id: cloneId, audit_id: id, created_at: at })
-        .execute();
-    }
-    for (const [position, task] of tasks.entries())
-      await trx
-        .insertInto('audit_tasks')
-        .values({
+    const clonedEngines = engines
+      .filter((engine) => tasks.some((task) => task.engine_snapshot_id === engine.id))
+      .map((engine) => {
+        const cloneId = randomUUID();
+        engineClones.set(engine.id, cloneId);
+        return { ...engine, id: cloneId, audit_id: id, created_at: at };
+      });
+    await trx.insertInto('audit_engine_snapshots').values(clonedEngines).execute();
+    await trx
+      .insertInto('audit_tasks')
+      .values(
+        tasks.map((task, position) => ({
           ...task,
           id: randomUUID(),
           audit_id: id,
@@ -200,8 +196,9 @@ export async function createRepairAudit(
           provider_credential_revision: null,
           finish_reason: 'unknown',
           raw_finish_reason: null,
-        })
-        .execute();
+        })),
+      )
+      .execute();
     await transitionAudit(trx, workspaceId, id, 'validating', at, 'repair audit validating');
     await transitionAudit(trx, workspaceId, id, 'queued', at, 'repair audit queued');
     await auditEvent(

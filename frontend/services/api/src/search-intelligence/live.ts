@@ -103,7 +103,7 @@ export async function executeLive(
   return {
     body,
     hash: createHash('sha256').update(utf8Canonical).digest('hex'),
-    taskId: String(task.id ?? '').slice(0, 255),
+    taskId: typeof task.id === 'string' ? task.id.slice(0, 255) : '',
     cost: numericCost(task.cost) ?? numericCost(body.cost),
   };
 }

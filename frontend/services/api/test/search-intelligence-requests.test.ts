@@ -3,6 +3,7 @@ import {
   buildRequest,
   quoteDataset,
   scopeHash,
+  canonicalJson,
   type RequestOptions,
 } from '../src/search-intelligence/requests.ts';
 import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';
@@ -32,6 +33,39 @@ const options: RequestOptions = {
   dateTo: '',
 };
 describe('reviewed Search Intelligence requests', () => {
+  it('escapes non-ASCII text as UTF-16 code units for stable historical identities', () => {
+    expect(canonicalJson({ emoji: '😀', accent: 'é' })).toBe(
+      '{"accent":"\\u00e9","emoji":"\\ud83d\\ude00"}',
+    );
+  });
+  it('uses broad domain intersections while preserving keyword order and acquisition filters', () => {
+    const comparison = {
+      ...target,
+      registrable_domain: 'rival.example',
+      hostname: 'shop.rival.example',
+      origin: 'https://shop.rival.example',
+    };
+    for (const kind of ['missing_keywords', 'shared_keywords'] as const) {
+      const built = buildRequest({
+        ...options,
+        kind,
+        comparison,
+        scope: 'domain_subdomains',
+        order: 'traffic',
+      });
+      expect(built.payload).toMatchObject({
+        target1: 'rival.example',
+        target2: 'example.com',
+        intersections: kind === 'shared_keywords',
+        order_by: ['first_domain_serp_element.etv,desc', 'keyword_data.keyword,asc'],
+        filters: ['keyword_data.keyword_info.search_volume', '>=', 10],
+      });
+      expect(built.payload.pages).toBeUndefined();
+      expect(() => buildRequest({ ...options, kind, comparison, order: 'traffic' })).toThrow(
+        'Unsupported acquisition order',
+      );
+    }
+  });
   it('preserves exact-host constraints and stable dataset identity across pages', () => {
     const first = buildRequest(options),
       second = buildRequest({ ...options, limit: 20, offset: 1000 });

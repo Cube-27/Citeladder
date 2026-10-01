@@ -21,7 +21,7 @@ afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
 });
-async function run() {
+async function run(depth = 2) {
   const t = await fixtures.tenant({ websiteUrl: 'https://www.example.com' }),
     at = new Date(),
     connectionId = randomUUID();
@@ -54,7 +54,7 @@ async function run() {
     scope,
     t.userId,
     'review',
-    reviewBody.parse({ datasets: [{ kind: 'ranking_keywords', depth: 2 }] }),
+    reviewBody.parse({ datasets: [{ kind: 'ranking_keywords', depth }] }),
     key,
   );
   await confirmRun(db, scope, review.id);
@@ -113,6 +113,39 @@ const response = {
   cost: '0.012',
 };
 describe('durable paid acquisition boundaries', () => {
+  it('publishes a full page with duplicate rows and keeps exact provenance on replay', async () => {
+    const t = await run(1000),
+      plan = t.plans[0]!,
+      prep = dispatched(await t.state.prepare(plan, 0));
+    await t.state.dispatch(prep);
+    const items = Array.from({ length: 1000 }, (_, i) => ({
+      keyword_data: { keyword: `shoes ${i === 999 ? 0 : i}` },
+      ranked_serp_element: { url: 'https://www.example.com/shoes', rank_group: i + 1 },
+    }));
+    await t.state.saveResponse(prep.call.id, {
+      ...response,
+      body: { ...response.body, tasks: [{ ...response.body.tasks[0]!, result: [{ items }] }] },
+    });
+    await t.state.publish(plan, prep.call.id, []);
+    const rows = await db
+      .selectFrom('search_intelligence_rows')
+      .select(['keyword', 'rank_group', 'call_id', 'dataset_id'])
+      .where('workspace_id', '=', t.workspaceId)
+      .where('dataset_id', '=', prep.dataset.id)
+      .execute();
+    expect(rows).toHaveLength(999);
+    expect(rows.find((row) => row.keyword === 'shoes 0')).toEqual({
+      keyword: 'shoes 0',
+      rank_group: 1,
+      call_id: prep.call.id,
+      dataset_id: prep.dataset.id,
+    });
+    await t.state.publish(plan, prep.call.id, []);
+    expect(await t.state.run().executeTakeFirstOrThrow()).toMatchObject({
+      completed_calls: 1,
+      received_rows: 1000,
+    });
+  });
   it.each([null, '1.00'])(
     'closes collecting datasets when a saved receipt stops the run (cost %s)',
     async (cost) => {

@@ -48,6 +48,8 @@ const reconciliationState = z.object({
   matches: z.record(z.string(), z.number().nullable()),
   upper: z.string(),
 });
+type DispatchState = { started: boolean; rateError?: ProviderError };
+
 type ProjectionOwners = {
   execution: DeriveExecution;
   prepare?: (context: ExecutionContext, result: ExecutionResult) => Promise<DeriveExecution>;
@@ -143,84 +145,20 @@ export class AuditWorker {
       Math.max(1, this.#runtime.audits.heartbeat_interval_seconds) * 1000,
     );
     const dispatchSignal = AbortSignal.any([abort.signal, ...(signal ? [signal] : [])]);
-    let context: ExecutionContext | null = null,
-      dispatchStarted = false;
+    let context: ExecutionContext | null = null;
+    const dispatch: DispatchState = { started: false };
     try {
       if (await repairOwnedCompletion(this.#db, claimed, this.owner, this.#now())) return;
       // Start the parent now; publish task running only after acquiring provider capacity.
       const running = await this.#queue.markRunning(claimed, this.owner, false);
       if (!running) return;
       claimed = running.task;
-      const expiredRecovery = surfaceRecoveryDeadline(
-        claimed,
-        Number(
-          record(claimed.request_snapshot).recovery_deadline_hours ??
-            this.#runtime.search.recoveryDeadlineHours,
-        ),
-      );
-      if (expiredRecovery && this.#now() >= expiredRecovery) {
-        await this.#failSurface(claimed, null, 'submission_unreconciled', false);
-        return;
-      }
-      try {
-        context = await loadExecutionContext(
-          this.#db,
-          claimed,
-          this.owner,
-          this.#runtime,
-          this.#key,
-          this.#now(),
-          this.#env,
-        );
-      } catch (error) {
-        const safe =
-          error instanceof ProviderError
-            ? error
-            : new ProviderError(auditPolicy.constants.error_no_connection);
-        if (claimed.transport_provider === 'dataforseo')
-          await this.#failSurface(claimed, null, 'credential_unavailable_for_retrieval', false);
-        else
-          await persistExecutionFailure(this.#db, claimed, this.owner, safe, this.#runtime, {
-            preCall: true,
-            at: this.#now(),
-          });
-        return;
-      }
+      if ((await this.#checkDeadline(claimed)).expired) return;
+      context = await this.#loadContext(claimed);
       if (!context) return;
       const surface = context.task.transport_provider === 'dataforseo';
-      const recovery = surfaceRecoveryDeadline(
-        context.task,
-        Number(
-          record(context.task.request_snapshot).recovery_deadline_hours ??
-            this.#runtime.search.recoveryDeadlineHours,
-        ),
-      );
-      if (recovery && this.#now() >= recovery) {
-        await this.#failSurface(claimed, context, 'submission_unreconciled', false);
-        return;
-      }
-      if (
-        !recovery &&
-        context.audit.started_at &&
-        this.#now().getTime() - context.audit.started_at.getTime() >=
-          Number(
-            record(context.audit.configuration).max_run_seconds ??
-              this.#runtime.audits.max_run_seconds,
-          ) *
-            1000
-      ) {
-        if (surface) await this.#failSurface(claimed, context, 'poll_ceiling_exceeded', false);
-        else
-          await persistExecutionFailure(
-            this.#db,
-            claimed,
-            this.owner,
-            new ProviderError(auditPolicy.constants.error_run_deadline),
-            this.#runtime,
-            { preCall: true, at: this.#now() },
-          );
-        return;
-      }
+      const { expired, recovery } = await this.#checkDeadline(claimed, context);
+      if (expired) return;
       const capacity = { ...context.capacity };
       if (
         ['chatgpt_search', 'gemini_consumer'].includes(claimed.logical_engine) &&
@@ -238,7 +176,7 @@ export class AuditWorker {
         await this.#parkCapacity(claimed, decision, recovery);
         return;
       }
-      let rateError: ProviderError | undefined;
+
       try {
         // Recheck ownership after acquiring capacity, immediately before any network boundary.
         const live = await this.#db
@@ -248,37 +186,10 @@ export class AuditWorker {
         if (!(await this.#queue.markRunning(claimed, this.owner))) return;
         if (surface) await this.#surface(context, dispatchSignal);
         else {
-          const request = directRequest(context);
-          dispatchStarted = true;
-          let answer;
-          try {
-            answer = await this.#executeAnswer(
-              request,
-              { secret: context.secret, base_url: context.endpoint },
-              this.#runtime.providers,
-              this.#send,
-              dispatchSignal,
-            );
-          } catch (error) {
-            const safe = error instanceof ProviderError ? error : new ProviderError('unknown');
-            rateError = safe;
-            await persistExecutionFailure(this.#db, claimed, this.owner, safe, this.#runtime, {
-              context,
-              at: this.#now(),
-            });
-            return;
-          }
-          await persistExecutionSuccess(
-            this.#db,
-            claimed,
-            this.owner,
-            answer,
-            await this.#prepare(context, answer),
-            { at: this.#now() },
-          );
+          await this.#dispatchDirect(claimed, context, dispatch, dispatchSignal);
         }
       } catch (error) {
-        if (error instanceof ProviderError) rateError = error;
+        if (error instanceof ProviderError) dispatch.rateError = error;
         throw error;
       } finally {
         await releaseCapacity(
@@ -286,8 +197,8 @@ export class AuditWorker {
           capacity,
           this.#runtime,
           {
-            rateLimited: rateError?.code === 'rate_limit',
-            retryAfterSeconds: rateError?.retryAfterSeconds,
+            rateLimited: dispatch.rateError?.code === 'rate_limit',
+            retryAfterSeconds: dispatch.rateError?.retryAfterSeconds,
           },
           this.#now(),
         );
@@ -306,13 +217,110 @@ export class AuditWorker {
           this.owner,
           error instanceof ProviderError ? error : new ProviderError('unknown'),
           this.#runtime,
-          { preCall: !dispatchStarted, ...(context ? { context } : {}), at: this.#now() },
+          { preCall: !dispatch.started, ...(context ? { context } : {}), at: this.#now() },
         );
     } finally {
       clearInterval(heartbeat);
       await beating;
       await this.#projections.finalize(claimed.workspace_id, claimed.audit_id);
     }
+  }
+  async #dispatchDirect(
+    claimed: AuditTask,
+    context: ExecutionContext,
+    dispatch: DispatchState,
+    signal: AbortSignal,
+  ) {
+    const request = directRequest(context);
+    dispatch.started = true;
+    let answer;
+    try {
+      answer = await this.#executeAnswer(
+        request,
+        { secret: context.secret, base_url: context.endpoint },
+        this.#runtime.providers,
+        this.#send,
+        signal,
+      );
+    } catch (error) {
+      const safe = error instanceof ProviderError ? error : new ProviderError('unknown');
+      dispatch.rateError = safe;
+      await persistExecutionFailure(this.#db, claimed, this.owner, safe, this.#runtime, {
+        context,
+        at: this.#now(),
+      });
+      return;
+    }
+    await persistExecutionSuccess(
+      this.#db,
+      claimed,
+      this.owner,
+      answer,
+      await this.#prepare(context, answer),
+      { at: this.#now() },
+    );
+  }
+  async #loadContext(claimed: AuditTask) {
+    try {
+      return await loadExecutionContext(
+        this.#db,
+        claimed,
+        this.owner,
+        this.#runtime,
+        this.#key,
+        this.#now(),
+        this.#env,
+      );
+    } catch (error) {
+      const safe =
+        error instanceof ProviderError
+          ? error
+          : new ProviderError(auditPolicy.constants.error_no_connection);
+      if (claimed.transport_provider === 'dataforseo')
+        await this.#failSurface(claimed, null, 'credential_unavailable_for_retrieval', false);
+      else
+        await persistExecutionFailure(this.#db, claimed, this.owner, safe, this.#runtime, {
+          preCall: true,
+          at: this.#now(),
+        });
+      return null;
+    }
+  }
+  async #checkDeadline(claimed: AuditTask, context?: ExecutionContext) {
+    const task = context?.task ?? claimed;
+    const recovery = surfaceRecoveryDeadline(
+      task,
+      Number(
+        record(task.request_snapshot).recovery_deadline_hours ??
+          this.#runtime.search.recoveryDeadlineHours,
+      ),
+    );
+    if (recovery && this.#now() >= recovery) {
+      await this.#failSurface(claimed, context ?? null, 'submission_unreconciled', false);
+      return { expired: true, recovery };
+    }
+    const audit = context?.audit;
+    const runExpired =
+      !recovery &&
+      audit?.started_at &&
+      this.#now().getTime() - audit.started_at.getTime() >=
+        Number(
+          record(audit.configuration).max_run_seconds ?? this.#runtime.audits.max_run_seconds,
+        ) *
+          1000;
+    if (!runExpired) return { expired: false, recovery };
+    if (task.transport_provider === 'dataforseo')
+      await this.#failSurface(claimed, context ?? null, 'poll_ceiling_exceeded', false);
+    else
+      await persistExecutionFailure(
+        this.#db,
+        claimed,
+        this.owner,
+        new ProviderError(auditPolicy.constants.error_run_deadline),
+        this.#runtime,
+        { preCall: true, at: this.#now() },
+      );
+    return { expired: true, recovery };
   }
   #parkCapacity(
     task: AuditTask,

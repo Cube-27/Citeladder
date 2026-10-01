@@ -66,6 +66,17 @@ describe('single-dispatch research transport and scoped normalization', () => {
       executeLive(input, { send: async () => new Response(' '.repeat(8 * 1024 * 1024 + 1)) }),
     ).rejects.toMatchObject({ code: 'parse_error' });
   });
+  it.each([null, 42, true, ['task'], { id: 'task' }])(
+    'retains receipts without inventing an ID from %j',
+    async (id) => {
+      const receipt = body({ items: [] });
+      const malformed = { ...receipt, tasks: [{ ...receipt.tasks[0]!, id }] };
+      const response = await executeLive(input, { send: async () => Response.json(malformed) });
+      expect(response.taskId).toBe('');
+      expect(response.cost).toBe('0.012');
+      expect(response.body).toEqual(malformed);
+    },
+  );
   it('keeps scoped rows with unknown metrics and rejects another host', () => {
     const item = {
       keyword_data: {

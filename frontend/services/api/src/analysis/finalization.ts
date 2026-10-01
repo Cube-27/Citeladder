@@ -343,7 +343,7 @@ async function persistPromptMetrics(
         .limit(rules.prompt_decline_history_candidate_limit * prepared.length)
         .execute()
     : [];
-  for (const { row, prompt } of prepared) {
+  const metrics = prepared.map(({ row, prompt }) => {
     const identity = promptTextHash(prompt.text);
     const previous = histories
       .filter(
@@ -359,28 +359,26 @@ async function persistPromptMetrics(
       .slice(0, rules.prompt_decline_window_movements);
     const trend = promptTrend(row, previous, audit.repetitions, engineCount),
       sources = analyses.filter((a) => a.prompt_index === prompt.prompt_index);
-    await db
-      .insertInto('prompt_metric_snapshots')
-      .values({
-        id: randomUUID(),
-        workspace_id: audit.workspace_id,
-        project_id: audit.project_id,
-        audit_id: audit.id,
-        prompt_id: prompt.prompt_id,
-        prompt_identity: identity,
-        prompt_index: prompt.prompt_index,
-        prompt_text: prompt.text,
-        cohort: prompt.cohort,
-        analyzer_version: rules.analyzer_version,
-        scoring_rule_version: rules.scoring_rule_version,
-        ...trend,
-        rolling_four: JSON.stringify(trend.rolling_four),
-        per_engine_scores: JSON.stringify(trend.per_engine_scores),
-        components: JSON.stringify(row.score_components),
-        source_analysis_ids: JSON.stringify(sources.map((a) => a.id)),
-        source_artifact_ids: JSON.stringify(sources.map((a) => a.artifact_id)),
-        created_at: at,
-      })
-      .execute();
-  }
+    return {
+      id: randomUUID(),
+      workspace_id: audit.workspace_id,
+      project_id: audit.project_id,
+      audit_id: audit.id,
+      prompt_id: prompt.prompt_id,
+      prompt_identity: identity,
+      prompt_index: prompt.prompt_index,
+      prompt_text: prompt.text,
+      cohort: prompt.cohort,
+      analyzer_version: rules.analyzer_version,
+      scoring_rule_version: rules.scoring_rule_version,
+      ...trend,
+      rolling_four: JSON.stringify(trend.rolling_four),
+      per_engine_scores: JSON.stringify(trend.per_engine_scores),
+      components: JSON.stringify(row.score_components),
+      source_analysis_ids: JSON.stringify(sources.map((a) => a.id)),
+      source_artifact_ids: JSON.stringify(sources.map((a) => a.artifact_id)),
+      created_at: at,
+    };
+  });
+  if (metrics.length) await db.insertInto('prompt_metric_snapshots').values(metrics).execute();
 }

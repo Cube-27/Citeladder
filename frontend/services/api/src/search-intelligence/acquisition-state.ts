@@ -534,20 +534,23 @@ export class AcquisitionState {
         await this.closeCollecting(trx, at);
         return true;
       }
-      for (const row of normalized.rows)
+      // Bound SQL parameters even when a provider returns more than the requested page.
+      for (let offset = 0; offset < normalized.rows.length; offset += si.page_size)
         await trx
           .insertInto('search_intelligence_rows')
-          .values({
-            ...row,
-            auxiliary: JSON.stringify(row.auxiliary),
-            id: randomUUID(),
-            workspace_id: run.workspace_id,
-            project_id: run.project_id,
-            dataset_id: dataset.id,
-            call_id: call.id,
-            row_kind: dataset.dataset_kind,
-            created_at: at,
-          })
+          .values(
+            normalized.rows.slice(offset, offset + si.page_size).map((row) => ({
+              ...row,
+              auxiliary: JSON.stringify(row.auxiliary),
+              id: randomUUID(),
+              workspace_id: run.workspace_id,
+              project_id: run.project_id,
+              dataset_id: dataset.id,
+              call_id: call.id,
+              row_kind: dataset.dataset_kind,
+              created_at: at,
+            })),
+          )
           .onConflict((oc) => oc.columns(['dataset_id', 'provider_row_key']).doNothing())
           .execute();
       const count = await trx

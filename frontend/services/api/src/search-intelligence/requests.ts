@@ -40,8 +40,37 @@ function backlinkFilters(target: CanonicalTarget, scope: ResearchScope): unknown
     }
   return [urls, 'and', ...exclusions];
 }
-/** Only reviewed domain/prefix constraints and policy-owned endpoints can reach a paid request. */
-export function buildRequest(o: RequestOptions) {
+function backlinkPayload(o: RequestOptions): Record<string, unknown> {
+  const { kind, target, scope } = o;
+  const filters = backlinkFilters(target, scope);
+  const payload = {
+    target: target.registrable_domain,
+    include_subdomains:
+      scope === 'domain_subdomains' || target.hostname !== target.registrable_domain,
+    include_indirect_links: scope === 'domain_subdomains',
+    backlinks_status_type: 'live',
+    rank_scale: 'one_hundred',
+  };
+  if (kind === 'backlinks')
+    return {
+      ...payload,
+      filters,
+      mode: o.grouping,
+      limit: o.limit,
+      offset: o.offset,
+      order_by: ['rank,desc', 'url_from,asc'],
+    };
+  if (kind === 'backlink_summary') return { ...payload, backlinks_filters: filters };
+  return {
+    ...payload,
+    backlinks_filters: filters,
+    limit: o.limit,
+    offset: o.offset,
+    order_by: ['backlinks,desc', `${kind === 'referring_domains' ? 'domain' : 'url'},asc`],
+  };
+}
+
+function datasetPayload(o: RequestOptions): Record<string, unknown> {
   const { kind, target, comparison, scope } = o;
   const common = {
     location_code: o.location,
@@ -49,134 +78,129 @@ export function buildRequest(o: RequestOptions) {
     limit: o.limit,
     offset: o.offset,
   };
-  let payload: Record<string, unknown>;
-  if (kind === 'footprint')
-    payload = {
-      ...common,
-      target: target.registrable_domain,
-      filters: ['subdomain', '=', target.hostname],
-      item_types: ['organic'],
-      limit: 1,
-      offset: 0,
-    };
-  else if (kind === 'ranking_keywords')
-    payload = {
-      ...common,
-      target: target.registrable_domain,
-      item_types: ['organic'],
-      filters: ['ranked_serp_element.serp_item.domain', '=', target.hostname],
-    };
-  else if (kind === 'missing_keywords' || kind === 'shared_keywords') {
-    if (!comparison) throw new Error('Comparison target is required');
-    payload = {
-      ...common,
-      pages: {
-        '1': `${comparison.origin}/*`,
-        ...(kind === 'shared_keywords' ? { '2': `${target.origin}/*` } : {}),
-      },
-      intersection_mode: kind === 'missing_keywords' ? 'union' : 'intersect',
-      include_subdomains: false,
-      item_types: ['organic'],
-    };
-    if (kind === 'missing_keywords') payload.exclude_pages = [`${target.origin}/*`];
-  } else if (kind === 'keyword_suggestions')
-    payload = {
-      ...common,
-      keyword: o.seed.trim(),
-      exact_match: true,
-      include_seed_keyword: false,
-      include_serp_info: false,
-    };
-  else if (kind === 'organic_pages') {
-    payload = {
-      ...common,
-      target: target.registrable_domain,
-      order_by: ['metrics.organic.etv,desc', 'page_address,asc'],
-    };
-    if (scope === 'exact_host')
-      payload.filters = [
-        ['page_address', 'like', `https://${new URL(target.origin).host}/%`],
-        'or',
-        ['page_address', 'like', `http://${new URL(target.origin).host}/%`],
-      ];
-  } else if (kind === 'backlink_history') {
-    if (scope !== 'domain_subdomains' || !o.dateFrom || !o.dateTo)
-      throw new Error('History requires a bounded broad scope');
-    payload = {
-      target: target.registrable_domain,
-      date_from: o.dateFrom,
-      date_to: o.dateTo,
-      rank_scale: 'one_hundred',
-    };
-  } else {
-    payload = {
-      target: target.registrable_domain,
-      include_subdomains:
-        scope === 'domain_subdomains' || target.hostname !== target.registrable_domain,
-      include_indirect_links: scope === 'domain_subdomains',
-      backlinks_status_type: 'live',
-      rank_scale: 'one_hundred',
-      backlinks_filters: backlinkFilters(target, scope),
-    };
-    if (kind === 'backlinks') {
-      payload.filters = payload.backlinks_filters;
-      delete payload.backlinks_filters;
-      Object.assign(payload, {
-        mode: o.grouping,
-        limit: o.limit,
-        offset: o.offset,
-        order_by: ['rank,desc', 'url_from,asc'],
-      });
-    } else if (kind !== 'backlink_summary')
-      Object.assign(payload, {
-        limit: o.limit,
-        offset: o.offset,
-        order_by: ['backlinks,desc', `${kind === 'referring_domains' ? 'domain' : 'url'},asc`],
-      });
-  }
-  let endpoint: string = si.endpoints[kind];
-  if (scope === 'domain_subdomains') {
-    if (kind in si.broad_endpoints)
-      endpoint = si.broad_endpoints[kind as keyof typeof si.broad_endpoints];
-    if (kind === 'footprint' || kind === 'ranking_keywords') delete payload.filters;
-    if (kind === 'footprint') delete payload.item_types;
-    if (kind === 'missing_keywords' || kind === 'shared_keywords') {
+  switch (kind) {
+    case 'footprint':
+      return {
+        ...common,
+        target: target.registrable_domain,
+        filters: ['subdomain', '=', target.hostname],
+        item_types: ['organic'],
+        limit: 1,
+        offset: 0,
+      };
+    case 'ranking_keywords':
+      return {
+        ...common,
+        target: target.registrable_domain,
+        item_types: ['organic'],
+        filters: ['ranked_serp_element.serp_item.domain', '=', target.hostname],
+      };
+    case 'missing_keywords':
+    case 'shared_keywords':
       if (!comparison) throw new Error('Comparison target is required');
-      for (const key of ['pages', 'exclude_pages', 'intersection_mode', 'include_subdomains'])
-        delete payload[key];
-      Object.assign(payload, {
-        target1: comparison.registrable_domain,
-        target2: target.registrable_domain,
-        intersections: kind === 'shared_keywords',
-      });
-    }
+      return {
+        ...common,
+        pages: {
+          '1': `${comparison.origin}/*`,
+          ...(kind === 'shared_keywords' ? { '2': `${target.origin}/*` } : {}),
+        },
+        intersection_mode: kind === 'missing_keywords' ? 'union' : 'intersect',
+        include_subdomains: false,
+        item_types: ['organic'],
+        ...(kind === 'missing_keywords' ? { exclude_pages: [`${target.origin}/*`] } : {}),
+      };
+    case 'keyword_suggestions':
+      return {
+        ...common,
+        keyword: o.seed.trim(),
+        exact_match: true,
+        include_seed_keyword: false,
+        include_serp_info: false,
+      };
+    case 'organic_pages':
+      return {
+        ...common,
+        target: target.registrable_domain,
+        order_by: ['metrics.organic.etv,desc', 'page_address,asc'],
+        ...(scope === 'exact_host'
+          ? {
+              filters: [
+                ['page_address', 'like', `https://${new URL(target.origin).host}/%`],
+                'or',
+                ['page_address', 'like', `http://${new URL(target.origin).host}/%`],
+              ],
+            }
+          : {}),
+      };
+    case 'backlink_history':
+      if (scope !== 'domain_subdomains' || !o.dateFrom || !o.dateTo)
+        throw new Error('History requires a bounded broad scope');
+      return {
+        target: target.registrable_domain,
+        date_from: o.dateFrom,
+        date_to: o.dateTo,
+        rank_scale: 'one_hundred',
+      };
+    default:
+      return backlinkPayload(o);
   }
+}
+
+function applyResearchScope(o: RequestOptions, payload: Record<string, unknown>): string {
+  const { kind, target, comparison, scope } = o;
+  let endpoint: string = si.endpoints[kind];
+  if (scope !== 'domain_subdomains') return endpoint;
+  if (kind in si.broad_endpoints)
+    endpoint = si.broad_endpoints[kind as keyof typeof si.broad_endpoints];
+  if (kind === 'footprint' || kind === 'ranking_keywords') delete payload.filters;
+  if (kind === 'footprint') delete payload.item_types;
+  if (kind === 'missing_keywords' || kind === 'shared_keywords') {
+    if (!comparison) throw new Error('Comparison target is required');
+    for (const key of ['pages', 'exclude_pages', 'intersection_mode', 'include_subdomains'])
+      delete payload[key];
+    Object.assign(payload, {
+      target1: comparison.registrable_domain,
+      target2: target.registrable_domain,
+      intersections: kind === 'shared_keywords',
+    });
+  }
+  return endpoint;
+}
+
+function applyKeywordOrder(o: RequestOptions, payload: Record<string, unknown>) {
+  const { kind, scope } = o;
   if (
-    includes(
+    !includes(
       ['ranking_keywords', 'missing_keywords', 'shared_keywords', 'keyword_suggestions'],
       kind,
     )
-  ) {
-    const prefix = kind === 'keyword_suggestions' ? '' : 'keyword_data.';
-    let field: string;
-    if (o.order in si.keyword_acquisition_fields)
-      field =
-        prefix +
-        si.keyword_acquisition_fields[o.order as keyof typeof si.keyword_acquisition_fields];
-    else if (kind === 'ranking_keywords')
-      field = `ranked_serp_element.serp_item.${o.order === 'traffic' ? 'etv' : 'rank_group'}`;
-    else if (scope === 'domain_subdomains' && kind !== 'keyword_suggestions')
-      field = `first_domain_serp_element.${o.order === 'traffic' ? 'etv' : 'rank_group'}`;
-    else throw new Error('Unsupported acquisition order');
-    payload.order_by = [
-      `${field},${['position', 'difficulty'].includes(o.order) ? 'asc' : 'desc'}`,
-      `${prefix}keyword,asc`,
-    ];
-    if (o.minVolume !== null) {
-      const condition = [`${prefix}keyword_info.search_volume`, '>=', o.minVolume];
-      payload.filters = payload.filters ? [payload.filters, 'and', condition] : condition;
-    }
+  )
+    return;
+  const prefix = kind === 'keyword_suggestions' ? '' : 'keyword_data.';
+  let field: string;
+  if (o.order in si.keyword_acquisition_fields)
+    field =
+      prefix + si.keyword_acquisition_fields[o.order as keyof typeof si.keyword_acquisition_fields];
+  else if (kind === 'ranking_keywords')
+    field = `ranked_serp_element.serp_item.${o.order === 'traffic' ? 'etv' : 'rank_group'}`;
+  else if (scope === 'domain_subdomains' && kind !== 'keyword_suggestions')
+    field = `first_domain_serp_element.${o.order === 'traffic' ? 'etv' : 'rank_group'}`;
+  else throw new Error('Unsupported acquisition order');
+  payload.order_by = [
+    `${field},${['position', 'difficulty'].includes(o.order) ? 'asc' : 'desc'}`,
+    `${prefix}keyword,asc`,
+  ];
+  if (o.minVolume !== null) {
+    const condition = [`${prefix}keyword_info.search_volume`, '>=', o.minVolume];
+    payload.filters = payload.filters ? [payload.filters, 'and', condition] : condition;
   }
+}
+
+/** Only reviewed domain/prefix constraints and policy-owned endpoints can reach a paid request. */
+export function buildRequest(o: RequestOptions) {
+  const payload = datasetPayload(o);
+  const endpoint = applyResearchScope(o, payload);
+  applyKeywordOrder(o, payload);
   return { endpoint, payload };
 }
 /** Python's compact sorted ensure_ascii serialization preserves historical scope identities. */
