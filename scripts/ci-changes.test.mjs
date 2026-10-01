@@ -59,7 +59,7 @@ test('contracts and shared configuration invalidate both sides', () => {
     'backend/app/api/projects.py',
     'backend/app/main.py',
     'backend/app/domain/projects/schemas.py',
-    'backend/app/domain/audits/schedule_schemas.py',
+    'backend/app/domain/audits/schemas.py',
     'frontend/lib/api/projects.ts',
     'frontend/packages/contracts/src/project.ts',
     'scripts/quality.mjs',

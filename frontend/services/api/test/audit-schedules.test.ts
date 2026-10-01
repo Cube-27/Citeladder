@@ -2,9 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import {
+  canonicalTimezone,
   scheduleCreate,
-  scheduleUpdate,
   scheduleIntervalIssue,
+  scheduleUpdate,
 } from '../src/audits/schedule-inputs.ts';
 import {
   createSchedule,
@@ -229,6 +230,14 @@ describe('schedule input decisions', () => {
     { repetitions: 0 },
   ])('rejects invalid scheduling input %j', (patch) => {
     expect(scheduleCreate.safeParse({ ...base, ...patch }).success).toBe(false);
+  });
+  it.each([
+    ['Asia/Kolkata', 'Asia/Kolkata'],
+    ['Etc/UTC', 'Etc/UTC'],
+    ['utc', 'UTC'],
+    ['asia/kolkata', null],
+  ])('stores timezone %s as %s', (value, stored) => {
+    expect(canonicalTimezone(value)).toBe(stored);
   });
   it('uses the exported interval environment override', () => {
     expect(

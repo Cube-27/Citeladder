@@ -6,6 +6,7 @@ import type { Database } from '../db/database.ts';
 import type { AuditSchedules } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
 import {
+  canonicalTimezone,
   scheduleIntervalIssue,
   type ScheduleCreate,
   type ScheduleUpdate,
@@ -55,8 +56,7 @@ export async function createSchedule(db: Database, scope: ScheduleScope, input: 
         id: randomUUID(),
         workspace_id: scope.workspaceId,
         project_id: scope.projectId,
-        timezone: new Intl.DateTimeFormat('en', { timeZone: input.timezone }).resolvedOptions()
-          .timeZone,
+        timezone: canonicalTimezone(input.timezone) ?? input.timezone,
         engines: JSON.stringify(input.engines),
         next_run_at: input.next_run_at ? new Date(input.next_run_at) : now,
         last_run_at: null,
@@ -110,11 +110,7 @@ export async function updateSchedule(
         ...fields,
         ...(input.timezone === undefined
           ? {}
-          : {
-              timezone: new Intl.DateTimeFormat('en', {
-                timeZone: input.timezone,
-              }).resolvedOptions().timeZone,
-            }),
+          : { timezone: canonicalTimezone(input.timezone) ?? input.timezone }),
         ...(engines === undefined ? {} : { engines: JSON.stringify(engines) }),
         ...(nextRunAt === undefined
           ? input.enabled === true && current.next_run_at === null
@@ -133,18 +129,13 @@ export async function updateSchedule(
 }
 
 export async function deleteSchedule(db: Database, scope: ScheduleScope, id: string) {
-  return db.transaction().execute(async (trx) => {
-    const current = await scoped(trx, scope)
-      .select('id')
-      .where('id', '=', id)
-      .forUpdate()
-      .executeTakeFirst();
-    if (!current) throw notFound('Audit schedule');
-    await trx
-      .deleteFrom('audit_schedules')
-      .where('id', '=', id)
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .execute();
-  });
+  // DELETE takes the row lock the retained scheduler's claim/finalize waits on.
+  const deleted = await db
+    .deleteFrom('audit_schedules')
+    .where('id', '=', id)
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .returning('id')
+    .executeTakeFirst();
+  if (!deleted) throw notFound('Audit schedule');
 }

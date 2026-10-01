@@ -848,8 +848,8 @@ remain Python as planned.
 Departures: required patch fields reject explicit null rather than reaching a
 NOT NULL database failure; timezone text and
 interval integers are bounded by their database columns. Timezones are
-canonicalized through Intl to IANA identifiers the retained scheduler can load;
-numeric UTC offsets are rejected. Partial edits validate the merged locked row;
+validated through Intl and stored as sent, with only casing corrected so the
+retained scheduler can load them; numeric UTC offsets are rejected. Partial edits validate the merged locked row;
 omitted scope and scheduler state remain unchanged.
 
 Split under D7's retirement budget: the audit, provider and acquisition scope

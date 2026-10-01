@@ -4,20 +4,29 @@ import { benchmarkModeSchema } from '@citeladder/contracts/project';
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import { policy, resolveSettingSpec } from '../config.ts';
 
+/**
+ * The IANA identifier the retained Python scheduler can load (its lookup is
+ * case-sensitive), or null. Only casing is corrected: ICU resolves current
+ * names such as Asia/Kolkata to legacy aliases, so a valid spelling is kept.
+ */
+export function canonicalTimezone(value: string): string | null {
+  if (!/^[A-Za-z]/u.test(value)) return null;
+  let resolved: string;
+  try {
+    resolved = new Intl.DateTimeFormat('en', { timeZone: value }).resolvedOptions().timeZone;
+  } catch {
+    return null;
+  }
+  if (resolved.toLowerCase() === value.toLowerCase()) return resolved;
+  return value.split('/').every((part) => /^[A-Z]/u.test(part)) ? value : null;
+}
+
 const timezone = z
   .string()
   .trim()
   .min(1)
   .max(64)
-  .refine((value) => {
-    if (!/^[A-Za-z]/u.test(value)) return false;
-    try {
-      new Intl.DateTimeFormat('en', { timeZone: value });
-      return true;
-    } catch {
-      return false;
-    }
-  }, 'timezone must be a valid IANA timezone');
+  .refine((value) => canonicalTimezone(value) !== null, 'timezone must be a valid IANA timezone');
 const engines = z
   .array(logicalEngineSchema)
   .min(1)
