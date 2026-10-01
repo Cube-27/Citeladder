@@ -15,9 +15,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.agent import router as agent_router
 from app.api.commerce import router as commerce_router
 from app.api.performance import router as performance_router
-from app.api.search_intelligence import (
-    reviews_router as search_intelligence_reviews_router,
-)
 from app.api.site_health import router as site_health_router
 from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.core.config import get_frontend_origins, settings
@@ -47,7 +44,6 @@ logger = logging.getLogger("app")
 # owns its own paths; the prefix keeps the whole surface under /api/v1.
 _ROUTERS = (
     site_health_router,
-    search_intelligence_reviews_router,
     performance_router,
     agent_router,
     commerce_router,

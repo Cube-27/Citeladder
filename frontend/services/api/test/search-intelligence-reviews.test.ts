@@ -4,7 +4,8 @@ import { createReview } from '../src/search-intelligence/reviews.ts';
 import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
-import { testDatabase } from './support.ts';
+import { testDatabase, testConfig, sessionToken } from './support.ts';
+import { createApp } from '../src/app.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const db = testDatabase(),
@@ -52,6 +53,65 @@ async function tenant() {
   };
 }
 describe('atomic Search Intelligence reviews', () => {
+  it('serves the complete review path with project authorization and bounded idempotency', async () => {
+    const t = await tenant(),
+      app = createApp(testConfig({ ENCRYPTION_KEY: key }), db);
+    const token = await sessionToken({ sub: t.userId, ver: 0 });
+    const url = `/api/v1/projects/${t.projectId}/search-intelligence/reviews`;
+    const headers = {
+      cookie: `${testConfig().session.cookieName}=${token}`,
+      'content-type': 'application/json',
+      'Idempotency-Key': 'http-review',
+    };
+    const response = await app.request(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ datasets: [{ kind: 'footprint' }] }),
+    });
+    expect(response.status).toBe(201);
+    const result = (await response.json()) as { id: string; status: string };
+    expect(result.status).toBe('reviewed');
+    const replay = await app.request(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ datasets: [{ kind: 'footprint' }] }),
+    });
+    expect(((await replay.json()) as { id: string }).id).toBe(result.id);
+    expect(
+      (
+        await app.request(url, {
+          method: 'POST',
+          headers: { ...headers, 'Idempotency-Key': '' },
+          body: JSON.stringify({ datasets: [{ kind: 'footprint' }] }),
+        })
+      ).status,
+    ).toBe(422);
+    const other = await tenant();
+    expect(
+      (
+        await app.request(`/api/v1/projects/${other.projectId}/search-intelligence/reviews`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ datasets: [{ kind: 'footprint' }] }),
+        })
+      ).status,
+    ).toBe(404);
+    await db
+      .updateTable('workspace_members')
+      .set({ role: 'viewer' })
+      .where('workspace_id', '=', t.workspaceId)
+      .where('user_id', '=', t.userId)
+      .execute();
+    expect(
+      (
+        await app.request(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ datasets: [{ kind: 'footprint' }] }),
+        })
+      ).status,
+    ).toBe(403);
+  });
   it('freezes one quoted paged plan under competing idempotent reviews', async () => {
     const t = await tenant(),
       input = reviewBody.parse({
