@@ -47,6 +47,60 @@ describe('public pricing handoff', () => {
       'href',
       'https://app.citeladder.com/pricing?kind=checkout&catalog_key=tier_1&quantity=1&byok=1',
     );
+    expect(
+      screen.queryByRole('complementary', { name: 'Early access announcement' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps published terms readable while checkout and extras are unavailable', () => {
+    const unavailable: BillingCatalog = {
+      ...catalog,
+      plans: [
+        {
+          ...catalog.plans[0]!,
+          checkout_available: false,
+          capabilities: [
+            { key: 'ai_credits', value: 50, capability_type: 'counter.consumable', issuable: true },
+            { key: 'fanout', value: true, capability_type: 'flag', issuable: true },
+            { key: 'provider.grok', value: null, capability_type: 'flag', issuable: false },
+            { key: 'provider.perplexity', value: null, capability_type: 'flag', issuable: false },
+            { key: 'provider.copilot', value: null, capability_type: 'flag', issuable: false },
+          ],
+        },
+      ],
+      addons: [
+        {
+          key: 'extra_prompts',
+          name: 'Extra prompts',
+          description: 'More prompts',
+          unit_price: { currency: 'USD', amount_minor: 500 },
+          availability: 'unavailable',
+          quantity_min: 1,
+          quantity_max: 5,
+          eligible_plan_keys: ['tier_1'],
+          expiry_days: 30,
+          grants_per_unit: [],
+          unavailable_reason: 'checkout_unavailable',
+        },
+      ],
+    };
+    render(
+      <PublicPricingCatalog
+        catalog={unavailable}
+        appOrigin="https://app.citeladder.com"
+        initialByok
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'Request early access' })).toHaveAttribute(
+      'href',
+      'https://www.cube27.com/contact/',
+    );
+    expect(screen.queryByRole('link', { name: /^Choose / })).not.toBeInTheDocument();
+    expect(screen.getByText('$12')).toBeInTheDocument();
+    expect(screen.getByRole('row', { name: 'AI credits 50' })).toBeInTheDocument();
+    for (const label of ['Query fanouts', 'Grok', 'Perplexity', 'Microsoft Copilot']) {
+      expect(screen.getByRole('rowheader', { name: label })).toBeInTheDocument();
+    }
   });
 });
 

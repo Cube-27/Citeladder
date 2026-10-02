@@ -1,0 +1,22 @@
+---
+import { CommercialEntryPage } from '@/components/marketing/pages/commercial';
+import { SHARE_OF_VOICE_PAGE } from '@/lib/marketing-content/commercial-pages';
+import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+
+const breadcrumb = breadcrumbJsonLd([
+  { name: 'Home', path: '/' },
+  { name: 'AI share of voice', path: '/ai-search-share-of-voice' },
+]);
+---
+
+<MarketingLayout
+  title="AI Search Share of Voice Tracking | CiteLadder"
+  description="Compare your brand with competitors across a consistent set of AI prompts. Understand visibility changes with answer-level evidence and clear context."
+  canonical="/ai-search-share-of-voice"
+  jsonLd={breadcrumb ? [breadcrumb] : []}
+>
+  <main id="main">
+    <CommercialEntryPage page={SHARE_OF_VOICE_PAGE} intent="share-of-voice" />
+  </main>
+</MarketingLayout>

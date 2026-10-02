@@ -41,7 +41,7 @@ export function ButtonLink({
         className,
       )}
     >
-      <a href={href} {...rest}>
+      <a href={href} data-marketing-cta="" {...rest}>
         {children}
       </a>
     </SharedButton>

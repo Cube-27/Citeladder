@@ -1,6 +1,75 @@
 import { expect, test } from '@playwright/test';
+import { CITATION_PAGE, SHARE_OF_VOICE_PAGE } from '@/lib/marketing-content/commercial-pages';
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 test.describe('marketing routes', () => {
+  test('commercial entry pages deliver indexable copy and usable links without JavaScript', async ({
+    browser,
+    baseURL,
+    request,
+  }) => {
+    const context = await browser.newContext({ baseURL, javaScriptEnabled: false });
+    const page = await context.newPage();
+    const entries = [
+      { path: '/ai-citation-tracking', copy: CITATION_PAGE },
+      { path: '/ai-search-share-of-voice', copy: SHARE_OF_VOICE_PAGE },
+    ];
+    for (const { path, copy } of entries) {
+      const response = await request.get(path);
+      expect(response.status()).toBe(200);
+      // Parse the HTTP response itself, before hydration or browser rendering.
+      const initial = await page.evaluate(
+        (html) => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          return {
+            headings: [...doc.querySelectorAll('h1')].map((h) => h.textContent),
+            text: doc.querySelector('main')?.textContent,
+            canonical: doc.querySelector('link[rel="canonical"]')?.getAttribute('href'),
+            title: doc.title,
+            socialTitle: doc.querySelector('meta[property="og:title"]')?.getAttribute('content'),
+            description: doc.querySelector('meta[name="description"]')?.getAttribute('content'),
+            socialDescription: doc
+              .querySelector('meta[property="og:description"]')
+              ?.getAttribute('content'),
+          };
+        },
+        await response.text(),
+      );
+      expect(initial.headings).toEqual([copy.heading]);
+      expect(initial.text).toContain(copy.introduction);
+      expect(initial.canonical).toBe(
+        new URL(path, process.env.PUBLIC_WEBSITE_ORIGIN ?? baseURL).href,
+      );
+      expect(initial.socialTitle).toBe(initial.title);
+      expect(initial.socialDescription).toBe(initial.description);
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(path);
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        );
+        const demo = page.locator('main').getByRole('link', { name: 'Book a demo' }).first();
+        await demo.focus();
+        await expect(demo).toBeFocused();
+        await expect(demo).toHaveAttribute('href', DEMO_HREF);
+        for (const target of [copy.secondary.href, '/solutions', '/pricing']) {
+          const link = page.locator(`main a[href="${target}"]`).first();
+          await expect(link).toBeAttached();
+          expect((await request.get(target)).status()).toBe(200);
+        }
+        await page.screenshot({
+          path: test.info().outputPath(`${path.slice(1)}-${width}.png`),
+          fullPage: true,
+        });
+      }
+      await page.goto('/compare');
+      await expect(page.locator(`main a[href="${path}"]`)).toBeVisible();
+      await expect(page.locator(`footer a[href="${path}"]`)).toBeAttached();
+    }
+    expect((await request.get('/ai-citation-tracking/does-not-exist')).status()).toBe(404);
+    await context.close();
+  });
   test('public paper surfaces and long tabs stay usable across viewport sizes', async ({
     page,
   }) => {
@@ -48,11 +117,11 @@ test.describe('marketing routes', () => {
     expect(tagRequests[0]).toContain('id=G-CONSENTTEST');
   });
 
-  test('four monitored surfaces stay visible with reduced motion', async ({ page }) => {
+  test('collection sources stay distinguishable with reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
     const roster = page.getByRole('region', { name: 'Monitored answer engines' });
-    for (const name of ['ChatGPT', 'Gemini', 'Claude', 'Google AI Overviews']) {
+    for (const name of ['OpenAI API', 'Gemini API', 'Claude API', 'Google AI Overviews']) {
       await expect(roster.getByText(name, { exact: true })).toBeVisible();
     }
     await expect(roster.getByText('DataForSEO')).toHaveCount(0);

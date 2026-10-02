@@ -13,6 +13,7 @@ import {
   formatMoney,
   headlinePrice,
   isPurchasable,
+  selfServeCheckoutComingSoon,
 } from '@/lib/billing/catalog';
 import { publicPricingSelectionHref } from '@/lib/billing/public-pricing-selection';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
@@ -25,6 +26,7 @@ import {
 
 import { Section, SectionHeader } from '../primitives/section';
 import { PricingComparison } from './pricing-comparison';
+import { PricingComingSoonStrip } from './pricing-coming-soon-strip';
 
 /**
  * INR prices are published exclusive of GST, which the server quote adds for
@@ -152,6 +154,7 @@ export function PublicPricingCatalog({
   const mode = byok ? 'byok' : 'funded';
   return (
     <>
+      {selfServeCheckoutComingSoon(catalog) && <PricingComingSoonStrip />}
       <Section tone="paper" rhythm="tight" aria-label="Plans">
         <label className="border-border-subtle bg-background-alt mb-8 flex items-center gap-3 rounded-[var(--radius-card)] border p-4">
           <input
@@ -169,6 +172,10 @@ export function PublicPricingCatalog({
           <span className="text-foreground text-sm font-medium">{BYOK_SWITCH_LABEL}</span>
           <span className="website-label text-muted">{BYOK_DISCLOSURE}</span>
         </label>
+        <p className="website-body text-muted mb-6">
+          Provider usage may be billed separately from your CiteLadder plan. Review the selected
+          usage option and its costs before starting a run.
+        </p>
         <p className="website-label text-muted mb-6">
           Prices shown in {catalog.currency}
           {catalog.currency === 'INR' ? ', exclusive of GST' : ''}. Your billing country sets the

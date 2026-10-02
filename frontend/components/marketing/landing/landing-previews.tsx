@@ -118,7 +118,7 @@ function VisibilityPreview() {
         <div>
           <small>Tracked prompts</small>
           <strong>42</strong>
-          <span>3 answer engines</span>
+          <span>Configured collection sources</span>
         </div>
       </div>
       <div className="cl-chart">
@@ -352,7 +352,7 @@ export function PlatformExplorer({
                     <div className="cl-product-card">
                       <div className="cl-window-bar">
                         <Grid2X2 size={14} aria-hidden />
-                        Zernovelle / {item.label}
+                        Zernovelle / {item.label} · Illustrative example
                       </div>
                       <Preview />
                     </div>
@@ -381,7 +381,7 @@ export function HeroPreview() {
             <Grid2X2 size={13} aria-hidden />
             zernovelle.example / AI Visibility
           </span>
-          <span>Workspace overview</span>
+          <span>Illustrative example</span>
         </div>
         <div className="cl-hero-preview-layout">
           <aside>

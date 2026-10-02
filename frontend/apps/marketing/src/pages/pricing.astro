@@ -1,6 +1,5 @@
 ---
 import { PricingCta } from '@/components/marketing/pages/pricing';
-import { PricingComingSoonStrip } from '@/components/marketing/pricing/pricing-coming-soon-strip';
 import { PublicPricingCatalog } from '@/components/marketing/pricing/public-pricing-catalog';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
@@ -9,7 +8,7 @@ import { workerApexEnv } from '../worker-env';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 
 const description =
-  'Self-serve CiteLadder plans plus Enterprise. You pay for the workspace and the evidence. Model usage bills to your own provider keys, never marked up.';
+  'Explore CiteLadder plans, provider-key usage and early-access options. Review published limits and confirm availability before choosing a plan.';
 const env = workerApexEnv();
 const catalog = await publicCatalog(env, displayCountry(Astro.request.headers));
 const initialByok = Astro.url.searchParams.get('byok') !== '0';
@@ -17,7 +16,7 @@ Astro.response.headers.set('Cache-Control', 'no-store');
 ---
 
 <MarketingLayout
-  title="CiteLadder pricing for AI visibility · CiteLadder"
+  title="AI Visibility Software Pricing | CiteLadder"
   description={description}
   canonical="/pricing"
 >
@@ -31,7 +30,6 @@ Astro.response.headers.set('Cache-Control', 'no-store');
     >
       <TrustStrip className="mt-8 justify-center" />
     </PageHero>
-    <PricingComingSoonStrip />
     {catalog ? (
       <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} client:load />
     ) : (

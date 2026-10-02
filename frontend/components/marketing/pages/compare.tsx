@@ -26,6 +26,14 @@ export function CompareIndex() {
       />
 
       <Section tone="paper" rhythm="tight" aria-label="Competitors">
+        <div className="website-body text-accent-text flex flex-wrap gap-5">
+          <a href="/ai-citation-tracking" className="underline underline-offset-2">
+            Understand citation tracking
+          </a>
+          <a href="/ai-search-share-of-voice" className="underline underline-offset-2">
+            Understand AI share of voice
+          </a>
+        </div>
         <div className="mb-5 flex items-center justify-between gap-4">
           <Meta as="p">Choose a tool</Meta>
           <Meta>{COMPETITORS.length} comparisons</Meta>

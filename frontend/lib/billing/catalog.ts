@@ -112,6 +112,12 @@ export function isPurchasable(entry: CatalogAddon | CatalogTopup): boolean {
   return entry.availability === 'available' && entry.unit_price !== null;
 }
 
+/** Unknown catalog state must never be presented as a coming-soon launch. */
+export function selfServeCheckoutComingSoon(catalog: BillingCatalog): boolean {
+  const selfServePlans = catalog.plans.filter((plan) => plan.self_serve && !plan.contact_only);
+  return selfServePlans.length > 0 && selfServePlans.every((plan) => !plan.checkout_available);
+}
+
 export type ProviderMarketingState = {
   key: string;
   label: string;

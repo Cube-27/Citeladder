@@ -24,6 +24,8 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
       { label: 'What CiteLadder reveals', href: '/#why' },
       { label: 'The operating loop', href: '/#how-it-works' },
       { label: 'See it', href: '/#see-it' },
+      { label: 'Citation tracking', href: '/ai-citation-tracking' },
+      { label: 'AI share of voice', href: '/ai-search-share-of-voice' },
       { label: 'Pricing', href: '/pricing' },
       { label: 'Enterprise', href: '/enterprise' },
     ],
