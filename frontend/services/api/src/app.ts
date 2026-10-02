@@ -20,6 +20,9 @@ import { requestId } from './request-id.ts';
 import { PRODUCT_ROUTES } from './routes/index.ts';
 import { registerMethodGuards } from './routes/define.ts';
 import { registerMcpRoutes } from './mcp/server.ts';
+import { observeCommittedWork } from './db/committed-work.ts';
+import { runnerStarter } from './workers/start-runner.ts';
+import { originToken } from './http/origin-token.ts';
 
 const logger = getLogger('api');
 
@@ -48,10 +51,17 @@ async function databaseReachable(db: Database, timeoutMs: number): Promise<boole
   }
 }
 
-export function createApp(config: ServiceConfig, db: Database): Hono<AppEnv> {
+export function createApp(
+  config: ServiceConfig,
+  db: Database,
+  options: { startRunner?: () => Promise<void> } = {},
+): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use(requestId(config.requestIdHeader));
   app.use(apiNoStore());
+  app.use(originToken(config));
+  const startRunner = options.startRunner ?? runnerStarter(config);
+  app.use(async (_c, next) => observeCommittedWork(next, startRunner));
   app.use(
     '/api/*',
     bodyLimit({

@@ -7,7 +7,10 @@ import { getLogger } from './logging.ts';
 
 const logger = getLogger('api');
 const config = loadConfig();
-const db = createDatabase(config);
+const db = createDatabase(
+  config,
+  config.execution.runnerJob ? { maxConnections: config.execution.poolSize } : {},
+);
 const server = serve(
   { fetch: createApp(config, db).fetch, hostname: config.host, port: config.port },
   (info) => logger.info('api_service_started', { host: config.host, port: info.port }),

@@ -8,6 +8,7 @@
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import ipaddr from 'ipaddr.js';
 import { ConfigError } from './config/config-error.ts';
+import { executionSettings } from './config/execution.ts';
 export { ConfigError } from './config/config-error.ts';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
@@ -292,6 +293,7 @@ function resolveSetting(name: string, env: Record<string, string | undefined>): 
 }
 
 export type ServiceConfig = {
+  execution: ReturnType<typeof executionSettings>;
   billing: BillingSettings;
   razorpay: RazorpaySettings;
   appName: string;
@@ -472,6 +474,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   );
   const setting = (name: keyof typeof policy.settings) => resolveSetting(name, env);
   const config: ServiceConfig = {
+    execution: executionSettings(env),
     billing: billingSettings(env),
     razorpay: razorpaySettings(env),
     appName: setting('app_name') as string,
