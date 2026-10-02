@@ -9,6 +9,7 @@ import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
 import { agentContext } from './config/agent-context.ts';
 import { agentSkills } from './config/agent-skills.ts';
+import { mcp } from './config/mcp.ts';
 import { promptGeneration } from './config/prompt-generation.ts';
 import { brandLogos } from './config/brand-logos.ts';
 import { internalLinks } from './config/internal-links.ts';
@@ -36,6 +37,14 @@ export const policy = {
   ...pythonConfig,
   agent_context: agentContext,
   agent_skills: agentSkills,
+  mcp: {
+    ...mcp,
+    terms_revision: pythonConfig.auth.terms_revision,
+    constants: {
+      ...mcp.constants,
+      api_request_body_max_bytes: pythonConfig.api.request_body_max_bytes,
+    },
+  },
   prompts: { ...pythonConfig.prompts, generation: promptGeneration },
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,
