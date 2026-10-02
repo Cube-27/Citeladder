@@ -33,8 +33,9 @@ A route family, task kind or table has exactly one writing stack, Python or
 TypeScript. The change that gives it a TypeScript owner deletes the Python owner.
 For route families the route-ownership manifest is the single record, and
 ingress must route each family's paths only to the stack it names. For
-analytics task kinds it is `ANALYTICS_TS_OWNED_TASK_KINDS` in
-`core/config/analytics.py`: each stack's worker claims only its own kinds.
+analytics task kinds the native catalog in
+`frontend/services/api/src/config/connected-data.ts` owns execution and recovery;
+Python operators may enqueue the shared Opportunity kind but have no executor.
 
 ## 2. Product policy is configuration
 

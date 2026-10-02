@@ -6,7 +6,7 @@
 #
 # A separate table rather than columns on ``users`` because the provider
 # catalog already spans google / github / apple
-# (``app.core.config.oauth.OAUTH_PROVIDERS``) and one account may eventually
+# (native ``config/auth-oauth.json``) and one account may eventually
 # carry several.
 from __future__ import annotations
 

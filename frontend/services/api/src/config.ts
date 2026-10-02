@@ -16,6 +16,10 @@ import modelGateway from './config/model-gateway.json' with { type: 'json' };
 import { discovery } from './config/discovery.ts';
 import promptLibrary from './config/prompt-library.json' with { type: 'json' };
 import api from './config/api.json' with { type: 'json' };
+import searchIntelligence from './config/search-intelligence.json' with { type: 'json' };
+import demand from './config/demand.json' with { type: 'json' };
+import { integrations, traffic, analytics, referrals, authOAuth } from './config/connected-data.ts';
+import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
@@ -60,6 +64,21 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   api,
+  settings: { ...pythonConfig.settings, ...integrationCredentials },
+  integrations,
+  analytics,
+  referrals,
+  auth: { ...pythonConfig.auth, oauth: authOAuth },
+  search_intelligence: {
+    ...searchIntelligence,
+    ...pythonConfig.search_intelligence,
+    task_kind: analytics.tasks.search_intelligence_acquisition,
+  },
+  demand: {
+    ...demand,
+    ...pythonConfig.demand,
+    query_page_dataset: traffic.DATASET_GSC_QUERY_PAGE_DAILY,
+  },
   visibility: { ...pythonConfig.visibility, ...promptLibrary.cohorts },
   projects: { ...pythonConfig.projects, prompt_set_name: promptLibrary.prompt_set_name },
   errors,
@@ -106,12 +125,12 @@ export const policy = {
   providers: { ...pythonConfig.providers, app: appModels },
   content_differentiation: {
     ...contentDifferentiation,
-    stop_words: pythonConfig.demand.stop_words,
+    stop_words: demand.stop_words,
   },
   site_health: siteHealth,
   web_fetch: siteHealth.web_fetch,
   traffic: {
-    ...pythonConfig.traffic,
+    ...traffic,
     url_schemes: siteHealth.web_fetch.schemes,
     url_ports: siteHealth.web_fetch.ports,
     ignored_query_keys: [...siteHealth.tracking_params, ...siteHealth.ignored_query_keys].sort(

@@ -1348,6 +1348,19 @@ punctuation. Retire Python HTTP/API policy modules and the obsolete Agent gatewa
 dotenv test; native gateway/admission/skills tests and remaining Python dotenv
 coverage guard the retained consumers. Other policy families remain open.
 
+**20k.** Transfer Search Intelligence acquisition/pricing, Demand lexical policy,
+integration transports/settings/datasets, traffic and referral catalogs, analytics
+runtime and OAuth policy to native config. Dataset arity, dimension separators,
+OAuth transaction cookies and analytics execution/recovery kinds compose from
+their sole native owners. Preserve credential aliases and sync/worker cross-field
+bounds. Python retains integration and analytics queue defaults, provenance
+versions, entitlement identities and supported Opportunity enqueue behavior.
+Retire the uncalled Python analytics fixture helper and execution-only catalogs,
+OAuth helpers and tests. Native recorded-provider and PostgreSQL paths retain
+classification, redaction, resume, lease, scope and distinct unavailable coverage;
+model/isolation and deployment-secret coverage stays in Python. Further policy
+transfer remains open.
+
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,
 > and supported offline operators/bootstrap. Queue recovery is native; Python

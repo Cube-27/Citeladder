@@ -8,6 +8,14 @@ Console, GA4 and Bing Webmaster Tools are implemented connectors. Shopify
 OAuth/product/order sync is retired; [Commerce](commerce-intelligence.md)
 uses Site Health and CSV. Reports, agents and reads never call these providers.
 
+Native [connected-data config](../frontend/services/api/src/config/connected-data.ts)
+owns sync settings, transports, dataset grains, traffic and referral catalogs,
+analytics task kinds and OAuth policy. [Demand config](../frontend/services/api/src/config/demand.json)
+owns query/lexical policy and [Search Intelligence config](../frontend/services/api/src/config/search-intelligence.json)
+owns acquisition and pricing. Python retains model defaults, provenance versions
+and entitlement identities through the drift-checked export. Dataset arity and
+dimension separators derive from the native integration catalog.
+
 ## Consent and mapping
 
 Google Search Console and GA4 share one Google grant per workspace and the

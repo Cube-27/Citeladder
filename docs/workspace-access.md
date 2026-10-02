@@ -20,18 +20,17 @@ session-version checks invalidate stale sessions. The frontend crosses the
 identity boundary with full-document navigation so a prefetched anonymous
 layout cannot be reused.
 
-TypeScript issues sessions and reads the Argon2, OAuth and abuse policies from
-the generated Python config export. Remaining Python APIs and MCP verify the
-same HS256 claims against the persisted user session version. Google sign-in
+TypeScript issues sessions, owns OAuth and abuse policy, and reads shared Argon2
+parameters from the generated Python config export. Python account/demo operators
+retain password and provisioning behavior. Google sign-in
 uses a signed state bound to an HttpOnly transaction cookie and verified email
 before linking a new provider subject. Provider requests have host, redirect,
 deadline and response-size bounds. PostgreSQL abuse counters commit before
 password verification or provider I/O; successful credentials bypass email
 failure budgets.
 
-[TypeScript authorization](../frontend/services/api/src/auth/workspace.ts) and
-[remaining Python dependencies](../backend/app/api/deps.py) resolve membership and expose
-safe capabilities. Flat APIs use an explicit workspace header or the user's
+[TypeScript authorization](../frontend/services/api/src/auth/workspace.ts) resolves
+membership and exposes safe capabilities. Flat APIs use an explicit workspace header or the user's
 default membership. A project-detail or image request can resolve membership
 through its project ID, but never trusts that ID alone. Foreign/missing objects
 do not reveal product data.

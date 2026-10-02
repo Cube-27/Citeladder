@@ -22,12 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.integrations_contracts import (
     GRANT_STATUS_CONNECTED,
     MAPPING_STATUS_ACTIVE,
-    MAPPING_STATUS_DISABLED,
     SYNC_KIND_ON_DEMAND,
-    SYNC_KIND_SCHEDULED,
-)
-from app.core.config.integrations_datasets import (
-    DATASET_GSC_PAGE_DAILY,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
@@ -178,7 +173,7 @@ async def test_active_window_partial_index_dedupes_inflight_runs(
                 connection_id,
                 target,
                 resync_seq=2,
-                sync_kind=SYNC_KIND_SCHEDULED,
+                sync_kind="scheduled",
             )
         )
         session.add(
@@ -381,7 +376,7 @@ async def test_one_active_mapping_per_property_across_connections(
             await session.commit()
     # A disabled mapping coexists with the active owner.
     async with session_factory() as session:
-        session.add(_mapping(gsc_id, "gsc", status=MAPPING_STATUS_DISABLED))
+        session.add(_mapping(gsc_id, "gsc", status="disabled"))
         await session.commit()
     # The same property_ref under another provider is a different property.
     async with session_factory() as session:
@@ -403,7 +398,7 @@ async def test_metric_row_identity_and_resync_retention(
             sync_run_id=run.id,
             connection_id=connection_id,
             provider="gsc",
-            dataset=DATASET_GSC_PAGE_DAILY,
+            dataset="gsc_page_daily",
             query_snapshot={"dimensions": ["page", "date"]},
             payload_hash="a" * 64,
             row_count=1,
@@ -423,7 +418,7 @@ async def test_metric_row_identity_and_resync_retention(
             project_id=project_id,
             property_ref="sc-domain:example.com",
             provider="gsc",
-            dataset=DATASET_GSC_PAGE_DAILY,
+            dataset="gsc_page_daily",
             date=date(2026, 7, 21),
             dimension_key="https://example.com/page | 20260721",
             metrics={"clicks": 3, "impressions": 40},
@@ -504,7 +499,7 @@ async def test_same_workspace_composite_fks_reject_cross_workspace_refs(
                     sync_run_id=run.id,
                     connection_id=connection_id,
                     provider="gsc",
-                    dataset=DATASET_GSC_PAGE_DAILY,
+                    dataset="gsc_page_daily",
                     payload_hash="b" * 64,
                 )
             )
@@ -585,7 +580,7 @@ async def test_workspace_delete_cascades_graph(
                 sync_run_id=run.id,
                 connection_id=connection_id,
                 provider="gsc",
-                dataset=DATASET_GSC_PAGE_DAILY,
+                dataset="gsc_page_daily",
                 payload_hash="c" * 64,
             )
         )
