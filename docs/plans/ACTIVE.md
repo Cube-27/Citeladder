@@ -65,7 +65,8 @@
   the Python analytics worker and its exclusive acquisition/parser bridges.
   Python keeps brand-discovery/integration recovery and fixture identity helpers.
   PR 20 is assigned: 20a transfers the first native policy owners and retires
-  unused Python bridges; further policy, runtime and dependency slices remain.
+  unused Python bridges; 20b updates dependencies and prunes Python multipart.
+  Further policy and runtime slices remain.
   Deployment of implemented cutovers is pending; the owner dropped the
   one-week soak while there are no customers (smoke tests instead). On
   1 October 2026 the owner accepted a low-cost hosting phase (PRs 21–24:

@@ -5,9 +5,10 @@ ENV PATH="${PNPM_HOME}:${PATH}"
 WORKDIR /app
 
 # Keep this version in lockstep with packageManager in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@12.4.2
+RUN npm install --global --ignore-scripts pnpm@12.8.1
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/packages/contracts/package.json ./packages/contracts/
+COPY frontend/services/api/package.json ./services/api/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder
@@ -18,7 +19,7 @@ ENV PATH="${PNPM_HOME}:${PATH}"
 ENV PUBLIC_DOCS_ORIGIN=${PUBLIC_DOCS_ORIGIN}
 WORKDIR /app
 
-RUN npm install --global --ignore-scripts pnpm@12.4.2
+RUN npm install --global --ignore-scripts pnpm@12.8.1
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:docs
