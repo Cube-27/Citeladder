@@ -31,7 +31,10 @@ export function tokenInventory(source) {
   const dark = resolvePalette(source, ":root[data-theme='dark']");
   return [...light.keys()]
     .filter((token) => token.startsWith('--color-'))
-    .sort()
+    .sort((left, right) => {
+      if (left === right) return 0;
+      return left < right ? -1 : 1;
+    })
     .map((token) => ({
       token,
       light: light.get(token),
