@@ -157,7 +157,6 @@
     }
   },
   "constants": {
-    "max_project_competitors": 5,
     "discovery_status_running": "running",
     "discovery_status_failed": "failed",
     "discovery_status_ready": "ready",

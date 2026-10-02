@@ -71,6 +71,10 @@ total.
 
 ## 3. Verified constraints
 
+This section records the migration's starting state. The completed cutover uses
+native PostgreSQL queues and a single TypeScript API; current ownership is in
+[backend architecture](../backend-architecture.md).
+
 - Backend processes share one image (`docker-compose.yml`,
   `infra/gcp/runtime/compose.gcp.yml`), and all queues share
   `orchestration/postgres_task_queue.py`, whose claim accepts a `task_kind`
@@ -214,9 +218,10 @@ the path's project (like `require_project_member`) without `X-Workspace-Id`.
 
 `frontend/lib/api/schemas/*` moved into `frontend/packages/contracts`. The
 route-ownership manifest (family → stack) and the error machine-code union live
-there. The contract-drift guard checks only Python-owned families against
-FastAPI. All golden files, frozen fragments, `src/python` emulation helpers and
-their Python builders were deleted; query keys, prompt-text hashes and Action
+there. At PR 2, the contract-drift guard checked Python-owned families against
+FastAPI; that guard retired when the final Python route family moved. All golden
+files, frozen fragments, `src/python` emulation helpers and their Python builders
+were deleted; query keys, prompt-text hashes and Action
 query group keys lower-case in both stacks.
 
 ### PR 3: First live reads
@@ -1097,7 +1102,7 @@ Departures in 18b5c:
 
 | Python bridge kept by 18b4 | Remaining caller / retirement condition |
 | --- | --- |
-| `connectors/web_evidence/{fetcher,curl_transport,url_policy,brand_evidence}.py` | Commerce competitor discovery and retained URL identities. Onboarding site resolution has no current application caller. Provider probes are TypeScript; the Agent's `app_model_transport.py` still uses the DNS/target validation helpers. Retire after Agent and 19c caller inventories. |
+| `connectors/web_evidence/{fetcher,curl_transport,url_policy,brand_evidence}.py` | Historical 18b4 bridge for Commerce and Agent DNS/target validation; retired after the Agent and 19c caller inventories. Public website transport now belongs to native `projects/safe-fetch.ts`. |
 | `analysis/site_health/parser.py` and its fact extractors | Commerce competitor discovery |
 | `domain/site_health/discovery.add_automatic_root`, `frontier_support.py` | retired in 18b5c (TypeScript crawl admission) |
 | `canonical_aliases.reconcile_crawl_duplicate_aliases` | retired in 18b5b (TypeScript finalization) |

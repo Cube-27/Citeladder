@@ -19,7 +19,7 @@ export async function repairOwnedCompletion(
   at: Date,
 ) {
   return db.transaction().execute(async (trx) => {
-    const locked = await ownedAuditTask(trx, claimed, owner, at);
+    const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return false;
     const { task, audit } = locked;
     const observation =
@@ -140,7 +140,7 @@ export class AuditMaintenance {
       .selectFrom('audit_tasks')
       .select(['id', 'workspace_id', 'audit_id', 'project_id'])
       .where('status', 'in', ['leased', 'running'])
-      .where('lease_expires_at', '<=', at)
+      .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
       .orderBy('lease_expires_at')
       .orderBy('id')
       .limit(batchSize)
@@ -167,7 +167,7 @@ export class AuditMaintenance {
           .where('id', '=', candidate.id)
           .where('audit_id', '=', audit.id)
           .where('status', 'in', ['leased', 'running'])
-          .where('lease_expires_at', '<=', at)
+          .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
           .forUpdate()
           .skipLocked()
           .executeTakeFirst();

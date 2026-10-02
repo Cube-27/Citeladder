@@ -12,7 +12,7 @@ export function commitSubmissionIntent(
   at = new Date(),
 ) {
   return db.transaction().execute(async (trx) => {
-    const locked = await ownedAuditTask(trx, context.task, owner, at);
+    const locked = await ownedAuditTask(trx, context.task, owner);
     if (!locked) return null;
     if (locked.task.provider_submission_ref) return { fresh: false, task: locked.task };
     const connection = await trx

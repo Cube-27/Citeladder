@@ -6,7 +6,6 @@ import type { Database } from '../db/database.ts';
 import type { AuditSchedules } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
 import {
-  canonicalTimezone,
   scheduleIntervalIssue,
   type ScheduleCreate,
   type ScheduleUpdate,
@@ -56,7 +55,6 @@ export function createSchedule(db: Database, scope: ScheduleScope, input: Schedu
         id: randomUUID(),
         workspace_id: scope.workspaceId,
         project_id: scope.projectId,
-        timezone: canonicalTimezone(input.timezone) ?? input.timezone,
         engines: JSON.stringify(input.engines),
         next_run_at: input.next_run_at ? new Date(input.next_run_at) : now,
         last_run_at: null,
@@ -115,9 +113,6 @@ export function updateSchedule(
       .updateTable('audit_schedules')
       .set({
         ...fields,
-        ...(input.timezone === undefined
-          ? {}
-          : { timezone: canonicalTimezone(input.timezone) ?? input.timezone }),
         ...(engines === undefined ? {} : { engines: JSON.stringify(engines) }),
         ...nextRunPatch(input, current, now),
         updated_at: now,

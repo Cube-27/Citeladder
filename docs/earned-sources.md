@@ -233,9 +233,9 @@ alone, because it has learned nothing that contradicts it.
 What was never read stays distinguishable from what was read and found absent.
 A page carries presence verdicts only once a snapshot exists.
 
-[Configuration](../backend/app/core/config/source_pages.py) owns the
+[Configuration](../frontend/services/api/src/config/source-pages.ts) owns the
 inspection limits, vocabularies and budget window;
-[earned actions](../backend/app/core/config/earned_actions.py) owns the rule
+[earned actions](../frontend/services/api/src/config/earned-actions.ts) owns the rule
 ids, the qualification thresholds and the format-to-output-type mapping;
-[placement](../backend/app/core/config/placement.py) owns the expected-change
+[placement](../frontend/services/api/src/config/placement.ts) owns the expected-change
 vocabulary, the check states and the recheck schedule.

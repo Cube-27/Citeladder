@@ -120,7 +120,7 @@ export function persistSurfaceExchange(
   at = new Date(),
 ) {
   return db.transaction().execute(async (trx) => {
-    const locked = await ownedAuditTask(trx, claimed, owner, at);
+    const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return false;
     const metadata = { ...record(locked.task.provider_metadata) };
     if (exchange.raw !== undefined) metadata.provider_submission_payload = exchange.raw;

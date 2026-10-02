@@ -313,10 +313,8 @@ services:
     healthcheck:
       disable: true
 
-  # TypeScript API service (docs/plans/citeladder-typescript-migration.md).
-  # Serves the route families the route-ownership manifest assigns to
-  # TypeScript; both local ingresses send it exactly those paths. It reads the
-  # Alembic-migrated schema and verifies backend-issued sessions.
+  # The native API serves every application route family and issues sessions.
+  # Both local ingresses route /api/* here; Alembic owns its database schema.
   api-service:
     build:
       context: .

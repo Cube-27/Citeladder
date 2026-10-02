@@ -26,7 +26,12 @@ const timezone = z
   .trim()
   .min(1)
   .max(64)
-  .refine((value) => canonicalTimezone(value) !== null, 'timezone must be a valid IANA timezone');
+  .transform((value, context) => {
+    const canonical = canonicalTimezone(value);
+    if (canonical !== null) return canonical;
+    context.addIssue({ code: 'custom', message: 'timezone must be a valid IANA timezone' });
+    return z.NEVER;
+  });
 const engines = z
   .array(logicalEngineSchema)
   .min(1)

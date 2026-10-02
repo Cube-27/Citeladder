@@ -11,6 +11,7 @@ import { recoverIntegrationLeases, recoverQueues } from '../src/queue/recovery.t
 import { referralEventFields } from '../src/referrals/events.ts';
 import { seedProject } from './referral-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
+import { setLogSink } from '../src/logging.ts';
 
 const db = testDatabase();
 const fixtures = new Fixtures(db);
@@ -115,6 +116,24 @@ async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
 }
 
 describe('integration worker paging and resume', () => {
+  it('publishes with a live database lease despite a skewed application clock', async () => {
+    const run = await seedRun();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(Date.now() + 86400000));
+    try {
+      const client = { page: async () => ({ payload: { rows: [] }, rawRowCount: 0 }) };
+      const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token');
+      expect(await worker.runOnce()).toBe(true);
+      const result = await db
+        .selectFrom('integration_sync_runs')
+        .select('status')
+        .where('id', '=', run.runId)
+        .executeTakeFirstOrThrow();
+      expect(result.status).toBe('succeeded');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('reports partial sweep failure after recovering the independent queue', async () => {
     const run = await seedRun();
     await db
@@ -267,10 +286,26 @@ describe('integration worker paging and resume', () => {
       .set({ attempt_count: 2 })
       .where('id', '=', exhausted.runId)
       .execute();
-    const reclaimed = await Promise.all([
-      recoverIntegrationLeases(db, 1),
-      recoverIntegrationLeases(db, 1),
-    ]);
+    const logs: string[] = [];
+    const previousSink = setLogSink((line) => logs.push(line));
+    let reclaimed: number[];
+    try {
+      reclaimed = await Promise.all([
+        recoverIntegrationLeases(db, 1),
+        recoverIntegrationLeases(db, 1),
+      ]);
+    } finally {
+      setLogSink(previousSink);
+    }
+    expect(logs.map((line) => JSON.parse(line))).toContainEqual(
+      expect.objectContaining({
+        event: 'queue_task_attempts_exhausted',
+        queue: 'integration_sync_runs',
+        task_id: exhausted.runId,
+        workspace_id: exhausted.workspaceId,
+        attempt_count: 2,
+      }),
+    );
     expect(reclaimed.reduce((a, b) => a + b, 0)).toBe(2);
     const terminal = await db
       .selectFrom('integration_sync_runs')

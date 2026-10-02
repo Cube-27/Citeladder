@@ -147,6 +147,14 @@ describe('configured model gateway', () => {
 
 describe('JEV transport', () => {
   const configured = { ...jevSettings({}), apiKey: 'test-only' };
+  it.each(['https://model.test?token=fixture', 'https://model.test#fragment'])(
+    'refuses an ambiguous endpoint before sending credentials (%s)',
+    (baseUrl) => {
+      const io = transport([]);
+      expect(() => createJevClient({ ...configured, baseUrl }, io)).toThrow('not_configured');
+      expect(io.fetch).not.toHaveBeenCalled();
+    },
+  );
   it('is off without a key and returns typed answer records when enabled', async () => {
     expect(createJevClient(jevSettings({}))).toBeNull();
     const io = transport([

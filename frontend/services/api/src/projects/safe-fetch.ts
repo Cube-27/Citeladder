@@ -97,7 +97,9 @@ export function publicUrl(value: string, base?: string): URL {
     url.password ||
     !url.hostname ||
     hostname.length > bounds.max_dns_hostname_chars ||
-    hostname.split('.').some((label) => label.length > bounds.max_dns_label_chars) ||
+    hostname
+      .split('.')
+      .some((label) => !label.length || label.length > bounds.max_dns_label_chars) ||
     url.href.length > 1024
   )
     throw new FetchError('invalid_url');

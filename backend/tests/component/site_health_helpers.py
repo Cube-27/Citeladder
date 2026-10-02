@@ -55,6 +55,8 @@ async def seed_site_crawl(
     # domain (example.com and the reserved .example hosts). URL admission is
     # native; persistence fixtures do not implement a second URL policy.
     parsed = urlsplit(root_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("Site Health fixture root must be an absolute HTTP(S) URL")
     canonical_root = parsed._replace(path=parsed.path or "/").geturl()
     root_host = parsed.hostname or ""
     root_base = (

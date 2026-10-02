@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import auditRuntime from '../src/config/audits.json' with { type: 'json' };
+import trafficRuntime from '../src/config/traffic.json' with { type: 'json' };
+import shared from '../src/generated/python-config.json' with { type: 'json' };
 
 import {
   ConfigError,
@@ -30,6 +33,58 @@ it('applies production and test-key aliases to Razorpay credential admission', (
 });
 
 describe('loadConfig', () => {
+  it('reports missing provider routes as configuration failures during composition', async () => {
+    vi.resetModules();
+    vi.doMock('../src/config/audits.json', () => ({
+      default: {
+        ...auditRuntime,
+        route_policies: { ...auditRuntime.route_policies, unregistered: {} },
+      },
+    }));
+    try {
+      await expect(import('../src/config/audits.ts')).rejects.toThrow(
+        'Audit engine unregistered has no shared provider route',
+      );
+    } finally {
+      vi.doUnmock('../src/config/audits.json');
+      vi.resetModules();
+    }
+  });
+
+  it('refuses a shared policy that overwrites a native connected-data value', async () => {
+    vi.resetModules();
+    vi.doMock('../src/generated/python-config.json', () => ({
+      default: { ...shared, traffic: { ...shared.traffic, TRAFFIC_DEFAULT_WINDOW_DAYS: 99 } },
+    }));
+    try {
+      await expect(import('../src/config/connected-data.ts')).rejects.toThrow(
+        'Duplicate connected-data policy: traffic.TRAFFIC_DEFAULT_WINDOW_DAYS',
+      );
+    } finally {
+      vi.doUnmock('../src/generated/python-config.json');
+      vi.resetModules();
+    }
+  });
+
+  it('derives unavailable performance dimensions from excluded acquisition datasets', async () => {
+    vi.resetModules();
+    vi.doMock('../src/config/traffic.json', () => ({
+      default: {
+        ...trafficRuntime,
+        PERFORMANCE_DIMENSION_DATASETS: {
+          ...trafficRuntime.PERFORMANCE_DIMENSION_DATASETS,
+          unavailable: 'gsc_search_appearance_daily',
+        },
+      },
+    }));
+    try {
+      const { traffic } = await import('../src/config/connected-data.ts');
+      expect(traffic.PERFORMANCE_UNAVAILABLE_DIMENSIONS).toContain('unavailable');
+    } finally {
+      vi.doUnmock('../src/config/traffic.json');
+      vi.resetModules();
+    }
+  });
   it('refuses invalid JEV thresholds and destinations before accepting work', () => {
     expect(() => loadConfig({ JEV_FAIL_BELOW: '0.5', JEV_FLAG_BELOW: '0.3' })).toThrow(
       'Invalid JEV thresholds',
@@ -38,6 +93,9 @@ describe('loadConfig', () => {
       loadConfig({ JEV_DUPLICATE_FAIL_AT: '0.5', JEV_DUPLICATE_FLAG_AT: '0.7' }),
     ).toThrow('Invalid JEV thresholds');
     expect(() => loadConfig({ JEV_BASE_URL: 'http://example.test' })).toThrow('JEV_BASE_URL');
+    expect(() => loadConfig({ JEV_BASE_URL: 'not-a-url' })).toThrow(ConfigError);
+    for (const baseUrl of ['https://example.test?token=fixture', 'https://example.test#fragment'])
+      expect(() => loadConfig({ JEV_BASE_URL: baseUrl })).toThrow(ConfigError);
     expect(() => loadConfig({ JEV_TIMEOUT_SECONDS: '61' })).toThrow(ConfigError);
   });
   it('resolves native abuse budgets with case-insensitive aliases and positive integer bounds', () => {

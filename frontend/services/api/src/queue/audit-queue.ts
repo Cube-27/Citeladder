@@ -65,7 +65,7 @@ function auditClaimStatement(
 }
 
 /** Lock order for every worker write: scoped parent audit, then the owned task. */
-export async function ownedAuditTask(db: Database, claimed: AuditTask, owner: string, at: Date) {
+export async function ownedAuditTask(db: Database, claimed: AuditTask, owner: string) {
   const audit = await db
     .selectFrom('audits')
     .selectAll()
@@ -83,7 +83,7 @@ export async function ownedAuditTask(db: Database, claimed: AuditTask, owner: st
     .where('workspace_id', '=', claimed.workspace_id)
     .where('lease_owner', '=', owner)
     .where('status', 'in', [statuses.leased, statuses.running])
-    .where('lease_expires_at', '>', at)
+    .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
     .forUpdate()
     .executeTakeFirst();
   return task ? { audit, task } : null;
@@ -138,7 +138,7 @@ export class AuditQueue {
         .set({
           status: statuses.leased,
           lease_owner: owner,
-          lease_expires_at: new Date(at.getTime() + this.leaseSeconds * 1000),
+          lease_expires_at: sql<Date>`clock_timestamp() + ${this.leaseSeconds} * interval '1 second'`,
           heartbeat_at: at,
           updated_at: at,
         })
@@ -174,7 +174,7 @@ export class AuditQueue {
   markRunning(claimed: AuditTask, owner: string, startTask = true) {
     const at = this.now();
     return this.db.transaction().execute(async (trx) => {
-      const locked = await ownedAuditTask(trx, claimed, owner, at);
+      const locked = await ownedAuditTask(trx, claimed, owner);
       if (!locked) return null;
       if (!['queued', 'running'].includes(locked.audit.status)) return null;
       if (locked.audit.status === 'queued') {
@@ -218,14 +218,14 @@ export class AuditQueue {
       .set({
         heartbeat_at: at,
         updated_at: at,
-        lease_expires_at: new Date(at.getTime() + this.leaseSeconds * 1000),
+        lease_expires_at: sql<Date>`clock_timestamp() + ${this.leaseSeconds} * interval '1 second'`,
       })
       .where('id', '=', task.id)
       .where('workspace_id', '=', task.workspace_id)
       .where('audit_id', '=', task.audit_id)
       .where('lease_owner', '=', owner)
       .where('status', 'in', [statuses.leased, statuses.running])
-      .where('lease_expires_at', '>', at)
+      .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
       .executeTakeFirst();
     return result.numUpdatedRows > 0n;
   }

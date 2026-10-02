@@ -6,6 +6,7 @@ import {
   type InternalLinkPage,
 } from '@citeladder/contracts/site-health';
 import { z } from 'zod';
+import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
@@ -188,7 +189,7 @@ export const publishInternalLinks: Executor = async (task, { db, checkCancelled 
       .where('id', '=', task.id)
       .where('lease_owner', '=', task.lease_owner)
       .where('status', '=', policy.task_queue.statuses.running)
-      .where('lease_expires_at', '>', new Date())
+      .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
       .forUpdate()
       .executeTakeFirst();
     if (!lease) return;

@@ -2,6 +2,8 @@
 import native from './discovery.json' with { type: 'json' };
 import shared from '../generated/python-config.json' with { type: 'json' };
 
+// keenable_api_key is a plain runtime string: resolve only in discovery and never log settings.
+
 export const discovery = {
   constants: { ...native.constants, ...shared.discovery.constants },
   settings: { ...native.settings, ...shared.discovery.settings },

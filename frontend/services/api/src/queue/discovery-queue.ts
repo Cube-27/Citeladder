@@ -51,7 +51,7 @@ export class DiscoveryQueue {
         .set({
           status: statuses.running,
           lease_owner: owner,
-          lease_expires_at: new Date(now.getTime() + this.leaseSeconds * 1000),
+          lease_expires_at: sql<Date>`clock_timestamp() + ${this.leaseSeconds} * interval '1 second'`,
           heartbeat_at: now,
           updated_at: now,
         })
@@ -83,7 +83,7 @@ export class DiscoveryQueue {
       .set({
         heartbeat_at: now,
         updated_at: now,
-        lease_expires_at: new Date(now.getTime() + this.leaseSeconds * 1000),
+        lease_expires_at: sql<Date>`clock_timestamp() + ${this.leaseSeconds} * interval '1 second'`,
       })
       .where('id', '=', task.id)
       .where('workspace_id', '=', task.workspace_id)

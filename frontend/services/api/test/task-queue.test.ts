@@ -5,7 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import type { AliasNode, OperationNode, SelectQueryNode } from 'kysely';
+import { sql, type AliasNode, type OperationNode, type SelectQueryNode } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
@@ -78,6 +78,41 @@ function referencedColumns(node: unknown, into = new Set<string>()): Set<string>
 }
 
 describe('TaskQueue', () => {
+  it.each([-86400000, 86400000])(
+    'keeps leases live with application clock skew %s',
+    async (skew) => {
+      const id = await task(workspaces[0]!, TS_KINDS[0]!);
+      await db
+        .updateTable('analytics_tasks')
+        .set({ available_at: new Date(0) })
+        .where('id', '=', id)
+        .execute();
+      const skewed = new TaskQueue(db, {
+        leaseTtlSeconds: 120,
+        now: () => new Date(Date.now() + skew),
+      });
+      const [claimed] = await skewed.claim({ owner: 'skewed', kinds: TS_KINDS });
+      expect(await skewed.markRunning(claimed!.id, 'skewed')).toBe(true);
+      expect(await skewed.heartbeat(claimed!.id, 'skewed')).toBe(true);
+      const expiry = await db
+        .selectFrom('analytics_tasks')
+        .select(
+          sql<number>`extract(epoch from (lease_expires_at - clock_timestamp()))::float8`.as(
+            'remaining',
+          ),
+        )
+        .where('id', '=', claimed!.id)
+        .executeTakeFirstOrThrow();
+      expect(expiry.remaining).toBeGreaterThan(110);
+      expect(expiry.remaining).toBeLessThanOrEqual(120);
+      await db
+        .updateTable('analytics_tasks')
+        .set({ lease_expires_at: new Date(0) })
+        .where('id', '=', claimed!.id)
+        .execute();
+      expect(await skewed.heartbeat(claimed!.id, 'skewed')).toBe(false);
+    },
+  );
   it('re-checks eligibility on the locked relation, not only in the ranking', () => {
     const node = claimStatement(db, {
       now: new Date(),

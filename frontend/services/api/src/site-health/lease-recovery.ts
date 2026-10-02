@@ -14,7 +14,7 @@ export function recoverExpiredLeases(db: Database, batchSize: number, now = new 
         .selectFrom('site_crawl_tasks')
         .select('id')
         .where('status', 'in', ['leased', 'running'])
-        .where('lease_expires_at', '<=', now)
+        .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
         .orderBy('lease_expires_at')
         .orderBy('id')
         .limit(batchSize)

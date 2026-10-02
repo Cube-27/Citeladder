@@ -4,6 +4,7 @@ import visibilityRuntime from './visibility.json' with { type: 'json' };
 import shared from '../generated/python-config.json' with { type: 'json' };
 import { compareText } from '../text-order.ts';
 import { dataforseo } from './providers.ts';
+import { ConfigError } from './config-error.ts';
 
 export const selectableEngines = shared.providers.catalog
   .filter((entry) => entry.adapter_shipped && Object.hasOwn(shared.providers.routes, entry.key))
@@ -18,6 +19,7 @@ export const audits = {
   route_policies: Object.fromEntries(
     Object.entries(runtime.route_policies).map(([engine, execution]) => {
       const route = shared.providers.routes[engine as keyof typeof shared.providers.routes];
+      if (!route) throw new ConfigError(`Audit engine ${engine} has no shared provider route`);
       return [
         engine,
         {

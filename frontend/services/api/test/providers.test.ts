@@ -374,6 +374,32 @@ describe('provider credential custody', () => {
     expect(result.detail).not.toContain('raw-secret-echo');
   });
 
+  it.each([
+    'not-json',
+    JSON.stringify({ login: '', password: 'fixture' }),
+    JSON.stringify({ login: 'fixture', password: '' }),
+  ])('rejects malformed stored DataForSEO credentials without network I/O (%s)', async (secret) => {
+    const row = await create({
+      transport_provider: 'dataforseo',
+      api_key: '',
+      api_login: 'fixture',
+      api_password: 'fixture',
+      routes: [],
+    });
+    await db
+      .updateTable('provider_connections')
+      .set({ api_key_encrypted: createSecretCipher(key).encrypt(secret) })
+      .where('id', '=', row.id)
+      .execute();
+    let calls = 0;
+    const result = await probeConnection(db, workspace, row.id, key, settings, async () => {
+      calls++;
+      throw new Error('Unexpected provider call');
+    });
+    expect(result).toMatchObject({ status: 'failed', error_code: 'parse_error' });
+    expect(calls).toBe(0);
+  });
+
   it('keeps never-probed, connected and paused states distinct without I/O', async () => {
     const w = await fixtures.ownedWorkspace(await fixtures.user());
     const id = (

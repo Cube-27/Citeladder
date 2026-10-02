@@ -7,6 +7,8 @@
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import ipaddr from 'ipaddr.js';
+import { ConfigError } from './config/config-error.ts';
+export { ConfigError } from './config/config-error.ts';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { errors } from './config/errors.ts';
@@ -199,8 +201,6 @@ export const policy = {
 const TRUE_VALUES = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
 const FALSE_VALUES = new Set(['0', 'off', 'f', 'false', 'n', 'no']);
 
-export class ConfigError extends Error {}
-
 function envValue(spec: SettingSpec, env: Record<string, string | undefined>): string | undefined {
   // pydantic-settings matches environment names case-insensitively.
   const byLowerName = new Map(
@@ -372,7 +372,11 @@ function productionFrontendUrl(value: string): boolean {
       !url.username &&
       !url.password &&
       host.toLowerCase() !== 'localhost' &&
-      !(ipaddr.isValid(host) && ipaddr.process(host).range() === 'loopback')
+      !(
+        ipaddr.isValid(host) &&
+        (ipaddr.process(host).toString().startsWith('0.') ||
+          ['loopback', 'unspecified', 'linkLocal'].includes(ipaddr.process(host).range()))
+      )
     );
   } catch {
     return false;

@@ -1,7 +1,7 @@
 # Workers migration operations
 
 This is the operator procedure for the four-PR
-[Workers migration plan](../plans/CiteLadder_Workers_Migration_Implementation_Plan.md).
+[Workers migration plan](../archive/plans/CiteLadder_Workers_Migration_Implementation_Plan.md).
 PRs 1–3 prepared protected ingress and two Workers. PR 4 removes the superseded
 production frontend serving layer before the owner authorizes a fresh release.
 There is no staging environment or staging Worker target. Repository availability
@@ -37,7 +37,7 @@ adding this configuration does not claim that the subdomain has been deployed.
 Before deploying, record the actual main SHA, prior frontend and backend image
 digests, VM name, static IP, DNS records, Cloudflare Worker routes/Custom
 Domains, cache/WAF rules, TLS certificate version and Caddy configuration.
-Record current `DOMAIN_NAME`, `FRONTEND_URL`, `FRONTEND_ORIGINS`,
+Record current `DOMAIN_NAME`, `FRONTEND_URL`,
 `MCP_PUBLIC_BASE_URL`, provider redirect overrides, enabled integrations and
 payment providers, webhook destinations, current build commands, and smoke
 results. Record unknown or inaccessible values explicitly. Never copy a secret
@@ -64,7 +64,6 @@ currently deployed revision, DNS or enabled provider state.
 | `ORIGIN_DOMAIN_NAME` | `origin.citeladder.com` | same |
 | `APP_DOMAIN_NAME` | `app.citeladder.com` | same |
 | `FRONTEND_URL` | `https://citeladder.com` | `https://app.citeladder.com` |
-| `FRONTEND_ORIGINS` | `https://citeladder.com` | explicit verified browser origins during transition, then app only |
 | `MCP_PUBLIC_BASE_URL` | `https://citeladder.com` | same |
 | `PUBLIC_WEBSITE_ORIGIN` | `https://citeladder.com` | same |
 | `PUBLIC_APP_ORIGIN` | `https://citeladder.com` | `https://app.citeladder.com` |
@@ -282,7 +281,7 @@ Worker secrets. Do not paste secret values into a PR, issue or chat.
 5. **GCP / release:** verify the retained backend VM, static IP, Cloudflare-only
    firewall, IAP, PostgreSQL, backups and Secret Manager access. `gcp-demo`
    deploys backend/ingress only with
-   `FRONTEND_URL=FRONTEND_ORIGINS=https://app.citeladder.com` and
+   `FRONTEND_URL=https://app.citeladder.com` and
    `MCP_PUBLIC_BASE_URL=https://citeladder.com`. Record the exact disposable
    data target before requesting any stale-data deletion. No database reset is
    implied by this checklist.
@@ -320,7 +319,7 @@ procedure itself does not authorize dispatch or DNS changes.
    approve `workers-marketing-production` and attach
    `citeladder.com`. Verify initial HTML, direct app links, public pricing,
    genuine 404s, sitemap, canonicals and apex MCP/webhook ownership.
-5. Run [the architecture acceptance matrix](../plans/CiteLadder_Workers_Migration_Architecture.md#12-acceptance-matrix-evidence-required-before-completion)
+5. Run [the architecture acceptance matrix](../archive/plans/CiteLadder_Workers_Migration_Architecture.md#12-acceptance-matrix-evidence-required-before-completion)
    on the deployed topology. Record unavailable external checks as unexecuted.
    Fix actual failures before accepting the release.
 

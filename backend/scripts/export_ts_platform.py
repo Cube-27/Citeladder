@@ -6,13 +6,16 @@ still read by its models, operators or bootstrap; TS-only policy and the API
 error vocabulary have native owners.
 
 ``--check`` regenerates in memory and fails when the committed artifact is
-stale, which keeps genuinely shared values from drifting.
+stale, which keeps genuinely shared values from drifting. It also checks that
+shared Python error codes remain declared in the native API contract.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -278,6 +281,32 @@ def _stale_paths(artifacts: dict[Path, str]) -> list[Path]:
     ]
 
 
+def _missing_error_codes() -> set[str]:
+    """Validate shared Python machine codes against the executable native contract."""
+    contract = FRONTEND_ROOT / "packages" / "contracts" / "src" / "error-codes.ts"
+    node = shutil.which("node")
+    if node is None:
+        raise RuntimeError("Node.js is required to check the native error contract")
+    shared_codes = set(entitlements_policy()["codes"].values())
+    # Resolved Node executable and repository-owned module; no shell or user input.
+    result = subprocess.run(  # noqa: S603
+        [
+            node,
+            "--input-type=module",
+            "-e",
+            f"import {{ asApiErrorCode }} from '{contract.as_uri()}';"
+            f"const codes = {json.dumps(sorted(shared_codes))};"
+            "process.stdout.write(JSON.stringify(codes.filter(code => {"
+            "try { asApiErrorCode(code); return false; } catch { return true; }"
+            "})));",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return set(json.loads(result.stdout))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -288,6 +317,14 @@ def main() -> int:
     arguments = parser.parse_args()
     artifacts = build_artifacts()
     if arguments.check:
+        missing_codes = _missing_error_codes()
+        if missing_codes:
+            codes = ", ".join(sorted(missing_codes))
+            print(
+                f"Undeclared shared API error codes: {codes}",
+                file=sys.stderr,
+            )
+            return 1
         stale = _stale_paths(artifacts)
         for path in stale:
             print(f"stale: {path.relative_to(FRONTEND_ROOT)}", file=sys.stderr)

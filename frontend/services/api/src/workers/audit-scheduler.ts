@@ -46,7 +46,10 @@ export class AuditScheduler {
         .where('enabled', '=', true)
         .where('next_run_at', '<=', at)
         .where((eb) =>
-          eb.or([eb('lease_expires_at', 'is', null), eb('lease_expires_at', '<=', at)]),
+          eb.or([
+            eb('lease_expires_at', 'is', null),
+            eb('lease_expires_at', '<=', sql<Date>`clock_timestamp()`),
+          ]),
         )
         .orderBy('next_run_at')
         .orderBy('id')
@@ -59,7 +62,7 @@ export class AuditScheduler {
           .updateTable('audit_schedules')
           .set({
             lease_owner: this.owner,
-            lease_expires_at: new Date(at.getTime() + this.settings.lease_ttl_seconds * 1000),
+            lease_expires_at: sql<Date>`clock_timestamp() + ${this.settings.lease_ttl_seconds} * interval '1 second'`,
             updated_at: at,
           })
           .where(
@@ -85,7 +88,7 @@ export class AuditScheduler {
         .where('project_id', '=', claim.projectId)
         .where('id', '=', claim.id)
         .where('lease_owner', '=', this.owner)
-        .where('lease_expires_at', '>', at)
+        .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
         .forUpdate()
         .executeTakeFirst();
       if (!schedule) return false;

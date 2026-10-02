@@ -10,6 +10,7 @@ import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { auditTenant } from './audit-fixtures.ts';
+import shared from '../src/generated/python-config.json' with { type: 'json' };
 
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
@@ -30,6 +31,36 @@ async function queued(workspaceId: string) {
   return db.selectFrom('audits').selectAll().where('workspace_id', '=', workspaceId).execute();
 }
 describe('atomic audit admission', () => {
+  it('rejects unshipped catalog engines before persisting an audit', async () => {
+    const t = await auditTenant(db, fixtures);
+    vi.resetModules();
+    vi.doMock('../src/generated/python-config.json', () => ({
+      default: {
+        ...shared,
+        providers: {
+          ...shared.providers,
+          catalog: shared.providers.catalog.map((row) =>
+            row.key === 'chatgpt' ? { ...row, adapter_shipped: false } : row,
+          ),
+        },
+      },
+    }));
+    try {
+      const { createAudit: createWithoutAdapter } = await import('../src/audits/creation.ts');
+      const { scheduleCreate } = await import('../src/audits/schedule-inputs.ts');
+      await expect(
+        createWithoutAdapter(db, t.workspaceId, input(t), {}, runtime),
+      ).rejects.toMatchObject({ status: 400, message: 'An engine is unavailable' });
+      expect(
+        scheduleCreate.safeParse({ prompt_set_id: t.setId, cadence: 'daily', engines: ['chatgpt'] })
+          .success,
+      ).toBe(false);
+    } finally {
+      vi.doUnmock('../src/generated/python-config.json');
+      vi.resetModules();
+    }
+    expect(await queued(t.workspaceId)).toEqual([]);
+  });
   it.each([
     'AUDIT_WORKER_CONCURRENCY',
     'AUDIT_POLL_INTERVAL_SECONDS',

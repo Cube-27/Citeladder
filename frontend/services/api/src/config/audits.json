@@ -23,12 +23,6 @@
     "prompt_decline_min_engines": 2,
     "prompt_decline_repetition_agreement": 0.67,
     "prompt_decline_history_candidate_limit": 20,
-    "visibility_trend_granularities": ["day", "month", "run", "week"],
-    "visibility_trend_default_granularity": "run",
-    "visibility_trend_max_points": 100,
-    "visibility_selection_max_runs": 100,
-    "visibility_evidence_default_limit": 100,
-    "visibility_evidence_max_limit": 500,
     "ambiguous_aliases": ["target"],
     "fanout_feature_rules": {
       "community": ["reddit", "forum", "discussion", "experiences"],

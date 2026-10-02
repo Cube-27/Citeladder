@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { TaskCancelledError } from '../workers/executor.ts';
@@ -12,7 +13,7 @@ export function lockOwnedTask(db: Database, task: QueueTask) {
     .where('project_id', '=', task.project_id)
     .where('status', '=', 'running')
     .where('lease_owner', '=', task.lease_owner)
-    .where('lease_expires_at', '>', new Date())
+    .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
     .forUpdate()
     .executeTakeFirst();
 }

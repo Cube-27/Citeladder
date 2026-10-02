@@ -67,7 +67,7 @@ inside the same transaction and project lock as the snapshot it describes, so
 members, priority and diagnosis always match that snapshot. Grouping,
 convergence across evidence families, priority and the deterministic diagnosis
 (approach and recommended skill) are pure functions of the members under
-[Action policy](../backend/app/core/config/actions.py), stamped with their
+[Action policy](../frontend/services/api/src/config/actions.ts), stamped with their
 versions. A model does not score or diagnose an Action.
 
 `actions` has two TypeScript writers. The refresh derives
@@ -212,9 +212,9 @@ Declaration and verification rows are append-only. Deleting their owning
 workspace/project follows the baseline cascade; nullable crawl/audit references
 survive source retention through SET NULL.
 
-[Configuration](../backend/app/core/config/opportunities.py) owns tunable
+[Configuration](../frontend/services/api/src/config/opportunity.ts) owns tunable
 ranking and verification policy;
-[placement configuration](../backend/app/core/config/placement.py) owns the
+[placement configuration](../frontend/services/api/src/config/placement.ts) owns the
 expected-change vocabulary, the check states and the recheck schedule.
 [Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
 [Visibility](visibility-prompt.md) remain the source authorities.

@@ -2399,11 +2399,6 @@
       "license": "BSD-3-Clause"
     },
     {
-      "package": "python-multipart",
-      "version": "0.0.32",
-      "license": "Apache-2.0"
-    },
-    {
       "package": "pywin32",
       "version": "312",
       "license": "Python Software Foundation License"

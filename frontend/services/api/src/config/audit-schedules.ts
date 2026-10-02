@@ -1,4 +1,4 @@
-/** Native scheduler limits and pinned tzdata 2026.4 timezone catalog. */
+/** Native scheduler limits and checked-in IANA catalog; admission also requires runtime support. */
 export const auditSchedules = {
   settings: {
     poll_interval_seconds: {
