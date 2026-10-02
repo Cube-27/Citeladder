@@ -2,6 +2,7 @@ import ipaddr from 'ipaddr.js';
 import { getConnInfo } from '@hono/node-server/conninfo';
 import type { Context } from 'hono';
 import type { ServiceConfig } from '../config.ts';
+import type { AppEnv } from '../context.ts';
 
 export type TrustedProxies = readonly [ipaddr.IPv4 | ipaddr.IPv6, number][];
 
@@ -35,8 +36,12 @@ export function clientIdentity(
   return peer;
 }
 
-export function trustedClientIdentity(c: Context, config: ServiceConfig): string {
+export function trustedClientIdentity(c: Context<AppEnv>, config: ServiceConfig): string {
+  // Behind Cloud Run the socket peer is Google's front end; the admitted Worker names the visitor.
+  const admitted = c.get('clientIp');
+  if (admitted) return admitted;
   // app.request fixtures have no socket; headers still cannot manufacture a peer.
-  const peer = c.env?.incoming ? (getConnInfo(c).remote.address ?? 'unavailable') : 'unavailable';
+  const socket = (c.env as { incoming?: unknown } | undefined)?.incoming;
+  const peer = socket ? (getConnInfo(c).remote.address ?? 'unavailable') : 'unavailable';
   return clientIdentity(peer, c.req.header('x-forwarded-for'), config.auth.trustedProxies);
 }

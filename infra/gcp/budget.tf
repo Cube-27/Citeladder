@@ -1,13 +1,16 @@
-data "google_project" "demo" {
+data "google_project" "current" {
   project_id = var.project_id
 }
 
-resource "google_billing_budget" "demo" {
+# Fixed hosting target: under the monthly amount, excluding provider usage. The
+# forecast rule raises the alarm early when the daily run rate would exceed it.
+resource "google_billing_budget" "monthly" {
   billing_account = var.billing_account
-  display_name    = "CiteLadder seven-day demo"
+  display_name    = "CiteLadder monthly hosting"
 
   budget_filter {
-    projects = ["projects/${data.google_project.demo.number}"]
+    projects        = ["projects/${data.google_project.current.number}"]
+    calendar_period = "MONTH"
   }
 
   amount {
@@ -25,5 +28,9 @@ resource "google_billing_budget" "demo" {
   }
   threshold_rules {
     threshold_percent = 1.0
+  }
+  threshold_rules {
+    threshold_percent = 1.0
+    spend_basis       = "FORECASTED_SPEND"
   }
 }

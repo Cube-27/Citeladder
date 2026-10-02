@@ -1,16 +1,17 @@
 variable "project_id" {
   type        = string
-  description = "Dedicated disposable GCP project ID."
+  description = "Existing CiteLadder GCP project ID (reused; never recreated)."
 }
 
 variable "billing_account" {
   type        = string
-  description = "Billing account used by the configured demo-cost alert."
+  description = "Billing account that owns the monthly budget alert."
   sensitive   = true
 }
 
 variable "budget_currency_code" {
   type        = string
+  default     = "INR"
   description = "ISO 4217 currency code matching the billing account."
   validation {
     condition     = can(regex("^[A-Z]{3}$", var.budget_currency_code))
@@ -20,7 +21,8 @@ variable "budget_currency_code" {
 
 variable "budget_units" {
   type        = number
-  description = "Positive whole-unit budget amount in the billing account currency."
+  default     = 500
+  description = "Monthly fixed-hosting budget in whole billing-currency units."
   validation {
     condition     = var.budget_units > 0 && floor(var.budget_units) == var.budget_units
     error_message = "budget_units must be a positive whole number."
@@ -29,71 +31,138 @@ variable "budget_units" {
 
 variable "region" {
   type    = string
-  default = "asia-south1"
+  default = "us-central1"
   validation {
-    condition     = var.region == "asia-south1"
-    error_message = "The deployment is fixed to asia-south1 (Mumbai)."
+    # The e2-micro and 30 GB standard disk free tier applies in us-central1.
+    condition     = var.region == "us-central1"
+    error_message = "The low-cost deployment is fixed to us-central1."
   }
 }
 
 variable "zone" {
   type    = string
-  default = "asia-south1-a"
+  default = "us-central1-a"
   validation {
-    condition     = can(regex("^asia-south1-[a-z]$", var.zone))
-    error_message = "The zone must be in asia-south1 (Mumbai)."
+    condition     = can(regex("^us-central1-[a-z]$", var.zone))
+    error_message = "The zone must be in us-central1."
   }
 }
 
 variable "domain_name" {
-  type    = string
-  default = "citeladder.com"
+  type        = string
+  default     = "citeladder.com"
+  description = "Apex host served by the marketing Worker and used as the MCP origin."
   validation {
-    condition = length(var.domain_name) <= 253 && alltrue([
-      for label in split(".", var.domain_name) :
-      length(label) >= 1 && length(label) <= 63 &&
-      can(regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", label))
-    ])
+    condition     = can(regex("^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$", var.domain_name))
     error_message = "domain_name must be a lower-case DNS hostname."
   }
 }
 
-variable "backend_image" {
-  type = string
+variable "app_domain_name" {
+  type        = string
+  default     = "app.citeladder.com"
+  description = "Product Worker host; FRONTEND_URL and OAuth redirects derive from it."
   validation {
-    condition = startswith(
-      var.backend_image,
-      "${var.region}-docker.pkg.dev/${var.project_id}/citeladder-demo/backend@sha256:"
-    ) && can(regex("@sha256:[0-9a-f]{64}$", var.backend_image))
-    error_message = "backend_image must be an immutable Artifact Registry digest."
+    condition     = can(regex("^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$", var.app_domain_name)) && var.app_domain_name != var.domain_name
+    error_message = "app_domain_name must be a lower-case DNS hostname distinct from domain_name."
   }
 }
 
-variable "cloudflare_ipv4_cidrs" {
-  type = set(string)
+variable "api_image" {
+  type        = string
+  description = "API service image (API, runner and tick) by immutable digest."
   validation {
-    condition = length(var.cloudflare_ipv4_cidrs) > 0 && alltrue([
-      for cidr in var.cloudflare_ipv4_cidrs : can(cidrnetmask(cidr)) && cidr != "0.0.0.0/0"
-    ])
-    error_message = "A non-empty, non-catch-all Cloudflare IPv4 set is required."
+    condition     = can(regex("^us-central1-docker\\.pkg\\.dev/[a-z0-9-]+/citeladder/api-service@sha256:[0-9a-f]{64}$", var.api_image))
+    error_message = "api_image must be an immutable citeladder/api-service digest."
   }
 }
 
-variable "cloudflare_ipv6_cidrs" {
-  type = set(string)
+variable "migrate_image" {
+  type        = string
+  description = "Python schema/operator image by immutable digest."
   validation {
-    condition = length(var.cloudflare_ipv6_cidrs) > 0 && alltrue([
-      for cidr in var.cloudflare_ipv6_cidrs : can(cidrhost(cidr, 0)) && strcontains(cidr, ":") && cidr != "::/0"
-    ])
-    error_message = "A non-empty, non-catch-all Cloudflare IPv6 set is required."
+    condition     = can(regex("^us-central1-docker\\.pkg\\.dev/[a-z0-9-]+/citeladder/backend@sha256:[0-9a-f]{64}$", var.migrate_image))
+    error_message = "migrate_image must be an immutable citeladder/backend digest."
   }
 }
 
-variable "machine_type" {
+variable "postgres_image" {
+  type        = string
+  description = "PostgreSQL 16 image mirrored into Artifact Registry by immutable digest."
+  validation {
+    condition     = can(regex("^us-central1-docker\\.pkg\\.dev/[a-z0-9-]+/citeladder/postgres@sha256:[0-9a-f]{64}$", var.postgres_image))
+    error_message = "postgres_image must be an immutable citeladder/postgres digest."
+  }
+}
+
+variable "optional_secrets" {
+  type        = set(string)
+  default     = []
+  description = "Optional runtime secret IDs that currently hold an enabled version."
+}
+
+variable "agent_base_url" {
+  type        = string
+  description = "HTTPS base URL of the platform OpenAI-compatible Agent provider."
+  validation {
+    condition     = startswith(var.agent_base_url, "https://")
+    error_message = "agent_base_url must be an HTTPS URL."
+  }
+}
+
+variable "agent_model" {
+  type        = string
+  description = "Exact provider model identifier used by the Agent."
+  validation {
+    condition     = length(trimspace(var.agent_model)) > 0
+    error_message = "agent_model is required."
+  }
+}
+
+variable "demo_mode" {
+  type        = bool
+  default     = false
+  description = "true restores the single-account demo (no registration, MCP pinned to one account)."
+}
+
+variable "demo_expires_at" {
+  type        = string
+  default     = ""
+  description = "RFC 3339 expiry, required only in demo mode."
+}
+
+variable "dev_login_email" {
   type    = string
-  default = "e2-standard-2"
+  default = "dev@citeladder.com"
+}
+
+variable "dev_login_counter_allowance" {
+  type    = number
+  default = 200
+}
+
+variable "oauth_google_enabled" {
+  type        = bool
+  default     = false
+  description = "Google sign-in; a first Google sign-in creates an account."
+}
+
+variable "public_signup_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "runner_budget_seconds" {
+  type    = number
+  default = 300
   validation {
-    condition     = var.machine_type == "e2-standard-2"
-    error_message = "The reviewed temporary-demo size is e2-standard-2."
+    condition     = var.runner_budget_seconds >= 60 && var.runner_budget_seconds <= 3000
+    error_message = "runner_budget_seconds must be between 60 and 3000."
   }
+}
+
+variable "tick_schedule" {
+  type        = string
+  default     = "*/10 * * * *"
+  description = "Cron schedule (UTC) for the periodic tick; API writes wake the runner directly."
 }

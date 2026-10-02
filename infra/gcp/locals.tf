@@ -1,30 +1,89 @@
 locals {
-  name = "citeladder-demo"
+  name = "citeladder"
   labels = {
     project     = "citeladder"
-    environment = "demo"
+    environment = "production"
     managed_by  = "terraform"
   }
-  runtime_secret_ids = toset([
-    "citeladder-db-password",
-    "citeladder-jwt-secret",
-    "citeladder-encryption-key",
-    "citeladder-referral-salt",
-    "citeladder-demo-password",
-    "citeladder-cloudflare-origin-cert",
-    "citeladder-cloudflare-origin-key",
-    "citeladder-worker-origin-token",
-    "citeladder-worker-origin-token-previous",
-    "citeladder-default-agent-api-key",
-    "citeladder-keenable-api-key",
-    # Unset until the prompt-quality subprocessor policy is published.
-    "citeladder-jev-api-key",
-    "citeladder-tavily-api-key",
-    # The Google pair backs both sign-in and the GSC/GA4 connect; the Bing pair
-    # is issued by Bing Webmaster Tools, not Azure.
-    "citeladder-google-oauth-client-id",
-    "citeladder-google-oauth-client-secret",
-    "citeladder-bing-oauth-client-id",
-    "citeladder-bing-oauth-client-secret",
-  ])
+
+  subnet_cidr = "10.28.0.0/24"
+  # Fixed so the deploy workflow can compose DATABASE_URL before Terraform runs.
+  db_address = cidrhost(local.subnet_cidr, 10)
+
+  # Generated once by the deploy workflow, or copied from protected GitHub secrets.
+  required_secret_env = {
+    DATABASE_URL                     = "citeladder-database-url"
+    JWT_SECRET_KEY                   = "citeladder-jwt-secret"
+    ENCRYPTION_KEY                   = "citeladder-encryption-key"
+    REFERRAL_HASH_SALT               = "citeladder-referral-salt"
+    DEV_LOGIN_PASSWORD               = "citeladder-demo-password"
+    INTEGRATION_GOOGLE_CLIENT_ID     = "citeladder-google-oauth-client-id"
+    INTEGRATION_GOOGLE_CLIENT_SECRET = "citeladder-google-oauth-client-secret"
+  }
+  # Present only while the protected environment supplies a value; Cloud Run
+  # cannot reference a secret without an enabled version.
+  optional_secret_env = {
+    DEFAULT_AGENT_API_KEY               = "citeladder-default-agent-api-key"
+    KEENABLE_API_KEY                    = "citeladder-keenable-api-key"
+    JEV_API_KEY                         = "citeladder-jev-api-key"
+    TAVILY_API_KEY                      = "citeladder-tavily-api-key"
+    INTEGRATION_MICROSOFT_CLIENT_ID     = "citeladder-bing-oauth-client-id"
+    INTEGRATION_MICROSOFT_CLIENT_SECRET = "citeladder-bing-oauth-client-secret"
+    DATAFORSEO_API_LOGIN                = "citeladder-dataforseo-login"
+    DATAFORSEO_API_PASSWORD             = "citeladder-dataforseo-password"
+  }
+  api_secret_env = {
+    CITELADDER_ORIGIN_TOKEN = "citeladder-worker-origin-token"
+  }
+  api_optional_secret_env = {
+    CITELADDER_ORIGIN_TOKEN_PREVIOUS = "citeladder-worker-origin-token-previous"
+  }
+
+  runtime_secret_ids = toset(concat(
+    ["citeladder-db-password"],
+    values(local.required_secret_env),
+    values(local.optional_secret_env),
+    values(local.api_secret_env),
+    values(local.api_optional_secret_env),
+  ))
+
+  shared_secret_env = merge(
+    local.required_secret_env,
+    { for name, id in local.optional_secret_env : name => id if contains(var.optional_secrets, id) },
+  )
+  api_only_secret_env = merge(
+    local.api_secret_env,
+    { for name, id in local.api_optional_secret_env : name => id if contains(var.optional_secrets, id) },
+  )
+
+  runner_job = "projects/${var.project_id}/locations/${var.region}/jobs/${local.name}-runner"
+
+  # Non-secret configuration shared by the API, runner, tick and migration.
+  shared_env = merge(
+    {
+      APP_ENV                     = "production"
+      DB_SSL_MODE                 = "require"
+      DB_MAX_OVERFLOW             = "0"
+      FRONTEND_URL                = "https://${var.app_domain_name}"
+      MCP_ENABLED                 = "true"
+      MCP_PUBLIC_BASE_URL         = "https://${var.domain_name}"
+      MCP_ALLOWED_ACCOUNT_EMAIL   = var.demo_mode ? var.dev_login_email : ""
+      DEMO_MODE                   = tostring(var.demo_mode)
+      DEMO_MONITORED_URL_LIMIT    = "50000"
+      DEV_LOGIN_EMAIL             = var.dev_login_email
+      DEV_LOGIN_COUNTER_ALLOWANCE = tostring(var.dev_login_counter_allowance)
+      OAUTH_GOOGLE_ENABLED        = tostring(var.oauth_google_enabled)
+      PUBLIC_SIGNUP_ENABLED       = tostring(var.public_signup_enabled)
+      # Cloud Run's front end; admitted Worker requests name the visitor instead.
+      TRUSTED_PROXY_CIDRS              = "169.254.0.0/16"
+      DEFAULT_AGENT_BASE_URL           = var.agent_base_url
+      DEFAULT_AGENT_MODEL              = var.agent_model
+      SITE_HEALTH_AUTOMATIC_PAGE_LIMIT = "200"
+      SITE_HEALTH_GLOBAL_CONCURRENCY   = "8"
+      SITE_HEALTH_PER_HOST_CONCURRENCY = "6"
+      RUNNER_BUDGET_SECONDS            = tostring(var.runner_budget_seconds)
+      RUNNER_DB_POOL_SIZE              = "4"
+    },
+    var.demo_expires_at == "" ? {} : { DEMO_EXPIRES_AT = var.demo_expires_at },
+  )
 }

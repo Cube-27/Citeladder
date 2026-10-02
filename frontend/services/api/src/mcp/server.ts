@@ -68,7 +68,7 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
       if (!settings.enabled) return c.notFound();
       const consent = c.req.path === '/mcp/oauth/consent';
       const allowed = consent ? settings.browserOrigin : settings.origin;
-      const host = c.req.header('host') ?? new URL(c.req.url).host;
+      const host = c.get('publicHost') ?? c.req.header('host') ?? new URL(c.req.url).host;
       const hostOrigin = origin(`${new URL(allowed).protocol}//${host}`);
       if (
         consent &&

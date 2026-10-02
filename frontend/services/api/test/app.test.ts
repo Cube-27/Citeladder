@@ -1,6 +1,11 @@
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { Hono } from 'hono';
+
 import { createApp } from '../src/app.ts';
+import { trustedClientIdentity } from '../src/auth/client-identity.ts';
+import type { AppEnv } from '../src/context.ts';
+import { originToken } from '../src/http/origin-token.ts';
 import { policy } from '../src/config.ts';
 import { setLogSink } from '../src/logging.ts';
 import { testConfig, testDatabase } from './support.ts';
@@ -19,23 +24,80 @@ describe('health and readiness', () => {
         K_SERVICE: 'api',
         CITELADDER_ORIGIN_TOKEN: current,
         CITELADDER_ORIGIN_TOKEN_PREVIOUS: previous,
+        FRONTEND_URL: 'https://app.example.test',
+        MCP_PUBLIC_BASE_URL: 'https://example.test',
       }),
       db,
     );
+    const host = { 'X-CiteLadder-Public-Host': 'app.example.test' };
     for (const path of ['/health', '/ready', '/api/v1/auth/me', '/mcp']) {
-      expect((await protectedApp.request(path)).status).toBe(403);
+      expect((await protectedApp.request(path, { headers: host })).status).toBe(403);
       for (const token of ['wrong', 'x'.repeat(current.length)])
         expect(
-          (await protectedApp.request(path, { headers: { 'X-CiteLadder-Origin-Token': token } }))
-            .status,
+          (
+            await protectedApp.request(path, {
+              headers: { ...host, 'X-CiteLadder-Origin-Token': token },
+            })
+          ).status,
         ).toBe(403);
     }
     for (const token of [current, previous])
+      for (const publicHost of ['app.example.test', 'EXAMPLE.test'])
+        expect(
+          (
+            await protectedApp.request('/health', {
+              headers: {
+                'X-CiteLadder-Origin-Token': token,
+                'X-CiteLadder-Public-Host': publicHost,
+              },
+            })
+          ).status,
+        ).toBe(200);
+    // The token alone is not enough: the public host must be one the Workers serve.
+    for (const publicHost of [undefined, 'attacker.example', 'api-123.us-central1.run.app'])
       expect(
-        (await protectedApp.request('/health', { headers: { 'X-CiteLadder-Origin-Token': token } }))
-          .status,
-      ).toBe(200);
+        (
+          await protectedApp.request('/health', {
+            headers: {
+              'X-CiteLadder-Origin-Token': current,
+              ...(publicHost ? { 'X-CiteLadder-Public-Host': publicHost } : {}),
+            },
+          })
+        ).status,
+      ).toBe(403);
   });
+  it('takes the visitor address only from a token-admitted Worker request', async () => {
+    const protectedConfig = testConfig({
+      K_SERVICE: 'api',
+      CITELADDER_ORIGIN_TOKEN: 'current-origin-token-0123456789abcdef',
+      FRONTEND_URL: 'https://app.example.test',
+    });
+    const probe = new Hono<AppEnv>()
+      .use(originToken(protectedConfig))
+      .get('/whoami', (c) => c.text(trustedClientIdentity(c, protectedConfig)));
+    const admitted = {
+      'X-CiteLadder-Origin-Token': 'current-origin-token-0123456789abcdef',
+      'X-CiteLadder-Public-Host': 'app.example.test',
+    };
+    const identity = async (headers: Record<string, string>) =>
+      (await probe.request('/whoami', { headers })).text();
+    expect(await identity({ ...admitted, 'X-CiteLadder-Client-IP': '::ffff:203.0.113.7' })).toBe(
+      '203.0.113.7',
+    );
+    // A malformed or absent address never becomes a shared rate-limit subject.
+    expect(await identity({ ...admitted, 'X-CiteLadder-Client-IP': 'not-an-ip' })).toBe(
+      'unavailable',
+    );
+    const open = new Hono<AppEnv>()
+      .use(originToken(config))
+      .get('/whoami', (c) => c.text(trustedClientIdentity(c, config)));
+    expect(
+      await (
+        await open.request('/whoami', { headers: { 'X-CiteLadder-Client-IP': '203.0.113.7' } })
+      ).text(),
+    ).toBe('unavailable');
+  });
+
   it('reports liveness without touching the database', async () => {
     const response = await createApp(config, db).request('/health');
     expect(response.status).toBe(200);

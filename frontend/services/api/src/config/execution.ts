@@ -1,6 +1,13 @@
 import { ConfigError } from './config-error.ts';
 
-const defaults = { budgetSeconds: 300, poolSize: 4, wakeTimeoutMs: 5000, laneConcurrency: 1 };
+const defaults = {
+  budgetSeconds: 300,
+  poolSize: 4,
+  wakeTimeoutMs: 5000,
+  laneConcurrency: 1,
+  drainLockWaitMs: 15_000,
+  drainLockPollMs: 250,
+};
 
 function integer(
   env: Record<string, string | undefined>,
@@ -47,6 +54,9 @@ export function executionSettings(env: Record<string, string | undefined>) {
     originToken,
     previousOriginToken,
     laneConcurrency: defaults.laneConcurrency,
+    // How long a later execution waits for an active drain before leaving it the work.
+    drainLockWaitMs: defaults.drainLockWaitMs,
+    drainLockPollMs: defaults.drainLockPollMs,
     budgetSeconds: integer(env, 'RUNNER_BUDGET_SECONDS', defaults.budgetSeconds, 3600),
     poolSize: integer(env, 'RUNNER_DB_POOL_SIZE', defaults.poolSize, 4),
     wakeTimeoutMs: integer(env, 'RUNNER_WAKE_TIMEOUT_MS', defaults.wakeTimeoutMs, 30000),

@@ -1,7 +1,7 @@
 import { loadConfig } from '../config.ts';
 import { createDatabase } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
-import { drainLanes, runnerOwners, tickAndDrain } from './runner.ts';
+import { drainLanes, exclusiveDrain, runnerOwners, tickAndDrain } from './runner.ts';
 
 export async function runExecution(tick: boolean) {
   const config = loadConfig();
@@ -13,7 +13,10 @@ export async function runExecution(tick: boolean) {
   try {
     const options = { signal: stop.signal, deadline };
     const owners = await runnerOwners(db, config);
-    const tasks = await (tick ? tickAndDrain(owners, options) : drainLanes(owners.lanes, options));
+    const exclusive = exclusiveDrain(config, options);
+    const tasks = await (tick
+      ? tickAndDrain(owners, options, exclusive)
+      : exclusive(() => drainLanes(owners.lanes, options)));
     getLogger('workers.runner').info('runner_completed', {
       tick,
       tasks,

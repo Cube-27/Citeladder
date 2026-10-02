@@ -1,0 +1,364 @@
+name: GCP - Deploy
+
+# Scale-to-zero production on Cloud Run (us-central1) with one free-tier
+# PostgreSQL VM. Owner procedure: docs/operations/GCP_RUNBOOK.md.
+on:
+  workflow_dispatch:
+    inputs:
+      reset_database:
+        description: 'Irreversibly replace the database VM and all its data (no backup) before migrating'
+        type: boolean
+        default: false
+      confirm_project:
+        description: 'For a database reset, enter the exact GCP project ID'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: gcp-demo
+    concurrency:
+      group: gcp-deploy
+      cancel-in-progress: false
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres # pragma: allowlist secret -- CI-only fixture
+          POSTGRES_DB: citeladder
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+      ZONE: ${{ vars.GCP_ZONE || 'us-central1-a' }}
+      STATE_BUCKET: ${{ vars.GCP_TF_STATE_BUCKET }}
+      BILLING_ACCOUNT: ${{ vars.GCP_BILLING_ACCOUNT }}
+      BUDGET_CURRENCY_CODE: ${{ vars.GCP_BUDGET_CURRENCY_CODE || 'INR' }}
+      BUDGET_UNITS: ${{ vars.GCP_BUDGET_UNITS || '500' }}
+      DOMAIN_NAME: ${{ vars.DOMAIN_NAME || 'citeladder.com' }}
+      APP_DOMAIN_NAME: ${{ vars.APP_DOMAIN_NAME || 'app.citeladder.com' }}
+      # 'true' restores the single-account demo (no public sign-up).
+      DEMO_MODE: ${{ vars.DEMO_MODE || 'false' }}
+      DEMO_EXPIRES_AT: ${{ vars.DEMO_EXPIRES_AT }}
+      DEMO_LOGIN_EMAIL: ${{ vars.DEMO_LOGIN_EMAIL || 'dev@citeladder.com' }}
+      DEV_LOGIN_COUNTER_ALLOWANCE: ${{ vars.DEV_LOGIN_COUNTER_ALLOWANCE || '200' }}
+      OAUTH_GOOGLE_ENABLED: ${{ vars.OAUTH_GOOGLE_ENABLED || 'false' }}
+      PUBLIC_SIGNUP_ENABLED: ${{ vars.PUBLIC_SIGNUP_ENABLED || 'false' }}
+      DEFAULT_AGENT_BASE_URL: ${{ vars.DEFAULT_AGENT_BASE_URL }}
+      DEFAULT_AGENT_MODEL: ${{ vars.DEFAULT_AGENT_MODEL }}
+      TICK_SCHEDULE: ${{ vars.TICK_SCHEDULE || '*/10 * * * *' }}
+      # The repository gate builds both Workers; this workflow publishes only the backend.
+      PUBLIC_WEBSITE_ORIGIN: ${{ format('https://{0}', vars.DOMAIN_NAME || 'citeladder.com') }}
+      PUBLIC_APP_ORIGIN: ${{ format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify exact main commit
+        shell: bash
+        run: test "$GITHUB_SHA" = "$(git rev-parse origin/main)"
+      - name: Install repository toolchain
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ripgrep
+          python -m pip install --only-binary :all: uv==0.11.28
+          # Published wheels only; tests import `app` from backend/ directly.
+          uv sync --project backend --frozen --extra dev --no-install-project --no-build
+          npm install --global --ignore-scripts pnpm@12.4.2
+          pnpm --dir frontend install --frozen-lockfile --ignore-scripts
+          pnpm --dir frontend exec playwright install --with-deps chromium
+      - name: Run repository gates for the deployed commit
+        shell: pwsh
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder # pragma: allowlist secret -- CI-only fixture
+        run: |
+          ./scripts/check.ps1 -CheckOnly
+          $toolTests = @(Get-ChildItem scripts/*.test.mjs | ForEach-Object FullName)
+          node --test @toolTests
+          if ($LASTEXITCODE -ne 0) { throw 'Tooling tests failed' }
+          Push-Location backend
+          try {
+            .venv/bin/python -m pytest -q --no-cov -x --tb=short
+            if ($LASTEXITCODE -ne 0) { throw 'Backend tests failed' }
+          } finally { Pop-Location }
+      # pnpm's entry point is a Node script behind a shebang, and PowerShell on
+      # Linux execs it directly rather than through the loader, so calling it
+      # from the pwsh step above dies with 'Exec format error'. Keep every pnpm
+      # gate in bash, where the shebang is honoured.
+      - name: Run frontend gates for the deployed commit
+        shell: bash
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder # pragma: allowlist secret -- CI-only fixture
+        run: |
+          set -euo pipefail
+          pnpm --dir frontend test
+          pnpm --dir frontend test:e2e
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - name: Verify explicit database reset target
+        if: inputs.reset_database
+        shell: bash
+        env:
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+        run: |
+          set -euo pipefail
+          test -n "$PROJECT_ID" && test "$CONFIRM_PROJECT" = "$PROJECT_ID"
+          test "$DEMO_MODE" = false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.10.5
+          terraform_wrapper: false
+      - name: Initialize Terraform and render inputs
+        working-directory: infra/gcp
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PROJECT_ID" && test -n "$STATE_BUCKET" && test -n "$BILLING_ACCOUNT"
+          test -n "$DEFAULT_AGENT_BASE_URL" && test -n "$DEFAULT_AGENT_MODEL"
+          [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
+          [[ "$OAUTH_GOOGLE_ENABLED" =~ ^(true|false)$ ]]
+          [[ "$PUBLIC_SIGNUP_ENABLED" =~ ^(true|false)$ ]]
+          terraform init -input=false -backend-config="bucket=$STATE_BUCKET"
+          terraform fmt -check
+          terraform validate
+          placeholder="sha256:$(printf 'a%.0s' $(seq 64))"
+          registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder"
+          jq -n \
+            --arg project "$PROJECT_ID" --arg billing "$BILLING_ACCOUNT" \
+            --arg currency "$BUDGET_CURRENCY_CODE" --argjson units "$BUDGET_UNITS" \
+            --arg region "$REGION" --arg zone "$ZONE" \
+            --arg domain "$DOMAIN_NAME" --arg app "$APP_DOMAIN_NAME" \
+            --arg api "$registry/api-service@$placeholder" \
+            --arg migrate "$registry/backend@$placeholder" \
+            --arg postgres "$registry/postgres@$placeholder" \
+            --arg agent_url "$DEFAULT_AGENT_BASE_URL" --arg agent_model "$DEFAULT_AGENT_MODEL" \
+            --argjson demo "$DEMO_MODE" --arg expires "$DEMO_EXPIRES_AT" \
+            --arg email "$DEMO_LOGIN_EMAIL" --argjson allowance "$DEV_LOGIN_COUNTER_ALLOWANCE" \
+            --argjson google "$OAUTH_GOOGLE_ENABLED" --argjson signup "$PUBLIC_SIGNUP_ENABLED" \
+            --arg tick "$TICK_SCHEDULE" \
+            '{project_id:$project,billing_account:$billing,budget_currency_code:$currency,
+              budget_units:$units,region:$region,zone:$zone,domain_name:$domain,
+              app_domain_name:$app,api_image:$api,migrate_image:$migrate,postgres_image:$postgres,
+              agent_base_url:$agent_url,agent_model:$agent_model,demo_mode:$demo,
+              demo_expires_at:$expires,dev_login_email:$email,dev_login_counter_allowance:$allowance,
+              oauth_google_enabled:$google,public_signup_enabled:$signup,tick_schedule:$tick,
+              optional_secrets:[]}' > deploy.auto.tfvars.json
+          # Images and secret versions need the registry and secret containers
+          # first. On the first run this also replaces the retired asia-south1
+          # registry, deleting every stale image with it.
+          terraform apply -input=false -auto-approve \
+            -target=google_artifact_registry_repository.images \
+            -target=google_secret_manager_secret.runtime
+      - name: Build and push immutable images
+        working-directory: infra/gcp
+        shell: bash
+        run: |
+          set -euo pipefail
+          registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder"
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          # `images list` resolves a digest from the registry alone (no
+          # Container Analysis permission). Prints nothing for a missing tag.
+          image_digest() {
+            gcloud artifacts docker images list "$registry/$1" --include-tags --filter="tags:$2" \
+              --format='value(version)' --quiet 2>/dev/null | head -n 1
+          }
+          # Reuses an image already pushed for this tag, so retries are safe.
+          publish() {
+            local name="$1" tag="$2" digest
+            shift 2
+            if [ -z "$(image_digest "$name" "$tag")" ]; then
+              docker build --build-arg BUILD_REVISION="$GITHUB_SHA" -t "$registry/$name:$tag" "$@" >&2
+              docker push "$registry/$name:$tag" >&2
+            fi
+            digest="$(image_digest "$name" "$tag")"
+            test -n "$digest"
+            echo "$registry/$name@$digest"
+          }
+          migrate="$(publish backend "$GITHUB_SHA" ../..)"
+          api="$(publish api-service "$GITHUB_SHA" -f ../../frontend/services/api/Dockerfile ../..)"
+          postgres="$(publish postgres "16-$(sha256sum postgres/Dockerfile | cut -c1-12)" postgres)"
+          jq --arg api "$api" --arg migrate "$migrate" --arg postgres "$postgres" \
+            '.api_image=$api | .migrate_image=$migrate | .postgres_image=$postgres' \
+            deploy.auto.tfvars.json > /tmp/tfvars
+          mv /tmp/tfvars deploy.auto.tfvars.json
+          printf -- '- API service: `%s`\n- Migration: `%s`\n- PostgreSQL: `%s`\n' \
+            "$api" "$migrate" "$postgres" > /tmp/release-images.md
+      - name: Synchronize runtime secret versions
+        working-directory: infra/gcp
+        shell: bash
+        env:
+          DEMO_LOGIN_PASSWORD: ${{ secrets.DEMO_LOGIN_PASSWORD }}
+          CITELADDER_ORIGIN_TOKEN: ${{ secrets.CITELADDER_ORIGIN_TOKEN }}
+          CITELADDER_ORIGIN_TOKEN_PREVIOUS: ${{ secrets.CITELADDER_ORIGIN_TOKEN_PREVIOUS }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          DEFAULT_AGENT_API_KEY: ${{ secrets.DEFAULT_AGENT_API_KEY }}
+          KEENABLE_API_KEY: ${{ secrets.KEENABLE_API_KEY }}
+          JEV_API_KEY: ${{ secrets.JEV_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          BING_OAUTH_CLIENT_ID: ${{ secrets.BING_OAUTH_CLIENT_ID }}
+          BING_OAUTH_CLIENT_SECRET: ${{ secrets.BING_OAUTH_CLIENT_SECRET }}
+          DATAFORSEO_API_LOGIN: ${{ secrets.DATAFORSEO_API_LOGIN }}
+          DATAFORSEO_API_PASSWORD: ${{ secrets.DATAFORSEO_API_PASSWORD }}
+        run: |
+          set -euo pipefail
+          has_version() {
+            gcloud secrets versions list "$1" --project "$PROJECT_ID" --format=json \
+              | jq -e 'any(.[]; .state == "ENABLED")' >/dev/null
+          }
+          add_generated() {
+            has_version "$1" || openssl rand -hex 32 \
+              | gcloud secrets versions add "$1" --project "$PROJECT_ID" --data-file=- >/dev/null
+          }
+          sync_value() {
+            local name="$1" value="$2" current_hash incoming_hash
+            if [ -z "$value" ]; then
+              echo "::error::$name has no value; add its gcp-demo environment secret and re-run."
+              exit 1
+            fi
+            if has_version "$name"; then
+              current_hash="$(gcloud secrets versions access latest --secret "$name" --project "$PROJECT_ID" | sha256sum | cut -d' ' -f1)"
+              incoming_hash="$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)"
+              test "$current_hash" != "$incoming_hash" || return 0
+            fi
+            printf '%s' "$value" | gcloud secrets versions add "$name" --project "$PROJECT_ID" --data-file=- >/dev/null
+          }
+          enabled_optional=()
+          # An unset optional secret has its versions disabled and is left out
+          # of Cloud Run, which cannot reference a secret without a version.
+          sync_optional_value() {
+            local name="$1" value="$2"
+            if [ -n "$value" ]; then
+              sync_value "$name" "$value"
+              enabled_optional+=("$name")
+              return
+            fi
+            gcloud secrets versions list "$name" --project "$PROJECT_ID" \
+              --filter='state=ENABLED' --format='value(name)' \
+              | while read -r version; do
+                  test -z "$version" || gcloud secrets versions disable "$version" \
+                    --secret "$name" --project "$PROJECT_ID" --quiet >/dev/null
+                done
+          }
+          add_generated citeladder-db-password
+          add_generated citeladder-jwt-secret
+          add_generated citeladder-encryption-key
+          add_generated citeladder-referral-salt
+          # 10.28.0.10 is the database VM's fixed private address (locals.tf).
+          db_password="$(gcloud secrets versions access latest --secret citeladder-db-password --project "$PROJECT_ID")"
+          db_password_uri="$(DB_PASSWORD="$db_password" python3 -c \
+            'import os, urllib.parse; print(urllib.parse.quote(os.environ["DB_PASSWORD"], safe=""))')"
+          sync_value citeladder-database-url \
+            "postgresql+asyncpg://citeladder:${db_password_uri}@10.28.0.10:5432/citeladder"
+          if [ "${#DEMO_LOGIN_PASSWORD}" -lt 8 ] || [ "${#DEMO_LOGIN_PASSWORD}" -gt 128 ]; then
+            echo '::error::DEMO_LOGIN_PASSWORD must hold 8 to 128 characters.'
+            exit 1
+          fi
+          if [ "${#CITELADDER_ORIGIN_TOKEN}" -lt 32 ]; then
+            echo '::error::CITELADDER_ORIGIN_TOKEN must hold at least 32 characters.'
+            exit 1
+          fi
+          sync_value citeladder-demo-password "$DEMO_LOGIN_PASSWORD"
+          sync_value citeladder-worker-origin-token "$CITELADDER_ORIGIN_TOKEN"
+          # Without the Google pair, sign-in and every Google connect button 503.
+          sync_value citeladder-google-oauth-client-id "$GOOGLE_OAUTH_CLIENT_ID"
+          sync_value citeladder-google-oauth-client-secret "$GOOGLE_OAUTH_CLIENT_SECRET"
+          sync_optional_value citeladder-worker-origin-token-previous "$CITELADDER_ORIGIN_TOKEN_PREVIOUS"
+          sync_optional_value citeladder-default-agent-api-key "$DEFAULT_AGENT_API_KEY"
+          sync_optional_value citeladder-keenable-api-key "$KEENABLE_API_KEY"
+          sync_optional_value citeladder-jev-api-key "$JEV_API_KEY"
+          sync_optional_value citeladder-tavily-api-key "$TAVILY_API_KEY"
+          sync_optional_value citeladder-bing-oauth-client-id "$BING_OAUTH_CLIENT_ID"
+          sync_optional_value citeladder-bing-oauth-client-secret "$BING_OAUTH_CLIENT_SECRET"
+          sync_optional_value citeladder-dataforseo-login "$DATAFORSEO_API_LOGIN"
+          sync_optional_value citeladder-dataforseo-password "$DATAFORSEO_API_PASSWORD"
+          for pair in citeladder-bing-oauth-client citeladder-dataforseo; do
+            count=0
+            for name in "${enabled_optional[@]}"; do
+              case "$name" in "$pair"-*) count=$((count + 1)) ;; esac
+            done
+            if [ "$count" = 1 ]; then
+              echo "::error::Set both $pair secrets or neither."
+              exit 1
+            fi
+            [ "$count" = 2 ] || echo "::warning::$pair is unconfigured for this deploy."
+          done
+          printf '%s\n' "${enabled_optional[@]}" | jq -R 'select(length > 0)' | jq -s . > /tmp/optional.json
+          jq --slurpfile optional /tmp/optional.json '.optional_secrets=$optional[0]' \
+            deploy.auto.tfvars.json > /tmp/tfvars
+          mv /tmp/tfvars deploy.auto.tfvars.json
+      - name: Converge the database and migrate before the API rolls forward
+        working-directory: infra/gcp
+        shell: bash
+        env:
+          RESET_DATABASE: ${{ inputs.reset_database }}
+        run: |
+          set -euo pipefail
+          replace=()
+          # Replacing the VM deletes its boot disk, which holds every row.
+          if [ "$RESET_DATABASE" = true ]; then replace=(-replace=google_compute_instance.db); fi
+          terraform apply -input=false -auto-approve -target=google_cloud_run_v2_job.migrate "${replace[@]}"
+          test "$(terraform output -raw db_address)" = 10.28.0.10
+          gcloud run jobs execute "$(terraform output -raw migrate_job)" \
+            --project "$PROJECT_ID" --region "$REGION" --wait
+      - name: Apply infrastructure
+        id: terraform
+        working-directory: infra/gcp
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform apply -input=false -auto-approve
+          echo "api_url=$(terraform output -raw api_url)" >> "$GITHUB_OUTPUT"
+          echo "tick_job=$(terraform output -raw tick_job)" >> "$GITHUB_OUTPUT"
+      - name: Smoke the API origin and tick
+        shell: bash
+        env:
+          API_URL: ${{ steps.terraform.outputs.api_url }}
+          TICK_JOB: ${{ steps.terraform.outputs.tick_job }}
+          ORIGIN_TOKEN: ${{ secrets.CITELADDER_ORIGIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          code() {
+            curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$@"
+          }
+          admitted() {
+            code --retry 10 --retry-delay 6 --retry-all-errors \
+              --header "X-CiteLadder-Origin-Token: $ORIGIN_TOKEN" --header "X-CiteLadder-Public-Host: $1" "$2"
+          }
+          ready="$(admitted "$APP_DOMAIN_NAME" "$API_URL/ready")"
+          providers="$(admitted "$APP_DOMAIN_NAME" "$API_URL/api/v1/auth/oauth/providers")"
+          mcp="$(admitted "$DOMAIN_NAME" "$API_URL/.well-known/oauth-authorization-server")"
+          anonymous="$(code "$API_URL/health")"
+          foreign="$(code --header "X-CiteLadder-Origin-Token: $ORIGIN_TOKEN" \
+            --header 'X-CiteLadder-Public-Host: attacker.example' "$API_URL/health")"
+          if [[ "$ready" != 200 || "$providers" != 200 || "$mcp" != 200 || "$anonymous" != 403 || "$foreign" != 403 ]]; then
+            echo "::error::Origin smoke failed: ready=$ready providers=$providers mcp=$mcp anonymous=$anonymous foreign=$foreign"
+            exit 1
+          fi
+          # Tick runs every periodic owner and then drains; it must finish cleanly.
+          gcloud run jobs execute "$TICK_JOB" --project "$PROJECT_ID" --region "$REGION" --wait
+          {
+            echo '### GCP deployment'
+            echo "- Source commit: \`$GITHUB_SHA\`"
+            cat /tmp/release-images.md
+            echo "- API origin \`$API_URL\`: ready $ready, providers $providers, MCP metadata $mcp; anonymous $anonymous, foreign host $foreign"
+            echo '- Tick execution: succeeded'
+            echo '- The Workers ORIGIN_UPSTREAM must equal the API origin above.'
+          } >> "$GITHUB_STEP_SUMMARY"

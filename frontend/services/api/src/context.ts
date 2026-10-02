@@ -7,5 +7,8 @@ export type AppEnv = {
     requestId: string;
     user: SessionUser;
     workspace: WorkspaceContext;
+    /** Set only on a token-admitted Cloud Run request (`http/origin-token.ts`). */
+    publicHost?: string;
+    clientIp?: string;
   };
 };

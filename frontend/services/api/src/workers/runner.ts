@@ -1,4 +1,6 @@
 import { randomInt, randomUUID } from 'node:crypto';
+import { setTimeout as sleep } from 'node:timers/promises';
+import pg from 'pg';
 import {
   configEnvironment,
   loadWorkerSettings,
@@ -6,7 +8,7 @@ import {
   resolveSettingSpec,
   type ServiceConfig,
 } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { poolOptions, type Database } from '../db/database.ts';
 import { createAgentBindings } from '../agent/bindings.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { auditProjections } from '../audits/projections.ts';
@@ -69,6 +71,55 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
   return tasks;
 }
 
+export type Exclusive = (drain: () => Promise<number>) => Promise<number>;
+
+// hashtextextended('citeladder-runner-drain', 0): one drain per database at a time.
+const DRAIN_LOCK = 'citeladder-runner-drain';
+
+/**
+ * Each committed write may start an execution; without this a burst would open
+ * one pool per execution against the small database. A second execution waits
+ * briefly, then leaves the work to the active drain, which revisits every lane
+ * until idle. Tick recovers the rare start that lands after that final pass.
+ * The lock lives on its own session so the drain keeps every pooled connection.
+ */
+export function exclusiveDrain(
+  config: ServiceConfig,
+  options: Pick<DrainOptions, 'signal' | 'deadline' | 'now'>,
+  waitMs = config.execution.drainLockWaitMs,
+): Exclusive {
+  const now = options.now ?? (() => performance.now());
+  return async (drain) => {
+    const lock = new pg.Client(poolOptions(config));
+    await lock.connect();
+    try {
+      const until = Math.min(now() + waitMs, options.deadline);
+      for (;;) {
+        const { rows } = await lock.query<{ locked: boolean }>( // NOSONAR -- Each attempt waits for the previous one.
+          'select pg_try_advisory_lock(hashtextextended($1, 0)) as locked',
+          [DRAIN_LOCK],
+        );
+        if (rows[0]?.locked) break;
+        if (options.signal.aborted || now() >= until) {
+          getLogger('workers.runner').info('runner_drain_active_elsewhere');
+          return 0;
+        }
+        const pause = sleep(config.execution.drainLockPollMs, undefined, {
+          signal: options.signal,
+        });
+        await pause.catch(() => undefined); // NOSONAR -- Polling interval between attempts.
+      }
+      try {
+        return await drain();
+      } finally {
+        await lock.query('select pg_advisory_unlock(hashtextextended($1, 0))', [DRAIN_LOCK]);
+      }
+    } finally {
+      await lock.end();
+    }
+  };
+}
+
 export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = configEnvironment(config);
   const runtime = auditRuntime(env);
@@ -127,6 +178,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
 export async function tickAndDrain(
   owners: { lanes: RunnerLane[]; periodic: RunnerLane[] },
   options: DrainOptions,
+  exclusive: Exclusive = (drain) => drain(),
 ) {
   const failures: unknown[] = [];
   const now = options.now ?? (() => performance.now());
@@ -142,7 +194,7 @@ export async function tickAndDrain(
   }
   let tasks = 0;
   try {
-    tasks = await drainLanes(owners.lanes, options);
+    tasks = await exclusive(() => drainLanes(owners.lanes, options));
   } catch (error) {
     failures.push(error);
   }

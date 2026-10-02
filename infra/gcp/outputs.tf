@@ -2,22 +2,23 @@ output "artifact_registry" {
   value = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.images.repository_id}"
 }
 
-output "backup_bucket" {
-  value = google_storage_bucket.backups.name
+# The Workers' ORIGIN_UPSTREAM: the deterministic run.app URL of the API.
+output "api_url" {
+  value = "https://${google_cloud_run_v2_service.api.name}-${data.google_project.current.number}.${var.region}.run.app"
 }
 
-output "demo_url" {
-  value = "https://${var.domain_name}"
+output "db_instance" {
+  value = google_compute_instance.db.name
 }
 
-output "static_ip" {
-  value = google_compute_address.demo.address
+output "migrate_job" {
+  value = google_cloud_run_v2_job.migrate.name
 }
 
-output "vm_name" {
-  value = google_compute_instance.demo.name
+output "tick_job" {
+  value = google_cloud_run_v2_job.execution["tick"].name
 }
 
-output "vm_service_account" {
-  value = google_service_account.vm.email
+output "db_address" {
+  value = google_compute_address.db.address
 }

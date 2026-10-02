@@ -27,6 +27,7 @@ const INTERNAL_HEADERS = new Set([
   'cf-connecting-ip',
   'x-citeladder-origin-token',
   'x-citeladder-public-host',
+  'x-citeladder-client-ip',
 ]);
 
 function upstreamOrigin(value: string, allowDevelopmentHttp = false): URL {
@@ -34,8 +35,8 @@ function upstreamOrigin(value: string, allowDevelopmentHttp = false): URL {
   const localComposeUpstream =
     allowDevelopmentHttp &&
     url.protocol === 'http:' &&
-    url.hostname === 'web' &&
-    url.port === '8000';
+    url.hostname === 'api-service' &&
+    url.port === '8100';
   if (
     (url.protocol !== 'https:' && !localComposeUpstream) ||
     url.username ||
@@ -60,6 +61,10 @@ function originRequest(request: Request, config: WorkerOriginConfig, incoming: U
   }
   headers.set('X-CiteLadder-Origin-Token', config.originToken);
   headers.set('X-CiteLadder-Public-Host', config.publicHost);
+  // Cloudflare sets CF-Connecting-IP on every Worker request; the API trusts it
+  // only alongside the origin token, so per-visitor rate limits survive.
+  const clientIp = request.headers.get('cf-connecting-ip');
+  if (clientIp) headers.set('X-CiteLadder-Client-IP', clientIp);
   return new Request(upstream, {
     method: request.method,
     headers,
