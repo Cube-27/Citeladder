@@ -11,6 +11,8 @@ import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { errors } from './config/errors.ts';
 import { compareText } from './text-order.ts';
+import agentRuntime from './config/agent-runtime.json' with { type: 'json' };
+import modelGateway from './config/model-gateway.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
@@ -55,6 +57,7 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   errors,
+  agent: { ...agentRuntime, ...pythonConfig.agent },
   abuse,
   audit_schedules: {
     ...pythonConfig.audit_schedules,
@@ -72,6 +75,7 @@ export const policy = {
   },
   opportunity: {
     ...pythonConfig.opportunity,
+    declaration: { output_phase_outline: 'outline' },
     opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
     actions: { ...actions, ...pythonConfig.opportunity.actions },
     earned_actions: earnedActions,
@@ -91,7 +95,7 @@ export const policy = {
       source_page_outcome_inspected: sourcePageVocabulary.INSPECTION_INSPECTED,
     },
   },
-  models: { ...pythonConfig.models, jev, quality },
+  models: { ...modelGateway, jev, quality },
   workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
   providers: { ...pythonConfig.providers, app: appModels },
   content_differentiation: {

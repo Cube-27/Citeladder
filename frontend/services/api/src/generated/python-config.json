@@ -3255,9 +3255,6 @@
         "newsletter",
         "original_research"
       ]
-    },
-    "declaration": {
-      "output_phase_outline": "outline"
     }
   },
   "search_intelligence": {
@@ -5313,135 +5310,7 @@
       "vocabulary_empty": "binding_vocabulary_empty"
     }
   },
-  "models": {
-    "gateway": {
-      "api_key": {
-        "env": [
-          "DEFAULT_AGENT_API_KEY"
-        ],
-        "type": "str",
-        "default": ""
-      },
-      "base_url": {
-        "env": [
-          "DEFAULT_AGENT_BASE_URL"
-        ],
-        "type": "str",
-        "default": ""
-      },
-      "model": {
-        "env": [
-          "DEFAULT_AGENT_MODEL"
-        ],
-        "type": "str",
-        "default": ""
-      },
-      "timeout_seconds": {
-        "env": [
-          "DEFAULT_AGENT_TIMEOUT_SECONDS"
-        ],
-        "type": "float",
-        "default": 180.0
-      },
-      "max_output_tokens": {
-        "env": [
-          "DEFAULT_AGENT_MAX_OUTPUT_TOKENS"
-        ],
-        "type": "int",
-        "default": 16384,
-        "exclusive_minimum": 0
-      },
-      "skills_directory": {
-        "env": [
-          "AGENT_SKILLS_DIRECTORY"
-        ],
-        "type": "str",
-        "default": ""
-      },
-      "execution_timeout_seconds": {
-        "env": [
-          "DEFAULT_AGENT_EXECUTION_TIMEOUT_SECONDS"
-        ],
-        "type": "float",
-        "default": 210.0,
-        "exclusive_minimum": 0
-      },
-      "lease_margin_seconds": {
-        "env": [
-          "DEFAULT_AGENT_LEASE_MARGIN_SECONDS"
-        ],
-        "type": "float",
-        "default": 30.0,
-        "exclusive_minimum": 0
-      },
-      "context_limit": {
-        "env": [
-          "DEFAULT_AGENT_CONTEXT_LIMIT"
-        ],
-        "type": "int",
-        "default": 32000,
-        "minimum": 1024
-      },
-      "reconcile_poll_seconds": {
-        "env": [
-          "DEFAULT_AGENT_RECONCILE_POLL_SECONDS",
-          "AGENT_RECONCILE_POLL_SECONDS"
-        ],
-        "type": "float",
-        "default": 2.0,
-        "exclusive_minimum": 0
-      },
-      "retry_base_delay_seconds": {
-        "env": [
-          "DEFAULT_AGENT_RETRY_BASE_DELAY_SECONDS"
-        ],
-        "type": "float",
-        "default": 2.0,
-        "exclusive_minimum": 0
-      },
-      "retry_max_delay_seconds": {
-        "env": [
-          "DEFAULT_AGENT_RETRY_MAX_DELAY_SECONDS"
-        ],
-        "type": "float",
-        "default": 45.0,
-        "exclusive_minimum": 0
-      }
-    },
-    "max_attempts": 3
-  },
   "agent": {
-    "runtime_version": "agent-runtime-ts-3",
-    "protocol_version": "agent-protocol-1",
-    "context_manifest_version": "agent-context-1",
-    "max_steps": 8,
-    "max_tool_calls": 6,
-    "max_protocol_errors": 2,
-    "run_max_attempts": 3,
-    "provider_max_attempts": 1,
-    "chat_turn_limit": 60,
-    "tool_result_max_chars": 12000,
-    "context_package_max_chars": 24000,
-    "transcript_max_chars": 90000,
-    "transcript_truncation_marker": "\n\n[earlier steps truncated]\n\n",
-    "context_truncation_marker": "\n\n[context and output truncated]\n\n",
-    "progress_version": "agent-progress-1",
-    "history_max_messages": 12,
-    "history_message_max_chars": 4000,
-    "message_max_chars": 8000,
-    "mentions_max": 5,
-    "instructions_max_chars": 4000,
-    "output_title_max_chars": 255,
-    "output_body_max_chars": 100000,
-    "reply_max_chars": 12000,
-    "chat_title_max_chars": 60,
-    "idempotency_key_max_chars": 128,
-    "list_default_limit": 30,
-    "list_max_limit": 100,
-    "revision_list_max": 100,
-    "differentiation_report_limit": 10,
-    "worker_poll_seconds": 1.0,
-    "recovery_batch_size": 100,
-    "heartbeat_seconds": 20.0
+    "run_max_attempts": 3
   }
 }

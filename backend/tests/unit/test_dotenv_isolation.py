@@ -5,11 +5,9 @@ This is the enforcement for the rule stated in ``tests/conftest.py`` and
 adds a sixth settings class with its own hard-coded ``env_file`` tuple, and a
 real provider key silently loads into the next test run.
 
-The failure being prevented is concrete. A developer ``.env`` sets
-``DEFAULT_AGENT_API_KEY``; that makes ``default_agent_settings.configured``
-true; the agent worker then builds a live gateway and posts evidence to a real
-provider from a component test — a network call, a bill, and a
-nondeterministic result, on a machine nobody was watching.
+A developer's provider or database credentials must never silently load into
+a Python model/operator test. Native model-gateway tests separately cover the
+TypeScript runtime, which has no dotenv loader.
 """
 
 from __future__ import annotations
@@ -27,7 +25,6 @@ from app.core.config import (
     encryption_key_configured,
     settings,
 )
-from app.core.config.agent import DefaultAgentSettings, default_agent_settings
 from app.core.config.billing_settings import BillingSettings
 from app.core.config.dotenv import (
     DISABLE_DOTENV_VAR,
@@ -43,7 +40,6 @@ from app.core.config.site_health_runtime import SiteHealthSettings
 # ``dotenv_sources()`` — or the sweep below fails.
 DOTENV_SETTINGS_CLASSES: tuple[type[BaseSettings], ...] = (
     Settings,
-    DefaultAgentSettings,
     BillingSettings,
     SiteHealthSettings,
     IntegrationSettings,
@@ -102,16 +98,6 @@ def test_crypto_secrets_are_the_declared_test_values() -> None:
     assert settings.encryption_key == os.environ["ENCRYPTION_KEY"]
     assert settings.jwt_secret_key == os.environ["JWT_SECRET_KEY"]
     assert encryption_key_configured(settings) is True
-
-
-def test_no_model_provider_is_configured_during_tests() -> None:
-    """The specific hazard: a live provider must be unreachable from a test.
-
-    ``configured`` gates whether the agent worker builds a real gateway. If a
-    developer key ever loads again, this is the test that says so.
-    """
-    assert default_agent_settings.configured is False
-    assert default_agent_settings.resolved_api_key == ""
 
 
 def test_a_developer_dotenv_is_not_being_read_even_when_present() -> None:

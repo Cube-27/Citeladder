@@ -294,23 +294,7 @@ def build_config() -> dict[str, Any]:
         "entitlements": entitlements_policy(),
         "billing": billing_policy(_setting),
         "prompts": _prompts_policy(),
-        "models": {
-            "gateway": {
-                name: _setting(name, agent_config.DefaultAgentSettings)
-                for name in agent_config.DefaultAgentSettings.model_fields
-            },
-            "max_attempts": agent_config.GENERATION_PROVIDER_MAX_ATTEMPTS,
-        },
-        "agent": _agent_policy(),
-    }
-
-
-def _agent_policy() -> dict[str, str | int | float]:
-    """Agent core bounds and versions; destinations remain model-owner settings."""
-    return {
-        name.removeprefix("AGENT_").lower(): value
-        for name, value in vars(agent_config).items()
-        if name.startswith("AGENT_") and isinstance(value, (str, int, float))
+        "agent": {"run_max_attempts": agent_config.AGENT_RUN_MAX_ATTEMPTS},
     }
 
 
