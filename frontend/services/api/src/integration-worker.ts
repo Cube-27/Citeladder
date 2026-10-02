@@ -1,4 +1,5 @@
 import { loadConfig } from './config.ts';
+import { parseArgs } from 'node:util';
 import { createDatabase } from './db/database.ts';
 import { getLogger } from './logging.ts';
 import { IntegrationWorker } from './workers/integration-worker.ts';
@@ -14,7 +15,9 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   });
 }
 try {
-  await worker.runForever(stop.signal);
+  const { values } = parseArgs({ options: { drain: { type: 'boolean', default: false } } });
+  if (values.drain) await worker.runUntilIdle(stop.signal);
+  else await worker.runForever(stop.signal);
 } finally {
   await db.destroy();
 }

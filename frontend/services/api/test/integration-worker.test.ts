@@ -7,6 +7,7 @@ import type { IntegrationClient } from '../src/integrations/client.ts';
 import { IntegrationError } from '../src/integrations/client.ts';
 import { integrationPolicy, integrationSettings } from '../src/integrations/config.ts';
 import { IntegrationWorker } from '../src/workers/integration-worker.ts';
+import { recoverIntegrationLeases } from '../src/queue/recovery.ts';
 import { referralEventFields } from '../src/referrals/events.ts';
 import { seedProject } from './referral-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
@@ -114,6 +115,155 @@ async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
 }
 
 describe('integration worker paging and resume', () => {
+  it('claims by priority and availability while concurrent workers never share a run', async () => {
+    const low = await seedRun(),
+      high = await seedRun(),
+      other = await seedRun();
+    const future = await seedRun();
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ priority: 10 })
+      .where('id', '=', high.runId)
+      .execute();
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ available_at: new Date(Date.now() + 3600000) })
+      .where('id', '=', future.runId)
+      .execute();
+    const grants: string[] = [];
+    const client = { page: vi.fn(async () => ({ payload: { rows: [] }, rawRowCount: 0 })) };
+    const token: ConstructorParameters<typeof IntegrationWorker>[3] = async (_db, grantId) => {
+      grants.push(grantId);
+      return 'recorded-token';
+    };
+    const workers = [
+      new IntegrationWorker(db, client, settings, token),
+      new IntegrationWorker(db, client, settings, token),
+    ];
+    await workers[0]!.runOnce();
+    expect(grants).toEqual([high.grantId]);
+    expect(await Promise.all(workers.map((worker) => worker.runOnce()))).toEqual([true, true]);
+    expect(grants.slice(1).sort()).toEqual([low.grantId, other.grantId].sort());
+    expect(await workers[0]!.runOnce()).toBe(false);
+  });
+
+  it('heartbeats a live request but denies late publication after recovery takes its lease', async () => {
+    const target = await seedRun();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let entered!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const client = {
+      page: vi.fn(async () => {
+        entered();
+        await gate;
+        return { payload: { rows: [] }, rawRowCount: 0 };
+      }),
+    };
+    const worker = new IntegrationWorker(
+      db,
+      client,
+      { ...settings, heartbeat_interval_seconds: 0.01 },
+      async () => 'recorded-token',
+    );
+    const running = worker.runOnce();
+    const row = () =>
+      db
+        .selectFrom('integration_sync_runs')
+        .selectAll()
+        .where('id', '=', target.runId)
+        .executeTakeFirstOrThrow();
+    try {
+      await started;
+      const initial = await row();
+      await vi.waitFor(async () =>
+        expect((await row()).lease_expires_at!.getTime()).toBeGreaterThan(
+          initial.lease_expires_at!.getTime(),
+        ),
+      );
+      expect(await recoverIntegrationLeases(db)).toBe(0);
+      await db
+        .updateTable('integration_sync_runs')
+        .set({ lease_expires_at: new Date(Date.now() - 1000) })
+        .where('id', '=', target.runId)
+        .execute();
+      expect(await recoverIntegrationLeases(db)).toBe(1);
+    } finally {
+      release();
+      await running;
+    }
+    expect(await row()).toMatchObject({
+      status: 'retry_wait',
+      lease_owner: null,
+      attempt_count: 1,
+    });
+    expect(
+      await db
+        .selectFrom('integration_import_artifacts')
+        .select('id')
+        .where('sync_run_id', '=', target.runId)
+        .execute(),
+    ).toEqual([]);
+    // Keep this fixture out of later worker claims.
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ status: 'cancelled' })
+      .where('id', '=', target.runId)
+      .execute();
+  });
+
+  it('recovers crashed attempts without charging twice and never retries an exhausted run', async () => {
+    const retry = await seedRun(),
+      exhausted = await seedRun();
+    await db
+      .updateTable('integration_sync_runs')
+      .set({
+        status: 'running',
+        lease_owner: 'dead-worker',
+        lease_expires_at: new Date(Date.now() - 1000),
+        attempt_count: 1,
+        max_attempts: 2,
+      })
+      .where('id', 'in', [retry.runId, exhausted.runId])
+      .execute();
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ attempt_count: 2 })
+      .where('id', '=', exhausted.runId)
+      .execute();
+    const reclaimed = await Promise.all([
+      recoverIntegrationLeases(db, 1),
+      recoverIntegrationLeases(db, 1),
+    ]);
+    expect(reclaimed.reduce((a, b) => a + b, 0)).toBe(2);
+    const terminal = await db
+      .selectFrom('integration_sync_runs')
+      .selectAll()
+      .where('id', '=', exhausted.runId)
+      .executeTakeFirstOrThrow();
+    expect(terminal).toMatchObject({
+      status: 'failed',
+      attempt_count: 2,
+      lease_owner: null,
+      error_code: 'max_attempts_exceeded',
+    });
+    expect(terminal.completed_at).not.toBeNull();
+    const client = { page: vi.fn(async () => ({ payload: { rows: [] }, rawRowCount: 0 })) };
+    const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token');
+    expect(await worker.runOnce()).toBe(true);
+    expect(
+      await db
+        .selectFrom('integration_sync_runs')
+        .select(['status', 'attempt_count'])
+        .where('id', '=', retry.runId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ status: 'succeeded', attempt_count: 2 });
+    expect(await worker.runUntilIdle()).toBe(0);
+  });
   it.each([
     {
       value: { reason: 'recorded non-Error rejection' },

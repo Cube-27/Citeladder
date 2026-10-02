@@ -1,16 +1,20 @@
-import { loadConfig } from './config.ts';
 import { parseArgs } from 'node:util';
+import { loadConfig } from './config.ts';
+import { queueRecovery } from './config/queue-recovery.ts';
 import { createDatabase } from './db/database.ts';
-import { DiscoveryWorker } from './workers/discovery-worker.ts';
+import { recoverQueues } from './queue/recovery.ts';
+import { waitForPoll } from './workers/poll.ts';
 
 const db = createDatabase(loadConfig());
 const stop = new AbortController();
 for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, () => stop.abort());
 try {
   const { values } = parseArgs({ options: { drain: { type: 'boolean', default: false } } });
-  const worker = new DiscoveryWorker(db);
-  if (values.drain) await worker.runUntilIdle(stop.signal);
-  else await worker.runForever(stop.signal);
+  do {
+    await recoverQueues(db);
+    if (values.drain) break;
+    await waitForPoll(queueRecovery.pollSeconds * 1000, stop.signal);
+  } while (!stop.signal.aborted);
 } finally {
   await db.destroy();
 }

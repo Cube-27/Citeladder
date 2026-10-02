@@ -8,6 +8,7 @@ import { completeDiscovery, createDiscovery, discoveryRow } from '../src/project
 import { discoveryComplete, discoveryCreate } from '../src/projects/discovery-inputs.ts';
 import { FetchError, type WebsiteFetcher } from '../src/projects/safe-fetch.ts';
 import { DiscoveryQueue } from '../src/queue/discovery-queue.ts';
+import { recoverDiscoveryLeases } from '../src/queue/recovery.ts';
 import { DiscoveryWorker } from '../src/workers/discovery-worker.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { Fixtures, testConfig, testDatabase } from './support.ts';
@@ -87,6 +88,68 @@ describe('durable onboarding', () => {
       .execute();
     return row;
   }
+  it('reclaims leases once across sweepers, bounds batches and atomically reconciles exhausted parents', async () => {
+    const first = await tenant(),
+      second = await tenant();
+    const retry = await createDiscovery(db, first.workspaceId, input, randomUUID());
+    const failed = await createDiscovery(db, second.workspaceId, input, randomUUID());
+    const completed = await ready(second.workspaceId);
+    const ids = [retry.id, failed.id, completed.id];
+    await db
+      .updateTable('brand_discovery_tasks')
+      .set({
+        status: 'running',
+        lease_owner: 'dead-worker',
+        lease_expires_at: new Date(Date.now() - 1000),
+        attempt_count: 1,
+        max_attempts: 2,
+      })
+      .where('discovery_id', 'in', ids)
+      .execute();
+    await db
+      .updateTable('brand_discovery_tasks')
+      .set({ attempt_count: 0 })
+      .where('discovery_id', '=', retry.id)
+      .execute();
+    const stale = await db
+      .selectFrom('brand_discovery_tasks')
+      .selectAll()
+      .where('discovery_id', '=', retry.id)
+      .executeTakeFirstOrThrow();
+    const counts = await Promise.all([
+      recoverDiscoveryLeases(db, 1),
+      recoverDiscoveryLeases(db, 1),
+    ]);
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(2);
+    expect(await recoverDiscoveryLeases(db, 1)).toBe(1);
+    expect(await recoverDiscoveryLeases(db)).toBe(0);
+    const tasks = await db
+      .selectFrom('brand_discovery_tasks')
+      .select(['discovery_id', 'status', 'attempt_count', 'lease_owner', 'completed_at'])
+      .where('discovery_id', 'in', ids)
+      .execute();
+    expect(tasks.find((task) => task.discovery_id === retry.id)).toMatchObject({
+      status: 'retry_wait',
+      attempt_count: 1,
+      lease_owner: null,
+      completed_at: null,
+    });
+    expect(tasks.find((task) => task.discovery_id === failed.id)).toMatchObject({
+      status: 'failed',
+      attempt_count: 2,
+      lease_owner: null,
+    });
+    expect(await discoveryRow(db, second.workspaceId, failed.id)).toMatchObject({
+      status: 'failed',
+      warnings: ['research_degraded'],
+    });
+    expect(await discoveryRow(db, second.workspaceId, completed.id)).toMatchObject({
+      status: 'ready',
+    });
+    const queue = new DiscoveryQueue(db, 30);
+    expect(await queue.heartbeat(stale, 'dead-worker')).toBe(false);
+    expect(await queue.lockedTask(db, stale, 'dead-worker')).toBeUndefined();
+  });
   it('rejects completion without persisted research and overlapping competitor domains', async () => {
     const t = await tenant();
     const missing = await createDiscovery(db, t.workspaceId, input, randomUUID());
