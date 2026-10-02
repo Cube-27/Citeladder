@@ -1,15 +1,12 @@
 """Export the Python-owned inputs of the TypeScript API service.
 
-Committed artifacts:
+The shared policy bridge is committed at
+``services/api/src/generated/python-config.json``. Python owns only values
+still read by its models, operators or bootstrap; TS-only policy and the API
+error vocabulary have native owners.
 
-* ``services/api/src/generated/python-config.json`` -- the policy the TS
-  service reads. ``app/core/config`` stays the policy authority (TypeScript
-  migration D5); TS never restates a default, bound, error code or role matrix.
-* ``packages/contracts/src/generated/error-codes.ts`` -- the machine-code
-  union: every error code declared by the modules in ``ERROR_CODE_MODULES``.
-
-``--check`` regenerates in memory and fails when a committed artifact is
-stale, which is how CI keeps the two stacks from drifting.
+``--check`` regenerates in memory and fails when the committed artifact is
+stale, which keeps genuinely shared values from drifting.
 """
 
 from __future__ import annotations
@@ -19,7 +16,6 @@ import dataclasses
 import json
 import sys
 import types
-from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -39,25 +35,13 @@ from app.core.config import (
     WEAK_SECRET_WORDS,
 )
 from app.core.config import agent as agent_config
-from app.core.config import audits as audit_config
 from app.core.config import brand_discovery as discovery_config
 from app.core.config import commerce_catalog as commerce_config
 from app.core.config import dataforseo as search_config
-from app.core.config import demand as demand_config
-from app.core.config import entitlements as entitlements_config
-from app.core.config import errors as error_config
-from app.core.config import integrations_contracts as integration_contracts
-from app.core.config import legal as legal_config
-from app.core.config import oauth as oauth_config
-from app.core.config import opportunities as opportunities_config
 from app.core.config import projects as projects_config
 from app.core.config import prompts as prompts_config
-from app.core.config import provider_catalog as provider_config
 from app.core.config import search_intelligence as search_intelligence_config
-from app.core.config import site_health_contracts as site_health_config
-from app.core.config import site_health_crawl_policy as site_crawl_config
 from app.core.config import site_health_rules as web_rules
-from app.core.config import workspaces as workspace_config
 from app.core.config.analysis import (
     ANALYZER_VERSION,
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
@@ -107,12 +91,6 @@ from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
     MEASUREMENT_POLICY_KEY,
-)
-from app.core.config.errors import (
-    CODE_HTTP_ERROR,
-    CODE_INTERNAL_ERROR,
-    RETRYABLE_STATUSES,
-    STATUS_DEFAULT_CODE,
 )
 from app.core.config.http import (
     API_REQUEST_BODY_MAX_BYTES,
@@ -184,8 +162,6 @@ from scripts.web_evidence_policy import web_evidence_policy
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 SERVICE_ROOT = FRONTEND_ROOT / "services" / "api"
 CONFIG_PATH = SERVICE_ROOT / "src" / "generated" / "python-config.json"
-CONTRACTS_ROOT = FRONTEND_ROOT / "packages" / "contracts"
-ERROR_CODES_PATH = CONTRACTS_ROOT / "src" / "generated" / "error-codes.ts"
 GENERATED_BY = "backend/scripts/export_ts_platform.py"
 
 # Settings the TS service consumes. Secrets are exported only as their
@@ -273,15 +249,6 @@ def build_config() -> dict[str, Any]:
             "readiness_timeout_seconds": READINESS_TIMEOUT_SECONDS,
             "service_port": TS_API_SERVICE_PORT,
             "request_body_max_bytes": API_REQUEST_BODY_MAX_BYTES,
-        },
-        "errors": {
-            "status_default_code": {
-                str(status): code
-                for status, code in sorted(STATUS_DEFAULT_CODE.items())
-            },
-            "fallback_code": CODE_HTTP_ERROR,
-            "internal_error_code": CODE_INTERNAL_ERROR,
-            "retryable_statuses": sorted(RETRYABLE_STATUSES),
         },
         "workspaces": workspace_policy(),
         "visibility": _visibility_policy(),
@@ -579,64 +546,10 @@ ANALYTICS_WORKER_SETTINGS = (
 )
 
 
-# The config modules whose error codes a TypeScript owner may emit: the
-# generic envelope vocabulary and the workspace authorization codes. A PR that
-# ports a route family adds that family's owning config module here.
-ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
-    agent_config,
-    audit_config,
-    provider_config,
-    error_config,
-    oauth_config,
-    legal_config,
-    workspace_config,
-    demand_config,
-    opportunities_config,
-    search_intelligence_config,
-    commerce_config,
-    integration_contracts,
-    prompts_config,
-    entitlements_config,
-    site_health_config,
-    site_crawl_config,
-)
-_ERROR_CODE_PREFIXES = ("CODE_", "ERROR_", "URL_EXCLUSION_")
-
-
-def error_codes(modules: Iterable[types.ModuleType] = ERROR_CODE_MODULES) -> list[str]:
-    """Every ``CODE_*``/``ERROR_*`` string constant the modules declare."""
-    from app.domain.entitlements.types import STATUS_ENTITLEMENT_UNRESOLVED
-
-    codes = {
-        value
-        for module in modules
-        for name, value in vars(module).items()
-        if name.startswith(_ERROR_CODE_PREFIXES) and isinstance(value, str)
-    }
-    # Funded/manual admission reuses the resolver's unresolved status as its code.
-    return sorted(codes | {STATUS_ENTITLEMENT_UNRESOLVED})
-
-
-def render_error_codes() -> str:
-    """The union as TypeScript source (excluded from formatting, byte-checked)."""
-    modules = ", ".join(f"`{module.__name__}`" for module in ERROR_CODE_MODULES)
-    lines = [
-        f"// Generated by {GENERATED_BY}; do not edit.",
-        f"// Error codes declared by {modules}.",
-        "export const API_ERROR_CODES = [",
-        *(f"  {json.dumps(code)}," for code in error_codes()),
-        "] as const;",
-        "",
-        "export type ApiErrorCode = (typeof API_ERROR_CODES)[number];",
-    ]
-    return "\n".join(lines) + "\n"
-
-
 def build_artifacts() -> dict[Path, str]:
     """Every artifact path mapped to its exact expected contents."""
     return {
         CONFIG_PATH: json.dumps(build_config(), indent=2, ensure_ascii=False) + "\n",
-        ERROR_CODES_PATH: render_error_codes(),
     }
 
 

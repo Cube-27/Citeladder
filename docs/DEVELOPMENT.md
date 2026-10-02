@@ -281,12 +281,12 @@ API_TEST_DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<dispos
 TYPES_DATABASE_URL="<same disposable database>" pnpm db:types   # regenerate Kysely types after a schema change
 ```
 
-After changing an exported setting, error code or the workspace role matrix,
+After changing an exported shared setting or the workspace role matrix,
 regenerate the Python-owned inputs from `backend/` with
 `uv run python -m scripts.export_ts_platform` and commit them. From the
 repository root, `node scripts/quality.mjs --mode check --scope api` checks types,
 schema authority, export freshness and route ownership (`pnpm check:routes` against
-FastAPI's exported OpenAPI and every ingress Caddyfile); CI
+native route-family declarations and every ingress Caddyfile); CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
 The Site Health TypeScript worker supports one-shot processing from
 `frontend/services/api/` with `node src/site-health-worker.ts --drain`.

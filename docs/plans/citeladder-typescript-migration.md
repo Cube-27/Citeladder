@@ -185,7 +185,7 @@ total.
 | 18 | Site Health and source-page inspection | High | Done; 18b5b (#224), 18b5c (#225) merged |
 | 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a merged (#226); 19b adapters, activation and retirement implemented; PR validation pending |
 | 19c | Commerce competitor discovery and remaining acquisition bridges | High | Implemented 2 October 2026; deployment pending |
-| 20 | Consolidation and policy transfer | Medium | 20a–c merged; native recovery/startup slice implemented; further policy/web retirement in progress |
+| 20 | Consolidation and policy transfer | Medium | 20a–f merged; error authority transfer implemented; further policy/bridge retirement in progress |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
 | 23 | Database move and HTTP cutover (section 9) | High | Proposed |
@@ -1303,6 +1303,13 @@ and exclusive bounds. Timezone admission also checks the native runtime's
 support, rejecting catalog names such as `Factory` that cannot execute.
 Further policy and test-only acquisition bridge retirement
 remain open; PR20 is not complete.
+
+**20g.** The hand-owned `@citeladder/contracts/error-codes` vocabulary now owns
+API machine codes. Native error configuration owns HTTP defaults and retry
+classification, retiring Python's unused generic error policy, Commerce's
+unused API error constants and the error-code generator/drift coupling.
+The shared policy export remains for genuine Python model/operator consumers.
+Further TS-only policy transfer and acquisition bridge retirement remain open.
 
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,

@@ -1,10 +1,10 @@
 /**
  * The unified API error envelope (docs/api-error-contract.md).
  *
- * Mirrors `backend/app/core/errors.py`: every 4xx/5xx body is
+ * Every 4xx/5xx body is
  * `{detail, error: {code, message, request_id, retryable, details?}}`, with
- * `detail` retained for legacy clients. Codes and the retryable rule come
- * from the Python policy export, typed by the contracts' code union; the shared envelope is tested by shape.
+ * `detail` retained for legacy clients. Native config owns status defaults
+ * and retry classification; contracts owns the machine-code vocabulary.
  */
 import { asApiErrorCode, type ApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
@@ -17,8 +17,7 @@ import { getLogger } from './logging.ts';
 const logger = getLogger('api.errors');
 
 const INTERNAL_ERROR_MESSAGE = 'An unexpected error occurred';
-// Narrowed at import, so a policy export naming an undeclared code fails at
-// startup rather than on the first unhandled error.
+// Configuration is typed against the contracts' machine-code vocabulary.
 const INTERNAL_ERROR_CODE = asApiErrorCode(policy.errors.internal_error_code);
 
 type Envelope = {
@@ -60,7 +59,7 @@ function errorEnvelope(input: {
   return { detail: input.detail ?? input.message, error };
 }
 
-/** What every route raises: the TS counterpart of `ApiException`. */
+/** The coded failure every route raises. */
 export class ApiError extends Error {
   readonly status: ContentfulStatusCode;
   readonly code: ApiErrorCode;
@@ -125,7 +124,7 @@ export const onError: ErrorHandler = (error, c) => {
   }
   if (error instanceof HTTPException) {
     // The framework's own failures (malformed input a middleware refused),
-    // coded from the status exactly as the backend's shim handler does.
+    // use the configured status defaults.
     const status = error.status as ContentfulStatusCode;
     const message = error.message || statusPhrase(error.getResponse());
     return c.json(
@@ -154,7 +153,7 @@ export const onError: ErrorHandler = (error, c) => {
   );
 };
 
-/** Unknown path: the same body Starlette's routing 404 produces. */
+/** Unknown path: a coded routing 404. */
 export const onNotFound: NotFoundHandler = (c) =>
   c.json(
     errorEnvelope({
