@@ -6,7 +6,7 @@ export function BusyBar({ active, label }: Readonly<{ active: boolean; label: st
   if (!active) return null;
   return (
     <progress
-      className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent absolute inset-x-0 top-0 z-1 h-0.5 w-full appearance-none border-0"
+      className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-info [&::-moz-progress-bar]:bg-info absolute inset-x-0 top-0 z-1 h-0.5 w-full appearance-none border-0"
       aria-label={label}
     />
   );

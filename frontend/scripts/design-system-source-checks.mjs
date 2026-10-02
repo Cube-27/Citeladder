@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { visitorKeys } from 'oxc-parser';
+import { tokenInventory } from './audit-design-tokens.mjs';
 export { textContrastViolations } from './design-system-contrast.mjs';
 
 import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './source-ast.mjs';
@@ -11,6 +12,146 @@ const EDITORIAL_SIZE = /\btext-(?:2xs|xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)\b/;
 const WEBSITE_CSS = 'apps/app/src/website-type.css';
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const LANDING_CSS = 'apps/marketing/src/pages/landing.css';
+
+function withoutComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
+/** Only motion declarations and utilities are policy: measured durations are data. */
+export function motionRoleViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi || label === TOKEN_CSS || label === WEBSITE_CSS) return [];
+  const text = withoutComments(source);
+  const declarations = text.matchAll(
+    /(?:animation|transition)(?:-(?:duration|delay|timing-function))?\s*:\s*['"]?([^;\n}'"]+)/g,
+  );
+  const rawTiming =
+    /\b\d*\.?\d+m?s\b|cubic-bezier\s*\(|(?<![\w-])(?:ease(?:-in(?:-out)?|-out)?|linear)(?![\w-])/;
+  const rawUtility =
+    /\b(?:duration|delay)-(?:\d+|\[[\d.]+m?s\])|\bease-(?:in(?:-out)?|out|linear)\b/;
+  if (
+    [...declarations].some(([, value]) => rawTiming.test(value)) ||
+    rawUtility.test(text) ||
+    /\b(?:opacity|transform|color|width|height)\s+\d*\.?\d+m?s\b/.test(text)
+  ) {
+    return [`${label}: motion must consume duration and easing roles from globals.css`];
+  }
+  return [];
+}
+
+/** Feature recipes cannot suppress or replace the shared keyboard outline. */
+export function focusRoleViolations(source, label, ownsProductUi) {
+  if (label === TOKEN_CSS) return [];
+  const text = withoutComments(source);
+  if (/var\(--(?:color-focus(?:-ring)?|focus-ring)\)/.test(text)) {
+    return [`${label}: retired focus/glow tokens must migrate to the shared outline`];
+  }
+  if (!ownsProductUi) return [];
+  if (
+    /\b(?:focus(?:-visible)?:)?outline-(?:none|\d|\[)|\bfocus(?:-visible)?:ring-/.test(text) ||
+    (label.endsWith('.css') &&
+      /(?:^|[;{])\s*outline(?:-offset|-color|-style|-width)?\s*:/.test(text))
+  ) {
+    return [`${label}: keyboard focus belongs to focus-ring, focus-input or focus-frame`];
+  }
+  return [];
+}
+
+/** Detached surfaces are the only consumers of elevation. */
+export function shadowRoleViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi || label === TOKEN_CSS) return [];
+  const text = withoutComments(source);
+  const shadows = text.matchAll(/\bshadow-(\[[^\]]+\]|[\w-]+)/g);
+  const rawDeclaration =
+    label.endsWith('.css') &&
+    [...text.matchAll(/box-shadow\s*:\s*([^;]+);/g)].some(
+      ([, value]) => !/^(?:none|var\(--shadow-(?:none|overlay|modal)\))$/.test(value.trim()),
+    );
+  if (
+    [...shadows].some(([, role]) => !['none', 'overlay', 'modal'].includes(role)) ||
+    rawDeclaration
+  ) {
+    return [`${label}: elevation must use shadow-none, shadow-overlay or shadow-modal`];
+  }
+  return [];
+}
+
+/** Radius family mismatches are review advice because composition can be intentional. */
+export function radiusRoleAdvisories(source, label, ownsProductUi) {
+  if (!ownsProductUi || !label.endsWith('.tsx')) return [];
+  const roles = {
+    Button: 'control',
+    Input: 'control',
+    Textarea: 'control',
+    Select: 'control',
+    Card: 'card',
+    Panel: 'card',
+    Dialog: 'overlay',
+    Drawer: 'overlay',
+    DropdownContent: 'overlay',
+    Tooltip: 'overlay',
+  };
+  return jsxClassData(source, label).flatMap(({ tag, classes, line }) => {
+    const expected = roles[tag];
+    if (!expected) return [];
+    const mismatch = [
+      ...classes.matchAll(/rounded-\[var\(--radius-(control|card|overlay)\)\]/g),
+    ].some(([, role]) => role !== expected);
+    return mismatch ? [`${label}:${line}: review ${tag} radius; family role is ${expected}`] : [];
+  });
+}
+
+/** The parsed contract assigns each live token one intentional role. */
+export function tokenContractViolations(source, document) {
+  const classes = new Set([
+    'surface',
+    'state-tint',
+    'ink',
+    'border',
+    'semantic-status',
+    'brand',
+    'data-viz',
+  ]);
+  const entries = document
+    .split('\n')
+    .filter((line) => /^\| `--color-/.test(line))
+    .map((line) =>
+      line
+        .split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim().replaceAll('`', '')),
+    );
+  const live = new Set(tokenInventory(source).map(({ token }) => token));
+  const violations = [];
+  for (const token of live) {
+    const rows = entries.filter(([name]) => name === token);
+    if (
+      rows.length !== 1 ||
+      rows[0].length !== 6 ||
+      !classes.has(rows[0][1]) ||
+      rows[0].slice(2).some((cell) => !cell)
+    ) {
+      violations.push(`docs/design.md: ${token} needs one complete token-contract row`);
+    }
+  }
+  for (const [token] of entries) {
+    if (!live.has(token))
+      violations.push(`docs/design.md: retired token ${token} remains in the contract`);
+  }
+  return violations;
+}
+
+/** Control owners consume the size ladder; glyph dimensions remain intrinsic. */
+export function densityRoleViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi || !label.startsWith('components/ui/')) return [];
+  const text = withoutComments(source);
+  if (
+    /--(?:control-height|field-height(?:-lg)?)(?=\))/.test(text) ||
+    /\b(?:min-h|h|size)-(?:9|11|\[(?:20|36|44)px\])(?![\w.])/.test(text)
+  ) {
+    return [`${label}: control heights must consume named density roles`];
+  }
+  return [];
+}
 /**
  * Roles the website stylesheet must define.
  *
@@ -689,7 +830,7 @@ export function productContractViolations(root) {
   const css = readFileSync(join(root, ...TOKEN_CSS.split('/')), 'utf8');
   const websiteCss = readFileSync(join(root, ...WEBSITE_CSS.split('/')), 'utf8');
   // Every role the product builds on has to be defined somewhere. The value is
-  // the design system's to choose: pinning `--color-action` to a literal hex
+  // the design system's to choose: pinning `--color-accent` to a literal hex
   // meant a rebrand failed a test rather than a review.
   const requiredTokens = [
     '--text-xs',
@@ -706,7 +847,12 @@ export function productContractViolations(root) {
     '--page-section-gap',
     '--card-padding',
     '--modal-padding',
-    '--control-height',
+    '--control-height-sm',
+    '--control-height-md',
+    '--menu-item-height',
+    '--table-row-height-dense',
+    '--badge-height-sm',
+    '--badge-height-md',
     '--control-height-lg',
     '--radius-control',
     '--radius-card',
@@ -717,10 +863,7 @@ export function productContractViolations(root) {
     '--color-well',
     '--color-active',
     '--color-sidebar',
-    '--color-action',
     '--color-accent',
-    '--color-focus',
-    '--color-focus-ring',
     '--color-selection',
     '--color-selection-fg',
   ];

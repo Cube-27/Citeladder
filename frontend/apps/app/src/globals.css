@@ -16,47 +16,18 @@
     var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-heading), sans-serif;
 
-  /* Palette layer. Product code consumes the semantic aliases below. */
-  --color-gray-0: #ffffff;
-  --color-gray-50: #f7f9fc;
-  --color-gray-100: #eef1f5;
-  --color-gray-200: #e4e7ec;
-  --color-gray-300: #cbd2dc;
-  --color-gray-400: #8793a3;
-  --color-gray-500: #667085;
-  --color-gray-600: #596579;
-  --color-gray-700: #30313d;
-  --color-gray-800: #1d2939;
-  --color-gray-900: #101828;
-  --color-cyan-50: #edf7f7;
-  --color-cyan-100: #ddf1f2;
-  --color-cyan-500: #00a9c5;
-  --color-cyan-700: #155e75;
-  --color-coral-50: #fff3f0;
-  --color-coral-100: #ffe4de;
-  --color-coral-500: #ff6e56;
-  --color-coral-700: #9a3412;
-  --color-lime-50: #f4f8ec;
-  --color-lime-100: #e6f0d1;
-  --color-lime-500: #9acd32;
-  --color-lime-700: #3f6212;
-  --color-amber-50: #fffbeb;
-  --color-amber-100: #fde68a;
-  --color-amber-500: #f59e0b;
-  --color-amber-700: #b45309;
-
   --color-background: #f3f5f7;
   --color-background-alt: #f7f9fb;
   --color-panel: #ffffff;
   --color-panel-tonal: #f7f9fb;
   --color-elevated: #ffffff;
   --color-well: #e9edf1;
-  --color-active: #eef1f5;
-  /* Selection. A segmented track and the selected item on it must differ at
-     a glance, so the pair is its own role rather than borrowed surfaces:
-     `track` is the recessed groove, `selected` the raised paper on it. */
+  --color-hover: color-mix(in srgb, var(--color-panel), var(--color-foreground) 4%);
+  --color-selected: color-mix(in srgb, var(--color-panel), var(--color-foreground) 8%);
+  --color-active: color-mix(in srgb, var(--color-panel), var(--color-foreground) 12%);
+  --color-disabled: color-mix(in srgb, var(--color-panel), var(--color-foreground) 3%);
+  /* Recessed selection track; state tints follow their enclosing surface. */
   --color-track: #e6eaf0;
-  --color-selected: #ffffff;
   --color-input: #ffffff;
   /* The elevation ladder is rail → ground → paper: the sidebar sits one step
      below the shell ground, and cards and tables (--color-panel) sit one step
@@ -76,9 +47,7 @@
      `[data-citeladder-section='indigo']` and `='teal'` scopes below — so
      nothing inside those bands names a dark colour itself. */
   --color-band-indigo: #1b1938;
-  --color-band-indigo-deep: #0e0c1f;
   --color-band-teal: #0e3030;
-  --color-band-teal-mid: #155555;
 
   /* The marketing canvases (docs/design.md §Marketing): the barely warm
      off-white for alternating body bands, warm hairlines for white surfaces,
@@ -87,9 +56,6 @@
      they stay out of the status ladder. */
   --color-canvas-soft: #f7f9fb;
   --color-hairline-warm: #e8e4dd;
-  --color-hairline-dark: #3f3a52;
-  --color-violet-soft: #c9b4fa;
-  --color-violet-soft-strong: #d8c9fb;
   --color-atmosphere-green: rgb(214 236 222 / 60%);
   --color-atmosphere-blue: rgb(219 234 248 / 55%);
 
@@ -115,15 +81,10 @@
   --color-border-strong: #c3ccd9;
   --color-border-bold: #8a95a5;
 
-  /* Three inks, clearly apart: `foreground` for what the reader came for
-     (titles, values), `secondary` for sentences, `muted` for labels and
-     metadata. The old fourth rung (`subtle`) sat darker than `muted`, so the
-     ladder had no order; it now resolves to `muted`. */
+  /* The three reading inks: primary, secondary and muted. */
   --color-foreground: #0f172a;
   --color-secondary: #334155;
   --color-muted: #5b6678;
-  --color-subtle: var(--color-muted);
-  --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
 
   /* Forest uses the deep shade for white-on-colour controls and text. The
@@ -136,27 +97,15 @@
   --color-accent-subtle: #dcfce7;
   --color-accent-soft: #f0fdf4;
   --color-accent-border: #86efac;
-  --color-recommendation: var(--color-accent-soft);
   --color-accent-text: #14532d;
-  --color-focus: var(--color-brand-forest);
-  --color-focus-ring: rgb(22 163 74 / 20%);
   --color-selection: #86efac;
   --color-selection-fg: #0f172a;
 
-  --color-action: #14532d;
-  --color-action-hover: #166534;
-  --color-action-active: #0b3d20;
-  --color-action-fg: #ffffff;
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
   --color-brand-openai: #10a37f;
   --color-brand-gemini: #4285f4;
   --color-brand-claude: #d97757;
-  --color-brand-perplexity: #20808d;
-  --color-brand-copilot-violet: #7f52ff;
-  --color-brand-copilot-blue: #1a73e8;
-  --color-brand-copilot-cyan: #00a4ef;
-  --color-brand-copilot-green: #35c759;
 
   --color-brand-google-blue: #4285f4;
   --color-brand-google-green: #34a853;
@@ -166,11 +115,9 @@
   /* Status — app-only evidence families. */
   --color-success: #166534;
   --color-success-bg: #edf7ed;
-  --color-success-border: #cce8cc;
   --color-success-text: #166534;
   --color-warning: #8a4600;
   --color-warning-bg: #fff5db;
-  --color-warning-border: #f0dfab;
   --color-warning-text: #8a4600;
   --color-danger: #b42332;
   --color-danger-solid: #b42332;
@@ -179,10 +126,10 @@
   --color-danger-bg: #fff0f1;
   --color-danger-border: #f2c6cb;
   --color-danger-text: #b42332;
-  --color-info: var(--color-accent-text);
-  --color-info-bg: var(--color-accent-soft);
-  --color-info-border: var(--color-accent-border);
-  --color-info-text: var(--color-accent-text);
+  --color-info: #24476b;
+  --color-info-bg: #eef5fa;
+  --color-info-border: #c8d9e8;
+  --color-info-text: #24476b;
   --color-neutral-bg: #eef1f5;
 
   /* Marketing icon tiles — the pastel colour carriers for public-section
@@ -199,12 +146,6 @@
   --color-tile-purple-ink: #ea580c;
   --color-tile-green: #dcfce7;
   --color-tile-green-ink: #16a34a;
-  /* Marketing preview-only states preserve the authored illustration palette
-     without leaking raw framework colours into component code. */
-  --color-preview-success-dot: oklch(69.6% 0.17 162.48);
-  --color-preview-success: oklch(59.6% 0.145 163.225);
-  --color-preview-success-strong: oklch(50.8% 0.118 165.612);
-
   --color-sentiment-positive: #9acd32;
   --color-sentiment-positive-bg: #f4f8ec;
   --color-sentiment-positive-text: #3f6212;
@@ -219,7 +160,6 @@
   --color-citation-owned: #c15f3c;
   --color-citation-competitor: #00a9c5;
   --color-citation-third-party: #6b6b72;
-  --color-citation-third-party-text: #3a3a40;
 
   --color-run-draft: #6b6b72;
   --color-run-queued: #6b6b72;
@@ -241,8 +181,7 @@
   --color-score-high-text: #3f6212;
   --color-score-high-ring: #9acd32;
 
-  /* Charts keep categorical identities, with forest as the first product
-     series. Generic series alias the chart ladder so the two cannot drift. */
+  /* Charts keep categorical identities, with forest as the first product series. */
   --color-chart-1: #16a34a;
   --color-chart-2: #00a9c5;
   --color-chart-3: #f59e0b;
@@ -255,12 +194,6 @@
   --color-gsc-impressions: #673ab7;
   --color-gsc-ctr: #00897b;
   --color-gsc-position: #e65100;
-  --color-series-1: var(--color-chart-1);
-  --color-series-2: var(--color-chart-2);
-  --color-series-3: var(--color-chart-3);
-  --color-series-4: var(--color-chart-4);
-  --color-series-5: var(--color-chart-5);
-  --color-series-other: var(--color-chart-8);
   --color-overlay-scrim: rgb(20 33 61 / 45%);
 
   /* Tailwind's default radius scale is cleared so the ladder cannot be
@@ -271,40 +204,13 @@
   --radius-xs: 4px;
   --radius-full: 9999px;
 
-  /* Elevation — cards use subtle bottom-weighted shadows, while dropdowns
-     and overlays retain stronger omnidirectional all-side shadows. */
-  --shadow-xs: 0 1px 2px rgb(26 31 54 / 0.06);
-  --shadow-sm: 0 1px 2px rgb(26 31 54 / 0.06);
-  /* Smudged control edge — the shared edge treatment for buttons and fields.
-     A faint full-perimeter ring fused with a soft bottom-weighted drop reads
-     as diffused graphite rather than a drawn hairline. The ring now carries the
-     weight and the drop only softens it, so a control's edge lands at roughly
-     the same strength as --color-border and a row of buttons reads as objects
-     rather than as tinted patches. Hover deepens the fuse; it never returns to
-     a crisp border. The ring rides the same ink as --shadow-xs, so the dark
-     band rebinds below re-ink it. */
-  --shadow-smudge:
-    0 0 0 1px rgb(26 31 54 / 0.16), 0 1px 2px rgb(26 31 54 / 0.04);
-  --shadow-smudge-hover:
-    0 0 0 1px rgb(26 31 54 / 0.24), 0 1px 2px rgb(26 31 54 / 0.06);
-  --shadow-smudge-danger:
-    0 0 0 1px rgb(180 35 50 / 0.42), 0 1px 2px rgb(180 35 50 / 0.12);
-  /* Composer lift. The one case where a FIELD is the page: a brief box or an
-     agent prompt that the reader is meant to type into before anything else.
-     A hair more ring than --shadow-smudge plus a wider drop, so it reads as
-     the surface in front rather than as one more control in a row. */
-  --shadow-raised:
-    0 0 0 1px rgb(26 31 54 / 0.24), 0 2px 8px -2px rgb(26 31 54 / 0.1);
-  /* Product cards carry no resting shadow; this remains for the marketing
-     previews that still use it. */
-  --shadow-card: 0 1px 2px -1px rgb(17 28 69 / 0.06);
-  /* The raised selected item (segmented control, active navigation). A soft
-     drop only: a selected item is never outlined. */
-  --shadow-selected: 0 1px 2px rgb(15 23 42 / 0.1), 0 1px 1px rgb(15 23 42 / 0.04);
-  --shadow-elevated:
+  /* Resting surfaces use boundaries; only detached surfaces cast a shadow. */
+  --shadow-*: initial;
+  --shadow-none: none;
+  --shadow-overlay:
     0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
-  --shadow-modal-value:
-    0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
+  --shadow-modal:
+    0 24px 64px rgb(26 31 54 / 0.2), 0 8px 16px rgb(26 31 54 / 0.12);
 
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
@@ -333,11 +239,14 @@
 
   /* Restrained enterprise motion: quick controls, slightly longer spatial
      transitions, one shared easing curve. */
-  --transition-fast: 140ms;
-  --transition-base: 200ms;
-  --transition-slow: 280ms;
-  --ease-standard: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-fast: 110ms;
+  --motion-normal: 150ms;
+  --motion-slow: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0.38, 0.9);
+  --ease-enter: cubic-bezier(0, 0, 0.38, 0.9);
+  --ease-exit: cubic-bezier(0.2, 0, 1, 0.9);
+  --default-transition-duration: var(--motion-fast);
+  --default-transition-timing-function: var(--ease-standard);
   --z-index-sticky: 20;
   --z-index-overlay: 40;
   --z-index-modal: 50;
@@ -346,10 +255,11 @@
 
 :root {
   color-scheme: light;
+  --state-surface: var(--color-panel);
   --sidebar-width: 240px;
   --compact-topbar-height: 56px;
   --sticky-header-offset: 0px;
-  --nav-item-height: 36px;
+  --nav-item-height: var(--control-height-md);
   /* Sidebar rhythm. The rail's four bands share one inset so no band invents
      its own; the group gap is small because the section label carries the
      separation between groups. */
@@ -367,23 +277,21 @@
   --page-section-gap: 24px;
   --workspace-gap: 16px;
   --compact-gap: 12px;
-  --card-padding: 20px;
-  --card-padding-compact: 12px;
-  --card-padding-large: 20px;
+  --card-padding: 16px;
   /* The workspace pane is continuous with shell ground; cards and tables on
      it carry the elevated paper fill. The focused flow pane stays paper. */
   /* No seam: the tonal steps between rail, ground, and paper are the separation. */
-  --shadow-pane: none;
   --modal-padding: 24px;
   --empty-state-padding: 24px;
-  --control-height-sm: 32px;
-  --control-height: 36px;
-  --control-height-lg: 40px;
-  --field-height: 36px;
-  --field-end-target: 24px;
-  --field-height-lg: 44px;
+  --control-height-sm: 28px;
+  --control-height-md: 32px;
+  --control-height-lg: 36px;
+  --field-end-target: var(--control-height-sm);
+  --menu-item-height: 32px;
+  --badge-height-sm: 20px;
+  --badge-height-md: 24px;
   --textarea-min-height: 112px;
-  --tab-height: 40px;
+  --tab-height: var(--control-height-md);
   --tab-gap: 24px;
   /* The page grammar's rows. Every route draws the same bands in the same
      order, each closed by a full-bleed hairline: identity, then tabs, then
@@ -393,10 +301,11 @@
   --page-header-padding-top: 24px;
   --page-header-padding-bottom: 24px;
   --page-header-gap: 16px;
-  --table-row-height: 44px;
-  --table-header-height: 36px;
+  --table-row-height: 36px;
+  --table-row-height-dense: 32px;
+  --table-header-height: var(--control-height-md);
   --table-cell-padding-x: 12px;
-  --table-cell-padding-y: 12px;
+  --table-cell-padding-y: 0px;
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
   --radius-control: 6px;
   --radius-card: 8px;
@@ -412,11 +321,28 @@
   --site-gutter: 20px;
   --section-y: 56px;
   --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
-  --focus-ring: 0 0 0 3px var(--color-focus-ring);
   --skeleton-base: #eef2f6;
   --skeleton-highlight: #ffffff;
-  --value-placeholder: var(--color-subtle);
+  --value-placeholder: var(--color-muted);
 }
+
+/* State tints are derived from the surface receiving the interaction. */
+:where(.bg-background, .bg-panel, .bg-panel-tonal, .bg-background-alt, .bg-well,
+  .bg-input, .bg-elevated, .bg-sidebar, .bg-track) {
+  --color-hover: color-mix(in srgb, var(--state-surface), var(--color-foreground) 4%);
+  --color-selected: color-mix(in srgb, var(--state-surface), var(--color-foreground) 8%);
+  --color-active: color-mix(in srgb, var(--state-surface), var(--color-foreground) 12%);
+  --color-disabled: color-mix(in srgb, var(--state-surface), var(--color-foreground) 3%);
+}
+.bg-background { --state-surface: var(--color-background); }
+.bg-panel { --state-surface: var(--color-panel); }
+.bg-panel-tonal { --state-surface: var(--color-panel-tonal); }
+.bg-background-alt { --state-surface: var(--color-background-alt); }
+.bg-well { --state-surface: var(--color-well); }
+.bg-input { --state-surface: var(--color-input); }
+.bg-elevated { --state-surface: var(--color-elevated); }
+.bg-sidebar { --state-surface: var(--color-sidebar); }
+.bg-track { --state-surface: var(--color-track); }
 
 .cl-landing {
   --cl-paper: var(--color-panel);
@@ -496,12 +422,10 @@
   --color-foreground: #f4f3fa;
   --color-secondary: #d6d3e8;
   --color-muted: #a5a1c2;
-  --color-subtle: #8d89ad;
   --color-panel: #242244;
   --color-elevated: #242244;
   --color-well: #2b2950;
   --color-background-alt: #2b2950;
-  --color-active: #34325c;
   --color-input: #242244;
   --color-border-subtle: #34325c;
   --color-border: #43406e;
@@ -514,17 +438,7 @@
   --color-accent-subtle: rgb(201 180 250 / 12%);
   --color-accent-soft: rgb(201 180 250 / 8%);
   --color-accent-border: rgb(201 180 250 / 30%);
-  --color-focus: #c9b4fa;
-  --color-focus-ring: rgb(201 180 250 / 38%);
   --color-selection: rgb(201 180 250 / 30%);
-  --color-action: #c9b4fa;
-  --color-action-hover: #d8c9fb;
-  --color-action-active: #e4dafc;
-  --color-action-fg: #1b1938;
-  --shadow-smudge:
-    0 0 0 1px rgb(244 243 250 / 0.16), 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-smudge-hover:
-    0 0 0 1px rgb(244 243 250 / 0.24), 0 1px 3px rgb(0 0 0 / 0.4);
   --skeleton-base: #2b2950;
   --skeleton-highlight: #34325c;
 }
@@ -534,12 +448,10 @@
   --color-foreground: #eef4f2;
   --color-secondary: #cfdedb;
   --color-muted: #9db8b2;
-  --color-subtle: #8aa6a0;
   --color-panel: #143b3b;
   --color-elevated: #143b3b;
   --color-well: #1a4545;
   --color-background-alt: #1a4545;
-  --color-active: #205050;
   --color-input: #143b3b;
   --color-border-subtle: #205050;
   --color-border: #2a5b5b;
@@ -552,17 +464,7 @@
   --color-accent-subtle: rgb(238 244 242 / 12%);
   --color-accent-soft: rgb(238 244 242 / 8%);
   --color-accent-border: rgb(238 244 242 / 30%);
-  --color-focus: #ffffff;
-  --color-focus-ring: rgb(255 255 255 / 40%);
   --color-selection: rgb(255 255 255 / 25%);
-  --color-action: #ffffff;
-  --color-action-hover: #eef1ee;
-  --color-action-active: #dfe4e0;
-  --color-action-fg: #0e3030;
-  --shadow-smudge:
-    0 0 0 1px rgb(238 244 242 / 0.16), 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-smudge-hover:
-    0 0 0 1px rgb(238 244 242 / 0.24), 0 1px 3px rgb(0 0 0 / 0.4);
   --skeleton-base: #1a4545;
   --skeleton-highlight: #205050;
 }
@@ -993,62 +895,70 @@ body {
   }
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
+/* Primary metadata ink keeps current/pressed navigation readable on its tint. */
+.focus-ring[aria-current='page'] .type-caption,
+a.focus-ring:active .type-caption {
+  color: var(--color-foreground);
 }
 
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
+/* Keyboard focus is owned here. Composed fields ring their frame; other
+   controls ring only the element receiving focus. Filled actions use their
+   high-contrast label ink and an inset outline so clipping cannot hide it. */
+:focus-visible,
+.focus-ring:focus-visible,
 .focus-input:focus-visible,
 .focus-frame:has(:focus-visible) {
-  border-color: var(--color-focus);
-  outline: 2px solid var(--color-focus);
-  outline-offset: -1px;
-  /* Keep the smudged edge under the focus glow: box-shadow does not compose
-     across rules, so focus restates the edge instead of replacing it. */
-  box-shadow: var(--focus-ring), var(--shadow-smudge);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
 }
 
-.focus-frame :focus-visible {
+.focus-ring:is([data-button-variant='primary'], [data-button-variant='destructive']):focus-visible {
+  outline-color: currentColor;
+  outline-offset: -2px;
+}
+
+.focus-ring:is([aria-current], [aria-selected='true'], [data-state='active']):focus-visible {
+  outline-offset: -2px;
+}
+
+/* A frame can replace its child's outline only when focus has one destination.
+   Keep each child's outline when siblings include another interactive control. */
+.focus-frame:not(:has(:where(input:not([type='hidden']), textarea, select, button,
+  a[href], area[href], summary, [tabindex], [contenteditable]:not([contenteditable='false'])):not(:focus-visible))) :focus-visible {
   outline: none;
 }
 
-/* The shared focus treatment for pressable things that are not text fields:
-   buttons, tabs, menu items, chips, sidebar rows, cards you can click. It was
-   consumed in ~40 places before it existed anywhere, so every one of those
-   fell back to the global `:focus-visible` outline with its 3px offset — a
-   detached ring that clipped inside scroll containers and overlapped
-   neighbours in dense rows. Defining it here is what makes the treatment
-   uniform rather than per-route.
-
-   The design contract asks for accent on the element's own border plus one
-   attached soft glow, with no gap and no second floating ring, so the offset
-   outline is pulled back to the edge and the glow is the same `--focus-ring`
-   token the field recipe above uses. Both are theme-scoped variables, so the
-   purple and teal section rebinds carry through untouched. */
-.focus-ring:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 0;
-  box-shadow: var(--focus-ring);
+:disabled:focus-visible,
+[aria-disabled='true']:focus-visible,
+[data-disabled]:focus-visible,
+.focus-ring:is(:disabled, [aria-disabled='true'], [data-disabled]):focus-visible,
+.focus-input:is(:disabled, [aria-disabled='true'], [data-disabled]):focus-visible,
+.focus-frame:has(:disabled):not(:has(:enabled:focus-visible)) {
+  outline: none;
 }
 
-/* Deliberately NOT `:has(:focus-visible)`. Several consumers are containers
-   that hold their own focusable controls — `TabPanel` carries this class and
-   wraps whole forms — so matching on a focused descendant would ring the
-   entire panel and, worse, suppress the outline on the input the reader is
-   actually typing in. The element that receives focus is the element that
-   shows it. Composed controls whose frame owns the ring use `.focus-frame`
-   above, which opts in explicitly. */
+@media (prefers-contrast: more) {
+  :focus-visible,
+  .focus-ring:focus-visible,
+  .focus-input:focus-visible,
+  .focus-frame:has(:focus-visible) {
+    outline-style: dotted;
+  }
+}
 
-/* Forced-colours mode drops both the accent border and the glow, because
-   neither survives the system palette. `outline` is the one property the mode
-   keeps painting, so the state stays visible there on its own terms. */
 @media (forced-colors: active) {
-  .focus-ring:focus-visible {
-    outline: 2px solid Highlight;
+  .focus-ring:is([data-button-variant='primary'], [data-button-variant='destructive']):focus-visible,
+  :focus-visible,
+  .focus-ring:focus-visible,
+  .focus-input:focus-visible,
+  .focus-frame:has(:focus-visible) {
+    outline-color: Highlight;
+  }
+
+  /* The radio dot is a filled span, which otherwise collapses to Canvas. */
+  [role='radio'][data-state='checked'] [data-state='checked'] > span {
+    background-color: CanvasText;
+    forced-color-adjust: none;
   }
 }
 
@@ -1071,17 +981,6 @@ input:-webkit-autofill:focus {
   transition: background-color 9999s ease-out;
 }
 
-/* Plain fields draw their edge with a shadow; keep it alongside autofill paint. */
-input.focus-input:-webkit-autofill,
-input.focus-input:-webkit-autofill:hover {
-  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--shadow-smudge);
-}
-
-input.focus-input:-webkit-autofill:focus-visible {
-  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--focus-ring),
-    var(--shadow-smudge);
-}
-
 /* The public surface prints on white, not the app's tinted paper canvas. Its
    editorial ink is a dark navy family: a very dark navy foreground stepping
    through navy variants, so type prints in clearly blue ink rather than
@@ -1102,18 +1001,14 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-foreground: #0f172a;
   --color-secondary: #1e293b;
   --color-muted: #3a4658;
-  --color-subtle: #4b5a6e;
   --color-background-alt: #f8fafc;
   --color-canvas-soft: #f7f9fb;
-  --color-active: #f1f5f9;
   --color-border: #e2e8f0;
   --color-border-subtle: #f1f5f9;
   --color-border-strong: #cbd5e1;
   --color-hairline-warm: #e2e8f0;
   --color-band-indigo: #131028;
-  --color-band-indigo-deep: #0d0a1c;
   --color-band-teal: #0c2626;
-  --color-band-teal-mid: #114747;
 }
 
 /* Product light inherits the white-paper palette from @theme. Public
@@ -1122,13 +1017,6 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-neutral-bg: var(--color-well);
   --skeleton-base: var(--color-well);
   --skeleton-highlight: var(--color-panel);
-}
-
-/* The product reads its type from the `.type-*` roles. Field text is 16px,
-   which also stops iOS zooming on focus. */
-:root:not([data-public-surface]) {
-  --text-field: 1rem;
-  --text-field--line-height: 1.5rem;
 }
 
 /* Light is the default. Dark is a per-device reader preference applied to the
@@ -1150,7 +1038,6 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-panel-tonal: #1e1e1e;
   --color-elevated: #262626;
   --color-well: #0e0e0e;
-  --color-active: #232323;
   --color-input: #141414;
   --color-sidebar: #0a0a0a;
   --color-shell: #111111;
@@ -1160,9 +1047,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-foreground: #d2d2d0;
   --color-secondary: #c0c0be;
   --color-muted: #999996;
-  --color-subtle: var(--color-muted);
   --color-track: #141414;
-  --color-selected: #333333;
   --color-border-subtle: #272727;
   --color-border: #343434;
   --color-border-strong: #5c5c59;
@@ -1176,24 +1061,15 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-accent-subtle: rgb(118 223 156 / 18%);
   --color-accent-soft: rgb(118 223 156 / 12%);
   --color-accent-border: rgb(118 223 156 / 45%);
-  --color-focus: #94ebb0;
-  --color-focus-ring: rgb(148 235 176 / 35%);
   --color-selection: rgb(118 223 156 / 35%);
   --color-selection-fg: #faf9f5;
-  --color-action: var(--color-accent);
-  --color-action-hover: var(--color-accent-hover);
-  --color-action-active: var(--color-accent-active);
-  --color-action-fg: var(--color-accent-fg);
-  --color-recommendation: var(--color-accent-soft);
   --color-surface-inverse: #76df9c;
   --color-on-inverse: #0d2618;
   --color-success: #80dfa2;
   --color-success-bg: rgb(128 223 162 / 13%);
-  --color-success-border: rgb(128 223 162 / 38%);
   --color-success-text: #a4edbd;
   --color-warning: #f2c879;
   --color-warning-bg: rgb(242 200 121 / 13%);
-  --color-warning-border: rgb(242 200 121 / 38%);
   --color-warning-text: #f7d99e;
   --color-danger: #f3979e;
   --color-danger-solid: #d95767;
@@ -1219,7 +1095,6 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-citation-owned: var(--color-chart-4);
   --color-citation-competitor: var(--color-chart-2);
   --color-citation-third-party: var(--color-chart-8);
-  --color-citation-third-party-text: var(--color-secondary);
   --color-run-draft: var(--color-chart-8);
   --color-run-queued: var(--color-chart-8);
   --color-run-running: var(--color-chart-2);
@@ -1252,56 +1127,28 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-overlay-scrim: rgb(0 0 0 / 72%);
   --skeleton-base: #1e1e1e;
   --skeleton-highlight: #292929;
-  --shadow-smudge: 0 0 0 1px rgb(255 255 255 / 10%), 0 1px 2px rgb(0 0 0 / 25%);
-  --shadow-smudge-hover: 0 0 0 1px rgb(255 255 255 / 16%), 0 1px 2px rgb(0 0 0 / 35%);
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 16%);
-  --shadow-selected: 0 1px 2px rgb(0 0 0 / 40%);
-  --shadow-raised: 0 0 0 1px rgb(255 255 255 / 24%), 0 2px 5px rgb(0 0 0 / 35%);
-  --shadow-smudge-danger: 0 0 0 1px var(--color-danger), 0 1px 2px rgb(0 0 0 / 25%);
-  --shadow-elevated: 0 12px 32px rgb(0 0 0 / 40%);
-  --shadow-modal-value: var(--shadow-elevated);
+  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 40%);
+  --shadow-modal: 0 24px 64px rgb(0 0 0 / 60%);
 }
 
 :root[data-theme='dark'] .brand-wordmark {
   filter: brightness(0) invert(1);
 }
 
-/* Bind utilities to live theme variables inside their layer so focus
-   continues to own the composed ring and edge. */
+/* Detached surfaces resolve their elevation in the current theme. */
 @layer utilities {
-  .shadow-smudge { box-shadow: var(--shadow-smudge); }
-  .shadow-smudge-hover,
-  .hover\:shadow-smudge-hover:hover { box-shadow: var(--shadow-smudge-hover); }
-  .shadow-raised,
-  .hover\:shadow-raised:hover { box-shadow: var(--shadow-raised); }
-  .shadow-smudge-danger,
-  .hover\:shadow-smudge-danger:hover { box-shadow: var(--shadow-smudge-danger); }
-  .shadow-card { box-shadow: var(--shadow-card); }
-  .shadow-selected { box-shadow: var(--shadow-selected); }
-  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .shadow-overlay { box-shadow: var(--shadow-overlay); }
+  .shadow-modal { box-shadow: var(--shadow-modal); }
 }
 .focus-input[aria-invalid='true'],
 .focus-ring[aria-invalid='true'],
 .focus-frame:has([aria-invalid='true']) {
-  box-shadow: var(--shadow-smudge-danger);
-}
-.focus-input[aria-invalid='true']:focus-visible,
-.focus-ring[aria-invalid='true']:focus-visible,
-.focus-frame:has([aria-invalid='true']):has(:focus-visible) {
-  box-shadow: var(--focus-ring), var(--shadow-smudge-danger);
-}
-input.focus-input[aria-invalid='true']:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--shadow-smudge-danger);
-}
-input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
-  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--focus-ring), var(--shadow-smudge-danger);
+  border: 1px solid var(--color-danger);
 }
 @media (forced-colors: active) {
   .focus-input[aria-invalid='true'],
   .focus-ring[aria-invalid='true'],
-  .focus-frame:has([aria-invalid='true']) { border: 1px solid Mark; }
-  .focus-input:focus-visible,
-  .focus-frame:has(:focus-visible) { outline-color: Highlight; }
+  .focus-frame:has([aria-invalid='true']) { border-color: Mark; }
 }
 
 /* A spinner is a promise that the wait is long enough to be worth explaining.
@@ -1321,7 +1168,7 @@ input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
 
 .loading-delayed {
   opacity: 0;
-  animation: citeladder-loading-appear 120ms ease-out 300ms forwards;
+  animation: citeladder-loading-appear var(--motion-fast) var(--ease-enter) 300ms forwards;
 }
 
 /* Paper, not screen. A fractal-noise tile at a few percent over the marketing
@@ -1351,7 +1198,7 @@ input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
 .app-pane {
   background: var(--color-panel);
   border-radius: var(--radius-workspace);
-  box-shadow: var(--shadow-pane);
+  box-shadow: none;
 }
 
 /* The workspace pane fills the shell rather than floating in it: it meets the
@@ -1378,32 +1225,14 @@ input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
   }
 }
 
-:root:not([data-theme='dark']) [data-app-surface] {
-  --color-info: #24476b;
-  --color-info-bg: #eef5fa;
-  --color-info-border: #c8d9e8;
-  --color-info-text: #24476b;
+/* Dense page toolbars keep every trigger at the same role in all viewports. */
+[data-page-band='control'] {
+  --control-height-md: var(--control-height-sm);
 }
 
-@media (min-width: 701px) and (pointer: fine) {
-  [data-page-band='control'] {
-    --control-height: var(--control-height-sm);
-    --field-height: var(--control-height-sm);
-  }
-}
-
-@media (max-width: 700px), (pointer: coarse) {
-  :root {
-    --control-height-sm: 44px;
-    --control-height: 44px;
-    --control-height-lg: 44px;
-    --field-height: 44px;
-    --field-end-target: 44px;
-    --tab-height: 44px;
-  }
-  :root [data-flow-surface] {
-    --control-height-sm: 44px;
-  }
+.table-dense {
+  --table-row-height: var(--table-row-height-dense);
+  --badge-height-md: var(--badge-height-sm);
 }
 
 @media (max-width: 700px) {
@@ -1444,14 +1273,15 @@ samp {
 
 .menu-panel {
   transition:
-    opacity var(--transition-fast) var(--ease-standard),
-    transform var(--transition-fast) var(--ease-standard);
+    opacity var(--motion-normal) var(--ease-enter),
+    transform var(--motion-normal) var(--ease-enter);
 }
 
 .menu-panel[data-state="closed"] {
   opacity: 0;
   transform: translateY(-2px);
-  transition-duration: 140ms;
+  transition-duration: var(--motion-normal);
+  transition-timing-function: var(--ease-exit);
 }
 
 @keyframes drawer-overlay-in {
@@ -1517,19 +1347,19 @@ samp {
 }
 
 .drawer-overlay[data-state="open"] {
-  animation: drawer-overlay-in 180ms var(--ease-standard) both;
+  animation: drawer-overlay-in var(--motion-slow) var(--ease-standard) both;
 }
 
 .drawer-overlay[data-state="closed"] {
-  animation: drawer-overlay-out 180ms var(--ease-standard) both;
+  animation: drawer-overlay-out var(--motion-normal) var(--ease-exit) both;
 }
 
 .drawer-panel[data-state="open"] {
-  animation: drawer-panel-in var(--transition-base) var(--ease-drawer) both;
+  animation: drawer-panel-in var(--motion-slow) var(--ease-enter) both;
 }
 
 .drawer-panel[data-state="closed"] {
-  animation: drawer-panel-out var(--transition-base) var(--ease-standard) both;
+  animation: drawer-panel-out var(--motion-slow) var(--ease-exit) both;
 }
 
 .drawer-panel[data-side="left"][data-state="open"] {
@@ -1578,7 +1408,7 @@ samp {
     var(--skeleton-highlight),
     transparent
   );
-  animation: skeleton-shimmer 1.2s var(--ease-standard) infinite;
+  animation: skeleton-shimmer calc(var(--motion-slow) * 5) var(--ease-standard) infinite;
 }
 
 @media (min-width: 768px) {
@@ -1620,7 +1450,7 @@ samp {
   inset: 0;
   border-radius: inherit;
   background: inherit;
-  animation: activity-ping 1.8s var(--ease-standard) infinite;
+  animation: activity-ping calc(var(--motion-slow) * 7.5) var(--ease-standard) infinite;
 }
 
 @keyframes activity-ping {
@@ -1652,13 +1482,13 @@ samp {
   inset: -0.25rem;
   border-radius: var(--radius-full);
   border: 1px solid currentcolor;
-  animation: activity-check-ring 520ms var(--ease-standard) both;
+  animation: activity-check-ring var(--motion-slow) var(--ease-standard) both;
 }
 
 .activity-check svg path {
   stroke-dasharray: 24;
   stroke-dashoffset: 24;
-  animation: activity-check-draw 260ms var(--ease-standard) 80ms both;
+  animation: activity-check-draw var(--motion-normal) var(--ease-enter) var(--motion-fast) both;
 }
 
 @keyframes activity-check-draw {
@@ -1801,11 +1631,7 @@ samp {
 }
 
 
-@media (forced-colors: active) {
-  :focus-visible {
-    outline: 3px solid ButtonText;
-  }
-}
+
 
 /* Skip link — the first tab stop on every route (app/layout.tsx). Off-screen
    until focused, then it lands as a normal control against the panel fill. */
@@ -1822,7 +1648,7 @@ samp {
   padding: 0.5rem 0.875rem;
   font-size: var(--text-sm);
   font-weight: 500;
-  box-shadow: var(--shadow-elevated);
+  box-shadow: var(--shadow-overlay);
 }
 .skip-link:focus-visible {
   transform: translateY(0);

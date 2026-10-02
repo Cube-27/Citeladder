@@ -55,7 +55,7 @@ function ProgressHeader({
             className="type-caption inline-flex items-center gap-2 tabular-nums"
             aria-live="polite"
           >
-            <span className="activity-dot bg-accent inline-block size-1.5" aria-hidden />
+            <span className="activity-dot bg-run-running inline-block size-1.5" aria-hidden />
             Updating…
           </span>
         ) : null}
@@ -112,7 +112,7 @@ function ProgressBar({
       </div>
       <div className="bg-well h-1.5 w-full overflow-hidden rounded-full">
         <div
-          className="bg-accent h-full transition-[width] duration-300"
+          className="bg-chart-1 h-full transition-[width] duration-[var(--motion-normal)]"
           style={{ width: `${percent}%` }}
         />
       </div>

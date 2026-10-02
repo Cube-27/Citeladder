@@ -154,8 +154,8 @@ function RevisionRow({
 
 const DIFF_LINE = {
   same: { mark: ' ', label: null, tone: 'text-muted' },
-  removed: { mark: '−', label: 'Removed', tone: 'bg-danger-bg text-danger-text' },
-  added: { mark: '+', label: 'Added', tone: 'bg-success-bg text-success-text' },
+  removed: { mark: '−', label: 'Removed', tone: 'bg-well text-secondary' },
+  added: { mark: '+', label: 'Added', tone: 'bg-panel-tonal text-secondary' },
 } as const;
 
 /** What changed from this revision to the current one, line by line. */

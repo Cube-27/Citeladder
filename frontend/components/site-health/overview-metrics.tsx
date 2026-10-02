@@ -8,7 +8,7 @@ import { ScoreRing } from '@/components/ui/score-ring';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@/lib/api/types';
-import { PLACEHOLDER, measurementCaveat, shouldPollCrawl } from '@/lib/site-health/status';
+import { measurementCaveat, shouldPollCrawl } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 
 type Summary = SiteHealthDashboard['score_summary'];
@@ -25,7 +25,6 @@ type MetricModel = {
   valueUnit?: 'score' | 'percent';
   /** Only when the measurement is qualified; null on the ordinary case. */
   caveat: string | null;
-  detail: string;
   href: string;
   icon: typeof ICONS.site;
 };
@@ -87,13 +86,6 @@ function technicalMetric(context: MetricContext): MetricModel {
     title: 'Web Fundamentals',
     value: score ?? null,
     caveat: measurementCaveat(state, coverage),
-    detail: context.overview
-      ? occurrenceDetail(
-          context.overview.technical_defect_count,
-          'defect',
-          context.overview.technical_defect_affected_page_count,
-        )
-      : `${context.analyzed} pages analyzed`,
     href: '/issues?dimension=technical',
     icon: ICONS.siteHealth,
   };
@@ -108,22 +100,9 @@ function aeoMetric(context: MetricContext): MetricModel {
     title: 'AEO Readiness',
     value: score ?? null,
     caveat: measurementCaveat(state, coverage),
-    detail: context.overview
-      ? occurrenceDetail(
-          context.overview.aeo_readiness_gap_count,
-          'readiness gap',
-          context.overview.aeo_readiness_gap_affected_page_count,
-        )
-      : `${context.analyzed} pages analyzed`,
     href: '/issues?dimension=aeo',
     icon: ICONS.visibility,
   };
-}
-
-function occurrenceDetail(count: number, noun: string, affectedPages: number): string {
-  const occurrenceLabel = count === 1 ? `${noun} occurrence` : `${noun} occurrences`;
-  const pageLabel = affectedPages === 1 ? 'page' : 'pages';
-  return `${count} ${occurrenceLabel} · ${affectedPages} ${pageLabel} affected`;
 }
 
 function measurementMetric(context: MetricContext): MetricModel {
@@ -135,9 +114,6 @@ function measurementMetric(context: MetricContext): MetricModel {
     valueUnit: 'percent',
     value: percentRatio(coverage),
     caveat: measurementCaveat(state, coverage),
-    detail: context.overview
-      ? `${context.overview.measured_check_count} of ${context.overview.expected_check_count} checks completed`
-      : 'Completed checks across applicable pillars',
     href: '/site?tab=aeo-readiness',
     icon: ICONS.reports,
   };
@@ -149,12 +125,7 @@ function crawlMetric(context: MetricContext): MetricModel {
   return {
     title: 'Crawl Coverage',
     value: progress,
-    // The ring already shows the share and `detail` already counts the pages;
-    // the only thing left worth saying is that the crawl did NOT finish.
     caveat: coverageCaveat(terminalCoverage, context.active),
-    detail: terminalCoverage
-      ? `${context.analyzed} of ${context.selected || PLACEHOLDER} pages analyzed${coverageReason(terminalCoverage.evidence)}`
-      : `${context.analyzed} of ${context.selected || PLACEHOLDER} pages analyzed`,
     href: '/site?tab=pages',
     icon: ICONS.site,
   };
@@ -166,14 +137,12 @@ function coverageCaveat(
 ): string | null {
   if (!coverage) return active ? 'In progress' : 'Coverage unavailable';
   if (coverage.state === 'complete') return null;
-  return coverage.state === 'partial' ? 'Partial coverage' : 'Coverage unknown';
-}
-
-function coverageReason(evidence: Record<string, unknown>): string {
-  const reasons = evidence.reasons;
-  if (!Array.isArray(reasons)) return '';
-  const reason = reasons.find((value): value is string => typeof value === 'string');
-  return reason ? ` · ${reason.replaceAll('_', ' ')}` : '';
+  const label = coverage.state === 'partial' ? 'Partial coverage' : 'Coverage unknown';
+  const reasons = coverage.evidence.reasons;
+  const reason = Array.isArray(reasons)
+    ? reasons.find((value): value is string => typeof value === 'string')
+    : undefined;
+  return reason ? `${label} · ${reason.replaceAll('_', ' ')}` : label;
 }
 
 function OverviewMetricCard({
@@ -181,17 +150,16 @@ function OverviewMetricCard({
   value,
   valueUnit = 'score',
   caveat,
-  detail,
   href,
   icon: Icon,
 }: Readonly<MetricModel>) {
   return (
     <div
-      className={cn(hairlineBandItemClasses, 'grid h-full gap-4 p-4 sm:first:ps-4 sm:last:pe-4')}
+      className={cn(hairlineBandItemClasses, 'grid h-full gap-2 p-3 sm:first:ps-3 sm:last:pe-3')}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <Icon aria-hidden className="text-muted size-4" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Icon aria-hidden className="text-muted size-4 shrink-0" />
           <p className={textRole('itemTitle')}>{title}</p>
         </div>
         {value === null ? (
@@ -199,7 +167,8 @@ function OverviewMetricCard({
         ) : (
           <ScoreRing
             value={value}
-            size={64}
+            size={40}
+            strokeWidth={4}
             label={
               valueUnit === 'percent'
                 ? `${title}: ${Math.round(value)}%`
@@ -208,10 +177,7 @@ function OverviewMetricCard({
           />
         )}
       </div>
-      <div className="grid gap-1">
-        {caveat ? <p className="type-caption">{caveat}</p> : null}
-        <p className="type-caption">{detail}</p>
-      </div>
+      {caveat ? <span className="sr-only">{caveat}</span> : null}
       <Button asChild variant="ghost" size="sm" className="-ms-3 mt-auto justify-self-start">
         <ProjectLink href={href}>View details</ProjectLink>
       </Button>

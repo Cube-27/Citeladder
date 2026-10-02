@@ -41,7 +41,7 @@ function StepCheck() {
 function StepIndicator({ state }: Readonly<{ state: ActivityStepState }>) {
   if (state === 'complete') return <StepCheck />;
   if (state === 'attention') return <CircleAlert className="size-4" />;
-  if (state === 'active') return <span className="activity-dot bg-accent size-2" />;
+  if (state === 'active') return <span className="activity-dot bg-info size-2" />;
   return <span className="bg-border-subtle size-1.5 rounded-full" />;
 }
 
@@ -143,7 +143,7 @@ export function ActivityProgress({
   return (
     <section aria-label={label} className="grid gap-4">
       <progress
-        className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent h-1.5 w-full appearance-none overflow-hidden rounded-full border-0"
+        className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-info [&::-moz-progress-bar]:bg-info h-1.5 w-full appearance-none overflow-hidden rounded-full border-0"
         aria-label={progressLabel}
         aria-valuemin={0}
         aria-valuemax={steps.length}
@@ -159,8 +159,8 @@ export function ActivityProgress({
               <span
                 className={cn(
                   'relative z-1 flex size-6 shrink-0 items-center justify-center rounded-full',
-                  step.state === 'complete' && 'bg-success text-accent-fg',
-                  step.state === 'active' && 'bg-accent-subtle text-accent-text',
+                  step.state === 'complete' && 'bg-success-bg text-success-text',
+                  step.state === 'active' && 'bg-info-bg text-info-text',
                   step.state === 'attention' && 'bg-warning-bg text-warning-text',
                   step.state === 'pending' && 'border-border bg-panel text-muted border',
                 )}

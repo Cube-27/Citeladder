@@ -178,7 +178,7 @@ export function DomainTable({
     // `table-fixed` with explicit column widths: without it every column sizes
     // to its own longest cell, so filtering to a shorter set of domains
     // re-lays out the whole table under the reader's pointer.
-    <Table className="table-fixed">
+    <Table className="table-dense table-fixed">
       <TableHeader>
         <TableRow>
           <SortableHead
@@ -326,7 +326,7 @@ export function UrlTable({
   state?: SourceTableState;
 }>) {
   return (
-    <Table className="table-fixed">
+    <Table className="table-dense table-fixed">
       <TableHeader>
         <TableRow>
           <SortableHead

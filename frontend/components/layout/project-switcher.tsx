@@ -67,7 +67,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     <Dropdown>
       <DropdownTrigger
         className={cn(
-          'focus-ring hover:bg-active hover:text-foreground flex w-full items-center gap-2 rounded-[var(--radius-control)] px-3 py-1 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
+          'focus-ring hover:bg-hover active:bg-active data-[state=open]:bg-selected hover:text-foreground flex w-full items-center gap-2 rounded-[var(--radius-control)] px-3 py-1 text-left transition-colors disabled:pointer-events-none disabled:bg-disabled disabled:text-muted',
           className,
         )}
         disabled={isLoading}
@@ -144,7 +144,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             <DropdownItem onSelect={() => router(newProjectDestination(activeWorkspaceId))}>
               <span
                 aria-hidden
-                className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
+                className="bg-well text-secondary flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
               >
                 <Plus className="size-4" />
               </span>

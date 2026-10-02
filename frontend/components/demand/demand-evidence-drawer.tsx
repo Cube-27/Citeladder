@@ -184,14 +184,14 @@ function DemandEvidenceContent({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Cohort Median CTR:</span>
-                <span className={textRole('emphasis', 'text-success tabular-nums')}>
+                <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
                   {(details.cohortMedianCtr * 100).toFixed(1)}%
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Observed Actual CTR:</span>
                 {numericMetric(signal, 'ctr') !== null ? (
-                  <span className={textRole('emphasis', 'text-danger tabular-nums')}>
+                  <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
                     {(numericMetric(signal, 'ctr')! * 100).toFixed(1)}%
                   </span>
                 ) : (

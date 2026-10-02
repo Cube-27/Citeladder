@@ -2,7 +2,7 @@
 
 > Canonical visual and interaction contract for marketing, authentication, onboarding, and the authenticated application. This is the only design-system document.
 
-Existing owners govern production workflows. Visual work must not change factual copy, data, feature claims, scripted preview content, transactions, or explicit confirmation gates without approval. Unresolved instructions from the supplied contract are recorded at the end; consolidation does not decide them.
+Existing owners govern production workflows. Visual work must not change factual copy, data, feature claims, scripted preview content, transactions, or explicit confirmation gates without approval. Product decisions remain with the owning feature contract.
 
 Tests verify shared ownership, accessibility, and product correctness—not exact classes, fonts, pixels, or CSS recipes as a second visual authority.
 
@@ -11,7 +11,7 @@ Tests verify shared ownership, accessibility, and product correctness—not exac
 CiteLadder (`citeladder.com`) is an evidence-led enterprise system. Its **Prism Evidence Workspace** puts neutral ground behind the chrome and a distinct work surface behind the content, using navy ink in light mode, Emerald actions by default, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup: `frontend/public/citeladder-logo.svg` for the wordmark and the matching inline glyph for mark-only mode. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts. The mark inherits `currentColor`; non-empty `alt` supplies either rendering's accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same black silhouette across frames.
-- **Typography:** self-hosted variable faces on every surface: Switzer (sans) for body, UI and data type, Sora (sans) for headings and display roles, both capped at weight 600 by their `@font-face` ranges; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); field text is 16px (`--text-field`, 14px on public surfaces).
+- **Typography:** self-hosted variable faces on every surface: Switzer (sans) for body, UI and data type, Sora (sans) for headings and display roles, both capped at weight 600 by their `@font-face` ranges; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
 - **Surface identity:** Light is the default. The app and onboarding headers carry a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Emerald is the sole action accent on public and product surfaces. The logo and provider marks retain their fixed brand colours. The app uses a sidebar rail below neutral workspace ground, with paper cards and tables above it; auth and onboarding retain a centred paper task column against neutral ground. Dark mode keeps the same tonal order in near-black neutrals. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only with their own editorial ink.
 
@@ -38,23 +38,158 @@ Consume semantic roles, never page-local values.
 | Role | Tokens and values | Use |
 | --- | --- | --- |
 | Ground and rail | `background`, `shell` `#F3F5F7`; `sidebar` `#E9EDF1` | Neutral workspace ground and the lower sidebar rail in light mode |
-| Structure | `panel-tonal`, `background-alt` `#F7F9FB`; `well`, `active` `#E9EDF1` | Insets, wells, tonal panels; hover/selected states |
+| Structure | `panel-tonal`, `background-alt` `#F7F9FB`; `well` `#E9EDF1` | Tonal panels and recessed wells |
 | Paper | `panel`, `input`, `elevated` `#FFFFFF` | Work surfaces, inputs, semantic objects, overlays |
-| Ink | `foreground` `#0F172A`; `secondary` `#334155`; `muted` `#5B6678` | Three clearly separated inks: titles and values; sentences; labels and metadata. The former fourth rung, `subtle`, resolves to `muted` and is retired. |
+| Ink | `foreground` `#0F172A`; `secondary` `#334155`; `muted` `#5B6678` | Three clearly separated inks: titles and values; sentences; labels and metadata. The former fourth rung, `subtle`, is deleted; metadata consumes `muted`. |
 | Boundaries | `border-subtle` `#E5E9EF`; `border` `#D3DAE4`; `border-strong` `#C3CCD9`; `border-bold` `#8A95A5` | `border-subtle` divides rows or peers *inside* one surface; `border` bounds controls, inset white panels and overlays, and divides a table header from its rows; `border-strong` is deliberate emphasis; `border-bold` bounds inputs. Default cards and table wrappers use fill contrast instead. |
-| Selection | `track` `#E6EAF0`; `selected` `#FFFFFF`; `shadow-selected` | The recessed groove of a segmented control and the raised paper of the selected item on it or in navigation. |
-| Interaction | Emerald: forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC`. | Primary actions on every surface, links, tabs, selection, active navigation, focus, first chart series |
-| Evidence | success, warning, error, info, `chart-secondary`, `chart-grid` | Persisted status/data, always labelled or paired with an icon |
+| Neutral states | `hover`, `selected`, `active`, `disabled` | Surface mixed with primary ink at 4%, 8%, 12%, and 3%; the selected state is distinct from hover. `track` is the recessed segmented-control surface. |
+| Interaction | Emerald: forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC`. | Primary actions, links, tab underlines, checked indicators and focus; navigation and filter selection use neutral tints |
+| Evidence | `success`, `warning`, `danger`, `info`; `chart-1..8`, `chart-grid` | Status families carry labelled status; data-viz roles carry measurements |
 
-Hierarchy is carried by boundary and tone, not by elevation: the app's rail, ground and paper are distinct fills, while an inset box may use an edge. Shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips) and for the raised selected item (`shadow-selected`). A `Card` has no resting shadow.
+Hierarchy is carried by boundary and tone, not by elevation: the app's rail, ground and paper are distinct fills, while an inset box may use an edge. Shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips). A `Card` has no resting shadow.
 
-**Borders.** A line may draw the edge of an inset white panel, status card, overlay, control or field, or divide rows and peers inside one surface (including the full-width rule closing each page band). Default cards and table wrappers have no outer border: their paper fill separates them from workspace ground. Selection is fill plus `shadow-selected`, never an outline or a leading bar. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space, not by a rule above or around them. The workspace pane has no seam against the ground. Lines use a token at full strength, never an alpha-faded colour.
+**Borders.** A line may draw the edge of an inset white panel, status card, overlay, control or field, or divide rows and peers inside one surface (including the full-width rule closing each page band). Default cards and table wrappers have no outer border: their paper fill separates them from workspace ground. Selection uses a distinct neutral tint and the family's indicator, without a resting shadow. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space, not by a rule above or around them. The workspace pane has no seam against the ground. Lines use a token at full strength, never an alpha-faded colour.
 
-Reading text must meet 4.5:1 contrast. `subtle` metadata belongs on reading surfaces; active/tonal surfaces use `muted` or `ink` to retain contrast. Cyan, coral, lime, and amber express evidence/status, not route decoration. Never communicate meaning through colour alone.
+Reading text must meet 4.5:1 contrast. Use primary ink on selected surfaces when secondary ink would lose contrast. Accent denotes action, never success or positive metric deltas. Success, warning, danger and info denote their corresponding statuses; danger also denotes destructive intent. Metrics use data-viz or neutral signed/directional treatments. Decorative icons and category labels use neutral ink. Dark mode keeps colour concentrated in actions and meaningful evidence. Never communicate meaning through colour alone.
 
 Marketing subpages use the semantic public canvas, centred Sora hero, quiet surface bands, and the shared full-width dark footer. The homepage uses a white canvas with distinct neutral bands and capability-tinted wells, with scoped aliases resolving to shared semantic roles. The owner-scoped `[data-public-surface]` rebind deepens light-mode inks and strengthens hairlines. Use divided hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews.
 
 The homepage may use marketing-only geometry roles: `--radius-marketing-card` (20px), `--radius-marketing-well` (16px), `--radius-marketing-preview` (24px), and `--radius-marketing-control` (10px). The homepage shares the public container measure (`max-w-7xl` plus `--site-gutter`) with the navigation and footer. White capability and integration objects sit on neutral edges; each capability owns one identity hue (`--cl-hue-*`: visibility blue, sources green, site health indigo, demand teal, content orange, MCP pink) that `landing.css` derives into a tint for its wells and an ink for its labels, icons and bars; everything else uses the accent-tinted `--cl-well`. Identity hues never carry actions, which stay Emerald. Section heads stack a single-line heading over the lead; embedded sub-headings stay a rung below the section heading. Homepage headings use weight 500 at most. Product data and status colours retain their own meaning. These roles do not change the authenticated application's 8px `--radius-card` contract.
+
+## Token contract
+
+The surface ladder is ground → resting panel → recessed well, with `elevated`
+reserved for detached floating surfaces. State tints follow the surface they
+modify: mix primary ink into that surface at 4% for hover, 8% for selection,
+12% for pressed feedback, and 3% for disabled fill. The source surface classes
+own this derivation in `globals.css`. Selected and pressed labels use primary
+ink; dark chrome uses neutral tints rather than an accent wash.
+
+Every application-owned color token has exactly one class and purpose below.
+Light/dark values are the effective product defaults; state values show the
+panel context and rederive on input, well, track, rail and overlay surfaces.
+Public canvases and feature bands retain their separately scoped counterparts.
+`node frontend/scripts/audit-design-tokens.mjs` inventories values and current
+consumers without becoming another value authority.
+
+| Token | Class | Purpose | Position | Light | Dark |
+| --- | --- | --- | --- | --- | --- |
+| `--color-accent` | brand | Sole product action accent | Action layer | `#14532d` | `#76df9c` |
+| `--color-accent-active` | state-tint | Pressed solid action fill | Action layer | `#0b3d20` | `#b2f4c6` |
+| `--color-accent-border` | border | Boundary of a tinted action | Action layer | `#86efac` | `rgb(118 223 156 / 45%)` |
+| `--color-accent-fg` | ink | Label on solid accent | On accent fill | `#ffffff` | `#0d2618` |
+| `--color-accent-hover` | state-tint | Hovered solid action fill | Action layer | `#166534` | `#94ebb0` |
+| `--color-accent-soft` | state-tint | Quiet action or recommendation wash | Action on panel | `#f0fdf4` | `rgb(118 223 156 / 12%)` |
+| `--color-accent-subtle` | state-tint | Stronger action-selection wash | Action on panel | `#dcfce7` | `rgb(118 223 156 / 18%)` |
+| `--color-accent-text` | ink | Readable action/link text | On neutral surfaces | `#14532d` | `#86e5a6` |
+| `--color-active` | state-tint | Pressed neutral surface | Surface + 12% primary ink | `#e2e3e5` | `#303030` |
+| `--color-atmosphere-blue` | brand | atmosphere blue identity wash | Fixed mark or separate public decoration | `rgb(219 234 248 / 55%)` | `rgb(219 234 248 / 55%)` |
+| `--color-atmosphere-green` | brand | atmosphere green identity wash | Fixed mark or separate public decoration | `rgb(214 236 222 / 60%)` | `rgb(214 236 222 / 60%)` |
+| `--color-background` | surface | Page ground | Ground | `#f3f5f7` | `#111111` |
+| `--color-background-alt` | surface | Public alternating canvas or neutral inset | Ground/inset | `#f7f9fb` | `#1e1e1e` |
+| `--color-band-indigo` | surface | Public indigo feature canvas | Public ground | `#1b1938` | `#1b1938` |
+| `--color-band-teal` | surface | Public teal feature canvas | Public ground | `#0e3030` | `#0e3030` |
+| `--color-border` | border | Control, inset and overlay boundary | Between surfaces | `#d3dae4` | `#343434` |
+| `--color-border-bold` | border | Small choice-control boundary | Inside panel | `#8a95a5` | `#76766f` |
+| `--color-border-strong` | border | Emphasized or hovered boundary | Between surfaces | `#c3ccd9` | `#5c5c59` |
+| `--color-border-subtle` | border | Divider within one surface | Inside surface | `#e5e9ef` | `#272727` |
+| `--color-brand-claude` | brand | brand claude identity | Fixed mark or separate public decoration | `#d97757` | `#d97757` |
+| `--color-brand-forest` | brand | brand forest identity | Fixed mark or separate public decoration | `#16a34a` | `#16a34a` |
+| `--color-brand-gemini` | brand | brand gemini identity | Fixed mark or separate public decoration | `#4285f4` | `#4285f4` |
+| `--color-brand-google-blue` | brand | brand google blue identity | Fixed mark or separate public decoration | `#4285f4` | `#4285f4` |
+| `--color-brand-google-green` | brand | brand google green identity | Fixed mark or separate public decoration | `#34a853` | `#34a853` |
+| `--color-brand-google-red` | brand | brand google red identity | Fixed mark or separate public decoration | `#ea4335` | `#ea4335` |
+| `--color-brand-google-yellow` | brand | brand google yellow identity | Fixed mark or separate public decoration | `#fbbc05` | `#fbbc05` |
+| `--color-brand-openai` | brand | brand openai identity | Fixed mark or separate public decoration | `#10a37f` | `#10a37f` |
+| `--color-canvas-soft` | surface | Public alternating soft canvas | Public ground | `#f7f9fb` | `#161616` |
+| `--color-chart-1` | data-viz | Categorical chart series 1 | Observed data layer | `#16a34a` | `#76df9c` |
+| `--color-chart-2` | data-viz | Categorical chart series 2 | Observed data layer | `#00a9c5` | `#75cee1` |
+| `--color-chart-3` | data-viz | Categorical chart series 3 | Observed data layer | `#f59e0b` | `#efc676` |
+| `--color-chart-4` | data-viz | Categorical chart series 4 | Observed data layer | `#ff6e56` | `#f49a8b` |
+| `--color-chart-5` | data-viz | Categorical chart series 5 | Observed data layer | `#9acd32` | `#b8db73` |
+| `--color-chart-6` | data-viz | Categorical chart series 6 | Observed data layer | `#8b5cf6` | `#bca4f6` |
+| `--color-chart-7` | data-viz | Categorical chart series 7 | Observed data layer | `#14532d` | `#9ce5ba` |
+| `--color-chart-8` | data-viz | Categorical chart series 8 | Observed data layer | `#64748b` | `#a3a39d` |
+| `--color-citation-competitor` | data-viz | citation competitor evidence encoding | Observed data layer | `#00a9c5` | `#75cee1` |
+| `--color-citation-owned` | data-viz | citation owned evidence encoding | Observed data layer | `#c15f3c` | `#f49a8b` |
+| `--color-citation-third-party` | data-viz | citation third party evidence encoding | Observed data layer | `#6b6b72` | `#a3a39d` |
+| `--color-danger` | semantic-status | danger status mark | Labelled status layer | `#b42332` | `#f3979e` |
+| `--color-danger-bg` | semantic-status | danger bg | Labelled status layer | `#fff0f1` | `rgb(243 151 158 / 13%)` |
+| `--color-danger-border` | semantic-status | danger border | Labelled status layer | `#f2c6cb` | `rgb(243 151 158 / 38%)` |
+| `--color-danger-fg` | semantic-status | danger fg | Labelled status layer | `#ffffff` | `#350b10` |
+| `--color-danger-solid` | semantic-status | danger solid | Labelled status layer | `#b42332` | `#d95767` |
+| `--color-danger-solid-hover` | semantic-status | danger solid hover | Labelled status layer | `#8f1d29` | `#eb7481` |
+| `--color-danger-text` | semantic-status | danger text | Labelled status layer | `#b42332` | `#f6abb1` |
+| `--color-disabled` | state-tint | Disabled neutral control fill | Surface + 3% primary ink | `#f8f8f9` | `#20201f` |
+| `--color-elevated` | surface | Detached floating overlay | Above ground/panel | `#ffffff` | `#262626` |
+| `--color-foreground` | ink | Primary reading text | On neutral surfaces | `#0f172a` | `#d2d2d0` |
+| `--color-gsc-clicks` | data-viz | gsc clicks evidence encoding | Observed data layer | `#1a73e8` | `#8ab4f8` |
+| `--color-gsc-ctr` | data-viz | gsc ctr evidence encoding | Observed data layer | `#00897b` | `#4db6ac` |
+| `--color-gsc-impressions` | data-viz | gsc impressions evidence encoding | Observed data layer | `#673ab7` | `#c58af9` |
+| `--color-gsc-position` | data-viz | gsc position evidence encoding | Observed data layer | `#e65100` | `#ff8a65` |
+| `--color-hairline-warm` | border | Public editorial boundary | Public surfaces | `#e8e4dd` | `#343434` |
+| `--color-hover` | state-tint | Hovered neutral surface | Surface + 4% primary ink | `#f5f6f6` | `#212121` |
+| `--color-info` | semantic-status | info status mark | Labelled status layer | `#24476b` | `#8ad4e1` |
+| `--color-info-bg` | semantic-status | info bg | Labelled status layer | `#eef5fa` | `rgb(138 212 225 / 13%)` |
+| `--color-info-border` | semantic-status | info border | Labelled status layer | `#c8d9e8` | `rgb(138 212 225 / 38%)` |
+| `--color-info-text` | semantic-status | info text | Labelled status layer | `#24476b` | `#a5e2eb` |
+| `--color-input` | surface | Field interior | Inside panel boundary | `#ffffff` | `#141414` |
+| `--color-muted` | ink | Helpers, metadata and disabled labels | On reading surfaces | `#5b6678` | `#999996` |
+| `--color-neutral-bg` | surface | Neutral badge or progress track | Inside panel | `#e9edf1` | `#222222` |
+| `--color-on-inverse` | ink | Label on inverse surface | On surface-inverse | `#ffffff` | `#0d2618` |
+| `--color-overlay-scrim` | surface | Modal backdrop | Between ground and modal | `rgb(20 33 61 / 45%)` | `rgb(0 0 0 / 72%)` |
+| `--color-panel` | surface | Resting content or chrome | On ground | `#ffffff` | `#1a1a1a` |
+| `--color-panel-tonal` | surface | Tonal resting panel or control band | On ground/panel | `#f7f9fb` | `#1e1e1e` |
+| `--color-run-analyzing` | semantic-status | Persisted run analyzing mark | Labelled status layer | `#c15f3c` | `#efc676` |
+| `--color-run-cancelled` | semantic-status | Persisted run cancelled mark | Labelled status layer | `#6b6b72` | `#a3a39d` |
+| `--color-run-completed` | semantic-status | Persisted run completed mark | Labelled status layer | `#9acd32` | `#b8db73` |
+| `--color-run-draft` | semantic-status | Persisted run draft mark | Labelled status layer | `#6b6b72` | `#a3a39d` |
+| `--color-run-failed` | semantic-status | Persisted run failed mark | Labelled status layer | `#ff6e56` | `#f49a8b` |
+| `--color-run-partial` | semantic-status | Persisted run partial mark | Labelled status layer | `#f59e0b` | `#efc676` |
+| `--color-run-queued` | semantic-status | Persisted run queued mark | Labelled status layer | `#6b6b72` | `#a3a39d` |
+| `--color-run-running` | semantic-status | Persisted run running mark | Labelled status layer | `#00a9c5` | `#75cee1` |
+| `--color-score-good-ring` | data-viz | score good ring evidence encoding | Observed data layer | `#00a9c5` | `#75cee1` |
+| `--color-score-good-text` | data-viz | score good text evidence encoding | Observed data layer | `#155e75` | `#a5e2eb` |
+| `--color-score-high` | data-viz | score high evidence encoding | Observed data layer | `#9acd32` | `#b8db73` |
+| `--color-score-high-ring` | data-viz | score high ring evidence encoding | Observed data layer | `#9acd32` | `#b8db73` |
+| `--color-score-high-text` | data-viz | score high text evidence encoding | Observed data layer | `#3f6212` | `#a4edbd` |
+| `--color-score-low-ring` | data-viz | score low ring evidence encoding | Observed data layer | `#ff6e56` | `#f49a8b` |
+| `--color-score-low-text` | data-viz | score low text evidence encoding | Observed data layer | `#9a3412` | `#f6abb1` |
+| `--color-score-mid-ring` | data-viz | score mid ring evidence encoding | Observed data layer | `#f59e0b` | `#efc676` |
+| `--color-score-mid-text` | data-viz | score mid text evidence encoding | Observed data layer | `#b45309` | `#f7d99e` |
+| `--color-secondary` | ink | Secondary reading text | On neutral surfaces | `#334155` | `#c0c0be` |
+| `--color-selected` | state-tint | Selected neutral surface | Surface + 8% primary ink | `#ececee` | `#292929` |
+| `--color-selection` | state-tint | Native text selection highlight | On reading surface | `#86efac` | `rgb(118 223 156 / 35%)` |
+| `--color-selection-fg` | ink | Text within native selection | On selection highlight | `#0f172a` | `#faf9f5` |
+| `--color-sentiment-negative` | data-viz | sentiment negative evidence encoding | Observed data layer | `#ff6e56` | `#f49a8b` |
+| `--color-sentiment-negative-bg` | data-viz | sentiment negative bg evidence encoding | Observed data layer | `#fff3f0` | `rgb(243 151 158 / 13%)` |
+| `--color-sentiment-negative-text` | data-viz | sentiment negative text evidence encoding | Observed data layer | `#9a3412` | `#f6abb1` |
+| `--color-sentiment-neutral` | data-viz | sentiment neutral evidence encoding | Observed data layer | `#6b6b72` | `#a3a39d` |
+| `--color-sentiment-neutral-bg` | data-viz | sentiment neutral bg evidence encoding | Observed data layer | `#f4f4f1` | `#222222` |
+| `--color-sentiment-neutral-text` | data-viz | sentiment neutral text evidence encoding | Observed data layer | `#3a3a40` | `#c0c0be` |
+| `--color-sentiment-positive` | data-viz | sentiment positive evidence encoding | Observed data layer | `#9acd32` | `#b8db73` |
+| `--color-sentiment-positive-bg` | data-viz | sentiment positive bg evidence encoding | Observed data layer | `#f4f8ec` | `rgb(128 223 162 / 13%)` |
+| `--color-sentiment-positive-text` | data-viz | sentiment positive text evidence encoding | Observed data layer | `#3f6212` | `#a4edbd` |
+| `--color-shell` | surface | Workspace/focused-flow ground | Ground | `#f3f5f7` | `#111111` |
+| `--color-shell-alt` | surface | Stronger shell inset | Inside ground | `#e9edf1` | `#161616` |
+| `--color-sidebar` | surface | Navigation rail | Below ground | `#e9edf1` | `#0a0a0a` |
+| `--color-success` | semantic-status | success status mark | Labelled status layer | `#166534` | `#80dfa2` |
+| `--color-success-bg` | semantic-status | success bg | Labelled status layer | `#edf7ed` | `rgb(128 223 162 / 13%)` |
+| `--color-success-text` | semantic-status | success text | Labelled status layer | `#166534` | `#a4edbd` |
+| `--color-surface-inverse` | surface | Inverse floating tooltip surface | Floating overlay | `#14532d` | `#76df9c` |
+| `--color-tile-blue` | brand | tile blue identity | Fixed mark or separate public decoration | `#e0f2fe` | `#e0f2fe` |
+| `--color-tile-blue-ink` | brand | tile blue ink identity | Fixed mark or separate public decoration | `#0284c7` | `#0284c7` |
+| `--color-tile-green` | brand | tile green identity | Fixed mark or separate public decoration | `#dcfce7` | `#dcfce7` |
+| `--color-tile-green-ink` | brand | tile green ink identity | Fixed mark or separate public decoration | `#16a34a` | `#16a34a` |
+| `--color-tile-indigo` | brand | tile indigo identity | Fixed mark or separate public decoration | `#ede9fe` | `#ede9fe` |
+| `--color-tile-indigo-ink` | brand | tile indigo ink identity | Fixed mark or separate public decoration | `#4f46e5` | `#4f46e5` |
+| `--color-tile-purple` | brand | tile purple identity | Fixed mark or separate public decoration | `#ffede8` | `#ffede8` |
+| `--color-tile-purple-ink` | brand | tile purple ink identity | Fixed mark or separate public decoration | `#ea580c` | `#ea580c` |
+| `--color-track` | surface | Recessed segmented-control track | Inside control | `#e6eaf0` | `#141414` |
+| `--color-warning` | semantic-status | warning status mark | Labelled status layer | `#8a4600` | `#f2c879` |
+| `--color-warning-bg` | semantic-status | warning bg | Labelled status layer | `#fff5db` | `rgb(242 200 121 / 13%)` |
+| `--color-warning-text` | semantic-status | warning text | Labelled status layer | `#8a4600` | `#f7d99e` |
+| `--color-well` | surface | Recessed evidence or inset | Inside panel | `#e9edf1` | `#0e0e0e` |
 
 ## Typography
 
@@ -75,7 +210,7 @@ Roles own all typography properties. The general ladder is mobile-first: base be
 | Large body | 16/22px | 400 | 0 | `ink` |
 | Body baseline | 14/20px | 400 | 0 | `ink` |
 | Navigation/actions | 14/20px | 500 | 0 | `ink` or inverse |
-| Label/caption/eyebrow | 13/18px | 400–500 | 0 | `muted` or `subtle` |
+| Label/caption/eyebrow | 13/18px | 400–500 | 0 | `muted` |
 
 `website-data-display` is pricing-only: Switzer 500, tabular, 30/36px → 40/46px at 768px. Never apply it to prose or headings.
 
@@ -107,13 +242,13 @@ The ladder is strictly ordered: a section title never out-sizes the page title a
 | Sidebar | 240px | 224px |
 | Compact topbar | — | 56px |
 | Content gutter | 32px | 24px / 16px |
-| Navigation row | 36px | 44px minimum target |
-| Control | 32 / 36 / 40px | 44px minimum target |
-| Table row | 44px | Labelled record |
+| Navigation row / tabs | 32px | 32px |
+| Control (small / default / large) | 28 / 32 / 36px | 28 / 32 / 36px |
+| Table row (standard / dense) | 36 / 32px | Same roles or labelled record layout |
 
 Data columns and their headers are centre-aligned and tabular; text columns stay left-aligned. The header centres with its values so a column reads as one block — a sort glyph pushed to the padding edge leaves the label sitting off the numbers by its own width. This resolves the table-header precedence question previously recorded as unresolved: the shared `numeric` flag on `TableHead`/`TableCell` owns both alignment and tabular figures, and call sites do not re-declare either.
 
-Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 20, page gutter 32, section to section 24.
+Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 16, page gutter 32, section to section 24.
 
 | Geometry role | Value | Use |
 | --- | --- | --- |
@@ -125,7 +260,7 @@ Analytical content caps at 1392px; form-first workflow content caps at 1040px wh
 
 Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 24px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed.
 
-Marketing subpages and the homepage use `--section-y`: 56px base, 80px from 768px, 96px from 1280px. Adjacent homepage sections of the same tone share one rhythm rather than stacking both paddings. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and selection chips 36px desktop/44px touch. The flow shell owns its scrolling main region and action bar.
+Marketing subpages and the homepage use `--section-y`: 56px base, 80px from 768px, 96px from 1280px. Adjacent homepage sections of the same tone share one rhythm rather than stacking both paddings. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and shared compact controls on every viewport. The flow shell owns its scrolling main region and action bar.
 
 ### Availability vocabulary
 
@@ -248,9 +383,9 @@ JavaScript. No decorative motion or alternate design system is introduced.
 
 ### Controls
 
-Shared buttons use the 6px control radius and the `control` type role: app heights 32px compact, 36px default, 40px large; touch targets at least 44px. App buttons have no decorative inset border. Marketing primary buttons use the same solid-forest `primary` variant, minimum 44px (`min-h-[2.75rem]`), and shared hover ramp. Secondary, neutral, ghost, and danger variants remain shared.
+Shared buttons use the 6px control radius and the `control` type role. Small controls use `--control-height-sm` (28px), defaults use `--control-height-md` (32px), and large page actions use `--control-height-lg` (36px), on every viewport. Page control bands rebind the default role to small so buttons and all select-family triggers align. Marketing's separately owned `marketing` Button size remains 48px minimum; marketing primitives retain their own public geometry.
 
-Controls need direct labels, immediate pressed feedback, and visible focus: accent on their own border plus one attached soft glow, no gap or second floating ring. Inputs use semantic input/border roles; labels stay beside controls, helpers explain constraints, and errors provide recovery. Placeholder-only labels are forbidden. Composed inputs have one shared-frame focus ring, not an additional native-input outline.
+Controls need direct labels, immediate pressed feedback and central keyboard focus. `.focus-ring`, `.focus-input` and `.focus-frame` use a 2px accent outline with 1px outside offset; filled primary/destructive actions use their high-contrast label ink with a -2px inset offset, also used for selected tabs and current navigation. All treatments key on `:focus-visible`. A composed field with one interactive control rings its frame once; frames with multiple controls retain each focused child's outline. Disabled controls have no outline. Higher contrast uses a dotted outline; forced colours use system Highlight. Invalid controls retain a danger border during hover and focus, paired by the form owner with `aria-invalid` and descriptive recovery text. Placeholder-only labels are forbidden. Glow and bespoke component focus recipes are retired.
 
 ### Charts
 
@@ -262,11 +397,11 @@ Every chart is `aria-hidden` and carries a written description instead. A null p
 
 ### Panels, badges, and evidence
 
-Structural sections remain open or tonal. `Card` is a white semantic object with the shared card radius, 20px padding, and no resting border or shadow; its fill separates it from workspace ground. Its `recommendation` tone (accent-soft fill, accent-border edge) marks the page's single next action, and the `danger` tone retains its status edge. Bare `Table` wrappers use the same paper fill and card radius, with a hairline below the header; a table inside a card shares its fill. Cards in one row share their height, and a row is either all cards or all open bands, never both. `Card` sets no display mode; opt into aligned-footer layouts at call sites without breaking sticky scrolling. Never nest a `Card` inside another `Card`, modal, drawer, or sheet.
+Structural sections remain open or tonal. `Card` is a white semantic object with the shared card radius, 16px padding, and no resting border or shadow; its fill separates it from workspace ground. Its `recommendation` tone (accent-soft fill, accent-border edge) marks the page's single next action, and the `danger` tone retains its status edge. Bare `Table` wrappers use the same paper fill and card radius, with a hairline below the header; a table inside a card shares its fill. Cards in one row share their height, and a row is either all cards or all open bands, never both. `Card` sets no display mode; opt into aligned-footer layouts at call sites without breaking sticky scrolling. Never nest a `Card` inside another `Card`, modal, drawer, or sheet.
 
 For a filled, padded box inside a card/section, use `panelClasses({ tone, pad })` from `components/ui/panel.tsx`. Only its white `panel` tone draws an edge; `well`, `tonal` and `accent` are separated by their fill. Drawer field groups/lists use unboxed sections/rows. Multi-category editors use shared underline tabs and one linear field flow, not dashboard grids.
 
-Badges pair labels with state marks. Evidence rows identify source, measurement context, and an action opening the persisted record. Loading/empty states preserve layout and explain absence through the availability vocabulary.
+Badges pair labels with state marks. Tags use the 20px small badge minimum, badges/filter chips the 24px default. Dense tables rebind badges to the small role. Menu rows use a 32px minimum and may grow for option detail; card/panel padding is 16px. Checkbox/radio marks and switch tracks retain intrinsic glyph geometry inside labelled or role-sized targets. Evidence rows identify source, measurement context, and an action opening the persisted record. Loading/empty states preserve layout and explain absence through the availability vocabulary.
 
 Confirmed first-use analytical states omit filters, charts, and table reservations that cannot change or explain the result. Keep controls that can recover a filtered or uncovered state, and render persisted measured zero or partial-provider evidence through its normal measurement surface.
 
@@ -278,17 +413,33 @@ The contents panels include H2/H3 entries, omit leading step-number prefixes fro
 
 ### Navigation and overlays
 
-- **Navigation:** the active app location is raised paper (`selected` fill, `shadow-selected`) with a dark label and brand-green icon — no border and no leading mark. Hover uses the `active` fill. Preserve icon/label contrast and avoid translation. Page controls sit on a tonal band; identity and tab navigation bands stay on paper. Selected tab underlines use brand green.
-- **Menus:** shared panel/item recipes, `shadow-elevated`, 12px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
-- **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal-value` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-elevated` and the same 12px radius. Features own no shadow recipes.
-- **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the recessed `track` for compact single-select changes; the selected item is raised paper with `shadow-selected` and dark ink, unselected items are muted. Segment labels use the `badge` role (12/16, 500) so a page's filter row stays one row. Tabs and segments stay on a single row and scroll when labels exceed the available width; keyboard focus reveals the focused option. Filled tabs share spare width without shrinking below their labels; shared UI filter pills handle independent/multi-select filters.
+- **Navigation:** current locations use `selected` fill with primary label/icon ink; hover uses `hover`, pressed feedback uses `active`. Preserve contrast and avoid translation. Page controls sit on a tonal band; identity and tab navigation bands stay on paper. Selected tabs use the theme's accent underline.
+- **Menus:** shared panel/item recipes, `shadow-overlay`, 12px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
+- **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-overlay` and the same 12px radius. Features own no shadow recipes.
+- **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the recessed `track` for compact single-select changes; selected items use neutral `selected` tint and primary ink; unselected items use secondary ink and the distinct hover tint. Segment labels use the `badge` role (12/16, 500) so a page's filter row stays one row. Tabs and segments stay on a single row and scroll when labels exceed the available width; keyboard focus reveals the focused option. Filled tabs share spare width without shrinking below their labels; shared UI filter pills handle independent/multi-select filters.
 - **Analytical loading:** interval changes retain prior analytical content while the new persisted projection loads. Mark the region busy with compact feedback; no replacement skeleton or labels describing data not yet received.
 
-HeroUI is a reference for state completeness, not an installed dependency.
+### Component state contract
+
+| Family | Rest, hover and pressed | Selection or checked | Disabled and invalid |
+| --- | --- | --- | --- |
+| Buttons | Semantic action fills; secondary/ghost neutral hover and active tints | Toggle/open triggers use selected tint | Neutral disabled fill and muted ink; pending content sizes within the button |
+| Fields | Input surface, stronger enabled hover border, central outline | Text selection remains browser-native | Disabled neutral fill; invalid danger edge with owner-provided error text |
+| Select family / menus | Shared menu-height, hover and pressed tints | Selected tint and check/ARIA selection, distinct from highlight | Muted disabled rows; existing field invalid contracts retained |
+| Tabs / segments | Neutral hover and pressed tints | Tabs have accent underline; segments selected tint | Muted disabled controls; roving keyboard model retained |
+| Tables | Standard 36px or opt-in dense 32px rows, hover/pressed tints | Highlight/selected tint; sorted headers use primary ink and existing sort indicator | Existing semantic table contracts retained |
+| Navigation / palette | Neutral hover and pressed tints | Current/active selection uses neutral tint and primary ink | Existing entitlement availability retained |
+| Checkbox / radio / switch | Neutral unchecked surface and hover feedback | Accent check/dot/track; checkbox indeterminate mark | Neutral disabled fill; radio dot remains visible in forced colours |
+| Filter chips / badges | Chip hover/pressed tints; badges static | Chips selected tint with pressed semantics | Neutral disabled chips |
+| Alerts / read errors / toast | Labelled status icon/text; actionable controls follow shared states | Info/success/warning/danger meanings remain distinct | Toast's existing success-only API remains; errors use existing read-error/alert owners |
+
+Focus uses the central recipe for every interactive family. Invalid states apply where the existing component API supports validation; this refresh does not add props or validation policy to choice/navigation/status owners.
+
+Only `shadow-none`, `shadow-overlay` and `shadow-modal` are available to product consumers. Resting cards, tables and navigation have no shadow; detached menus/popovers/tooltips/palette use overlay, dialogs/drawers/floating toast use modal. Radius families are control 6px, card/well 8px, overlay 12px, xs 4px for intrinsic sub-elements and full for true pills/dots/avatars. Workspace and scoped marketing radii retain their existing owners.
 
 ## Motion and accessibility
 
-Authenticated and marketing routes use shared CSS feedback without a general-purpose animation runtime. Pointer-opened menus use a 150–180ms fade/shift; keyboard command interfaces open immediately. Drawers use interruptible 220–260ms right-side transitions; press feedback begins on pointer-down. Authenticated route content and tab indicators update immediately without opacity transitions.
+Product and shared-control motion consumes the centralized roles: `--motion-fast` 110ms for hover/micro-feedback, `--motion-normal` 150ms for menus/tooltips, `--motion-slow` 240ms for dialogs/drawers/toasts. Implicit Tailwind transitions inherit the fast duration and standard easing. Standard easing is cubic-bezier(0.2, 0, 0.38, 0.9), enter is (0, 0, 0.38, 0.9), exit is (0.2, 0, 1, 0.9). Repeating activity/shimmer cycles derive from these roles. Keyboard command interfaces and route/tab content update immediately; press feedback begins on pointer-down. Separately owned marketing choreography and onboarding research's 220ms/60ms reveal/stagger remain scoped. Functional delays (tooltip delay, toast dwell, first-load reveal delay) remain independent from motion duration. Browser autofill's paint-suppression timing is a technical exception.
 
 Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window walkthrough; native CSS scroll fade/rise reveals that never hide server-rendered content after hydration; master-detail continuity/domain-owned measured expansion; onboarding research results resolving below factual activity with a 220ms fade/rise and 60ms stagger.
 

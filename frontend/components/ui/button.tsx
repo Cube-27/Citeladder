@@ -81,12 +81,12 @@ function NativeButton({
     >
       <span
         aria-hidden={pending || undefined}
-        className={cn('inline-flex items-center gap-2', pending && 'opacity-0')}
+        className={cn('inline-flex items-center gap-2', pending && 'hidden')}
       >
         {children}
       </span>
       {pending ? (
-        <span className="absolute inset-0 inline-flex items-center justify-center gap-2 px-2">
+        <span className="inline-flex items-center justify-center gap-2">
           <Spinner size="md" />
           {pendingLabel ?? children}
         </span>

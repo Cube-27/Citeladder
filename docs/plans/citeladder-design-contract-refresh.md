@@ -1,8 +1,11 @@
 # Design-system contract refresh — CiteLadder product app
 
-> Status: **planning handoff, owner decisions resolved on 30 September 2026.**
-> Not registered in [docs/plans/ACTIVE.md](ACTIVE.md); the owner adds that
-> entry before implementation starts. Produced from a read-only repository
+> Status: **implemented locally on 1 October 2026** in committed slices on
+> `codex/design-contract-refresh`. On 2 October 2026 the owner authorized
+> rebasing onto main, review, simplification and PR creation, then stopping.
+> Registered in [docs/plans/ACTIVE.md](ACTIVE.md). CI and merge remain pending.
+> The design owner is [docs/design.md](../design.md).
+> Originally produced from a read-only repository
 > inspection; Carbon Design System (<https://carbondesignsystem.com/>) is used
 > **as inspiration for contracts only** — no Carbon values, packages, or
 > visual language are adopted. Every implementation value in this document is
@@ -32,9 +35,18 @@
 | D7 | Shadows | **Keep no-resting-shadow; consolidate to `none` / `overlay` / `modal`** roles; no arbitrary box-shadows (§3.7) |
 | D8 | Component states | **Normalize the full state matrix** (default → hover → active → selected → focus → disabled → invalid) across all control families (§3.8) |
 
+### Execution clarifications (owner, 1 October 2026)
+
+- Common tokens and shared controls apply across their consumers; separately scoped marketing roles stay scoped.
+- Retire redundant tokens immediately after migrating consumers; retain no compatibility aliases.
+- Apply 28/32/36px controls on every viewport, retiring the former 44px phone/coarse-pointer override.
+- Emerald remains the product action accent; dark mode minimizes decorative colour. The existing product dark accent is already emerald; separate marketing indigo bands retain their scope.
+- Update only affected E2E visual assertions to the border/outline contract, preserving accessibility coverage.
+- Treat the proposed PRs as committed slices; create no PR yet. Run the repository completion check once for the completed executable branch.
+
 ## 1. Scope and non-goals
 
-**In scope** (product app only: `frontend/apps/app`, `frontend/components/**`
+**In scope** (product app and common token/control consumers: `frontend/apps/app`, `frontend/components/**`
 product trees, `frontend/lib`): token-role audit and contract; density/motion/
 focus/shadow role systems; radius and shadow enforcement; color-semantics
 audit; component state normalization; policy-script and documentation
@@ -47,12 +59,11 @@ updates.
   the 4px spacing grid.
 - Zero-radius (Carbon) styling — the 6/8/12 ladder stays.
 - Restructuring `AppShell` or any component ownership/export/props/ARIA
-  changes. Playwright specs assert roles/accessible names and must pass
-  untouched in every PR.
+  changes. Playwright role/accessible-name contracts remain unchanged; the owner authorized affected visual assertions to migrate to border/outline.
 
 ---
 
-## 2. Current state (verified; the refresh builds on this)
+## 2. Baseline at planning (historical; the refresh replaces these contracts)
 
 - **Single token owner**: `frontend/apps/app/src/globals.css` (~1,900 lines) —
   the only file allowed to contain raw hex or the single Tailwind `@theme`
@@ -119,8 +130,7 @@ position in the ladder, and its dark-theme counterpart. Then fix drift:
   (hover = closest step toward ink or a fixed tint ratio; selected =
   distinct-from-hover; active = distinct-from-selected) — verified
   visually in both themes.
-- Redundant/ambiguous tokens found by the audit are **retired** (aliased to
-  the surviving token for one release, then deleted) under the replacement
+- Redundant/ambiguous tokens found by the audit are **retired immediately** after consumer migration under the replacement
   gate — inventory consumers first. No new tokens unless the audit proves a
   gap; the ~120 count should shrink, not grow.
 
@@ -129,7 +139,7 @@ position in the ladder, and its dark-theme counterpart. Then fix drift:
 Replace the single `--control-height` with a role scale; components consume
 roles, never raw px:
 
-| Role | Value (proposed) | Used by |
+| Role | Accepted value | Used by |
 |---|---|---|
 | `--control-height-sm` | `28px` | dense contexts: table toolbars, in-table row actions, compact topbar |
 | `--control-height-md` | `32px` | **default** control height: inputs, selects, buttons, menu rows |
@@ -147,7 +157,7 @@ in the same context; the scale is the only source of control heights (grep
 audit removes hard-coded 36/44/20px in `components/ui/`). Exceptions need a
 listed entry in the PR description (expect near-none). Values are proposals
 within the owner's stated 32–36 / 28–32 / 36 / 16 / 32–36 / 20–24 ranges —
-confirm at PR 2 review, not per-component ad hoc later.
+accepted by the owner for every viewport; do not choose values per component.
 
 ### 3.3 Motion roles (D3)
 
@@ -285,9 +295,7 @@ regression gate.
 
 Each PR is independently releasable and reversible. Foundations first
 (no-visual-change or single-concern), then normalization passes. Run
-`./scripts/check.ps1 -CheckOnly` once per completed executable diff; iterate
-with the smallest relevant suites; product e2e specs pass untouched in every
-PR.
+`./scripts/check.ps1 -CheckOnly` once for the completed executable branch; iterate with the smallest relevant suites. Role/ARIA behavior stays intact; only the authorized visual assertions change.
 
 ### PR 1 — Motion roles (§3.3)
 
@@ -329,8 +337,7 @@ PR.
 
 - **Objective**: mapping rules enforced; shadow roles collapsed to
   none/overlay/modal.
-- **Files**: `globals.css` (shadow role definitions; old shadow roles aliased
-  then retired); shadow consumer migration across `frontend/components/`
+- **Files**: `globals.css` (shadow role definitions; old shadow roles deleted after consumer migration); shadow consumer migration across `frontend/components/`
   (inventory `smudge|raised|selected|elevated|modal-value` usages first);
   `design-system-source-checks.mjs` extensions (radius-role mapping advisory;
   box-shadow must use a role — tighten existing rule).
@@ -341,8 +348,7 @@ PR.
   both themes; `surface-layout.spec.ts`.
 - **Acceptance**: only the three shadow roles exist (grep); policy checks
   green; no visual regression in hierarchy.
-- **Rollback**: revert per-surface; old role aliases keep the intermediate
-  state releasable.
+- **Rollback**: revert the coherent slice.
 
 ### PR 4 — Action vs status color separation (§3.5)
 
@@ -368,26 +374,22 @@ PR.
 - **Objective**: the token contract table in `docs/design.md`; ambiguity and
   redundancy fixes.
 - **Files**: audit script/output over `globals.css` tokens; consumer fixes
-  for misused tokens (esp. `elevated`); retirement aliases for redundant
-  tokens; `docs/design.md` "Token contract" section.
+  for misused tokens (esp. `elevated`); immediate retirement of redundant tokens; `docs/design.md` "Token contract" section.
 - **Dependencies**: PRs 3–4 (surface/shadow/semantics settled first).
-  **Risks**: largest review surface; token retirement must be one-way-door
-  careful (aliases first, deletion after one release cycle); dark-theme
+  **Risks**: largest review surface; token retirement requires a complete consumer inventory and cutover; dark-theme
   counterpart verification per token.
-- **Tests**: contrast script; jscpd (aliases must not introduce clone
-  patterns); budgets.
+- **Tests**: contrast script; jscpd (migrations must not introduce clone patterns); budgets.
 - **Visual checks**: one page per domain light+dark after any consumer fix;
   both section bands and `[data-public-surface]`.
 - **Acceptance**: every `--color-*` token appears in the contract table
   exactly once with one purpose; no orphan/ambiguous uses (grep-backed);
   budgets unchanged.
-- **Rollback**: revert consumer fixes; aliases keep deletions reversible.
+- **Rollback**: revert the coherent slice.
 
 ### PR 6 — Density roles (§3.2)
 
 - **Objective**: the named size scale replaces mixed 36/44/20px metrics.
-- **Files**: `globals.css` (role definitions; `--control-height` retained as
-  alias of `--control-height-md` during migration then retired);
+- **Files**: `globals.css` (role definitions; legacy height aliases deleted after consumer migration);
   height/padding consumer updates in `frontend/components/ui/` (grep
   inventory of hard-coded 36/44/20px first); domain call sites only where
   they hard-code metrics (should be near-none).
@@ -409,7 +411,7 @@ PR.
 
 Three sub-PRs, each with the standard template (objective/files/risks/
 visual checks per family in light+dark+reduced-motion+forced-contrast;
-acceptance: no ARIA/role/prop changes, budgets green, e2e untouched;
+acceptance: no ARIA/role/prop changes, budgets green, retained E2E behavior;
 rollback per family):
 
 - **7a Buttons + inputs + selects/dropdowns** (the four list-control owners

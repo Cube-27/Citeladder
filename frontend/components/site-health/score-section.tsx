@@ -40,7 +40,7 @@ export function ScoreSection({
 
   return (
     <Card data-testid="score-section">
-      <CardContent>
+      <CardContent className="px-3 py-2">
         {/* One strip, not three cards: the scores are three readings of the
             same crawl, and hairlines say that better than three edges do. What
             changed is the ground under it — a white card rather than canvas. */}
@@ -95,7 +95,7 @@ function ScoreCard({
   sub: string | null;
 }>) {
   return (
-    <div className={hairlineBandItemClasses}>
+    <div className={cn(hairlineBandItemClasses, 'py-1')}>
       {value === null ? (
         // No sub-line in the unmeasured state: "Not measured" already says
         // everything, and one cell carrying an extra line made the strip read
@@ -127,8 +127,8 @@ function ScoreCard({
           />
           <Stack gap="tight">
             <p className={eyebrowClasses}>{label}</p>
-            <span className={textRole('figure')}>{formatScore(value)} / 100</span>
-            {sub ? <span className={textRole('caption')}>{sub}</span> : null}
+            <span className={textRole('figureSm')}>{formatScore(value)} / 100</span>
+            {sub ? <span className="sr-only">{sub}</span> : null}
           </Stack>
         </div>
       )}

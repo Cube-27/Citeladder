@@ -184,8 +184,8 @@ function ChatRows({
               className={cn(
                 'focus-ring grid gap-0.5 rounded-[var(--radius-control)] border px-3 py-2',
                 active
-                  ? 'border-border bg-panel'
-                  : 'hover:bg-active border-transparent text-secondary',
+                  ? 'border-transparent bg-selected text-foreground active:bg-active'
+                  : 'hover:bg-hover active:bg-active border-transparent text-secondary',
               )}
             >
               <span className={textRole('label', 'truncate text-foreground')}>{chat.title}</span>

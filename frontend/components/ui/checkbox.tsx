@@ -49,9 +49,21 @@ export function Checkbox({
       disabled={disabled}
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
-      className="focus-ring group grid min-h-[var(--control-height)] min-w-[var(--control-height)] shrink-0 place-items-center rounded-[var(--radius-control)] disabled:cursor-not-allowed disabled:opacity-60"
+      className="focus-ring group enabled:hover:bg-hover enabled:active:bg-active disabled:bg-disabled grid min-h-[var(--control-height-md)] min-w-[var(--control-height-md)] shrink-0 place-items-center rounded-[var(--radius-control)] disabled:cursor-not-allowed"
     >
-      <span className="border-border-bold bg-input group-data-[state=checked]:border-accent group-data-[state=checked]:bg-accent group-data-[state=indeterminate]:border-accent group-data-[state=indeterminate]:bg-accent text-accent-fg grid size-4 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--transition-fast)]">
+      <span
+        className={cn(
+          'grid size-4 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--motion-fast)]',
+          disabled
+            ? 'border-border-subtle bg-disabled text-muted'
+            : cn(
+                'text-accent-fg',
+                checked
+                  ? 'border-accent bg-accent'
+                  : 'border-border-bold bg-input group-hover:border-border-strong',
+              ),
+        )}
+      >
         <CheckboxPrimitive.Indicator>
           {checked === 'indeterminate' ? (
             <Minus className="size-3" aria-hidden />
@@ -70,7 +82,7 @@ export function Checkbox({
   return (
     <label className={cn('type-body text-foreground inline-flex items-center gap-2', className)}>
       {control}
-      <span className={cn(disabled && 'opacity-60')}>{label}</span>
+      <span className={cn(disabled && 'text-muted')}>{label}</span>
     </label>
   );
 }

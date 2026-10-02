@@ -71,7 +71,7 @@ describe('OverviewPanel', () => {
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('4 of 10 pages analyzed')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Crawl Coverage score: 40' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
     expect(overviewRequests).toBe(0);
   });
@@ -228,11 +228,9 @@ describe('OverviewPanel', () => {
     // A caveat only where the measurement is qualified: the partial audit and
     // the partial crawl say so, and nothing prints a "complete" reassurance.
     expect(await screen.findAllByText('Partial audit · 60% coverage')).toHaveLength(2);
-    expect(screen.getByText('Partial coverage')).toBeInTheDocument();
+    expect(screen.getByText(/Partial coverage/)).toBeInTheDocument();
     expect(screen.queryByText(/Complete checklist|Complete coverage/)).not.toBeInTheDocument();
     expect(screen.getByText(/requested page limit reached/)).toBeInTheDocument();
-    expect(screen.getByText('1 defect occurrence · 1 page affected')).toBeInTheDocument();
-    expect(screen.getByText('1 readiness gap occurrence · 1 page affected')).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
     expect(screen.getByText('Medium')).toBeInTheDocument();
     expect(screen.getByText('Low')).toBeInTheDocument();

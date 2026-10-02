@@ -28,29 +28,34 @@
 }
 
 .dialog-overlay[data-state='open'] {
-  animation: modal-overlay-in 180ms var(--ease-standard) both;
+  animation: modal-overlay-in var(--motion-slow) var(--ease-enter) both;
 }
 .dialog-overlay[data-state='closed'] {
-  animation: modal-overlay-in 140ms var(--ease-standard) reverse both;
+  animation: modal-overlay-in var(--motion-normal) var(--ease-exit) reverse both;
 }
 .dialog-panel[data-state='open'] {
-  animation: modal-panel-in var(--transition-base) var(--ease-standard) both;
+  animation: modal-panel-in var(--motion-slow) var(--ease-enter) both;
 }
 .dialog-panel[data-state='closed'] {
-  animation: modal-panel-in 140ms var(--ease-standard) reverse both;
+  animation: modal-panel-in var(--motion-normal) var(--ease-exit) reverse both;
 }
 
 .tooltip-panel,
 .toast-panel {
   transition:
-    opacity var(--transition-fast) var(--ease-standard),
-    transform var(--transition-fast) var(--ease-standard);
+    opacity var(--motion-normal) var(--ease-standard),
+    transform var(--motion-normal) var(--ease-standard);
+}
+
+.toast-panel {
+  transition-duration: var(--motion-slow);
 }
 
 .tooltip-panel[data-state='closed'],
 .toast-panel[data-state='closed'] {
   opacity: 0;
   transform: translateY(2px);
+  transition-timing-function: var(--ease-exit);
 }
 
 @starting-style {

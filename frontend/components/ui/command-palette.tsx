@@ -56,7 +56,7 @@ type Command = {
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
 const ROW =
-  'type-control flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 text-left h-9';
+  'type-control flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 text-left min-h-[var(--menu-item-height)]';
 
 function subscribeToPlatform() {
   return () => {};
@@ -301,10 +301,10 @@ export function CommandPalette() {
               event.preventDefault();
               restoreFocus();
             }}
-            className="border-border bg-elevated/95 shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-[var(--radius-overlay)] border backdrop-blur-xl focus:outline-none"
+            className="border-border bg-elevated shadow-overlay z-modal focus-ring fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-[var(--radius-overlay)] border backdrop-blur-xl"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-            <div className="border-border-subtle flex items-center gap-3 border-b px-4">
+            <div className="focus-frame border-border-subtle flex items-center gap-3 border-b px-4">
               <Search className="text-muted size-4 shrink-0" aria-hidden />
               <input
                 ref={inputRef}
@@ -317,12 +317,7 @@ export function CommandPalette() {
                 aria-activedescendant={
                   results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
                 }
-                // The input is the only focusable thing in the palette and is
-                // focused the whole time it is open, so the global
-                // `:focus-visible` outline would draw a permanent blue ring
-                // around the header for no information. `!` is needed because
-                // that rule is unlayered and would otherwise beat a utility.
-                className="type-body text-foreground placeholder:text-muted h-11 min-w-0 flex-1 bg-transparent outline-none focus-visible:outline-none!"
+                className="type-body text-foreground placeholder:text-muted h-[var(--control-height-md)] min-w-0 flex-1 bg-transparent"
               />
               <kbd className="bg-well text-muted type-badge shrink-0 rounded-xs px-1 py-0.5 tabular-nums">
                 esc
@@ -359,10 +354,10 @@ export function CommandPalette() {
                           onClick={() => runCommand(command)}
                           className={cn(
                             ROW,
-                            'transition-colors',
+                            'focus-ring transition-colors active:bg-active',
                             isActive
-                              ? 'bg-accent-subtle text-accent-text'
-                              : 'text-secondary hover:bg-background-alt',
+                              ? 'bg-selected text-foreground'
+                              : 'text-secondary hover:bg-hover hover:text-foreground',
                           )}
                         >
                           {Icon ? (

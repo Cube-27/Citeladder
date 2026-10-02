@@ -164,7 +164,7 @@ export function SearchableSelect({
                 menuItemVariants({ selected: option.value === value }),
                 'grid gap-x-3',
                 optionGridClass(Boolean(renderLeading), Boolean(renderOptionEnd)),
-                index === activeIndex && option.value !== value && 'bg-background-alt',
+                index === activeIndex && option.value !== value && 'bg-hover',
               )}
               onMouseDown={(event) => {
                 event.preventDefault();

@@ -13,6 +13,12 @@ import {
   standalonePlaceholderViolations,
   textContrastViolations,
   rawRadiusViolations,
+  motionRoleViolations,
+  focusRoleViolations,
+  shadowRoleViolations,
+  radiusRoleAdvisories,
+  tokenContractViolations,
+  densityRoleViolations,
   styleAssertionViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
@@ -30,6 +36,7 @@ const ignored = new Set([
   'playwright-report',
 ]);
 const violations = [];
+const advisories = [];
 
 function files(directory) {
   return readdirSync(directory).flatMap((name) => {
@@ -99,12 +106,21 @@ for (const path of files(root)) {
     ...editorialTypographyViolations(source, label, ownsWebsiteEditorialCopy),
     ...standalonePlaceholderViolations(source, label, ownsProductUi),
     ...productUiSourceViolations(source, label, ownsProductUi),
+    ...motionRoleViolations(source, label, ownsProductUi),
+    ...focusRoleViolations(source, label, ownsProductUi),
+    ...shadowRoleViolations(source, label, ownsProductUi),
+    ...densityRoleViolations(source, label, ownsProductUi),
     ...nestedCardViolations(source, label, ownsProductUi),
     ...productControlViolations(source, label, ownsProductUi),
   );
+  advisories.push(...radiusRoleAdvisories(source, label, ownsProductUi));
 }
 
 violations.push(
+  ...tokenContractViolations(
+    readFileSync(tokenOwner, 'utf8'),
+    readFileSync(join(root, '..', 'docs', 'design.md'), 'utf8'),
+  ),
   ...websiteContractViolations(root),
   ...textContrastViolations(root),
   ...productContractViolations(root),
@@ -129,4 +145,5 @@ if (violations.length) {
   console.error(violations.join('\n'));
   process.exit(1);
 }
+if (advisories.length) console.warn(advisories.join('\n'));
 console.log('CiteLadder design-system policy passed.');

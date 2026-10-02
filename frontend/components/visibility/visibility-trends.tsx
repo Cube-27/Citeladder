@@ -301,7 +301,7 @@ function MeasurementHistory({
           className="h-auto w-full"
         />
         <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <SeriesKey label={primaryLabel} swatchClass="bg-accent" />
+          <SeriesKey label={primaryLabel} swatchClass="bg-chart-1" />
           {competitors.map((entry) => (
             <SeriesKey
               key={entry.label}

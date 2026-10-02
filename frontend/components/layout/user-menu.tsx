@@ -111,7 +111,7 @@ export function UserMenuTrigger({
         <DropdownTrigger
           aria-label={compact ? `Account menu for ${email}` : undefined}
           className={cn(
-            'focus-ring hover:bg-active hover:text-foreground flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 text-left transition-colors',
+            'focus-ring hover:bg-hover active:bg-active data-[state=open]:bg-selected hover:text-foreground flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 text-left transition-colors',
             compact ? 'min-h-11' : 'py-1',
           )}
         >
@@ -125,7 +125,7 @@ export function UserMenuTrigger({
             aria-hidden
             className={textRole(
               'label',
-              'type-caption bg-accent text-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full uppercase',
+              'type-caption bg-well text-secondary flex size-7 shrink-0 items-center justify-center rounded-full uppercase',
             )}
           >
             {emailInitials(email)}

@@ -172,6 +172,8 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Design policy tests
+        run: node --test ../scripts/frontend/*.test.mjs
       - name: Frontend quality
         env:
           COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}

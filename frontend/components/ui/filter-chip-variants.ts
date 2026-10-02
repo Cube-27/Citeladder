@@ -6,11 +6,13 @@ import { cn } from '@/lib/utils';
  * the base and its own state classes instead of restating the recipe.
  */
 export const chipBaseClasses =
-  'focus-ring type-badge inline-flex h-[var(--control-height-sm)] items-center gap-2 rounded-full px-3 transition-[background-color,color,box-shadow] duration-[250ms] ease-standard';
+  'focus-ring type-badge inline-flex h-[var(--badge-height-md)] items-center gap-2 rounded-full px-3 transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]';
 
-export const chipRestingClasses = 'bg-panel text-secondary shadow-smudge hover:text-foreground';
+export const chipRestingClasses =
+  'bg-panel text-secondary border border-border enabled:hover:bg-hover enabled:hover:text-foreground enabled:active:bg-active';
 
-const chipSelectedClasses = 'bg-accent-subtle text-accent-text shadow-smudge';
+const chipSelectedClasses =
+  'bg-selected text-foreground border border-border enabled:hover:bg-selected enabled:active:bg-active';
 
 /** Shared multi-select/filter chip recipe. */
 export function filterChipClasses(active: boolean): string {
@@ -20,12 +22,11 @@ export function filterChipClasses(active: boolean): string {
 /**
  * Tag — the small inline chip that labels a value: a provenance marker, a
  * count, a property name. Six of these were hand-rolled with three different
- * fills, so the same marker read differently on each screen. It is not a
- * control: no height, no focus ring, no hover.
+ * fills, so the same marker read differently on each screen. It is static: badge-height-sm sets the minimum, with no focus or hover.
  */
 const TAG_TONE = {
   well: 'bg-well text-secondary',
-  outline: 'bg-panel text-secondary shadow-smudge',
+  outline: 'bg-panel text-secondary border border-border',
   accent: 'bg-accent-subtle text-accent-text',
 } as const;
 
@@ -33,7 +34,7 @@ export type TagTone = keyof typeof TAG_TONE;
 
 export function tagClasses(tone: TagTone = 'well', className?: string) {
   return cn(
-    'type-badge inline-flex items-center gap-1 rounded-xs px-2 py-0.5',
+    'type-badge inline-flex min-h-[var(--badge-height-sm)] items-center gap-1 rounded-xs px-2 py-0.5',
     TAG_TONE[tone],
     className,
   );

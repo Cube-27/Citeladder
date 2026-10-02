@@ -69,18 +69,18 @@ export function RadioGroup<T extends string>({
         options.map((option) => (
           <label
             key={option.value}
-            className="type-body text-foreground inline-flex items-center gap-2"
+            className="type-body text-foreground inline-flex min-h-[var(--control-height-md)] items-center gap-2"
           >
             <RadioGroupPrimitive.Item
               value={option.value}
               disabled={option.disabled}
-              className="focus-ring border-border-bold bg-input data-[state=checked]:border-accent grid size-4 shrink-0 place-items-center rounded-full border disabled:opacity-50"
+              className="focus-ring group border-border-bold bg-input enabled:hover:border-border-strong enabled:active:bg-active data-[state=checked]:border-accent disabled:bg-disabled disabled:text-muted disabled:border-border-subtle data-[state=checked]:disabled:border-border-subtle grid size-4 shrink-0 place-items-center rounded-full border"
             >
               <RadioGroupPrimitive.Indicator>
-                <span className="bg-accent block size-2 rounded-full" />
+                <span className="bg-accent group-disabled:bg-muted block size-2 rounded-full" />
               </RadioGroupPrimitive.Indicator>
             </RadioGroupPrimitive.Item>
-            <span className={cn(option.disabled && 'opacity-50')}>{option.label}</span>
+            <span className={cn(option.disabled && 'text-muted')}>{option.label}</span>
           </label>
         ))
       )}
@@ -94,15 +94,15 @@ function RadioRow<T extends string>({ option }: Readonly<{ option: RadioOption<T
     <RadioGroupPrimitive.Item
       value={option.value}
       disabled={option.disabled}
-      className="group focus-ring hover:bg-background-alt data-[state=checked]:text-accent-text text-foreground type-control flex min-h-9 w-full items-center justify-between gap-3 rounded-[var(--radius-control)] px-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
+      className="group focus-ring enabled:hover:bg-hover enabled:active:bg-active data-[state=checked]:bg-selected data-[state=checked]:enabled:hover:bg-selected data-[state=checked]:disabled:bg-disabled text-foreground type-control disabled:bg-disabled disabled:text-muted disabled:border-border-subtle data-[state=checked]:disabled:border-border-subtle flex min-h-[var(--menu-item-height)] w-full items-center justify-between gap-3 rounded-[var(--radius-control)] px-2 text-left disabled:cursor-not-allowed"
     >
       <span className="min-w-0">{option.label}</span>
       <span
         aria-hidden
-        className="border-border-strong group-data-[state=checked]:border-accent grid size-4 shrink-0 place-items-center rounded-full border"
+        className="border-border-strong group-data-[state=checked]:border-accent group-disabled:border-border-subtle group-data-[state=checked]:group-disabled:border-border-subtle grid size-4 shrink-0 place-items-center rounded-full border"
       >
         <RadioGroupPrimitive.Indicator>
-          <span className="bg-accent block size-2 rounded-full" />
+          <span className="bg-accent group-disabled:bg-muted block size-2 rounded-full" />
         </RadioGroupPrimitive.Indicator>
       </span>
     </RadioGroupPrimitive.Item>
@@ -138,7 +138,7 @@ function RadioChip<T extends string>({ option }: Readonly<{ option: RadioOption<
       className={cn(
         chipBaseClasses,
         chipRestingClasses,
-        'data-[state=checked]:bg-accent-soft data-[state=checked]:text-accent-text disabled:cursor-not-allowed disabled:opacity-50',
+        'data-[state=checked]:bg-selected data-[state=checked]:text-foreground data-[state=checked]:enabled:hover:bg-selected data-[state=checked]:disabled:bg-disabled data-[state=checked]:disabled:text-muted disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle data-[state=checked]:disabled:border-border-subtle',
       )}
     >
       <span aria-hidden className="grid size-3.5 shrink-0 place-items-center">

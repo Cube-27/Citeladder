@@ -26,9 +26,9 @@ const PANEL_TONE = {
 
 const PANEL_PAD = {
   none: '',
-  compact: 'p-[var(--card-padding-compact)]',
+  compact: 'p-[var(--card-padding)]',
   default: 'p-[var(--card-padding)]',
-  large: 'p-[var(--card-padding-large)]',
+  large: 'p-[var(--card-padding)]',
 } as const;
 
 /**
@@ -43,7 +43,7 @@ const PANEL_PAD = {
  * more line on the screen carrying no information.
  */
 const PANEL_EDGE = {
-  rounded: 'rounded-[var(--radius-control)]',
+  rounded: 'rounded-[var(--radius-card)]',
   flush: '',
 } as const;
 

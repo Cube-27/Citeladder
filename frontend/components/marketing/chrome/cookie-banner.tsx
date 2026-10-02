@@ -91,7 +91,7 @@ export function CookieBanner() {
       className="fixed right-4 bottom-0 left-4 z-[var(--z-index-overlay)] sm:right-6 sm:left-auto sm:w-[27rem] print:hidden"
     >
       <div className="pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="border-border-strong bg-panel shadow-elevated grid gap-4 rounded-[var(--radius-card)] border p-5">
+        <div className="border-border-strong bg-panel shadow-overlay grid gap-4 rounded-[var(--radius-card)] border p-5">
           <div className="grid gap-2">
             <h2 className="website-small-heading text-foreground">Cookie Settings</h2>
             <p className="website-body text-muted">

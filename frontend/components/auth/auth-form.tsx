@@ -144,7 +144,7 @@ function TermsConsent({
           </>
         }
       />
-      <p id={noticeId} className="type-caption ps-[calc(var(--control-height)+0.5rem)]">
+      <p id={noticeId} className="type-caption ps-[calc(var(--control-height-md)+0.5rem)]">
         Our{' '}
         <a href={websiteHref('/privacy')} target="_blank" rel="noreferrer" className="flow-exit">
           Privacy Policy
@@ -155,7 +155,7 @@ function TermsConsent({
         <p
           id={errorId}
           role="alert"
-          className="type-caption text-danger-text ps-[calc(var(--control-height)+0.5rem)]"
+          className="type-caption text-danger-text ps-[calc(var(--control-height-md)+0.5rem)]"
         >
           Agree to the Terms of Service to continue.
         </p>

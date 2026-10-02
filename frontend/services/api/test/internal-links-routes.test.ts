@@ -131,7 +131,9 @@ describe('internal link analysis admission', () => {
       { skipIfCurrent: true },
     );
     const result = internalLinksReadSchema.parse(await (await request(seed)).json());
-    const link = result.analysis!.recommendations.find((item) => item.id === selected[0]!.id)!;
+    // Overlap filtering can retain a different candidate from the same source.
+    const link = result.analysis!.recommendations.find((item) => selectedIds.has(item.id))!;
+    expect(link).toBeDefined();
     expect(link.action_id).not.toBeNull();
     const contextualMember = await db
       .selectFrom('opportunities')

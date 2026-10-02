@@ -54,7 +54,6 @@
   --flow-step-mark: 1.5rem;
   --flow-step-connector: clamp(1.5rem, 4vw, 4rem);
   --flow-result-stagger: 60ms;
-  --control-height-sm: 2.25rem;
 }
 
 .flow-title {
@@ -306,7 +305,7 @@
   line-height: 1.25rem;
   font-weight: 500;
   text-decoration: none;
-  transition: color var(--transition-fast) var(--ease-standard);
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .flow-exit:hover {

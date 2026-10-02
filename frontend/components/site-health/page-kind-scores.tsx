@@ -114,15 +114,12 @@ function MeasurementValue({
   state,
 }: Readonly<{ score: number | null; coverage: number | null; state: string }>) {
   if (score !== null) {
-    // A caveat only when there is one. This cell used to carry
-    // "100% complete · Complete checklist" under every score in the table —
-    // two spellings of the ordinary case, repeated once per page kind, which
-    // is precisely what buried the rows that WERE partial.
+    // Keep measurement qualifications accessible without a repeated caption row.
     const caveat = measurementCaveat(state, coverage);
     return (
-      <span className="grid gap-0.5">
+      <span>
         <span>{formatScore(score)}</span>
-        {caveat ? <span className={textRole('caption', 'normal-case')}>{caveat}</span> : null}
+        {caveat ? <span className="sr-only">{caveat}</span> : null}
       </span>
     );
   }

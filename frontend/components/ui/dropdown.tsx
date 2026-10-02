@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * Dropdown (§8) — Radix menu. Surface = bg-elevated, border,
- * shadow-elevated, and the shared menu radius.
+ * shadow-overlay, and the shared menu radius.
  * Re-exports the Radix parts with token-styled Content / Item defaults.
  */
 export const Dropdown = DropdownPrimitive.Root;

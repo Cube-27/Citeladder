@@ -76,7 +76,7 @@ export function BrandLogo({
         // Only the initials fallback gets a ground: it is generated text, not
         // a logo asset. Brand marks are transparent and render on the surface
         // they sit on.
-        <span className="bg-accent-soft text-accent-text grid size-full place-items-center">
+        <span className="bg-well text-secondary grid size-full place-items-center">
           {brandInitials(name)}
         </span>
       )}

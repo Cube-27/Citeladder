@@ -50,7 +50,7 @@ const valueText = (value: number | null) => (value === null ? 'unavailable' : `$
 function TrendPointMark({ x, y, point }: Readonly<{ x: number; y: number; point: TrendPoint }>) {
   const description = `${point.label}: ${point.value}`;
   const mark = (
-    <circle cx={x} cy={y} r={2.5} className="fill-accent" aria-label={description}>
+    <circle cx={x} cy={y} r={2.5} className="fill-chart-1" aria-label={description}>
       <title>{description}</title>
     </circle>
   );
@@ -368,7 +368,7 @@ export function TrendChart({
           vectorEffect="non-scaling-stroke"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="stroke-accent"
+          className="stroke-chart-1"
         />
       ))}
       {points.map((point, index) =>

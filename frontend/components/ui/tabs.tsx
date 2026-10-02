@@ -112,7 +112,7 @@ export function TabsBar<T extends string>({
           className={cn(
             textRole(
               'label',
-              'focus-ring text-secondary hover:text-foreground data-[state=active]:text-foreground relative inline-flex h-[var(--tab-height)] items-center px-0 whitespace-nowrap transition-colors disabled:opacity-50',
+              'focus-ring text-secondary enabled:hover:bg-hover enabled:hover:text-foreground enabled:active:bg-active data-[state=active]:text-foreground relative inline-flex h-[var(--tab-height)] items-center px-0 whitespace-nowrap transition-colors disabled:bg-disabled disabled:text-muted',
             ),
             fill ? 'min-w-max flex-1 basis-0 justify-center px-3' : 'shrink-0',
           )}
@@ -120,10 +120,7 @@ export function TabsBar<T extends string>({
           {item.label}
           {item.value === value ? (
             <span
-              className={cn(
-                'bg-brand-forest absolute bottom-0 h-0.5',
-                fill ? 'inset-x-0' : 'inset-x-2',
-              )}
+              className={cn('bg-accent absolute bottom-0 h-0.5', fill ? 'inset-x-0' : 'inset-x-2')}
             />
           ) : null}
         </TabsPrimitive.Trigger>
@@ -165,7 +162,7 @@ export function TabPanel({
       value={value}
       forceMount={forceMount}
       hidden={activeValue !== value}
-      className={cn('outline-none', className)}
+      className={cn('focus-ring', className)}
     >
       {children}
     </TabsPrimitive.Content>

@@ -60,8 +60,8 @@ import { cn } from '@/lib/utils';
  */
 
 const TONE_CLASS: Record<'up' | 'down' | 'flat', string> = {
-  up: 'text-success-text',
-  down: 'text-danger-text',
+  up: 'text-secondary',
+  down: 'text-secondary',
   flat: 'text-muted',
 };
 

@@ -374,7 +374,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
               <span className="type-caption">{DEPTH_LABELS[bucket.key]}</span>
               <div className="bg-background-alt h-1.5 overflow-hidden rounded-full">
                 <div
-                  className="bg-accent h-full rounded-full"
+                  className="bg-chart-1 h-full rounded-full"
                   style={{ width: `${Math.round((bucket.percentage ?? 0) * 100)}%` }}
                 />
               </div>

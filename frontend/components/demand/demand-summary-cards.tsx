@@ -70,14 +70,14 @@ export function DemandSummaryCards({ snapshot }: Readonly<{ snapshot: DemandSnap
         value={formatCount(latentImpressions)}
         caption="Impressions in ranking gaps"
         icon={Zap}
-        iconClassName="text-accent"
+        iconClassName="text-muted"
       />
       <KpiSegment
         label="Striking Distance"
         value={String(countByTab(signals, 'striking_distance'))}
         caption="Positions 4–15 quick wins"
         icon={ArrowUpRight}
-        iconClassName="text-info"
+        iconClassName="text-muted"
       />
       <KpiSegment
         label="Cannibalization"
@@ -98,7 +98,7 @@ export function DemandSummaryCards({ snapshot }: Readonly<{ snapshot: DemandSnap
         value={health.value ?? <UnavailableValue state="unknown" />}
         caption={health.caption}
         icon={Activity}
-        iconClassName="text-success"
+        iconClassName="text-muted"
         className="sm:col-span-2 lg:col-span-1"
       />
     </MetricGroup>

@@ -32,19 +32,20 @@ export function NavLink({
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-[var(--radius-control)] px-3 transition-colors duration-150',
-        // Navigation takes the control role. The active row is raised paper
-        // with a soft drop and the brand icon — never an outline or a leading
-        // bar, which read as a second, competing selection mark.
+        'focus-ring group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-[var(--radius-control)] px-3 transition-colors duration-[var(--motion-fast)]',
+        // Current destinations use neutral selection; hover remains a lighter tint.
         active
-          ? textRole('control', 'bg-selected shadow-selected text-foreground')
-          : textRole('control', 'text-secondary hover:bg-active hover:text-foreground'),
+          ? textRole('control', 'bg-selected text-foreground active:bg-active')
+          : textRole(
+              'control',
+              'text-secondary hover:bg-hover active:bg-active hover:text-foreground',
+            ),
       )}
     >
       <Icon
         className={cn(
-          'size-4 shrink-0 transition-colors duration-150',
-          active ? 'text-brand-forest' : 'text-muted group-hover:text-foreground',
+          'size-4 shrink-0 transition-colors duration-[var(--motion-fast)]',
+          active ? 'text-foreground' : 'text-muted group-hover:text-foreground',
         )}
         aria-hidden
       />
