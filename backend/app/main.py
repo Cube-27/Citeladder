@@ -12,9 +12,8 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.commerce import router as commerce_router
 from app.core.config import get_frontend_origins, settings
-from app.core.config.api import API_V1_PREFIX, READINESS_TIMEOUT_SECONDS
+from app.core.config.api import READINESS_TIMEOUT_SECONDS
 from app.core.database import SessionLocal, dispose_engine
 from app.core.errors import (
     ApiException,
@@ -34,11 +33,6 @@ from app.core.telemetry import (
 )
 
 logger = logging.getLogger("app")
-
-
-# Explicit router stubs registered now so B2–B6 fill them in place. Each router
-# owns its own paths; the prefix keeps the whole surface under /api/v1.
-_ROUTERS = (commerce_router,)
 
 
 @asynccontextmanager
@@ -136,9 +130,6 @@ def create_app() -> FastAPI:
                 status_code=503, content={"status": "unavailable", "database": "down"}
             )
         return JSONResponse(status_code=200, content={"status": "ready"})
-
-    for router in _ROUTERS:
-        app.include_router(router, prefix=API_V1_PREFIX)
 
     instrument_fastapi(app)
     return app

@@ -79,8 +79,18 @@ while position metrics use only explicitly ordered recommendations.
 
 The [TypeScript Commerce API](../frontend/services/api/src/routes/commerce.ts)
 authorizes persisted reads, CSV imports and explicit decisions using active
-workspace membership and run/write capabilities. The
-[Python API](../backend/app/api/commerce.py) retains competitor discovery.
+workspace membership and run/write capabilities, including competitor discovery.
+The [discovery executor](../frontend/services/api/src/commerce/discovery.ts)
+uses the shared Site Health safe fetcher, acquisition controls, robots policy,
+parser and classifier. Provider calls and candidate verification finish before
+the worker locks the live claim and atomically appends the attempt, pending
+candidates and queue outcome. No database transaction spans network I/O.
+Search responses are byte-bounded. A target removed before execution or
+publication terminalizes with `commerce_target_unavailable` without retrying or
+publishing stale candidates. Failed page verification consumes no accept slot;
+verified survivors beyond the result limit retain an `excluded_limit` verdict.
+Query qualifiers use textual and numeric attributes; booleans are omitted
+rather than converted into language-dependent `True`/`False` strings.
 Buyer-prompt generation and manual entry use the TypeScript owner.
 [CSV admission](../frontend/services/api/src/commerce/import.ts)
 and [catalog projection](../frontend/services/api/src/commerce/projection.ts)
@@ -102,8 +112,9 @@ and [route tests](../frontend/services/api/test/commerce.test.ts) cover the data
 owner, including the projection enqueue and audit-context boundaries. Native
 [shelf tests](../frontend/services/api/test/commerce-shelf.test.ts) cover frozen
 catalog identity, recommendations and source provenance. The
-[Python tests](../backend/tests/component/test_commerce_suite_api.py) retain
-competitor discovery coverage with deterministic provider doubles.
+[discovery tests](../frontend/services/api/test/commerce-discovery.test.ts) cover
+provider outcomes, target-aware verification, immutable attempts and lease loss
+against PostgreSQL with deterministic provider doubles.
 
 The retired [rebuild record](archive/plans/commerce-suite-atomic-rebuild.md)
 retains unverified manual migration/crawl/CSV, reference-evaluation, Tavily and

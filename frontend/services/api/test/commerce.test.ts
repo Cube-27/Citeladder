@@ -74,6 +74,7 @@ describe('Commerce workspace boundaries', () => {
     ['/catalog/import', 'POST', { content: csv }],
     ['/competitors', 'GET', undefined],
     ['/competitors/discoveries', 'GET', undefined],
+    ['/competitors/discover', 'POST', { targets: [{ kind: 'product', id: randomUUID() }] }],
     [`/competitors/${randomUUID()}`, 'PATCH', { decision: 'approved' }],
     ['/buyer-prompts', 'GET', undefined],
     [`/buyer-prompts/${randomUUID()}`, 'PATCH', { approved: true }],
@@ -96,6 +97,67 @@ describe('Commerce workspace boundaries', () => {
 });
 
 describe('CSV evidence and catalog', () => {
+  it('queues a frozen discovery per distinct target, starts a new run on repeat, and rejects foreign targets atomically', async () => {
+    await importCsv();
+    const product = (await call<CommerceCatalog>('/catalog')).body.products[0]!;
+    const target = { kind: 'product', id: product.id };
+    const one = await call<{ task_ids: string[] }>('/competitors/discover', {
+      method: 'POST',
+      body: { targets: [target, target] },
+    });
+    const two = await call<{ task_ids: string[] }>('/competitors/discover', {
+      method: 'POST',
+      body: { targets: [target] },
+    });
+    expect(one.status).toBe(202);
+    expect(one.body.task_ids[0]).toBe(one.body.task_ids[1]);
+    expect(two.body.task_ids[0]).not.toBe(one.body.task_ids[0]);
+    const queued = await db
+      .selectFrom('analytics_tasks')
+      .selectAll()
+      .where('id', '=', one.body.task_ids[0]!)
+      .executeTakeFirstOrThrow();
+    expect(queued).toMatchObject({
+      status: 'queued',
+      workspace_id: t.workspaceId,
+      payload: { target, target_context: { name: 'One, large', price: 19.25, currency: '' } },
+    });
+    const foreign = await fixtures.tenant();
+    tenants.push(foreign);
+    const foreignTarget = randomUUID();
+    await db
+      .insertInto('commerce_categories')
+      .values({
+        id: foreignTarget,
+        workspace_id: foreign.workspaceId,
+        project_id: foreign.projectId,
+        name: 'Foreign',
+        normalized_name: 'foreign',
+        role: 'leaf',
+        canonical_url: '',
+        field_sources: {},
+        source_analysis_id: null,
+        projector_version: policy.commerce.projector_version,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    expect(
+      (
+        await call('/competitors/discover', {
+          method: 'POST',
+          body: { targets: [target, { kind: 'category', id: foreignTarget }] },
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      await db
+        .selectFrom('analytics_tasks')
+        .select('id')
+        .where('project_id', '=', t.projectId)
+        .execute(),
+    ).toHaveLength(2);
+  });
   it('serializes simultaneous imports, keeps raw evidence, and publishes shared-contract values', async () => {
     const [one, two] = await Promise.all([importCsv(), importCsv()]);
     expect(one.status).toBe(201);

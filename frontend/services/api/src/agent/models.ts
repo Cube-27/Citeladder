@@ -14,6 +14,18 @@ import type { AgentModel } from './model-calls.ts';
 
 const defaultTransports = { platform: defaultTransport, customer: sendProbe };
 
+/** Both funding and dispatch bind the same verified destination to the frozen run. */
+export function frozenRouteMatches(route: Awaited<ReturnType<typeof resolveAppRoute>>, run: Run) {
+  return (
+    !!route &&
+    route.routeId === run.route_id &&
+    route.connectionId === run.connection_id &&
+    route.routeRevision === run.route_revision &&
+    route.credentialRevision === run.credential_revision &&
+    route.model === run.requested_model
+  );
+}
+
 export function agentModels(
   db: Database,
   encryptionKey: string,
@@ -26,15 +38,7 @@ export function agentModels(
     if (customer) {
       try {
         const route = await resolveAppRoute(db, run.workspace_id);
-        if (
-          !route ||
-          route.routeId !== run.route_id ||
-          route.connectionId !== run.connection_id ||
-          route.routeRevision !== run.route_revision ||
-          route.credentialRevision !== run.credential_revision ||
-          route.model !== run.requested_model
-        )
-          throw new AppRouteUnavailable();
+        if (!route || !frozenRouteMatches(route, run)) throw new AppRouteUnavailable();
         gateway = createAppModelGateway(
           route,
           encryptionKey,

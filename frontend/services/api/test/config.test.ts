@@ -1,9 +1,32 @@
 import { describe, expect, it } from 'vitest';
 
-import { ConfigError, demoAccessExpired, loadConfig, policy } from '../src/config.ts';
+import {
+  ConfigError,
+  demoAccessExpired,
+  loadConfig,
+  policy,
+  resolveSettingSpec,
+} from '../src/config.ts';
 import { libpqUrl, poolOptions } from '../src/db/database.ts';
+import { razorpaySettings } from '../src/billing/config.ts';
 
 const STRONG_KEY = 'a-deployment-grade-session-key-with-enough-entropy-9';
+
+it('applies production and test-key aliases to Razorpay credential admission', () => {
+  const env = {
+    APP_ENV: 'production',
+    BILLING_RAZORPAY_MODE: 'test',
+    RAZORPAY_TEST_KEY_ID: 'fixture-id',
+    RAZORPAY_TEST_KEY_SECRET: 'fixture-secret',
+  };
+  expect(razorpaySettings(env)).toMatchObject({
+    production: true,
+    keyId: 'fixture-id',
+    keySecret: 'fixture-secret',
+    conflicting: false,
+  });
+  expect(razorpaySettings({ ...env, BILLING_RAZORPAY_MODE: 'live' }).conflicting).toBe(true);
+});
 
 describe('loadConfig', () => {
   it('uses the exported Python defaults when the environment is silent', () => {
@@ -15,6 +38,12 @@ describe('loadConfig', () => {
 
   it('matches environment names case-insensitively, as pydantic-settings does', () => {
     expect(loadConfig({ db_pool_size: '7' }).database.poolSize).toBe(7);
+  });
+
+  it('rejects a value at an exported exclusive maximum', () => {
+    const spec = { env: ['BOUNDED'], type: 'float', default: 1, exclusive_maximum: 672 };
+    expect(resolveSettingSpec(spec, { BOUNDED: '671.5' })).toBe(671.5);
+    expect(() => resolveSettingSpec(spec, { BOUNDED: '672' })).toThrow(ConfigError);
   });
 
   it('enforces the Python field bounds and literal values', () => {

@@ -147,9 +147,6 @@ services:
     <<: *backend
     image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}
     command: ["node", "--experimental-strip-types", "src/agent-worker.ts"]
-  analytics-worker:
-    <<: *backend
-    command: ["python", "-m", "app.workers.analytics_worker"]
   queue-sweeper:
     <<: *backend
     command: ["python", "-m", "app.workers.queue_sweeper"]
@@ -253,8 +250,7 @@ services:
         condition: service_completed_successfully
 
   # TypeScript analytics worker: the API service image, another command. It
-  # claims the analytics kinds core/config/analytics.py assigns to TypeScript;
-  # analytics-worker claims the rest and queue-sweeper expires every lease.
+  # claims every analytics kind and recovers their expired leases.
   analytics-worker-ts:
     image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE must be an immutable digest}
     network_mode: host

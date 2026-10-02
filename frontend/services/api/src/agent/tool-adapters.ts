@@ -10,11 +10,19 @@ import { ToolRegistry, type ReadTool } from './tools.ts';
 import { type Json, type Scope } from './contracts.ts';
 
 const reference = z.object({ id: z.string(), record_uri: z.string().nullish() }).catchall(z.json());
-function outcome(value: unknown) {
+const availability = z.enum([
+  'available',
+  'unavailable',
+  policy.demand.QUERY_EVIDENCE_STATE_OBSERVED_ZERO,
+]);
+function outcome(value: unknown, defaultState?: 'available') {
   const data = z.record(z.string(), z.json()).parse(JSON.parse(JSON.stringify(value)));
   const refs = Array.isArray(data.artifact_refs) ? data.artifact_refs : [];
   return {
-    state: data.state === 'unavailable' ? ('unavailable' as const) : ('available' as const),
+    state:
+      availability.parse(data.state ?? defaultState) === 'unavailable'
+        ? ('unavailable' as const)
+        : ('available' as const),
     data,
     artifactRefs: refs.flatMap((ref) => {
       const parsed = reference.safeParse(ref);
@@ -51,6 +59,11 @@ function sharedTools(db: Database): ReadTool[] {
               { ...args, ...(_project ? { project_id: scope.projectId } : {}) },
               '',
             ),
+            // Successful search, exact fetch and aggregate context have no
+            // top-level availability field in their MCP contracts.
+            ['search', 'fetch', 'get_project_business_context'].includes(name)
+              ? 'available'
+              : undefined,
           ),
       };
     });

@@ -236,7 +236,7 @@ the backup job checks and restore verification as evidence of recoverability.
 Merge an update to `main`, wait for CI, and rerun **GCP Demo - Deploy**. The VM
 stops write-capable services, takes a `predeploy` dump, pulls exact digests,
 migrates, and validates the API, database, migration, Caddy, and all
-ten workers. A failed backup restores the old runtime; a later deployment
+worker services and the queue sweeper. A failed backup restores the old runtime; a later deployment
 failure also attempts to restore prior digests and services.
 
 Record the previous backend digest and `predeploy` object. If a
@@ -249,7 +249,7 @@ Example database restore on the VM (replace the object exactly):
 
 ```bash
 cd /opt/citeladder
-services=(caddy web api-service audit-worker audit-scheduler audit-maintenance site-health-worker-ts brand-discovery-worker agent-worker analytics-worker analytics-worker-ts queue-sweeper integration-worker-ts integration-dispatcher-ts billing-worker-ts)
+services=(caddy web api-service audit-worker audit-scheduler audit-maintenance site-health-worker-ts brand-discovery-worker agent-worker analytics-worker-ts queue-sweeper integration-worker-ts integration-dispatcher-ts billing-worker-ts)
 sudo docker compose --env-file runtime.env -f compose.gcp.yml stop "${services[@]}"
 bucket=$(sudo sed -n "s/^BACKUP_BUCKET='\(.*\)'$/\1/p" runtime.env)
 gcloud storage cp "gs://${bucket}/predeploy/<TIMESTAMP>.sql.gz" /tmp/citeladder-restore.sql.gz

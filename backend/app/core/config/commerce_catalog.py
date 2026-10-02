@@ -1,6 +1,6 @@
 """Configuration and version vocabulary for the Commerce replacement."""
 
-from typing import Final
+from typing import Final, Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,6 +27,8 @@ COMMERCE_PROMPTS_MAX: Final = 10
 COMMERCE_GENERATION_TARGETS_MAX: Final = 10
 COMMERCE_COMPETITOR_RESULT_LIMIT: Final = 5
 COMMERCE_COMPETITOR_PROVIDER_RESULT_LIMIT: Final = 10
+COMMERCE_COMPETITOR_RESPONSE_MAX_BYTES: Final = 1_000_000
+COMMERCE_COMPETITOR_TARGET_MISSING_ERROR: Final = "commerce_target_unavailable"
 COMMERCE_IMPORT_MAX_BYTES: Final = 2_000_000
 COMMERCE_IMPORT_MAX_ROWS: Final = 10_000
 COMMERCE_IMPORT_ERROR_LIMIT: Final = 100
@@ -328,7 +330,8 @@ class CommerceSettings(BaseSettings):
     )
 
     tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
-    tavily_endpoint: str = Field(
+    # Credentials may only be sent to the canonical provider destination.
+    tavily_endpoint: Literal["https://api.tavily.com/search"] = Field(
         default="https://api.tavily.com/search", validation_alias="TAVILY_ENDPOINT"
     )
     tavily_timeout_seconds: float = Field(default=20.0, gt=0, le=60)

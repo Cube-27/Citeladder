@@ -139,11 +139,11 @@ describe('catalog projection PostgreSQL boundary', () => {
     },
     20_000,
   );
-  it('claims queued projections, honors CSV priority in a race, and leaves discovery to Python', async () => {
+  it('claims queued projections, honors CSV priority in a race, and leaves non-analytics work to its owner', async () => {
     const s = await seed();
-    const pythonTask = await enqueue(db, {
+    const otherTask = await enqueue(db, {
       ...s,
-      kind: 'commerce_competitor_discovery',
+      kind: 'brand_discovery',
       payload: {},
     });
     const worker = new AnalyticsWorker(db, loadWorkerSettings({}), { owner: 'commerce-ts-test' });
@@ -167,7 +167,7 @@ describe('catalog projection PostgreSQL boundary', () => {
         .filter((row) => row.task_kind === 'commerce_catalog_projection')
         .map((row) => row.status),
     ).toEqual(['succeeded', 'succeeded']);
-    expect(tasks.find((row) => row.id === pythonTask)!.status).toBe('queued');
+    expect(tasks.find((row) => row.id === otherTask)!.status).toBe('queued');
     const id = result.categories.find((row) => row.name === 'Tools')!.id;
     const seeded = await commerceIsland<{ promptId: string }>(
       'prompt',

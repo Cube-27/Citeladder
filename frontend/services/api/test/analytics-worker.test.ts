@@ -4,10 +4,10 @@
  * artifact it reads, the retention horizon, and the terminal accounting of
  * the one finalize (retry, exhaustion, not wired, cancelled, lost lease).
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { loadWorkerSettings, policy } from '../src/config.ts';
-import type { QueueTask } from '../src/queue/task-queue.ts';
+import { TaskQueue, type QueueTask } from '../src/queue/task-queue.ts';
 import { AnalyticsWorker, EXECUTORS } from '../src/workers/analytics-worker.ts';
 import type { Executor } from '../src/workers/executor.ts';
 import {
@@ -63,6 +63,32 @@ const tasks = (kind: string) =>
 
 const worker = (executors?: Record<string, Executor>) =>
   new AnalyticsWorker(db, settings, { owner: 'worker-test', executors });
+
+it('leaves a failed running transition leased without dispatching or consuming an executor attempt', async () => {
+  const id = await enqueue(db, {
+    workspaceId,
+    projectId,
+    kind: 'commerce_catalog_projection',
+    payload: {},
+  });
+  const run = vi.fn();
+  const transition = vi
+    .spyOn(TaskQueue.prototype, 'markRunning')
+    .mockRejectedValueOnce(new Error('Database transition failed'));
+  try {
+    await worker({ commerce_catalog_projection: run }).runOnce();
+    expect(run).not.toHaveBeenCalled();
+    expect(
+      await db
+        .selectFrom('analytics_tasks')
+        .selectAll()
+        .where('id', '=', id)
+        .executeTakeFirstOrThrow(),
+    ).toMatchObject({ status: 'leased', attempt_count: 0, lease_owner: 'worker-test' });
+  } finally {
+    transition.mockRestore();
+  }
+});
 
 describe('referral chain', () => {
   it('ingests, classifies and projects one import end to end', async () => {
@@ -329,6 +355,56 @@ describe('referral retention sweep', () => {
 });
 
 describe('finalize', () => {
+  it('commits acquired evidence with success and rolls it back when publication fails', async () => {
+    const project = await db
+      .selectFrom('projects')
+      .select('brand_name')
+      .where('id', '=', projectId)
+      .executeTakeFirstOrThrow();
+    const failingPublication: Executor = async () => ({
+      error: null,
+      persist: async (trx) => {
+        await trx
+          .updateTable('projects')
+          .set({ brand_name: 'Uncommitted evidence' })
+          .where('id', '=', projectId)
+          .execute();
+        throw new Error('Publication failed');
+      },
+    });
+    expect(await runOne({ ingest_referrals: failingPublication })).toMatchObject({
+      status: 'retry_wait',
+      attempt_count: 1,
+    });
+    expect(
+      await db
+        .selectFrom('projects')
+        .select('brand_name')
+        .where('id', '=', projectId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual(project);
+    expect(
+      await runOne({
+        ingest_referrals: async () => ({
+          error: null,
+          persist: async (trx) => {
+            await trx
+              .updateTable('projects')
+              .set({ brand_name: 'Committed evidence' })
+              .where('id', '=', projectId)
+              .execute();
+          },
+        }),
+      }),
+    ).toMatchObject({ status: 'succeeded', attempt_count: 1 });
+    expect(
+      await db
+        .selectFrom('projects')
+        .select('brand_name')
+        .where('id', '=', projectId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ brand_name: 'Committed evidence' });
+  });
   const failing: Executor = async () => {
     throw new Error('projection failed');
   };

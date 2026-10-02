@@ -19,11 +19,8 @@ from app.core.config.analytics import (
     AI_SOURCES,
     ANALYTICS_DEFAULT_GRANULARITY,
     ANALYTICS_MAX_WINDOW_DAYS,
-    ANALYTICS_PYTHON_TASK_KINDS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_TTL_S,
-    ANALYTICS_TASK_KINDS,
-    ANALYTICS_TS_OWNED_TASK_KINDS,
     CONFIDENCE_BUCKETS,
     MATCH_SIGNALS,
     REFERRAL_RAW_ALLOWLIST,
@@ -66,7 +63,6 @@ from app.core.config.traffic import (
     TRAFFIC_REFRESH_TRIGGER_DATASETS,
     TRAFFIC_SNAPSHOT_GRANULARITIES,
 )
-from app.workers.analytics_worker import EXECUTORS
 
 
 def test_traffic_window_and_granularity_knobs() -> None:
@@ -102,14 +98,6 @@ def test_traffic_refresh_trigger_datasets() -> None:
     }
     assert "ga4_referrer_daily" not in TRAFFIC_REFRESH_TRIGGER_DATASETS
     assert TRAFFIC_REFRESH_TRIGGER_DATASETS <= set(INTEGRATION_DATASET_TEMPLATES)
-
-
-def test_analytics_task_kinds_have_registered_executors() -> None:
-    # Every configured kind is drainable by exactly one stack: Python runs the
-    # complement of the TypeScript-owned kinds, and only that complement.
-    assert ANALYTICS_TS_OWNED_TASK_KINDS <= ANALYTICS_TASK_KINDS
-    assert ANALYTICS_PYTHON_TASK_KINDS == set(EXECUTORS)
-    assert not ANALYTICS_PYTHON_TASK_KINDS & ANALYTICS_TS_OWNED_TASK_KINDS
 
 
 def test_traffic_sort_whitelists() -> None:
@@ -340,6 +328,15 @@ def test_analytics_settings_lease_ttl_env_override(
     configured = AnalyticsSettings(_env_file=None)
     assert configured.lease_ttl_seconds == 45
     monkeypatch.setenv("ANALYTICS_LEASE_TTL_SECONDS", "0")
+    with pytest.raises(ValidationError):
+        AnalyticsSettings(_env_file=None)
+
+
+@pytest.mark.parametrize("budget", ["0", "-1", "inf", "nan"])
+def test_analytics_drain_rejects_unbounded_or_nonpositive_budget(
+    monkeypatch: pytest.MonkeyPatch, budget: str
+) -> None:
+    monkeypatch.setenv("ANALYTICS_DRAIN_BUDGET_SECONDS", budget)
     with pytest.raises(ValidationError):
         AnalyticsSettings(_env_file=None)
 

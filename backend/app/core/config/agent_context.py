@@ -1,6 +1,6 @@
 """Agent context-package policy: bounded, deterministic crawl selection.
 
-The single context builder (``domain/agent/context_builder.py``) freezes a
+The TypeScript context adapter (``services/api/src/agent/context-adapter.ts``) freezes a
 versioned package from reviewed brand facts, target-page evidence and a
 bounded related-page set. Every bound it reads lives here (invariant 2).
 """

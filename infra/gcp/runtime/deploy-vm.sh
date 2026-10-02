@@ -263,7 +263,7 @@ mv /opt/citeladder/ingress.env.new /opt/citeladder/ingress.env
 cd /opt/citeladder
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 stopped_services=(caddy web api-service audit-worker audit-scheduler site-health-worker-ts \
-  brand-discovery-worker agent-worker analytics-worker analytics-worker-ts \
+  brand-discovery-worker agent-worker analytics-worker-ts \
   queue-sweeper integration-worker-ts integration-dispatcher-ts billing-worker-ts)
 
 python3 ./retain-images.py --registry "$expected_registry" --apply \

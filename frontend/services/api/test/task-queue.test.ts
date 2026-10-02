@@ -16,7 +16,6 @@ const db = testDatabase();
 const fixtures = new Fixtures(db);
 const queue = new TaskQueue(db, { leaseTtlSeconds: 120 });
 const TS_KINDS = policy.analytics.ts_owned_task_kinds;
-const PYTHON_KINDS = policy.analytics.python_task_kinds;
 let workspaces: string[] = [];
 
 async function task(workspaceId: string, kind: string, priority = 0): Promise<string> {
@@ -93,11 +92,11 @@ describe('TaskQueue', () => {
     expect(node.endModifiers?.map((item) => item.modifier)).toEqual(['ForUpdate', 'SkipLocked']);
   });
 
-  it('never cross-claims between workers with disjoint kind sets', async () => {
+  it('never duplicates claims between concurrent workers', async () => {
     const created = new Map<string, string>();
     for (const [index, workspaceId] of workspaces.entries()) {
       for (let copy = 0; copy < 6; copy += 1) {
-        for (const kind of [...TS_KINDS, ...PYTHON_KINDS]) {
+        for (const kind of TS_KINDS) {
           created.set(await task(workspaceId, kind, (index + copy) % 3), kind);
         }
       }
@@ -110,18 +109,13 @@ describe('TaskQueue', () => {
         seen.push(...claimed.map((row) => ({ id: row.id, kind: row.task_kind })));
       }
     };
-    const results = await Promise.all([
-      ...[1, 2, 3, 4].map((n) => drain(`ts-${n}`, TS_KINDS)),
-      ...[1, 2, 3, 4].map((n) => drain(`py-${n}`, PYTHON_KINDS)),
-    ]);
-    const tsClaims = results.slice(0, 4).flat();
-    const pythonClaims = results.slice(4).flat();
-    const all = [...tsClaims, ...pythonClaims].map((claim) => claim.id);
+    const results = await Promise.all([...[1, 2, 3, 4].map((n) => drain(`ts-${n}`, TS_KINDS))]);
+    const tsClaims = results.flat();
+    const all = tsClaims.map((claim) => claim.id);
 
     expect(new Set(all).size).toBe(all.length);
     expect(new Set(all)).toEqual(new Set(created.keys()));
     expect(tsClaims.every((claim) => TS_KINDS.includes(claim.kind))).toBe(true);
-    expect(pythonClaims.every((claim) => PYTHON_KINDS.includes(claim.kind))).toBe(true);
   });
 
   it('serves one task per workspace before any workspace gets a second', async () => {

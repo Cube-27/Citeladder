@@ -138,7 +138,7 @@ class SiteHealthSettings(BaseSettings):
     # HTML size cap fed to the parser.
     max_html_bytes: int = 5_000_000
 
-    # --- Server-owned curl-cffi acquisition ---
+    # --- Server-owned TypeScript acquisition ---
     # Each crawl freezes these values in its configuration. They are kept here
     # (not in a connector) because acquisition behavior is an operational
     # policy, not application logic.
@@ -175,17 +175,6 @@ class SiteHealthSettings(BaseSettings):
     # Hard ceiling on cached authorities. Expired entries are dropped first;
     # beyond the cap, the oldest go. 0 disables the cap.
     robots_cache_max_authorities: int = 2048
-    # Curl sessions are pooled per pinned address so a crawl of one host reuses
-    # its connection and TLS session instead of handshaking per page. An idle
-    # session holds an open socket against someone else's server, so it is
-    # dropped once it has gone unused this long. Entries in flight are never
-    # evicted -- a fetch holds a streaming response well past the request call.
-    curl_session_pool_idle_seconds: float = 90.0
-    # Hard ceiling on pooled sessions, so a crawl spanning many hosts (or a
-    # rotating-DNS host) cannot accumulate sockets without bound. Idle entries
-    # go oldest-first. 0 disables the cap.
-    curl_session_pool_max_entries: int = 64
-
     # --- Parser bounds (bounded, deterministic extraction) ---
     max_links_per_page: int = 2000
     max_structured_data_blocks: int = 100
@@ -372,7 +361,7 @@ class SiteHealthSettings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_acquisition(self) -> SiteHealthSettings:
-        """Keep curl acquisition policy reproducible."""
+        """Keep acquisition policy reproducible across the policy export."""
         _require_non_empty(
             self,
             ("acquisition_policy_version",),
@@ -385,13 +374,6 @@ class SiteHealthSettings(BaseSettings):
                 "rate_limit_cooldown_seconds",
                 "robots_cache_ttl_seconds",
                 "robots_unreachable_recheck_seconds",
-            ),
-        )
-        _require_non_negative(
-            self,
-            (
-                "curl_session_pool_idle_seconds",
-                "curl_session_pool_max_entries",
             ),
         )
         return self
@@ -577,11 +559,9 @@ SITE_CRAWL_QUEUE_SPEC: Final[PostgresQueueSpec[SiteCrawlTask]] = PostgresQueueSp
     lease_ttl=lambda: site_health_settings.lease_ttl_seconds,
     claim_order=_site_task_claim_order,
     max_attempts_error=ERROR_MAX_ATTEMPTS,
-    # A crawl terminalizes only via the worker's reconcile, which runs in a
-    # task's finalize. The sweeper failing a task at max attempts bypasses that
-    # path entirely, so it must report the owning crawl for reconciliation —
-    # otherwise a crawl whose LAST task the sweeper failed stays 'running'
-    # forever (no snapshot, no completion event, endless client polling).
+    # Retained Python queue metadata for fixtures. The TypeScript Site Health
+    # worker owns live task recovery and reconciles affected parent crawls;
+    # the Python queue sweeper no longer handles this queue.
     parent_id_attr="crawl_id",
 )
 

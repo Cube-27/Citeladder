@@ -75,8 +75,7 @@ class AnalyticsTask(QueueLeaseStateMixin, Base):
     """One queue+lease row for one analytics projection job.
 
     Carries the exact queue-row column contract of ``SiteCrawlTask`` so the
-    one generic ``PostgresTaskQueue`` serves it unchanged (invariant 8),
-    parameterized by ``ANALYTICS_QUEUE_SPEC``. The kind-specific frozen
+    TypeScript queue can claim and recover it (invariant 15). The kind-specific frozen
     inputs live in ``payload`` (small, credential-free JSONB — e.g.
     ``{"import_artifact_id": ...}`` for the referral chain, a date window for
     the snapshot refreshes). ``project_id`` is nullable because the

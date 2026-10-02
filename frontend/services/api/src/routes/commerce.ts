@@ -4,12 +4,14 @@ import {
   commerceCatalogSchema,
   competitorCandidateSchema,
   competitorDiscoveryTaskSchema,
+  competitorDiscoverySchema,
   shelfSchema,
 } from '@citeladder/contracts/commerce-suite';
 import type { Context } from 'hono';
 import { z } from 'zod';
 
 import { decideBuyerPrompt, decideCandidate } from '../commerce/decisions.ts';
+import { discoveryInput, enqueueDiscoveries } from '../commerce/discovery.ts';
 import {
   buyerGenerateInput,
   buyerManualInput,
@@ -52,6 +54,22 @@ async function scopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
 }
 
 export const commerceRoutes = [
+  definePostRoute({
+    family,
+    path: `${root}/competitors/discover`,
+    capability: 'run',
+    status: 202,
+    params: { path: projectPath, query: {} },
+    body: discoveryInput,
+    response: competitorDiscoverySchema,
+    async handle({ c, db }, { path }) {
+      return enqueueDiscoveries(
+        db,
+        await scopeOf(db, c, path.project_id),
+        await readBody(c, discoveryInput),
+      );
+    },
+  }),
   definePostRoute({
     family,
     path: `${root}/buyer-prompts/generate`,

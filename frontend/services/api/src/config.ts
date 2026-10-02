@@ -25,6 +25,7 @@ type SettingSpec = {
   minimum?: number;
   exclusive_minimum?: number;
   maximum?: number;
+  exclusive_maximum?: number;
 };
 
 export type PythonPolicy = typeof pythonConfig;
@@ -56,6 +57,9 @@ function checkBounds(name: string, value: number, spec: SettingSpec): number {
   }
   if (spec.maximum !== undefined && value > spec.maximum) {
     throw new ConfigError(`${name} must be <= ${spec.maximum}`);
+  }
+  if (spec.exclusive_maximum !== undefined && value >= spec.exclusive_maximum) {
+    throw new ConfigError(`${name} must be < ${spec.exclusive_maximum}`);
   }
   return value;
 }
@@ -278,6 +282,8 @@ export function demoAccessExpired(config: ServiceConfig, now: Date = new Date())
 }
 
 export type WorkerSettings = {
+  leaseReclaimBatchSize: number;
+  drainBudgetSeconds: number;
   leaseTtlSeconds: number;
   heartbeatIntervalSeconds: number;
   taskMaxAttempts: number;
@@ -310,6 +316,8 @@ export function loadWorkerSettings(
   const specs = policy.analytics.worker_settings;
   const setting = (name: keyof typeof specs) => resolveSpec(name, specs[name], env) as number;
   const settings: WorkerSettings = {
+    leaseReclaimBatchSize: setting('lease_reclaim_batch_size'),
+    drainBudgetSeconds: setting('drain_budget_seconds'),
     leaseTtlSeconds: setting('lease_ttl_seconds'),
     heartbeatIntervalSeconds: setting('heartbeat_interval_seconds'),
     taskMaxAttempts: setting('task_max_attempts'),

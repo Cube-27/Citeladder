@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 from httpx import ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -140,16 +141,22 @@ async def test_declared_oversized_api_body_is_rejected_before_parsing() -> None:
 
 @pytest.mark.asyncio
 async def test_chunked_oversized_api_body_is_stopped_while_streaming() -> None:
+    local = main.create_app()
+
+    @local.post("/api/v1/body-probe")
+    async def probe(request: Request) -> dict[str, int]:
+        return {"bytes": len(await request.body())}
+
     async def chunks():
         for _ in range(33):
             yield b"x" * (64 * 1024)
 
-    transport = ASGITransport(app=app)
+    transport = ASGITransport(app=local)
     async with httpx.AsyncClient(
         transport=transport, base_url="http://testserver"
     ) as client:
         response = await client.post(
-            "/api/v1/projects/00000000-0000-0000-0000-000000000001/commerce/competitors/discover",
+            "/api/v1/body-probe",
             content=chunks(),
             headers={"Content-Type": "application/json"},
         )

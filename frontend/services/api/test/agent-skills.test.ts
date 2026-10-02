@@ -23,7 +23,10 @@ describe('packaged Agent model inputs', () => {
     const temporary = await mkdtemp(join(tmpdir(), 'agent-catalog-'));
     try {
       await cp(root, temporary, { recursive: true });
-      const first = await loadSkillCatalog(temporary);
+      // The runtime image supplies this exact alias and has no checkout fallback.
+      const first = await loadSkillCatalog(
+        agentSettings({ AGENT_SKILLS_DIRECTORY: temporary }).skillsDirectory,
+      );
       await appendFile(join(temporary, 'operating_contract.md'), '\nNew operating constraint.\n');
       expect((await loadSkillCatalog(temporary)).version).not.toBe(first.version);
       const skillPath = join(temporary, 'skills/content_create/SKILL.md');

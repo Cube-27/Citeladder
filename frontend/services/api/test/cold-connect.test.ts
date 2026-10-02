@@ -71,14 +71,12 @@ it('takes a first connect through both workers to analysis_ready without provide
 import asyncio, json, uuid
 from app.core.database import SessionLocal, engine
 from app.domain.analytics.enqueue import enqueue_post_sync_projections
-from app.workers.analytics_worker import AnalyticsWorker
 async def main():
     async with SessionLocal() as session:
         if '${phase}' == 'enqueue':
             await enqueue_post_sync_projections(session, project_id=uuid.UUID('${t.projectId}'), import_artifact_ids=[uuid.UUID('${gsc.artifactId}'), uuid.UUID('${ga4.artifactId}')])
             await session.commit()
-    count = await AnalyticsWorker(session_factory=SessionLocal, owner='cold-connect-python').run_until_idle()
-    print(json.dumps({'ran': count}))
+    print(json.dumps({'enqueued': True}))
     await engine.dispose()
 asyncio.run(main())
 `,
@@ -97,7 +95,7 @@ asyncio.run(main())
     );
     return JSON.parse(result.stdout.trim().split('\n').at(-1)!);
   };
-  expect((await run('enqueue')).ran).toBe(0);
+  await run('enqueue');
   const worker = new AnalyticsWorker(db, loadWorkerSettings({}));
   expect(await worker.runUntilIdle()).toBeGreaterThanOrEqual(2);
   const request = requests(db, t);
@@ -117,7 +115,6 @@ asyncio.run(main())
     next.body.items.some((row) => queries.body.items.some((first) => first.id === row.id)),
   ).toBe(false);
   // The TS worker drains the whole chain, Opportunity refresh included.
-  expect((await run('finish')).ran).toBe(0);
   expect(await readProjectReadiness(db, t)).toMatchObject({
     stage: 'analysis_ready',
     connection_count: 2,

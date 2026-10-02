@@ -12,8 +12,6 @@ from app.models.agent import AgentChat, AgentOutput, AgentOutputRevision
 from app.models.opportunity import Opportunity, OpportunitySnapshot
 from app.models.project import Project
 from app.models.site_health.analysis import SitePageAnalysis
-from app.models.site_health.acquisition import SiteFetchArtifact
-from app.analysis.site_health.parser import extract_page_facts
 from app.models.source_pages import SourcePage, SourcePageEntityPresence, SourcePageSnapshot
 from tests.component.opportunity_helpers import _seed_scenario, seed_action_for, seed_live_set
 
@@ -120,17 +118,7 @@ async def content():
     async with SessionLocal() as session:
         rows = list(await session.scalars(select(SitePageAnalysis).where(
             SitePageAnalysis.crawl_id == uuid.UUID(result["crawl_id"]))))
-        names = ["Garden soil guide", "Soil testing kit", "Compost for healthy soil"]
-        for index, row in enumerate(rows):
-            artifact = await session.get(SiteFetchArtifact, row.artifact_id)
-            name = names[index % len(names)]
-            artifact.normalized_facts = extract_page_facts(
-                body=(f'<html><title>{name} | Acme</title><main><h1>{name}</h1>'
-                      '<p>Use a soil testing kit to understand nutrient levels before planting.</p>'
-                      '<p>Add compost to improve moisture retention and support a thriving garden.</p></main></html>').encode(),
-                final_url=artifact.final_url, content_type="text/html", status_code=200,
-                redacted_headers={},
-            )
+        for row in rows:
             row.main_content_indexable = True
             row.finalized_at = datetime.now(UTC)
             row.is_current = True

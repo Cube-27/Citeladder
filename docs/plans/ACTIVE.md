@@ -54,10 +54,12 @@
   maintenance, provider and Search Intelligence owners in committed slices.
   PR 18a moves source inspection and the first Site Health phases. PR 18b is
   implemented through 18b5c: TypeScript owns Site Health reads, acquisition,
-  analysis, lifecycle, drain mode and crawl controls; Python retains Agent/MCP
-  persisted-read bridges until PR 19. PR 19a adds the inactive Agent runtime
-  core; PR 19b retains the adapter completion and final ownership cutover.
-  Python remains the production Agent owner. PR 20 follows the re-sequenced
+  analysis, lifecycle, drain mode and crawl controls. PR 19a adds the Agent runtime
+  core; PR 19b completes adapters and activates the native Agent owner. PR 19c
+  completes Commerce competitor discovery and analytics lease recovery, retiring
+  the Python analytics worker and its exclusive acquisition/parser bridges.
+  Python keeps brand-discovery/integration recovery and fixture identity helpers.
+  PR 20 follows the re-sequenced
   order. Deployment of implemented cutovers is pending; the owner dropped the
   one-week soak while there are no customers (smoke tests instead). On
   1 October 2026 the owner accepted a low-cost hosting phase (PRs 21–24:

@@ -89,9 +89,11 @@ TypeScript analytics worker (`src/worker.ts`), which claims the AI Referrals
 chain's kinds (`ingest_referrals`, `classify_referrals`,
 `ai_referrals_snapshot_refresh`, `referral_retention_sweep`) through a port of
 the PostgreSQL queue claim. Its registered kinds also include Search Intelligence
-acquisition and source inspection; the Python analytics worker claims the other
-kinds. Native audit maintenance owns audit lease expiry and funding recovery;
-the Python sweeper retains the remaining queue reconciliation. Each route family, task
+acquisition, source inspection and Commerce competitor discovery. TypeScript
+owns every analytics kind, expired-lease recovery and terminal compensation.
+Acquired Commerce attempts, candidates and queue outcomes settle atomically under
+the live claim. Native audit maintenance owns audit lease expiry and funding recovery;
+the Python sweeper retains brand-discovery and integration queue reconciliation. Each route family, task
 kind and table has exactly one writing stack. For route families (OpenAPI tags)
 the record is the manifest in `frontend/packages/contracts/src/route-ownership.ts`;
 the route-ownership gate (`frontend/services/api/scripts/check-route-ownership.ts`)
@@ -99,8 +101,9 @@ holds both stacks' OpenAPI documents and every ingress Caddyfile (production's
 origin, the local Compose ingress and the Vite app container) to it.
 
 Python code a moved route still shares with Python callers stays until its last
-Python caller moves (the Agent still reads AI Referrals, MCP still reads
-execution evidence). TypeScript owners are covered by their own TypeScript and
+Python caller moves. The remaining acquisition identity/suppression helpers
+support active component fixtures and safety tests; the Python fetcher and parser
+are retired. TypeScript owners are covered by their own TypeScript and
 PostgreSQL tests; no golden files compare them with Python.
 
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response

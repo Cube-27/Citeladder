@@ -15,6 +15,7 @@ import { AgentError, type Run, type Scope } from './contracts.ts';
 import type { Admission, FundingIdentity } from './store.ts';
 import type { Funding } from './model-calls.ts';
 import type { GatewaySettings } from '../models/gateway.ts';
+import { frozenRouteMatches } from './models.ts';
 
 type Settings = ReturnType<typeof agentSettings>;
 async function historicalRate(db: Database, model: string, revision: string) {
@@ -132,15 +133,7 @@ async function recheck(db: Database, run: Run, settings: Settings, platform: Gat
   await capability(db, run.workspace_id);
   if (run.funding_source === 'customer_byok') {
     const route = await customerRoute(db, run.workspace_id);
-    if (
-      !route ||
-      route.routeId !== run.route_id ||
-      route.connectionId !== run.connection_id ||
-      route.routeRevision !== run.route_revision ||
-      route.credentialRevision !== run.credential_revision ||
-      route.model !== run.requested_model
-    )
-      throw new AgentError('route_unavailable');
+    if (!frozenRouteMatches(route, run)) throw new AgentError('route_unavailable');
     return;
   }
   if (run.requested_model !== platform.model) throw new AgentError('model_changed');

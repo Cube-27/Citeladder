@@ -2,7 +2,7 @@
  * The contract between the analytics worker and the executors it dispatches.
  *
  * An executor receives the claimed row and performs its kind's projection
- * over persisted rows only (no provider I/O). The worker owns the queue
+ * over persisted rows or bounded acquisition. The worker owns the queue
  * lifecycle around it: run marking, heartbeats and the terminal write.
  */
 import type { Database } from '../db/database.ts';
@@ -18,10 +18,27 @@ type ExecutorContext = {
   maxAttempts: number;
 };
 
-export type Executor = (task: QueueTask, context: ExecutorContext) => Promise<void>;
+export type TaskSettlement = {
+  error: Error | null;
+  /** Appends acquired evidence in the worker's fenced terminal transaction. */
+  persist: (db: Database) => Promise<void>;
+};
+export type Executor = (
+  task: QueueTask,
+  context: ExecutorContext,
+) => Promise<void | TaskSettlement>;
 
 /** The claimed row turned terminal mid-run; the worker writes nothing. */
 export class TaskCancelledError extends Error {}
+
+/** A bounded admission/provider outcome that retrying cannot repair. */
+export class TerminalExecutorError extends Error {
+  readonly code: string;
+  constructor(code: string, message = code) {
+    super(message);
+    this.code = code;
+  }
+}
 
 function payloadField(task: QueueTask, name: string): unknown {
   const payload = task.payload;

@@ -15,7 +15,7 @@ import uuid
 
 import httpx
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport
 
 from app.core.config import settings
@@ -24,16 +24,9 @@ from app.core.telemetry import (
     reset_correlation_id,
     set_correlation_id,
 )
-from app.main import app
-from tests.component.auth_helpers import register_and_login
+from app.main import app, create_app
 
 pytestmark = pytest.mark.asyncio
-
-_EMAIL = "envelope@example.com"
-
-
-async def _register(client: httpx.AsyncClient, email: str = _EMAIL) -> None:
-    await register_and_login(client, email)
 
 
 def _assert_envelope(body: dict, *, code: str, retryable: bool) -> None:
@@ -60,14 +53,18 @@ async def test_unknown_route_404_uses_envelope(client: httpx.AsyncClient) -> Non
     _assert_envelope(body, code="not_found", retryable=False)
 
 
-async def test_legacy_http_exception_router_normalized_by_shim(
-    client: httpx.AsyncClient,
-) -> None:
-    """Unmigrated router authorization keeps its normalized envelope."""
-    invalid = await client.post(
-        f"/api/v1/projects/{uuid.uuid4()}/commerce/competitors/discover",
-        json={"targets": [{"kind": "product", "id": str(uuid.uuid4())}]},
-    )
+async def test_legacy_http_exception_router_normalized_by_shim() -> None:
+    """The retained HTTP exception handler preserves a normalized envelope."""
+    local = create_app()
+
+    @local.post("/api/v1/envelope-probe")
+    async def probe() -> None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=local), base_url="http://testserver"
+    ) as client:
+        invalid = await client.post("/api/v1/envelope-probe")
     assert invalid.status_code == 401
     body = invalid.json()
     assert isinstance(body["detail"], str)  # legacy string detail preserved
@@ -75,13 +72,18 @@ async def test_legacy_http_exception_router_normalized_by_shim(
     assert body["error"]["message"] == body["detail"]
 
 
-async def test_request_validation_error_envelope(client: httpx.AsyncClient) -> None:
+async def test_request_validation_error_envelope() -> None:
     """FastAPI's 422 array normalizes into sanitized field-level details."""
-    await _register(client, "env-validation@example.com")
-    resp = await client.post(
-        "/api/v1/projects/not-a-uuid/commerce/competitors/discover",
-        json={"targets": [{"kind": "product", "id": str(uuid.uuid4())}]},
-    )
+    local = create_app()
+
+    @local.post("/api/v1/envelope-probe/{project_id}")
+    async def probe(project_id: uuid.UUID) -> dict[str, str]:
+        return {"id": str(project_id)}
+
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=local), base_url="http://testserver"
+    ) as client:
+        resp = await client.post("/api/v1/envelope-probe/not-a-uuid")
     assert resp.status_code == 422
     body = resp.json()
     # ``detail`` is now a human string, not the raw validation array.

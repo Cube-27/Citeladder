@@ -8,13 +8,11 @@ dependencies = [
   "argon2-cffi>=25.1.0,<26",
   "asyncpg>=0.30.0,<1",
   "cryptography>=50.0.0,<51",
-  "curl-cffi>=0.11,<1",
   "email-validator>=2.3.0,<3",
   "fastapi>=0.116.0,<1",
   "httpx>=0.28.1,<1",
   "joserfc>=1.6.8,<2",
   "logfire[fastapi,httpx,sqlalchemy,system-metrics]>=4.20.0,<6",
-  "lxml>=6.1.0,<7",
   # Imported directly by ~30 modules but declared nowhere until the `deptry`
   # gate found it: both arrived only because FastAPI/pydantic-settings happened
   # to pull them in, so a FastAPI bump narrowing either range would have broken
@@ -48,7 +46,6 @@ dev = [
   "deptry>=0.20,<1",
   "import-linter>=2.0,<3",
   "jsonschema>=4.26.0,<5",
-  "lxml-stubs>=0.5.1,<1",
   "mypy>=2.3.0,<3",
   "pytest>=9.0.3,<10",
   "pytest-asyncio>=1.1.0,<2",

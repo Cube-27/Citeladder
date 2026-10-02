@@ -2,15 +2,18 @@
  * The TypeScript analytics worker: claims the kinds `core/config/analytics.py`
  * assigns to TypeScript and runs each through its executor.
  *
- * Mirrors `app/workers/analytics_worker.py` on the queue lifecycle: the claim
+ * Owns the analytics queue lifecycle: the claim
  * commits before any work, a row already terminal at claim time is never
  * dispatched, the lease is marked running and heartbeated while the executor
  * runs, and one locked finalize per dispatch is the only terminal writer. It
  * re-checks owner and status (a lost lease or a terminal row writes nothing)
- * and counts the attempt exactly once. The Python sweeper still reclaims
- * expired leases for every kind.
+ * and counts the attempt exactly once. Bounded lease recovery and durable
+ * terminal compensation run before every claim, including an empty drain.
  */
 import { randomBytes } from 'node:crypto';
+import { sql } from 'kysely';
+import { recoverAnalyticsLeases } from '../queue/analytics-recovery.ts';
+import { competitorDiscovery } from '../commerce/discovery.ts';
 import { compensateTerminalTasks } from './terminal-compensation.ts';
 import { waitForPoll } from './poll.ts';
 
@@ -22,7 +25,12 @@ import { classifyReferrals } from '../referrals/classify.ts';
 import { ingestReferrals } from '../referrals/ingest.ts';
 import { referralRetentionSweep } from '../referrals/retention.ts';
 import { refreshAiReferralsSnapshot } from '../referrals/snapshot.ts';
-import { TaskCancelledError, type Executor } from './executor.ts';
+import {
+  TaskCancelledError,
+  TerminalExecutorError,
+  type Executor,
+  type TaskSettlement,
+} from './executor.ts';
 import { projectPerformanceRange, refreshTrafficSnapshot } from '../traffic/snapshot.ts';
 import { recomputeDemand } from '../demand/snapshot.ts';
 import { refreshOpportunities } from '../opportunities/refresh.ts';
@@ -39,6 +47,7 @@ const ERROR_DETAIL_LIMIT = 2000;
 
 /** Kind dispatch: exactly the kinds TypeScript owns. */
 export const EXECUTORS: Readonly<Record<string, Executor>> = {
+  commerce_competitor_discovery: competitorDiscovery(),
   search_intelligence_acquisition: acquireResearch,
   source_page_inspection: sourcePageInspector(),
   internal_link_judgment: internalLinkJudge(),
@@ -59,6 +68,40 @@ export const EXECUTORS: Readonly<Record<string, Executor>> = {
 class ExecutorNotWiredError extends Error {}
 
 const detail = (error: Error) => [...String(error.message)].slice(0, ERROR_DETAIL_LIMIT).join('');
+
+function taskOutcome(
+  error: Error | null,
+  attempt: number,
+  maxAttempts: number,
+  now: Date,
+  retryDelaySeconds: number,
+) {
+  if (error === null)
+    return { status: statuses.succeeded, completed_at: now, error_code: '', error_detail: '' };
+  if (error instanceof ExecutorNotWiredError || error instanceof TerminalExecutorError)
+    return {
+      status: statuses.failed,
+      completed_at: now,
+      error_code:
+        error instanceof TerminalExecutorError
+          ? error.code
+          : policy.analytics.executor_not_wired_error,
+      error_detail: detail(error),
+    };
+  if (attempt < maxAttempts)
+    return {
+      status: statuses.retry_wait,
+      available_at: new Date(now.getTime() + retryDelaySeconds * 1000),
+      error_code: policy.analytics.retry_error,
+      error_detail: detail(error),
+    };
+  return {
+    status: statuses.failed,
+    completed_at: now,
+    error_code: policy.task_queue.max_attempts_error,
+    error_detail: detail(error),
+  };
+}
 
 export class AnalyticsWorker {
   readonly owner: string;
@@ -81,6 +124,7 @@ export class AnalyticsWorker {
 
   /** Claim one row of a TypeScript-owned kind and run it; the count run. */
   async runOnce(): Promise<number> {
+    await recoverAnalyticsLeases(this.#db, this.#settings.leaseReclaimBatchSize);
     // Compensation is secondary: its failure must not block claiming new work.
     await compensateTerminalTasks(this.#db).catch((error: unknown) =>
       logger.exception('analytics_terminal_compensation_failed', error),
@@ -94,9 +138,11 @@ export class AnalyticsWorker {
   }
 
   /** Drain until a claim returns nothing (tests and one-shot runs). */
-  async runUntilIdle(maxBatches = 1000): Promise<number> {
+  async runUntilIdle(maxBatches = 1000, signal?: AbortSignal): Promise<number> {
     let total = 0;
+    const deadline = performance.now() + this.#settings.drainBudgetSeconds * 1000;
     for (let batch = 0; batch < maxBatches; batch += 1) {
+      if (signal?.aborted || performance.now() >= deadline) break;
       const ran = await this.runOnce();
       if (ran === 0) break;
       total += ran;
@@ -122,29 +168,35 @@ export class AnalyticsWorker {
   }
 
   async #execute(claimed: QueueTask): Promise<void> {
+    let started = false;
     try {
       // Cooperative cancel at the boundary: a row that turned terminal between
       // enqueue and claim is never dispatched.
       if (await this.#queue.isTerminal(claimed.id)) return;
-      if (!(await this.#queue.markRunning(claimed.id, this.owner))) return;
-      await this.#finalize(claimed.id, await this.#run(claimed));
+      if (!(await this.#queue.markRunning(claimed.id, this.owner, claimed.attempt_count))) return;
+      started = true;
+      await this.#finalize(claimed, await this.#run(claimed));
     } catch (error) {
       logger.exception('analytics_task_crashed', error, { task_id: claimed.id });
-      await this.#finalize(claimed.id, error as Error).catch(() => undefined);
+      // A failed transition leaves a leased claim for recovery; no executor
+      // attempt or partial publication occurred.
+      if (started) await this.#finalize(claimed, error as Error).catch(() => undefined);
     }
   }
 
   /** Run the executor under a heartbeat; the error it raised, if any. */
-  async #run(claimed: QueueTask): Promise<Error | null> {
+  async #run(claimed: QueueTask): Promise<Error | TaskSettlement | null> {
     const executor = Object.hasOwn(this.#executors, claimed.task_kind)
       ? this.#executors[claimed.task_kind]
       : undefined;
     const heartbeat = setInterval(
       () => {
-        this.#queue.heartbeat(claimed.id, this.owner).catch((error: unknown) => {
-          // A dead heartbeat silently expires the lease; keep beating instead.
-          logger.exception('analytics_heartbeat_failed', error, { task_id: claimed.id });
-        });
+        this.#queue
+          .heartbeat(claimed.id, this.owner, claimed.attempt_count)
+          .catch((error: unknown) => {
+            // A dead heartbeat silently expires the lease; keep beating instead.
+            logger.exception('analytics_heartbeat_failed', error, { task_id: claimed.id });
+          });
       },
       Math.max(1, this.#settings.heartbeatIntervalSeconds) * 1000,
     );
@@ -154,7 +206,7 @@ export class AnalyticsWorker {
           `analytics task kind '${claimed.task_kind}' has no registered executor`,
         );
       }
-      await executor(claimed, {
+      const settlement = await executor(claimed, {
         db: this.#db,
         maxAttempts: this.#settings.taskMaxAttempts,
         checkCancelled: async (boundary) => {
@@ -165,7 +217,7 @@ export class AnalyticsWorker {
           }
         },
       });
-      return null;
+      return settlement ?? null;
     } catch (error) {
       return error instanceof Error ? error : new Error(String(error));
     } finally {
@@ -174,43 +226,33 @@ export class AnalyticsWorker {
   }
 
   /** The one locked terminal write per dispatch. */
-  #finalize(taskId: string, error: Error | null): Promise<boolean> {
+  #finalize(claimed: QueueTask, result: Error | TaskSettlement | null): Promise<boolean> {
+    const taskId = claimed.id;
     return this.#db.transaction().execute(async (trx) => {
       const row = await trx
         .selectFrom('analytics_tasks')
         .select(['lease_owner', 'status', 'attempt_count', 'max_attempts'])
         .where('id', '=', taskId)
+        .where('workspace_id', '=', claimed.workspace_id)
+        .where('project_id', claimed.project_id === null ? 'is' : '=', claimed.project_id)
+        .where('attempt_count', '=', claimed.attempt_count)
+        .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
         .forUpdate()
         .executeTakeFirst();
       if (row === undefined || row.lease_owner !== this.owner || terminal.includes(row.status)) {
         return false;
       }
       const now = new Date();
+      const error = result === null || result instanceof Error ? result : result.error;
+      if (result !== null && !(result instanceof Error)) await result.persist(trx);
       const attempt = row.attempt_count + 1;
-      const outcome =
-        error === null
-          ? { status: statuses.succeeded, completed_at: now, error_code: '', error_detail: '' }
-          : error instanceof ExecutorNotWiredError
-            ? {
-                // Permanent until a deploy: terminal without spending retries.
-                status: statuses.failed,
-                completed_at: now,
-                error_code: policy.analytics.executor_not_wired_error,
-                error_detail: detail(error),
-              }
-            : attempt < row.max_attempts
-              ? {
-                  status: statuses.retry_wait,
-                  available_at: new Date(now.getTime() + this.#settings.retryDelaySeconds * 1000),
-                  error_code: policy.analytics.retry_error,
-                  error_detail: detail(error),
-                }
-              : {
-                  status: statuses.failed,
-                  completed_at: now,
-                  error_code: policy.task_queue.max_attempts_error,
-                  error_detail: detail(error),
-                };
+      const outcome = taskOutcome(
+        error,
+        attempt,
+        row.max_attempts,
+        now,
+        this.#settings.retryDelaySeconds,
+      );
       await trx
         .updateTable('analytics_tasks')
         .set({

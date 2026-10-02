@@ -268,30 +268,9 @@ services:
     healthcheck:
       disable: true
 
-  # Analytics worker: claims analytics_tasks queue rows and runs the
-  # registered per-kind projection executor (no network I/O — invariant 7).
-  analytics-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["python", "-m", "app.workers.analytics_worker"]
-    healthcheck:
-      disable: true
-
-  # Queue sweeper: reclaims expired leases across EVERY queue. Each worker
-  # already sweeps its own queue, but a worker killed after mark_running
-  # leaves its row at `running` with nothing alive to reclaim it -- which
-  # surfaced as a Commerce discovery that polled "running" forever. Owns no
-  # queue and runs no executors, so it is safe to run beside the workers.
+  # Python queue sweeper: reclaims brand-discovery and integration leases.
+  # TypeScript analytics, Agent and Site Health workers recover their own
+  # expired leases on the next poll. The sweeper runs no executors.
   queue-sweeper:
     build:
       context: .
@@ -384,8 +363,7 @@ services:
 
   # TypeScript analytics worker (TypeScript migration PR 4): the API service
   # image running another command. It claims the analytics task kinds
-  # core/config/analytics.py assigns to TypeScript; analytics-worker claims
-  # the rest, and queue-sweeper still expires leases for every kind.
+  # core/config/analytics.py assigns to TypeScript and recovers their leases.
   analytics-worker-ts:
     build:
       context: .
