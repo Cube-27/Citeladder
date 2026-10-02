@@ -111,6 +111,11 @@ and persisted identity defaults. The native Agent catalog parses packaged
 Markdown; Python no longer parses those model inputs. Opportunity reads preserve
 frozen format identifiers, including identifiers retired from the current
 catalog. Queue execution bounds are native; schema status vocabulary remains shared.
+Billing checkout, reconciliation, webhook policy and provider-display composition
+are native. Python retains seller/tax configuration, catalog identities and
+read-only Razorpay credentials for catalog authoring, provisioning and bootstrap.
+Entitlement registry/algebra, operator grants and account-capacity locks stay
+shared; no exported section remains solely for a native runtime consumer.
 Do not introduce Redis without measured need.
 
 Backend schemas own the wire contract. Coordinate frontend schemas and API

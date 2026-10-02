@@ -104,6 +104,11 @@ Native-only policy lives in TypeScript config. Shared Python policy reaches the
 service through a generated, drift-checked export. Site Health catalogs and
 worker policy are native; Python retains its model defaults, terminal statuses
 and supported operator/entitlement allowance settings.
+Checkout execution, provider request policy, auth HTTP settings and packaged
+Agent parsing are native. The retained export carries model defaults and
+provenance, frozen provider routes/catalogs, security, role and entitlement
+registries, plus settings used by bootstrap and supported operators. Billing
+tax/catalog authoring and read-only plan verification remain Python consumers.
 The auth and workspace HTTP families
 are TypeScript-owned, including session issuance, Google identity sign-in,
 membership/invitation mutations, policy acceptance and product-tour state.

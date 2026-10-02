@@ -1,6 +1,6 @@
 # Payment provider readiness
 
-Runtime owner updated on 30 September 2026; provider acceptance is unchanged.
+Runtime/configuration owner updated on 2 October 2026; provider acceptance is unchanged.
 
 **Payments are not enabled.** `BILLING_CHECKOUT_ENABLED` and
 `BILLING_RAZORPAY_LIVE_READY` are false and no real payment has been taken.
@@ -33,14 +33,16 @@ is evidence that money can be taken correctly.
 | Uncertain creation is recovered without another create request | `src/billing/recovery.ts` | `billing.test.ts` |
 | Quote signing uses an independent secret with no gateway fallback | `src/billing/razorpay.ts` | `billing-boundaries.test.ts` |
 
-Paths above are relative to `frontend/services/api/`. Python config remains
-the exported policy authority; Python catalog/operator administration and
-worker metering bridges remain until their assigned migrations. Public pricing
+Paths above are relative to `frontend/services/api/`. Native config owns billing
+execution policy. Python retains shared tax/catalog inputs, operator credentials
+and catalog administration; it has no metering worker bridge. Public pricing
 and billing reads consume persisted state without provider calls.
 
 ## Configuration
 
-Shared, provider-independent (`core/config/billing_settings.py`):
+Provider-independent execution policy (`frontend/services/api/src/config/billing.json`),
+composed with shared tax/seller and operator settings from
+`backend/app/core/config/billing_settings.py`:
 
 - `BILLING_CHECKOUT_ENABLED` — the operational kill switch.
 - `BILLING_CHECKOUT_PROVIDER` — which provider identity admits NEW checkout.
@@ -54,13 +56,14 @@ Shared, provider-independent (`core/config/billing_settings.py`):
 Commercial terms (prices, grants, add-ons, top-ups, support contact) are never
 environment settings: they live in the published `BillingCatalogRevision`.
 
-Razorpay-owned (`core/config/razorpay_settings.py`): `BILLING_RAZORPAY_MODE`,
+Razorpay-owned (native `config/billing.json` and shared operator credentials in
+`backend/app/core/config/razorpay_settings.py`): `BILLING_RAZORPAY_MODE`,
 `BILLING_RAZORPAY_KEY_ID`, `BILLING_RAZORPAY_KEY_SECRET`,
 `BILLING_RAZORPAY_WEBHOOK_SECRET`, the readiness flags and the fixed API origin.
 
 ## Adding another provider
 
-1. Write its settings module beside `razorpay_settings.py`, keeping its
+1. Add its native settings under `src/config/`, keeping its
    variable names its own.
 2. Implement its TypeScript `BillingProvider` operations, webhook authentication
    and checkout signature verification under `src/billing/`.

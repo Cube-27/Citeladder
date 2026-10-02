@@ -71,8 +71,13 @@
   complete production startup admission (#234). 20e retires Python web, its
   unused dependencies and the empty OpenAPI drift bridge (#235). 20f transfers
   Commerce and audit-scheduler runtime policy, retaining shared model defaults
-  and versions. Further field-level
-  policy transfer and bridge retirement remain.
+  and versions. PR20g–n complete the error vocabulary, acquisition retirement,
+  Site Health, Agent/gateway, connected-data, audit/provider, auth/identity and
+  billing policy transfers. Remaining Python configuration serves schema defaults
+  and provenance, security, role/entitlement registries, frozen provider catalogs
+  and supported operators/bootstrap. Unused fixture/exporter/suggestion bridges
+  and dependencies are retired. PR20 implementation is complete; PR21–24 remain
+  separate hosting work and are not started by this assignment.
   Deployment of implemented cutovers is pending; the owner dropped the
   one-week soak while there are no customers (smoke tests instead). On
   1 October 2026 the owner accepted a low-cost hosting phase (PRs 21–24:

@@ -185,7 +185,7 @@ total.
 | 18 | Site Health and source-page inspection | High | Done; 18b5b (#224), 18b5c (#225) merged |
 | 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a merged (#226); 19b adapters, activation and retirement implemented; PR validation pending |
 | 19c | Commerce competitor discovery and remaining acquisition bridges | High | Implemented 2 October 2026; deployment pending |
-| 20 | Consolidation and policy transfer | Medium | 20a–g merged; test-only acquisition retirement implemented; further policy transfer in progress |
+| 20 | Consolidation and policy transfer | Medium | Implemented through 20n; native runtime policy and dead bridges retired, shared model/operator inputs retained |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
 | 23 | Database move and HTTP cutover (section 9) | High | Proposed |
@@ -1386,9 +1386,27 @@ grouping. Shared queue vocabulary
 continues to serve schema indexes and operator seeds. Billing policy cleanup
 and the final remaining-consumer sweep remain open.
 
+**20n.** Finish billing policy transfer field by field: native config owns
+checkout, webhook/reconciliation settings and runtime commercial vocabularies;
+native provider display composes the shared public catalog and frozen routes.
+Retain Python's tax/seller configuration, fixed-origin operator credentials,
+catalog authoring identities and entitlement registry/algebra. Retire the
+provider-display builder, unused Razorpay webhook/readiness methods, generic
+constant exporter, unreferenced suggestion config and four uncalled billing/
+Commerce fixture helpers. Contact-link admission has native coverage; seller,
+catalog publication and read-only plan verification retain Python coverage.
+Remove unused `email-validator`, its `dnspython` dependency and stale exemption.
+
+PR20 implementation is complete. The remaining export is a drift-checked bridge
+for real schema defaults/provenance, security, role/entitlement registries,
+provider route/catalog identities and supported operator/bootstrap settings.
+Packaged Agent Markdown stays in its existing directory and image contract.
+No Python HTTP or executing worker remains; dependencies have no retired-reader
+exemptions. Hosting PR21–24 and deployment/provider acceptance remain separate.
+
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
-> Python keeps the schema (models and Alembic), any policy not yet transferred,
-> and supported offline operators/bootstrap. Queue recovery is native; Python
+> Python keeps the schema (models and Alembic), genuinely shared model/operator
+> policy and supported offline operators/bootstrap. Queue recovery is native; Python
 > has no HTTP or executing worker process.
 
 ## 7. Values both stacks read
