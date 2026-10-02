@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { drainLanes, tickAndDrain } from '../src/workers/runner.ts';
+import { drainLanes, exclusiveDrain, tickAndDrain } from '../src/workers/runner.ts';
+import { testConfig, testDatabase } from './support.ts';
 import { executionSettings } from '../src/config/execution.ts';
 import { runnerStarter } from '../src/workers/start-runner.ts';
 import { loadConfig } from '../src/config.ts';
@@ -241,4 +242,38 @@ it('refuses arbitrary credential destinations, unbounded pools and unprotected C
   expect(() => executionSettings({ RUNNER_BUDGET_SECONDS: '0' })).toThrow();
   expect(() => executionSettings({ K_SERVICE: 'api' })).toThrow();
   expect(() => executionSettings({ CITELADDER_ORIGIN_TOKEN_PREVIOUS: 'a'.repeat(32) })).toThrow();
+});
+
+describe('exclusive drain on PostgreSQL', () => {
+  it('admits one drain at a time and lets a later execution take over once it ends', async () => {
+    const config = testConfig();
+    const first = testDatabase(config);
+    const second = testDatabase(config);
+    try {
+      const live = { signal: new AbortController().signal, deadline: Number.POSITIVE_INFINITY };
+      const holding = Promise.withResolvers<void>();
+      const started = Promise.withResolvers<void>();
+      const active = exclusiveDrain(
+        first,
+        live,
+        0,
+      )(async () => {
+        started.resolve();
+        await holding.promise;
+        return 3;
+      });
+      await started.promise;
+      const blocked = vi.fn(async () => 1);
+      // A concurrent execution gives up without draining while the lock is held.
+      expect(await exclusiveDrain(second, live, 300)(blocked)).toBe(0);
+      expect(blocked).not.toHaveBeenCalled();
+      // A waiting execution proceeds as soon as the active drain releases.
+      const waiting = exclusiveDrain(second, live, 5_000)(async () => 2);
+      holding.resolve();
+      expect(await active).toBe(3);
+      expect(await waiting).toBe(2);
+    } finally {
+      await Promise.all([first.destroy(), second.destroy()]);
+    }
+  });
 });

@@ -15,6 +15,7 @@ describe('Worker origin transport', () => {
       expect(request.headers.get('x-citeladder-origin-token')).toBe(config.originToken);
       expect(request.headers.get('x-citeladder-public-host')).toBe(config.publicHost);
       expect(request.headers.get('x-forwarded-host')).toBeNull();
+      expect(request.headers.get('x-citeladder-client-ip')).toBe('203.0.113.7');
       expect(request.headers.get('origin')).toBe('https://app.citeladder.com');
       const headers = new Headers();
       headers.append('Set-Cookie', 'first=1; HttpOnly');
@@ -27,6 +28,8 @@ describe('Worker origin transport', () => {
         Origin: 'https://app.citeladder.com',
         'X-Forwarded-Host': 'attacker.example',
         'X-CiteLadder-Origin-Token': 'spoof',
+        'X-CiteLadder-Client-IP': '198.51.100.1',
+        'CF-Connecting-IP': '203.0.113.7',
       },
     });
     const response = await proxyWorkerRequest(request, config, transport);

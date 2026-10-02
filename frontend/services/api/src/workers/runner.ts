@@ -1,4 +1,6 @@
 import { randomInt, randomUUID } from 'node:crypto';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { sql } from 'kysely';
 import {
   configEnvironment,
   loadWorkerSettings,
@@ -69,6 +71,49 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
   return tasks;
 }
 
+export type Exclusive = (drain: () => Promise<number>) => Promise<number>;
+
+// hashtextextended('citeladder-runner-drain', 0): one drain per database at a time.
+const DRAIN_LOCK = 'citeladder-runner-drain';
+
+/**
+ * Each committed write may start an execution; without this a burst would open
+ * one pool per execution against the small database. A second execution waits
+ * briefly, then leaves the work to the active drain, which revisits every lane
+ * until idle. Tick recovers the rare start that lands after that final pass.
+ */
+export function exclusiveDrain(
+  db: Database,
+  options: Pick<DrainOptions, 'signal' | 'deadline' | 'now'>,
+  waitMs: number,
+): Exclusive {
+  const now = options.now ?? (() => performance.now());
+  return (drain) =>
+    db.connection().execute(async (connection) => {
+      const until = Math.min(now() + waitMs, options.deadline);
+      for (;;) {
+        const { rows } = await sql<{
+          locked: boolean;
+        }>`select pg_try_advisory_lock(hashtextextended(${DRAIN_LOCK}, 0)) as locked`.execute(
+          connection,
+        );
+        if (rows[0]?.locked) break;
+        if (options.signal.aborted || now() >= until) {
+          getLogger('workers.runner').info('runner_drain_active_elsewhere');
+          return 0;
+        }
+        await sleep(250, undefined, { signal: options.signal }).catch(() => undefined);
+      }
+      try {
+        return await drain();
+      } finally {
+        await sql`select pg_advisory_unlock(hashtextextended(${DRAIN_LOCK}, 0))`.execute(
+          connection,
+        );
+      }
+    });
+}
+
 export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = configEnvironment(config);
   const runtime = auditRuntime(env);
@@ -127,6 +172,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
 export async function tickAndDrain(
   owners: { lanes: RunnerLane[]; periodic: RunnerLane[] },
   options: DrainOptions,
+  exclusive: Exclusive = (drain) => drain(),
 ) {
   const failures: unknown[] = [];
   const now = options.now ?? (() => performance.now());
@@ -142,7 +188,7 @@ export async function tickAndDrain(
   }
   let tasks = 0;
   try {
-    tasks = await drainLanes(owners.lanes, options);
+    tasks = await exclusive(() => drainLanes(owners.lanes, options));
   } catch (error) {
     failures.push(error);
   }
