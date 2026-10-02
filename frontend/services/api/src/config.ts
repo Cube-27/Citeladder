@@ -24,6 +24,7 @@ import costs from './config/costs.json' with { type: 'json' };
 import brandIdentity from './config/brand-identity.json' with { type: 'json' };
 import workspaceRuntime from './config/workspaces.json' with { type: 'json' };
 import authRuntime from './config/auth-runtime.json' with { type: 'json' };
+import queue from './config/queue.json' with { type: 'json' };
 import { integrations, traffic, analytics, referrals, authOAuth } from './config/connected-data.ts';
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
@@ -69,6 +70,7 @@ type SettingSpec = {
 
 export const policy = {
   ...pythonConfig,
+  task_queue: { ...pythonConfig.task_queue, ...queue },
   api,
   settings: { ...pythonConfig.settings, ...integrationCredentials, ...authRuntime.settings },
   integrations,

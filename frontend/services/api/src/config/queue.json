@@ -1,0 +1,4 @@
+{
+  "max_attempts_error": "max_attempts_exceeded",
+  "max_drain_batches": 1000
+}

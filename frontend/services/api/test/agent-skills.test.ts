@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { agentSkillSchema } from '@citeladder/contracts/agent';
 import { agentSettings } from '../src/agent/config.ts';
 import { loadSkillCatalog } from '../src/agent/skills.ts';
+import { contentFormatIds } from '../src/config/skill-inputs.ts';
 
 describe('packaged Agent model inputs', () => {
   const root = agentSettings({}).skillsDirectory;
@@ -27,6 +28,14 @@ describe('packaged Agent model inputs', () => {
       const first = await loadSkillCatalog(
         agentSettings({ AGENT_SKILLS_DIRECTORY: temporary }).skillsDirectory,
       );
+      await appendFile(
+        join(temporary, 'content_formats.md'),
+        '\n## briefing — Briefing\nA bounded briefing.\n',
+      );
+      const changed = await loadSkillCatalog(temporary);
+      expect(contentFormatIds(temporary)).toEqual([...changed.formats.keys()]);
+      expect(changed.formats.has('briefing')).toBe(true);
+      expect(changed.version).not.toBe(first.version);
       await appendFile(join(temporary, 'operating_contract.md'), '\nNew operating constraint.\n');
       expect((await loadSkillCatalog(temporary)).version).not.toBe(first.version);
       const skillPath = join(temporary, 'skills/content_create/SKILL.md');

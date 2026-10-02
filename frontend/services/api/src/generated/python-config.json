@@ -320,9 +320,7 @@
       "cancelled",
       "failed",
       "succeeded"
-    ],
-    "max_attempts_error": "max_attempts_exceeded",
-    "max_drain_batches": 1000
+    ]
   },
   "referrals": {
     "rule_version": "ai-referral-rules-1",
@@ -604,29 +602,7 @@
         "partially_completed",
         "cancelled"
       ],
-      "crawl_status_completed": "completed",
-      "content_format_ids": [
-        "content_page",
-        "product_page",
-        "category_page",
-        "about_us",
-        "article",
-        "blog",
-        "faq",
-        "glossary_term",
-        "listicle",
-        "case_study",
-        "comparison",
-        "content_refresh",
-        "youtube",
-        "tiktok",
-        "linkedin",
-        "x",
-        "instagram",
-        "reddit",
-        "newsletter",
-        "original_research"
-      ]
+      "crawl_status_completed": "completed"
     }
   },
   "search_intelligence": {

@@ -12,12 +12,15 @@ import {
 } from '@citeladder/contracts/opportunities';
 import { sql } from 'kysely';
 
-import { policy } from '../config.ts';
+import { policy, resolveSettingSpec } from '../config.ts';
+import { contentFormatIds } from '../config/skill-inputs.ts';
 import { isoUtc, isoUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
 import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 
-const r = policy.opportunity.refresh;
+const formats = contentFormatIds(
+  String(resolveSettingSpec(policy.models.gateway.skills_directory)),
+);
 
 /** One `opportunities` row with its timestamps as `utcText`. */
 export type OpportunityRow = {
@@ -208,7 +211,7 @@ function projectContentHandoff(row: OpportunityRow): Record<string, unknown> {
     ...defaultHandoff(row),
     ...persisted,
     opportunity_id: row.id,
-    suggested_skill_id: r.content_format_ids.includes(skill) ? skill : DEFAULT_FORMAT,
+    suggested_skill_id: formats.includes(skill) ? skill : DEFAULT_FORMAT,
     snapshot_versions: versions,
   };
 }

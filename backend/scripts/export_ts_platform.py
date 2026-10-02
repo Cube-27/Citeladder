@@ -55,8 +55,6 @@ from app.core.config.provider_catalog import (
 )
 from app.core.config.site_health_page_kinds import PAGE_KIND_OTHER
 from app.core.config.task_queue import (
-    DEFAULT_MAX_DRAIN_BATCHES,
-    ERROR_MAX_ATTEMPTS,
     TASK_ACTIVE_STATUSES,
     TASK_CLAIMABLE_STATUSES,
     TASK_STATUS_CANCELLED,
@@ -261,8 +259,6 @@ def _task_queue_policy() -> dict[str, Any]:
         "claimable": sorted(TASK_CLAIMABLE_STATUSES),
         "active": sorted(TASK_ACTIVE_STATUSES),
         "terminal": sorted(TASK_TERMINAL_STATUSES),
-        "max_attempts_error": ERROR_MAX_ATTEMPTS,
-        "max_drain_batches": DEFAULT_MAX_DRAIN_BATCHES,
     }
 
 
