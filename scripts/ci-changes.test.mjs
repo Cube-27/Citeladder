@@ -161,6 +161,8 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
     'frontend/pnpm-lock.yaml',
     'frontend/apps/app/vite.config.ts',
     'frontend/apps/marketing/astro.config.mjs',
+    'frontend/apps/docs/astro.config.mjs',
+    'frontend/lib/server/worker-origin-proxy.ts',
     'scripts/frontend-ingress-smoke.mjs',
     '.github/workflows/compose-smoke.yml',
   ]) {

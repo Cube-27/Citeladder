@@ -126,7 +126,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    command: ["/bin/sh", "-c", "while :; do node src/tick.ts; sleep 10; done"]
+    # A failing tick ends the loop, so Compose restarts and surfaces it.
+    command: ["/bin/sh", "-c", "while node src/tick.ts; do sleep 10; done"]
     healthcheck:
       disable: true
 

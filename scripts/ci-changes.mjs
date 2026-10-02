@@ -165,7 +165,10 @@ function isComposeSensitive(path) {
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
     path.startsWith('frontend/apps/app/') ||
+    path.startsWith('frontend/apps/docs/') ||
     path.startsWith('frontend/apps/marketing/') ||
+    // Shared server code, including the Worker origin proxy the stack runs.
+    path.startsWith('frontend/lib/') ||
     // Only Compose boots the API service's real entry point on its image.
     path.startsWith('frontend/services/')
   );

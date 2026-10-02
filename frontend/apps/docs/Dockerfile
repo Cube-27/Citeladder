@@ -30,6 +30,8 @@ FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c
 
 ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false
 WORKDIR /app
+# Wrangler keeps its local state under the working directory.
+RUN chown node:node /app
 
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/package.json ./
