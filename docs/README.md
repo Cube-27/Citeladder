@@ -41,6 +41,8 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 - [API errors](api-error-contract.md): cross-stack error contract.
 - [Development](DEVELOPMENT.md): setup, isolation and validation commands.
 - [Review](../Review.md): compact review procedure.
+- [Audit prompts](prompts/README.md): reusable read-only audit prompts for
+  periodic runs with fast models.
 
 ## Work and decisions
 

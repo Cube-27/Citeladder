@@ -45,6 +45,11 @@ read_password() {
     tr -d '\n ' | sed -n 's/.*"data":"\([^"]*\)".*/\1/p' | base64 -d > "$config/db-password.new"
   [[ -s "$config/db-password.new" ]]
 }
+# The COS host firewall drops inbound traffic other than SSH. PostgreSQL uses
+# host networking, so open its port on the private address only.
+iptables -C INPUT -p tcp -d '${db_address}' --dport 5432 -j ACCEPT 2>/dev/null ||
+  iptables -I INPUT 1 -p tcp -d '${db_address}' --dport 5432 -j ACCEPT
+
 umask 077
 retry read_password
 mv "$config/db-password.new" "$config/db-password"

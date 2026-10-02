@@ -1,0 +1,108 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+artifacts/
+.artifacts/
+**/.terraform/
+
+# Env / secrets
+.env
+# Logfire CLI credentials: contains a project write token.
+.logfire/
+*.env
+!.env.example
+
+# Node / frontend (F1+)
+node_modules/
+/.playwright/
+frontend/.playwright-cli/
+frontend/apps/app/.wrangler/
+frontend/apps/app/.dev.vars*
+frontend/apps/marketing/.wrangler/
+frontend/apps/marketing/.dev.vars*
+frontend/apps/docs/.wrangler/
+frontend/.wrangler/
+frontend/apps/docs/.astro/
+frontend/apps/docs/dist/
+frontend/apps/docs/public/fonts/
+frontend/apps/docs/public/citeladder-logo.svg
+frontend/apps/docs/public/citeladder-favicon.ico
+/.playwright-cli/
+
+# The root package.json only delegates to frontend/ and backend/; it declares
+# no dependencies. pnpm still materializes an empty project there on any root
+# `pnpm run`, and a second lockfile at the repository root would move the
+# workspace root that frontend tooling infers. frontend/pnpm-lock.yaml
+# (not anchored here) stays tracked.
+/pnpm-lock.yaml
+
+# Local measurement sweep output (committed artifacts live in
+# backend/docs/measurements/ instead)
+backend/var/measurements/
+
+# OS
+.DS_Store
+
+# Local screenshot/debug scratch scripts and their output
+frontend/.*.mjs
+frontend/.*.png
+.runtime/
+backend/.runtime/
+
+# Coverage artifacts (measured on every run; CI uploads nothing today)
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Playwright CLI saved browser state. These files hold live session cookies
+# and auth tokens. The skill's own examples write `auth.json` and
+# `my-auth-state.json` as well as the `*.auth-state.json` it recommends
+# ignoring, so all three shapes are covered -- a footgun that only bites once.
+auth.json
+*.auth-state.json
+*-auth-state.json
+.auth/
+
+# Coding-agent config. `.claude/settings.json` is shared (it carries the
+# permission rules for the repository's own tooling) and stays tracked; the
+# rest is per-developer — a personal output style, a local launch profile.
+.claude/*
+!.claude/settings.json
+
+# Fonts: pulled from the private Cube-27/cube27-fonts repo by
+# `pnpm fonts:pull`, never committed (some licences forbid redistribution).
+frontend/public/fonts/
+
+# ===== ↑ 以上同步自 .gitignore（「从 .gitignore 同步」只重写以上部分）=====
+.git/
+.hg/
+.svn/
+bower_components/
+jspm_packages/
+site-packages/
+coverage/
+lcov-report/
+cmakefiles/
+cmake-build-*/
+bazel-*/
+pods/
+deriveddata/
+storybook-static/
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+cdk.out/
+*.dist-info/
+eggs/
+pip-wheel-metadata/
+wheels/
+# ----- ↑ 以上为 ZCode 默认排除规则（自定义规则请写在本行下方，不会被同步/恢复改动）-----
+# 自定义规则写在下方（本行提示可删除）
