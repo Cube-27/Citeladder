@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 const expected = {
   name: 'citeladder-marketing',
   domain: 'citeladder.com',
-  upstream: 'https://origin.citeladder.com',
+  upstream: 'https://citeladder-api-44437656491.us-central1.run.app',
   app: 'https://app.citeladder.com',
 };
 
