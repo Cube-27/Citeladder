@@ -225,6 +225,13 @@ same rule to drafted and proposed text.
 
 ## Audit admission and execution
 
+[Audit config](../frontend/services/api/src/config/audits.ts) owns lifecycle,
+scoring and read policy; [provider config](../frontend/services/api/src/config/providers.ts)
+owns transport/capacity policy and [cost config](../frontend/services/api/src/config/costs.json)
+owns versioned pricing and measured envelopes. Python exports only the shared
+route/catalog identities, model defaults, provenance and operator security inputs.
+Provider error bodies do not become public failure details.
+
 The [audit API](../frontend/services/api/src/routes/audits.ts),
 [creation owner](../frontend/services/api/src/audits/creation.ts) and
 [schedule-management owner](../frontend/services/api/src/audits/schedules.ts)

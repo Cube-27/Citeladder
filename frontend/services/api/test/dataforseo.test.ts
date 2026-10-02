@@ -27,6 +27,15 @@ const client = (send: typeof fetch) =>
     send,
   );
 describe('DataForSEO paid submission boundary', () => {
+  it.each(['0', '-1'])(
+    'rejects a nonpositive request timeout %s at configuration admission',
+    (timeout) => {
+      expect(() => searchSettings({ DATAFORSEO_REQUEST_TIMEOUT_SECONDS: timeout })).toThrow();
+    },
+  );
+  it('accepts a positive fractional request timeout', () => {
+    expect(searchSettings({ DATAFORSEO_REQUEST_TIMEOUT_SECONDS: '0.5' }).timeoutSeconds).toBe(0.5);
+  });
   it('submits the exact frozen tag and losslessly escaped query, retaining the accepted charge', async () => {
     const c = client(async (url, options) => {
       expect(url).toBe('https://api.dataforseo.com/v3/serp/google/organic/task_post');

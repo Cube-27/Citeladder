@@ -14,7 +14,6 @@ from app.core.config import (
 )
 from app.core.config.agent_skills import CONTENT_FORMAT_IDS
 from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
-from app.core.config.audits import MEASUREMENT_POLICY_KEY
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_CANCELLED,
     CRAWL_STATUS_COMPLETED,
@@ -67,7 +66,6 @@ def opportunity_policy() -> dict[str, Any]:
                 "SOURCE_PAGE_PRESENCE_VERSION",
             }
         },
-        "measurement_policy_key": MEASUREMENT_POLICY_KEY,
         "refresh": _refresh_policy(),
     }
 

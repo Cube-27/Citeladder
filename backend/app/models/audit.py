@@ -524,7 +524,7 @@ class ExecutionCostProjection(Base):
     an existing one (invariant 3). Every usage/cost field is nullable —
     unknown never becomes zero; only ``projection_status`` summarizes how much
     of the observation is known (``complete | partial | unknown``, vocabulary
-    owned by ``app.core.config.costs``).
+    owned by native ``config/costs.json``).
     """
 
     __tablename__ = "execution_cost_projections"
@@ -683,7 +683,7 @@ class ProviderCapacityBucket(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    # POOL_KIND_* vocabulary (owned by ``app.core.config.audits``).
+    # POOL_KIND_* vocabulary (owned by native ``config/audits.json``).
     pool_kind: Mapped[str] = mapped_column(String(16))
     transport_provider: Mapped[str] = mapped_column(String(32))
     account_pool_identity: Mapped[str] = mapped_column(
@@ -779,7 +779,7 @@ class ProviderCapacityLease(Base):
         index=True,
     )
     attempt_number: Mapped[int] = mapped_column(Integer)
-    # LEASE_KIND_* vocabulary (owned by ``app.core.config.audits``).
+    # LEASE_KIND_* vocabulary (owned by native ``config/audits.json``).
     lease_kind: Mapped[str] = mapped_column(String(16))
     units: Mapped[Decimal] = mapped_column(Numeric(14, 4))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)

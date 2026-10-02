@@ -3,7 +3,6 @@
 from typing import Any
 
 from app.core.config import brand_profile as brand_profile_config
-from app.core.config import observed_competitors as observed_config
 from app.core.config.projects import MAX_PROJECT_COMPETITORS
 
 
@@ -24,6 +23,4 @@ def brand_identity_policy() -> dict[str, Any]:
         ),
         "map_max_exclusions": profile.BUSINESS_MAP_MAX_EXCLUSIONS,
         "max_project_competitors": MAX_PROJECT_COMPETITORS,
-        "suggestion_pending": observed_config.STATUS_PENDING,
-        "suggestion_accepted": observed_config.STATUS_ACCEPTED,
     }

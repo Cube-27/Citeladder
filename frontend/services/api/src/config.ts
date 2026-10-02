@@ -18,6 +18,9 @@ import promptLibrary from './config/prompt-library.json' with { type: 'json' };
 import api from './config/api.json' with { type: 'json' };
 import searchIntelligence from './config/search-intelligence.json' with { type: 'json' };
 import demand from './config/demand.json' with { type: 'json' };
+import { audits, visibility, selectableEngines } from './config/audits.ts';
+import { providers, dataforseo } from './config/providers.ts';
+import costs from './config/costs.json' with { type: 'json' };
 import { integrations, traffic, analytics, referrals, authOAuth } from './config/connected-data.ts';
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
@@ -66,6 +69,8 @@ export const policy = {
   api,
   settings: { ...pythonConfig.settings, ...integrationCredentials },
   integrations,
+  dataforseo,
+  costs,
   analytics,
   referrals,
   auth: { ...pythonConfig.auth, oauth: authOAuth },
@@ -73,25 +78,34 @@ export const policy = {
     ...searchIntelligence,
     ...pythonConfig.search_intelligence,
     task_kind: analytics.tasks.search_intelligence_acquisition,
+    connection_test_ok: providers.test_status_ok,
   },
   demand: {
     ...demand,
     ...pythonConfig.demand,
     query_page_dataset: traffic.DATASET_GSC_QUERY_PAGE_DAILY,
   },
-  visibility: { ...pythonConfig.visibility, ...promptLibrary.cohorts },
-  projects: { ...pythonConfig.projects, prompt_set_name: promptLibrary.prompt_set_name },
+  visibility: { ...visibility, ...promptLibrary.cohorts },
+  projects: {
+    ...pythonConfig.projects,
+    prompt_set_name: promptLibrary.prompt_set_name,
+    min_repetitions: audits.min_repetitions,
+    max_repetitions: audits.max_repetitions,
+    location_codes: dataforseo.constants.location_codes,
+    language_codes: dataforseo.constants.language_codes,
+  },
   errors,
   agent: { ...agentRuntime, ...pythonConfig.agent },
   abuse,
   audit_schedules: {
     ...pythonConfig.audit_schedules,
     ...auditSchedules,
+    selectable_engines: selectableEngines,
     min_interval_minutes: auditSchedules.settings.min_interval_minutes,
   },
   discovery: { ...discovery, industry_library: industryLibrary },
   source_pages: sourcePages,
-  audits: { ...pythonConfig.audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },
+  audits: { ...audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },
   commerce: {
     ...commerce,
     ...pythonConfig.commerce,
@@ -100,6 +114,7 @@ export const policy = {
   },
   opportunity: {
     ...pythonConfig.opportunity,
+    measurement_policy_key: audits.constants.measurement_policy_key,
     declaration: opportunityDeclaration,
     opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
     actions: { ...actions, ...pythonConfig.opportunity.actions },
@@ -122,7 +137,7 @@ export const policy = {
   },
   models: { ...modelGateway, jev, quality },
   workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
-  providers: { ...pythonConfig.providers, app: appModels },
+  providers: { ...providers, app: appModels },
   content_differentiation: {
     ...contentDifferentiation,
     stop_words: demand.stop_words,
@@ -157,6 +172,11 @@ export const policy = {
       ...pythonConfig.prompts.candidate,
       quality_gates_reported: qualityGatesReported,
     },
+  },
+  brand_identity: {
+    ...pythonConfig.brand_identity,
+    suggestion_pending: audits.observed_competitors.status_pending,
+    suggestion_accepted: audits.observed_competitors.status_accepted,
   },
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,
