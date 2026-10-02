@@ -10,6 +10,13 @@ services:
   frontend:
     ports: !override
       - "127.0.0.1:3300:3000"
+  # Keep the parallel stack off the default stack's app and docs ports.
+  vite-app:
+    ports: !override
+      - "127.0.0.1:3301:3001"
+  docs:
+    ports: !override
+      - "127.0.0.1:4332:4322"
   webhook-proxy:
     image: nginx:alpine
     ports:

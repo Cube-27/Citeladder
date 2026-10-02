@@ -24,17 +24,21 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:docs
 
-# Local Compose only: production docs deploy through apps/docs/wrangler.jsonc.
-FROM caddy@sha256:13ba145cba2f3e28fa801994876e4c086d1b95d5aa2a520a734765ffb6b12017 AS runtime
+# Local Compose only: run the same static-assets Worker production deploys
+# (apps/docs/wrangler.jsonc) over the built output.
+FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
 
-COPY frontend/apps/docs/Caddyfile /etc/caddy/Caddyfile
-COPY --from=builder /app/apps/docs/dist /srv
+ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false
+WORKDIR /app
 
-USER 1000:1000
+COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/package.json ./
+COPY --from=builder --chown=node:node /app/apps/docs/wrangler.jsonc ./apps/docs/wrangler.jsonc
+COPY --from=builder --chown=node:node /app/apps/docs/dist ./apps/docs/dist
 
+USER node
 EXPOSE 4322
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --quiet --output-document=- http://127.0.0.1:4322/health >/dev/null || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3   CMD node -e "fetch('http://127.0.0.1:4322/').then(r=>process.exit(r.ok ? 0 : 1)).catch(()=>process.exit(1))"
 
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+CMD ["./node_modules/.bin/wrangler", "dev", "-c", "apps/docs/wrangler.jsonc", "--local", "--ip", "0.0.0.0", "--port", "4322"]

@@ -7,7 +7,7 @@ accumulates fastest and costs a run on every change.
 
 The rule is narrow on purpose. It fires only when an assertion's right-hand
 side is a name bound to the text of a file that *has* a parser -- YAML, JSON,
-TOML, Python. Terraform, shell, and Caddyfile have no parser here, so a
+TOML, Python. Terraform and shell have no parser here, so a
 substring check against those is the honest option and is left alone.
 Assertions against an already-parsed structure are never flagged; they are the
 prescribed alternative.

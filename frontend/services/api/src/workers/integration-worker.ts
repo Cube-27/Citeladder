@@ -18,7 +18,6 @@ import {
   selectedItemDataset,
 } from '../integrations/sync-state.ts';
 import { enqueuePostSyncProjections } from '../integrations/projections.ts';
-import { waitForPoll } from './poll.ts';
 
 const logger = getLogger('workers.integrations');
 const statuses = policy.task_queue.statuses;
@@ -112,17 +111,6 @@ export class IntegrationWorker {
       clearInterval(timer);
     }
     return true;
-  }
-
-  async runForever(signal: AbortSignal): Promise<void> {
-    while (!signal.aborted) {
-      try {
-        if (await this.runOnce()) continue;
-      } catch (error) {
-        logger.exception('integration_worker_iteration_failed', error);
-      }
-      await waitForPoll(this.#settings.poll_interval_seconds * 1000, signal);
-    }
   }
 
   #claim(): Promise<Run | null> {

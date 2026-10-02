@@ -40,7 +40,6 @@ import { persistOverview, persistSurfaceExchange } from '../audits/surface-persi
 import { auditPolicy, type AuditRuntime } from '../audits/config.ts';
 import { auditEvent } from '../audits/state.ts';
 import { AuditMaintenance, repairOwnedCompletion } from '../audits/maintenance.ts';
-import { waitForPoll } from './poll.ts';
 
 const logger = getLogger('workers.audit');
 const reconciliationState = z.object({
@@ -111,18 +110,6 @@ export class AuditWorker {
     );
     await Promise.all(tasks.map((task) => this.#execute(task, signal)));
     return tasks.length;
-  }
-  async runForever(signal: AbortSignal) {
-    logger.info('audit_worker_started', { owner: this.owner });
-    while (!signal.aborted) {
-      try {
-        if (await this.runOnce(signal)) continue;
-      } catch {
-        logger.info('audit_worker_iteration_failed', { owner: this.owner });
-      }
-      await waitForPoll(Math.max(50, this.#runtime.audits.poll_interval_seconds * 1000), signal);
-    }
-    logger.info('audit_worker_stopped', { owner: this.owner });
   }
   async #execute(claimed: AuditTask, signal?: AbortSignal) {
     const abort = new AbortController();

@@ -46,7 +46,7 @@ try {
             $env:CITELADDER_DISABLE_DOTENV = '1'
             if ($Action -eq 'reconcile') {
                 Push-Location (Join-Path $root 'frontend')
-                try { & pnpm --filter '@citeladder/api' billing-worker @CommandArgs } finally { Pop-Location }
+                try { & pnpm --filter '@citeladder/api' runner @CommandArgs } finally { Pop-Location }
                 break
             }
             $modules = @{ admin = 'scripts.billing_admin'; plans = 'scripts.provision_razorpay_plans' }

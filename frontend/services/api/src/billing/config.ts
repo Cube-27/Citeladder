@@ -25,7 +25,6 @@ export function billingSettings(env: Record<string, string | undefined> = proces
     webhookAttempts: get('webhook_max_attempts') as number,
     leaseSeconds: get('reconciliation_lease_seconds') as number,
     batchSize: get('reconciliation_batch_size') as number,
-    pollSeconds: get('reconciliation_poll_seconds') as number,
     staleSeconds: get('reconciliation_stale_after_seconds') as number,
     abandonSeconds: get('reconciliation_abandon_after_seconds') as number,
     attempts: get('reconciliation_max_attempts') as number,

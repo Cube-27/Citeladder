@@ -108,4 +108,25 @@ describe('product Worker routing', () => {
       expect(result.headers.get('cache-control')).toBe('no-store');
     }
   });
+
+  it('serves local HTTP and proxies to the API container only with the development binding', async () => {
+    const local = new Request('http://app.citeladder.com/api/v1/auth/me', {
+      headers: { 'CF-Connecting-IP': '203.0.113.7' },
+    });
+    expect((await handleAppRequest(local, env)).status).toBe(404);
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input) => new Response((input as Request).url));
+    try {
+      const response = await handleAppRequest(local, {
+        ...env,
+        // Local Compose overrides the generated production upstream.
+        ORIGIN_UPSTREAM: 'http://api-service:8100' as typeof env.ORIGIN_UPSTREAM,
+        LOCAL_WORKER_ORIGIN: 'true',
+      });
+      expect(await response.text()).toBe('http://api-service:8100/api/v1/auth/me');
+    } finally {
+      fetch.mockRestore();
+    }
+  });
 });

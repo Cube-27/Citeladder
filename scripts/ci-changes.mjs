@@ -34,16 +34,12 @@ function isFrontend(path) {
 // The TypeScript API service, the contracts package it imports, and the
 // Python inputs it is built from: the policy export reads `app/core` and the
 // workspace policy, and its Kysely types are generated from the
-// Alembic-migrated schema. The route-ownership gate reads native route contracts
-// and every ingress Caddyfile.
+// Alembic-migrated schema. The route-ownership gate reads native route contracts.
 
 function isApiService(path) {
   return (
     path.startsWith('frontend/services/') ||
     path.startsWith('frontend/packages/') ||
-    path === 'frontend/local-compose-routes.caddy' ||
-    path === 'frontend/apps/app/Caddyfile' ||
-    path === 'infra/gcp/runtime/Caddyfile' ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
     path === 'frontend/pnpm-workspace.yaml' ||
@@ -153,8 +149,6 @@ function isComposeSensitive(path) {
   return (
     path === '.github/workflows/compose-smoke.yml' ||
     path === 'scripts/frontend-ingress-smoke.mjs' ||
-    path === 'frontend/Caddyfile' ||
-    path === 'frontend/local-compose-routes.caddy' ||
     path === '.dockerignore' ||
     path === '.env.example' ||
     // Both images. `frontend/Dockerfile` matched nothing here and reached

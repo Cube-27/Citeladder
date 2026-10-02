@@ -8,7 +8,6 @@ import { auditInput } from '../audits/inputs.ts';
 import type { AuditRuntime } from '../audits/config.ts';
 import { nextRunAfter } from '../audits/schedule-cadence.ts';
 import { getLogger } from '../logging.ts';
-import { waitForPoll } from './poll.ts';
 
 export function schedulerSettings(env: Record<string, string | undefined> = process.env) {
   return Object.fromEntries(
@@ -174,17 +173,5 @@ export class AuditScheduler {
       if (await this.planClaim(claim, this.now())) created++; // NOSONAR -- Finish the leased occurrence before claiming another.
     }
     return created;
-  }
-  async runForever(signal: AbortSignal, heartbeat: (at: Date) => Promise<void>) {
-    logger.info('audit_scheduler_started', { owner: this.owner });
-    while (!signal.aborted) {
-      try {
-        await this.runOnce();
-        await heartbeat(this.now());
-      } catch {
-        logger.info('audit_scheduler_tick_failed', { owner: this.owner });
-      }
-      await waitForPoll(this.settings.poll_interval_seconds * 1000, signal);
-    }
   }
 }
