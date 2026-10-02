@@ -45,11 +45,6 @@
       "type": "str",
       "default": ""
     },
-    "reconciliation_poll_seconds": {
-      "env": ["BILLING_RECONCILIATION_POLL_SECONDS"],
-      "type": "int",
-      "default": 2
-    },
     "reconciliation_batch_size": {
       "env": ["BILLING_RECONCILIATION_BATCH_SIZE"],
       "type": "int",

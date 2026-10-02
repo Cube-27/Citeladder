@@ -1,9 +1,8 @@
 /**
  * The TypeScript API service application.
  *
- * Serves liveness, readiness and the route families the route-ownership
- * manifest assigns to TypeScript (`routes/`); ingress sends only those paths
- * here.
+ * Serves liveness, readiness, MCP and every product route family (`routes/`).
+ * On Cloud Run only token-admitted Worker requests reach it.
  */
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';

@@ -50,11 +50,11 @@ updates:
   # patch nor minor, so `patch-and-minor` does not catch it — which is exactly
   # why the /frontend digest arrived as its own ungrouped PR. Omitting the key
   # takes every update type, so these directories' node bumps land together.
-  # `patch-and-minor` still covers the caddy image in apps/app.
   - package-ecosystem: docker
     directories:
       - /frontend
       - /frontend/apps/app
+      - /frontend/apps/docs
       - /frontend/services/api
       - /infra/gcp/postgres
     schedule:

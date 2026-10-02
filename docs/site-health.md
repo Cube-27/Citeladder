@@ -72,11 +72,9 @@ TypeScript alone recovers expired `site_crawl_tasks` leases in bounded,
 oldest-first `SKIP LOCKED` batches before claiming work. Recovery spends one
 attempt, releases the lease, and either makes the task due immediately or
 fails it at its attempt ceiling. The Python global sweeper excludes this queue.
-`node src/site-health-worker.ts --drain` processes due work and successors until
-idle or `SITE_HEALTH_DRAIN_BUDGET_SECONDS` stops new claims (default 300 seconds).
-Already claimed work finishes under its existing task/acquisition bounds,
-then the process closes its database pool and exits successfully. The default
-entry point keeps the long-polling loop for Compose.
+The runner's Site Health lane processes due work and successors until idle or
+the runner admission budget stops new claims. Already claimed work finishes
+under its existing task/acquisition bounds before the execution exits.
 Analyze tasks extract facts and evaluate rules in Node worker threads before
 taking commit locks. The commit rechecks the page's site/sitemap context;
 changed context is interpreted once under the crawl lock without spending another attempt.

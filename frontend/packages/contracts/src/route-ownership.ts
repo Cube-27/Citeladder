@@ -1,4 +1,4 @@
-/** Native API families; the route gate checks declarations and every ingress. */
+/** Native API families; the route gate checks every operation declares one. */
 export type RouteStack = 'typescript';
 
 export const ROUTE_OWNERSHIP = {
@@ -37,7 +37,10 @@ export const ROUTE_OWNERSHIP = {
 
 export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
 
-/** Same-origin API and protocol paths shared with the development proxy. */
+/**
+ * Same-origin API and protocol paths the development proxy forwards. `/x/*`
+ * forwards everything below `/x/`; any other entry matches only itself.
+ */
 export const TYPESCRIPT_INGRESS_PATHS = [
   '/api',
   '/api/*',

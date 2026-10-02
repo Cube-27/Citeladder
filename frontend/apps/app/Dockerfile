@@ -37,16 +37,23 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:vite
 
-FROM caddy@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52 AS runtime
+# Local Compose only: production serves this build through the product Worker
+# (wrangler.jsonc). Run that same Worker so routing, headers and the API proxy
+# match production; LOCAL_WORKER_ORIGIN admits HTTP and the API container.
+FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
 
-COPY frontend/apps/app/Caddyfile /etc/caddy/Caddyfile
-COPY --from=builder /app/apps/app/dist /srv
+ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false
+WORKDIR /app
 
-USER 1000:1000
+COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/package.json /app/tsconfig.json ./
+COPY --from=builder --chown=node:node /app/lib ./lib
+COPY --from=builder --chown=node:node /app/packages ./packages
+COPY --from=builder --chown=node:node /app/apps/app ./apps/app
 
+USER node
 EXPOSE 3001
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --quiet --output-document=- http://127.0.0.1:3001/health >/dev/null || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3   CMD node -e "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok ? 0 : 1)).catch(()=>process.exit(1))"
 
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+CMD ["./node_modules/.bin/wrangler", "dev", "-c", "apps/app/wrangler.jsonc", "--local", "--ip", "0.0.0.0", "--port", "3001", "--var", "ORIGIN_UPSTREAM:http://api-service:8100", "--var", "ORIGIN_TOKEN:local-dev-only-token-32-characters", "--var", "LOCAL_WORKER_ORIGIN:true"]

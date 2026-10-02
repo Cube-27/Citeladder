@@ -6,7 +6,6 @@ import { IntegrationClient } from '../integrations/client.ts';
 import { endpoints, integrationSettings } from '../integrations/config.ts';
 import { enqueueSyncRun } from '../integrations/sync.ts';
 import { getLogger } from '../logging.ts';
-import { waitForPoll } from './poll.ts';
 
 const logger = getLogger('workers.integration-dispatcher');
 const settings = integrationSettings();
@@ -35,17 +34,6 @@ export class IntegrationDispatcher {
   async runOnce(canAdmit = () => true): Promise<void> {
     if (canAdmit()) await this.#schedule(canAdmit);
     if (canAdmit()) await this.#revoke(canAdmit);
-  }
-
-  async runForever(signal: AbortSignal): Promise<void> {
-    while (!signal.aborted) {
-      try {
-        await this.runOnce();
-      } catch (error) {
-        logger.exception('integration_dispatcher_iteration_failed', error);
-      }
-      await waitForPoll(settings.dispatcher_interval_seconds * 1000, signal);
-    }
   }
 
   async #schedule(canAdmit: () => boolean): Promise<void> {

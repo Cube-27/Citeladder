@@ -2,12 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { getLogger } from '../logging.ts';
 import { createAgentBindings } from '../agent/bindings.ts';
 import { runAgentOnce } from '../agent/worker.ts';
-import { waitForPoll } from './poll.ts';
 
-const logger = getLogger('app.workers.agent_worker');
 export class AgentWorker {
   readonly owner: string;
   readonly db: Database;
@@ -95,17 +92,5 @@ export class AgentWorker {
       if (!ran) break;
     }
     return total;
-  }
-  async runForever(signal: AbortSignal) {
-    logger.info('agent worker started', { owner: this.owner });
-    while (!signal.aborted) {
-      try {
-        if (await this.runOnce()) continue;
-      } catch (error) {
-        logger.exception('agent worker loop iteration failed', error);
-      }
-      await waitForPoll(policy.agent.worker_poll_seconds * 1000, signal);
-    }
-    logger.info('agent worker stopped', { owner: this.owner });
   }
 }

@@ -12,7 +12,7 @@ import { getLogger } from '../logging.ts';
 import { parseUuid } from '../http/uuid.ts';
 const logger = getLogger('mcp');
 
-export const MCP_PROTOCOL_PATHS = [
+const MCP_PROTOCOL_PATHS = [
   '/mcp',
   '/mcp/',
   '/mcp/register',

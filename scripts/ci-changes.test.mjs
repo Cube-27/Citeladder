@@ -79,9 +79,6 @@ test('the TypeScript API service runs for its code and every Python input it is 
     'backend/scripts/site_health_policy.py',
     'frontend/packages/contracts/src/route-ownership.ts',
     'frontend/services/api/src/routes/projects.ts',
-    'frontend/local-compose-routes.caddy',
-    'frontend/apps/app/Caddyfile',
-    'infra/gcp/runtime/Caddyfile',
   ]) {
     assert.equal(classifyPaths([path]).api, true, path);
   }
@@ -164,8 +161,8 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
     'frontend/pnpm-lock.yaml',
     'frontend/apps/app/vite.config.ts',
     'frontend/apps/marketing/astro.config.mjs',
-    'frontend/Caddyfile',
-    'frontend/local-compose-routes.caddy',
+    'frontend/apps/docs/astro.config.mjs',
+    'frontend/lib/server/worker-origin-proxy.ts',
     'scripts/frontend-ingress-smoke.mjs',
     '.github/workflows/compose-smoke.yml',
   ]) {

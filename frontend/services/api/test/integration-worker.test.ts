@@ -356,34 +356,6 @@ describe('integration worker paging and resume', () => {
       expect(run).toMatchObject({ status: 'failed', error_detail: expected });
     },
   );
-  it('survives an iteration failure and delays the next attempt until the poll interval', async () => {
-    vi.useFakeTimers();
-    const controller = new AbortController();
-    const worker = new IntegrationWorker(
-      db,
-      { page: vi.fn() },
-      settings,
-      async () => 'recorded-token',
-    );
-    const iteration = vi
-      .spyOn(worker, 'runOnce')
-      .mockRejectedValueOnce(new Error('recorded claim failure'))
-      .mockImplementationOnce(async () => {
-        controller.abort();
-        return false;
-      });
-    try {
-      const loop = worker.runForever(controller.signal);
-      await vi.advanceTimersByTimeAsync(settings.poll_interval_seconds * 1000 - 1);
-      expect(iteration).toHaveBeenCalledTimes(1);
-      await vi.advanceTimersByTimeAsync(1);
-      await loop;
-      expect(iteration).toHaveBeenCalledTimes(2);
-    } finally {
-      controller.abort();
-      vi.useRealTimers();
-    }
-  });
   it('rejects a mapping retired while a provider request is in flight', async () => {
     const { mappingId, runId } = await seedRun();
     const client: Pick<IntegrationClient, 'page'> = {

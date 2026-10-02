@@ -89,9 +89,8 @@ Periodic owners recheck admission before each occurrence, revocation or recovery
 unit. The scheduler claims one occurrence at a time under a runner budget, so
 stopping never strands a preclaimed batch; admitted units finish settlement.
 Worker-owned lease and crawl backstops still run in each lane, including idle
-passes. Existing per-owner
-Compose processes remain the deployment path until hosting cutover PR23; they
-are not retired or started alongside the runner as a new continuous service.
+passes. Runner and tick are the only executors; no per-owner daemon remains.
+One PostgreSQL advisory lock admits one drain at a time across executions.
 
 With `CLOUD_RUN_RUNNER_JOB` configured, the API observes successful queue/billing
 mutations per request at the PostgreSQL connection boundary. Autocommit or
@@ -106,9 +105,10 @@ tokens/provider bodies and leaves the committed response and work intact for tic
 The Cloud Run API (`K_SERVICE`, or configured runner job) requires the existing
 `CITELADDER_ORIGIN_TOKEN` on every request, including health/readiness and MCP;
 the previous token may be accepted during rotation. Missing tokens fail startup.
-The current VM keeps Caddy's admission and existing private health probes until
-cutover. Cloud Run uses a TCP startup probe; authenticated HTTP probes must send
-the origin header. Runtime commands and environment settings are owned by
+An admitted request must also name an allowlisted public host (the app or apex
+host), which MCP origin checks use. Its `X-CiteLadder-Client-IP` becomes the
+client identity for rate limits. Cloud Run uses a TCP startup probe;
+authenticated HTTP probes must send the origin and public-host headers. Runtime commands and environment settings are owned by
 [Development](DEVELOPMENT.md#scale-to-zero-runtime).
 
 1. Claim bounded work with `FOR UPDATE SKIP LOCKED`.

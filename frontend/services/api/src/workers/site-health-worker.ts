@@ -20,7 +20,6 @@ import { runChangeIntel } from '../site-health/change-snapshot.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { lockSiteTask, type Crawl } from '../site-health/task-fence.ts';
 import { TaskCancelledError } from './executor.ts';
-import { waitForPoll } from './poll.ts';
 import { recoverExpiredLeases } from '../site-health/lease-recovery.ts';
 import {
   publishCancelledCrawls,
@@ -277,24 +276,5 @@ export class SiteHealthWorker {
         .where('workspace_id', '=', task.workspace_id)
         .execute();
     });
-  }
-  /**
-   * Keep `concurrency` tasks in flight, each slot claiming one task as it
-   * finishes the last, so a slow page fetch never holds a whole batch.
-   */
-  async runForever(signal: AbortSignal) {
-    logger.info('site health worker started', { owner: this.owner });
-    const slot = async () => {
-      while (!signal.aborted) {
-        let count = 0;
-        try {
-          count = await this.runOnce(1); // NOSONAR: each slot claims its next task only after finishing the last.
-        } catch (error) {
-          logger.exception('site health iteration failed', error);
-        }
-        if (!count) await waitForPoll(Math.max(50, this.settings.poll * 1000), signal);
-      }
-    };
-    await Promise.all(Array.from({ length: this.settings.concurrency }, slot));
   }
 }

@@ -1,6 +1,10 @@
 import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
 import { APP_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy';
-import type { WorkerEnv } from './worker-configuration';
+import type { WorkerEnv as GeneratedEnv } from './worker-configuration';
+
+// Local Compose runs this Worker under `wrangler dev` over HTTP against the
+// API container; production never sets the binding.
+type WorkerEnv = GeneratedEnv & { LOCAL_WORKER_ORIGIN?: string };
 
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -53,11 +57,16 @@ function isResource(path: string): boolean {
   );
 }
 
+function localWorker(env: WorkerEnv): boolean {
+  return env.LOCAL_WORKER_ORIGIN === 'true';
+}
+
 function proxied(request: Request, env: WorkerEnv): Promise<Response> {
   return proxyWorkerRequest(request, {
     upstream: env.ORIGIN_UPSTREAM,
     publicHost: env.PUBLIC_APP_HOST,
     originToken: env.ORIGIN_TOKEN,
+    allowDevelopmentHttp: localWorker(env),
   });
 }
 
@@ -138,7 +147,8 @@ async function staticOrNavigation(
 
 export async function handleAppRequest(request: Request, env: WorkerEnv): Promise<Response> {
   const url = new URL(request.url);
-  if (url.protocol !== 'https:' || url.hostname !== env.PUBLIC_APP_HOST) {
+  const allowedScheme = url.protocol === 'https:' || (localWorker(env) && url.protocol === 'http:');
+  if (!allowedScheme || url.hostname !== env.PUBLIC_APP_HOST) {
     return decorate(response('Not found.', 404));
   }
   let path: string;

@@ -51,41 +51,20 @@ pnpm install
 pnpm --filter @citeladder/api start
 ```
 
-Run only the separate workers required by the workflow under test. The API process enqueues
-work and never performs provider calls or long-running crawl/sync/generation work inline.
-Run each worker command in its own terminal; every worker below runs indefinitely.
+The API process enqueues work and never performs provider calls or long-running
+crawl/sync/generation work inline. Every background owner (analytics, discovery,
+integrations, Agent, audits, Site Health and billing recovery) runs through one
+bounded entry point, from `frontend/services/api/`:
 
 ```bash
-cd frontend/services/api
-node src/agent-worker.ts
-node src/worker.ts
+pnpm tick     # periodic owners once (recovery, schedules, dispatch), then drain
+pnpm runner   # drain every lane until idle or the admission budget expires
 ```
 
-From frontend/, run the TypeScript brand-discovery worker with:
-
-```bash
-pnpm --filter @citeladder/api exec node --experimental-strip-types src/discovery-worker.ts
-```
-
-The integrations worker and dispatcher run from the TypeScript API package:
-
-```bash
-cd frontend/services/api
-node src/integration-worker.ts
-node src/integration-dispatcher.ts
-```
-
-Each process uses the shared durable PostgreSQL queue/lease contract and receives only the
-configuration/secrets required by its owner.
-
-Audit execution, scheduling and independent lease/funding maintenance run with
-Node 26 from `frontend/services/api/`:
-
-```bash
-pnpm worker:audit
-pnpm scheduler:audit
-pnpm maintenance:audit
-```
+Run `pnpm tick` again (or in a loop) to keep processing; the Compose `runner`
+service repeats it every 10 seconds. Each owner uses the shared durable
+PostgreSQL queue/lease contract and receives only the configuration its owner
+requires.
 
 ## Frontend setup
 
@@ -150,8 +129,8 @@ from, and does not replace, the Playwright Test runner used by `pnpm test:e2e`.
 
 The Compose path is the clean-clone workflow. From the repository root, it builds and starts
 PostgreSQL, applies the migration baseline once, then starts the native API, the
-local marketing Worker, Vite application, Caddy ingress, and the workers. Do not run host-side migrations or
-`pnpm dev` alongside this stack.
+`runner` loop and the three Workers under `wrangler dev`. Do not run host-side
+migrations or `pnpm dev` alongside this stack.
 
 ```bash
 cp .env.example .env
@@ -162,27 +141,27 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   docker compose --env-file .env -f docker-compose.yml \
   up -d --build --force-recreate
 
-# The frontend proxies relative /api/* requests to the API inside Compose.
-curl -fsS http://localhost:3000/
-curl -fsS http://localhost:8100/health
+curl -fsS http://127.0.0.1:3000/
+curl -fsS http://127.0.0.1:3001/health
+curl -fsS http://127.0.0.1:8100/health
 ```
 
-The default stack includes the frontend runtimes and static docs; no migration profile
-is needed. Only Caddy ingress exposes browser port 3000. Visit `http://127.0.0.1:3000`
-for marketing, `http://app.localhost:3000` for the app and `http://docs.localhost:3000`
-for the documentation. Compose builds bake `PUBLIC_DOCS_ORIGIN` so marketing and app
-docs links stay local; other builds link `https://docs.citeladder.com`. The former retains
-the local-only path table in `frontend/local-compose-routes.caddy`; the app host
-serves the Vite application and its same-origin API. The internal Vite and
-marketing ports are not published. Local Compose uses disposable Worker-to-API
-HTTP transport enabled only by Compose for its `api-service:8100` upstream; production always
-requires HTTPS ingress authentication.
-The Vite runtime serves direct SPA refreshes from its built `index.html` with
-`no-store`; missing chunks return 404 instead of application HTML.
+Each Worker runs exactly as production serves it, on its own loopback port:
+marketing at `http://127.0.0.1:3000`, the app at `http://127.0.0.1:3001` and
+the documentation at `http://127.0.0.1:4322`. The app Worker proxies relative
+`/api/*` requests to the API container, and the marketing Worker proxies the
+apex MCP and protocol paths. Compose sets `FRONTEND_URL` to the app port.
+Compose builds bake those origins, so marketing, app and docs links stay
+local; other builds link production. Local Compose enables disposable
+Worker-to-API HTTP transport with the `LOCAL_WORKER_ORIGIN` binding, and only
+for its `api-service:8100` upstream. Production always requires HTTPS and the
+origin token. The app Worker serves direct SPA refreshes from its built
+`index.html` with `no-store`; missing chunks return 404 instead of application
+HTML.
 
-The stack's frontend is at `http://localhost:3000`, and the API is at
-`http://localhost:8100`. Inspect readiness with the same `env -u` wrapper (gotcha 1) —
-every Compose invocation resolves `${VAR}` from the shell first, not just `up`:
+The API is also published at `http://127.0.0.1:8100`. Inspect readiness with the
+same `env -u` wrapper (gotcha 1); every Compose invocation resolves `${VAR}`
+from the shell first, not just `up`:
 
 ```bash
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
@@ -288,41 +267,21 @@ After changing an exported shared setting or the workspace role matrix,
 regenerate the Python-owned inputs from `backend/` with
 `uv run python -m scripts.export_ts_platform` and commit them. From the
 repository root, `node scripts/quality.mjs --mode check --scope api` checks types,
-schema authority, export freshness and route ownership (`pnpm check:routes` against
-native route-family declarations and every ingress Caddyfile); CI
+schema authority, export freshness and route ownership (`pnpm check:routes`: every
+native operation declares exactly one manifest family); CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
-The Site Health TypeScript worker supports one-shot processing from
-`frontend/services/api/` with `node src/site-health-worker.ts --drain`.
-`SITE_HEALTH_DRAIN_BUDGET_SECONDS` (default 300) bounds admission of new work;
-claimed tasks finish before exit. Without `--drain`, it long-polls for Compose.
-It is the only Site Health worker: it recovers expired leases, reconciles and
-finalizes crawls, and every pass (including a drain over an empty queue) runs
-the stalled, overdue and cancelled-crawl backstops.
-`docker compose up analytics-worker-ts` (or `node src/worker.ts` in
-`frontend/services/api`) runs the TypeScript analytics worker, which claims the
-kinds in `ANALYTICS_TS_OWNED_TASK_KINDS`, now every analytics kind. It owns
-bounded expired-lease recovery and terminal compensation on every pass. Run
-`node src/worker.ts --drain` to process due work until idle or the
-`ANALYTICS_DRAIN_BUDGET_SECONDS` budget (default 300) expires; claimed work finishes
-before exit. Discovery and integration workers also accept `--drain` and admit
-new work for at most 300 seconds per invocation; claimed tasks finish before
-exit, so this is an admission budget rather than an invocation deadline. Native
-queue-recovery config owns the bound. Their regular passes recover expired
-leases before claiming.
-`node src/queue-sweeper.ts --drain` performs one bounded recovery pass without
-executors. The same entry point without `--drain` is Compose's independent
-`queue-sweeper` service, so recovery survives a dead domain worker.
-`docker compose up api-service` runs the service on `127.0.0.1:8100`; both local
-ingresses send it the TypeScript-owned paths. `pnpm dev` proxies the same paths
-to `API_SERVICE_ORIGIN` (default `http://localhost:8100`), so run the service
-beside the backend when working on those screens.
+Site Health, analytics, discovery and integration lanes recover their own
+expired leases and run their backstops on every runner pass, including a pass
+over an empty queue. Tick also runs native queue recovery, so recovery survives
+an owner that is not currently draining. `docker compose up api-service` runs
+the service on `127.0.0.1:8100`. `pnpm dev` proxies the API and protocol paths
+in `TYPESCRIPT_INGRESS_PATHS` to `API_SERVICE_ORIGIN` (default
+`http://localhost:8100`), so run the service beside the app when working on
+those screens.
 
-A new OpenAPI tag on a Python router needs an entry in
-`frontend/packages/contracts/src/route-ownership.ts`. Moving a family to TypeScript
-adds its zod route contracts, flips the manifest entry, adds the family's paths
-to `TYPESCRIPT_INGRESS_PATHS` and every ingress Caddyfile, and deletes the Python
-router. Its behavior is covered by TypeScript and PostgreSQL tests; nothing
-compares it with Python output.
+A new route family needs an entry in
+`frontend/packages/contracts/src/route-ownership.ts`, and its routes carry that
+family as their OpenAPI tag.
 
 ### Scale-to-zero runtime
 
@@ -351,16 +310,15 @@ Runner/tick receive the existing configuration and credentials required by all
 their native owners. Billing remains disabled/unavailable unless already
 configured; the runner does not enable checkout or provision providers.
 
-PR21 requires no environment changes for the current VM/Compose deployment.
-Leave `CLOUD_RUN_RUNNER_JOB` unset until PR22 provisions the job. Set the job and
-origin secret on the Cloud Run API at deployment. `K_SERVICE` is supplied by
-Cloud Run and makes a missing origin secret a startup error. Existing VM Caddy
-admission remains in place. Do not change Workers' `ORIGIN_UPSTREAM` before PR23.
-The Cloud Run job timeout and termination grace must allow in-flight work to
-finish beyond the admission budget; a forced termination leaves leased work for
-recovery. The scheduler may invoke the same runner job with its argument
-overridden to `src/tick.ts` (requiring execution-with-overrides permission), so
-there is one periodic tick and no continuously running application process.
+Terraform (`infra/gcp/run.tf`) sets these on Cloud Run. `K_SERVICE` is
+supplied by Cloud Run and makes a missing origin secret a startup error. The
+runner and tick are separate jobs over the same image, and Cloud Scheduler
+starts the tick job. Each job's timeout allows in-flight work to finish beyond
+the admission budget; a forced termination leaves leased work for recovery.
+Only one execution drains at a time (a PostgreSQL advisory lock). A later
+execution waits up to 15 seconds and then leaves the work to the active drain,
+so a burst of writes cannot open one pool per execution. Locally, leave
+`CLOUD_RUN_RUNNER_JOB` unset; the Compose `runner` loop replaces wake-up.
 
 ### Repository validation harness
 
@@ -519,10 +477,10 @@ Execution repricing is native: from `frontend/`, run
 `pnpm --filter @citeladder/api audit:reprice --help`. Preview is the default;
 applying a versioned cost projection requires an explicit operator action.
 
-Billing reconciliation is TypeScript-owned. From `frontend/`, run
-`pnpm --filter @citeladder/api billing-worker` for one bounded sweep or add
-`--loop` for the configured watcher. This command reads provider authority and
-can settle commercial evidence; use only an explicitly authorized target.
+Billing reconciliation is TypeScript-owned and runs as the runner's billing
+lane. From `frontend/`, `pnpm --filter @citeladder/api runner` performs one
+bounded sweep with every other lane. It reads provider authority and can settle
+commercial evidence; use only an explicitly authorized target.
 
 Platform provider provisioning stores only each non-secret opaque reference.
 At execution, that reference must exactly match the corresponding
@@ -641,7 +599,7 @@ API that also sets a specific ACAO for credentialed requests
 produces **two** ACAO headers, which browsers reject. `curl` does not enforce CORS, so it
 cannot reproduce the failure.
 
-**Fix:** the browser never talks cross-origin to the backend. The Vite development proxy and production Worker/Caddy ingress route relative
+**Fix:** the browser never talks cross-origin to the backend. The Vite development proxy and the production app Worker route relative
 `/api/*` to the native API, so all browser calls are **same-origin**. The API
 client uses a relative base (`/api/v1`), `cache: 'no-store'`, and
 `credentials: 'include'`.

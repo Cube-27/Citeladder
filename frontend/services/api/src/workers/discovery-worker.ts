@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { setTimeout as sleep } from 'node:timers/promises';
 
 import { sql } from 'kysely';
 
@@ -242,23 +241,6 @@ export class DiscoveryWorker {
         .executeTakeFirst();
       if (finalized.numUpdatedRows !== 1n) throw new Error('lease_lost');
     });
-  }
-  async runForever(signal: AbortSignal, owner = `brand-discovery-ts:${randomUUID()}`) {
-    // Finish each task before claiming another, and await idle/error backoff to avoid busy polling.
-    while (!signal.aborted) {
-      try {
-        if (!(await this.runOnce(owner)))
-          await sleep(this.settings.poll_seconds * 1000, undefined, { signal });
-      } catch (error) {
-        if (signal.aborted) break;
-        logger.warning('brand discovery worker iteration failed', {
-          error: error instanceof Error ? error.name : 'unknown',
-        });
-        await sleep(this.settings.failure_backoff_max_seconds * 1000, undefined, { signal }).catch(
-          () => undefined,
-        );
-      }
-    }
   }
 
   async runUntilIdle(signal?: AbortSignal) {

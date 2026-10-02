@@ -1,4 +1,4 @@
-# CiteLadder local stack: PostgreSQL, migration, backend, workers, and frontend.
+# CiteLadder local stack: PostgreSQL, migration, API, runner and the three Workers.
 #
 # =============================================================================
 # GOTCHA 1 (docs/invariants.md invariant 11) — READ BEFORE `docker compose up`
@@ -46,6 +46,8 @@ services:
       - ${CITELADDER_ENV_FILE:-.env}
     environment: &backend_env
       APP_ENV: ${APP_ENV:-development}
+      # OAuth redirects and invitation links target the local app Worker.
+      FRONTEND_URL: http://127.0.0.1:3001
       # skipcq: SCT-A000 - password comes from environment, not hardcoded.
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/${POSTGRES_DB:-citeladder}
     depends_on:
@@ -53,6 +55,9 @@ services:
         condition: service_healthy
     command: ["/bin/sh", "-c", "alembic upgrade head && python -m app.demo.bootstrap"]
 
+  # Each Worker runs under `wrangler dev` as production serves it:
+  # marketing http://127.0.0.1:3000, app http://127.0.0.1:3001 (proxies /api
+  # to the API container), docs http://127.0.0.1:4322.
   frontend:
     build:
       context: .
@@ -60,53 +65,33 @@ services:
       args:
         NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS: ${NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS:-}
         PUBLIC_WEBSITE_ORIGIN: http://127.0.0.1:3000
-        PUBLIC_APP_ORIGIN: http://app.localhost:3000
-        PUBLIC_DOCS_ORIGIN: http://docs.localhost:3000
+        PUBLIC_APP_ORIGIN: http://127.0.0.1:3001
+        PUBLIC_DOCS_ORIGIN: http://127.0.0.1:4322
     restart: unless-stopped
     environment:
       # Canonical website URLs are baked into the build; rebuild after changes.
       # Wrangler runs the local Worker with an isolated API-container upstream.
       # No env_file: the service must not receive backend secrets.
       PUBLIC_WEBSITE_ORIGIN: http://127.0.0.1:3000
-      PUBLIC_APP_ORIGIN: http://app.localhost:3000
+      PUBLIC_APP_ORIGIN: http://127.0.0.1:3001
       DEMO_BOOKING_URL: ${DEMO_BOOKING_URL:-}
       PUBLIC_SALES_EMAIL: ${PUBLIC_SALES_EMAIL:-}
     depends_on:
       api-service:
         condition: service_healthy
-  # The apex-style ingress, app.localhost and docs.localhost share one exposed port locally.
-  # Keep a local-only route table for legacy combined-origin smoke.
-  ingress:
-    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
-    restart: unless-stopped
-    environment:
-      API_SERVICE_ORIGIN: api-service:8100
-      VITE_ORIGIN: vite-app:3001
-      MARKETING_ORIGIN: frontend:3000
-      DOCS_ORIGIN: docs:4322
-    volumes:
-      - ./frontend/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./frontend/local-compose-routes.caddy:/etc/caddy/frontend-routes.caddy:ro
-    depends_on:
-      frontend:
-        condition: service_healthy
-      vite-app:
-        condition: service_healthy
-      docs:
-        condition: service_healthy
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
-  # Static public documentation, served at http://docs.localhost:3000.
   docs:
     build:
       context: .
       dockerfile: frontend/apps/docs/Dockerfile
       args:
-        PUBLIC_DOCS_ORIGIN: http://docs.localhost:3000
+        PUBLIC_DOCS_ORIGIN: http://127.0.0.1:4322
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:4322:4322"
 
-  # Authenticated Vite application is required by the default stack.
   vite-app:
     build:
       context: .
@@ -116,17 +101,19 @@ services:
         NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS: ${NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS:-}
         NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE: ${NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE:-}
         PUBLIC_WEBSITE_ORIGIN: http://127.0.0.1:3000
-        PUBLIC_APP_ORIGIN: http://app.localhost:3000
-        PUBLIC_DOCS_ORIGIN: http://docs.localhost:3000
+        PUBLIC_APP_ORIGIN: http://127.0.0.1:3001
+        PUBLIC_DOCS_ORIGIN: http://127.0.0.1:4322
     restart: unless-stopped
-    environment:
-      # Caddy consumes these only at runtime; they are never bundled for browsers.
-      API_SERVICE_ORIGIN: http://api-service:8100
     depends_on:
       api-service:
         condition: service_healthy
+    ports:
+      - "127.0.0.1:3001:3001"
 
-  worker:
+  # Production runs the same image as Cloud Run jobs: the API starts a runner
+  # after committed work and Cloud Scheduler starts a tick. Locally one service
+  # repeats the tick (periodic owners, then drain) until stopped.
+  runner:
     build:
       context: .
       dockerfile: frontend/services/api/Dockerfile
@@ -139,182 +126,13 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    # Audit worker is a separate Postgres-queue process.
-    command: ["node", "src/audit-worker.ts"]
-    # The Dockerfile HEALTHCHECK probes the web /ready endpoint, which worker
-    # containers don't serve — disable it so they don't report unhealthy.
-    healthcheck:
-      disable: true
-
-  audit-maintenance:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["node", "src/audit-maintenance.ts"]
-    healthcheck:
-      disable: true
-
-  # Claims due recurring schedules and delegates every slot to the same audit
-  # planner used by manual runs. The unique schedule slot prevents duplicates.
-  audit-scheduler:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment:
-      <<: *backend_env
-      AUDIT_SCHEDULE_HEARTBEAT_PATH: /tmp/audit-scheduler-heartbeat
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["node", "src/audit-scheduler.ts"]
-    healthcheck:
-      disable: true
-
-  # Persisted onboarding discovery: one secure homepage request, structured
-  # application-model research, then deterministic industry-library fallback.
-  brand-discovery-worker:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["node", "--experimental-strip-types", "src/discovery-worker.ts"]
-    healthcheck:
-      disable: true
-
-  # Claims every SiteCrawlTask kind, recovers expired leases and owns the crawl
-  # lifecycle (reconcile, stalled/overdue backstops, finalization).
-  site-health-worker-ts:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["node", "--experimental-strip-types", "src/site-health-worker.ts"]
-    healthcheck:
-      disable: true
-
-  # Agent worker: claims agent runs (one chat turn each) and runs the bounded
-  # tool-use loop over the shared read-tool registry.
-  agent-worker:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["node", "--experimental-strip-types", "src/agent-worker.ts"]
-    healthcheck:
-      disable: true
-
-  # Independent native sweeper: reclaims brand-discovery and integration leases.
-  # TypeScript analytics, Agent and Site Health workers recover their own
-  # expired leases on the next poll. The sweeper runs no executors.
-  queue-sweeper:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["node", "src/queue-sweeper.ts"]
-    healthcheck:
-      disable: true
-
-  # TypeScript integrations workers use the same API image and Alembic schema.
-  integration-worker-ts:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["node", "src/integration-worker.ts"]
-    healthcheck:
-      disable: true
-
-  integration-dispatcher-ts:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["node", "src/integration-dispatcher.ts"]
-    healthcheck:
-      disable: true
-
-  billing-worker-ts:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    command: ["node", "src/billing-worker.ts", "--loop"]
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+    # A failing tick ends the loop, so Compose restarts and surfaces it.
+    command: ["/bin/sh", "-c", "while node src/tick.ts; do sleep 10; done"]
     healthcheck:
       disable: true
 
   # The native API serves every application route family and issues sessions.
-  # Both local ingresses route /api/* here; Alembic owns its database schema.
+  # The app Worker proxies /api/* here; Alembic owns its database schema.
   api-service:
     build:
       context: .
@@ -331,26 +149,6 @@ services:
     ports:
       # Loopback only: nothing may reach this service except from this host.
       - "127.0.0.1:8100:8100"
-
-  # TypeScript analytics worker (TypeScript migration PR 4): the API service
-  # image running another command. It claims the analytics task kinds
-  # core/config/analytics.py assigns to TypeScript and recovers their leases.
-  analytics-worker-ts:
-    build:
-      context: .
-      dockerfile: frontend/services/api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["node", "src/worker.ts"]
-    healthcheck:
-      disable: true
 
 volumes:
   pg_data:

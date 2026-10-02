@@ -1,12 +1,6 @@
 /** Native scheduler limits and checked-in IANA catalog; admission also requires runtime support. */
 export const auditSchedules = {
   settings: {
-    poll_interval_seconds: {
-      env: ['AUDIT_SCHEDULE_POLL_INTERVAL_SECONDS'],
-      type: 'float',
-      default: 30,
-      exclusive_minimum: 0,
-    },
     lease_ttl_seconds: {
       env: ['AUDIT_SCHEDULE_LEASE_TTL_SECONDS'],
       type: 'float',
@@ -37,17 +31,6 @@ export const auditSchedules = {
       default: 5,
       exclusive_minimum: 0,
     },
-    health_stale_seconds: {
-      env: ['AUDIT_SCHEDULE_HEALTH_STALE_SECONDS'],
-      type: 'int',
-      default: 180,
-      exclusive_minimum: 0,
-    },
-  },
-  heartbeat_path: {
-    env: ['AUDIT_SCHEDULE_HEARTBEAT_PATH'],
-    type: 'str',
-    default: '.runtime/audit-scheduler-heartbeat',
   },
   timezones: [
     'Africa/Abidjan',

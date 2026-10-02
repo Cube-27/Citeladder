@@ -15,7 +15,6 @@ import { sql } from 'kysely';
 import { recoverAnalyticsLeases } from '../queue/analytics-recovery.ts';
 import { competitorDiscovery } from '../commerce/discovery.ts';
 import { compensateTerminalTasks } from './terminal-compensation.ts';
-import { waitForPoll } from './poll.ts';
 
 import { policy, type WorkerSettings } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -148,23 +147,6 @@ export class AnalyticsWorker {
       total += ran;
     }
     return total;
-  }
-
-  /** Poll until `signal` aborts; the task in hand always finishes first. */
-  async runForever(signal: AbortSignal): Promise<void> {
-    logger.info('analytics_worker_started', { owner: this.owner });
-    while (!signal.aborted) {
-      let ran = 0;
-      try {
-        ran = await this.runOnce();
-      } catch (error) {
-        // A bad row must not kill the loop.
-        logger.exception('analytics_worker_iteration_failed', error);
-      }
-      if (ran === 0)
-        await waitForPoll(Math.max(50, this.#settings.pollIntervalSeconds * 1000), signal);
-    }
-    logger.info('analytics_worker_stopped', { owner: this.owner });
   }
 
   async #execute(claimed: QueueTask): Promise<void> {
