@@ -19,11 +19,6 @@ dependencies = [
   # the build with no line here to point at.
   "pydantic>=2.13,<3",
   "pydantic-settings>=2.10.0,<3",
-  # Required, with no direct import to prove it: FastAPI raises at ROUTE
-  # DEFINITION time when a path declares ``UploadFile``, which the products and
-  # prompts CSV import endpoints do. Removing it fails every test that touches
-  # the app, not just the two upload routes.
-  "python-multipart>=0.0.31,<1",
   "sqlalchemy[asyncio]>=2.1.1,<3",
   # See the pydantic note above; `app/main.py` imports StarletteHTTPException.
   # Range pinned to the version FastAPI already resolved -- a wider floor
@@ -200,9 +195,6 @@ DEP002 = [
   "asyncpg",
   # Pydantic imports it lazily to validate `EmailStr`.
   "email-validator",
-  # FastAPI raises at ROUTE DEFINITION time when a path declares `UploadFile`.
-  # See the long note on the dependency itself.
-  "python-multipart",
   # Ships the IANA zone database for `zoneinfo` on hosts without a system one.
   "tzdata",
   # The ASGI server: `uvicorn app.main:app` is the image CMD.
