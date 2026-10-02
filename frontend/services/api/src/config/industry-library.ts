@@ -1,0 +1,311 @@
+/** Supported onboarding industries and their buyer context. */
+export const industryLibrary = {
+  industries: {
+    General: {
+      buyer_persona: 'my needs',
+      customer_types: ['consumers', 'businesses'],
+      use_cases: ['discovering options', 'comparing alternatives', 'choosing a provider'],
+      topics: [
+        'professional help',
+        'online tools',
+        'local services',
+        'specialist support',
+        'everyday products',
+      ],
+      archetypes: [
+        {
+          text: 'What are my best options for {category} in {market}?',
+          intent: 'discovery',
+        },
+        {
+          text: 'How do I compare providers for {category} in {market}?',
+          intent: 'comparison',
+        },
+        {
+          text: 'Which option for {category} best fits my needs?',
+          intent: 'purchase',
+        },
+        {
+          text: 'What should I look for when choosing {category}?',
+          intent: 'purchase',
+        },
+        {
+          text: 'Where can I find reliable options for {category} in {market}?',
+          intent: 'discovery',
+        },
+      ],
+    },
+    Ecommerce: {
+      buyer_persona: 'my household',
+      subindustries: [
+        'Marketplaces',
+        'Fashion Retail',
+        'Beauty Retail',
+        'Consumer Electronics',
+        'Home and General Merchandise',
+      ],
+      customer_types: ['online shoppers', 'value-conscious shoppers', 'families'],
+      use_cases: [
+        'buying products online',
+        'comparing price and delivery',
+        'finding trusted retailers',
+      ],
+      topics: ['clothing', 'homewares', 'electronics', 'beauty products', 'household essentials'],
+      archetypes: [
+        {
+          text: 'Where can I buy {quality} {category} online in {market}?',
+          intent: 'purchase',
+        },
+        {
+          text: 'Which stores give me the best value on {category} in {market}?',
+          intent: 'comparison',
+        },
+        {
+          text: 'Where can I get {category} with reliable delivery in {market}?',
+          intent: 'service',
+        },
+        {
+          text: 'How do I compare price, delivery, and returns for {category} in {market}?',
+          intent: 'comparison',
+        },
+        {
+          text: 'Which online stores can I trust for {category} in {market}?',
+          intent: 'service',
+        },
+      ],
+    },
+    Software: {
+      buyer_persona: 'my team',
+      subindustries: [
+        'Analytics',
+        'Data Management',
+        'Marketing Technology',
+        'Commerce Technology',
+        'Collaboration',
+        'Developer Tools',
+      ],
+      customer_types: ['small businesses', 'mid-market teams', 'enterprise teams'],
+      use_cases: [
+        'automating workflows',
+        'integrating business data',
+        'improving team performance',
+      ],
+      topics: [
+        'analytics software',
+        'workflow automation',
+        'data management',
+        'team collaboration',
+        'business software',
+      ],
+      archetypes: [
+        {
+          text: 'Which {category} options can help my team with {use_case}?',
+          intent: 'discovery',
+        },
+        {
+          text: 'Which {category} option should I choose for my small business in {market}?',
+          intent: 'purchase',
+        },
+        {
+          text: 'How do I compare {category} options for {use_case}?',
+          intent: 'comparison',
+        },
+        {
+          text: 'Which {category} options integrate with the systems my team already uses?',
+          intent: 'service',
+        },
+        {
+          text: 'How much should my team budget for {category} in {market}?',
+          intent: 'purchase',
+        },
+      ],
+    },
+    'Professional Services': {
+      buyer_persona: 'my situation',
+      subindustries: ['Consulting', 'Legal', 'Accounting', 'Marketing Services', 'IT Services'],
+      customer_types: ['individuals', 'small businesses', 'enterprise teams'],
+      use_cases: ['solving a specialist problem', 'outsourcing expertise', 'finding local support'],
+      topics: [
+        'consulting services',
+        'legal help',
+        'accounting help',
+        'marketing services',
+        'IT support',
+      ],
+      archetypes: [
+        {
+          text: 'How do I find the best providers for {category} in {market}?',
+          intent: 'discovery',
+        },
+        {
+          text: 'What should I ask before I hire a provider for {category}?',
+          intent: 'purchase',
+        },
+        {
+          text: 'How do I compare providers for {category} on expertise and price?',
+          intent: 'comparison',
+        },
+        {
+          text: 'Where can I find trusted local support for {category} in {market}?',
+          intent: 'local',
+        },
+        {
+          text: 'How much should I expect to pay for {category} in {market}?',
+          intent: 'purchase',
+        },
+      ],
+    },
+    'Financial Services': {
+      buyer_persona: 'my finances',
+      subindustries: ['Banking', 'Payments', 'Insurance', 'Investing', 'Lending'],
+      customer_types: ['consumers', 'small businesses', 'finance teams'],
+      use_cases: ['managing money', 'making payments', 'reducing financial risk'],
+      topics: [
+        'everyday banking',
+        'payment processing',
+        'insurance',
+        'personal loans',
+        'investment platforms',
+      ],
+      archetypes: [
+        {
+          text: 'Which option for {category} is best for me in {market}?',
+          intent: 'purchase',
+        },
+        {
+          text: 'How do I compare fees and support for {category}?',
+          intent: 'comparison',
+        },
+        {
+          text: 'What features should I look for when choosing {category}?',
+          intent: 'purchase',
+        },
+        {
+          text: 'How do I know whether I qualify for {category} in {market}?',
+          intent: 'service',
+        },
+        {
+          text: 'Which providers for {category} can I trust with my money in {market}?',
+          intent: 'service',
+        },
+      ],
+    },
+    Healthcare: {
+      buyer_persona: 'my care needs',
+      subindustries: ['Clinics', 'Telehealth', 'Health Technology', 'Wellness', 'Pharmacy'],
+      customer_types: ['patients', 'families', 'healthcare organizations'],
+      use_cases: ['accessing care', 'managing health', 'improving care delivery'],
+      topics: [
+        'primary care',
+        'telehealth',
+        'pharmacy services',
+        'wellness support',
+        'health apps',
+      ],
+      archetypes: [
+        {
+          text: 'Where can I find {category} in {market}?',
+          intent: 'discovery',
+        },
+        {
+          text: 'How do I compare providers for {category} in {market}?',
+          intent: 'comparison',
+        },
+        {
+          text: 'What should I check before choosing a provider for {category}?',
+          intent: 'purchase',
+        },
+        {
+          text: 'Where can I access {category} near me?',
+          intent: 'local',
+        },
+        {
+          text: 'How much should I expect to pay for {category} in {market}?',
+          intent: 'purchase',
+        },
+      ],
+    },
+    'Travel and Hospitality': {
+      buyer_persona: 'my trip',
+      subindustries: [
+        'Hotels',
+        'Travel Booking',
+        'Tours and Activities',
+        'Business Travel',
+        'Vacation Rentals',
+      ],
+      customer_types: ['leisure travelers', 'families', 'business travelers'],
+      use_cases: ['planning a trip', 'booking accommodation', 'finding local experiences'],
+      topics: [
+        'hotel stays',
+        'vacation rentals',
+        'travel booking',
+        'local tours',
+        'business travel',
+      ],
+      archetypes: [
+        {
+          text: 'What are my best options for {category} in {market}?',
+          intent: 'discovery',
+        },
+        {
+          text: 'Where can I find good-value {category} in {market}?',
+          intent: 'discovery',
+        },
+        {
+          text: 'How do I compare options for {category} before I book?',
+          intent: 'comparison',
+        },
+        {
+          text: 'Where can I book trusted {category} in {market}?',
+          intent: 'purchase',
+        },
+        {
+          text: 'Which option for {category} is best for my next trip?',
+          intent: 'purchase',
+        },
+      ],
+    },
+    Education: {
+      buyer_persona: 'my learning goals',
+      subindustries: [
+        'Online Learning',
+        'Higher Education',
+        'Professional Training',
+        'Tutoring',
+        'Education Technology',
+      ],
+      customer_types: ['students', 'parents', 'working professionals', 'education teams'],
+      use_cases: ['learning a skill', 'choosing a course', 'improving learning outcomes'],
+      topics: [
+        'online courses',
+        'degree programs',
+        'professional training',
+        'tutoring',
+        'learning platforms',
+      ],
+      archetypes: [
+        {
+          text: 'What are my best options for {category} in {market}?',
+          intent: 'discovery',
+        },
+        {
+          text: 'Which provider for {category} should I choose for my career goals?',
+          intent: 'purchase',
+        },
+        {
+          text: 'How do I compare options for {category} before I enroll?',
+          intent: 'comparison',
+        },
+        {
+          text: 'Which {category} options give me the best outcomes for the price?',
+          intent: 'comparison',
+        },
+        {
+          text: 'What should I check before I choose {category}?',
+          intent: 'purchase',
+        },
+      ],
+    },
+  },
+};

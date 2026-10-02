@@ -233,11 +233,6 @@ def _discovery_policy() -> dict[str, Any]:
             if name.isupper()
             and isinstance(value, (str, int, float, tuple, dict, frozenset))
         },
-        "industry_library": json.loads(
-            (
-                Path(__file__).parents[1] / "app/core/config/industry_library.json"
-            ).read_text(encoding="utf-8")
-        ),
     }
 
 

@@ -8,6 +8,7 @@
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
+import { industryLibrary } from './config/industry-library.ts';
 import { opportunities } from './config/opportunity.ts';
 import { earnedActions } from './config/earned-actions.ts';
 import { actions } from './config/actions.ts';
@@ -49,6 +50,7 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   abuse,
+  discovery: { ...pythonConfig.discovery, industry_library: industryLibrary },
   source_pages: sourcePages,
   audits: { ...pythonConfig.audits, url_identity: urlIdentity },
   opportunity: {
