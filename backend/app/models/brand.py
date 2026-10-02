@@ -2,9 +2,7 @@
 #
 # Decision B-1 replaces the reference's JSON-blob brand identity with explicit,
 # normalized rows so each alias / domain / competitor is queryable and
-# individually editable. A serialization shim (``domain/projects/shim.py``)
-# rebuilds the plain dict ``ScoringConfig.from_project`` expects from these rows
-# so downstream scoring (B5/B6) works unchanged.
+# individually editable. Native TypeScript projections consume these rows.
 #
 # Everything here is scoped to a ``Project`` (which is itself workspace-scoped),
 # so access is enforced through the project's workspace (invariant 5).

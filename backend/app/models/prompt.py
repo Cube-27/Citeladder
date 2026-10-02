@@ -171,8 +171,8 @@ class Prompt(Base):
     # the archetype below rather than choosing it independently.
     intent: Mapped[str] = mapped_column(String(32), default="")
     # Where in the buyer journey this prompt sits, and what the person wants
-    # from the answer (config/visibility_prompts.py BUYER_STAGES /
-    # PROMPT_INTENT_VOCABULARY). Empty for manually written and imported
+    # from the answer (native config/prompt-generation.ts vocabulary).
+    # Empty for manually written and imported
     # prompts, which never went through the slot planner.
     buyer_stage: Mapped[str] = mapped_column(String(16), default="", server_default="")
     prompt_intent: Mapped[str] = mapped_column(

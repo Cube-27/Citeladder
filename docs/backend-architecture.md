@@ -1,6 +1,8 @@
 # Backend architecture
 
-The backend combines FastAPI and the TypeScript API service with separate workers.
+The application API and executing workers are TypeScript-owned. Python's web
+process currently serves only health/readiness; its sweeper retains discovery
+and integration recovery, and its migration job runs Alembic and demo bootstrap.
 PostgreSQL owns durable
 state and queues. Domain behavior is documented in the feature owners listed in
 [the documentation index](README.md); this file owns shared backend mechanics.
@@ -8,8 +10,7 @@ state and queues. Domain behavior is documented in the feature owners listed in
 Projects, onboarding research/completion, logo refresh and command-center reads
 are TypeScript-owned under frontend/services/api/src/projects/. Discovery runs
 in its TypeScript worker; the Python queue sweeper retains lease-expiry and retry
-reconciliation. Python keeps authorized project reads for integrations and
-remaining visibility consumers. Executive PDFs use the TypeScript command-center
+reconciliation. Executive PDFs use the TypeScript command-center
 projection and shared PDF renderer; receipt list/download reads are also
 TypeScript-owned. Ingress routing is
 checked against the shared route-ownership manifest.
@@ -42,7 +43,7 @@ rather than restating them. Business logic does not move into generic utilities
 for convenience.
 
 Python 3.12, async SQLAlchemy/asyncpg and Pydantic settings own the remaining
-Python runtime; Node 24, Hono and Kysely own the native service and workers.
+Python runtime; Node 26, Hono and Kysely own the native service and workers.
 Compose names the API service web; the frontend's server-only proxy destination
 is http://web:8000. Browser calls remain same-origin /api/v1.
 Fernet-encrypted provider/OAuth secrets and least-privilege worker environments
@@ -55,7 +56,7 @@ an output cap sent as `max_completion_tokens` (retried once as `max_tokens` when
 the provider rejects the former by name), and JSON Schema instructions in the
 prompt rather than a provider-specific response format. Customer (BYOK) app
 routes and their connection test follow the same rules through
-`app/connectors/output_cap.py`. Callers validate the returned JSON against
+`frontend/services/api/src/models/`. Callers validate the returned JSON against
 their own schemas and evidence contracts before persistence.
 
 ## Task queue contract
@@ -79,7 +80,12 @@ Every project query is workspace-authorized and product IDs are UUIDs.
 [Workspace access](workspace-access.md) owns the role and membership model.
 Reads project existing state without provider I/O, acquisition or repair.
 Raw evidence and provider attempts are append-only; derived rows retain direct
-source IDs and relevant versions. Product policy lives under app/core/config/.
+source IDs and relevant versions. Native policy lives under
+`frontend/services/api/src/config/` and the owning service config modules.
+Policy with remaining Python readers stays in `app/core/config/` and reaches
+TypeScript through the drift-checked export. Models/Alembic, supported operator
+tools and demo/bootstrap remain Python consumers. Moving a policy section
+removes its Python definition and exporter builder in the same change.
 Do not introduce Redis without measured need.
 
 Backend schemas own the wire contract. Coordinate frontend schemas and API

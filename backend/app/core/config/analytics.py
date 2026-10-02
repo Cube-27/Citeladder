@@ -119,7 +119,7 @@ CONFIDENCE_BUCKETS: Final[frozenset[str]] = frozenset(
 class AiReferralHostRule:
     """One known AI-referrer hostname -> ``ai_source`` (suffix-safe match).
 
-    Matching reuses ``analysis/normalization.domain_matches``: the candidate
+    Native referral matching checks host boundaries: the candidate
     host must EQUAL ``host`` or be a subdomain of it, so
     ``notchatgpt.com`` never matches ``chatgpt.com``.
     """

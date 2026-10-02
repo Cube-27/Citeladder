@@ -64,8 +64,9 @@
   completes Commerce competitor discovery and analytics lease recovery, retiring
   the Python analytics worker and its exclusive acquisition/parser bridges.
   Python keeps brand-discovery/integration recovery and fixture identity helpers.
-  PR 20 follows the re-sequenced
-  order. Deployment of implemented cutovers is pending; the owner dropped the
+  PR 20 is assigned: 20a transfers the first native policy owners and retires
+  unused Python bridges; further policy, runtime and dependency slices remain.
+  Deployment of implemented cutovers is pending; the owner dropped the
   one-week soak while there are no customers (smoke tests instead). On
   1 October 2026 the owner accepted a low-cost hosting phase (PRs 21–24:
   scale-to-zero Cloud Run in us-central1, free-tier PostgreSQL VM). From PR 18b

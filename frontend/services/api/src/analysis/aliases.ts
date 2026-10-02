@@ -1,6 +1,6 @@
 /**
  * Brand and competitor name matching, the TS form of Python's
- * `analysis/normalization.py` alias rules: `&` reads as "and", punctuation
+ * Alias rules: `&` reads as "and", punctuation
  * separates words, and a name matches on whole-word boundaries including its
  * separator-free spelling ("Ace Hardware" names "acehardware").
  */

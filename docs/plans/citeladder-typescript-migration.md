@@ -185,7 +185,7 @@ total.
 | 18 | Site Health and source-page inspection | High | Done; 18b5b (#224), 18b5c (#225) merged |
 | 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a merged (#226); 19b adapters, activation and retirement implemented; PR validation pending |
 | 19c | Commerce competitor discovery and remaining acquisition bridges | High | Implemented 2 October 2026; deployment pending |
-| 20 | Consolidation and policy transfer | Medium | |
+| 20 | Consolidation and policy transfer | Medium | 20a implemented; further policy, runtime and dependency slices in progress |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
 | 23 | Database move and HTTP cutover (section 9) | High | Proposed |
@@ -1224,6 +1224,31 @@ Move `core/config` modules consumed only by TS into TS config and shrink the
 export. Delete Python bridges whose last caller has moved. Remove empty Python
 routers and dead registrations. Document the final Python↔TS boundary in the
 architecture owner.
+
+**20a.** Native configuration now owns brand evidence/logo acquisition,
+internal-link retrieval and judgment, Agent context and skill vocabulary, MCP
+protocol settings, prompt-generation templates, and Site Health authorship and
+company identity. Prompt templates compose examples and cohort rules at use
+time instead of exporting every expanded combination. Python retains the
+model-consumed prompt vocabulary and normalization, shared security/settings,
+queue policy and other still-shared sections; the generated bridge remains
+drift-checked.
+
+Retired bridges: Python analytics reads/enqueue, project business-context and
+identity shims, legacy normalization/source-pattern analysis, CSV helpers,
+Keenable, output-cap handling, streaming and executor-error shells. Their
+Python-only tests retire with them; native owner tests remain. Cold-connect
+coverage now uses integration completion's native successor admission.
+Literal-vocabulary guards retire with their last Python schema consumer;
+prompt exemplar substring tests retire with the templates, with native
+generation/admission and packaged-skill tests covering the consumers.
+
+Remaining PR20 work: further field-level policy transfer and bridge retirement,
+native discovery/integration lease recovery, Python web retirement with full
+production startup validation, and dependency updates/pruning. Models/Alembic
+remain Python; supported operator tooling and deploy-time bootstrap remain
+explicit consumers until their callers are replaced. No schema tables are
+dropped merely because their HTTP owner moved.
 
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,
