@@ -50,7 +50,7 @@ async function reclaim(db: Database, table: Queue, increment: number, batchSize:
     .execute();
 }
 
-export async function recoverDiscoveryLeases(db: Database, batchSize = queueRecovery.batchSize) {
+export function recoverDiscoveryLeases(db: Database, batchSize = queueRecovery.batchSize) {
   return db.transaction().execute(async (trx) => {
     // Discovery counts the attempt on completion or recovery, never on claim.
     const tasks = await reclaim(trx, 'brand_discovery_tasks', 1, batchSize);
@@ -96,7 +96,7 @@ export async function recoverDiscoveryLeases(db: Database, batchSize = queueReco
   });
 }
 
-export async function recoverIntegrationLeases(db: Database, batchSize = queueRecovery.batchSize) {
+export function recoverIntegrationLeases(db: Database, batchSize = queueRecovery.batchSize) {
   // Integration claims already charge the attempt. Reclaiming must not charge it twice.
   return db
     .transaction()
@@ -106,6 +106,7 @@ export async function recoverIntegrationLeases(db: Database, batchSize = queueRe
 export async function recoverQueues(db: Database) {
   const logger = getLogger('workers.queue-recovery');
   let reclaimed = 0;
+  const failures: unknown[] = [];
   for (const [queue, recover] of [
     ['brand_discovery_tasks', recoverDiscoveryLeases],
     ['integration_sync_runs', recoverIntegrationLeases],
@@ -115,8 +116,10 @@ export async function recoverQueues(db: Database) {
     } catch (error) {
       // One broken queue must not stop the independent recovery of the other.
       logger.exception('queue_recovery_failed', error, { queue });
+      failures.push(error);
     }
   }
   if (reclaimed) logger.info('expired_queue_leases_recovered', { reclaimed });
+  if (failures.length) throw new AggregateError(failures, 'Queue recovery failed');
   return reclaimed;
 }

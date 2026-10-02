@@ -276,7 +276,11 @@ function productionFrontendUrl(value: string): boolean {
     // Inspect the unnormalized path too: URL would collapse /private/.. to /.
     if (!/^https:\/\/[^/?#\\@]+\/?$/iu.test(value.trim())) return false;
     const url = new URL(value);
-    const host = url.hostname.replace(/^\[|\]$/gu, '').replace(/\.+$/u, '');
+    let host = url.hostname;
+    if (host.startsWith('[')) host = host.slice(1, -1);
+    let end = host.length;
+    while (host[end - 1] === '.') end -= 1;
+    host = host.slice(0, end);
     return (
       !url.username &&
       !url.password &&

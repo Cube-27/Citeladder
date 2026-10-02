@@ -7,7 +7,7 @@ import type { IntegrationClient } from '../src/integrations/client.ts';
 import { IntegrationError } from '../src/integrations/client.ts';
 import { integrationPolicy, integrationSettings } from '../src/integrations/config.ts';
 import { IntegrationWorker } from '../src/workers/integration-worker.ts';
-import { recoverIntegrationLeases } from '../src/queue/recovery.ts';
+import { recoverIntegrationLeases, recoverQueues } from '../src/queue/recovery.ts';
 import { referralEventFields } from '../src/referrals/events.ts';
 import { seedProject } from './referral-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
@@ -115,6 +115,38 @@ async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
 }
 
 describe('integration worker paging and resume', () => {
+  it('reports partial sweep failure after recovering the independent queue', async () => {
+    const run = await seedRun();
+    await db
+      .updateTable('integration_sync_runs')
+      .set({
+        status: 'running',
+        attempt_count: 1,
+        lease_owner: 'dead-worker',
+        lease_expires_at: new Date(Date.now() - 1000),
+      })
+      .where('id', '=', run.runId)
+      .execute();
+    const transaction = vi.spyOn(db, 'transaction').mockImplementationOnce(() => {
+      throw new Error('discovery queue unavailable');
+    });
+    try {
+      await expect(recoverQueues(db)).rejects.toThrow('Queue recovery failed');
+      const recovered = await db
+        .selectFrom('integration_sync_runs')
+        .select(['status', 'attempt_count'])
+        .where('id', '=', run.runId)
+        .executeTakeFirstOrThrow();
+      expect(recovered).toEqual({ status: 'retry_wait', attempt_count: 1 });
+    } finally {
+      transaction.mockRestore();
+      await db
+        .updateTable('integration_sync_runs')
+        .set({ status: 'succeeded' })
+        .where('id', '=', run.runId)
+        .execute();
+    }
+  });
   it('claims by priority and availability while concurrent workers never share a run', async () => {
     const low = await seedRun(),
       high = await seedRun(),

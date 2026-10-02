@@ -11,7 +11,12 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, () => 
 try {
   const { values } = parseArgs({ options: { drain: { type: 'boolean', default: false } } });
   do {
-    await recoverQueues(db);
+    try {
+      await recoverQueues(db);
+    } catch (error) {
+      // The daemon retries on its next poll; a one-shot operator must see failure.
+      if (values.drain) throw error;
+    }
     if (values.drain) break;
     await waitForPoll(queueRecovery.pollSeconds * 1000, stop.signal);
   } while (!stop.signal.aborted);
