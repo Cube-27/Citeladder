@@ -76,11 +76,11 @@ durable-memory promotion retain their explicit user-decision boundaries.
 
 TypeScript owns every application route, protocol endpoint and executing worker.
 `frontend/services/api` runs Node, Hono and Kysely against PostgreSQL.
-Audit maintenance, the analytics/Agent/Site Health workers, and the independent
-native discovery/integration sweeper own their respective lease recovery.
-Every route family, task kind and table has one writing owner. The route-family
-manifest in `frontend/packages/contracts/src/route-ownership.ts` and the native
-OpenAPI declarations are checked against all three ingress Caddyfiles.
+Background work runs in bounded runner and tick executions of the same image;
+each lane and the tick's queue recovery own their lease recovery.
+Every route family, task kind and table has one writing owner. Every native
+OpenAPI operation declares one family from the manifest in
+`frontend/packages/contracts/src/route-ownership.ts`.
 
 Python retains SQLAlchemy models, Alembic, deploy-time bootstrap, supported
 offline operators and policy still read by those consumers. It has no web
@@ -123,9 +123,10 @@ generated from the migrated schema.
 The marketing Worker serves `citeladder.com` with Astro SSR and keeps public
 MCP and signed webhook paths on their established apex identity. The product
 Worker serves `app.citeladder.com`, including same-origin `/api/v1`, browser
-login, callbacks and consent. Each Worker reaches the native API through authenticated
-`origin.citeladder.com` ingress. GCP retains Caddy, the native API, PostgreSQL, durable workers, secrets and
-backups; deployment uses separate API and Python schema/operator images.
+login, callbacks and consent. Each Worker reaches the native API on scale-to-zero
+Cloud Run (us-central1) with the origin token. Runner, tick and migration jobs
+share its images, and PostgreSQL runs alone on a private free-tier VM. There
+are no backups ([Google Cloud hosting](operations/GOOGLE_CLOUD.md)).
 The [Workers runbook](operations/WORKERS_RUNBOOK.md) owns the approved release,
 production acceptance and recovery order.
 

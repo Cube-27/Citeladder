@@ -160,16 +160,9 @@ uv run python -m scripts.account_manager \
   --actor <workspace-owner-or-admin-email> --workspace-id <workspace-uuid>
 ```
 
-After deploying an image that includes the script, run it on the GCP VM with
-the backend container's interactive terminal:
-
-```bash
-sudo docker compose --env-file /opt/citeladder/runtime.env \
-  -f /opt/citeladder/compose.gcp.yml exec web \
-  python -m scripts.account_manager \
-  --actor kerry@citeladder.com \
-  --workspace-id fe2ce60f-906d-4285-afd6-17b5ea51e510
-```
+Against production, open the IAP database tunnel from the
+[GCP runbook](operations/GCP_RUNBOOK.md#3-daily-operation) and run the same
+command from `backend/` with `DATABASE_URL` pointing at `127.0.0.1:15432`.
 
 Passwords are prompted without echo and are never command-line arguments.
 

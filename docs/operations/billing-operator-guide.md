@@ -296,7 +296,7 @@ or success counts.
 
 ```bash
 cd frontend
-pnpm --filter @citeladder/api billing-worker
+pnpm --filter @citeladder/api runner
 ```
 
 Run it when webhook delivery is delayed, an accepted create outcome is uncertain,
@@ -307,8 +307,10 @@ inspect affected pending rows, webhook results, normalized receipts, grants, and
 ledger entries. Reconciliation is not evidence that production provider behavior
 has been tested.
 
-The Compose `billing-worker-ts` service runs the same entry point with `--loop`.
-Batch size, polling, lease duration, abandonment window, pagination and retry
+The runner drains every lane, so this also processes other due work. In
+production the API starts a runner after committed billing work, and the
+scheduled tick drains it too; locally the Compose `runner` service repeats tick.
+Batch size, lease duration, abandonment window, pagination and retry
 limits come from the existing `BILLING_RECONCILIATION_*` settings, rather than
 command-line overrides. Claims renew during I/O and an expired worker cannot
 settle after another worker reacquires its row. Inspect pending intents whose

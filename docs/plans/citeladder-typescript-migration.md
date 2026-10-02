@@ -1534,6 +1534,37 @@ Mumbai VM after the smoke tests pass, and keep its final backup.
 Caddy and origin configuration, and the `compose.gcp.yml` path. After seven
 days, check billing by SKU and remove anything unexpectedly non-zero.
 
+PR22–24 implementation is complete (2 October 2026), assigned together with
+these owner directions: no backups, a clean rebuild reusing the existing
+project and state, deletion of the stale images and database, and removal of
+Caddy and other retired dependencies. Departures from the text above:
+
+- No backup bucket, Mumbai dump or restore. The first apply of the new
+  Terraform deletes the Mumbai VM and disk, static IP, VPC, the asia-south1
+  image repository, the backup bucket and the Storage data-access audit
+  configuration. The database starts empty, and a reset replaces the database
+  VM.
+- PostgreSQL runs on Container-Optimized OS from an image mirrored into
+  Artifact Registry, so the VM needs no NAT or public address (Private Google
+  Access). There is no ₹20/day budget: GCP budgets have no daily period, so a
+  forecast-spend rule on the ₹500 monthly budget catches run-rate spikes.
+- The Workers call the deterministic run.app URL directly. The API now
+  enforces the remainder of Caddy's admission: allowlisted public host and
+  the Cloudflare-observed client address for per-visitor rate limits. A
+  PostgreSQL advisory lock admits one drain at a time, so a write burst
+  cannot open one pool per runner execution.
+- Tick is its own job (no execution overrides). The deploy migrates before
+  the API rolls forward and smokes origin admission and one tick.
+- Caddy is removed everywhere. Local Compose runs the three Workers under
+  `wrangler dev`, and one runner service repeats tick. The per-owner daemon
+  entry points and loops, the Caddyfile route model, the VM runtime scripts,
+  the control/destroy workflows and the settings only those read are deleted.
+
+Live acceptance (first deploy, Worker deploys, smoke, seven-day SKU check) is
+an owner operation in the [GCP runbook](../operations/GCP_RUNBOOK.md). The
+published DPA still states India hosting. Updating it is an owner/legal action
+and must happen before customer data is accepted.
+
 **Owner decisions (1 October 2026).** us-central1 is accepted despite about
 250 ms more per API round trip from India. The owner stops the Mumbai VM
 manually if needed; no PR stops it before PR 23. Cutovers need no soak (rule 7).

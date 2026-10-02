@@ -234,7 +234,7 @@ Inspect the activation response in browser Network and the account with:
 ```powershell
 $accountId = 'REPLACE_WITH_BILLING_ACCOUNT_UUID'
 .\scripts\billing-test.ps1 -Action admin -CommandArgs @('account-inspect','--account-id',$accountId,'--actor',$actor,'--reason','Inspect sandbox payment','--idempotency-key','inspect-inr-1')
-docker logs --tail 30 citeladder-billing-test-billing-worker-ts-1
+docker logs --tail 30 citeladder-billing-test-runner-1
 ```
 
 Get the billing account UUID from the signed-in billing API response, not a

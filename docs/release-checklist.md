@@ -33,8 +33,8 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
   docker compose --env-file .env -f docker-compose.yml ps
-curl -fsS http://localhost:3000/
-node scripts/frontend-ingress-smoke.mjs http://localhost:3000
+curl -fsS http://127.0.0.1:3000/
+node scripts/frontend-ingress-smoke.mjs http://127.0.0.1:3000 http://127.0.0.1:3001
 curl -fsS http://localhost:8100/health
 ```
 

@@ -103,7 +103,7 @@ public identity. Callback verification binds its signature to the stored
 subscription or order and schedules bounded reconciliation; durable webhook receipt precedes asynchronous processing. The
 checkout kill switch does not disable recovery of existing payment evidence.
 Razorpay vocabulary, headers, keys and webhook path remain adapter-owned.
-The [billing worker](../frontend/services/api/src/billing-worker.ts) claims each
+The [billing recovery lane](../frontend/services/api/src/billing/recovery.ts) claims each
 row with PostgreSQL leases, renews during provider I/O and checks ownership
 before settlement. Attempts and retry bounds persist across process restarts;
 uncertain evidence never establishes nonpayment. Exhausted claims require

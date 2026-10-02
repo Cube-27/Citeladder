@@ -3,8 +3,8 @@
 The frontend has three runtime owners: the marketing Worker serves Astro SSR and
 public routes at `citeladder.com`; the product Worker serves the Vite/React
 Router SPA at `app.citeladder.com`; the static documentation Worker serves Astro
-pages at `docs.citeladder.com`. Local Compose retains frontend containers
-and a Caddy ingress on browser port 3000 for development and clean-clone smoke.
+pages at `docs.citeladder.com`. Local Compose runs the same three Workers under
+`wrangler dev` on ports 3000, 3001 and 4322 for development and clean-clone smoke.
 Together they project workspace-authorized
 backend contracts. The frontend owns navigation, ephemeral state, accessible
 interactions and presentation; the backend owns authorization, measurement and
@@ -92,8 +92,7 @@ Browser APIs use relative `/api/v1`. After cutover, the product Worker sends
 these requests through the shared authenticated origin transport. Marketing
 navigation uses direct app-origin links; the public pricing HTML is rendered
 from a validated catalog response and selection links carry only bounded public
-fields. Local Compose still exercises the legacy Caddy route table during the
-rollback window. Application documents use `no-store` and missing fingerprinted
+fields. Application documents use `no-store` and missing fingerprinted
 assets return 404.
 Each domain has one API module and query-key owner. Workspace/project identity
 belongs in both requests and cache keys. Retained placeholder data may survive

@@ -79,8 +79,12 @@
   and dependencies are retired. PR20 implementation is complete; PR21–24 remain
   separate hosting work. PR21 implementation is complete (2 October 2026):
   bounded shared-pool runner/tick, commit-aware API wake-up and Cloud Run origin
-  admission. PR22–24 infrastructure/cutover/retirement and live smoke acceptance
-  remain unassigned.
+  admission. PR22–24 implementation is complete (2 October 2026): us-central1
+  Terraform (Cloud Run API/runner/tick/migrate, free-tier PostgreSQL VM,
+  scheduler, budget), Workers pointed at Cloud Run, and Mumbai, Caddy, the VM
+  runtime and per-owner daemons retired. No backups by owner direction. The
+  first deploy, Worker deploys, live smoke and the DPA hosting-location update
+  are owner operations ([GCP runbook](../operations/GCP_RUNBOOK.md)).
   Deployment of implemented cutovers is pending; the owner dropped the
   one-week soak while there are no customers (smoke tests instead). On
   1 October 2026 the owner accepted a low-cost hosting phase (PRs 21–24:

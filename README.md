@@ -131,9 +131,9 @@ Stated as plainly as the features, because it is a design constraint rather than
 ## Quick start (Docker Compose)
 
 From a clean clone, copy the local template and use one Compose command. It builds and starts
-Postgres, runs the migration job, then starts the native API, Astro marketing, the Vite app,
-the shared Caddy ingress, and workers. Both marketing and `/login` use port 3000.
-The browser stays same-origin: the frontend proxies relative `/api/*` calls to the API over the
+Postgres, runs the migration job, then starts the native API, the runner loop and the three
+Workers as production serves them: marketing on port 3000, the app on 3001 and docs on 4322.
+The browser stays same-origin: the app Worker proxies relative `/api/*` calls to the API over the
 Compose network.
 
 > **Important:** exported `POSTGRES_*` and `DATABASE_URL` shell variables take precedence over
@@ -151,8 +151,9 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   up -d --build --force-recreate
 
 # 3. Once `docker compose ... ps` shows the services healthy, verify the application and API.
-curl -fsS http://localhost:3000/
-curl -fsS http://localhost:8100/health
+curl -fsS http://127.0.0.1:3000/
+curl -fsS http://127.0.0.1:3001/health
+curl -fsS http://127.0.0.1:8100/health
 ```
 
 No host-side migration command or separate frontend dev server is needed for this Compose path.
