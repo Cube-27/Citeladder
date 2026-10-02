@@ -7,6 +7,7 @@
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
+import { agentContext } from './config/agent-context.ts';
 import { brandLogos } from './config/brand-logos.ts';
 import { internalLinks } from './config/internal-links.ts';
 import {
@@ -31,6 +32,7 @@ type SettingSpec = {
 
 export const policy = {
   ...pythonConfig,
+  agent_context: agentContext,
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,
   internal_links: internalLinks,

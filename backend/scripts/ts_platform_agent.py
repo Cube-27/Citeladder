@@ -2,16 +2,7 @@
 
 from typing import Any
 
-from app.core.config import agent_context
 from app.core.config import agent_skills as config
-
-
-def agent_context_policy() -> dict[str, str | int]:
-    return {
-        name.lower(): value
-        for name, value in vars(agent_context).items()
-        if name.startswith(("CONTENT_", "CONTEXT_")) and isinstance(value, (str, int))
-    }
 
 
 def agent_skill_policy() -> dict[str, Any]:
