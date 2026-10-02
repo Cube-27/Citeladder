@@ -1296,9 +1296,12 @@ native schema-typed handlers and browser consumers share their contracts.
 policy now belong to native config; prompt examples compose at use time.
 Python retains only Commerce versions used by models and error vocabulary
 pending the error-code authority transfer. Audit-scheduler runtime settings and
-the pinned timezone catalog move to native config; model defaults and the shared
+the pinned timezone catalog move to native config, retiring Python's unused
+`tzdata` dependency; model defaults and the shared
 provider catalog remain exported. Both transfers preserve environment aliases
-and exclusive bounds. Further policy and test-only acquisition bridge retirement
+and exclusive bounds. Timezone admission also checks the native runtime's
+support, rejecting catalog names such as `Factory` that cannot execute.
+Further policy and test-only acquisition bridge retirement
 remain open; PR20 is not complete.
 
 > **Stop point D (end of this plan).** TypeScript owns the application layer.

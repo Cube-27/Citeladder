@@ -222,6 +222,7 @@ describe('schedule input decisions', () => {
     { engines: [] },
     { engines: ['unknown'] },
     { timezone: 'not/a_zone' },
+    { timezone: 'Factory' },
     { timezone: ' ' },
     { timezone: '+05:30' },
     { next_run_at: '2026-10-01T12:00:00' },
