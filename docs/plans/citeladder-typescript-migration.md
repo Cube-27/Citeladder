@@ -1325,6 +1325,19 @@ Python model/isolation fixtures use known canonical URLs; Commerce's
 Remove declaration-only onboarding direct-fetch settings and `tldextract` with
 its unused transitive dependencies. Further TS-only policy transfer remains open.
 
+**20i.** Move Site Health acquisition, analysis, readiness, rule, architecture,
+link-metric and change-intelligence catalogs and TS-only runtime settings to
+native config. Compose rule metadata and checklist IDs from their owning maps;
+startup validates catalog relationships and environment bounds, including
+cross-field constraints previously enforced only by Python.
+Retire 19 Python catalogs/builders/tests whose last application caller moved.
+Python retains model defaults, terminal states and the supported allowance
+projection with five shared settings: automatic/requested limits, sample
+analysis/discovery limits and task attempts. Native analysis/read/acquisition
+coverage and catalog/settings decision tests replace the retired readiness
+tests; real-PostgreSQL model/isolation and entitlement coverage remains.
+Further field-level policy transfer remains open.
+
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,
 > and supported offline operators/bootstrap. Queue recovery is native; Python

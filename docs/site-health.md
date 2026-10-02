@@ -28,6 +28,16 @@ explicit Run new crawl
 Read endpoints only render persisted projections. They never acquire, classify,
 score, call a model/provider or repair state.
 
+Native policy lives in `frontend/services/api/src/config/site-health.ts` and
+its `config/site-health/` catalogs: acquisition, classification, checks,
+readiness, architecture, link metrics, change intelligence and worker settings.
+Startup validates environment bounds, cross-field relationships and catalog
+references. Python retains model defaults, terminal status vocabulary and the
+supported entitlement/operator allowance projection. Its shared settings are
+`automatic_page_limit`, `max_requested_page_limit`, `sample_url_limit`,
+`sample_discovery_url_cap` and `max_attempts`; the generated bridge exports only
+those settings and the shared model/read defaults.
+
 During the TypeScript cutover, `site-health-worker-ts` claims every
 `site_crawl_tasks` kind: `discover`, `site_setup`, `analyze`, `change_intel`,
 `link_metrics` and `architecture`. The TypeScript owner locks crawl then task,
@@ -323,8 +333,8 @@ without a model call. The anchor is a suggestion, so rewording it still
 verifies. No CMS publishing occurs.
 
 Limits and provisional thresholds live in
-`backend/app/core/config/site_health_internal_links.py` and are exported to
-TypeScript. Live rollout still requires editor-reviewed calibration; fixture tests do not establish recommendation quality.
+`frontend/services/api/src/config/internal-links.ts`.
+Live rollout still requires editor-reviewed calibration; fixture tests do not establish recommendation quality.
 
 ### Change intelligence
 
