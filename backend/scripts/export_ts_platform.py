@@ -41,15 +41,7 @@ from app.core.config import prompts as prompts_config
 from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import site_health_contracts as site_contracts
 from app.core.config import site_health_crawl_policy as site_crawl
-from app.core.config.analysis import (
-    ANALYZER_VERSION,
-    VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-    VISIBILITY_EVIDENCE_MAX_LIMIT,
-    VISIBILITY_SELECTION_MAX_RUNS,
-    VISIBILITY_TREND_DEFAULT_GRANULARITY,
-    VISIBILITY_TREND_GRANULARITIES,
-    VISIBILITY_TREND_MAX_POINTS,
-)
+from app.core.config.analysis import ANALYZER_VERSION
 from app.core.config.analytics import (
     AI_REFERRAL_ANALYZER_VERSION,
     AI_REFERRAL_FORMULA_VERSION,
@@ -60,12 +52,7 @@ from app.core.config.analytics import (
     REFERRAL_SANITIZE_VERSION,
     AnalyticsSettings,
 )
-from app.core.config.audits import (
-    AUDIT_SCOPE_BRAND,
-    AUDIT_STATUS_COMPLETED,
-    AUDIT_STATUS_PARTIALLY_COMPLETED,
-    MEASUREMENT_POLICY_KEY,
-)
+from app.core.config.audits import AUDIT_SCOPE_BRAND
 from app.core.config.provider_catalog import (
     LOGICAL_ENGINES,
     TEST_STATUS_OK,
@@ -251,26 +238,13 @@ def _search_intelligence_policy() -> dict[str, Any]:
 
 
 def _visibility_policy() -> dict[str, Any]:
-    """What the persisted visibility readers select, filter and bound by."""
     return {
-        # Catalog order, which is also the order error messages list them in.
         "logical_engines": list(LOGICAL_ENGINES),
         "search_surface_engines": [
             engine for engine in LOGICAL_ENGINES if is_search_surface(engine)
         ],
-        "dashboard_audit_statuses": [
-            AUDIT_STATUS_COMPLETED,
-            AUDIT_STATUS_PARTIALLY_COMPLETED,
-        ],
         "brand_audit_scope": AUDIT_SCOPE_BRAND,
         "succeeded_task_status": TASK_STATUS_SUCCEEDED,
-        "measurement_policy_key": MEASUREMENT_POLICY_KEY,
-        "selection_max_runs": VISIBILITY_SELECTION_MAX_RUNS,
-        "evidence_default_limit": VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-        "evidence_max_limit": VISIBILITY_EVIDENCE_MAX_LIMIT,
-        "trend_granularities": sorted(VISIBILITY_TREND_GRANULARITIES),
-        "trend_default_granularity": VISIBILITY_TREND_DEFAULT_GRANULARITY,
-        "trend_max_points": VISIBILITY_TREND_MAX_POINTS,
         "overview_present_outcome": OUTCOME_AI_OVERVIEW_PRESENT,
         "successful_outcomes": sorted(SUCCESSFUL_OUTCOMES),
     }

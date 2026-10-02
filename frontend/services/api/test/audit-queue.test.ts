@@ -3,6 +3,7 @@ import { AuditQueue, ownedAuditTask, parkAuditTask } from '../src/queue/audit-qu
 import { createAudit } from '../src/audits/creation.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
+import { transitionAudit } from '../src/audits/state.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant } from './audit-fixtures.ts';
@@ -32,6 +33,24 @@ async function seed() {
   return { ...t, auditId };
 }
 describe('audit queue leases against PostgreSQL', () => {
+  it('refuses lifecycle jumps and terminal revival without writing an event', async () => {
+    const t = await seed();
+    const transition = (target: string) =>
+      db.transaction().execute((trx) => transitionAudit(trx, t.workspaceId, t.auditId, target, at));
+    const events = () =>
+      db.selectFrom('audit_events').select('id').where('audit_id', '=', t.auditId).execute();
+    const before = await events();
+    await expect(transition('completed')).rejects.toMatchObject({ status: 409 });
+    await transition('queued');
+    expect(await events()).toHaveLength(before.length);
+    await transition('running');
+    await transition('partially_completed');
+    await expect(transition('running')).rejects.toMatchObject({ status: 409 });
+    expect(await events()).toHaveLength(before.length + 2);
+    expect(
+      await db.selectFrom('audits').select('status').where('id', '=', t.auditId).executeTakeFirst(),
+    ).toEqual({ status: 'partially_completed' });
+  });
   it('gives each workspace a turn and concurrent claims never share a task', async () => {
     const one = await seed(),
       two = await seed(),

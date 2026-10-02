@@ -18,6 +18,7 @@ import promptLibrary from './config/prompt-library.json' with { type: 'json' };
 import api from './config/api.json' with { type: 'json' };
 import searchIntelligence from './config/search-intelligence.json' with { type: 'json' };
 import demand from './config/demand.json' with { type: 'json' };
+import { audits, visibility, selectableEngines } from './config/audits.ts';
 import { integrations, traffic, analytics, referrals, authOAuth } from './config/connected-data.ts';
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
@@ -79,7 +80,7 @@ export const policy = {
     ...pythonConfig.demand,
     query_page_dataset: traffic.DATASET_GSC_QUERY_PAGE_DAILY,
   },
-  visibility: { ...pythonConfig.visibility, ...promptLibrary.cohorts },
+  visibility: { ...visibility, ...promptLibrary.cohorts },
   projects: { ...pythonConfig.projects, prompt_set_name: promptLibrary.prompt_set_name },
   errors,
   agent: { ...agentRuntime, ...pythonConfig.agent },
@@ -87,11 +88,12 @@ export const policy = {
   audit_schedules: {
     ...pythonConfig.audit_schedules,
     ...auditSchedules,
+    selectable_engines: selectableEngines,
     min_interval_minutes: auditSchedules.settings.min_interval_minutes,
   },
   discovery: { ...discovery, industry_library: industryLibrary },
   source_pages: sourcePages,
-  audits: { ...pythonConfig.audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },
+  audits: { ...audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },
   commerce: {
     ...commerce,
     ...pythonConfig.commerce,
@@ -100,6 +102,7 @@ export const policy = {
   },
   opportunity: {
     ...pythonConfig.opportunity,
+    measurement_policy_key: audits.constants.measurement_policy_key,
     declaration: opportunityDeclaration,
     opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
     actions: { ...actions, ...pythonConfig.opportunity.actions },
@@ -157,6 +160,11 @@ export const policy = {
       ...pythonConfig.prompts.candidate,
       quality_gates_reported: qualityGatesReported,
     },
+  },
+  brand_identity: {
+    ...pythonConfig.brand_identity,
+    suggestion_pending: audits.observed_competitors.status_pending,
+    suggestion_accepted: audits.observed_competitors.status_accepted,
   },
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,

@@ -24,7 +24,6 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.audits import AUDIT_STATUS_COMPLETED
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
     INITIAL_TASK_GENERATION,
@@ -255,7 +254,7 @@ async def _add_visibility(
     audit = Audit(
         workspace_id=workspace_id,
         project_id=project_id,
-        status=AUDIT_STATUS_COMPLETED,
+        status="completed",
         completed_at=datetime.now(UTC),
         requested_count=2,
         completed_count=2,
