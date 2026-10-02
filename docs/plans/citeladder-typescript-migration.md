@@ -185,7 +185,7 @@ total.
 | 18 | Site Health and source-page inspection | High | Done; 18b5b (#224), 18b5c (#225) merged |
 | 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a merged (#226); 19b adapters, activation and retirement implemented; PR validation pending |
 | 19c | Commerce competitor discovery and remaining acquisition bridges | High | Implemented 2 October 2026; deployment pending |
-| 20 | Consolidation and policy transfer | Medium | 20a and dependency slice implemented; further policy/runtime work in progress |
+| 20 | Consolidation and policy transfer | Medium | 20a/b merged; 20c policy catalogs implemented; further policy/runtime work in progress |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
 | 23 | Database move and HTTP cutover (section 9) | High | Proposed |
@@ -1258,6 +1258,18 @@ production startup validation. Models/Alembic
 remain Python; supported operator tooling and deploy-time bootstrap remain
 explicit consumers until their callers are replaced. No schema tables are
 dropped merely because their HTTP owner moved.
+
+**20c.** Transfer abuse budgets, customer model connection policy, JEV settings
+and judgment catalogs, product-tour version, content differentiation, onboarding
+industries, Opportunity/Action decision catalogs, placement verification and
+cited-source taxonomy/inspection policy to native config. Retain Python's
+model-consumed lifecycle defaults and the Opportunity versions used by the
+development enqueue producer. Remove the duplicated Action rule catalog and
+unused industry prompt templates/context and customer-model timeout setting
+(the gateway's configured timeout remains authoritative). Native consumers retain environment bounds,
+threshold ordering and the complete rule-to-evidence-family guard. Python
+source-page persistence tests keep their behavior coverage with literal evidence
+fixtures instead of importing the retired application vocabulary.
 
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,

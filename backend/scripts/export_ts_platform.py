@@ -43,7 +43,6 @@ from app.core.config import demand as demand_config
 from app.core.config import entitlements as entitlements_config
 from app.core.config import errors as error_config
 from app.core.config import integrations_contracts as integration_contracts
-from app.core.config import jev as jev_config
 from app.core.config import legal as legal_config
 from app.core.config import oauth as oauth_config
 from app.core.config import opportunities as opportunities_config
@@ -55,7 +54,6 @@ from app.core.config import site_health_contracts as site_health_config
 from app.core.config import site_health_crawl_policy as site_crawl_config
 from app.core.config import site_health_rules as web_rules
 from app.core.config import workspaces as workspace_config
-from app.core.config.abuse import AbuseSettings
 from app.core.config.analysis import (
     ANALYZER_VERSION,
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
@@ -128,7 +126,6 @@ from app.core.config.integrations_datasets import (
     DIMENSION_KEY_SEPARATOR,
     INTEGRATION_DATASET_TEMPLATES,
 )
-from app.core.config.jev import QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE
 from app.core.config.projects import (
     PROMPT_INTENTS,
     PROMPT_ORIGIN_GENERATED,
@@ -236,11 +233,6 @@ def _discovery_policy() -> dict[str, Any]:
             if name.isupper()
             and isinstance(value, (str, int, float, tuple, dict, frozenset))
         },
-        "industry_library": json.loads(
-            (
-                Path(__file__).parents[1] / "app/core/config/industry_library.json"
-            ).read_text(encoding="utf-8")
-        ),
     }
 
 
@@ -344,9 +336,6 @@ def build_config() -> dict[str, Any]:
                 commerce_config.COMMERCE_VISIBLE_PRICE_AMBIGUOUS_TOKENS
             ),
         },
-        "abuse": {
-            name: _setting(name, AbuseSettings) for name in AbuseSettings.model_fields
-        },
         "auth": auth_policy(_setting),
         "site_health_runtime": site_health_runtime_policy(_setting),
         "entitlements": entitlements_policy(),
@@ -358,15 +347,6 @@ def build_config() -> dict[str, Any]:
                 for name in agent_config.DefaultAgentSettings.model_fields
             },
             "max_attempts": agent_config.GENERATION_PROVIDER_MAX_ATTEMPTS,
-            "jev": {
-                name: _setting(name, jev_config.JevSettings)
-                for name in jev_config.JevSettings.model_fields
-            },
-            "quality": {
-                name.removeprefix("JEV_").lower(): value
-                for name, value in vars(jev_config).items()
-                if name.startswith("JEV_")
-            },
         },
         "agent": _agent_policy(),
     }
@@ -423,7 +403,6 @@ def _prompts_policy() -> dict[str, Any]:
             "accepted": cfg.CANDIDATE_DISPOSITION_ACCEPTED,
             "rejected": cfg.CANDIDATE_DISPOSITION_REJECTED,
             "outcomes": sorted(cfg.CANDIDATE_OUTCOME_DISPOSITIONS),
-            "quality_gates_reported": [QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE],
         },
         "generation_settings": {
             name: _setting(name, PromptGenerationSettings)

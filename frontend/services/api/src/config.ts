@@ -7,6 +7,18 @@
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
+import { abuse } from './config/abuse.ts';
+import { industryLibrary } from './config/industry-library.ts';
+import { opportunities } from './config/opportunity.ts';
+import { earnedActions } from './config/earned-actions.ts';
+import { actions } from './config/actions.ts';
+import { placement } from './config/placement.ts';
+import { sourcePatterns } from './config/source-patterns.ts';
+import { sourcePages, sourcePageVocabulary, urlIdentity } from './config/source-pages.ts';
+import { jev, quality, qualityGatesReported, validateJevSettings } from './config/jev.ts';
+import { appModels } from './config/app-models.ts';
+import { productTourVersion } from './config/product-tour.ts';
+import { contentDifferentiation } from './config/content-differentiation.ts';
 import { agentContext } from './config/agent-context.ts';
 import { agentSkills } from './config/agent-skills.ts';
 import { mcp } from './config/mcp.ts';
@@ -37,6 +49,30 @@ type SettingSpec = {
 
 export const policy = {
   ...pythonConfig,
+  abuse,
+  discovery: { ...pythonConfig.discovery, industry_library: industryLibrary },
+  source_pages: sourcePages,
+  audits: { ...pythonConfig.audits, url_identity: urlIdentity },
+  opportunity: {
+    ...pythonConfig.opportunity,
+    opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
+    actions: { ...actions, ...pythonConfig.opportunity.actions },
+    earned_actions: earnedActions,
+    placement: { ...placement, ...pythonConfig.opportunity.placement },
+    source_patterns: { ...sourcePatterns, ...pythonConfig.opportunity.source_patterns },
+    source_pages: { ...sourcePageVocabulary, ...pythonConfig.opportunity.source_pages },
+    refresh: {
+      ...pythonConfig.opportunity.refresh,
+      source_page_outcome_inspected: sourcePageVocabulary.INSPECTION_INSPECTED,
+    },
+  },
+  models: { ...pythonConfig.models, jev, quality },
+  workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
+  providers: { ...pythonConfig.providers, app: appModels },
+  content_differentiation: {
+    ...contentDifferentiation,
+    stop_words: pythonConfig.demand.stop_words,
+  },
   site_health: {
     ...pythonConfig.site_health,
     page_analysis: {
@@ -62,7 +98,11 @@ export const policy = {
       api_request_body_max_bytes: pythonConfig.api.request_body_max_bytes,
     },
   },
-  prompts: { ...pythonConfig.prompts, generation: promptGeneration },
+  prompts: {
+    ...pythonConfig.prompts,
+    generation: promptGeneration,
+    candidate: { ...pythonConfig.prompts.candidate, quality_gates_reported: qualityGatesReported },
+  },
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,
   internal_links: internalLinks,
@@ -251,6 +291,11 @@ export function configEnvironment(config: ServiceConfig): Record<string, string 
 
 /** Resolve the service configuration from `env` (defaults to `process.env`). */
 export function loadConfig(env: Record<string, string | undefined> = process.env): ServiceConfig {
+  validateJevSettings(
+    Object.fromEntries(
+      Object.entries(jev).map(([name, spec]) => [name, resolveSettingSpec(spec, env)]),
+    ) as Record<keyof typeof jev, unknown>,
+  );
   const setting = (name: keyof typeof policy.settings) => resolveSetting(name, env);
   const config: ServiceConfig = {
     billing: billingSettings(env),

@@ -10,7 +10,6 @@ from app.core.config import (
     observed_competitors,
     projects,
     provider_catalog,
-    source_pages,
 )
 from app.core.config import audit_schedules as audit_schedule_config
 from app.core.config.provider_catalog import SELECTABLE_ENGINES
@@ -28,11 +27,6 @@ def audit_policy(setting):
             source: sorted(targets) for source, targets in _ALLOWED_TRANSITIONS.items()
         },
         "analysis": constants(analysis, (str, int, float, dict, frozenset)),
-        "url_identity": {
-            "version": source_pages.SOURCE_PAGE_IDENTITY_VERSION,
-            "verbatim": source_pages.URL_IDENTITY_VERBATIM,
-            "unresolved": source_pages.URL_IDENTITY_UNRESOLVED,
-        },
         "observed_competitors": constants(observed_competitors, (str, int, frozenset)),
         "settings": {
             name: setting(name, audits.AuditSettings)

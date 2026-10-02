@@ -2,8 +2,7 @@
 
 import dataclasses
 
-from app.core.config import app_models, dataforseo, provider_catalog
-from scripts.ts_platform_constants import constants
+from app.core.config import dataforseo, provider_catalog
 
 
 def provider_policy(setting):
@@ -75,7 +74,4 @@ def provider_policy(setting):
             "probe_path": dataforseo.PATH_USER_DATA,
             "success_status": dataforseo.STATUS_OK,
         },
-        "app": constants(
-            app_models, (str, int, float, bool, dict, frozenset), prefix="APP_MODEL_"
-        ),
     }

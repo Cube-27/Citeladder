@@ -5,7 +5,7 @@ import { compareText } from '../../text-order.ts';
 const p = policy.opportunity.source_patterns;
 /**
  * True when `google` is the registrable label: only a public suffix follows
- * it (`core/config/source_patterns.is_google_search_surface`). Not a prefix
+ * it. Not a prefix
  * test, so `google.evil.com` is an ordinary publisher.
  */
 function isGoogleSearchSurface(domain: string): boolean {
