@@ -182,3 +182,15 @@ export const quality = {
 };
 
 export const qualityGatesReported = ['off', 'unavailable'];
+
+/** Cross-field validation runs at startup as it did for Python's settings owner. */
+export function validateJevSettings(settings: Record<keyof typeof jev, unknown>): void {
+  if (
+    Number(settings.fail_below) > Number(settings.flag_below) ||
+    Number(settings.duplicate_fail_at) < Number(settings.duplicate_flag_at)
+  )
+    throw new Error('Invalid JEV thresholds');
+  const endpoint = new URL(String(settings.base_url));
+  if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password)
+    throw new Error('JEV_BASE_URL must be a credential-free HTTPS URL');
+}

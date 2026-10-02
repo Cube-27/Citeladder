@@ -101,7 +101,7 @@ export function createDiscovery(
       .where('idempotency_key', '=', key)
       .executeTakeFirst();
     if (existing) return discoveryView(existing);
-    const industries: Record<string, { buyer_persona: string; subindustries?: string[] }> =
+    const industries: Record<string, { subindustries?: string[] }> =
       policy.discovery.industry_library.industries;
     if (!Object.hasOwn(industries, input.industry))
       throw new ApiError(422, 'industry is not supported');

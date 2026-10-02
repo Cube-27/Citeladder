@@ -15,7 +15,7 @@ import { actions } from './config/actions.ts';
 import { placement } from './config/placement.ts';
 import { sourcePatterns } from './config/source-patterns.ts';
 import { sourcePages, sourcePageVocabulary, urlIdentity } from './config/source-pages.ts';
-import { jev, quality, qualityGatesReported } from './config/jev.ts';
+import { jev, quality, qualityGatesReported, validateJevSettings } from './config/jev.ts';
 import { appModels } from './config/app-models.ts';
 import { productTourVersion } from './config/product-tour.ts';
 import { contentDifferentiation } from './config/content-differentiation.ts';
@@ -291,6 +291,11 @@ export function configEnvironment(config: ServiceConfig): Record<string, string 
 
 /** Resolve the service configuration from `env` (defaults to `process.env`). */
 export function loadConfig(env: Record<string, string | undefined> = process.env): ServiceConfig {
+  validateJevSettings(
+    Object.fromEntries(
+      Object.entries(jev).map(([name, spec]) => [name, resolveSettingSpec(spec, env)]),
+    ) as Record<keyof typeof jev, unknown>,
+  );
   const setting = (name: keyof typeof policy.settings) => resolveSetting(name, env);
   const config: ServiceConfig = {
     billing: billingSettings(env),

@@ -29,6 +29,16 @@ it('applies production and test-key aliases to Razorpay credential admission', (
 });
 
 describe('loadConfig', () => {
+  it('refuses invalid JEV thresholds and destinations before accepting work', () => {
+    expect(() => loadConfig({ JEV_FAIL_BELOW: '0.5', JEV_FLAG_BELOW: '0.3' })).toThrow(
+      'Invalid JEV thresholds',
+    );
+    expect(() =>
+      loadConfig({ JEV_DUPLICATE_FAIL_AT: '0.5', JEV_DUPLICATE_FLAG_AT: '0.7' }),
+    ).toThrow('Invalid JEV thresholds');
+    expect(() => loadConfig({ JEV_BASE_URL: 'http://example.test' })).toThrow('JEV_BASE_URL');
+    expect(() => loadConfig({ JEV_TIMEOUT_SECONDS: '61' })).toThrow(ConfigError);
+  });
   it('resolves native abuse budgets with case-insensitive aliases and positive integer bounds', () => {
     const spec = policy.abuse.login_email_limit;
     expect(resolveSettingSpec(spec, { abuse_login_email_limit: '7' })).toBe(7);

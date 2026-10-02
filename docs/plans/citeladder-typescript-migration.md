@@ -1265,7 +1265,8 @@ industries, Opportunity/Action decision catalogs, placement verification and
 cited-source taxonomy/inspection policy to native config. Retain Python's
 model-consumed lifecycle defaults and the Opportunity versions used by the
 development enqueue producer. Remove the duplicated Action rule catalog and
-unused industry prompt archetypes. Native consumers retain environment bounds,
+unused industry prompt templates/context and customer-model timeout setting
+(the gateway's configured timeout remains authoritative). Native consumers retain environment bounds,
 threshold ordering and the complete rule-to-evidence-family guard. Python
 source-page persistence tests keep their behavior coverage with literal evidence
 fixtures instead of importing the retired application vocabulary.
