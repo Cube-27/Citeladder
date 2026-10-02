@@ -16,7 +16,7 @@ import { z } from 'zod';
 import { sessionUser } from '../auth/session.ts';
 import { activeWorkspace, projectMember, workspaceMember } from '../auth/workspace.ts';
 import type { WorkspaceCapability } from '../auth/workspace.ts';
-import { policy, type ServiceConfig } from '../config.ts';
+import { policy, resolveSettingSpec, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
@@ -119,7 +119,9 @@ function parameterObject(specs: ParamSpecs): z.ZodObject {
 
 const optionalString = z.string().nullable().optional();
 const ACTIVE_WORKSPACE_HEADERS = z.object({ 'x-workspace-id': optionalString });
-const SESSION_COOKIE = z.object({ [policy.settings.session_cookie_name.default]: optionalString });
+const SESSION_COOKIE = z.object({
+  [String(resolveSettingSpec(policy.settings.session_cookie_name))]: optionalString,
+});
 
 /** FastAPI's `{name}` path template as a Hono pattern. */
 function honoPath(path: string): string {

@@ -1379,9 +1379,10 @@ families remain open.
 denial policy, brand validation and Opportunity error codes to native config.
 Retain Python's operator limits, role matrix and persisted model defaults.
 Retire the Python content-format parser and general Opportunity serialization
-bridge; native Agent and Opportunity owners parse the same packaged Markdown,
-including the image-supplied directory override. Move queue execution bounds to
-native config and remove unused provider-wait grouping. Shared queue vocabulary
+bridge; the native Agent parses packaged Markdown with the image-supplied
+directory override. Opportunity reads preserve historical frozen format IDs.
+Move queue execution bounds to native config and remove unused provider-wait
+grouping. Shared queue vocabulary
 continues to serve schema indexes and operator seeds. Billing policy cleanup
 and the final remaining-consumer sweep remain open.
 

@@ -16,6 +16,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { updateActionStatus, attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { loadWorkerSettings, policy } from '../src/config.ts';
+import { record } from '../src/db/json.ts';
 import { recomputeOpportunities, refreshOpportunities } from '../src/opportunities/refresh.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -156,6 +157,26 @@ afterAll(async () => {
 });
 
 describe('opportunity_refresh', () => {
+  it('preserves a frozen historical format identifier in the read response', async () => {
+    const s = await seed();
+    await worker().runUntilIdle();
+    const row = (await live(s))[0]!;
+    await db
+      .updateTable('opportunities')
+      .set({
+        evidence: {
+          ...record(row.evidence),
+          content_handoff: { suggested_skill_id: 'retired_format' },
+        },
+      })
+      .where('id', '=', row.id)
+      .execute();
+    const result = await request(s, `/api/v1/opportunities/${row.id}`);
+    expect(result.status).toBe(200);
+    expect(record(record(await result.response.json()).content_handoff).suggested_skill_id).toBe(
+      'retired_format',
+    );
+  });
   it('claims the one Python-enqueued task and persists exact provenance', async () => {
     const tasks = await db
       .selectFrom('analytics_tasks')

@@ -298,7 +298,10 @@
       "retry_wait": "retry_wait",
       "succeeded": "succeeded",
       "failed": "failed",
-      "cancelled": "cancelled"
+      "cancelled": "cancelled",
+      "capacity_wait": "capacity_wait",
+      "awaiting_provider_result": "awaiting_provider_result",
+      "submission_uncertain": "submission_uncertain"
     },
     "claimable": [
       "awaiting_provider_result",

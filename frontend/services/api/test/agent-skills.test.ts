@@ -5,10 +5,18 @@ import { describe, expect, it } from 'vitest';
 import { agentSkillSchema } from '@citeladder/contracts/agent';
 import { agentSettings } from '../src/agent/config.ts';
 import { loadSkillCatalog } from '../src/agent/skills.ts';
-import { contentFormatIds } from '../src/config/skill-inputs.ts';
+import { parseContentFormats } from '../src/config/skill-inputs.ts';
 
 describe('packaged Agent model inputs', () => {
   const root = agentSettings({}).skillsDirectory;
+  it.each(['  ## briefing — Briefing', '## briefing malformed'])(
+    'rejects malformed format headings %s instead of hiding them in a prior format',
+    (heading) => {
+      expect(() =>
+        parseContentFormats('# Formats\n\n## page — Page\nBody\n' + heading + '\nBody'),
+      ).toThrow('Invalid content format');
+    },
+  );
   it('loads packaged metadata, expanded vocabulary and one selected format', async () => {
     const catalog = await loadSkillCatalog(root);
     const skills = [...catalog.skills.values()];
@@ -33,7 +41,6 @@ describe('packaged Agent model inputs', () => {
         '\n## briefing — Briefing\nA bounded briefing.\n',
       );
       const changed = await loadSkillCatalog(temporary);
-      expect(contentFormatIds(temporary)).toEqual([...changed.formats.keys()]);
       expect(changed.formats.has('briefing')).toBe(true);
       expect(changed.version).not.toBe(first.version);
       await appendFile(join(temporary, 'operating_contract.md'), '\nNew operating constraint.\n');

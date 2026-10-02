@@ -107,10 +107,10 @@ runtime settings and the pinned timezone catalog, are native. Commerce persisted
 versions and scheduler model defaults remain in the shared export.
 Auth HTTP settings, approved policy revisions, workspace denial responses and
 brand validation bounds are native. Python retains operator limits, role grants
-and persisted identity defaults. The native Agent catalog and Opportunity handoff
-parse content formats from the same packaged Markdown; Python no longer parses
-those model inputs. Queue execution bounds are native; schema status vocabulary
-remains shared.
+and persisted identity defaults. The native Agent catalog parses packaged
+Markdown; Python no longer parses those model inputs. Opportunity reads preserve
+frozen format identifiers, including identifiers retired from the current
+catalog. Queue execution bounds are native; schema status vocabulary remains shared.
 Do not introduce Redis without measured need.
 
 Backend schemas own the wire contract. Coordinate frontend schemas and API
