@@ -10,6 +10,8 @@ import ipaddr from 'ipaddr.js';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { errors } from './config/errors.ts';
+import { siteHealth } from './config/site-health.ts';
+import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
 import { auditSchedules } from './config/audit-schedules.ts';
 import { industryLibrary } from './config/industry-library.ts';
@@ -26,8 +28,6 @@ import { contentDifferentiation } from './config/content-differentiation.ts';
 import { agentContext } from './config/agent-context.ts';
 import { agentSkills } from './config/agent-skills.ts';
 import { mcp } from './config/mcp.ts';
-import { siteAuthorship } from './config/site-authorship.ts';
-import { companyIdentity } from './config/company-identity.ts';
 import { promptGeneration } from './config/prompt-generation.ts';
 import { brandLogos } from './config/brand-logos.ts';
 import { internalLinks } from './config/internal-links.ts';
@@ -77,8 +77,16 @@ export const policy = {
     placement: { ...placement, ...pythonConfig.opportunity.placement },
     source_patterns: { ...sourcePatterns, ...pythonConfig.opportunity.source_patterns },
     source_pages: { ...sourcePageVocabulary, ...pythonConfig.opportunity.source_pages },
+    tracking_query_params: siteHealth.tracking_params,
     refresh: {
       ...pythonConfig.opportunity.refresh,
+      finding_class_defect: 'defect',
+      change_analyzer_version: siteHealth.change_intel.analyzer_version,
+      change_class_regression: siteHealth.change_intel.class_regression,
+      change_class_critical: siteHealth.change_intel.class_critical,
+      change_max_observations: siteHealth.change_intel.max_observations,
+      change_state_available: siteHealth.change_intel.state_available,
+      content_change_field: siteHealth.change_intel.change_field,
       source_page_outcome_inspected: sourcePageVocabulary.INSPECTION_INSPECTED,
     },
   },
@@ -89,20 +97,13 @@ export const policy = {
     ...contentDifferentiation,
     stop_words: pythonConfig.demand.stop_words,
   },
-  site_health: {
-    ...pythonConfig.site_health,
-    page_analysis: {
-      ...pythonConfig.site_health.page_analysis,
-      facts: {
-        ...pythonConfig.site_health.page_analysis.facts,
-        authorship: siteAuthorship,
-        provider_identity_exclusions: companyIdentity.provider_identity_exclusions,
-      },
-      traits: {
-        ...pythonConfig.site_health.page_analysis.traits,
-        company_profile: companyIdentity.company_profile,
-      },
-    },
+  site_health: siteHealth,
+  web_fetch: siteHealth.web_fetch,
+  traffic: {
+    ...pythonConfig.traffic,
+    url_schemes: siteHealth.web_fetch.schemes,
+    url_ports: siteHealth.web_fetch.ports,
+    ignored_query_keys: [...siteHealth.tracking_params, ...siteHealth.ignored_query_keys].sort(),
   },
   agent_context: agentContext,
   agent_skills: agentSkills,
@@ -381,6 +382,14 @@ export function configEnvironment(config: ServiceConfig): Record<string, string 
 
 /** Resolve the service configuration from `env` (defaults to `process.env`). */
 export function loadConfig(env: Record<string, string | undefined> = process.env): ServiceConfig {
+  validateSiteHealthSettings(
+    Object.fromEntries(
+      Object.entries(siteHealth.settings).map(([name, spec]) => [
+        name,
+        resolveSettingSpec(spec, env),
+      ]),
+    ),
+  );
   validateJevSettings(
     Object.fromEntries(
       Object.entries(jev).map(([name, spec]) => [name, resolveSettingSpec(spec, env)]),

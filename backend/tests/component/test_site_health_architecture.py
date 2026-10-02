@@ -6,10 +6,6 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.site_health_archetypes import (
-    ARCHETYPE_POLICY_VERSION,
-    ARCHITECTURE_FORMULA_VERSION,
-)
 from app.models.site_health.architecture import SiteObservedArchitecture
 from app.models.site_health.snapshot import SiteHealthSnapshot
 from tests.component.site_health_crawl_seed import _seed_analyze_phase_crawl
@@ -43,8 +39,8 @@ async def test_architecture_composite_fk_rejects_cross_workspace_crawl(
                 project_id=first.project_id,
                 crawl_id=second.crawl_id,
                 source_snapshot_id=first_snapshot.id,
-                architecture_formula_version=ARCHITECTURE_FORMULA_VERSION,
-                archetype_policy_version=ARCHETYPE_POLICY_VERSION,
+                architecture_formula_version="fixture-1",
+                archetype_policy_version="fixture-1",
             )
         )
         with pytest.raises(IntegrityError):

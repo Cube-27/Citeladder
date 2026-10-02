@@ -15,10 +15,17 @@ from app.core.config.site_health_runtime import (
 )
 
 
-@pytest.mark.parametrize("cooldown", [0, -1])
-def test_rate_limit_fallback_cooldown_must_be_positive(cooldown: float) -> None:
-    with pytest.raises(ValidationError, match="rate_limit_cooldown_seconds"):
-        SiteHealthSettings(rate_limit_cooldown_seconds=cooldown)
+@pytest.mark.parametrize(
+    "limits",
+    [
+        {"sample_url_limit": -1},
+        {"sample_discovery_url_cap": -1},
+        {"sample_url_limit": 11, "sample_discovery_url_cap": 10},
+    ],
+)
+def test_sample_limits_remain_nonnegative_and_discovery_covers_analysis(limits):
+    with pytest.raises(ValidationError):
+        SiteHealthSettings(**limits)
 
 
 def test_automatic_page_limit_must_fit_public_maximum():

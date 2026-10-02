@@ -1,282 +1,32 @@
-"""Crawl admission, inventory, and runtime policy for Site Health.
-
-This is deliberately separate from the fetch/rule catalog: these values govern
-which URLs belong to a crawl and the allowance-to-runtime projection.  They
-remain config-owned and are frozen onto a crawl by its planner.
-"""
+"""Shared Site Health model defaults and supported operator policy."""
 
 from __future__ import annotations
 
 from typing import Final, Protocol
 
 DISCOVERY_MODE_SAMPLE: Final = "sample"
+
 DISCOVERY_MODE_FULL: Final = "full"
-INVENTORY_SOURCE_CRAWL_IDS_KEY: Final = "inventory_source_crawl_ids"
-AUTOMATIC_MONITOR_LIMIT_KEY: Final = "automatic_monitor_limit"
+
 SAMPLE_URL_LIMIT: Final = 10
+
 SAMPLE_DISCOVERY_URL_CAP: Final = 200
 
-# How far a FULL crawl maps the site relative to what its allowance lets it
-# actually analyze. Sample mode has always had this bound
-# (``SAMPLE_DISCOVERY_URL_CAP`` over ``SAMPLE_URL_LIMIT``); full mode had
-# none, so every entitled workspace discovered the flat
-# ``automatic_page_limit`` of 500 pages no matter how few of them it could
-# monitor. On the free profile that is 500 fetches to analyze 20 URLs: the
-# screen settles at 20/20 while the crawler keeps working for many more
-# minutes, which reads as a crawl that never stops and gets cancelled by hand.
-#
-# Headroom, not equality: discovery has to see more than it analyzes so the
-# selection has something to rank, and a cap AT the allowance would spend a
-# small budget entirely on a site's navigation shell (the failure that set
-# ``automatic_page_limit`` to 500 in the first place). The floor keeps small
-# allowances mapping enough of the site to reach product/detail URLs.
 FULL_DISCOVERY_HEADROOM: Final = 5
+
 MIN_FULL_DISCOVERY_URL_CAP: Final = 100
 
-URL_ADMISSION_POLICY_VERSION: Final = "sh-url-admission-1"
-INPUT_MODE_AUTO: Final = "auto"
-INPUT_MODE_EXACT_URLS: Final = "exact_urls"
-INPUT_MODE_DISCOVERY_SEEDS: Final = "discovery_seeds"
-INPUT_MODES: Final[frozenset[str]] = frozenset(
-    {INPUT_MODE_AUTO, INPUT_MODE_EXACT_URLS, INPUT_MODE_DISCOVERY_SEEDS}
-)
-URL_EXCLUSION_HARD_PATH: Final = "hard_excluded_path"
-URL_EXCLUSION_HARD_ASSET: Final = "hard_excluded_asset"
-URL_EXCLUSION_HARD_QUERY: Final = "hard_excluded_query"
-URL_EXCLUSION_OUT_OF_SCOPE: Final = "out_of_scope"
-URL_EXCLUSION_NARROWED: Final = "narrowed"
-URL_EXCLUSION_INVALID: Final = "invalid_url"
-URL_EXCLUSION_DUPLICATE: Final = "duplicate"
-URL_EXCLUSION_PAGE_KIND: Final = "page_kind_filtered"
-URL_EXCLUSION_TRACKING: Final = "tracking_url"
-URL_EXCLUSION_HARD_HOST: Final = "hard_excluded_host"
-
-# These dispositions are distinct states, not a confidence gradient.
 CORPUS_DISPOSITION_ANALYZE: Final = "analyze"
-CORPUS_DISPOSITION_INVENTORY_ONLY: Final = "inventory_only"
-CORPUS_DISPOSITION_EXCLUDE: Final = "exclude"
-CORPUS_DISPOSITIONS: Final[frozenset[str]] = frozenset(
-    {
-        CORPUS_DISPOSITION_ANALYZE,
-        CORPUS_DISPOSITION_INVENTORY_ONLY,
-        CORPUS_DISPOSITION_EXCLUDE,
-    }
-)
-DISPOSITION_REASON_HTML_CONTENT: Final = "html_content"
-DISPOSITION_REASON_DOCUMENT: Final = "document"
-DISPOSITION_REASON_UNSUPPORTED_MEDIA: Final = "unsupported_media"
-CORPUS_DISPOSITION_VERSION: Final = "sh-disposition-1"
 
 ITEM_KIND_HTML_PAGE: Final = "html_page"
-ITEM_KIND_DOCUMENT: Final = "document"
-ITEM_KIND_OTHER: Final = "other"
-TEMPORAL_STATE_CURRENT: Final = "current"
-TEMPORAL_STATE_HISTORICAL: Final = "historical"
-TEMPORAL_STATE_FUTURE: Final = "future"
-TEMPORAL_STATE_UNKNOWN: Final = "unknown"
-TEMPORAL_STATES: Final[frozenset[str]] = frozenset(
-    {
-        TEMPORAL_STATE_CURRENT,
-        TEMPORAL_STATE_HISTORICAL,
-        TEMPORAL_STATE_FUTURE,
-        TEMPORAL_STATE_UNKNOWN,
-    }
-)
-URL_HARD_EXCLUSION_PATH_PATTERNS: Final[tuple[str, ...]] = (
-    r"(?:^|/)(?:login|log-in|signin|sign-in|register|signup|sign-up)(?:/|$)",
-    r"(?:^|/)(?:account|profile|admin|wp-admin|dashboard)(?:/|$)",
-    r"(?:^|/)(?:cart|basket|checkout|payment|payments|order|orders|wishlist)(?:/|$)",
-    r"(?:^|/)(?:search|tag|tags|author|authors|feed)(?:/|$)",
-    r"(?:^|/)(?:viewcart|searchsuggestion)(?:/|$)",
-    r"(?:^|/)item/(?:payments?[-_][^/]*|product[-_](?:delivery|warranty))(?:/|$)",
-    r"(?:^|/)(?:preview|print|share)(?:/|$)",
-    # Platform auth REDIRECTORS, which is a different shape from the customer
-    # area itself. `/customer_authentication/redirect` is same-host, is not
-    # named `login` or `account`, and carries no excluded query key, so it
-    # passed admission at discovery and consumed a page of the budget. Only at
-    # analyze time does it 302 onto `account.<domain>`, where the host-label
-    # rule above rejects it -- one permanently failed page per crawl, on every
-    # Shopify storefront, which is what finished every such crawl one page
-    # short of its own limit.
-    r"(?:^|/)(?:customer_authentication|customer_identity|account_login)(?:/|$)",
-    # Cloudflare's own endpoints. These live on the customer's origin but are
-    # infrastructure, never content: `/cdn-cgi/l/email-protection#<hex>` (the
-    # rewritten mailto, whose address is entirely in the fragment), plus
-    # challenge-platform, rum, trace and speculation. The obfuscated mailto is
-    # the costly one -- it survives the non-navigable-href filter because its
-    # `#` is mid-string, and canonicalization then drops the fragment, leaving
-    # a bare path Cloudflare answers 404 to. Admitting it spent a page of the
-    # budget and booked that 404 as a broken internal link on EVERY page
-    # carrying the footer that produced it.
-    r"(?:^|/)cdn-cgi(?:/|$)",
-)
-# Href prefixes that never name a navigable page. One owner, because the same
-# tuple was independently spelled in the link-fact extractor, frontier
-# admission and brand evidence, so an addition reached one of the three.
-# `mailto:` and `data:` are also refused downstream by ALLOWED_URL_SCHEMES;
-# skipping them here keeps them out of the link graph as well as the frontier.
-NON_NAVIGABLE_HREF_PREFIXES: Final[tuple[str, ...]] = (
-    "#",
-    "about:",
-    "blob:",
-    "data:",
-    "javascript:",
-    "mailto:",
-    "sms:",
-    "tel:",
-)
-# The same non-content endpoints as the path patterns above, but named by
-# SUBDOMAIN instead of by path. Scope is the registrable domain plus every
-# subdomain, so a storefront that puts its customer area on `account.<domain>`
-# put it squarely in the frontier: the crawler spent budget on
-# `https://account.<domain>/?buyer_flags=<jwt>` — a page that answers 401/403 to
-# an unauthenticated fetch — and the resulting Error/Blocked rows were enough
-# to finish the crawl as ``partially_completed``. Only the LEFTMOST label is
-# matched, so `shop.<domain>` and a path like `/my-account-guide` are untouched.
-URL_HARD_EXCLUSION_HOST_LABELS: Final[frozenset[str]] = frozenset(
-    {
-        "account",
-        "accounts",
-        "admin",
-        "auth",
-        "basket",
-        "cart",
-        "checkout",
-        "login",
-        "signin",
-        "signup",
-        "register",
-        "payment",
-        "payments",
-        "orders",
-        "wishlist",
-        # APP SHELLS, not content. `app.<domain>` is the logged-in product,
-        # `affiliates.<domain>` a partner portal: client-rendered, gated, and
-        # nothing an answer engine will ever cite. One crawl pulled in
-        # `affiliates.<domain>`, classified its root as a SECOND homepage for
-        # the site (a subdomain root has path "/" like any other) and scored it
-        # 13.3 -- a real measurement of a page that does not belong to the
-        # content corpus at all. `docs.<domain>` is deliberately NOT here: API
-        # and product documentation is exactly the material AI answers cite.
-        "app",
-        "affiliates",
-        "partners",
-        "portal",
-        "my",
-        "secure",
-        "billing",
-    }
-)
-URL_HARD_EXCLUSION_QUERY_KEYS: Final[frozenset[str]] = frozenset(
-    {
-        "q",
-        "query",
-        "s",
-        "search",
-        "filter",
-        "filters",
-        "facet",
-        "sort",
-        "page",
-        "paged",
-        "preview",
-    }
-)
-
-# Query keys that select a presentation variant without identifying a distinct
-# page. Unlike tracking parameters, these are normalized away but do not cause
-# admission to reject the URL outright.
-URL_IDENTITY_IGNORED_QUERY_KEYS: Final[frozenset[str]] = frozenset(
-    {"variant", "variant_id"}
-)
-# Documents remain inventory evidence.  Only unsafe/contentless assets exclude.
-INVENTORY_DOCUMENT_EXTENSIONS: Final[frozenset[str]] = frozenset(
-    {".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".md"}
-)
-DOCUMENT_MEDIA_TYPES: Final[frozenset[str]] = frozenset(
-    {
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.ms-powerpoint",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "text/markdown",
-    }
-)
-URL_HARD_EXCLUSION_EXTENSIONS: Final[frozenset[str]] = frozenset(
-    {
-        ".zip",
-        ".gz",
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".gif",
-        ".webp",
-        ".svg",
-        ".ico",
-        ".css",
-        ".js",
-        ".mjs",
-        ".xml",
-        ".json",
-        ".csv",
-        ".txt",
-        ".mp3",
-        ".mp4",
-        ".webm",
-        ".woff",
-        ".woff2",
-        ".ttf",
-        ".eot",
-        ".tar",
-        ".bz2",
-        ".7z",
-        ".rar",
-        ".exe",
-        ".msi",
-        ".dmg",
-        ".pkg",
-        ".apk",
-        ".deb",
-        ".rpm",
-    }
-)
-URL_VALUE_PRIORITIES: Final[dict[str, int]] = {
-    "root": 100,
-    "product": 90,
-    "comparison": 85,
-    "service": 80,
-    "local": 80,
-    "category": 70,
-    "pricing": 70,
-    "article": 60,
-    "guide": 60,
-    "faq": 60,
-    "docs": 60,
-    "trust": 40,
-    "other": 20,
-}
-
-# Path tokens that still rank a URL when no value-priority kind names it,
-# tried in order after the kinds themselves.
-URL_VALUE_FALLBACK_TOKENS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
-    ("product", ("product", "/p/", "shop")),
-    ("article", ("blog", "article", "news")),
-)
 
 FRONTIER_PENDING: Final = "pending"
-FRONTIER_ADMITTED: Final = "admitted"
+
 SELECTION_SOURCE_USER: Final = "user"
+
 SELECTION_SOURCE_FREE_SAMPLE: Final = "free_sample"
+
 SELECTION_SOURCE_BOOTSTRAP: Final = "bootstrap"
-SAMPLE_ANALYSIS_SELECTION_SOURCES: Final[frozenset[str]] = frozenset(
-    {SELECTION_SOURCE_FREE_SAMPLE, SELECTION_SOURCE_BOOTSTRAP}
-)
-SELECTION_SOURCES: Final[frozenset[str]] = frozenset(
-    {SELECTION_SOURCE_USER, SELECTION_SOURCE_FREE_SAMPLE, SELECTION_SOURCE_BOOTSTRAP}
-)
 
 
 class _RuntimeSettings(Protocol):

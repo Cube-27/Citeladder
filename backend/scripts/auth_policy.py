@@ -62,6 +62,8 @@ def site_health_runtime_policy(setting: SettingExporter) -> dict[str, Any]:
             name: setting(name, SiteHealthSettings)
             for name in (
                 "automatic_page_limit",
+                "max_requested_page_limit",
+                "max_attempts",
                 "sample_discovery_url_cap",
                 "sample_url_limit",
             )

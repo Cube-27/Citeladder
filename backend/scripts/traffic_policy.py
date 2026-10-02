@@ -9,12 +9,6 @@ from app.core.config.integrations_datasets import (
     DIMENSION_KEY_SEPARATOR,
     INTEGRATION_DATASET_TEMPLATES,
 )
-from app.core.config.site_health_crawl_policy import URL_IDENTITY_IGNORED_QUERY_KEYS
-from app.core.config.site_health_rules import (
-    ALLOWED_URL_PORTS,
-    ALLOWED_URL_SCHEMES,
-    TRACKING_QUERY_PARAMS,
-)
 from app.core.config.task_queue import TASK_ACTIVE_STATUSES
 
 
@@ -31,11 +25,6 @@ def traffic_policy() -> dict[str, Any]:
             dataset: len(template.dimensions)
             for dataset, template in INTEGRATION_DATASET_TEMPLATES.items()
         },
-        "url_schemes": sorted(ALLOWED_URL_SCHEMES),
-        "url_ports": sorted(ALLOWED_URL_PORTS),
-        "ignored_query_keys": sorted(
-            TRACKING_QUERY_PARAMS | URL_IDENTITY_IGNORED_QUERY_KEYS
-        ),
     }
 
 
