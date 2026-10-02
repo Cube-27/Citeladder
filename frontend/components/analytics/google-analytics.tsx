@@ -52,23 +52,22 @@ function configureLoadedTag(script: HTMLScriptElement, measurementId: string) {
   script.dataset.configured = 'true';
 }
 
+function ctaDestinationType(anchor: HTMLAnchorElement, demo: boolean) {
+  if (demo) return 'demo';
+  return new URL(anchor.href).origin === window.location.origin ? 'internal' : 'external';
+}
+
 function marketingCtaFields(anchor: HTMLAnchorElement, demo: boolean) {
-  const placement = anchor.closest('[data-cta-placement]');
+  const placement = anchor.closest<HTMLElement>('[data-cta-placement]');
   const region = anchor.closest('header, footer, nav, section');
   return {
     page_path: window.location.pathname,
     placement:
-      placement?.getAttribute('data-cta-placement') ??
-      (region?.id || region?.tagName.toLowerCase()) ??
-      'page',
+      placement?.dataset.ctaPlacement ?? (region?.id || region?.tagName.toLowerCase()) ?? 'page',
     cta_label: (anchor.getAttribute('aria-label') ?? anchor.textContent ?? '')
       .trim()
       .replace(/\s+/g, ' '),
-    destination_type: demo
-      ? 'demo'
-      : new URL(anchor.href).origin === window.location.origin
-        ? 'internal'
-        : 'external',
+    destination_type: ctaDestinationType(anchor, demo),
   };
 }
 
@@ -78,7 +77,7 @@ function trackMarketingCta(event: MouseEvent) {
   const anchor = event.target.closest('a');
   if (!(anchor instanceof HTMLAnchorElement)) return;
   const demo = anchor.href === DEMO_HREF;
-  if (!demo && !anchor.hasAttribute('data-marketing-cta')) return;
+  if (!demo && anchor.dataset.marketingCta === undefined) return;
   const fields = marketingCtaFields(anchor, demo);
   const gtag = (window as GtagWindow).gtag;
   gtag?.('event', 'marketing_cta_click', fields);

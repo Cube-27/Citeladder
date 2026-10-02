@@ -109,7 +109,7 @@ export function CompareIndex() {
           >
             how to investigate citations
           </a>
-          .
+          {'.'}
         </p>
       </Section>
 

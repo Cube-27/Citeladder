@@ -171,10 +171,11 @@ describe('pricing content', () => {
 });
 
 describe('blog content', () => {
-  it('provides PNG share images at the dimensions declared in article metadata', () => {
+  it('gives every published post a PNG share image at the declared dimensions', () => {
     for (const post of POSTS) {
-      if (!post.image) continue;
-      const image = readFileSync(resolve(process.cwd(), 'public', post.image.slice(1)));
+      // A post without one shares as a small text card on social platforms.
+      expect(post.image, post.slug).toMatch(/^\/.+\.png$/);
+      const image = readFileSync(resolve(process.cwd(), 'public', String(post.image).slice(1)));
       expect(image.subarray(0, 8).toString('hex'), post.slug).toBe('89504e470d0a1a0a');
       expect(image.readUInt32BE(16), post.slug).toBe(1080);
       expect(image.readUInt32BE(20), post.slug).toBe(630);

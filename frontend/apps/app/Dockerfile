@@ -1,4 +1,4 @@
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS dependencies
+FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -11,7 +11,7 @@ COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder
+FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder
 
 ARG NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS
 ARG NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS
@@ -40,7 +40,7 @@ RUN pnpm build:vite
 # Local Compose only: production serves this build through the product Worker
 # (wrangler.jsonc). Run that same Worker so routing, headers and the API proxy
 # match production; LOCAL_WORKER_ORIGIN admits HTTP and the API container.
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
+FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
 
 ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false
 WORKDIR /app

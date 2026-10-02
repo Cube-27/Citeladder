@@ -118,7 +118,7 @@ function VisibilityPreview() {
         <div>
           <small>Tracked prompts</small>
           <strong>42</strong>
-          <span>Configured collection sources</span>
+          <span>Across buyer journey stages</span>
         </div>
       </div>
       <div className="cl-chart">

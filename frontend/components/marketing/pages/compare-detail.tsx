@@ -41,7 +41,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                   >
                     {source.label}
                   </a>
-                  .
+                  {'.'}
                 </span>
               ))}
             </p>
@@ -50,7 +50,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
       </header>
       <Section rhythm="tight">
         <div className="max-w-3xl space-y-5">
-          <SectionHeader title={competitor.whenHeading} />
+          <SectionHeader title={`When to examine ${competitor.name} more closely`} />
           <p className="website-body-lg text-muted">{competitor.whenBody}</p>
         </div>
       </Section>

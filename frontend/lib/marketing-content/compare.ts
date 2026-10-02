@@ -2,7 +2,6 @@
 type ComparisonSource = {
   label: string;
   url: string;
-  supportedSummary: string;
   reviewedDate: string;
 };
 
@@ -15,11 +14,13 @@ export type Competitor = {
   metaTitle: string;
   metaDescription: string;
   sources: readonly ComparisonSource[];
-  whenHeading: string;
   whenBody: string;
   conclusionHeading: string;
   conclusion: string;
 };
+
+/** Date the official sources below were last re-read. */
+const SOURCES_REVIEWED = '2026-10-02';
 
 export const COMPARISON_DISCLOSURE =
   'This comparison is written by CiteLadder. It summarizes public product information and provides evaluation questions. It is not an independent review or a promise that every feature is included in every plan.';
@@ -67,12 +68,9 @@ export const COMPETITORS: readonly Competitor[] = [
       {
         label: 'Profound’s official product overview',
         url: 'https://www.tryprofound.com/',
-        supportedSummary:
-          'Profound presents a broad AI marketing platform with answer-engine insights, prompt intelligence, agent analytics and marketing agents.',
-        reviewedDate: '2026-10-02',
+        reviewedDate: SOURCES_REVIEWED,
       },
     ],
-    whenHeading: 'When to examine Profound more closely',
     whenBody:
       'Include Profound in your evaluation if a broad AI marketing platform and agent-based marketing workflows are central to your requirements. Ask which capabilities are included in the plan you are considering and how the underlying observations can be inspected.',
     conclusionHeading: 'A practical way to compare',
@@ -94,12 +92,9 @@ export const COMPETITORS: readonly Competitor[] = [
       {
         label: 'Otterly AI’s official product overview',
         url: 'https://otterly.ai/',
-        supportedSummary:
-          'Otterly AI presents an AI search monitoring and optimization workflow covering brand visibility, cited sources and website-related recommendations.',
-        reviewedDate: '2026-10-02',
+        reviewedDate: SOURCES_REVIEWED,
       },
     ],
-    whenHeading: 'When to examine Otterly AI more closely',
     whenBody:
       'Include Otterly AI in your evaluation when recurring AI search monitoring and related optimization work are the starting point. Confirm the exact engine selection, observation cadence, reporting and usage limits for the proposed plan.',
     conclusionHeading: 'Test the investigation as well as the dashboard',
@@ -121,12 +116,9 @@ export const COMPETITORS: readonly Competitor[] = [
       {
         label: 'Scrunch’s official platform overview',
         url: 'https://scrunch.com/',
-        supportedSummary:
-          'Scrunch describes a platform spanning AI visibility monitoring, content diagnostics, bot observability and its Agent Experience Platform for agent delivery.',
-        reviewedDate: '2026-10-02',
+        reviewedDate: SOURCES_REVIEWED,
       },
     ],
-    whenHeading: 'When to examine Scrunch more closely',
     whenBody:
       'Include Scrunch in your evaluation if agent traffic observability or agent-specific content delivery is an important part of the project. Ask what implementation is required, how content consistency is maintained and which capabilities are included in the selected plan.',
     conclusionHeading: 'Separate the observation from the intervention',
@@ -148,12 +140,9 @@ export const COMPETITORS: readonly Competitor[] = [
       {
         label: 'Peec AI’s official product overview',
         url: 'https://peec.ai/',
-        supportedSummary:
-          'Peec AI presents AI search analytics for marketing teams, with visibility reporting and reporting/export integrations.',
-        reviewedDate: '2026-10-02',
+        reviewedDate: SOURCES_REVIEWED,
       },
     ],
-    whenHeading: 'When to examine Peec AI more closely',
     whenBody:
       'Include Peec AI in your evaluation when AI search analytics and recurring reporting are central requirements. Confirm the collection sources, metric definitions and reporting integrations available in your selected plan.',
     conclusionHeading: 'Compare definitions before percentages',

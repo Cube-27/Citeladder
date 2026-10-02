@@ -12,6 +12,8 @@ export type CommercialPage = {
   }[];
   contextHeading: string;
   context: string;
+  /** Internal next steps rendered after the context section. */
+  related: readonly { label: string; href: string }[];
   faqs: readonly { q: string; a: string }[];
   closingHeading: string;
   closing: string;
@@ -69,6 +71,16 @@ export const CITATION_PAGE: CommercialPage = {
   contextHeading: 'Use citations alongside visibility and traffic',
   context:
     'A citation is evidence of a source reference in an observed answer. It does not by itself measure a visit, a lead or a sale. Pair source analysis with your tracked brand observations and your website analytics to understand the different stages.',
+  related: [
+    { label: 'Explore AI share of voice', href: '/ai-search-share-of-voice' },
+    {
+      label: 'Learn how to investigate a citation',
+      href: '/blog/action-playbook-winning-ai-citations',
+    },
+    { label: 'Compare AI visibility tools', href: '/compare' },
+    { label: 'Explore team workflows', href: '/solutions' },
+    { label: 'Review CiteLadder pricing', href: '/pricing' },
+  ],
   faqs: [
     {
       q: 'Does being mentioned mean my website was cited?',
@@ -139,6 +151,13 @@ export const SHARE_OF_VOICE_PAGE: CommercialPage = {
   contextHeading: 'Put visibility in business context',
   context:
     'A visibility observation is not a sales result. Use it to identify questions, sources and pages worth investigating. Then examine referral visits and relevant business outcomes separately.',
+  related: [
+    { label: 'Investigate AI citations', href: '/ai-citation-tracking' },
+    { label: 'Read the measurement guide', href: '/blog/verify-improve-ai-search-visibility' },
+    { label: 'Compare AI visibility tools', href: '/compare' },
+    { label: 'Explore team workflows', href: '/solutions' },
+    { label: 'Review CiteLadder pricing', href: '/pricing' },
+  ],
   faqs: [
     {
       q: 'Is AI share of voice the same as Google ranking?',

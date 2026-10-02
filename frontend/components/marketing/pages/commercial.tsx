@@ -3,10 +3,7 @@ import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
 
-export function CommercialEntryPage({
-  page,
-  intent,
-}: Readonly<{ page: CommercialPage; intent: 'citation' | 'share-of-voice' }>) {
+export function CommercialEntryPage({ page }: Readonly<{ page: CommercialPage }>) {
   return (
     <>
       <PageHero eyebrow={page.eyebrow} title={page.heading} lead={page.introduction}>
@@ -44,57 +41,15 @@ export function CommercialEntryPage({
         <div className="max-w-3xl space-y-5">
           <SectionHeader title={page.contextHeading} />
           <p className="website-body-lg text-muted">{page.context}</p>
-          <p className="website-body-lg text-muted">
-            {intent === 'citation' ? (
-              <>
-                <a className="text-accent-text underline" href="/ai-search-share-of-voice">
-                  Explore AI share of voice
-                </a>{' '}
-                or{' '}
-                <a className="text-accent-text underline" href="/pricing">
-                  review CiteLadder pricing
+          <ul className="website-body flex flex-wrap gap-x-5 gap-y-2" aria-label="Related pages">
+            {page.related.map((link) => (
+              <li key={link.href}>
+                <a className="text-accent-text underline" href={link.href}>
+                  {link.label}
                 </a>
-                .
-              </>
-            ) : (
-              <>
-                <a className="text-accent-text underline" href="/ai-citation-tracking">
-                  Investigate AI citations
-                </a>
-                ,{' '}
-                <a className="text-accent-text underline" href="/solutions">
-                  explore team workflows
-                </a>
-                , or{' '}
-                <a className="text-accent-text underline" href="/pricing">
-                  review pricing
-                </a>
-                .
-              </>
-            )}
-          </p>
-          {intent === 'citation' && (
-            <a className="website-body text-accent-text underline" href="/solutions">
-              Explore team workflows
-            </a>
-          )}
-          <p className="website-body flex flex-wrap gap-5">
-            <a
-              className="text-accent-text underline"
-              href={
-                intent === 'citation'
-                  ? '/blog/action-playbook-winning-ai-citations'
-                  : '/blog/verify-improve-ai-search-visibility'
-              }
-            >
-              {intent === 'citation'
-                ? 'Learn how to investigate a citation'
-                : 'Read the measurement guide'}
-            </a>
-            <a className="text-accent-text underline" href="/compare">
-              Compare AI visibility tools
-            </a>
-          </p>
+              </li>
+            ))}
+          </ul>
         </div>
       </Section>
       <Section tone="sunken" rhythm="tight">

@@ -10,6 +10,8 @@ export const POST_AUDIT: BlogPost = {
     'Check crawl access, indexing controls, public content, factual clarity and internal links. A practical website audit for teams investigating AI search visibility.',
   excerpt:
     'Check the page a visitor or crawler can actually access before changing the copy. Work through technical and content evidence in a clear order.',
+  image: '/blog/editorial/article-audit.png',
+  cardImage: '/blog/editorial/article-audit.svg',
   date: '2026-09-03',
   dateModified: '2026-09-09',
   author: PRODUCT_HEAD.name,
