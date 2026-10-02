@@ -34,6 +34,15 @@ describe('resolveApiServiceOrigin', () => {
     );
   });
 
+  it.each([
+    'http://169.254.169.254:8100',
+    'http://[fe80::1]:8100',
+    'http://0177.0.0.1:8100',
+    'http://0x7f000001:8100',
+  ])('rejects local production target %s', (origin) => {
+    expect(() => resolveApiServiceOrigin(origin, true)).toThrow(/loopback host/i);
+  });
+
   it('allows a real IPv6 origin that is not loopback or mapped', () => {
     expect(resolveApiServiceOrigin('http://[2606:4700:4700::1111]', true)).toBe(
       'http://[2606:4700:4700::1111]',

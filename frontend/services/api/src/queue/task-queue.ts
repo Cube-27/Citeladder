@@ -61,10 +61,6 @@ export type TaskQueueOptions = {
   now?: () => Date;
 };
 
-function addSeconds(instant: Date, seconds: number): Date {
-  return new Date(instant.getTime() + seconds * 1000);
-}
-
 /**
  * The locking SELECT one claim runs.
  *
@@ -142,7 +138,6 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
     const { owner, kinds, limit = 1 } = options;
     if (kinds.length === 0) return Promise.resolve([]);
     const now = this.#now();
-    const leaseExpires = addSeconds(now, this.#leaseTtlSeconds);
     return this.#db.transaction().execute(async (trx) => {
       const locked = await claimStatement(trx, { now, limit, kinds }, this.#table).execute();
       if (locked.length === 0) return [];
@@ -151,7 +146,7 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
         .set({
           status: statuses.leased,
           lease_owner: owner,
-          lease_expires_at: leaseExpires,
+          lease_expires_at: sql<Date>`clock_timestamp() + ${this.#leaseTtlSeconds} * interval '1 second'`,
           heartbeat_at: now,
           updated_at: now,
         })
@@ -197,7 +192,7 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
       .where('lease_owner', '=', owner)
       .where('status', '=', statuses.leased)
       .$if(attemptCount !== undefined, (query) => query.where('attempt_count', '=', attemptCount!))
-      .where('lease_expires_at', '>', now)
+      .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
       .executeTakeFirst();
     return updated.numUpdatedRows > 0n;
   }
@@ -209,13 +204,13 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
       .updateTable(this.#table)
       .set({
         heartbeat_at: now,
-        lease_expires_at: addSeconds(now, this.#leaseTtlSeconds),
+        lease_expires_at: sql<Date>`clock_timestamp() + ${this.#leaseTtlSeconds} * interval '1 second'`,
         updated_at: now,
       })
       .where('id', '=', taskId)
       .where('lease_owner', '=', owner)
       .where('status', 'in', [statuses.leased, statuses.running])
-      .where('lease_expires_at', '>', now)
+      .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
       .$if(attemptCount !== undefined, (query) => query.where('attempt_count', '=', attemptCount!))
       .executeTakeFirst();
     return updated.numUpdatedRows > 0n;

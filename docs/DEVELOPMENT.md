@@ -274,6 +274,9 @@ it does not enable or test a live checkout/provider.
 installs it. Its suite writes and deletes fixture rows, so it never reads
 `TEST_DATABASE_URL`: point `API_TEST_DATABASE_URL` at a **disposable** database that
 `alembic upgrade head` has migrated, never the development database.
+The API bootstrap refuses inherited provider credentials, including
+`DEFAULT_AGENT_API_KEY`, `DEFAULT_AGENT_BASE_URL` and `DEFAULT_AGENT_MODEL`.
+Clear these before running tests; dotenv loading is disabled.
 
 ```bash
 cd frontend/services/api
@@ -302,8 +305,10 @@ bounded expired-lease recovery and terminal compensation on every pass. Run
 `node src/worker.ts --drain` to process due work until idle or the
 `ANALYTICS_DRAIN_BUDGET_SECONDS` budget (default 300) expires; claimed work finishes
 before exit. Discovery and integration workers also accept `--drain` and admit
-work for at most 300 seconds per invocation (the native queue-recovery config
-owns the bound). Their regular passes recover expired leases before claiming.
+new work for at most 300 seconds per invocation; claimed tasks finish before
+exit, so this is an admission budget rather than an invocation deadline. Native
+queue-recovery config owns the bound. Their regular passes recover expired
+leases before claiming.
 `node src/queue-sweeper.ts --drain` performs one bounded recovery pass without
 executors. The same entry point without `--drain` is Compose's independent
 `queue-sweeper` service, so recovery survives a dead domain worker.

@@ -3,6 +3,8 @@
  * with thresholds. A blank API key disables the judge; deployments must authorize
  * this customer-data processor before configuring a key.
  */
+import { ConfigError } from './config-error.ts';
+
 export const jev = {
   api_key: {
     env: ['JEV_API_KEY'],
@@ -189,8 +191,13 @@ export function validateJevSettings(settings: Record<keyof typeof jev, unknown>)
     Number(settings.fail_below) > Number(settings.flag_below) ||
     Number(settings.duplicate_fail_at) < Number(settings.duplicate_flag_at)
   )
-    throw new Error('Invalid JEV thresholds');
-  const endpoint = new URL(String(settings.base_url));
+    throw new ConfigError('Invalid JEV thresholds');
+  let endpoint: URL;
+  try {
+    endpoint = new URL(String(settings.base_url));
+  } catch {
+    throw new ConfigError('JEV_BASE_URL must be a credential-free HTTPS URL');
+  }
   if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password)
-    throw new Error('JEV_BASE_URL must be a credential-free HTTPS URL');
+    throw new ConfigError('JEV_BASE_URL must be a credential-free HTTPS URL');
 }

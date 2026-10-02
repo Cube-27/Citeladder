@@ -116,7 +116,6 @@
     "bing_query": "bing_query_daily",
     "bing_page": "bing_page_daily"
   },
-  "PERFORMANCE_UNAVAILABLE_DIMENSIONS": ["search_appearance"],
   "PERFORMANCE_SORT_METRICS": ["clicks", "impressions", "ctr", "position"],
   "PERFORMANCE_SORT_KEY_DIMENSION": "dimension_key",
   "PERFORMANCE_SORT_WHITELIST": ["clicks", "ctr", "dimension_key", "impressions", "position"],

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
@@ -133,6 +134,39 @@ function answer(task: AuditTask): ExecutionResult {
   };
 }
 describe('audit recovery against PostgreSQL', () => {
+  it('uses database time to recover leases despite application clock skew', async () => {
+    const t = await seed(),
+      task = t.tasks[0]!;
+    await db
+      .updateTable('audit_tasks')
+      .set({
+        status: 'running',
+        lease_owner: 'worker',
+        lease_expires_at: sql<Date>`clock_timestamp() + interval '120 seconds'`,
+      })
+      .where('id', '=', task.id)
+      .execute();
+    const maintenance = new AuditMaintenance(db, async () => {});
+    expect(await maintenance.runOnce(new Date(Date.now() + 86_400_000))).toBe(0);
+    await db
+      .updateTable('audit_tasks')
+      .set({
+        lease_expires_at: sql<Date>`clock_timestamp() - interval '1 second'`,
+      })
+      .where('id', '=', task.id)
+      .execute();
+    expect(await maintenance.runOnce(new Date(Date.now() - 86_400_000))).toBe(1);
+    expect(
+      await db
+        .selectFrom('audit_tasks')
+        .select(['status', 'attempt_count'])
+        .where('id', '=', task.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({
+      status: 'retry_wait',
+      attempt_count: 1,
+    });
+  });
   it('reclaims each expired lease once, diverts paid uncertainty without spending budget and settles scoped terminal holds', async () => {
     const t = await seed(),
       foreign = await seed();

@@ -6,7 +6,20 @@ import pytest
 from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from scripts import export_ts_platform
 from scripts.ts_settings_policy import setting
+
+
+def test_export_detects_shared_error_code_renames(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert not export_ts_platform._missing_error_codes()
+    monkeypatch.setattr(
+        export_ts_platform,
+        "entitlements_policy",
+        lambda: {"codes": {"renamed": "new_shared_failure"}},
+    )
+    assert export_ts_platform._missing_error_codes() == {"new_shared_failure"}
 
 
 class ExportSettings(BaseSettings):

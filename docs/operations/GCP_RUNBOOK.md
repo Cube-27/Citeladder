@@ -72,6 +72,14 @@ Add these environment variables:
 | `DEMO_LOGIN_EMAIL` | Optional; defaults to `dev@citeladder.com` |
 | `DEFAULT_AGENT_BASE_URL` | HTTPS base URL for the demo's OpenAI-compatible agent provider |
 | `DEFAULT_AGENT_MODEL` | Exact provider model identifier used by the Agent |
+| `API_DB_POOL_SIZE` | Optional API connection limit; defaults to 8, with no overflow. Budget this together with the separate worker pools against PostgreSQL's connection limit. |
+
+Native startup rejects legacy overrides with audit `max_attempts < 1`,
+Site Health `max_frontier_urls < 0`, or nonpositive DataForSEO timeouts.
+Check existing environment overrides before cutover. Existing audit schedules
+must use a catalog timezone executable by the deployed Node runtime; unsupported
+names must be disabled or corrected through schedule management before workers
+resume. No automatic data rewrite is performed.
 
 Add these environment secrets:
 
@@ -143,7 +151,7 @@ For the first Workers release, [the Workers runbook](WORKERS_RUNBOOK.md)
 owns the coordinated cutover and recovery. Capture the running old frontend
 digests, files and route associations in the protected release record before
 dispatch. The final `gcp-demo` workflow builds and deploys only the backend
-image. It fixes `FRONTEND_URL` and `FRONTEND_ORIGINS` to the app host while
+image. It fixes `FRONTEND_URL` to the app host while
 pinning MCP identity to the apex; app callback registration is a release
 prerequisite. The prior VM runtime files remain in `.previous` copies for
 first-release recovery, not as inputs to normal deployment.

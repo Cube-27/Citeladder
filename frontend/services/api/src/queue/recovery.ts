@@ -50,8 +50,24 @@ async function reclaim(db: Database, table: Queue, increment: number, batchSize:
     .execute();
 }
 
-export function recoverDiscoveryLeases(db: Database, batchSize = queueRecovery.batchSize) {
-  return db.transaction().execute(async (trx) => {
+function logExhausted(
+  queue: Queue,
+  tasks: { id: string; workspace_id: string; status: string; attempt_count: number }[],
+) {
+  const logger = getLogger('workers.queue-recovery');
+  for (const task of tasks) {
+    if (task.status === statuses.failed)
+      logger.warning('queue_task_attempts_exhausted', {
+        queue,
+        task_id: task.id,
+        workspace_id: task.workspace_id,
+        attempt_count: task.attempt_count,
+      });
+  }
+}
+
+export async function recoverDiscoveryLeases(db: Database, batchSize = queueRecovery.batchSize) {
+  const tasks = await db.transaction().execute(async (trx) => {
     // Discovery counts the attempt on completion or recovery, never on claim.
     const tasks = await reclaim(trx, 'brand_discovery_tasks', 1, batchSize);
     const cfg = policy.discovery.constants;
@@ -92,15 +108,19 @@ export function recoverDiscoveryLeases(db: Database, batchSize = queueRecovery.b
         .where('workspace_id', '=', task.workspace_id)
         .execute();
     }
-    return tasks.length;
+    return tasks;
   });
+  logExhausted('brand_discovery_tasks', tasks);
+  return tasks.length;
 }
 
-export function recoverIntegrationLeases(db: Database, batchSize = queueRecovery.batchSize) {
+export async function recoverIntegrationLeases(db: Database, batchSize = queueRecovery.batchSize) {
   // Integration claims already charge the attempt. Reclaiming must not charge it twice.
-  return db
+  const tasks = await db
     .transaction()
-    .execute(async (trx) => (await reclaim(trx, 'integration_sync_runs', 0, batchSize)).length);
+    .execute((trx) => reclaim(trx, 'integration_sync_runs', 0, batchSize));
+  logExhausted('integration_sync_runs', tasks);
+  return tasks.length;
 }
 
 export async function recoverQueues(db: Database) {

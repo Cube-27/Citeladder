@@ -163,7 +163,7 @@ export function persistExecutionSuccess(
   )
     throw new Error('Execution route mismatch');
   return db.transaction().execute(async (trx) => {
-    const locked = await ownedAuditTask(trx, claimed, owner, at);
+    const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return null;
     const artifactId = randomUUID();
     const previous = record(locked.task.provider_metadata);
@@ -256,7 +256,7 @@ export function persistExecutionFailure(
 ) {
   const at = options.at ?? new Date();
   return db.transaction().execute(async (trx) => {
-    const locked = await ownedAuditTask(trx, claimed, owner, at);
+    const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return null;
     const attempt =
       locked.task.attempt_count +

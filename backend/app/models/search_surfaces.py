@@ -81,7 +81,7 @@ class AioObservation(Base):
     )
 
     # One of the five terminal outcomes. Closed vocabulary, owned by
-    # ``connectors.search_surfaces.contracts``.
+    # native ``config/dataforseo.json`` surface policy.
     outcome: Mapped[str] = mapped_column(String(32), index=True)
     # Names CiteLadder's OWN failure, and is set only for
     # ``execution_failure``. It is what stops a local fault from being filed

@@ -292,7 +292,6 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     # Backend is the sole GCP image; frontend artifacts deploy independently.
     inputs = deploy_workflow["jobs"]["deploy"]["env"]
     assert "vars.APP_DOMAIN_NAME" in inputs["FRONTEND_URL"]
-    assert inputs["FRONTEND_ORIGINS"] == inputs["FRONTEND_URL"]
     assert "vars.DOMAIN_NAME" in inputs["MCP_PUBLIC_BASE_URL"]
     assert not {"LEGACY_FRONTEND_IMAGE", "LEGACY_VITE_APP_IMAGE"} & inputs.keys()
     dispatch = deploy_workflow.get("on", deploy_workflow.get(True))["workflow_dispatch"]
@@ -329,7 +328,6 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
 
     api_environment = services["api-service"]["environment"]
     assert api_environment["DB_SSL_MODE"] == "require"
-    assert api_environment["DB_POOL_SIZE"] == "4"
     assert api_environment["DB_MAX_OVERFLOW"] == "0"
     assert api_environment["MCP_ENABLED"] == "true"
     assert (

@@ -19,7 +19,7 @@ function formatSections(body: string): string[] {
         (marker[1]![0] === fence[0] && marker[1]!.length >= fence.length && !marker[2]!.trim()))
     )
       fence = fence ? null : marker[1]!;
-    if (!fence && !marker && /^[ \t]*##(?!#)/u.test(line)) sections.push('');
+    if (!fence && !marker && /^ {0,3}##(?:[ \t]|$)/u.test(line)) sections.push('');
     sections[sections.length - 1] += line + '\n';
   }
   return sections;

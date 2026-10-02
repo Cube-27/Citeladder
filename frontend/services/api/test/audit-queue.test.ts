@@ -33,6 +33,14 @@ async function seed() {
   return { ...t, auditId };
 }
 describe('audit queue leases against PostgreSQL', () => {
+  it('keeps a lease live when the application clock is a day behind PostgreSQL', async () => {
+    const t = await seed();
+    const [task] = await queue.claim('skewed', 1, t);
+    at = new Date(Date.now() - 86400000);
+    const skewed = new AuditQueue(db, 120, () => at);
+    expect(await skewed.heartbeat(task!, 'skewed')).toBe(true);
+    expect(await skewed.markRunning(task!, 'skewed')).not.toBeNull();
+  });
   it('refuses lifecycle jumps and terminal revival without writing an event', async () => {
     const t = await seed();
     const transition = (target: string) =>
@@ -80,7 +88,12 @@ describe('audit queue leases against PostgreSQL', () => {
     expect(await queue.heartbeat(task!, 'other')).toBe(false);
     const running = await queue.markRunning(task!, 'worker');
     expect(running?.audit.status).toBe('running');
-    at = new Date(at.getTime() + 121000);
+    // Expiry belongs to PostgreSQL, independent of the injected application clock.
+    await db
+      .updateTable('audit_tasks')
+      .set({ lease_expires_at: new Date(0) })
+      .where('id', '=', task!.id)
+      .execute();
     expect(await queue.heartbeat(task!, 'worker')).toBe(false);
     expect(await queue.markRunning(task!, 'worker')).toBeNull();
     const [another] = await queue.claim('worker', 1, t);
@@ -96,7 +109,7 @@ describe('audit queue leases against PostgreSQL', () => {
     const [task] = await queue.claim('worker', 1, t);
     const ready = new Date(at.getTime() + 30000);
     await db.transaction().execute(async (trx) => {
-      const locked = await ownedAuditTask(trx, task!, 'worker', at);
+      const locked = await ownedAuditTask(trx, task!, 'worker');
       expect(locked).not.toBeNull();
       await trx
         .updateTable('audit_tasks')

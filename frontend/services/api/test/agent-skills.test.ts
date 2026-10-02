@@ -8,6 +8,12 @@ import { loadSkillCatalog } from '../src/agent/skills.ts';
 import { parseContentFormats } from '../src/config/skill-inputs.ts';
 
 describe('packaged Agent model inputs', () => {
+  it('keeps prose hash prefixes inside a format body', () => {
+    const { formats } = parseContentFormats(
+      '# Formats\n## page — Page\nBody\n##id is prose, not a heading.\n',
+    );
+    expect(formats.get('page')?.body).toContain('##id is prose');
+  });
   const root = agentSettings({}).skillsDirectory;
   it('keeps example headings inside fenced methodology text and continues at the next format', () => {
     const { formats } = parseContentFormats(

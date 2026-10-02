@@ -6,6 +6,21 @@ import { generationInput } from '../src/prompts/generation-input.ts';
 import { loadWorkerSettings, policy, resolveSettingSpec } from '../src/config.ts';
 import { integrationSettings } from '../src/integrations/config.ts';
 import { validateReferralRules } from '../src/config/referral-rules.ts';
+import { generationSystemPrompt } from '../src/config/prompt-generation.ts';
+import { publicUrl } from '../src/projects/safe-fetch.ts';
+
+it.each(['https://example..com/', 'https://.example.com/'])(
+  'rejects malformed DNS labels before acquisition: %s',
+  (url) => {
+    expect(() => publicUrl(url)).toThrow('invalid_url');
+  },
+);
+
+it('rejects an unknown prompt cohort before model I/O', () => {
+  expect(() => generationSystemPrompt('retail', 'new_cohort' as 'core')).toThrow(
+    'Unknown prompt cohort',
+  );
+});
 
 afterEach(() => vi.unstubAllEnvs());
 

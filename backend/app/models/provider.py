@@ -276,9 +276,10 @@ class ProviderConnectionTest(Base):
         ForeignKey(FK_PROVIDER_CONNECTIONS_ID, ondelete="CASCADE"),
         index=True,
     )
-    # ok | failed (provider_catalog.TEST_STATUS_*).
+    # ok | failed (native config/providers.json test_status_*).
     status: Mapped[str] = mapped_column(String(16))
-    # Classification token on failure (provider_catalog.ERROR_*); "" on success.
+    # Classification token on failure (native config/providers.json errors);
+    # empty on success.
     error_code: Mapped[str] = mapped_column(String(32), default="")
     # Short, credential-free human message (never echoes the key).
     detail: Mapped[str] = mapped_column(String(1024), default="")

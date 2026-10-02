@@ -7,6 +7,40 @@ import analyticsRuntime from './analytics.json' with { type: 'json' };
 import oauthRuntime from './auth-oauth.json' with { type: 'json' };
 import { validateReferralRules } from './referral-rules.ts';
 import { compareText } from '../text-order.ts';
+import { ConfigError } from './config-error.ts';
+
+/** Shared object sections may be merged, but their leaf policies have one owner. */
+function assertDisjoint(
+  native: Record<string, unknown>,
+  sharedPolicy: Record<string, unknown>,
+  path: string,
+): void {
+  for (const [key, value] of Object.entries(sharedPolicy)) {
+    if (!Object.hasOwn(native, key)) continue;
+    const existing = native[key];
+    if (
+      value &&
+      existing &&
+      typeof value === 'object' &&
+      typeof existing === 'object' &&
+      !Array.isArray(value) &&
+      !Array.isArray(existing)
+    ) {
+      assertDisjoint(
+        existing as Record<string, unknown>,
+        value as Record<string, unknown>,
+        `${path}.${key}`,
+      );
+    } else {
+      throw new ConfigError(`Duplicate connected-data policy: ${path}.${key}`);
+    }
+  }
+}
+
+assertDisjoint(integrationRuntime, shared.integrations, 'integrations');
+assertDisjoint(trafficRuntime, shared.traffic, 'traffic');
+assertDisjoint(analyticsRuntime, shared.analytics, 'analytics');
+assertDisjoint(referralRuntime, shared.referrals, 'referrals');
 
 validateReferralRules(referralRuntime);
 
@@ -29,6 +63,10 @@ export const traffic = {
   ...datasetConstants,
   dimension_key_separator: integrations.dimension_separator,
   dimension_arity: dimensionArity,
+  PERFORMANCE_UNAVAILABLE_DIMENSIONS: Object.entries(trafficRuntime.PERFORMANCE_DIMENSION_DATASETS)
+    .filter(([, id]) => integrations.excluded_datasets.includes(id))
+    .map(([dimension]) => dimension)
+    .sort(compareText),
   PERFORMANCE_DATASET_DIMENSIONS: Object.fromEntries(
     Object.entries(trafficRuntime.PERFORMANCE_DIMENSION_DATASETS).map(([dimension, id]) => [
       id,

@@ -167,5 +167,7 @@ export function generationSystemPrompt(
   cohort: keyof typeof cohortRules | 'commerce',
 ): string {
   const base = template.replace('{example}', () => examples[businessModel] ?? fallbackExample);
+  if (cohort !== 'commerce' && !Object.hasOwn(cohortRules, cohort))
+    throw new TypeError(`Unknown prompt cohort: ${cohort}`);
   return cohort === 'commerce' ? base : `${base}\n${cohortRules[cohort]}`;
 }

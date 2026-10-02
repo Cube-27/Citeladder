@@ -1,5 +1,6 @@
 /** Committed dispatches, bounded concurrent JEV calls, and lease-fenced outcomes. */
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
@@ -32,7 +33,7 @@ async function lockedRun(db: Database, task: QueueTask, terminal = false) {
       eb.and([
         eb('lease_owner', '=', task.lease_owner),
         eb('status', '=', 'running'),
-        eb('lease_expires_at', '>', new Date()),
+        eb('lease_expires_at', '>', sql<Date>`clock_timestamp()`),
       ]),
       ...(terminal ? [eb('status', '=', 'failed')] : []),
     ]),

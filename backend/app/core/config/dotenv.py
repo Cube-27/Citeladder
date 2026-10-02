@@ -10,7 +10,8 @@ suite imports the app, every one of those loads into the settings singletons,
 and any code path gated on "is this provider configured?" turns ON. That is not
 hypothetical — a component test for the agent worker built a live gateway and
 posted evidence to a real provider endpoint, because the developer's key made
-``default_agent_settings.configured`` true.
+the then-existing ``default_agent_settings.configured`` true. Agent execution
+now belongs to TypeScript; Python operators still need isolated settings.
 
 So tests never read ``.env``. ``backend/tests/conftest.py`` sets
 ``CITELADDER_DISABLE_DOTENV`` before importing anything from ``app`` and then

@@ -43,7 +43,16 @@ function validateOriginShape(parsed: URL): void {
 }
 
 function isLoopbackHost(host: string): boolean {
-  return LOOPBACK_HOSTS[host] === true || host.startsWith('127.') || isMappedIpv4Literal(host);
+  // URL parsing canonicalizes alternate IPv4 spellings before this check.
+  const linkLocalV6 =
+    host.includes(':') && (Number.parseInt(host.split(':')[0]!, 16) & 0xffc0) === 0xfe80;
+  return (
+    LOOPBACK_HOSTS[host] === true ||
+    host.startsWith('127.') ||
+    host.startsWith('169.254.') ||
+    linkLocalV6 ||
+    isMappedIpv4Literal(host)
+  );
 }
 
 export function resolveApiServiceOrigin(

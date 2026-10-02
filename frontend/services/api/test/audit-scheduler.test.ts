@@ -164,12 +164,12 @@ describe('durable audit occurrence planning', () => {
     expect(await scheduler.planClaim(claim!, at)).toBe(false);
     await updateSchedule(db, scope, schedule.id, { enabled: true, next_run_at: at.toISOString() });
     const [expired] = await scheduler.claimDue(at);
-    expect(
-      await scheduler.planClaim(
-        expired!,
-        new Date(at.getTime() + settings.lease_ttl_seconds * 1000 + 1),
-      ),
-    ).toBe(false);
+    await db
+      .updateTable('audit_schedules')
+      .set({ lease_expires_at: new Date(0) })
+      .where('id', '=', expired!.id)
+      .execute();
+    expect(await scheduler.planClaim(expired!, at)).toBe(false);
   });
   it('rolls back failed admission before recording bounded retry and disablement', async () => {
     const t = await auditTenant(db, fixtures),

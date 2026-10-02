@@ -158,7 +158,9 @@ export async function probeConnection(
         errorCode = 'revision_changed';
       }
       const detail =
-        status === 'ok' ? 'Connection succeeded' : `Connection test failed: ${errorCode}`;
+        status === 'ok'
+          ? providerPolicy.app.success_detail
+          : `Connection test failed: ${errorCode}`;
       if (current) {
         await trx
           .insertInto('provider_connection_tests')

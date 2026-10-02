@@ -10,9 +10,11 @@ disconnect-safe events. Requires a real Postgres (partial index semantics).
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from sqlalchemy import select
@@ -43,6 +45,17 @@ from app.models.user import User
 from app.models.workspace import Workspace
 
 _WINDOW = (date(2026, 7, 20), date(2026, 7, 22))
+_NATIVE_DATASETS = json.loads(
+    (
+        Path(__file__).resolve().parents[3]
+        / "frontend/services/api/src/config/integrations.json"
+    ).read_text(encoding="utf-8")
+)["datasets"]
+_GSC_PAGE_DATASET = next(
+    row["dataset"]
+    for row in _NATIVE_DATASETS.values()
+    if row["provider"] == "gsc" and row["dimensions"] == ["page", "date"]
+)
 
 
 async def _seed_workspace(session: AsyncSession, name: str = "Integrations WS"):
@@ -398,7 +411,7 @@ async def test_metric_row_identity_and_resync_retention(
             sync_run_id=run.id,
             connection_id=connection_id,
             provider="gsc",
-            dataset="gsc_page_daily",
+            dataset=_GSC_PAGE_DATASET,
             query_snapshot={"dimensions": ["page", "date"]},
             payload_hash="a" * 64,
             row_count=1,
@@ -418,7 +431,7 @@ async def test_metric_row_identity_and_resync_retention(
             project_id=project_id,
             property_ref="sc-domain:example.com",
             provider="gsc",
-            dataset="gsc_page_daily",
+            dataset=_GSC_PAGE_DATASET,
             date=date(2026, 7, 21),
             dimension_key="https://example.com/page | 20260721",
             metrics={"clicks": 3, "impressions": 40},
@@ -499,7 +512,7 @@ async def test_same_workspace_composite_fks_reject_cross_workspace_refs(
                     sync_run_id=run.id,
                     connection_id=connection_id,
                     provider="gsc",
-                    dataset="gsc_page_daily",
+                    dataset=_GSC_PAGE_DATASET,
                     payload_hash="b" * 64,
                 )
             )
@@ -580,7 +593,7 @@ async def test_workspace_delete_cascades_graph(
                 sync_run_id=run.id,
                 connection_id=connection_id,
                 provider="gsc",
-                dataset="gsc_page_daily",
+                dataset=_GSC_PAGE_DATASET,
                 payload_hash="c" * 64,
             )
         )

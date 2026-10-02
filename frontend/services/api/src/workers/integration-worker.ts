@@ -45,14 +45,13 @@ function valueDate(value: string): string {
 }
 
 type Artifact = { dataset: string; query_snapshot: unknown; row_count: number };
-type Lease = { status: string; lease_owner: string | null; lease_expires_at: Date | null };
+type Lease = { status: string; lease_owner: string | null; lease_live: boolean | null };
 
 function ownsLease(current: Lease | undefined, owner: string): boolean {
   return (
     current?.status === statuses.running &&
     current.lease_owner === owner &&
-    current.lease_expires_at !== null &&
-    current.lease_expires_at.getTime() > Date.now()
+    current.lease_live === true
   );
 }
 
@@ -92,13 +91,13 @@ export class IntegrationWorker {
         .updateTable('integration_sync_runs')
         .set({
           heartbeat_at: new Date(),
-          lease_expires_at: new Date(Date.now() + this.#settings.lease_ttl_seconds * 1000),
+          lease_expires_at: sql<Date>`clock_timestamp() + ${this.#settings.lease_ttl_seconds} * interval '1 second'`,
           updated_at: new Date(),
         })
         .where('id', '=', run.id)
         .where('lease_owner', '=', this.#owner)
         .where('status', '=', statuses.running)
-        .where('lease_expires_at', '>', new Date())
+        .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
         .execute()
         .catch((error: unknown) =>
           logger.exception('integration_heartbeat_failed', error, { sync_run_id: run.id }),
@@ -147,7 +146,7 @@ export class IntegrationWorker {
         .set({
           status: statuses.running,
           lease_owner: this.#owner,
-          lease_expires_at: new Date(Date.now() + this.#settings.lease_ttl_seconds * 1000),
+          lease_expires_at: sql<Date>`clock_timestamp() + ${this.#settings.lease_ttl_seconds} * interval '1 second'`,
           heartbeat_at: new Date(),
           attempt_count: row.attempt_count + 1,
           updated_at: new Date(),
@@ -422,7 +421,11 @@ export class IntegrationWorker {
   async #ownedTarget(db: Database, run: Run) {
     const current = await db
       .selectFrom('integration_sync_runs')
-      .select(['status', 'lease_owner', 'lease_expires_at'])
+      .select([
+        'status',
+        'lease_owner',
+        sql<boolean>`lease_expires_at > clock_timestamp()`.as('lease_live'),
+      ])
       .where('id', '=', run.id)
       .where('workspace_id', '=', run.workspace_id)
       .forUpdate()
@@ -468,7 +471,11 @@ export class IntegrationWorker {
     await this.#db.transaction().execute(async (trx) => {
       const current = await trx
         .selectFrom('integration_sync_runs')
-        .select(['status', 'lease_owner', 'lease_expires_at'])
+        .select([
+          'status',
+          'lease_owner',
+          sql<boolean>`lease_expires_at > clock_timestamp()`.as('lease_live'),
+        ])
         .where('id', '=', run.id)
         .where('workspace_id', '=', run.workspace_id)
         .forUpdate()

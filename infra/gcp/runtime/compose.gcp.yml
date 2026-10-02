@@ -29,7 +29,6 @@ x-backend: &backend
     SITE_HEALTH_PER_HOST_CONCURRENCY: "6"
     SITE_HEALTH_AUTOMATIC_PAGE_LIMIT: "200"
     FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
-    FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:?FRONTEND_ORIGINS is required}
     # Google sign-in, OFF until the public policies are cleared for open
     # sign-up: a first Google sign-in creates an account. Operator-created
     # client logins use email and password. Set OAUTH_GOOGLE_ENABLED=true on
@@ -225,7 +224,8 @@ services:
       SITE_HEALTH_AUTOMATIC_PAGE_LIMIT: "200"
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       DB_SSL_MODE: require
-      DB_POOL_SIZE: "4"
+      # One API process serves all route families; operators can tune its pool.
+      DB_POOL_SIZE: ${API_DB_POOL_SIZE:-8}
       DB_MAX_OVERFLOW: "0"
       DEMO_MODE: ${DEMO_MODE:-false}
       MCP_ENABLED: "true"

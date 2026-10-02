@@ -181,7 +181,7 @@ export class AuditWorker {
         // Recheck ownership after acquiring capacity, immediately before any network boundary.
         const live = await this.#db
           .transaction()
-          .execute((trx) => ownedAuditTask(trx, claimed, this.owner, this.#now()));
+          .execute((trx) => ownedAuditTask(trx, claimed, this.owner));
         if (!live || dispatchSignal.aborted) return;
         if (!(await this.#queue.markRunning(claimed, this.owner))) return;
         if (surface) await this.#surface(context, dispatchSignal);
@@ -330,7 +330,7 @@ export class AuditWorker {
     const at = this.#now(),
       available = deadline && decision.availableAt > deadline ? deadline : decision.availableAt;
     return this.#db.transaction().execute(async (trx) => {
-      const locked = await ownedAuditTask(trx, task, this.owner, at);
+      const locked = await ownedAuditTask(trx, task, this.owner);
       if (!locked) return;
       await parkAuditTask(trx, locked.task, 'capacity_wait', available, at);
       await auditEvent(
@@ -540,7 +540,7 @@ export class AuditWorker {
   }
   #pauseAuth(context: ExecutionContext) {
     return this.#db.transaction().execute(async (trx) => {
-      if (await ownedAuditTask(trx, context.task, this.owner, this.#now()))
+      if (await ownedAuditTask(trx, context.task, this.owner))
         await pauseExecutionCredential(trx, context, this.#runtime, this.#now());
     });
   }

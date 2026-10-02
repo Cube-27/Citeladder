@@ -146,7 +146,7 @@ describe('durable onboarding', () => {
     expect(await discoveryRow(db, second.workspaceId, completed.id)).toMatchObject({
       status: 'ready',
     });
-    const queue = new DiscoveryQueue(db, 30);
+    const queue = new DiscoveryQueue(db, 30, () => new Date(Date.now() - 86400000));
     expect(await queue.heartbeat(stale, 'dead-worker')).toBe(false);
     expect(await queue.lockedTask(db, stale, 'dead-worker')).toBeUndefined();
   });
@@ -309,6 +309,7 @@ describe('durable onboarding', () => {
     const claimed = await Promise.all([queue.claim('one'), queue.claim('two')]);
     const task = claimed.find((item) => item?.discovery_id === row.id)!;
     expect(claimed.filter((item) => item?.id === task.id)).toHaveLength(1);
+    expect(await queue.heartbeat(task, task.lease_owner!)).toBe(true);
     await db
       .updateTable('brand_discovery_tasks')
       .set({ lease_expires_at: new Date(Date.now() - 1) })

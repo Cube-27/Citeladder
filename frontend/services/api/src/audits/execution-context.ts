@@ -67,7 +67,7 @@ export async function loadExecutionContext(
   env: Record<string, string | undefined> = process.env,
 ) {
   return db.transaction().execute(async (trx) => {
-    const locked = await ownedAuditTask(trx, claimed, owner, at);
+    const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return null;
     const { task, audit } = locked;
     const parsed = routeSchema.safeParse(task.provider_route_snapshot);

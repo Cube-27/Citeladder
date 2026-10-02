@@ -59,7 +59,7 @@ export class AcquisitionState {
       .where('project_id', '=', this.task.project_id!)
       .where('run_id', '=', this.runId);
   }
-  async owned(db: Database, at: Date) {
+  async owned(db: Database) {
     return db
       .selectFrom('analytics_tasks')
       .select('id')
@@ -68,7 +68,7 @@ export class AcquisitionState {
       .where('id', '=', this.task.id)
       .where('lease_owner', '=', this.task.lease_owner)
       .where('status', '=', 'running')
-      .where('lease_expires_at', '>', at)
+      .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
       .forUpdate()
       .executeTakeFirst();
   }
@@ -105,7 +105,7 @@ export class AcquisitionState {
   async start(at = new Date()) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
-      if (!run || terminal.includes(run.status) || !(await this.owned(trx, at))) return null;
+      if (!run || terminal.includes(run.status) || !(await this.owned(trx))) return null;
       if (
         !run.confirmed_at ||
         run.pricing_version !== si.price_version ||
@@ -138,8 +138,7 @@ export class AcquisitionState {
   async prepare(plan: ResearchPlan, sequence: number, at = new Date()): Promise<PreparedResearch> {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
-      if (!run || run.status !== 'running' || !(await this.owned(trx, at)))
-        return { action: 'stop' };
+      if (!run || run.status !== 'running' || !(await this.owned(trx))) return { action: 'stop' };
       const connection = await this.connection(trx, run);
       if (!connection) {
         await trx
@@ -338,7 +337,7 @@ export class AcquisitionState {
       if (
         !run ||
         run.status !== 'running' ||
-        !(await this.owned(trx, at)) ||
+        !(await this.owned(trx)) ||
         !(await this.connection(trx, run))
       )
         return false;
@@ -425,7 +424,7 @@ export class AcquisitionState {
   async park(at: Date) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
-      if (!run || run.status !== 'running' || !(await this.owned(trx, new Date()))) return;
+      if (!run || run.status !== 'running' || !(await this.owned(trx))) return;
       await trx
         .updateTable('search_intelligence_runs')
         .set({ status: 'queued', updated_at: new Date() })
@@ -458,7 +457,7 @@ export class AcquisitionState {
       if (
         !run ||
         !['running', 'queued'].includes(run.status) ||
-        !(terminalTask ? await this.terminalTask(trx) : await this.owned(trx, at))
+        !(terminalTask ? await this.terminalTask(trx) : await this.owned(trx))
       )
         return true;
       const call = await this.calls(trx)
@@ -622,7 +621,7 @@ export class AcquisitionState {
   ) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
-      if (!run || run.status !== 'running' || !(await this.owned(trx, at)))
+      if (!run || run.status !== 'running' || !(await this.owned(trx)))
         return { stop: true, wait: null };
       const call = await this.calls(trx)
         .where('id', '=', prepared.call.id)
@@ -691,7 +690,7 @@ export class AcquisitionState {
   async finish(at = new Date()) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
-      if (!run || run.status !== 'running' || !(await this.owned(trx, at))) return;
+      if (!run || run.status !== 'running' || !(await this.owned(trx))) return;
       await this.closeCollecting(trx, at);
       const datasets = await trx
         .selectFrom('search_intelligence_datasets')

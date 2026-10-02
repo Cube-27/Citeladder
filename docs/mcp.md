@@ -40,7 +40,7 @@ protections are bounds and binding instead:
   PostgreSQL usage counters before the body is read, keyed by the trusted-proxy
   client identity. Refusals are 429 with `Retry-After`; a client already over
   its own budget does not spend the global one. CORS preflight is not metered.
-  Limits are owned by [abuse configuration](../backend/app/core/config/abuse.py).
+  Limits are owned by [abuse configuration](../frontend/services/api/src/config/abuse.ts).
 - The body is capped at a registration size. The provider accepts only the
   `authorization_code`/`refresh_token` grants and the `code` response type,
   at most ten concrete-host HTTPS or loopback-HTTP redirects without
@@ -65,7 +65,7 @@ cannot resolve. It is a separate change; DCR remains the compatibility path.
 
 ## Configuration and persistence
 
-[Configuration](../backend/app/core/config/mcp.py) owns enablement and bounds.
+[Configuration](../frontend/services/api/src/config/mcp.ts) owns enablement and bounds.
 An enabled server requires a safe public origin; disabled MCP must not break
 the rest of application startup. Protocol routes remain behind request-body and
 transport-security guards. A demo allowlist is an additional admission condition,
@@ -152,5 +152,5 @@ external acceptance.
 
 The public tool reference is generated from the live TypeScript catalogue with
 `pnpm --filter @citeladder/api mcp:reference`; the repository check detects drift.
-Python [Agent bridge tests](../backend/tests/component/test_mcp_agent_bridge.py)
-retain membership isolation coverage until PR 19 removes that caller.
+Native [Agent owner-adapter tests](../frontend/services/api/test/agent-owner-adapters.test.ts)
+cover project pinning and membership isolation for the shared MCP reads.

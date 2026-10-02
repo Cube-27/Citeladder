@@ -10,7 +10,6 @@ set -euo pipefail
 : "${ORIGIN_DOMAIN_NAME:?ORIGIN_DOMAIN_NAME is required}"
 : "${APP_DOMAIN_NAME:?APP_DOMAIN_NAME is required}"
 : "${FRONTEND_URL:?FRONTEND_URL is required}"
-: "${FRONTEND_ORIGINS:?FRONTEND_ORIGINS is required}"
 : "${MCP_PUBLIC_BASE_URL:?MCP_PUBLIC_BASE_URL is required}"
 : "${SOURCE_COMMIT:?SOURCE_COMMIT is required}"
 : "${DEFAULT_AGENT_BASE_URL:?DEFAULT_AGENT_BASE_URL is required}"
@@ -30,12 +29,10 @@ DEPLOY_RUNTIME_FREE_BYTES="${DEPLOY_RUNTIME_FREE_BYTES:-1073741824}"
 [[ "$APP_DOMAIN_NAME" =~ ^[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
 [[ "$FRONTEND_URL" =~ ^https://[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
 [[ "$MCP_PUBLIC_BASE_URL" =~ ^https://[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
-[[ "$FRONTEND_ORIGINS" =~ ^https://[a-z0-9.,:/-]+$ ]]
 [[ "$ORIGIN_DOMAIN_NAME" != "$DOMAIN_NAME" && "$ORIGIN_DOMAIN_NAME" != "$APP_DOMAIN_NAME" ]]
 [[ "$APP_DOMAIN_NAME" != "$DOMAIN_NAME" ]]
 [[ "$MCP_PUBLIC_BASE_URL" == "https://$DOMAIN_NAME" ]]
 [[ "$FRONTEND_URL" == "https://$APP_DOMAIN_NAME" ]]
-[[ "$FRONTEND_ORIGINS" == "https://$APP_DOMAIN_NAME" ]]
 [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
 [[ "$RESET_DATABASE" =~ ^(true|false)$ ]]
@@ -220,7 +217,7 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env ORIGIN_DOMAIN_NAME "$ORIGIN_DOMAIN_NAME"
   write_env APP_DOMAIN_NAME "$APP_DOMAIN_NAME"
   write_env FRONTEND_URL "$FRONTEND_URL"
-  write_env FRONTEND_ORIGINS "$FRONTEND_ORIGINS"
+  write_env API_DB_POOL_SIZE "${API_DB_POOL_SIZE:-8}"
   write_env MCP_PUBLIC_BASE_URL "$MCP_PUBLIC_BASE_URL"
   write_env SOURCE_COMMIT "$SOURCE_COMMIT"
   write_env TRUSTED_PROXY_CIDRS "$trusted_proxy_cidrs"

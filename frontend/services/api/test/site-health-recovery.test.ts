@@ -1,4 +1,5 @@
 import { afterAll, expect, it, vi } from 'vitest';
+import { sql } from 'kysely';
 
 import { policy } from '../src/config.ts';
 import { recoverExpiredLeases } from '../src/site-health/lease-recovery.ts';
@@ -31,6 +32,35 @@ async function expired(id: string, attempts = 0, at = new Date(Date.now() - 1000
     .where('id', '=', id)
     .execute();
 }
+
+it('uses database time to recover leases despite application clock skew', async () => {
+  const seed = await fixtures.crawl('running');
+  const id = await fixtures.task(seed);
+  await db
+    .updateTable('site_crawl_tasks')
+    .set({
+      status: 'running',
+      lease_owner: 'worker',
+      lease_expires_at: sql<Date>`clock_timestamp() + interval '120 seconds'`,
+    })
+    .where('id', '=', id)
+    .execute();
+  expect((await recoverExpiredLeases(db, 10, new Date(Date.now() + 86_400_000))).reclaimed).toBe(0);
+  await db
+    .updateTable('site_crawl_tasks')
+    .set({
+      lease_expires_at: sql<Date>`clock_timestamp() - interval '1 second'`,
+    })
+    .where('id', '=', id)
+    .execute();
+  expect((await recoverExpiredLeases(db, 10, new Date(Date.now() - 86_400_000))).reclaimed).toBe(1);
+  expect(await row(id)).toMatchObject({ status: 'retry_wait', attempt_count: 1 });
+  await db
+    .updateTable('site_crawl_tasks')
+    .set({ status: 'cancelled' })
+    .where('id', '=', id)
+    .execute();
+});
 
 it('reclaims retryable leases, spends one attempt, and fences the old owner after a new claim', async () => {
   const seed = await fixtures.crawl('running');
