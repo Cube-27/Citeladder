@@ -118,7 +118,8 @@ async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
 describe('integration worker paging and resume', () => {
   it('publishes with a live database lease despite a skewed application clock', async () => {
     const run = await seedRun();
-    const skewed = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 86400000);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(Date.now() + 86400000));
     try {
       const client = { page: async () => ({ payload: { rows: [] }, rawRowCount: 0 }) };
       const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token');
@@ -130,7 +131,7 @@ describe('integration worker paging and resume', () => {
         .executeTakeFirstOrThrow();
       expect(result.status).toBe('succeeded');
     } finally {
-      skewed.mockRestore();
+      vi.useRealTimers();
     }
   });
   it('reports partial sweep failure after recovering the independent queue', async () => {

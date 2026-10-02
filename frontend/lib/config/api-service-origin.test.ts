@@ -29,12 +29,13 @@ describe('resolveApiServiceOrigin', () => {
   });
 
   it('continues to allow a non-loopback production origin', () => {
-    expect(resolveApiServiceOrigin('https://backend.internal.example', true)).toBe(
-      'https://backend.internal.example',
+    expect(resolveApiServiceOrigin('https://0.backend.internal.example', true)).toBe(
+      'https://0.backend.internal.example',
     );
   });
 
   it.each([
+    'http://0.0.0.1:8100',
     'http://169.254.169.254:8100',
     'http://[fe80::1]:8100',
     'http://0177.0.0.1:8100',

@@ -198,6 +198,12 @@ export function validateJevSettings(settings: Record<keyof typeof jev, unknown>)
   } catch {
     throw new ConfigError('JEV_BASE_URL must be a credential-free HTTPS URL');
   }
-  if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password)
+  if (
+    endpoint.protocol !== 'https:' ||
+    endpoint.username ||
+    endpoint.password ||
+    endpoint.search ||
+    endpoint.hash
+  )
     throw new ConfigError('JEV_BASE_URL must be a credential-free HTTPS URL');
 }

@@ -35,7 +35,13 @@ const decision = z.object({
 export function createJevClient(settings = jevSettings(), transport: Transport = defaultTransport) {
   if (!settings.apiKey) return null;
   const endpoint = parseEndpoint(settings.baseUrl);
-  if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password) {
+  if (
+    endpoint.protocol !== 'https:' ||
+    endpoint.username ||
+    endpoint.password ||
+    endpoint.search ||
+    endpoint.hash
+  ) {
     throw new ModelError('not_configured');
   }
   return {

@@ -374,7 +374,8 @@ function productionFrontendUrl(value: string): boolean {
       host.toLowerCase() !== 'localhost' &&
       !(
         ipaddr.isValid(host) &&
-        ['loopback', 'unspecified', 'linkLocal'].includes(ipaddr.process(host).range())
+        (ipaddr.process(host).toString().startsWith('0.') ||
+          ['loopback', 'unspecified', 'linkLocal'].includes(ipaddr.process(host).range()))
       )
     );
   } catch {

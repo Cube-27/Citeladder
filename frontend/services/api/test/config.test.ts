@@ -94,6 +94,8 @@ describe('loadConfig', () => {
     ).toThrow('Invalid JEV thresholds');
     expect(() => loadConfig({ JEV_BASE_URL: 'http://example.test' })).toThrow('JEV_BASE_URL');
     expect(() => loadConfig({ JEV_BASE_URL: 'not-a-url' })).toThrow(ConfigError);
+    for (const baseUrl of ['https://example.test?token=fixture', 'https://example.test#fragment'])
+      expect(() => loadConfig({ JEV_BASE_URL: baseUrl })).toThrow(ConfigError);
     expect(() => loadConfig({ JEV_TIMEOUT_SECONDS: '61' })).toThrow(ConfigError);
   });
   it('resolves native abuse budgets with case-insensitive aliases and positive integer bounds', () => {

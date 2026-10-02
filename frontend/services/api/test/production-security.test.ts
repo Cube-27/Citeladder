@@ -35,6 +35,8 @@ describe('production startup admission', () => {
     'https://127.20.0.4',
     'https://[::1]',
     'https://0.0.0.0',
+    'https://0.0.0.1',
+    'https://[::ffff:0.0.0.1]',
     'https://[::]',
     'https://169.254.169.254',
     'https://[fe80::1]',
@@ -56,6 +58,7 @@ describe('production startup admission', () => {
     expect(
       loadConfig({
         ...productionEnv,
+        FRONTEND_URL: 'https://0.app.example.test',
         DATABASE_URL: `postgresql://fixture:${encodeURIComponent('database-password-with-:/@-and-0123456789')}@database.test/app`,
         TRUSTED_PROXY_CIDRS: '10.0.0.1/24,2001:db8::/64',
       }).appEnv,

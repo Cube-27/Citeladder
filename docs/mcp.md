@@ -96,8 +96,8 @@ citation-compatible search/fetch documents, query-page evidence, Site Health
 pages/link projections, visibility results/sources, Search Intelligence
 datasets and shared growth-evidence reads. The [catalogue](../frontend/services/api/src/mcp/tools.ts)
 delegates to the existing TypeScript domain read services and scoped persisted
-projections. The in-app [Agent](agents.md) retains Python read bridges until its
-runtime migrates in PR 19; those bridges do not serve hosted routes or OAuth.
+projections. The in-app [Agent](agents.md) uses its native TypeScript runtime
+and owner adapters; the Python Agent read bridges have been retired.
 Its internal skills and Agent-only reads are not exposed here. Search is bounded persisted retrieval; it is not
 a web search or provider request. Missing projections remain unavailable and
 cannot be repaired by reading them. Search Intelligence summaries retain their
