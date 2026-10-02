@@ -7,6 +7,7 @@
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
+import { internalLinks } from './config/internal-links.ts';
 import {
   billingSettings,
   razorpaySettings,
@@ -27,7 +28,11 @@ type SettingSpec = {
   exclusive_maximum?: number;
 };
 
-export const policy = { ...pythonConfig, brand_evidence: brandEvidence };
+export const policy = {
+  ...pythonConfig,
+  brand_evidence: brandEvidence,
+  internal_links: internalLinks,
+};
 
 const TRUE_VALUES = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
 const FALSE_VALUES = new Set(['0', 'off', 'f', 'false', 'n', 'no']);

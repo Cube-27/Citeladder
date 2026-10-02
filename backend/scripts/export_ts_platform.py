@@ -54,7 +54,6 @@ from app.core.config import provider_catalog as provider_config
 from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import site_health_contracts as site_health_config
 from app.core.config import site_health_crawl_policy as site_crawl_config
-from app.core.config import site_health_internal_links as internal_links_config
 from app.core.config import site_health_rules as web_rules
 from app.core.config import visibility_prompts as visibility_config
 from app.core.config import workspaces as workspace_config
@@ -301,11 +300,6 @@ def build_config() -> dict[str, Any]:
         "audits": audit_policy(_setting),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
-        "internal_links": {
-            name.removeprefix("INTERNAL_LINKS_").lower(): value
-            for name, value in vars(internal_links_config).items()
-            if name.startswith("INTERNAL_LINKS_")
-        },
         **web_evidence_policy(_prefixed_constants, _setting),
         "brand_identity": brand_identity_policy(),
         "projects": {
