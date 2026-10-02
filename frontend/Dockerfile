@@ -9,6 +9,7 @@ WORKDIR /app
 RUN npm install --global --ignore-scripts pnpm@12.8.1
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/packages/contracts/package.json ./packages/contracts/
+COPY frontend/services/api/package.json ./services/api/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder

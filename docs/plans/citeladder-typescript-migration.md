@@ -1248,6 +1248,9 @@ align pnpm 12.8.1 in workspace/root metadata and all Node images, and retire
 `python-multipart` with the already-removed Python upload routes. Frontend Knip
 and backend deptry remain the unused-dependency gates. Vite+/Vitest stay coupled
 at the bundled versions; MSW stays on 2.x because that mocker requires it.
+SQLAlchemy remains resolved at 2.1.1 until the 2.1.2 release supplies the
+Python 3.12 Linux wheel required by binary-only deployment installs. All Node
+dependency stages include every workspace manifest for pnpm's frozen checks.
 
 Remaining PR20 work: further field-level policy transfer and bridge retirement,
 native discovery/integration lease recovery and Python web retirement with full
