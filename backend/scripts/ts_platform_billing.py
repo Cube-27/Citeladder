@@ -1,8 +1,7 @@
-"""Billing policy export; Python config remains the single policy authority."""
+"""Shared commercial catalog, tax and operator/schema policy inputs."""
 
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import Callable
 from typing import Any
 
@@ -12,10 +11,6 @@ from app.core.config import billing_contracts
 from app.core.config import entitlements as entitlements_config
 from app.core.config.billing_contracts import SUBSCRIPTION_KIND_BASE
 from app.core.config.billing_settings import BillingSettings
-from app.core.config.provider_catalog import (
-    PUBLIC_PROVIDER_CATALOG,
-    public_provider_routes,
-)
 from app.core.config.razorpay_settings import RAZORPAY_API_ORIGIN, RazorpaySettings
 
 Setting = Callable[[str, type[BaseSettings]], dict[str, Any]]
@@ -37,20 +32,6 @@ def billing_policy(setting: Setting) -> dict[str, Any]:
             for name, value in vars(billing_contracts).items()
             if name.isupper()
         },
-        "providers": [
-            {
-                **dataclasses.asdict(entry),
-                "routes": [
-                    {
-                        "logical_engine": route.logical_engine,
-                        "transport_provider": route.transport_provider,
-                        "model": route.transport_model,
-                    }
-                    for route in public_provider_routes(entry.key)
-                ],
-            }
-            for entry in PUBLIC_PROVIDER_CATALOG
-        ],
     }
 
 

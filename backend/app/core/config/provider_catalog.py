@@ -212,15 +212,6 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
 )
 
 
-def public_provider_routes(provider_key: str) -> tuple[MeasurementRoute, ...]:
-    """Approved mode-specific routes for a public catalog row.
-
-    Each tuple is one exact mode-specific route. Coming-soon providers have no
-    executable entries by construction.
-    """
-    return measurement_routes_for_engine(provider_key)
-
-
 CREDENTIAL_SOURCE_BYOK: Final = "byok"
 
 CREDENTIAL_SOURCE_PLATFORM: Final = "platform"
