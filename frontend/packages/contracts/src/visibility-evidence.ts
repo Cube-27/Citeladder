@@ -15,7 +15,7 @@ const uuid = () => z.uuid();
 // `VisibilityFanoutState`): `queries_available` (≥1 stored event has non-blank
 // query text), `count_only` (search used / count positive but no query text —
 // e.g. a legacy count-only row), `no_search` (neither signal present).
-export const visibilityFanoutStateSchema = z.enum([
+const visibilityFanoutStateSchema = z.enum([
   'queries_available',
   'count_only',
   'no_search',
@@ -26,7 +26,7 @@ export const visibilityFanoutStateSchema = z.enum([
 // One normalized stored search event (backend `VisibilityEvidenceSearchEvent`).
 // Empty query strings are preserved verbatim (a count-only event); query text
 // is never invented.
-export const visibilityEvidenceSearchEventSchema = responseObject({
+const visibilityEvidenceSearchEventSchema = responseObject({
   sequence: z.number().int(),
   query: z.string(),
   call_id: z.string(),
@@ -37,7 +37,7 @@ export const visibilityEvidenceSearchEventSchema = responseObject({
 // One persisted brand/competitor mention row (backend
 // `VisibilityMentionEvidence`). Projected directly from `BrandMention` /
 // `CompetitorMention`; never inferred from answer text at read time.
-export const visibilityMentionEvidenceSchema = responseObject({
+const visibilityMentionEvidenceSchema = responseObject({
   kind: z.enum(['brand', 'competitor']),
   name: z.string(),
   first_offset: z.number().int().nullable(),

@@ -43,18 +43,18 @@ export const performanceDimensionSchema = z.enum([
   'bing_query',
   'bing_page',
 ]);
-export const evidenceStateSchema = z.enum(['not_run', 'observed_zero', 'available']);
+const evidenceStateSchema = z.enum(['not_run', 'observed_zero', 'available']);
 /** The chart's BUCKET size — distinct from the range, which is its LENGTH. */
 export const performanceGranularitySchema = z.enum(['day', 'week', 'month']);
 
-export const performanceSeriesPointSchema = responseObject({
+const performanceSeriesPointSchema = responseObject({
   date: z.string(),
   value: z.number().nullable(),
 });
 
 const metricSeries = z.array(performanceSeriesPointSchema);
 
-export const performanceTotalsSchema = responseObject({
+const performanceTotalsSchema = responseObject({
   clicks: z.number().int().nullable(),
   impressions: z.number().int().nullable(),
   ctr: z.number().nullable(),
@@ -66,14 +66,14 @@ export const performanceTotalsSchema = responseObject({
 // GA4 is deliberately absent from the series: it renders as a compact,
 // non-interactive summary row, so all four chart metrics come from one
 // provider and one dataset.
-export const performanceSeriesSchema = responseObject({
+const performanceSeriesSchema = responseObject({
   clicks: metricSeries,
   impressions: metricSeries,
   ctr: metricSeries,
   position: metricSeries,
 });
 
-export const performanceWindowSchema = responseObject({
+const performanceWindowSchema = responseObject({
   snapshot_id: uuid().nullable(),
   window_start: z.string(),
   window_end: z.string(),
@@ -82,13 +82,13 @@ export const performanceWindowSchema = responseObject({
   series: performanceSeriesSchema,
 });
 
-export const performanceCoverageSchema = responseObject({
+const performanceCoverageSchema = responseObject({
   earliest_date: z.string().nullable(),
   latest_date: z.string().nullable(),
   covered_days: z.number().int(),
 });
 
-export const performanceDimensionCountsSchema = responseObject({
+const performanceDimensionCountsSchema = responseObject({
   query: z.number().int(),
   page: z.number().int(),
   country: z.number().int(),
@@ -152,7 +152,7 @@ export const performanceDashboardSchema = responseObject({
   normalization_version: z.string(),
 });
 
-export const performanceMetricsSchema = responseObject({
+const performanceMetricsSchema = responseObject({
   clicks: z.number().int(),
   impressions: z.number().int(),
   ctr: z.number().nullable(),
@@ -162,7 +162,7 @@ export const performanceMetricsSchema = responseObject({
 // A key absent from the comparison period was NOT observed there, which is
 // different from having been observed at zero — so `comparison_metrics` is
 // null and the difference column renders unavailable.
-export const performanceTableRowSchema = responseObject({
+const performanceTableRowSchema = responseObject({
   dimension_key: z.string(),
   display_value: z.string(),
   metrics: performanceMetricsSchema,

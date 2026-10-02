@@ -23,7 +23,7 @@ export const auditStatusSchema = z.enum([
 ]);
 
 // The engine provenance a run froze at launch (B5 `AuditEngineSnapshotResponse`).
-export const auditEngineSnapshotSchema = responseObject({
+const auditEngineSnapshotSchema = responseObject({
   logical_engine: z.string(),
   transport_provider: z.string(),
   transport_model: z.string(),
@@ -97,7 +97,7 @@ export const auditScheduleSchema = responseObject({
   updated_at: z.string(),
 });
 
-export const auditEngineEstimateSchema = responseObject({
+const auditEngineEstimateSchema = responseObject({
   logical_engine: logicalEngineSchema,
   transport_provider: transportProviderSchema,
   transport_model: z.string(),
@@ -261,7 +261,7 @@ export const executionSchema = responseObject({
  * arrive as citations. Keeping them apart is what lets the evidence view show
  * "linked but not cited" as the distinct fact it is.
  */
-export const aioLinkSchema = responseObject({
+const aioLinkSchema = responseObject({
   url: z.string(),
   domain: z.string(),
   title: z.string(),
@@ -323,7 +323,7 @@ export const aioRateSchema = responseObject({
   value: z.number().nullable(),
 });
 
-export const aioCompetitorRateSchema = responseObject({
+const aioCompetitorRateSchema = responseObject({
   name: z.string(),
   rate: aioRateSchema,
 });

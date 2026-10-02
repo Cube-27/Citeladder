@@ -27,7 +27,7 @@ export const deliveryFactsSchema = responseObject({
 });
 
 // Bounded normalized page facts (deterministic; extractor-versioned).
-export const pageFactsSchema = responseObject({
+const pageFactsSchema = responseObject({
   title: z.string().nullable(),
   meta_description: z.string().nullable(),
   canonical_url: z.string().nullable(),
@@ -129,7 +129,7 @@ const anchorDiagnosticSchema = responseObject({
   h1_coverage: z.number().nullable(),
 });
 
-export const internalLinksSchema = responseObject({
+const internalLinksSchema = responseObject({
   inbound_count: z.number().int(),
   outbound_count: z.number().int(),
   main_content_inbound_count: z.number().int(),

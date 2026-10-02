@@ -23,14 +23,14 @@ export const architectureNodeSchema = responseObject({
   depth_from_home: z.number().int().nullable(),
 });
 
-export const architectureOrphanPageSchema = responseObject({
+const architectureOrphanPageSchema = responseObject({
   site_url_id: z.string(),
   url: z.string(),
   title: z.string(),
   page_kind: z.string(),
 });
 
-export const architectureInternalLinkingSchema = responseObject({
+const architectureInternalLinkingSchema = responseObject({
   internal_link_count: z.number().int(),
   pages_with_incoming_count: z.number().int(),
   pages_with_incoming_percentage: z.number().nullable(),
@@ -40,13 +40,13 @@ export const architectureInternalLinkingSchema = responseObject({
   orphan_pages: z.array(architectureOrphanPageSchema).default([]),
 });
 
-export const architectureDepthBucketSchema = responseObject({
+const architectureDepthBucketSchema = responseObject({
   key: z.enum(['depth_0', 'depth_1', 'depth_2', 'depth_3_plus']),
   page_count: z.number().int(),
   percentage: z.number().nullable(),
 });
 
-export const architectureStructureDepthSchema = responseObject({
+const architectureStructureDepthSchema = responseObject({
   measured_page_count: z.number().int(),
   unmeasured_page_count: z.number().int(),
   buckets: z.array(architectureDepthBucketSchema),

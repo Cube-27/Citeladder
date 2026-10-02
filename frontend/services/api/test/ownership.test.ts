@@ -1,142 +1,77 @@
-/**
- * The route-ownership gate: one writing stack per family, and ingress that
- * agrees with it.
- */
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-
-import { openApiDocument, type OpenApiDocument } from '../src/openapi/document.ts';
+import { openApiDocument } from '../src/openapi/document.ts';
 import { ingressRouter } from '../src/openapi/ingress.ts';
 import { routeOwnershipFailures, type OwnershipInputs } from '../src/openapi/ownership.ts';
 
-const PREFIX = '/api/v1';
-const UPSTREAMS = { python: ['BACKEND_ORIGIN'], typescript: ['API_SERVICE_ORIGIN'] };
-
-/** FastAPI's spelling of one operation per family. */
-function pythonDocument(families: string[]): OpenApiDocument {
-  const paths: OpenApiDocument['paths'] = {
-    '/health': { get: { tags: ['health'], responses: {} } },
-  };
-  for (const family of families) {
-    paths[`${PREFIX}/${family}/{item_id}`] = {
-      get: {
-        tags: [family],
-        parameters: [
-          {
-            name: 'item_id',
-            in: 'path',
-            required: true,
-            schema: { type: 'string', format: 'uuid' },
-          },
-        ],
-        responses: {
-          '200': {
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: { name: { type: 'string', title: 'Name' } },
-                  required: ['name'],
-                },
-              },
-            },
-          },
-        },
-      },
-    };
-  }
-  return { openapi: '3.1.0', paths };
-}
-
-function executionsRoute(response: z.ZodType = z.object({ name: z.string() })) {
-  return openApiDocument([
-    {
-      family: 'executions',
-      method: 'get',
-      path: `${PREFIX}/executions/{item_id}`,
-      pathParams: z.object({ item_id: z.uuid() }),
-      responses: { 200: response },
-    },
-  ]);
-}
-
-const SPLIT_INGRESS = `
-@ts_api path /api/v1/executions/*
-reverse_proxy @ts_api {$API_SERVICE_ORIGIN:127.0.0.1:8100}
-@backend path /api /api/*
-reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}
-`;
-const PYTHON_INGRESS = `
-@backend path /api /api/*
-reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}
-`;
-
-/** `executions` moved to TypeScript; `projects` stays Python. */
-function migrated(overrides: Partial<OwnershipInputs> = {}): OwnershipInputs {
+const UPSTREAMS = { python: ['RETIRED_ORIGIN'], typescript: ['API_SERVICE_ORIGIN'] };
+function native(overrides: Partial<OwnershipInputs> = {}): OwnershipInputs {
   return {
-    apiPrefix: PREFIX,
-    manifest: { executions: 'typescript', projects: 'python' },
-    python: pythonDocument(['projects']),
-    typescript: executionsRoute(),
-    ingress: { Caddyfile: ingressRouter(SPLIT_INGRESS, UPSTREAMS) },
+    apiPrefix: '/api/v1',
+    manifest: { executions: 'typescript' },
+    typescript: openApiDocument([
+      {
+        family: 'executions',
+        method: 'get',
+        path: '/api/v1/executions/{item_id}',
+        pathParams: z.object({ item_id: z.uuid() }),
+        responses: { 200: z.object({ name: z.string() }) },
+      },
+    ]),
+    ingress: { Caddyfile: ingressRouter('reverse_proxy {$API_SERVICE_ORIGIN}', UPSTREAMS) },
     ...overrides,
   };
 }
-
-describe('route-ownership gate', () => {
-  it('accepts a migrated family with matching ingress', () => {
-    expect(routeOwnershipFailures(migrated())).toEqual([]);
+describe('native route-ownership gate', () => {
+  it('accepts declared families with matching ingress', () => {
+    expect(routeOwnershipFailures(native())).toEqual([]);
   });
-
-  it('refuses a Python family the manifest does not list', () => {
-    const failures = routeOwnershipFailures(
-      migrated({ python: pythonDocument(['projects', 'billing']) }),
-    );
-    expect(failures).toEqual([
-      expect.stringContaining("'billing' is missing from the route-ownership manifest"),
-    ]);
-  });
-
-  it('refuses a TypeScript family that Python still serves', () => {
-    const failures = routeOwnershipFailures(
-      migrated({ python: pythonDocument(['projects', 'executions']) }),
-    );
-    expect(failures).toContainEqual(
-      expect.stringContaining('Python still serves GET /api/v1/executions'),
+  it('rejects a served family missing from the manifest', () => {
+    expect(routeOwnershipFailures(native({ manifest: {} }))).toContainEqual(
+      expect.stringContaining('assigns to no stack'),
     );
   });
-
-  it('refuses TypeScript routes for a family the manifest gives Python', () => {
-    const failures = routeOwnershipFailures(
-      migrated({ manifest: { executions: 'python', projects: 'python' } }),
-    );
-    expect(failures).toContainEqual(
-      "The TypeScript service serves 'executions', which the manifest assigns to python",
+  it('rejects a manifest family without a route', () => {
+    expect(
+      routeOwnershipFailures(
+        native({ manifest: { executions: 'typescript', billing: 'typescript' } }),
+      ),
+    ).toContain("'billing' has no declared route");
+  });
+  it('refuses a retired route owner', () => {
+    expect(routeOwnershipFailures(native({ manifest: { executions: 'python' } }))).toContain(
+      "'executions' must be TypeScript-owned",
     );
   });
-
-  it('refuses ingress that still sends a TypeScript family to Python', () => {
-    const failures = routeOwnershipFailures(
-      migrated({ ingress: { Caddyfile: ingressRouter(PYTHON_INGRESS, UPSTREAMS) } }),
-    );
-    expect(failures).toEqual([
-      "Caddyfile: /api/v1/executions/{item_id} ('executions') must reach only typescript, but reaches [python]",
-    ]);
+  it('refuses misrouted native operations', () => {
+    expect(
+      routeOwnershipFailures(
+        native({
+          ingress: { Caddyfile: ingressRouter('reverse_proxy {$RETIRED_ORIGIN}', UPSTREAMS) },
+        }),
+      ),
+    ).toEqual([expect.stringContaining('must reach only typescript, but reaches [python]')]);
   });
-  it('checks non-browser protocol paths independently of OpenAPI', () => {
-    const failures = routeOwnershipFailures(
-      migrated({
-        protocolPaths: ['/mcp', '/token'],
-        ingress: {
-          Caddyfile: ingressRouter(
-            `${SPLIT_INGRESS}\nreverse_proxy /mcp {$API_SERVICE_ORIGIN}\nreverse_proxy /token {$BACKEND_ORIGIN}\n`,
-            UPSTREAMS,
-          ),
-        },
-      }),
+  it('checks protocol paths independently of OpenAPI', () => {
+    expect(
+      routeOwnershipFailures(
+        native({
+          protocolPaths: ['/mcp', '/token'],
+          ingress: {
+            Caddyfile: ingressRouter(
+              'reverse_proxy /token {$RETIRED_ORIGIN}\nreverse_proxy {$API_SERVICE_ORIGIN}',
+              UPSTREAMS,
+            ),
+          },
+        }),
+      ),
+    ).toEqual([expect.stringContaining('/token must reach only typescript')]);
+  });
+  it('refuses ambiguous family tags', () => {
+    const input = native();
+    input.typescript.paths['/api/v1/executions/{item_id}']!.get!.tags = ['executions', 'billing'];
+    expect(routeOwnershipFailures(input)).toContainEqual(
+      expect.stringContaining('exactly one family tag'),
     );
-    expect(failures).toEqual([
-      expect.stringContaining('protocol /token must reach only typescript'),
-    ]);
   });
 });

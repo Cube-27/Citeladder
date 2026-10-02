@@ -9,8 +9,7 @@ import { z } from 'zod';
  * `context` on any mismatch of a DECLARED field. The backend is the source of
  * truth: a failure here means `schemas.ts` is out of sync and must be fixed —
  * never swallowed. Unknown keys are stripped by `responseObject` (tolerated
- * additive drift); the contract-drift guard (`lib/api/contract-drift.ts`)
- * keeps the two field sets from silently diverging.
+ * additive drift). The native API and browser share these schema definitions.
  */
 export function strictValidate<T>(schema: z.ZodType<T>, data: unknown, context: string): T {
   const result = schema.safeParse(data);

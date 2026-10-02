@@ -4,7 +4,7 @@ const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(s
 const uuid = () => z.uuid();
 
 // Queue-row lifecycle shared by every leased task.
-export const agentRunStatusSchema = z.enum([
+const agentRunStatusSchema = z.enum([
   'queued',
   'leased',
   'running',
@@ -156,7 +156,7 @@ function compareCheckpoints(left: string, right: string) {
   return left > right ? 1 : 0;
 }
 
-export const agentSiteHealthReferenceSchema = z.object({
+const agentSiteHealthReferenceSchema = z.object({
   project_id: uuid(),
   crawl_id: uuid(),
   site_url_id: uuid(),
@@ -168,7 +168,7 @@ export const agentSiteHealthReferenceSchema = z.object({
     .max(16)
     .transform((ids) => [...new Set(ids)].sort(compareCheckpoints)),
 });
-export const agentSearchReferenceSchema = z.object({
+const agentSearchReferenceSchema = z.object({
   dataset_id: uuid(),
   row_ids: z
     .array(uuid())

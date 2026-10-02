@@ -34,8 +34,8 @@ function isFrontend(path) {
 // The TypeScript API service, the contracts package it imports, and the
 // Python inputs it is built from: the policy export reads `app/core` and the
 // workspace policy, and its Kysely types are generated from the
-// Alembic-migrated schema. The route-ownership gate also reads the Python
-// routers' OpenAPI families and every ingress Caddyfile.
+// Alembic-migrated schema. The route-ownership gate reads native route contracts
+// and every ingress Caddyfile.
 
 function isApiService(path) {
   return (
@@ -44,9 +44,6 @@ function isApiService(path) {
     path === 'frontend/local-compose-routes.caddy' ||
     path === 'frontend/apps/app/Caddyfile' ||
     path === 'infra/gcp/runtime/Caddyfile' ||
-    path.startsWith('backend/app/api/') ||
-    path === 'backend/app/main.py' ||
-    path === 'backend/scripts/export_openapi.py' ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
     path === 'frontend/pnpm-workspace.yaml' ||
@@ -125,10 +122,8 @@ function isNonBrowserTooling(path) {
 
 function isContract(path) {
   return (
-    path.startsWith('backend/app/api/') ||
-    path === 'backend/app/main.py' ||
-    /^backend\/app\/.+\/[^/]*schemas?\.py$/.test(path) ||
-    path === 'backend/scripts/export_openapi.py' ||
+    path.startsWith('frontend/services/api/src/routes/') ||
+    path.startsWith('frontend/services/api/src/openapi/') ||
     path.startsWith('frontend/lib/api/') ||
     path.startsWith('frontend/packages/contracts/')
   );

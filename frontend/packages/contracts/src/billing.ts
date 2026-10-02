@@ -9,21 +9,21 @@ const uuid = () => z.uuid();
 
 // Plan keys are LOCKED to the four the backend publishes. A retired `free`/
 // `paid` key must fail parsing rather than render as an unknown tier.
-export const planCatalogKeySchema = z.enum(['tier_1', 'tier_2', 'tier_3', 'enterprise']);
-export const credentialModeSchema = z.enum(['byok', 'funded']);
-export const billingRegionSchema = z.enum(['india', 'international']);
+const planCatalogKeySchema = z.enum(['tier_1', 'tier_2', 'tier_3', 'enterprise']);
+const credentialModeSchema = z.enum(['byok', 'funded']);
+const billingRegionSchema = z.enum(['india', 'international']);
 export const taxTreatmentSchema = z.enum(['CGST_SGST', 'IGST', 'EXPORT_ZERO_RATED']);
-export const catalogAvailabilitySchema = z.enum(['available', 'unavailable']);
-export const grantSourceKindSchema = z.enum(['plan', 'addon', 'topup', 'trial', 'override']);
-export const entitlementStatusSchema = z.enum(['resolved', 'entitlement_unresolved']);
-export const capabilityTypeSchema = z.enum([
+const catalogAvailabilitySchema = z.enum(['available', 'unavailable']);
+const grantSourceKindSchema = z.enum(['plan', 'addon', 'topup', 'trial', 'override']);
+const entitlementStatusSchema = z.enum(['resolved', 'entitlement_unresolved']);
+const capabilityTypeSchema = z.enum([
   'flag',
   'counter.occupancy',
   'counter.consumable',
   'counter.rate',
   'level',
 ]);
-export const counterCapabilityTypeSchema = z.enum([
+const counterCapabilityTypeSchema = z.enum([
   'counter.occupancy',
   'counter.consumable',
   'counter.rate',
@@ -33,9 +33,9 @@ export const counterCapabilityTypeSchema = z.enum([
  * backend never uses null to mean both "unlimited" and "unresolved". The UI
  * must branch on this, never on nullability.
  */
-export const limitStateSchema = z.enum(['finite', 'unlimited', 'unknown']);
-export const activationKindSchema = z.enum(['base', 'addon', 'topup', 'upgrade']);
-export const activationStatusSchema = z.enum(['pending', 'activated', 'failed', 'abandoned']);
+const limitStateSchema = z.enum(['finite', 'unlimited', 'unknown']);
+const activationKindSchema = z.enum(['base', 'addon', 'topup', 'upgrade']);
+const activationStatusSchema = z.enum(['pending', 'activated', 'failed', 'abandoned']);
 
 export const moneySchema = responseObject({
   currency: z.enum(['USD', 'INR']),
@@ -71,14 +71,14 @@ export const resolvedQuoteSchema = responseObject({
   expires_at: z.string(),
 });
 
-export const capabilityValueSchema = responseObject({
+const capabilityValueSchema = responseObject({
   key: z.string(),
   capability_type: capabilityTypeSchema,
   value: z.union([z.boolean(), z.number(), z.string()]).nullable(),
   issuable: z.boolean(),
 });
 
-export const catalogProviderRouteSchema = responseObject({
+const catalogProviderRouteSchema = responseObject({
   logical_engine: z.string(),
   transport_provider: z.string(),
   model: z.string(),
@@ -89,7 +89,7 @@ export const catalogProviderRouteSchema = responseObject({
  * Perplexity and Copilot appear here as `unavailable` with an empty `routes`
  * list; that absence of a route is what makes them non-connectable.
  */
-export const catalogProviderSchema = responseObject({
+const catalogProviderSchema = responseObject({
   key: z.string(),
   label: z.string(),
   availability: catalogAvailabilitySchema,
@@ -100,7 +100,7 @@ export const catalogProviderSchema = responseObject({
   routes: z.array(catalogProviderRouteSchema),
 });
 
-export const catalogPlanSchema = responseObject({
+const catalogPlanSchema = responseObject({
   key: planCatalogKeySchema,
   name: z.string(),
   description: z.string(),
@@ -140,11 +140,11 @@ const catalogItemSchema = responseObject({
   expiry_days: z.number().int(),
 });
 
-export const catalogAddonSchema = catalogItemSchema;
+const catalogAddonSchema = catalogItemSchema;
 
-export const catalogTopupSchema = catalogItemSchema;
+const catalogTopupSchema = catalogItemSchema;
 
-export const catalogSupportContactSchema = responseObject({
+const catalogSupportContactSchema = responseObject({
   email: z.string(),
   phone: z.string().nullable(),
   contact_url: z.string(),
@@ -220,7 +220,7 @@ export const billingCatalogSchema = responseObject({
   support_contact: catalogSupportContactSchema.nullable(),
 });
 
-export const grantProvenanceSchema = responseObject({
+const grantProvenanceSchema = responseObject({
   grant_id: uuid(),
   source_kind: grantSourceKindSchema,
   key: z.string(),
@@ -231,7 +231,7 @@ export const grantProvenanceSchema = responseObject({
   catalog_revision: z.string(),
 });
 
-export const resolvedCapabilitySchema = responseObject({
+const resolvedCapabilitySchema = responseObject({
   key: z.string(),
   capability_type: capabilityTypeSchema,
   value: z.union([z.boolean(), z.number(), z.string()]).nullable(),
@@ -240,14 +240,14 @@ export const resolvedCapabilitySchema = responseObject({
 });
 
 /** The one plan change waiting for the next renewal. */
-export const scheduledPlanChangeSchema = responseObject({
+const scheduledPlanChangeSchema = responseObject({
   direction: z.enum(['upgrade', 'downgrade']),
   catalog_key: z.string(),
   effective_at: z.string(),
   state: z.enum(['requested', 'scheduled', 'provider_rejected']),
 });
 
-export const subscriptionSummarySchema = responseObject({
+const subscriptionSummarySchema = responseObject({
   catalog_key: z.string(),
   status: z.string(),
   current_period_end: z.string().nullable(),
@@ -255,7 +255,7 @@ export const subscriptionSummarySchema = responseObject({
   scheduled_change: scheduledPlanChangeSchema.nullable(),
 });
 
-export const trialGrantSummarySchema = responseObject({
+const trialGrantSummarySchema = responseObject({
   deadline: z.string(),
   days_remaining: z.number().int(),
   exhausted: z.boolean(),
@@ -280,7 +280,7 @@ export const billingEntitlementSchema = responseObject({
   grants: z.array(grantProvenanceSchema),
 });
 
-export const usageGrantBalanceSchema = responseObject({
+const usageGrantBalanceSchema = responseObject({
   grant_id: uuid(),
   source_kind: grantSourceKindSchema,
   allowance: z.number().int(),
@@ -290,7 +290,7 @@ export const usageGrantBalanceSchema = responseObject({
   effective_valid_until: z.string().nullable(),
 });
 
-export const usageItemSchema = responseObject({
+const usageItemSchema = responseObject({
   key: z.string(),
   capability_type: counterCapabilityTypeSchema,
   unit: z.string(),
@@ -359,7 +359,7 @@ export const providerConnectionStateSchema = z.enum([
   'unavailable',
 ]);
 
-export const providerProbeSchema = responseObject({
+const providerProbeSchema = responseObject({
   status: z.enum(['ok', 'failed']),
   safe_reason: z.string().nullable(),
   tested_at: z.string(),

@@ -337,30 +337,12 @@ function apiServiceChecks() {
     ['-m', 'scripts.export_ts_platform', '--check'],
     backendRoot,
   );
-  // One writing stack per route family: both OpenAPI documents and every
-  // ingress Caddyfile against the manifest.
-  const pythonOpenApi = join('.artifacts', 'openapi.json');
-  if (
-    step(
-      'Python OpenAPI export',
-      backendPython(),
-      ['-m', 'scripts.export_openapi', '--output', pythonOpenApi],
-      backendRoot,
-    )
-  ) {
-    pnpm('API route ownership', [
-      '--filter',
-      '@citeladder/api',
-      'check:routes',
-      '--python-openapi',
-      join(backendRoot, pythonOpenApi),
-    ]);
-  }
+  pnpm('API route ownership', ['--filter', '@citeladder/api', 'check:routes']);
 }
 
 if (scopes.has('backend')) backendChecks();
 if (scopes.has('frontend')) frontendChecks();
-if (scopes.has('contract')) pnpm('API contract policy', ['check:contract']);
+if (scopes.has('contract') && !scopes.has('api')) pnpm('API contract policy', ['check:contract']);
 if (scopes.has('api')) apiServiceChecks();
 
 if (failedSteps.length) {

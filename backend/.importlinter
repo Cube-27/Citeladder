@@ -19,37 +19,9 @@
 root_package = app
 include_external_packages = False
 
-[importlinter:contract:api-is-a-leaf]
-name = Only app.main may import the API layer
-type = forbidden
-source_modules =
-    app.analysis
-    app.connectors
-    app.core
-    app.domain
-    app.models
-    app.orchestration
-    app.workers
-forbidden_modules =
-    app.api
-
-[importlinter:contract:workers-are-a-leaf]
-name = Nothing may import the worker processes
-type = forbidden
-source_modules =
-    app.analysis
-    app.api
-    app.connectors
-    app.core
-    app.domain
-    app.models
-    app.orchestration
-forbidden_modules =
-    app.workers
-
 [importlinter:contract:core-is-the-floor]
-; `app.core` holds configuration, database wiring, security primitives and
-; telemetry: the things every other package is allowed to sit on. It must not
+; `app.core` holds configuration, database wiring and security primitives:
+; the things every other package is allowed to sit on. It must not
 ; acquire a dependency on business logic, or the import graph gains a cycle
 ; through the one module everything already imports.
 ;
@@ -62,10 +34,8 @@ source_modules =
     app.core
 forbidden_modules =
     app.analysis
-    app.api
     app.domain
     app.orchestration
-    app.workers
 
 [importlinter:contract:models-are-persistence-only]
 ; One violation exists and is named: `Prompt._sync_normalized_hash` keeps the
@@ -78,10 +48,8 @@ source_modules =
     app.models
 forbidden_modules =
     app.analysis
-    app.api
     app.domain
     app.orchestration
-    app.workers
 ignore_imports =
     app.models.prompt -> app.domain.prompts.normalization
 
@@ -94,17 +62,14 @@ source_modules =
     app.connectors
 forbidden_modules =
     app.analysis
-    app.api
     app.domain
     app.models
     app.orchestration
-    app.workers
 ; Direct imports only. The transitive form of this rule is broken by chains
 ; that run through edges this policy deliberately allows (connectors -> core ->
 ; models, models -> connectors, domain -> orchestration). Forbidding those
 ; chains would mean forbidding the allowed edge, so the contract checks the
-; direct dependency it is actually about. The two leaf contracts above are
-; checked transitively, which is stronger, because they can be.
+; direct dependency it is actually about.
 allow_indirect_imports = True
 
 [importlinter:contract:orchestration-is-infrastructure]
@@ -115,10 +80,8 @@ source_modules =
     app.orchestration
 forbidden_modules =
     app.analysis
-    app.api
     app.connectors
     app.domain
-    app.workers
 allow_indirect_imports = True
 
 [importlinter:contract:analysis-does-not-reach-up]
@@ -126,12 +89,10 @@ allow_indirect_imports = True
 ; schemas and normalization helpers (allowed), but a rule or extractor that
 ; needs an API type, a worker, or the capacity manager has the dependency
 ; backwards.
-name = Analysis depends on no API, worker, or orchestration
+name = Analysis does not depend on orchestration
 type = forbidden
 source_modules =
     app.analysis
 forbidden_modules =
-    app.api
     app.orchestration
-    app.workers
 allow_indirect_imports = True

@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
-
 // ---------------------------------------------------------------------------
 // The entity-presence shape an inspected page carries.
 //
@@ -30,13 +28,3 @@ export const pageEntityFields = {
   match_count: z.number().int(),
   passages: z.array(z.string()),
 } as const;
-
-export const sourcePageEntitySchema = responseObject({
-  ...pageEntityFields,
-  entity_kind: z.enum(['brand', 'competitor']),
-  // The resolver's vocabulary: a presence verdict OR the page-level state
-  // that overrides it. The brief calls the same thing `presence` because it
-  // carries the raw verdict, not the resolved one.
-  state: z.string(),
-  limitations: z.array(z.string()),
-});

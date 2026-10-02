@@ -288,40 +288,6 @@ class Settings(BaseSettings):
         ),
     )
 
-    # --- Observability (optional Logfire) ---
-    logfire_enabled: bool = Field(
-        default=False,
-        validation_alias=AliasChoices("LOGFIRE_ENABLED", "logfire_enabled"),
-    )
-    logfire_token: str = Field(
-        default="",
-        validation_alias=AliasChoices("LOGFIRE_TOKEN", "logfire_token"),
-    )
-    # BASE name only. Each runnable process appends its own role suffix
-    # (``citeladder-api``, ``citeladder-audit-worker``) in ``core/telemetry.py``,
-    # because compose gives every service the same environment block.
-    logfire_service_name: str = Field(
-        default="citeladder",
-        validation_alias=AliasChoices("LOGFIRE_SERVICE_NAME", "logfire_service_name"),
-    )
-    # Region-specific Logfire ingest endpoint. Configurable so a self-hosted or
-    # EU deployment is an environment change, not a code change.
-    logfire_base_url: str = Field(
-        default="https://logfire-us.pydantic.dev",
-        validation_alias=AliasChoices("LOGFIRE_BASE_URL", "logfire_base_url"),
-    )
-    logfire_environment: str = Field(
-        default="",
-        validation_alias=AliasChoices("LOGFIRE_ENVIRONMENT", "logfire_environment"),
-    )
-    # Unit tests remain locally observable unless this separate opt-in is set.
-    logfire_enabled_in_tests: bool = Field(
-        default=False,
-        validation_alias=AliasChoices(
-            "LOGFIRE_ENABLED_IN_TESTS", "logfire_enabled_in_tests"
-        ),
-    )
-
 
 def _load_settings() -> Settings:
     # BaseSettings reads values from environment/.env at runtime.

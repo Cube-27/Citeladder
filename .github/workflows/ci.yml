@@ -105,15 +105,6 @@ jobs:
         env:
           COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node ../scripts/quality.mjs --mode check --scope backend
-      - name: Export OpenAPI contract
-        run: .venv/bin/python -m scripts.export_openapi --output .artifacts/openapi.json
-      - name: Publish OpenAPI contract
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: backend-openapi
-          path: backend/.artifacts/openapi.json
-          if-no-files-found: error
-          retention-days: 7
       - name: Radon advisory report
         run: |
           .venv/bin/radon cc app -s -n C
@@ -221,11 +212,11 @@ jobs:
           fi
 
   contract:
-    name: API contract (backend to frontend)
+    name: API contract and ingress
     permissions:
       contents: read
-    needs: [changes, backend]
-    if: always() && needs.changes.outputs.contract == 'true' && needs.backend.result == 'success'
+    needs: changes
+    if: needs.changes.outputs.contract == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -245,14 +236,7 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Download OpenAPI contract
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: backend-openapi
-          path: backend-openapi
-      - name: Strict contract validation
-        env:
-          CITELADDER_OPENAPI_JSON: ../backend-openapi/openapi.json
+      - name: Native contract validation
         run: pnpm quality:check -- --scope contract
 
   api:

@@ -1,7 +1,7 @@
 # Canonical API error codes + retryable classification (invariant 1).
 #
 # Every non-2xx API response carries the unified envelope built by
-# ``app.core.errors`` — ``{detail, error: {code, message, request_id,
+# the native API's ``errors.ts`` — ``{detail, error: {code, message, request_id,
 # retryable, details?}}``. The stable snake_case ``code`` vocabulary and the
 # retryable classification rule live HERE, never inline in routers or
 # handlers, so the machine-readable contract stays greppable and cannot drift

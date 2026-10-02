@@ -56,10 +56,8 @@ test('browser-sensitive frontend paths select E2E without escalating every front
 
 test('contracts and shared configuration invalidate both sides', () => {
   for (const path of [
-    'backend/app/api/projects.py',
-    'backend/app/main.py',
-    'backend/app/domain/projects/schemas.py',
-    'backend/app/domain/audits/schemas.py',
+    'frontend/services/api/src/routes/projects.ts',
+    'frontend/services/api/src/openapi/routes.ts',
     'frontend/lib/api/projects.ts',
     'frontend/packages/contracts/src/project.ts',
     'scripts/quality.mjs',
@@ -80,7 +78,7 @@ test('the TypeScript API service runs for its code and every Python input it is 
     'backend/app/domain/workspaces/policy.py',
     'backend/scripts/site_health_policy.py',
     'frontend/packages/contracts/src/route-ownership.ts',
-    'backend/app/api/projects.py',
+    'frontend/services/api/src/routes/projects.ts',
     'frontend/local-compose-routes.caddy',
     'frontend/apps/app/Caddyfile',
     'infra/gcp/runtime/Caddyfile',
