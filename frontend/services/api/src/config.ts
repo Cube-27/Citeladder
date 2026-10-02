@@ -9,6 +9,7 @@ import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { appModels } from './config/app-models.ts';
+import { contentDifferentiation } from './config/content-differentiation.ts';
 import { agentContext } from './config/agent-context.ts';
 import { agentSkills } from './config/agent-skills.ts';
 import { mcp } from './config/mcp.ts';
@@ -41,6 +42,10 @@ export const policy = {
   ...pythonConfig,
   abuse,
   providers: { ...pythonConfig.providers, app: appModels },
+  content_differentiation: {
+    ...contentDifferentiation,
+    stop_words: pythonConfig.demand.stop_words,
+  },
   site_health: {
     ...pythonConfig.site_health,
     page_analysis: {
