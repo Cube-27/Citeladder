@@ -57,8 +57,10 @@ export function Checkbox({
           disabled
             ? 'border-border-subtle bg-disabled text-muted'
             : cn(
-                'text-accent-fg group-hover:border-border-strong',
-                checked ? 'border-accent bg-accent' : 'border-border-bold bg-input',
+                'text-accent-fg',
+                checked
+                  ? 'border-accent bg-accent'
+                  : 'border-border-bold bg-input group-hover:border-border-strong',
               ),
         )}
       >

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 /** Fields share a hairline boundary and the central keyboard outline. */
 export const inputClasses =
-  'focus-input h-[var(--control-height-md)] w-full rounded-[var(--radius-control)] border border-border bg-input px-3 text-field text-foreground leading-[calc(var(--control-height-md)_-_2px)] transition-[border-color,background-color] placeholder:text-muted enabled:hover:border-border-strong aria-invalid:border-danger disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle';
+  'focus-input h-[var(--control-height-md)] w-full rounded-[var(--radius-control)] border border-border bg-input px-3 text-field text-foreground leading-[calc(var(--control-height-md)_-_2px)] transition-[border-color,background-color] placeholder:text-muted enabled:hover:border-border-strong aria-invalid:border-danger aria-invalid:enabled:hover:border-danger disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle';
 
 /** Preserve the composer emphasis through a stronger boundary. */
 const raisedClasses = 'border border-border-strong enabled:hover:border-border-strong';
@@ -66,7 +66,7 @@ export function Input({
   return (
     <div
       className={cn(
-        'focus-frame bg-input has-[[aria-invalid=true]]:border-danger flex h-[var(--control-height-md)] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 border border-border transition-[border-color,background-color] has-[:enabled]:hover:border-border-strong',
+        'focus-frame bg-input has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:has-[:enabled]:hover:border-danger flex h-[var(--control-height-md)] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 border border-border transition-[border-color,background-color] has-[:enabled]:hover:border-border-strong',
         size === 'lg' && 'h-[var(--control-height-lg)] px-3',
         size === 'compact' && 'h-[var(--control-height-sm)]',
         raised && raisedClasses,

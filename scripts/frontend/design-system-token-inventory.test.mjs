@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { tokenInventory } from '../frontend/scripts/audit-design-tokens.mjs';
-import { tokenContractViolations } from '../frontend/scripts/design-system-source-checks.mjs';
+import { tokenInventory } from '../../frontend/scripts/audit-design-tokens.mjs';
+import { tokenContractViolations } from '../../frontend/scripts/design-system-source-checks.mjs';
 
 test('token inventory resolves scoped aliases and neutral state derivation in both themes', () => {
   const rows = tokenInventory(`

@@ -921,8 +921,10 @@ a.focus-ring:active .type-caption {
   outline-offset: -2px;
 }
 
-.focus-frame :focus-visible,
-.focus-frame :is(.focus-ring, .focus-input):focus-visible {
+/* A frame can replace its child's outline only when focus has one destination.
+   Keep each child's outline when siblings include another interactive control. */
+.focus-frame:not(:has(:where(input:not([type='hidden']), textarea, select, button,
+  a[href], area[href], summary, [tabindex], [contenteditable]:not([contenteditable='false'])):not(:focus-visible))) :focus-visible {
   outline: none;
 }
 
@@ -1015,13 +1017,6 @@ input:-webkit-autofill:focus {
   --color-neutral-bg: var(--color-well);
   --skeleton-base: var(--color-well);
   --skeleton-highlight: var(--color-panel);
-}
-
-/* The product reads its type from the `.type-*` roles. Field text is 16px,
-   which also stops iOS zooming on focus. */
-:root:not([data-public-surface]) {
-  --text-field: 1rem;
-  --text-field--line-height: 1.5rem;
 }
 
 /* Light is the default. Dark is a per-device reader preference applied to the

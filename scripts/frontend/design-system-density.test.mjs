@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { densityRoleViolations } from '../frontend/scripts/design-system-source-checks.mjs';
+import { densityRoleViolations } from '../../frontend/scripts/design-system-source-checks.mjs';
 
 test('density policy rejects retired and fixed control metrics without confusing intrinsic glyphs', () => {
   const label = 'components/ui/example.tsx';

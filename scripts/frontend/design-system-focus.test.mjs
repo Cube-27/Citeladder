@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { focusRoleViolations } from '../frontend/scripts/design-system-source-checks.mjs';
+import { focusRoleViolations } from '../../frontend/scripts/design-system-source-checks.mjs';
 
 test('focus policy rejects local outlines and ring overrides while admitting the three owners', () => {
   const label = 'components/ui/example.tsx';

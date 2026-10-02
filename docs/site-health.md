@@ -380,8 +380,12 @@ Crawl and page-kind coverage count pages with a score, while their state also
 retains incomplete checks within scored pages. Pillar rollups likewise count
 scored pages and retain unresolved-check counts. Check completion, scored-page
 coverage, classification coverage and discovery limits remain separate.
-The UI rounds scores to whole numbers and shows **Partial audit** caveats
-without inferring confidence from coverage.
+The UI rounds scores to whole numbers without inferring confidence from coverage.
+Website Overview and Pages use compact metric strips without repeated audit
+captions; Overview also omits supporting occurrence, page and checklist counts.
+Measurement caveats remain available to assistive technology, and detailed
+evidence retains measurement and coverage states. Page-kind scores likewise
+omit repeated visible audit captions.
 The positive access-gate label is **No observed blocker**, which does not claim
 actual indexing or engine eligibility.
 

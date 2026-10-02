@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { motionRoleViolations } from '../frontend/scripts/design-system-source-checks.mjs';
+import { motionRoleViolations } from '../../frontend/scripts/design-system-source-checks.mjs';
 
 test('motion policy rejects local timing recipes but permits measurements and role consumers', () => {
   const label = 'components/ui/example.tsx';

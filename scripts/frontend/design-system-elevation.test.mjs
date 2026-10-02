@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import {
   radiusRoleAdvisories,
   shadowRoleViolations,
-} from '../frontend/scripts/design-system-source-checks.mjs';
+} from '../../frontend/scripts/design-system-source-checks.mjs';
 
 test('elevation policy admits only roles and diagnoses radius family drift separately', () => {
   const label = 'components/ui/example.tsx';
