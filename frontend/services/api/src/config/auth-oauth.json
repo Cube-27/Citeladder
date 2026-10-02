@@ -63,7 +63,8 @@
     "state_ttl_seconds": {
       "env": ["OAUTH_STATE_TTL_SECONDS"],
       "type": "int",
-      "default": 600
+      "default": 600,
+      "exclusive_minimum": 0
     }
   },
   "labels": {

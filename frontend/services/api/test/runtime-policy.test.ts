@@ -52,6 +52,13 @@ it('preserves integration credential aliases and refuses unsafe worker bounds', 
     expect(() => loadWorkerSettings({ ANALYTICS_DRAIN_BUDGET_SECONDS: budget })).toThrow();
     expect(() => integrationSettings({ INTEGRATION_LEASE_TTL_SECONDS: budget })).toThrow();
   }
+  for (const ttl of ['0', '-1']) {
+    expect(() =>
+      resolveSettingSpec(policy.auth.oauth.settings.state_ttl_seconds, {
+        OAUTH_STATE_TTL_SECONDS: ttl,
+      }),
+    ).toThrow();
+  }
   expect(() => integrationSettings({ INTEGRATION_HEARTBEAT_INTERVAL_SECONDS: '120' })).toThrow();
   expect(() => integrationSettings({ INTEGRATION_TOKEN_REFRESH_CLAIM_SECONDS: '60' })).toThrow();
   expect(() => integrationSettings({ INTEGRATION_SYNC_BACKFILL_MAX_DAYS: '20' })).toThrow();

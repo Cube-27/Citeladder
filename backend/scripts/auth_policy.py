@@ -15,7 +15,7 @@ from app.domain.workspaces.policy import WORKSPACE_ROLES, effective_capabilities
 SettingExporter = Callable[[str, type[BaseSettings]], dict[str, Any]]
 
 
-def auth_policy(setting: SettingExporter) -> dict[str, Any]:
+def auth_policy() -> dict[str, Any]:
     return {
         "password": {
             "memoryCost": auth_config.ARGON2_MEMORY_COST,

@@ -222,7 +222,7 @@ def build_config() -> dict[str, Any]:
             "importer_version": commerce_config.COMMERCE_IMPORTER_VERSION,
             "projector_version": commerce_config.COMMERCE_PROJECTOR_VERSION,
         },
-        "auth": auth_policy(_setting),
+        "auth": auth_policy(),
         "site_health_runtime": site_health_runtime_policy(_setting),
         "entitlements": entitlements_policy(),
         "billing": billing_policy(_setting),

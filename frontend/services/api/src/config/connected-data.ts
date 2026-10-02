@@ -6,6 +6,7 @@ import referralRuntime from './referrals.json' with { type: 'json' };
 import analyticsRuntime from './analytics.json' with { type: 'json' };
 import oauthRuntime from './auth-oauth.json' with { type: 'json' };
 import { validateReferralRules } from './referral-rules.ts';
+import { compareText } from '../text-order.ts';
 
 validateReferralRules(referralRuntime);
 
@@ -36,7 +37,7 @@ export const traffic = {
   ),
 };
 const tasks = { ...analyticsRuntime.tasks, ...shared.analytics.tasks };
-const taskKinds = Object.values(tasks).sort();
+const taskKinds = Object.values(tasks).sort(compareText);
 export const analytics = {
   ...analyticsRuntime,
   ...shared.analytics,
