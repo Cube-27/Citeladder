@@ -64,132 +64,158 @@
     "max_tasks_per_audit": {
       "env": ["AUDIT_MAX_TASKS_PER_AUDIT"],
       "type": "int",
-      "default": 500
+      "default": 500,
+      "exclusive_minimum": 0
     },
     "worker_concurrency": {
       "env": ["AUDIT_WORKER_CONCURRENCY"],
       "type": "int",
-      "default": 10
+      "default": 10,
+      "exclusive_minimum": 0
     },
     "per_transport_concurrency": {
       "env": ["AUDIT_PER_TRANSPORT_CONCURRENCY"],
       "type": "int",
-      "default": 4
+      "default": 4,
+      "exclusive_minimum": 0
     },
     "funded_pool_max_concurrency": {
       "env": ["AUDIT_FUNDED_POOL_MAX_CONCURRENCY"],
       "type": "int",
-      "default": 12
+      "default": 12,
+      "exclusive_minimum": 0
     },
     "funded_pool_per_account": {
       "env": ["AUDIT_FUNDED_POOL_PER_ACCOUNT"],
       "type": "int",
-      "default": 6
+      "default": 6,
+      "exclusive_minimum": 0
     },
     "worker_db_sessions_per_task": {
       "env": ["AUDIT_WORKER_DB_SESSIONS_PER_TASK"],
       "type": "int",
-      "default": 2
+      "default": 2,
+      "exclusive_minimum": 0
     },
     "operational_headroom": {
       "env": ["AUDIT_OPERATIONAL_HEADROOM"],
       "type": "int",
-      "default": 4
+      "default": 4,
+      "minimum": 0
     },
     "capacity_lease_ttl_seconds": {
       "env": ["AUDIT_CAPACITY_LEASE_TTL_SECONDS"],
       "type": "float",
-      "default": 240.0
+      "default": 240.0,
+      "exclusive_minimum": 0
     },
     "capacity_concurrency_retry_seconds": {
       "env": ["AUDIT_CAPACITY_CONCURRENCY_RETRY_SECONDS"],
       "type": "float",
-      "default": 2.0
+      "default": 2.0,
+      "exclusive_minimum": 0
     },
     "poll_interval_seconds": {
       "env": ["AUDIT_POLL_INTERVAL_SECONDS"],
       "type": "float",
-      "default": 1.0
+      "default": 1.0,
+      "exclusive_minimum": 0
     },
     "min_request_interval_seconds": {
       "env": ["AUDIT_MIN_REQUEST_INTERVAL_SECONDS"],
       "type": "float",
-      "default": 0.0
+      "default": 0.0,
+      "minimum": 0
     },
     "max_run_seconds": {
       "env": ["AUDIT_MAX_RUN_SECONDS"],
       "type": "float",
-      "default": 1800.0
+      "default": 1800.0,
+      "exclusive_minimum": 0
     },
     "max_attempts": {
       "env": ["AUDIT_MAX_ATTEMPTS"],
       "type": "int",
-      "default": 5
+      "default": 5,
+      "exclusive_minimum": 0
     },
     "retry_base_delay_seconds": {
       "env": ["AUDIT_RETRY_BASE_DELAY_SECONDS"],
       "type": "float",
-      "default": 2.0
+      "default": 2.0,
+      "exclusive_minimum": 0
     },
     "retry_max_delay_seconds": {
       "env": ["AUDIT_RETRY_MAX_DELAY_SECONDS"],
       "type": "float",
-      "default": 45.0
+      "default": 45.0,
+      "exclusive_minimum": 0
     },
     "retry_jitter_seconds": {
       "env": ["AUDIT_RETRY_JITTER_SECONDS"],
       "type": "float",
-      "default": 1.5
+      "default": 1.5,
+      "minimum": 0
     },
     "lease_ttl_seconds": {
       "env": ["AUDIT_LEASE_TTL_SECONDS"],
       "type": "float",
-      "default": 120.0
+      "default": 120.0,
+      "exclusive_minimum": 0
     },
     "heartbeat_interval_seconds": {
       "env": ["AUDIT_HEARTBEAT_INTERVAL_SECONDS"],
       "type": "float",
-      "default": 30.0
+      "default": 30.0,
+      "exclusive_minimum": 0
     },
     "request_timeout_seconds": {
       "env": ["AUDIT_REQUEST_TIMEOUT_SECONDS"],
       "type": "float",
-      "default": 60.0
+      "default": 60.0,
+      "exclusive_minimum": 0
     },
     "audit_max_output_tokens": {
       "env": ["AUDIT_AUDIT_MAX_OUTPUT_TOKENS"],
       "type": "int",
-      "default": 800
+      "default": 800,
+      "exclusive_minimum": 0
     },
     "audit_timeout_seconds": {
       "env": ["AUDIT_AUDIT_TIMEOUT_SECONDS"],
       "type": "float",
-      "default": 60.0
+      "default": 60.0,
+      "exclusive_minimum": 0
     },
     "audit_repetitions": {
       "env": ["AUDIT_AUDIT_REPETITIONS"],
       "type": "int",
-      "default": 3
+      "default": 3,
+      "exclusive_minimum": 0
     },
     "max_prompt_chars": {
       "env": ["AUDIT_MAX_PROMPT_CHARS"],
       "type": "int",
-      "default": 300
+      "default": 300,
+      "exclusive_minimum": 0
     },
     "sse_poll_seconds": {
       "env": ["AUDIT_SSE_POLL_SECONDS"],
       "type": "float",
-      "default": 1.0
+      "default": 1.0,
+      "exclusive_minimum": 0
     },
     "sse_terminal_grace_polls": {
       "env": ["AUDIT_SSE_TERMINAL_GRACE_POLLS"],
       "type": "int",
-      "default": 2
+      "default": 2,
+      "minimum": 0
     },
     "max_event_page": {
       "env": ["AUDIT_MAX_EVENT_PAGE"],
       "type": "int",
-      "default": 1000
+      "default": 1000,
+      "exclusive_minimum": 0
     }
   },
   "prompt_count": {
@@ -266,39 +292,21 @@
   "max_repetitions": 10,
   "route_policies": {
     "chatgpt": {
-      "reasoning_effort": "off",
-      "reasoning_pinnable": true,
-      "representative_status": "unverified",
       "batch_enabled": false
     },
     "claude": {
-      "reasoning_effort": "low",
-      "reasoning_pinnable": true,
-      "representative_status": "unverified",
       "batch_enabled": false
     },
     "gemini": {
-      "reasoning_effort": "low",
-      "reasoning_pinnable": true,
-      "representative_status": "unverified",
       "batch_enabled": false
     },
     "google_ai_overview": {
-      "reasoning_effort": null,
-      "reasoning_pinnable": null,
-      "representative_status": "verified",
       "batch_enabled": false
     },
     "chatgpt_search": {
-      "reasoning_effort": null,
-      "reasoning_pinnable": null,
-      "representative_status": "unverified",
       "batch_enabled": false
     },
     "gemini_consumer": {
-      "reasoning_effort": null,
-      "reasoning_pinnable": null,
-      "representative_status": "unverified",
       "batch_enabled": false
     }
   }

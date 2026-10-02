@@ -110,13 +110,6 @@
       ],
       "default": "disable"
     },
-    "request_id_header": {
-      "env": [
-        "REQUEST_ID_HEADER"
-      ],
-      "type": "str",
-      "default": "X-Request-ID"
-    },
     "jwt_secret_key": {
       "env": [
         "JWT_SECRET_KEY"
@@ -134,26 +127,12 @@
       ],
       "default": "HS256"
     },
-    "session_cookie_name": {
-      "env": [
-        "SESSION_COOKIE_NAME"
-      ],
-      "type": "str",
-      "default": "citeladder_session"
-    },
     "jwt_expire_hours": {
       "env": [
         "JWT_EXPIRE_HOURS"
       ],
       "type": "int",
       "default": 24
-    },
-    "public_signup_enabled": {
-      "env": [
-        "PUBLIC_SIGNUP_ENABLED"
-      ],
-      "type": "bool",
-      "default": false
     },
     "frontend_url": {
       "env": [
@@ -276,15 +255,6 @@
       "viewer": [
         "read"
       ]
-    },
-    "forbidden_code": "workspace_role_forbidden",
-    "denial_messages": {
-      "read": "Workspace access is required",
-      "write": "Workspace member access is required",
-      "run": "Workspace member access is required",
-      "manage_billing": "Workspace owner or admin access is required",
-      "manage_members": "Workspace owner or admin access is required",
-      "manage_credentials": "Workspace owner or admin access is required"
     }
   },
   "visibility": {
@@ -322,13 +292,16 @@
   },
   "task_queue": {
     "statuses": {
-      "queued": "queued",
-      "leased": "leased",
-      "running": "running",
-      "retry_wait": "retry_wait",
-      "succeeded": "succeeded",
+      "awaiting_provider_result": "awaiting_provider_result",
+      "cancelled": "cancelled",
+      "capacity_wait": "capacity_wait",
       "failed": "failed",
-      "cancelled": "cancelled"
+      "leased": "leased",
+      "queued": "queued",
+      "retry_wait": "retry_wait",
+      "running": "running",
+      "submission_uncertain": "submission_uncertain",
+      "succeeded": "succeeded"
     },
     "claimable": [
       "awaiting_provider_result",
@@ -350,9 +323,7 @@
       "cancelled",
       "failed",
       "succeeded"
-    ],
-    "max_attempts_error": "max_attempts_exceeded",
-    "max_drain_batches": 1000
+    ]
   },
   "referrals": {
     "rule_version": "ai-referral-rules-1",
@@ -611,10 +582,7 @@
     "opportunities": {
       "ANALYZER_VERSION": "opp-analyzer-1",
       "RULE_VERSION": "opp-rules-2",
-      "FORMULA_VERSION": "opp-formula-1",
-      "CODE_OPPORTUNITY_ORDER_CONFLICT": "opportunity_order_conflict",
-      "CODE_IMPLEMENTATION_TARGET_CONFLICT": "implementation_target_conflict",
-      "CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT": "implementation_idempotency_conflict"
+      "FORMULA_VERSION": "opp-formula-1"
     },
     "actions": {
       "ACTION_STATUS_OPEN": "open"
@@ -637,29 +605,7 @@
         "partially_completed",
         "cancelled"
       ],
-      "crawl_status_completed": "completed",
-      "content_format_ids": [
-        "content_page",
-        "product_page",
-        "category_page",
-        "about_us",
-        "article",
-        "blog",
-        "faq",
-        "glossary_term",
-        "listicle",
-        "case_study",
-        "comparison",
-        "content_refresh",
-        "youtube",
-        "tiktok",
-        "linkedin",
-        "x",
-        "instagram",
-        "reddit",
-        "newsletter",
-        "original_research"
-      ]
+      "crawl_status_completed": "completed"
     }
   },
   "search_intelligence": {
@@ -692,16 +638,8 @@
       "products_services",
       "target_audience"
     ],
-    "profile_text_max_chars": 4000,
-    "profile_product_max_chars": 255,
-    "profile_products_max_count": 100,
     "profile_source_manual": "manual",
-    "profile_review_confirmed": "confirmed",
-    "profile_review_edited": "edited",
-    "map_value_max_chars": 120,
-    "map_max_entries_per_dimension": 20,
-    "map_max_exclusions": 40,
-    "max_project_competitors": 5
+    "profile_review_confirmed": "confirmed"
   },
   "projects": {
     "default_benchmark_mode": "controlled_localized",
@@ -743,9 +681,7 @@
       "timeCost": 3,
       "parallelism": 4,
       "outputLen": 32
-    },
-    "terms_revision": "2026-09-24",
-    "privacy_revision": "2026-09-28"
+    }
   },
   "site_health_runtime": {
     "settings": {

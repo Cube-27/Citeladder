@@ -21,6 +21,10 @@ import demand from './config/demand.json' with { type: 'json' };
 import { audits, visibility, selectableEngines } from './config/audits.ts';
 import { providers, dataforseo } from './config/providers.ts';
 import costs from './config/costs.json' with { type: 'json' };
+import brandIdentity from './config/brand-identity.json' with { type: 'json' };
+import workspaceRuntime from './config/workspaces.json' with { type: 'json' };
+import authRuntime from './config/auth-runtime.json' with { type: 'json' };
+import queue from './config/queue.json' with { type: 'json' };
 import { integrations, traffic, analytics, referrals, authOAuth } from './config/connected-data.ts';
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
@@ -66,14 +70,20 @@ type SettingSpec = {
 
 export const policy = {
   ...pythonConfig,
+  task_queue: { ...pythonConfig.task_queue, ...queue },
   api,
-  settings: { ...pythonConfig.settings, ...integrationCredentials },
+  settings: { ...pythonConfig.settings, ...integrationCredentials, ...authRuntime.settings },
   integrations,
   dataforseo,
   costs,
   analytics,
   referrals,
-  auth: { ...pythonConfig.auth, oauth: authOAuth },
+  auth: {
+    ...pythonConfig.auth,
+    terms_revision: authRuntime.terms_revision,
+    privacy_revision: authRuntime.privacy_revision,
+    oauth: authOAuth,
+  },
   search_intelligence: {
     ...searchIntelligence,
     ...pythonConfig.search_intelligence,
@@ -136,7 +146,7 @@ export const policy = {
     },
   },
   models: { ...modelGateway, jev, quality },
-  workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
+  workspaces: { ...pythonConfig.workspaces, ...workspaceRuntime, tour_version: productTourVersion },
   providers: { ...providers, app: appModels },
   content_differentiation: {
     ...contentDifferentiation,
@@ -156,7 +166,7 @@ export const policy = {
   agent_skills: agentSkills,
   mcp: {
     ...mcp,
-    terms_revision: pythonConfig.auth.terms_revision,
+    terms_revision: authRuntime.terms_revision,
     constants: {
       ...mcp.constants,
       api_request_body_max_bytes: api.request_body_max_bytes,
@@ -174,6 +184,7 @@ export const policy = {
     },
   },
   brand_identity: {
+    ...brandIdentity,
     ...pythonConfig.brand_identity,
     suggestion_pending: audits.observed_competitors.status_pending,
     suggestion_accepted: audits.observed_competitors.status_accepted,

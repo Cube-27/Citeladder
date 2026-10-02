@@ -1,10 +1,10 @@
 /**
  * The brand profile: a project's reviewed brand knowledge.
  *
- * Python onboarding creates the profile and prompt generation records
+ * Native onboarding creates the profile and prompt generation records
  * business-map suggestions in its `business_context`; people edit the four
  * knowledge fields here. Every TypeScript writer takes the project advisory
- * lock before the profile row, the order Python generation uses.
+ * lock before the profile row, shared with native generation.
  */
 import { randomUUID } from 'node:crypto';
 

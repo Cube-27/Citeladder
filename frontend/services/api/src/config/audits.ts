@@ -15,6 +15,20 @@ export const audits = {
   analysis: { ...runtime.analysis, ...shared.audits.analysis },
   constants: { ...runtime.constants, ...shared.audits.constants },
   selectable_engines: selectableEngines,
+  route_policies: Object.fromEntries(
+    Object.entries(runtime.route_policies).map(([engine, execution]) => {
+      const route = shared.providers.routes[engine as keyof typeof shared.providers.routes];
+      return [
+        engine,
+        {
+          ...execution,
+          reasoning_effort: route.reasoning_effort,
+          reasoning_pinnable: route.reasoning_pinnable,
+          representative_status: route.representative_status,
+        },
+      ];
+    }),
+  ),
 };
 export const visibility = {
   ...visibilityRuntime,

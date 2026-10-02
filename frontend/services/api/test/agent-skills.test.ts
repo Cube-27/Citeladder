@@ -5,9 +5,25 @@ import { describe, expect, it } from 'vitest';
 import { agentSkillSchema } from '@citeladder/contracts/agent';
 import { agentSettings } from '../src/agent/config.ts';
 import { loadSkillCatalog } from '../src/agent/skills.ts';
+import { parseContentFormats } from '../src/config/skill-inputs.ts';
 
 describe('packaged Agent model inputs', () => {
   const root = agentSettings({}).skillsDirectory;
+  it('keeps example headings inside fenced methodology text and continues at the next format', () => {
+    const { formats } = parseContentFormats(
+      '# Formats\n## page — Page\nBody\n~~~markdown\n## example — Example\nLiteral example.\n~~~\n## briefing — Briefing\nBrief.',
+    );
+    expect([...formats.keys()]).toEqual(['page', 'briefing']);
+    expect(formats.get('page')?.body).toContain('## example — Example');
+  });
+  it.each(['  ## briefing — Briefing', '## briefing malformed'])(
+    'rejects malformed format headings %s instead of hiding them in a prior format',
+    (heading) => {
+      expect(() =>
+        parseContentFormats('# Formats\n\n## page — Page\nBody\n' + heading + '\nBody'),
+      ).toThrow('Invalid content format');
+    },
+  );
   it('loads packaged metadata, expanded vocabulary and one selected format', async () => {
     const catalog = await loadSkillCatalog(root);
     const skills = [...catalog.skills.values()];
@@ -27,6 +43,13 @@ describe('packaged Agent model inputs', () => {
       const first = await loadSkillCatalog(
         agentSettings({ AGENT_SKILLS_DIRECTORY: temporary }).skillsDirectory,
       );
+      await appendFile(
+        join(temporary, 'content_formats.md'),
+        '\n## briefing — Briefing\nA bounded briefing.\n',
+      );
+      const changed = await loadSkillCatalog(temporary);
+      expect(changed.formats.has('briefing')).toBe(true);
+      expect(changed.version).not.toBe(first.version);
       await appendFile(join(temporary, 'operating_contract.md'), '\nNew operating constraint.\n');
       expect((await loadSkillCatalog(temporary)).version).not.toBe(first.version);
       const skillPath = join(temporary, 'skills/content_create/SKILL.md');

@@ -30,6 +30,22 @@ async function queued(workspaceId: string) {
   return db.selectFrom('audits').selectAll().where('workspace_id', '=', workspaceId).execute();
 }
 describe('atomic audit admission', () => {
+  it.each([
+    'AUDIT_WORKER_CONCURRENCY',
+    'AUDIT_POLL_INTERVAL_SECONDS',
+    'AUDIT_LEASE_TTL_SECONDS',
+    'AUDIT_MAX_ATTEMPTS',
+  ])('refuses zero execution bound %s', (name) => {
+    expect(() => auditRuntime({ [name]: '0' })).toThrow();
+  });
+  it('permits disabled pacing and jitter while refusing inconsistent heartbeat and retry bounds', () => {
+    expect(
+      auditRuntime({ AUDIT_MIN_REQUEST_INTERVAL_SECONDS: '0', AUDIT_RETRY_JITTER_SECONDS: '0' })
+        .audits.retry_jitter_seconds,
+    ).toBe(0);
+    expect(() => auditRuntime({ AUDIT_HEARTBEAT_INTERVAL_SECONDS: '120' })).toThrow('heartbeat');
+    expect(() => auditRuntime({ AUDIT_RETRY_BASE_DELAY_SECONDS: '46' })).toThrow('retry');
+  });
   it('commits platform funding holds and denies another run at the monthly budget boundary', async () => {
     const t = await auditTenant(db, fixtures),
       platform = await auditTenant(db, fixtures);

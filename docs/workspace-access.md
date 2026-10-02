@@ -61,7 +61,7 @@ actor, workspace, immutable revision, context and timestamp; repeated acceptance
 of one revision is idempotent. Updating the approved Terms revision requires
 renewed acceptance and never overwrites an earlier row. Privacy is a notice;
 optional analytics consent remains separate. The approved revision registry is
-`backend/app/core/config/legal.py`; internal proposals never enter it.
+`frontend/services/api/src/config/auth-runtime.json`; internal proposals never enter it.
 Signed enterprise-agreement references are separate append-only records. A
 platform administrator uses `uv run python -m scripts.enterprise_agreement
 --actor <admin-email> --input <local-json-file>` from `backend/`; the command

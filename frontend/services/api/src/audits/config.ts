@@ -10,6 +10,10 @@ export function auditSettings(env: Record<string, string | undefined> = process.
       Number(resolveSettingSpec(spec, env)),
     ]),
   ) as Record<keyof typeof auditPolicy.settings, number>;
+  if (settings.heartbeat_interval_seconds >= settings.lease_ttl_seconds)
+    throw new ConfigError('Audit heartbeat interval must be shorter than its lease');
+  if (settings.retry_base_delay_seconds > settings.retry_max_delay_seconds)
+    throw new ConfigError('Audit retry base delay must not exceed its maximum');
   const count = resolveSettingSpec(auditPolicy.prompt_count, env);
   const promptCount = count == null ? null : Number(count);
   if (

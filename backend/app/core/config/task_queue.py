@@ -35,26 +35,8 @@ TASK_STATUS_AWAITING_PROVIDER_RESULT: Final = "awaiting_provider_result"
 # provider by its correlation tag.
 TASK_STATUS_SUBMISSION_UNCERTAIN: Final = "submission_uncertain"
 
-# In-flight states that wait on an external provider task. Held together
-# because every sweeper, counter and claim predicate has to treat them alike:
-# the work is outstanding somewhere else, not stalled here.
-TASK_AWAITING_PROVIDER_STATUSES: Final[frozenset[str]] = frozenset(
-    {TASK_STATUS_AWAITING_PROVIDER_RESULT, TASK_STATUS_SUBMISSION_UNCERTAIN}
-)
-
 TASK_TERMINAL_STATUSES: Final[frozenset[str]] = frozenset(
     {TASK_STATUS_SUCCEEDED, TASK_STATUS_FAILED, TASK_STATUS_CANCELLED}
-)
-TASK_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
-    {
-        TASK_STATUS_QUEUED,
-        TASK_STATUS_LEASED,
-        TASK_STATUS_RUNNING,
-        TASK_STATUS_RETRY_WAIT,
-        TASK_STATUS_CAPACITY_WAIT,
-        TASK_STATUS_AWAITING_PROVIDER_RESULT,
-        TASK_STATUS_SUBMISSION_UNCERTAIN,
-    }
 )
 # Statuses a ``claim()`` may pick up: queued, ready-to-retry, unparked from a
 # capacity wait, or due for the next poll / reconciliation attempt on an
@@ -73,9 +55,6 @@ TASK_LEASED_STATUSES: Final[frozenset[str]] = frozenset(
     {TASK_STATUS_LEASED, TASK_STATUS_RUNNING}
 )
 
-# Error token stamped on a task the sweeper fails after the retry budget is
-# spent. Queue-neutral (shared by audit + Site Health task rows).
-ERROR_MAX_ATTEMPTS: Final = "max_attempts_exceeded"
-
-# Safety bound for one-shot/test queue drains.
-DEFAULT_MAX_DRAIN_BATCHES: Final = 1000
+TASK_ACTIVE_STATUSES: Final[frozenset[str]] = (
+    TASK_CLAIMABLE_STATUSES | TASK_LEASED_STATUSES
+)

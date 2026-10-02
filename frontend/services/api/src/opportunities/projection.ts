@@ -17,8 +17,6 @@ import { isoUtc, isoUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
 import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 
-const r = policy.opportunity.refresh;
-
 /** One `opportunities` row with its timestamps as `utcText`. */
 export type OpportunityRow = {
   id: string;
@@ -208,7 +206,7 @@ function projectContentHandoff(row: OpportunityRow): Record<string, unknown> {
     ...defaultHandoff(row),
     ...persisted,
     opportunity_id: row.id,
-    suggested_skill_id: r.content_format_ids.includes(skill) ? skill : DEFAULT_FORMAT,
+    suggested_skill_id: skill,
     snapshot_versions: versions,
   };
 }

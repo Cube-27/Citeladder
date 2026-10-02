@@ -55,16 +55,8 @@ from app.core.config.provider_catalog import (
 )
 from app.core.config.site_health_page_kinds import PAGE_KIND_OTHER
 from app.core.config.task_queue import (
-    DEFAULT_MAX_DRAIN_BATCHES,
-    ERROR_MAX_ATTEMPTS,
     TASK_ACTIVE_STATUSES,
     TASK_CLAIMABLE_STATUSES,
-    TASK_STATUS_CANCELLED,
-    TASK_STATUS_FAILED,
-    TASK_STATUS_LEASED,
-    TASK_STATUS_QUEUED,
-    TASK_STATUS_RETRY_WAIT,
-    TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
 )
@@ -104,12 +96,9 @@ EXPORTED_SETTINGS = (
     "db_lock_timeout_ms",
     "db_idle_transaction_timeout_ms",
     "db_ssl_mode",
-    "request_id_header",
     "jwt_secret_key",
     "jwt_algorithm",
-    "session_cookie_name",
     "jwt_expire_hours",
-    "public_signup_enabled",
     "frontend_url",
     "trusted_proxy_cidrs",
     "demo_mode",
@@ -253,19 +242,12 @@ def _task_queue_policy() -> dict[str, Any]:
     """The shared queue-row status vocabulary the TS claim and finalize write."""
     return {
         "statuses": {
-            "queued": TASK_STATUS_QUEUED,
-            "leased": TASK_STATUS_LEASED,
-            "running": TASK_STATUS_RUNNING,
-            "retry_wait": TASK_STATUS_RETRY_WAIT,
-            "succeeded": TASK_STATUS_SUCCEEDED,
-            "failed": TASK_STATUS_FAILED,
-            "cancelled": TASK_STATUS_CANCELLED,
+            status: status
+            for status in sorted(TASK_ACTIVE_STATUSES | TASK_TERMINAL_STATUSES)
         },
         "claimable": sorted(TASK_CLAIMABLE_STATUSES),
         "active": sorted(TASK_ACTIVE_STATUSES),
         "terminal": sorted(TASK_TERMINAL_STATUSES),
-        "max_attempts_error": ERROR_MAX_ATTEMPTS,
-        "max_drain_batches": DEFAULT_MAX_DRAIN_BATCHES,
     }
 
 

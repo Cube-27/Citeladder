@@ -4,6 +4,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { z } from 'zod';
 import { policy } from '../config.ts';
+import { parseContentFormats } from '../config/skill-inputs.ts';
 import { compareText } from '../text-order.ts';
 import type { Skill, SkillCatalog } from './contracts.ts';
 
@@ -41,18 +42,6 @@ async function markdownFiles(root: string): Promise<string[]> {
     }),
   );
   return files.flat().sort(compareText);
-}
-function contentFormats(body: string) {
-  const [preamble = '', ...sections] = body.split(/\n(?=## )/u);
-  const formats = new Map<string, { id: string; label: string; body: string }>();
-  for (const section of sections) {
-    const heading = /^## ([a-z_]+) — (.+)\n/u.exec(section);
-    if (!heading || formats.has(heading[1]!)) throw new TypeError('Invalid content format');
-    const text = section.slice(heading[0].length).trim();
-    if (!text) throw new TypeError('Empty content format');
-    formats.set(heading[1]!, { id: heading[1]!, label: heading[2]!.trim(), body: text });
-  }
-  return { formatPreamble: preamble.slice(preamble.indexOf('\n') + 1).trim(), formats };
 }
 function parseSkill(path: string, body: string): CatalogSkill {
   const match = /^---\n([\s\S]*?)\n---\n([\s\S]+)$/u.exec(body);
@@ -92,7 +81,7 @@ export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
     digest.update(path).update('\0').update(body).update('\0');
     if (path === 'operating_contract.md') operatingContract = body;
     else if (path === 'content_formats.md') {
-      ({ formatPreamble, formats } = contentFormats(body));
+      ({ formatPreamble, formats } = parseContentFormats(body));
     } else if (/^skills\/[^/]+\/SKILL\.md$/u.test(path)) {
       skills.push(parseSkill(path, body));
     }
