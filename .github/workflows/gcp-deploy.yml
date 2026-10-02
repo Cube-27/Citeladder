@@ -15,6 +15,7 @@ on:
         required: false
 
 permissions:
+  actions: read
   contents: read
   id-token: write
 
@@ -26,19 +27,6 @@ jobs:
     concurrency:
       group: gcp-deploy
       cancel-in-progress: false
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres # pragma: allowlist secret -- CI-only fixture
-          POSTGRES_DB: citeladder
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION || 'us-central1' }}
@@ -59,9 +47,6 @@ jobs:
       DEFAULT_AGENT_BASE_URL: ${{ vars.DEFAULT_AGENT_BASE_URL }}
       DEFAULT_AGENT_MODEL: ${{ vars.DEFAULT_AGENT_MODEL }}
       TICK_SCHEDULE: ${{ vars.TICK_SCHEDULE || '*/10 * * * *' }}
-      # The repository gate builds both Workers; this workflow publishes only the backend.
-      PUBLIC_WEBSITE_ORIGIN: ${{ format('https://{0}', vars.DOMAIN_NAME || 'citeladder.com') }}
-      PUBLIC_APP_ORIGIN: ${{ format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -70,43 +55,36 @@ jobs:
       - name: Verify exact main commit
         shell: bash
         run: test "$GITHUB_SHA" = "$(git rev-parse origin/main)"
-      - name: Install repository toolchain
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends ripgrep
-          python -m pip install --only-binary :all: uv==0.11.28
-          # Published wheels only; tests import `app` from backend/ directly.
-          uv sync --project backend --frozen --extra dev --no-install-project --no-build
-          npm install --global --ignore-scripts pnpm@12.4.2
-          pnpm --dir frontend install --frozen-lockfile --ignore-scripts
-          pnpm --dir frontend exec playwright install --with-deps chromium
-      - name: Run repository gates for the deployed commit
-        shell: pwsh
-        env:
-          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder # pragma: allowlist secret -- CI-only fixture
-        run: |
-          ./scripts/check.ps1 -CheckOnly
-          $toolTests = @(Get-ChildItem scripts/*.test.mjs | ForEach-Object FullName)
-          node --test @toolTests
-          if ($LASTEXITCODE -ne 0) { throw 'Tooling tests failed' }
-          Push-Location backend
-          try {
-            .venv/bin/python -m pytest -q --no-cov -x --tb=short
-            if ($LASTEXITCODE -ne 0) { throw 'Backend tests failed' }
-          } finally { Pop-Location }
-      # pnpm's entry point is a Node script behind a shebang, and PowerShell on
-      # Linux execs it directly rather than through the loader, so calling it
-      # from the pwsh step above dies with 'Exec format error'. Keep every pnpm
-      # gate in bash, where the shebang is honoured.
-      - name: Run frontend gates for the deployed commit
+      # This workflow publishes only the API, migration and PostgreSQL images;
+      # the Workers ship through their own workflows. ci.yml has already run
+      # every affected owner suite on this exact main commit, so the deploy
+      # requires that green record instead of repeating the suites.
+      - name: Require green CI for the deployed commit
         shell: bash
         env:
-          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder # pragma: allowlist secret -- CI-only fixture
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          pnpm --dir frontend test
-          pnpm --dir frontend test:e2e
+          # Bounded wait, so a deploy started right after merge still proceeds.
+          for _ in $(seq 60); do
+            run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main \
+              --event push --commit "$GITHUB_SHA" --limit 1 --json status,conclusion,url)"
+            status="$(jq -r '.[0].status // "missing"' <<< "$run")"
+            url="$(jq -r '.[0].url // ""' <<< "$run")"
+            if [ "$status" = completed ]; then
+              conclusion="$(jq -r '.[0].conclusion' <<< "$run")"
+              if [ "$conclusion" != success ]; then
+                echo "::error::CI concluded '$conclusion' for $GITHUB_SHA: $url"
+                exit 1
+              fi
+              echo "CI passed for $GITHUB_SHA: $url"
+              exit 0
+            fi
+            echo "CI for $GITHUB_SHA is $status; waiting."
+            sleep 30
+          done
+          echo "::error::CI did not complete for $GITHUB_SHA within 30 minutes; re-run once it is green."
+          exit 1
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
