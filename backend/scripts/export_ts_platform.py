@@ -308,7 +308,7 @@ def build_config() -> dict[str, Any]:
             "language_codes": sorted(search_config.LANGUAGE_CODES),
             "prompt_set_name": prompts_config.ONBOARDING_PROMPT_SET_NAME,
         },
-        "audit_schedules": audit_schedule_policy(_setting),
+        "audit_schedules": audit_schedule_policy(),
         "discovery": _discovery_policy(),
         "web_fetch": {
             "user_agent": SITE_HEALTH_USER_AGENT,

@@ -10,6 +10,7 @@ import ipaddr from 'ipaddr.js';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
+import { auditSchedules } from './config/audit-schedules.ts';
 import { industryLibrary } from './config/industry-library.ts';
 import { opportunities } from './config/opportunity.ts';
 import { earnedActions } from './config/earned-actions.ts';
@@ -52,6 +53,11 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   abuse,
+  audit_schedules: {
+    ...pythonConfig.audit_schedules,
+    ...auditSchedules,
+    min_interval_minutes: auditSchedules.settings.min_interval_minutes,
+  },
   discovery: { ...pythonConfig.discovery, industry_library: industryLibrary },
   source_pages: sourcePages,
   audits: { ...pythonConfig.audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },

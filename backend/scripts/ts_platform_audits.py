@@ -1,7 +1,5 @@
 """Audit policy inputs; selection and execution remain application decisions."""
 
-from importlib.resources import files
-
 from app.core.config import (
     Settings,
     analysis,
@@ -60,23 +58,9 @@ def audit_policy(setting):
     }
 
 
-def audit_schedule_policy(setting):
+def audit_schedule_policy():
+    """Only model defaults and the shared provider catalog remain Python-owned."""
     return {
-        "settings": {
-            name: setting(name, audit_schedule_config.AuditScheduleSettings)
-            for name in audit_schedule_config.AuditScheduleSettings.model_fields
-            if name != "heartbeat_path"
-        },
-        "heartbeat_path": setting(
-            "heartbeat_path", audit_schedule_config.AuditScheduleSettings
-        ),
-        "cadences": sorted(audit_schedule_config.AUDIT_SCHEDULE_CADENCES),
         "default_timezone": audit_schedule_config.DEFAULT_AUDIT_SCHEDULE_TIMEZONE,
         "selectable_engines": sorted(SELECTABLE_ENGINES),
-        # The pinned timezone catalog shared by schedule validation and execution.
-        "timezones": sorted(files("tzdata").joinpath("zones").read_text().split()),
-        "min_interval_minutes": setting(
-            "min_interval_minutes",
-            audit_schedule_config.AuditScheduleSettings,
-        ),
     }
