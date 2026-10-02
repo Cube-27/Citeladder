@@ -3,10 +3,6 @@
 from typing import Final
 
 COMMERCE_PROJECTOR_VERSION: Final = "commerce-projector-1"
-CODE_COMMERCE_NOT_FOUND: Final = "commerce_not_found"
-CODE_COMMERCE_CONFLICT: Final = "commerce_conflict"
-CODE_COMMERCE_INVALID: Final = "commerce_invalid"
-CODE_COMMERCE_TARGET_REQUIRED: Final = "commerce_target_required"
 COMMERCE_IMPORTER_VERSION: Final = "commerce-catalog-importer-1"
 COMMERCE_EDIT_VERSION: Final = "commerce-catalog-edit-1"
 COMMERCE_COMPETITOR_PROVIDER_VERSION: Final = "tavily-commerce-1"

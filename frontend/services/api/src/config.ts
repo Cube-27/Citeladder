@@ -9,6 +9,7 @@ import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import ipaddr from 'ipaddr.js';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
+import { errors } from './config/errors.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
 import { auditSchedules } from './config/audit-schedules.ts';
 import { industryLibrary } from './config/industry-library.ts';
@@ -52,6 +53,7 @@ type SettingSpec = {
 
 export const policy = {
   ...pythonConfig,
+  errors,
   abuse,
   audit_schedules: {
     ...pythonConfig.audit_schedules,
