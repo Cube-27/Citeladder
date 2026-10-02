@@ -10,6 +10,8 @@ import { brandEvidence } from './config/brand-evidence.ts';
 import { agentContext } from './config/agent-context.ts';
 import { agentSkills } from './config/agent-skills.ts';
 import { mcp } from './config/mcp.ts';
+import { siteAuthorship } from './config/site-authorship.ts';
+import { companyIdentity } from './config/company-identity.ts';
 import { promptGeneration } from './config/prompt-generation.ts';
 import { brandLogos } from './config/brand-logos.ts';
 import { internalLinks } from './config/internal-links.ts';
@@ -35,6 +37,21 @@ type SettingSpec = {
 
 export const policy = {
   ...pythonConfig,
+  site_health: {
+    ...pythonConfig.site_health,
+    page_analysis: {
+      ...pythonConfig.site_health.page_analysis,
+      facts: {
+        ...pythonConfig.site_health.page_analysis.facts,
+        authorship: siteAuthorship,
+        provider_identity_exclusions: companyIdentity.provider_identity_exclusions,
+      },
+      traits: {
+        ...pythonConfig.site_health.page_analysis.traits,
+        company_profile: companyIdentity.company_profile,
+      },
+    },
+  },
   agent_context: agentContext,
   agent_skills: agentSkills,
   mcp: {

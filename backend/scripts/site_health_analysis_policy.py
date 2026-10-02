@@ -12,8 +12,6 @@ from collections.abc import Callable
 from typing import Any
 
 from app.core.config import site_health_acquisition as acquisition
-from app.core.config import site_health_authorship as authorship
-from app.core.config import site_health_company_entity as company
 from app.core.config import site_health_contracts as contracts
 from app.core.config import site_health_crawl_policy as crawl_policy
 from app.core.config import site_health_measurement as measurement
@@ -54,14 +52,8 @@ def _facts_policy(constants: Constants) -> dict[str, Any]:
         "answer_first_max_hops": rules.ANSWER_FIRST_MAX_HOPS,
         "non_navigable_href_prefixes": list(crawl_policy.NON_NAVIGABLE_HREF_PREFIXES),
         "search_robots_header_agents": sorted(search_rules.SEARCH_ROBOTS_HEADER_AGENTS),
-        "provider_identity_exclusions": sorted(company.PROVIDER_IDENTITY_EXCLUSIONS),
         "source_support": constants(measurement, "SOURCE_SUPPORT_"),
         "freshness": constants(measurement, "FRESHNESS_"),
-        "authorship": {
-            name.lower(): sorted(value) if isinstance(value, frozenset) else value
-            for name, value in vars(authorship).items()
-            if name.isupper()
-        },
     }
 
 
@@ -154,11 +146,6 @@ def _traits_policy() -> dict[str, Any]:
         "contact_form_fields": sorted(traits.PAGE_TRAIT_CONTACT_FORM_FIELDS),
         "variant_form_fields": sorted(traits.PAGE_TRAIT_VARIANT_FORM_FIELDS),
         "procedural_min_steps": traits.PAGE_TRAIT_PROCEDURAL_MIN_STEPS,
-        "company_profile": {
-            "route_segments": list(company.COMPANY_PROFILE_ROUTE_SEGMENTS),
-            "title_phrases": list(company.COMPANY_PROFILE_TITLE_PHRASES),
-            "excluded_terms": list(company.COMPANY_PROFILE_EXCLUDED_TERMS),
-        },
     }
 
 
