@@ -135,6 +135,16 @@ jobs:
           [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
           [[ "$OAUTH_GOOGLE_ENABLED" =~ ^(true|false)$ ]]
           [[ "$PUBLIC_SIGNUP_ENABLED" =~ ^(true|false)$ ]]
+          # The Workers commit the deterministic Cloud Run URL, which embeds the
+          # project number; refuse to deploy an API they would not reach.
+          api_url="https://citeladder-api-$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)').${REGION}.run.app"
+          for worker in app marketing; do
+            upstream="$(sed -n 's/.*"ORIGIN_UPSTREAM": *"\([^"]*\)".*/\1/p' "../../frontend/apps/$worker/wrangler.jsonc")"
+            if [[ "$upstream" != "$api_url" ]]; then
+              echo "::error::frontend/apps/$worker/wrangler.jsonc ORIGIN_UPSTREAM is '$upstream'; this project serves $api_url."
+              exit 1
+            fi
+          done
           terraform init -input=false -backend-config="bucket=$STATE_BUCKET"
           terraform fmt -check
           terraform validate

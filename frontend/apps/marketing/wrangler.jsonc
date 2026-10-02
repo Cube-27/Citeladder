@@ -13,7 +13,7 @@
   },
   "secrets": { "required": ["ORIGIN_TOKEN"] },
   "vars": {
-    "ORIGIN_UPSTREAM": "https://origin.citeladder.com",
+    "ORIGIN_UPSTREAM": "https://citeladder-api-44437656491.us-central1.run.app",
     "PUBLIC_WEBSITE_HOST": "citeladder.com",
     "PUBLIC_APP_ORIGIN": "https://app.citeladder.com",
   },

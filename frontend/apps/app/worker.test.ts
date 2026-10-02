@@ -3,7 +3,7 @@ import { handleAppRequest } from './worker';
 
 const env: Parameters<typeof handleAppRequest>[1] = {
   PUBLIC_APP_HOST: 'app.citeladder.com',
-  ORIGIN_UPSTREAM: 'https://origin.citeladder.com',
+  ORIGIN_UPSTREAM: 'https://citeladder-api-44437656491.us-central1.run.app',
   ORIGIN_TOKEN: 'x'.repeat(32),
   ASSETS: {
     fetch: async (request: Request) =>
