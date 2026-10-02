@@ -276,8 +276,9 @@ it('composes every production lane and periodic owner on an idle disposable data
     const tables = await sql<{
       tablename: string;
     }>`select tablename from pg_catalog.pg_tables where schemaname = 'public'`.execute(db);
+    // Idle owners need column contracts, without duplicating every production index.
     for (const table of tables.rows)
-      await sql`create table ${sql.id(schema, table.tablename)} (like ${sql.id('public', table.tablename)} including all)`.execute(
+      await sql`create table ${sql.id(schema, table.tablename)} (like ${sql.id('public', table.tablename)})`.execute(
         db,
       );
     const owners = await runnerOwners(isolated, isolatedConfig);

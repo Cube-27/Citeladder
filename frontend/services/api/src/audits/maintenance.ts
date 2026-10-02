@@ -325,16 +325,20 @@ export class AuditMaintenance {
       .execute();
     for (const audit of inspectionOwing)
       parents.set(audit.id, { workspaceId: audit.workspace_id, auditId: audit.id });
-    for (const parent of parents.values()) {
+    await this.finalizeParents(parents.values(), canAdmit);
+    return reclaimed;
+  }
+
+  private async finalizeParents(parents: Iterable<Parent>, canAdmit: () => boolean) {
+    for (const parent of parents) {
       if (!canAdmit()) break;
       try {
-        await this.finalize(parent.workspaceId, parent.auditId);
+        await this.finalize(parent.workspaceId, parent.auditId); // NOSONAR -- Settle each parent before admitting the next within budget.
       } catch {
         getLogger('workers.audit').info('audit_maintenance_finalize_failed', {
           audit_id: parent.auditId,
         });
       }
     }
-    return reclaimed;
   }
 }

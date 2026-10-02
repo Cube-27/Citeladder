@@ -61,7 +61,7 @@ export function createApp(
   app.use(apiNoStore());
   app.use(originToken(config));
   const startRunner = options.startRunner ?? runnerStarter(config);
-  app.use(async (_c, next) => observeCommittedWork(next, startRunner));
+  app.use((_c, next) => observeCommittedWork(next, startRunner));
   app.use(
     '/api/*',
     bodyLimit({
