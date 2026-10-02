@@ -11,9 +11,9 @@ The envelope is produced by `frontend/services/api/src/errors.ts`. On the
 frontend, `frontend/lib/api/client.ts` parses it and
 `frontend/lib/api/errors.ts` owns `ApiError` and its display-safe projection.
 The API emits only the `ApiErrorCode` union from
-`@citeladder/contracts/error-codes`. That union is currently generated from the
-error policy modules listed by `export_ts_platform.py`; message wording and JSON
-key order are not contracts.
+`@citeladder/contracts/error-codes`, whose hand-owned source is the machine-code
+authority. Native `config/errors.ts` owns status defaults and retry classification;
+message wording and JSON key order are not contracts.
 
 ## 1. The wire envelope
 
@@ -116,20 +116,10 @@ artifact were retired after their final mapped product route moved.
 
 ## 5. Adding a new error code
 
-1. Add the constant to `backend/app/core/config/errors.py` (invariant 1 — never inline).
+1. Add the machine code to `frontend/packages/contracts/src/error-codes.ts`.
 2. Throw `ApiError`, or `notFound(resource)` for repeated 404s, from the owning native route.
 3. If the frontend must branch on it, handle the `code` in the calling module — do not
    match on `message` text.
 4. Cover it in the relevant native API test under `frontend/services/api/test/`.
-# Staged Site Health and Commerce codes
-
-The shared error envelope includes the following stable coded failures for
-these routes: `url_hard_excluded`, `url_out_of_scope`,
-`url_preview_invalid`, `crawl_limit_not_available`, `acquisition_budget_exceeded`,
-and `scraperapi_unavailable`.
-They use the existing `{ code, message, request_id, details? }` envelope; details
-contain only safe validation or aggregate information and never secrets, raw HTML,
-or provider request headers.
-
 Workspace creation additionally uses `workspace_limit_exceeded` with a safe
 `limit` detail when the account has reached the configured tenant-root cap.

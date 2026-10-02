@@ -96,7 +96,8 @@ PostgreSQL tests; no golden files compare them with Python.
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
 contracts the browser app validates with (TypeScript routes publish the same
 schemas, and each handler's return type is checked against its schema), the route-ownership manifest, and the
-API error-code union exported from the Python config that declares the codes.
+hand-owned API error-code vocabulary. Native config owns HTTP status defaults
+and retry classification; neither is generated from Python.
 
 Native-only policy lives in TypeScript config. Shared Python policy reaches the
 service through a generated, drift-checked export. The auth and workspace HTTP families
