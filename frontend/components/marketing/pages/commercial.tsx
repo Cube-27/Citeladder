@@ -78,6 +78,23 @@ export function CommercialEntryPage({
               Explore team workflows
             </a>
           )}
+          <p className="website-body flex flex-wrap gap-5">
+            <a
+              className="text-accent-text underline"
+              href={
+                intent === 'citation'
+                  ? '/blog/action-playbook-winning-ai-citations'
+                  : '/blog/verify-improve-ai-search-visibility'
+              }
+            >
+              {intent === 'citation'
+                ? 'Learn how to investigate a citation'
+                : 'Read the measurement guide'}
+            </a>
+            <a className="text-accent-text underline" href="/compare">
+              Compare AI visibility tools
+            </a>
+          </p>
         </div>
       </Section>
       <Section tone="sunken" rhythm="tight">

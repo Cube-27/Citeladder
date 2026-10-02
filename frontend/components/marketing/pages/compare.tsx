@@ -1,6 +1,6 @@
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
-import { COMPETITORS, FACT_ROWS, FAIRNESS_POINTS } from '@/lib/marketing-content/compare';
+import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
@@ -11,8 +11,8 @@ import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
 
 /**
  * `/compare` — comparison index. Competitor rows are a ledger, not a card
- * grid: name, one-line position, link. Fairness claims sit as a strip above a
- * compact glance table — no nested feature boxes.
+ * grid: name, one-line position, link. A vendor disclosure and measurement
+ * questions keep the comparisons tied to an explainable workflow.
  */
 
 export function CompareIndex() {
@@ -20,12 +20,16 @@ export function CompareIndex() {
     <>
       <PageHero
         eyebrow="Comparisons"
-        title="How CiteLadder"
-        accent="compares."
-        lead="Side-by-side notes on engines, scoring, evidence and keys. Each comparison records its own review date and first-party sources."
+        title="Compare AI visibility software around your workflow."
+        lead="Start with the questions your team needs to answer, the evidence it needs to inspect, and the work it plans to do next. These comparisons explain the products’ public positioning and provide a practical evaluation checklist."
       />
 
       <Section tone="paper" rhythm="tight" aria-label="Competitors">
+        <p className="website-body text-muted mb-6 max-w-3xl">
+          Published by CiteLadder. These are vendor-authored comparisons, not independent rankings.
+          Product scope, plans and availability can change; use the linked official sources when
+          evaluating a purchase.
+        </p>
         <div className="website-body text-accent-text flex flex-wrap gap-5">
           <a href="/ai-citation-tracking" className="underline underline-offset-2">
             Understand citation tracking
@@ -59,12 +63,12 @@ export function CompareIndex() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="text-foreground block text-base font-medium">
-                      {competitor.name}
+                      CiteLadder vs {competitor.name}
                     </span>
                     <span className="text-muted mt-1 block text-sm">{competitor.tagline}</span>
                   </span>
                   <span className="text-accent-text hidden items-center gap-2 text-sm font-medium sm:inline-flex">
-                    vs {competitor.name}
+                    Read comparison
                     <ArrowRight
                       className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
                       aria-hidden
@@ -81,44 +85,32 @@ export function CompareIndex() {
       <Section tone="sunken" rhythm="tight" aria-labelledby="compare-fair-title">
         <Reveal className="mb-6 max-w-3xl">
           <h2 id="compare-fair-title" className="website-section-heading text-foreground">
-            Compared honestly.
+            Agree on the measurement before comparing the score.
           </h2>
           <p className="website-body-lg text-muted mt-3">
-            Competitor facts come from each vendor’s public site. Ours come from this codebase.
+            Ask each vendor what it observes, how it selects prompts, what it counts and how you can
+            inspect the evidence. Confirm collection sources, current limits and the total cost for
+            your actual workflow.
           </p>
         </Reveal>
 
-        <ul className="mb-8 grid gap-3 md:grid-cols-3">
-          {FAIRNESS_POINTS.map((point) => (
-            <li
-              key={point}
-              className="text-foreground md:border-border-subtle flex gap-3 text-sm font-medium md:block md:border-l md:pl-4"
-            >
-              <Check
-                aria-hidden
-                className="text-accent-text mt-0.5 size-4 shrink-0 md:mt-0 md:mb-2"
-              />
-              <span className="text-muted font-normal md:block">{point}</span>
-            </li>
-          ))}
-        </ul>
-
-        <Reveal>
-          <Meta as="p" className="mb-3">
-            At a glance
-          </Meta>
-          <dl className="border-border-subtle divide-border-subtle grid divide-y border-t sm:grid-cols-2 sm:gap-x-8 sm:divide-y-0">
-            {FACT_ROWS.map((row) => (
-              <div
-                key={row.key}
-                className="sm:border-border-subtle grid grid-cols-[7rem_minmax(0,1fr)] gap-3 py-3 sm:border-t"
-              >
-                <dt className="text-muted text-sm">{row.key}</dt>
-                <dd className="text-foreground m-0 text-sm">{row.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </Reveal>
+        <p className="website-body text-muted">
+          Read{' '}
+          <a
+            href="/blog/verify-improve-ai-search-visibility"
+            className="text-accent-text underline"
+          >
+            how to measure AI visibility
+          </a>{' '}
+          and{' '}
+          <a
+            href="/blog/action-playbook-winning-ai-citations"
+            className="text-accent-text underline"
+          >
+            how to investigate citations
+          </a>
+          .
+        </p>
       </Section>
 
       <Section
@@ -129,10 +121,10 @@ export function CompareIndex() {
       >
         <Reveal className="mx-auto max-w-3xl text-center">
           <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-3 max-w-[28ch]">
-            Don’t compare pages. Compare evidence.
+            Evaluate CiteLadder using your own questions.
           </h2>
           <p className="website-body-lg text-muted mx-auto max-w-[56ch]">
-            Same prompts across ChatGPT, Gemini and Claude. Raw responses included.
+            Bring a small prompt portfolio and the reporting questions your team needs to answer.
           </p>
           <div className="mt-8 flex items-stretch justify-center gap-3 sm:items-center sm:gap-4">
             <DemoButtonLink className="min-w-0 flex-1 sm:flex-none">

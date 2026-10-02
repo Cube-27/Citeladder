@@ -1,8 +1,140 @@
 import { expect, test } from '@playwright/test';
 import { CITATION_PAGE, SHARE_OF_VOICE_PAGE } from '@/lib/marketing-content/commercial-pages';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
+import { POSTS } from '@/lib/marketing-content/blog';
+import { COMPETITORS } from '@/lib/marketing-content/compare';
+import { filterAndSortPosts, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 
 test.describe('marketing routes', () => {
+  test('guides and comparisons deliver their evidence and contextual links without JavaScript', async ({
+    browser,
+    baseURL,
+    request,
+  }) => {
+    const context = await browser.newContext({
+      baseURL,
+      javaScriptEnabled: false,
+      reducedMotion: 'reduce',
+    });
+    const page = await context.newPage();
+    const guides = POSTS.filter((post) => post.editorialNote);
+    const pages = [
+      ...guides.map((post) => ({
+        path: `/blog/${post.slug}`,
+        title: post.seoTitle,
+        heading: post.title,
+        description: post.seoDescription,
+      })),
+      ...COMPETITORS.map((competitor) => ({
+        path: `/compare/${competitor.slug}`,
+        title: competitor.metaTitle,
+        heading: `CiteLadder vs ${competitor.name}`,
+        description: competitor.metaDescription,
+      })),
+    ];
+    const visited = new Set<string>();
+    for (const entry of pages) {
+      const response = await request.get(entry.path);
+      expect(response.status()).toBe(200);
+      const initial = await page.evaluate(
+        (html) => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          return {
+            title: doc.title,
+            description: doc.querySelector('meta[name="description"]')?.getAttribute('content'),
+            canonical: doc.querySelector('link[rel="canonical"]')?.getAttribute('href'),
+            headings: [...doc.querySelectorAll('h1')].map((heading) => heading.textContent?.trim()),
+            links: [...doc.querySelectorAll('main a[href]')].map((link) =>
+              link.getAttribute('href')!,
+            ),
+            text: doc.querySelector('main')?.textContent,
+          };
+        },
+        await response.text(),
+      );
+      expect(initial.title).toBe(entry.title);
+      expect(initial.description).toBe(entry.description);
+      expect(initial.headings).toEqual([entry.heading]);
+      expect(initial.canonical).toBe(
+        new URL(entry.path, process.env.PUBLIC_WEBSITE_ORIGIN ?? baseURL).href,
+      );
+      expect(initial.links).toContain(DEMO_HREF);
+      for (const href of initial.links.filter(
+        (href) => href.startsWith('/') && !visited.has(href),
+      )) {
+        visited.add(href);
+        expect((await request.get(href)).status(), `${entry.path} → ${href}`).toBe(200);
+      }
+      const post = guides.find((post) => entry.path === `/blog/${post.slug}`);
+      if (post) {
+        for (const block of post.body) {
+          if (block.type === 'paragraph') expect(initial.text).toContain(block.text);
+        }
+      }
+      const competitor = COMPETITORS.find(
+        (competitor) => entry.path === `/compare/${competitor.slug}`,
+      );
+      if (competitor) {
+        expect(initial.text).toContain(competitor.lead);
+        expect(initial.links).toContain(competitor.sources[0]!.url);
+      }
+      await page.setViewportSize({ width: 390, height: 900 });
+      await page.goto(entry.path);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      const demo = page.locator('main').getByRole('link', { name: 'Book a demo' }).first();
+      await demo.focus();
+      await expect(demo).toBeFocused();
+    }
+    for (const path of ['/blog', '/compare', '/solutions']) {
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(path);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        );
+        await page.screenshot({
+          path: test.info().outputPath(`${path.slice(1)}-${width}.png`),
+          fullPage: true,
+        });
+      }
+    }
+    await context.close();
+  });
+
+  test('blog topic filters and sorting retain article navigation without a thumbnail', async ({
+    page,
+  }) => {
+    const waitForBlog = () =>
+      page.waitForFunction(() =>
+        [...document.querySelectorAll('astro-island')].some(
+          (island) =>
+            island.getAttribute('component-url')?.includes('/blog.') && !island.hasAttribute('ssr'),
+        ),
+      );
+    await page.goto('/blog');
+    await waitForBlog();
+    const archive = page.getByRole('region', { name: 'Blog articles' });
+    await archive.getByRole('button', { name: 'Website readiness', exact: true }).click();
+    const card = archive.locator('article');
+    await expect(card).toHaveCount(1);
+    await expect(card.getByRole('img')).toHaveCount(0);
+    await card.getByRole('link', { name: 'Read article' }).click();
+    await expect(page).toHaveURL(/\/blog\/auditing-content-for-llms-ai-search$/);
+    await expect(
+      page.getByRole('navigation', { name: 'Previous and next articles' }),
+    ).toBeVisible();
+    await page.goto('/blog');
+    await waitForBlog();
+    await archive.getByRole('button', { name: 'All posts', exact: true }).click();
+    await archive.getByRole('combobox', { name: 'Sort', exact: true }).click();
+    await page.getByRole('option', { name: 'Oldest' }).click();
+    const expected = filterAndSortPosts(POSTS.map(toBlogPostSummary), null, 'oldest').map(
+      (post) => post.title,
+    );
+    await expect(archive.locator('article h2')).toHaveText(expected);
+  });
   test('commercial entry pages deliver indexable copy and usable links without JavaScript', async ({
     browser,
     baseURL,

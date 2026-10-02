@@ -22,6 +22,7 @@ describe('PostBlock', () => {
           content: [
             'Read ',
             { type: 'link', text: 'solutions', href: '/solutions' },
+            { type: 'link', text: 'Provider documentation', href: 'https://example.com/product' },
             ' and the source ',
             { type: 'citation', sourceId: 'official' },
           ],
@@ -37,6 +38,10 @@ describe('PostBlock', () => {
       />,
     );
     expect(screen.getByRole('link', { name: 'solutions' })).toHaveAttribute('href', '/solutions');
+    const external = screen.getByRole('link', { name: 'Provider documentation' });
+    expect(external).toHaveAttribute('href', 'https://example.com/product');
+    expect(external).toHaveAttribute('target', '_blank');
+    expect(external).toHaveAttribute('rel', 'noreferrer');
     expect(screen.getByRole('link', { name: /Source 1: Official guidance/ })).toHaveAttribute(
       'href',
       'https://example.com/guidance',
