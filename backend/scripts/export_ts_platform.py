@@ -17,10 +17,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from app.connectors.search_surfaces.contracts import (
-    OUTCOME_AI_OVERVIEW_PRESENT,
-    SUCCESSFUL_OUTCOMES,
-)
 from app.core.config import (
     DEVELOPMENT_ENV_NAMES,
     INSECURE_SECRET_DEFAULTS,
@@ -35,7 +31,6 @@ from app.core.config import (
 from app.core.config import agent as agent_config
 from app.core.config import brand_discovery as discovery_config
 from app.core.config import commerce_catalog as commerce_config
-from app.core.config import dataforseo as search_config
 from app.core.config import projects as projects_config
 from app.core.config import prompts as prompts_config
 from app.core.config import search_intelligence as search_intelligence_config
@@ -55,7 +50,6 @@ from app.core.config.analytics import (
 from app.core.config.audits import AUDIT_SCOPE_BRAND
 from app.core.config.provider_catalog import (
     LOGICAL_ENGINES,
-    TEST_STATUS_OK,
     TRANSPORT_DATAFORSEO,
     is_search_surface,
 )
@@ -83,7 +77,6 @@ from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
 from scripts.ts_platform_audits import audit_policy, audit_schedule_policy
 from scripts.ts_platform_billing import billing_policy, entitlements_policy
-from scripts.ts_platform_costs import costs_policy
 from scripts.ts_platform_dataforseo import dataforseo_policy
 from scripts.ts_platform_identity import brand_identity_policy
 from scripts.ts_platform_integrations import integration_policy
@@ -168,9 +161,8 @@ def build_config() -> dict[str, Any]:
         "traffic": traffic_policy(),
         "demand": demand_policy(),
         "integrations": integration_policy(_setting),
-        "providers": provider_policy(_setting),
-        "dataforseo": dataforseo_policy(_setting),
-        "costs": costs_policy(),
+        "providers": provider_policy(),
+        "dataforseo": dataforseo_policy(),
         "audits": audit_policy(_setting),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
@@ -187,10 +179,6 @@ def build_config() -> dict[str, Any]:
         "projects": {
             "default_benchmark_mode": projects_config.DEFAULT_BENCHMARK_MODE,
             "default_repetitions": projects_config.DEFAULT_REPETITIONS,
-            "min_repetitions": projects_config.MIN_REPETITIONS,
-            "max_repetitions": projects_config.MAX_REPETITIONS,
-            "location_codes": search_config.LOCATION_CODES,
-            "language_codes": sorted(search_config.LANGUAGE_CODES),
         },
         "audit_schedules": audit_schedule_policy(),
         "discovery": _discovery_policy(),
@@ -233,7 +221,6 @@ def _search_intelligence_policy() -> dict[str, Any]:
         "parser_version": search_intelligence_config.PARSER_VERSION,
         "price_version": search_intelligence_config.PRICE_VERSION,
         "transport_provider": TRANSPORT_DATAFORSEO,
-        "connection_test_ok": TEST_STATUS_OK,
     }
 
 
@@ -245,8 +232,6 @@ def _visibility_policy() -> dict[str, Any]:
         ],
         "brand_audit_scope": AUDIT_SCOPE_BRAND,
         "succeeded_task_status": TASK_STATUS_SUCCEEDED,
-        "overview_present_outcome": OUTCOME_AI_OVERVIEW_PRESENT,
-        "successful_outcomes": sorted(SUCCESSFUL_OUTCOMES),
     }
 
 

@@ -3,6 +3,7 @@ import runtime from './audits.json' with { type: 'json' };
 import visibilityRuntime from './visibility.json' with { type: 'json' };
 import shared from '../generated/python-config.json' with { type: 'json' };
 import { compareText } from '../text-order.ts';
+import { dataforseo } from './providers.ts';
 
 export const selectableEngines = shared.providers.catalog
   .filter((entry) => entry.adapter_shipped && Object.hasOwn(shared.providers.routes, entry.key))
@@ -23,4 +24,6 @@ export const visibility = {
     audits.constants.audit_status_partially_completed,
   ],
   measurement_policy_key: audits.constants.measurement_policy_key,
+  overview_present_outcome: dataforseo.surface.outcome_ai_overview_present,
+  successful_outcomes: dataforseo.surface.successful_outcomes,
 };

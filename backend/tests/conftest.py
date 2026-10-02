@@ -183,32 +183,6 @@ def _pin_site_health_sample_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-@pytest.fixture(autouse=True)
-def _seed_test_funded_cost_observation(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Keep funded mechanics testable without enabling them in production.
-
-    Production intentionally ships no current-route execution observation and
-    therefore fails funded admission closed. Component tests that exercise
-    reservations, settlement, and concurrency need one explicit test-only audit
-    observation; every other route remains unresolved.
-    """
-    from app.core.config.costs import (
-        _EXPECTED_COST_CATALOG,
-        ROUTE_CLAUDE,
-        _ExpectedCostEstimate,
-    )
-
-    monkeypatch.setitem(
-        _EXPECTED_COST_CATALOG,
-        ROUTE_CLAUDE,
-        _ExpectedCostEstimate(
-            token_cost_microusd=2_890,
-            search_fee_microusd=10_000,
-            expected_searches=3,
-        ),
-    )
-
-
 @pytest.fixture(scope="session")
 def test_database_url() -> Iterator[str]:
     """Create a throwaway session database on the configured Postgres server.

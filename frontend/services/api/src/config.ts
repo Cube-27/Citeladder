@@ -19,6 +19,8 @@ import api from './config/api.json' with { type: 'json' };
 import searchIntelligence from './config/search-intelligence.json' with { type: 'json' };
 import demand from './config/demand.json' with { type: 'json' };
 import { audits, visibility, selectableEngines } from './config/audits.ts';
+import { providers, dataforseo } from './config/providers.ts';
+import costs from './config/costs.json' with { type: 'json' };
 import { integrations, traffic, analytics, referrals, authOAuth } from './config/connected-data.ts';
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
@@ -67,6 +69,8 @@ export const policy = {
   api,
   settings: { ...pythonConfig.settings, ...integrationCredentials },
   integrations,
+  dataforseo,
+  costs,
   analytics,
   referrals,
   auth: { ...pythonConfig.auth, oauth: authOAuth },
@@ -74,6 +78,7 @@ export const policy = {
     ...searchIntelligence,
     ...pythonConfig.search_intelligence,
     task_kind: analytics.tasks.search_intelligence_acquisition,
+    connection_test_ok: providers.test_status_ok,
   },
   demand: {
     ...demand,
@@ -81,7 +86,14 @@ export const policy = {
     query_page_dataset: traffic.DATASET_GSC_QUERY_PAGE_DAILY,
   },
   visibility: { ...visibility, ...promptLibrary.cohorts },
-  projects: { ...pythonConfig.projects, prompt_set_name: promptLibrary.prompt_set_name },
+  projects: {
+    ...pythonConfig.projects,
+    prompt_set_name: promptLibrary.prompt_set_name,
+    min_repetitions: audits.min_repetitions,
+    max_repetitions: audits.max_repetitions,
+    location_codes: dataforseo.constants.location_codes,
+    language_codes: dataforseo.constants.language_codes,
+  },
   errors,
   agent: { ...agentRuntime, ...pythonConfig.agent },
   abuse,
@@ -125,7 +137,7 @@ export const policy = {
   },
   models: { ...modelGateway, jev, quality },
   workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
-  providers: { ...pythonConfig.providers, app: appModels },
+  providers: { ...providers, app: appModels },
   content_differentiation: {
     ...contentDifferentiation,
     stop_words: demand.stop_words,

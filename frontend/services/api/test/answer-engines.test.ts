@@ -22,6 +22,21 @@ function request(engine: 'chatgpt' | 'gemini' | 'claude', retrieval = true): Ans
   });
 }
 describe('frozen answer-engine execution', () => {
+  it('returns only a safe code for a permanent provider error body', async () => {
+    const error = await executeAnswer(
+      request('claude'),
+      { secret: 'test-secret', base_url: '' },
+      providerSettings({}),
+      async () =>
+        Response.json(
+          { error: { message: 'private-provider-message', key: 'private-key' } },
+          { status: 400 },
+        ),
+    ).catch((failure: unknown) => failure);
+    expect(error).toMatchObject({ code: 'client_error', retryable: false });
+    expect(String(error)).not.toContain('private-provider-message');
+    expect(String(error)).not.toContain('private-key');
+  });
   it.each([undefined, { query: 'Acme options' }])(
     'keeps count-only OpenAI searches distinct from query text (%j)',
     (action) => {

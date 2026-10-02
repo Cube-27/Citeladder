@@ -1,0 +1,199 @@
+{
+  "scraper_reconciliation_capacity_engine": "llm_scraper_reconciliation",
+  "errors": {
+    "timeout": "timeout",
+    "connection": "connection",
+    "rate_limit": "rate_limit",
+    "server": "server_error",
+    "client": "client_error",
+    "auth": "auth_failure",
+    "parse": "parse_error",
+    "unknown": "unknown",
+    "invalid_surface": "invalid_surface"
+  },
+  "capacity": [
+    {
+      "logical_engine": "claude",
+      "transport_provider": "anthropic",
+      "capacity": null,
+      "refill_tokens_per_second": null,
+      "max_cooldown_seconds": 60.0,
+      "max_concurrency": null
+    },
+    {
+      "logical_engine": "chatgpt",
+      "transport_provider": "openai",
+      "capacity": null,
+      "refill_tokens_per_second": null,
+      "max_cooldown_seconds": 60.0,
+      "max_concurrency": null
+    },
+    {
+      "logical_engine": "gemini",
+      "transport_provider": "google",
+      "capacity": null,
+      "refill_tokens_per_second": null,
+      "max_cooldown_seconds": 60.0,
+      "max_concurrency": null
+    },
+    {
+      "logical_engine": "google_ai_overview",
+      "transport_provider": "dataforseo",
+      "capacity": 1.0,
+      "refill_tokens_per_second": 1.0,
+      "max_cooldown_seconds": 60.0,
+      "max_concurrency": 2
+    },
+    {
+      "logical_engine": "chatgpt_search",
+      "transport_provider": "dataforseo",
+      "capacity": 1.0,
+      "refill_tokens_per_second": 1.0,
+      "max_cooldown_seconds": 60.0,
+      "max_concurrency": 2
+    },
+    {
+      "logical_engine": "gemini_consumer",
+      "transport_provider": "dataforseo",
+      "capacity": 1.0,
+      "refill_tokens_per_second": 1.0,
+      "max_cooldown_seconds": 60.0,
+      "max_concurrency": 2
+    },
+    {
+      "logical_engine": "search_intelligence",
+      "transport_provider": "dataforseo",
+      "capacity": 1.0,
+      "refill_tokens_per_second": 1.0,
+      "max_cooldown_seconds": 60.0,
+      "max_concurrency": 2
+    },
+    {
+      "logical_engine": "llm_scraper_reconciliation",
+      "transport_provider": "dataforseo",
+      "capacity": 1.0,
+      "refill_tokens_per_second": 0.15,
+      "max_cooldown_seconds": 60.0,
+      "max_concurrency": 1
+    }
+  ],
+  "platform_credentials": {
+    "openai": {
+      "reference": {
+        "env": ["PROVIDER_PLATFORM_OPENAI_CREDENTIAL_REF"],
+        "type": "str",
+        "default": ""
+      },
+      "secret": {
+        "env": ["PROVIDER_PLATFORM_OPENAI_API_KEY"],
+        "type": "str",
+        "default": ""
+      }
+    },
+    "google": {
+      "reference": {
+        "env": ["PROVIDER_PLATFORM_GOOGLE_CREDENTIAL_REF"],
+        "type": "str",
+        "default": ""
+      },
+      "secret": {
+        "env": ["PROVIDER_PLATFORM_GOOGLE_API_KEY"],
+        "type": "str",
+        "default": ""
+      }
+    },
+    "anthropic": {
+      "reference": {
+        "env": ["PROVIDER_PLATFORM_ANTHROPIC_CREDENTIAL_REF"],
+        "type": "str",
+        "default": ""
+      },
+      "secret": {
+        "env": ["PROVIDER_PLATFORM_ANTHROPIC_API_KEY"],
+        "type": "str",
+        "default": ""
+      }
+    }
+  },
+  "platform_dataforseo": {
+    "platform_credential_ref": {
+      "env": ["DATAFORSEO_PLATFORM_CREDENTIAL_REF"],
+      "type": "str",
+      "default": ""
+    },
+    "api_login": {
+      "env": ["DATAFORSEO_API_LOGIN"],
+      "type": "str",
+      "default": ""
+    },
+    "api_password": {
+      "env": ["DATAFORSEO_API_PASSWORD"],
+      "type": "str",
+      "default": ""
+    }
+  },
+  "settings": {
+    "openai_responses_url": {
+      "env": ["PROVIDER_OPENAI_RESPONSES_URL"],
+      "type": "str",
+      "default": "https://api.openai.com/v1/responses"
+    },
+    "google_interactions_url": {
+      "env": ["PROVIDER_GOOGLE_INTERACTIONS_URL"],
+      "type": "str",
+      "default": "https://generativelanguage.googleapis.com/v1beta/interactions"
+    },
+    "anthropic_messages_url": {
+      "env": ["PROVIDER_ANTHROPIC_MESSAGES_URL"],
+      "type": "str",
+      "default": "https://api.anthropic.com/v1/messages"
+    },
+    "anthropic_version": {
+      "env": ["PROVIDER_ANTHROPIC_VERSION"],
+      "type": "str",
+      "default": "2023-06-01"
+    },
+    "test_timeout_seconds": {
+      "env": ["PROVIDER_TEST_TIMEOUT_SECONDS"],
+      "type": "float",
+      "default": 20.0
+    },
+    "test_max_output_tokens": {
+      "env": ["PROVIDER_TEST_MAX_OUTPUT_TOKENS"],
+      "type": "int",
+      "default": 32
+    },
+    "anthropic_max_uses": {
+      "env": ["PROVIDER_ANTHROPIC_MAX_USES"],
+      "type": "int",
+      "default": 5
+    },
+    "byok_key_grace_days": {
+      "env": ["PROVIDER_BYOK_KEY_GRACE_DAYS"],
+      "type": "int",
+      "default": 7
+    },
+    "max_response_bytes": {
+      "env": ["PROVIDER_MAX_RESPONSE_BYTES"],
+      "type": "int",
+      "default": 8388608,
+      "exclusive_minimum": 0
+    }
+  },
+  "probe_prompt": "Reply with the single word: ok.",
+  "dataforseo": {
+    "base_url": {
+      "env": ["DATAFORSEO_BASE_URL"],
+      "type": "str",
+      "default": "https://api.dataforseo.com"
+    },
+    "test_timeout_seconds": {
+      "env": ["DATAFORSEO_TEST_TIMEOUT_SECONDS"],
+      "type": "float",
+      "default": 20.0
+    },
+    "probe_path": "/v3/appendix/user_data",
+    "success_status": 20000
+  },
+  "test_status_ok": "ok"
+}

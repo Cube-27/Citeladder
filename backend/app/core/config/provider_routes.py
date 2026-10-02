@@ -4,12 +4,12 @@ Split out of ``provider_catalog`` because identity and policy are different
 concerns that were sharing one file. This module answers "what is the exact
 executable route for this engine" — the engine and transport vocabularies,
 the surface-kind axis, and the frozen ``MeasurementRoute`` per engine.
-``provider_catalog`` keeps what surrounds that: execution-time policy, pacing,
-endpoints, credential sourcing and the public display catalog.
+``provider_catalog`` keeps the shared public display catalog and operator
+credential metadata. Native config owns execution policy, pacing and endpoints.
 
 Nothing here imports ``provider_catalog``, which is what keeps the split free
-of a cycle. ``provider_catalog`` re-exports every name below, so existing
-imports are unchanged and no caller needs to know where the line falls.
+of a cycle. ``provider_catalog`` re-exports the vocabulary still read by Python
+models, offline evaluation and supported operators.
 """
 
 from __future__ import annotations
