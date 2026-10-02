@@ -11,12 +11,17 @@ import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { errors } from './config/errors.ts';
 import { compareText } from './text-order.ts';
+import agentRuntime from './config/agent-runtime.json' with { type: 'json' };
+import modelGateway from './config/model-gateway.json' with { type: 'json' };
+import { discovery } from './config/discovery.ts';
+import promptLibrary from './config/prompt-library.json' with { type: 'json' };
+import api from './config/api.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
 import { auditSchedules } from './config/audit-schedules.ts';
 import { industryLibrary } from './config/industry-library.ts';
-import { opportunities } from './config/opportunity.ts';
+import { opportunities, opportunityDeclaration } from './config/opportunity.ts';
 import { earnedActions } from './config/earned-actions.ts';
 import { actions } from './config/actions.ts';
 import { placement } from './config/placement.ts';
@@ -54,14 +59,18 @@ type SettingSpec = {
 
 export const policy = {
   ...pythonConfig,
+  api,
+  visibility: { ...pythonConfig.visibility, ...promptLibrary.cohorts },
+  projects: { ...pythonConfig.projects, prompt_set_name: promptLibrary.prompt_set_name },
   errors,
+  agent: { ...agentRuntime, ...pythonConfig.agent },
   abuse,
   audit_schedules: {
     ...pythonConfig.audit_schedules,
     ...auditSchedules,
     min_interval_minutes: auditSchedules.settings.min_interval_minutes,
   },
-  discovery: { ...pythonConfig.discovery, industry_library: industryLibrary },
+  discovery: { ...discovery, industry_library: industryLibrary },
   source_pages: sourcePages,
   audits: { ...pythonConfig.audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },
   commerce: {
@@ -72,6 +81,7 @@ export const policy = {
   },
   opportunity: {
     ...pythonConfig.opportunity,
+    declaration: opportunityDeclaration,
     opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
     actions: { ...actions, ...pythonConfig.opportunity.actions },
     earned_actions: earnedActions,
@@ -91,7 +101,7 @@ export const policy = {
       source_page_outcome_inspected: sourcePageVocabulary.INSPECTION_INSPECTED,
     },
   },
-  models: { ...pythonConfig.models, jev, quality },
+  models: { ...modelGateway, jev, quality },
   workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
   providers: { ...pythonConfig.providers, app: appModels },
   content_differentiation: {
@@ -115,13 +125,19 @@ export const policy = {
     terms_revision: pythonConfig.auth.terms_revision,
     constants: {
       ...mcp.constants,
-      api_request_body_max_bytes: pythonConfig.api.request_body_max_bytes,
+      api_request_body_max_bytes: api.request_body_max_bytes,
     },
   },
   prompts: {
+    ...promptLibrary.prompts,
     ...pythonConfig.prompts,
+    origins: { ...promptLibrary.prompts.origins, ...pythonConfig.prompts.origins },
     generation: promptGeneration,
-    candidate: { ...pythonConfig.prompts.candidate, quality_gates_reported: qualityGatesReported },
+    candidate: {
+      ...promptLibrary.prompts.candidate,
+      ...pythonConfig.prompts.candidate,
+      quality_gates_reported: qualityGatesReported,
+    },
   },
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,

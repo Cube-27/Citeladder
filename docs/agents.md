@@ -37,7 +37,8 @@ the TypeScript runtime for the existing Agent tables: transactional chat
 admission, append-only messages, leased runs, committed model/tool attempts,
 bounded structured turns, persisted reads and output revisions. It uses the
 existing workspace policy, generated database types, shared Agent response
-contracts and Python-owned Agent policy export. The API ownership manifest,
+contracts and native Agent runtime/gateway policy. Python exports only the
+run-attempt default used by its model. The API ownership manifest,
 all ingress matchers, compose and cloud worker commands select this owner.
 The Python Agent API, worker and sweeper registration are retired; deployment
 and external cutover smoke checks remain separate release work.
@@ -49,7 +50,7 @@ default. Dispatch and settlement are separate committed transactions; receipt
 settlement survives cancellation and lease loss, while replies and revisions
 remain fenced. Recovery requires the accounting callback in the same
 transaction as retry/reclaim. The worker discovers a bounded workspace set for queued, expired and cancelled
-runs and applies the exported retry-delay policy. Its process supports draining
+runs and applies native retry-delay policy. Its process supports draining
 and graceful shutdown. Existing billing, provider, MCP, Action and persisted
 evidence owners supply the adapters. Tests use scripted models and real
 PostgreSQL without live provider calls.
@@ -68,7 +69,10 @@ registry versions, step/tool/size budgets, the per-call time bound and funding
 identity. A configuration change never alters a queued turn, and a turn whose
 skill catalog changed before it ran (a deploy in between) ends with
 `skills_changed` before any model call. Budgets live in
-[Agent configuration](../backend/app/core/config/agent.py).
+[Agent runtime configuration](../frontend/services/api/src/config/agent-runtime.json)
+and [gateway settings](../frontend/services/api/src/config/model-gateway.json).
+`AGENT_SKILLS_DIRECTORY` still selects the image's read-only packaged skills;
+the development fallback remains the checked-in Python asset directory.
 
 A chat owns one deliverable of one kind. Agent saves and user edits both append
 an immutable [output revision](../frontend/services/api/src/agent/outputs.ts); an edit

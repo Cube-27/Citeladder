@@ -1,0 +1,34 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { agentSettings } from '../src/agent/config.ts';
+import { gatewaySettings } from '../src/models/gateway.ts';
+import { discoverySettings } from '../src/projects/discovery-inputs.ts';
+import { generationInput } from '../src/prompts/generation-input.ts';
+
+afterEach(() => vi.unstubAllEnvs());
+
+it('resolves model aliases and rejects an unusable output budget', () => {
+  expect(gatewaySettings({ default_agent_max_output_tokens: '2048' }).maxOutputTokens).toBe(2048);
+  expect(() => gatewaySettings({ DEFAULT_AGENT_MAX_OUTPUT_TOKENS: '0' })).toThrow();
+  for (const timeout of ['0', '-1'])
+    expect(() => gatewaySettings({ DEFAULT_AGENT_TIMEOUT_SECONDS: timeout })).toThrow();
+  expect(agentSettings({ AGENT_SKILLS_DIRECTORY: '/app/agent-skills' }).skillsDirectory).toBe(
+    '/app/agent-skills',
+  );
+  expect(() => agentSettings({ DEFAULT_AGENT_LEASE_MARGIN_SECONDS: '0' })).toThrow();
+});
+
+it('preserves the legacy research credential alias and bounded retries', () => {
+  expect(discoverySettings({ KEEBNABLE_API_KEY: 'fixture-only' }).keenable_api_key).toBe(
+    'fixture-only',
+  );
+  expect(() =>
+    discoverySettings({ BRAND_DISCOVERY_COMPETITOR_MODEL_MAXIMUM_ATTEMPTS: '4' }),
+  ).toThrow();
+});
+
+it('resolves the generation count lazily and refuses an invalid default', () => {
+  vi.stubEnv('GENERATION_DEFAULT_COUNT', '7');
+  expect(generationInput.parse({}).count).toBe(7);
+  vi.stubEnv('GENERATION_DEFAULT_COUNT', '0');
+  expect(() => generationInput.parse({})).toThrow();
+});

@@ -97,8 +97,10 @@ confirmed offerings.
 
 ## Dependencies and limits
 
-- [Discovery configuration](../backend/app/core/config/brand_discovery.py)
-  owns budgets, queue policy and statuses. Model/provider routing and encrypted
+- [Native discovery configuration](../frontend/services/api/src/config/discovery.ts)
+  owns research budgets, templates and worker policy. Python retains the queued
+  status, task kind and maximum-attempt model defaults in the shared export.
+  Model/provider routing and encrypted
   credential custody stay in their existing owners.
 - Project creation checks workspace role and occupancy. Discovery IDs and
   target projects are always workspace-authorized.
