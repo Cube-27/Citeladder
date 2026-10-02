@@ -6,8 +6,12 @@ assert.ok(
   'Usage: node scripts/frontend-ingress-smoke.mjs <marketing-origin> <app-origin>',
 );
 
-async function get(origin, path) {
-  return fetch(new URL(path, origin), { redirect: 'manual', signal: AbortSignal.timeout(15_000) });
+async function get(origin, path, accept = '*/*') {
+  return fetch(new URL(path, origin), {
+    headers: { Accept: accept },
+    redirect: 'manual',
+    signal: AbortSignal.timeout(15_000),
+  });
 }
 
 async function apexRejects(path) {
@@ -27,7 +31,8 @@ async function assetLoads(asset) {
 }
 
 async function appServes(path) {
-  const response = await get(app, path);
+  // Browsers navigate with Accept: text/html; only that receives the SPA shell.
+  const response = await get(app, path, 'text/html');
   assert.equal(response.status, 200, `${path} serves the application`);
   assert.match(response.headers.get('cache-control') ?? '', /no-store/, `${path} is not cached`);
   const html = await response.text();
