@@ -27,6 +27,10 @@ so no audit, capacity/occupancy or visibility query can see a proposal. The
 tracked or already pending. The TypeScript API owns the prompt library: prompt
 sets, prompts, topics, import, generation and candidate review
 ([`src/prompts/`](../frontend/services/api/src/prompts/)).
+Native `config/prompt-library.json` owns library bounds, cohorts, write locks,
+binding and generation settings; `config/api.json` owns HTTP admission limits.
+Python exports model defaults and the shared normalization punctuation used by
+the prompt model's persisted identity. Generation defaults resolve at use time.
 `POST /prompt-sets/{id}/candidates/review` takes `accept_ids`/`reject_ids`:
 accept runs prompt-slot occupancy
 ([`src/entitlements/`](../frontend/services/api/src/entitlements/)) and the

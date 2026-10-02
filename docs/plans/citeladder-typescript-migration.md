@@ -1338,6 +1338,16 @@ coverage and catalog/settings decision tests replace the retired readiness
 tests; real-PostgreSQL model/isolation and entitlement coverage remains.
 Further field-level policy transfer remains open.
 
+**20j.** Transfer Agent runtime/gateway, discovery research/worker and prompt
+library/HTTP policy to native config. Preserve environment aliases, exclusive
+bounds, lazy generation defaults and the packaged-skills image/fallback path.
+Competitor suggestion instructions compose with the resolved limit at use time;
+retire the unused discovery research template. Python retains Agent run attempts,
+discovery queued/task/attempt defaults, prompt model defaults and normalization
+punctuation. Retire Python HTTP/API policy modules and the obsolete Agent gateway
+dotenv test; native gateway/admission/skills tests and remaining Python dotenv
+coverage guard the retained consumers. Other policy families remain open.
+
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,
 > and supported offline operators/bootstrap. Queue recovery is native; Python
