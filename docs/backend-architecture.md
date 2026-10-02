@@ -23,6 +23,11 @@ native provider custody and PostgreSQL capacity boundary. Python retains schema
 models and policy still consumed by models/operators. Site Health's acquisition,
 check catalogs and worker settings are native; its exported Python bridge is
 limited to model/read defaults and five operator/entitlement settings.
+Native audit config owns lifecycle, scoring, read limits and runtime settings;
+native provider/DataForSEO config owns endpoints, capacity, request policy and
+pricing. Python keeps frozen route identities and the public provider catalog
+for offline evaluation, launch authoring and non-secret provisioning, plus model
+defaults and provenance versions. No Python connector executes an answer engine.
 Commerce competitor discovery uses the native
 analytics worker and Site Health acquisition, parsing and classification owners.
 Analytics lease recovery and evidence/outcome settlement belong to that worker;

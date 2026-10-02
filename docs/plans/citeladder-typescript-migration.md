@@ -1361,6 +1361,20 @@ classification, redaction, resume, lease, scope and distinct unavailable coverag
 model/isolation and deployment-secret coverage stays in Python. Further policy
 transfer remains open.
 
+**20l.** Transfer audit lifecycle, scoring, Visibility reads and observed
+competitor policy, then provider capacity/endpoints/credentials, DataForSEO
+request policy and execution pricing to native config. Selectable engines derive
+from the shared public provider catalog and frozen routes. Native audit
+transitions refuse invalid jumps/terminal revival without writing events;
+provider failure details remain opaque. Retire 12 Python files: execution-only
+catalogs, state/error bridges, their superseded tests and the uncalled audit seed
+helper. Remove the obsolete Python funded-test policy fixtures. Python retains
+model defaults/provenance, public catalogs, frozen route identities and supported
+offline evaluation/non-secret provisioning. Native recorded-provider/cost and
+PostgreSQL paths cover the transferred decisions; retained Python operator,
+evaluation and persistence tests cover the shared boundary. Other PR20 policy
+families remain open.
+
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,
 > and supported offline operators/bootstrap. Queue recovery is native; Python
