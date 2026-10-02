@@ -37,6 +37,7 @@ export function ButtonLink({
       size={size}
       className={cn(
         '[&_svg]:size-4 [&_svg]:shrink-0',
+        variant !== 'ghost' && variant !== 'nav' && 'marketing-cta-button',
         variant === 'soft' && 'marketing-soft-button',
         className,
       )}
