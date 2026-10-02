@@ -4,6 +4,8 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
+import { queueRecovery } from '../config/queue-recovery.ts';
+import { recoverDiscoveryLeases } from '../queue/recovery.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { getLogger } from '../logging.ts';
@@ -44,6 +46,7 @@ export class DiscoveryWorker {
     this.queue = new DiscoveryQueue(db, this.settings.lease_seconds);
   }
   async runOnce(owner: string): Promise<boolean> {
+    await recoverDiscoveryLeases(this.db);
     const task = await this.queue.claim(owner);
     if (!task) return false;
     let heartbeat: Promise<boolean> | null = null;
@@ -256,5 +259,20 @@ export class DiscoveryWorker {
         );
       }
     }
+  }
+
+  async runUntilIdle(signal?: AbortSignal) {
+    const owner = `brand-discovery-drain:${randomUUID()}`;
+    const deadline = performance.now() + queueRecovery.drainBudgetSeconds * 1000;
+    let count = 0;
+    while (
+      count < policy.task_queue.max_drain_batches &&
+      !signal?.aborted &&
+      performance.now() < deadline
+    ) {
+      if (!(await this.runOnce(owner))) break;
+      count++;
+    }
+    return count;
   }
 }

@@ -299,7 +299,12 @@ kinds in `ANALYTICS_TS_OWNED_TASK_KINDS`, now every analytics kind. It owns
 bounded expired-lease recovery and terminal compensation on every pass. Run
 `node src/worker.ts --drain` to process due work until idle or the
 `ANALYTICS_DRAIN_BUDGET_SECONDS` budget (default 300) expires; claimed work finishes
-before exit. The Python sweeper retains brand-discovery and integration recovery.
+before exit. Discovery and integration workers also accept `--drain` and admit
+work for at most 300 seconds per invocation (the native queue-recovery config
+owns the bound). Their regular passes recover expired leases before claiming.
+`node src/queue-sweeper.ts --drain` performs one bounded recovery pass without
+executors. The same entry point without `--drain` is Compose's independent
+`queue-sweeper` service, so recovery survives a dead domain worker.
 `docker compose up api-service` runs the service on `127.0.0.1:8100`; both local
 ingresses send it the TypeScript-owned paths. `pnpm dev` proxies the same paths
 to `API_SERVICE_ORIGIN` (default `http://localhost:8100`), so run the service

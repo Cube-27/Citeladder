@@ -6,9 +6,9 @@
 # queue-row column contract of ``SiteCrawlTask`` (status / priority /
 # randomized_position / available_at / lease_owner / lease_expires_at /
 # heartbeat_at / attempt_count / max_attempts / idempotency_key / error_code /
-# error_detail / created_at / updated_at / completed_at) so the single
-# generic ``PostgresTaskQueue`` claims/leases/heartbeats/sweeps it unchanged
-# (invariant 8). Double-claim is prevented by ``FOR UPDATE SKIP LOCKED`` plus
+# error_detail / created_at / updated_at / completed_at). TypeScript owns
+# claims, leases, heartbeats and recovery. Double-claim is prevented by
+# ``FOR UPDATE SKIP LOCKED`` plus
 # the unique ``idempotency_key``.
 #
 # The referral scope adds these persisted rows: ``ReferralEvent`` — the

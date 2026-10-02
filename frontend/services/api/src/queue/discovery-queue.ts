@@ -1,4 +1,4 @@
-/** Discovery queue leases. The Python queue sweeper retains expiry/retry reconciliation. */
+/** Discovery queue leases; native recovery serializes against heartbeat and publication. */
 import { randomUUID } from 'node:crypto';
 
 import { sql, type Selectable } from 'kysely';
@@ -31,7 +31,7 @@ export class DiscoveryQueue {
         )
         .selectAll(table)
         .where('brand_discovery_tasks.status', 'in', claimable)
-        .where('brand_discovery_tasks.available_at', '<=', now)
+        .where('brand_discovery_tasks.available_at', '<=', sql<Date>`clock_timestamp()`)
         .whereRef('brand_discovery_tasks.attempt_count', '<', 'brand_discovery_tasks.max_attempts')
         .where('task_kind', 'in', [
           policy.discovery.constants.task_kind_brand_discovery,

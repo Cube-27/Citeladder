@@ -207,6 +207,13 @@
       "type": "str",
       "default": "replace-with-32-byte-minimum-secret"
     },
+    "referral_hash_salt": {
+      "env": [
+        "REFERRAL_HASH_SALT"
+      ],
+      "type": "str",
+      "default": "replace-with-64-byte-random-secret"
+    },
     "integration_microsoft_client_id": {
       "env": [
         "INTEGRATION_MICROSOFT_CLIENT_ID",
@@ -260,7 +267,17 @@
       "citeladder",
       "password",
       "secret"
-    ]
+    ],
+    "login_password": {
+      "min_chars": 8,
+      "max_chars": 128,
+      "min_unique_chars": 4,
+      "weak_words": [
+        "changeme",
+        "citeladder",
+        "password"
+      ]
+    }
   },
   "api": {
     "prefix": "/api/v1",
@@ -8131,7 +8148,6 @@
     },
     "constants": {
       "max_project_competitors": 5,
-      "error_max_attempts": "max_attempts_exceeded",
       "discovery_status_queued": "queued",
       "discovery_status_running": "running",
       "discovery_status_failed": "failed",

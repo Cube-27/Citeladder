@@ -2,6 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
+import { queueRecovery } from '../config/queue-recovery.ts';
+import { recoverIntegrationLeases } from '../queue/recovery.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import type { ImportPage } from '../integrations/client.ts';
@@ -82,6 +84,7 @@ export class IntegrationWorker {
   }
 
   async runOnce(): Promise<boolean> {
+    await recoverIntegrationLeases(this.#db);
     const run = await this.#claim();
     if (!run) return false;
     const timer = setInterval(() => {
@@ -129,7 +132,8 @@ export class IntegrationWorker {
         .selectFrom('integration_sync_runs')
         .selectAll()
         .where('status', 'in', [statuses.queued, statuses.retry_wait])
-        .where('available_at', '<=', new Date())
+        .where('available_at', '<=', sql<Date>`clock_timestamp()`)
+        .whereRef('attempt_count', '<', 'max_attempts')
         .orderBy('priority', 'desc')
         .orderBy('available_at', 'asc')
         .orderBy('randomized_position', 'asc')
@@ -173,6 +177,20 @@ export class IntegrationWorker {
       }
       return (updated ?? null) as Run | null;
     });
+  }
+
+  async runUntilIdle(signal?: AbortSignal) {
+    const deadline = performance.now() + queueRecovery.drainBudgetSeconds * 1000;
+    let count = 0;
+    while (
+      count < policy.task_queue.max_drain_batches &&
+      !signal?.aborted &&
+      performance.now() < deadline
+    ) {
+      if (!(await this.runOnce())) break;
+      count++;
+    }
+    return count;
   }
 
   async #execute(run: Run): Promise<void> {

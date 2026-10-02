@@ -185,7 +185,7 @@ total.
 | 18 | Site Health and source-page inspection | High | Done; 18b5b (#224), 18b5c (#225) merged |
 | 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a merged (#226); 19b adapters, activation and retirement implemented; PR validation pending |
 | 19c | Commerce competitor discovery and remaining acquisition bridges | High | Implemented 2 October 2026; deployment pending |
-| 20 | Consolidation and policy transfer | Medium | 20a/b merged; 20c policy catalogs implemented; further policy/runtime work in progress |
+| 20 | Consolidation and policy transfer | Medium | 20a–c merged; native recovery/startup slice implemented; further policy/web retirement in progress |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
 | 23 | Database move and HTTP cutover (section 9) | High | Proposed |
@@ -1253,8 +1253,7 @@ Python 3.12 Linux wheel required by binary-only deployment installs. All Node
 dependency stages include every workspace manifest for pnpm's frozen checks.
 
 Remaining PR20 work: further field-level policy transfer and bridge retirement,
-native discovery/integration lease recovery and Python web retirement with full
-production startup validation. Models/Alembic
+and Python web retirement. Models/Alembic
 remain Python; supported operator tooling and deploy-time bootstrap remain
 explicit consumers until their callers are replaced. No schema tables are
 dropped merely because their HTTP owner moved.
@@ -1270,6 +1269,17 @@ unused industry prompt templates/context and customer-model timeout setting
 threshold ordering and the complete rule-to-evidence-family guard. Python
 source-page persistence tests keep their behavior coverage with literal evidence
 fixtures instead of importing the retired application vocabulary.
+
+**20d.** Native startup enforces the complete production-security gate, while
+Python retains it for migration/operator processes. Discovery and integration
+workers recover expired leases and support bounded drain-and-exit operation;
+the existing independent `queue-sweeper` service now uses the API image and
+TypeScript entry point. Discovery parent failure commits with task recovery.
+Integration recovery preserves attempts already charged at claim; claim-time
+availability uses PostgreSQL's clock to agree with recovery. Retire Python's
+generic queue/protocol, queue specs and parent reconciler. Native real-PostgreSQL
+tests replace the retired queue implementation/wiring tests; Python model
+constraint and isolation coverage remains.
 
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,

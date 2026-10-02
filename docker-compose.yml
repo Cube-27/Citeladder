@@ -268,13 +268,13 @@ services:
     healthcheck:
       disable: true
 
-  # Python queue sweeper: reclaims brand-discovery and integration leases.
+  # Independent native sweeper: reclaims brand-discovery and integration leases.
   # TypeScript analytics, Agent and Site Health workers recover their own
   # expired leases on the next poll. The sweeper runs no executors.
   queue-sweeper:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: frontend/services/api/Dockerfile
     restart: unless-stopped
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
@@ -284,7 +284,7 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    command: ["python", "-m", "app.workers.queue_sweeper"]
+    command: ["node", "src/queue-sweeper.ts"]
     healthcheck:
       disable: true
 

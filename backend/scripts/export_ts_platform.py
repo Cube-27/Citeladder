@@ -30,6 +30,10 @@ from app.connectors.search_surfaces.contracts import (
 from app.core.config import (
     DEVELOPMENT_ENV_NAMES,
     INSECURE_SECRET_DEFAULTS,
+    LOGIN_PASSWORD_MAX_CHARS,
+    LOGIN_PASSWORD_MIN_CHARS,
+    LOGIN_PASSWORD_MIN_UNIQUE_CHARS,
+    LOGIN_PASSWORD_WEAK_WORDS,
     SECRET_MIN_BYTES,
     SECRET_MIN_UNIQUE_CHARS,
     WEAK_SECRET_WORDS,
@@ -214,6 +218,7 @@ EXPORTED_SETTINGS = (
     "demo_mode",
     "demo_expires_at",
     "encryption_key",
+    "referral_hash_salt",
     "integration_microsoft_client_id",
     "integration_microsoft_client_secret",
     "dev_login_email",
@@ -257,6 +262,12 @@ def build_config() -> dict[str, Any]:
             "min_unique_chars": SECRET_MIN_UNIQUE_CHARS,
             "insecure_values": sorted(INSECURE_SECRET_DEFAULTS),
             "weak_words": sorted(WEAK_SECRET_WORDS),
+            "login_password": {
+                "min_chars": LOGIN_PASSWORD_MIN_CHARS,
+                "max_chars": LOGIN_PASSWORD_MAX_CHARS,
+                "min_unique_chars": LOGIN_PASSWORD_MIN_UNIQUE_CHARS,
+                "weak_words": sorted(LOGIN_PASSWORD_WEAK_WORDS),
+            },
         },
         "api": {
             "prefix": API_V1_PREFIX,

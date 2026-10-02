@@ -31,6 +31,10 @@ INSECURE_SECRET_DEFAULTS = frozenset(
 SECRET_MIN_BYTES = 32
 SECRET_MIN_UNIQUE_CHARS = 12
 WEAK_SECRET_WORDS = frozenset({"password", "secret", "citeladder", "changeme"})
+LOGIN_PASSWORD_MIN_CHARS = 8
+LOGIN_PASSWORD_MAX_CHARS = 128
+LOGIN_PASSWORD_MIN_UNIQUE_CHARS = 4
+LOGIN_PASSWORD_WEAK_WORDS = frozenset({"password", "citeladder", "changeme"})
 
 
 class Settings(BaseSettings):
@@ -348,9 +352,9 @@ def _login_password_is_invalid(value: str) -> bool:
     """Match the public credentials contract without imposing key-size rules."""
     normalized = value.strip().casefold()
     return (
-        not 8 <= len(value) <= 128
-        or len(set(value)) < 4
-        or normalized in {"password", "citeladder", "changeme"}
+        not LOGIN_PASSWORD_MIN_CHARS <= len(value) <= LOGIN_PASSWORD_MAX_CHARS
+        or len(set(value)) < LOGIN_PASSWORD_MIN_UNIQUE_CHARS
+        or normalized in LOGIN_PASSWORD_WEAK_WORDS
     )
 
 

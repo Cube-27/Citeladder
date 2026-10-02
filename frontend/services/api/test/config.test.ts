@@ -9,6 +9,7 @@ import {
 } from '../src/config.ts';
 import { libpqUrl, poolOptions } from '../src/db/database.ts';
 import { razorpaySettings } from '../src/billing/config.ts';
+import { productionEnv } from './production-config.ts';
 
 const STRONG_KEY = 'a-deployment-grade-session-key-with-enough-entropy-9';
 
@@ -79,11 +80,7 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ APP_ENV: 'production', JWT_SECRET_KEY: STRONG_KEY })).toThrow(
       /db_ssl_mode/u,
     );
-    const config = loadConfig({
-      APP_ENV: 'production',
-      JWT_SECRET_KEY: STRONG_KEY,
-      DB_SSL_MODE: 'require',
-    });
+    const config = loadConfig(productionEnv);
     expect(poolOptions(config).ssl).toEqual({ rejectUnauthorized: false });
   });
 

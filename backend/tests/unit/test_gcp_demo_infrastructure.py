@@ -380,7 +380,13 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
         if any(
             "app.workers." in value
             or value.endswith(
-                ("-worker.ts", "/worker.ts", "-scheduler.ts", "-maintenance.ts")
+                (
+                    "-worker.ts",
+                    "/worker.ts",
+                    "-scheduler.ts",
+                    "-maintenance.ts",
+                    "-sweeper.ts",
+                )
             )
             for value in _values(service.get("command", []))
         )
