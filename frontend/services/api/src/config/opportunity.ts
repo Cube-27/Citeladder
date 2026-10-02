@@ -1,4 +1,6 @@
 /** Native opportunity catalog: deterministic decisions over persisted evidence. */
+export const opportunityDeclaration = { output_phase_outline: 'outline' };
+
 export const opportunities = {
   RULE_PRODUCT_NOT_MENTIONED: 'product_not_mentioned',
   RULE_CITED_ALTERNATIVES: 'cited_alternatives_without_uploaded_presence',

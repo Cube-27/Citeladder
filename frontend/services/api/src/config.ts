@@ -21,7 +21,7 @@ import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
 import { auditSchedules } from './config/audit-schedules.ts';
 import { industryLibrary } from './config/industry-library.ts';
-import { opportunities } from './config/opportunity.ts';
+import { opportunities, opportunityDeclaration } from './config/opportunity.ts';
 import { earnedActions } from './config/earned-actions.ts';
 import { actions } from './config/actions.ts';
 import { placement } from './config/placement.ts';
@@ -81,7 +81,7 @@ export const policy = {
   },
   opportunity: {
     ...pythonConfig.opportunity,
-    declaration: { output_phase_outline: 'outline' },
+    declaration: opportunityDeclaration,
     opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
     actions: { ...actions, ...pythonConfig.opportunity.actions },
     earned_actions: earnedActions,

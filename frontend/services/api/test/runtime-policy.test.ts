@@ -9,6 +9,8 @@ afterEach(() => vi.unstubAllEnvs());
 it('resolves model aliases and rejects an unusable output budget', () => {
   expect(gatewaySettings({ default_agent_max_output_tokens: '2048' }).maxOutputTokens).toBe(2048);
   expect(() => gatewaySettings({ DEFAULT_AGENT_MAX_OUTPUT_TOKENS: '0' })).toThrow();
+  for (const timeout of ['0', '-1'])
+    expect(() => gatewaySettings({ DEFAULT_AGENT_TIMEOUT_SECONDS: timeout })).toThrow();
   expect(agentSettings({ AGENT_SKILLS_DIRECTORY: '/app/agent-skills' }).skillsDirectory).toBe(
     '/app/agent-skills',
   );
