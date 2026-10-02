@@ -38,7 +38,7 @@ export class AuditScheduler {
     this.owner = options.owner ?? `audit-scheduler-ts-${randomBytes(6).toString('hex')}`;
     this.now = options.now ?? (() => new Date());
   }
-  async claimDue(at: Date): Promise<ScheduleClaim[]> {
+  async claimDue(at: Date, limit = this.settings.claim_batch_size): Promise<ScheduleClaim[]> {
     return this.db.transaction().execute(async (trx) => {
       const schedules = await trx
         .selectFrom('audit_schedules')
@@ -53,7 +53,7 @@ export class AuditScheduler {
         )
         .orderBy('next_run_at')
         .orderBy('id')
-        .limit(this.settings.claim_batch_size)
+        .limit(limit)
         .forUpdate()
         .skipLocked()
         .execute();
@@ -158,10 +158,21 @@ export class AuditScheduler {
       }
     });
   }
-  async runOnce(at = this.now()) {
+  async runOnce(at = this.now(), canAdmit?: () => boolean) {
+    if (canAdmit) return this.planUntilBudget(at, canAdmit);
     const claims = await this.claimDue(at);
     let created = 0;
     for (const claim of claims) if (await this.planClaim(claim, this.now())) created++;
+    return created;
+  }
+  private async planUntilBudget(at: Date, canAdmit: () => boolean) {
+    let created = 0;
+    for (let count = 0; count < this.settings.claim_batch_size && canAdmit(); count++) {
+      // Claim one occurrence so stopping does not strand a preclaimed batch.
+      const [claim] = await this.claimDue(at, 1); // NOSONAR -- Lease one occurrence before checking the next admission.
+      if (!claim) break;
+      if (await this.planClaim(claim, this.now())) created++; // NOSONAR -- Finish the leased occurrence before claiming another.
+    }
     return created;
   }
   async runForever(signal: AbortSignal, heartbeat: (at: Date) => Promise<void>) {

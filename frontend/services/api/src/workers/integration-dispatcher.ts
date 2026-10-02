@@ -32,9 +32,9 @@ export class IntegrationDispatcher {
     this.#client = client;
   }
 
-  async runOnce(): Promise<void> {
-    await this.#schedule();
-    await this.#revoke();
+  async runOnce(canAdmit = () => true): Promise<void> {
+    if (canAdmit()) await this.#schedule(canAdmit);
+    if (canAdmit()) await this.#revoke(canAdmit);
   }
 
   async runForever(signal: AbortSignal): Promise<void> {
@@ -48,7 +48,7 @@ export class IntegrationDispatcher {
     }
   }
 
-  async #schedule(): Promise<void> {
+  async #schedule(canAdmit: () => boolean): Promise<void> {
     const targets = await this.#db
       .selectFrom('integration_property_mappings as mapping')
       .innerJoin('integration_connections as connection', (join) =>
@@ -75,6 +75,7 @@ export class IntegrationDispatcher {
     const end = day(new Date(now.getTime() - 86_400_000));
     const start = addDays(end, -(settings.sync_default_window_days - 1));
     for (const target of targets) {
+      if (!canAdmit()) break;
       const previous = await this.#db
         .selectFrom('integration_sync_runs')
         .select('created_at')
@@ -105,7 +106,7 @@ export class IntegrationDispatcher {
     }
   }
 
-  async #revoke(): Promise<void> {
+  async #revoke(canAdmit: () => boolean): Promise<void> {
     const grants = await this.#db
       .selectFrom('integration_oauth_grants')
       .select(['id', 'workspace_id'])
@@ -118,7 +119,10 @@ export class IntegrationDispatcher {
       )
       .limit(20)
       .execute();
-    for (const candidate of grants) await this.#revokeGrant(candidate.id, candidate.workspace_id);
+    for (const candidate of grants) {
+      if (!canAdmit()) break;
+      await this.#revokeGrant(candidate.id, candidate.workspace_id); // NOSONAR -- Revocations finish sequentially before the next admission check.
+    }
   }
 
   async #revokeGrant(grantId: string, workspaceId: string): Promise<void> {

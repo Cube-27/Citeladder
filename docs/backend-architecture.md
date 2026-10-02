@@ -75,6 +75,42 @@ their own schemas and evidence contracts before persistence.
 
 ## Task queue contract
 
+The bounded `runner.ts` process composes all six native task lanes and billing
+recovery with one PostgreSQL pool (at most four connections). It admits one task
+per lane per pass and revisits earlier lanes for successors. Its time budget
+stops new admission; claimed work finishes before the pool closes. A randomized
+starting lane avoids systematically delaying the same owner across executions.
+Lane failures leave the job failed after independent owners have had a chance.
+
+`tick.ts` first runs queue recovery, audit maintenance/Search Intelligence
+reconciliation, due audit schedules and integration dispatch/revocation once,
+then uses the remaining budget for that same drain.
+Periodic owners recheck admission before each occurrence, revocation or recovery
+unit. The scheduler claims one occurrence at a time under a runner budget, so
+stopping never strands a preclaimed batch; admitted units finish settlement.
+Worker-owned lease and crawl backstops still run in each lane, including idle
+passes. Existing per-owner
+Compose processes remain the deployment path until hosting cutover PR23; they
+are not retired or started alongside the runner as a new continuous service.
+
+With `CLOUD_RUN_RUNNER_JOB` configured, the API observes successful queue/billing
+mutations per request at the PostgreSQL connection boundary. Autocommit or
+successful COMMIT marks work; rollback, savepoint rollback, aborted transactions
+and no-op writes do not. After the request settles, it awaits a bounded Cloud Run
+job-start request using service-account metadata credentials. This also covers
+requests whose later operation fails after earlier work committed. Reads do not
+start jobs; worker writes never recursively start jobs. Duplicate starts are
+allowed and existing leases arbitrate claims. A failed start is logged without
+tokens/provider bodies and leaves the committed response and work intact for tick.
+
+The Cloud Run API (`K_SERVICE`, or configured runner job) requires the existing
+`CITELADDER_ORIGIN_TOKEN` on every request, including health/readiness and MCP;
+the previous token may be accepted during rotation. Missing tokens fail startup.
+The current VM keeps Caddy's admission and existing private health probes until
+cutover. Cloud Run uses a TCP startup probe; authenticated HTTP probes must send
+the origin header. Runtime commands and environment settings are owned by
+[Development](DEVELOPMENT.md#scale-to-zero-runtime).
+
 1. Claim bounded work with `FOR UPDATE SKIP LOCKED`.
 2. Persist the lease and commit before network I/O.
 3. Heartbeat long work and recover expired leases.

@@ -123,7 +123,7 @@ export async function recoverIntegrationLeases(db: Database, batchSize = queueRe
   return tasks.length;
 }
 
-export async function recoverQueues(db: Database) {
+export async function recoverQueues(db: Database, canAdmit = () => true) {
   const logger = getLogger('workers.queue-recovery');
   let reclaimed = 0;
   const failures: unknown[] = [];
@@ -131,6 +131,7 @@ export async function recoverQueues(db: Database) {
     ['brand_discovery_tasks', recoverDiscoveryLeases],
     ['integration_sync_runs', recoverIntegrationLeases],
   ] as const) {
+    if (!canAdmit()) break;
     try {
       reclaimed += await recover(db);
     } catch (error) {

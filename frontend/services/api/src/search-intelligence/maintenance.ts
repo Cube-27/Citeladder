@@ -5,7 +5,8 @@ import { si } from './requests.ts';
 import { getLogger } from '../logging.ts';
 
 /** The queue sweeper may exhaust a dead analytics worker; recover saved receipts with no HTTP. */
-export async function reconcileResearch(db: Database, at = new Date()) {
+export async function reconcileResearch(db: Database, at = new Date(), canAdmit = () => true) {
+  if (!canAdmit()) return 0;
   const candidates = await db
     .selectFrom('search_intelligence_runs as r')
     .innerJoin('analytics_tasks as t', (join) =>
@@ -22,6 +23,7 @@ export async function reconcileResearch(db: Database, at = new Date()) {
     .limit(si.maintenance_batch_size)
     .execute();
   for (const candidate of candidates) {
+    if (!canAdmit()) break;
     try {
       const state = new AcquisitionState(db, candidate, candidate.run_id),
         plans = jsonObjects(candidate.call_plan, 'Research recovery plan');

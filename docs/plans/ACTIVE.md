@@ -77,7 +77,10 @@
   and provenance, security, role/entitlement registries, frozen provider catalogs
   and supported operators/bootstrap. Unused fixture/exporter/suggestion bridges
   and dependencies are retired. PR20 implementation is complete; PR21–24 remain
-  separate hosting work and are not started by this assignment.
+  separate hosting work. PR21 implementation is complete (2 October 2026):
+  bounded shared-pool runner/tick, commit-aware API wake-up and Cloud Run origin
+  admission. PR22–24 infrastructure/cutover/retirement and live smoke acceptance
+  remain unassigned.
   Deployment of implemented cutovers is pending; the owner dropped the
   one-week soak while there are no customers (smoke tests instead). On
   1 October 2026 the owner accepted a low-cost hosting phase (PRs 21–24:

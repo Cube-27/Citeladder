@@ -12,6 +12,7 @@ import pg from 'pg';
 
 import type { ServiceConfig } from '../config.ts';
 import type { DB } from '../generated/db-schema.ts';
+import { observeConnection } from './committed-work.ts';
 
 export type Database = Kysely<DB>;
 
@@ -40,8 +41,22 @@ export function poolOptions(config: ServiceConfig): pg.PoolConfig {
   };
 }
 
-export function createDatabase(config: ServiceConfig): Database {
+export function createDatabase(
+  config: ServiceConfig,
+  options: { execution?: boolean } = {},
+): Database {
   return new Kysely<DB>({
-    dialect: new PostgresDialect({ pool: new pg.Pool(poolOptions(config)) }),
+    dialect: new PostgresDialect({
+      pool: new pg.Pool({
+        ...poolOptions(config),
+        ...(options.execution || config.execution.runnerJob
+          ? { max: config.execution.poolSize }
+          : {}),
+      }),
+      onCreateConnection: (connection) => {
+        observeConnection(connection);
+        return Promise.resolve();
+      },
+    }),
   });
 }

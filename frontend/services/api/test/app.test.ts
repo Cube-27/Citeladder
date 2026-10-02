@@ -11,6 +11,31 @@ const db = testDatabase(config);
 afterAll(() => db.destroy());
 
 describe('health and readiness', () => {
+  it('protects the raw origin, including probes and MCP, and accepts rotated tokens', async () => {
+    const current = 'current-origin-token-0123456789abcdef';
+    const previous = 'previous-origin-token-0123456789abcdef';
+    const protectedApp = createApp(
+      testConfig({
+        K_SERVICE: 'api',
+        CITELADDER_ORIGIN_TOKEN: current,
+        CITELADDER_ORIGIN_TOKEN_PREVIOUS: previous,
+      }),
+      db,
+    );
+    for (const path of ['/health', '/ready', '/api/v1/auth/me', '/mcp']) {
+      expect((await protectedApp.request(path)).status).toBe(403);
+      for (const token of ['wrong', 'x'.repeat(current.length)])
+        expect(
+          (await protectedApp.request(path, { headers: { 'X-CiteLadder-Origin-Token': token } }))
+            .status,
+        ).toBe(403);
+    }
+    for (const token of [current, previous])
+      expect(
+        (await protectedApp.request('/health', { headers: { 'X-CiteLadder-Origin-Token': token } }))
+          .status,
+      ).toBe(200);
+  });
   it('reports liveness without touching the database', async () => {
     const response = await createApp(config, db).request('/health');
     expect(response.status).toBe(200);

@@ -24,6 +24,39 @@ afterAll(async () => {
   await db.destroy();
 });
 describe('durable audit occurrence planning', () => {
+  it('finishes one admitted occurrence without preclaiming the remaining schedule', async () => {
+    const t = await auditTenant(db, fixtures),
+      at = new Date();
+    const scope = { workspaceId: t.workspaceId, projectId: t.projectId };
+    const schedules = await Promise.all(
+      [0, 1].map(() =>
+        createSchedule(
+          db,
+          scope,
+          scheduleCreate.parse({
+            prompt_set_id: t.setId,
+            cadence: 'hourly',
+            engines: ['chatgpt'],
+            next_run_at: at.toISOString(),
+          }),
+        ),
+      ),
+    );
+    let admissions = 0;
+    const scheduler = new AuditScheduler(db, runtime, settings, { now: () => at });
+    expect(await scheduler.runOnce(at, () => admissions++ === 0)).toBe(1);
+    const rows = await db
+      .selectFrom('audit_schedules')
+      .select(['lease_owner', 'last_run_at'])
+      .where(
+        'id',
+        'in',
+        schedules.map((row) => row.id),
+      )
+      .execute();
+    expect(rows.every((row) => row.lease_owner === null)).toBe(true);
+    expect(rows.filter((row) => row.last_run_at !== null)).toHaveLength(1);
+  });
   it('preserves local wall-clock cadence through DST, including ambiguous and missing local slots', () => {
     const schedule = {
       cadence: 'daily',

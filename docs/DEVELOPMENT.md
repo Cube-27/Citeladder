@@ -324,6 +324,44 @@ to `TYPESCRIPT_INGRESS_PATHS` and every ingress Caddyfile, and deletes the Pytho
 router. Its behavior is covered by TypeScript and PostgreSQL tests; nothing
 compares it with Python output.
 
+### Scale-to-zero runtime
+
+From `frontend/`, `pnpm --filter @citeladder/api runner` runs all native worker
+lanes and billing recovery until idle or the shared admission budget expires.
+`pnpm --filter @citeladder/api tick` runs the periodic owners once, then drains
+with the remaining budget. Both commands perform real durable/provider work;
+run them only against an authorized target. They use the API image with commands
+`node src/runner.ts` and `node src/tick.ts` from its service working directory.
+No HTTP server or perpetual polling loop runs in a job. SIGTERM/SIGINT stops
+new admission and lets claimed work finish before destroying the pool.
+
+| Environment variable | Scope | Default / requirement |
+|---|---|---|
+| `CLOUD_RUN_RUNNER_JOB` | API | Unset disables wake-up; otherwise `projects/<project>/locations/us-central1/jobs/<job>` |
+| `CITELADDER_ORIGIN_TOKEN` | Cloud Run API | Existing secret matching both Workers' `ORIGIN_TOKEN`; at least 32 characters |
+| `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | Cloud Run API | Optional previous token during rotation |
+| `RUNNER_BUDGET_SECONDS` | Runner/tick | 300; 1–3600 seconds, shared across phases and lanes |
+| `RUNNER_DB_POOL_SIZE` | Runner/tick and API with configured job | 4; 1–4 connections total, independent of legacy pool/overflow sizes |
+| `RUNNER_WAKE_TIMEOUT_MS` | API | 5000; 1–30000 milliseconds for metadata plus job-start requests |
+
+The API's service account needs permission to execute that runner job
+(`roles/run.invoker` on the job); no new static Google key is needed. Metadata
+credentials and the fixed Google Run API destination are used only for wake-up.
+Runner/tick receive the existing configuration and credentials required by all
+their native owners. Billing remains disabled/unavailable unless already
+configured; the runner does not enable checkout or provision providers.
+
+PR21 requires no environment changes for the current VM/Compose deployment.
+Leave `CLOUD_RUN_RUNNER_JOB` unset until PR22 provisions the job. Set the job and
+origin secret on the Cloud Run API at deployment. `K_SERVICE` is supplied by
+Cloud Run and makes a missing origin secret a startup error. Existing VM Caddy
+admission remains in place. Do not change Workers' `ORIGIN_UPSTREAM` before PR23.
+The Cloud Run job timeout and termination grace must allow in-flight work to
+finish beyond the admission budget; a forced termination leaves leased work for
+recovery. The scheduler may invoke the same runner job with its argument
+overridden to `src/tick.ts` (requiring execution-with-overrides permission), so
+there is one periodic tick and no continuously running application process.
+
 ### Repository validation harness
 
 [AGENTS.md](../AGENTS.md#validation) owns when each tier runs. This section

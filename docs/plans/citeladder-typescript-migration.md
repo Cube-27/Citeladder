@@ -1510,6 +1510,15 @@ dispatcher, scheduler and sweeper loops do today. The API starts a runner
 execution after committing work. Requires PR 20: no Python process remains at
 runtime except the migration.
 
+PR21 implementation is complete (2 October 2026): one native shared-pool runner
+drains the six task lanes and billing recovery; tick composes due schedules,
+sync/revocation dispatch, queue recovery and audit/Search Intelligence maintenance
+before draining within the same admission budget. The API starts a Cloud Run
+execution after committed queue/billing work, including partial request failures,
+and keeps failed starts recoverable by tick. The Cloud Run API owns origin-token
+admission. Existing Compose processes remain until PR23; infrastructure,
+deployment/IAM, scheduler wiring and live smoke acceptance remain PR22–24 work.
+
 **PR 22: Foundation.** Terraform for a new us-central1 environment beside the
 current one: the e2-micro PostgreSQL VM without a public address, the
 Cloud Run API service, runner and migrate jobs, the scheduler tick, Secret
