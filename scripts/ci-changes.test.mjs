@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   classifyPaths,
   hasTrustworthyJobEvidence,
+  isOwnerFreeChange,
   selectE2EFiles,
   selectDiff,
 } from './ci-changes.mjs';
@@ -103,6 +104,30 @@ test('documentation-only changes avoid implementation suites', () => {
     security: false,
     compose: false,
   });
+});
+
+test('external-service and deploy-only configuration runs only the security owner', () => {
+  assert.deepEqual(
+    classifyPaths(['.sonarcloud.properties', '.github/workflows/gcp-deploy.yml', 'docs/x.md']),
+    {
+      backend: false,
+      frontend: false,
+      contract: false,
+      api: false,
+      e2e: false,
+      security: true,
+      compose: false,
+    },
+  );
+  // The CI workflow itself still escalates: owners run under its definition.
+  assert.equal(classifyPaths(['.github/workflows/ci.yml']).backend, true);
+});
+
+test('main skips full validation only for an owner-free push', () => {
+  assert.equal(isOwnerFreeChange(['docs/README.md', '.sonarcloud.properties']), true);
+  assert.equal(isOwnerFreeChange(['docs/README.md', 'backend/app/main.py']), false);
+  // An unknown range must never read as an owner-free change.
+  assert.equal(isOwnerFreeChange([]), false);
 });
 
 test('root governance and product prose avoid implementation suites', () => {
@@ -249,4 +274,18 @@ test('pull-request synchronization uses latest-push diff and main is full', () =
   for (const eventName of ['push', 'workflow_dispatch', 'merge_group']) {
     assert.deepEqual(selectDiff({ eventName }), { full: true, range: null }, eventName);
   }
+  assert.deepEqual(selectDiff({ eventName: 'push', beforeSha: 'before', headSha: 'head' }), {
+    full: true,
+    range: 'before..head',
+  });
+  // A force-pushed main has no meaningful push range.
+  assert.deepEqual(
+    selectDiff({
+      eventName: 'push',
+      beforeSha: 'before',
+      headSha: 'head',
+      beforeIsAncestor: false,
+    }),
+    { full: true, range: null },
+  );
 });
