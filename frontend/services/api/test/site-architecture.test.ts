@@ -1,4 +1,5 @@
 import { afterAll, expect, it } from 'vitest';
+import { architectureSchema } from '@citeladder/contracts/site-health/architecture';
 import { buildArchitecture, type ArchitecturePage } from '../src/site-health/architecture-model.ts';
 import { architectureRules } from '../src/site-health/architecture-rules.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
@@ -14,6 +15,17 @@ const context = {
   field_confidence: { business_model: 0.9 },
   market_scope: 'national',
 };
+it('rejects malformed persisted identifiers in orphan-page projections', () => {
+  const schema = architectureSchema.shape.internal_linking.shape.orphan_pages;
+  const orphan = {
+    site_url_id: '00000000-0000-4000-8000-000000000001',
+    url: 'https://example.test/orphan',
+    title: 'Orphan',
+    page_kind: 'product',
+  };
+  expect(schema.safeParse([orphan]).success).toBe(true);
+  expect(schema.safeParse([{ ...orphan, site_url_id: 'malformed' }]).success).toBe(false);
+});
 function page(
   id: string,
   path: string,

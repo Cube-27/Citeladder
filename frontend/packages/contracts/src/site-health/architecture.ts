@@ -24,7 +24,7 @@ export const architectureNodeSchema = responseObject({
 });
 
 const architectureOrphanPageSchema = responseObject({
-  site_url_id: z.string(),
+  site_url_id: uuid(),
   url: z.string(),
   title: z.string(),
   page_kind: z.string(),

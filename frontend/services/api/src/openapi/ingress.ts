@@ -147,8 +147,9 @@ function sortHandlers(handlers: Handler[]): Handler[] {
 }
 
 function classify(upstream: string, upstreams: Upstreams): IngressOutcome {
-  if (upstreams.typescript.some((marker) => upstream.includes(marker))) return 'typescript';
-  if (upstreams.python.some((marker) => upstream.includes(marker))) return 'python';
+  const identity = /^\{\$([^}:]+)(?::[^}]*)?\}$/u.exec(upstream)?.[1] ?? upstream;
+  if (upstreams.typescript.includes(identity)) return 'typescript';
+  if (upstreams.python.includes(identity)) return 'python';
   return 'other';
 }
 

@@ -106,8 +106,6 @@ class TestArchitecturePolicy:
 
     def test_every_expected_contract_is_declared(self) -> None:
         assert set(self._contracts()) == {
-            "api-is-a-leaf",
-            "workers-are-a-leaf",
             "core-is-the-floor",
             "models-are-persistence-only",
             "connectors-are-transport-only",
@@ -115,17 +113,16 @@ class TestArchitecturePolicy:
             "analysis-does-not-reach-up",
         }
 
-    def test_the_two_leaf_contracts_are_checked_transitively(self) -> None:
+    def test_core_contract_is_checked_transitively(self) -> None:
         """These hold for every import path, not just direct ones.
 
         `allow_indirect_imports` is the weaker mode, needed only where a chain
-        runs through an edge this policy deliberately allows. The leaf
-        contracts do not need it and must not acquire it.
+        runs through an edge this policy deliberately allows. Core does not
+        need it and must not acquire it.
         """
         contracts = self._contracts()
 
-        for name in ("api-is-a-leaf", "workers-are-a-leaf", "core-is-the-floor"):
-            assert "allow_indirect_imports" not in contracts[name]
+        assert "allow_indirect_imports" not in contracts["core-is-the-floor"]
 
     def test_recorded_exceptions_stay_at_two(self) -> None:
         """Only the retained Prompt normalization boundary exception remains."""

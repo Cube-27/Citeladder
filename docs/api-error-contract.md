@@ -117,10 +117,10 @@ artifact were retired after their final mapped product route moved.
 ## 5. Adding a new error code
 
 1. Add the constant to `backend/app/core/config/errors.py` (invariant 1 — never inline).
-2. Raise it via `ApiException` / `ApiException.coded` from the owning router.
+2. Throw `ApiError`, or `notFound(resource)` for repeated 404s, from the owning native route.
 3. If the frontend must branch on it, handle the `code` in the calling module — do not
    match on `message` text.
-4. Cover it in `backend/tests/component/test_error_envelope_api.py`.
+4. Cover it in the relevant native API test under `frontend/services/api/test/`.
 # Staged Site Health and Commerce codes
 
 The shared error envelope includes the following stable coded failures for

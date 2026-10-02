@@ -22,8 +22,8 @@ const INGRESS_FILES = [
 
 // Recognize retired upstream names too, so stale ingress fails explicitly.
 const UPSTREAMS = {
-  python: ['BACKEND_ORIGIN', ':8000'],
-  typescript: ['API_SERVICE_ORIGIN', `:${policy.api.service_port}`],
+  python: ['BACKEND_ORIGIN', '127.0.0.1:8000'],
+  typescript: ['API_SERVICE_ORIGIN', `127.0.0.1:${policy.api.service_port}`],
 };
 
 const failures = routeOwnershipFailures({

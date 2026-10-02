@@ -15,6 +15,24 @@ function reach(source: string, path: string) {
 }
 
 describe('ingress routing model', () => {
+  it('recognizes only exact configured upstream identities', () => {
+    const upstreams = { ...UPSTREAMS, typescript: ['API_SERVICE_ORIGIN', '127.0.0.1:8100'] };
+    for (const endpoint of ['127.0.0.1:8100', '{$API_SERVICE_ORIGIN:api-service:8100}']) {
+      expect([...ingressRouter(`reverse_proxy ${endpoint}`, upstreams)(PROJECT)]).toEqual([
+        'typescript',
+      ]);
+    }
+    for (const endpoint of [
+      'unrelated:8100',
+      'API_SERVICE_ORIGIN.example:8100',
+      '{$API_SERVICE_ORIGIN_OTHER:127.0.0.1:8100}',
+    ]) {
+      expect([...ingressRouter(`reverse_proxy ${endpoint}`, upstreams)(PROJECT)]).toEqual([
+        'other',
+      ]);
+    }
+  });
+
   it('sorts a longer single-path matcher ahead of the catch-all API matcher', () => {
     const snippet = `
 @backend path /api /api/*
