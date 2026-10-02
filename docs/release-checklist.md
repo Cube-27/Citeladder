@@ -42,8 +42,9 @@ curl -fsS http://localhost:8100/health
 
 - [ ] Compose reports the migration job completed successfully and the API/frontend services are
       healthy or running as designed.
-- [ ] Marketing, `/login`, direct app refreshes, and their CSS/JS load through port 3000;
-      missing routes/assets return 404. Browser requests use relative `/api/*` routes.
+- [ ] Marketing loads through port 3000, where `/login` and `/api/*` return 404.
+      `/login`, direct app refreshes and their CSS/JS load through port 3001;
+      missing assets return 404. Browser requests use relative `/api/*` routes on 3001.
 - [ ] The local Workerd marketing runtime serves initial HTML and the public
       catalog through the disposable Compose upstream. Production Worker Custom
       Domains and split-origin callbacks are verified separately through the
