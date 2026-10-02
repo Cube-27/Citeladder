@@ -2,8 +2,7 @@
 
 from typing import Any
 
-from app.analysis.lexical import STOP_WORDS
-from app.core.config import demand, traffic
+from app.core.config import traffic
 from app.core.config.integrations_datasets import (
     DATASET_GSC_QUERY_PAGE_DAILY,
     DIMENSION_KEY_SEPARATOR,
@@ -32,10 +31,4 @@ def demand_policy() -> dict[str, Any]:
     return {
         "query_page_dataset": DATASET_GSC_QUERY_PAGE_DAILY,
         "active_task_statuses": sorted(TASK_ACTIVE_STATUSES),
-        "stop_words": sorted(STOP_WORDS),
-        **{
-            name: sorted(value) if isinstance(value, frozenset) else value
-            for name, value in vars(demand).items()
-            if name.isupper()
-        },
     }
