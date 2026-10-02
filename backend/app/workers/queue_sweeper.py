@@ -8,7 +8,7 @@ is the one that just died. Commerce competitor discovery showed this as a
 workspace polling "Discovery for this category is running" indefinitely.
 
 This process sweeps queues whose recovery still belongs to Python and runs no
-executors. Site Health recovery belongs to the TypeScript worker.
+executors. Analytics and Site Health recovery belong to their TypeScript workers.
 Its reclaim path is bounded, ``SKIP LOCKED`` (so it never contends with a live
 worker holding its row), and already the single writer of the reclaim
 transition. Running it alongside the real workers is therefore safe rather
@@ -23,9 +23,8 @@ in exactly the case (their worker is gone) it exists for. So the sweep uses
 ``release_expired_detailed`` and hands the reported parents to the domain
 reconciler registered in ``parent_reconcilers``.
 
-The TypeScript analytics worker scans failed tasks for durable compensation,
-including rows terminalized here. Its recovery therefore survives either
-worker or sweeper winning the lease-reclaim race.
+Analytics no longer registers here: its native worker recovers leases and
+scans terminal tasks for durable compensation before every claim.
 """
 
 from __future__ import annotations
@@ -35,7 +34,6 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.analytics import ANALYTICS_QUEUE_SPEC
 from app.core.config.brand_discovery import BRAND_DISCOVERY_QUEUE_SPEC
 from app.core.config.integrations_clients import INTEGRATION_QUEUE_SPEC
 from app.core.config.task_queue import PostgresQueueSpec
@@ -51,7 +49,6 @@ logger = logging.getLogger("app.workers.queue_sweeper")
 # forgetting one is a stranded row, not a crash -- hence the list is explicit
 # rather than discovered by reflection.
 _CANDIDATE_QUEUES: tuple[PostgresQueueSpec, ...] = (
-    ANALYTICS_QUEUE_SPEC,
     BRAND_DISCOVERY_QUEUE_SPEC,
     INTEGRATION_QUEUE_SPEC,
 )

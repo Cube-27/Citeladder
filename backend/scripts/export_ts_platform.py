@@ -89,7 +89,6 @@ from app.core.config.analytics import (
     ANALYTICS_DEFAULT_GRANULARITY,
     ANALYTICS_MAX_WINDOW_DAYS,
     ANALYTICS_PRESET_RANGE_DAYS,
-    ANALYTICS_PYTHON_TASK_KINDS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_WINDOW_DAYS,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
@@ -183,6 +182,7 @@ from scripts.auth_policy import (
 from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
+from scripts.ts_commerce_policy import discovery_policy
 from scripts.ts_platform_agent import agent_context_policy, agent_skill_policy
 from scripts.ts_platform_audits import audit_policy, audit_schedule_policy
 from scripts.ts_platform_billing import billing_policy, entitlements_policy
@@ -387,6 +387,7 @@ def build_config() -> dict[str, Any]:
             "schemes": sorted(web_rules.ALLOWED_URL_SCHEMES),
         },
         "commerce": {
+            "discovery": discovery_policy(_setting),
             "buyer_prompts": {
                 "min": commerce_config.COMMERCE_PROMPTS_MIN,
                 "max": commerce_config.COMMERCE_PROMPTS_MAX,
@@ -619,7 +620,6 @@ def _analytics_policy() -> dict[str, Any]:
         "ai_referral_formula_version": AI_REFERRAL_FORMULA_VERSION,
         "snapshot_window_days": list(ANALYTICS_SNAPSHOT_WINDOW_DAYS),
         "ts_owned_task_kinds": sorted(ANALYTICS_TS_OWNED_TASK_KINDS),
-        "python_task_kinds": sorted(ANALYTICS_PYTHON_TASK_KINDS),
         "worker_settings": {
             name: _setting(name, AnalyticsSettings)
             for name in ANALYTICS_WORKER_SETTINGS
@@ -696,6 +696,8 @@ ANALYTICS_WORKER_SETTINGS = (
     "task_max_attempts",
     "poll_interval_seconds",
     "retry_delay_seconds",
+    "lease_reclaim_batch_size",
+    "drain_budget_seconds",
 )
 
 

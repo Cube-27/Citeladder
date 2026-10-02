@@ -329,6 +329,56 @@ describe('referral retention sweep', () => {
 });
 
 describe('finalize', () => {
+  it('commits acquired evidence with success and rolls it back when publication fails', async () => {
+    const project = await db
+      .selectFrom('projects')
+      .select('brand_name')
+      .where('id', '=', projectId)
+      .executeTakeFirstOrThrow();
+    const failingPublication: Executor = async () => ({
+      error: null,
+      persist: async (trx) => {
+        await trx
+          .updateTable('projects')
+          .set({ brand_name: 'Uncommitted evidence' })
+          .where('id', '=', projectId)
+          .execute();
+        throw new Error('Publication failed');
+      },
+    });
+    expect(await runOne({ ingest_referrals: failingPublication })).toMatchObject({
+      status: 'retry_wait',
+      attempt_count: 1,
+    });
+    expect(
+      await db
+        .selectFrom('projects')
+        .select('brand_name')
+        .where('id', '=', projectId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual(project);
+    expect(
+      await runOne({
+        ingest_referrals: async () => ({
+          error: null,
+          persist: async (trx) => {
+            await trx
+              .updateTable('projects')
+              .set({ brand_name: 'Committed evidence' })
+              .where('id', '=', projectId)
+              .execute();
+          },
+        }),
+      }),
+    ).toMatchObject({ status: 'succeeded', attempt_count: 1 });
+    expect(
+      await db
+        .selectFrom('projects')
+        .select('brand_name')
+        .where('id', '=', projectId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ brand_name: 'Committed evidence' });
+  });
   const failing: Executor = async () => {
     throw new Error('projection failed');
   };

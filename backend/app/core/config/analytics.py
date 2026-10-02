@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from typing import Final
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,11 +30,6 @@ from app.core.config.provider_catalog import (
     ENGINE_GEMINI,
     ENGINE_GOOGLE_AI_OVERVIEW,
 )
-from app.core.config.task_queue import ERROR_MAX_ATTEMPTS, PostgresQueueSpec
-
-if TYPE_CHECKING:
-    # Type-only: config never imports a model at runtime (circular import).
-    from app.models.analytics import AnalyticsTask
 
 # The day|week|month snapshot-bucket vocabulary is shared with the Traffic
 # projection (same concept) and OWNED by config/traffic.py — aliased here,
@@ -352,12 +347,8 @@ ANALYTICS_TASK_KINDS: Final[frozenset[str]] = frozenset(
     }
 )
 
-# Which stack's worker claims each kind (TypeScript migration PR 4). The
-# TypeScript analytics worker claims exactly these kinds and the Python worker
-# claims the complement, so every kind has one writer. Both images read this
-# one set (TS through the generated policy export), which makes rollback a
-# change to this constant rather than a data repair. Lease expiry stays with
-# the Python sweeper for every kind.
+# TypeScript owns execution and expired-lease recovery for every analytics kind.
+# The native worker reads this policy through the generated export.
 ANALYTICS_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
     {
         ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
@@ -374,10 +365,8 @@ ANALYTICS_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
         ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
         ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
         ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION,
+        ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
     }
-)
-ANALYTICS_PYTHON_TASK_KINDS: Final[frozenset[str]] = (
-    ANALYTICS_TASK_KINDS - ANALYTICS_TS_OWNED_TASK_KINDS
 )
 
 # Error token stamped when a claimed kind has no registered executor — a
@@ -400,8 +389,7 @@ class AnalyticsSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="ANALYTICS_", extra="ignore")
 
-    # Queue lease TTL for the analytics worker (A3's ANALYTICS_QUEUE_SPEC
-    # reads this).
+    # Queue lease TTL for the TypeScript analytics worker.
     lease_ttl_seconds: float = Field(default=120.0, gt=0)
     # Heartbeat cadence while an executor runs (must be < the lease TTL).
     heartbeat_interval_seconds: float = Field(default=30.0, gt=0)
@@ -412,6 +400,8 @@ class AnalyticsSettings(BaseSettings):
     # Fixed retry delay after a failed attempt. Executors are DB-only
     # projections (no provider call), so no Retry-After channel exists.
     retry_delay_seconds: float = Field(default=30.0, ge=0)
+    lease_reclaim_batch_size: int = Field(default=100, gt=0)
+    drain_budget_seconds: float = Field(default=300.0, gt=0)
 
     @model_validator(mode="after")
     def _check_operational_bounds(self) -> AnalyticsSettings:
@@ -426,31 +416,3 @@ class AnalyticsSettings(BaseSettings):
 
 
 analytics_settings = AnalyticsSettings()
-
-
-def _analytics_task_model() -> type[AnalyticsTask]:
-    # Imported lazily so this config module never imports a model at import
-    # time (would create a config <-> models circular import).
-    from app.models.analytics import AnalyticsTask
-
-    return AnalyticsTask
-
-
-def _analytics_claim_order(model: type[AnalyticsTask]) -> tuple:
-    # Deterministic claim order mirroring ``CONTENT_QUEUE_SPEC`` exactly:
-    # priority, then FIFO by availability, then the randomized position.
-    return (
-        model.priority.desc(),
-        model.available_at.asc(),
-        model.randomized_position.asc(),
-    )
-
-
-# Parameterizes the one generic ``PostgresTaskQueue`` over ``AnalyticsTask``
-# rows with the analytics lease TTL + claim order.
-ANALYTICS_QUEUE_SPEC: Final[PostgresQueueSpec[AnalyticsTask]] = PostgresQueueSpec(
-    model_ref=_analytics_task_model,
-    lease_ttl=lambda: analytics_settings.lease_ttl_seconds,
-    claim_order=_analytics_claim_order,
-    max_attempts_error=ERROR_MAX_ATTEMPTS,
-)

@@ -125,8 +125,6 @@ AI_CRAWLER_BOTS: Final[tuple[str, ...]] = tuple(
     )
 )
 
-ACQUISITION_TRANSPORT_CURL_CFFI: Final = "curl_cffi"
-
 # The TypeScript analyzer acquires pages with Node's pinned HTTP transport.
 ACQUISITION_TRANSPORT_NODE: Final = "node"
 

@@ -8,7 +8,7 @@
  * same promises: a claim locks eligible rows `FOR UPDATE SKIP LOCKED`, commits
  * before the caller does any work, and gives each workspace one task before
  * any workspace gets a second. Site Health owns its lease recovery; analytics
- * leases still expire through the Python sweeper.
+ * leases expire through bounded TypeScript analytics recovery.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -41,6 +41,7 @@ type LeaseColumns = Pick<
   | 'lease_expires_at'
   | 'heartbeat_at'
   | 'updated_at'
+  | 'attempt_count'
 >;
 type QueueDatabase = Kysely<{
   analytics_tasks: LeaseColumns;
@@ -187,7 +188,7 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
   }
 
   /** Move a leased row this owner still holds to `running`. */
-  async markRunning(taskId: string, owner: string): Promise<boolean> {
+  async markRunning(taskId: string, owner: string, attemptCount?: number): Promise<boolean> {
     const now = this.#now();
     const updated = await queueDatabase(this.#db)
       .updateTable(this.#table)
@@ -195,13 +196,14 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
       .where('id', '=', taskId)
       .where('lease_owner', '=', owner)
       .where('status', '=', statuses.leased)
+      .$if(attemptCount !== undefined, (query) => query.where('attempt_count', '=', attemptCount!))
       .where('lease_expires_at', '>', now)
       .executeTakeFirst();
     return updated.numUpdatedRows > 0n;
   }
 
   /** Extend the lease of a leased or running row this owner still holds. */
-  async heartbeat(taskId: string, owner: string): Promise<boolean> {
+  async heartbeat(taskId: string, owner: string, attemptCount?: number): Promise<boolean> {
     const now = this.#now();
     const updated = await queueDatabase(this.#db)
       .updateTable(this.#table)
@@ -214,6 +216,7 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
       .where('lease_owner', '=', owner)
       .where('status', 'in', [statuses.leased, statuses.running])
       .where('lease_expires_at', '>', now)
+      .$if(attemptCount !== undefined, (query) => query.where('attempt_count', '=', attemptCount!))
       .executeTakeFirst();
     return updated.numUpdatedRows > 0n;
   }

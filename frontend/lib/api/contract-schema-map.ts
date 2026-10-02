@@ -11,8 +11,7 @@ export const CONTRACT_SCHEMA_MAP = {
   // Auth, workspaces and projects are owned and served by the TypeScript API.
   // Providers, audits, integrations and Search Intelligence are TypeScript-owned.
   // Agent chats, outputs and revisions now serve the shared TypeScript schemas.
-  // Commerce discovery remains Python-owned until PR 19c.
-  competitorDiscoverySchema: 'DiscoveryResponse',
+  // Commerce discovery now serves the shared TypeScript response schema.
   // Site Health controls and reads are owned and served by the TypeScript API.
 } as const;
 

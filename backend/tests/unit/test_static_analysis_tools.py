@@ -128,7 +128,7 @@ class TestArchitecturePolicy:
             assert "allow_indirect_imports" not in contracts[name]
 
     def test_recorded_exceptions_stay_at_two(self) -> None:
-        """Only the two retained boundary exceptions remain after audit cutover."""
+        """Only the retained Prompt normalization boundary exception remains."""
         ignored = [
             line.strip()
             for contract in self._contracts().values()
@@ -137,8 +137,6 @@ class TestArchitecturePolicy:
         ]
 
         assert sorted(ignored) == [
-            "app.connectors.web_evidence.brand_evidence"
-            " -> app.analysis.site_health.dom",
             "app.models.prompt -> app.domain.prompts.normalization",
         ]
 

@@ -504,6 +504,7 @@
       "ai_referrals_snapshot_refresh",
       "classify_referrals",
       "commerce_catalog_projection",
+      "commerce_competitor_discovery",
       "demand_snapshot_refresh",
       "ingest_referrals",
       "internal_link_judgment",
@@ -515,9 +516,6 @@
       "search_intelligence_acquisition",
       "source_page_inspection",
       "traffic_snapshot_refresh"
-    ],
-    "python_task_kinds": [
-      "commerce_competitor_discovery"
     ],
     "worker_settings": {
       "lease_ttl_seconds": {
@@ -559,6 +557,22 @@
         "type": "float",
         "default": 30.0,
         "minimum": 0
+      },
+      "lease_reclaim_batch_size": {
+        "env": [
+          "ANALYTICS_LEASE_RECLAIM_BATCH_SIZE"
+        ],
+        "type": "int",
+        "default": 100,
+        "exclusive_minimum": 0
+      },
+      "drain_budget_seconds": {
+        "env": [
+          "ANALYTICS_DRAIN_BUDGET_SECONDS"
+        ],
+        "type": "float",
+        "default": 300.0,
+        "exclusive_minimum": 0
       }
     },
     "executor_not_wired_error": "executor_not_wired",
@@ -7111,20 +7125,6 @@
         "type": "int",
         "default": 2048
       },
-      "curl_session_pool_idle_seconds": {
-        "env": [
-          "SITE_HEALTH_CURL_SESSION_POOL_IDLE_SECONDS"
-        ],
-        "type": "float",
-        "default": 90.0
-      },
-      "curl_session_pool_max_entries": {
-        "env": [
-          "SITE_HEALTH_CURL_SESSION_POOL_MAX_ENTRIES"
-        ],
-        "type": "int",
-        "default": 64
-      },
       "max_links_per_page": {
         "env": [
           "SITE_HEALTH_MAX_LINKS_PER_PAGE"
@@ -8911,7 +8911,6 @@
           "crawl_overdue": "crawl_overdue"
         },
         "provenance": {
-          "transport_curl_cffi": "curl_cffi",
           "transport_node": "node",
           "trigger_initial": "initial"
         },
@@ -10864,6 +10863,121 @@
     ]
   },
   "commerce": {
+    "discovery": {
+      "result_limit": 5,
+      "provider_result_limit": 10,
+      "query_attribute_limit": 4,
+      "name_max_words": 8,
+      "snippet_chars": 1000,
+      "verify_concurrency": 5,
+      "verify_timeout_seconds": 10.0,
+      "price_bands": [
+        [
+          25.0,
+          "under 25"
+        ],
+        [
+          75.0,
+          "25 to 75"
+        ],
+        [
+          200.0,
+          "75 to 200"
+        ],
+        [
+          500.0,
+          "200 to 500"
+        ],
+        [
+          null,
+          "over 500"
+        ]
+      ],
+      "page_kinds": {
+        "category": [
+          "category"
+        ],
+        "product": [
+          "product"
+        ]
+      },
+      "excluded_hosts": [
+        "amazon.com",
+        "ebay.com",
+        "etsy.com",
+        "poshmark.com",
+        "stylight.com",
+        "thredup.com",
+        "depop.com",
+        "mercari.com",
+        "lyst.com",
+        "shopstyle.com",
+        "pinterest.com",
+        "aliexpress.com",
+        "walmart.com",
+        "target.com",
+        "shein.com",
+        "temu.com",
+        "vinted.com",
+        "farfetch.com",
+        "zalando.com",
+        "google.com",
+        "facebook.com",
+        "instagram.com",
+        "tiktok.com"
+      ],
+      "excluded_paths": [
+        "/blog/",
+        "/news/",
+        "/article/",
+        "/search"
+      ],
+      "editorial_patterns": [
+        "\\b\\d+\\s+best\\b",
+        "\\bbest\\b.{0,40}\\bof\\s+20\\d{2}\\b",
+        "\\btop\\s+\\d+\\b",
+        "\\btested\\s*(?:&|and)\\s*reviewed\\b",
+        "\\b(?:best|top)\\b[^.]{0,40}\\breviews?\\b",
+        "\\bwe\\s+(?:tested|tried|reviewed)\\b",
+        "\\b(?:our|editors?'?s?|expert)\\s+(?:pick|picks|recommendations?)\\b",
+        "\\bbuy(?:er|ing)'?s?\\s+guide\\b",
+        "\\branked\\b",
+        "\\bvs\\.?\\s"
+      ],
+      "second_hand_tokens": [
+        "used",
+        "pre-owned",
+        "second hand",
+        "refurbished"
+      ],
+      "provider_version": "tavily-commerce-1",
+      "validator_version": "commerce-competitor-validator-1",
+      "settings": {
+        "tavily_api_key": {
+          "env": [
+            "TAVILY_API_KEY"
+          ],
+          "type": "str",
+          "default": ""
+        },
+        "tavily_endpoint": {
+          "env": [
+            "TAVILY_ENDPOINT"
+          ],
+          "type": "str",
+          "default": "https://api.tavily.com/search"
+        },
+        "tavily_timeout_seconds": {
+          "env": [
+            "TAVILY_TIMEOUT_SECONDS"
+          ],
+          "type": "float",
+          "default": 20.0,
+          "exclusive_minimum": 0,
+          "maximum": 60
+        }
+      }
+    },
     "buyer_prompts": {
       "min": 2,
       "max": 10,
