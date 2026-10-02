@@ -16,11 +16,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.source_pages import (
-    ENTITY_KIND_BRAND,
     INSPECTION_NOT_INSPECTED,
     PAGE_FORMAT_UNRESOLVED,
-    PRESENCE_MATCH_EXACT_ALIAS,
-    PRESENCE_PRESENT,
 )
 from app.models.project import Project
 from app.models.source_pages import (
@@ -145,10 +142,10 @@ async def test_deleting_a_project_removes_its_pages_and_their_evidence(
                     project_id=scenario.project_id,
                     source_page_id=page.id,
                     snapshot_id=snapshot.id,
-                    entity_kind=ENTITY_KIND_BRAND,
+                    entity_kind="brand",
                     entity_name="Acme",
-                    presence=PRESENCE_PRESENT,
-                    match_method=PRESENCE_MATCH_EXACT_ALIAS,
+                    presence="present",
+                    match_method="exact_alias",
                     match_count=2,
                     roster_version="roster-1",
                 ),
@@ -209,10 +206,10 @@ async def test_one_entity_has_one_verdict_per_snapshot(
                 project_id=scenario.project_id,
                 source_page_id=page.id,
                 snapshot_id=snapshot.id,
-                entity_kind=ENTITY_KIND_BRAND,
+                entity_kind="brand",
                 entity_name="Acme",
-                presence=PRESENCE_PRESENT,
-                match_method=PRESENCE_MATCH_EXACT_ALIAS,
+                presence="present",
+                match_method="exact_alias",
                 roster_version="roster-1",
             )
 

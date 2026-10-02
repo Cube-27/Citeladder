@@ -13,6 +13,7 @@ import { earnedActions } from './config/earned-actions.ts';
 import { actions } from './config/actions.ts';
 import { placement } from './config/placement.ts';
 import { sourcePatterns } from './config/source-patterns.ts';
+import { sourcePages, sourcePageVocabulary, urlIdentity } from './config/source-pages.ts';
 import { jev, quality, qualityGatesReported } from './config/jev.ts';
 import { appModels } from './config/app-models.ts';
 import { productTourVersion } from './config/product-tour.ts';
@@ -48,6 +49,8 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   abuse,
+  source_pages: sourcePages,
+  audits: { ...pythonConfig.audits, url_identity: urlIdentity },
   opportunity: {
     ...pythonConfig.opportunity,
     opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
@@ -55,6 +58,11 @@ export const policy = {
     earned_actions: earnedActions,
     placement: { ...placement, ...pythonConfig.opportunity.placement },
     source_patterns: { ...sourcePatterns, ...pythonConfig.opportunity.source_patterns },
+    source_pages: { ...sourcePageVocabulary, ...pythonConfig.opportunity.source_pages },
+    refresh: {
+      ...pythonConfig.opportunity.refresh,
+      source_page_outcome_inspected: sourcePageVocabulary.INSPECTION_INSPECTED,
+    },
   },
   models: { ...pythonConfig.models, jev, quality },
   workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },

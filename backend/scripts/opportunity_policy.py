@@ -31,7 +31,6 @@ from app.core.config.site_health_contracts import (
 )
 from app.core.config.site_health_rule_types import FINDING_CLASS_DEFECT
 from app.core.config.site_health_rules import TRACKING_QUERY_PARAMS
-from app.core.config.source_pages import INSPECTION_INSPECTED as OUTCOME_INSPECTED
 
 
 def _value(value: Any) -> Any:
@@ -104,6 +103,5 @@ def _refresh_policy() -> dict[str, Any]:
         "change_max_observations": CHANGE_MAX_OBSERVATIONS,
         "change_state_available": CHANGE_STATE_AVAILABLE,
         "content_change_field": CONTENT_CHANGE_FIELD,
-        "source_page_outcome_inspected": OUTCOME_INSPECTED,
         "content_format_ids": list(CONTENT_FORMAT_IDS),
     }
