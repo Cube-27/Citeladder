@@ -13,6 +13,14 @@ resource "google_compute_subnetwork" "main" {
   network                  = google_compute_network.main.id
   ip_cidr_range            = local.subnet_cidr
   private_ip_google_access = true
+
+  # Sampled, aggregated flow logs keep an audit trail of database access at
+  # negligible cost for this low-traffic subnet.
+  log_config {
+    aggregation_interval = "INTERVAL_10_MIN"
+    flow_sampling        = 0.5
+    metadata             = "EXCLUDE_ALL_METADATA"
+  }
 }
 
 resource "google_compute_address" "db" {

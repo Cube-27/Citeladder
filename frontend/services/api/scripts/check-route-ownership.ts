@@ -12,13 +12,9 @@ import { MCP_PROTOCOL_PATHS } from '../src/mcp/server.ts';
 
 const repository = new URL('../../../../', import.meta.url);
 
-// Every ingress that proxies /api: production's origin Caddy, and locally the
-// combined-origin Compose ingress and the Vite app container.
-const INGRESS_FILES = [
-  'infra/gcp/runtime/Caddyfile',
-  'frontend/local-compose-routes.caddy',
-  'frontend/apps/app/Caddyfile',
-];
+// Every remaining Caddy ingress that proxies /api: the local combined-origin
+// Compose ingress and the Vite app container. Production calls Cloud Run.
+const INGRESS_FILES = ['frontend/local-compose-routes.caddy', 'frontend/apps/app/Caddyfile'];
 
 // Recognize retired upstream names too, so stale ingress fails explicitly.
 const UPSTREAMS = {

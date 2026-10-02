@@ -13,7 +13,7 @@ export async function runExecution(tick: boolean) {
   try {
     const options = { signal: stop.signal, deadline };
     const owners = await runnerOwners(db, config);
-    const exclusive = exclusiveDrain(db, options, config.execution.drainLockWaitMs);
+    const exclusive = exclusiveDrain(config, options);
     const tasks = await (tick
       ? tickAndDrain(owners, options, exclusive)
       : exclusive(() => drainLanes(owners.lanes, options)));

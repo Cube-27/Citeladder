@@ -1,6 +1,6 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { sql } from 'kysely';
+import pg from 'pg';
 import {
   configEnvironment,
   loadWorkerSettings,
@@ -8,7 +8,7 @@ import {
   resolveSettingSpec,
   type ServiceConfig,
 } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { poolOptions, type Database } from '../db/database.ts';
 import { createAgentBindings } from '../agent/bindings.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { auditProjections } from '../audits/projections.ts';
@@ -81,37 +81,43 @@ const DRAIN_LOCK = 'citeladder-runner-drain';
  * one pool per execution against the small database. A second execution waits
  * briefly, then leaves the work to the active drain, which revisits every lane
  * until idle. Tick recovers the rare start that lands after that final pass.
+ * The lock lives on its own session so the drain keeps every pooled connection.
  */
 export function exclusiveDrain(
-  db: Database,
+  config: ServiceConfig,
   options: Pick<DrainOptions, 'signal' | 'deadline' | 'now'>,
-  waitMs: number,
+  waitMs = config.execution.drainLockWaitMs,
 ): Exclusive {
   const now = options.now ?? (() => performance.now());
-  return (drain) =>
-    db.connection().execute(async (connection) => {
+  return async (drain) => {
+    const lock = new pg.Client(poolOptions(config));
+    await lock.connect();
+    try {
       const until = Math.min(now() + waitMs, options.deadline);
       for (;;) {
-        const { rows } = await sql<{
-          locked: boolean;
-        }>`select pg_try_advisory_lock(hashtextextended(${DRAIN_LOCK}, 0)) as locked`.execute(
-          connection,
+        const { rows } = await lock.query<{ locked: boolean }>( // NOSONAR -- Each attempt waits for the previous one.
+          'select pg_try_advisory_lock(hashtextextended($1, 0)) as locked',
+          [DRAIN_LOCK],
         );
         if (rows[0]?.locked) break;
         if (options.signal.aborted || now() >= until) {
           getLogger('workers.runner').info('runner_drain_active_elsewhere');
           return 0;
         }
-        await sleep(250, undefined, { signal: options.signal }).catch(() => undefined);
+        await sleep(config.execution.drainLockPollMs, undefined, { signal: options.signal }).catch(
+          // NOSONAR -- Polling interval between attempts.
+          () => undefined,
+        );
       }
       try {
         return await drain();
       } finally {
-        await sql`select pg_advisory_unlock(hashtextextended(${DRAIN_LOCK}, 0))`.execute(
-          connection,
-        );
+        await lock.query('select pg_advisory_unlock(hashtextextended($1, 0))', [DRAIN_LOCK]);
       }
-    });
+    } finally {
+      await lock.end();
+    }
+  };
 }
 
 export async function runnerOwners(db: Database, config: ServiceConfig) {

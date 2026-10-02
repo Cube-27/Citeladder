@@ -341,7 +341,7 @@ new admission and lets claimed work finish before destroying the pool.
 | `CITELADDER_ORIGIN_TOKEN` | Cloud Run API | Existing secret matching both Workers' `ORIGIN_TOKEN`; at least 32 characters |
 | `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | Cloud Run API | Optional previous token during rotation |
 | `RUNNER_BUDGET_SECONDS` | Runner/tick | 300; 1–3600 seconds, shared across phases and lanes |
-| `RUNNER_DB_POOL_SIZE` | Runner/tick and API with configured job | 4; 1–4 connections total, independent of legacy pool/overflow sizes |
+| `RUNNER_DB_POOL_SIZE` | Runner/tick and API with configured job | 4; 1–4 pooled connections, independent of legacy pool/overflow sizes; a draining execution also holds one lock session |
 | `RUNNER_WAKE_TIMEOUT_MS` | API | 5000; 1–30000 milliseconds for metadata plus job-start requests |
 
 The API's service account needs permission to execute that runner job

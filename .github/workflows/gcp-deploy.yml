@@ -76,7 +76,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends ripgrep
           python -m pip install --only-binary :all: uv==0.11.28
-          uv sync --project backend --frozen --extra dev
+          # Published wheels only; tests import `app` from backend/ directly.
+          uv sync --project backend --frozen --extra dev --no-install-project --no-build
           npm install --global --ignore-scripts pnpm@12.4.2
           pnpm --dir frontend install --frozen-lockfile --ignore-scripts
           pnpm --dir frontend exec playwright install --with-deps chromium
