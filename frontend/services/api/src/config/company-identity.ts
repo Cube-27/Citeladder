@@ -1,0 +1,32 @@
+/** Site Health company identity policy. */
+export const companyIdentity = {
+  provider_identity_exclusions: [
+    'our company',
+    'our platform',
+    'our product',
+    'our products',
+    'our service',
+    'our services',
+    'our solution',
+    'our solutions',
+    'our team',
+    'the team',
+  ],
+  company_profile: {
+    route_segments: ['about', 'about-us', 'our-company', 'our-story', 'who-we-are'],
+    title_phrases: ['about', 'about us', 'our company', 'our story', 'who we are', 'story of'],
+    excluded_terms: [
+      'careers',
+      'company history',
+      'contact',
+      'history',
+      'leadership',
+      'our team',
+      'ownership',
+      'responsibility',
+      'sourcing',
+      'sustainability',
+      'team',
+    ],
+  },
+};

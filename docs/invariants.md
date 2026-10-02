@@ -44,7 +44,8 @@ budgets, models, and templates live under
 `backend/app/core/config/*` or the owning frontend config. Services and workers
 do not embed alternate policy. A public check has at most one AEO pillar and
 equal weight within that pillar. Rule count and page-kind cohort size cannot
-manufacture score influence. A TypeScript service reads this policy through the
+manufacture score influence. Policy used only by TypeScript belongs to its
+owning frontend config. Policy still shared with Python is read through the
 generated export (`backend/scripts/export_ts_platform.py`), never a restated copy.
 
 ## 3. Workspace authorization is mandatory

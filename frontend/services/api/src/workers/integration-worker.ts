@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import type { ImportPage } from '../integrations/client.ts';
@@ -15,7 +15,7 @@ import {
   artifactOffset,
   selectedItemDataset,
 } from '../integrations/sync-state.ts';
-import { enqueueTask } from '../referrals/enqueue.ts';
+import { enqueuePostSyncProjections } from '../integrations/projections.ts';
 import { waitForPoll } from './poll.ts';
 
 const logger = getLogger('workers.integrations');
@@ -501,41 +501,7 @@ export class IntegrationWorker {
         created_at: now,
       })
       .execute();
-    const artifacts = await trx
-      .selectFrom('integration_import_artifacts')
-      .select(['id', 'dataset'])
-      .where('sync_run_id', '=', run.id)
-      .where('workspace_id', '=', run.workspace_id)
-      .execute();
-    const maxAttempts = resolveSettingSpec(
-      policy.analytics.worker_settings.task_max_attempts,
-    ) as number;
-    const referralDatasets = new Set(policy.traffic.TRAFFIC_GA4_REFERRAL_DATASETS);
-    const trafficDatasets = new Set(policy.traffic.TRAFFIC_REFRESH_TRIGGER_DATASETS);
-    for (const artifact of artifacts) {
-      if (!referralDatasets.has(artifact.dataset)) continue;
-      await enqueueTask(trx, {
-        workspaceId: run.workspace_id,
-        projectId: run.project_id,
-        kind: 'ingest_referrals',
-        payload: { import_artifact_id: artifact.id },
-        keyParts: [run.project_id, artifact.id],
-        maxAttempts,
-      });
-    }
-    if (artifacts.some((artifact) => trafficDatasets.has(artifact.dataset))) {
-      const start = valueDate(run.window_start);
-      const end = valueDate(run.window_end);
-      const sourceRevision = run.id;
-      await enqueueTask(trx, {
-        workspaceId: run.workspace_id,
-        projectId: run.project_id,
-        kind: 'traffic_snapshot_refresh',
-        payload: { window_start: start, window_end: end, source_revision: sourceRevision },
-        keyParts: [run.project_id, start, end, run.resync_seq, sourceRevision],
-        maxAttempts,
-      });
-    }
+    await enqueuePostSyncProjections(trx, run);
   }
 
   async #fail(trx: Database, run: Run, now: Date, failure: unknown): Promise<void> {

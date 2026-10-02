@@ -1,7 +1,7 @@
 /**
  * Cached brand and competitor logos, served to the browser's `<img>`.
  *
- * Python fetches and caches the assets (the refresh goes through the safe
+ * The logo refresh fetches and caches assets through the safe
  * fetcher); these reads serve a ready asset with validators, sandboxed so an
  * image can never run as a document.
  */
@@ -10,7 +10,7 @@ import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import type { ProjectScope } from './brand-profile.ts';
 
-const { logo_ready: READY, logo_cache_max_age_seconds: MAX_AGE } = policy.brand_identity;
+const { status_ready: READY, cache_max_age_seconds: MAX_AGE } = policy.brand_logos;
 
 export function brandLogoUrl(projectId: string): string {
   return `${policy.api.prefix}/projects/${projectId}/logo`;

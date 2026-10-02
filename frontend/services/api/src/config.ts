@@ -1,13 +1,20 @@
 /**
- * Service configuration: Python-owned policy plus environment overrides.
+ * Service configuration: native policy, shared Python policy and environment overrides.
  *
- * `backend/app/core/config` stays the policy authority (TypeScript migration
- * D5). Defaults, bounds, env names, error codes and the role matrix arrive
- * through `generated/python-config.json`, written by
- * `backend/scripts/export_ts_platform.py` and drift-checked in CI. This module
- * only applies the same environment overrides pydantic-settings would.
+ * Migrated policy belongs in `./config/`; policy with remaining Python readers
+ * arrives through the drift-checked `generated/python-config.json` export.
+ * Each section has one authority. Environment overrides are validated here.
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
+import { brandEvidence } from './config/brand-evidence.ts';
+import { agentContext } from './config/agent-context.ts';
+import { agentSkills } from './config/agent-skills.ts';
+import { mcp } from './config/mcp.ts';
+import { siteAuthorship } from './config/site-authorship.ts';
+import { companyIdentity } from './config/company-identity.ts';
+import { promptGeneration } from './config/prompt-generation.ts';
+import { brandLogos } from './config/brand-logos.ts';
+import { internalLinks } from './config/internal-links.ts';
 import {
   billingSettings,
   razorpaySettings,
@@ -28,8 +35,38 @@ type SettingSpec = {
   exclusive_maximum?: number;
 };
 
-export type PythonPolicy = typeof pythonConfig;
-export const policy: PythonPolicy = pythonConfig;
+export const policy = {
+  ...pythonConfig,
+  site_health: {
+    ...pythonConfig.site_health,
+    page_analysis: {
+      ...pythonConfig.site_health.page_analysis,
+      facts: {
+        ...pythonConfig.site_health.page_analysis.facts,
+        authorship: siteAuthorship,
+        provider_identity_exclusions: companyIdentity.provider_identity_exclusions,
+      },
+      traits: {
+        ...pythonConfig.site_health.page_analysis.traits,
+        company_profile: companyIdentity.company_profile,
+      },
+    },
+  },
+  agent_context: agentContext,
+  agent_skills: agentSkills,
+  mcp: {
+    ...mcp,
+    terms_revision: pythonConfig.auth.terms_revision,
+    constants: {
+      ...mcp.constants,
+      api_request_body_max_bytes: pythonConfig.api.request_body_max_bytes,
+    },
+  },
+  prompts: { ...pythonConfig.prompts, generation: promptGeneration },
+  brand_evidence: brandEvidence,
+  brand_logos: brandLogos,
+  internal_links: internalLinks,
+};
 
 const TRUE_VALUES = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
 const FALSE_VALUES = new Set(['0', 'off', 'f', 'false', 'n', 'no']);

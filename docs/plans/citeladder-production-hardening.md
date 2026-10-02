@@ -234,7 +234,7 @@ and one-time side effects; prove behavior with isolated PostgreSQL tests.
 Owners:
 [request](../../backend/app/domain/demand/schemas.py),
 [route](../../backend/app/api/demand.py),
-[enqueue](../../backend/app/domain/analytics/enqueue.py),
+[enqueue](../../frontend/services/api/src/integrations/projections.ts),
 [abuse controls](../../backend/app/domain/abuse/service.py),
 `backend/app/core/config/demand.py` and `abuse.py`.
 

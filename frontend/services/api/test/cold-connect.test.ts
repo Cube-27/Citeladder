@@ -1,8 +1,7 @@
-/** Post-connect crosses the retained Python enqueue and TypeScript projections. */
-import { execFile } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
+/** Post-connect exercises native successor admission and persisted projections. */
 import { afterAll, expect, it } from 'vitest';
+import { sql } from 'kysely';
+import { enqueuePostSyncProjections } from '../src/integrations/projections.ts';
 import { loadWorkerSettings } from '../src/config.ts';
 import { readProjectReadiness } from '../src/integrations/readiness.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
@@ -49,53 +48,21 @@ it('takes a first connect through both workers to analysis_ready without provide
       metrics: { clicks: i, impressions: 100 },
     });
   }
-  const backend = fileURLToPath(new URL('../../../../backend/', import.meta.url));
-  const python = fileURLToPath(
-    new URL(
-      `../../../../backend/.venv/${process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'}`,
-      import.meta.url,
-    ),
-  );
-  // Whitelist transport/runtime variables: inherited provider secrets never enter tests.
-  const env = Object.fromEntries(
-    ['PATH', 'SystemRoot', 'TEMP', 'TMP'].flatMap((key) =>
-      process.env[key] ? [[key, process.env[key]!]] : [],
-    ),
-  );
-  const run = async (phase: string) => {
-    const result = await promisify(execFile)(
-      python,
-      [
-        '-c',
-        `
-import asyncio, json, uuid
-from app.core.database import SessionLocal, engine
-from app.domain.analytics.enqueue import enqueue_post_sync_projections
-async def main():
-    async with SessionLocal() as session:
-        if '${phase}' == 'enqueue':
-            await enqueue_post_sync_projections(session, project_id=uuid.UUID('${t.projectId}'), import_artifact_ids=[uuid.UUID('${gsc.artifactId}'), uuid.UUID('${ga4.artifactId}')])
-            await session.commit()
-    print(json.dumps({'enqueued': True}))
-    await engine.dispose()
-asyncio.run(main())
-`,
-      ],
-      {
-        cwd: backend,
-        env: {
-          ...env,
-          CITELADDER_DISABLE_DOTENV: '1',
-          DATABASE_URL: process.env.API_TEST_DATABASE_URL!.replace(
-            'postgresql://',
-            'postgresql+asyncpg://',
-          ),
-        },
-      },
-    );
-    return JSON.parse(result.stdout.trim().split('\n').at(-1)!);
-  };
-  await run('enqueue');
+  await db.transaction().execute(async (trx) => {
+    for (const seed of [gsc, ga4]) {
+      const run = await trx
+        .selectFrom('integration_sync_runs')
+        .selectAll()
+        .select([
+          sql<string>`window_start::text`.as('window_start'),
+          sql<string>`window_end::text`.as('window_end'),
+        ])
+        .where('id', '=', seed.syncRunId)
+        .where('workspace_id', '=', t.workspaceId)
+        .executeTakeFirstOrThrow();
+      await enqueuePostSyncProjections(trx, run);
+    }
+  });
   const worker = new AnalyticsWorker(db, loadWorkerSettings({}));
   expect(await worker.runUntilIdle()).toBeGreaterThanOrEqual(2);
   const request = requests(db, t);

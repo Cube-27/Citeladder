@@ -1,0 +1,80 @@
+/** MCP protocol bounds and environment specifications. */
+export const mcp = {
+  settings: {
+    enabled: {
+      env: ['MCP_ENABLED'],
+      type: 'bool',
+      default: false,
+    },
+    public_base_url: {
+      env: ['MCP_PUBLIC_BASE_URL'],
+      type: 'str',
+      default: '',
+    },
+    allowed_account_email: {
+      env: ['MCP_ALLOWED_ACCOUNT_EMAIL'],
+      type: 'str',
+      default: '',
+    },
+    authorization_request_ttl_seconds: {
+      env: ['MCP_AUTHORIZATION_REQUEST_TTL_SECONDS'],
+      type: 'int',
+      default: 600,
+      minimum: 60,
+      maximum: 1800,
+    },
+    authorization_code_ttl_seconds: {
+      env: ['MCP_AUTHORIZATION_CODE_TTL_SECONDS'],
+      type: 'int',
+      default: 300,
+      minimum: 60,
+      maximum: 600,
+    },
+    access_token_ttl_seconds: {
+      env: ['MCP_ACCESS_TOKEN_TTL_SECONDS'],
+      type: 'int',
+      default: 3600,
+      minimum: 300,
+      maximum: 86400,
+    },
+    refresh_token_ttl_seconds: {
+      env: ['MCP_REFRESH_TOKEN_TTL_SECONDS'],
+      type: 'int',
+      default: 2592000,
+      minimum: 3600,
+      maximum: 31536000,
+    },
+    unused_client_ttl_seconds: {
+      env: ['MCP_UNUSED_CLIENT_TTL_SECONDS'],
+      type: 'int',
+      default: 86400,
+      minimum: 3600,
+      maximum: 2592000,
+    },
+  },
+  constants: {
+    consent_csp:
+      "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    read_scope: 'citeladder:read',
+    scope_descriptions: {
+      'citeladder:read': 'Read CiteLadder project data',
+    },
+    server_version: '1.1.0',
+    documentation_url: 'https://docs.citeladder.com/mcp/',
+    max_search_results: 20,
+    search_snippet_chars: 500,
+    default_list_limit: 50,
+    default_roadmap_limit: 10,
+    default_search_limit: 10,
+    max_list_limit: 200,
+    max_document_bytes: 256000,
+    max_visibility_source_offset: 20000,
+    registration_max_body_bytes: 16384,
+    max_redirect_uris: 10,
+    max_redirect_uri_length: 2048,
+    max_client_name_length: 200,
+    supported_grant_types: ['authorization_code', 'refresh_token'],
+    supported_response_types: ['code'],
+    unused_client_prune_batch: 100,
+  },
+};
