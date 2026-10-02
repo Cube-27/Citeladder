@@ -47,7 +47,7 @@ class SiteCrawlTask(QueueLeaseStateMixin, Base):
     lease_owner / lease_expires_at / heartbeat_at / attempt_count /
     max_attempts / available_at / priority / randomized_position /
     idempotency_key / error_code / error_detail / completed_at /
-    result_artifact_id) so the single generic ``PostgresTaskQueue`` serves it
+    result_artifact_id) for its TypeScript queue owner
     unchanged (invariant 8). Double-claim is prevented by ``FOR UPDATE SKIP
     LOCKED`` plus the unique ``idempotency_key``.
 

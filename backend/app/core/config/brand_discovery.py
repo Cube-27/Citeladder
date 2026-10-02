@@ -13,7 +13,6 @@ from app.core.config.projects import MAX_PROJECT_COMPETITORS
 from app.core.config.site_health_runtime import (
     site_health_settings,
 )
-from app.core.config.task_queue import ERROR_MAX_ATTEMPTS, PostgresQueueSpec
 
 DISCOVERY_STATUS_QUEUED: Final = "queued"
 DISCOVERY_STATUS_RUNNING: Final = "running"
@@ -412,22 +411,3 @@ COMPETITOR_SUGGESTION_SYSTEM_PROMPT: Final = _competitor_suggestion_system_promp
 
 # Onboarding uses the same sole SSRF-pinned curl transport as Site Health.
 ONBOARDING_DIRECT_FETCH_SETTINGS: Final = site_health_settings.model_copy()
-
-
-def _discovery_task_model():
-    from app.models.discovery import BrandDiscoveryTask
-
-    return BrandDiscoveryTask
-
-
-def _discovery_claim_order(model) -> tuple:
-    return (model.priority.desc(), model.available_at.asc(), model.created_at.asc())
-
-
-BRAND_DISCOVERY_QUEUE_SPEC: Final = PostgresQueueSpec(
-    model_ref=_discovery_task_model,
-    lease_ttl=lambda: brand_discovery_settings.lease_seconds,
-    claim_order=_discovery_claim_order,
-    max_attempts_error=ERROR_MAX_ATTEMPTS,
-    parent_id_attr="discovery_id",
-)

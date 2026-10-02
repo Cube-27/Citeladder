@@ -1,18 +1,15 @@
-"""Integration model constraints + queue wiring (I2).
+"""Integration model persistence constraints (I2).
 
 Verifies the persistence contract the sync pipeline depends on: the
 active-window partial unique index (in-flight dedup) vs the full
 ``(…, resync_seq)`` re-sync identity, one-active-owner property mappings,
 metric-row identity with retained old revisions, same-workspace composite
 FKs, the grant find-or-create uniqueness, OAuth-state jti uniqueness,
-disconnect-safe events, and that ``INTEGRATION_QUEUE_SPEC`` claims
-``IntegrationSyncRun`` rows through the shared generic queue without
-double-claim. Requires a real Postgres (partial index semantics).
+disconnect-safe events. Requires a real Postgres (partial index semantics).
 """
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -22,9 +19,6 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.integrations_clients import (
-    INTEGRATION_QUEUE_SPEC,
-)
 from app.core.config.integrations_contracts import (
     GRANT_STATUS_CONNECTED,
     MAPPING_STATUS_ACTIVE,
@@ -36,7 +30,6 @@ from app.core.config.integrations_datasets import (
     DATASET_GSC_PAGE_DAILY,
 )
 from app.core.config.task_queue import (
-    TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
     TASK_STATUS_SUCCEEDED,
 )
@@ -53,7 +46,6 @@ from app.models.integrations import (
 from app.models.project import Project
 from app.models.user import User
 from app.models.workspace import Workspace
-from app.orchestration.postgres_task_queue import PostgresTaskQueue
 
 _WINDOW = (date(2026, 7, 20), date(2026, 7, 22))
 
@@ -616,56 +608,3 @@ async def test_workspace_delete_cascades_graph(
                 await session.scalars(select(model).where(model.workspace_id == ws_id))
             ).all()
             assert remaining == [], model.__tablename__
-
-
-@pytest.mark.asyncio
-async def test_integration_queue_claims_without_double_claim(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        ws_id, _, connection_id, target = await _seed_connection(session)
-        ids = []
-        for offset in range(6):
-            # Distinct windows so the active-window index is not exercised.
-            row = _run(
-                ws_id,
-                connection_id,
-                target,
-                resync_seq=offset,
-                window=(
-                    date(2026, 7, 1) + timedelta(days=offset * 3),
-                    date(2026, 7, 2) + timedelta(days=offset * 3),
-                ),
-            )
-            session.add(row)
-            await session.flush()
-            ids.append(row.id)
-        await session.commit()
-
-    queue = PostgresTaskQueue(session_factory, INTEGRATION_QUEUE_SPEC)
-    results = await asyncio.gather(
-        queue.claim(owner="integration-a", limit=6),
-        queue.claim(owner="integration-b", limit=6),
-    )
-    claimed_a = {t.id for t in results[0]}
-    claimed_b = {t.id for t in results[1]}
-    assert claimed_a.isdisjoint(claimed_b)
-    assert claimed_a | claimed_b == set(ids)
-    assert all(t.status == TASK_STATUS_LEASED for r in results for t in r)
-
-    owners = ("integration-a", "integration-b")
-    owner, first = next(
-        (claim_owner, tasks[0])
-        for claim_owner, tasks in zip(owners, results, strict=True)
-        if tasks
-    )
-    stranger = next(claim_owner for claim_owner in owners if claim_owner != owner)
-    assert await queue.mark_running(task_id=first.id, owner=owner)
-    assert await queue.heartbeat(task_id=first.id, owner=owner)
-    # A stranger's heartbeat never extends an owned lease.
-    assert not await queue.heartbeat(task_id=first.id, owner=stranger)
-    assert await queue.succeed(task_id=first.id, owner=owner)
-    async with session_factory() as session:
-        refreshed = await session.get(IntegrationSyncRun, first.id)
-    assert refreshed is not None
-    assert refreshed.status == TASK_STATUS_SUCCEEDED

@@ -15,7 +15,7 @@ def _utcnow() -> datetime:
 
 
 class QueueLeaseStateMixin:
-    """Columns required by ``PostgresTaskQueue`` apart from queue policy."""
+    """Persisted lease columns used by the TypeScript queue owners."""
 
     status: Mapped[str] = mapped_column(
         String(24), default=TASK_STATUS_QUEUED, index=True

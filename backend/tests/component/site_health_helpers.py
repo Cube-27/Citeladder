@@ -1,9 +1,8 @@
 """Shared seed helpers for the Task 1 Site Health component tests.
 
 Builds a workspace + project + Site Health profile + crawl, and enqueues
-``SiteCrawlTask`` queue rows directly through the ORM (no HTTP), so the generic
-``PostgresTaskQueue`` (parameterized by ``SITE_CRAWL_QUEUE_SPEC``) can be
-exercised against a real Postgres schema exactly like the audit queue.
+``SiteCrawlTask`` queue rows directly through the ORM (no HTTP) for schema and
+persistence checks. TypeScript owns claiming, execution and recovery.
 """
 
 from __future__ import annotations

@@ -6,9 +6,8 @@
 # (NEVER serialized into any DTO or log, invariant 6) and the refresh/revoke
 # lifecycle. ``IntegrationConnection`` binds a logical provider to a grant and
 # carries NO credential columns. ``IntegrationSyncRun`` reuses the exact
-# queue-row column contract of ``SiteCrawlTask`` so the one generic
-# ``PostgresTaskQueue`` claims/leases/heartbeats/sweeps it unchanged
-# (invariant 8). ``IntegrationImportArtifact`` is the immutable, written-once
+# queue-row column contract of ``SiteCrawlTask``; TypeScript owns claiming,
+# execution and recovery. ``IntegrationImportArtifact`` is the immutable, written-once
 # record of one fetched page of provider data (invariant 3);
 # ``IntegrationMetricRow`` is the derived fact row carrying source-artifact +
 # importer-version + resync_seq provenance (invariant 4).
@@ -213,7 +212,7 @@ class IntegrationSyncRun(QueueLeaseStateMixin, Base):
     priority / randomized_position / available_at / lease_owner /
     lease_expires_at / heartbeat_at / attempt_count / max_attempts /
     idempotency_key / error_code / error_detail / created_at / updated_at /
-    completed_at) so the single generic ``PostgresTaskQueue`` serves it
+    completed_at) for its TypeScript queue owner
     unchanged (invariant 8). Double-claim is prevented by ``FOR UPDATE SKIP
     LOCKED`` plus the unique ``idempotency_key``.
 

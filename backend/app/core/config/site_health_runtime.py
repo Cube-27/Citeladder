@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import Final
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,7 +16,6 @@ from app.core.config.site_health_crawl_policy import (
 from app.core.config.site_health_crawl_policy import (
     runtime_policy_for_allowance as _runtime_policy_for_allowance,
 )
-from app.core.config.task_queue import ERROR_MAX_ATTEMPTS, PostgresQueueSpec
 
 READ_PAGE_DEFAULT_LIMIT: Final = 50
 READ_PAGE_MAX_LIMIT: Final = 200
@@ -508,14 +507,6 @@ def runtime_policy_for_allowance(
     )
 
 
-def _site_crawl_task_model() -> type[SiteCrawlTask]:
-    # Lazy import: this config module must never import a model at import time
-    # (would create a config <-> models circular import).
-    from app.models.site_health.queue import SiteCrawlTask
-
-    return SiteCrawlTask
-
-
 # An analyze task is only ever created once its page has ALREADY been fetched
 # (discovery hands over its artifact), so analysis is pure local work against
 # evidence that is in hand while a discover task is another round trip to the
@@ -541,30 +532,3 @@ SITE_SETUP_PRIORITY_BOOST: Final = 1_000
 # indefinitely; bounded whole-transaction replay lets the user action win once
 # the current evidence commit releases the row.
 CRAWL_CANCEL_DB_CONFLICT_RETRIES: Final = 3
-
-
-def _site_task_claim_order(model: type[SiteCrawlTask]) -> tuple:
-    # Deterministic claim order: priority, then FIFO by availability, then the
-    # frozen randomized frontier position, then a stable id tiebreak.
-    return (
-        model.priority.desc(),
-        model.available_at.asc(),
-        model.randomized_position.asc(),
-        model.id.asc(),
-    )
-
-
-SITE_CRAWL_QUEUE_SPEC: Final[PostgresQueueSpec[SiteCrawlTask]] = PostgresQueueSpec(
-    model_ref=_site_crawl_task_model,
-    lease_ttl=lambda: site_health_settings.lease_ttl_seconds,
-    claim_order=_site_task_claim_order,
-    max_attempts_error=ERROR_MAX_ATTEMPTS,
-    # Retained Python queue metadata for fixtures. The TypeScript Site Health
-    # worker owns live task recovery and reconciles affected parent crawls;
-    # the Python queue sweeper no longer handles this queue.
-    parent_id_attr="crawl_id",
-)
-
-if TYPE_CHECKING:
-    # Type-only: config never imports a model at runtime (circular import).
-    from app.models.site_health.queue import SiteCrawlTask

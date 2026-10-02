@@ -8,10 +8,6 @@ import pytest
 from pydantic import ValidationError
 
 from app.core.config import Settings
-from app.core.config.integrations_clients import (
-    INTEGRATION_QUEUE_SPEC,
-    _integration_claim_order,
-)
 from app.core.config.integrations_contracts import (
     INTEGRATION_GRANT_STATUSES,
     INTEGRATION_SYNC_KINDS,
@@ -42,18 +38,6 @@ from app.core.config.integrations_transport import (
     INTEGRATION_TRANSPORT_GOOGLE,
     INTEGRATION_TRANSPORT_MICROSOFT,
 )
-from app.models.integrations import IntegrationSyncRun
-
-
-def test_queue_spec_keeps_sync_runs_on_shared_postgres_queue() -> None:
-    assert INTEGRATION_QUEUE_SPEC.model is IntegrationSyncRun
-    assert INTEGRATION_QUEUE_SPEC.lease_ttl() > 0
-    order = _integration_claim_order(IntegrationSyncRun)
-    assert [str(clause).split()[0] for clause in order] == [
-        "integration_sync_runs.priority",
-        "integration_sync_runs.available_at",
-        "integration_sync_runs.randomized_position",
-    ]
 
 
 def test_provider_grants_and_urls_stay_transport_scoped() -> None:
