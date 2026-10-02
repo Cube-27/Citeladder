@@ -16,9 +16,15 @@ describe('referralEventFields', () => {
       dataset: 'ga4_referrer_daily',
       date: '2026-07-20',
       dimension_key: 'https://chatgpt.com/ | 20260720',
+      ip: '192.0.2.1',
+      email: 'private@example.test',
+      device_id: 'private-device',
+      session_id: 'private-session',
     };
     const first = referralEventFields(row);
     expect(first).toMatchObject({ referrer_host: 'chatgpt.com' });
+    for (const key of ['ip', 'email', 'device_id', 'session_id'])
+      expect(first!.raw).not.toHaveProperty(key);
     expect(referralEventFields(row)?.content_hash).toBe(first?.content_hash);
     expect(referralEventFields({ ...row, date: '2026-07-21' })?.content_hash).not.toBe(
       first?.content_hash,

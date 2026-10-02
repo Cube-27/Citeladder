@@ -12,7 +12,6 @@ stale, which keeps genuinely shared values from drifting.
 from __future__ import annotations
 
 import argparse
-import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -54,31 +53,11 @@ from app.core.config.analysis import (
 from app.core.config.analytics import (
     AI_REFERRAL_ANALYZER_VERSION,
     AI_REFERRAL_FORMULA_VERSION,
-    AI_REFERRAL_HOST_RULES,
     AI_REFERRAL_RULE_VERSION,
-    AI_REFERRAL_UA_RULES,
-    AI_REFERRAL_UTM_RULES,
     AI_SOURCE_OTHER,
-    AI_SOURCE_TO_LOGICAL_ENGINE,
-    ANALYTICS_DEFAULT_GRANULARITY,
-    ANALYTICS_MAX_WINDOW_DAYS,
-    ANALYTICS_PRESET_RANGE_DAYS,
-    ANALYTICS_SNAPSHOT_GRANULARITIES,
-    ANALYTICS_SNAPSHOT_WINDOW_DAYS,
-    ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
-    ANALYTICS_TASK_KINDS,
-    ANALYTICS_TERMINAL_COMPENSATION_BATCH,
-    ANALYTICS_TERMINAL_COMPENSATION_MAX_FAILURES,
-    ANALYTICS_TS_OWNED_TASK_KINDS,
-    ERROR_EXECUTOR_NOT_WIRED,
-    MATCH_SIGNAL_REFERRER,
-    MATCH_SIGNAL_USER_AGENT,
-    MATCH_SIGNAL_UTM,
-    REFERRAL_RAW_ALLOWLIST,
-    REFERRAL_RETENTION_DAYS,
+    ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+    ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
     REFERRAL_SANITIZE_VERSION,
-    REFERRAL_URL_PARAM_ALLOWLIST,
-    REFERRAL_URL_PARAM_ALLOWLIST_PREFIXES,
     AnalyticsSettings,
 )
 from app.core.config.audits import (
@@ -87,14 +66,7 @@ from app.core.config.audits import (
     AUDIT_STATUS_PARTIALLY_COMPLETED,
     MEASUREMENT_POLICY_KEY,
 )
-from app.core.config.integrations_datasets import (
-    DATASET_GA4_REFERRER_DAILY,
-    DATASET_GA4_SOURCE_MEDIUM_DAILY,
-    DIMENSION_KEY_SEPARATOR,
-    INTEGRATION_DATASET_TEMPLATES,
-)
 from app.core.config.provider_catalog import (
-    ERROR_UNKNOWN,
     LOGICAL_ENGINES,
     TEST_STATUS_OK,
     TRANSPORT_DATAFORSEO,
@@ -160,14 +132,10 @@ EXPORTED_SETTINGS = (
     "public_signup_enabled",
     "frontend_url",
     "trusted_proxy_cidrs",
-    "integration_google_client_id",
-    "integration_google_client_secret",
     "demo_mode",
     "demo_expires_at",
     "encryption_key",
     "referral_hash_salt",
-    "integration_microsoft_client_id",
-    "integration_microsoft_client_secret",
     "dev_login_email",
     "dev_login_password",
 )
@@ -275,9 +243,8 @@ def _prompts_policy() -> dict[str, Any]:
 
 def _search_intelligence_policy() -> dict[str, Any]:
     return {
-        "task_kind": ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
-        "price_version": search_intelligence_config.PRICE_VERSION,
         "parser_version": search_intelligence_config.PARSER_VERSION,
+        "price_version": search_intelligence_config.PRICE_VERSION,
         "transport_provider": TRANSPORT_DATAFORSEO,
         "connection_test_ok": TEST_STATUS_OK,
     }
@@ -310,27 +277,16 @@ def _visibility_policy() -> dict[str, Any]:
 
 
 def _analytics_policy() -> dict[str, Any]:
-    """The AI Referrals read vocabulary and the snapshot versions it serves."""
     return {
-        "default_granularity": ANALYTICS_DEFAULT_GRANULARITY,
-        "snapshot_granularities": sorted(ANALYTICS_SNAPSHOT_GRANULARITIES),
-        "max_window_days": ANALYTICS_MAX_WINDOW_DAYS,
-        "preset_range_days": dict(ANALYTICS_PRESET_RANGE_DAYS),
         "ai_referral_analyzer_version": AI_REFERRAL_ANALYZER_VERSION,
         "ai_referral_formula_version": AI_REFERRAL_FORMULA_VERSION,
-        "snapshot_window_days": list(ANALYTICS_SNAPSHOT_WINDOW_DAYS),
-        "ts_owned_task_kinds": sorted(ANALYTICS_TS_OWNED_TASK_KINDS),
-        "task_kinds": sorted(ANALYTICS_TASK_KINDS),
-        "worker_settings": {
-            name: _setting(name, AnalyticsSettings)
-            for name in ANALYTICS_WORKER_SETTINGS
+        "tasks": {
+            "ingest_referrals": ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+            "opportunity_refresh": ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
         },
-        "executor_not_wired_error": ERROR_EXECUTOR_NOT_WIRED,
-        "retry_error": ERROR_UNKNOWN,
-        "terminal_compensation_batch": ANALYTICS_TERMINAL_COMPENSATION_BATCH,
-        "terminal_compensation_max_failures": (
-            ANALYTICS_TERMINAL_COMPENSATION_MAX_FAILURES
-        ),
+        "worker_settings": {
+            "task_max_attempts": _setting("task_max_attempts", AnalyticsSettings)
+        },
     }
 
 
@@ -354,52 +310,16 @@ def _task_queue_policy() -> dict[str, Any]:
     }
 
 
-_REFERRAL_DATASETS = (DATASET_GA4_REFERRER_DAILY, DATASET_GA4_SOURCE_MEDIUM_DAILY)
-
-
 def _referral_policy() -> dict[str, Any]:
-    """The referral chain's rule tables, redaction contract and versions."""
     return {
         "rule_version": AI_REFERRAL_RULE_VERSION,
         "analyzer_version": ANALYZER_VERSION,
         "sanitize_version": REFERRAL_SANITIZE_VERSION,
         "other_source": AI_SOURCE_OTHER,
-        "source_to_logical_engine": dict(AI_SOURCE_TO_LOGICAL_ENGINE),
-        "match_signals": {
-            "referrer": MATCH_SIGNAL_REFERRER,
-            "utm": MATCH_SIGNAL_UTM,
-            "user_agent": MATCH_SIGNAL_USER_AGENT,
-        },
-        # Config order is the priority order within each tier.
-        "host_rules": [dataclasses.asdict(rule) for rule in AI_REFERRAL_HOST_RULES],
-        "utm_rules": [dataclasses.asdict(rule) for rule in AI_REFERRAL_UTM_RULES],
-        "ua_rules": [dataclasses.asdict(rule) for rule in AI_REFERRAL_UA_RULES],
-        "raw_allowlist": sorted(REFERRAL_RAW_ALLOWLIST),
-        "url_param_allowlist": sorted(REFERRAL_URL_PARAM_ALLOWLIST),
-        "url_param_allowlist_prefixes": list(REFERRAL_URL_PARAM_ALLOWLIST_PREFIXES),
-        "retention_days": REFERRAL_RETENTION_DAYS,
-        "datasets": {
-            "referrer_daily": DATASET_GA4_REFERRER_DAILY,
-            "source_medium_daily": DATASET_GA4_SOURCE_MEDIUM_DAILY,
-        },
-        "dimension_key_separator": DIMENSION_KEY_SEPARATOR,
-        "dimension_arity": {
-            dataset: len(INTEGRATION_DATASET_TEMPLATES[dataset].dimensions)
-            for dataset in _REFERRAL_DATASETS
-        },
     }
 
 
 # The analytics worker knobs the TS worker reads (``ANALYTICS_`` env prefix).
-ANALYTICS_WORKER_SETTINGS = (
-    "lease_ttl_seconds",
-    "heartbeat_interval_seconds",
-    "task_max_attempts",
-    "poll_interval_seconds",
-    "retry_delay_seconds",
-    "lease_reclaim_batch_size",
-    "drain_budget_seconds",
-)
 
 
 def build_artifacts() -> dict[Path, str]:
