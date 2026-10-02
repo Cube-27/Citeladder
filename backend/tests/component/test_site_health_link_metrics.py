@@ -6,7 +6,6 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.site_health_link_metrics import LINK_METRIC_FORMULA_VERSION
 from app.models.site_health.links import SitePageLinkMetric
 from tests.component.site_health_crawl_seed import _seed_analyze_phase_crawl
 
@@ -35,7 +34,7 @@ async def test_metric_composite_foreign_keys_reject_cross_workspace_urls(
                 site_url_id=second_url_id,
                 source_page_count=1,
                 extractor_version="test",
-                formula_version=LINK_METRIC_FORMULA_VERSION,
+                formula_version="fixture-1",
             )
         )
         with pytest.raises(IntegrityError):

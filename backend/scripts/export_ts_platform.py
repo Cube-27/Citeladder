@@ -15,7 +15,6 @@ import argparse
 import dataclasses
 import json
 import sys
-import types
 from pathlib import Path
 from typing import Any
 
@@ -41,7 +40,8 @@ from app.core.config import dataforseo as search_config
 from app.core.config import projects as projects_config
 from app.core.config import prompts as prompts_config
 from app.core.config import search_intelligence as search_intelligence_config
-from app.core.config import site_health_rules as web_rules
+from app.core.config import site_health_contracts as site_contracts
+from app.core.config import site_health_crawl_policy as site_crawl
 from app.core.config.analysis import (
     ANALYZER_VERSION,
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
@@ -127,7 +127,7 @@ from app.core.config.provider_catalog import (
     TRANSPORT_DATAFORSEO,
     is_search_surface,
 )
-from app.core.config.site_health_acquisition import SITE_HEALTH_USER_AGENT
+from app.core.config.site_health_page_kinds import PAGE_KIND_OTHER
 from app.core.config.task_queue import (
     DEFAULT_MAX_DRAIN_BATCHES,
     ERROR_MAX_ATTEMPTS,
@@ -157,7 +157,6 @@ from scripts.ts_platform_identity import brand_identity_policy
 from scripts.ts_platform_integrations import integration_policy
 from scripts.ts_platform_providers import provider_policy
 from scripts.ts_settings_policy import setting as _setting
-from scripts.web_evidence_policy import web_evidence_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 SERVICE_ROOT = FRONTEND_ROOT / "services" / "api"
@@ -216,16 +215,6 @@ def _discovery_policy() -> dict[str, Any]:
     }
 
 
-def _prefixed_constants(module: types.ModuleType, prefix: str) -> dict[str, Any]:
-    return {
-        name.removeprefix(prefix).lower(): sorted(value)
-        if isinstance(value, frozenset)
-        else value
-        for name, value in vars(module).items()
-        if name.startswith(prefix)
-    }
-
-
 def build_config() -> dict[str, Any]:
     """The policy export, in a stable key order."""
     return {
@@ -264,7 +253,15 @@ def build_config() -> dict[str, Any]:
         "audits": audit_policy(_setting),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
-        **web_evidence_policy(_prefixed_constants, _setting),
+        "site_health": {
+            "model_defaults": {"page_kind_other": PAGE_KIND_OTHER},
+            "crawl": {"frontier_statuses": {"pending": site_crawl.FRONTIER_PENDING}},
+            "reads": {
+                "terminal_crawl_statuses": sorted(
+                    site_contracts.CRAWL_TERMINAL_STATUSES
+                )
+            },
+        },
         "brand_identity": brand_identity_policy(),
         "projects": {
             "default_benchmark_mode": projects_config.DEFAULT_BENCHMARK_MODE,
@@ -277,11 +274,6 @@ def build_config() -> dict[str, Any]:
         },
         "audit_schedules": audit_schedule_policy(),
         "discovery": _discovery_policy(),
-        "web_fetch": {
-            "user_agent": SITE_HEALTH_USER_AGENT,
-            "ports": sorted(web_rules.ALLOWED_URL_PORTS),
-            "schemes": sorted(web_rules.ALLOWED_URL_SCHEMES),
-        },
         "commerce": {
             "discovery": {
                 "provider_version": (

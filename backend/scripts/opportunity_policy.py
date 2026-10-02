@@ -16,21 +16,11 @@ from app.core.config.agent import OUTPUT_PHASE_OUTLINE
 from app.core.config.agent_skills import CONTENT_FORMAT_IDS
 from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
 from app.core.config.audits import MEASUREMENT_POLICY_KEY
-from app.core.config.site_change_intel import (
-    CHANGE_ANALYZER_VERSION,
-    CHANGE_CLASS_CRITICAL,
-    CHANGE_CLASS_REGRESSION,
-    CHANGE_MAX_OBSERVATIONS,
-    CHANGE_STATE_AVAILABLE,
-    CONTENT_CHANGE_FIELD,
-)
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_CANCELLED,
     CRAWL_STATUS_COMPLETED,
     CRAWL_STATUS_PARTIALLY_COMPLETED,
 )
-from app.core.config.site_health_rule_types import FINDING_CLASS_DEFECT
-from app.core.config.site_health_rules import TRACKING_QUERY_PARAMS
 
 
 def _value(value: Any) -> Any:
@@ -79,7 +69,6 @@ def opportunity_policy() -> dict[str, Any]:
             }
         },
         "measurement_policy_key": MEASUREMENT_POLICY_KEY,
-        "tracking_query_params": sorted(TRACKING_QUERY_PARAMS),
         "refresh": _refresh_policy(),
         "declaration": {"output_phase_outline": OUTPUT_PHASE_OUTLINE},
     }
@@ -96,12 +85,5 @@ def _refresh_policy() -> dict[str, Any]:
             CRAWL_STATUS_CANCELLED,
         ],
         "crawl_status_completed": CRAWL_STATUS_COMPLETED,
-        "finding_class_defect": FINDING_CLASS_DEFECT,
-        "change_analyzer_version": CHANGE_ANALYZER_VERSION,
-        "change_class_regression": CHANGE_CLASS_REGRESSION,
-        "change_class_critical": CHANGE_CLASS_CRITICAL,
-        "change_max_observations": CHANGE_MAX_OBSERVATIONS,
-        "change_state_available": CHANGE_STATE_AVAILABLE,
-        "content_change_field": CONTENT_CHANGE_FIELD,
         "content_format_ids": list(CONTENT_FORMAT_IDS),
     }

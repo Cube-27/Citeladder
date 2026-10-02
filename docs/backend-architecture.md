@@ -20,7 +20,10 @@ Audit admission, providers and answer-engine transports, immutable execution
 persistence, scoring, funded settlement, scheduling and maintenance are native
 TypeScript owners. Search Intelligence review and acquisition use the same
 native provider custody and PostgreSQL capacity boundary. Python retains schema
-models and exported policy. Commerce competitor discovery uses the native
+models and policy still consumed by models/operators. Site Health's acquisition,
+check catalogs and worker settings are native; its exported Python bridge is
+limited to model/read defaults and five operator/entitlement settings.
+Commerce competitor discovery uses the native
 analytics worker and Site Health acquisition, parsing and classification owners.
 Analytics lease recovery and evidence/outcome settlement belong to that worker;
 the independent native sweeper recovers brand-discovery and integration leases

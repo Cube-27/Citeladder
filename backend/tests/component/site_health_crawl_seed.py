@@ -13,10 +13,7 @@ from urllib.parse import urlsplit
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.site_health_contracts import (
-    ANALYZER_VERSION,
     DISCOVERY_STATUS_COMPLETED,
-    EXTRACTOR_VERSION,
-    SCORING_VERSION,
     TASK_KIND_ANALYZE,
 )
 from app.core.config.site_health_crawl_policy import SELECTION_SOURCE_USER
@@ -97,9 +94,9 @@ async def _seed_analyze_phase_crawl(
     crawl.discovery_status = DISCOVERY_STATUS_COMPLETED
     crawl.discovered_url_count = len(urls)
     crawl.inventory_complete = True
-    crawl.extractor_version = EXTRACTOR_VERSION
-    crawl.analyzer_version = ANALYZER_VERSION
-    crawl.scoring_version = SCORING_VERSION
+    crawl.extractor_version = "fixture-1"
+    crawl.analyzer_version = "fixture-1"
+    crawl.scoring_version = "fixture-1"
     crawl.configuration = {
         "root_registrable_domain": urlsplit(root).hostname,
         "include_globs": None,

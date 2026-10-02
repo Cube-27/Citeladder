@@ -1,15 +1,13 @@
-from __future__ import annotations
+"""Shared model/entitlement settings; acquisition and worker policy is native."""
 
-from typing import Final
+from __future__ import annotations
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.dotenv import dotenv_sources
 from app.core.config.site_health_crawl_policy import (
-    SAMPLE_DISCOVERY_URL_CAP as SAMPLE_DISCOVERY_URL_CAP,
-)
-from app.core.config.site_health_crawl_policy import (
+    SAMPLE_DISCOVERY_URL_CAP,
     SAMPLE_URL_LIMIT,
     SiteHealthRuntimePolicy,
 )
@@ -17,482 +15,34 @@ from app.core.config.site_health_crawl_policy import (
     runtime_policy_for_allowance as _runtime_policy_for_allowance,
 )
 
-READ_PAGE_DEFAULT_LIMIT: Final = 50
-READ_PAGE_MAX_LIMIT: Final = 200
-READ_TERMINAL_GRACE_POLLS: Final = 2
-READ_EXPORT_PAGE_SIZE: Final = 200
-READ_MAX_DETAIL_EVALUATIONS: Final = 200
-
-
-def _require_non_empty(settings: object, names: tuple[str, ...]) -> None:
-    for name in names:
-        if not str(getattr(settings, name)).strip():
-            raise ValueError(f"{name} must not be empty")
-
-
-def _require_positive(settings: object, names: tuple[str, ...]) -> None:
-    for name in names:
-        if getattr(settings, name) <= 0:
-            raise ValueError(f"{name} must be positive")
-
-
-def _require_non_negative(settings: object, names: tuple[str, ...]) -> None:
-    for name in names:
-        if getattr(settings, name) < 0:
-            raise ValueError(f"{name} must not be negative")
-
 
 class SiteHealthSettings(BaseSettings):
-    """Env-overridable Site Health crawler/queue guardrails.
-
-    Every operational bound the secure fetcher, frontier, robots/sitemap
-    parser, worker, and queue read. Frozen into ``SiteCrawl.configuration`` at
-    creation so a live change never alters an in-flight run (invariant 9). All
-    knobs use the ``SITE_HEALTH_`` env prefix (no service literals — invariant
-    1).
-    """
+    """Bounds still read by Python model defaults and supported operators."""
 
     model_config = SettingsConfigDict(
         env_prefix="SITE_HEALTH_",
         extra="ignore",
-        # Every threshold below is compared against, and every comparison with
-        # NaN is false: a stray ``SITE_HEALTH_*=nan`` would pass the validators
-        # here AND silently disable the bound it names. Reject non-finite
-        # values at load instead.
         allow_inf_nan=False,
-        # Same .env sources as the root Settings so SITE_HEALTH_* overrides in
-        # the repo-root / backend-local .env work without exporting them.
         env_file=dotenv_sources(),
         env_file_encoding="utf-8",
     )
-
-    # --- Neutral sample policy (dev-tunable) ---
-    # Manual seed, page-kind, and oversized crawl controls are development-only.
-    # The standard product path is one bounded, progressively analyzed crawl.
-    advanced_controls_enabled: bool = False
-    # Standard user-initiated crawls discover at most 500 pages. Development
-    # advanced controls may explicitly request more, up to the separate
-    # 50,000-URL internal ceilings below. A 50-page sample spent its whole
-    # budget on a large retailer's navigation shell -- category hubs and
-    # /shop/* landing pages -- and never reached a single product detail URL,
-    # which left every downstream Commerce projection empty.
-    automatic_page_limit: int = 500
-    max_requested_page_limit: int = 500
-    # Technical/dev ceiling. Entitlement grants and paid-plan allowances remain
-    # separate; the audited workspace override is required to use all 500.
-    max_advanced_requested_page_limit: int = 500
-    max_discovery_urls: int = 50_000
-    max_analysis_urls: int = 50_000
-    max_preview_rows: int = 500
-    max_preview_input_bytes: int = 262_144
-    max_seed_urls: int = 500
-    max_narrowing_globs: int = 100
-    max_glob_length: int = 512
-    # Sample-mode crawl allowance used when the workspace's resolved
-    # ``monitored_urls`` entitlement is zero: a deterministic automatic sample
-    # of this many admitted URLs across the whole workspace; no user
-    # selection; no count disclosure.
-    sample_url_limit: int = SAMPLE_URL_LIMIT
-    # Sample mode: how far discovery maps the site (inventory only — NOT
-    # analyzed). Decoupled from the analysis budget above.
-    sample_discovery_url_cap: int = SAMPLE_DISCOVERY_URL_CAP
-
-    # --- Frontier / discovery bounds ---
-    # Absolute frontier ceiling for a FULL (Starter) crawl to bound memory/time.
-    max_frontier_urls: int = 50000
-    # Max discovery depth from the root.
-    max_crawl_depth: int = 20
-    # Batch size for progressive inventory admission (INSERT ... ON CONFLICT).
-    admission_batch_size: int = 200
-    inventory_history_crawl_limit: int = 20
-
-    # --- Concurrency / politeness ---
-    # Global in-process concurrent fetch ceiling for the Site Health worker.
-    global_concurrency: int = 8
-    # Per-host concurrent fetch ceiling.
-    per_host_concurrency: int = 6
-    # Minimum delay between requests to the same host (politeness); robots
-    # crawl-delay overrides upward. A 150 ms floor permits roughly six request
-    # starts per second on a responsive owned site without turning that rate
-    # into a promise; fetch latency, retries, parsing, and declared crawl-delay
-    # still determine observed throughput.
-    per_host_delay_seconds: float = 0.15
-    # How long to stop starting requests to a host that answered 429 when it
-    # sent no Retry-After. Clamped by ``max_crawl_delay_seconds``.
-    rate_limit_cooldown_seconds: float = 5.0
-    # Default crawl delay applied when robots does not specify one.
-    default_crawl_delay_seconds: float = 0.0
-    # Cap on any robots-declared crawl delay we will honor.
-    max_crawl_delay_seconds: float = 30.0
-
-    # --- Fetch limits ---
-    # Per-request wall-clock timeout.
-    request_timeout_seconds: float = 20.0
-    # Max redirect hops manually followed (each re-validated for SSRF/scope).
-    max_redirects: int = 5
-    # Wire-byte (raw network) cap per response.
-    max_response_wire_bytes: int = 5_000_000
-    # Decoded-byte cap per response (guards decompression bombs).
-    max_response_decoded_bytes: int = 20_000_000
-    # HTML size cap fed to the parser.
-    max_html_bytes: int = 5_000_000
-
-    # --- Server-owned TypeScript acquisition ---
-    # Each crawl freezes these values in its configuration. They are kept here
-    # (not in a connector) because acquisition behavior is an operational
-    # policy, not application logic.
-    acquisition_policy_version: str = "sh-acquisition-1"
-
-    # --- Sitemap limits ---
-    max_sitemap_index_depth: int = 3
-    # Parse budget and admit budget are deliberately the SAME number. Parsing
-    # 50,000 URLs to admit at most 5,000 spent the whole cost of the extra
-    # 45,000 for a result no crawl could use; with the two aligned, the walker
-    # stops fetching documents the moment the collector saturates.
-    max_sitemap_urls: int = 5000
-    # 8 MB decoded per sitemap document. The 50 MB ceiling was sized for the
-    # 50,000-URL parse budget above; a document large enough to need more than
-    # 8 MB cannot contribute past the aligned cap anyway.
-    max_sitemap_decoded_bytes: int = 8_000_000
-    # v2 P2 site-setup ingestion (Starter crawls): how many sitemap DOCUMENTS
-    # (index children included) one crawl fetches, and how many sitemap URLs
-    # one crawl admits into the frontier (bounded, deterministic).
-    max_sitemap_documents: int = 32
-    sitemap_fetch_concurrency: int = Field(default=4, ge=1)
-    max_sitemap_admitted_urls: int = 5000
-    # --- Site setup fetch caps (v2 P2: robots.txt / llms.txt probes) ---
-    # Decoded-byte caps for the well-known file fetches (much tighter than the
-    # page-fetch cap: these files are small; anything larger is abuse/error).
-    robots_max_decoded_bytes: int = 512_000
-    llms_txt_max_decoded_bytes: int = 262_144
-    # How long a cached per-authority robots policy stays fresh before the
-    # worker re-fetches it (RFC 9309 caching guidance is ~24h).
-    robots_cache_ttl_seconds: float = 86_400.0
-    # An unreachable robots.txt (429, 5xx, network failure) pauses the host
-    # only until this recheck, not for the full cache lifetime.
-    robots_unreachable_recheck_seconds: float = 300.0
-    # Hard ceiling on cached authorities. Expired entries are dropped first;
-    # beyond the cap, the oldest go. 0 disables the cap.
-    robots_cache_max_authorities: int = 2048
-    # --- Parser bounds (bounded, deterministic extraction) ---
-    max_links_per_page: int = 2000
-    max_structured_data_blocks: int = 100
-    max_text_chars: int = 200_000
-
-    # --- Queue / lease / retry ---
-    lease_ttl_seconds: float = 120.0
-    heartbeat_interval_seconds: float = 30.0
-    max_attempts: int = 4
-    retry_base_delay_seconds: float = 2.0
-    retry_max_delay_seconds: float = 60.0
-    retry_jitter_seconds: float = 1.5
-    db_conflict_max_requeues: int = 20
-    db_conflict_base_delay_seconds: float = 0.05
-    db_conflict_jitter_seconds: float = 0.2
-    worker_concurrency: int = 8
-    poll_interval_seconds: float = 1.0
-    # Bounded recheck when analyze observes a still-running discover task for
-    # the same URL. A non-zero delay prevents a claim/defer hot loop.
-    analysis_dependency_retry_seconds: float = 1.0
-    # Ceiling on that recheck delay. The wait backs off from the base towards
-    # this so a prerequisite that is slow (rather than instant) is not polled
-    # once a second for its whole life: every one of those rechecks re-claims
-    # the row and re-runs the crawl's locked reconcile, and that contention is
-    # what starves the user's Stop button of the crawl row lock.
-    analysis_dependency_retry_max_seconds: float = 15.0
-    # Hard bound on how long analyze defers to its prerequisite. ``defer``
-    # spends no attempt budget and leaves the row non-terminal, so a
-    # prerequisite that never resolves is an UNBOUNDED claim/defer loop: the
-    # crawl keeps a non-terminal task forever, never drains, never
-    # terminalizes, and the zero-outstanding-work backstop below can never see
-    # it. Past this bound analyze stops waiting and acquires the page itself —
-    # reuse of a sibling's discover artifact is an optimization, never a
-    # correctness requirement.
-    analysis_dependency_max_wait_seconds: float = 180.0
-    # Spread applied to a recrawl's pre-seeded analyze tasks. Seeding creates
-    # one per monitored URL, all immediately claimable, before discovery has
-    # fetched anything -- so at t0 every processing slot claims a task whose
-    # prerequisite cannot exist yet and immediately defers it. Staggering
-    # ``available_at`` by rank lets discovery get ahead of the seeded set
-    # instead of racing it for slots. Capped so a large monitored set cannot
-    # push its own tail minutes into the future. 0 disables the stagger.
-    monitored_seed_stagger_seconds: float = 0.25
-    monitored_seed_stagger_max_seconds: float = 30.0
-    # Deterministic bound on how many expired leases the sweeper reclaims in
-    # ONE transaction. A mass expiry across a large frontier (e.g. 50,000
-    # URLs) would otherwise lock and update every expired row in a single
-    # long-running transaction and stall live claims; the sweeper instead
-    # drains the remainder across subsequent polls.
-    lease_reclaim_batch_size: int = 500
-    # One-shot TypeScript worker runs stop admitting work at this deadline.
-    # Already claimed work finishes under the acquisition/task bounds.
-    drain_budget_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
-    # Backstop for crawl terminalization. A crawl normally goes terminal from a
-    # task's finalize; any path that drains the last non-terminal task without
-    # running one (a sweeper reclaim at max attempts, a killed process between
-    # the queue ack and the finalize) would strand it in an active status
-    # forever. The worker force-reconciles active crawls that have no
-    # outstanding tasks and have not been touched for this long. Defaults to
-    # 2x the lease TTL so a crawl merely between tasks is never swept up. Set
-    # to 0 to disable.
-    stalled_crawl_reconcile_seconds: float = 240.0
-    # Bound on how many stalled crawls one sweep reconciles, keeping the
-    # backstop's cost per loop iteration flat.
-    stalled_crawl_reconcile_batch: int = 50
-    # Wall-clock ceiling on ONE crawl. The backstop above only rescues a crawl
-    # whose queue is already empty, so any route that holds a task non-terminal
-    # indefinitely strands the crawl outside it -- exactly the state a user
-    # sees as "running forever, 20 of 22 pages". This is the unconditional
-    # answer to that: past this age an active crawl has its outstanding tasks
-    # failed and is terminalized on whatever evidence it did gather. Sized
-    # well above any healthy crawl so it can never truncate live work. 0
-    # disables it.
-    overdue_crawl_seconds: float = 3_600.0
-
-    # --- Live score projection ---
-    # A successful analyze rewrites the crawl's WHOLE score summary: it locks
-    # the crawl row and the profile row, reloads every analysis, every rule
-    # evaluation the analyses cite, and the classification cohort. Doing that
-    # once per page made the cost of displaying a running mean grow with the
-    # square of the crawl, and those two row locks are the same ones the user's
-    # Stop button needs -- the contention documented on
-    # ``_finalize_reconcile_outcome``. A refresh is admitted after this many
-    # analyses (growing with the fraction below), or after the time interval,
-    # whichever comes first. The number is a live convenience, never the record:
-    # terminalization always rebuilds the summary from persisted evidence, so
-    # a debounced crawl cannot settle on a partial one. The mark is per worker
-    # process, so N workers refresh up to N times as often -- fresher than
-    # configured, never staler. 0 on either knob disables that trigger.
-    live_score_refresh_page_interval: int = 10
-    # Grow the page trigger with analyses observed by this worker. The time
-    # trigger still keeps a slowly advancing crawl's provisional score fresh.
-    live_score_refresh_page_fraction: float = Field(default=0.1, ge=0, le=1)
-    live_score_refresh_min_interval_seconds: float = 5.0
-    # Ceiling on how many crawls carry a live-refresh mark in one worker, so a
-    # long-lived process cannot accumulate one entry per crawl it ever saw.
-    live_score_refresh_max_tracked_crawls: int = 256
-
-    # --- Export ---
-    # Bounds how many rows ``_export_items`` materializes into memory for a
-    # single CSV/Markdown export before it truncates, so a very large Starter
-    # inventory can never exhaust memory on one request.
-    max_export_items: int = 20_000
-
-    # --- SSE / events ---
-    sse_poll_interval_seconds: float = 2.0
-    sse_max_duration_seconds: float = 300.0
-    # Bounds one JSON event-replay page. The UI resumes with ``Last-Event-ID``
-    # over the same keyset the stream uses, so a long crawl's event log is
-    # paged rather than materialized whole on every poll.
-    max_event_page: int = 1_000
+    automatic_page_limit: int = Field(default=500, gt=0)
+    max_requested_page_limit: int = Field(default=500, gt=0)
+    sample_url_limit: int = Field(default=SAMPLE_URL_LIMIT, ge=0)
+    sample_discovery_url_cap: int = Field(default=SAMPLE_DISCOVERY_URL_CAP, ge=0)
+    max_attempts: int = Field(default=4, ge=1)
 
     @model_validator(mode="after")
-    def _validate_sample_limits(self) -> SiteHealthSettings:
-        """Reject a negative sample limit from env overrides.
-
-        The limit feeds quota arithmetic and SQL ``LIMIT`` clauses; a negative
-        value would silently break sampling. Zero stays allowed (an
-        intentional "no sample" configuration).
-        """
-        for name in ("sample_url_limit", "sample_discovery_url_cap"):
-            if getattr(self, name) < 0:
-                raise ValueError(f"{name} must be non-negative")
-        if self.inventory_history_crawl_limit <= 0:
-            raise ValueError("inventory_history_crawl_limit must be positive")
-        for name in (
-            "automatic_page_limit",
-            "max_requested_page_limit",
-            "max_advanced_requested_page_limit",
-            "max_discovery_urls",
-            "max_analysis_urls",
-            "max_preview_rows",
-            "max_preview_input_bytes",
-            "max_seed_urls",
-            "max_narrowing_globs",
-            "max_glob_length",
-            "max_event_page",
-        ):
-            if getattr(self, name) <= 0:
-                raise ValueError(f"{name} must be positive")
-        return self
-
-    @model_validator(mode="after")
-    def _validate_page_limit_relationships(self) -> SiteHealthSettings:
-        """Keep defaults inside their public and internal ceilings."""
+    def _validate_limits(self) -> SiteHealthSettings:
         if self.automatic_page_limit > self.max_requested_page_limit:
             raise ValueError(
                 "automatic_page_limit must not exceed max_requested_page_limit"
             )
-        if self.max_requested_page_limit > self.max_discovery_urls:
-            raise ValueError(
-                "max_requested_page_limit must not exceed max_discovery_urls"
-            )
-        if self.max_advanced_requested_page_limit > self.max_discovery_urls:
-            raise ValueError(
-                "max_advanced_requested_page_limit must not exceed max_discovery_urls"
-            )
-        return self
-
-    @model_validator(mode="after")
-    def _validate_live_score_refresh(self) -> SiteHealthSettings:
-        """Keep the live-summary debounce non-negative (0 disables a trigger)."""
-        _require_non_negative(
-            self,
-            (
-                "live_score_refresh_page_interval",
-                "live_score_refresh_min_interval_seconds",
-                "live_score_refresh_max_tracked_crawls",
-            ),
-        )
-        return self
-
-    @model_validator(mode="after")
-    def _validate_monitored_seed_stagger(self) -> SiteHealthSettings:
-        """Keep the recrawl seeding stagger non-negative (0 disables it)."""
-        _require_non_negative(
-            self,
-            (
-                "monitored_seed_stagger_seconds",
-                "monitored_seed_stagger_max_seconds",
-            ),
-        )
-        return self
-
-    @model_validator(mode="after")
-    def _validate_acquisition(self) -> SiteHealthSettings:
-        """Keep acquisition policy reproducible across the policy export."""
-        _require_non_empty(
-            self,
-            ("acquisition_policy_version",),
-        )
-        # A zero or negative robots lifetime would refetch robots.txt on every
-        # request against a site that is already failing.
-        _require_positive(
-            self,
-            (
-                "rate_limit_cooldown_seconds",
-                "robots_cache_ttl_seconds",
-                "robots_unreachable_recheck_seconds",
-            ),
-        )
-        return self
-
-    @model_validator(mode="after")
-    def _validate_discovery_cap(self) -> SiteHealthSettings:
-        """Discovery must map a superset of what it analyzes.
-
-        A cap below the sample budget would starve analysis of candidates it is
-        entitled to fetch. Its own validator (rather than a branch bolted onto
-        ``_validate_sample_limits``) keeps that method on its downward
-        complexity ratchet.
-        """
         if self.sample_discovery_url_cap < self.sample_url_limit:
             raise ValueError(
                 "sample_discovery_url_cap must not be less than sample_url_limit"
             )
         return self
-
-    @model_validator(mode="after")
-    def _validate_lease_and_heartbeat(self) -> SiteHealthSettings:
-        """Enforce positive lease/heartbeat values and heartbeat < lease TTL.
-
-        A heartbeat interval that is not strictly less than the lease TTL
-        would let the sweeper reclaim a still-live task before it ever gets a
-        chance to send its first heartbeat.
-        """
-        _require_positive(
-            self,
-            (
-                "lease_ttl_seconds",
-                "heartbeat_interval_seconds",
-                "lease_reclaim_batch_size",
-                "stalled_crawl_reconcile_batch",
-                "global_concurrency",
-                "per_host_concurrency",
-                "worker_concurrency",
-                "db_conflict_max_requeues",
-            ),
-        )
-        if self.heartbeat_interval_seconds >= self.lease_ttl_seconds:
-            raise ValueError(
-                "heartbeat_interval_seconds must be strictly less than "
-                "lease_ttl_seconds"
-            )
-        _require_non_negative(
-            self,
-            (
-                "stalled_crawl_reconcile_seconds",
-                "overdue_crawl_seconds",
-                "db_conflict_base_delay_seconds",
-                "db_conflict_jitter_seconds",
-            ),
-        )
-        _require_positive(
-            self,
-            (
-                "analysis_dependency_retry_seconds",
-                "analysis_dependency_retry_max_seconds",
-                "analysis_dependency_max_wait_seconds",
-            ),
-        )
-        if (
-            self.analysis_dependency_retry_max_seconds
-            < self.analysis_dependency_retry_seconds
-        ):
-            raise ValueError(
-                "analysis_dependency_retry_max_seconds must not be below "
-                "analysis_dependency_retry_seconds"
-            )
-        if (
-            0 < self.stalled_crawl_reconcile_seconds
-            and self.stalled_crawl_reconcile_seconds <= self.lease_ttl_seconds
-        ):
-            # A threshold inside the lease window could force-reconcile a crawl
-            # whose last task is still legitimately leased and about to write.
-            raise ValueError(
-                "stalled_crawl_reconcile_seconds must exceed lease_ttl_seconds "
-                "(or be 0 to disable)"
-            )
-        if self.per_host_concurrency > self.global_concurrency:
-            raise ValueError("per_host_concurrency must not exceed global_concurrency")
-        return self
-
-    def retry_delay(
-        self, attempt: int, retry_after_seconds: float | None = None
-    ) -> float:
-        """Seconds to wait before the next attempt.
-
-        Prefers a server-advised ``Retry-After`` (clamped); else exponential
-        backoff capped at the max, plus deterministic jitter (derived from the
-        attempt number, not RNG, so it stays reproducible — invariant 9).
-        """
-        cap = self.retry_max_delay_seconds
-        if retry_after_seconds is not None:
-            return min(retry_after_seconds, cap)
-        base = self.retry_base_delay_seconds * (2**attempt)
-        jitter = (attempt * 0.37) % 1.0 * self.retry_jitter_seconds
-        return min(base, cap) + jitter
-
-    def analysis_dependency_retry_delay(self, waited_seconds: float) -> float:
-        """Backoff for the next prerequisite recheck, given the wait so far.
-
-        Doubles from the base delay with the elapsed wait and clamps at the
-        max, so a prerequisite that resolves quickly is still picked up within
-        a second while a slow one costs a handful of rechecks rather than one
-        per second for its whole duration.
-        """
-        base = max(0.0, self.analysis_dependency_retry_seconds)
-        if base <= 0:
-            return 0.0
-        steps = max(0.0, waited_seconds) / base
-        return min(
-            base * (2 ** min(steps, 16.0)), self.analysis_dependency_retry_max_seconds
-        )
-
-    def db_conflict_retry_delay(self, conflict_count: int) -> float:
-        """Short deterministic jitter for database-only contention retries."""
-        jitter = (conflict_count * 0.37) % 1.0 * self.db_conflict_jitter_seconds
-        return self.db_conflict_base_delay_seconds + jitter
 
 
 site_health_settings = SiteHealthSettings()
@@ -501,34 +51,7 @@ site_health_settings = SiteHealthSettings()
 def runtime_policy_for_allowance(
     monitored_urls_allowance: int,
 ) -> SiteHealthRuntimePolicy:
-    """Resolve the runtime policy using the live Site Health settings."""
+    """Resolve the supported operator projection using shared allowance bounds."""
     return _runtime_policy_for_allowance(
         monitored_urls_allowance, settings=site_health_settings
     )
-
-
-# An analyze task is only ever created once its page has ALREADY been fetched
-# (discovery hands over its artifact), so analysis is pure local work against
-# evidence that is in hand while a discover task is another round trip to the
-# site. Sharing one priority scale with discover meant analysis lost every tie
-# -- both kinds inherit the URL's value priority, and the discover row is
-# always inserted first, so it always won on `available_at`. A cold crawl
-# therefore drained its entire discovery tree before analyzing anything: 405
-# pages fetched and 3 analyzed in seven minutes, with the analyzed counter
-# sitting at zero for long enough that the crawl read as hung.
-#
-# The boost is larger than any value priority so the ordering is categorical,
-# not a tuning knob: finish the pages we already hold before fetching more.
-ANALYZE_PRIORITY_BOOST: Final = 1_000
-
-# Site setup is the crawl's one-shot discovery prerequisite. It shares the
-# acquisition lane with page discovery but outranks ordinary frontier rows so
-# robots/llms/sitemap evidence starts beside the root rather than behind a
-# manually seeded discovery burst.
-SITE_SETUP_PRIORITY_BOOST: Final = 1_000
-
-# Cancellation owns the crawl row and may arrive behind a full worker batch.
-# PostgreSQL's lock timeout aborts that transaction rather than waiting
-# indefinitely; bounded whole-transaction replay lets the user action win once
-# the current evidence commit releases the row.
-CRAWL_CANCEL_DB_CONFLICT_RETRIES: Final = 3

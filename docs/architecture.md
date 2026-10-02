@@ -101,7 +101,10 @@ hand-owned API error-code vocabulary. Native config owns HTTP status defaults
 and retry classification; neither is generated from Python.
 
 Native-only policy lives in TypeScript config. Shared Python policy reaches the
-service through a generated, drift-checked export. The auth and workspace HTTP families
+service through a generated, drift-checked export. Site Health catalogs and
+worker policy are native; Python retains its model defaults, terminal statuses
+and supported operator/entitlement allowance settings.
+The auth and workspace HTTP families
 are TypeScript-owned, including session issuance, Google identity sign-in,
 membership/invitation mutations, policy acceptance and product-tour state.
 Both stacks verify the same session claims and persisted session version;

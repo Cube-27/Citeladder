@@ -26,7 +26,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.config.site_health_contracts import (
     PAGE_ANALYSIS_STATUS_PENDING,
 )
-from app.core.config.site_health_taxonomy import PAGE_KIND_OTHER
+from app.core.config.site_health_page_kinds import PAGE_KIND_OTHER
 from app.core.database import Base
 
 from .common import (

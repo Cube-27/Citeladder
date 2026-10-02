@@ -50,7 +50,7 @@ download is removed.
 ## Two distinctions that carry the whole feature
 
 **Publisher class is not page format.** `source_class` describes a domain and
-comes from the taxonomy in `core/config/source_patterns.py`. `page_format`
+comes from `frontend/services/api/src/config/source-patterns.ts`. `page_format`
 describes ONE page. Sync derives a first verdict from the citation URL's own
 shape and stamps it `url_pattern`; a successful inspection may replace that
 with what the page says about itself, and an inspection that learns nothing
@@ -59,7 +59,8 @@ on its own terms either way; it never promotes its publisher to a known
 category.
 
 The page-kind catalog is SHARED with Site Health
-(`core/config/site_health_answer_shapes.py` and `site_health_page_kinds.py`).
+(`frontend/services/api/src/config/site-health/analysis.json` and
+`acquisition.json`, composed by `config/site-health.ts`).
 `listicle`, `how_to`, `comparison` and `alternative` are ordinary page kinds
 there, classified by the same slug and route catalogs whether the page is one
 we own or one an engine cited. A second classifier for the same four shapes is
