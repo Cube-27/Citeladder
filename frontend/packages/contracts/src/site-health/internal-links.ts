@@ -35,7 +35,7 @@ export const internalLinkPageSchema = z.object({
   extractor_version: z.string(),
 });
 
-export const internalLinkPageSummarySchema = internalLinkPageSchema.omit({
+const internalLinkPageSummarySchema = internalLinkPageSchema.omit({
   contextual_targets: true,
   source_passages: true,
 });

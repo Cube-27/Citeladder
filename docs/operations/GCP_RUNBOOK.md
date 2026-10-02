@@ -180,7 +180,7 @@ curl.exe --fail --show-error "$appOrigin/api/v1/auth/oauth/providers"
 
 Health must succeed. While sign-up is closed, the provider catalog reports
 Google as not `configured` and `POST /api/v1/auth/register` returns 403. Sign
-in with an operator-created account, connect Search Console and Bing end to end, then confirm ports 22, 3000, 3001, 5432, and 8000 are
+in with an operator-created account, connect Search Console and Bing end to end, then confirm ports 22, 3000, 3001, 5432, and 8100 are
 not publicly reachable. Only Cloudflare may reach origin 80/443; use
 IAP for administration. After deployment and review, make the repository
 private as planned and recheck environment reviewers and the WIF claim.
@@ -202,7 +202,7 @@ On the VM:
 ```bash
 cd /opt/citeladder
 sudo docker compose --env-file runtime.env -f compose.gcp.yml ps
-sudo docker compose --env-file runtime.env -f compose.gcp.yml logs --tail=200 web caddy
+sudo docker compose --env-file runtime.env -f compose.gcp.yml logs --tail=200 api-service caddy
 sudo systemctl status citeladder-backup.timer
 sudo journalctl -u citeladder-backup.service --since '24 hours ago'
 df -h /
@@ -249,7 +249,7 @@ Example database restore on the VM (replace the object exactly):
 
 ```bash
 cd /opt/citeladder
-services=(caddy web api-service audit-worker audit-scheduler audit-maintenance site-health-worker-ts brand-discovery-worker agent-worker analytics-worker-ts queue-sweeper integration-worker-ts integration-dispatcher-ts billing-worker-ts)
+services=(caddy api-service audit-worker audit-scheduler audit-maintenance site-health-worker-ts brand-discovery-worker agent-worker analytics-worker-ts queue-sweeper integration-worker-ts integration-dispatcher-ts billing-worker-ts)
 sudo docker compose --env-file runtime.env -f compose.gcp.yml stop "${services[@]}"
 bucket=$(sudo sed -n "s/^BACKUP_BUCKET='\(.*\)'$/\1/p" runtime.env)
 gcloud storage cp "gs://${bucket}/predeploy/<TIMESTAMP>.sql.gz" /tmp/citeladder-restore.sql.gz

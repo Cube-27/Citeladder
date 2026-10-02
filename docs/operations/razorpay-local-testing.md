@@ -66,7 +66,7 @@ captured payment can never outrun CiteLadder's receipt evidence.
 ```
 
 Expected: frontend `http://127.0.0.1:3300`, API port 8300, PostgreSQL port 55433,
-webhook proxy port 8301. Migration exits successfully; web/frontend/database and
+webhook proxy port 8301. Migration exits successfully; api-service/frontend/database and
 the recovery worker remain running. The ordinary local stack uses other ports
 and must remain untouched.
 

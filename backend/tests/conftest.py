@@ -31,10 +31,8 @@ from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import asyncpg
-import httpx
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
@@ -110,7 +108,6 @@ for _name in [
 
 from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
-from app.main import app  # noqa: E402
 
 _TEST_RUN_ID = uuid.uuid4().hex[:12]
 _TEST_SCHEMA = f"test_{re.sub(r'[^a-zA-Z0-9_]', '_', _TEST_RUN_ID)}"
@@ -348,33 +345,3 @@ async def db_session(
 ) -> AsyncIterator[AsyncSession]:
     async with session_factory() as session:
         yield session
-
-
-@pytest_asyncio.fixture
-async def client(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> AsyncIterator[httpx.AsyncClient]:
-    """ASGI client whose DB dependency is bound to the per-test schema.
-
-    Overrides ``get_session`` so every request opens a fresh session against
-    the isolated schema, mirroring production request scoping.
-    """
-    from app.core.database import get_session
-
-    async def _override_get_session() -> AsyncIterator[AsyncSession]:
-        async with session_factory() as session:
-            try:
-                yield session
-            except Exception:
-                await session.rollback()
-                raise
-
-    app.dependency_overrides[get_session] = _override_get_session
-    transport = ASGITransport(app=app)
-    try:
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://testserver"
-        ) as http_client:
-            yield http_client
-    finally:
-        app.dependency_overrides.pop(get_session, None)

@@ -236,7 +236,7 @@ def test_public_access_is_the_default_and_demo_mode_stays_switchable() -> None:
     deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
     deploy_workflow = _document(WORKFLOWS / "gcp-demo-deploy.yml")
     services = compose["services"]
-    assert services["web"]["environment"]["DEMO_MODE"] == "${DEMO_MODE:-false}"
+    assert services["api-service"]["environment"]["DEMO_MODE"] == "${DEMO_MODE:-false}"
     assert 'DEMO_MODE="${DEMO_MODE:-false}"' in deploy
     assert '[[ "$DEMO_MODE" =~ ^(true|false)$ ]]' in deploy
     assert "write_env DEMO_MODE" in deploy
@@ -320,42 +320,35 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert {
         name: service.get("network_mode") for name, service in services.items()
     } == {name: "host" for name in services}
-    assert services["web"]["command"][:4] == [
-        "uvicorn",
-        "app.main:app",
-        "--host",
-        "127.0.0.1",
-    ]
+    assert "web" not in services
     assert services["caddy"]["env_file"][0]["path"] == "ingress.env"
 
     db_command = " ".join(_values(services["db"].get("command", [])))
     assert "listen_addresses=127.0.0.1" in db_command
     assert "ssl=on" in db_command
 
-    web_environment = services["web"]["environment"]
-    assert web_environment["DB_SSL_MODE"] == "require"
-    assert web_environment["DB_POOL_SIZE"] == "8"
-    assert web_environment["DB_MAX_OVERFLOW"] == "0"
-    assert web_environment["MCP_ENABLED"] == "true"
+    api_environment = services["api-service"]["environment"]
+    assert api_environment["DB_SSL_MODE"] == "require"
+    assert api_environment["DB_POOL_SIZE"] == "4"
+    assert api_environment["DB_MAX_OVERFLOW"] == "0"
+    assert api_environment["MCP_ENABLED"] == "true"
     assert (
-        web_environment["MCP_PUBLIC_BASE_URL"]
+        api_environment["MCP_PUBLIC_BASE_URL"]
         == "${MCP_PUBLIC_BASE_URL:?MCP_PUBLIC_BASE_URL is required}"
     )
     assert (
-        web_environment["FRONTEND_URL"] == "${FRONTEND_URL:?FRONTEND_URL is required}"
+        api_environment["FRONTEND_URL"] == "${FRONTEND_URL:?FRONTEND_URL is required}"
     )
     assert (
-        web_environment["MCP_ALLOWED_ACCOUNT_EMAIL"] == "${MCP_ALLOWED_ACCOUNT_EMAIL-}"
+        api_environment["MCP_ALLOWED_ACCOUNT_EMAIL"] == "${MCP_ALLOWED_ACCOUNT_EMAIL-}"
     )
-    assert web_environment["TRUSTED_PROXY_CIDRS"].startswith("${TRUSTED_PROXY_CIDRS")
+    assert api_environment["TRUSTED_PROXY_CIDRS"].startswith("${TRUSTED_PROXY_CIDRS")
 
     assert "frontend" not in services
     assert "vite-app" not in services
     assert services["caddy"]["depends_on"] == {
-        "web": {"condition": "service_healthy"},
         "api-service": {"condition": "service_healthy"},
     }
-    api_environment = services["api-service"]["environment"]
     assert api_environment["HOST"] == "127.0.0.1"
     assert api_environment["DB_SSL_MODE"] == "require"
     assert api_environment["DB_MAX_OVERFLOW"] == "0"

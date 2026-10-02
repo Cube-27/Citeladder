@@ -129,8 +129,6 @@ export const shelfSchema = z.strictObject({
 
 export type CommerceTarget = z.infer<typeof commerceTargetSchema>;
 export type CommerceCatalog = z.infer<typeof commerceCatalogSchema>;
-export type CommerceCategory = z.infer<typeof commerceCategorySchema>;
-export type CommerceProduct = z.infer<typeof commerceProductSchema>;
 export type CatalogImport = z.infer<typeof catalogImportSchema>;
 export type CompetitorCandidate = z.infer<typeof competitorCandidateSchema>;
 export type CompetitorDiscoveryTask = z.infer<typeof competitorDiscoveryTaskSchema>;

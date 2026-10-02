@@ -227,7 +227,7 @@ protocol proxy paths return 502. Check initial HTML for home, pricing,
 commercial, docs, article and legal pages, plus canonical and sitemap URLs.
 Check real 404s for old product/API/asset paths, GET consent redirect, safe
 legacy consent POST, exact webhook proxy and MCP discovery. Local Compose uses
-a fixed disposable HTTP exception only through its `web:8000`
+a fixed disposable HTTP exception only through its `api-service:8100`
 service; production config cannot select it.
 
 ### Fresh release after PR 4

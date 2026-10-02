@@ -7,24 +7,17 @@
 > (§6 subsystem ownership), [`frontend-architecture.md`](frontend-architecture.md) (§6
 > drift policy).
 
-One owner per concept (invariant 2): the envelope is **produced** only by
-`backend/app/core/errors.py` and, for the TypeScript API service,
-`frontend/services/api/src/errors.ts`, which verifies the shared envelope shape,
-status codes and retry policy against Python fixtures. Message wording and JSON
-key order are not cross-stack contracts. On the frontend, `frontend/lib/api/client.ts` owns
-**parsing** the wire envelope and `frontend/lib/api/errors.ts` owns the `ApiError`
-type and its display-safe projection (`humanizeApiError`). Generic codes live in
-`backend/app/core/config/errors.py`; feature-specific codes live in their single owning
-`backend/app/core/config/*` module (for example `oauth.py` or `provider_catalog.py`).
-Codes are never declared inline at raise sites. The TypeScript service may emit only
-the `ApiErrorCode` union in `@citeladder/contracts/error-codes`, generated from the
-config modules listed in `export_ts_platform.py`'s `ERROR_CODE_MODULES`; a PR that
-ports a route family adds its owning config module there.
+The envelope is produced by `frontend/services/api/src/errors.ts`. On the
+frontend, `frontend/lib/api/client.ts` parses it and
+`frontend/lib/api/errors.ts` owns `ApiError` and its display-safe projection.
+The API emits only the `ApiErrorCode` union from
+`@citeladder/contracts/error-codes`. That union is currently generated from the
+error policy modules listed by `export_ts_platform.py`; message wording and JSON
+key order are not contracts.
 
 ## 1. The wire envelope
 
-Every 4xx or 5xx response — from a router raise, a validation failure, a Starlette
-routing 404, or an unhandled crash — carries exactly this shape:
+Every 4xx or 5xx response — from a router raise, a validation failure, a routing 404, or an unhandled crash — carries exactly this shape:
 
 ```jsonc
 {
@@ -57,56 +50,24 @@ selection/opportunity/crawl endpoints already returned. New code reads `error`.
 
 ## 2. Backend production
 
-`app/core/errors.py` owns four registered handlers (wired in `app/main.py`):
+The native `errors.ts` handlers translate `ApiError`, framework HTTP failures,
+unknown paths and uncaught exceptions into the same envelope. Method guards
+produce coded 405 responses. Request validation projects safe issue paths,
+messages and codes without echoing the input payload.
 
-| Handler | Covers | Result |
-|---|---|---|
-| `api_exception_handler` | `ApiException` — what every router raises | The raise's own code/message/details |
-| `http_exception_shim_handler` | The **framework's** own `HTTPException`: Starlette routing 404/405, third-party dependencies | Status-derived default code; the string detail becomes the message |
-| `request_validation_error_handler` | `RequestValidationError` | 422 `validation_error` with **sanitized** field errors |
-| `unhandled_exception_handler` | Any uncaught `Exception` | 500 `internal_error` — full detail to the log, **nothing internal to the client** |
+Routes throw `ApiError` or the shared `notFound(resource)` helper:
 
-### Raising an error
-
-Routers **do not raise raw `HTTPException`.** `app/core/http_errors.py` is the one
-door, so the status → code mapping and the detail strings cannot drift between raise
-sites:
-
-```python
-from fastapi import status
-from app.core.http_errors import (
-    api_error,  # build one (for a router-local `_not_found(exc)` factory)
-    raise_api_error,  # plain failure; code defaults to the status's canonical code
-    raise_coded_error,  # coded dialect; `detail` stays the {"code", "message"} dict
-    raise_not_found,  # the repeated 404, detail exactly "{resource} not found"
-)
-
-raise_not_found("Crawl", cause=exc)
-
-raise_api_error(status.HTTP_409_CONFLICT, "That window is already active", cause=exc)
-
-raise_coded_error(
-    status.HTTP_409_CONFLICT,
-    "stale_selection_version",
-    "The selection changed since you loaded it.",
-    details={"current_selection_version": 7},
-)
+```typescript
+throw new ApiError(409, 'The selection changed since you loaded it.', {
+  code: 'stale_selection_version',
+  details: { current_selection_version: 7 },
+});
 ```
 
-`raise_api_error` also takes an explicit `detail=` for the handful of endpoints whose
-clients read a dict body that is *not* the `{"code", "message"}` dialect (the OAuth
-`{"code", "provider"}` shape, the sync-conflict `{"error", "enqueued_connection_ids"}`
-shape). The canonical `error` block still carries a real code and a human message.
-
-### Two things that must never leak
-
-1. **Pydantic internals.** `sanitize_validation_errors` strips `ctx` (raw constraint
-   values), `input` (echoed payloads, possibly secrets), and the `errors.pydantic.dev`
-   URL, keeping only `loc` / `message` / `type`. The transport prefix
-   (`body`/`query`/`path`/…) is dropped from `loc`.
-2. **Internals on a 500.** The unhandled handler logs the exception with the correlation
-   id and returns a fixed message. No stack trace, no exception text, no SQL — and per
-   invariant 6, never a credential.
+An explicit `detail` may retain a legacy coded-dict shape; the canonical
+`error` block still contains a machine code and human message. Unhandled errors
+log internal diagnostics with a request ID and return a fixed 500 message.
+Never return stack traces, SQL, credentials or raw provider bodies.
 
 ## 3. Frontend consumption
 
@@ -147,20 +108,19 @@ the shared mutation-failure surface:
 Full rationale in [`frontend-architecture.md`](frontend-architecture.md) §6. In short:
 response objects use `responseObject` (zod `.strip()`), so an **additive** backend field
 can never break a screen, while a **declared** field that goes missing still fails loud.
-Tolerance is prevented from becoming silent divergence by the contract-drift guard
-(`lib/api/contract-drift.ts`; `pnpm check:contract`), which FAILs on missing declared
-fields and WARNs on undeclared additive ones. In CI, the backend job exports its
-FastAPI OpenAPI JSON as an artifact and the dedicated cross-stack contract job supplies
-that exact file through `CITELADDER_OPENAPI_JSON`; the strict guard therefore cannot
-silently skip for lack of a backend virtual environment.
+The native API and browser import the same response schemas from
+`@citeladder/contracts`; route handlers are typed against those schemas.
+`pnpm check:contract` validates the native route-family declarations and
+API/protocol ingress. The former Python component comparison and OpenAPI
+artifact were retired after their final mapped product route moved.
 
 ## 5. Adding a new error code
 
 1. Add the constant to `backend/app/core/config/errors.py` (invariant 1 — never inline).
-2. Raise it via `ApiException` / `ApiException.coded` from the owning router.
+2. Throw `ApiError`, or `notFound(resource)` for repeated 404s, from the owning native route.
 3. If the frontend must branch on it, handle the `code` in the calling module — do not
    match on `message` text.
-4. Cover it in `backend/tests/component/test_error_envelope_api.py`.
+4. Cover it in the relevant native API test under `frontend/services/api/test/`.
 # Staged Site Health and Commerce codes
 
 The shared error envelope includes the following stable coded failures for

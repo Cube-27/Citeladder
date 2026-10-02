@@ -1,16 +1,11 @@
 # Async database engine, declarative Base, and session factory.
 from __future__ import annotations
 
-import logging
-from collections.abc import AsyncIterator
-
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
-
-logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -54,18 +49,5 @@ SessionLocal = async_sessionmaker(
 
 
 async def dispose_engine() -> None:
-    """Dispose the connection pool. Call during application shutdown."""
+    """Dispose the connection pool after an operator or bootstrap run."""
     await engine.dispose()
-
-
-async def get_session() -> AsyncIterator[AsyncSession]:
-    """FastAPI dependency yielding an async session with rollback-on-error."""
-    async with SessionLocal() as session:
-        try:
-            yield session
-        except Exception:
-            try:
-                await session.rollback()
-            except Exception:
-                logger.debug("Session rollback failed during teardown", exc_info=True)
-            raise

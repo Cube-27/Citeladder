@@ -27,7 +27,7 @@ export const surfaceKindSchema = z.enum(['llm', 'search_ai', 'llm_scraper']);
 
 // A configured route on a connection: which logical engine this transport
 // serves and the concrete transport model to call.
-export const providerRouteSchema = responseObject({
+const providerRouteSchema = responseObject({
   id: uuid(),
   logical_engine: logicalEngineSchema,
   transport_provider: transportProviderSchema,
@@ -39,7 +39,7 @@ export const providerRouteSchema = responseObject({
 
 // Strict: an unexpected key (e.g. a leaked `api_key`/`secret`) is a contract
 // violation and must fail loud — the secret is never present on the wire.
-export const providerAppRouteSchema = responseObject({
+const providerAppRouteSchema = responseObject({
   id: uuid(),
   feature: z.literal('agent'),
   protocol: z.literal('openai_chat'),

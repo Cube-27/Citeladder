@@ -30,7 +30,7 @@ export const integrationProviderSchema = z.enum(['gsc', 'ga4', 'bing']);
 // Grant lifecycle (`IntegrationOAuthGrant.status`). `pending_revocation` is
 // disconnect-requested with the remote revoke not yet confirmed (encrypted
 // tokens deliberately retained); `revoked` is fully torn down.
-export const integrationGrantStatusSchema = z.enum([
+const integrationGrantStatusSchema = z.enum([
   'connected',
   'needs_reauth',
   'pending_revocation',
@@ -39,12 +39,12 @@ export const integrationGrantStatusSchema = z.enum([
 ]);
 
 // Why a sync run was enqueued (`IntegrationSyncRun.sync_kind`).
-export const integrationSyncKindSchema = z.enum(['scheduled', 'on_demand', 'backfill']);
+const integrationSyncKindSchema = z.enum(['scheduled', 'on_demand', 'backfill']);
 
 // `IntegrationSyncRun` IS a queue row (same shared queue-row contract as
 // `AuditTask` / `SiteCrawlTask` / `AgentRun`), so the wire statuses
 // are the queue statuses — the same vocabulary as `siteCrawlTaskStatusSchema`.
-export const integrationSyncRunStatusSchema = z.enum([
+const integrationSyncRunStatusSchema = z.enum([
   'queued',
   'leased',
   'running',
@@ -112,12 +112,7 @@ export const integrationSyncRunListSchema = z.array(integrationSyncRunSchema);
 // (no import was ever enqueued) is not zero imported windows, and `partial`
 // (all terminal, some failed) is not `complete`. `covered_from`/`_through`
 // bound the SUCCEEDED windows only and are null until one succeeds.
-export const integrationBackfillStateSchema = z.enum([
-  'not_started',
-  'importing',
-  'complete',
-  'partial',
-]);
+const integrationBackfillStateSchema = z.enum(['not_started', 'importing', 'complete', 'partial']);
 
 export const integrationBackfillProgressSchema = responseObject({
   connection_id: uuid(),

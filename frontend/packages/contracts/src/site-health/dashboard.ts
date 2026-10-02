@@ -14,7 +14,7 @@ import { cursorPageSchema } from './pagination.ts';
 
 // One per-URL issue-history row — an issue occurrence from the selected crawl
 // or a prior crawl in the project chronology (immutable failure projection).
-export const issueHistoryRowSchema = responseObject({
+const issueHistoryRowSchema = responseObject({
   id: uuid(),
   crawl_id: uuid(),
   rule_id: z.string(),
@@ -61,8 +61,8 @@ export const siteHealthDashboardSchema = responseObject({
   root_errors: z.array(rootErrorSchema),
 });
 
-export const changeStateSchema = z.enum(['available', 'unavailable', 'non_comparable']);
-export const changeClassSchema = z.enum([
+const changeStateSchema = z.enum(['available', 'unavailable', 'non_comparable']);
+const changeClassSchema = z.enum([
   'improvement',
   'neutral-change',
   'potential-regression',
@@ -109,7 +109,7 @@ export const changesPageSchema = changeSummarySchema.extend({
 
 // One failed check on a page, named the way the rule catalog names it. A raw
 // rule id (`aeo.answer_first`) never reaches the screen.
-export const readinessFailingCheckSchema = responseObject({
+const readinessFailingCheckSchema = responseObject({
   rule_id: z.string(),
   title: z.string(),
   observed_evidence: z.record(z.string(), z.unknown()),
@@ -124,7 +124,7 @@ export const readinessFailingCheckSchema = responseObject({
 
 // Evidence is one row per FAILING PAGE listing that page's failed checks —
 // never one row per evaluation, which repeated the same URL once per rule.
-export const readinessEvidencePageSchema = responseObject({
+const readinessEvidencePageSchema = responseObject({
   site_url_id: uuid(),
   source_analysis_id: uuid(),
   normalized_url: z.string(),
@@ -383,7 +383,7 @@ export const siteHealthOverviewSchema = responseObject({
 
 // Stable coded failures (plan §API contract). The frontend keys UX (upgrade
 // prompt, quota feedback, stale-revision refetch, retry copy) off these codes.
-export const siteHealthErrorCodeSchema = z.enum([
+const siteHealthErrorCodeSchema = z.enum([
   'starter_required',
   'site_health_quota_exceeded',
   'stale_selection_version',

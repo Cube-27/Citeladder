@@ -15,7 +15,7 @@ const uuid = () => z.uuid();
 // derived from the persisted `share_of_voice.mention_counts`. Both are
 // deterministic reprojections of persisted metrics (invariant 7) and are
 // nullable when the source metric is absent.
-export const visibilityTrendSovSchema = responseObject({
+const visibilityTrendSovSchema = responseObject({
   response: z.number().nullable(),
   mention: z.number().nullable(),
 });
@@ -23,7 +23,7 @@ export const visibilityTrendSovSchema = responseObject({
 // One brand-vs-competitor ranking-history row within a trend point (backend
 // `VisibilityTrendRankingRow`). Field-for-field identical to `rankingRowSchema`
 // — aliased so the two contracts can't drift apart silently.
-export const visibilityTrendRankingRowSchema = rankingRowSchema;
+const visibilityTrendRankingRowSchema = rankingRowSchema;
 
 // One point in the cross-run Visibility trend (backend `VisibilityTrendPoint`).
 // A raw per-run point carries a set `audit_id`; a week/month bucket folds many

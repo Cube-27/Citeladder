@@ -36,7 +36,7 @@ services:
       retries: 10
       start_period: 10s
 
-  # Applies migrations once, then exits; web + worker wait on its success.
+  # Applies migrations once, then exits; API + workers wait on its success.
   migrate:
     build:
       context: .
@@ -53,29 +53,6 @@ services:
         condition: service_healthy
     command: ["/bin/sh", "-c", "alembic upgrade head && python -m app.demo.bootstrap"]
 
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    ports:
-      - "8000:8000"
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/ready').status==200 else 1)\""]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-
   frontend:
     build:
       context: .
@@ -88,14 +65,14 @@ services:
     restart: unless-stopped
     environment:
       # Canonical website URLs are baked into the build; rebuild after changes.
-      # Wrangler runs the local Worker with an isolated web-container upstream.
+      # Wrangler runs the local Worker with an isolated API-container upstream.
       # No env_file: the service must not receive backend secrets.
       PUBLIC_WEBSITE_ORIGIN: http://127.0.0.1:3000
       PUBLIC_APP_ORIGIN: http://app.localhost:3000
       DEMO_BOOKING_URL: ${DEMO_BOOKING_URL:-}
       PUBLIC_SALES_EMAIL: ${PUBLIC_SALES_EMAIL:-}
     depends_on:
-      web:
+      api-service:
         condition: service_healthy
   # The apex-style ingress, app.localhost and docs.localhost share one exposed port locally.
   # Keep a local-only route table for legacy combined-origin smoke.
@@ -103,7 +80,6 @@ services:
     image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     restart: unless-stopped
     environment:
-      BACKEND_ORIGIN: web:8000
       API_SERVICE_ORIGIN: api-service:8100
       VITE_ORIGIN: vite-app:3001
       MARKETING_ORIGIN: frontend:3000
@@ -145,11 +121,8 @@ services:
     restart: unless-stopped
     environment:
       # Caddy consumes these only at runtime; they are never bundled for browsers.
-      BACKEND_ORIGIN: http://web:8000
       API_SERVICE_ORIGIN: http://api-service:8100
     depends_on:
-      web:
-        condition: service_healthy
       api-service:
         condition: service_healthy
 

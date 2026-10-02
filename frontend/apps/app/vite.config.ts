@@ -34,7 +34,7 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
   };
   const proxy =
     command === 'serve' && !isPreview
-      ? createServerProxy(environment.BACKEND_ORIGIN, environment.API_SERVICE_ORIGIN)
+      ? createServerProxy(environment.API_SERVICE_ORIGIN)
       : undefined;
 
   return {

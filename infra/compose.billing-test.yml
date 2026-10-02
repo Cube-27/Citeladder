@@ -4,9 +4,9 @@ services:
       - "127.0.0.1:55433:5432"
   migrate:
     command: ["alembic", "upgrade", "head"]
-  web:
+  api-service:
     ports: !override
-      - "127.0.0.1:8300:8000"
+      - "127.0.0.1:8300:8100"
   frontend:
     ports: !override
       - "127.0.0.1:3300:3000"

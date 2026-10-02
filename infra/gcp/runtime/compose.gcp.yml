@@ -110,16 +110,6 @@ services:
     # configured development account and leaves public accounts untouched.
     command: ["/bin/sh", "-c", "alembic upgrade head && python -m app.demo.bootstrap"]
 
-  web:
-    <<: *backend
-    command: ["uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "127.0.0.1"]
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/ready').status==200 else 1)\""]
-      interval: 15s
-      timeout: 5s
-      retries: 8
-      start_period: 20s
-
   audit-worker:
     <<: *backend
     image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}
@@ -216,10 +206,8 @@ services:
     healthcheck:
       disable: true
 
-  # TypeScript API service: the route families the route-ownership manifest
-  # assigns to TypeScript, which Caddy sends to :8100. Same database, session
-  # key and runtime.env as the Python web process; a smaller pool, since it
-  # serves a handful of reads beside ten Python processes.
+  # All application API and protocol routes. Caddy owns authenticated ingress;
+  # this process listens only on loopback and shares the durable database.
   api-service:
     image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE must be an immutable digest}
     network_mode: host
@@ -287,8 +275,6 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      web:
-        condition: service_healthy
       api-service:
         condition: service_healthy
 

@@ -7,7 +7,7 @@ import { responseObject, uuid } from './core.ts';
 // user selection of a persistent monitored set. `unresolved` is the explicit
 // fail-closed state. This is a NEUTRAL capability, not a plan name — there is
 // deliberately no `plan_key` here to branch on.
-export const siteHealthAccessModeSchema = z.enum(['sample', 'full', 'unresolved']);
+const siteHealthAccessModeSchema = z.enum(['sample', 'full', 'unresolved']);
 
 // `GET /entitlements` — the workspace's neutral Site Health runtime
 // projection. `monitored_url_limit` is the ONLY authority for the selection
@@ -58,17 +58,6 @@ export const crawlAnalysisStatusSchema = z.enum([
   'failed',
   'cancelled',
 ]);
-// Queue-neutral task status shared with the audit queue contract.
-export const siteCrawlTaskStatusSchema = z.enum([
-  'queued',
-  'leased',
-  'running',
-  'succeeded',
-  'retry_wait',
-  'failed',
-  'cancelled',
-]);
-
 // How a discovered URL was first observed (immutable provenance).
 export const siteUrlSourceSchema = z.enum(['root', 'link', 'sitemap', 'redirect']);
 
@@ -120,7 +109,7 @@ export const pageKindSchema = z.enum([
 // coverage. `other` is a terminal classifier abstention and does not enter the
 // classification coverage numerator. It can still enter the scored cohort
 // when independently applicable Web or AEO checks produce a score.
-export const classificationStateSchema = z.enum(['complete', 'partial', 'not_measured']);
+const classificationStateSchema = z.enum(['complete', 'partial', 'not_measured']);
 export const classificationProjectionFields = {
   classified_page_count: z.number().int().nonnegative(),
   other_page_count: z.number().int().nonnegative(),
@@ -198,7 +187,7 @@ export const crawlCountersSchema = responseObject({
 // `message` + the terminal HTTP status / attempt count when present. Projected
 // from the root discover task's terminal fetch attempts; null on any crawl
 // that did not fail (and on list projections — N+1 avoidance).
-export const crawlFailureSummarySchema = responseObject({
+const crawlFailureSummarySchema = responseObject({
   code: z.string(),
   message: z.string(),
   attempts: z.number().int().nullable(),
@@ -260,7 +249,7 @@ export const siteCrawlSchema = responseObject({
   completed_at: z.string().nullable(),
 });
 
-export const urlPreviewRowSchema = responseObject({
+const urlPreviewRowSchema = responseObject({
   row: z.number().int(),
   input: z.string(),
   accepted: z.boolean(),

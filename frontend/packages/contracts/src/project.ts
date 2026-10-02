@@ -114,7 +114,7 @@ export const promptCandidateSchema = responseObject({
 });
 
 // Why a drafted or proposed row failed admission, one code per dropped row.
-export const promptAdmissionDropReasons = [
+const promptAdmissionDropReasons = [
   'unknown_topic',
   'unplanned_slot',
   'intent',
@@ -128,7 +128,7 @@ export const promptAdmissionDropReasons = [
   'brand_missing',
   'competitor_missing',
 ] as const;
-export const promptAdmissionDropReasonSchema = z.enum(promptAdmissionDropReasons);
+const promptAdmissionDropReasonSchema = z.enum(promptAdmissionDropReasons);
 export type PromptAdmissionDropReason = z.infer<typeof promptAdmissionDropReasonSchema>;
 
 // `POST /prompt-sets/{id}/generate` result: staged candidates, the topics

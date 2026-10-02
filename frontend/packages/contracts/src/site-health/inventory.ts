@@ -58,7 +58,7 @@ export const monitoredQuotaSchema = responseObject({
 });
 
 // One persistent monitored-set row.
-export const monitoredUrlSchema = responseObject({
+const monitoredUrlSchema = responseObject({
   site_url_id: uuid(),
   normalized_url: z.string(),
   display_url: z.string(),
