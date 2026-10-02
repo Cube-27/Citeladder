@@ -119,6 +119,9 @@
   max-width: 56ch;
   text-wrap: pretty;
 }
+.cl-section-head-wide p {
+  max-width: none;
+}
 .cl-cta:hover svg,
 .cl-text-link:hover svg {
   transform: translateX(2px);
@@ -395,7 +398,7 @@
 .cl-steps {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 32px;
   margin: 0;
   padding: 0;
@@ -438,7 +441,6 @@
   margin-bottom: 8px;
 }
 .cl-steps p {
-  max-width: 27ch;
   color: var(--cl-muted);
   font-size: 14px;
   line-height: 1.55;

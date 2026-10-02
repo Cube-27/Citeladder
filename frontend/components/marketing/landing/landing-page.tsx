@@ -105,7 +105,7 @@ function Intelligence() {
   return (
     <section className="cl-section" id="why">
       <div className="cl-wrap">
-        <div className="cl-section-head">
+        <div className="cl-section-head cl-section-head-wide">
           <h2>Turn AI answers into a clearer marketing picture.</h2>
           <p>
             AI answers can introduce a buyer to your brand, leave it out, or rely on another website
@@ -371,16 +371,6 @@ export function LandingPage() {
       <EngineStrip />
       <Intelligence />
       <Workflow />
-      <section className="cl-section" aria-labelledby="interpretation-title">
-        <div className="cl-wrap cl-section-head">
-          <h2 id="interpretation-title">Understand what the data represents.</h2>
-          <p>
-            Tracked answers are observations from a defined set of prompts and collection
-            conditions. They are not a census of every AI conversation. A mention, a citation and a
-            referral visit describe different outcomes.
-          </p>
-        </div>
-      </section>
       <PlatformExplorer selected={module} selectModule={setModule} />
       <Evidence />
       <Integrations />

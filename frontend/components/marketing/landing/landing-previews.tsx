@@ -307,7 +307,7 @@ export function PlatformExplorer({
     <section className="cl-section cl-platform" id="see-it">
       <span className="cl-anchor" id="platform" />
       <div className="cl-wrap">
-        <div className="cl-section-head">
+        <div className="cl-section-head cl-section-head-wide">
           <h2>Connected capabilities. Consistent context.</h2>
           <p>Measurement, diagnosis and content work remain accessible within the same project.</p>
         </div>
