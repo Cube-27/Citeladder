@@ -1,8 +1,8 @@
 # Backend architecture
 
 The application API and executing workers are TypeScript-owned. Python's web
-process currently serves only health/readiness; its sweeper retains lease
-recovery for discovery and integration queues. Its migration job runs Alembic
+process currently serves only health/readiness. The native queue sweeper backs
+up discovery and integration lease recovery. The Python migration job runs Alembic
 and demo bootstrap.
 PostgreSQL owns durable
 state and queues. Domain behavior is documented in the feature owners listed in
@@ -10,7 +10,7 @@ state and queues. Domain behavior is documented in the feature owners listed in
 
 Projects, onboarding research/completion, logo refresh and command-center reads
 are TypeScript-owned under frontend/services/api/src/projects/. Discovery runs
-in its TypeScript worker; the Python queue sweeper retains lease-expiry and retry
+in its TypeScript worker; the native queue sweeper backs up lease-expiry and retry
 reconciliation. Executive PDFs use the TypeScript command-center
 projection and shared PDF renderer; receipt list/download reads are also
 TypeScript-owned. Ingress routing is
@@ -23,7 +23,9 @@ native provider custody and PostgreSQL capacity boundary. Python retains schema
 models and exported policy. Commerce competitor discovery uses the native
 analytics worker and Site Health acquisition, parsing and classification owners.
 Analytics lease recovery and evidence/outcome settlement belong to that worker;
-the Python sweeper retains brand-discovery and integration recovery.
+the independent native sweeper recovers brand-discovery and integration leases
+when their workers are down. Discovery charges attempts on completion/recovery;
+integrations charge at claim and recovery does not charge a second time.
 
 ## Layers and extension
 
@@ -45,8 +47,11 @@ for convenience.
 
 Python 3.12, async SQLAlchemy/asyncpg and Pydantic settings own the remaining
 Python runtime; Node 26, Hono and Kysely own the native service and workers.
-Compose names the API service web; the frontend's server-only proxy destination
-is http://web:8000. Browser calls remain same-origin /api/v1.
+Compose names the native API `api-service` on port 8100. Python `web` remains
+only for health/readiness until its retirement. Browser calls stay same-origin
+`/api/v1`. Native startup enforces the shared production secret, database, proxy,
+demo and redirect-origin admission policy; Python keeps the same safeguards for
+migration and operator tooling.
 Fernet-encrypted provider/OAuth secrets and least-privilege worker environments
 keep credential custody separate from product projections.
 

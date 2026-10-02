@@ -67,7 +67,9 @@
   PR 20 is assigned: 20a (#231) transfers the first native policy owners and
   retires unused Python bridges; 20b (#232) updates dependencies and prunes
   Python multipart. 20c transfers Opportunity/Action, source-page, JEV and
-  other native catalogs. Further policy and runtime slices remain.
+  other native catalogs (#233). 20d implements native recovery, sweeper and
+  complete production startup admission. Further policy and Python web
+  retirement remain.
   Deployment of implemented cutovers is pending; the owner dropped the
   one-week soak while there are no customers (smoke tests instead). On
   1 October 2026 the owner accepted a low-cost hosting phase (PRs 21–24:
