@@ -8,8 +8,10 @@ state=/mnt/stateful_partition/citeladder
 config=$state/config
 export HOME=/var/lib/citeladder
 export DOCKER_CONFIG=$HOME/docker
-install -d -m 0700 "$HOME" "$DOCKER_CONFIG" "$state" "$config"
-# The image runs PostgreSQL as uid/gid 999, never root.
+install -d -m 0700 "$HOME" "$DOCKER_CONFIG" "$state"
+# The image runs PostgreSQL as uid/gid 999, never root. It must traverse the
+# mounted config directory; the secret files inside stay 0600 and owned by 999.
+install -d -m 0755 "$config"
 install -d -o 999 -g 999 -m 0700 "$state/pgdata"
 
 # New IAM grants can take minutes to propagate after a fresh create.
