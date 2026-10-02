@@ -1,13 +1,12 @@
 /**
- * Service configuration: Python-owned policy plus environment overrides.
+ * Service configuration: native policy, shared Python policy and environment overrides.
  *
- * `backend/app/core/config` stays the policy authority (TypeScript migration
- * D5). Defaults, bounds, env names, error codes and the role matrix arrive
- * through `generated/python-config.json`, written by
- * `backend/scripts/export_ts_platform.py` and drift-checked in CI. This module
- * only applies the same environment overrides pydantic-settings would.
+ * Migrated policy belongs in `./config/`; policy with remaining Python readers
+ * arrives through the drift-checked `generated/python-config.json` export.
+ * Each section has one authority. Environment overrides are validated here.
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
+import { brandEvidence } from './config/brand-evidence.ts';
 import {
   billingSettings,
   razorpaySettings,
@@ -28,8 +27,7 @@ type SettingSpec = {
   exclusive_maximum?: number;
 };
 
-export type PythonPolicy = typeof pythonConfig;
-export const policy: PythonPolicy = pythonConfig;
+export const policy = { ...pythonConfig, brand_evidence: brandEvidence };
 
 const TRUE_VALUES = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
 const FALSE_VALUES = new Set(['0', 'off', 'f', 'false', 'n', 'no']);

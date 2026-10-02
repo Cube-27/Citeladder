@@ -37,7 +37,6 @@ from app.core.config import (
 from app.core.config import agent as agent_config
 from app.core.config import audits as audit_config
 from app.core.config import brand_discovery as discovery_config
-from app.core.config import brand_evidence as evidence_config
 from app.core.config import brand_logos as brand_logo_config
 from app.core.config import commerce_catalog as commerce_config
 from app.core.config import dataforseo as search_config
@@ -320,7 +319,6 @@ def build_config() -> dict[str, Any]:
         },
         "audit_schedules": audit_schedule_policy(_setting),
         "discovery": _discovery_policy(),
-        "brand_evidence": _prefixed_constants(evidence_config, "BRAND_EVIDENCE_"),
         "brand_logos": _prefixed_constants(brand_logo_config, "BRAND_LOGO_"),
         "web_fetch": {
             "user_agent": SITE_HEALTH_USER_AGENT,
