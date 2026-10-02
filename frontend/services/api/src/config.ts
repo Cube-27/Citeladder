@@ -6,6 +6,7 @@
  * Each section has one authority. Environment overrides are validated here.
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
+import ipaddr from 'ipaddr.js';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { industryLibrary } from './config/industry-library.ts';
@@ -270,16 +271,86 @@ export function secretIsWeak(value: string): boolean {
   );
 }
 
-function assertDeployable(config: ServiceConfig): void {
+function productionFrontendUrl(value: string): boolean {
+  try {
+    // Inspect the unnormalized path too: URL would collapse /private/.. to /.
+    if (!/^https:\/\/[^/?#\\]+\/?$/iu.test(value.trim())) return false;
+    const url = new URL(value);
+    const host = url.hostname.replace(/^\[|\]$/gu, '').replace(/\.+$/u, '');
+    return (
+      !url.username &&
+      !url.password &&
+      host.toLowerCase() !== 'localhost' &&
+      !(ipaddr.isValid(host) && ipaddr.process(host).range() === 'loopback')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function productionSecretProblems(
+  config: ServiceConfig,
+  env: Record<string, string | undefined>,
+): string[] {
+  const secrets = {
+    JWT_SECRET_KEY: config.session.secretKey,
+    ENCRYPTION_KEY: String(resolveSetting('encryption_key', env)),
+    REFERRAL_HASH_SALT: String(resolveSetting('referral_hash_salt', env)),
+  };
+  const values = Object.values(secrets);
+  const issues = Object.entries(secrets)
+    .filter(([, value]) => secretIsWeak(value))
+    .map(([name]) => `${name} does not meet the production strength policy`);
+  if (new Set(values).size !== values.length)
+    issues.push('application secrets must be independent');
+  let password = '';
+  try {
+    password = decodeURIComponent(new URL(config.databaseUrl).password);
+  } catch {
+    /* Report without the URL. */
+  }
+  if (secretIsWeak(password))
+    issues.push('database password does not meet the production strength policy');
+  if (values.includes(password))
+    issues.push('database password must be independent of application secrets');
+  const login = String(resolveSetting('dev_login_password', env));
+  const rules = policy.secret_policy.login_password;
+  const length = [...login].length;
+  if (
+    length < rules.min_chars ||
+    length > rules.max_chars ||
+    new Set(login).size < rules.min_unique_chars ||
+    rules.weak_words.includes(login.trim().toLowerCase())
+  )
+    issues.push('dev_login_password does not meet the login password policy');
+  if (values.includes(login))
+    issues.push('dev_login_password must be independent of application secrets');
+  return issues;
+}
+
+function assertDeployable(config: ServiceConfig, env: Record<string, string | undefined>): void {
   if (isDevelopmentEnv(config.appEnv)) return;
-  // The Python startup check owns the full production policy; this service
-  // refuses the two failures that would make its own sessions or data unsafe.
-  if (secretIsWeak(config.session.secretKey)) {
-    throw new ConfigError('JWT_SECRET_KEY does not meet the production strength policy');
-  }
+  const issues = productionSecretProblems(config, env);
   if (config.database.sslMode !== 'require') {
-    throw new ConfigError('db_ssl_mode must be require in production');
+    issues.push('db_ssl_mode must be require in production');
   }
+  if (
+    !config.auth.trustedProxies.length ||
+    config.auth.trustedProxies.some(([, prefix]) => prefix === 0)
+  )
+    issues.push('trusted_proxy_cidrs must contain configured networks without catch-all ranges');
+  if (resolveSettingSpec(policy.audits.dev_test_allow_platform, env))
+    issues.push(
+      'dev_test_login_allow_platform_credentials must be disabled outside development/test',
+    );
+  if (
+    config.demo.enabled &&
+    (config.demo.expiresAt === null || !Number.isFinite(config.demo.expiresAt.getTime()))
+  )
+    issues.push('demo_expires_at must be a timezone-aware timestamp in demo mode');
+  if (!productionFrontendUrl(config.auth.frontendUrl))
+    issues.push('frontend_url must be a non-loopback credential-free HTTPS origin in production');
+  if (issues.length) throw new ConfigError(issues.join('; '));
 }
 
 // Auxiliary owners resolve the same startup input. Keep it out of loggable
@@ -350,7 +421,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     },
     readinessTimeoutMs: policy.api.readiness_timeout_seconds * 1000,
   };
-  assertDeployable(config);
+  assertDeployable(config, env);
   environments.set(config, { ...env });
   return config;
 }

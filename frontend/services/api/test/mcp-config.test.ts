@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { loadConfig } from '../src/config.ts';
 import { accountAllowed, loadMcpConfig } from '../src/mcp/config.ts';
+import { productionEnv } from './production-config.ts';
 
 const base = {
   APP_ENV: 'test',
@@ -28,15 +29,15 @@ it('binds MCP enablement and origin to explicit startup inputs instead of inheri
 });
 it('refuses unsafe enabled origins and enforces production and demo admission', () => {
   const production = {
-    ...base,
-    APP_ENV: 'production',
-    DB_SSL_MODE: 'require',
-    JWT_SECRET_KEY: 'aB09xY82pQ7eT1kL5mN3vF6sW4rC8hJ2',
+    ...productionEnv,
     MCP_ENABLED: 'true',
     MCP_PUBLIC_BASE_URL: 'https://protocol.example.test',
     FRONTEND_URL: 'https://app.example.test',
   };
-  expect(() => loadMcpConfig(loadConfig(production))).toThrow('ENCRYPTION_KEY');
+  expect(loadMcpConfig(loadConfig(production)).enabled).toBe(true);
+  expect(() => loadMcpConfig(loadConfig({ ...production, ENCRYPTION_KEY: '' }))).toThrow(
+    'ENCRYPTION_KEY',
+  );
   expect(() =>
     loadMcpConfig(loadConfig({ ...production, ENCRYPTION_KEY: production.JWT_SECRET_KEY })),
   ).toThrow('independent');
