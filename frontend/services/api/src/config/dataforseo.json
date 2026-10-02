@@ -327,7 +327,8 @@
     "request_timeout_seconds": {
       "env": ["DATAFORSEO_REQUEST_TIMEOUT_SECONDS"],
       "type": "float",
-      "default": 60.0
+      "default": 60.0,
+      "exclusive_minimum": 0
     },
     "recovery_deadline_hours": {
       "env": ["DATAFORSEO_RECOVERY_DEADLINE_HOURS"],
