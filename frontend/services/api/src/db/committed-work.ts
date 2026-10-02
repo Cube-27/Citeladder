@@ -11,7 +11,7 @@ type RequestWork = { committed: boolean };
 const requests = new AsyncLocalStorage<RequestWork>();
 
 /** A request owns observation; workers and offline operators never start more jobs. */
-export async function observeCommittedWork(run: () => Promise<void>, wake: () => Promise<void>) {
+export function observeCommittedWork(run: () => Promise<void>, wake: () => Promise<void>) {
   const state: RequestWork = { committed: false };
   return requests.run(state, async () => {
     try {
@@ -58,15 +58,69 @@ function writesWork(node: OperationNode): boolean {
   });
 }
 
-/** Observe actual successful statements, including COMMIT and manual savepoints.
- * No callback performs network I/O while a pooled connection is held.
- */
+class ConnectionWork {
+  transaction = false;
+  failed = false;
+  pending = false;
+  savepoints: { name: string; pending: boolean }[] = [];
+
+  reset(transaction: boolean) {
+    this.transaction = transaction;
+    this.failed = false;
+    this.pending = false;
+    this.savepoints = [];
+  }
+
+  control(statement: string): boolean {
+    const command = statement.trim();
+    const lower = command.toLowerCase();
+    if (/^(?:begin|start transaction)\b/u.test(lower)) {
+      this.reset(true);
+      return true;
+    }
+    if (lower === 'commit' || lower === 'rollback') {
+      const state = requests.getStore();
+      if (lower === 'commit' && this.pending && !this.failed && state) state.committed = true;
+      this.reset(false);
+      return true;
+    }
+    const prefix = /^(savepoint|rollback to(?: savepoint)?|release(?: savepoint)?)\s+/iu.exec(
+      command,
+    );
+    if (!prefix) return false;
+    const name = command.slice(prefix[0].length).trim();
+    const identifier = name.startsWith('"') ? name : name.toLowerCase();
+    this.savepoint(prefix[1]!.toLowerCase(), identifier);
+    return true;
+  }
+
+  savepoint(action: string, name: string) {
+    if (action === 'savepoint') {
+      this.savepoints.push({ name, pending: this.pending });
+      return;
+    }
+    const index = this.savepoints.findLastIndex((item) => item.name === name);
+    if (index < 0) return;
+    const rollback = action.startsWith('rollback');
+    if (rollback) {
+      this.pending = this.savepoints[index]!.pending;
+      this.failed = false;
+    }
+    this.savepoints = this.savepoints.slice(0, index + (rollback ? 1 : 0));
+  }
+
+  mutation() {
+    const state = requests.getStore();
+    if (!state) return;
+    if (this.transaction) this.pending = true;
+    else state.committed = true;
+  }
+}
+
+/** Observe successful statements without network I/O while a connection is held. */
 export function observeConnection(connection: DatabaseConnection): void {
   const execute = connection.executeQuery.bind(connection);
-  let transaction = false;
-  let failed = false;
-  let pending = false;
-  let savepoints: { name: string; pending: boolean }[] = [];
+  const work = new ConnectionWork();
   connection.executeQuery = async <R>(
     query: CompiledQuery,
     options?: AbortableOperationOptions,
@@ -76,53 +130,16 @@ export function observeConnection(connection: DatabaseConnection): void {
       result = await execute<R>(query, options);
     } catch (error) {
       // PostgreSQL turns COMMIT into ROLLBACK in an aborted transaction.
-      if (transaction) failed = true;
+      if (work.transaction) work.failed = true;
       throw error;
     }
-    const command = query.sql.trim().toLowerCase();
-    if (/^(?:begin|start transaction)\b/u.test(command)) {
-      transaction = true;
-      failed = false;
-      pending = false;
-      savepoints = [];
-    } else if (command === 'commit') {
-      const state = requests.getStore();
-      if (pending && !failed && state) state.committed = true;
-      transaction = false;
-      pending = false;
-      savepoints = [];
-    } else if (command === 'rollback') {
-      transaction = false;
-      pending = false;
-      savepoints = [];
-    } else {
-      const savepoint =
-        /^(savepoint|rollback to(?: savepoint)?|release(?: savepoint)?)\s+(.+)$/u.exec(command);
-      if (savepoint) {
-        const name = savepoint[2]!;
-        if (savepoint[1] === 'savepoint') savepoints.push({ name, pending });
-        else {
-          const index = savepoints.findLastIndex((item) => item.name === name);
-          if (index >= 0) {
-            if (savepoint[1]!.startsWith('rollback')) {
-              pending = savepoints[index]!.pending;
-              failed = false;
-            }
-            savepoints = savepoints.slice(
-              0,
-              index + (savepoint[1]!.startsWith('rollback') ? 1 : 0),
-            );
-          }
-        }
-      } else if (
-        requests.getStore() &&
-        (result.numAffectedRows ?? 0n) > 0n &&
-        writesWork(query.query)
-      ) {
-        if (transaction) pending = true;
-        else requests.getStore()!.committed = true;
-      }
-    }
+    if (
+      !work.control(query.sql) &&
+      requests.getStore() &&
+      (result.numAffectedRows ?? 0n) > 0n &&
+      writesWork(query.query)
+    )
+      work.mutation();
     return result;
   };
 }

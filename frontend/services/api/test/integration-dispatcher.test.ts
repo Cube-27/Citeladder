@@ -13,6 +13,46 @@ afterAll(async () => {
 });
 
 describe('integration revocation', () => {
+  it('finishes admitted revocation and leaves the next grant pending when the budget expires', async () => {
+    const user = await fixtures.user();
+    const ids = [randomUUID(), randomUUID()];
+    for (const id of ids) {
+      const workspaceId = await fixtures.ownedWorkspace(user);
+      await db
+        .insertInto('integration_oauth_grants')
+        .values({
+          id,
+          workspace_id: workspaceId,
+          transport: 'google_oauth',
+          status: 'pending_revocation',
+          access_token_encrypted: secrets.cipher.encrypt('test-access'),
+          refresh_token_encrypted: '',
+          token_expires_at: null,
+          token_revision: 1,
+          refresh_claim_id: null,
+          refresh_claim_expires_at: null,
+          granted_scopes: '[]',
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .execute();
+    }
+    let active = true;
+    const revoke = vi.fn(async () => {
+      active = false;
+    });
+    await new IntegrationDispatcher(db, { secrets, revoke }).runOnce(() => active);
+    expect(revoke).toHaveBeenCalledTimes(1);
+    const rows = await db
+      .selectFrom('integration_oauth_grants')
+      .select(['status', 'refresh_claim_id'])
+      .where('id', 'in', ids)
+      .execute();
+    expect(rows.map((row) => row.status).sort()).toEqual(['pending_revocation', 'revoked']);
+    expect(rows.every((row) => row.refresh_claim_id === null)).toBe(true);
+    await db.deleteFrom('integration_events').where('grant_id', 'in', ids).execute();
+    await db.deleteFrom('integration_oauth_grants').where('id', 'in', ids).execute();
+  });
   it.each([false, true])(
     'resolves unreadable credentials locally but preserves provider failures (%s)',
     async (decryptable) => {

@@ -542,6 +542,7 @@ export async function recoverBilling(
   db: Database,
   config: ServiceConfig,
   supplied?: BillingProvider,
+  canAdmit = () => true,
 ) {
   if (!supplied && !configured(config.razorpay))
     return { pending: 0, webhooks: 0, subscriptions: 0 };
@@ -554,6 +555,7 @@ export async function recoverBilling(
   ] as const) {
     const seen: string[] = [];
     for (let i = 0; i < config.billing.batchSize; i++) {
+      if (!canAdmit()) break;
       const id = await probe(db, config, provider, seen);
       if (!id) break;
       seen.push(id);

@@ -84,8 +84,12 @@ Lane failures leave the job failed after independent owners have had a chance.
 
 `tick.ts` first runs queue recovery, audit maintenance/Search Intelligence
 reconciliation, due audit schedules and integration dispatch/revocation once,
-then uses the remaining budget for that same drain. Worker-owned lease and crawl
-backstops still run in each lane, including idle passes. Existing per-owner
+then uses the remaining budget for that same drain.
+Periodic owners recheck admission before each occurrence, revocation or recovery
+unit. The scheduler claims one occurrence at a time under a runner budget, so
+stopping never strands a preclaimed batch; admitted units finish settlement.
+Worker-owned lease and crawl backstops still run in each lane, including idle
+passes. Existing per-owner
 Compose processes remain the deployment path until hosting cutover PR23; they
 are not retired or started alongside the runner as a new continuous service.
 

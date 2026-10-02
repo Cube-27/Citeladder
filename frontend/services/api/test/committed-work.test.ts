@@ -152,6 +152,31 @@ describe('committed API work at PostgreSQL', () => {
     expect(wake).not.toHaveBeenCalled();
   });
 
+  it('preserves quoted savepoint identity and clears an error after rollback to a savepoint', async () => {
+    const wake = vi.fn(async () => {});
+    await observeCommittedWork(async () => {
+      await db.transaction().execute(async (trx) => {
+        await sql`savepoint "Upper"`.execute(trx);
+        await enqueue(trx);
+        await sql`savepoint "upper"`.execute(trx);
+        await sql`select 1 / 0`.execute(trx).catch(() => {});
+        await sql`rollback to savepoint "Upper"`.execute(trx);
+        await sql`release savepoint "Upper"`.execute(trx);
+      });
+    }, wake);
+    expect(wake).not.toHaveBeenCalled();
+    await observeCommittedWork(async () => {
+      await db.transaction().execute(async (trx) => {
+        await enqueue(trx);
+        await sql`savepoint later`.execute(trx);
+        await sql`select 1 / 0`.execute(trx).catch(() => {});
+        await sql`rollback to savepoint later`.execute(trx);
+        await sql`release savepoint later`.execute(trx);
+      });
+    }, wake);
+    expect(wake).toHaveBeenCalledTimes(1);
+  });
+
   it('wakes for an autocommitted retry and committed work preceding an HTTP failure, never for GET', async () => {
     const id = await enqueue(db);
     const wake = vi.fn(async () => {});
@@ -236,12 +261,35 @@ it('overlapping runners share real leases and settle each workspace task once', 
 });
 
 it('composes every production lane and periodic owner on an idle disposable database', async () => {
-  const owners = await runnerOwners(db, config);
-  expect(
-    await tickAndDrain(owners, {
-      signal: new AbortController().signal,
-      deadline: performance.now() + 30000,
-      firstLane: 0,
-    }),
-  ).toBe(0);
+  // Global workers must not claim rows retained by other files in the shared suite.
+  const schema = `runner_test_${randomUUID().replaceAll('-', '')}`;
+  await sql`create schema ${sql.id(schema)}`.execute(db);
+  const url = new URL(config.databaseUrl);
+  url.searchParams.set('options', `-c search_path=${schema}`);
+  const isolatedConfig = testConfig({
+    DATABASE_URL: url.toString(),
+    DB_POOL_SIZE: '4',
+    DB_MAX_OVERFLOW: '0',
+  });
+  const isolated = testDatabase(isolatedConfig);
+  try {
+    const tables = await sql<{
+      tablename: string;
+    }>`select tablename from pg_catalog.pg_tables where schemaname = 'public'`.execute(db);
+    for (const table of tables.rows)
+      await sql`create table ${sql.id(schema, table.tablename)} (like ${sql.id('public', table.tablename)} including all)`.execute(
+        db,
+      );
+    const owners = await runnerOwners(isolated, isolatedConfig);
+    expect(
+      await tickAndDrain(owners, {
+        signal: new AbortController().signal,
+        deadline: performance.now() + 30000,
+        firstLane: 0,
+      }),
+    ).toBe(0);
+  } finally {
+    await isolated.destroy();
+    await sql`drop schema ${sql.id(schema)} cascade`.execute(db);
+  }
 });

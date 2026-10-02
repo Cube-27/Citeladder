@@ -43,15 +43,20 @@ export function poolOptions(config: ServiceConfig): pg.PoolConfig {
 
 export function createDatabase(
   config: ServiceConfig,
-  options: { maxConnections?: number } = {},
+  options: { execution?: boolean } = {},
 ): Database {
   return new Kysely<DB>({
     dialect: new PostgresDialect({
       pool: new pg.Pool({
         ...poolOptions(config),
-        ...(options.maxConnections ? { max: options.maxConnections } : {}),
+        ...(options.execution || config.execution.runnerJob
+          ? { max: config.execution.poolSize }
+          : {}),
       }),
-      onCreateConnection: async (connection) => observeConnection(connection),
+      onCreateConnection: (connection) => {
+        observeConnection(connection);
+        return Promise.resolve();
+      },
     }),
   });
 }

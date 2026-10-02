@@ -26,7 +26,10 @@ import { integrationSettings } from '../integrations/config.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { getLogger } from '../logging.ts';
 
-export type RunnerLane = { name: string; run: () => Promise<number | boolean | void> };
+export type RunnerLane = {
+  name: string;
+  run: (canAdmit: () => boolean) => Promise<number | boolean | void>;
+};
 type DrainOptions = {
   signal: AbortSignal;
   deadline: number;
@@ -39,6 +42,7 @@ type DrainOptions = {
  */
 export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOptions) {
   const now = options.now ?? (() => performance.now());
+  const canAdmit = () => !options.signal.aborted && now() < options.deadline;
   const failures: unknown[] = [];
   const failed = new Set<string>();
   const first = options.firstLane ?? randomInt(Math.max(1, lanes.length));
@@ -51,7 +55,7 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
       const lane = lanes[(first + offset) % lanes.length]!;
       if (failed.has(lane.name)) continue;
       try {
-        progress += Number((await lane.run()) ?? 0);
+        progress += Number((await lane.run(canAdmit)) ?? 0); // NOSONAR -- Sequential admission preserves the shared pool and budget.
       } catch (error) {
         // Attempt other owners, but leave an infrastructure failure visible to the job.
         failed.add(lane.name);
@@ -69,7 +73,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = configEnvironment(config);
   const runtime = auditRuntime(env);
   // Each lane admits one task at a time; the shared pool retains room for heartbeat/settlement.
-  runtime.audits.worker_concurrency = 1;
+  runtime.audits.worker_concurrency = config.execution.laneConcurrency;
   const projections = auditProjections(db);
   const analytics = new AnalyticsWorker(db, loadWorkerSettings(env));
   const discovery = new DiscoveryWorker(db, { env });
@@ -94,24 +98,27 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       { name: 'integrations', run: () => integration.runOnce() },
       { name: 'agent', run: () => agent.runOnce() },
       { name: 'audits', run: () => audit.runOnce() },
-      { name: 'site-health', run: () => site.runOnce(1) },
+      { name: 'site-health', run: () => site.runOnce(config.execution.laneConcurrency) },
       {
         name: 'billing',
-        run: async () =>
-          Object.values(await recoverBilling(db, config)).reduce((sum, count) => sum + count, 0),
+        run: async (canAdmit) =>
+          Object.values(await recoverBilling(db, config, undefined, canAdmit)).reduce(
+            (sum, count) => sum + count,
+            0,
+          ),
       },
     ] satisfies RunnerLane[],
     periodic: [
-      { name: 'queue-recovery', run: () => recoverQueues(db) },
+      { name: 'queue-recovery', run: (canAdmit) => recoverQueues(db, canAdmit) },
       {
         name: 'audit-maintenance',
-        run: async () => {
-          await maintenance.runOnce();
-          await reconcileResearch(db);
+        run: async (canAdmit) => {
+          await maintenance.runOnce(new Date(), canAdmit);
+          if (canAdmit()) await reconcileResearch(db, new Date(), canAdmit);
         },
       },
-      { name: 'audit-scheduler', run: () => scheduler.runOnce() },
-      { name: 'integration-dispatcher', run: () => dispatcher.runOnce() },
+      { name: 'audit-scheduler', run: (canAdmit) => scheduler.runOnce(scheduler.now(), canAdmit) },
+      { name: 'integration-dispatcher', run: (canAdmit) => dispatcher.runOnce(canAdmit) },
     ] satisfies RunnerLane[],
   };
 }
@@ -123,10 +130,11 @@ export async function tickAndDrain(
 ) {
   const failures: unknown[] = [];
   const now = options.now ?? (() => performance.now());
+  const canAdmit = () => !options.signal.aborted && now() < options.deadline;
   for (const phase of owners.periodic) {
     if (options.signal.aborted || now() >= options.deadline) break;
     try {
-      await phase.run();
+      await phase.run(canAdmit); // NOSONAR -- Periodic phases share one admission budget and pool.
     } catch (error) {
       failures.push(error);
       getLogger('workers.runner').warning('tick_phase_failed', { phase: phase.name });

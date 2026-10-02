@@ -24,10 +24,11 @@ describe('health and readiness', () => {
     );
     for (const path of ['/health', '/ready', '/api/v1/auth/me', '/mcp']) {
       expect((await protectedApp.request(path)).status).toBe(403);
-      expect(
-        (await protectedApp.request(path, { headers: { 'X-CiteLadder-Origin-Token': 'wrong' } }))
-          .status,
-      ).toBe(403);
+      for (const token of ['wrong', 'x'.repeat(current.length)])
+        expect(
+          (await protectedApp.request(path, { headers: { 'X-CiteLadder-Origin-Token': token } }))
+            .status,
+        ).toBe(403);
     }
     for (const token of [current, previous])
       expect(

@@ -1,6 +1,6 @@
 import { ConfigError } from './config-error.ts';
 
-const defaults = { budgetSeconds: 300, poolSize: 4, wakeTimeoutMs: 5000 };
+const defaults = { budgetSeconds: 300, poolSize: 4, wakeTimeoutMs: 5000, laneConcurrency: 1 };
 
 function integer(
   env: Record<string, string | undefined>,
@@ -46,6 +46,7 @@ export function executionSettings(env: Record<string, string | undefined>) {
     protectOrigin,
     originToken,
     previousOriginToken,
+    laneConcurrency: defaults.laneConcurrency,
     budgetSeconds: integer(env, 'RUNNER_BUDGET_SECONDS', defaults.budgetSeconds, 3600),
     poolSize: integer(env, 'RUNNER_DB_POOL_SIZE', defaults.poolSize, 4),
     wakeTimeoutMs: integer(env, 'RUNNER_WAKE_TIMEOUT_MS', defaults.wakeTimeoutMs, 30000),

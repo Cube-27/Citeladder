@@ -135,7 +135,8 @@ export class AuditMaintenance {
     this.db = db;
     this.finalize = finalize;
   }
-  async runOnce(at = new Date()) {
+  async runOnce(at = new Date(), canAdmit = () => true) {
+    if (!canAdmit()) return 0;
     const expired = await this.db
       .selectFrom('audit_tasks')
       .select(['id', 'workspace_id', 'audit_id', 'project_id'])
@@ -148,6 +149,7 @@ export class AuditMaintenance {
     const parents = new Map<string, Parent>();
     let reclaimed = 0;
     for (const candidate of expired) {
+      if (!canAdmit()) break;
       const terminal = await this.db.transaction().execute(async (trx) => {
         // Match all other audit writers' lock order. SKIP LOCKED never waits on a live writer.
         const audit = await trx
@@ -244,6 +246,7 @@ export class AuditMaintenance {
       .limit(batchSize)
       .execute();
     for (const candidate of owing) {
+      if (!canAdmit()) break;
       await this.db.transaction().execute(async (trx) => {
         const audit = await trx
           .selectFrom('audits')
@@ -323,6 +326,7 @@ export class AuditMaintenance {
     for (const audit of inspectionOwing)
       parents.set(audit.id, { workspaceId: audit.workspace_id, auditId: audit.id });
     for (const parent of parents.values()) {
+      if (!canAdmit()) break;
       try {
         await this.finalize(parent.workspaceId, parent.auditId);
       } catch {

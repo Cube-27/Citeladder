@@ -13,6 +13,30 @@ const options = () => ({
 });
 
 describe('bounded runner', () => {
+  it('passes the same live budget to periodic work and stops within a phase', async () => {
+    let clock = 0;
+    let processed = 0;
+    const drain = vi.fn(async () => 0);
+    await tickAndDrain(
+      {
+        periodic: [
+          {
+            name: 'batch',
+            run: async (canAdmit) => {
+              while (canAdmit()) {
+                processed++;
+                clock = 101;
+              }
+            },
+          },
+        ],
+        lanes: [{ name: 'tasks', run: drain }],
+      },
+      { ...options(), now: () => clock },
+    );
+    expect(processed).toBe(1);
+    expect(drain).not.toHaveBeenCalled();
+  });
   it('drains successors into earlier lanes before declaring idle', async () => {
     let earlier = 0,
       later = 1;
