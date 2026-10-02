@@ -88,9 +88,10 @@ process or executing queue worker. The root Dockerfile builds this schema and
 operator image; the API image supplies all long-running application processes.
 
 Python code a moved route still shares with Python callers stays until its last
-Python caller moves. The remaining acquisition identity/suppression helpers
-support active component fixtures and safety tests; the Python fetcher and parser
-are retired. TypeScript owners are covered by their own TypeScript and
+Python caller moves. Acquisition, URL admission, suppression and failure reads
+are native; Python persistence fixtures supply explicit canonical test URLs.
+The supported Python acquisition-control operator still writes the durable stop
+switch consumed by native per-hop authorization. TypeScript owners are covered by their own TypeScript and
 PostgreSQL tests; no golden files compare them with Python.
 
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response

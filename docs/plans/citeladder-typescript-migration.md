@@ -185,7 +185,7 @@ total.
 | 18 | Site Health and source-page inspection | High | Done; 18b5b (#224), 18b5c (#225) merged |
 | 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a merged (#226); 19b adapters, activation and retirement implemented; PR validation pending |
 | 19c | Commerce competitor discovery and remaining acquisition bridges | High | Implemented 2 October 2026; deployment pending |
-| 20 | Consolidation and policy transfer | Medium | 20a–f merged; error authority transfer implemented; further policy/bridge retirement in progress |
+| 20 | Consolidation and policy transfer | Medium | 20a–g merged; test-only acquisition retirement implemented; further policy transfer in progress |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
 | 23 | Database move and HTTP cutover (section 9) | High | Proposed |
@@ -1310,6 +1310,20 @@ classification, retiring Python's unused generic error policy, Commerce's
 unused API error constants and the error-code generator/drift coupling.
 The shared policy export remains for genuine Python model/operator consumers.
 Further TS-only policy transfer and acquisition bridge retirement remain open.
+
+**20h.** Retire test-only Python acquisition contracts, URL policy,
+normalization, suppression, inventory scope and failure readers, together with
+their implementation tests. Native per-hop tests cover global/parent/IDNA
+suppression, operator resumption, inert bare-TLD rows, unavailable policy storage
+and malformed destinations; admission tests retain hard-exclusion, document,
+binary, length and public-suffix scope decisions. The native transport now
+rejects overlong DNS names before lookup. Existing native SSRF, redirect,
+rebinding and failure-read coverage remains.
+Python model/isolation fixtures use known canonical URLs; Commerce's
+`seed_site_crawl` caller remains. Retain the supported offline
+`scripts/acquisition_control.py` operator, its model and security-event owner.
+Remove declaration-only onboarding direct-fetch settings and `tldextract` with
+its unused transitive dependencies. Further TS-only policy transfer remains open.
 
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,
