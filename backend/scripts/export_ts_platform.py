@@ -55,7 +55,6 @@ from app.core.config import site_health_contracts as site_health_config
 from app.core.config import site_health_crawl_policy as site_crawl_config
 from app.core.config import site_health_rules as web_rules
 from app.core.config import workspaces as workspace_config
-from app.core.config.abuse import AbuseSettings
 from app.core.config.analysis import (
     ANALYZER_VERSION,
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
@@ -343,9 +342,6 @@ def build_config() -> dict[str, Any]:
             "ambiguous_price_tokens": (
                 commerce_config.COMMERCE_VISIBLE_PRICE_AMBIGUOUS_TOKENS
             ),
-        },
-        "abuse": {
-            name: _setting(name, AbuseSettings) for name in AbuseSettings.model_fields
         },
         "auth": auth_policy(_setting),
         "site_health_runtime": site_health_runtime_policy(_setting),

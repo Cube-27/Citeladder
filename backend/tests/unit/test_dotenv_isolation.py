@@ -27,7 +27,6 @@ from app.core.config import (
     encryption_key_configured,
     settings,
 )
-from app.core.config.abuse import AbuseSettings
 from app.core.config.agent import DefaultAgentSettings, default_agent_settings
 from app.core.config.billing_settings import BillingSettings
 from app.core.config.dotenv import (
@@ -44,7 +43,6 @@ from app.core.config.site_health_runtime import SiteHealthSettings
 # ``dotenv_sources()`` — or the sweep below fails.
 DOTENV_SETTINGS_CLASSES: tuple[type[BaseSettings], ...] = (
     Settings,
-    AbuseSettings,
     DefaultAgentSettings,
     BillingSettings,
     SiteHealthSettings,

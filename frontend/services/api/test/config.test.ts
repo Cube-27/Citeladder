@@ -29,6 +29,16 @@ it('applies production and test-key aliases to Razorpay credential admission', (
 });
 
 describe('loadConfig', () => {
+  it('resolves native abuse budgets with case-insensitive aliases and positive integer bounds', () => {
+    const spec = policy.abuse.login_email_limit;
+    expect(resolveSettingSpec(spec, { abuse_login_email_limit: '7' })).toBe(7);
+    for (const value of ['0', '-1', '1.5']) {
+      expect(() => resolveSettingSpec(spec, { ABUSE_LOGIN_EMAIL_LIMIT: value })).toThrow(
+        ConfigError,
+      );
+    }
+  });
+
   it('uses the exported Python defaults when the environment is silent', () => {
     const config = loadConfig({});
     expect(config.database.poolSize).toBe(policy.settings.db_pool_size.default);

@@ -7,6 +7,7 @@
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
+import { abuse } from './config/abuse.ts';
 import { agentContext } from './config/agent-context.ts';
 import { agentSkills } from './config/agent-skills.ts';
 import { mcp } from './config/mcp.ts';
@@ -37,6 +38,7 @@ type SettingSpec = {
 
 export const policy = {
   ...pythonConfig,
+  abuse,
   site_health: {
     ...pythonConfig.site_health,
     page_analysis: {
