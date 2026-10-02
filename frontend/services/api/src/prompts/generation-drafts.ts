@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { namesAlias } from '../analysis/aliases.ts';
 import { policy } from '../config.ts';
+import { generationSystemPrompt } from '../config/prompt-generation.ts';
 import { record, strings } from '../db/json.ts';
 import { getLogger } from '../logging.ts';
 import { ModelError } from '../models/http.ts';
@@ -463,9 +464,10 @@ export async function generateDrafts(
   const drops: Drops = {};
   const dropRecords: AdmissionDrop[] = [];
   let parseError = false;
-  const systems = G.systems as Record<string, Record<string, string>>;
-  const system = (systems[String(record(context.context.business_context).business_model)] ??
-    systems[''])![input.cohort]!;
+  const system = generationSystemPrompt(
+    String(record(context.context.business_context).business_model),
+    input.cohort,
+  );
   for (let call = 0; call < draftCallLimit(input.count); call++) {
     const accepted = new Set(drafts.map((row) => row.slot.slot_id));
     const batch = slots.filter((slot) => !accepted.has(slot.slot_id)).slice(0, batchSize);

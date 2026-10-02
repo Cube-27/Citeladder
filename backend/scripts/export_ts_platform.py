@@ -54,7 +54,6 @@ from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import site_health_contracts as site_health_config
 from app.core.config import site_health_crawl_policy as site_crawl_config
 from app.core.config import site_health_rules as web_rules
-from app.core.config import visibility_prompts as visibility_config
 from app.core.config import workspaces as workspace_config
 from app.core.config.abuse import AbuseSettings
 from app.core.config.analysis import (
@@ -173,7 +172,6 @@ from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
 from scripts.ts_commerce_policy import discovery_policy
-from scripts.ts_platform_agent import agent_skill_policy
 from scripts.ts_platform_audits import audit_policy, audit_schedule_policy
 from scripts.ts_platform_billing import billing_policy, entitlements_policy
 from scripts.ts_platform_costs import costs_policy
@@ -373,7 +371,6 @@ def build_config() -> dict[str, Any]:
             },
         },
         "agent": _agent_policy(),
-        "agent_skills": agent_skill_policy(),
     }
 
 
@@ -407,27 +404,6 @@ def _prompts_policy() -> dict[str, Any]:
         "trailing_punctuation": cfg.PROMPT_TRAILING_PUNCTUATION,
         "text_max_chars": PROMPT_TEXT_MAX_CHARS,
         "text_min_words": PROMPT_TEXT_MIN_WORDS,
-        "generation": {
-            "version": cfg.GENERATOR_VERSION,
-            "policy_version": visibility_config.BUYER_QUERY_POLICY_VERSION,
-            "cell_max_facets": cfg.GENERATION_CELL_MAX_FACETS,
-            "map_calls": cfg.MAP_SUGGESTION_MODEL_CALLS,
-            "map_max_entries": cfg.MAP_SUGGESTION_MAX_PER_DIMENSION,
-            "map_system": cfg.MAP_SUGGESTION_SYSTEM_PROMPT,
-            "stages": visibility_config.BUYER_STAGES,
-            "intent_legacy": visibility_config.PROMPT_INTENT_LEGACY,
-            "local_intents": visibility_config.LOCAL_PROMPT_INTENTS,
-            "topic_max": visibility_config.VISIBILITY_TOPIC_MAX,
-            "brand_common_words": sorted(cfg.BRAND_TOKEN_COMMON_WORDS),
-            "provider_phrases": sorted(visibility_config.PROVIDER_DESCRIPTION_PHRASES),
-            "systems": {
-                model: {
-                    cohort: visibility_config.cohort_system_prompt(model, cohort)
-                    for cohort in ("core", "comparison", "brand_diagnostic")
-                }
-                for model in ("", *visibility_config.PROMPT_EXEMPLARS)
-            },
-        },
         "theme_max_chars": PROMPT_THEME_MAX_CHARS,
         "intent_max_chars": PROMPT_INTENT_MAX_CHARS,
         "topic_name_max_chars": TOPIC_NAME_MAX_CHARS,
