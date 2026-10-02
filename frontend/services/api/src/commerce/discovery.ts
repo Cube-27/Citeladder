@@ -28,7 +28,9 @@ import {
 } from './discovery-validation.ts';
 
 const p = policy.commerce.discovery;
-export const discoveryInput = z.object({ targets: z.array(commerceTargetSchema).min(1) });
+export const discoveryInput = z.object({
+  targets: z.array(commerceTargetSchema).min(1).max(policy.commerce.buyer_prompts.targets_max),
+});
 const payloadSchema = z.object({
   target: commerceTargetSchema,
   target_context: z.record(z.string(), z.unknown()).optional(),

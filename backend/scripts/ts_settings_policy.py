@@ -43,7 +43,7 @@ def _type_descriptor(annotation: Any) -> dict[str, Any]:
 
 
 def _export_default(name: str, field: FieldInfo) -> Any:
-    default = field.default
+    default = field.get_default(call_default_factory=True)
     metadata = field.json_schema_extra
     sensitive = isinstance(metadata, dict) and metadata.get("secret") is True
     if isinstance(default, SecretStr) or sensitive:
@@ -69,4 +69,6 @@ def setting(name: str, model: type[BaseSettings] = Settings) -> dict[str, Any]:
             entry["exclusive_minimum"] = exclusive
         if (maximum := getattr(constraint, "le", None)) is not None:
             entry["maximum"] = maximum
+        if (exclusive := getattr(constraint, "lt", None)) is not None:
+            entry["exclusive_maximum"] = exclusive
     return entry

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { ConfigError, demoAccessExpired, loadConfig, policy } from '../src/config.ts';
+import {
+  ConfigError,
+  demoAccessExpired,
+  loadConfig,
+  policy,
+  resolveSettingSpec,
+} from '../src/config.ts';
 import { libpqUrl, poolOptions } from '../src/db/database.ts';
 import { razorpaySettings } from '../src/billing/config.ts';
 
@@ -32,6 +38,12 @@ describe('loadConfig', () => {
 
   it('matches environment names case-insensitively, as pydantic-settings does', () => {
     expect(loadConfig({ db_pool_size: '7' }).database.poolSize).toBe(7);
+  });
+
+  it('rejects a value at an exported exclusive maximum', () => {
+    const spec = { env: ['BOUNDED'], type: 'float', default: 1, exclusive_maximum: 672 };
+    expect(resolveSettingSpec(spec, { BOUNDED: '671.5' })).toBe(671.5);
+    expect(() => resolveSettingSpec(spec, { BOUNDED: '672' })).toThrow(ConfigError);
   });
 
   it('enforces the Python field bounds and literal values', () => {

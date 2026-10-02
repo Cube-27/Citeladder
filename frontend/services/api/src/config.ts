@@ -25,6 +25,7 @@ type SettingSpec = {
   minimum?: number;
   exclusive_minimum?: number;
   maximum?: number;
+  exclusive_maximum?: number;
 };
 
 export type PythonPolicy = typeof pythonConfig;
@@ -56,6 +57,9 @@ function checkBounds(name: string, value: number, spec: SettingSpec): number {
   }
   if (spec.maximum !== undefined && value > spec.maximum) {
     throw new ConfigError(`${name} must be <= ${spec.maximum}`);
+  }
+  if (spec.exclusive_maximum !== undefined && value >= spec.exclusive_maximum) {
+    throw new ConfigError(`${name} must be < ${spec.exclusive_maximum}`);
   }
   return value;
 }

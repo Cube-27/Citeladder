@@ -50,3 +50,16 @@ def test_export_refuses_nonempty_typed_or_declared_credential_defaults(
 
     with pytest.raises(ValueError, match="non-empty secret default"):
         setting("token" if typed_secret else "password", CredentialSettings)
+
+
+def test_export_evaluates_default_factories_and_keeps_strict_upper_bounds() -> None:
+    class FactorySettings(BaseSettings):
+        token: SecretStr = Field(
+            default_factory=lambda: SecretStr("credential-fixture")
+        )
+        hours: float = Field(default_factory=lambda: 2.0, gt=0, lt=24)
+
+    with pytest.raises(ValueError, match="non-empty secret default"):
+        setting("token", FactorySettings)
+    spec = setting("hours", FactorySettings)
+    assert (spec["default"], spec["exclusive_maximum"]) == (2.0, 24)
