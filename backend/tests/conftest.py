@@ -115,6 +115,7 @@ from app.main import app  # noqa: E402
 _TEST_RUN_ID = uuid.uuid4().hex[:12]
 _TEST_SCHEMA = f"test_{re.sub(r'[^a-zA-Z0-9_]', '_', _TEST_RUN_ID)}"
 
+
 # Between-test cleanup, as one round trip. Raw SQL bypasses the engine's
 # ``schema_translate_map`` (which only rewrites SQLAlchemy constructs), so the
 # schema is spelled out here.
@@ -143,27 +144,22 @@ _TEST_SCHEMA = f"test_{re.sub(r'[^a-zA-Z0-9_]', '_', _TEST_RUN_ID)}"
 # table (so it matches every freshly created table, narrowing nothing), while
 # ``relpages`` and ``n_live_tup`` still read 0 immediately after an insert, so
 # genuinely written tables get skipped and their rows leak into the next test.
-with warnings.catch_warnings():
-    # Emits a cycle warning for the audit-task / artifact tables; the deferred
-    # constraints above are what actually makes those safe to delete.
-    warnings.simplefilter("ignore")
-    _DELETE_ORDER = list(reversed(Base.metadata.sorted_tables))
-
-# ``consumable_ledger`` RESTRICT-references ``audit_tasks`` / ``audits``, and
-# the audit snapshot/audit tables CASCADE into ``audit_tasks`` (the task row
-# sits late in the order, entangled in the artifact cycle). Deleting a
-# snapshot/audit row therefore cascades into tasks while ledger history still
-# exists and trips the RESTRICT guard — so immutable ledger history must be
-# emptied BEFORE any table whose delete can cascade into the task cycle.
-# Stable sort: only the named tables move, everything else keeps its order.
-_DELETE_ORDER.sort(key=lambda table: table.name != "consumable_ledger")
-
-_CLEANUP_SQL = "DO $$ BEGIN SET CONSTRAINTS ALL DEFERRED; {deletes} END $$;".format(
-    deletes="".join(
-        f'DELETE FROM "{_TEST_SCHEMA}"."{table.name}";'  # noqa: S608 - names come from SQLAlchemy metadata, never a request
-        for table in _DELETE_ORDER
+def _cleanup_sql() -> str:
+    # Resolve after test collection has imported the models, just as create_all
+    # does. The retired web router no longer imports every table at bootstrap.
+    with warnings.catch_warnings():
+        # Deferred constraints above make the artifact/task cycle safe.
+        warnings.simplefilter("ignore")
+        delete_order = list(reversed(Base.metadata.sorted_tables))
+    # Ledger history RESTRICT-references tasks; remove it before deleting a
+    # snapshot/audit can cascade into the artifact/task cycle.
+    delete_order.sort(key=lambda table: table.name != "consumable_ledger")
+    return "DO $$ BEGIN SET CONSTRAINTS ALL DEFERRED; {deletes} END $$;".format(
+        deletes="".join(
+            f'DELETE FROM "{_TEST_SCHEMA}"."{table.name}";'  # noqa: S608 - names come from SQLAlchemy metadata, never a request
+            for table in delete_order
+        )
     )
-)
 
 
 @pytest.fixture(autouse=True)
@@ -338,11 +334,12 @@ async def session_factory(
         class_=AsyncSession,
         autoflush=False,
     )
+    cleanup_sql = _cleanup_sql()
     try:
         yield factory
     finally:
         async with _schema_engine.begin() as conn:
-            await conn.execute(text(_CLEANUP_SQL))
+            await conn.execute(text(cleanup_sql))
 
 
 @pytest_asyncio.fixture

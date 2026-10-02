@@ -19,6 +19,7 @@ import {
 } from './discovery-provider.ts';
 import {
   competitorHost,
+  contextText,
   discoveryQuery,
   exclusion,
   prepareResults,
@@ -77,28 +78,28 @@ export function enqueueDiscoveries(
     if (!project) commerceMissing('Project not found');
     const runId = randomUUID(),
       locale = [project.language_code, project.country_code].filter(Boolean).join('-');
-    const ids = new Map<string, string>(),
-      taskIds: string[] = [];
-    for (const target of input.targets) {
-      const key = `${target.kind}:${target.id}`;
-      let id = ids.get(key);
-      if (!id) {
-        const context = await targetContext(trx, scope, target);
-        id =
-          (await enqueueTask(trx, {
-            ...scope,
-            kind: 'commerce_competitor_discovery',
-            payload: { target, target_context: context, locale, run_id: runId },
-            keyParts: [],
-            idempotencyKey: `commerce:competitors:${runId}:${key}`,
-            maxAttempts: loadWorkerSettings().taskMaxAttempts,
-          })) ?? undefined;
-        if (!id) throw new Error('Competitor discovery task was not persisted');
-        ids.set(key, id);
-      }
-      taskIds.push(id);
-    }
-    return { task_ids: taskIds };
+    const targetKey = (target: z.infer<typeof commerceTargetSchema>) =>
+      `${target.kind}:${target.id.toLowerCase()}`;
+    const targets = new Map(input.targets.map((target) => [targetKey(target), target]));
+    const ids = new Map(
+      await Promise.all(
+        [...targets].map(async ([key, target]) => {
+          const context = await targetContext(trx, scope, target);
+          const id =
+            (await enqueueTask(trx, {
+              ...scope,
+              kind: 'commerce_competitor_discovery',
+              payload: { target, target_context: context, locale, run_id: runId },
+              keyParts: [],
+              idempotencyKey: `commerce:competitors:${runId}:${key}`,
+              maxAttempts: loadWorkerSettings().taskMaxAttempts,
+            })) ?? undefined;
+          if (!id) throw new Error('Competitor discovery task was not persisted');
+          return [key, id] as const;
+        }),
+      ),
+    );
+    return { task_ids: input.targets.map((target) => ids.get(targetKey(target))!) };
   });
 }
 
@@ -143,6 +144,8 @@ async function validate(
   const verified = new Set<string>();
   await Promise.all(
     Array.from({ length: Math.min(p.verify_concurrency, candidates.length) }, async () => {
+      // Each consumer verifies one page at a time; parallelizing the loop
+      // would exceed the configured acquisition concurrency.
       while (next < candidates.length) {
         const item = candidates[next++]!;
         try {
@@ -165,16 +168,14 @@ async function validate(
     }),
   );
   let accepted = 0;
-  return items.map((item) => ({
-    ...item,
-    validation_outcome:
-      item.validation_outcome ||
-      (!verified.has(item.canonical!)
-        ? 'excluded_unavailable'
-        : accepted++ < p.result_limit
-          ? 'accepted'
-          : 'excluded_limit'),
-  }));
+  return items.map((item) => {
+    let verdict = item.validation_outcome;
+    if (!verdict) {
+      if (!verified.has(item.canonical!)) verdict = 'excluded_unavailable';
+      else verdict = accepted++ < p.result_limit ? 'accepted' : 'excluded_limit';
+    }
+    return { ...item, validation_outcome: verdict };
+  });
 }
 
 async function publish(
@@ -213,7 +214,7 @@ async function publish(
       locale: payload.locale,
       status: outcome.status,
       error_code: outcome.errorCode,
-      provider_version: p.provider_version,
+      provider_version: outcome.providerVersion ?? p.provider_version,
       validator_version: p.validator_version,
       created_at: now,
       result_payload: JSON.stringify(
@@ -222,6 +223,9 @@ async function publish(
           title: item.title.slice(0, 512),
           content: item.content.slice(0, p.snippet_chars),
           validation_outcome: item.validation_outcome,
+          source_id: item.source_id,
+          processing_version: item.processing_version,
+          provider: item.provider,
         })),
       ),
     })
@@ -247,6 +251,9 @@ async function publish(
             search_excerpt: item.content.slice(0, p.snippet_chars),
             extractor_version: policy.site_health.versions.extractor,
             classifier_version: policy.site_health.page_analysis.classification.version,
+            source_id: item.source_id,
+            processing_version: item.processing_version,
+            provider: item.provider,
           }),
           source_kind: 'provider',
           state: 'pending',
@@ -266,7 +273,7 @@ export function competitorDiscovery(
       payload = payloadSchema.parse(task.payload);
     await targetContext(db, { workspaceId: task.workspace_id, projectId }, payload.target);
     const context = payload.target_context ?? { name: payload.target_name ?? '' };
-    if (!searchableName(String(context.name ?? '')))
+    if (!searchableName(contextText(context.name)))
       throw new TerminalExecutorError('unusable_target', 'Commerce target name is not searchable');
     const query = discoveryQuery(payload.target, context);
     const owned = await ownedHosts(db, task, projectId);
@@ -280,12 +287,11 @@ export function competitorDiscovery(
       owned,
       options.fetcher,
     );
+    let error: Error | null = null;
+    if (outcome.retry) error = new Error('Competitor discovery provider failed');
+    else if (outcome.status === 'unavailable') error = new TerminalExecutorError(outcome.errorCode);
     return {
-      error: outcome.retry
-        ? new Error('Competitor discovery provider failed')
-        : outcome.status === 'unavailable'
-          ? new TerminalExecutorError(outcome.errorCode)
-          : null,
+      error,
       persist: (trx) => publish(trx, task, projectId, payload, query, outcome, items),
     };
   };

@@ -1198,9 +1198,13 @@ evaluation corpus remains evidence of the Python-era implementation.
 Departures: redirects to owned, marketplace or editorial destinations are
 excluded before verification; shared robots policy and host pacing now apply to
 candidate pages; verification records the current extractor/classifier versions.
+Search source IDs and processing versions survive into attempts and candidates;
+Tavily results without a provider ID receive a deterministic payload hash.
 Malformed provider envelopes fail over or retry rather than silently becoming an
 empty successful result. Provider credentials require canonical HTTPS destinations
-and never follow redirects. Failed attempts use the shared analytics retry code;
+and never follow redirects. Invalid Tavily destinations are rejected by both
+configuration consumers, and drain budgets must be finite and positive.
+Failed attempts use the shared analytics retry code;
 unavailable providers and unusable names retain explicit terminal codes. Queue
 outcomes and evidence settle atomically instead of separate commits, and expired
 claims cannot finalize. No live provider or deployment acceptance is implied.

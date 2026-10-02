@@ -69,6 +69,40 @@ class ExecutorNotWiredError extends Error {}
 
 const detail = (error: Error) => [...String(error.message)].slice(0, ERROR_DETAIL_LIMIT).join('');
 
+function taskOutcome(
+  error: Error | null,
+  attempt: number,
+  maxAttempts: number,
+  now: Date,
+  retryDelaySeconds: number,
+) {
+  if (error === null)
+    return { status: statuses.succeeded, completed_at: now, error_code: '', error_detail: '' };
+  if (error instanceof ExecutorNotWiredError || error instanceof TerminalExecutorError)
+    return {
+      status: statuses.failed,
+      completed_at: now,
+      error_code:
+        error instanceof TerminalExecutorError
+          ? error.code
+          : policy.analytics.executor_not_wired_error,
+      error_detail: detail(error),
+    };
+  if (attempt < maxAttempts)
+    return {
+      status: statuses.retry_wait,
+      available_at: new Date(now.getTime() + retryDelaySeconds * 1000),
+      error_code: policy.analytics.retry_error,
+      error_detail: detail(error),
+    };
+  return {
+    status: statuses.failed,
+    completed_at: now,
+    error_code: policy.task_queue.max_attempts_error,
+    error_detail: detail(error),
+  };
+}
+
 export class AnalyticsWorker {
   readonly owner: string;
   readonly #db: Database;
@@ -134,15 +168,19 @@ export class AnalyticsWorker {
   }
 
   async #execute(claimed: QueueTask): Promise<void> {
+    let started = false;
     try {
       // Cooperative cancel at the boundary: a row that turned terminal between
       // enqueue and claim is never dispatched.
       if (await this.#queue.isTerminal(claimed.id)) return;
       if (!(await this.#queue.markRunning(claimed.id, this.owner, claimed.attempt_count))) return;
+      started = true;
       await this.#finalize(claimed, await this.#run(claimed));
     } catch (error) {
       logger.exception('analytics_task_crashed', error, { task_id: claimed.id });
-      await this.#finalize(claimed, error as Error).catch(() => undefined);
+      // A failed transition leaves a leased claim for recovery; no executor
+      // attempt or partial publication occurred.
+      if (started) await this.#finalize(claimed, error as Error).catch(() => undefined);
     }
   }
 
@@ -208,33 +246,13 @@ export class AnalyticsWorker {
       const error = result === null || result instanceof Error ? result : result.error;
       if (result !== null && !(result instanceof Error)) await result.persist(trx);
       const attempt = row.attempt_count + 1;
-      const outcome =
-        error === null
-          ? { status: statuses.succeeded, completed_at: now, error_code: '', error_detail: '' }
-          : error instanceof ExecutorNotWiredError || error instanceof TerminalExecutorError
-            ? {
-                // Permanent until a deploy: terminal without spending retries.
-                status: statuses.failed,
-                completed_at: now,
-                error_code:
-                  error instanceof TerminalExecutorError
-                    ? error.code
-                    : policy.analytics.executor_not_wired_error,
-                error_detail: detail(error),
-              }
-            : attempt < row.max_attempts
-              ? {
-                  status: statuses.retry_wait,
-                  available_at: new Date(now.getTime() + this.#settings.retryDelaySeconds * 1000),
-                  error_code: policy.analytics.retry_error,
-                  error_detail: detail(error),
-                }
-              : {
-                  status: statuses.failed,
-                  completed_at: now,
-                  error_code: policy.task_queue.max_attempts_error,
-                  error_detail: detail(error),
-                };
+      const outcome = taskOutcome(
+        error,
+        attempt,
+        row.max_attempts,
+        now,
+        this.#settings.retryDelaySeconds,
+      );
       await trx
         .updateTable('analytics_tasks')
         .set({

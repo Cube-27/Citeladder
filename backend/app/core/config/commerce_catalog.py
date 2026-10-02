@@ -1,6 +1,6 @@
 """Configuration and version vocabulary for the Commerce replacement."""
 
-from typing import Final
+from typing import Final, Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -328,7 +328,8 @@ class CommerceSettings(BaseSettings):
     )
 
     tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
-    tavily_endpoint: str = Field(
+    # Credentials may only be sent to the canonical provider destination.
+    tavily_endpoint: Literal["https://api.tavily.com/search"] = Field(
         default="https://api.tavily.com/search", validation_alias="TAVILY_ENDPOINT"
     )
     tavily_timeout_seconds: float = Field(default=20.0, gt=0, le=60)

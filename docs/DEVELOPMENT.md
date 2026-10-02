@@ -51,6 +51,7 @@ uv run uvicorn app.main:app --reload --port 8000
 
 Run only the separate workers required by the workflow under test. The web process enqueues
 work and never performs provider calls or long-running crawl/sync/generation work inline.
+Run each worker command in its own terminal; every worker below runs indefinitely.
 
 ```bash
 cd frontend/services/api

@@ -57,22 +57,24 @@ export async function actionFixture<T>(...args: string[]): Promise<T> {
         .where('a.crawl_id', '=', seed.crawl_id)
         .execute();
       const names = ['Garden soil guide', 'Soil testing kit', 'Compost for healthy soil'];
-      for (const [index, row] of rows.entries()) {
-        const name = names[index % names.length]!;
-        const facts = extractPageFacts(
-          Buffer.from(
-            `<html><title>${name} | Acme</title><main><h1>${name}</h1><p>Use a soil testing kit to understand nutrient levels before planting.</p><p>Add compost to improve moisture retention and support a thriving garden.</p></main></html>`,
-          ),
-          { finalUrl: row.final_url, contentType: 'text/html', statusCode: 200 },
-          factSettings({}),
-        );
-        await db
-          .updateTable('site_fetch_artifacts')
-          .set({ normalized_facts: JSON.stringify(facts) })
-          .where('id', '=', row.id)
-          .where('workspace_id', '=', seed.workspace_id)
-          .execute();
-      }
+      await Promise.all(
+        rows.map(async (row, index) => {
+          const name = names[index % names.length]!;
+          const facts = extractPageFacts(
+            Buffer.from(
+              `<html><title>${name} | Acme</title><main><h1>${name}</h1><p>Use a soil testing kit to understand nutrient levels before planting.</p><p>Add compost to improve moisture retention and support a thriving garden.</p></main></html>`,
+            ),
+            { finalUrl: row.final_url, contentType: 'text/html', statusCode: 200 },
+            factSettings({}),
+          );
+          await db
+            .updateTable('site_fetch_artifacts')
+            .set({ normalized_facts: JSON.stringify(facts) })
+            .where('id', '=', row.id)
+            .where('workspace_id', '=', seed.workspace_id)
+            .execute();
+        }),
+      );
     } finally {
       await db.destroy();
     }

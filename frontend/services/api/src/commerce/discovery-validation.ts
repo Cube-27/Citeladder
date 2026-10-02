@@ -10,6 +10,7 @@ import type { SearchResult } from './discovery-provider.ts';
 
 const p = policy.commerce.discovery;
 const editorial = p.editorial_patterns.map((pattern) => new RegExp(pattern, 'iu'));
+export const contextText = (value: unknown) => (typeof value === 'string' ? value : '');
 export function competitorHost(value: string) {
   try {
     return new URL(value.includes('://') ? value : `https://${value}`).hostname
@@ -40,7 +41,7 @@ export function searchableName(name: string) {
   return clean.length >= 2 && !/[|–—»]/u.test(clean) && clean.split(' ').length <= p.name_max_words;
 }
 export function discoveryQuery(target: CommerceTarget, context: Record<string, unknown>) {
-  const name = String(context.name ?? '');
+  const name = contextText(context.name);
   if (target.kind === 'category') return `buy ${name} online store`;
   const attributes = record(context.attributes);
   const type = ['product_type', 'type', 'category']
@@ -64,23 +65,21 @@ export function discoveryQuery(target: CommerceTarget, context: Record<string, u
     type,
     ...details,
     band
-      ? `price ${String(context.currency ?? '').toUpperCase()} ${band}`.replace(/\s+/gu, ' ')
+      ? `price ${contextText(context.currency).toUpperCase()} ${band}`.replace(/\s+/gu, ' ')
       : '',
   ]
     .filter(Boolean)
     .join(' ');
-  return `buy ${name}${qualifiers ? ` ${qualifiers}` : ''} online store`;
+  return ['buy', name, qualifiers, 'online store'].filter(Boolean).join(' ');
 }
 export function prepareResults(results: SearchResult[], owned: readonly string[]) {
   const seen = new Set<string>();
   return results.slice(0, p.provider_result_limit).map((item) => {
     const url = canonicalUrl(item.url);
-    let outcome =
-      !item.url.trim() || !item.title.trim()
-        ? 'excluded_missing_identity'
-        : !url
-          ? 'excluded_invalid_url'
-          : exclusion(url, item.title, owned);
+    let outcome = '';
+    if (!item.url.trim() || !item.title.trim()) outcome = 'excluded_missing_identity';
+    else if (!url) outcome = 'excluded_invalid_url';
+    else outcome = exclusion(url, item.title, owned);
     if (!outcome && url) {
       outcome = seen.has(url) ? 'excluded_duplicate' : '';
       seen.add(url);

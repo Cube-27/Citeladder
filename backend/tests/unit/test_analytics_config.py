@@ -332,6 +332,15 @@ def test_analytics_settings_lease_ttl_env_override(
         AnalyticsSettings(_env_file=None)
 
 
+@pytest.mark.parametrize("budget", ["0", "-1", "inf", "nan"])
+def test_analytics_drain_rejects_unbounded_or_nonpositive_budget(
+    monkeypatch: pytest.MonkeyPatch, budget: str
+) -> None:
+    monkeypatch.setenv("ANALYTICS_DRAIN_BUDGET_SECONDS", budget)
+    with pytest.raises(ValidationError):
+        AnalyticsSettings(_env_file=None)
+
+
 def test_referral_hash_salt_env_injected_with_insecure_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

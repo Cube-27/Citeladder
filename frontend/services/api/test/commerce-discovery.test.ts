@@ -97,6 +97,9 @@ it('validates real page facts, preserves every verdict and source attempt, and n
         url: 'https://merchant.example/products/tool?utm_source=test',
         title: 'Merchant tool',
         content: 'Search evidence',
+        source_id: 'source-merchant',
+        processing_version: 'search-processing-2',
+        provider: 'keenable',
       },
       { url: 'https://merchant.example/products/tool', title: 'Duplicate', content: '' },
       { url: 'https://broken.example/products/tool', title: 'Broken', content: '' },
@@ -116,7 +119,11 @@ it('validates real page facts, preserves every verdict and source attempt, and n
     { validation_outcome: 'excluded_owned_domain' },
     { validation_outcome: 'excluded_marketplace' },
     { validation_outcome: 'excluded_editorial' },
-    { validation_outcome: 'accepted' },
+    {
+      validation_outcome: 'accepted',
+      source_id: 'source-merchant',
+      processing_version: 'search-processing-2',
+    },
     { validation_outcome: 'excluded_duplicate' },
     { validation_outcome: 'excluded_unavailable' },
   ]);
@@ -127,6 +134,8 @@ it('validates real page facts, preserves every verdict and source attempt, and n
     canonical_url: 'https://merchant.example/products/tool',
     evidence: {
       search_excerpt: 'Search evidence',
+      source_id: 'source-merchant',
+      processing_version: 'search-processing-2',
       extractor_version: policy.site_health.versions.extractor,
     },
   });
@@ -343,14 +352,27 @@ it('falls back from failed Tavily to the existing Keenable transport and refuses
         ? new Response('', { status: 503 })
         : Response.json({
             results: [
-              { url: 'https://merchant.example/products/tool', title: 'Tool', snippet: 'Evidence' },
+              {
+                source_id: 'provider-source-123',
+                url: 'https://merchant.example/products/tool',
+                title: 'Tool',
+                snippet: 'Evidence',
+              },
             ],
           });
     },
   );
   expect(await search('buy tool online store', 'en-US')).toMatchObject({
     status: 'succeeded',
-    results: [{ content: 'Evidence' }],
+    providerVersion: policy.discovery.constants.keenable_research_version,
+    results: [
+      {
+        content: 'Evidence',
+        source_id: 'provider-source-123',
+        processing_version: policy.discovery.constants.keenable_research_version,
+        provider: 'keenable',
+      },
+    ],
   });
   expect(sent.map((row) => [row.url, row.init?.redirect])).toEqual([
     ['https://api.tavily.com/search', 'error'],
@@ -361,14 +383,14 @@ it('falls back from failed Tavily to the existing Keenable transport and refuses
     max_results: policy.commerce.discovery.provider_result_limit,
   });
   let called = false;
-  expect(
-    await competitorSearch(
+  expect(() =>
+    competitorSearch(
       { TAVILY_API_KEY: 'test-key', TAVILY_ENDPOINT: 'https://attacker.example/search' },
       async () => {
         called = true;
         return Response.json({ results: [] });
       },
-    )('tool', ''),
-  ).toMatchObject({ status: 'unavailable', retry: true });
+    ),
+  ).toThrow(/TAVILY_ENDPOINT/u);
   expect(called).toBe(false);
 });

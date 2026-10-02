@@ -397,11 +397,11 @@ class AnalyticsSettings(BaseSettings):
     task_max_attempts: int = Field(default=3, gt=0)
     # Idle poll interval of the worker loop.
     poll_interval_seconds: float = Field(default=1.0, gt=0)
-    # Fixed retry delay after a failed attempt. Executors are DB-only
-    # projections (no provider call), so no Retry-After channel exists.
+    # Fixed retry delay after a failed attempt; executors publish under the
+    # durable claim after any bounded acquisition has finished.
     retry_delay_seconds: float = Field(default=30.0, ge=0)
     lease_reclaim_batch_size: int = Field(default=100, gt=0)
-    drain_budget_seconds: float = Field(default=300.0, gt=0)
+    drain_budget_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
 
     @model_validator(mode="after")
     def _check_operational_bounds(self) -> AnalyticsSettings:

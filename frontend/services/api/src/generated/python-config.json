@@ -10964,7 +10964,10 @@
           "env": [
             "TAVILY_ENDPOINT"
           ],
-          "type": "str",
+          "type": "literal",
+          "values": [
+            "https://api.tavily.com/search"
+          ],
           "default": "https://api.tavily.com/search"
         },
         "tavily_timeout_seconds": {
