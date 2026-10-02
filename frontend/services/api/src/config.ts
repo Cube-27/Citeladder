@@ -274,7 +274,7 @@ export function secretIsWeak(value: string): boolean {
 function productionFrontendUrl(value: string): boolean {
   try {
     // Inspect the unnormalized path too: URL would collapse /private/.. to /.
-    if (!/^https:\/\/[^/?#\\]+\/?$/iu.test(value.trim())) return false;
+    if (!/^https:\/\/[^/?#\\@]+\/?$/iu.test(value.trim())) return false;
     const url = new URL(value);
     const host = url.hostname.replace(/^\[|\]$/gu, '').replace(/\.+$/u, '');
     return (

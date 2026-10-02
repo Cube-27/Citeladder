@@ -36,6 +36,7 @@ describe('production startup admission', () => {
     'https://[::1]',
     'http://app.example.test',
     'https://user:pass@app.example.test',
+    'https://@app.example.test',
     'https://app.example.test/path',
     'https://app.example.test/path/..',
     'https://app.example.test?redirect=elsewhere',
