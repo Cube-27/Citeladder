@@ -10,6 +10,7 @@ import ipaddr from 'ipaddr.js';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { errors } from './config/errors.ts';
+import { compareText } from './text-order.ts';
 import { siteHealth } from './config/site-health.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
@@ -103,7 +104,9 @@ export const policy = {
     ...pythonConfig.traffic,
     url_schemes: siteHealth.web_fetch.schemes,
     url_ports: siteHealth.web_fetch.ports,
-    ignored_query_keys: [...siteHealth.tracking_params, ...siteHealth.ignored_query_keys].sort(),
+    ignored_query_keys: [...siteHealth.tracking_params, ...siteHealth.ignored_query_keys].sort(
+      compareText,
+    ),
   },
   agent_context: agentContext,
   agent_skills: agentSkills,

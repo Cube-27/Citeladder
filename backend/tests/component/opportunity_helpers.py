@@ -28,8 +28,6 @@ from app.core.config.audits import AUDIT_STATUS_COMPLETED
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
     INITIAL_TASK_GENERATION,
-    PAGE_ANALYSIS_STATUS_COMPLETED,
-    RULE_OUTCOME_MISSING,
     TASK_KIND_ANALYZE,
 )
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
@@ -367,7 +365,7 @@ async def _add_issue(
         crawl_id=crawl.id,
         site_url_id=site_url.id,
         artifact_id=artifact.id,
-        status=PAGE_ANALYSIS_STATUS_COMPLETED,
+        status="completed",
         analyzer_version="v1",
         scoring_version="v1",
     )
@@ -382,7 +380,7 @@ async def _add_issue(
         category="content",
         severity=severity,
         weight=1.0,
-        outcome=RULE_OUTCOME_MISSING,
+        outcome="missing",
         evidence={"observed": "missing"},
         analyzer_version="v1",
         rule_version="v1",

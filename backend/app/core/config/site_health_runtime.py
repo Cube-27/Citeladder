@@ -30,7 +30,7 @@ class SiteHealthSettings(BaseSettings):
     max_requested_page_limit: int = Field(default=500, gt=0)
     sample_url_limit: int = Field(default=SAMPLE_URL_LIMIT, ge=0)
     sample_discovery_url_cap: int = Field(default=SAMPLE_DISCOVERY_URL_CAP, ge=0)
-    max_attempts: int = 4
+    max_attempts: int = Field(default=4, ge=1)
 
     @model_validator(mode="after")
     def _validate_limits(self) -> SiteHealthSettings:

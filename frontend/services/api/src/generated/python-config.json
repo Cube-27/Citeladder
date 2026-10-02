@@ -4028,7 +4028,8 @@
           "SITE_HEALTH_MAX_ATTEMPTS"
         ],
         "type": "int",
-        "default": 4
+        "default": 4,
+        "minimum": 1
       },
       "sample_discovery_url_cap": {
         "env": [

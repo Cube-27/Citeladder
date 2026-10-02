@@ -3,6 +3,9 @@ import { loadConfig, policy } from '../src/config.ts';
 import { validateSiteHealthCatalog } from '../src/config/site-health/validation.ts';
 
 it.each([
+  { SITE_HEALTH_MAX_ATTEMPTS: '0' },
+  { SITE_HEALTH_MAX_ATTEMPTS: '-1' },
+  { SITE_HEALTH_MAX_FRONTIER_URLS: '-1' },
   { SITE_HEALTH_RATE_LIMIT_COOLDOWN_SECONDS: '0' },
   { SITE_HEALTH_ROBOTS_CACHE_TTL_SECONDS: 'nan' },
   { SITE_HEALTH_SAMPLE_URL_LIMIT: '-1' },

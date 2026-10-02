@@ -1,5 +1,6 @@
 /** Native Site Health policy, composed with the narrow Python model/operator bridge. */
 import shared from '../generated/python-config.json' with { type: 'json' };
+import { compareText } from '../text-order.ts';
 import architecture from './site-health/architecture.json' with { type: 'json' };
 import acquisition from './site-health/acquisition.json' with { type: 'json' };
 import analysis from './site-health/analysis.json' with { type: 'json' };
@@ -14,6 +15,18 @@ import { validateSiteHealthCatalog } from './site-health/validation.ts';
 
 const contentChecks = new Set(Object.keys(reads.reads.content_addressable_check_fields));
 const ruleVersion = 'sh-rules-1';
+
+function remediationRoute(rule: (typeof rules)[number]) {
+  if (contentChecks.has(rule.rule_id)) return 'content';
+  if (
+    rule.dimension === 'aeo' &&
+    ['content', 'citability'].includes(rule.category) &&
+    rule.scope === 'page' &&
+    rule.rule_id !== 'aeo.server_rendered_content'
+  )
+    return 'agent';
+  return 'code';
+}
 
 export const siteHealth = {
   ...architecture,
@@ -30,7 +43,7 @@ export const siteHealth = {
   reads: {
     ...reads.reads,
     ...shared.site_health.reads,
-    content_addressable_check_ids: [...contentChecks].sort(),
+    content_addressable_check_ids: [...contentChecks].sort(compareText),
   },
   crawl: {
     ...acquisition.crawl,
@@ -46,7 +59,7 @@ export const siteHealth = {
       page_kinds: [
         ...analysis.page_analysis.classification.page_kinds,
         shared.site_health.model_defaults.page_kind_other,
-      ].sort(),
+      ].sort(compareText),
     },
     facts: {
       ...analysis.page_analysis.facts,
@@ -63,14 +76,7 @@ export const siteHealth = {
     ...rule,
     rule_version: ruleVersion,
     content_addressable: contentChecks.has(rule.rule_id),
-    remediation_route: contentChecks.has(rule.rule_id)
-      ? 'content'
-      : rule.dimension === 'aeo' &&
-          ['content', 'citability'].includes(rule.category) &&
-          rule.scope === 'page' &&
-          rule.rule_id !== 'aeo.server_rendered_content'
-        ? 'agent'
-        : 'code',
+    remediation_route: remediationRoute(rule),
   })),
 };
 
