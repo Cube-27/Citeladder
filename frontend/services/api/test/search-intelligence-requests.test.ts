@@ -108,6 +108,11 @@ describe('reviewed Search Intelligence requests', () => {
       costMicrousd: 144120,
     });
     expect(quoteDataset('backlink_history', 13).costMicrousd).toBe(24468);
+    expect(quoteDataset('referring_domains', 1001)).toEqual({
+      calls: 2,
+      rows: 1001,
+      costMicrousd: 84036,
+    });
   });
   it('rejects selections with no supported acquisition semantics', () => {
     for (const selection of [

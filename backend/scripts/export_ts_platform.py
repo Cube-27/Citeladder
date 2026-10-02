@@ -274,43 +274,12 @@ def _prompts_policy() -> dict[str, Any]:
 
 
 def _search_intelligence_policy() -> dict[str, Any]:
-    """What Search Intelligence confirms, reads and sorts by."""
-    si = search_intelligence_config
     return {
         "task_kind": ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
-        "price_version": si.PRICE_VERSION,
+        "price_version": search_intelligence_config.PRICE_VERSION,
+        "parser_version": search_intelligence_config.PARSER_VERSION,
         "transport_provider": TRANSPORT_DATAFORSEO,
         "connection_test_ok": TEST_STATUS_OK,
-        "default_research_scope": si.DEFAULT_RESEARCH_SCOPE,
-        "default_depths": dict(si.DEFAULT_DEPTHS),
-        "max_depth": si.MAX_SAFE_DEPTH,
-        "endpoints": dict(si.ENDPOINTS),
-        "broad_endpoints": dict(si.BROAD_ENDPOINTS),
-        "list_kinds": sorted(si.LIST_KINDS),
-        "labs_kinds": sorted(si.LABS_KINDS),
-        "backlink_kinds": sorted(si.BACKLINK_KINDS),
-        "parser_version": si.PARSER_VERSION,
-        "page_size": si.PROVIDER_PAGE_SIZE,
-        "provider_timeout_seconds": si.PROVIDER_TIMEOUT_SECONDS,
-        "provider_max_response_bytes": si.PROVIDER_MAX_RESPONSE_BYTES,
-        "maintenance_batch_size": si.MAINTENANCE_BATCH_SIZE,
-        "backlink_max_offset": si.BACKLINK_MAX_OFFSET,
-        "keyword_acquisition_fields": dict(si.KEYWORD_ACQUISITION_FIELDS),
-        "history_days": si.HISTORY_DAYS,
-        "history_max_observations": si.HISTORY_MAX_OBSERVATIONS,
-        "reuse_days": si.REUSE_DAYS,
-        "review_ttl_seconds": si.REVIEW_TTL_SECONDS,
-        "rate_limit_retries": si.RATE_LIMIT_RETRIES,
-        "rate_limit_default_wait_seconds": si.RATE_LIMIT_DEFAULT_WAIT_SECONDS,
-        "rate_limit_max_wait_seconds": si.RATE_LIMIT_MAX_WAIT_SECONDS,
-        "rates": {
-            "labs_task": str(si.LABS_TASK_USD),
-            "labs_item": str(si.LABS_ITEM_USD),
-            "backlinks_request": str(si.BACKLINKS_REQUEST_USD),
-            "backlinks_row": str(si.BACKLINKS_ROW_USD),
-        },
-        "row_sort_fields": sorted(si.ROW_SORT_FIELDS),
-        "auxiliary_sort_fields": sorted(si.AUXILIARY_SORT_FIELDS),
     }
 
 

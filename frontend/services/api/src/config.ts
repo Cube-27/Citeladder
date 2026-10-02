@@ -16,6 +16,7 @@ import modelGateway from './config/model-gateway.json' with { type: 'json' };
 import { discovery } from './config/discovery.ts';
 import promptLibrary from './config/prompt-library.json' with { type: 'json' };
 import api from './config/api.json' with { type: 'json' };
+import searchIntelligence from './config/search-intelligence.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
@@ -60,6 +61,7 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   api,
+  search_intelligence: { ...searchIntelligence, ...pythonConfig.search_intelligence },
   visibility: { ...pythonConfig.visibility, ...promptLibrary.cohorts },
   projects: { ...pythonConfig.projects, prompt_set_name: promptLibrary.prompt_set_name },
   errors,
