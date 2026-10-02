@@ -16,7 +16,7 @@ import { getVisibilitySources } from '../visibility/sources.ts';
 import { readiness, datasetPage } from '../search-intelligence/reads.ts';
 import { opportunityStatusClause, validateStatus } from '../opportunities/action-status.ts';
 import { authorizeProject, decodeCursor, encodeCursor, pagination } from './data.ts';
-import { McpInputError, type Evidence, type McpPrincipal, type ReadScope } from './types.ts';
+import { McpInputError, type Evidence, type EvidencePrincipal, type ReadScope } from './types.ts';
 
 const reference = (kind: string, id: string, retrievable = true) => ({
   kind,
@@ -574,7 +574,7 @@ const sectionTools: Record<string, string> = {
 };
 export async function projectBusinessContext(
   db: Database,
-  principal: McpPrincipal,
+  principal: EvidencePrincipal,
   projectId: string,
   sections?: string[],
 ): Promise<Evidence> {

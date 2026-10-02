@@ -18,7 +18,7 @@ export type ActionMember = {
   source_issue_ids: string[];
   source_metric_ids: string[];
 };
-const pageGroupKey = (url: string) => `page:${normalizedUrlForCompare(url)}`;
+export const pageGroupKey = (url: string) => `page:${normalizedUrlForCompare(url)}`;
 function target(
   key: string,
   kind: string,
@@ -67,7 +67,7 @@ function actionPriority(strongest: number, families: number): number {
     p.ACTION_PRIORITY_ROUNDING_DECIMALS,
   );
 }
-function approach(ids: string[], kind: string) {
+export function selectApproach(ids: string[], kind: string) {
   return (
     p.APPROACH_TREE.find(
       (b) =>
@@ -88,7 +88,7 @@ function group(t: ReturnType<typeof targetFor>, members: ActionMember[], availab
   const families = p.EVIDENCE_FAMILIES.filter((f) =>
     ordered.some((m) => familyMap[m.rule_id] === f),
   );
-  const branch = approach(
+  const branch = selectApproach(
     ordered.map((m) => m.rule_id),
     t.kind,
   );

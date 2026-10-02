@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
+import { stripTrailing } from '../text-order.ts';
 import {
   defaultTransport,
   endpointUrl,
@@ -68,6 +69,32 @@ function unfenced(content: string) {
   return text.trim();
 }
 
+function normalizedUsage(raw: Record<string, unknown> | undefined) {
+  const usage: Record<string, number | null> = {};
+  const nested = (name: string, field: string) => {
+    const details = raw?.[name];
+    return details && typeof details === 'object' ? Reflect.get(details, field) : undefined;
+  };
+  const fallback: Record<string, unknown> = {
+    cached_input_tokens: nested('prompt_tokens_details', 'cached_tokens'),
+    reasoning_tokens: nested('completion_tokens_details', 'reasoning_tokens'),
+  };
+  for (const [target, aliases] of Object.entries({
+    input_tokens: ['input_tokens', 'prompt_tokens'],
+    output_tokens: ['output_tokens', 'completion_tokens'],
+    total_tokens: ['total_tokens'],
+    cached_input_tokens: ['cached_input_tokens'],
+    reasoning_tokens: ['reasoning_tokens'],
+  })) {
+    const alias = aliases.find((name) => raw && Object.hasOwn(raw, name));
+    const value = alias ? raw?.[alias] : fallback[target];
+    if (value !== undefined)
+      usage[target] =
+        typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
+  }
+  return usage;
+}
+
 export function createModelGateway(
   settings = gatewaySettings(),
   transport: Transport = defaultTransport,
@@ -80,16 +107,20 @@ export function createModelGateway(
   const secure =
     endpoint.protocol === 'https:' ||
     (endpoint.protocol === 'http:' && LOOPBACK_HOSTS.has(endpoint.hostname));
-  if (endpoint.username || endpoint.password || !secure) {
+  if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !secure) {
     throw new ModelError('not_configured');
   }
   let legacyCap = false;
   const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
-  const url = endpointUrl(settings.baseUrl, '/chat/completions');
-  async function complete(system: string, user: string) {
+  const base = stripTrailing(endpoint.href, '/');
+  const url = base.endsWith('/chat/completions') ? base : endpointUrl(base, '/chat/completions');
+  async function complete(system: string, user: string, signal?: AbortSignal) {
     const started = performance.now();
     // Retries share one call's timeout, the envelope of a single provider call.
-    const deadline = AbortSignal.timeout(settings.timeoutSeconds * 1000);
+    const deadline = AbortSignal.any([
+      AbortSignal.timeout(settings.timeoutSeconds * 1000),
+      ...(signal ? [signal] : []),
+    ]);
     const send = (legacy: boolean) =>
       postModel(
         url,
@@ -124,20 +155,7 @@ export function createModelGateway(
     const parsed = completion.safeParse(await modelJson(response));
     if (!parsed.success) throw new ModelError('parse');
     const body = parsed.data;
-    const usage: Record<string, number> = {};
-    for (const [target, aliases] of Object.entries({
-      input_tokens: ['input_tokens', 'prompt_tokens'],
-      output_tokens: ['output_tokens', 'completion_tokens'],
-      total_tokens: ['total_tokens'],
-    })) {
-      for (const alias of aliases) {
-        const value = body.usage?.[alias];
-        if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
-          usage[target] = value;
-          break;
-        }
-      }
-    }
+    const usage = normalizedUsage(body.usage);
     const latency = Math.round(performance.now() - started);
     logger.info('default agent call ok', { latency_ms: latency, model: settings.model });
     return {
@@ -155,6 +173,19 @@ export function createModelGateway(
     model: settings.model,
     baseUrlHost: endpoint.hostname,
     complete,
+    async completeStructured(
+      system: string,
+      user: string,
+      schema: Record<string, unknown>,
+      signal?: AbortSignal,
+    ) {
+      const result = await complete(
+        system,
+        `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`,
+        signal,
+      );
+      return { ...result, content: unfenced(result.content) };
+    },
     async structured<T>(system: string, user: string, schema: z.ZodType<T>) {
       const result = await complete(
         system,

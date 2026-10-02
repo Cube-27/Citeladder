@@ -229,6 +229,13 @@
       ],
       "type": "str",
       "default": "dev@citeladder.com"
+    },
+    "dev_login_password": {
+      "env": [
+        "DEV_LOGIN_PASSWORD"
+      ],
+      "type": "str",
+      "default": ""
     }
   },
   "development_env_names": [
@@ -590,7 +597,8 @@
       "failed",
       "succeeded"
     ],
-    "max_attempts_error": "max_attempts_exceeded"
+    "max_attempts_error": "max_attempts_exceeded",
+    "max_drain_batches": 1000
   },
   "referrals": {
     "rule_version": "ai-referral-rules-1",
@@ -7624,6 +7632,10 @@
         "technical.meta_description_present",
         "technical.title_present"
       ],
+      "content_addressable_check_fields": {
+        "technical.title_present": "title",
+        "technical.meta_description_present": "meta_description"
+      },
       "partial_reasons": {
         "discovery": "discovery_incomplete",
         "analysis": "analysis_incomplete",
@@ -12856,6 +12868,13 @@
         "default": 16384,
         "exclusive_minimum": 0
       },
+      "skills_directory": {
+        "env": [
+          "SKILLS_DIRECTORY"
+        ],
+        "type": "str",
+        "default": ""
+      },
       "execution_timeout_seconds": {
         "env": [
           "DEFAULT_AGENT_EXECUTION_TIMEOUT_SECONDS"
@@ -13119,13 +13138,14 @@
     }
   },
   "agent": {
-    "runtime_version": "agent-runtime-2",
+    "runtime_version": "agent-runtime-ts-3",
     "protocol_version": "agent-protocol-1",
     "context_manifest_version": "agent-context-1",
     "max_steps": 8,
     "max_tool_calls": 6,
     "max_protocol_errors": 2,
     "run_max_attempts": 3,
+    "provider_max_attempts": 1,
     "chat_turn_limit": 60,
     "tool_result_max_chars": 12000,
     "context_package_max_chars": 24000,
@@ -13148,6 +13168,73 @@
     "revision_list_max": 100,
     "differentiation_report_limit": 10,
     "worker_poll_seconds": 1.0,
+    "recovery_batch_size": 100,
     "heartbeat_seconds": 20.0
+  },
+  "agent_skills": {
+    "groups": [
+      "strategy",
+      "demand",
+      "owned_site",
+      "visibility",
+      "content"
+    ],
+    "output_kinds": [
+      "plan",
+      "measurement",
+      "research",
+      "prompt_portfolio",
+      "page_edits",
+      "link_plan",
+      "technical_fix",
+      "diagnosis",
+      "earned_brief",
+      "content"
+    ],
+    "outline_first_kinds": [
+      "content",
+      "prompt_portfolio"
+    ],
+    "format_kinds": [
+      "content"
+    ],
+    "description_max_chars": 320,
+    "body_max_chars": 14000,
+    "vocabularies": {
+      "buyer_stages": [
+        "awareness",
+        "consideration",
+        "decision",
+        "implementation"
+      ],
+      "prompt_intents": [
+        "learn",
+        "solve",
+        "compare",
+        "recommend",
+        "validate",
+        "buy",
+        "implement"
+      ]
+    }
+  },
+  "agent_context": {
+    "content_context_status_included": "included",
+    "content_context_status_unavailable": "unavailable",
+    "content_context_max_pages": 10,
+    "context_max_h1": 3,
+    "context_max_h2": 8,
+    "content_context_per_page_body_chars": 2000,
+    "content_context_max_chars": 24000,
+    "content_context_field_max_chars": 300,
+    "content_score_target_url": 1000,
+    "content_score_title": 20,
+    "content_score_h1": 20,
+    "content_score_h2": 10,
+    "content_score_url": 10,
+    "content_score_body": 2,
+    "content_score_monitored": 5,
+    "content_crawl_fragment_selection_version": "crawl-fragment-selection-1",
+    "content_context_version": "content-context-v1"
   }
 }

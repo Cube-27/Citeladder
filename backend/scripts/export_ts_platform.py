@@ -162,6 +162,7 @@ from app.core.config.provider_catalog import (
 )
 from app.core.config.site_health_acquisition import SITE_HEALTH_USER_AGENT
 from app.core.config.task_queue import (
+    DEFAULT_MAX_DRAIN_BATCHES,
     ERROR_MAX_ATTEMPTS,
     TASK_ACTIVE_STATUSES,
     TASK_CLAIMABLE_STATUSES,
@@ -182,6 +183,7 @@ from scripts.auth_policy import (
 from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
+from scripts.ts_platform_agent import agent_context_policy, agent_skill_policy
 from scripts.ts_platform_audits import audit_policy, audit_schedule_policy
 from scripts.ts_platform_billing import billing_policy, entitlements_policy
 from scripts.ts_platform_costs import costs_policy
@@ -230,6 +232,7 @@ EXPORTED_SETTINGS = (
     "integration_microsoft_client_id",
     "integration_microsoft_client_secret",
     "dev_login_email",
+    "dev_login_password",
 )
 
 
@@ -438,6 +441,8 @@ def build_config() -> dict[str, Any]:
             },
         },
         "agent": _agent_policy(),
+        "agent_skills": agent_skill_policy(),
+        "agent_context": agent_context_policy(),
     }
 
 
@@ -644,6 +649,7 @@ def _task_queue_policy() -> dict[str, Any]:
         "active": sorted(TASK_ACTIVE_STATUSES),
         "terminal": sorted(TASK_TERMINAL_STATUSES),
         "max_attempts_error": ERROR_MAX_ATTEMPTS,
+        "max_drain_batches": DEFAULT_MAX_DRAIN_BATCHES,
     }
 
 
@@ -697,6 +703,7 @@ ANALYTICS_WORKER_SETTINGS = (
 # generic envelope vocabulary and the workspace authorization codes. A PR that
 # ports a route family adds that family's owning config module here.
 ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
+    agent_config,
     audit_config,
     provider_config,
     error_config,
@@ -745,17 +752,12 @@ def render_error_codes() -> str:
     return "\n".join(lines) + "\n"
 
 
-def _render(payload: dict[str, Any]) -> str:
-    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
-
-
 def build_artifacts() -> dict[Path, str]:
     """Every artifact path mapped to its exact expected contents."""
-    artifacts = {
-        CONFIG_PATH: _render(build_config()),
+    return {
+        CONFIG_PATH: json.dumps(build_config(), indent=2, ensure_ascii=False) + "\n",
         ERROR_CODES_PATH: render_error_codes(),
     }
-    return artifacts
 
 
 def _stale_paths(artifacts: dict[Path, str]) -> list[Path]:

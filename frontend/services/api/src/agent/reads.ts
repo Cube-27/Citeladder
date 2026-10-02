@@ -13,6 +13,7 @@ import {
 } from '@citeladder/contracts/agent';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
+import { containsPattern } from '../db/like.ts';
 import { authorize } from './access.ts';
 import { agentPolicy, type Chat, type Run, type Scope } from './contracts.ts';
 import { currentOutput, revisionRefs } from './outputs.ts';
@@ -28,6 +29,31 @@ function summary(chat: Chat, output: { kind: string; phase: string } | null, lab
     output_phase: output?.phase ?? null,
     last_activity_at: iso(chat.last_activity_at),
     created_at: iso(chat.created_at),
+  });
+}
+export function runView(run: Run, steps: z.input<typeof agentRunStepSchema>[] = []) {
+  return agentRunSchema.parse({
+    ...run,
+    skill_id: run.skill_id ?? run.requested_skill_id,
+    skill_source: run.skill_source ?? run.requested_skill_source,
+    created_at: iso(run.created_at),
+    completed_at: iso(run.completed_at),
+    progress: steps,
+  });
+}
+export function revisionView(
+  revision: Parameters<typeof revisionRefs>[0] & {
+    id: string;
+    created_at: Date;
+    approved_at: Date | null;
+    source_refs: unknown;
+  },
+) {
+  return agentRevisionSchema.parse({
+    ...revision,
+    source_refs: revisionRefs(revision.source_refs),
+    created_at: iso(revision.created_at),
+    approved_at: iso(revision.approved_at),
   });
 }
 function modelStepStatus(outcome: string, latest: boolean) {
@@ -108,7 +134,10 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
   return agentChatDetailSchema.parse({
     chat: summary(chat, current.output, action?.target_label ?? null),
     pinned_skill_id: chat.pinned_skill_id,
-    context: run ? jsonObject(run.context_manifest, 'agent_runs.context_manifest') : {},
+    context: {
+      ...jsonObject(chat.context_refs, 'agent_chats.context_refs'),
+      ...(run ? jsonObject(run.context_manifest, 'agent_runs.context_manifest') : {}),
+    },
     messages: messages.map((message) =>
       agentMessageSchema.parse({
         ...message,
@@ -116,14 +145,7 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
         evidence_refs: revisionRefs(message.evidence_refs),
       }),
     ),
-    latest_run: run
-      ? agentRunSchema.parse({
-          ...run,
-          created_at: iso(run.created_at),
-          completed_at: iso(run.completed_at),
-          progress: await progress(db, run),
-        })
-      : null,
+    latest_run: run ? runView(run, await progress(db, run)) : null,
     output: current.output
       ? agentOutputSchema.parse({
           ...current.output,
@@ -169,7 +191,7 @@ export async function listRevisions(db: Database, scope: Scope, chatId: string) 
 export async function listChats(
   db: Database,
   scope: Scope,
-  options: { limit?: number; cursor?: string; actionId?: string } = {},
+  options: { limit?: number; cursor?: string; actionId?: string; query?: string } = {},
 ) {
   await authorize(db, scope, false);
   const limit = z
@@ -202,6 +224,7 @@ export async function listChats(
     .where('chat.project_id', '=', scope.projectId)
     .where('chat.archived_at', 'is', null);
   if (options.actionId) query = query.where('chat.action_id', '=', options.actionId);
+  if (options.query) query = query.where('chat.title', 'ilike', containsPattern(options.query));
   if (options.cursor) {
     const cursor = cursorSchema.parse(
       JSON.parse(Buffer.from(options.cursor, 'base64url').toString('utf8')),

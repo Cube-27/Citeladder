@@ -6,7 +6,7 @@ import { authorizeProject, listAccountProjects, searchBusinessContext } from './
 import { projectBusinessContext, readEvidence, type ReadArguments } from './evidence.ts';
 import { readSiteEvidence } from './evidence-site.ts';
 import { fetchRecord } from './retrieval.ts';
-import { McpInputError, type Evidence, type McpPrincipal } from './types.ts';
+import { McpInputError, type Evidence, type EvidencePrincipal } from './types.ts';
 
 const nullable = <T extends z.ZodType>(schema: T) => schema.nullish();
 const uuid = z.uuid();
@@ -35,7 +35,7 @@ const sections = z.enum([
   'integrations',
   'search_intelligence',
 ]);
-const definitions = {
+export const definitions = {
   list_projects: {
     title: 'List CiteLadder projects',
     description:
@@ -261,7 +261,7 @@ export const tools = Object.entries(definitions).map(([name, definition]) => ({
 
 export async function dispatchTool(
   db: Database,
-  principal: McpPrincipal,
+  principal: EvidencePrincipal,
   name: string,
   input: unknown,
   origin: string,

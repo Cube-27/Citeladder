@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app import main
 from app.main import app
-from tests.component.auth_helpers import register_and_login
 
 
 @pytest.mark.asyncio
@@ -94,10 +93,10 @@ async def test_cors_is_outermost_and_handles_preflight_before_api_middleware() -
         transport=transport, base_url="http://testserver"
     ) as client:
         response = await client.options(
-            "/api/v1/agent/skills",
+            "/api/v1/projects/00000000-0000-0000-0000-000000000001/commerce/competitors/discover",
             headers={
                 "Origin": "http://127.0.0.1:3000",
-                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Method": "POST",
             },
         )
     assert response.status_code == 200
@@ -105,12 +104,18 @@ async def test_cors_is_outermost_and_handles_preflight_before_api_middleware() -
 
 
 @pytest.mark.asyncio
-async def test_api_responses_and_errors_are_authoritatively_no_store(
-    client: httpx.AsyncClient,
-) -> None:
-    await register_and_login(client, "no-store@example.com")
-    success_response = await client.get("/api/v1/agent/skills")
-    error_response = await client.get("/api/v1/projects")
+async def test_api_responses_and_errors_are_authoritatively_no_store() -> None:
+    local = main.create_app()
+
+    @local.get("/api/v1/cache-probe")
+    async def cache_probe() -> dict[str, bool]:
+        return {"ok": True}
+
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=local), base_url="http://testserver"
+    ) as client:
+        success_response = await client.get("/api/v1/cache-probe")
+        error_response = await client.get("/api/v1/no-such-route")
     assert success_response.status_code == 200
     assert error_response.status_code >= 400
     for response in (success_response, error_response):
@@ -125,7 +130,7 @@ async def test_declared_oversized_api_body_is_rejected_before_parsing() -> None:
         transport=transport, base_url="http://testserver"
     ) as client:
         response = await client.post(
-            "/api/v1/projects/00000000-0000-0000-0000-000000000001/agent/chats",
+            "/api/v1/projects/00000000-0000-0000-0000-000000000001/commerce/competitors/discover",
             content=b"{}",
             headers={"Content-Length": str(3 * 1024 * 1024)},
         )
@@ -144,7 +149,7 @@ async def test_chunked_oversized_api_body_is_stopped_while_streaming() -> None:
         transport=transport, base_url="http://testserver"
     ) as client:
         response = await client.post(
-            "/api/v1/projects/00000000-0000-0000-0000-000000000001/agent/chats",
+            "/api/v1/projects/00000000-0000-0000-0000-000000000001/commerce/competitors/discover",
             content=chunks(),
             headers={"Content-Type": "application/json"},
         )

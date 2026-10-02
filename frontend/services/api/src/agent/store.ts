@@ -193,6 +193,10 @@ export class AgentStore {
         .executeTakeFirst();
       if (replay) {
         if (replay.project_id !== scope.projectId) throw notFound('Run');
+        // Python hashes escaped JSON. Reusing that key requires its original runtime;
+        // never interpret it as a TypeScript hash, even for an ASCII-only request.
+        if (replay.runtime_version !== agentPolicy.runtime_version)
+          throw new AgentError('agent_legacy_replay');
         if (replay.request_fingerprint !== hash) throw new AgentError('agent_idempotency_conflict');
         return replay;
       }

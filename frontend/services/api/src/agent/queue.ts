@@ -44,8 +44,7 @@ export async function terminalize(
     .execute();
 }
 
-/** No process entrypoint or registration in 19a. Workspace sets are explicit so
- * tests and future rollout admission cannot accidentally claim every tenant. */
+/** Workspace sets come from the process owner, with bounded lease recovery. */
 export class AgentQueue {
   readonly db: Database;
   readonly leaseSeconds: number;

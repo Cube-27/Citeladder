@@ -5,7 +5,7 @@ audit with prompt snapshots / analyses / citations / a metric snapshot, and
 one completed site crawl with two mapped issues (plus one unmapped), directly
 through the ORM. The refresh that turns this evidence into Opportunities is
 TypeScript (migration PR 7a); ``seed_live_set`` writes the live set and
-Actions it produces for the scenario, for the Python owners that read them.
+Actions it produces for the scenario, for TypeScript route test fixtures.
 
 Expected scores for the seeded scenario (severity * value * gap * 10):
 - brand_absent_high_value_prompt: high 3.0 * purchase 2.0 * gap 2.0 = 120.0
@@ -24,7 +24,6 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analysis.opportunities.actions import page_group_key
 from app.core.config.audits import AUDIT_STATUS_COMPLETED
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
@@ -527,25 +526,6 @@ async def _seed_scenario(
     )
 
 
-async def _live_rows(session: AsyncSession, scn: Scenario) -> list[Opportunity]:
-    return list(
-        (
-            await session.scalars(
-                select(Opportunity).where(
-                    Opportunity.project_id == scn.project_id,
-                    Opportunity.superseded_at.is_(None),
-                )
-            )
-        ).all()
-    )
-
-
-def _by_rule(rows: list[Opportunity], rule_id: str) -> Opportunity:
-    matches = [row for row in rows if row.rule_id == rule_id]
-    assert len(matches) == 1, f"expected exactly one {rule_id} row, got {len(matches)}"
-    return matches[0]
-
-
 async def seed_action_for(
     session: AsyncSession, opportunity: Opportunity, *, target_kind: str
 ) -> uuid.UUID:
@@ -635,13 +615,13 @@ async def seed_live_set(session: AsyncSession, scn: Scenario) -> dict[str, Oppor
     groups = [
         (
             "page",
-            page_group_key(URL_A),
+            "page:acme.test/a",
             URL_A,
             None,
             ["missing_structured_data"],
             "site_health",
         ),
-        ("page", page_group_key(URL_B), URL_B, None, ["thin_content"], "site_health"),
+        ("page", "page:acme.test/b", URL_B, None, ["thin_content"], "site_health"),
         (
             "prompt",
             f"prompt:{scn.prompt0_id}",

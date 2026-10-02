@@ -64,7 +64,10 @@ async def test_legacy_http_exception_router_normalized_by_shim(
     client: httpx.AsyncClient,
 ) -> None:
     """Unmigrated router authorization keeps its normalized envelope."""
-    invalid = await client.get("/api/v1/agent/skills")
+    invalid = await client.post(
+        f"/api/v1/projects/{uuid.uuid4()}/commerce/competitors/discover",
+        json={"targets": [{"kind": "product", "id": str(uuid.uuid4())}]},
+    )
     assert invalid.status_code == 401
     body = invalid.json()
     assert isinstance(body["detail"], str)  # legacy string detail preserved
@@ -75,7 +78,10 @@ async def test_legacy_http_exception_router_normalized_by_shim(
 async def test_request_validation_error_envelope(client: httpx.AsyncClient) -> None:
     """FastAPI's 422 array normalizes into sanitized field-level details."""
     await _register(client, "env-validation@example.com")
-    resp = await client.get("/api/v1/projects/not-a-uuid/readiness")
+    resp = await client.post(
+        "/api/v1/projects/not-a-uuid/commerce/competitors/discover",
+        json={"targets": [{"kind": "product", "id": str(uuid.uuid4())}]},
+    )
     assert resp.status_code == 422
     body = resp.json()
     # ``detail`` is now a human string, not the raw validation array.

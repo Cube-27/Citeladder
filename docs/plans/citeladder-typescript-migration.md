@@ -181,9 +181,10 @@ total.
 | 14 | Auth and workspaces | High | Done |
 | 15 | MCP server and OAuth provider | High | Done |
 | 16 | Billing and the entitlement ledger (16a PDF, 16b commercial/ledger) | High | Done |
-| 17 | Audits, providers and answer-engine connectors | High | 17a done; 17b implemented |
-| 18 | Site Health and source-page inspection | High | 18a, 18b1–18b4 done |
-| 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a implemented; 19b pending |
+| 17 | Audits, providers and answer-engine connectors | High | Done; 17b merged (#217) |
+| 18 | Site Health and source-page inspection | High | Done; 18b5b (#224), 18b5c (#225) merged |
+| 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a merged (#226); 19b adapters, activation and retirement implemented; PR validation pending |
+| 19c | Commerce competitor discovery and remaining acquisition bridges | High | Authorized before PR 20 (owner, 2 October 2026) |
 | 20 | Consolidation and policy transfer | Medium | |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
@@ -1037,8 +1038,8 @@ large crawl could push past the driver's parameter limit; the page join scopes a
 to the workspace; an implementation event's malformed target id no longer fails
 the task; and comparison text is lower-cased rather than Python-casefolded,
 which changes only stored shingles. The source hash is unchanged, so a task
-retried across the cutover reuses Python's snapshot. PR 18 remains incomplete
-until 18b5 lands.
+retried across the cutover reuses Python's snapshot. PR 18 is complete through
+18b5b (#224) and 18b5c (#225).
 
 Departures in 18b3: an analyzer crash settles as the worker's retryable
 `task_failed` rather than Python's terminal `crawl_task_crashed`, so
@@ -1096,7 +1097,7 @@ Departures in 18b5c:
 
 | Python bridge kept by 18b4 | Remaining caller / retirement condition |
 | --- | --- |
-| `connectors/web_evidence/{fetcher,curl_transport,url_policy,brand_evidence}.py` | Commerce competitor discovery, onboarding site resolution (Search Intelligence targets), provider route probes |
+| `connectors/web_evidence/{fetcher,curl_transport,url_policy,brand_evidence}.py` | Commerce competitor discovery and retained URL identities. Onboarding site resolution has no current application caller. Provider probes are TypeScript; the Agent's `app_model_transport.py` still uses the DNS/target validation helpers. Retire after Agent and 19c caller inventories. |
 | `analysis/site_health/parser.py` and its fact extractors | Commerce competitor discovery |
 | `domain/site_health/discovery.add_automatic_root`, `frontier_support.py` | retired in 18b5c (TypeScript crawl admission) |
 | `canonical_aliases.reconcile_crawl_duplicate_aliases` | retired in 18b5b (TypeScript finalization) |
@@ -1151,9 +1152,28 @@ that time; 19a neither assumes their final interfaces nor implements substitutes
 | Recovery and operations | Bind retry-delay configuration and bounded expiry/cancelled-dispatch reconciliation to the shared sweeper/worker ownership decision; preserve dashboards' telemetry names, worker draining and deployment assets. A rollback must restore a single writer without data repair. Deployment and cutover smoke tests (rule 7) remain separate release work. |
 | Python bridge retirement | Inventory all remaining callers at cutover, then delete Python Agent runtime/API/worker and only the Opportunity, visibility, traffic, demand, MCP, entitlement/provider and Site Health bridges whose last callers actually moved. Retain schema/models/Alembic and any shared sweeper/policy owners still required. |
 
-The repository remains deployable with Python Agent production ownership if
-19b never lands. PR 19 is incomplete until adapter completion, focused owner
-tests, bridge inventory/removals and the atomic activation are delivered.
+PR 19a retained Python Agent production ownership. PR 19b binds these seams to
+the existing TypeScript owners and activates the API, worker, recovery and
+ingress together. Historical Python idempotency keys explicitly conflict with
+`legacy_runtime` details; current non-ASCII requests replay normally. The caller
+inventory permits retirement of the Python Agent and its read, entitlement and
+provider bridges. Python models, Alembic, policy export, billing operator owners
+and the Opportunity queue helper used by development seeding remain.
+
+The owner's delivery instruction is one complete PR 19b in at most six slice
+commits. Its atomic retirement closure overrides the generic 50-file PR budget;
+Commerce discovery remains the separate authorized PR 19c.
+
+### PR 19c: Commerce competitor discovery
+
+Move `POST /projects/{id}/commerce/competitors/discover` and the
+`commerce_competitor_discovery` analytics executor together, reusing PR 18's
+safe fetch, parser, fact extraction and classifier. Retire Python Commerce
+discovery and its exclusively used acquisition bridges. Recheck the Python
+analytics worker, kind complement, sweeper spec, parent reconcilers and unused
+onboarding site resolution/normalization before deleting them; a recovery owner
+must transfer before its Python sweeper registration disappears. The owner
+assigned this separate PR before consolidation on 2 October 2026.
 
 ### PR 20: Consolidation and policy transfer
 

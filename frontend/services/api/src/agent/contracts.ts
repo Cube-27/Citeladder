@@ -83,5 +83,7 @@ export type SkillCatalog = {
   version: string;
   operatingContract: string;
   skills: ReadonlyMap<string, Skill>;
+  formatPreamble?: string;
+  formats?: ReadonlyMap<string, { id: string; label: string; body: string }>;
 };
 export const stepJsonSchema = z.toJSONSchema(wireStep);

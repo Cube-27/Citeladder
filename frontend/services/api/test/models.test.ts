@@ -28,6 +28,46 @@ function transport(responses: Response[]) {
 }
 
 describe('configured model gateway', () => {
+  it('preserves invalid usage as unknown and honors the caller cancellation signal', async () => {
+    const io = transport([
+      Response.json({
+        choices: [{ message: { content: '{}' } }],
+        usage: {
+          prompt_tokens: 20,
+          completion_tokens: 10,
+          cached_input_tokens: null,
+          completion_tokens_details: { reasoning_tokens: 3 },
+        },
+      }),
+    ]);
+    const gateway = createModelGateway(
+      { ...settings, baseUrl: 'https://model.test/v1/chat/completions/' },
+      io,
+    );
+    expect((await gateway.completeStructured('s', 'u', {})).usage).toEqual({
+      input_tokens: 20,
+      output_tokens: 10,
+      cached_input_tokens: null,
+      reasoning_tokens: 3,
+    });
+    expect(String(io.fetch.mock.calls[0]![0])).toBe('https://model.test/v1/chat/completions');
+    expect(() =>
+      createModelGateway({ ...settings, baseUrl: 'https://model.test/v1?secret=value' }, io),
+    ).toThrow('not_configured');
+    const abort = new AbortController();
+    abort.abort();
+    const cancelled = {
+      fetch: vi.fn<typeof fetch>(async (_url, init) => {
+        expect(init?.signal?.aborted).toBe(true);
+        throw new DOMException('Aborted', 'AbortError');
+      }),
+      sleep: vi.fn(async () => {}),
+    };
+    await expect(
+      createModelGateway(settings, cancelled).complete('s', 'u', abort.signal),
+    ).rejects.toMatchObject({ code: 'connection' });
+    expect(cancelled.fetch).toHaveBeenCalledTimes(1);
+  });
   it('validates structured JSON and records actual model and usage', async () => {
     const io = transport([reply()]);
     const gateway = createModelGateway(settings, io);

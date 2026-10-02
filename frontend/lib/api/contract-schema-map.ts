@@ -10,20 +10,10 @@
 export const CONTRACT_SCHEMA_MAP = {
   // Auth, workspaces and projects are owned and served by the TypeScript API.
   // Providers, audits, integrations and Search Intelligence are TypeScript-owned.
-  // Agent chats, outputs and revisions
-  agentRunSchema: 'RunView',
-  agentRevisionSchema: 'RevisionView',
-  agentOutputSchema: 'OutputView',
-  agentMessageSchema: 'MessageView',
-  agentChatSummarySchema: 'ChatSummary',
-  agentChatsPageSchema: 'ChatsPage',
-  agentChatDetailSchema: 'ChatDetail',
-  agentTurnAcceptedSchema: 'TurnAccepted',
-  agentRevisionsPageSchema: 'RevisionsPage',
-  agentSkillSchema: 'SkillView',
-  agentSkillCatalogSchema: 'SkillCatalog',
-  agentInstructionsSchema: 'InstructionsView',
+  // Agent chats, outputs and revisions now serve the shared TypeScript schemas.
+  // Commerce discovery remains Python-owned until PR 19c.
+  competitorDiscoverySchema: 'DiscoveryResponse',
   // Site Health controls and reads are owned and served by the TypeScript API.
 } as const;
 
-export type ContractSchemaName = keyof typeof CONTRACT_SCHEMA_MAP;
+export type ContractSchemaName = keyof typeof import('@citeladder/contracts');

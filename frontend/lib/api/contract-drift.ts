@@ -182,13 +182,13 @@ function compareMachineKeys(left: string, right: string): number {
 }
 
 /** Diff every mapped schema against the spec. Pure — testable offline. */
-export function diffContract(spec: OpenApiSpec): ContractDiffResult {
+export function diffContract(
+  spec: OpenApiSpec,
+  mappings: Partial<Record<ContractSchemaName, string>> = CONTRACT_SCHEMA_MAP,
+): ContractDiffResult {
   const drifts: ContractDrift[] = [];
   const unresolved: string[] = [];
-  for (const [name, component] of Object.entries(CONTRACT_SCHEMA_MAP) as [
-    ContractSchemaName,
-    string,
-  ][]) {
+  for (const [name, component] of Object.entries(mappings) as [ContractSchemaName, string][]) {
     const keys = declaredKeysFor(name);
     if (!keys) {
       unresolved.push(`${name}: does not resolve to an object schema in @citeladder/contracts`);

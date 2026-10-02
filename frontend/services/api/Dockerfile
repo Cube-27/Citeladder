@@ -31,11 +31,13 @@ LABEL org.opencontainers.image.title="citeladder-api-service" \
       org.opencontainers.image.revision="${BUILD_REVISION}"
 
 ENV NODE_ENV=production \
-    PORT=8100
+    PORT=8100 \
+    AGENT_SKILLS_DIRECTORY=/app/agent-skills
 WORKDIR /app
 
 # Dependencies and source stay root-owned and read-only to the runtime user.
 COPY --from=dependencies --chown=0:0 /runtime ./
+COPY --chown=0:0 backend/app/core/config/agent_skills ./agent-skills
 
 USER node
 EXPOSE 8100

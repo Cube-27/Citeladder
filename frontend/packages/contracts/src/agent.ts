@@ -150,3 +150,77 @@ export const agentInstructionsSchema = responseObject({
   text: z.string(),
   created_at: z.string().nullable(),
 });
+
+function compareCheckpoints(left: string, right: string) {
+  if (left < right) return -1;
+  return left > right ? 1 : 0;
+}
+
+export const agentSiteHealthReferenceSchema = z.object({
+  project_id: uuid(),
+  crawl_id: uuid(),
+  site_url_id: uuid(),
+  source_analysis_id: uuid(),
+  dimension: z.string().min(1).max(32),
+  checkpoint_ids: z
+    .array(z.string().max(64))
+    .min(1)
+    .max(16)
+    .transform((ids) => [...new Set(ids)].sort(compareCheckpoints)),
+});
+export const agentSearchReferenceSchema = z.object({
+  dataset_id: uuid(),
+  row_ids: z
+    .array(uuid())
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, 'Row IDs must be unique'),
+});
+export const agentContextRefsSchema = z
+  .object({
+    target_site_url_id: uuid().nullish(),
+    target_url: z.string().max(2048).nullish(),
+    opportunity_id: uuid().nullish(),
+    demand_signal_id: uuid().nullish(),
+    site_health_reference: agentSiteHealthReferenceSchema.nullish(),
+    search_intelligence_reference: agentSearchReferenceSchema.nullish(),
+  })
+  .strict();
+
+/** Request bounds come from the policy owner; the shared wire shape lives here. */
+export function agentRequestSchemas(bounds: {
+  message_max_chars: number;
+  mentions_max: number;
+  output_title_max_chars: number;
+  output_body_max_chars: number;
+  instructions_max_chars: number;
+}) {
+  const message = z.string().max(bounds.message_max_chars).trim().min(1);
+  const skill = z.string().max(64).nullish();
+  const mentions = z
+    .array(uuid())
+    .max(bounds.mentions_max)
+    .refine((ids) => new Set(ids).size === ids.length, 'Mentioned Actions must be unique')
+    .default([]);
+  return {
+    create: z
+      .object({
+        message,
+        skill_id: skill,
+        action_id: uuid().nullish(),
+        context: agentContextRefsSchema.default({}),
+        mentions,
+      })
+      .strict(),
+    message: z.object({ message, skill_id: skill, mentions }).strict(),
+    edit: z
+      .object({
+        base_revision_id: uuid(),
+        title: z.string().max(bounds.output_title_max_chars).trim().min(1),
+        body: z.string().max(bounds.output_body_max_chars).trim().min(1),
+      })
+      .strict(),
+    approve: z.object({ revision_id: uuid() }).strict(),
+    instructions: z.object({ text: z.string().max(bounds.instructions_max_chars) }).strict(),
+  };
+}

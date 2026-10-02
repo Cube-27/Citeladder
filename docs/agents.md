@@ -30,17 +30,17 @@ endpoint validation and verified-route checks remain with the provider owner.
 
 ## Chats, runs and outputs
 
-### TypeScript runtime foundation (PR 19a)
+### TypeScript runtime (PR 19a foundation, PR 19b cutover)
 
 [`frontend/services/api/src/agent`](../frontend/services/api/src/agent/) contains
-the inactive TypeScript core for the existing Agent tables: transactional chat
+the TypeScript runtime for the existing Agent tables: transactional chat
 admission, append-only messages, leased runs, committed model/tool attempts,
 bounded structured turns, persisted reads and output revisions. It uses the
 existing workspace policy, generated database types, shared Agent response
-contracts and Python-owned Agent policy export. No route, worker entrypoint,
-compose service, ingress matcher or ownership record activates it. Python
-remains the sole production Agent writer and its worker and sweeper continue
-unchanged if the migration stops here.
+contracts and Python-owned Agent policy export. The API ownership manifest,
+all ingress matchers, compose and cloud worker commands select this owner.
+The Python Agent API, worker and sweeper registration are retired; deployment
+and external cutover smoke checks remain separate release work.
 
 The core requires explicit adapters for funding/capacity admission, persisted
 content context, a versioned skill catalog, registered read tools, model
@@ -48,14 +48,14 @@ destinations and transactional Action attachment. None has a permissive
 default. Dispatch and settlement are separate committed transactions; receipt
 settlement survives cancellation and lease loss, while replies and revisions
 remain fenced. Recovery requires the accounting callback in the same
-transaction as retry/reclaim. The bounded worker unit receives an explicit
-workspace set and retry-delay policy; it has no autonomous polling entrypoint.
-The [PR 19b dependency inventory](plans/citeladder-typescript-migration.md#pr-19b-deferred-dependencies)
-owns adapter completion and the future atomic cutover. The TypeScript core is
-tested with scripted adapters and real PostgreSQL, not live providers.
+transaction as retry/reclaim. The worker discovers a bounded workspace set for queued, expired and cancelled
+runs and applies the exported retry-delay policy. Its process supports draining
+and graceful shutdown. Existing billing, provider, MCP, Action and persisted
+evidence owners supply the adapters. Tests use scripted models and real
+PostgreSQL without live provider calls.
 
-The [Agent API](../backend/app/api/agent.py) translates authorized requests
-into the [service](../backend/app/domain/agent/service.py). Every chat is pinned
+The [Agent API](../frontend/services/api/src/routes/agent.ts) translates authorized requests
+into the [service](../frontend/services/api/src/agent/store.ts). Every chat is pinned
 to one project and is the saved unit of work; there is no separate saved-work
 store. A user message is appended and queues exactly one
 [AgentRun](../backend/app/models/agent.py). Messages are append-only, a chat has
@@ -71,7 +71,7 @@ skill catalog changed before it ran (a deploy in between) ends with
 [Agent configuration](../backend/app/core/config/agent.py).
 
 A chat owns one deliverable of one kind. Agent saves and user edits both append
-an immutable [output revision](../backend/app/domain/agent/outputs.py); an edit
+an immutable [output revision](../frontend/services/api/src/agent/outputs.ts); an edit
 against a stale base revision conflicts, restoring an old revision appends a new
 one, and a follow-up turn revises the latest revision, including the user's own
 edit. Edits and restores are refused while a turn is queued or running, and a
@@ -86,7 +86,7 @@ with the revision on screen and then shows what each loop leg is waiting
 for; see [declaration](opportunities.md#explicit-implementation-declaration).
 
 While a run is active, the chat read also returns the
-[committed steps](../backend/app/domain/agent/progress.py) of its current
+[committed steps](../frontend/services/api/src/agent/reads.ts) of its current
 attempt, projected from its model and tool attempt rows: a call in flight, a
 step still being processed, a previous step that returned without a read, or a
 read's outcome. Each step retains its model/tool attempt IDs, run attempt and
@@ -113,6 +113,9 @@ from, never written by, the Agent; see [Actions](opportunities.md#actions).
 Idempotency keys are workspace-scoped and bound to the full request: project,
 message, skill, Action and context for a new chat. A reused key with a changed
 request conflicts, including when two identical requests race.
+Pre-cutover Python keys return an explicit `agent_idempotency_conflict` with
+`legacy_runtime` details, including non-ASCII requests. Historical chats remain
+readable; new work requires a new key rather than reinterpreting an old hash.
 
 A targeted output (a page or a planned page) attaches the chat to the existing
 [Action](opportunities.md#actions) for that target or creates one, so work on
@@ -122,16 +125,16 @@ an Action their evidence already created.
 ## Context and the bounded loop
 
 Before the first model call, each run freezes a
-[context manifest](../backend/app/domain/agent/context.py): reviewed business
+[context manifest](../frontend/services/api/src/agent/context.ts): reviewed business
 context, the target page and a bounded related-page set, the attached Action's
 diagnosis, the diagnoses of up to five Actions the message @-mentions, any Opportunity, Site Health, Demand or Search Intelligence evidence
 the request named, and the project's versioned Agent instructions (audience,
 voice, standing requirements and exclusions). The
-[context builder](../backend/app/domain/agent/context_builder.py) authorizes
+[context builder](../frontend/services/api/src/agent/context-adapter.ts) authorizes
 each identifier; missing optional evidence is recorded as an omission, not
 filled in. Crawl text remains untrusted observation.
 
-The [runtime](../backend/app/domain/agent/runtime.py) runs a bounded loop of
+The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a bounded loop of
 structured model steps. Each step does exactly one of `select_skill`,
 `call_tool` or `respond`. The runtime enforces the step, tool-call, transcript
 and output limits; the final step cannot spend a tool call, and a turn that
@@ -198,9 +201,8 @@ outputs; **Open in Agent** (or opening the output) continues the chat at
 
 ## Read tools
 
-The [tool catalog](../backend/app/domain/agent/tool_catalog.py) binds the retained
-Python read bridges. Hosted [MCP](mcp.md) owns its TypeScript catalogue; the Agent
-bridges retire with the runtime migration in PR 19. The chat's project is injected server-side: the model cannot
+The [tool adapters](../frontend/services/api/src/agent/tool-adapters.ts) bind the
+shared TypeScript [MCP](mcp.md) catalogue. The chat's project is injected server-side: the model cannot
 supply `project_id`, `list_projects` is not offered, and `fetch` refuses a
 record from another project. Each call runs as the chat member through MCP's
 membership predicate, so a member who loses access reads nothing. The
@@ -224,32 +226,33 @@ them.
 
 ## Skills
 
-The [internal skill catalog](../backend/app/core/config/agent_skills/__init__.py)
+The [internal skill catalog](../frontend/services/api/src/agent/skills.ts)
 loads the packaged `SKILL.md` methodologies, one shared operating contract and a
 content-format reference that the `content_create` skill draws on one format at
 a time. These files are production model input, not coding-agent skills.
-Packaging is declared in `backend/pyproject.toml`. The catalog version is a
+The [API image](../frontend/services/api/Dockerfile) packages the same files from
+`backend/app/core/config/agent_skills` as read-only assets. The catalog version is a
 content fingerprint of those files after vocabulary expansion. A body may name
 an application-owned vocabulary as `{{name}}`, which the loader expands from its owner's one listing
 (prompt buyer stages and intents), so the list is never hand-copied. The loader
-bounds descriptions and bodies, and a contract test requires every tool a skill
-names to be offered to the Agent.
+bounds descriptions and bodies and rejects unknown vocabularies and duplicate
+metadata. The read-tool registry authorizes every executed tool.
 
 Users may select a skill by name. The catalog endpoint returns only its label,
 description, group and output kind; skill bodies are never returned to users or
 exposed through MCP. A turn's skill is taken, in order, from the user's pick,
-the attached Action's diagnosis, the chat's previous skill, and otherwise the
+the chat's previous skill, the attached Action's diagnosis, and otherwise the
 model's `select_skill` step. Skills are methodologies used by the same runtime,
 not separate agents. Changing a skill body changes model input: validate it with
-the [skill loader tests](../backend/tests/unit/test_agent_skills.py).
+the [skill loader tests](../frontend/services/api/test/agent-skills.test.ts).
 
 ## Worker and funding
 
-The [worker](../backend/app/workers/agent_worker.py) claims runs from the shared
+The [worker](../frontend/services/api/src/workers/agent-worker.ts) claims runs from the shared
 PostgreSQL queue with a lease and a heartbeat. Before each model step it rechecks
 lease ownership, cancellation, that the queuing member still holds the run
 permission, capability, and the exact customer route/key revision or admitted
-platform model, then [commits the dispatch](../backend/app/domain/agent/model_calls.py)
+platform model, then [commits the dispatch](../frontend/services/api/src/agent/model-calls.ts)
 before any network I/O. The terminal write rechecks the member again. A revoked
 member, a changed platform model or a lost route ends the turn with its own
 code rather than retrying. No transaction is held across provider or tool I/O.
@@ -269,10 +272,19 @@ keyed `agent`.
 
 ## Coverage
 
-The [runtime component suite](../backend/tests/component/test_agent_runtime.py)
+The TypeScript adapters in
+[`src/agent`](../frontend/services/api/src/agent/) bind the existing billing
+ledger and provider owners. Its skill loader reads these same packaged files,
+expands the exported vocabularies and fingerprints the actual model inputs.
+The TypeScript image includes them as read-only assets.
+
+The [runtime component suite](../frontend/services/api/test/agent-runtime.test.ts)
 drives the real worker, runtime, tool catalog and persistence with a scripted
 model. It covers evidence-backed Action-linked outputs, follow-up revision of a
 user edit, outline-first enforcement, budget exhaustion, the frozen skill catalog and
 time bound, live step progress, refusal of project
 selection and unknown tools, single active run, idempotent replay, funding
-admission, workspace isolation, per-step settlement and unknown-usage recovery.
+admission and workspace isolation. The [funding suite](../frontend/services/api/test/agent-funding.test.ts)
+covers real ledger settlement and unknown usage; the
+[cutover suite](../frontend/services/api/test/agent-cutover.test.ts) covers HTTP
+admission, revisions, legacy replay, worker draining, cancellation and expiry.

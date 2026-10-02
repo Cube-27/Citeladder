@@ -9,19 +9,11 @@ import type { SourceScope } from './admission.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { fenceInspectionTask } from './task-fence.ts';
 import { compareText, scalarText } from '../text-order.ts';
+import { lexicalTokens } from '../analysis/lexical.ts';
 
 const p = policy.content_differentiation;
-const stopWords = new Set(p.stop_words);
 const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-function lexicalTokens(value: string) {
-  return new Set(
-    value
-      .toLowerCase()
-      .split(/[^a-z0-9]+/u)
-      .filter((token) => token.length >= 2 && !stopWords.has(token)),
-  );
-}
 export type ComparisonPage = {
   id: string;
   headings: string[];
