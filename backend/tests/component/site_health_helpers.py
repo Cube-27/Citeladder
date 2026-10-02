@@ -10,14 +10,10 @@ from __future__ import annotations
 import hashlib
 import uuid
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.connectors.web_evidence.url_policy import (
-    canonicalize,
-    registrable_domain,
-    split_host_port,
-)
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_RUNNING,
     INITIAL_TASK_GENERATION,
@@ -55,12 +51,12 @@ async def seed_site_crawl(
     """Seed a workspace/project/profile/crawl and ``task_count`` queued tasks."""
     email = email or f"user-{uuid.uuid4().hex[:8]}@example.com"
 
-    # Derive the canonical root + registrable host through the production
-    # URL-policy utilities (never hard-coded) so a custom-host root actually
-    # produces a matching profile, and a root without a trailing slash still
-    # joins task URLs safely (no "https://host page-0" malformed URL).
-    canonical_root = canonicalize(root_url)
-    root_host, _root_port = split_host_port(canonical_root)
+    # Callers supply canonical fixture URLs whose host is their registrable
+    # domain (example.com and the reserved .example hosts). URL admission is
+    # native; persistence fixtures do not implement a second URL policy.
+    parsed = urlsplit(root_url)
+    canonical_root = parsed._replace(path=parsed.path or "/").geturl()
+    root_host = parsed.hostname or ""
     root_base = (
         canonical_root if canonical_root.endswith("/") else (canonical_root + "/")
     )
@@ -94,7 +90,7 @@ async def seed_site_crawl(
         project_id=project.id,
         root_url=canonical_root,
         root_host=root_host,
-        registrable_domain=registrable_domain(root_host),
+        registrable_domain=root_host,
     )
     session.add(profile)
     await session.flush()

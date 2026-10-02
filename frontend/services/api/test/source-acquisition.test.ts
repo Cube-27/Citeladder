@@ -26,6 +26,21 @@ const options = {
   redirects: 3,
   contentTypes: ['text/html'],
 };
+it.each(['https://[unclosed/page', `https://${'a'.repeat(70)}.example.test/`])(
+  'rejects malformed destinations before policy lookup or network access: %s',
+  async (url) => {
+    const dns = vi.fn();
+    const send = vi.fn();
+    const authorize = vi.fn();
+    const fetcher = createWebsiteFetcher(dns, send);
+    await expect(fetcher(url, { ...options, authorize })).rejects.toMatchObject({
+      code: 'invalid_url',
+    });
+    expect(authorize).not.toHaveBeenCalled();
+    expect(dns).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  },
+);
 it.each(['https://first.test/private', 'https://second.test/private'])(
   'checks destination robots before downloading the redirected page %s',
   async (destination) => {

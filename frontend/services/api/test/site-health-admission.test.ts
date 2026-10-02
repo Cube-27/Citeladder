@@ -89,6 +89,58 @@ describe('URL admission', () => {
   });
 });
 
+it('keeps content about crawler paths while excluding platform redirectors despite includes', () => {
+  const scope = { domain: 'example.com', include: ['*'] };
+  for (const path of [
+    '/cdn-cgi/l/email-protection',
+    '/customer_authentication/redirect',
+    '/customer_identity/login',
+    '/account_login',
+  ]) {
+    expect(classifyUrlAdmission(`https://example.com${path}`, scope)).toMatchObject({
+      accepted: false,
+      reason: 'hard_excluded_path',
+    });
+  }
+  for (const path of ['/blog/cdn-cgi-explained', '/docs/how-cdn-cgi-works', '/cdn-cgifted']) {
+    expect(classifyUrlAdmission(`https://example.com${path}`, scope).accepted).toBe(true);
+  }
+});
+
+it('inventories readable documents while refusing binary downloads and oversized URLs', () => {
+  for (const extension of ['pdf', 'docx', 'md']) {
+    expect(classifyUrlAdmission(`https://example.com/download.${extension}`)).toMatchObject({
+      accepted: true,
+      disposition: 'inventory_only',
+      itemKind: 'document',
+    });
+  }
+  for (const extension of ['zip', 'exe', 'tar', 'deb', 'rpm', 'apk', 'dmg']) {
+    expect(classifyUrlAdmission(`https://example.com/download.${extension}`)).toMatchObject({
+      accepted: false,
+      reason: 'hard_excluded_asset',
+    });
+  }
+  expect(
+    classifyUrlAdmission(`https://example.com/page?context=${'x'.repeat(2048)}`),
+  ).toMatchObject({
+    accepted: false,
+    url: null,
+    reason: 'invalid_url',
+  });
+});
+
+it('keeps a public-suffix sibling outside the root site even with an unrestricted include', () => {
+  const scope = { domain: 'example.co.uk', include: ['*'] };
+  expect(classifyUrlAdmission('https://docs.example.co.uk/page', scope).accepted).toBe(true);
+  for (const host of ['other.co.uk', 'example.co.uk.evil.com', 'notexample.co.uk']) {
+    expect(classifyUrlAdmission(`https://${host}/page`, scope)).toMatchObject({
+      accepted: false,
+      reason: 'out_of_scope',
+    });
+  }
+});
+
 describe('discovery links', () => {
   it('keeps in-scope, canonical, first-seen links in order and repairs an encoded tracking query', () => {
     const root = document(
