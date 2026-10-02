@@ -1,44 +1,29 @@
-# Google Cloud temporary demo infrastructure
+# Google Cloud infrastructure
 
-Follow the complete owner procedure in
-[`docs/operations/GCP_RUNBOOK.md`](../../docs/operations/GCP_RUNBOOK.md).
+The owner procedure is [`docs/operations/GCP_RUNBOOK.md`](../../docs/operations/GCP_RUNBOOK.md).
 
-This directory is the sole infrastructure owner for the seven-day CiteLadder
-demo described in [`docs/operations/GOOGLE_CLOUD.md`](../../docs/operations/GOOGLE_CLOUD.md).
-It provisions one Shielded Compute Engine VM in Mumbai, a dedicated VPC,
-Cloudflare-only web ingress, IAP-only SSH, Artifact Registry, Secret Manager,
-a private backup bucket, and a billing-account-currency budget alert. The
-reviewed INR account uses `GCP_BUDGET_CURRENCY_CODE=INR` and
-`GCP_BUDGET_UNITS=2400`, approximately USD 25 at review time.
+This directory owns the scale-to-zero production environment in `us-central1`.
+The GCP project is reused; nothing here creates or deletes it.
 
-## Bootstrap
+| File | Owns |
+|---|---|
+| `network.tf` | Private VPC/subnet (Private Google Access), the database's fixed internal address, PostgreSQL and IAP-SSH firewall rules |
+| `database.tf`, `postgres-vm.sh` | Free-tier `e2-micro` Container-Optimized OS VM, no public address, running only PostgreSQL 16 from Artifact Registry |
+| `postgres/Dockerfile` | Digest pin of the PostgreSQL image the deploy mirrors into Artifact Registry |
+| `run.tf` | Cloud Run API service (min 0, max 2), runner/tick/migrate jobs and the Cloud Scheduler tick |
+| `identity.tf` | Database, runtime and scheduler service accounts and their least-privilege grants |
+| `registry.tf` | Artifact Registry with a cleanup policy, and the Secret Manager containers |
+| `budget.tf` | Monthly budget alert, including a forecast rule |
 
-Run `bootstrap.ps1` once from an owner workstation authenticated with `gcloud`.
-It creates or configures the disposable project, enables the required APIs,
-creates the versioned state bucket, and establishes an exact GitHub OIDC trust
-for `Cube-27/Citeladder`, `refs/heads/main`, and `gcp-demo`.
+Terraform state lives in the bootstrap state bucket under the historic
+`citeladder-demo/terraform` prefix. Terraform declares secret containers only.
+The deploy workflow adds secret values through stdin, so payloads never enter
+state, arguments or logs. Cloud Run reads them by reference.
 
-The script prints the non-secret GitHub environment variables. Configure them
-on the protected `gcp-demo` environment, add the fixed `DEMO_EXPIRES_AT`,
-`GCP_BILLING_ACCOUNT`, matching `GCP_BUDGET_CURRENCY_CODE` and
-`GCP_BUDGET_UNITS`, and `DOMAIN_NAME`, then add the protected
-`DEMO_LOGIN_PASSWORD` secret. Install the Cloudflare Origin CA certificate and
-key directly in Secret Manager; never pass them through Terraform.
+Data lives on the database VM's boot disk. Replacing the VM is the explicit,
+irreversible database reset. No backups are kept.
 
-## State and secrets
-
-Terraform state uses the bootstrap-created GCS bucket. Terraform declares
-Secret Manager containers only; workflows add values through stdin, so secret
-payloads never enter state, command arguments, logs, or workflow outputs.
-
-## Runtime
-
-`runtime/compose.gcp.yml` uses host networking while PostgreSQL and FastAPI
-bind loopback. Caddy exposes only protected Worker origin ingress on 443;
-the marketing and product Workers own browser delivery. Local Compose retains
-its own frontend route table for development and smoke tests.
-The deployer uploads the runtime files through IAP, pulls the backend image by digest, takes a
-quiesced pre-deploy backup, migrates, and installs the nightly-backup systemd
-timer. The host never tears itself down; use the destroy workflow. `DEMO_MODE`
-defaults to `false` (public sign-up) and bootstraps the single demo account
-only when set to `true`.
+`bootstrap.ps1` runs once per workstation-authorised setup. It enables APIs,
+creates the state bucket and the deploy identity, and establishes the exact
+GitHub OIDC trust for `Cube-27/Citeladder`, `refs/heads/main` and the
+`gcp-demo` environment.

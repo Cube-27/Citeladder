@@ -8,6 +8,8 @@ terraform {
     }
   }
 
+  # The prefix predates the us-central1 rebuild. Keeping it lets the first
+  # apply of this configuration delete the retired Mumbai resources it lists.
   backend "gcs" {
     prefix = "citeladder-demo/terraform"
   }

@@ -4,16 +4,16 @@ param(
     [Parameter(Mandatory)] [string] $ProjectId,
     [Parameter(Mandatory)] [string] $BillingAccount,
     [Parameter(Mandatory)] [string] $StateBucket,
-    [string] $Region = 'asia-south1',
-    [string] $Zone = 'asia-south1-a',
+    [string] $Region = 'us-central1',
+    [string] $Zone = 'us-central1-a',
     [string] $Repository = 'Cube-27/Citeladder',
     [string] $Environment = 'gcp-demo'
 )
 
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
-if ($Region -ne 'asia-south1' -or $Zone -notmatch '^asia-south1-[a-z]$') {
-    throw 'The region is fixed to asia-south1; select a zone in that region.'
+if ($Region -ne 'us-central1' -or $Zone -notmatch '^us-central1-[a-z]$') {
+    throw 'The region is fixed to us-central1 (free-tier e2-micro); select a zone in that region.'
 }
 $pool = 'github'
 $provider = 'citeladder-main'
@@ -44,7 +44,7 @@ function Set-ProjectLabels {
         }
     }
     $labels['project'] = 'citeladder'
-    $labels['environment'] = 'demo'
+    $labels['environment'] = 'production'
     $labels['managed_by'] = 'terraform'
 
     $headers = @{ Authorization = "Bearer $(gcloud auth print-access-token)" }
@@ -66,7 +66,7 @@ function Set-ProjectLabels {
 }
 
 if (-not (Test-GcloudResource { gcloud projects describe $ProjectId })) {
-    gcloud projects create $ProjectId --name='CiteLadder Demo' --labels='project=citeladder,environment=demo,managed_by=terraform'
+    gcloud projects create $ProjectId --name='CiteLadder' --labels='project=citeladder,environment=production,managed_by=terraform'
 }
 Set-ProjectLabels -Id $ProjectId
 gcloud billing projects link $ProjectId --billing-account=$BillingAccount
@@ -76,11 +76,12 @@ $apis = @(
     'artifactregistry.googleapis.com',
     'billingbudgets.googleapis.com',
     'cloudbilling.googleapis.com',
-    'cloudbuild.googleapis.com',
+    'cloudscheduler.googleapis.com',
     'compute.googleapis.com',
     'iam.googleapis.com',
     'iamcredentials.googleapis.com',
     'iap.googleapis.com',
+    'run.googleapis.com',
     'secretmanager.googleapis.com',
     'serviceusage.googleapis.com',
     'storage.googleapis.com',
@@ -104,25 +105,35 @@ if (-not (Test-GcloudResource { gcloud iam service-accounts describe $serviceAcc
 
 $projectRoles = @(
     'roles/artifactregistry.admin',
-    # Container Analysis is a separate API from Artifact Registry, and
-    # artifactregistry.admin carries none of its permissions. The deploy path
-    # resolves digests with `images list`, which does not need this, but
-    # `gcloud artifacts docker images describe` and any future scan-result read
-    # do. Granted read-only: the deploy never writes occurrences.
-    'roles/containeranalysis.occurrences.viewer',
+    'roles/cloudscheduler.admin',
     'roles/compute.admin',
-    'roles/compute.osAdminLogin',
     'roles/iam.serviceAccountAdmin',
     'roles/iam.serviceAccountUser',
-    'roles/iap.tunnelResourceAccessor',
     'roles/resourcemanager.projectIamAdmin',
-    'roles/resourcemanager.projectDeleter',
+    # Deploys services/jobs and executes migration and smoke executions.
+    'roles/run.admin',
     'roles/secretmanager.admin',
     'roles/storage.admin'
 )
 foreach ($role in $projectRoles) {
     gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$serviceAccount" `
         --role=$role --condition=None --quiet *> $null
+}
+# The project is reused across rebuilds and never deleted by automation; the
+# VM deployer's SSH/IAP and project-deletion grants are retired.
+$retiredRoles = @(
+    'roles/compute.osAdminLogin',
+    'roles/containeranalysis.occurrences.viewer',
+    'roles/iap.tunnelResourceAccessor',
+    'roles/resourcemanager.projectDeleter'
+)
+foreach ($role in $retiredRoles) {
+    if (Test-GcloudResource {
+            gcloud projects remove-iam-policy-binding $ProjectId --member="serviceAccount:$serviceAccount" `
+                --role=$role --condition=None --quiet
+        }) {
+        Write-Verbose "Removed retired role $role"
+    }
 }
 gcloud billing accounts add-iam-policy-binding $BillingAccount --member="serviceAccount:$serviceAccount" `
     --role='roles/billing.costsManager' --quiet *> $null

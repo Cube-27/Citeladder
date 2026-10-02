@@ -56,6 +56,7 @@ updates:
       - /frontend
       - /frontend/apps/app
       - /frontend/services/api
+      - /infra/gcp/postgres
     schedule:
       interval: weekly
       day: monday
