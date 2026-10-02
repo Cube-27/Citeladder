@@ -9,6 +9,7 @@ import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { appModels } from './config/app-models.ts';
+import { productTourVersion } from './config/product-tour.ts';
 import { contentDifferentiation } from './config/content-differentiation.ts';
 import { agentContext } from './config/agent-context.ts';
 import { agentSkills } from './config/agent-skills.ts';
@@ -41,6 +42,7 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   abuse,
+  workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
   providers: { ...pythonConfig.providers, app: appModels },
   content_differentiation: {
     ...contentDifferentiation,
