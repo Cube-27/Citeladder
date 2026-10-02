@@ -1,9 +1,10 @@
 # Design-system contract refresh — CiteLadder product app
 
 > Status: **implemented locally on 1 October 2026** in committed slices on
-> `codex/design-contract-refresh`, in a separate worktree from main.
-> Registered in [docs/plans/ACTIVE.md](ACTIVE.md). PR creation and publication
-> remain explicitly deferred. The design owner is [docs/design.md](../design.md).
+> `codex/design-contract-refresh`. On 2 October 2026 the owner authorized
+> rebasing onto main, review, simplification and PR creation, then stopping.
+> Registered in [docs/plans/ACTIVE.md](ACTIVE.md). CI and merge remain pending.
+> The design owner is [docs/design.md](../design.md).
 > Originally produced from a read-only repository
 > inspection; Carbon Design System (<https://carbondesignsystem.com/>) is used
 > **as inspiration for contracts only** — no Carbon values, packages, or

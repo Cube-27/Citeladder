@@ -51,7 +51,17 @@ export function Checkbox({
       aria-describedby={ariaDescribedBy}
       className="focus-ring group enabled:hover:bg-hover enabled:active:bg-active disabled:bg-disabled grid min-h-[var(--control-height-md)] min-w-[var(--control-height-md)] shrink-0 place-items-center rounded-[var(--radius-control)] disabled:cursor-not-allowed"
     >
-      <span className="border-border-bold bg-input group-enabled:group-hover:border-border-strong group-disabled:border-border-subtle group-disabled:bg-disabled group-disabled:text-muted group-data-[state=checked]:group-disabled:border-border-subtle group-data-[state=checked]:group-disabled:bg-disabled group-data-[state=indeterminate]:group-disabled:border-border-subtle group-data-[state=indeterminate]:group-disabled:bg-disabled group-data-[state=checked]:border-accent group-data-[state=checked]:bg-accent group-data-[state=indeterminate]:border-accent group-data-[state=indeterminate]:bg-accent text-accent-fg grid size-4 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--motion-fast)]">
+      <span
+        className={cn(
+          'grid size-4 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--motion-fast)]',
+          disabled
+            ? 'border-border-subtle bg-disabled text-muted'
+            : cn(
+                'text-accent-fg group-hover:border-border-strong',
+                checked ? 'border-accent bg-accent' : 'border-border-bold bg-input',
+              ),
+        )}
+      >
         <CheckboxPrimitive.Indicator>
           {checked === 'indeterminate' ? (
             <Minus className="size-3" aria-hidden />

@@ -29,6 +29,8 @@ test('token contract rejects missing or ambiguous roles and retirement residue',
   assert.equal(tokenContractViolations(source, '').length, 1);
   assert.equal(tokenContractViolations(source, row + '\n' + row).length, 1);
   assert.equal(tokenContractViolations(source, row.replace('surface', 'ambiguous')).length, 1);
+  assert.equal(tokenContractViolations(source, '| `--color-panel` | surface |').length, 1);
+  assert.equal(tokenContractViolations(source, row.replace('Resting panel', '')).length, 1);
   assert.equal(
     tokenContractViolations(source, row + '\n' + row.replace('--color-panel', '--color-retired'))
       .length,
