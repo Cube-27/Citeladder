@@ -9040,9 +9040,7 @@
     "map_max_exclusions": 40,
     "max_project_competitors": 5,
     "suggestion_pending": "pending",
-    "suggestion_accepted": "accepted",
-    "logo_ready": "ready",
-    "logo_cache_max_age_seconds": 86400
+    "suggestion_accepted": "accepted"
   },
   "projects": {
     "default_benchmark_mode": "controlled_localized",
@@ -10578,29 +10576,6 @@
         }
       }
     }
-  },
-  "brand_logos": {
-    "status_ready": "ready",
-    "status_failed": "failed",
-    "request_timeout_seconds": 4.0,
-    "max_redirects": 3,
-    "max_html_bytes": 2097152,
-    "max_image_bytes": 262144,
-    "max_candidates": 6,
-    "fetch_concurrency": 4,
-    "refresh_timeout_seconds": 10.0,
-    "success_cache_seconds": 604800,
-    "failure_cache_seconds": 86400,
-    "cache_max_age_seconds": 86400,
-    "fallback_path": "/favicon.ico",
-    "image_content_types": [
-      "image/gif",
-      "image/jpeg",
-      "image/png",
-      "image/vnd.microsoft.icon",
-      "image/webp",
-      "image/x-icon"
-    ]
   },
   "web_fetch": {
     "user_agent": "CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)",

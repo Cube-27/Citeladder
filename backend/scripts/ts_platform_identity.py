@@ -2,7 +2,6 @@
 
 from typing import Any
 
-from app.core.config import brand_logos as brand_logo_config
 from app.core.config import brand_profile as brand_profile_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config.projects import MAX_PROJECT_COMPETITORS
@@ -27,8 +26,4 @@ def brand_identity_policy() -> dict[str, Any]:
         "max_project_competitors": MAX_PROJECT_COMPETITORS,
         "suggestion_pending": observed_config.STATUS_PENDING,
         "suggestion_accepted": observed_config.STATUS_ACCEPTED,
-        "logo_ready": brand_logo_config.BRAND_LOGO_STATUS_READY,
-        "logo_cache_max_age_seconds": (
-            brand_logo_config.BRAND_LOGO_CACHE_MAX_AGE_SECONDS
-        ),
     }
