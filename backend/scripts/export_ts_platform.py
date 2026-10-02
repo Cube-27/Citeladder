@@ -171,7 +171,6 @@ from scripts.auth_policy import (
 )
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
-from scripts.ts_commerce_policy import discovery_policy
 from scripts.ts_platform_audits import audit_policy, audit_schedule_policy
 from scripts.ts_platform_billing import billing_policy, entitlements_policy
 from scripts.ts_platform_costs import costs_policy
@@ -317,35 +316,19 @@ def build_config() -> dict[str, Any]:
             "schemes": sorted(web_rules.ALLOWED_URL_SCHEMES),
         },
         "commerce": {
-            "discovery": discovery_policy(_setting),
-            "buyer_prompts": {
-                "min": commerce_config.COMMERCE_PROMPTS_MIN,
-                "max": commerce_config.COMMERCE_PROMPTS_MAX,
-                "default": commerce_config.COMMERCE_PROMPTS_DEFAULT,
-                "targets_max": commerce_config.COMMERCE_GENERATION_TARGETS_MAX,
-                "min_words": commerce_config.COMMERCE_BUYER_PROMPT_MIN_WORDS,
-                "max_words": commerce_config.COMMERCE_BUYER_PROMPT_MAX_WORDS,
-                "survey_markers": commerce_config.COMMERCE_BUYER_PROMPT_SURVEY_MARKERS,
-                "product_limit": commerce_config.COMMERCE_PROMPT_CONTEXT_PRODUCT_LIMIT,
-                "term_limit": commerce_config.COMMERCE_PROMPT_CONTEXT_TERM_LIMIT,
-                "version": commerce_config.COMMERCE_PROMPT_TEMPLATE_VERSION,
-                "systems": {
-                    model: commerce_config.commerce_buyer_prompt_system(model)
-                    for model in ("", *commerce_config.PROMPT_EXEMPLARS)
-                },
+            "discovery": {
+                "provider_version": (
+                    commerce_config.COMMERCE_COMPETITOR_PROVIDER_VERSION
+                ),
+                "validator_version": (
+                    commerce_config.COMMERCE_COMPETITOR_VALIDATOR_VERSION
+                ),
             },
-            "import_max_bytes": commerce_config.COMMERCE_IMPORT_MAX_BYTES,
-            "import_max_rows": commerce_config.COMMERCE_IMPORT_MAX_ROWS,
-            "import_error_limit": commerce_config.COMMERCE_IMPORT_ERROR_LIMIT,
+            "buyer_prompts": {
+                "version": commerce_config.COMMERCE_PROMPT_TEMPLATE_VERSION
+            },
             "importer_version": commerce_config.COMMERCE_IMPORTER_VERSION,
             "projector_version": commerce_config.COMMERCE_PROJECTOR_VERSION,
-            "breadcrumb_index_names": sorted(
-                commerce_config.COMMERCE_BREADCRUMB_INDEX_NAMES
-            ),
-            "price_markers": commerce_config.COMMERCE_VISIBLE_PRICE_CURRENCY_MARKERS,
-            "ambiguous_price_tokens": (
-                commerce_config.COMMERCE_VISIBLE_PRICE_AMBIGUOUS_TOKENS
-            ),
         },
         "auth": auth_policy(_setting),
         "site_health_runtime": site_health_runtime_policy(_setting),

@@ -18,7 +18,6 @@ from scripts.ts_platform_constants import constants
 
 
 def audit_policy(setting):
-    shelf_result_limit = commerce_catalog.COMMERCE_RECOMMENDATION_RESOLVER_RESULT_LIMIT
     return {
         "dev_test_allow_platform": setting(
             "dev_test_login_allow_platform_credentials", Settings
@@ -57,14 +56,6 @@ def audit_policy(setting):
             "parser_version": commerce_catalog.COMMERCE_RECOMMENDATION_PARSER_VERSION,
             "matcher_version": commerce_catalog.COMMERCE_RECOMMENDATION_MATCHER_VERSION,
             "formula_version": commerce_catalog.COMMERCE_SHELF_FORMULA_VERSION,
-        },
-        "commerce_shelf": {
-            "span_limit": commerce_catalog.COMMERCE_RECOMMENDATION_RESOLVER_SPAN_LIMIT,
-            "span_chars": commerce_catalog.COMMERCE_RECOMMENDATION_RESOLVER_SPAN_CHARS,
-            "result_limit": shelf_result_limit,
-            "excluded_paths": commerce_catalog.COMMERCE_COMPETITOR_EXCLUDED_PATH_TOKENS,
-            "non_pdp_hosts": commerce_catalog.COMMERCE_COMPETITOR_NON_PDP_HOST_SUFFIXES,
-            "dollar_currencies": commerce_catalog.COMMERCE_DOLLAR_CURRENCY_BY_COUNTRY,
         },
     }
 

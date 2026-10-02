@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { agentCallLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
+import { commerceBuyerPromptSystem } from '../config/commerce.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
 import { admitPrompts } from '../entitlements/occupancy.ts';
@@ -327,10 +328,9 @@ export async function generateBuyerPrompts(
     const gateway = gatewayFactory();
     await enforceWorkspaceRequest(db, scope.workspaceId, agentCallLimit(input.targets.length));
     const batches = [];
-    const systems = P.systems as Record<string, string>;
     for (const [index, context] of contexts.entries()) {
       const response = await gateway.structured(
-        systems[context.business_model] ?? systems['']!,
+        commerceBuyerPromptSystem(context.business_model),
         JSON.stringify({ count: input.count, context }),
         // Unusable items are dropped one by one during admission, never the batch.
         z.object({ prompts: z.array(z.object({ text: z.string() })) }),

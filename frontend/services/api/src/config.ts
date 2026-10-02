@@ -9,6 +9,7 @@ import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import ipaddr from 'ipaddr.js';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
+import { commerce, commerceShelf } from './config/commerce.ts';
 import { industryLibrary } from './config/industry-library.ts';
 import { opportunities } from './config/opportunity.ts';
 import { earnedActions } from './config/earned-actions.ts';
@@ -53,7 +54,13 @@ export const policy = {
   abuse,
   discovery: { ...pythonConfig.discovery, industry_library: industryLibrary },
   source_pages: sourcePages,
-  audits: { ...pythonConfig.audits, url_identity: urlIdentity },
+  audits: { ...pythonConfig.audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },
+  commerce: {
+    ...commerce,
+    ...pythonConfig.commerce,
+    discovery: { ...commerce.discovery, ...pythonConfig.commerce.discovery },
+    buyer_prompts: { ...commerce.buyer_prompts, ...pythonConfig.commerce.buyer_prompts },
+  },
   opportunity: {
     ...pythonConfig.opportunity,
     opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
