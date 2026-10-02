@@ -1,5 +1,5 @@
 /** The API machine-code vocabulary shared by native routes and browser clients. */
-export const API_ERROR_CODES = [
+const API_ERROR_CODES = [
   'access_revoked',
   'acquisition_in_progress',
   'advanced_controls_unavailable',
