@@ -1,7 +1,6 @@
 /**
- * Brand and competitor name matching, the TS form of Python's
- * Alias rules: `&` reads as "and", punctuation
- * separates words, and a name matches on whole-word boundaries including its
+ * Brand and competitor name matching: `&` reads as "and", punctuation other
+ * than underscores separates words, and a name matches on word boundaries including its
  * separator-free spelling ("Ace Hardware" names "acehardware").
  */
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';

@@ -308,6 +308,15 @@ describe('integration worker paging and resume', () => {
       .where('id', '=', runId)
       .executeTakeFirstOrThrow();
     expect(finished.status).toBe('succeeded');
+    const successors = await db
+      .selectFrom('analytics_tasks')
+      .select('task_kind')
+      .where('workspace_id', '=', finished.workspace_id)
+      .where('project_id', '=', projectId)
+      .execute();
+    expect(successors.map((task) => task.task_kind)).toEqual(
+      expect.arrayContaining(['ingest_referrals', 'traffic_snapshot_refresh']),
+    );
     expect(requested.filter((dataset) => dataset.startsWith('ga4_item_'))).toEqual([
       'ga4_item_source_medium_daily',
       'ga4_item_channel_group_daily',

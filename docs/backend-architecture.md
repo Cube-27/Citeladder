@@ -1,8 +1,9 @@
 # Backend architecture
 
 The application API and executing workers are TypeScript-owned. Python's web
-process currently serves only health/readiness; its sweeper retains discovery
-and integration recovery, and its migration job runs Alembic and demo bootstrap.
+process currently serves only health/readiness; its sweeper retains lease
+recovery for discovery and integration queues. Its migration job runs Alembic
+and demo bootstrap.
 PostgreSQL owns durable
 state and queues. Domain behavior is documented in the feature owners listed in
 [the documentation index](README.md); this file owns shared backend mechanics.
