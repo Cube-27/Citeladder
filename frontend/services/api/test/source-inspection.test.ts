@@ -292,8 +292,9 @@ it('keeps terminal handoff idempotent and rejects a task whose project belongs t
     compensateInspection(db, { ...own.task, workspace_id: foreign.workspaceId }),
   ).rejects.toThrow('outside its workspace');
 });
-it('checks global and parent-domain acquisition suppression immediately before an outbound hop', async () => {
+it('rechecks parent and IDNA suppression, resumption and global stops without treating a TLD as a stop', async () => {
   const own = await seed();
+  const domains = ['suppressed-pr18.test', 'xn--bcher-kva.test', 'test', '*'];
   await db
     .insertInto('web_acquisition_controls')
     .values({
@@ -308,15 +309,72 @@ it('checks global and parent-domain acquisition suppression immediately before a
     await expect(
       authorizeAcquisition(db, new URL('https://sub.suppressed-pr18.test/page')),
     ).rejects.toMatchObject({ code: 'acquisition_unavailable' });
-  } finally {
+    await expect(
+      authorizeAcquisition(db, new URL('https://notsuppressed-pr18.test/page')),
+    ).resolves.toBeUndefined();
     await db
-      .deleteFrom('web_acquisition_controls')
-      .where('domain', '=', 'suppressed-pr18.test')
+      .updateTable('web_acquisition_controls')
+      .set({ blocked: false })
+      .where('domain', '=', domains[0]!)
       .execute();
+    await expect(
+      authorizeAcquisition(db, new URL('https://sub.suppressed-pr18.test/page')),
+    ).resolves.toBeUndefined();
+    await db
+      .insertInto('web_acquisition_controls')
+      .values(
+        domains.slice(1, 3).map((domain) => ({
+          domain,
+          blocked: true,
+          reason: 'test-only',
+          actor_id: own.userId,
+          updated_at: new Date(),
+        })),
+      )
+      .execute();
+    await expect(
+      authorizeAcquisition(db, new URL('https://shop.bücher.test/page')),
+    ).rejects.toMatchObject({ code: 'acquisition_unavailable' });
+    await expect(
+      authorizeAcquisition(db, new URL('https://other.test/page')),
+    ).resolves.toBeUndefined();
+    await db
+      .insertInto('web_acquisition_controls')
+      .values({
+        domain: '*',
+        blocked: true,
+        reason: 'test-only',
+        actor_id: own.userId,
+        updated_at: new Date(),
+      })
+      .execute();
+    await expect(
+      authorizeAcquisition(db, new URL('https://other.test/page')),
+    ).rejects.toMatchObject({ code: 'acquisition_unavailable' });
+  } finally {
+    await db.deleteFrom('web_acquisition_controls').where('domain', 'in', domains).execute();
   }
   await expect(
     authorizeAcquisition(db, new URL('https://other.test/page')),
   ).resolves.toBeUndefined();
+});
+
+it('fails closed before DNS or transport when the policy store cannot answer', async () => {
+  const unavailable = db.withSchema('unavailable_acquisition_policy');
+  const dns = vi.fn();
+  const send = vi.fn();
+  const fetcher = createWebsiteFetcher(dns, send);
+  await expect(
+    fetcher('https://publisher.test/page', {
+      maxBytes: 1024,
+      timeoutSeconds: 1,
+      redirects: 0,
+      contentTypes: ['text/html'],
+      authorize: (url) => authorizeAcquisition(unavailable, url),
+    }),
+  ).rejects.toMatchObject({ code: 'acquisition_unavailable' });
+  expect(dns).not.toHaveBeenCalled();
+  expect(send).not.toHaveBeenCalled();
 });
 
 it('settles only a due post-declaration reading and commits its handoff in the same transaction', async () => {

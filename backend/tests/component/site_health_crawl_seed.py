@@ -6,6 +6,7 @@ these rows only give the Python model tests a realistic tenancy to violate.
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from urllib.parse import urlsplit
 
@@ -20,7 +21,6 @@ from app.core.config.site_health_contracts import (
 )
 from app.core.config.site_health_crawl_policy import SELECTION_SOURCE_USER
 from app.core.config.task_queue import TASK_STATUS_QUEUED
-from app.domain.site_health.normalization import canonical_identity
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
@@ -37,7 +37,9 @@ async def _add_monitored_analyze_task(
     session: AsyncSession, seed, url: str
 ) -> tuple[uuid.UUID, uuid.UUID]:
     """One monitored SiteUrl and its QUEUED analyze task."""
-    canonical, url_hash = canonical_identity(url)
+    # These are explicit canonical fixture URLs, not acquisition input.
+    canonical = url
+    url_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     site_url = SiteUrl(
         workspace_id=seed.workspace_id,
         project_id=seed.project_id,
@@ -99,7 +101,7 @@ async def _seed_analyze_phase_crawl(
     crawl.analyzer_version = ANALYZER_VERSION
     crawl.scoring_version = SCORING_VERSION
     crawl.configuration = {
-        "root_registrable_domain": "example.com",
+        "root_registrable_domain": urlsplit(root).hostname,
         "include_globs": None,
         "exclude_globs": None,
         "count_disclosure": True,

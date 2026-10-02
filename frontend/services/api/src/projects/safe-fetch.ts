@@ -88,12 +88,16 @@ export function publicUrl(value: string, base?: string): URL {
     throw new FetchError('invalid_url');
   }
   const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
+  const hostname = url.hostname.replace(/\.$/u, '');
+  const bounds = policy.audits.url_identity;
   if (
     !policy.web_fetch.schemes.includes(url.protocol.slice(0, -1)) ||
     !policy.web_fetch.ports.includes(port) ||
     url.username ||
     url.password ||
     !url.hostname ||
+    hostname.length > bounds.max_dns_hostname_chars ||
+    hostname.split('.').some((label) => label.length > bounds.max_dns_label_chars) ||
     url.href.length > 1024
   )
     throw new FetchError('invalid_url');

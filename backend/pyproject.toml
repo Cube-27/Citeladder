@@ -14,7 +14,6 @@ dependencies = [
   "pydantic>=2.13,<3",
   "pydantic-settings>=2.10.0,<3",
   "sqlalchemy[asyncio]>=2.1.1,<3",
-  "tldextract>=5.1.0,<6",
 ]
 
 # The ONE dev set. CI installs with ``uv sync --frozen --extra dev``, so an

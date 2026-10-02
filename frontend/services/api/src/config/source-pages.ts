@@ -129,6 +129,8 @@ export const sourcePageVocabulary = {
 };
 
 export const urlIdentity = {
+  max_dns_label_chars: 63,
+  max_dns_hostname_chars: 253,
   version: sourcePages.identity_version,
   verbatim: 'verbatim',
   unresolved: 'unresolved',

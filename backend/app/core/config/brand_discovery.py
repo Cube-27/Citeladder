@@ -10,9 +10,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.dotenv import dotenv_sources
 from app.core.config.projects import MAX_PROJECT_COMPETITORS
-from app.core.config.site_health_runtime import (
-    site_health_settings,
-)
 
 DISCOVERY_STATUS_QUEUED: Final = "queued"
 DISCOVERY_STATUS_RUNNING: Final = "running"
@@ -408,6 +405,3 @@ brand_discovery_settings = BrandDiscoverySettings()
 DISCOVERY_RESEARCH_SYSTEM_PROMPT: Final = _discovery_research_system_prompt()
 IDENTITY_RESEARCH_SYSTEM_PROMPT: Final = _identity_research_system_prompt()
 COMPETITOR_SUGGESTION_SYSTEM_PROMPT: Final = _competitor_suggestion_system_prompt()
-
-# Onboarding uses the same sole SSRF-pinned curl transport as Site Health.
-ONBOARDING_DIRECT_FETCH_SETTINGS: Final = site_health_settings.model_copy()
