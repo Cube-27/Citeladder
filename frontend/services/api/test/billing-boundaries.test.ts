@@ -10,8 +10,21 @@ import { creditAmounts } from '../src/billing/receipts.ts';
 import { baseRequest } from '../src/billing/purchases.ts';
 import { billingConfig, buyer } from './billing-support.ts';
 import { createHmac } from 'node:crypto';
+import { billingSettings } from '../src/billing/config.ts';
 
 describe('billing input and provider boundaries', () => {
+  it.each(['', '/contact', '//example.test/contact', 'javascript:alert(1)', 'data:text/html,test'])(
+    'rejects unsafe contact sales URL %s during settings admission',
+    (url) => {
+      expect(() => billingSettings({ BILLING_CONTACT_SALES_URL: url })).toThrow();
+    },
+  );
+  it.each(['http://example.test/contact', 'https://example.test:8443/contact?plan=team#sales'])(
+    'preserves an absolute HTTP(S) contact link %s',
+    (url) => {
+      expect(billingSettings({ BILLING_CONTACT_SALES_URL: url }).contactUrl).toBe(url);
+    },
+  );
   const config = billingConfig();
   it('rounds money with exact integers and refuses missing GST approval and export consent', () => {
     expect(roundedRatio(5n, 2n)).toBe(3);

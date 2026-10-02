@@ -19,8 +19,9 @@ Owner-user metadata is not a payer-selection rule.
 Owner/Admin; product Members receive safe effective allowances rather than
 private billing records.
 
-[Catalog revisions](../backend/app/domain/billing/catalog_revisions.py) is the
-runtime commercial authority. Validated revisions are immutable, and publication
+[Native catalog reads](../frontend/services/api/src/billing/catalog.ts) resolve
+persisted commercial authority. Python [catalog administration](../backend/app/domain/billing/catalog_revisions.py)
+validates and publishes revisions. Validated revisions are immutable, and publication
 retires the former published revision. [Launch catalog](../backend/app/domain/billing/launch_catalog.py)
 authors `launch-pricing-v1`; regional amounts are frozen at authoring by the
 [currency rule](../backend/app/core/config/billing_pricing.py) and never
@@ -143,6 +144,13 @@ Each subject has one ledger-writing stack. Operator
 catalog publication, grant correction and plan verification remain Python-owned;
 the read-only Razorpay plan reader has no checkout or settlement methods and
 retires when that operator CLI migrates.
+
+Native [execution config](../frontend/services/api/src/config/billing.ts) owns
+checkout, reconciliation, webhook settings and commercial runtime vocabularies.
+Python retains tax/seller settings, read-only Razorpay credentials, catalog
+identities and entitlement registry/algebra used by supported operators and
+bootstrap. Native provider display derives from the shared catalog and frozen
+routes; it has no separate Python builder.
 
 The shared transaction lock order remains in [architecture](architecture.md).
 Never acquire project/domain locks after billing locks or hold a transaction

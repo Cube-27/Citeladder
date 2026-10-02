@@ -1,9 +1,17 @@
-import { policy, resolveSettingSpec } from '../config.ts';
+import { ConfigError, policy, resolveSettingSpec } from '../config.ts';
 
-/** Resolve exported policy; tests pass a deterministic environment. */
+/** Resolve native/shared policy; tests pass a deterministic environment. */
 export function billingSettings(env: Record<string, string | undefined> = process.env) {
   const specs = policy.billing.settings;
   const get = <K extends keyof typeof specs>(key: K) => resolveSettingSpec(specs[key], env);
+  let contactUrl: URL;
+  try {
+    contactUrl = new URL(String(get('contact_sales_url')));
+  } catch {
+    throw new ConfigError('Billing contact URL must be an absolute HTTP(S) URL');
+  }
+  if (!['http:', 'https:'].includes(contactUrl.protocol))
+    throw new ConfigError('Billing contact URL must be an absolute HTTP(S) URL');
   return {
     enabled: get('checkout_enabled') as boolean,
     provider: get('checkout_provider') as string,
@@ -24,7 +32,7 @@ export function billingSettings(env: Record<string, string | undefined> = proces
     backoffSeconds: get('reconciliation_backoff_base_seconds') as number,
     listCount: get('reconciliation_list_count') as number,
     maxPages: get('reconciliation_max_pages') as number,
-    contactUrl: get('contact_sales_url') as string,
+    contactUrl: contactUrl.href,
     trialDays: get('trial_days') as number,
     gstRate: get('india_gst_rate') as string | null,
     seller: {

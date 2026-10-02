@@ -1,0 +1,272 @@
+{
+  "settings": {
+    "checkout_enabled": {
+      "env": ["BILLING_CHECKOUT_ENABLED"],
+      "type": "bool",
+      "default": false
+    },
+    "contact_sales_url": {
+      "env": ["BILLING_CONTACT_SALES_URL"],
+      "type": "str",
+      "default": "https://www.cube27.com/contact/"
+    },
+    "funded_monthly_budget_minor": {
+      "env": ["BILLING_FUNDED_MONTHLY_BUDGET_MINOR"],
+      "type": "int",
+      "default": 50000
+    },
+    "trial_days": {
+      "env": ["BILLING_TRIAL_DAYS"],
+      "type": "int",
+      "default": 7
+    },
+    "http_max_connections": {
+      "env": ["BILLING_HTTP_MAX_CONNECTIONS"],
+      "type": "int",
+      "default": 20
+    },
+    "http_max_keepalive_connections": {
+      "env": ["BILLING_HTTP_MAX_KEEPALIVE_CONNECTIONS"],
+      "type": "int",
+      "default": 10
+    },
+    "http_keepalive_expiry_seconds": {
+      "env": ["BILLING_HTTP_KEEPALIVE_EXPIRY_SECONDS"],
+      "type": "float",
+      "default": 60.0
+    },
+    "quote_validity_minutes": {
+      "env": ["BILLING_QUOTE_VALIDITY_MINUTES"],
+      "type": "int",
+      "default": 60
+    },
+    "quote_signing_secret": {
+      "env": ["BILLING_QUOTE_SIGNING_SECRET"],
+      "type": "str",
+      "default": ""
+    },
+    "reconciliation_poll_seconds": {
+      "env": ["BILLING_RECONCILIATION_POLL_SECONDS"],
+      "type": "int",
+      "default": 2
+    },
+    "reconciliation_batch_size": {
+      "env": ["BILLING_RECONCILIATION_BATCH_SIZE"],
+      "type": "int",
+      "default": 50
+    },
+    "reconciliation_stale_after_seconds": {
+      "env": ["BILLING_RECONCILIATION_STALE_AFTER_SECONDS"],
+      "type": "int",
+      "default": 300
+    },
+    "reconciliation_abandon_after_seconds": {
+      "env": ["BILLING_RECONCILIATION_ABANDON_AFTER_SECONDS"],
+      "type": "int",
+      "default": 86400
+    },
+    "reconciliation_list_count": {
+      "env": ["BILLING_RECONCILIATION_LIST_COUNT"],
+      "type": "int",
+      "default": 100,
+      "minimum": 1,
+      "maximum": 100
+    },
+    "reconciliation_max_pages": {
+      "env": ["BILLING_RECONCILIATION_MAX_PAGES"],
+      "type": "int",
+      "default": 5,
+      "minimum": 1,
+      "maximum": 20
+    },
+    "reconciliation_lease_seconds": {
+      "env": ["BILLING_RECONCILIATION_LEASE_SECONDS"],
+      "type": "int",
+      "default": 120
+    },
+    "reconciliation_max_attempts": {
+      "env": ["BILLING_RECONCILIATION_MAX_ATTEMPTS"],
+      "type": "int",
+      "default": 8
+    },
+    "reconciliation_backoff_base_seconds": {
+      "env": ["BILLING_RECONCILIATION_BACKOFF_BASE_SECONDS"],
+      "type": "int",
+      "default": 60
+    },
+    "webhook_lease_seconds": {
+      "env": ["BILLING_WEBHOOK_LEASE_SECONDS"],
+      "type": "int",
+      "default": 120
+    },
+    "webhook_max_attempts": {
+      "env": ["BILLING_WEBHOOK_MAX_ATTEMPTS"],
+      "type": "int",
+      "default": 8
+    },
+    "subscription_total_cycles": {
+      "env": ["BILLING_SUBSCRIPTION_TOTAL_CYCLES"],
+      "type": "int",
+      "default": 1200,
+      "minimum": 12,
+      "maximum": 1200
+    },
+    "plan_change_minimum_charge_minor": {
+      "env": ["BILLING_PLAN_CHANGE_MINIMUM_CHARGE_MINOR"],
+      "type": "int",
+      "default": 100,
+      "minimum": 100
+    },
+    "max_webhook_body_bytes": {
+      "env": ["BILLING_MAX_WEBHOOK_BODY_BYTES"],
+      "type": "int",
+      "default": 262144
+    }
+  },
+  "razorpay_settings": {
+    "test_ready": {
+      "env": ["BILLING_RAZORPAY_TEST_READY"],
+      "type": "bool",
+      "default": false
+    },
+    "test_international_ready": {
+      "env": ["BILLING_RAZORPAY_TEST_INTERNATIONAL_READY"],
+      "type": "bool",
+      "default": false
+    },
+    "test_india_ready": {
+      "env": ["BILLING_RAZORPAY_TEST_INDIA_READY"],
+      "type": "bool",
+      "default": false
+    },
+    "live_ready": {
+      "env": ["BILLING_RAZORPAY_LIVE_READY"],
+      "type": "bool",
+      "default": false
+    },
+    "international_ready": {
+      "env": ["BILLING_RAZORPAY_INTERNATIONAL_READY"],
+      "type": "bool",
+      "default": false
+    },
+    "webhook_secret": {
+      "env": ["BILLING_RAZORPAY_WEBHOOK_SECRET"],
+      "type": "str",
+      "default": ""
+    },
+    "webhook_previous_secret": {
+      "env": ["BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET"],
+      "type": "str",
+      "default": ""
+    },
+    "webhook_previous_secret_expires_at": {
+      "env": ["BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_EXPIRES_AT"],
+      "type": "datetime",
+      "nullable": true,
+      "default": null
+    },
+    "webhook_previous_secret_started_at": {
+      "env": ["BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_STARTED_AT"],
+      "type": "datetime",
+      "nullable": true,
+      "default": null
+    }
+  },
+  "contracts": {
+    "subscription_trialing": "trialing",
+    "subscription_active": "active",
+    "subscription_past_due": "past_due",
+    "subscription_cancel_scheduled": "cancel_scheduled",
+    "subscription_cancelled": "cancelled",
+    "subscription_unpaid": "unpaid",
+    "subscription_expired": "expired",
+    "razorpay_event_types": [
+      "subscription.activated",
+      "subscription.authenticated",
+      "subscription.cancelled",
+      "subscription.charged",
+      "subscription.completed",
+      "subscription.expired",
+      "subscription.halted",
+      "subscription.paused",
+      "subscription.pending",
+      "subscription.resumed"
+    ],
+    "razorpay_payment_event_types": ["order.paid", "payment.captured", "payment.failed"],
+    "razorpay_refund_event_types": ["refund.processed"],
+    "payment_pending": "payment_pending",
+    "payment_paid": "paid",
+    "payment_failed": "payment_failed",
+    "cadence_custom": "custom",
+    "coming_soon_plan_capability_keys": [
+      "provider.grok",
+      "provider.perplexity",
+      "provider.copilot"
+    ],
+    "activation_kind_base": "base",
+    "activation_kind_addon": "addon",
+    "activation_kind_topup": "topup",
+    "activation_kind_upgrade": "upgrade",
+    "plan_change_upgrade": "upgrade",
+    "plan_change_downgrade": "downgrade",
+    "plan_change_requested": "requested",
+    "plan_change_scheduled": "scheduled",
+    "plan_change_rejected": "provider_rejected",
+    "plan_bundle_priority": 200,
+    "upgrade_bundle_priority": 210,
+    "activation_pending": "pending",
+    "activation_activated": "activated",
+    "activation_failed": "failed",
+    "activation_abandoned": "abandoned",
+    "idempotency_started": "started",
+    "idempotency_completed": "completed",
+    "idempotency_failed": "failed",
+    "credential_mode_byok": "byok",
+    "credential_mode_funded": "funded",
+    "operation_subscription_create": "subscription.create",
+    "operation_subscription_cancel": "subscription.cancel",
+    "operation_addon_activate": "addon.activate",
+    "operation_topup_purchase": "topup.purchase",
+    "operation_plan_change": "subscription.change",
+    "reason_trial_requested_unavailable": "trial_unavailable",
+    "reason_idempotency_key_required": "idempotency_key_required",
+    "reason_idempotency_key_reused": "idempotency_key_reused",
+    "reason_catalog_key_unknown": "catalog_key_unknown",
+    "reason_quantity_out_of_bounds": "quantity_out_of_bounds",
+    "reason_subscription_exists": "subscription_already_active",
+    "reason_subscription_pending": "subscription_pending",
+    "reason_addon_pending": "addon_pending",
+    "reason_plan_change_pending": "plan_change_pending",
+    "reason_plan_change_same_plan": "plan_change_same_plan",
+    "reason_plan_change_unavailable": "plan_change_unavailable",
+    "reason_no_current_subscription": "no_current_subscription",
+    "reason_base_subscription_required": "base_subscription_required",
+    "reason_item_plan_ineligible": "item_plan_ineligible",
+    "reason_provider_unavailable": "provider_unavailable",
+    "reason_provider_rejected": "provider_rejected",
+    "reason_activation_expired": "activation_expired",
+    "refund_processed": "processed",
+    "revocation_reason_full_refund": "full_refund",
+    "coming_soon_addon_keys": [],
+    "idempotency_key_min_length": 8,
+    "idempotency_key_max_length": 255,
+    "telemetry_entitlement_unresolved": "billing.entitlement_unresolved",
+    "telemetry_funded_budget_exhausted": "billing.funded_budget_exhausted",
+    "telemetry_consumable_credits_exhausted": "billing.consumable_credits_exhausted",
+    "telemetry_duplicate_grant_prevented": "billing.duplicate_grant_prevented",
+    "activation_authority_webhook": "webhook",
+    "activation_authority_reconciliation": "reconciliation",
+    "usage_units_by_capability_type": {
+      "counter.consumable": "credits",
+      "counter.occupancy": "slots",
+      "counter.rate": "runs"
+    },
+    "country_verification_provisional": "provisional",
+    "country_verification_declared": "declared",
+    "cancellation_scheduled": "cancellation_scheduled",
+    "cancellation_already_scheduled": "already_scheduled",
+    "limit_state_finite": "finite",
+    "limit_state_unlimited": "unlimited",
+    "limit_state_unknown": "unknown"
+  }
+}
