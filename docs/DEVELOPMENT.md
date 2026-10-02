@@ -53,9 +53,9 @@ Run only the separate workers required by the workflow under test. The web proce
 work and never performs provider calls or long-running crawl/sync/generation work inline.
 
 ```bash
-cd backend
-uv run python -m app.workers.agent_worker
-uv run python -m app.workers.analytics_worker
+cd frontend/services/api
+node src/agent-worker.ts
+node src/worker.ts
 ```
 
 From frontend/, run the TypeScript brand-discovery worker with:
@@ -294,8 +294,11 @@ finalizes crawls, and every pass (including a drain over an empty queue) runs
 the stalled, overdue and cancelled-crawl backstops.
 `docker compose up analytics-worker-ts` (or `node src/worker.ts` in
 `frontend/services/api`) runs the TypeScript analytics worker, which claims the
-kinds in `ANALYTICS_TS_OWNED_TASK_KINDS`; the Python `analytics_worker` above no
-longer claims them, so run both when working on the referral chain.
+kinds in `ANALYTICS_TS_OWNED_TASK_KINDS`, now every analytics kind. It owns
+bounded expired-lease recovery and terminal compensation on every pass. Run
+`node src/worker.ts --drain` to process due work until idle or the
+`ANALYTICS_DRAIN_BUDGET_SECONDS` budget (default 300) expires; claimed work finishes
+before exit. The Python sweeper retains brand-discovery and integration recovery.
 `docker compose up api-service` runs the service on `127.0.0.1:8100`; both local
 ingresses send it the TypeScript-owned paths. `pnpm dev` proxies the same paths
 to `API_SERVICE_ORIGIN` (default `http://localhost:8100`), so run the service

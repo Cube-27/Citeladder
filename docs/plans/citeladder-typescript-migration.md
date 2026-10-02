@@ -184,7 +184,7 @@ total.
 | 17 | Audits, providers and answer-engine connectors | High | Done; 17b merged (#217) |
 | 18 | Site Health and source-page inspection | High | Done; 18b5b (#224), 18b5c (#225) merged |
 | 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a merged (#226); 19b adapters, activation and retirement implemented; PR validation pending |
-| 19c | Commerce competitor discovery and remaining acquisition bridges | High | Authorized before PR 20 (owner, 2 October 2026) |
+| 19c | Commerce competitor discovery and remaining acquisition bridges | High | Implemented 2 October 2026; deployment pending |
 | 20 | Consolidation and policy transfer | Medium | |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
@@ -1174,6 +1174,36 @@ analytics worker, kind complement, sweeper spec, parent reconcilers and unused
 onboarding site resolution/normalization before deleting them; a recovery owner
 must transfer before its Python sweeper registration disappears. The owner
 assigned this separate PR before consolidation on 2 October 2026.
+
+Implemented: TypeScript owns discovery admission and its analytics executor,
+with frozen target context, Tavily/Keenable search and target-aware verification
+through the existing Site Health acquisition and analysis owners. Every attempt,
+pending candidate and queue outcome commits together under the live claim;
+expired and reclaimed attempts cannot publish, finalize or heartbeat a later
+claim even when the worker name is reused. The native analytics worker owns
+bounded lease recovery, terminal compensation and a time-bounded drain command.
+The Python analytics claimant, complement, queue spec and Compose services are
+removed. The Python sweeper and parent reconciler stay for brand discovery and
+integrations; their recovery is not retired here.
+
+Retirement removes 44 Python application/test files: Commerce discovery, its
+transport, unused onboarding resolution, the Site Health parser/classifier graph
+and exclusively used fetch/acquisition bridges. `curl-cffi`, `lxml`, their stubs
+and the obsolete connector-to-DOM exception are removed. URL policy, fetch
+contracts, normalization and acquisition suppression remain for active fixture
+and safety-test callers; consolidation rechecks those callers. Action content
+fixtures now extract facts through TypeScript. The historical Site Health
+evaluation corpus remains evidence of the Python-era implementation.
+
+Departures: redirects to owned, marketplace or editorial destinations are
+excluded before verification; shared robots policy and host pacing now apply to
+candidate pages; verification records the current extractor/classifier versions.
+Malformed provider envelopes fail over or retry rather than silently becoming an
+empty successful result. Provider credentials require canonical HTTPS destinations
+and never follow redirects. Failed attempts use the shared analytics retry code;
+unavailable providers and unusable names retain explicit terminal codes. Queue
+outcomes and evidence settle atomically instead of separate commits, and expired
+claims cannot finalize. No live provider or deployment acceptance is implied.
 
 ### PR 20: Consolidation and policy transfer
 
