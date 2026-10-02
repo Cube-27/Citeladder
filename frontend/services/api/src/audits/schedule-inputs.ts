@@ -8,9 +8,17 @@ const timezones = new Map(
   policy.audit_schedules.timezones.map((name) => [name.toLowerCase(), name]),
 );
 
-/** The case-sensitive timezone spelling from the exported tzdata catalog, or null. */
+/** A pinned IANA name supported by this runtime's scheduler, or null. */
 export function canonicalTimezone(value: string): string | null {
-  return timezones.get(value.toLowerCase()) ?? null;
+  const name = timezones.get(value.toLowerCase());
+  if (!name) return null;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: name });
+    return name;
+  } catch (error) {
+    if (error instanceof RangeError) return null;
+    throw error;
+  }
 }
 
 const timezone = z

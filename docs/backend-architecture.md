@@ -94,6 +94,9 @@ tools and demo/bootstrap remain Python consumers. Moving a policy section
 removes its Python definition and exporter builder in the same change.
 Opportunity/Action catalogs, source-page inspection and placement policy are
 native; Python retains their schema defaults and development enqueue versions.
+Commerce acquisition/admission policy and buyer-prompt templates, plus scheduler
+runtime settings and the pinned timezone catalog, are native. Commerce persisted
+versions and scheduler model defaults remain in the shared export.
 Do not introduce Redis without measured need.
 
 Backend schemas own the wire contract. Coordinate frontend schemas and API

@@ -69,7 +69,9 @@
   Python multipart. 20c transfers Opportunity/Action, source-page, JEV and
   other native catalogs (#233). 20d implements native recovery, sweeper and
   complete production startup admission (#234). 20e retires Python web, its
-  unused dependencies and the empty OpenAPI drift bridge. Further field-level
+  unused dependencies and the empty OpenAPI drift bridge (#235). 20f transfers
+  Commerce and audit-scheduler runtime policy, retaining shared model defaults
+  and versions. Further field-level
   policy transfer and bridge retirement remain.
   Deployment of implemented cutovers is pending; the owner dropped the
   one-week soak while there are no customers (smoke tests instead). On
