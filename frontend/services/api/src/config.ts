@@ -8,6 +8,9 @@
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
+import { opportunities } from './config/opportunity.ts';
+import { earnedActions } from './config/earned-actions.ts';
+import { actions } from './config/actions.ts';
 import { jev, quality, qualityGatesReported } from './config/jev.ts';
 import { appModels } from './config/app-models.ts';
 import { productTourVersion } from './config/product-tour.ts';
@@ -43,6 +46,12 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   abuse,
+  opportunity: {
+    ...pythonConfig.opportunity,
+    opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
+    actions: { ...actions, ...pythonConfig.opportunity.actions },
+    earned_actions: earnedActions,
+  },
   models: { ...pythonConfig.models, jev, quality },
   workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
   providers: { ...pythonConfig.providers, app: appModels },
