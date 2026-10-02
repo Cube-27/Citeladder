@@ -12,6 +12,7 @@ import { opportunities } from './config/opportunity.ts';
 import { earnedActions } from './config/earned-actions.ts';
 import { actions } from './config/actions.ts';
 import { placement } from './config/placement.ts';
+import { sourcePatterns } from './config/source-patterns.ts';
 import { jev, quality, qualityGatesReported } from './config/jev.ts';
 import { appModels } from './config/app-models.ts';
 import { productTourVersion } from './config/product-tour.ts';
@@ -53,6 +54,7 @@ export const policy = {
     actions: { ...actions, ...pythonConfig.opportunity.actions },
     earned_actions: earnedActions,
     placement: { ...placement, ...pythonConfig.opportunity.placement },
+    source_patterns: { ...sourcePatterns, ...pythonConfig.opportunity.source_patterns },
   },
   models: { ...pythonConfig.models, jev, quality },
   workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
