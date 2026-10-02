@@ -9,6 +9,13 @@ import { parseContentFormats } from '../src/config/skill-inputs.ts';
 
 describe('packaged Agent model inputs', () => {
   const root = agentSettings({}).skillsDirectory;
+  it('keeps example headings inside fenced methodology text and continues at the next format', () => {
+    const { formats } = parseContentFormats(
+      '# Formats\n## page — Page\nBody\n~~~markdown\n## example — Example\nLiteral example.\n~~~\n## briefing — Briefing\nBrief.',
+    );
+    expect([...formats.keys()]).toEqual(['page', 'briefing']);
+    expect(formats.get('page')?.body).toContain('## example — Example');
+  });
   it.each(['  ## briefing — Briefing', '## briefing malformed'])(
     'rejects malformed format headings %s instead of hiding them in a prior format',
     (heading) => {

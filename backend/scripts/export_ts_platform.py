@@ -57,15 +57,6 @@ from app.core.config.site_health_page_kinds import PAGE_KIND_OTHER
 from app.core.config.task_queue import (
     TASK_ACTIVE_STATUSES,
     TASK_CLAIMABLE_STATUSES,
-    TASK_STATUS_AWAITING_PROVIDER_RESULT,
-    TASK_STATUS_CANCELLED,
-    TASK_STATUS_CAPACITY_WAIT,
-    TASK_STATUS_FAILED,
-    TASK_STATUS_LEASED,
-    TASK_STATUS_QUEUED,
-    TASK_STATUS_RETRY_WAIT,
-    TASK_STATUS_RUNNING,
-    TASK_STATUS_SUBMISSION_UNCERTAIN,
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
 )
@@ -251,16 +242,8 @@ def _task_queue_policy() -> dict[str, Any]:
     """The shared queue-row status vocabulary the TS claim and finalize write."""
     return {
         "statuses": {
-            "queued": TASK_STATUS_QUEUED,
-            "leased": TASK_STATUS_LEASED,
-            "running": TASK_STATUS_RUNNING,
-            "retry_wait": TASK_STATUS_RETRY_WAIT,
-            "succeeded": TASK_STATUS_SUCCEEDED,
-            "failed": TASK_STATUS_FAILED,
-            "cancelled": TASK_STATUS_CANCELLED,
-            "capacity_wait": TASK_STATUS_CAPACITY_WAIT,
-            "awaiting_provider_result": TASK_STATUS_AWAITING_PROVIDER_RESULT,
-            "submission_uncertain": TASK_STATUS_SUBMISSION_UNCERTAIN,
+            status: status
+            for status in sorted(TASK_ACTIVE_STATUSES | TASK_TERMINAL_STATUSES)
         },
         "claimable": sorted(TASK_CLAIMABLE_STATUSES),
         "active": sorted(TASK_ACTIVE_STATUSES),
