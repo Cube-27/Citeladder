@@ -13,6 +13,7 @@ import { errors } from './config/errors.ts';
 import { compareText } from './text-order.ts';
 import agentRuntime from './config/agent-runtime.json' with { type: 'json' };
 import modelGateway from './config/model-gateway.json' with { type: 'json' };
+import { discovery } from './config/discovery.ts';
 import { siteHealth } from './config/site-health.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
@@ -64,7 +65,7 @@ export const policy = {
     ...auditSchedules,
     min_interval_minutes: auditSchedules.settings.min_interval_minutes,
   },
-  discovery: { ...pythonConfig.discovery, industry_library: industryLibrary },
+  discovery: { ...discovery, industry_library: industryLibrary },
   source_pages: sourcePages,
   audits: { ...pythonConfig.audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },
   commerce: {

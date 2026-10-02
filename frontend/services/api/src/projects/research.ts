@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import { createModelGateway, gatewaySettings, type ModelGateway } from '../models/gateway.ts';
+import { competitorSuggestionPrompt } from '../config/discovery.ts';
 import { defaultTransport } from '../models/http.ts';
 import { competitorInput, cleanList } from './inputs.ts';
 import { discoveryProfile, discoverySettings, type DiscoveryInput } from './discovery-inputs.ts';
@@ -151,7 +152,7 @@ async function suggestCompetitors({
   for (let attempt = 0; attempt < settings.competitor_model_maximum_attempts; attempt++) {
     try {
       const generated = await gateway.structured(
-        cfg.competitor_suggestion_system_prompt,
+        competitorSuggestionPrompt(settings.competitor_suggestion_maximum),
         JSON.stringify({
           brand_name: input.brand_name,
           owned_domain: site.domain,

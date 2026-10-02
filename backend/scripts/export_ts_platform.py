@@ -203,14 +203,13 @@ EXPORTED_SETTINGS = (
 def _discovery_policy() -> dict[str, Any]:
     return {
         "settings": {
-            name: _setting(name, discovery_config.BrandDiscoverySettings)
-            for name in discovery_config.BrandDiscoverySettings.model_fields
+            "maximum_attempts": _setting(
+                "maximum_attempts", discovery_config.BrandDiscoverySettings
+            )
         },
         "constants": {
-            name.lower(): sorted(value) if isinstance(value, frozenset) else value
-            for name, value in vars(discovery_config).items()
-            if name.isupper()
-            and isinstance(value, (str, int, float, tuple, dict, frozenset))
+            "discovery_status_queued": discovery_config.DISCOVERY_STATUS_QUEUED,
+            "task_kind_brand_discovery": discovery_config.TASK_KIND_BRAND_DISCOVERY,
         },
     }
 
