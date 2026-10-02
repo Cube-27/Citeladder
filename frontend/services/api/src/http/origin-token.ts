@@ -14,7 +14,7 @@ function hostOf(origin: string): string {
 }
 
 /** The apex (MCP) and app hosts the Workers may name as a request's public host. */
-export function publicHosts(config: ServiceConfig): Set<string> {
+function publicHosts(config: ServiceConfig): Set<string> {
   const mcpBase = String(
     resolveSettingSpec(policy.mcp.settings.public_base_url, configEnvironment(config)),
   ).trim();
