@@ -104,10 +104,10 @@ export function exclusiveDrain(
           getLogger('workers.runner').info('runner_drain_active_elsewhere');
           return 0;
         }
-        await sleep(config.execution.drainLockPollMs, undefined, { signal: options.signal }).catch(
-          // NOSONAR -- Polling interval between attempts.
-          () => undefined,
-        );
+        const pause = sleep(config.execution.drainLockPollMs, undefined, {
+          signal: options.signal,
+        });
+        await pause.catch(() => undefined); // NOSONAR -- Polling interval between attempts.
       }
       try {
         return await drain();

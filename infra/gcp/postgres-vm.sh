@@ -101,7 +101,10 @@ for attempt in $(seq 1 60); do
   [[ "$attempt" -lt 60 ]] || exit 1
   sleep 2
 done
-docker exec -i citeladder-postgres psql -q -v ON_ERROR_STOP=1 -U citeladder -d citeladder >/dev/null <<'SQL'
-\set password `cat /run/citeladder/db-password`
+# The value travels through the container-local environment, never argv or SQL logs.
+docker exec -i citeladder-postgres sh -c \
+  'ROLE_PASSWORD="$(cat /run/citeladder/db-password)" psql -q -v ON_ERROR_STOP=1 -U citeladder -d citeladder' \
+  >/dev/null <<'SQL'
+\getenv password ROLE_PASSWORD
 ALTER ROLE citeladder PASSWORD :'password';
 SQL

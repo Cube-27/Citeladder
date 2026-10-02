@@ -262,16 +262,22 @@ describe('exclusive drain on PostgreSQL', () => {
       await holding.promise;
       return 3;
     });
-    await started.promise;
-    const blocked = vi.fn(async () => 1);
-    // A concurrent execution gives up without draining while the lock is held.
-    expect(await exclusiveDrain(config, live(), 300)(blocked)).toBe(0);
-    expect(blocked).not.toHaveBeenCalled();
-    // A waiting execution proceeds as soon as the active drain releases.
-    const waiting = exclusiveDrain(config, live(), 5_000)(async () => 2);
-    holding.resolve();
-    expect(await active).toBe(3);
-    expect(await waiting).toBe(2);
+    try {
+      await started.promise;
+      const blocked = vi.fn(async () => 1);
+      // A concurrent execution gives up without draining while the lock is held.
+      expect(await exclusiveDrain(config, live(), 300)(blocked)).toBe(0);
+      expect(blocked).not.toHaveBeenCalled();
+      // A waiting execution proceeds as soon as the active drain releases.
+      const waiting = exclusiveDrain(config, live(), 5_000)(async () => 2);
+      holding.resolve();
+      expect(await active).toBe(3);
+      expect(await waiting).toBe(2);
+    } finally {
+      // A failed assertion must not leave the lock session open.
+      holding.resolve();
+      await active.catch(() => undefined);
+    }
   });
 
   it('keeps the only pooled connection free for lanes that query the database', async () => {
