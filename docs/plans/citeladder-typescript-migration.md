@@ -185,7 +185,7 @@ total.
 | 18 | Site Health and source-page inspection | High | Done; 18b5b (#224), 18b5c (#225) merged |
 | 19 | Agent runtime (19a foundation; 19b cutover) | High | 19a merged (#226); 19b adapters, activation and retirement implemented; PR validation pending |
 | 19c | Commerce competitor discovery and remaining acquisition bridges | High | Implemented 2 October 2026; deployment pending |
-| 20 | Consolidation and policy transfer | Medium | 20a implemented; further policy, runtime and dependency slices in progress |
+| 20 | Consolidation and policy transfer | Medium | 20a and dependency slice implemented; further policy/runtime work in progress |
 | 21 | Scale-to-zero runner (section 9) | Medium | Proposed |
 | 22 | Low-cost GCP foundation (section 9) | Medium | Proposed |
 | 23 | Database move and HTTP cutover (section 9) | High | Proposed |
@@ -1243,9 +1243,15 @@ Literal-vocabulary guards retire with their last Python schema consumer;
 prompt exemplar substring tests retire with the templates, with native
 generation/admission and packaged-skill tests covering the consumers.
 
+**20b.** Update frontend/API dependencies and Python's resolved dependency set,
+align pnpm 12.8.1 in workspace/root metadata and all Node images, and retire
+`python-multipart` with the already-removed Python upload routes. Frontend Knip
+and backend deptry remain the unused-dependency gates. Vite+/Vitest stay coupled
+at the bundled versions; MSW stays on 2.x because that mocker requires it.
+
 Remaining PR20 work: further field-level policy transfer and bridge retirement,
-native discovery/integration lease recovery, Python web retirement with full
-production startup validation, and dependency updates/pruning. Models/Alembic
+native discovery/integration lease recovery and Python web retirement with full
+production startup validation. Models/Alembic
 remain Python; supported operator tooling and deploy-time bootstrap remain
 explicit consumers until their callers are replaced. No schema tables are
 dropped merely because their HTTP owner moved.
