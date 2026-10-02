@@ -53,8 +53,9 @@ composed with shared tax/seller and operator settings from
   required together; there is no source default.
 - the seller identity, the HTTP pool, and the sweep bounds.
 
-Commercial terms (prices, grants, add-ons, top-ups, support contact) are never
+Commercial terms (prices, grants, add-ons and top-ups) are never
 environment settings: they live in the published `BillingCatalogRevision`.
+The contact-sales display URL is configured by `BILLING_CONTACT_SALES_URL`.
 
 Razorpay-owned (native `config/billing.json` and shared operator credentials in
 `backend/app/core/config/razorpay_settings.py`): `BILLING_RAZORPAY_MODE`,

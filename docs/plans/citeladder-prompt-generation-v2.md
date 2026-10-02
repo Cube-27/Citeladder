@@ -214,8 +214,8 @@ so production gets `JEV_API_KEY` no earlier than 30 days after publication.
 - Privacy Policy, `retention` section, addition: "When you reject a suggested
   prompt that was quality-checked, we keep the check's result, without the
   suggestion's text, for up to 180 days to improve those checks."
-- On publication: bump `PRIVACY_NOTICE_REVISION` in
-  `backend/app/core/config/legal.py` (prior acceptance evidence is preserved),
+- On publication: bump `privacy_revision` in
+  `frontend/services/api/src/config/auth-runtime.json` (prior acceptance evidence is preserved),
   notify workspace owners under the DPA, then set the production key.
 
 ### 7.2 Implemented
@@ -239,8 +239,8 @@ so production gets `JEV_API_KEY` no earlier than 30 days after publication.
   approval):** add TypeSafe as a subprocessor on `/subprocessors`
   (`frontend/lib/marketing-content/legal*.ts`), describe the prompt-quality judgment
   and the data it receives (business context, candidate text, private GSC query
-  text) in the Privacy notice and AI policy, and bump `PRIVACY_NOTICE_REVISION` in
-  `backend/app/core/config/legal.py` only when the revision is actually published,
+  text) in the Privacy notice and AI policy, and bump `privacy_revision` in
+  `frontend/services/api/src/config/auth-runtime.json` only when the revision is actually published,
   preserving prior acceptance evidence. Confirm TypeSafe's data retention, privacy
   terms, region, rate limits and pricing before publishing.
 - **Calibration from real decisions:** join JEV decisions with user accept/reject
