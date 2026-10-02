@@ -14,6 +14,8 @@ import { compareText } from './text-order.ts';
 import agentRuntime from './config/agent-runtime.json' with { type: 'json' };
 import modelGateway from './config/model-gateway.json' with { type: 'json' };
 import { discovery } from './config/discovery.ts';
+import promptLibrary from './config/prompt-library.json' with { type: 'json' };
+import api from './config/api.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
@@ -57,6 +59,9 @@ type SettingSpec = {
 
 export const policy = {
   ...pythonConfig,
+  api,
+  visibility: { ...pythonConfig.visibility, ...promptLibrary.cohorts },
+  projects: { ...pythonConfig.projects, prompt_set_name: promptLibrary.prompt_set_name },
   errors,
   agent: { ...agentRuntime, ...pythonConfig.agent },
   abuse,
@@ -120,13 +125,19 @@ export const policy = {
     terms_revision: pythonConfig.auth.terms_revision,
     constants: {
       ...mcp.constants,
-      api_request_body_max_bytes: pythonConfig.api.request_body_max_bytes,
+      api_request_body_max_bytes: api.request_body_max_bytes,
     },
   },
   prompts: {
+    ...promptLibrary.prompts,
     ...pythonConfig.prompts,
+    origins: { ...promptLibrary.prompts.origins, ...pythonConfig.prompts.origins },
     generation: promptGeneration,
-    candidate: { ...pythonConfig.prompts.candidate, quality_gates_reported: qualityGatesReported },
+    candidate: {
+      ...promptLibrary.prompts.candidate,
+      ...pythonConfig.prompts.candidate,
+      quality_gates_reported: qualityGatesReported,
+    },
   },
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,

@@ -81,44 +81,17 @@ from app.core.config.analytics import (
     REFERRAL_URL_PARAM_ALLOWLIST_PREFIXES,
     AnalyticsSettings,
 )
-from app.core.config.api import (
-    API_V1_PREFIX,
-    READINESS_TIMEOUT_SECONDS,
-    TS_API_SERVICE_PORT,
-)
 from app.core.config.audits import (
     AUDIT_SCOPE_BRAND,
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
     MEASUREMENT_POLICY_KEY,
 )
-from app.core.config.http import (
-    API_REQUEST_BODY_MAX_BYTES,
-    IMPORT_BODY_MAX_BYTES,
-    PROMPT_IMPORT_MAX_ROWS,
-    PROMPT_INTENT_MAX_CHARS,
-    PROMPT_TEXT_MAX_CHARS,
-    PROMPT_TEXT_MIN_WORDS,
-    PROMPT_THEME_MAX_CHARS,
-    TOPIC_NAME_MAX_CHARS,
-)
 from app.core.config.integrations_datasets import (
     DATASET_GA4_REFERRER_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
     DIMENSION_KEY_SEPARATOR,
     INTEGRATION_DATASET_TEMPLATES,
-)
-from app.core.config.projects import (
-    PROMPT_INTENTS,
-    PROMPT_ORIGIN_GENERATED,
-    PROMPT_ORIGIN_IMPORTED,
-    PROMPT_ORIGIN_MANUAL,
-)
-from app.core.config.prompts import (
-    ORGANIC_PROMPT_COHORTS,
-    PROMPT_COHORT_CORE,
-    REQUESTABLE_PROMPT_COHORTS,
-    PromptGenerationSettings,
 )
 from app.core.config.provider_catalog import (
     ERROR_UNKNOWN,
@@ -232,12 +205,6 @@ def build_config() -> dict[str, Any]:
                 "weak_words": sorted(LOGIN_PASSWORD_WEAK_WORDS),
             },
         },
-        "api": {
-            "prefix": API_V1_PREFIX,
-            "readiness_timeout_seconds": READINESS_TIMEOUT_SECONDS,
-            "service_port": TS_API_SERVICE_PORT,
-            "request_body_max_bytes": API_REQUEST_BODY_MAX_BYTES,
-        },
         "workspaces": workspace_policy(),
         "visibility": _visibility_policy(),
         "analytics": _analytics_policy(),
@@ -269,7 +236,6 @@ def build_config() -> dict[str, Any]:
             "max_repetitions": projects_config.MAX_REPETITIONS,
             "location_codes": search_config.LOCATION_CODES,
             "language_codes": sorted(search_config.LANGUAGE_CODES),
-            "prompt_set_name": prompts_config.ONBOARDING_PROMPT_SET_NAME,
         },
         "audit_schedules": audit_schedule_policy(),
         "discovery": _discovery_policy(),
@@ -297,64 +263,13 @@ def build_config() -> dict[str, Any]:
     }
 
 
-# The review and retention knobs the TS prompt owner reads (``GENERATION_*``).
-PROMPT_GENERATION_SETTINGS = tuple(PromptGenerationSettings.model_fields)
-
-
 def _prompts_policy() -> dict[str, Any]:
-    """Prompt, topic and candidate vocabulary and bounds for the TS owner."""
-    cfg = prompts_config
     return {
-        "locks": {
-            "project": {
-                "namespace": cfg.PROJECT_LOCK_NAMESPACE,
-                "person": cfg.PROMPT_LOCK_PERSON,
-            },
-            "prompt_set": {
-                "namespace": cfg.PROMPT_SET_LOCK_NAMESPACE,
-                "person": cfg.PROMPT_LOCK_PERSON,
-            },
-        },
-        "trailing_punctuation": cfg.PROMPT_TRAILING_PUNCTUATION,
-        "text_max_chars": PROMPT_TEXT_MAX_CHARS,
-        "text_min_words": PROMPT_TEXT_MIN_WORDS,
-        "theme_max_chars": PROMPT_THEME_MAX_CHARS,
-        "intent_max_chars": PROMPT_INTENT_MAX_CHARS,
-        "topic_name_max_chars": TOPIC_NAME_MAX_CHARS,
-        "import_max_rows": PROMPT_IMPORT_MAX_ROWS,
-        "import_max_bytes": IMPORT_BODY_MAX_BYTES,
-        "intents": sorted(PROMPT_INTENTS),
-        "branded_cohorts": sorted(
-            {cfg.PROMPT_COHORT_COMPARISON, cfg.PROMPT_COHORT_BRAND_DIAGNOSTIC}
-        ),
-        "status_active": cfg.PROMPT_STATUS_ACTIVE,
-        "origins": {
-            "manual": PROMPT_ORIGIN_MANUAL,
-            "imported": PROMPT_ORIGIN_IMPORTED,
-            "generated": PROMPT_ORIGIN_GENERATED,
-        },
-        "topic_origin_manual": cfg.TOPIC_ORIGIN_MANUAL,
-        "candidate": {
-            "pending": cfg.CANDIDATE_DISPOSITION_PENDING,
-            "accepted": cfg.CANDIDATE_DISPOSITION_ACCEPTED,
-            "rejected": cfg.CANDIDATE_DISPOSITION_REJECTED,
-            "outcomes": sorted(cfg.CANDIDATE_OUTCOME_DISPOSITIONS),
-        },
-        "generation_settings": {
-            name: _setting(name, PromptGenerationSettings)
-            for name in PROMPT_GENERATION_SETTINGS
-        },
-        "binding": {
-            "min_token_chars": cfg.TOPICAL_BINDING_MIN_TOKEN_CHARS,
-            "min_dense_token_chars": cfg.TOPICAL_BINDING_MIN_DENSE_TOKEN_CHARS,
-            "stopwords": sorted(cfg.TOPICAL_BINDING_STOPWORDS),
-            "business_context_fields": list(
-                cfg.PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS
-            ),
-            "accepted": cfg.BINDING_CODE_ACCEPTED,
-            "off_topic": cfg.CODE_PROMPT_OFF_TOPIC,
-            "vocabulary_empty": cfg.CODE_BINDING_VOCABULARY_EMPTY,
-        },
+        "trailing_punctuation": prompts_config.PROMPT_TRAILING_PUNCTUATION,
+        "status_active": prompts_config.DEFAULT_PROMPT_STATUS,
+        "topic_origin_manual": prompts_config.TOPIC_ORIGIN_MANUAL,
+        "candidate": {"pending": prompts_config.CANDIDATE_DISPOSITION_PENDING},
+        "origins": {"manual": projects_config.DEFAULT_PROMPT_ORIGIN},
     }
 
 
@@ -407,9 +322,6 @@ def _visibility_policy() -> dict[str, Any]:
         "search_surface_engines": [
             engine for engine in LOGICAL_ENGINES if is_search_surface(engine)
         ],
-        "core_cohort": PROMPT_COHORT_CORE,
-        "organic_cohorts": sorted(ORGANIC_PROMPT_COHORTS),
-        "requestable_cohorts": sorted(REQUESTABLE_PROMPT_COHORTS),
         "dashboard_audit_statuses": [
             AUDIT_STATUS_COMPLETED,
             AUDIT_STATUS_PARTIALLY_COMPLETED,
