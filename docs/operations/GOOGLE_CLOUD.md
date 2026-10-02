@@ -15,7 +15,7 @@ The VM retains backend compute and data; frontend delivery uses two Workers:
 
 ```text
 Marketing Worker (citeladder.com) ─┐
-                                    ├─ protected origin → Caddy → FastAPI → PostgreSQL 16
+                                    ├─ protected origin → Caddy → native API → PostgreSQL 16
 Product Worker (app.citeladder.com) ┘                       └─ workers and schedulers
 ```
 
@@ -48,7 +48,7 @@ Product Worker (app.citeladder.com) ┘                       └─ workers and
   - Terraform state in a versioned, uniform-access GCS bucket within the disposable project.
 - Add a production Compose overlay that:
   - runs the API, migration/bootstrap, PostgreSQL, and all ten background processes;
-  - uses host networking but binds PostgreSQL and FastAPI to `127.0.0.1`; only Caddy binds protected origin ingress;
+  - uses host networking but binds PostgreSQL and native API to `127.0.0.1`; only Caddy binds protected origin ingress;
   - enables PostgreSQL TLS and keeps `DB_SSL_MODE=require`;
   - runs `alembic upgrade head && python -m app.demo.bootstrap`;
   - throttles demo concurrency to `AUDIT_WORKER_CONCURRENCY=2`, `DB_POOL_SIZE=8`, `DB_MAX_OVERFLOW=0`, and Site Health global/per-host concurrency of 2.
@@ -150,7 +150,7 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
 ## Tests and Acceptance Criteria
 
 - Replace the AWS infrastructure test with deterministic checks proving:
-  - no public 22, 3000, 8000, 5432, or database ingress;
+  - no public 22, 3000, 8100, 5432, or database ingress;
   - Cloudflare-only 80/443 and IAP-only SSH;
   - exact WIF repository/environment claims;
   - no service-account key files or secret payloads in Git, Terraform, outputs, logs, or workflow arguments;

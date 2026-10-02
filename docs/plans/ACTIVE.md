@@ -63,13 +63,14 @@
   core; PR 19b completes adapters and activates the native Agent owner. PR 19c
   completes Commerce competitor discovery and analytics lease recovery, retiring
   the Python analytics worker and its exclusive acquisition/parser bridges.
-  Python keeps brand-discovery/integration recovery and fixture identity helpers.
+  Python retains schema/operator and fixture identity helpers.
   PR 20 is assigned: 20a (#231) transfers the first native policy owners and
   retires unused Python bridges; 20b (#232) updates dependencies and prunes
   Python multipart. 20c transfers Opportunity/Action, source-page, JEV and
   other native catalogs (#233). 20d implements native recovery, sweeper and
-  complete production startup admission. Further policy and Python web
-  retirement remain.
+  complete production startup admission (#234). 20e retires Python web, its
+  unused dependencies and the empty OpenAPI drift bridge. Further field-level
+  policy transfer and bridge retirement remain.
   Deployment of implemented cutovers is pending; the owner dropped the
   one-week soak while there are no customers (smoke tests instead). On
   1 October 2026 the owner accepted a low-cost hosting phase (PRs 21–24:

@@ -1252,8 +1252,8 @@ SQLAlchemy remains resolved at 2.1.1 until the 2.1.2 release supplies the
 Python 3.12 Linux wheel required by binary-only deployment installs. All Node
 dependency stages include every workspace manifest for pnpm's frozen checks.
 
-Remaining PR20 work: further field-level policy transfer and bridge retirement,
-and Python web retirement. Models/Alembic
+Remaining PR20 work: further field-level policy transfer and bridge retirement.
+Models/Alembic
 remain Python; supported operator tooling and deploy-time bootstrap remain
 explicit consumers until their callers are replaced. No schema tables are
 dropped merely because their HTTP owner moved.
@@ -1281,10 +1281,21 @@ generic queue/protocol, queue specs and parent reconciler. Native real-PostgreSQ
 tests replace the retired queue implementation/wiring tests; Python model
 constraint and isolation coverage remains.
 
+**20e.** Retire Python's health-only web process, ASGI middleware/dependencies,
+OpenAPI exporter, obsolete HTTP test helpers, generic drain shell and unused
+telemetry wiring. Remove FastAPI, Starlette, Uvicorn, Logfire and structlog;
+declare the infrastructure tests' YAML parser in the dev dependencies. Python's
+image remains the migrations/bootstrap and offline-operator image. All local
+and production API/protocol ingress reaches the native service; Caddy retains
+origin-token, host and forwarded-header admission. The native route gate checks
+all 31 manifest families and three ingresses without a Python OpenAPI artifact.
+The empty Python component drift map and its acquisition pipeline retire;
+native schema-typed handlers and browser consumers share their contracts.
+
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
 > Python keeps the schema (models and Alembic), any policy not yet transferred,
-> the queue sweeper while a Python kind remains, and at most a crawl fetch
-> service: about 15–20% of source lines.
+> and supported offline operators/bootstrap. Queue recovery is native; Python
+> has no HTTP or executing worker process.
 
 ## 7. Values both stacks read
 

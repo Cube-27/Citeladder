@@ -74,31 +74,18 @@ durable-memory promotion retain their explicit user-decision boundaries.
 
 ## Languages and the TypeScript service
 
-Python (FastAPI, SQLAlchemy, Alembic) owns every route family and task kind
-except those assigned to TypeScript: route families by the manifest, analytics
-task kinds by `ANALYTICS_TS_OWNED_TASK_KINDS`. TypeScript also owns audit
-execution, audit scheduling and maintenance, discovery, integration and billing
-workers, and the migrated Site Health phases.
-`frontend/services/api` is the TypeScript API service (Node, Hono, Kysely)
-introduced by the [TypeScript migration](plans/citeladder-typescript-migration.md).
-It serves the read-only `executions`, `ai-referrals` and `visibility` families
-(one execution's evidence, the AI Referrals projection, the Sources series and
-URL detail, and the AI Overview rates), resolving the session and active
-workspace exactly as `require_active_workspace` does. The same image runs the
-TypeScript analytics worker (`src/worker.ts`), which claims the AI Referrals
-chain's kinds (`ingest_referrals`, `classify_referrals`,
-`ai_referrals_snapshot_refresh`, `referral_retention_sweep`) through a port of
-the PostgreSQL queue claim. Its registered kinds also include Search Intelligence
-acquisition, source inspection and Commerce competitor discovery. TypeScript
-owns every analytics kind, expired-lease recovery and terminal compensation.
-Acquired Commerce attempts, candidates and queue outcomes settle atomically under
-the live claim. Native audit maintenance owns audit lease expiry and funding recovery;
-the Python sweeper retains brand-discovery and integration queue reconciliation. Each route family, task
-kind and table has exactly one writing stack. For route families (OpenAPI tags)
-the record is the manifest in `frontend/packages/contracts/src/route-ownership.ts`;
-the route-ownership gate (`frontend/services/api/scripts/check-route-ownership.ts`)
-holds both stacks' OpenAPI documents and every ingress Caddyfile (production's
-origin, the local Compose ingress and the Vite app container) to it.
+TypeScript owns every application route, protocol endpoint and executing worker.
+`frontend/services/api` runs Node, Hono and Kysely against PostgreSQL.
+Audit maintenance, the analytics/Agent/Site Health workers, and the independent
+native discovery/integration sweeper own their respective lease recovery.
+Every route family, task kind and table has one writing owner. The route-family
+manifest in `frontend/packages/contracts/src/route-ownership.ts` and the native
+OpenAPI declarations are checked against all three ingress Caddyfiles.
+
+Python retains SQLAlchemy models, Alembic, deploy-time bootstrap, supported
+offline operators and policy still read by those consumers. It has no web
+process or executing queue worker. The root Dockerfile builds this schema and
+operator image; the API image supplies all long-running application processes.
 
 Python code a moved route still shares with Python callers stays until its last
 Python caller moves. The remaining acquisition identity/suppression helpers
@@ -111,8 +98,8 @@ contracts the browser app validates with (TypeScript routes publish the same
 schemas, and each handler's return type is checked against its schema), the route-ownership manifest, and the
 API error-code union exported from the Python config that declares the codes.
 
-The service does not own policy or schema. It reads `backend/app/core/config`
-through a generated, drift-checked export. The auth and workspace HTTP families
+Native-only policy lives in TypeScript config. Shared Python policy reaches the
+service through a generated, drift-checked export. The auth and workspace HTTP families
 are TypeScript-owned, including session issuance, Google identity sign-in,
 membership/invitation mutations, policy acceptance and product-tour state.
 Both stacks verify the same session claims and persisted session version;
@@ -126,9 +113,9 @@ generated from the migrated schema.
 The marketing Worker serves `citeladder.com` with Astro SSR and keeps public
 MCP and signed webhook paths on their established apex identity. The product
 Worker serves `app.citeladder.com`, including same-origin `/api/v1`, browser
-login, callbacks and consent. Each Worker reaches FastAPI through authenticated
-`origin.citeladder.com` ingress. GCP retains Caddy, FastAPI, PostgreSQL, durable
-workers, secrets and backups; its deployment publishes only the backend image.
+login, callbacks and consent. Each Worker reaches the native API through authenticated
+`origin.citeladder.com` ingress. GCP retains Caddy, the native API, PostgreSQL, durable workers, secrets and
+backups; deployment uses separate API and Python schema/operator images.
 The [Workers runbook](operations/WORKERS_RUNBOOK.md) owns the approved release,
 production acceptance and recovery order.
 

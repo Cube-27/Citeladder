@@ -15,7 +15,7 @@
   <a href="https://github.com/abhij1306/Citeladder/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/abhij1306/Citeladder?style=flat-square" /></a>
   <a href="https://github.com/abhij1306/Citeladder/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/abhij1306/Citeladder?style=flat-square" /></a>
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white&amp;style=flat-square" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-modular%20monolith-009688?logo=fastapi&amp;logoColor=white&amp;style=flat-square" />
+  <img alt="TypeScript API" src="https://img.shields.io/badge/TypeScript-native%20API-3178C6?logo=typescript&amp;logoColor=white&amp;style=flat-square" />
   <img alt="Astro and Vite" src="https://img.shields.io/badge/Frontend-Astro%20%2B%20Vite-646CFF?style=flat-square" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&amp;logoColor=white&amp;style=flat-square" />
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-15%2B-4169E1?logo=postgresql&amp;logoColor=white&amp;style=flat-square" />
@@ -131,7 +131,7 @@ Stated as plainly as the features, because it is a design constraint rather than
 ## Quick start (Docker Compose)
 
 From a clean clone, copy the local template and use one Compose command. It builds and starts
-Postgres, runs the migration job, then starts FastAPI, Astro marketing, the Vite app,
+Postgres, runs the migration job, then starts the native API, Astro marketing, the Vite app,
 the shared Caddy ingress, and workers. Both marketing and `/login` use port 3000.
 The browser stays same-origin: the frontend proxies relative `/api/*` calls to the API over the
 Compose network.
@@ -152,7 +152,7 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
 
 # 3. Once `docker compose ... ps` shows the services healthy, verify the application and API.
 curl -fsS http://localhost:3000/
-curl -fsS http://localhost:8000/health
+curl -fsS http://localhost:8100/health
 ```
 
 No host-side migration command or separate frontend dev server is needed for this Compose path.
@@ -182,7 +182,7 @@ Archived history, when present, is **not** an implementation authority.
 
 ```text
 frontend/                              Astro marketing and Vite/React application
-backend/app/                           FastAPI modular monolith and workers
+backend/app/                           Python schema, shared policy and offline operators
 backend/app/core/config/site_health_*.py focused page-kind, crawl, rule, and runtime policy
 migrations/versions/0001_initial.py    pre-launch canonical database baseline
 docs/README.md                         sole active documentation index

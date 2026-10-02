@@ -46,10 +46,12 @@ cd backend
 uv sync                     # creates backend/.venv and installs deps from uv.lock
 export DATABASE_URL="postgresql+asyncpg://postgres:<password>@localhost:5432/citeladder"
 uv run alembic upgrade head
-uv run uvicorn app.main:app --reload --port 8000
+cd ../frontend
+pnpm install
+pnpm --filter @citeladder/api start
 ```
 
-Run only the separate workers required by the workflow under test. The web process enqueues
+Run only the separate workers required by the workflow under test. The API process enqueues
 work and never performs provider calls or long-running crawl/sync/generation work inline.
 Run each worker command in its own terminal; every worker below runs indefinitely.
 
@@ -77,7 +79,7 @@ Each process uses the shared durable PostgreSQL queue/lease contract and receive
 configuration/secrets required by its owner.
 
 Audit execution, scheduling and independent lease/funding maintenance run with
-Node 24 from `frontend/services/api/`:
+Node 26 from `frontend/services/api/`:
 
 ```bash
 pnpm worker:audit
@@ -89,16 +91,16 @@ pnpm maintenance:audit
 
 ```bash
 cd frontend
-echo "BACKEND_ORIGIN=http://localhost:8000" > .env.local
+echo "API_SERVICE_ORIGIN=http://localhost:8100" > .env.local
 pnpm install
 pnpm fonts:pull             # Switzer/Sora from the private font repo
 pnpm dev                    # Local marketing Worker: http://127.0.0.1:3000
 pnpm dev:vite               # Vite authenticated SPA: http://127.0.0.1:3001/login
 ```
 
-`BACKEND_ORIGIN` is **server-only**. The browser calls relative `/api/*`.
-Astro and Vite development proxies keep those requests same-origin (see gotcha
-2 below).
+`API_SERVICE_ORIGIN` is **server-only**. The browser calls relative `/api/*`.
+Vite proxies these paths to the API service. Marketing Worker requests use
+its protected upstream configuration.
 
 Fonts come only from the private `Cube-27/cube27-fonts` repo (some faces there
 are licensed for self-hosting, not redistribution). `pnpm fonts:pull` uses your
@@ -107,8 +109,8 @@ are licensed for self-hosting, not redistribution). `pnpm fonts:pull` uses your
 renders in metric-matched system fallbacks.
 
 Astro owns marketing and public routes; Vite owns authenticated product routes.
-They share dependencies, API client, styles, public assets, and the server-only
-`BACKEND_ORIGIN`:
+They share dependencies, API client, styles and public assets. Vite reads the
+server-only `API_SERVICE_ORIGIN`; the marketing Worker uses `ORIGIN_UPSTREAM`:
 
 ```bash
 pnpm build                  # Astro marketing SSR build
@@ -147,7 +149,7 @@ from, and does not replace, the Playwright Test runner used by `pnpm test:e2e`.
 ## Running the full stack with Docker Compose
 
 The Compose path is the clean-clone workflow. From the repository root, it builds and starts
-PostgreSQL, applies the migration baseline once, then starts FastAPI, the
+PostgreSQL, applies the migration baseline once, then starts the native API, the
 local marketing Worker, Vite application, Caddy ingress, and the workers. Do not run host-side migrations or
 `pnpm dev` alongside this stack.
 
@@ -162,7 +164,7 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
 
 # The frontend proxies relative /api/* requests to the API inside Compose.
 curl -fsS http://localhost:3000/
-curl -fsS http://localhost:8000/health
+curl -fsS http://localhost:8100/health
 ```
 
 The default stack includes the frontend runtimes and static docs; no migration profile
@@ -172,14 +174,14 @@ for the documentation. Compose builds bake `PUBLIC_DOCS_ORIGIN` so marketing and
 docs links stay local; other builds link `https://docs.citeladder.com`. The former retains
 the local-only path table in `frontend/local-compose-routes.caddy`; the app host
 serves the Vite application and its same-origin API. The internal Vite and
-marketing ports are not published. Local Compose uses disposable Worker-to-`web`
-HTTP transport enabled only by Compose for its `web:8000` upstream; production always
+marketing ports are not published. Local Compose uses disposable Worker-to-API
+HTTP transport enabled only by Compose for its `api-service:8100` upstream; production always
 requires HTTPS ingress authentication.
 The Vite runtime serves direct SPA refreshes from its built `index.html` with
 `no-store`; missing chunks return 404 instead of application HTML.
 
-The stack's frontend is at `http://localhost:3000`, and FastAPI is at
-`http://localhost:8000`. Inspect readiness with the same `env -u` wrapper (gotcha 1) —
+The stack's frontend is at `http://localhost:3000`, and the API is at
+`http://localhost:8100`. Inspect readiness with the same `env -u` wrapper (gotcha 1) —
 every Compose invocation resolves `${VAR}` from the shell first, not just `up`:
 
 ```bash
@@ -591,14 +593,13 @@ their own configured PostgreSQL connection.)
 **Symptom:** frontend network calls fail in the browser with a CORS error about **duplicate**
 `Access-Control-Allow-Origin` headers — but `curl` against the same backend succeeds.
 
-**Cause:** the preview/tunnel proxy injects its own `Access-Control-Allow-Origin: *`. A
-FastAPI backend that also sets a specific ACAO (required when `allow_credentials=True`)
+**Cause:** the preview/tunnel proxy injects its own `Access-Control-Allow-Origin: *`. An
+API that also sets a specific ACAO for credentialed requests
 produces **two** ACAO headers, which browsers reject. `curl` does not enforce CORS, so it
 cannot reproduce the failure.
 
-**Fix:** the browser never talks cross-origin to the backend. Astro and Vite
-development proxies, and production Caddy, proxy relative `/api/*` to the
-server-only `BACKEND_ORIGIN`, so all browser calls are **same-origin**. The API
+**Fix:** the browser never talks cross-origin to the backend. The Vite development proxy and production Worker/Caddy ingress route relative
+`/api/*` to the native API, so all browser calls are **same-origin**. The API
 client uses a relative base (`/api/v1`), `cache: 'no-store'`, and
 `credentials: 'include'`.
 
@@ -608,8 +609,8 @@ client uses a relative base (`/api/v1`), `cache: 'no-store'`, and
 
 When previewing the app behind a tunnel/proxy:
 
-1. Point the frontend's `BACKEND_ORIGIN` at the running backend.
-2. Ensure the Astro or Vite dev server accepts the proxied host so the preview
+1. Point Vite's `API_SERVICE_ORIGIN` at the running native API.
+2. Ensure the Vite dev server accepts the proxied host so the preview
    host isn't rejected.
 3. Confirm every browser network call hits relative `/api/*` (same-origin) — not a
    cross-origin backend URL. This is what avoids the gotcha-2 double-CORS failure.
