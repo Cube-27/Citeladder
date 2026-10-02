@@ -1,8 +1,8 @@
 /**
  * The referral chain's successor enqueues, with deterministic idempotency keys.
  *
- * Mirrors `domain/analytics/enqueue.py`, which still owns the post-sync hook
- * that starts the chain. A key is `analytics:<kind>:<identity parts>`; with
+ * The integration completion owner starts the chain. A key is
+ * `analytics:<kind>:<identity parts>`; with
  * `ON CONFLICT DO NOTHING` on the unique key, re-enqueueing the same logical
  * task never adds a second row (invariant 8).
  */
