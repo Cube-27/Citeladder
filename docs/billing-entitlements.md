@@ -11,9 +11,9 @@ default; implemented adapters are not evidence of provider acceptance.
 ## Commercial authority and access
 
 [Workspace billing lookup](../frontend/services/api/src/billing/purchases.ts) resolves
-the one persisted account for a workspace. Python's
-[account provisioning](../backend/app/domain/billing/accounts.py) remains a bridge
-for workspace bootstrap until the separate auth/workspace migration merges.
+the one persisted account for a workspace. TypeScript
+[account provisioning](../frontend/services/api/src/entitlements/bootstrap.ts)
+owns runtime workspace bootstrap. Python account helpers remain for operator work.
 Owner-user metadata is not a payer-selection rule.
 [Workspace roles](workspace-access.md) gate billing and credentials to
 Owner/Admin; product Members receive safe effective allowances rather than
@@ -38,11 +38,9 @@ locked current counts; reads expose persisted/current projections without
 repairing provisioning or acquiring admission locks. Missing authority is not
 unlimited access. The TypeScript prompt writers resolve the same grants and
 admit prompt slots in [`src/entitlements/`](../frontend/services/api/src/entitlements/),
-under the account capacity lock Python's
-[enforcement](../backend/app/domain/entitlements/enforcement.py) takes
-(a personalized BLAKE2b of `OCCUPANCY_LOCK_NAMESPACE` and the account id), so
-Python Commerce and project writers and TypeScript prompt writers serialize on
-one key.
+under the [account capacity lock](../frontend/services/api/src/entitlements/occupancy.ts)
+(a personalized BLAKE2b of `OCCUPANCY_LOCK_NAMESPACE` and the account id).
+Commerce, project and prompt writers serialize on that same TypeScript boundary.
 
 ## Explicit purchase to settlement
 
@@ -118,18 +116,21 @@ explicit-target, reasoned, dry-run-reviewed administrative operations.
 
 [TypeScript grant writes](../frontend/services/api/src/entitlements/grants.ts)
 and the [ledger](../frontend/services/api/src/entitlements/ledger.ts) own the
-migrated billing boundary. Python
-[metering](../backend/app/domain/entitlements/metered.py) and its
-[ledger bridge](../backend/app/domain/entitlements/ledger.py) still serve Agent and
-Site Health accounting. Reservation, release, debit and refund retain typed parent
+migrated billing boundary. [Agent funding](../frontend/services/api/src/agent/funding.ts)
+and [AI credit rates](../frontend/services/api/src/billing/ai-credits.ts) use that
+ledger for runtime accounting. Reservation, release, debit and refund retain typed parent
 identity, allocation order, fingerprints and dispatch provenance. An Agent run
 holds one reservation per model step, so each debit carries that step's
 dispatch key. Commit the
 hold and attempt evidence before provider I/O; settle through the owning
 transaction. Successful-answer charging and actual provider cost are distinct
 quantities. Finite persisted rate/cap policy bounds funded work and unknown
-usage. Customer BYOK consumes no platform credits and never silently falls back.
-[Site Health fetch budget](../backend/app/domain/site_health/fetch_budget.py)
+usage. Missing, malformed or inconsistent usage (including cached input exceeding
+input) settles at the frozen policy's unknown-usage charge, bounded by the
+admitted hold. It is not clamped into an exact observed token debit. Failed
+dispatches also settle unknown usage exactly once. Customer BYOK consumes no
+platform credits and never silently falls back.
+[Site Health fetch budget](../frontend/services/api/src/site-health/fetch-budget.ts)
 reserves a crawl's page budget at creation and settles analyzed pages on every
 terminal path; accounts without a page-fetch grant are not metered there.
 Audit reservations, debits and releases now use the TypeScript ledger owner.
@@ -137,9 +138,8 @@ Its audit fingerprints reproduce the Python format so persisted Python audit
 entries can be replayed idempotently. Audit entries from the earlier TypeScript
 format are incompatible and fail closed on replay; they require fresh disposable
 pre-launch data rather than rewriting immutable history. No reset is implicit.
-Remaining Python metering, grant-write, resolver and admission bridges retire
-with their Site Health and Agent callers in migration PRs 18–19. Each migration
-moves a subject's ledger writes whole, preserving one writing stack. Operator
+Runtime metering, grants, resolution and admission use their TypeScript owners.
+Each subject has one ledger-writing stack. Operator
 catalog publication, grant correction and plan verification remain Python-owned;
 the read-only Razorpay plan reader has no checkout or settlement methods and
 retires when that operator CLI migrates.

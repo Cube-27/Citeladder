@@ -138,7 +138,7 @@ class SiteHealthSettings(BaseSettings):
     # HTML size cap fed to the parser.
     max_html_bytes: int = 5_000_000
 
-    # --- Server-owned curl-cffi acquisition ---
+    # --- Server-owned TypeScript acquisition ---
     # Each crawl freezes these values in its configuration. They are kept here
     # (not in a connector) because acquisition behavior is an operational
     # policy, not application logic.
@@ -361,7 +361,7 @@ class SiteHealthSettings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_acquisition(self) -> SiteHealthSettings:
-        """Keep curl acquisition policy reproducible."""
+        """Keep acquisition policy reproducible across the policy export."""
         _require_non_empty(
             self,
             ("acquisition_policy_version",),
@@ -559,11 +559,9 @@ SITE_CRAWL_QUEUE_SPEC: Final[PostgresQueueSpec[SiteCrawlTask]] = PostgresQueueSp
     lease_ttl=lambda: site_health_settings.lease_ttl_seconds,
     claim_order=_site_task_claim_order,
     max_attempts_error=ERROR_MAX_ATTEMPTS,
-    # A crawl terminalizes only via the worker's reconcile, which runs in a
-    # task's finalize. The sweeper failing a task at max attempts bypasses that
-    # path entirely, so it must report the owning crawl for reconciliation —
-    # otherwise a crawl whose LAST task the sweeper failed stays 'running'
-    # forever (no snapshot, no completion event, endless client polling).
+    # Retained Python queue metadata for fixtures. The TypeScript Site Health
+    # worker owns live task recovery and reconciles affected parent crawls;
+    # the Python queue sweeper no longer handles this queue.
     parent_id_attr="crawl_id",
 )
 

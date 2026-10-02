@@ -109,6 +109,11 @@ describe('Agent persisted context binding', () => {
       'missing',
     );
     await db
+      .updateTable('site_rule_evaluations')
+      .set({ evidence: JSON.stringify({ title: '', meta_description: 'Captured fallback' }) })
+      .where('id', '=', evaluationId)
+      .execute();
+    await db
       .updateTable('site_page_analyses')
       .set({ finalized_at: new Date(), source_artifact_ids: [page.artifactId] })
       .where('workspace_id', '=', seed.workspaceId)
@@ -128,6 +133,8 @@ describe('Agent persisted context binding', () => {
       source_evaluation_ids: [evaluationId],
       source_artifact_ids: [page.artifactId],
       target_fields: ['title'],
+      suggested_skill_id: 'content_page',
+      captured_values: ['Captured fallback'],
     });
     await expect(
       readAgentContext(

@@ -517,6 +517,23 @@
       "source_page_inspection",
       "traffic_snapshot_refresh"
     ],
+    "task_kinds": [
+      "ai_referrals_snapshot_refresh",
+      "classify_referrals",
+      "commerce_catalog_projection",
+      "commerce_competitor_discovery",
+      "demand_snapshot_refresh",
+      "ingest_referrals",
+      "internal_link_judgment",
+      "internal_link_publish",
+      "opportunity_refresh",
+      "opportunity_verification",
+      "performance_range_projection",
+      "referral_retention_sweep",
+      "search_intelligence_acquisition",
+      "source_page_inspection",
+      "traffic_snapshot_refresh"
+    ],
     "worker_settings": {
       "lease_ttl_seconds": {
         "env": [
@@ -9952,7 +9969,7 @@
       },
       "keenable_base_url": {
         "env": [
-          "BRAND_DISCOVERY_KEENABLE_BASE_URL"
+          "KEENABLE_BASE_URL"
         ],
         "type": "str",
         "default": "https://api.keenable.ai"
@@ -10866,6 +10883,8 @@
     "discovery": {
       "result_limit": 5,
       "provider_result_limit": 10,
+      "response_max_bytes": 1000000,
+      "target_missing_error": "commerce_target_unavailable",
       "query_attribute_limit": 4,
       "name_max_words": 8,
       "snippet_chars": 1000,
@@ -12053,21 +12072,21 @@
       },
       "deployment_env": {
         "env": [
-          "BILLING_RAZORPAY_DEPLOYMENT_ENV"
+          "APP_ENV"
         ],
         "type": "str",
         "default": "development"
       },
       "test_key_id_alias": {
         "env": [
-          "BILLING_RAZORPAY_TEST_KEY_ID_ALIAS"
+          "RAZORPAY_TEST_KEY_ID"
         ],
         "type": "str",
         "default": ""
       },
       "test_key_secret_alias": {
         "env": [
-          "BILLING_RAZORPAY_TEST_KEY_SECRET_ALIAS"
+          "RAZORPAY_TEST_KEY_SECRET"
         ],
         "type": "str",
         "default": ""
@@ -12987,7 +13006,7 @@
       },
       "skills_directory": {
         "env": [
-          "SKILLS_DIRECTORY"
+          "AGENT_SKILLS_DIRECTORY"
         ],
         "type": "str",
         "default": ""

@@ -101,6 +101,46 @@ describe('Agent funding through the production ledger and providers', () => {
     });
     expect(io.fetch).toHaveBeenCalledTimes(1);
   });
+  it.each(['active', 'daily'] as const)(
+    'refuses the %s admission limit with a retry window',
+    async (boundary) => {
+      const { scope } = await tenant();
+      const limits = { ...settings, activeLimit: boundary === 'active' ? 1 : 10, dailyLimit: 1 };
+      const store = agents.store({ admission: agentAdmission(limits, platform) });
+      await store.enqueue(scope, { key: randomUUID(), message: 'First turn' });
+      await expect(
+        store.enqueue(scope, { key: randomUUID(), message: 'Over limit' }),
+      ).rejects.toMatchObject({
+        status: 429,
+        headers: { 'retry-after': expect.any(String) },
+      });
+    },
+  );
+  it('settles a failed dispatch with the frozen unknown-usage charge exactly once', async () => {
+    const { scope, accountId, grantId } = await tenant();
+    const { run: saved, lease } = await run(scope);
+    const gateway = await agentModels(db, 'fixture-cipher', platform)(saved);
+    const model = {
+      ...gateway,
+      complete: async () => {
+        throw new Error('Provider unavailable');
+      },
+    };
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    await expect(
+      calls.call(lease, 1, model, { system: 's', user: 'u', schema: {} }),
+    ).rejects.toMatchObject({ code: 'provider_error' });
+    const attempt = await db
+      .selectFrom('agent_model_attempts')
+      .selectAll()
+      .where('run_id', '=', saved.id)
+      .executeTakeFirstOrThrow();
+    await calls.receipt(scope.workspaceId, attempt.id, null);
+    expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: rate.unknown_usage_charge,
+    });
+  });
   it('fences expired dispatches and settles unknown usage against historical policy', async () => {
     const { scope, accountId, grantId } = await tenant();
     const { run: saved, lease } = await run(scope);
@@ -208,9 +248,21 @@ describe('Agent funding through the production ledger and providers', () => {
       .set({ credential_revision: randomUUID() })
       .where('id', '=', connection.id)
       .execute();
+    // A newly verified route must still differ from this run's frozen key revision.
+    await probeConnection(
+      db,
+      scope.workspaceId,
+      connection.id,
+      'fixture-cipher',
+      providerSettings({}),
+      async () => ({ status: 200, body: { choices: [{ message: { content: 'ok' } }] } }),
+    );
     await expect(
       calls.dispatch(lease, 2, model, { system: 's', user: 'u', schema: {} }),
     ).rejects.toMatchObject({ code: 'route_unavailable' });
+    await expect(agentModels(db, 'fixture-cipher', platform)(saved)).rejects.toMatchObject({
+      code: 'route_unavailable',
+    });
     expect(send).toHaveBeenCalledTimes(1);
   });
   it('bounds arithmetic and distinguishes invalid usage from observed zero', () => {

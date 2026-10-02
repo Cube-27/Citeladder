@@ -2,8 +2,25 @@ import { describe, expect, it } from 'vitest';
 
 import { ConfigError, demoAccessExpired, loadConfig, policy } from '../src/config.ts';
 import { libpqUrl, poolOptions } from '../src/db/database.ts';
+import { razorpaySettings } from '../src/billing/config.ts';
 
 const STRONG_KEY = 'a-deployment-grade-session-key-with-enough-entropy-9';
+
+it('applies production and test-key aliases to Razorpay credential admission', () => {
+  const env = {
+    APP_ENV: 'production',
+    BILLING_RAZORPAY_MODE: 'test',
+    RAZORPAY_TEST_KEY_ID: 'fixture-id',
+    RAZORPAY_TEST_KEY_SECRET: 'fixture-secret',
+  };
+  expect(razorpaySettings(env)).toMatchObject({
+    production: true,
+    keyId: 'fixture-id',
+    keySecret: 'fixture-secret',
+    conflicting: false,
+  });
+  expect(razorpaySettings({ ...env, BILLING_RAZORPAY_MODE: 'live' }).conflicting).toBe(true);
+});
 
 describe('loadConfig', () => {
   it('uses the exported Python defaults when the environment is silent', () => {

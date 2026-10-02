@@ -14,6 +14,8 @@ def discovery_policy(
     return {
         "result_limit": c.COMMERCE_COMPETITOR_RESULT_LIMIT,
         "provider_result_limit": c.COMMERCE_COMPETITOR_PROVIDER_RESULT_LIMIT,
+        "response_max_bytes": c.COMMERCE_COMPETITOR_RESPONSE_MAX_BYTES,
+        "target_missing_error": c.COMMERCE_COMPETITOR_TARGET_MISSING_ERROR,
         "query_attribute_limit": c.COMMERCE_COMPETITOR_QUERY_ATTRIBUTE_LIMIT,
         "name_max_words": c.COMMERCE_COMPETITOR_TARGET_NAME_MAX_WORDS,
         "snippet_chars": c.COMMERCE_COMPETITOR_KEENABLE_SNIPPET_CHARS,

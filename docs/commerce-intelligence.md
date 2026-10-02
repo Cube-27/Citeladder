@@ -85,6 +85,12 @@ uses the shared Site Health safe fetcher, acquisition controls, robots policy,
 parser and classifier. Provider calls and candidate verification finish before
 the worker locks the live claim and atomically appends the attempt, pending
 candidates and queue outcome. No database transaction spans network I/O.
+Search responses are byte-bounded. A target removed before execution or
+publication terminalizes with `commerce_target_unavailable` without retrying or
+publishing stale candidates. Failed page verification consumes no accept slot;
+verified survivors beyond the result limit retain an `excluded_limit` verdict.
+Query qualifiers use textual and numeric attributes; booleans are omitted
+rather than converted into language-dependent `True`/`False` strings.
 Buyer-prompt generation and manual entry use the TypeScript owner.
 [CSV admission](../frontend/services/api/src/commerce/import.ts)
 and [catalog projection](../frontend/services/api/src/commerce/projection.ts)

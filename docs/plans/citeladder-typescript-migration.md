@@ -1208,6 +1208,15 @@ Failed attempts use the shared analytics retry code;
 unavailable providers and unusable names retain explicit terminal codes. Queue
 outcomes and evidence settle atomically instead of separate commits, and expired
 claims cannot finalize. No live provider or deployment acceptance is implied.
+Follow-up review repairs restore the Site Health `content_page` format hint and
+empty-title fallback, fix plain-string environment aliases in the shared policy
+export (including the image's `AGENT_SKILLS_DIRECTORY` contract), and remove the
+second analytics kind list. Registry coverage compares real executors to the
+full kind vocabulary. Removed targets terminalize without retries; Tavily JSON
+is byte-bounded; boolean query qualifiers are deliberately omitted. The Agent
+API's absent-context 404 and conservative malformed/failed usage settlement are
+recorded in their owner documents. Active runtime and restore instructions now
+refer to the TypeScript owners; dated legal evidence retains its original date.
 
 ### PR 20: Consolidation and policy transfer
 

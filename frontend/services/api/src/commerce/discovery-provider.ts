@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { policy, resolveSettingSpec } from '../config.ts';
 import { discoverySettings } from '../projects/discovery-inputs.ts';
 import { createResearchClient, ResearchBudget } from '../projects/research-evidence.ts';
+import { boundedJson } from '../providers/response.ts';
 
 const p = policy.commerce.discovery;
 const result = z.object({
@@ -47,11 +48,12 @@ export function competitorSearch(
           url.hash
         )
           throw new Error('Invalid Tavily destination');
+        const signal = AbortSignal.timeout(timeout * 1000);
         const response = await transport(url, {
           method: 'POST',
           redirect: 'error',
           headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-          signal: AbortSignal.timeout(timeout * 1000),
+          signal,
           body: JSON.stringify({
             query: `${query} ${locale}`.trim(),
             search_depth: 'basic',
@@ -61,7 +63,9 @@ export function competitorSearch(
           }),
         });
         if (!response.ok) throw new Error('Search failed');
-        const body = z.object({ results: z.array(z.unknown()) }).parse(await response.json());
+        const body = z
+          .object({ results: z.array(z.unknown()) })
+          .parse(await boundedJson(response, p.response_max_bytes, signal));
         return {
           status: 'succeeded',
           errorCode: '',

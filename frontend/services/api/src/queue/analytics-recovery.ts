@@ -3,6 +3,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
+const { statuses } = policy.task_queue;
 
 export async function recoverAnalyticsLeases(db: Database, batchSize: number) {
   const rows = await db.transaction().execute(async (trx) => {
@@ -10,7 +11,7 @@ export async function recoverAnalyticsLeases(db: Database, batchSize: number) {
       .selectFrom('analytics_tasks')
       .select('id')
       .where('task_kind', 'in', policy.analytics.ts_owned_task_kinds)
-      .where('status', 'in', ['leased', 'running'])
+      .where('status', 'in', [statuses.leased, statuses.running])
       .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
       .orderBy('lease_expires_at')
       .orderBy('id')
@@ -22,7 +23,7 @@ export async function recoverAnalyticsLeases(db: Database, batchSize: number) {
     return trx
       .updateTable('analytics_tasks')
       .set({
-        status: sql<string>`case when attempt_count + 1 >= max_attempts then 'failed' else 'retry_wait' end`,
+        status: sql<string>`case when attempt_count + 1 >= max_attempts then ${statuses.failed} else ${statuses.retry_wait} end`,
         attempt_count: sql<number>`attempt_count + 1`,
         lease_owner: null,
         lease_expires_at: null,
@@ -41,17 +42,17 @@ export async function recoverAnalyticsLeases(db: Database, batchSize: number) {
       .returning(['id', 'status', 'attempt_count'])
       .execute();
   });
-  const logger = getLogger('app.workers.queue_sweeper');
-  for (const task of rows.filter((row) => row.status === 'failed'))
-    logger.warning('sweeper failed task at max attempts', {
+  const logger = getLogger('workers.analytics-recovery');
+  for (const task of rows.filter((row) => row.status === statuses.failed))
+    logger.warning('analytics lease recovery exhausted attempts', {
       task_id: task.id,
       attempt_count: task.attempt_count,
       queue: 'analytics_tasks',
     });
   if (rows.length)
-    logger.info('sweeper reclaimed expired leases', {
+    logger.info('analytics recovered expired leases', {
       reclaimed: rows.length,
-      failed: rows.filter((row) => row.status === 'failed').length,
+      failed: rows.filter((row) => row.status === statuses.failed).length,
     });
   return rows.length;
 }

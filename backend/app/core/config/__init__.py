@@ -116,6 +116,8 @@ class Settings(BaseSettings):
     dev_login_password: str = Field(
         default="",
         validation_alias=AliasChoices("DEV_LOGIN_PASSWORD", "dev_login_password"),
+        repr=False,
+        json_schema_extra={"secret": True},
     )
     dev_login_counter_allowance: int = Field(
         default=200,

@@ -6,6 +6,13 @@
 **Proposed contracting entity:** Cube27 IT Private Limited\
 **Status:** Drafts for business approval and final legal review. Not yet approved for publication.
 
+Code-path and transport references below capture the 24 September review.
+The subsequent TypeScript migration retired the Python Agent, Commerce discovery
+and curl-cffi transport. Current runtime owners are documented in
+[Agent](../agents.md), [Commerce](../commerce-intelligence.md) and
+[Site Health](../site-health.md); this dated evidence does not redefine their
+implementation or the outstanding legal decisions.
+
 **26 September remediation addendum:** the active assignment and all supplied
 proposed decisions are retained in [the remediation plan](../plans/citeladder-audit-remediation.md).
 Part 0 below is dated historical evidence, not current deployed configuration.

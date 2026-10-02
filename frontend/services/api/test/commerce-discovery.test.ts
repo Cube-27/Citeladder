@@ -187,6 +187,70 @@ it('distinguishes unavailable providers from transient failures and retries with
   ]);
 });
 
+it('counts only verified survivors against accept slots and preserves the over-limit verdict', async () => {
+  const search: CompetitorSearch = async () => ({
+    ...(await successful('', '')),
+    results: [
+      { url: 'https://broken.example/products/tool', title: 'Unavailable tool', content: '' },
+      ...Array.from({ length: policy.commerce.discovery.result_limit + 1 }, (_, index) => ({
+        url: `https://merchant-${index}.example/products/tool`,
+        title: 'Merchant tool',
+        content: '',
+      })),
+    ],
+  });
+  await enqueue();
+  await worker(search, async (url, options) => {
+    if (url.includes('broken.')) throw new Error('Unavailable');
+    return fetcher(url, options);
+  }).runOnce();
+  expect((await attempts())[0]!.result_payload).toMatchObject([
+    { validation_outcome: 'excluded_unavailable' },
+    ...Array.from({ length: policy.commerce.discovery.result_limit }, () => ({
+      validation_outcome: 'accepted',
+    })),
+    { validation_outcome: 'excluded_limit' },
+  ]);
+  expect(await candidates()).toHaveLength(policy.commerce.discovery.result_limit);
+});
+
+it.each(['before-search', 'during-search'])(
+  'terminalizes a removed target %s without publishing or spending retries',
+  async (phase) => {
+    const id = await enqueue();
+    const remove = () => db.deleteFrom('commerce_products').where('id', '=', target.id).execute();
+    if (phase === 'before-search') await remove();
+    let calls = 0;
+    await worker(async (...args) => {
+      calls++;
+      await remove();
+      return successful(...args);
+    }, fetcher).runOnce();
+    expect(await queueTask(id)).toMatchObject({
+      status: 'failed',
+      attempt_count: 1,
+      error_code: policy.commerce.discovery.target_missing_error,
+    });
+    expect(calls).toBe(phase === 'before-search' ? 0 : 1);
+    expect(await attempts()).toEqual([]);
+    expect(await candidates()).toEqual([]);
+  },
+);
+
+it('refuses an oversized valid Tavily envelope before parsing candidates', async () => {
+  const search = competitorSearch({ TAVILY_API_KEY: 'fixture' }, async () =>
+    Response.json({
+      results: [],
+      padding: 'x'.repeat(policy.commerce.discovery.response_max_bytes),
+    }),
+  );
+  expect(await search('Tool', '')).toMatchObject({
+    status: 'unavailable',
+    retry: true,
+    results: [],
+  });
+});
+
 it('refuses unusable names before provider I/O and fences foreign targets', async () => {
   await db
     .updateTable('commerce_products')
@@ -292,7 +356,7 @@ it('recovers exhausted tasks in bounded batches, preserves errors, and drains an
     error_code: 'prior_error',
     error_detail: 'Prior failure',
   });
-  expect(Object.keys(EXECUTORS).sort()).toEqual([...policy.analytics.ts_owned_task_kinds].sort());
+  expect(Object.keys(EXECUTORS).sort()).toEqual([...policy.analytics.task_kinds].sort());
 });
 
 it('requires target-compatible structural evidence rather than schema claims alone', async () => {

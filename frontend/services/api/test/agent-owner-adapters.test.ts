@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import * as sharedTools from '../src/mcp/tools.ts';
 import { AgentFixtures, catalog, deliverable, scripted } from './agent-support.ts';
 import { testDatabase } from './support.ts';
 import { agentTools } from '../src/agent/tool-adapters.ts';
@@ -56,6 +57,35 @@ describe('Agent bindings to the evidence and Action owners', () => {
     await expect(tools.execute(db, scope, 'read_demand', {}, signal())).rejects.toMatchObject({
       status: 404,
     });
+  });
+  it('fails unknown reader availability while preserving observed zero and stateless search results', async () => {
+    const scope = await fixtures.scope();
+    const tools = agentTools(db);
+    const read = vi.spyOn(sharedTools, 'dispatchTool');
+    try {
+      for (const state of [undefined, 'unexpected']) {
+        read.mockResolvedValueOnce(state === undefined ? {} : { state });
+        expect(await tools.execute(db, scope, 'read_demand', {}, signal())).toMatchObject({
+          status: 'failed',
+        });
+      }
+      read.mockResolvedValueOnce({ state: 'observed_zero', items: [] });
+      const zero = await tools.execute(
+        db,
+        scope,
+        'read_query_evidence',
+        { window_start: '2026-09-01', window_end: '2026-09-02' },
+        signal(),
+      );
+      expect(zero.status).toBe('completed');
+      expect(JSON.parse(zero.text).state).toBe('observed_zero');
+      read.mockResolvedValueOnce({ results: [] });
+      expect(
+        await tools.execute(db, scope, 'search', { query: 'Nothing' }, signal()),
+      ).toMatchObject({ status: 'completed' });
+    } finally {
+      read.mockRestore();
+    }
   });
   it('reads the Action owner and refuses a sibling Action even inside the same workspace', async () => {
     const scope = await fixtures.scope(),

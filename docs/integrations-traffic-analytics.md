@@ -22,8 +22,8 @@ the TypeScript integration owner in
 encrypted and credential management is Owner/Admin-only. Product read/run
 permissions and entitlement limits are separate. A mapping binds an authorized
 connection, project and property. Retiring one project's mapping must not retire
-another's. The Python readiness projection remains a read-only bridge for Agent
-readiness until its owning migration.
+another's. The [TypeScript readiness reader](../frontend/services/api/src/integrations/readiness.ts)
+also serves the Agent's persisted tool reads.
 
 If saving a mapping succeeds but its history import cannot be queued, the API
 reports the failure with the saved mapping ID. Retrying the same binding reuses
@@ -60,10 +60,13 @@ chunks, bounded by the resolved history_window allowance.
 Post-sync work uses existing analytics tasks to refresh Traffic, AI Referrals
 and Demand, then the appropriate Opportunity and verification successors.
 Source identity and contributing revisions belong in refresh idempotency.
-[Analytics worker](../backend/app/workers/analytics_worker.py) owns dispatch
-of the Python kinds; the [TypeScript analytics worker](../frontend/services/api/src/workers/analytics-worker.ts)
-owns the AI Referrals chain (ingest, classify, snapshot refresh, retention),
-Traffic snapshot refresh, Performance range projection and Demand snapshot refresh.
+[TypeScript analytics worker](../frontend/services/api/src/workers/analytics-worker.ts)
+owns every analytics kind: the AI Referrals chain, Traffic and Performance
+projections, Demand, Opportunity refresh and verification, source-page inspection,
+Search Intelligence acquisition, internal links, catalog projection and Commerce
+competitor discovery. Its bounded lease recovery runs before each claim,
+including an empty drain. Splitting ownership requires restoring an executor
+and recovery path; changing a kind list alone cannot restore the Python worker.
 Each domain owns its derived projection.
 
 [Performance](../frontend/services/api/src/traffic/performance.ts) reads persisted
@@ -87,7 +90,7 @@ AI sources only. Formula changes require explicit derived rebuilds, never reads.
 
 ## Search Intelligence acquisition
 
-[Search Intelligence](../frontend/services/api/src/search-intelligence/) acquires explicit, reviewed DataForSEO Labs and Backlinks Live datasets for one saved apex or www project target and saved competitor targets. The review endpoint is provider-free: it freezes canonical scope, exact request pages, endpoint/version pricing, credential revision, an opaque HMAC account identity, and the maximum cost. Only the separate confirmation action enqueues paid work. Reads render immutable published datasets and never call DataForSEO. Review creation and paid acquisition now share the TypeScript owner with readiness, preferences, confirmation, cancellation, dataset reads, content handoff and citation matching. The Python package retains persisted read projections for Agent/MCP consumers until their migration. Paid dispatch intent commits before I/O; unknown submission or cost state stops acquisition rather than authorizing another paid call.
+[Search Intelligence](../frontend/services/api/src/search-intelligence/) acquires explicit, reviewed DataForSEO Labs and Backlinks Live datasets for one saved apex or www project target and saved competitor targets. The review endpoint is provider-free: it freezes canonical scope, exact request pages, endpoint/version pricing, credential revision, an opaque HMAC account identity, and the maximum cost. Only the separate confirmation action enqueues paid work. Reads render immutable published datasets and never call DataForSEO. Review creation and paid acquisition share the TypeScript owner with readiness, preferences, confirmation, cancellation, dataset reads, content handoff and citation matching, including Agent/MCP readers. Paid dispatch intent commits before I/O; unknown submission or cost state stops acquisition rather than authorizing another paid call.
 
 Account identity uses a purpose-specific key derived from the configured encryption secret, so JWT signing-key rotation does not change account capacity pools.
 

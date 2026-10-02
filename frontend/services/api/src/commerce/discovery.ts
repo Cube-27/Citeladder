@@ -40,6 +40,7 @@ async function targetContext(
   db: Database,
   scope: CommerceScope,
   target: z.infer<typeof commerceTargetSchema>,
+  executing = false,
 ) {
   const table = target.kind === 'product' ? 'commerce_products' : 'commerce_categories';
   const row = await db
@@ -49,7 +50,10 @@ async function targetContext(
     .where('project_id', '=', scope.projectId)
     .where('id', '=', target.id)
     .executeTakeFirst();
-  if (!row) commerceMissing('Commerce target not found');
+  if (!row) {
+    if (executing) throw new TerminalExecutorError(p.target_missing_error);
+    commerceMissing('Commerce target not found');
+  }
   return {
     name: row.name,
     ...('attributes' in row
@@ -189,7 +193,7 @@ async function publish(
 ) {
   const trx = db;
   await lockCatalog(trx, { workspaceId: task.workspace_id, projectId });
-  await targetContext(trx, { workspaceId: task.workspace_id, projectId }, payload.target);
+  await targetContext(trx, { workspaceId: task.workspace_id, projectId }, payload.target, true);
   const currentOwned = await ownedHosts(trx, task, projectId);
   items = items.map((item) => ({
     ...item,
@@ -271,7 +275,7 @@ export function competitorDiscovery(
   return async (task, { db, checkCancelled }) => {
     const projectId = await taskProject(db, task),
       payload = payloadSchema.parse(task.payload);
-    await targetContext(db, { workspaceId: task.workspace_id, projectId }, payload.target);
+    await targetContext(db, { workspaceId: task.workspace_id, projectId }, payload.target, true);
     const context = payload.target_context ?? { name: payload.target_name ?? '' };
     if (!searchableName(contextText(context.name)))
       throw new TerminalExecutorError('unusable_target', 'Commerce target name is not searchable');

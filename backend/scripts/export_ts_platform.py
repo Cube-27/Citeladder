@@ -19,16 +19,9 @@ import dataclasses
 import json
 import sys
 import types
-import typing
 from collections.abc import Iterable
-from datetime import datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
-
-from pydantic import SecretStr
-from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings
 
 from app.connectors.search_surfaces.contracts import (
     OUTCOME_AI_OVERVIEW_PRESENT,
@@ -40,7 +33,6 @@ from app.core.config import (
     SECRET_MIN_BYTES,
     SECRET_MIN_UNIQUE_CHARS,
     WEAK_SECRET_WORDS,
-    Settings,
 )
 from app.core.config import agent as agent_config
 from app.core.config import audits as audit_config
@@ -92,6 +84,7 @@ from app.core.config.analytics import (
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_WINDOW_DAYS,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
+    ANALYTICS_TASK_KINDS,
     ANALYTICS_TERMINAL_COMPENSATION_BATCH,
     ANALYTICS_TERMINAL_COMPENSATION_MAX_FAILURES,
     ANALYTICS_TS_OWNED_TASK_KINDS,
@@ -191,6 +184,7 @@ from scripts.ts_platform_dataforseo import dataforseo_policy
 from scripts.ts_platform_identity import brand_identity_policy
 from scripts.ts_platform_integrations import integration_policy
 from scripts.ts_platform_providers import provider_policy
+from scripts.ts_settings_policy import setting as _setting
 from scripts.web_evidence_policy import web_evidence_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
@@ -234,59 +228,6 @@ EXPORTED_SETTINGS = (
     "dev_login_email",
     "dev_login_password",
 )
-
-
-def _env_names(name: str, field: FieldInfo, prefix: str = "") -> list[str]:
-    """Environment names pydantic-settings accepts (case-insensitively)."""
-    alias = field.validation_alias
-    choices = getattr(alias, "choices", None) or [f"{prefix}{name}"]
-    return list(dict.fromkeys(str(choice).upper() for choice in choices))
-
-
-def _type_descriptor(annotation: Any) -> dict[str, Any]:
-    if annotation == Decimal | None:
-        return {"type": "decimal", "nullable": True}
-    if typing.get_origin(annotation) is typing.Literal:
-        return {"type": "literal", "values": list(typing.get_args(annotation))}
-    if isinstance(annotation, types.UnionType) and set(annotation.__args__) == {
-        datetime,
-        type(None),
-    }:
-        return {"type": "datetime", "nullable": True}
-    for candidate, label in (
-        (bool, "bool"),
-        (int, "int"),
-        (float, "float"),
-        (str, "str"),
-        (SecretStr, "str"),
-    ):
-        if annotation is candidate:
-            return {"type": label}
-    msg = f"Unsupported exported setting type: {annotation!r}"
-    raise TypeError(msg)
-
-
-def _setting(name: str, model: type[BaseSettings] = Settings) -> dict[str, Any]:
-    field = model.model_fields[name]
-    prefix = str(model.model_config.get("env_prefix") or "")
-    entry: dict[str, Any] = {"env": _env_names(name, field, prefix)}
-    entry.update(_type_descriptor(field.annotation))
-    entry["default"] = field.default
-    if isinstance(field.default, SecretStr):
-        # The export is committed: only an unset secret may be written.
-        if field.default.get_secret_value():
-            raise ValueError(f"{name} has a non-empty secret default")
-        entry["default"] = ""
-    # Pydantic records ``Field(ge=..., gt=..., le=...)`` as metadata objects
-    # that expose those attributes.
-    for constraint in field.metadata:
-        if (minimum := getattr(constraint, "ge", None)) is not None:
-            entry["minimum"] = minimum
-        if (exclusive := getattr(constraint, "gt", None)) is not None:
-            entry["exclusive_minimum"] = exclusive
-        if (maximum := getattr(constraint, "le", None)) is not None:
-            entry["maximum"] = maximum
-    return entry
 
 
 def _discovery_policy() -> dict[str, Any]:
@@ -620,6 +561,7 @@ def _analytics_policy() -> dict[str, Any]:
         "ai_referral_formula_version": AI_REFERRAL_FORMULA_VERSION,
         "snapshot_window_days": list(ANALYTICS_SNAPSHOT_WINDOW_DAYS),
         "ts_owned_task_kinds": sorted(ANALYTICS_TS_OWNED_TASK_KINDS),
+        "task_kinds": sorted(ANALYTICS_TASK_KINDS),
         "worker_settings": {
             name: _setting(name, AnalyticsSettings)
             for name in ANALYTICS_WORKER_SETTINGS

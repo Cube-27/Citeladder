@@ -16,11 +16,11 @@ serve the workspace-authorized catalog, detail, summary, history, manual order,
 exports and on-demand recompute. The
 [refresh](../frontend/services/api/src/opportunities/refresh.ts) is the one
 writer of Opportunities and snapshots: the TypeScript analytics worker claims
-`opportunity_refresh` tasks that Python sources enqueue through the
-[admission bridge](../backend/app/domain/opportunities/queue.py). Detectors
+`opportunity_refresh` tasks admitted through the
+[TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts). Detectors
 consume persisted source snapshots; recomputation writes ranked Opportunities
 and immutable snapshots with rule/formula versions and exact source identities,
-under the project advisory lock Python prompt writes share.
+under the project advisory lock shared by TypeScript prompt writes.
 An ordinary list/detail read never refreshes a source or recomputes a ranking.
 
 Site Health owns acquisition and deterministic findings. Demand owns imported
@@ -37,7 +37,7 @@ gap action over the same scope; it never creates a duplicate action or asserts
 causation. Anchor diagnostics and topical outliers do not promote by default.
 
 Source routing distinguishes owned and earned actions and exposes the persisted
-source mix. The [content handoff](../backend/app/domain/opportunities/content_handoff.py)
+source mix. The [content handoff](../frontend/services/api/src/opportunities/projection.ts)
 projects target IDs, citations, limitations, coverage and a suggested content
 format for the Agent's context.
 
@@ -70,15 +70,15 @@ convergence across evidence families, priority and the deterministic diagnosis
 [Action policy](../backend/app/core/config/actions.py), stamped with their
 versions. A model does not score or diagnose an Action.
 
-`actions` has two writers across the stack boundary. The refresh derives
-evidence Actions and restamps every row's members; the Python Agent only inserts
+`actions` has two TypeScript writers. The refresh derives
+evidence Actions and restamps every row's members; the Agent only inserts
 its own `agent`-origin row, and does nothing when the target key already exists.
 The refresh adopts an Agent row on the same key instead of opening a second one.
 The [TypeScript Action routes](../frontend/services/api/src/routes/actions.ts)
-own workflow updates and declarations. The retained
-[Python read/attach bridge](../backend/app/domain/opportunities/actions.py) serves
-the Agent, while MCP and command-center reads retain the effective-status bridge;
-these helpers retire only when their last Python callers move.
+own workflow updates and declarations. The
+[Agent target adapter](../frontend/services/api/src/agent/target-adapter.ts) uses
+the same Action owner. MCP and command-center reads use the shared
+[effective status](../frontend/services/api/src/opportunities/action-status.ts).
 
 An Action's identity and origin never change. When no live Opportunity targets
 it any more, the row keeps its identity with its evidence cleared. The Agent
@@ -153,7 +153,7 @@ and a check has to know which attempt it verifies.
 
 Later crawl, audit, traffic or source-page-inspection completion can enqueue
 bounded [TypeScript verification](../frontend/services/api/src/opportunities/verification.ts)
-through the [Python admission bridge](../backend/app/domain/opportunities/verification.py)
+through the [TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts)
 over persisted evidence. Verification appends observations against eligible
 declarations; it does not perform an external change or infer one from metrics.
 Repeated processing is idempotent. New evidence can change the observed
@@ -219,14 +219,14 @@ expected-change vocabulary, the check states and the recheck schedule.
 [Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
 [Visibility](visibility-prompt.md) remain the source authorities.
 [Refresh PostgreSQL tests](../frontend/services/api/test/opportunity-refresh.test.ts)
-exercise Python enqueue → TypeScript claim → Python read, replay, concurrent
+exercise admission, TypeScript claim and persisted reads, replay, concurrent
 claims and recomputes, supersession, the Agent handoff and non-member 404s.
 [Verification PostgreSQL tests](../frontend/services/api/test/opportunity-verification.test.ts)
 exercise comparison, unavailable-state behavior, workspace isolation and the
-Python-producer/TypeScript-worker/Python-reader boundary;
+producer, worker and persisted-reader boundary;
 [Action PostgreSQL tests](../frontend/services/api/test/actions.test.ts) cover
 declaration admission, concurrent replay, workspace isolation, frozen checks and
-the TypeScript-declaration/Python-inspection boundary. The
+the TypeScript declaration and inspection boundary. The
 [source-inspection tests](../frontend/services/api/test/source-inspection.test.ts)
 exercise placement settlement and recheck admission against seeded declarations. The pending integrations
 follow-up may improve these read surfaces; it is not a second action store.

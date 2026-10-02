@@ -3,8 +3,8 @@
  *
  * Ports the claim, lease and heartbeat of
  * `backend/app/orchestration/postgres_task_queue.py`, which keeps serving
- * every other queue. Both stacks claim from the same table with disjoint kind
- * sets (`ANALYTICS_TS_OWNED_TASK_KINDS`), so this module must make exactly the
+ * retained Python queues. TypeScript owns every analytics kind and recovery,
+ * so this module must make exactly the
  * same promises: a claim locks eligible rows `FOR UPDATE SKIP LOCKED`, commits
  * before the caller does any work, and gives each workspace one task before
  * any workspace gets a second. Site Health owns its lease recovery; analytics

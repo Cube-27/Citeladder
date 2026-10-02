@@ -349,25 +349,9 @@ ANALYTICS_TASK_KINDS: Final[frozenset[str]] = frozenset(
 
 # TypeScript owns execution and expired-lease recovery for every analytics kind.
 # The native worker reads this policy through the generated export.
-ANALYTICS_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
-    {
-        ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
-        ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
-        ANALYTICS_TASK_KIND_INTERNAL_LINK_JUDGMENT,
-        ANALYTICS_TASK_KIND_INTERNAL_LINK_PUBLISH,
-        ANALYTICS_TASK_KIND_INGEST_REFERRALS,
-        ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
-        ANALYTICS_TASK_KIND_AI_REFERRALS_SNAPSHOT_REFRESH,
-        ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
-        ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
-        ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
-        ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH,
-        ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
-        ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
-        ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION,
-        ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
-    }
-)
+# Splitting ownership again requires restoring an executor and recovery owner;
+# dropping a kind from a second manually maintained list cannot strand work.
+ANALYTICS_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = ANALYTICS_TASK_KINDS
 
 # Error token stamped when a claimed kind has no registered executor — a
 # permanent-until-deploy condition, so the worker never retries it.

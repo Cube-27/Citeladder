@@ -59,7 +59,7 @@ export async function contentHandoff(db: Database, scope: Scope, ref: ContentRef
     dimension: 'metadata',
     checkpoint_ids: evaluations.map((row) => row.rule_id),
     normalized_url: analysis.normalized_url,
-    suggested_skill_id: 'content_create',
+    suggested_skill_id: 'content_page',
     finding_class: evaluations[0]!.finding_class,
     observed_evidence: evaluations.map((row) => record(row.evidence)),
     source_evaluation_ids: evaluations.map((row) => row.id),
@@ -73,7 +73,7 @@ export async function contentHandoff(db: Database, scope: Scope, ref: ContentRef
         ] ?? '',
     ),
     captured_values: evaluations.map(
-      (row) => record(row.evidence).title ?? record(row.evidence).meta_description ?? '',
+      (row) => record(row.evidence).title || record(row.evidence).meta_description || '',
     ),
     expected_capability: evaluations.map((row) => rules.get(row.rule_id)?.description ?? ''),
     remediation: evaluations.map((row) => rules.get(row.rule_id)?.remediation ?? ''),

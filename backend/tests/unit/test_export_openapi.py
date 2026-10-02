@@ -8,7 +8,7 @@ import pytest
 from scripts.export_openapi import export_openapi
 
 
-def test_export_openapi_writes_the_versioned_api_contract(
+def test_export_openapi_writes_the_remaining_fastapi_health_contract(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -19,8 +19,8 @@ def test_export_openapi_writes_the_versioned_api_contract(
 
     document = json.loads(output.read_text(encoding="utf-8"))
     assert document["info"]["title"] == "CiteLadder"
-    assert "/health" in document["paths"]
-    assert any(path.startswith("/api/v1/") for path in document["paths"])
+    assert set(document["paths"]) == {"/health", "/ready"}
+    assert document["paths"]["/health"]["get"]["responses"]["200"]
 
 
 def test_export_openapi_rejects_output_outside_the_workspace(

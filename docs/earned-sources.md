@@ -67,8 +67,9 @@ a second place they drift.
 
 **Page state is not an entity verdict.** `not_inspected`, `blocked` and
 `stale` are properties of the page and are never written as a presence row.
-`domain/source_pages/projection.py::get_source_page` is the single resolver
-that maps the two onto the vocabulary a reader sees, so no caller can report
+[Source projections](../frontend/services/api/src/visibility/sources.ts) and
+[record retrieval](../frontend/services/api/src/mcp/retrieval.ts) render those
+persisted states separately, so no caller can report
 a page nobody read as a confirmed absence.
 
 A positive claim always resolves to a snapshot and a quoted window. A
@@ -103,15 +104,14 @@ Audit completion is independent of inspection. A blocked publisher never turns
 a successfully measured answer into a failed audit. Because terminalization
 enqueues inspection INSTEAD of the Opportunity refresh, that refresh is owed on
 every terminal outcome. The TypeScript analytics worker scans failed tasks for
-idempotent compensation, including tasks the Python lease sweeper terminalized.
+idempotent compensation, including tasks its own bounded lease recovery terminalized.
 Placement settlement commits its verification enqueue in the same transaction.
 
 `source-pages/differentiation.ts` writes comparison reports after inspection.
-The Python report listing remains a read-only bridge for Agent tools until the
-Agent migration. Citation identity and source projections also remain Python
-bridges for answer analysis until its callers move. The shared robots, sitemap,
-and HTML acquisition code remains for the Python Site Health crawler until its
-own cutover.
+The [report reader](../frontend/services/api/src/source-pages/differentiation-reads.ts)
+serves the [Agent tool adapter](../frontend/services/api/src/agent/tool-adapters.ts).
+Citation identity and source projections use the TypeScript evidence owners.
+Inspection shares the TypeScript Site Health acquisition, robots and HTML owners.
 
 ## The four page-keyed actions
 

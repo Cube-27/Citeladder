@@ -117,6 +117,11 @@ Pre-cutover Python keys return an explicit `agent_idempotency_conflict` with
 `legacy_runtime` details, including non-ASCII requests. Historical chats remain
 readable; new work requires a new key rather than reinterpreting an old hash.
 
+An unavailable explicit context identifier, including a foreign or removed
+origin, returns HTTP 404 from the migrated Agent API. Incompatible authorized
+targets return HTTP 409. The retired Python context error used 409 for both;
+the TypeScript API preserves absence separately from a conflicting selection.
+
 A targeted output (a page or a planned page) attaches the chat to the existing
 [Action](opportunities.md#actions) for that target or creates one, so work on
 one target converges instead of multiplying. Other target kinds attach only to
