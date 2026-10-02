@@ -3,6 +3,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
 import { hasAnalyticsConsent, subscribeToConsent } from '@/lib/consent/cookie-consent';
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 /**
  * `gtag.js` installs this pair on `window` as it boots. Both are optional here
@@ -51,9 +52,46 @@ function configureLoadedTag(script: HTMLScriptElement, measurementId: string) {
   script.dataset.configured = 'true';
 }
 
+function ctaDestinationType(anchor: HTMLAnchorElement, demo: boolean) {
+  if (demo) return 'demo';
+  return new URL(anchor.href).origin === window.location.origin ? 'internal' : 'external';
+}
+
+function marketingCtaFields(anchor: HTMLAnchorElement, demo: boolean) {
+  const placement = anchor.closest<HTMLElement>('[data-cta-placement]');
+  const region = anchor.closest('header, footer, nav, section');
+  return {
+    page_path: window.location.pathname,
+    placement:
+      placement?.dataset.ctaPlacement ?? (region?.id || region?.tagName.toLowerCase()) ?? 'page',
+    cta_label: (anchor.getAttribute('aria-label') ?? anchor.textContent ?? '')
+      .trim()
+      .replace(/\s+/g, ' '),
+    destination_type: ctaDestinationType(anchor, demo),
+  };
+}
+
+/** One delegated listener covers SSR links and hydrated islands without double-firing. */
+function trackMarketingCta(event: MouseEvent) {
+  if (!hasAnalyticsConsent() || !(event.target instanceof Element)) return;
+  const anchor = event.target.closest('a');
+  if (!(anchor instanceof HTMLAnchorElement)) return;
+  const demo = anchor.href === DEMO_HREF;
+  if (!demo && anchor.dataset.marketingCta === undefined) return;
+  const fields = marketingCtaFields(anchor, demo);
+  const gtag = (window as GtagWindow).gtag;
+  gtag?.('event', 'marketing_cta_click', fields);
+  if (demo) gtag?.('event', 'demo_outbound_click', fields);
+}
+
 /** Load the optional Google tag only after an explicit analytics opt-in. */
 export function GoogleAnalytics({ measurementId }: Readonly<{ measurementId: string }>) {
   const allowed = useSyncExternalStore(subscribeToConsent, hasAnalyticsConsent, () => false);
+
+  useEffect(() => {
+    document.addEventListener('click', trackMarketingCta);
+    return () => document.removeEventListener('click', trackMarketingCta);
+  }, []);
 
   useEffect(() => {
     const withGtag = window as GtagWindow;

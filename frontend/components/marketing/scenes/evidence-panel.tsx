@@ -23,10 +23,9 @@ import { ScaledPreview } from '../primitives/scaled-preview';
 type Tint = 'blue' | 'indigo' | 'purple' | 'green';
 
 const PLATFORM_LOGOS: Record<string, string> = {
-  ChatGPT: '/brand/chatgpt.webp',
-  Claude: '/brand/claude.webp',
-  Perplexity: '/brand/perplexity.webp',
-  Gemini: '/brand/gemini.webp',
+  'OpenAI API': '/brand/chatgpt.webp',
+  'Claude API': '/brand/claude.webp',
+  'Gemini API': '/brand/gemini.webp',
 };
 
 const TINT_CLASSES: Record<Tint, string> = {
@@ -128,6 +127,7 @@ function WindowChrome({ label }: Readonly<{ label: string }>) {
     <div className="border-border-subtle flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-1.5">
       <LogoMark variant="mini" wordmark={false} />
       <span className={textRole('badge', 'text-foreground')}>{label}</span>
+      <span className={textRole('caption', 'ml-auto')}>Illustrative example</span>
     </div>
   );
 }
@@ -191,11 +191,7 @@ const PANEL_LABELS: Record<SolutionScene, string> = {
 const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
   share: (tint) => (
     <>
-      <WindowHead
-        title="Share of citations"
-        note="412 recorded answers · four platforms"
-        tint={tint}
-      />
+      <WindowHead title="Share of citations" note="412 recorded answers" tint={tint} />
       <div className="mt-3 flex h-2.5 overflow-hidden rounded-full">
         <span className="bg-accent w-[68%]" />
         <span className={cn('w-[22%]', TINT_RIVAL[tint])} />
@@ -221,28 +217,28 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
           {
             q: 'Best project management tools for startups?',
             s: '“Notion, Linear, and ClickUp are top picks…”',
-            p: 'ChatGPT',
+            p: 'OpenAI API',
             c: '5',
             cited: true,
           },
           {
             q: 'How does Stripe compare to Adyen?',
             s: '“Stripe is easier to integrate and… ”',
-            p: 'Claude',
+            p: 'Claude API',
             c: '4',
             cited: false,
           },
           {
             q: 'What is revenue intelligence?',
             s: '“Revenue intelligence is a way to…”',
-            p: 'Perplexity',
+            p: 'OpenAI API',
             c: '6',
             cited: true,
           },
           {
             q: 'Top enterprise AI search platforms?',
             s: '“Leading platforms include…”',
-            p: 'Gemini',
+            p: 'Gemini API',
             c: '3',
             cited: true,
           },
@@ -265,12 +261,12 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
           </div>
         ))}
       </div>
-      <ExportRow badge="4 Engines Audited" tint={tint} />
+      <ExportRow badge="Illustrative example" tint={tint} />
     </>
   ),
   health: (tint) => (
     <>
-      <WindowHead title="Site health" note="33 rules · weighted 50/50 Tech & AEO" tint={tint} />
+      <WindowHead title="Site health" note="Illustrative example" tint={tint} />
       <div className="mt-4 grid gap-5">
         {[
           { name: 'Web Fundamentals', value: 88, status: 'Optimal', delta: '+2 vs last run' },

@@ -15,15 +15,16 @@ export type SolutionSegment = {
   eyebrow: string;
   title: string;
   lead: string;
+  body?: string;
+  guide?: { label: string; href: string };
   cta: string;
   scene: SolutionScene;
 };
 
 export const SOLUTIONS_HERO = {
   eyebrow: 'Solutions',
-  title: 'One evidence layer for',
-  accent: 'every team behind the brand.',
-  lead: 'CiteLadder measures how answer engines talk about you, then gives each team proof they can re-check: mentions, citations, and the pages that support the claim.',
+  title: 'AI visibility workflows for the teams behind your brand.',
+  lead: 'Different teams ask different questions of the same evidence. Use tracked answers and website findings to explain a result, choose an investigation and agree on the next step.',
 } as const;
 
 export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
@@ -31,18 +32,28 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     id: 'agencies',
     label: 'Agencies',
     eyebrow: 'For agencies',
-    title: 'Show retainer work with evidence clients can independently verify.',
-    lead: 'Per-client workspaces, share-of-voice benchmarks, and exports where every number opens to the run behind it.',
-    cta: 'See agency workflow',
+    title: 'Give clients a report they can question and understand.',
+    lead: 'Build reporting around a defined prompt portfolio, clear measurement rules and examples of the underlying answers. Explain what changed, which questions were covered and what remains uncertain.',
+    body: 'Use the findings to propose specific work, such as correcting a product explanation or investigating a repeatedly cited source.',
+    guide: {
+      label: 'Build a clearer visibility report',
+      href: '/blog/verify-improve-ai-search-visibility',
+    },
+    cta: 'Discuss an agency workflow',
     scene: 'share',
   },
   {
     id: 'in-house',
     label: 'In-house teams',
     eyebrow: 'For in-house teams',
-    title: 'Executive AI visibility metrics that hold up in board meetings.',
-    lead: 'Cross-engine trend lines with site health and analytics synced in — verified numbers, no screenshot decks.',
-    cta: 'See reporting surfaces',
+    title: 'Connect visibility findings to a practical work list.',
+    lead: 'Review the questions where your brand appears, the sources associated with those answers and the website findings worth investigating. Give marketing, content and web teams a common starting point for deciding what to improve.',
+    body: 'Keep observed visibility separate from referral traffic and commercial outcomes so internal reporting remains clear.',
+    guide: {
+      label: 'Investigate citation opportunities',
+      href: '/blog/action-playbook-winning-ai-citations',
+    },
+    cta: 'Discuss a team workflow',
     scene: 'health',
   },
   {
@@ -58,9 +69,11 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     id: 'commerce',
     label: 'Ecommerce',
     eyebrow: 'For ecommerce teams',
-    title: 'Track product recommendations and price accuracy across AI engines.',
-    lead: 'Which products AI shortlists, at what price, and which rival SKUs displace yours.',
-    cta: 'See commerce workflow',
+    title: 'Investigate the product questions buyers need answered.',
+    lead: 'Start with use cases, compatibility, selection criteria and product limitations. Review how those questions are answered and whether your own pages provide clear, accessible information.',
+    body: 'Use source analysis and page-level checks to choose focused improvements to relevant product, category or buying-guide content.',
+    guide: { label: 'Audit website readiness', href: '/blog/auditing-content-for-llms-ai-search' },
+    cta: 'Discuss an ecommerce workflow',
     scene: 'commerce',
   },
   {

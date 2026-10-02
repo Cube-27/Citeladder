@@ -1,7 +1,12 @@
 import { ArrowLeft, ArrowRight, PenLine } from 'lucide-react';
 
 import { BlogIndexExplorer } from '@/components/marketing/blog/blog-index-explorer';
-import { BLOG_EMPTY_STATE, POSTS, type BlogPost } from '@/lib/marketing-content/blog';
+import {
+  BLOG_EMPTY_STATE,
+  BLOG_START_PATHS,
+  POSTS,
+  type BlogPost,
+} from '@/lib/marketing-content/blog';
 import { formatBlogDate, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 import { blogPostingJsonLd } from '@/lib/seo/json-ld';
@@ -91,18 +96,17 @@ function PostByline({
 
 function BlogCta({
   title,
+  body = 'Build a measurement practice your team can inspect, explain, and improve.',
   secondary,
-}: Readonly<{ title: string; secondary: { href: string; label: string } }>) {
+}: Readonly<{ title: string; body?: string; secondary: { href: string; label: string } }>) {
   return (
     <Section tone="paper" rhythm="base" className="marketing-closing-band" aria-label="Get started">
-      <Reveal className="mx-auto max-w-3xl text-center">
+      <Reveal className="mx-auto w-full max-w-3xl min-w-0 text-center">
         <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-3 max-w-[28ch]">
           {title}
         </h2>
-        <p className="website-body-lg text-muted mx-auto max-w-[52ch]">
-          Build a measurement practice your team can inspect, explain, and improve.
-        </p>
-        <div className="mt-8 flex items-stretch justify-center gap-3 sm:items-center sm:gap-4">
+        <p className="website-body-lg text-muted mx-auto max-w-[52ch]">{body}</p>
+        <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
           <DemoButtonLink className="min-w-0 flex-1 sm:flex-none">
             {DEMO_CTA}
             <ArrowRight aria-hidden />
@@ -126,12 +130,12 @@ export function BlogIndex() {
             <div>
               <p className="website-eyebrow text-accent-text">Blog</p>
               <h1 className="website-page-title text-foreground mt-4">
-                Practical insights for AI visibility
+                Practical guides to AI visibility.
               </h1>
               <p className="website-body-lg text-muted mt-5 max-w-[56ch]">
-                Guides, frameworks and lessons from building for the AI search era.
-                <br className="hidden sm:block" /> Find content gaps, strengthen your sources and
-                measure progress.
+                Learn how to build a useful baseline, investigate the sources behind an answer, and
+                check whether important website information is accessible. Start with the question
+                your team is trying to answer.
               </p>
             </div>
             <div className="relative hidden aspect-[12/7] lg:block">
@@ -150,6 +154,27 @@ export function BlogIndex() {
           </Reveal>
         </Container>
       </header>
+
+      <Section rhythm="tight" aria-label="Start here">
+        <h2 className="website-section-heading text-foreground">Start here</h2>
+        <div className="grid gap-5 md:grid-cols-3">
+          {BLOG_START_PATHS.map((path) => (
+            <article
+              key={path.slug}
+              className="border-border-subtle bg-panel space-y-4 rounded-[var(--radius-card)] border p-5"
+            >
+              <h3 className="website-feature-heading text-foreground">{path.heading}</h3>
+              <p className="website-body text-muted">{path.body}</p>
+              <a
+                href={`/blog/${path.slug}`}
+                className="website-body text-accent-text underline underline-offset-2"
+              >
+                {path.label}
+              </a>
+            </article>
+          ))}
+        </div>
+      </Section>
 
       {summaries.length ? (
         <Section tone="paper" rhythm="tight" aria-label="Blog articles">
@@ -181,8 +206,9 @@ export function BlogIndex() {
       )}
 
       <BlogCta
-        title="Put these guides into practice."
-        secondary={{ href: '/faq', label: 'Read the FAQ' }}
+        title="Put the method into practice."
+        body="Explore how CiteLadder brings answer observations, source analysis and website findings into your team’s workflow."
+        secondary={{ href: '/compare', label: 'Compare AI visibility tools' }}
       />
     </>
   );
@@ -375,6 +401,9 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
             <p className="website-body-lg bg-accent-soft text-foreground mb-6 rounded-[var(--radius-card)] px-5 py-4 font-medium">
               {post.excerpt}
             </p>
+            {post.editorialNote && (
+              <p className="website-label text-muted mb-6">{post.editorialNote}</p>
+            )}
             {withOccurrenceKeys(post.body, blockIdentity).map(({ key, value }) => (
               <PostBlock key={key} block={value} sources={post.sources} />
             ))}
@@ -384,8 +413,9 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
       </Container>
 
       <BlogCta
-        title="Make AI visibility measurable."
-        secondary={{ href: '/blog', label: 'All guides' }}
+        title={post.closing?.heading ?? 'Make AI visibility measurable.'}
+        body={post.closing?.body}
+        secondary={post.closing?.secondary ?? { href: '/blog', label: 'All guides' }}
       />
     </>
   );

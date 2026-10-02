@@ -67,7 +67,6 @@ export function SolutionsHero() {
     <PageHero
       eyebrow={SOLUTIONS_HERO.eyebrow}
       title={SOLUTIONS_HERO.title}
-      accent={SOLUTIONS_HERO.accent}
       lead={SOLUTIONS_HERO.lead}
       centered
     >
@@ -122,6 +121,17 @@ export function SolutionSegments() {
                   {segment.title}
                 </h2>
                 <p className="website-body-lg text-muted mt-5 max-w-[42ch]">{segment.lead}</p>
+                {segment.body && (
+                  <p className="website-body-lg text-muted mt-5 max-w-[42ch]">{segment.body}</p>
+                )}
+                {segment.guide && (
+                  <a
+                    className="website-body text-accent-text mt-5 block underline"
+                    href={segment.guide.href}
+                  >
+                    {segment.guide.label}
+                  </a>
+                )}
                 <div className="mt-8">
                   <DemoTextLink>
                     {segment.cta}

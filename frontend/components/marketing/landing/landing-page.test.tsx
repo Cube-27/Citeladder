@@ -5,11 +5,11 @@ import { describe, expect, it } from 'vite-plus/test';
 import { LandingPage } from './landing-page';
 
 describe('LandingPage', () => {
-  it('shows four static monitored surfaces without provider attribution', () => {
+  it('distinguishes API collection from consumer answer surfaces', () => {
     render(<LandingPage />);
 
     const engines = screen.getByRole('region', { name: 'Monitored answer engines' });
-    for (const name of ['ChatGPT', 'Gemini', 'Claude', 'Google AI Overviews']) {
+    for (const name of ['OpenAI API', 'Gemini API', 'Claude API', 'Google AI Overviews']) {
       expect(within(engines).getByText(name)).toBeVisible();
     }
     expect(screen.queryByText(/dataforseo/i)).toBeNull();
@@ -42,7 +42,7 @@ describe('LandingPage', () => {
     expect(screen.getByRole('tabpanel', { name: /site health/i })).toBeVisible();
     await user.keyboard('{ArrowRight}');
     expect(within(tabs).getByRole('tab', { name: /demand intelligence/i })).toHaveFocus();
-    await user.click(screen.getByRole('link', { name: 'Visibility analysis' }));
+    await user.click(within(tabs).getByRole('tab', { name: /ai visibility/i }));
     expect(within(tabs).getByRole('tab', { name: /ai visibility/i })).toHaveAttribute(
       'aria-selected',
       'true',

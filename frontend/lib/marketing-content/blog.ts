@@ -80,7 +80,7 @@ export type BlogBlock =
 
 type BlogInline =
   | string
-  | { type: 'link'; text: string; href: `/${string}` }
+  | { type: 'link'; text: string; href: `/${string}` | `https://${string}` }
   | { type: 'citation'; sourceId: string; label?: string };
 
 export type BlogSource = {
@@ -97,7 +97,7 @@ export type BlogPost = {
   seoTitle: string;
   seoDescription: string;
   excerpt: string;
-  image: string;
+  image?: string;
   cardImage?: string;
   date?: string;
   dateModified?: string;
@@ -108,6 +108,8 @@ export type BlogPost = {
   tags: readonly string[];
   sources: readonly BlogSource[];
   relatedSlugs: readonly string[];
+  editorialNote?: string;
+  closing?: { heading: string; body: string; secondary?: { href: string; label: string } };
   body: readonly BlogBlock[];
 };
 
@@ -136,3 +138,24 @@ export const BLOG_EMPTY_STATE = {
   heading: 'Articles are on their way.',
   body: 'We publish practical guides to answer-engine optimization, evidence-led measurement, and the work between a finding and the next audit. Check back soon or explore the documentation.',
 } as const;
+
+export const BLOG_START_PATHS = [
+  {
+    heading: 'Measure visibility',
+    body: 'Learn what to count, how to keep observations comparable, and why a visibility percentage needs a clear denominator.',
+    label: 'Read the measurement guide',
+    slug: POST_VERIFY.slug,
+  },
+  {
+    heading: 'Investigate citations',
+    body: 'Turn a cited source into a specific research task. Check relevance, factual accuracy and the pages a buyer would find useful.',
+    label: 'Read the citation guide',
+    slug: POST_PLAYBOOK.slug,
+  },
+  {
+    heading: 'Check website readiness',
+    body: 'Work through access, indexing, content clarity and evidence before assuming that a missing citation is a writing problem.',
+    label: 'Read the website audit guide',
+    slug: POST_AUDIT.slug,
+  },
+] as const;

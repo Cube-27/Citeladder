@@ -6,7 +6,7 @@ import MarketingLayout from '../../layouts/MarketingLayout.astro';
 
 const competitor = COMPETITORS.find((candidate) => candidate.slug === Astro.params.competitor);
 if (!competitor) Astro.response.status = 404;
-const title = competitor ? `CiteLadder vs ${competitor.name}` : 'Comparison not found · CiteLadder';
+const title = competitor?.metaTitle ?? 'Comparison not found · CiteLadder';
 const description = competitor?.metaDescription ?? 'The requested CiteLadder comparison does not exist.';
 const breadcrumb = competitor
   ? breadcrumbJsonLd([

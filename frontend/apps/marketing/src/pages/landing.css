@@ -860,18 +860,19 @@
   }
   .cl-hero h1 {
     max-width: none;
-    font-size: calc(clamp(2.375rem, 1.5rem + 3vw, 3rem) - 2px);
+    font-size: calc(clamp(2.375rem, 1.5rem + 3vw, 3rem) - 4px);
   }
   .cl-hero-actions {
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: stretch;
     gap: 10px;
   }
   .cl-hero-actions .cl-cta {
-    flex: 1;
+    flex: none;
     min-width: 0;
-    min-height: 48px;
-    padding: 10px;
+    min-height: var(--marketing-hero-cta-height);
+    padding: 8px 12px;
     gap: 7px;
     font-size: 14px;
   }
@@ -926,15 +927,15 @@
     font-size: 16px;
   }
   .cl-closing-actions {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     width: 100%;
     gap: 10px;
   }
   .cl-closing-actions .cl-cta {
-    flex: 1;
+    flex: none;
     min-width: 0;
-    min-height: 48px;
-    padding: 10px;
+    min-height: var(--marketing-hero-cta-height);
+    padding: 8px 12px;
     gap: 7px;
   }
   .cl-section-head p,

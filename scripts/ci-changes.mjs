@@ -19,8 +19,23 @@ const DOC_FILES = new Set([
   'Review.md',
 ]);
 
+// Configuration read only by external services or by deploy-only workflows.
+// No owner suite exercises these files, so they never escalate to every owner.
+const INERT_CONFIG_FILES = new Set([
+  '.sonarcloud.properties',
+  '.github/dependabot.yml',
+  '.github/workflows/gcp-deploy.yml',
+  '.github/workflows/workers-app-deploy.yml',
+  '.github/workflows/workers-docs-deploy.yml',
+  '.github/workflows/workers-marketing-deploy.yml',
+]);
+
 function isDocumentation(path) {
   return path.startsWith('docs/') || DOC_FILES.has(path);
+}
+
+function isOwnerFree(path) {
+  return isDocumentation(path) || INERT_CONFIG_FILES.has(path);
 }
 
 function isBackend(path) {
@@ -143,8 +158,8 @@ function isSecuritySensitive(path) {
 // is already covered by the backend, frontend and E2E owners, and across 60
 // Compose runs it never caught a failure main CI missed (the one failure, a Next
 // prerender error, failed the frontend CI job on the same commit). Note that
-// pushes to `main` and merge-queue runs classify as `full` and therefore always
-// smoke the stack regardless of this function -- narrowing applies to PR runs.
+// pushes to `main` (unless owner-free) and merge-queue runs classify as `full`
+// and therefore smoke the stack regardless of this function.
 function isComposeSensitive(path) {
   return (
     path === '.github/workflows/compose-smoke.yml' ||
@@ -189,7 +204,7 @@ export function classifyPaths(paths, { full = false } = {}) {
 
   const normalized = [...new Set(paths.map((path) => path.replaceAll('\\', '/')))];
   const unowned = normalized.filter(
-    (path) => !isDocumentation(path) && !isBackend(path) && !isFrontend(path),
+    (path) => !isOwnerFree(path) && !isBackend(path) && !isFrontend(path),
   );
   const shared = unowned.length > 0;
   const e2eFiles = selectE2EFiles(normalized);
@@ -208,6 +223,11 @@ export function classifyPaths(paths, { full = false } = {}) {
   };
 }
 
+/** True only for a known, non-empty change that touches no owner. */
+export function isOwnerFreeChange(paths) {
+  return paths.length > 0 && paths.every((path) => isOwnerFree(path.replaceAll('\\', '/')));
+}
+
 export function selectDiff({
   eventName,
   action,
@@ -217,9 +237,13 @@ export function selectDiff({
   previousRunTrusted = true,
   beforeIsAncestor = true,
 }) {
-  if (eventName !== 'pull_request') return { full: true, range: null };
-
   const usableBefore = beforeSha && !/^0+$/.test(beforeSha);
+  if (eventName !== 'pull_request') {
+    // Main stays a full validation; the push range only lets an owner-free
+    // push (documentation or inert configuration) skip it.
+    const range = eventName === 'push' && usableBefore && beforeIsAncestor;
+    return { full: true, range: range ? `${beforeSha}..${headSha}` : null };
+  }
   // A force-push (rebase or amend) orphans the previous head, so its incremental
   // diff is neither fetchable nor meaningful; revalidate the cumulative PR scope.
   if (action === 'synchronize' && usableBefore && previousRunTrusted && beforeIsAncestor) {
@@ -350,11 +374,12 @@ async function main(environment = process.env) {
     beforeIsAncestor: isAncestor(environment.CI_BEFORE_SHA, environment.CI_HEAD_SHA),
   });
   const paths = changedPaths(diff.range);
-  const result = classifyPaths(paths, diff);
-  const e2eFiles = diff.full ? [] : selectE2EFiles(paths);
+  const full = diff.full && !isOwnerFreeChange(paths);
+  const result = classifyPaths(paths, { full });
+  const e2eFiles = full ? [] : selectE2EFiles(paths);
 
   process.stdout.write(
-    `CI diff: ${diff.full ? 'full main validation' : diff.range}; ${paths.length} changed path(s)\n`,
+    `CI diff: ${full ? 'full main validation' : diff.range}; ${paths.length} changed path(s)\n`,
   );
   process.stdout.write(`${JSON.stringify(result)}\n`);
   if (!environment.GITHUB_OUTPUT) throw new Error('GITHUB_OUTPUT is required.');

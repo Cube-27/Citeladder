@@ -84,6 +84,17 @@ export function FaqGroups() {
                   </summary>
                   <p className="website-body text-muted max-w-[64ch] pb-6">
                     <Linkify text={item.a} />
+                    {item.links?.map((link) => (
+                      <span key={link.href}>
+                        {' '}
+                        <a
+                          href={link.href}
+                          className="text-accent-text underline underline-offset-2"
+                        >
+                          {link.label}
+                        </a>
+                      </span>
+                    ))}
                   </p>
                 </details>
               ))}

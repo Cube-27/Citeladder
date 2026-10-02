@@ -112,7 +112,7 @@ export function faqPageJsonLd(groups: readonly FaqGroup[]): JsonLdObject {
 export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
   const url = absoluteUrl(`/blog/${post.slug}`);
   const organizationUrl = absoluteUrl('/');
-  const image = absoluteUrl(post.image);
+  const image = post.image ? absoluteUrl(post.image) : null;
   const blogUrl = absoluteUrl('/blog');
   return {
     '@context': 'https://schema.org',
@@ -201,17 +201,12 @@ export function blogIndexJsonLd(posts: readonly BlogPostSummary[]): JsonLdObject
   };
 }
 
-/** The comparison index, dated by the newest first-party review it rests on. */
+/** Source-review dates describe the evidence, not the page's publication date. */
 export function compareIndexJsonLd(
-  competitors: readonly { slug: string; name: string; lastReviewed: string }[],
+  competitors: readonly { slug: string; name: string }[],
 ): JsonLdObject | null {
   const url = absoluteUrl('/compare');
   if (!url) return null;
-  const reviews = competitors.map((competitor) => competitor.lastReviewed).filter(Boolean);
-  const modified = reviews.reduce<string | null>(
-    (latest, review) => (latest && latest > review ? latest : review),
-    null,
-  );
   return {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -219,7 +214,6 @@ export function compareIndexJsonLd(
     url,
     name: `${SITE_NAME} comparisons`,
     inLanguage: 'en',
-    ...(modified ? { dateModified: modified } : {}),
     publisher: { '@type': 'Organization', name: SITE_NAME, url: absoluteUrl('/') ?? url },
     mainEntity: {
       '@type': 'ItemList',

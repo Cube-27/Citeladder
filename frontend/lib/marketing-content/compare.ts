@@ -1,312 +1,152 @@
-/**
- * Competitor-comparison content for /compare and /compare/[competitor].
- *
- * Sourcing rule (internal): every `citeladder` cell is grounded in this repo's
- * own source code; every `competitor` cell must be confirmed first-party on
- * the vendor's own site before it ships. A row ships only when BOTH cells are
- * written. Unsupported dimensions are omitted.
- *
- * Copy rule: one short claim per cell. Detail lives in the product, not here.
- */
-import { CONTENT_REVIEWED } from './people';
-
-type ComparisonRow = {
-  dimension: string;
-  citeladder: string;
-  competitor: string;
-};
-
+/** Reviewed vendor positioning and evaluation copy; source dates are not release dates. */
 type ComparisonSource = {
   label: string;
   url: string;
-  dimensions: readonly string[];
+  reviewedDate: string;
 };
 
 export type Competitor = {
   slug: string;
   name: string;
-  /** One-line positioning, drawn from the vendor's own site copy. */
   tagline: string;
-  /** Unique opening for the detail page. Not a template. */
   lead: string;
-  /** Unique SERP description. */
+  context: string;
+  metaTitle: string;
   metaDescription: string;
-  /** ISO date of the last first-party review, e.g. '2026-08-01'. */
-  lastReviewed: string;
-  /** First-party pages reviewed for the claims on this comparison. */
   sources: readonly ComparisonSource[];
-  rows: readonly ComparisonRow[];
-  /** Short editorial verdict, in our voice. */
-  verdict: string;
-  /**
-   * Honest fit concession: when to choose the competitor instead.
-   * CiteLadder is not for everyone; naming where the other tool is better
-   * earns trust for the claims above.
-   */
-  betterFit: string;
+  whenBody: string;
+  conclusionHeading: string;
+  conclusion: string;
 };
 
-const OURS = {
-  engines: {
-    dimension: 'Engines',
-    citeladder: 'ChatGPT, Gemini, Claude. Same prompts, one audit, your keys.',
-  },
-  scoring: {
-    dimension: 'Scoring',
-    citeladder: 'Deterministic, versioned rules over persisted evidence.',
-  },
-  evidence: {
-    dimension: 'Evidence',
-    citeladder: 'Every metric opens the raw run, citations and query fanout.',
-  },
-  byok: {
-    dimension: 'BYOK',
-    citeladder: 'Your keys only. Fernet-encrypted, never returned or logged.',
-  },
-  siteHealth: {
-    dimension: 'Site health',
-    citeladder: 'Built-in Web Fundamentals + AEO audit with remediation.',
-  },
-  provenance: {
-    dimension: 'Provenance',
-    citeladder: 'Analyzer + rule version stamped on every projection.',
-  },
-  price: {
-    dimension: 'Pricing',
-    citeladder: 'Published self-serve plans; Enterprise by quote; provider usage not marked up.',
-  },
-} as const satisfies Record<string, { dimension: string; citeladder: string }>;
+/** Date the official sources below were last re-read. */
+const SOURCES_REVIEWED = '2026-10-02';
 
-/** Fairness strip on /compare — repo-grounded, one line each. */
-export const FAIRNESS_POINTS = [
-  'Deterministic scoring: versioned rules, not an LLM judge',
-  'BYOK: measurement runs on your provider keys',
-  'Evidence first: every metric links to persisted run evidence',
+export const COMPARISON_DISCLOSURE =
+  'This comparison is written by CiteLadder. It summarizes public product information and provides evaluation questions. It is not an independent review or a promise that every feature is included in every plan.';
+
+export const COMPARISON_CHECKLIST = [
+  {
+    heading: 'Collection',
+    body: 'Which engines or answer sources are available for this plan, and how are observations collected?',
+  },
+  {
+    heading: 'Evidence',
+    body: 'Can we inspect the prompt, answer, citation and observation date behind a reported result?',
+  },
+  {
+    heading: 'Definitions',
+    body: 'How are mentions, citations, position and share of voice calculated? What happens when collection fails?',
+  },
+  {
+    heading: 'Scope',
+    body: 'Does the workflow cover monitoring, website diagnostics, content work, agent delivery or some combination?',
+  },
+  {
+    heading: 'Reporting',
+    body: 'Which exports and integrations are available for the selected plan?',
+  },
+  {
+    heading: 'Cost',
+    body: 'What is included in the subscription, and what additional usage or provider charges apply?',
+  },
 ] as const;
 
-/** CiteLadder glance facts on /compare. */
-export const FACT_ROWS = [
-  { key: 'Engines', value: 'ChatGPT · Gemini · Claude' },
-  { key: 'Scoring', value: 'Versioned deterministic rules' },
-  { key: 'Evidence', value: 'Metric → run → answer' },
-  { key: 'Keys', value: 'BYOK · encrypted at rest' },
-  { key: 'Site health', value: 'Web Fundamentals + AEO' },
-  { key: 'Provenance', value: 'Analyzer + rule on every score' },
-] as const;
-
-/**
- * Published comparisons. Sourced from each vendor's public site as of
- * `lastReviewed`. Dimensions the vendor does not publish are omitted.
- */
 export const COMPETITORS: readonly Competitor[] = [
   {
     slug: 'profound',
     name: 'Profound',
-    tagline: 'Full-stack marketing platform for AI search.',
-    lead: 'Profound is built as a wide, hosted AI search suite. We are narrower: three engines, your keys, and a score you can open to the raw answer. Choose them for packaging. Choose us when procurement asks how the number was made.',
+    tagline:
+      'Explore a comparison with Profound’s broader AI marketing platform, including its monitoring and agent workflows.',
+    lead: 'Profound presents a broad AI marketing platform with answer-engine insights, prompt intelligence, agent analytics and marketing agents. CiteLadder’s workflow brings AI visibility, citation analysis and website findings together.',
+    context:
+      'The useful comparison is the work your team needs to complete: monitoring a defined set of questions, investigating the supporting sources, or running a broader set of marketing workflows.',
+    metaTitle: 'CiteLadder vs Profound for AI Visibility | CiteLadder',
     metaDescription:
-      'Profound offers a hosted multi-engine suite. CiteLadder measures ChatGPT, Gemini, and Claude on your keys with deterministic scores and raw-answer evidence.',
-    lastReviewed: CONTENT_REVIEWED,
+      'Compare CiteLadder and Profound by product focus, evidence access and workflow needs. Use a practical checklist and current official product sources.',
     sources: [
       {
-        label: 'Profound product',
+        label: 'Profound’s official product overview',
         url: 'https://www.tryprofound.com/',
-        dimensions: ['Engines', 'Scoring', 'Evidence', 'BYOK', 'Site health', 'Provenance'],
-      },
-      {
-        label: 'Profound pricing',
-        url: 'https://www.tryprofound.com/pricing',
-        dimensions: ['Pricing', 'Engines'],
+        reviewedDate: SOURCES_REVIEWED,
       },
     ],
-    rows: [
-      {
-        ...OURS.engines,
-        competitor: 'ChatGPT on Starter; three engines on Growth; nine on Enterprise.',
-      },
-      {
-        ...OURS.scoring,
-        competitor:
-          'Hosted daily analysis for citations, sentiment and rank. Methodology unpublished.',
-      },
-      {
-        ...OURS.evidence,
-        competitor: 'Dashboards for share of voice, citations, sentiment and rank.',
-      },
-      {
-        ...OURS.byok,
-        competitor: 'Hosted platform keys. No BYOK on public plans.',
-      },
-      {
-        ...OURS.siteHealth,
-        competitor:
-          'Agent Analytics via CDN and server integrations. Not a built-in site-health audit.',
-      },
-      {
-        ...OURS.provenance,
-        competitor: 'No published scoring/analysis versioning.',
-      },
-      {
-        ...OURS.price,
-        competitor: 'Starter $99/mo · Growth $399/mo · Enterprise custom.',
-      },
-    ],
-    verdict:
-      'Profound wins on enterprise packaging, agent workflows, and engine breadth at the top tier. We win when you need published self-serve pricing, BYOK, and a score that opens to the persisted answer.',
-    betterFit:
-      'Large marketing orgs that want a hosted all-in-one platform with agents, demand data, SOC 2 and SSO.',
+    whenBody:
+      'Include Profound in your evaluation if a broad AI marketing platform and agent-based marketing workflows are central to your requirements. Ask which capabilities are included in the plan you are considering and how the underlying observations can be inspected.',
+    conclusionHeading: 'A practical way to compare',
+    conclusion:
+      'Bring the same small prompt portfolio and one investigation to both demos. For example, ask how a team would examine a competitor mention, find the source behind it and document a next action. Compare the evidence, workflow effort and relevant commercial terms.',
   },
   {
     slug: 'otterly-ai',
     name: 'Otterly AI',
-    tagline: 'AI search monitoring, kept simple.',
-    lead: 'Otterly is monitoring with a low entry price and add-on engines. We run ChatGPT, Gemini, and Claude on one audit without per-engine add-ons, then keep the raw response under the metric.',
+    tagline:
+      'Compare monitoring, citation investigation and the evaluation questions that matter for your prompt portfolio.',
+    lead: 'Otterly AI presents an AI search monitoring and optimization workflow covering brand visibility, cited sources and website-related recommendations. CiteLadder connects tracked answer observations with source analysis and Site Health.',
+    context:
+      'Compare how each workflow supports the questions your team tracks and the investigation it needs to perform after a change appears.',
+    metaTitle: 'CiteLadder vs Otterly AI for AI Search Monitoring | CiteLadder',
     metaDescription:
-      'Otterly AI is simple hosted monitoring with engine add-ons. CiteLadder runs a three-engine BYOK audit with versioned scoring and evidence under every metric.',
-    lastReviewed: CONTENT_REVIEWED,
+      'Compare CiteLadder and Otterly AI for monitoring and citation investigation. Review evaluation questions, evidence access and official product information.',
     sources: [
       {
-        label: 'OtterlyAI features',
-        url: 'https://otterly.ai/features/',
-        dimensions: ['Engines', 'Scoring', 'Evidence', 'BYOK', 'Site health', 'Provenance'],
-      },
-      {
-        label: 'OtterlyAI pricing',
-        url: 'https://otterly.ai/pricing/',
-        dimensions: ['Pricing', 'Engines'],
+        label: 'Otterly AI’s official product overview',
+        url: 'https://otterly.ai/',
+        reviewedDate: SOURCES_REVIEWED,
       },
     ],
-    rows: [
-      {
-        ...OURS.engines,
-        competitor: 'Four engines included; Claude, Gemini and AI Mode are paid add-ons.',
-      },
-      {
-        ...OURS.scoring,
-        competitor:
-          'Daily hosted tracking for coverage, position, sentiment and SoV. Methodology unpublished.',
-      },
-      {
-        ...OURS.evidence,
-        competitor: 'Link-citation analysis with reports and exports.',
-      },
-      {
-        ...OURS.byok,
-        competitor: 'Hosted. No BYOK. No extra provider subscriptions required.',
-      },
-      {
-        ...OURS.siteHealth,
-        competitor: 'GEO crawlability audit with monthly URL quotas by plan.',
-      },
-      {
-        ...OURS.provenance,
-        competitor: 'No documented scoring/analysis versioning.',
-      },
-      {
-        ...OURS.price,
-        competitor: 'Lite $29 · Standard $189 · Premium $489; engines billed per add-on.',
-      },
-    ],
-    verdict:
-      'Otterly is the easy start: lower entry price, unlimited seats, engines as add-ons. We are the inspectable audit: three engines included, versioned rules, site health in the same workspace.',
-    betterFit:
-      'Solo marketers or small teams watching a few prompts on major engines at the lowest entry price.',
+    whenBody:
+      'Include Otterly AI in your evaluation when recurring AI search monitoring and related optimization work are the starting point. Confirm the exact engine selection, observation cadence, reporting and usage limits for the proposed plan.',
+    conclusionHeading: 'Test the investigation as well as the dashboard',
+    conclusion:
+      'Choose a prompt where your brand and a competitor appear differently. Ask to inspect the answer, citation details and the route from that observation to a specific task. Compare how much context survives when the finding is exported or shared.',
   },
   {
     slug: 'scrunch-ai',
-    name: 'Scrunch AI',
-    tagline: 'AI customer experience. Get your site ready for agents.',
-    lead: 'Scrunch treats the problem as infrastructure: serve agents a different view of the site. We treat it as measurement: crawl what people and engines can already see, then score ChatGPT, Gemini, and Claude with a trail.',
+    name: 'Scrunch',
+    tagline:
+      'Consider AI visibility measurement alongside Scrunch’s monitoring, diagnostics and agent-delivery capabilities.',
+    lead: 'Scrunch describes a platform spanning AI visibility monitoring, content diagnostics, bot observability and its Agent Experience Platform for agent delivery. CiteLadder combines answer observations, cited-source analysis and website findings.',
+    context:
+      'Treat monitoring, diagnostics and changes to content delivery as distinct requirements when evaluating the two products.',
+    metaTitle: 'CiteLadder vs Scrunch for AI Search Visibility | CiteLadder',
     metaDescription:
-      'Scrunch AI optimizes what agents fetch at the edge. CiteLadder measures ChatGPT, Gemini, and Claude with deterministic AEO health on the pages you already publish.',
-    lastReviewed: CONTENT_REVIEWED,
+      'Compare CiteLadder and Scrunch across visibility investigation, site diagnostics and workflow needs. Review the questions to ask and official product sources.',
     sources: [
       {
-        label: 'Scrunch platform',
-        url: 'https://scrunch.com/about/',
-        dimensions: ['Scoring', 'Evidence', 'Site health', 'Provenance'],
-      },
-      {
-        label: 'Scrunch supported platforms',
-        url: 'https://scrunch.com/faqs/which-ai-platforms-and-llms-can-scrunch-track-and-monitor/',
-        dimensions: ['Engines'],
+        label: 'Scrunch’s official platform overview',
+        url: 'https://scrunch.com/',
+        reviewedDate: SOURCES_REVIEWED,
       },
     ],
-    rows: [
-      {
-        ...OURS.engines,
-        competitor: 'Brand presence across answer engines; public pages omit a per-plan roster.',
-      },
-      {
-        ...OURS.scoring,
-        competitor: 'Monitoring with citations inside a broader suite. Methodology unpublished.',
-      },
-      {
-        ...OURS.evidence,
-        competitor: 'Citations reporting for brand references in AI answers.',
-      },
-      {
-        ...OURS.siteHealth,
-        competitor: 'Edge AXP serves AI-optimized content, plus agent traffic analytics.',
-      },
-      {
-        ...OURS.provenance,
-        competitor: 'No published scoring/analysis versioning.',
-      },
-    ],
-    verdict:
-      'Same diagnosis, different treatment. Scrunch serves agents at the edge. We measure ChatGPT, Gemini and Claude with deterministic scores and built-in AEO health on the published site.',
-    betterFit:
-      'Teams that want the site to serve optimized content to AI agents at the edge: infrastructure, not only measurement.',
+    whenBody:
+      'Include Scrunch in your evaluation if agent traffic observability or agent-specific content delivery is an important part of the project. Ask what implementation is required, how content consistency is maintained and which capabilities are included in the selected plan.',
+    conclusionHeading: 'Separate the observation from the intervention',
+    conclusion:
+      'Ask each vendor to show how it identifies a visibility issue and what it proposes changing. If the proposal affects delivery infrastructure, review rollout, verification and rollback requirements separately from reporting requirements.',
   },
   {
     slug: 'peec-ai',
     name: 'Peec AI',
-    tagline: 'AI search analytics for marketing teams.',
-    lead: 'Peec is a clean analytics dashboard across six platforms. We trade that breadth for proof: three engines, your keys, site health, and a metric that still opens to the answer.',
+    tagline:
+      'Compare an AI search analytics workflow with CiteLadder’s visibility, source-analysis and website context.',
+    lead: 'Peec AI presents AI search analytics for marketing teams, with visibility reporting and reporting/export integrations. CiteLadder brings tracked AI answers, cited-source analysis and Site Health into a shared project workflow.',
+    context:
+      'Compare the reporting questions your team needs to answer and how easily it can move from an aggregate result to the underlying evidence.',
+    metaTitle: 'CiteLadder vs Peec AI for AI Search Analytics | CiteLadder',
     metaDescription:
-      'Peec AI covers six AI platforms with hosted analytics. CiteLadder covers ChatGPT, Gemini, and Claude with BYOK, site health, and raw-answer provenance.',
-    lastReviewed: CONTENT_REVIEWED,
+      'Compare CiteLadder and Peec AI for AI search analytics and reporting. Review measurement definitions, source investigation and official product information.',
     sources: [
       {
-        label: 'Peec AI pricing',
-        url: 'https://peec.ai/pricing',
-        dimensions: ['Engines', 'Scoring', 'Evidence', 'BYOK', 'Provenance'],
-      },
-      {
-        label: 'Peec AI for agencies',
-        url: 'https://peec.ai/pricing-agencies',
-        dimensions: ['Engines', 'Scoring', 'Evidence', 'BYOK', 'Provenance'],
+        label: 'Peec AI’s official product overview',
+        url: 'https://peec.ai/',
+        reviewedDate: SOURCES_REVIEWED,
       },
     ],
-    rows: [
-      {
-        ...OURS.engines,
-        // Not "on every plan": a rival's per-tier model availability is not
-        // something this repository can stand behind, and the comparison pages
-        // only make claims we can. The platform list itself is published.
-        competitor: 'Six platforms: ChatGPT, AI Mode, Overviews, Copilot, Perplexity, Gemini.',
-      },
-      {
-        ...OURS.scoring,
-        competitor: 'Daily visibility, position and sentiment analytics. Methodology unpublished.',
-      },
-      {
-        ...OURS.evidence,
-        competitor: 'Source and citation insights with exports and Looker Studio.',
-      },
-      {
-        ...OURS.byok,
-        competitor: 'Hosted analytics. No BYOK on public plans.',
-      },
-      {
-        ...OURS.provenance,
-        competitor: 'No documented scoring/analysis versioning.',
-      },
-    ],
-    verdict:
-      'Peec is the tidy six-platform dashboard with exports your agency already knows. We are the narrower stack with versioned scores, built-in site health, and every metric tied to the raw answer.',
-    betterFit:
-      'SEO and content teams that want a simple analytics dashboard across major AI platforms with agency-friendly reporting.',
+    whenBody:
+      'Include Peec AI in your evaluation when AI search analytics and recurring reporting are central requirements. Confirm the collection sources, metric definitions and reporting integrations available in your selected plan.',
+    conclusionHeading: 'Compare definitions before percentages',
+    conclusion:
+      'Use the same business question and inspect how each product defines visibility, position and competitor presence. Check the observation set, available source context and export format. A difference between dashboard percentages can reflect a different method rather than a different underlying business outcome.',
   },
 ];

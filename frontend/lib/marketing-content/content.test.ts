@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { headingId } from '@/components/marketing/blog/post-blocks';
 
 import { POSTS, type BlogBlock } from './blog';
-import { COMPETITORS, FACT_ROWS, FAIRNESS_POINTS } from './compare';
+import { COMPETITORS } from './compare';
 import { FAQ_GROUPS } from './faq';
 import { AI_POLICY, COOKIE_POLICY, FOOTER_LEGAL_LINKS, type LegalDocument } from './legal';
 import { CANCELLATION_POLICY, CONTACT_PAGE, REFUND_POLICY } from './legal-billing';
@@ -171,9 +171,11 @@ describe('pricing content', () => {
 });
 
 describe('blog content', () => {
-  it('provides PNG share images at the dimensions declared in article metadata', () => {
+  it('gives every published post a PNG share image at the declared dimensions', () => {
     for (const post of POSTS) {
-      const image = readFileSync(resolve(process.cwd(), 'public', post.image.slice(1)));
+      // A post without one shares as a small text card on social platforms.
+      expect(post.image, post.slug).toMatch(/^\/.+\.png$/);
+      const image = readFileSync(resolve(process.cwd(), 'public', String(post.image).slice(1)));
       expect(image.subarray(0, 8).toString('hex'), post.slug).toBe('89504e470d0a1a0a');
       expect(image.readUInt32BE(16), post.slug).toBe(1080);
       expect(image.readUInt32BE(20), post.slug).toBe(630);
@@ -301,7 +303,7 @@ describe('blog content', () => {
             )
           : [],
       );
-      expect(internalLinks, post.slug).toContain('/solutions');
+      expect([...internalLinks, post.closing?.secondary?.href], post.slug).toContain('/solutions');
       expect(
         internalLinks.some((href) => href.startsWith('/blog/')),
         post.slug,
@@ -314,11 +316,6 @@ describe('comparison content', () => {
   it('names every competitor uniquely', () => {
     const names = COMPETITORS.map((competitor) => competitor.name);
     expect(new Set(names).size).toBe(names.length);
-  });
-
-  it('states the fairness position and the fact rows', () => {
-    expect(FAIRNESS_POINTS.length).toBeGreaterThan(0);
-    expect(FACT_ROWS.length).toBeGreaterThan(0);
   });
 
   it('gives every competitor a unique lead and meta description', () => {
@@ -412,8 +409,6 @@ describe('commercial positioning', () => {
     ...FAQ_GROUPS.flatMap((group) => group.items.flatMap((item) => [item.q, item.a])),
     ...Object.values(PLAN_PRESENTATION).map((plan) => plan.blurb),
     ...stringsIn(COMPETITORS),
-    ...stringsIn(FAIRNESS_POINTS),
-    ...stringsIn(FACT_ROWS),
     ...ALL_LEGAL.flatMap((document) =>
       document.sections.flatMap((section) => [
         ...(section.paragraphs ?? []),

@@ -46,7 +46,7 @@ Consume semantic roles, never page-local values.
 | Interaction | Emerald: forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC`. | Primary actions, links, tab underlines, checked indicators and focus; navigation and filter selection use neutral tints |
 | Evidence | `success`, `warning`, `danger`, `info`; `chart-1..8`, `chart-grid` | Status families carry labelled status; data-viz roles carry measurements |
 
-Hierarchy is carried by boundary and tone, not by elevation: the app's rail, ground and paper are distinct fills, while an inset box may use an edge. Shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips). A `Card` has no resting shadow.
+Hierarchy is carried by boundary and tone, not by elevation: the app's rail, ground and paper are distinct fills, while an inset box may use an edge. Shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips), with a shallow raised edge and inset highlight allowed for primary marketing CTA buttons. A `Card` has no resting shadow.
 
 **Borders.** A line may draw the edge of an inset white panel, status card, overlay, control or field, or divide rows and peers inside one surface (including the full-width rule closing each page band). Default cards and table wrappers have no outer border: their paper fill separates them from workspace ground. Selection uses a distinct neutral tint and the family's indicator, without a resting shadow. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space, not by a rule above or around them. The workspace pane has no seam against the ground. Lines use a token at full strength, never an alpha-faded colour.
 
@@ -193,7 +193,7 @@ consumers without becoming another value authority.
 
 ## Typography
 
-Sora headings use normal letter spacing, without custom tracking. The homepage H1 steps down by 2px at the mobile breakpoint (540px and below).
+Sora headings use normal letter spacing, without custom tracking. The homepage H1 steps down by 4px at the mobile breakpoint (540px and below).
 
 Use Switzer for text and figures and Sora for the page title and public headings; metrics, dates, ranks, and percentages use tabular numerals, not monospace. Switzer's default digits are already tabular, so numbers stay out of the display face. Weights are 400 (sentences), 500 (labels, controls, badges) and 600 (titles, figures). Do not assemble page-local size/weight/ink hierarchies.
 
@@ -244,6 +244,7 @@ The ladder is strictly ordered: a section title never out-sizes the page title a
 | Content gutter | 32px | 24px / 16px |
 | Navigation row / tabs | 32px | 32px |
 | Control (small / default / large) | 28 / 32 / 36px | 28 / 32 / 36px |
+| Marketing CTA (default / homepage) | 34 / 44px minimum | Text width at 540px and below |
 | Table row (standard / dense) | 36 / 32px | Same roles or labelled record layout |
 
 Data columns and their headers are centre-aligned and tabular; text columns stay left-aligned. The header centres with its values so a column reads as one block — a sort glyph pushed to the padding edge leaves the label sitting off the numbers by its own width. This resolves the table-header precedence question previously recorded as unresolved: the shared `numeric` flag on `TableHead`/`TableCell` owns both alignment and tabular figures, and call sites do not re-declare either.

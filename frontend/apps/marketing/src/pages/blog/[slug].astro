@@ -13,7 +13,9 @@ const breadcrumb = post
       { name: post.title, path: `/blog/${post.slug}` },
     ])
   : null;
-const title = post ? `${post.seoTitle} · CiteLadder` : 'Post not found · CiteLadder';
+const title = post
+  ? post.seoTitle.endsWith(' | CiteLadder') ? post.seoTitle : `${post.seoTitle} · CiteLadder`
+  : 'Post not found · CiteLadder';
 const description = post?.seoDescription ?? 'The requested CiteLadder resource does not exist.';
 ---
 
@@ -28,7 +30,7 @@ const description = post?.seoDescription ?? 'The requested CiteLadder resource d
   modifiedTime={post ? post.dateModified ?? post.date : undefined}
   author={post?.author}
   tags={post?.tags}
-  twitterCard={post ? 'summary_large_image' : undefined}
+  twitterCard={post?.image ? 'summary_large_image' : undefined}
   robots={post ? undefined : 'noindex'}
   jsonLd={breadcrumb ? [breadcrumb] : []}
 >

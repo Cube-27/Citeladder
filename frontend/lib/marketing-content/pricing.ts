@@ -31,10 +31,22 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   audit_web_search: 'Web-search-grounded audits',
   authenticated_exports: 'Authenticated exports',
   agent: 'Agent',
+  ai_credits: 'AI credits',
+  query_fanouts: 'Query fanouts',
+  fanout: 'Query fanouts',
+  grok: 'Grok',
+  perplexity: 'Perplexity',
+  copilot: 'Microsoft Copilot',
+  'Provider.grok': 'Grok',
+  'Provider.perplexity': 'Perplexity',
+  'Provider.copilot': 'Microsoft Copilot',
+  'provider.grok': 'Grok',
+  'provider.perplexity': 'Perplexity',
+  'provider.copilot': 'Microsoft Copilot',
 };
 
 export function capabilityLabel(key: string): string {
   if (Object.hasOwn(CAPABILITY_LABELS, key)) return CAPABILITY_LABELS[key];
-  const words = key.replaceAll('_', ' ');
+  const words = key.replaceAll('_', ' ').replaceAll('.', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }

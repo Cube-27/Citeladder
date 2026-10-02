@@ -30,22 +30,24 @@ function ArticleCard({ post }: Readonly<{ post: BlogPostSummary }>) {
   return (
     <article className="border-border-subtle bg-panel hover:border-accent-border overflow-hidden rounded-[var(--radius-card)] border transition-colors">
       <div className="flex flex-col sm:flex-row">
-        <a
-          href={`/blog/${post.slug}`}
-          tabIndex={-1}
-          aria-hidden="true"
-          className="bg-panel-tonal relative aspect-[12/7] shrink-0 sm:w-[15rem] lg:w-[16rem]"
-        >
-          <img
-            src={post.cardImage ?? post.image}
-            alt=""
-            width={1080}
-            height={630}
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 size-full object-contain"
-          />
-        </a>
+        {(post.cardImage ?? post.image) && (
+          <a
+            href={`/blog/${post.slug}`}
+            tabIndex={-1}
+            aria-hidden="true"
+            className="bg-panel-tonal relative aspect-[12/7] shrink-0 sm:w-[15rem] lg:w-[16rem]"
+          >
+            <img
+              src={post.cardImage ?? post.image}
+              alt=""
+              width={1080}
+              height={630}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 size-full object-contain"
+            />
+          </a>
+        )}
         <div className="min-w-0 flex-1 p-5 sm:p-6">
           {post.tags[0] ? (
             <span className="bg-accent-soft text-accent-text inline-flex rounded-full px-3 py-1 text-xs font-medium">

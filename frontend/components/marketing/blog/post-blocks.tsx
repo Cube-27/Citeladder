@@ -395,6 +395,7 @@ function RichParagraph({
             <a
               key={`${part.href}:${index}`}
               href={part.href}
+              {...(part.href.startsWith('https://') ? { target: '_blank', rel: 'noreferrer' } : {})}
               className="text-accent-text decoration-accent-border underline underline-offset-4 hover:decoration-current"
             >
               {part.text}

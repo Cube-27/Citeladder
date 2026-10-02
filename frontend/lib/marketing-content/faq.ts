@@ -2,15 +2,15 @@
  * FAQ content for /faq, aligned to the governed product loop in
  * docs/architecture.md.
  *
- * Answers describe the platform's architecture and guarantees at the vision
- * level; commercial answers follow lib/marketing-content/pricing.ts, the single
- * source for every published price and quota. Keep answers short and specific,
+ * Commercial amounts, quotas and availability come from the published catalog.
+ * Keep answers short and specific,
  * and never invent numbers, customers, or certainty.
  */
 
 type FaqItem = {
   q: string;
   a: string;
+  links?: readonly { label: string; href: string }[];
 };
 
 export type FaqGroup = {
@@ -18,8 +18,8 @@ export type FaqGroup = {
   items: readonly FaqItem[];
 };
 
-function faqItem(q: string, a: string): FaqItem {
-  return { q, a };
+function faqItem(q: string, a: string, links?: FaqItem['links']): FaqItem {
+  return { q, a, links };
 }
 
 export const FAQ_GROUPS: readonly FaqGroup[] = [
@@ -28,7 +28,8 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     items: [
       faqItem(
         'What is CiteLadder?',
-        'CiteLadder is AI visibility software for answer-engine optimization. It connects what your site proves with what people search for, ranks the next gap, and tracks observed mentions and citations in ChatGPT, Gemini, and Claude under a versioned prompt set. Every number opens to the artifact it came from.',
+        'CiteLadder is AI visibility software that helps teams inspect brand mentions, cited sources and competitor presence in tracked AI answers. It connects that answer evidence with website findings so teams can investigate what to improve.',
+        [{ label: 'Explore AI share of voice', href: '/ai-search-share-of-voice' }],
       ),
       faqItem(
         'What is AEO?',
@@ -40,15 +41,21 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'What is the difference between a mention and a citation?',
-        'A mention is the brand, product, or domain appearing in the answer text. A citation is the engine pointing at a source (a link, a chip, a named URL). You can be mentioned without being cited, and cited without being recommended. Share of voice is how often you appear versus named competitors on the same prompt set. Coverage is whether the run actually completed. Those four states are not interchangeable.',
+        'A mention means a brand or product appears in the answer text. A citation identifies a source referenced by the answer. Neither observation, on its own, proves a referral visit or a purchase.',
+        [{ label: 'Explore citation tracking', href: '/ai-citation-tracking' }],
       ),
       faqItem(
-        'Which answer engines does CiteLadder measure?',
-        'Three are available today: ChatGPT, Gemini, and Claude. Three are coming soon: Perplexity, Grok, and Copilot. Availability still depends on the provider account you connect.',
+        'Which engines and sources can I track?',
+        'Available engines and collection options depend on the current product configuration and the providers you connect. Check availability when setting up your project, and keep the collection source in view when interpreting a result.',
+      ),
+      faqItem(
+        'Do these observations represent every answer a consumer will see?',
+        'No. Results reflect the prompts, source and conditions used for the observation. Consumer experiences can differ because of factors such as account context, location, conversation history and collection method.',
+        [{ label: 'Understand AI share of voice', href: '/ai-search-share-of-voice' }],
       ),
       faqItem(
         'How is the product organized?',
-        'Five stations form one loop: Overview, Connect, Analyze, Act, and Track. Site Health, Content Intelligence, Demand Intelligence, and the bounded Agent sit behind those stations. Improve / Verify is the transition after you declare a change, not a separate workspace.',
+        'CiteLadder brings AI visibility, source analysis, Site Health and connected workflows into a shared project. Use the evidence behind each observation to decide what to investigate next.',
       ),
       faqItem(
         'How does the growth loop work?',
@@ -134,8 +141,9 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
         'No. Model usage bills straight to your provider accounts and never passes through us. CiteLadder charges for the workspace, the intelligence, and the evidence. Current plan prices are at /pricing.',
       ),
       faqItem(
-        'What do I need to get started?',
-        'A plan from /pricing and your own AI provider key. The key is what runs the measurement and generation on your behalf.',
+        'How do I get started?',
+        'Book a demo to discuss your use case and current access options. Published plans and availability information are on the pricing page.',
+        [{ label: 'View pricing', href: '/pricing' }],
       ),
       faqItem(
         'Can I change plan later?',

@@ -15,8 +15,6 @@ import {
 import { EngineLogo } from '../primitives/engine-logo';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
-import { appHref } from '@/lib/config/app-link';
-import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import {
   CAPABILITIES,
   FAQS,
@@ -41,31 +39,26 @@ function Hero() {
     <header className="cl-hero">
       <div className="cl-wrap">
         <div className="cl-hero-copy">
-          <h1>
-            AI search intelligence.
-            <br />
-            <em>Shape how your brand shows up in AI.</em>
-          </h1>
+          <span className="cl-overline">AI visibility and citation tracking</span>
+          <h1>AI visibility software for brands that want to be found.</h1>
           <p>
-            AI visibility, citation analysis, site readiness and content intelligence in one
-            connected workspace.
+            Understand where your brand appears in AI answers, which sources get cited, and how your
+            visibility compares with competitors. Bring answer evidence and website findings
+            together so your team can decide what to improve next.
           </p>
           <div className="cl-hero-actions">
             <DemoLink />
-            {selfServeSignupOpen() ? (
-              <ButtonLink
-                href={appHref('/register')}
-                variant="soft"
-                size="marketing"
-                className="cl-cta"
-              >
-                Start free trial <ArrowRight size={18} aria-hidden />
-              </ButtonLink>
-            ) : null}
+            <ButtonLink
+              href="/ai-citation-tracking"
+              variant="soft"
+              size="marketing"
+              className="cl-cta"
+            >
+              Explore citation tracking <ArrowRight size={18} aria-hidden />
+            </ButtonLink>
           </div>
           <p className="cl-hero-note">
-            Source-level evidence &nbsp; · &nbsp; Provider-key control &nbsp; · &nbsp; MCP
-            connectivity
+            Brand mentions · Cited sources · Competitor visibility · Site health
           </p>
         </div>
         <div className="cl-hero-stage">
@@ -88,15 +81,15 @@ function EngineStrip() {
         <section className="cl-engines" aria-label="Monitored answer engines">
           <span>
             <EngineLogo engine="openai" className="cl-engine-icon" />
-            ChatGPT
+            OpenAI API
           </span>
           <span>
             <EngineLogo engine="gemini" className="cl-engine-icon" />
-            Gemini
+            Gemini API
           </span>
           <span>
             <EngineLogo engine="claude" className="cl-engine-icon" />
-            Claude
+            Claude API
           </span>
           <span>
             <EngineLogo engine="google" className="cl-engine-icon" />
@@ -108,13 +101,21 @@ function EngineStrip() {
   );
 }
 
-function Intelligence({ selectModule }: Readonly<{ selectModule: (module: ModuleId) => void }>) {
+function Intelligence() {
   return (
     <section className="cl-section" id="why">
       <div className="cl-wrap">
         <div className="cl-section-head">
-          <h2>Visibility, sources and site readiness.</h2>
-          <p>AI answers and website analysis, organized around shared business questions.</p>
+          <h2>Turn AI answers into a clearer marketing picture.</h2>
+          <p>
+            AI answers can introduce a buyer to your brand, leave it out, or rely on another website
+            to describe it. CiteLadder helps you examine those observations across the questions
+            your team chooses to track.
+          </p>
+          <p>
+            Start with the answer, inspect the sources, and connect the finding to a specific next
+            step.
+          </p>
         </div>
         <div className="cl-capabilities">
           {CAPABILITIES.map((capability) => (
@@ -122,6 +123,7 @@ function Intelligence({ selectModule }: Readonly<{ selectModule: (module: Module
               <div className="cl-cap-well">
                 <div className="cl-cap-top">
                   <span>{capability.label}</span>
+                  <span>Illustrative example</span>
                 </div>
                 <div className="cl-cap-graphic" aria-hidden>
                   {capability.tab === 'visibility' ? (
@@ -170,11 +172,7 @@ function Intelligence({ selectModule }: Readonly<{ selectModule: (module: Module
               <div className="cl-cap-body">
                 <h3>{capability.title}</h3>
                 <p>{capability.body}</p>
-                <a
-                  className="cl-text-link"
-                  href="/#see-it"
-                  onClick={() => selectModule(capability.tab)}
-                >
+                <a className="cl-text-link" href={capability.href} data-marketing-cta="">
                   {capability.action} <ArrowRight size={16} aria-hidden />
                 </a>
               </div>
@@ -191,8 +189,7 @@ function Workflow() {
     <section className="cl-section cl-workflow" id="how-it-works">
       <div className="cl-wrap">
         <div className="cl-section-head">
-          <h2>From discovery to verification.</h2>
-          <p>A repeatable sequence for measurement, analysis and content development.</p>
+          <h2>Start with a question your buyer would ask.</h2>
         </div>
         <ol className="cl-steps">
           {WORKFLOW_STEPS.map(([number, title, body]) => (
@@ -349,24 +346,17 @@ function Closing() {
     <section className="cl-section cl-closing" id="get-started">
       <div className="cl-wrap cl-closing-grid">
         <div>
-          <h2>AI search intelligence, in one workspace.</h2>
+          <h2>See how CiteLadder fits your AI visibility workflow.</h2>
           <p>
-            See brand visibility, source analysis, website readiness and evidence-backed content
-            workflows in one working session.
+            Bring the questions your buyers ask. We’ll walk through the visibility and source
+            evidence that can help your team decide what to investigate next.
           </p>
         </div>
         <div className="cl-closing-actions">
           <DemoLink />
-          {selfServeSignupOpen() ? (
-            <ButtonLink
-              href={appHref('/register')}
-              variant="dark"
-              size="marketing"
-              className="cl-cta"
-            >
-              Start free trial <ArrowRight size={18} aria-hidden />
-            </ButtonLink>
-          ) : null}
+          <ButtonLink href="/pricing" variant="dark" size="marketing" className="cl-cta">
+            View pricing <ArrowRight size={18} aria-hidden />
+          </ButtonLink>
         </div>
       </div>
     </section>
@@ -379,8 +369,18 @@ export function LandingPage() {
     <div className="cl-landing">
       <Hero />
       <EngineStrip />
-      <Intelligence selectModule={setModule} />
+      <Intelligence />
       <Workflow />
+      <section className="cl-section" aria-labelledby="interpretation-title">
+        <div className="cl-wrap cl-section-head">
+          <h2 id="interpretation-title">Understand what the data represents.</h2>
+          <p>
+            Tracked answers are observations from a defined set of prompts and collection
+            conditions. They are not a census of every AI conversation. A mention, a citation and a
+            referral visit describe different outcomes.
+          </p>
+        </div>
+      </section>
       <PlatformExplorer selected={module} selectModule={setModule} />
       <Evidence />
       <Integrations />

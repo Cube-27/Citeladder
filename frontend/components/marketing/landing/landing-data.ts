@@ -55,33 +55,51 @@ export const HERO_SOURCE_MIX = [
 export const CAPABILITIES = [
   {
     label: 'BRAND PRESENCE',
-    title: 'AI visibility',
-    body: 'Brand mentions, positions and competitor presence across tracked prompts.',
-    action: 'Visibility analysis',
+    title: 'Track brand visibility',
+    body: 'Review brand mentions and competitor presence across your tracked questions. Compare observations over time with the prompt and run context kept in view.',
+    action: 'Explore AI share of voice',
+    href: '/ai-search-share-of-voice',
     tab: 'visibility',
   },
   {
     label: 'CITATION CONTEXT',
-    title: 'Source intelligence',
-    body: 'Cited domains, URLs and source patterns behind recorded AI answers.',
-    action: 'Source analysis',
+    title: 'Investigate cited sources',
+    body: 'See which domains and pages appear as sources in recorded answers. Distinguish your own pages from the other sources shaping the response.',
+    action: 'Explore citation tracking',
+    href: '/ai-citation-tracking',
     tab: 'sources',
   },
   {
     label: 'WEBSITE READINESS',
-    title: 'Site Health',
-    body: 'Technical and AEO findings supported by page-level crawl evidence.',
-    action: 'Website analysis',
+    title: 'Examine website readiness',
+    body: 'Connect an answer observation with page-level Site Health findings. Investigate whether important information is accessible, clearly presented and supported.',
+    action: 'Explore team workflows',
+    href: '/solutions',
     tab: 'health',
   },
 ] as const;
 
 export const WORKFLOW_STEPS = [
-  ['01', 'Discover', 'Business context, competitor research and a relevant prompt portfolio.'],
-  ['02', 'Observe', 'Brand mentions, positions and citations across configured engines.'],
-  ['03', 'Diagnose', 'Source patterns, page-level findings and demand context.'],
-  ['04', 'Act', 'Evidence-backed content briefs, drafts and documented changes.'],
-  ['05', 'Verify', 'Comparable follow-up runs and recorded changes in performance.'],
+  [
+    '01',
+    'Choose the questions',
+    'Build a prompt set around the products, services and buying decisions that matter to your business.',
+  ],
+  [
+    '02',
+    'Review the answers',
+    'Look at mentions, competitors and cited sources within the recorded responses.',
+  ],
+  [
+    '03',
+    'Choose an improvement',
+    'Use the evidence to investigate a product page, explanation, comparison or external source.',
+  ],
+  [
+    '04',
+    'Check again',
+    'Compare later observations with the earlier baseline, keeping changes to prompts and collection conditions visible.',
+  ],
 ] as const;
 
 export const MODULES = [

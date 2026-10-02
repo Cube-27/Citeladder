@@ -26,6 +26,3 @@ export const FOUNDER: PublicPerson = {
   linkedin: 'https://www.linkedin.com/in/arpan-jain-17938b43/',
   organization: 'Cube27',
 };
-
-/** ISO date for the 3 Sep 2026 content pass. */
-export const CONTENT_REVIEWED = '2026-09-03';

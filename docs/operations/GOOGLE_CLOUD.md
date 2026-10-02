@@ -68,8 +68,8 @@ Docs Worker (static, no origin)                            │ starts runner aft
 - `infra/gcp/*.tf`, `infra/gcp/postgres-vm.sh`, `infra/gcp/postgres/Dockerfile`:
   the environment ([README](../../infra/gcp/README.md)).
 - `infra/gcp/bootstrap.ps1`: APIs, state bucket, deployer and WIF trust.
-- `.github/workflows/gcp-deploy.yml`: gates, images, secrets, migration,
-  Terraform and smoke.
+- `.github/workflows/gcp-deploy.yml`: green `ci.yml` run for the exact commit,
+  images, secrets, migration, Terraform and smoke.
 - `frontend/services/api/src/http/origin-token.ts`: origin admission, public
   host and client address.
 - `frontend/services/api/src/workers/runner.ts`, `start-runner.ts`: runner,

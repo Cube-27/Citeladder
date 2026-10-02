@@ -58,12 +58,12 @@ export function Evidence() {
         <div className="cl-record-stage">
           <div className="cl-record">
             <div className="cl-window-bar">
-              <FileText size={14} aria-hidden /> Answer record
+              <FileText size={14} aria-hidden /> Answer record · Illustrative example
             </div>
             <div className="cl-record-body">
               <div className="cl-record-label">
                 <span>TRACKED PROMPT</span>
-                <span>ChatGPT · Sep 19</span>
+                <span>ChatGPT Search · Sep 19</span>
               </div>
               <h3>Which workflow platforms support multi-team operations?</h3>
               <p className="cl-answer">
@@ -123,6 +123,7 @@ export function Evidence() {
       >
         <div className="cl-drawer-body">
           <span className="cl-overline">SOURCE RECORD</span>
+          <p>Illustrative example</p>
           <h3>{source.name}</h3>
           <p>{source.detail}</p>
           <dl>
@@ -131,7 +132,7 @@ export function Evidence() {
             <dt>Source type</dt>
             <dd>{source.type}</dd>
             <dt>Engine</dt>
-            <dd>ChatGPT</dd>
+            <dd>ChatGPT Search</dd>
             <dt>Prompt</dt>
             <dd>Multi-team operations</dd>
             <dt>Observation</dt>

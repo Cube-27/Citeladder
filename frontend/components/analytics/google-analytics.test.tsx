@@ -6,6 +6,7 @@ import { COOKIE_CONSENT_STORAGE_KEY, writeConsent } from '@/lib/consent/cookie-c
 
 import { CookieBanner } from '../marketing/chrome/cookie-banner';
 import { GoogleAnalytics } from './google-analytics';
+import { ButtonLink, DemoButtonLink } from '../marketing/primitives/button';
 
 describe('GoogleAnalytics', () => {
   beforeEach(() => window.localStorage.clear());
@@ -15,6 +16,67 @@ describe('GoogleAnalytics', () => {
       .forEach((script) => script.remove());
     Reflect.deleteProperty(window, 'dataLayer');
     Reflect.deleteProperty(window, 'gtag');
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('counts one consented CTA and outbound event without treating a click as a booking', async () => {
+    const user = userEvent.setup();
+    const gtag = vi.fn();
+    Reflect.set(window, 'gtag', gtag);
+    window.history.replaceState(null, '', '/ai-citation-tracking?email=private@example.com');
+    const view = render(
+      <>
+        <GoogleAnalytics measurementId="G-TEST" />
+        <header data-cta-placement="hero">
+          <DemoButtonLink onClick={(event) => event.preventDefault()}>
+            <span>Book a demo</span>
+          </DemoButtonLink>
+          <ButtonLink href="/pricing" onClick={(event) => event.preventDefault()}>
+            View pricing
+          </ButtonLink>
+        </header>
+      </>,
+    );
+    await user.click(screen.getByText('Book a demo'));
+    expect(gtag.mock.calls.filter(([command]) => command === 'event')).toHaveLength(0);
+    act(() => writeConsent('accepted'));
+    Reflect.set(window, 'gtag', gtag);
+    await user.click(screen.getByText('Book a demo'));
+    const fields = {
+      page_path: '/ai-citation-tracking',
+      placement: 'hero',
+      cta_label: 'Book a demo',
+      destination_type: 'demo',
+    };
+    expect(gtag.mock.calls.filter(([command]) => command === 'event')).toEqual([
+      ['event', 'marketing_cta_click', fields],
+      ['event', 'demo_outbound_click', fields],
+    ]);
+    gtag.mockClear();
+    document.querySelector('header')!.removeAttribute('data-cta-placement');
+    await user.click(screen.getByRole('link', { name: 'View pricing' }));
+    expect(gtag).toHaveBeenCalledExactlyOnceWith('event', 'marketing_cta_click', {
+      ...fields,
+      placement: 'header',
+      cta_label: 'View pricing',
+      destination_type: 'internal',
+    });
+    act(() => writeConsent('rejected'));
+    gtag.mockClear();
+    await user.click(screen.getByText('Book a demo'));
+    expect(gtag).not.toHaveBeenCalled();
+    view.unmount();
+    act(() => writeConsent('accepted'));
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<a href="https://www.cube27.com/contact/" id="detached-demo">Demo</a>',
+    );
+    const detached = document.getElementById('detached-demo')!;
+    detached.addEventListener('click', (event) => event.preventDefault());
+    await user.click(detached);
+    detached.remove();
+    expect(gtag).not.toHaveBeenCalled();
+    writeConsent('rejected');
   });
 
   it('does not render a tag before consent or after rejection', async () => {

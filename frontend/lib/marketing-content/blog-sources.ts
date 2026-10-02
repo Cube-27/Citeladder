@@ -16,6 +16,30 @@ import type { BlogSource } from './blog';
  * its own behaviour — over secondary coverage of it.
  */
 export const BLOG_SOURCES = {
+  googleAiFeatures: {
+    id: 'google-ai-features',
+    title: 'AI features and your website',
+    publisher: 'Google Search Central',
+    url: 'https://developers.google.com/search/docs/appearance/ai-features',
+  },
+  googleRobots: {
+    id: 'google-robots',
+    title: 'Robots.txt guidance',
+    publisher: 'Google Search Central',
+    url: 'https://developers.google.com/search/docs/crawling-indexing/robots/intro',
+  },
+  googleNoindex: {
+    id: 'google-noindex',
+    title: 'Google’s noindex documentation',
+    publisher: 'Google Search Central',
+    url: 'https://developers.google.com/search/docs/crawling-indexing/block-indexing',
+  },
+  googleJavaScript: {
+    id: 'google-javascript',
+    title: 'JavaScript SEO guidance',
+    publisher: 'Google Search Central',
+    url: 'https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics',
+  },
   gaAiAssistant: {
     id: 'ga-ai-assistant',
     title: 'Default channel group: AI Assistant',
