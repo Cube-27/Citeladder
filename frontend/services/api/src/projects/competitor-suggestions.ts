@@ -1,7 +1,7 @@
 /**
  * Evidence-backed competitor suggestions from completed audits.
  *
- * The Python analysis service records candidates; a person accepts one here,
+ * The native audit projection records candidates; a person accepts one here,
  * which adds (or reuses) a tracked competitor. Accepts take the project row
  * lock before the candidate row, so concurrent accepts cannot both add a
  * competitor past the project ceiling or duplicate one.

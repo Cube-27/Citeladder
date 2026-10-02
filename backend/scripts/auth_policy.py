@@ -6,7 +6,6 @@ from typing import Any
 from pydantic_settings import BaseSettings
 
 from app.core.config import auth as auth_config
-from app.core.config import legal as legal_config
 from app.core.config import site_health_crawl_policy as crawl_policy
 from app.core.config import workspaces as workspace_config
 from app.core.config.site_health_runtime import SiteHealthSettings
@@ -23,8 +22,6 @@ def auth_policy() -> dict[str, Any]:
             "parallelism": auth_config.ARGON2_PARALLELISM,
             "outputLen": auth_config.ARGON2_HASH_LENGTH,
         },
-        "terms_revision": legal_config.TERMS_REVISION,
-        "privacy_revision": legal_config.PRIVACY_NOTICE_REVISION,
     }
 
 
@@ -56,6 +53,4 @@ def workspace_policy() -> dict[str, Any]:
             workspace_config.MAX_PENDING_INVITATIONS_PER_WORKSPACE
         ),
         "roles": {role: list(effective_capabilities(role)) for role in WORKSPACE_ROLES},
-        "forbidden_code": workspace_config.CODE_WORKSPACE_ROLE_FORBIDDEN,
-        "denial_messages": dict(workspace_config.CAPABILITY_DENIAL_MESSAGES),
     }

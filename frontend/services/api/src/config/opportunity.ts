@@ -2,6 +2,9 @@
 export const opportunityDeclaration = { output_phase_outline: 'outline' };
 
 export const opportunities = {
+  CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: 'implementation_idempotency_conflict',
+  CODE_IMPLEMENTATION_TARGET_CONFLICT: 'implementation_target_conflict',
+  CODE_OPPORTUNITY_ORDER_CONFLICT: 'opportunity_order_conflict',
   RULE_PRODUCT_NOT_MENTIONED: 'product_not_mentioned',
   RULE_CITED_ALTERNATIVES: 'cited_alternatives_without_uploaded_presence',
   RULE_CATALOG_FIELDS_MISSING: 'catalog_fields_missing',

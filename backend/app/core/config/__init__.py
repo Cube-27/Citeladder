@@ -62,8 +62,6 @@ class Settings(BaseSettings):
         default="http://127.0.0.1:3000",
         validation_alias=AliasChoices("FRONTEND_URL", "frontend_url"),
     )
-    # Comma-separated explicit CORS origins; overrides frontend_url expansion.
-    frontend_origins: str = ""
     # Comma-separated networks whose direct peers may supply a proxy chain.
     # Production traffic reaches the private API through Next.js/ALB, so auth
     # abuse controls must recover the first untrusted address without trusting
@@ -87,15 +85,6 @@ class Settings(BaseSettings):
     jwt_expire_hours: int = Field(
         default=24,
         validation_alias=AliasChoices("JWT_EXPIRE_HOURS", "jwt_expire_hours"),
-    )
-    # Session cookie name for the HttpOnly JWT (set by B2).
-    session_cookie_name: str = "citeladder_session"
-    # Self-serve password registration. Off by default so accounts exist only
-    # when an operator creates them (``scripts/account_manager.py``) until the
-    # public policies are cleared for open sign-up.
-    public_signup_enabled: bool = Field(
-        default=False,
-        validation_alias=AliasChoices("PUBLIC_SIGNUP_ENABLED", "public_signup_enabled"),
     )
     demo_mode: bool = Field(
         default=False,
@@ -226,11 +215,6 @@ class Settings(BaseSettings):
     db_ssl_mode: Literal["disable", "require"] = Field(
         default="disable",
         validation_alias=AliasChoices("DB_SSL_MODE", "db_ssl_mode"),
-    )
-
-    request_id_header: str = Field(
-        default="X-Request-ID",
-        validation_alias=AliasChoices("REQUEST_ID_HEADER", "request_id_header"),
     )
 
     # --- Dev-test login platform-credential gate (T11) --------------------
@@ -495,21 +479,3 @@ def _check_secret_defaults() -> None:
 
 
 _check_secret_defaults()
-
-
-def get_frontend_origins() -> list[str]:
-    """Resolve the allowed CORS origins for the FastAPI CORS middleware."""
-    if settings.frontend_origins.strip():
-        return [
-            origin.strip()
-            for origin in settings.frontend_origins.split(",")
-            if origin.strip()
-        ]
-
-    origin = settings.frontend_url.rstrip("/")
-    variants = {origin}
-    if "127.0.0.1" in origin:
-        variants.add(origin.replace("127.0.0.1", "localhost"))
-    if "localhost" in origin:
-        variants.add(origin.replace("localhost", "127.0.0.1"))
-    return sorted(variants)

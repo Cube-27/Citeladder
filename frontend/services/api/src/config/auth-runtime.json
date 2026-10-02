@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "request_id_header": {
+      "env": ["REQUEST_ID_HEADER"],
+      "type": "str",
+      "default": "X-Request-ID"
+    },
+    "session_cookie_name": {
+      "env": ["SESSION_COOKIE_NAME"],
+      "type": "str",
+      "default": "citeladder_session"
+    },
+    "public_signup_enabled": {
+      "env": ["PUBLIC_SIGNUP_ENABLED"],
+      "type": "bool",
+      "default": false
+    }
+  },
+  "terms_revision": "2026-09-24",
+  "privacy_revision": "2026-09-28"
+}
