@@ -2169,19 +2169,6 @@
       },
       "probe_path": "/v3/appendix/user_data",
       "success_status": 20000
-    },
-    "app": {
-      "disclosure_revision": "1",
-      "allowed_ports": [
-        443
-      ],
-      "max_request_bytes": 256000,
-      "max_response_bytes": 512000,
-      "timeout_seconds": 60.0,
-      "probe_timeout_seconds": 10.0,
-      "probe_max_output_tokens": 4,
-      "probe_prompt": "Reply with OK. This is a customer-charged connection test.",
-      "success_detail": "Connection succeeded"
     }
   },
   "dataforseo": {
