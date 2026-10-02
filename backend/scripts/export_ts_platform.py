@@ -43,7 +43,6 @@ from app.core.config import demand as demand_config
 from app.core.config import entitlements as entitlements_config
 from app.core.config import errors as error_config
 from app.core.config import integrations_contracts as integration_contracts
-from app.core.config import jev as jev_config
 from app.core.config import legal as legal_config
 from app.core.config import oauth as oauth_config
 from app.core.config import opportunities as opportunities_config
@@ -127,7 +126,6 @@ from app.core.config.integrations_datasets import (
     DIMENSION_KEY_SEPARATOR,
     INTEGRATION_DATASET_TEMPLATES,
 )
-from app.core.config.jev import QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE
 from app.core.config.projects import (
     PROMPT_INTENTS,
     PROMPT_ORIGIN_GENERATED,
@@ -354,15 +352,6 @@ def build_config() -> dict[str, Any]:
                 for name in agent_config.DefaultAgentSettings.model_fields
             },
             "max_attempts": agent_config.GENERATION_PROVIDER_MAX_ATTEMPTS,
-            "jev": {
-                name: _setting(name, jev_config.JevSettings)
-                for name in jev_config.JevSettings.model_fields
-            },
-            "quality": {
-                name.removeprefix("JEV_").lower(): value
-                for name, value in vars(jev_config).items()
-                if name.startswith("JEV_")
-            },
         },
         "agent": _agent_policy(),
     }
@@ -419,7 +408,6 @@ def _prompts_policy() -> dict[str, Any]:
             "accepted": cfg.CANDIDATE_DISPOSITION_ACCEPTED,
             "rejected": cfg.CANDIDATE_DISPOSITION_REJECTED,
             "outcomes": sorted(cfg.CANDIDATE_OUTCOME_DISPOSITIONS),
-            "quality_gates_reported": [QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE],
         },
         "generation_settings": {
             name: _setting(name, PromptGenerationSettings)

@@ -8,6 +8,7 @@
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
+import { jev, quality, qualityGatesReported } from './config/jev.ts';
 import { appModels } from './config/app-models.ts';
 import { productTourVersion } from './config/product-tour.ts';
 import { contentDifferentiation } from './config/content-differentiation.ts';
@@ -42,6 +43,7 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   abuse,
+  models: { ...pythonConfig.models, jev, quality },
   workspaces: { ...pythonConfig.workspaces, tour_version: productTourVersion },
   providers: { ...pythonConfig.providers, app: appModels },
   content_differentiation: {
@@ -73,7 +75,11 @@ export const policy = {
       api_request_body_max_bytes: pythonConfig.api.request_body_max_bytes,
     },
   },
-  prompts: { ...pythonConfig.prompts, generation: promptGeneration },
+  prompts: {
+    ...pythonConfig.prompts,
+    generation: promptGeneration,
+    candidate: { ...pythonConfig.prompts.candidate, quality_gates_reported: qualityGatesReported },
+  },
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,
   internal_links: internalLinks,
