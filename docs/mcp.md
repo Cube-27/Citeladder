@@ -110,6 +110,15 @@ cannot be repaired by reading them. Search Intelligence summaries retain their
 dataset grain: referring-domain and destination-page aggregates are not exposed
 as individual backlink edges.
 
+`read_ai_crawlability` reads the latest authorized project's persisted Site
+Health robots projection, including per-bot matched groups, root permissions,
+sample policies and snapshot provenance. `get_project_business_context`
+includes this projection in its selectable `crawlability` section. A missing
+crawl or missing robots observation returns an explicit unavailable result;
+neither read starts a crawl. Snapshot references identify provenance but are
+not raw-body fetch resolvers. The browser's separately paged robots history
+read owns retained text comparisons.
+
 Every retrievable evidence reference uses an allowlisted `citeladder://` record
 type. `fetch` reauthorizes the owning workspace and returns the normalized
 `id`/`title`/`text`/`url`/`metadata` document while preserving the structured

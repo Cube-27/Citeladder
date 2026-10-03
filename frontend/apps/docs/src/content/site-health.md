@@ -32,6 +32,26 @@ Page scores use determinate applicable checks. Checks marked unknown, error or p
 
 Crawl scores average finalized page scores in the selected cohort. A page with many checks does not automatically outweigh one with fewer checks. Avoid rebuilding the score from a filtered issue table.
 
+## Review crawler permissions
+
+The crawler panel groups bots by purpose: search engines, AI search, AI
+training and user-triggered fetches. Filter by purpose to focus the table.
+**Root access** reports the homepage permission. **Policy** reports allowed,
+disallowed, mixed or unknown access over the crawl's bounded URL sample.
+These can differ when rules allow the homepage but block other paths.
+
+The matched group shows a bot-specific group, wildcard fallback or **Not
+specified**. Missing or unreadable evidence stays unknown. These observations
+describe robots.txt permissions; they do not confirm indexing, citations or
+bot visits.
+
+Open **robots.txt history** to inspect earlier observations. Choose two
+observations on the loaded page to compare their retained text, and use the
+pagination controls for older observations. Repeated text can share a snapshot
+while retaining each crawl's observation. A truncation notice means the retained
+text is incomplete. **Ask agent** carries the selected crawl context into a
+conversation about the evidence.
+
 ## Work through an issue
 
 Use **Ask agent** on supported evidence screens, or **Work on this** on the related Action. Ask for a small, reviewable correction tied to the affected page.

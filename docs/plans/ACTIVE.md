@@ -117,8 +117,8 @@
 ## Queued
 - [AI Traffic analytics, crawl logs and authorized crawl](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026 and revised twice on 3 October 2026;
-  implementation not started. Part A is three self-contained PRs: A1 bot
-  catalog and AI crawlability; A2 Crawl Logs and the AI Traffic screen, which
+  A1 bot catalog and AI crawlability implemented. A2 Crawl Logs and the AI
+  Traffic screen, which
   replaces AI Referrals; A3 GA4 extract contract fixes, the per-URL Pages
   join, comparisons and insights. Part B (authorized crawl) follows
   separately; its Terms wording awaits legal review. Production enablement of
