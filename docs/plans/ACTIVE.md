@@ -103,6 +103,11 @@
   execution and project skill policy are deferred. D/E remain separate assignments.
 
 ## Queued
+- [Security hardening](citeladder-security-hardening.md)
+  — plan saved and simplified on 3 October 2026; not started. Six schema-free
+  slices ordered by privacy, access and billing risk; Cloud Run IAM, database
+  CA and identity split assessed and not planned. Listing is not execution or
+  deployment authorization.
 - [AI Traffic analytics, crawl logs and authorized crawl](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026 and revised twice on 3 October 2026;
   implementation not started. Part A is three self-contained PRs: A1 bot
