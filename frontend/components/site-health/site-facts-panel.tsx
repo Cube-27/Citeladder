@@ -1,186 +1,40 @@
 'use client';
-
+import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label, textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
-import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
+import { Disclosure } from '@/components/ui/disclosure';
+import { Select } from '@/components/ui/select';
 import {
-  AI_CRAWLER_ENGINE_LABELS,
-  readSiteFacts,
-  type AiCrawlerBot,
-  type SiteFactsStance,
-  type SiteFactsView,
-} from '@/lib/site-health/site-facts';
-import { cn } from '@/lib/utils';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { SectionTitle, textRole } from '@/components/ui/typography';
+import { ProjectLink } from '@/components/layout/scoped-link';
+import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
+import { agentHandoffHref } from '@/lib/agent/handoff';
+import { readSiteFacts, type SiteFactsView } from '@/lib/site-health/site-facts';
+import { RobotsHistory } from './robots-history';
 
-function engineLabel(bot: string): string {
-  return AI_CRAWLER_ENGINE_LABELS[bot as AiCrawlerBot] ?? bot;
-}
+const purposeLabels: Record<SiteFactsView['robots']['bots'][number]['purpose'], string> = {
+  ai_training: 'AI training',
+  ai_search: 'AI search',
+  ai_user_fetch: 'AI user fetch',
+  search_engine: 'Search engine',
+  other: 'Other',
+};
+const policyLabels = {
+  all_allowed: 'All allowed',
+  restricted: 'Restricted',
+  all_disallowed: 'All disallowed',
+  unknown: 'Unknown',
+} as const;
 
-/** One bot's Allow/Block/Unknown chip — left-aligned inside its grid cell. */
-function StanceBadge({ stance }: Readonly<{ stance: SiteFactsStance }>) {
-  if (stance === 'allow') {
-    return (
-      <Badge variant="status" value="success" className="justify-self-start">
-        Allow
-      </Badge>
-    );
-  }
-  if (stance === 'block') {
-    return (
-      <Badge variant="status" value="danger" className="justify-self-start">
-        Block
-      </Badge>
-    );
-  }
-  return <Badge className="justify-self-start">Unknown</Badge>;
-}
-
-/** Header summary chip: blocked count, unknown stance, or all-allowed. */
-function SummaryBadge({ view }: Readonly<{ view: SiteFactsView }>) {
-  // B2: only an unread robots.txt leaves the stance genuinely unknown — a 404
-  // means "no robots.txt", which is a definitive all-allowed, not an unknown.
-  if (view.robotsFetchStatus === 'access_blocked') {
-    return (
-      <Badge variant="status" value="danger">
-        Access blocked
-      </Badge>
-    );
-  }
-  if (view.robotsFetchStatus === 'fetch_failed') {
-    return (
-      <Badge variant="status" value="warning">
-        Stance unknown
-      </Badge>
-    );
-  }
-  const blockedCount = view.bots.filter((bot) => bot.stance === 'block').length;
-  if (blockedCount > 0) {
-    return (
-      <Badge variant="status" value="danger">
-        {blockedCount} of {view.bots.length} blocked
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="status" value="success">
-      All {view.bots.length} allowed
-    </Badge>
-  );
-}
-
-function SiteFactsAlerts({
-  view,
-  blocked,
-}: Readonly<{ view: SiteFactsView; blocked: SiteFactsView['bots'] }>) {
-  if (view.robotsFetched && blocked.length > 0) return <BlockedBotsAlert blocked={blocked} />;
-  if (view.robotsFetchStatus === 'not_found') {
-    return (
-      <Alert tone="info">
-        No robots.txt — public pages are crawled under normal rate limits; the AI-crawler stance
-        defaults to allow.
-      </Alert>
-    );
-  }
-  if (view.robotsFetchStatus === 'access_blocked') {
-    return (
-      <Alert tone="danger">
-        {`Access blocked — the site refused access to robots.txt (HTTP ${view.robotsStatus ?? '401/403'}). `}
-        CiteLadder does not bypass access controls, so re-crawling will not help until the
-        site&apos;s security settings allow the crawler.
-      </Alert>
-    );
-  }
-  if (view.robotsFetchStatus === 'fetch_failed') {
-    return (
-      <Alert tone="warning">
-        robots.txt could not be read, so the AI-crawler stance is unknown. Crawling pauses
-        temporarily and robots.txt is checked again shortly.
-      </Alert>
-    );
-  }
-  return null;
-}
-
-function BlockedBotsAlert({ blocked }: Readonly<{ blocked: SiteFactsView['bots'] }>) {
-  const bots = blocked.map(({ bot }) => bot);
-  const singular = bots.length === 1;
-  return (
-    <Alert tone="danger">
-      {bots.join(', ')} {singular ? 'is' : 'are'} disallowed in robots.txt —{' '}
-      {singular ? engineLabel(bots[0]) : 'those answer engines'} cannot crawl these pages, so they
-      can never be cited in its answers.
-    </Alert>
-  );
-}
-
-/** Whether robots.txt was read, and the three answers that are not one yes/no. */
-function RobotsFetchBadge({ status }: Readonly<{ status: SiteFactsView['robotsFetchStatus'] }>) {
-  if (status === 'fetched') {
-    return (
-      <Badge variant="status" value="success">
-        Fetched
-      </Badge>
-    );
-  }
-  if (status === 'not_found') return <Badge>Not found</Badge>;
-  if (status === 'access_blocked') {
-    return (
-      <Badge variant="status" value="danger">
-        Access blocked
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="status" value="warning">
-      Not fetched
-    </Badge>
-  );
-}
-
-/** A fetch that never happened is not the same finding as a file that is absent. */
-function LlmsTxtBadge({ fetched, present }: Readonly<{ fetched: boolean; present: boolean }>) {
-  if (!fetched) {
-    return (
-      <Badge variant="status" value="warning">
-        Not fetched
-      </Badge>
-    );
-  }
-  if (present) {
-    return (
-      <Badge variant="status" value="success">
-        Present
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="status" value="warning">
-      Absent
-    </Badge>
-  );
-}
-
-function StatusValue({ status }: Readonly<{ status: number | null }>) {
-  if (status === null) {
-    return <UnavailableValue state="unknown" />;
-  }
-  return <span className={textRole('itemTitle', 'tabular-nums')}>{status}</span>;
-}
-
-/**
- * Dashboard "AI crawler access" panel (site-health v2 P2).
- *
- * Renders the crawl's bounded `site_facts` blob: the robots.txt AI-crawler
- * stance strip (one cell per known AI bot), a blocked/unknown-stance alert,
- * and the well-known file row (robots.txt + llms.txt status and the checked
- * URLs). Never Free-redacted, so no entitlement gating. Follows the same
- * dashboard-then-crawl fallback as the page-kind scores; renders NOTHING
- * while no completed crawl has persisted `site_facts` yet (the absent
- * mockup omits the panel entirely).
- */
 export function SiteFactsPanel({
   crawl,
   dashboard,
@@ -188,95 +42,122 @@ export function SiteFactsPanel({
   crawl: SiteCrawl | null;
   dashboard: SiteHealthDashboard | undefined;
 }>) {
-  const view = readSiteFacts(dashboard?.crawl?.site_facts ?? crawl?.site_facts);
-  if (view === null) return null;
-  return <SiteFactsViewPanel view={view} />;
+  const current = dashboard?.crawl ?? crawl;
+  const view = readSiteFacts(current?.site_facts);
+  if (!current || !view) return null;
+  return <SiteFactsViewPanel key={current.id} crawl={current} view={view} />;
 }
-
-function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
-  const blocked = view.bots.filter((bot) => bot.stance === 'block');
-
+function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: SiteFactsView }>) {
+  const [purpose, setPurpose] = useState('all');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const purposes = [...new Set(view.robots.bots.map((bot) => bot.purpose))];
+  const unknown = view.robots.status === 'fetch_failed' || view.robots.status === 'access_blocked';
   return (
-    <Card data-testid="site-facts-panel">
-      <CardContent className="grid gap-2 p-3">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <span className={textRole('itemTitle')}>AI crawler access</span>
-          <SummaryBadge view={view} />
-          <span className="type-caption flex items-center gap-2">
-            <span>robots.txt</span>
-            <StatusValue status={view.robotsStatus} />
-          </span>
-          <span className="type-caption flex items-center gap-2">
-            <span>llms.txt</span>
-            <StatusValue status={view.llmsTxtStatus} />
-          </span>
+    <Card className="min-w-0">
+      <CardContent className="grid min-w-0 gap-3 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionTitle>AI crawler robots policy</SectionTitle>
+          <Button variant="secondary" size="sm" asChild>
+            <ProjectLink
+              projectId={crawl.project_id}
+              href={agentHandoffHref({
+                prompt: `Explain the persisted AI crawlability and robots policy for crawl ${crawl.id}. Use read_ai_crawlability and distinguish robots permission from observed retrieval.`,
+              })}
+            >
+              Ask agent
+            </ProjectLink>
+          </Button>
         </div>
-
-        <SiteFactsAlerts view={view} blocked={blocked} />
-
-        <details className="border-border-subtle grid gap-3 border-t pt-2">
-          <summary
-            className={textRole(
-              'label',
-              'focus-ring hover:text-foreground w-fit cursor-pointer rounded-[var(--radius-control)]',
-            )}
-          >
-            Crawler details
-          </summary>
-          <div className="grid gap-3">
-            <div
-              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-              data-testid="site-facts-stance-grid"
-            >
-              {view.bots.map(({ bot, stance }) => (
-                <div
-                  key={bot}
-                  data-testid={`site-facts-stance-${bot.toLowerCase()}`}
-                  className={cn(
-                    'flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-3 py-2',
-                    stance === 'block'
-                      ? 'border-danger-border bg-danger-bg'
-                      : 'border-border-subtle bg-background-alt',
-                  )}
-                >
-                  <span className={textRole('label', 'tabular-nums truncate')}>{bot}</span>
-                  <StanceBadge stance={stance} />
-                  <span className="type-caption basis-full">{engineLabel(bot)}</span>
-                </div>
-              ))}
+        <p className={textRole('caption')}>
+          What robots.txt permits over known URLs. This does not prove that a crawler retrieved a
+          page.
+        </p>
+        <p className={textRole('caption')}>
+          robots.txt: {view.robots.status.replaceAll('_', ' ')}
+          {view.robots.status_code !== null ? ` (HTTP ${view.robots.status_code})` : ''} · llms.txt:{' '}
+          {view.llms_txt.fetched ? (view.llms_txt.present ? 'present' : 'absent') : 'not fetched'}
+        </p>
+        {unknown ? (
+          <Alert tone="warning">
+            robots.txt could not be read. Root access and robots policy are unknown.
+          </Alert>
+        ) : null}
+        {view.robots.status === 'not_found' ? (
+          <Alert tone="info">
+            No robots.txt was found. No robots rules restrict these known URLs.
+          </Alert>
+        ) : null}
+        <Select
+          ariaLabel="Filter crawlers by purpose"
+          value={purpose}
+          onValueChange={setPurpose}
+          options={[
+            { value: 'all', label: 'All purposes' },
+            ...purposes.map((value) => ({ value, label: purposeLabels[value] })),
+          ]}
+        />
+        {purposes
+          .filter((value) => purpose === 'all' || value === purpose)
+          .map((group) => (
+            <div key={group} className="min-w-0">
+              <h3 className={textRole('itemTitle', 'mb-2')}>{purposeLabels[group]}</h3>
+              <Table>
+                <caption className="sr-only">{purposeLabels[group]} robots policy</caption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bot</TableHead>
+                    <TableHead>Operator</TableHead>
+                    <TableHead>Matched group</TableHead>
+                    <TableHead>Root access</TableHead>
+                    <TableHead>Robots policy</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {view.robots.bots
+                    .filter((bot) => bot.purpose === group)
+                    .map((bot) => (
+                      <TableRow key={bot.bot_id}>
+                        <TableCell>{bot.label}</TableCell>
+                        <TableCell>{bot.operator}</TableCell>
+                        <TableCell>
+                          {bot.matched === 'no_rules'
+                            ? 'Not specified'
+                            : bot.matched === 'specific_group'
+                              ? 'Specific group'
+                              : 'Wildcard group'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge>
+                            {bot.root_access === 'allowed'
+                              ? 'Allowed'
+                              : bot.root_access === 'disallowed'
+                                ? 'Disallowed'
+                                : 'Unknown'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge>{policyLabels[bot.policy]}</Badge>
+                          <p className={textRole('caption')}>
+                            {bot.policy === 'unknown'
+                              ? 'No complete policy sample is available.'
+                              : `${bot.disallowed_url_count} of ${bot.evaluated_url_count} known URLs disallowed`}
+                          </p>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
             </div>
-            <div
-              className="border-border-subtle grid gap-3 border-t pt-3 sm:grid-cols-[auto_auto_minmax(0,1fr)]"
-              data-testid="site-facts-well-known-files"
-            >
-              <div className="grid gap-0.5">
-                <Label>robots.txt</Label>
-                <span className="flex items-center gap-2">
-                  <StatusValue status={view.robotsStatus} />
-                  <RobotsFetchBadge status={view.robotsFetchStatus} />
-                </span>
-              </div>
-              <div className="grid gap-0.5">
-                <Label>llms.txt</Label>
-                <span className="flex items-center gap-2">
-                  <StatusValue status={view.llmsTxtStatus} />
-                  <LlmsTxtBadge fetched={view.llmsTxtFetched} present={view.llmsTxtPresent} />
-                </span>
-              </div>
-              <div className="grid min-w-0 gap-0.5 sm:justify-self-end">
-                <Label>Checked</Label>
-                <span className={textRole('label', 'tabular-nums truncate')}>
-                  {view.robotsUrl ?? <UnavailableValue state="unavailable" />}
-                </span>
-                {view.llmsTxtUrl !== null ? (
-                  <span className={textRole('label', 'tabular-nums truncate')}>
-                    {view.llmsTxtUrl}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </details>
+          ))}
+        <Disclosure title="robots.txt history" onOpenChange={setHistoryOpen}>
+          {historyOpen ? (
+            <RobotsHistory
+              workspaceId={crawl.workspace_id}
+              projectId={crawl.project_id}
+              crawlId={crawl.id}
+            />
+          ) : null}
+        </Disclosure>
       </CardContent>
     </Card>
   );

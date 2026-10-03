@@ -1,227 +1,59 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { expect, it } from 'vite-plus/test';
 import { render, screen, within } from '@testing-library/react';
-
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { SiteFactsPanel } from './site-facts-panel';
-import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
-import {
-  SITE_HEALTH_UUID as PROJECT,
-  makeSiteCrawl,
-  makeSiteFacts,
-} from '@/test/fixtures/site-health';
+import { makeSiteCrawl, makeSiteFacts } from '@/test/fixtures/site-health';
+import { parseAgentHandoff } from '@/lib/agent/handoff';
 
-/** Variant A — GPTBot blocked, everything else allowed. */
-const variantA = makeSiteFacts();
-
-const robotsUnfetched = {
-  ...variantA,
-  robots: {
-    ...variantA.robots,
-    fetched: false,
-    status: 'fetch_failed',
-    status_code: null,
-    // Recorded fail-open server-side; the panel must still show Unknown.
-    ai_crawlers: {
-      GPTBot: 'allow',
-      ClaudeBot: 'allow',
-      PerplexityBot: 'allow',
-      'Google-Extended': 'allow',
-    },
-  },
-  llms_txt: {
-    fetched: true,
-    url: 'https://acme.com/llms.txt',
-    status_code: 404,
-    present: false,
-  },
-};
-
-/** B2: the site HAS no robots.txt (HTTP 404) — a definitive default-allow. */
-const robotsNotFound = {
-  ...variantA,
-  robots: {
-    ...variantA.robots,
-    fetched: false,
-    status: 'not_found',
-    status_code: 404,
-    ai_crawlers: {
-      GPTBot: 'allow',
-      ClaudeBot: 'allow',
-      PerplexityBot: 'allow',
-      'Google-Extended': 'allow',
-    },
-  },
-  llms_txt: {
-    fetched: true,
-    url: 'https://acme.com/llms.txt',
-    status_code: 404,
-    present: false,
-  },
-};
-
-const allAllowed = {
-  ...variantA,
-  robots: {
-    ...variantA.robots,
-    ai_crawlers: {
-      GPTBot: 'allow',
-      ClaudeBot: 'allow',
-      PerplexityBot: 'allow',
-      'Google-Extended': 'allow',
-    },
-  },
-};
-
-function crawl(siteFacts: SiteCrawl['site_facts']): SiteCrawl {
-  return makeSiteCrawl({ site_facts: siteFacts });
-}
-
-function dashboard(crawlValue: SiteCrawl | null): SiteHealthDashboard {
-  return {
-    project_id: PROJECT,
-    crawl: crawlValue,
-    score_summary: null,
-    phase: 'dashboard',
-    snapshot_id: null,
-    quota: { used: 4, limit: 50 },
-    root_errors: [],
-  };
-}
-
-describe('SiteFactsPanel', () => {
-  it('renders the four bot rows in order with GPTBot blocked (variant A)', () => {
-    render(<SiteFactsPanel crawl={crawl(variantA)} dashboard={undefined} />);
-
-    expect(screen.getByTestId('site-facts-panel')).toBeInTheDocument();
-    // Header summary badge + description.
-    expect(screen.getByText('1 of 4 blocked')).toBeInTheDocument();
-    expect(screen.getByText('AI crawler access')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Which AI answer engines your robots.txt allows to crawl this site.'),
-    ).not.toBeInTheDocument();
-    expect(screen.getByText('Crawler details').closest('details')).not.toHaveAttribute('open');
-
-    // Four stance cells in canonical AI_CRAWLER_BOTS order.
-    const grid = screen.getByTestId('site-facts-stance-grid');
-    const cells = [
-      within(grid).getByTestId('site-facts-stance-gptbot'),
-      within(grid).getByTestId('site-facts-stance-claudebot'),
-      within(grid).getByTestId('site-facts-stance-perplexitybot'),
-      within(grid).getByTestId('site-facts-stance-google-extended'),
-    ];
-    expect(
-      cells[0].compareDocumentPosition(cells[1]) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      cells[1].compareDocumentPosition(cells[2]) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      cells[2].compareDocumentPosition(cells[3]) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-
-    // GPTBot blocked, the rest allowed — badge inside the right cell.
-    expect(within(cells[0]).getByText('GPTBot')).toBeInTheDocument();
-    expect(within(cells[0]).getByText('Block')).toBeInTheDocument();
-    expect(within(cells[0]).getByText('ChatGPT')).toBeInTheDocument();
-    for (const cell of cells.slice(1)) {
-      expect(within(cell).getByText('Allow')).toBeInTheDocument();
-    }
-    expect(within(cells[3]).getByText('Gemini / AI Overviews')).toBeInTheDocument();
-
-    // Blocked alert names the bot and its engine.
-    expect(
-      screen.getByText(/GPTBot is disallowed in robots\.txt — ChatGPT cannot crawl/),
-    ).toBeInTheDocument();
-
-    // Well-known files row: status codes, fetch badges, checked URLs.
-    const files = screen.getByTestId('site-facts-well-known-files');
-    expect(within(files).getByText('robots.txt')).toBeInTheDocument();
-    expect(within(files).getByText('llms.txt')).toBeInTheDocument();
-    expect(within(files).getAllByText('200')).toHaveLength(2);
-    expect(within(files).getByText('Fetched')).toBeInTheDocument();
-    expect(within(files).getByText('Present')).toBeInTheDocument();
-    expect(within(files).getByText('https://acme.com/robots.txt')).toBeInTheDocument();
-    expect(within(files).getByText('https://acme.com/llms.txt')).toBeInTheDocument();
-  });
-
-  it('renders nothing when site_facts is null (absent mockup omits the panel)', () => {
-    const { container } = render(
-      <SiteFactsPanel crawl={crawl(null)} dashboard={dashboard(null)} />,
-    );
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId('site-facts-panel')).not.toBeInTheDocument();
-  });
-
-  it('renders nothing when the blob is malformed', () => {
-    const { container } = render(
-      <SiteFactsPanel crawl={crawl({ robots: 'nope' })} dashboard={undefined} />,
-    );
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it('shows unknown stance for all bots when robots.txt could not be fetched (B2)', () => {
-    render(<SiteFactsPanel crawl={crawl(robotsUnfetched)} dashboard={undefined} />);
-
-    expect(screen.getByText('Stance unknown')).toBeInTheDocument();
-    expect(screen.getAllByText('Unknown')).toHaveLength(6);
-    expect(screen.queryByText('Block')).not.toBeInTheDocument();
-    expect(screen.queryByText('Allow')).not.toBeInTheDocument();
-    expect(screen.getByText(/robots\.txt could not be read/)).toBeInTheDocument();
-
-    const files = screen.getByTestId('site-facts-well-known-files');
-    expect(within(files).getByText('Not fetched')).toBeInTheDocument();
-    expect(within(files).getByText('Absent')).toBeInTheDocument();
-    expect(within(files).getByText('404')).toBeInTheDocument();
-    expect(within(files).getByText('Unknown')).toBeInTheDocument(); // no robots status
-  });
-
-  it('reports a 403 robots.txt as access blocked, not a temporary outage', () => {
-    const accessBlocked = {
-      ...robotsUnfetched,
-      robots: { ...robotsUnfetched.robots, status: 'access_blocked', status_code: 403 },
-    };
-    render(<SiteFactsPanel crawl={crawl(accessBlocked)} dashboard={undefined} />);
-
-    expect(screen.queryByText('Stance unknown')).not.toBeInTheDocument();
-    expect(screen.getByRole('alert').textContent).toMatch(/HTTP 403/);
-    expect(screen.queryByText(/checked again shortly/)).not.toBeInTheDocument();
-    const files = screen.getByTestId('site-facts-well-known-files');
-    expect(within(files).getByText('Access blocked')).toBeInTheDocument();
-  });
-
-  it('shows a definitive all-allowed stance when the site has NO robots.txt (B2 not_found)', () => {
-    // A 404 robots.txt is not a fetch failure: the fail-open default IS the
-    // answer, so the panel says so instead of crying "unknown".
-    render(<SiteFactsPanel crawl={crawl(robotsNotFound)} dashboard={undefined} />);
-
-    expect(screen.getByText('All 4 allowed')).toBeInTheDocument();
-    expect(screen.getAllByText('Allow')).toHaveLength(4);
-    expect(screen.queryByText('Stance unknown')).not.toBeInTheDocument();
-    expect(screen.getByText(/No robots\.txt — public pages are crawled/)).toBeInTheDocument();
-
-    const files = screen.getByTestId('site-facts-well-known-files');
-    expect(within(files).getByText('Not found')).toBeInTheDocument();
-    // robots.txt AND llms.txt both answered 404 in this fixture.
-    expect(within(files).getAllByText('404')).toHaveLength(2);
-  });
-
-  it('shows the all-allowed summary with no alert (variant B)', () => {
-    render(<SiteFactsPanel crawl={crawl(allAllowed)} dashboard={undefined} />);
-    expect(screen.getByText('All 4 allowed')).toBeInTheDocument();
-    expect(screen.getAllByText('Allow')).toHaveLength(4);
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
-
-  it('prefers the dashboard crawl site_facts over the crawl prop fallback', () => {
-    render(
-      <SiteFactsPanel crawl={crawl(robotsUnfetched)} dashboard={dashboard(crawl(variantA))} />,
-    );
-    expect(screen.getByText('1 of 4 blocked')).toBeInTheDocument();
-    expect(screen.queryByText('Stance unknown')).not.toBeInTheDocument();
-  });
-
-  it('falls back to the crawl prop when the dashboard has no crawl', () => {
-    render(<SiteFactsPanel crawl={crawl(variantA)} dashboard={dashboard(null)} />);
-    expect(screen.getByTestId('site-facts-panel')).toBeInTheDocument();
-    expect(screen.getByText('1 of 4 blocked')).toBeInTheDocument();
-  });
+it('renders all policies and Not specified with accessible purpose tables and an agent handoff', async () => {
+  const user = userEvent.setup();
+  const crawl = makeSiteCrawl({ site_facts: makeSiteFacts() });
+  render(
+    <MemoryRouter>
+      <SiteFactsPanel crawl={crawl} dashboard={undefined} />
+    </MemoryRouter>,
+  );
+  const training = screen.getByRole('table', { name: 'AI training robots policy' });
+  expect(within(training).getByRole('row', { name: /GPTBot/ })).toHaveTextContent('All disallowed');
+  expect(within(training).getByRole('row', { name: /ClaudeBot/ })).toHaveTextContent('All allowed');
+  expect(within(training).getByRole('row', { name: /Google-Extended/ })).toHaveTextContent(
+    'Unknown',
+  );
+  const search = screen.getByRole('table', { name: 'AI search robots policy' });
+  const row = within(search).getByRole('row', { name: /PerplexityBot/ });
+  expect(row).toHaveTextContent('Not specified');
+  expect(row).toHaveTextContent('Restricted');
+  expect(row).toHaveTextContent('1 of 4 known URLs disallowed');
+  const href = screen.getByRole('link', { name: 'Ask agent' }).getAttribute('href')!;
+  const url = new URL(href, 'https://example.test');
+  expect(url.searchParams.get('project')).toBe(crawl.project_id);
+  expect(parseAgentHandoff(url.searchParams).prompt).toContain(crawl.id);
+  await user.click(screen.getByRole('combobox', { name: 'Filter crawlers by purpose' }));
+  await user.click(screen.getByRole('option', { name: 'AI search' }));
+  expect(
+    screen.queryByRole('table', { name: 'AI training robots policy' }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('table', { name: 'AI search robots policy' })).toBeInTheDocument();
+});
+it('keeps an unreadable robots file distinct from an absent panel', () => {
+  const facts = makeSiteFacts();
+  const robots = { ...facts.robots, fetched: false, status: 'access_blocked', status_code: 403 };
+  const { rerender } = render(
+    <MemoryRouter>
+      <SiteFactsPanel
+        crawl={makeSiteCrawl({ site_facts: { ...facts, robots } })}
+        dashboard={undefined}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByRole('alert')).toHaveTextContent('robots.txt could not be read');
+  rerender(
+    <MemoryRouter>
+      <SiteFactsPanel crawl={makeSiteCrawl({ site_facts: null })} dashboard={undefined} />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.queryByRole('heading', { name: 'AI crawler robots policy' }),
+  ).not.toBeInTheDocument();
 });
