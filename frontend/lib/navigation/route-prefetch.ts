@@ -85,11 +85,19 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
   },
   '/ai-traffic': async (client, { projectId, workspaceId }) => {
     const { aiTrafficApi } = await import('@/lib/api/ai-traffic');
-    const params = { granularity: 'week' as const };
+    const params = {
+      range: '30d',
+      verification: undefined,
+      purpose: undefined,
+      bot_id: undefined,
+      status: undefined,
+      folder: undefined,
+      resource_class: undefined,
+    };
     warmQuery(client, {
-      queryKey: queryKeys.aiTraffic.dashboard(projectId, params),
+      queryKey: queryKeys.aiTraffic.view(workspaceId, projectId, 'overview', params),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        aiTrafficApi.getDashboard(projectId, params, { signal, workspaceId }),
+        aiTrafficApi.overview(projectId, params, { signal, workspaceId }),
     });
   },
 };

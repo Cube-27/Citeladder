@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { CrawlLogConnections } from '@/components/ai-traffic/crawl-log-connections';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GRANT_FAMILY, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
@@ -150,6 +151,7 @@ export function IntegrationSettings() {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       <CallbackNotice notice={notice} />
+      <CrawlLogConnections />
 
       {connectionsQuery.isError ? (
         <Alert tone="danger">

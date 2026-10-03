@@ -25,7 +25,10 @@ export function AiReferralsScreen({ tabs }: Readonly<{ tabs?: React.ReactNode }>
   const [granularity, setGranularity] = useState<AiReferralsGranularity>('week');
   const rangeParams = useMemo(() => rangeToParams(range), [range]);
   const dashboardQuery = useQuery({
-    queryKey: queryKeys.aiTraffic.dashboard(projectId ?? '', { ...rangeParams, granularity }),
+    queryKey: queryKeys.aiTraffic.dashboard(activeProject?.workspace_id ?? '', projectId ?? '', {
+      ...rangeParams,
+      granularity,
+    }),
     queryFn: ({ signal }) =>
       aiTrafficApi.getDashboard(
         projectId!,
@@ -37,7 +40,9 @@ export function AiReferralsScreen({ tabs }: Readonly<{ tabs?: React.ReactNode }>
       ),
     enabled: Boolean(projectId && activeProject?.workspace_id),
     placeholderData: (previousData, previousQuery) =>
-      retainPreviousDataForScope(projectId!, previousData, previousQuery),
+      previousQuery?.queryKey[3] === activeProject?.workspace_id
+        ? retainPreviousDataForScope(projectId!, previousData, previousQuery)
+        : undefined,
   });
 
   return (

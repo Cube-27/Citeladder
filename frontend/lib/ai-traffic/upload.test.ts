@@ -1,0 +1,177 @@
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test';
+import { ReadableStream, TextDecoderStream, DecompressionStream } from 'node:stream/web';
+import { gzipSync } from 'node:zlib';
+import { uploadCrawlFile } from './upload';
+import { aiTrafficApi } from '@/lib/api/ai-traffic';
+vi.mock('@/lib/api/ai-traffic', () => ({
+  aiTrafficApi: {
+    createUpload: vi.fn(),
+    uploadStatus: vi.fn(),
+    uploadBatch: vi.fn(),
+    completeUpload: vi.fn(),
+  },
+}));
+const mapping = {
+  timestamp: 'timestamp',
+  host: 'host',
+  path: 'path',
+  method: 'method',
+  status: 'status',
+  user_agent: 'user_agent',
+  client_ip: 'client_ip',
+  request_id: 'request_id',
+  timestamp_unit: 'iso' as const,
+};
+const catalog = {
+  catalog_version: '1',
+  bots: [
+    {
+      bot_id: 'test',
+      label: 'Test bot',
+      purpose: 'ai_search' as const,
+      ua_patterns: ['known-robot'],
+    },
+  ],
+  presets: {
+    custom_ndjson: {
+      ...mapping,
+      collection_point: 'application',
+      sampling: { kind: 'none' as const },
+    },
+  },
+  max_batch_bytes: 2000,
+  max_lines_per_batch: 1,
+  upload_sample_lines: 50,
+  max_line_bytes: 1000,
+  worker_timeout_ms: 5000,
+};
+const event = (ua: string, path = '/page') => ({
+  timestamp: '2026-10-02T12:00:00Z',
+  path,
+  method: 'GET',
+  status: 200,
+  user_agent: ua,
+});
+function file(data: string | Uint8Array, name = 'logs.ndjson') {
+  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+  return {
+    name,
+    size: bytes.length,
+    stream: () =>
+      new ReadableStream({
+        start(controller) {
+          // Chunk boundaries split records and UTF-8 decoding.
+          for (let i = 0; i < bytes.length; i += 13) controller.enqueue(bytes.slice(i, i + 13));
+          controller.close();
+        },
+      }),
+  } as unknown as File;
+}
+const run = (value: File, format = 'ndjson', resumeId?: string) =>
+  uploadCrawlFile({
+    file: value,
+    format,
+    mapping,
+    catalog,
+    projectId: 'project',
+    sourceId: 'source',
+    resumeId,
+    options: { workspaceId: 'workspace' },
+    onProgress: vi.fn(),
+  });
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.stubGlobal('TextDecoderStream', TextDecoderStream);
+  vi.stubGlobal('DecompressionStream', DecompressionStream);
+  vi.mocked(aiTrafficApi.createUpload).mockResolvedValue({
+    id: 'upload',
+    filename: 'logs.ndjson',
+    size_bytes: 0,
+    status: 'open',
+    last_ack_seq: -1,
+    scanned_lines: 0,
+    missing_fields: [],
+  });
+  vi.mocked(aiTrafficApi.uploadBatch).mockResolvedValue({
+    id: 'batch',
+    lines_received: 1,
+    lines_parsed: 1,
+    lines_matched: 1,
+    lines_unmatched: 0,
+    lines_out_of_scope: 0,
+    lines_rejected: 0,
+    lines_duplicate: 0,
+    lines_overlapping: 0,
+    heartbeat: false,
+  });
+});
+describe('local streaming upload privacy', () => {
+  it('sends only recognized lines and completes zero-match scans without sending batches', async () => {
+    await run(
+      file(
+        JSON.stringify(event('unmatched-private-agent')) +
+          '\n' +
+          JSON.stringify(event('known-robot')),
+      ),
+    );
+    const posted = vi.mocked(aiTrafficApi.uploadBatch).mock.calls[0]![4];
+    expect(posted).toHaveLength(1);
+    expect(JSON.stringify(posted)).not.toContain('unmatched-private-agent');
+    expect(aiTrafficApi.completeUpload).toHaveBeenCalledWith(
+      'project',
+      'source',
+      'upload',
+      expect.objectContaining({ scanned_lines: 2 }),
+      expect.anything(),
+    );
+    vi.mocked(aiTrafficApi.uploadBatch).mockClear();
+    await run(file(JSON.stringify(event('unmatched-only'))));
+    expect(aiTrafficApi.uploadBatch).not.toHaveBeenCalled();
+    expect(aiTrafficApi.completeUpload).toHaveBeenLastCalledWith(
+      'project',
+      'source',
+      'upload',
+      expect.objectContaining({
+        scanned_lines: 1,
+        scanned_dates: [{ date: '2026-10-02', complete: false }],
+      }),
+      expect.anything(),
+    );
+  });
+  it('resumes deterministic batches and streams gzip JSON arrays', async () => {
+    const rows = [event('known-robot', '/one'), event('known-robot', '/two')];
+    const original = file(gzipSync(Buffer.from(JSON.stringify(rows))), 'logs.json.gz');
+    vi.mocked(aiTrafficApi.uploadStatus).mockResolvedValue({
+      id: 'upload',
+      filename: original.name,
+      size_bytes: original.size,
+      status: 'open',
+      last_ack_seq: 0,
+      scanned_lines: 0,
+      missing_fields: [],
+    });
+    await run(original, 'json_array', 'upload');
+    expect(aiTrafficApi.createUpload).not.toHaveBeenCalled();
+    expect(aiTrafficApi.uploadBatch).toHaveBeenCalledTimes(1);
+    expect(aiTrafficApi.uploadBatch).toHaveBeenCalledWith(
+      'project',
+      'source',
+      'upload',
+      1,
+      [expect.stringContaining('/two')],
+      expect.anything(),
+    );
+  });
+  it('rejects unsupported or malformed UTF-8 headers before transmitting file evidence', async () => {
+    await expect(run(file('{"path":"/no-user-agent"}'))).rejects.toThrow(/crawler identification/);
+    await expect(
+      run(file(JSON.stringify(event('known-robot')) + '\n{"path":"/missing"}')),
+    ).rejects.toThrow(/crawler identification/);
+    await expect(
+      run(file('[' + JSON.stringify(event('known-robot')) + ',]'), 'json_array'),
+    ).rejects.toThrow(/comma/);
+    await expect(run(file(new Uint8Array([255])))).rejects.toThrow();
+    expect(aiTrafficApi.createUpload).not.toHaveBeenCalled();
+    expect(aiTrafficApi.uploadBatch).not.toHaveBeenCalled();
+  });
+});

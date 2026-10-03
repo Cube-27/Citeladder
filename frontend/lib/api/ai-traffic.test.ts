@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
-import { aiTrafficApi, type AiReferralsWindowParams } from './ai-traffic';
+import { aiTrafficApi } from './ai-traffic';
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 const dashboard = {
@@ -22,17 +22,6 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('aiTrafficApi', () => {
-  it('requires both date-window bounds at the type boundary', () => {
-    const bounded = { from: '2026-08-01', to: '2026-08-07' } satisfies AiReferralsWindowParams;
-    const latest = { granularity: 'week' } satisfies AiReferralsWindowParams;
-    expect(bounded).toEqual({ from: '2026-08-01', to: '2026-08-07' });
-    expect(latest).toEqual({ granularity: 'week' });
-
-    // @ts-expect-error A persisted window is exact and must provide both bounds.
-    const missingTo: AiReferralsWindowParams = { from: '2026-08-01' };
-    expect(missingTo).toEqual({ from: '2026-08-01' });
-  });
-
   it('uses the focused persisted endpoint and validates its compact response', async () => {
     let requested = '';
     mswServer.use(
