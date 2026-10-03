@@ -243,7 +243,7 @@ migrations or DDL (`scripts/quality.mjs --scope api`).
   non-text subtrees, then comments, then unterminated subtrees. Bind extracted
   facts through the page role's primary entity and identity key.
 - Scope mutation status to the active workspace/project. Global visual rules
-  belong to `frontend/app/globals.css`, and each rendered page has one `h1`.
+  belong to `frontend/apps/app/src/globals.css`, and each rendered page has one `h1`.
 - Billing webhook conflicts must follow the owning idempotent settlement
   contract rather than leaking an unhandled 500. Framework-required packages,
   annotations, and CLI entry points count as dependency use even without a

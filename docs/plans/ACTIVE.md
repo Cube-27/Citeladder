@@ -128,7 +128,7 @@
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
   — pending; remaining evidence/action and selected-query generation work.
 
-The owner retained [shell/commercial follow-up](citeladder-authed-shell-and-commercial-architecture.md)
+The owner retained [shell/commercial follow-up](../archive/plans/citeladder-authed-shell-and-commercial-architecture.md)
 for deferred sign-in selection and invitation delivery; it is not an active or
 additional queued assignment. Listed work is not authorization to execute it.
 
@@ -141,6 +141,6 @@ additional queued assignment. Listed work is not authorization to execute it.
   follow.
   Payments stay disabled until that sign-off.
 
-[Discovery simplification](citeladder-discovery-simplification.md)
+[Discovery simplification](../archive/plans/citeladder-discovery-simplification.md)
 — completion confirmed by the owner on 23 September 2026. This index update
 does not establish new validation.

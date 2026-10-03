@@ -81,7 +81,7 @@ similarity: men's and women's departments must not merge because their spellings
 are close. The provider-restatement rule rejects a name only when every token
 is provider vocabulary; containment would incorrectly reject School Uniforms.
 An offer matching the business category stays eligible alongside other offers;
-provider-only labels are rejected. Configuration and [onboarding topic admission](../backend/app/domain/projects/onboarding/topic_admission.py)
+provider-only labels are rejected. Configuration and native onboarding topic admission
 own these decisions, not a copied vocabulary list in documentation.
 
 Generation plans `count × GENERATION_OVERGENERATE_FACTOR`
@@ -145,7 +145,7 @@ counted in `quality_rejected`. Selection can use other surviving drafts from
 the same pool; any remaining shortfall is reported without a rewrite loop.
 `JEV_MODE=shadow` records and flags without removing anything. The thresholds
 (policy `jev-gate-1`) are provisional until calibrated from review outcomes
-with `scripts/jev_calibration.py`, an aggregate, text-free operator report; a
+with `frontend/services/api/src/prompts/calibration.ts`, an aggregate, text-free operator report; a
 threshold change bumps `JEV_POLICY_VERSION`. A JEV failure never removes
 the candidate it failed on: it reports `quality_gate="unavailable"`, that
 unjudged candidate stays reviewable, candidates judged in the same request are
@@ -344,6 +344,5 @@ in Overview Facts rather than becoming measurement evidence automatically.
 The [pending integrations work](plans/citeladder-integrations-audit-followups.md)
 covers richer observed-state/action links and selected-search-query generation.
 Existing observed-query context does not mean that selection/provenance UX is
-complete. Historical evaluation numbers are retained in
-[the archived generation document](archive/evaluations/visibility-prompt-history.md);
-they are not current acceptance or a model recommendation.
+complete. Historical evaluation numbers do not establish current acceptance
+or a model recommendation.
