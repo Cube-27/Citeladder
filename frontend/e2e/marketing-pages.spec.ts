@@ -38,8 +38,9 @@ test.describe('marketing routes', () => {
         );
         // WebKit's fonts.ready waits for document readiness, which the held
         // module scripts prevent. Load the used faces without that dependency.
+        // Builds without the private font files settle on the fallback faces.
         await page.evaluate(() =>
-          Promise.all(
+          Promise.allSettled(
             ['400 16px Sora', '600 16px Sora', '400 16px Switzer', '600 16px Switzer'].map((font) =>
               document.fonts.load(font),
             ),

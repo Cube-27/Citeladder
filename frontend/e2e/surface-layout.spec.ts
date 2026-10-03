@@ -274,6 +274,20 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
     await reveal.evaluate((node) => Number.parseFloat(getComputedStyle(node).outlineOffset)),
   ).toBeLessThan(0);
 
+  // A framed invalid field keeps its danger edge while it holds focus.
+  await password.evaluate((node) => node.setAttribute('aria-invalid', 'true'));
+  const invalidEdge = await frame.evaluate(async (node) => {
+    await Promise.all(node.getAnimations().map((animation) => animation.finished));
+    return getComputedStyle(node).borderColor;
+  });
+  expect(invalidEdge).not.toBe(restingEdge);
+  await password.focus();
+  await expect(password).toBeFocused();
+  await expect(async () => {
+    expect(await frame.evaluate((node) => getComputedStyle(node).borderColor)).toBe(invalidEdge);
+  }).toPass();
+  await password.evaluate((node) => node.removeAttribute('aria-invalid'));
+
   await stubAuthedShell(page);
   await page.goto(fixtureProjectPath('/agent'));
   const prompt = page.locator('textarea');

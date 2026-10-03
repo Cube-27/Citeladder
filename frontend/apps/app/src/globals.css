@@ -915,7 +915,7 @@ a.focus-ring:active .type-caption {
 }
 
 .focus-input:focus-visible,
-.focus-frame:has(input:focus-visible, textarea:focus-visible, select:focus-visible) {
+.focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
   border-color: var(--color-accent);
   outline: none;
 }
@@ -980,12 +980,12 @@ a.focus-ring:active .type-caption {
   :focus-visible,
   .focus-ring:focus-visible,
   .focus-input:focus-visible,
-  .focus-frame:has(input:focus-visible, textarea:focus-visible, select:focus-visible) {
+  .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
     outline-style: dotted;
   }
 
   .focus-input:focus-visible,
-  .focus-frame:has(input:focus-visible, textarea:focus-visible, select:focus-visible) {
+  .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
     border-style: dotted;
     outline: none;
   }
@@ -1000,7 +1000,7 @@ a.focus-ring:active .type-caption {
   :focus-visible,
   .focus-ring:focus-visible,
   .focus-input:focus-visible,
-  .focus-frame:has(input:focus-visible, textarea:focus-visible, select:focus-visible) {
+  .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
     outline-color: Highlight;
     border-color: Highlight;
   }
