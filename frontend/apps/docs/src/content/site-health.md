@@ -36,8 +36,8 @@ Crawl scores average finalized page scores in the selected cohort. A page with m
 
 The crawler panel groups bots by purpose: search engines, AI search, AI
 training and user-triggered fetches. Filter by purpose to focus the table.
-**Root access** reports the homepage permission. **Policy** reports allowed,
-disallowed, mixed or unknown access over the crawl's bounded URL sample.
+**Root access** reports the homepage permission. **Policy** reports All allowed,
+Restricted, All disallowed or Unknown access over the crawl's bounded URL sample.
 These can differ when rules allow the homepage but block other paths.
 
 The matched group shows a bot-specific group, wildcard fallback or **Not
