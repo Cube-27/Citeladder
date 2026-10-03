@@ -3,6 +3,8 @@ export const agentContext = {
   content_context_status_included: 'included',
   content_context_status_unavailable: 'unavailable',
   content_context_max_pages: 10,
+  content_context_background_max_pages: 100,
+  content_context_read_batch_size: 100,
   context_max_h1: 3,
   context_max_h2: 8,
   content_context_per_page_body_chars: 2000,

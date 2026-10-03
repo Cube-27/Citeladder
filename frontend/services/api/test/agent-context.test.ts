@@ -4,6 +4,7 @@ import { testDatabase } from './support.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 import { readAgentContext } from '../src/agent/context-adapter.ts';
 import { selectContentFragments } from '../src/site-health/reads/content-fragments.ts';
+import { policy } from '../src/config.ts';
 
 describe('Agent persisted context binding', () => {
   const db = testDatabase(),
@@ -97,6 +98,40 @@ describe('Agent persisted context binding', () => {
       crawl_page_count: 0,
     });
     expect(context.related_site_block).toBe('');
+  });
+  it('keeps the same highest-ranked pages when the background crawl exceeds its candidate cap', async () => {
+    const seed = await fixtures.crawl();
+    for (let index = 0; index < policy.agent_context.content_context_max_pages; index++) {
+      await fixtures.page(seed, `/pricing-${index}`, {
+        title: 'Pricing plans',
+        body: { text: 'Costs and plans' },
+      });
+    }
+    const finalize = () =>
+      db
+        .updateTable('site_page_analyses')
+        .set({ finalized_at: new Date() })
+        .where('crawl_id', '=', seed.crawlId)
+        .execute();
+    await finalize();
+    const before = await selectContentFragments(db, seed, 'pricing plans');
+    for (
+      let index = 0;
+      index <= policy.agent_context.content_context_background_max_pages;
+      index++
+    ) {
+      await fixtures.page(seed, `/background-${index}`, {
+        title: 'Other content',
+        body: { text: 'Background' },
+      });
+    }
+    await finalize();
+    const after = await selectContentFragments(db, seed, 'pricing plans');
+    expect(after.pages).toEqual(before.pages);
+    expect(after.summary.omissions).toContainEqual({
+      reason: 'background_candidate_limit',
+      count: 11,
+    });
   });
   it('resolves an exact readiness gap to finalized evidence and refuses a conflicting target', async () => {
     const seed = await fixtures.crawl();

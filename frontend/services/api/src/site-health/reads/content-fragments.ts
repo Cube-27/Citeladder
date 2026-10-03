@@ -50,8 +50,8 @@ function pagesQuery(db: Database, scope: Scope) {
       sql<boolean>`jsonb_typeof(f.normalized_facts) = 'object' and f.normalized_facts <> '{}'::jsonb`,
     );
 }
-type PageRow = Awaited<ReturnType<typeof rows>>[number];
-function rows(db: Database, scope: Scope, crawlId: string) {
+type PageRow = Awaited<ReturnType<ReturnType<typeof rowsQuery>['execute']>>[number];
+function rowsQuery(db: Database, scope: Scope, crawlId: string) {
   return pagesQuery(db, scope)
     .where('a.crawl_id', '=', crawlId)
     .select([
@@ -64,12 +64,18 @@ function rows(db: Database, scope: Scope, crawlId: string) {
       'a.scoring_version',
       'f.id as artifact_id',
       'f.final_url',
-      'f.normalized_facts',
+      sql<Record<string, unknown>>`jsonb_build_object(
+        'title', f.normalized_facts->'title',
+        'meta_description', f.normalized_facts->'meta_description',
+        'headings', jsonb_build_object('h1_texts', f.normalized_facts->'headings'->'h1_texts',
+          'h2_texts', f.normalized_facts->'headings'->'h2_texts'),
+        'structured_data', jsonb_build_object('types', f.normalized_facts->'structured_data'->'types'),
+        'body', jsonb_build_object('text', f.normalized_facts->'body'->'text')
+      )`.as('normalized_facts'),
       'f.content_hash',
       'f.fetched_at',
       'f.extractor_version',
-    ])
-    .execute();
+    ]);
 }
 function pageBlock(row: PageRow) {
   const facts = record(row.normalized_facts),
@@ -208,8 +214,7 @@ export async function selectContentFragments(
     ).map((row) => row.site_url_id),
   );
   const terms = lexicalTokens(query, 3),
-    target = comparableUrl(targetUrl),
-    candidates = await rows(db, scope, crawl.id);
+    target = comparableUrl(targetUrl);
   const home = (row: PageRow) =>
     comparableUrl(row.normalized_url) === comparableUrl(profile?.root_url ?? '') ||
     comparableUrl(row.normalized_url) === (profile?.root_host ?? '');
@@ -223,16 +228,47 @@ export async function selectContentFragments(
       target &&
       [row.final_url ?? '', row.normalized_url].some((url) => comparableUrl(url) === target)
     );
-  candidates.sort(
-    (a, b) =>
-      (terms.size || target
-        ? Number(background(a)) - Number(background(b)) ||
-          score(b, terms, target, monitored) - score(a, terms, target, monitored)
-        : tier(a) - tier(b)) ||
-      compareText(a.normalized_url, b.normalized_url) ||
-      compareText(a.site_url_id, b.site_url_id),
-  );
-  const result = projection(candidates);
+  type Ranked = { row: PageRow; background: number; score: number; tier: number };
+  const compare = (a: Ranked, b: Ranked) =>
+    (terms.size || target ? a.background - b.background || b.score - a.score : a.tier - b.tier) ||
+    compareText(a.row.normalized_url, b.row.normalized_url) ||
+    compareText(a.row.site_url_id, b.row.site_url_id);
+  let candidates: Ranked[] = [];
+  let after: string | null = null;
+  let omitted = 0;
+  for (;;) {
+    let query = rowsQuery(db, scope, crawl.id)
+      .orderBy('u.id')
+      .limit(p.content_context_read_batch_size);
+    if (after) query = query.where('u.id', '>', after);
+    const batch = await query.execute();
+    candidates.push(
+      ...batch.map((row) => ({
+        row,
+        background: Number(background(row)),
+        score: score(row, terms, target, monitored),
+        tier: tier(row),
+      })),
+    );
+    candidates.sort(compare);
+    let backgroundCount = 0;
+    candidates = candidates.filter(({ row, tier }) => {
+      if (
+        tier < 2 ||
+        (target &&
+          [row.final_url ?? '', row.normalized_url].some((url) => comparableUrl(url) === target))
+      )
+        return true;
+      if (++backgroundCount <= p.content_context_background_max_pages) return true;
+      omitted++;
+      return false;
+    });
+    if (batch.length < p.content_context_read_batch_size) break;
+    after = batch.at(-1)!.site_url_id;
+  }
+  const result = projection(candidates.map(({ row }) => row));
+  if (omitted)
+    result.summary.omissions.push({ reason: 'background_candidate_limit', count: omitted });
   return {
     pages: result.pages,
     summary: {
