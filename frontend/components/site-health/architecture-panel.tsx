@@ -15,6 +15,7 @@ import {
 } from '@/components/site-health/architecture-orphans';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Pressable } from '@/components/ui/pressable';
@@ -93,7 +94,15 @@ export function ArchitecturePanel({
       </output>
     );
   }
-  if (architecture.isError) return <Alert tone="danger">Could not load Architecture.</Alert>;
+  if (architecture.isError)
+    return (
+      <ReadError
+        error={architecture.error}
+        fallback="Could not load Architecture."
+        onRetry={() => void architecture.refetch()}
+        pending={architecture.isFetching}
+      />
+    );
   if (!architecture.data || architecture.data.state === 'unavailable') {
     return (
       <Alert tone="info">
@@ -337,7 +346,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
     <div className="grid gap-[var(--workspace-gap)] md:grid-cols-2">
       <Card>
         <CardHeader className="flex-row items-center gap-2 pb-2">
-          <Link2 className="text-accent-text size-4" aria-hidden />
+          <Link2 className="text-muted size-4" aria-hidden />
           <CardTitle>Internal linking</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 pt-2">
@@ -365,14 +374,14 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
       </Card>
       <Card>
         <CardHeader className="flex-row items-center gap-2 pb-2">
-          <ListTree className="text-accent-text size-4" aria-hidden />
+          <ListTree className="text-muted size-4" aria-hidden />
           <CardTitle>Structure depth</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 pt-2">
           {data.structure_depth.buckets.map((bucket) => (
             <div key={bucket.key} className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-3">
               <span className="type-caption">{DEPTH_LABELS[bucket.key]}</span>
-              <div className="bg-background-alt h-1.5 overflow-hidden rounded-full">
+              <div className="bg-neutral-bg h-1.5 overflow-hidden rounded-full">
                 <div
                   className="bg-chart-1 h-full rounded-full"
                   style={{ width: `${Math.round((bucket.percentage ?? 0) * 100)}%` }}

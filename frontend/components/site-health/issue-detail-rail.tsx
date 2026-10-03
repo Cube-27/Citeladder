@@ -4,7 +4,8 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
-import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -34,17 +35,12 @@ export function IssueDetailRail({
 }: Readonly<{
   issue: SiteIssue;
   crawlId: string;
-  detailQuery: {
-    data: SiteIssueDetail | undefined;
-    isError: boolean;
-    isFetching: boolean;
-    isPending: boolean;
-  };
+  detailQuery: UseQueryResult<SiteIssueDetail>;
   canPrevious: boolean;
   onPrevious: () => void;
   onNext: () => void;
 }>) {
-  const detail = detailQuery.data;
+  const detail = detailQuery.isError ? undefined : detailQuery.data;
   useAgentPanelSeed({ prompt: askAgentPrompt(issue) });
   return (
     <section
@@ -98,13 +94,7 @@ export function IssueDetailRail({
               <p className="type-body whitespace-pre-line">{issue.remediation}</p>
             </div>
           ) : null}
-          <OccurrenceList
-            issue={issue}
-            detail={detail}
-            crawlId={crawlId}
-            isError={detailQuery.isError}
-            isPending={detailQuery.isPending}
-          />
+          <OccurrenceList issue={issue} detail={detail} crawlId={crawlId} query={detailQuery} />
         </div>
         {detail && (canPrevious || detail.next_cursor) ? (
           <footer className="border-border-subtle bg-panel flex shrink-0 items-center justify-end gap-2 border-t p-3">
@@ -161,21 +151,27 @@ function OccurrenceList({
   issue,
   detail,
   crawlId,
-  isError,
-  isPending,
+  query,
 }: Readonly<{
   issue: SiteIssue;
   detail: SiteIssueDetail | undefined;
   crawlId: string;
-  isError: boolean;
-  isPending: boolean;
+  query: UseQueryResult<SiteIssueDetail>;
 }>) {
-  if (isError) return <Alert tone="danger">Could not load affected URLs.</Alert>;
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Could not load affected URLs."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
   // The list no longer waits for this read, so "none" and "not yet" are now
   // genuinely different answers here. Claiming the first while the second is
   // true told the reader an issue affected nothing, a moment before showing
   // them the pages it affects.
-  if (isPending || !detail) {
+  if (query.isPending || !detail) {
     return (
       <ul aria-busy="true" className={ledgerClasses('open')}>
         {OCCURRENCE_PLACEHOLDERS.map((placeholder) => (

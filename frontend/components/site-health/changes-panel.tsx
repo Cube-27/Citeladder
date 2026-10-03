@@ -6,6 +6,7 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
@@ -21,6 +22,11 @@ import { siteHealthQueries } from '@/lib/api/site-health';
 import type { ChangeObservation, ChangesPage, ChangeSummary } from '@/lib/api/types';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { textRole } from '@/components/ui/typography';
+import {
+  CHANGE_EVIDENCE_DEPTH_LIMIT,
+  CHANGE_EVIDENCE_LIMIT,
+  CHANGE_EVIDENCE_TEXT_LIMIT,
+} from '@/lib/config/site-health';
 
 const CLASS_LABELS = {
   improvement: 'Improvement',
@@ -38,11 +44,106 @@ function displayPath(url: string) {
   }
 }
 
-function valueLabel(value: unknown) {
-  if (value === null || value === undefined || value === '') return 'Not present';
-  if (Array.isArray(value)) return value.length ? value.join(', ') : 'Not present';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+function boundedText(value: string) {
+  return value.length > CHANGE_EVIDENCE_TEXT_LIMIT
+    ? `${value.slice(0, CHANGE_EVIDENCE_TEXT_LIMIT)}…`
+    : value;
+}
+
+function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: number }>) {
+  if (value === null || value === undefined || value === '') return <>Not present</>;
+  if (Array.isArray(value)) {
+    if (!value.length) return <>Not present</>;
+    if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT)
+      return (
+        <>
+          {value.length} {value.length === 1 ? 'item' : 'items'}
+        </>
+      );
+    return (
+      <ul className="grid gap-1 pl-3">
+        {value.slice(0, CHANGE_EVIDENCE_LIMIT).map((item, index) => (
+          <li key={index}>
+            <ChangeValue value={item} depth={depth + 1} />
+          </li>
+        ))}
+        {value.length > CHANGE_EVIDENCE_LIMIT ? (
+          <li className="text-muted">
+            {value.length - CHANGE_EVIDENCE_LIMIT} more items not shown
+          </li>
+        ) : null}
+      </ul>
+    );
+  }
+  if (typeof value === 'object') return <ChangeRecord value={value} depth={depth} />;
+  return <>{boundedText(String(value))}</>;
+}
+
+const CONTENT_FIELD_ORDER = [
+  'content_change_classification',
+  'content_delta_ratio',
+  'comparison_coverage',
+  'coverage_reason',
+  'sections_added',
+  'sections_removed',
+  'heading_outline',
+  'word_count',
+];
+
+const CONTENT_STATE_FIELDS = new Set([
+  'content_change_classification',
+  'metadata_consistency',
+  'comparison_coverage',
+  'coverage',
+  'coverage_reason',
+  'content_delta_measure',
+]);
+
+function changeFieldValue(key: string, value: unknown) {
+  if (typeof value !== 'string' || !CONTENT_STATE_FIELDS.has(key)) return value;
+  const label = value.replaceAll('_', ' ');
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function ChangeRecord({ value, depth }: Readonly<{ value: object; depth: number }>) {
+  const fields = Object.entries(value);
+  if (!fields.length) return <>Not present</>;
+  if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT)
+    return (
+      <>
+        {fields.length} {fields.length === 1 ? 'field' : 'fields'}
+      </>
+    );
+  // Comparison outcomes precede capture details in the bounded content record.
+  const rank = (key: string) => {
+    const index = CONTENT_FIELD_ORDER.indexOf(key);
+    return index < 0 ? CONTENT_FIELD_ORDER.length : index;
+  };
+  fields.sort(([left], [right]) => rank(left) - rank(right));
+  return (
+    <dl className="grid gap-1 pl-3">
+      {fields.slice(0, CHANGE_EVIDENCE_LIMIT).map(([key, item]) => (
+        <div key={key}>
+          <dt className="text-muted inline">{boundedText(key.replaceAll('_', ' '))}: </dt>
+          <dd className="inline [overflow-wrap:anywhere]">
+            {key === 'shingles' && Array.isArray(item) ? (
+              `${item.length} text fingerprints`
+            ) : (
+              <ChangeValue value={changeFieldValue(key, item)} depth={depth + 1} />
+            )}
+          </dd>
+        </div>
+      ))}
+      {fields.length > CHANGE_EVIDENCE_LIMIT ? (
+        <div>
+          <dt className="sr-only">Additional evidence</dt>
+          <dd className="text-muted">
+            {fields.length - CHANGE_EVIDENCE_LIMIT} more fields not shown
+          </dd>
+        </div>
+      ) : null}
+    </dl>
+  );
 }
 
 function Evidence({ row }: Readonly<{ row: ChangeObservation }>) {
@@ -54,11 +155,15 @@ function Evidence({ row }: Readonly<{ row: ChangeObservation }>) {
       <dl className="type-caption grid gap-1">
         <div>
           <dt className="text-muted inline">Before: </dt>
-          <dd className="inline">{valueLabel(row.before_value)}</dd>
+          <dd className="inline">
+            <ChangeValue value={row.before_value} />
+          </dd>
         </div>
         <div>
           <dt className="text-muted inline">After: </dt>
-          <dd className="inline">{valueLabel(row.after_value)}</dd>
+          <dd className="inline">
+            <ChangeValue value={row.after_value} />
+          </dd>
         </div>
         <div>
           <dt className="text-muted inline">Analyses: </dt>
@@ -142,8 +247,16 @@ function changesState(
   const loading = summary.isLoading || (pairAvailable && changes.isLoading);
   if (loading)
     return <output className="type-body block">Loading persisted website changes…</output>;
-  if (summary.isError || changes.isError)
-    return <Alert tone="danger">Could not load Website Changes.</Alert>;
+  const failedRead = summary.isError ? summary : changes;
+  if (failedRead.isError)
+    return (
+      <ReadError
+        error={failedRead.error}
+        fallback="Could not load Website Changes."
+        onRetry={() => void failedRead.refetch()}
+        pending={failedRead.isFetching}
+      />
+    );
   return comparisonState(summary.data, pairAvailable);
 }
 
@@ -229,9 +342,7 @@ function ChangesTable({
                     <TableCell>{row.field.replaceAll('_', ' ')}</TableCell>
                     <TableCell>
                       <Badge>{CLASS_LABELS[row.change_class]}</Badge>
-                      {row.expected ? (
-                        <span className="type-caption text-success-text ml-2">Expected</span>
-                      ) : null}
+                      {row.expected ? <span className="type-caption ml-2">Expected</span> : null}
                     </TableCell>
                     <TableCell>
                       <Evidence row={row} />

@@ -1675,7 +1675,7 @@ samp {
 
 
 
-/* Skip link — the first tab stop on every route (app/layout.tsx). Off-screen
+/* Skip link — the first tab stop in AppShell. Off-screen
    until focused, then it lands as a normal control against the panel fill. */
 .skip-link {
   position: fixed;

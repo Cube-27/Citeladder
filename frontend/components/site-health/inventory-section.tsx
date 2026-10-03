@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 
-import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Label, textRole } from '@/components/ui/typography';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
@@ -94,12 +94,20 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
       limit: pager.pageSize,
     }),
   );
-  const rows = inventoryQuery.data?.items ?? [];
-  const nextCursor = inventoryQuery.data?.next_cursor ?? null;
+  const data = inventoryQuery.isError ? undefined : inventoryQuery.data;
+  const rows = data?.items ?? [];
+  const nextCursor = data?.next_cursor ?? null;
 
   let body: ReactNode;
   if (inventoryQuery.isError) {
-    body = <Alert tone="danger">Could not load the page inventory. Please refresh.</Alert>;
+    body = (
+      <ReadError
+        error={inventoryQuery.error}
+        fallback="Could not load the page inventory."
+        onRetry={() => void inventoryQuery.refetch()}
+        pending={inventoryQuery.isFetching}
+      />
+    );
   } else if (rows.length === 0) {
     body = (
       <p className={textRole('body')}>
@@ -194,7 +202,7 @@ function ScoredInventoryBody({
   sort,
   onSortChange,
 }: Readonly<{
-  query: { isError: boolean; isLoading: boolean };
+  query: UseQueryResult<PagesPage>;
   rows: PagesPage['items'];
   rootErrors: NonNullable<PagesPage['root_errors']>;
   active: boolean;
@@ -203,7 +211,14 @@ function ScoredInventoryBody({
   onSortChange: (sort: PagesSort) => void;
 }>) {
   if (query.isError)
-    return <Alert tone="danger">Could not load pages for this view. Try again.</Alert>;
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Could not load pages for this view."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
   if (query.isLoading)
     return (
       <div className="grid min-h-40 gap-2 py-[var(--card-padding)]">
@@ -330,13 +345,14 @@ function ScoredInventoryState({
     );
   };
 
-  const rows = pagesQuery.data?.items ?? [];
-  const nextCursor = pagesQuery.data?.next_cursor ?? null;
+  const data = pagesQuery.isError ? undefined : pagesQuery.data;
+  const rows = data?.items ?? [];
+  const nextCursor = data?.next_cursor ?? null;
   // B3 (SH-4): the root fetch's failed calls ride the pages response. They
   // render ONLY on the Errors & Blocked tab, above the table, as a distinct
   // non-clickable block — the `error_or_blocked` filter keeps its real-page
   // semantics (a root failure never created a page row).
-  const rootErrors = tab === 'errors' ? (pagesQuery.data?.root_errors ?? []) : [];
+  const rootErrors = tab === 'errors' ? (data?.root_errors ?? []) : [];
 
   const body = (
     <ScoredInventoryBody

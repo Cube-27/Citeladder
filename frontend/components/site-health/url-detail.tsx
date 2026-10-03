@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
 import { CursorPager } from '@/components/ui/cursor-pager';
 import { Card, CardContent } from '@/components/ui/card';
@@ -95,7 +96,14 @@ export function UrlDetail({
 
   if (detailQuery.isLoading) return <PageLoading label="Loading page detail…" />;
   if (detailQuery.isError || !detailQuery.data) {
-    return <Alert tone="danger">Could not load this page. It may not exist in this crawl.</Alert>;
+    return (
+      <ReadError
+        error={detailQuery.error}
+        fallback="Could not load this page. It may not exist in this crawl."
+        onRetry={() => void detailQuery.refetch()}
+        pending={detailQuery.isFetching}
+      />
+    );
   }
 
   return (
@@ -162,14 +170,21 @@ function IssueHistory({
       limit: HISTORY_LIMIT,
     }),
   );
-  const rows = historyQuery.data?.items ?? [];
+  const rows = historyQuery.isError ? [] : (historyQuery.data?.items ?? []);
   const nextCursor = historyQuery.data?.next_cursor ?? null;
 
   return (
     <Card>
       <CardContent className="grid gap-3">
         <h2 className={textRole('sectionTitle')}>Issue History</h2>
-        {historyQuery.isError ? <Alert tone="danger">Could not load issue history.</Alert> : null}
+        {historyQuery.isError ? (
+          <ReadError
+            error={historyQuery.error}
+            fallback="Could not load issue history."
+            onRetry={() => void historyQuery.refetch()}
+            pending={historyQuery.isFetching}
+          />
+        ) : null}
         {historyQuery.isLoading ? <HistorySkeleton /> : null}
         {!historyQuery.isLoading && !historyQuery.isError && rows.length === 0 ? (
           <p className={textRole('body')}>No prior issue records for this page.</p>

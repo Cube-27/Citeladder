@@ -18,3 +18,8 @@ export const SITE_HEALTH_STREAM_RECONNECT_MAX_MS = 15_000;
  */
 export const ISSUE_PAGE_LIMIT = 25;
 export const ISSUE_OCCURRENCE_LIMIT = 25;
+
+/** Bounds for heterogeneous persisted Website Changes evidence. */
+export const CHANGE_EVIDENCE_LIMIT = 8;
+export const CHANGE_EVIDENCE_TEXT_LIMIT = 140;
+export const CHANGE_EVIDENCE_DEPTH_LIMIT = 2;

@@ -41,7 +41,11 @@ function response(state: 'available' | 'unavailable' | 'non_comparable', complet
   };
 }
 
-function handlers(state: 'available' | 'unavailable' | 'non_comparable', complete = true) {
+function handlers(
+  state: 'available' | 'unavailable' | 'non_comparable',
+  complete = true,
+  values: Record<string, unknown> = {},
+) {
   const base = `/api/v1/projects/${PROJECT}/site-health/changes`;
   mswServer.use(
     http.get(`${base}/summary`, () => HttpResponse.json(response(state, complete))),
@@ -75,6 +79,7 @@ function handlers(state: 'available' | 'unavailable' | 'non_comparable', complet
                   expected: false,
                   implementation_event_id: null,
                   created_at: '2026-08-15T00:00:00Z',
+                  ...values,
                 },
               ]
             : [],
@@ -85,6 +90,28 @@ function handlers(state: 'available' | 'unavailable' | 'non_comparable', complet
 }
 
 describe('Website Changes', () => {
+  it('labels and bounds content records and nested arrays instead of dumping JSON', async () => {
+    handlers('available', true, {
+      field: 'content_change',
+      before_value: { word_count: 100, heading_outline: ['Introduction'] },
+      after_value: {
+        word_count: 200,
+        content_delta_ratio: 0.5,
+        content_change_classification: 'substantial_change',
+        heading_outline: Array.from({ length: 10 }, (_, i) => `Heading ${i}`),
+        details: { region: { text: 'Nested text' } },
+      },
+    });
+    renderWithProviders(<ChangesPanel projectId={PROJECT} />);
+    await userEvent.click(await screen.findByText('View evidence'));
+    const after = screen.getByText(/After:/).parentElement!;
+    expect(after).toHaveTextContent('word count: 200');
+    expect(after).toHaveTextContent('content delta ratio: 0.5');
+    expect(after).toHaveTextContent('content change classification: Substantial change');
+    expect(after).toHaveTextContent('2 more items not shown');
+    expect(after).toHaveTextContent('region: 1 field');
+    expect(after).not.toHaveTextContent('Heading 8');
+  });
   it('renders regression summary and exact before/after evidence', async () => {
     handlers('available');
     renderWithProviders(<ChangesPanel projectId={PROJECT} />);

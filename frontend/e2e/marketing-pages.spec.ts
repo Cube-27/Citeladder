@@ -6,6 +6,77 @@ import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { filterAndSortPosts, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 
 test.describe('marketing routes', () => {
+  test('product previews reserve their scaled height before hydration', async ({
+    browser,
+    baseURL,
+  }) => {
+    for (const width of [375, 1280]) {
+      for (const path of ['/', '/solutions']) {
+        const context = await browser.newContext({
+          baseURL,
+          viewport: { width, height: 900 },
+          reducedMotion: 'reduce',
+        });
+        const page = await context.newPage();
+        let releaseScripts!: () => void;
+        const scriptsReleased = new Promise<void>((resolve) => {
+          releaseScripts = resolve;
+        });
+        await page.route('**/_astro/*.js', async (route) => {
+          await scriptsReleased;
+          await route.continue();
+        });
+        await page.goto(path, { waitUntil: 'commit' });
+        const frames = page.locator(
+          path === '/' ? '.cl-hero-scaled-preview' : '.cl-solution-preview',
+        );
+        await expect(frames.first()).toBeVisible();
+        await page.waitForFunction(() =>
+          [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].every(
+            (stylesheet) => stylesheet.sheet !== null,
+          ),
+        );
+        // WebKit's fonts.ready waits for document readiness, which the held
+        // module scripts prevent. Load the used faces without that dependency.
+        await page.evaluate(() =>
+          Promise.all(
+            ['400 16px Sora', '600 16px Sora', '400 16px Switzer', '600 16px Switzer'].map((font) =>
+              document.fonts.load(font),
+            ),
+          ),
+        );
+        const boxes = () =>
+          frames.evaluateAll((elements) =>
+            elements.map((element) => {
+              const { y, width, height } = element.getBoundingClientRect();
+              return { y, width, height };
+            }),
+          );
+        const before = await boxes();
+        releaseScripts();
+        await page.waitForLoadState('networkidle');
+        if (path === '/')
+          await expect(page.getByRole('tab', { name: 'Trends', exact: true })).toBeVisible();
+        const after = await boxes();
+        for (let index = 0; index < before.length; index += 1) {
+          expect(before[index]!.height).toBeGreaterThan(0);
+          expect(
+            Math.abs(after[index]!.height - before[index]!.height),
+            `${path} at ${width}px: preview height`,
+          ).toBeLessThanOrEqual(1);
+          expect(
+            Math.abs(after[index]!.y - before[index]!.y),
+            `${path} at ${width}px: preview position`,
+          ).toBeLessThanOrEqual(1);
+        }
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        );
+        await context.close();
+      }
+    }
+  });
+
   test('contact form supports validation, delivery retry and success at public viewport sizes', async ({
     page,
   }) => {
@@ -338,7 +409,10 @@ test.describe('marketing routes', () => {
           .poll(() =>
             panel
               .locator('.cl-product-preview > div')
-              .evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
+              .evaluate(
+                (element) =>
+                  element.getBoundingClientRect().width / (element as HTMLElement).offsetWidth,
+              ),
           )
           .toBeLessThan(1);
       }
@@ -388,7 +462,10 @@ test.describe('marketing routes', () => {
         for (const image of [hero, product]) {
           await expect
             .poll(() =>
-              image.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
+              image.evaluate(
+                (element) =>
+                  element.getBoundingClientRect().width / (element as HTMLElement).offsetWidth,
+              ),
             )
             .toBeLessThan(1);
         }
@@ -407,7 +484,10 @@ test.describe('marketing routes', () => {
       if (width === 375) {
         await expect
           .poll(() =>
-            solution.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
+            solution.evaluate(
+              (element) =>
+                element.getBoundingClientRect().width / (element as HTMLElement).offsetWidth,
+            ),
           )
           .toBeLessThan(1);
       }

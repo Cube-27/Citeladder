@@ -148,5 +148,5 @@ function bucketLabel(value: string): string {
   const at = new Date(value);
   return Number.isNaN(at.getTime())
     ? value
-    : at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    : at.toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }

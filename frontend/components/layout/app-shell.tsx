@@ -61,6 +61,9 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
       <AgentPanelProvider>
         <TooltipProvider>
           <div data-app-surface className="bg-shell relative flex min-h-dvh">
+            <a href="#main" className="skip-link">
+              Skip to main content
+            </a>
             <aside className="bg-sidebar sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col min-[981px]:flex">
               {/* The project selector is the sidebar's first row, at the same
                   height as the header beside it. The rail reads project →
@@ -124,7 +127,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 </div>
               </header>
 
-              <main id="main" className="app-pane app-pane-workspace relative flex-1">
+              <main id="main" tabIndex={-1} className="app-pane app-pane-workspace relative flex-1">
                 {/* The account rides the route's own first row rather than a
                     bar of its own, so the shell adds no second row above the
                     work. It is positioned rather than placed in PageShell
