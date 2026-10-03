@@ -119,7 +119,7 @@ export function PropertyPicker({
   const [open, setOpen] = useState(false);
   const [pendingRef, setPendingRef] = useState<string | null>(null);
 
-  const propertiesQuery = useMutation({
+  const discovery = useMutation({
     mutationFn: () =>
       integrationsApi.discoverProperties(connection.id, {
         workspaceId: connection.workspace_id,
@@ -177,12 +177,12 @@ export function PropertyPicker({
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (propertiesQuery.isPending) return;
-              propertiesQuery.reset();
+              if (discovery.isPending) return;
+              discovery.reset();
               setOpen(true);
-              propertiesQuery.mutate();
+              discovery.mutate();
             }}
-            disabled={disabled || propertiesQuery.isPending}
+            disabled={disabled || discovery.isPending}
             data-testid={`select-property-${connection.provider}`}
           >
             {selected ? 'Change' : 'Select'}
@@ -213,28 +213,28 @@ export function PropertyPicker({
             </Alert>
           ) : null}
 
-          {propertiesQuery.isPending ? (
+          {discovery.isPending ? (
             <>
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
             </>
           ) : null}
 
-          {propertiesQuery.isError ? (
+          {discovery.isError ? (
             <Alert tone="danger">
               Could not load your properties from the provider.{' '}
-              {humanizeApiError(propertiesQuery.error).message}
+              {humanizeApiError(discovery.error).message}
             </Alert>
           ) : null}
 
-          {propertiesQuery.data?.length === 0 ? (
+          {discovery.data?.length === 0 ? (
             <Alert tone="neutral">
               This account has no {noun} available. Verify the property in the provider&rsquo;s own
               console first, then reopen this dialog.
             </Alert>
           ) : null}
 
-          {propertiesQuery.data?.map((property) => (
+          {discovery.data?.map((property) => (
             <PropertyOption
               key={property.property_ref}
               property={property}

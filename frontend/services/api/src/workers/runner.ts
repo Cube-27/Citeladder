@@ -75,8 +75,6 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
 
 export type Exclusive = (drain: () => Promise<number>) => Promise<number>;
 
-// hashtextextended('citeladder-runner-drain', 0): one drain per database at a time.
-
 /**
  * Each committed write may start an execution; without this a burst would open
  * one pool per execution against the small database. A second execution waits

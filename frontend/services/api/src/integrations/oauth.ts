@@ -153,13 +153,7 @@ export async function completeOAuth(
     redirect_uri: redirectUri,
   });
   await db.transaction().execute(async (trx) => {
-    try {
-      await lockAuthorizedWorkspace(trx, workspaceId, userId, 'manage_credentials');
-    } catch (error) {
-      if (!(error instanceof ApiError)) throw error;
-      throw new IntegrationError('oauth_state_invalid', 'Invalid OAuth state');
-    }
-    await requireCredentialAuthority(trx, workspaceId, userId);
+    await requireCredentialAuthority(trx, workspaceId, userId, true);
     const existing = await trx
       .selectFrom('integration_oauth_grants')
       .selectAll()
@@ -250,17 +244,24 @@ export async function completeOAuth(
   });
 }
 
-async function requireCredentialAuthority(db: Database, workspaceId: string, userId: string) {
+/** Any authority failure reads as an invalid state; `lock` holds the workspace for the write. */
+async function requireCredentialAuthority(
+  db: Database,
+  workspaceId: string,
+  userId: string,
+  lock = false,
+) {
+  try {
+    if (lock) await lockAuthorizedWorkspace(db, workspaceId, userId, 'manage_credentials');
+    else (await resolveWorkspaceMember(db, userId, workspaceId)).require('manage_credentials');
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+    throw new IntegrationError('oauth_state_invalid', 'Invalid OAuth state');
+  }
   const user = await db
     .selectFrom('users')
     .select('is_active')
     .where('id', '=', userId)
     .executeTakeFirst();
   if (!user?.is_active) throw new IntegrationError('oauth_state_invalid', 'Invalid OAuth state');
-  try {
-    (await resolveWorkspaceMember(db, userId, workspaceId)).require('manage_credentials');
-  } catch (error) {
-    if (!(error instanceof ApiError)) throw error;
-    throw new IntegrationError('oauth_state_invalid', 'Invalid OAuth state');
-  }
 }

@@ -70,6 +70,7 @@ export function executionSettings(env: Record<string, string | undefined>) {
   };
 }
 
+// hashtextextended(DRAIN_LOCK, 0): one drain per database at a time.
 export const DRAIN_LOCK = 'citeladder-runner-drain';
 
 /** Tables whose API mutations can leave executable or recoverable work. */
