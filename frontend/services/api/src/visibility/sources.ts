@@ -118,6 +118,41 @@ function filteredCitations(
     .where('page.page_format', '=', query.sourceClass);
 }
 
+/** The compact citation rows shared by source paging and category totals. */
+function citationSelection(
+  db: Database,
+  scope: Scope,
+  selection: RunSelection,
+  query: SourceQuery,
+  pages: boolean,
+) {
+  const key = pages ? 'citation.url' : 'citation.domain';
+  let citations = filteredCitations(db, scope, selection, query, pages);
+  if (pages)
+    citations = citations.leftJoin('source_pages as format_page', (join) =>
+      join
+        .onRef('format_page.url_hash', '=', 'citation.url_hash')
+        .on('format_page.workspace_id', '=', selection.workspaceId)
+        .on('format_page.project_id', '=', selection.projectId),
+    );
+  return citations.select([
+    'citation.id',
+    'citation.analysis_id',
+    'citation.url_hash',
+    'citation.url',
+    'citation.classification',
+    'citation.source_class',
+    'citation.source_taxonomy_version',
+    'scope.prompt_key',
+    'scope.observed_at',
+    sql<string>`${sql.ref(key)}`.as('key'),
+    (pages
+      ? sql<string | null>`format_page.page_format`
+      : sql<string | null>`citation.source_class`
+    ).as('category'),
+  ]);
+}
+
 export async function getVisibilitySources(
   db: Database,
   requested: RunSelection,
@@ -146,31 +181,7 @@ export async function getVisibilitySources(
   // Selecting a domain is the drill-down into its pages; the URL dimension
   // is pages across every domain.
   const pages = Boolean(query.domain) || query.dimension === 'url';
-  const key = pages ? 'citation.url' : 'citation.domain';
-  let citations = filteredCitations(db, scope, selection, query, pages);
-  if (pages)
-    citations = citations.leftJoin('source_pages as format_page', (join) =>
-      join
-        .onRef('format_page.url_hash', '=', 'citation.url_hash')
-        .on('format_page.workspace_id', '=', selection.workspaceId)
-        .on('format_page.project_id', '=', selection.projectId),
-    );
-  const selected = citations.select([
-    'citation.id',
-    'citation.analysis_id',
-    'citation.url_hash',
-    'citation.url',
-    'citation.classification',
-    'citation.source_class',
-    'citation.source_taxonomy_version',
-    'scope.prompt_key',
-    'scope.observed_at',
-    sql<string>`${sql.ref(key)}`.as('key'),
-    (pages
-      ? sql<string | null>`format_page.page_format`
-      : sql<string | null>`citation.source_class`
-    ).as('category'),
-  ]);
+  const selected = citationSelection(db, scope, selection, query, pages);
   const base = db.with(
     (cte) => cte('selected').materialized(),
     () => selected,
