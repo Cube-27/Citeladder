@@ -1989,6 +1989,7 @@ def upgrade() -> None:
         sa.Column("score_summary", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("site_facts", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("robots_snapshot_id", sa.UUID(), nullable=True),
+        sa.Column("robots_observed_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["workspace_id", "project_id", "robots_snapshot_id"],
             ["robots_snapshots.workspace_id", "robots_snapshots.project_id", "robots_snapshots.id"],
@@ -2019,6 +2020,12 @@ def upgrade() -> None:
     )
     op.create_index(
         op.f("ix_site_crawls_project_id"), "site_crawls", ["project_id"], unique=False
+    )
+    op.create_index(
+        "ix_site_crawls_robots_history",
+        "site_crawls",
+        ["workspace_id", "project_id", "robots_observed_at", "id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_site_crawls_status"), "site_crawls", ["status"], unique=False

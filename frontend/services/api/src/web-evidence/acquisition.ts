@@ -1,9 +1,6 @@
 /** Durable operator suppression, destination robots, and publisher pacing at every hop. */
 import { setTimeout as delay } from 'node:timers/promises';
 import robotsModule from 'robots-parser';
-import type { z } from 'zod';
-import type { crawlerBotFactSchema } from '@citeladder/contracts/site-health';
-import type { CrawlerBot } from '../config/crawlers.ts';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -135,6 +132,8 @@ export function robotsPolicy(
   const unavailable = status === 429 || status >= 500 || status === 0;
   const restricted = status === 401 || status === 403;
   const fetched = status >= 200 && status < 300;
+  // A missing file (other 4xx) is readable as "no rules"; 1xx, 3xx and failures are not.
+  const readable = fetched || (status >= 400 && status < 500 && !unavailable && !restricted);
   const robots = robotsParser(`${origin}/robots.txt`, fetched ? body : '');
   const declared = robots.getCrawlDelay(policy.web_fetch.user_agent);
   const seconds = declared === undefined ? settings.defaultDelay : Math.max(0, declared);
@@ -144,6 +143,7 @@ export function robotsPolicy(
     body: fetched ? body : null,
     unavailable,
     restricted,
+    readable,
     delay: seconds,
     /** Whether the publisher's rules admit `agent`, for reporting another crawler's stance. */
     allows: (url: string, agent: string) =>
@@ -164,41 +164,7 @@ export function robotsPolicy(
       robots.isAllowed(url, policy.web_fetch.user_agent) === true,
   };
 }
-type RobotsPolicy = ReturnType<typeof robotsPolicy>;
-
-/** Report permissions for a bounded set of known URLs using the acquisition parser. */
-export function crawlerPolicyFacts(
-  origin: string,
-  status: number,
-  body: string,
-  urls: string[],
-  bots: readonly CrawlerBot[] = policy.crawlers.bots,
-): z.infer<typeof crawlerBotFactSchema>[] {
-  const robots = robotsPolicy(origin, status, body);
-  const unreadable =
-    robots.unavailable || robots.restricted || status < 200 || (status >= 300 && status < 400);
-  const root = `${origin}/`;
-  return bots.map((bot) => {
-    const matched = robots.matched(bot.robots_tokens);
-    const allowed = (url: string) => bot.robots_tokens.every((token) => robots.allows(url, token));
-    const disallowed = unreadable ? 0 : urls.filter((url) => !allowed(url)).length;
-    let summary: z.infer<typeof crawlerBotFactSchema>['policy'] = 'all_allowed';
-    if (disallowed > 0) summary = disallowed === urls.length ? 'all_disallowed' : 'restricted';
-    let rootAccess: z.infer<typeof crawlerBotFactSchema>['root_access'] = 'unknown';
-    if (!unreadable) rootAccess = allowed(root) ? 'allowed' : 'disallowed';
-    return {
-      bot_id: bot.bot_id,
-      label: bot.label,
-      operator: bot.operator,
-      purpose: bot.purpose,
-      matched,
-      root_access: rootAccess,
-      policy: unreadable || urls.length === 0 ? 'unknown' : summary,
-      evaluated_url_count: unreadable ? 0 : urls.length,
-      disallowed_url_count: disallowed,
-    };
-  });
-}
+export type RobotsPolicy = ReturnType<typeof robotsPolicy>;
 
 export class PageAcquirer {
   readonly #cache = new Map<string, { expires: number; value: Promise<RobotsPolicy> }>();
@@ -260,7 +226,9 @@ export class PageAcquirer {
   /** `admit` screens each page hop (never robots.txt) before the shared authorization. */
   fetch(
     url: string,
-    options: Omit<FetchOptions, 'gate' | 'authorize'> & { admit?: (url: URL) => void },
+    options: Omit<FetchOptions, 'gate' | 'authorize'> & {
+      admit?: (url: URL) => void;
+    },
   ) {
     const { admit, ...rest } = options;
     return this.fetcher(url, {

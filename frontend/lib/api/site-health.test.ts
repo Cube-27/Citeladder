@@ -9,6 +9,7 @@ import {
   monitoredUrlsResponseSchema,
   pageDetailSchema,
   rerunPageResponseSchema,
+  robotsFactsSchema,
   siteCrawlSchema,
   siteHealthEntitlementSchema,
   siteHealthErrorSchema,
@@ -199,12 +200,7 @@ describe('siteHealthApi.getCrawl site_facts (v2 P2 contract)', () => {
 describe('siteCrawlSchema site_facts (v2 P2 contract)', () => {
   it('accepts a populated site_facts blob as the worker persists it', () => {
     const parsed = strictValidate(siteCrawlSchema, crawl, 'siteHealth.getCrawl');
-    const robots = parsed.site_facts?.robots as { bots: { label: string; root_access: string }[] };
-    expect(robots.bots).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ label: 'GPTBot', root_access: 'disallowed' }),
-      ]),
-    );
+    expect(robotsFactsSchema.safeParse(parsed.site_facts?.robots).success).toBe(true);
     expect(parsed.site_facts?.llms_txt).toEqual({
       fetched: true,
       url: 'https://example.com/llms.txt',

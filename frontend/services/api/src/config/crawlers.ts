@@ -11,8 +11,6 @@ import { ConfigError } from './config-error.ts';
 const nonempty = z.string().trim().min(1);
 const schema = z.strictObject({
   catalog_version: nonempty,
-  purposes: z.array(crawlerPurposeSchema),
-  resource_classes: z.array(crawlerResourceClassSchema),
   resource_rules: z.array(
     z.strictObject({
       resource_class: crawlerResourceClassSchema,
@@ -50,12 +48,7 @@ export function loadCrawlerCatalog(value: unknown) {
   for (const bot of result.bots) {
     if (ids.has(bot.bot_id)) throw new ConfigError(`Duplicate crawler bot_id: ${bot.bot_id}`);
     ids.add(bot.bot_id);
-    if (!result.purposes.includes(bot.purpose))
-      throw new ConfigError(`Undeclared crawler purpose: ${bot.purpose}`);
   }
-  for (const rule of result.resource_rules)
-    if (!result.resource_classes.includes(rule.resource_class))
-      throw new ConfigError(`Undeclared resource class: ${rule.resource_class}`);
   return result;
 }
 export const crawlers = loadCrawlerCatalog(catalog);

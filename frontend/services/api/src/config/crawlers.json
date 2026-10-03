@@ -1,16 +1,5 @@
 {
   "catalog_version": "1",
-  "purposes": ["ai_training", "ai_search", "ai_user_fetch", "search_engine", "other"],
-  "resource_classes": [
-    "page",
-    "document",
-    "asset",
-    "robots",
-    "sitemap",
-    "llms_txt",
-    "feed",
-    "other"
-  ],
   "resource_rules": [
     {
       "resource_class": "robots",

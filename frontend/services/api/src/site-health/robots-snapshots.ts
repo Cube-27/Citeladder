@@ -16,7 +16,7 @@ export async function insertRobotsSnapshot(
   const retained = new TextDecoder().decode(bytes.subarray(0, maxBytes), {
     stream: bytes.length > maxBytes,
   });
-  await db
+  const inserted = await db
     .insertInto('robots_snapshots')
     .values({
       id: randomUUID(),
@@ -31,13 +31,17 @@ export async function insertRobotsSnapshot(
     .onConflict((conflict) =>
       conflict.columns(['workspace_id', 'project_id', 'origin', 'content_hash']).doNothing(),
     )
-    .execute();
-  return db
-    .selectFrom('robots_snapshots')
-    .selectAll()
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('project_id', '=', crawl.project_id)
-    .where('origin', '=', origin)
-    .where('content_hash', '=', contentHash)
-    .executeTakeFirstOrThrow();
+    .returning('id')
+    .executeTakeFirst();
+  return (
+    inserted ??
+    db
+      .selectFrom('robots_snapshots')
+      .select('id')
+      .where('workspace_id', '=', crawl.workspace_id)
+      .where('project_id', '=', crawl.project_id)
+      .where('origin', '=', origin)
+      .where('content_hash', '=', contentHash)
+      .executeTakeFirstOrThrow()
+  );
 }

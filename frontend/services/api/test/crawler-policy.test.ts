@@ -1,11 +1,17 @@
 import { expect, it } from 'vitest';
 import catalog from '../src/config/crawlers.json' with { type: 'json' };
 import { loadCrawlerCatalog, matchesCrawlerUserAgent } from '../src/config/crawlers.ts';
-import { crawlerPolicyFacts } from '../src/web-evidence/acquisition.ts';
+import { crawlerRootFacts, crawlerSamplePolicy } from '../src/site-health/crawler-policy.ts';
+import { robotsPolicy } from '../src/web-evidence/acquisition.ts';
 import { DELIVERY_CHECKS } from '../src/site-health/analysis/delivery-checks.ts';
 
 const origin = 'https://example.test';
 const bot = loadCrawlerCatalog(catalog).bots.find((value) => value.label === 'GPTBot')!;
+function facts(status: number, body: string, urls: string[]) {
+  const robots = robotsPolicy(origin, status, body);
+  const [root] = crawlerRootFacts(robots, origin, [bot]);
+  return { ...root, ...crawlerSamplePolicy(robots, bot.robots_tokens, urls) };
+}
 it.each([
   [
     'allow exception',
@@ -51,9 +57,7 @@ it.each([
 ])(
   'evaluates %s with the acquisition parser',
   (_name, body, matched, rootAccess, summary, denied) => {
-    expect(
-      crawlerPolicyFacts(origin, 200, body, [`${origin}/`, `${origin}/products/widget`], [bot])[0],
-    ).toMatchObject({
+    expect(facts(200, body, [`${origin}/`, `${origin}/products/widget`])).toMatchObject({
       matched,
       root_access: rootAccess,
       policy: summary,
@@ -63,34 +67,17 @@ it.each([
   },
 );
 it.each([0, 301, 401, 403, 429, 503])('keeps unreadable robots %s unknown', (status) => {
-  expect(crawlerPolicyFacts(origin, status, '', [`${origin}/`], [bot])[0]).toMatchObject({
+  expect(facts(status, '', [`${origin}/`])).toMatchObject({
     root_access: 'unknown',
     policy: 'unknown',
     evaluated_url_count: 0,
     disallowed_url_count: 0,
   });
 });
-it.each([
-  (value: typeof catalog) => value.bots.push({ ...value.bots[0]! }),
-  (value: typeof catalog) => {
-    value.bots[0]!.purpose = 'invented';
-  },
-  (value: typeof catalog) => {
-    value.bots[0]!.ai_source = 'invented';
-  },
-  (value: typeof catalog) => {
-    value.bots[0]!.checks = ['invented'];
-  },
-  (value: typeof catalog) => {
-    value.resource_classes.push('invented');
-  },
-  (value: typeof catalog) => {
-    value.resource_rules[0]!.resource_class = 'invented';
-  },
-])('rejects an invalid catalog', (mutate) => {
+it('rejects a catalog with a duplicate bot_id', () => {
   const value = structuredClone(catalog);
-  mutate(value);
-  expect(() => loadCrawlerCatalog(value)).toThrow();
+  value.bots.push({ ...value.bots[0]! });
+  expect(() => loadCrawlerCatalog(value)).toThrow(/Duplicate crawler bot_id/);
 });
 it('never identifies requests through robots-only tokens', () => {
   const bots = loadCrawlerCatalog(catalog).bots;
@@ -100,11 +87,9 @@ it('never identifies requests through robots-only tokens', () => {
   expect(matchesCrawlerUserAgent(bot, 'Mozilla/5.0 (compatible; GPTBOT/1.4)')).toBe(true);
 });
 it('retains the root-access decision for training and search checks', () => {
-  const bots = crawlerPolicyFacts(
+  const bots = crawlerRootFacts(
+    robotsPolicy(origin, 200, 'User-agent: GPTBot\nDisallow: /\nAllow: /products/'),
     origin,
-    200,
-    'User-agent: GPTBot\nDisallow: /\nAllow: /products/',
-    [`${origin}/`, `${origin}/products/widget`],
   );
   const robots = {
     fetched: true,

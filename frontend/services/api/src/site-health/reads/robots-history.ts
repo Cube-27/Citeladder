@@ -1,8 +1,8 @@
 import { robotsFactsSchema } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import type { Database } from '../../db/database.ts';
-import { record } from '../../db/json.ts';
-import { utcText, pydanticUtc } from '../../db/timestamps.ts';
+import { pydanticUtc, utcTextOf } from '../../db/timestamps.ts';
+import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import {
   decodeKeysetCursor,
   encodeKeysetCursor,
@@ -19,24 +19,26 @@ export async function robotsHistory(
   input: { limit: number; cursor: string | null },
 ) {
   await loadProject(db, workspaceId, projectId);
+  const workspace = new WorkspaceScope(workspaceId);
   const filters = { workspace_id: workspaceId, project_id: projectId };
-  const observedAt = sql<Date>`(site_facts -> 'robots' ->> 'observed_at')::timestamptz`;
-  let query = db
-    .selectFrom('site_crawls')
-    .select(['id', 'site_facts', 'robots_snapshot_id'])
-    .select(utcText(observedAt).$notNull().as('observed_at'))
-    .where('workspace_id', '=', workspaceId)
+  let query = workspace
+    .selectFrom(db, 'site_crawls')
+    .select(['id', 'robots_snapshot_id'])
+    .select(sql<unknown>`site_facts -> 'robots'`.as('robots'))
+    .select(utcTextOf(sql.ref('robots_observed_at')).as('observed_at'))
     .where('project_id', '=', projectId)
-    .where(sql<boolean>`site_facts -> 'robots' ->> 'observed_at' IS NOT NULL`);
+    .where('robots_observed_at', 'is not', null);
   if (input.cursor) {
     const keys = decodeKeysetCursor(input.cursor, 'robots-history', filters);
     const id = parseUuid(keys[1]);
     if (keys.length !== 2 || !keys[0] || !Number.isFinite(Date.parse(keys[0])) || !id)
       throw new InvalidCursorError('invalid cursor');
-    query = query.where(sql<boolean>`(${observedAt}, id) < (${keys[0]}::timestamptz, ${id}::uuid)`);
+    query = query.where(
+      sql<boolean>`(robots_observed_at, id) < (${keys[0]}::timestamptz, ${id}::uuid)`,
+    );
   }
   const rows = await query
-    .orderBy(observedAt, 'desc')
+    .orderBy('robots_observed_at', 'desc')
     .orderBy('id', 'desc')
     .limit(input.limit + 1)
     .execute();
@@ -45,10 +47,9 @@ export async function robotsHistory(
     ...new Set(page.flatMap((row) => (row.robots_snapshot_id ? [row.robots_snapshot_id] : []))),
   ];
   const snapshots = ids.length
-    ? await db
-        .selectFrom('robots_snapshots')
+    ? await workspace
+        .selectFrom(db, 'robots_snapshots')
         .select(['id', 'origin', 'content_hash', 'body', 'truncated', 'status_code'])
-        .where('workspace_id', '=', workspaceId)
         .where('project_id', '=', projectId)
         .where('id', 'in', ids)
         .execute()
@@ -57,8 +58,7 @@ export async function robotsHistory(
   return {
     items: page.map((row) => ({
       crawl_id: row.id,
-      observed_at: pydanticUtc(row.observed_at),
-      robots: robotsFactsSchema.parse(record(row.site_facts).robots),
+      robots: robotsFactsSchema.parse(row.robots),
     })),
     snapshots,
     next_cursor:

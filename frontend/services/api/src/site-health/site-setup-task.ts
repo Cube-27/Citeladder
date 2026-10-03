@@ -13,7 +13,8 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
 import { SitemapCollector, SitemapParseError, sitemapRef } from '../web-evidence/sitemaps.ts';
-import { crawlerPolicyFacts } from '../web-evidence/acquisition.ts';
+import { robotsPolicy } from '../web-evidence/acquisition.ts';
+import { crawlerRootFacts, crawlerSamplePolicy } from './crawler-policy.ts';
 import { insertRobotsSnapshot } from './robots-snapshots.ts';
 import { admitCandidates, candidate, crawlScope, lockRuntime, type Candidate } from './frontier.ts';
 import {
@@ -56,11 +57,9 @@ type Robots = Awaited<ReturnType<SiteTaskContext['fetcher']['acquirer']['robots'
 /** How the robots.txt response reads in the dashboard: a missing file is not a failure. */
 function robotsStatus(robots: Robots | null) {
   if (robots?.body != null) return crawlPolicy.robots_statuses.fetched;
-  const status = robots?.status ?? 0;
-  if (status === 401 || status === 403) return crawlPolicy.robots_statuses.access_blocked;
+  if (robots?.restricted) return crawlPolicy.robots_statuses.access_blocked;
   // Unreachable, rate-limited, failing or unresolved redirects pause the crawl; other 4xx is a missing file.
-  if (status < 400 || status === 429 || status >= 500)
-    return crawlPolicy.robots_statuses.fetch_failed;
+  if (!robots?.readable) return crawlPolicy.robots_statuses.fetch_failed;
   return crawlPolicy.robots_statuses.not_found;
 }
 
@@ -112,7 +111,7 @@ async function siteEvidence(
         status_code: robots?.status || null,
         catalog_version: policy.crawlers.catalog_version,
         robots_snapshot_id: null as string | null,
-        bots: crawlerPolicyFacts(origin, robots?.status ?? 0, robots?.body ?? '', []),
+        bots: crawlerRootFacts(robots ?? robotsPolicy(origin, 0, ''), origin),
         sitemaps: (robots?.sitemaps ?? []).slice(0, crawlPolicy.max_declared_sitemaps),
       },
       llms_txt: llms,
@@ -320,6 +319,37 @@ function underLease(
     });
 }
 
+/** Same-origin known URLs, root first: sitemap URLs, then those the crawl has observed. */
+async function policySample(
+  trx: Database,
+  crawl: Crawl,
+  origin: string,
+  urls: string[],
+  size: number,
+) {
+  const sample = new Set([`${origin}/`]);
+  const add = (values: Iterable<string>) => {
+    for (const url of values) {
+      if (sample.size >= size) return;
+      if (URL.parse(url)?.origin === origin) sample.add(url);
+    }
+  };
+  add(urls);
+  if (sample.size < size) {
+    const discovered = await trx
+      .selectFrom('site_url_observations')
+      .select('final_url')
+      .where('workspace_id', '=', crawl.workspace_id)
+      .where('crawl_id', '=', crawl.id)
+      .orderBy('created_at')
+      .orderBy('id')
+      .limit(size)
+      .execute();
+    add(discovered.map((row) => row.final_url));
+  }
+  return [...sample].slice(0, size);
+}
+
 /** The second commit: sitemap admission, the resolved facts and the task outcome. */
 async function persist(
   ctx: SiteTaskContext,
@@ -350,48 +380,26 @@ async function persist(
       const snapshot = crawl.robots_snapshot_id
         ? await trx
             .selectFrom('robots_snapshots')
-            .selectAll()
+            .select(['body', 'truncated'])
             .where('workspace_id', '=', crawl.workspace_id)
             .where('project_id', '=', crawl.project_id)
             .where('id', '=', crawl.robots_snapshot_id)
             .executeTakeFirst()
         : undefined;
-      const discovered = await trx
-        .selectFrom('site_url_observations')
-        .select('final_url')
-        .where('workspace_id', '=', crawl.workspace_id)
-        .where('crawl_id', '=', crawl.id)
-        .orderBy('created_at')
-        .orderBy('id')
-        .limit(settings.policySampleSize)
-        .execute();
       const origin = new URL(crawl.root_url).origin;
-      const sample = [
-        ...new Set([`${origin}/`, ...urls, ...discovered.map((row) => row.final_url)]),
-      ]
-        .filter((url) => new URL(url).origin === origin)
-        .slice(0, settings.policySampleSize);
-      const bots = crawlerPolicyFacts(
-        origin,
-        Number(robots.status_code ?? 0),
-        snapshot?.body ?? '',
-        sample,
-      );
-      if (snapshot?.truncated)
-        for (const bot of bots) {
-          bot.policy = 'unknown';
-          bot.evaluated_url_count = 0;
-          bot.disallowed_url_count = 0;
-        }
-      // Root access was published from the full response in commit one and stays frozen.
-      const rootFacts = Array.isArray(robots.bots) ? robots.bots.map(record) : [];
-      for (const bot of bots) {
-        const initial = rootFacts.find((fact) => fact.bot_id === bot.bot_id);
-        if (initial) {
-          bot.root_access = initial.root_access as typeof bot.root_access;
-          bot.matched = initial.matched as typeof bot.matched;
-        }
-      }
+      const sample = await policySample(trx, crawl, origin, urls, settings.policySampleSize);
+      const parsed = robotsPolicy(origin, Number(robots.status_code ?? 0), snapshot?.body ?? '');
+      const tokens = new Map(policy.crawlers.bots.map((bot) => [bot.bot_id, bot.robots_tokens]));
+      // Root access and the matched group were published in commit one and stay frozen.
+      const bots = (Array.isArray(robots.bots) ? robots.bots.map(record) : []).map((bot) => ({
+        ...bot,
+        ...crawlerSamplePolicy(
+          parsed,
+          tokens.get(String(bot.bot_id)) ?? [],
+          tokens.has(String(bot.bot_id)) ? sample : [],
+          snapshot?.truncated,
+        ),
+      }));
       await trx
         .updateTable('site_crawls')
         .set((eb) => ({
@@ -457,6 +465,7 @@ export async function runSiteSetup(
         .set({
           site_facts: JSON.stringify(evidence),
           robots_snapshot_id: snapshot?.id ?? null,
+          robots_observed_at: new Date(observed.facts.robots.observed_at),
           updated_at: new Date(),
         })
         .where('id', '=', locked.id)

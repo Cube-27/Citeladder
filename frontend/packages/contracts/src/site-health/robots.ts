@@ -46,7 +46,6 @@ export const robotsHistoryPageSchema = responseObject({
   items: z.array(
     responseObject({
       crawl_id: z.uuid(),
-      observed_at: z.string(),
       robots: robotsFactsSchema,
     }),
   ),

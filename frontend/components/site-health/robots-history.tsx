@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import type { robotsHistoryPageSchema } from '@citeladder/contracts/site-health';
+import type { z } from 'zod';
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { CursorPager } from '@/components/ui/cursor-pager';
+import { DisplayTime } from '@/components/ui/display-time';
+import { LineDiff } from '@/components/ui/line-diff';
+import { ReadError } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
 import {
   Table,
@@ -12,8 +17,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
+import { diffLines } from '@/lib/agent/diff';
 import { siteHealthQueries } from '@/lib/api/site-health';
-import { robotsLineDiff } from '@/lib/site-health/robots-diff';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatDisplayTimestamp } from '@/lib/format';
+import { crawlerPolicyLabels, robotsStatusLabels } from '@/lib/site-health/site-facts';
+import { useCursorTable } from '@/lib/table/use-cursor-table';
+
+type RobotsHistoryPage = z.infer<typeof robotsHistoryPageSchema>;
 
 export function RobotsHistory({
   workspaceId,
@@ -22,21 +33,19 @@ export function RobotsHistory({
   workspaceId: string;
   projectId: string;
 }>) {
-  const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
-  const [beforeId, setBeforeId] = useState('');
-  const [afterId, setAfterId] = useState('');
-  const query = useQuery(siteHealthQueries.robotsHistory(workspaceId, projectId, cursors.at(-1)));
+  const pager = useCursorTable(projectId);
+  const query = useQuery(siteHealthQueries.robotsHistory(workspaceId, projectId, pager.cursor));
   if (query.isPending) return <output>Loading robots.txt observations…</output>;
-  if (query.isError) return <Alert tone="warning">robots.txt history is unavailable.</Alert>;
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="robots.txt history is unavailable."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
   const page = query.data;
-  const snapshots = new Map(page.snapshots.map((snapshot) => [snapshot.id, snapshot]));
-  const versions = page.items
-    .filter((item) => item.robots.robots_snapshot_id)
-    .map((item) => ({ value: item.crawl_id, label: item.observed_at }));
-  const snapshotFor = (id: string) =>
-    snapshots.get(page.items.find((item) => item.crawl_id === id)?.robots.robots_snapshot_id ?? '');
-  const before = snapshotFor(beforeId);
-  const after = snapshotFor(afterId);
   return (
     <>
       {page.items.length === 0 ? (
@@ -56,12 +65,12 @@ export function RobotsHistory({
             {page.items.map((item) => (
               <TableRow key={item.crawl_id}>
                 <TableCell>
-                  <time dateTime={item.observed_at}>{item.observed_at}</time>
+                  <DisplayTime value={item.robots.observed_at} />
                 </TableCell>
-                <TableCell>{item.robots.status.replaceAll('_', ' ')}</TableCell>
+                <TableCell>{robotsStatusLabels[item.robots.status]}</TableCell>
                 <TableCell>
                   {item.robots.bots
-                    .map((bot) => `${bot.label}: ${bot.policy.replaceAll('_', ' ')}`)
+                    .map((bot) => `${bot.label}: ${crawlerPolicyLabels[bot.policy]}`)
                     .join('; ')}
                 </TableCell>
                 <TableCell>{item.robots.robots_snapshot_id ?? 'No body observed'}</TableCell>
@@ -71,43 +80,53 @@ export function RobotsHistory({
         </Table>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={cursors.length === 1}
-          onClick={() => {
-            setCursors((values) => values.slice(0, -1));
-            setBeforeId('');
-            setAfterId('');
-          }}
-        >
-          Previous observations
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={!page.next_cursor}
-          onClick={() => {
-            setCursors((values) => [...values, page.next_cursor ?? undefined]);
-            setBeforeId('');
-            setAfterId('');
-          }}
-        >
-          Older observations
-        </Button>
+        <CursorPager
+          canPrev={pager.canPrev}
+          canNext={Boolean(page.next_cursor)}
+          onPrev={pager.pop}
+          onNext={() => pager.push(page.next_cursor)}
+        />
       </div>
-      <Select
-        ariaLabel="Before robots.txt observation"
-        value={beforeId}
-        onValueChange={setBeforeId}
-        options={[{ value: '', label: 'Select before observation' }, ...versions]}
-      />
-      <Select
-        ariaLabel="After robots.txt observation"
-        value={afterId}
-        onValueChange={setAfterId}
-        options={[{ value: '', label: 'Select after observation' }, ...versions]}
-      />
+      {/* A new page offers different observations, so the comparison starts over. */}
+      <RobotsCompare key={pager.cursor ?? 'first'} page={page} />
+    </>
+  );
+}
+
+function RobotsCompare({ page }: Readonly<{ page: RobotsHistoryPage }>) {
+  const timeZone = useDisplayTimeZone();
+  const [selected, setSelected] = useState({ before: '', after: '' });
+  const snapshots = new Map(page.snapshots.map((snapshot) => [snapshot.id, snapshot]));
+  const versions = page.items.flatMap((item) =>
+    item.robots.robots_snapshot_id
+      ? [
+          {
+            value: item.crawl_id,
+            label: formatDisplayTimestamp(item.robots.observed_at, timeZone),
+            snapshot: snapshots.get(item.robots.robots_snapshot_id),
+          },
+        ]
+      : [],
+  );
+  const options = versions.map(({ value, label }) => ({ value, label }));
+  const before = versions.find((version) => version.value === selected.before)?.snapshot;
+  const after = versions.find((version) => version.value === selected.after)?.snapshot;
+  // The React Compiler memoizes this on the selected snapshots.
+  const lines =
+    before && after
+      ? diffLines(before.body.replace(/\r\n?/gu, '\n'), after.body.replace(/\r\n?/gu, '\n'))
+      : undefined;
+  return (
+    <>
+      {(['before', 'after'] as const).map((side) => (
+        <Select
+          key={side}
+          ariaLabel={`${side === 'before' ? 'Before' : 'After'} robots.txt observation`}
+          value={selected[side]}
+          onValueChange={(value) => setSelected((current) => ({ ...current, [side]: value }))}
+          options={[{ value: '', label: `Select ${side} observation` }, ...options]}
+        />
+      ))}
       {before && after ? (
         <>
           {before.truncated || after.truncated ? (
@@ -116,15 +135,16 @@ export function RobotsHistory({
             </Alert>
           ) : null}
           <p className={textRole('caption')}>
-            Removed lines start with − from the Before observation; added lines start with + from
-            the After observation. Choose two observations on this page.
+            Lines removed since the Before observation and added in the After observation. Choose
+            two observations on this page.
           </p>
-          <pre
-            aria-label="robots.txt line diff"
-            className={textRole('body', 'max-h-96 overflow-auto whitespace-pre-wrap bg-well p-3')}
-          >
-            {robotsLineDiff(before.body, after.body)}
-          </pre>
+          {lines ? (
+            <LineDiff lines={lines} label="robots.txt line diff" />
+          ) : (
+            <p className={textRole('body')}>
+              These robots.txt files are too long to compare line by line.
+            </p>
+          )}
         </>
       ) : null}
     </>

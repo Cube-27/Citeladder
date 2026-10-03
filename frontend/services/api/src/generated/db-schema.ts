@@ -2196,6 +2196,7 @@ export interface SiteCrawls {
   profile_id: string;
   project_id: string;
   random_seed: string;
+  robots_observed_at: Timestamp | null;
   robots_snapshot_id: string | null;
   root_url: string;
   rule_catalog_version: string;

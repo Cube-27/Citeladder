@@ -102,6 +102,13 @@ class SiteCrawl(Base):
                 "robots_snapshots.id",
             ],
         ),
+        Index(
+            "ix_site_crawls_robots_history",
+            "workspace_id",
+            "project_id",
+            "robots_observed_at",
+            "id",
+        ),
         # Backs the composite (workspace_id, project_id, crawl_id) foreign key
         # from ``SiteUrlObservation`` that pins an observation's crawl to its
         # own workspace AND project (tenant-consistency guard). Including
@@ -171,6 +178,10 @@ class SiteCrawl(Base):
     site_facts: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     robots_snapshot_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True), nullable=True
+    )
+    # When site setup observed robots.txt; keys the paged observation history.
+    robots_observed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     extractor_version: Mapped[str] = mapped_column(String(32), default="")
     analyzer_version: Mapped[str] = mapped_column(String(32), default="")

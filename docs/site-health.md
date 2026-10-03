@@ -158,7 +158,8 @@ citations or actual bot visits.
 Append-only `robots_snapshots` retain a bounded UTF-8 body, truncation flag,
 status, origin and hash of the full fetched body. Inserts use
 `ON CONFLICT DO NOTHING` within workspace/project/origin/hash scope. Every
-crawl retains its observation time and snapshot ID; A→B→A therefore produces
+crawl retains its observation time (the indexed `robots_observed_at` column,
+written with the snapshot pointer) and snapshot ID; A→B→A therefore produces
 three observations referencing two bodies. The crawl pointer has a composite
 workspace/project foreign key. `robots_snapshot_max_bytes` owns retention size.
 

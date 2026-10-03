@@ -2,7 +2,8 @@ import { robotsHistoryPageSchema } from '@citeladder/contracts/site-health';
 import { afterAll, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { insertRobotsSnapshot } from '../src/site-health/robots-snapshots.ts';
-import { crawlerPolicyFacts } from '../src/web-evidence/acquisition.ts';
+import { crawlerRootFacts } from '../src/site-health/crawler-policy.ts';
+import { robotsPolicy } from '../src/web-evidence/acquisition.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 
@@ -38,6 +39,7 @@ async function observe(seed: SiteSeed, crawlId: string, body: string, time: numb
       .set({
         created_at: new Date(time),
         robots_snapshot_id: snapshot.id,
+        robots_observed_at: new Date(time),
         site_facts: JSON.stringify({
           robots: {
             observed_at: new Date(time).toISOString(),
@@ -48,7 +50,7 @@ async function observe(seed: SiteSeed, crawlId: string, body: string, time: numb
             status_code: 200,
             url: `${origin}/robots.txt`,
             sitemaps: [],
-            bots: crawlerPolicyFacts(origin, 200, body, [`${origin}/`]),
+            bots: crawlerRootFacts(robotsPolicy(origin, 200, body), origin),
           },
         }),
       })
@@ -70,7 +72,7 @@ it('deduplicates A→B→A while paging three observations and isolating workspa
   const unobserved = await fixtures.sibling(seed);
   await db
     .updateTable('site_crawls')
-    .set({ site_facts: JSON.stringify({}) })
+    .set({ site_facts: JSON.stringify({}), robots_observed_at: null })
     .where('workspace_id', '=', seed.workspaceId)
     .where('id', '=', unobserved)
     .execute();
@@ -87,7 +89,7 @@ it('deduplicates A→B→A while paging three observations and isolating workspa
     await (await get(seed, seed.projectId, `?limit=2&cursor=${page.next_cursor}`)).json(),
   );
   expect(next.items.map((row) => row.crawl_id)).toEqual([seed.crawlId]);
-  expect(next.items[0]!.robots.bots[0]!.policy).toBe('all_allowed');
+  expect(next.items[0]!.robots.bots[0]!.root_access).toBe('allowed');
   expect(next.next_cursor).toBeNull();
   const other = await fixtures.crawl();
   await observe(other, other.crawlId, a, Date.UTC(2026, 0, 4));
@@ -110,6 +112,12 @@ it('bounds snapshot UTF-8 bodies while hashing the complete response', async () 
   const scope = { workspace_id: seed.workspaceId, project_id: seed.projectId };
   const first = await insertRobotsSnapshot(db, scope, origin, 'aéz', 200, 2);
   const second = await insertRobotsSnapshot(db, scope, origin, 'aéother', 200, 2);
-  expect(first).toMatchObject({ body: 'a', truncated: true });
+  const retained = await db
+    .selectFrom('robots_snapshots')
+    .select(['body', 'truncated'])
+    .where('workspace_id', '=', seed.workspaceId)
+    .where('id', '=', first.id)
+    .executeTakeFirstOrThrow();
+  expect(retained).toEqual({ body: 'a', truncated: true });
   expect(second.id).not.toBe(first.id);
 });

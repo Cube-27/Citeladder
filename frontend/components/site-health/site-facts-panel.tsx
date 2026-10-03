@@ -18,32 +18,16 @@ import { SectionTitle, textRole } from '@/components/ui/typography';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { agentHandoffHref } from '@/lib/agent/handoff';
-import { readSiteFacts, type SiteFactsView } from '@/lib/site-health/site-facts';
+import {
+  crawlerMatchedLabels,
+  crawlerPolicyLabels,
+  crawlerPurposeLabels,
+  crawlerRootAccessLabels,
+  readSiteFacts,
+  robotsStatusLabels,
+  type SiteFactsView,
+} from '@/lib/site-health/site-facts';
 import { RobotsHistory } from './robots-history';
-
-const purposeLabels: Record<SiteFactsView['robots']['bots'][number]['purpose'], string> = {
-  ai_training: 'AI training',
-  ai_search: 'AI search',
-  ai_user_fetch: 'AI user fetch',
-  search_engine: 'Search engine',
-  other: 'Other',
-};
-const policyLabels = {
-  all_allowed: 'All allowed',
-  restricted: 'Restricted',
-  all_disallowed: 'All disallowed',
-  unknown: 'Unknown',
-} as const;
-const matchedLabels = {
-  no_rules: 'Not specified',
-  specific_group: 'Specific group',
-  wildcard_group: 'Wildcard group',
-} as const;
-const rootAccessLabels = {
-  allowed: 'Allowed',
-  disallowed: 'Disallowed',
-  unknown: 'Unknown',
-} as const;
 
 export function SiteFactsPanel({
   crawl,
@@ -85,7 +69,7 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
           page.
         </p>
         <p className={textRole('caption')}>
-          robots.txt: {view.robots.status.replaceAll('_', ' ')}
+          robots.txt: {robotsStatusLabels[view.robots.status]}
           {view.robots.status_code !== null ? ` (HTTP ${view.robots.status_code})` : ''} · llms.txt:{' '}
           {llmsStatus}
         </p>
@@ -105,16 +89,16 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
           onValueChange={setPurpose}
           options={[
             { value: 'all', label: 'All purposes' },
-            ...purposes.map((value) => ({ value, label: purposeLabels[value] })),
+            ...purposes.map((value) => ({ value, label: crawlerPurposeLabels[value] })),
           ]}
         />
         {purposes
           .filter((value) => purpose === 'all' || value === purpose)
           .map((group) => (
             <div key={group} className="grid min-w-0 gap-2">
-              <h3 className={textRole('itemTitle')}>{purposeLabels[group]}</h3>
+              <h3 className={textRole('itemTitle')}>{crawlerPurposeLabels[group]}</h3>
               <Table>
-                <caption className="sr-only">{purposeLabels[group]} robots policy</caption>
+                <caption className="sr-only">{crawlerPurposeLabels[group]} robots policy</caption>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Bot</TableHead>
@@ -131,12 +115,12 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
                       <TableRow key={bot.bot_id}>
                         <TableCell>{bot.label}</TableCell>
                         <TableCell>{bot.operator}</TableCell>
-                        <TableCell>{matchedLabels[bot.matched]}</TableCell>
+                        <TableCell>{crawlerMatchedLabels[bot.matched]}</TableCell>
                         <TableCell>
-                          <Badge>{rootAccessLabels[bot.root_access]}</Badge>
+                          <Badge>{crawlerRootAccessLabels[bot.root_access]}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge>{policyLabels[bot.policy]}</Badge>
+                          <Badge>{crawlerPolicyLabels[bot.policy]}</Badge>
                           <p className={textRole('caption')}>
                             {bot.policy === 'unknown'
                               ? 'No complete policy sample is available.'
