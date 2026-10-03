@@ -69,6 +69,7 @@ export const crawlSourceSchema = z.object({
   rejected_lines: z.number(),
   overlapping_lines: z.number(),
   unsupported_uploads: z.number(),
+  unsupported_batches: z.number(),
 });
 export const crawlSourceListSchema = z.object({
   ingestion_enabled: z.boolean(),
@@ -89,6 +90,8 @@ export const crawlReceiptSchema = z.object({
 });
 export const crawlUploadSchema = z.object({
   id: z.uuid(),
+  filename: z.string(),
+  size_bytes: z.number(),
   status: z.string(),
   last_ack_seq: z.number(),
   scanned_lines: z.number(),
@@ -170,7 +173,7 @@ export const botCrawlerRowSchema = z.object({
   label: z.string(),
   purpose: crawlerPurposeSchema,
   requests: z.number(),
-  pages: z.number(),
+  pages: z.number().nullable(),
   last_seen: z.string(),
   status_codes: z.record(z.string(), z.number()),
   verification: z.record(z.string(), z.number()),

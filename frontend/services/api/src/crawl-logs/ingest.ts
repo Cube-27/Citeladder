@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import type { Insertable, Selectable } from 'kysely';
 import { sql } from 'kysely';
@@ -87,25 +87,30 @@ export async function ingest(
 ) {
   ingestionEnabled();
   const now = options.now ?? new Date();
-  const key = options.key ?? hash(body.toString('base64'));
+  const key = options.key ?? createHash('sha256').update(body).digest('hex');
   if (!key.trim() || key.length > 255) throw new ApiError(422, 'Invalid idempotency key');
   // Attempt quota commits before parsing; replay does not spend accepted-line quota.
   if (!options.quotaChecked) await batchQuota(db, source, now);
-  const text = decodedBody(body, options.encoding);
-  let lines: string[];
+  const encoding =
+    options.encoding ??
+    (source.setup === 'cloudflare_logpush' && body[0] === 0x1f && body[1] === 0x8b
+      ? 'gzip'
+      : undefined);
+  const text = decodedBody(body, encoding);
+  let lines: string[] = [];
+  let unsupported: UnsupportedLogFormat | null = null;
+  // Cloudflare validates HTTP destinations with this authenticated gzipped probe.
+  const validation =
+    source.setup === 'cloudflare_logpush' &&
+    /^\s*\{\s*"content"\s*:\s*"tests"\s*\}\s*$/u.test(text);
   try {
-    lines = logLines(
-      text,
-      options.uploadId ? 'ndjson' : source.format,
-      crawlLogs.max_lines_per_batch,
-    );
+    lines = validation
+      ? []
+      : logLines(text, options.uploadId ? 'ndjson' : source.format, crawlLogs.max_lines_per_batch);
   } catch (error) {
     if (error instanceof RangeError) throw new ApiError(413, 'Too many log lines');
-    if (error instanceof UnsupportedLogFormat)
-      throw new ApiError(422, error.message, {
-        details: { status: 'unsupported_format', missing_fields: error.missing_fields },
-      });
-    throw error;
+    if (error instanceof UnsupportedLogFormat) unsupported = error;
+    else throw error;
   }
   const counts = {
     lines_received: lines.length,
@@ -142,22 +147,11 @@ export async function ingest(
       mapped = parseLogLine(line, options.uploadId ? 'ndjson' : source.format, preset);
     } catch (error) {
       if (!(error instanceof UnsupportedLogFormat)) throw error;
-      if (options.uploadId)
-        await db
-          .updateTable('crawl_log_uploads')
-          .set({
-            status: 'unsupported_format',
-            missing_fields: JSON.stringify(error.missing_fields),
-            updated_at: now,
-          })
-          .where('workspace_id', '=', scope.workspaceId)
-          .where('project_id', '=', scope.projectId)
-          .where('source_id', '=', source.id)
-          .where('id', '=', options.uploadId)
-          .execute();
-      throw new ApiError(422, error.message, {
-        details: { status: 'unsupported_format', missing_fields: error.missing_fields },
-      });
+      unsupported = error;
+      prepared.length = 0;
+      counts.lines_rejected = lines.length;
+      first = last = null;
+      break;
     }
     if (!mapped) {
       counts.lines_rejected++;
@@ -221,7 +215,7 @@ export async function ingest(
       line_hash: hash(JSON.stringify([source.id, mapped])),
     });
   }
-  return db.transaction().execute(async (trx) => {
+  const receipt = await db.transaction().execute(async (trx) => {
     if (options.actorId)
       await lockAuthorizedWorkspace(trx, scope.workspaceId, options.actorId, 'manage_credentials');
     const state = await lockCrawlState(trx, scope);
@@ -275,28 +269,32 @@ export async function ingest(
         .where('b.project_id', '=', scope.projectId)
         .where('s.host', '=', row.host)
         .where('b.source_id', '!=', source.id)
+        .where('b.status', '=', 'accepted')
+        .where(
+          sql<boolean>`(b.lines_matched>0 or b.lines_duplicate>0 or b.lines_unmatched>0 or b.heartbeat)`,
+        )
         .where(sql<boolean>`((${day}::date between (b.first_line_at at time zone ${state.reporting_timezone})::date and (b.last_line_at at time zone ${state.reporting_timezone})::date)
           or (b.heartbeat and (b.received_at at time zone ${state.reporting_timezone})::date = ${day}::date))`)
         .executeTakeFirst();
-      if (overlap) {
+      const declared = await trx
+        .selectFrom('crawl_log_uploads as u')
+        .innerJoin('crawl_log_sources as s', 's.id', 'u.source_id')
+        .select('u.id')
+        .where('u.workspace_id', '=', scope.workspaceId)
+        .where('u.project_id', '=', scope.projectId)
+        .where('s.host', '=', row.host)
+        .where('u.source_id', '!=', source.id)
+        .where('u.status', '=', 'completed')
+        .where(
+          sql<boolean>`exists(select 1 from jsonb_array_elements(u.scanned_dates) d where d->>'date'=${day})`,
+        )
+        .executeTakeFirst();
+      if (overlap || declared) {
         counts.lines_overlapping++;
         continue;
       }
       admitted.push(row);
     }
-    if (admitted.length)
-      await enforceSubjectRequest(
-        trx,
-        'crawl_project',
-        scope.projectId,
-        {
-          operation: 'crawl_logs.accepted_lines',
-          limit: crawlLogs.accepted_lines_per_project_per_day,
-          windowSeconds: 86400,
-          amount: admitted.length,
-        },
-        now,
-      );
     const id = randomUUID();
     await trx
       .insertInto('crawl_log_batches')
@@ -310,12 +308,18 @@ export async function ingest(
         idempotency_key: key,
         received_at: now,
         format: options.uploadId ? 'ndjson' : source.format,
+        status: unsupported
+          ? 'unsupported_format'
+          : validation
+            ? 'destination_validation'
+            : 'accepted',
+        missing_fields: JSON.stringify(unsupported?.missing_fields ?? []),
         parser_version: crawlLogs.parser_version,
         catalog_version: crawlers.catalog_version,
         ...counts,
         first_line_at: first,
         last_line_at: last,
-        heartbeat: !options.uploadId && lines.length === 0,
+        heartbeat: !options.uploadId && !unsupported && !validation && lines.length === 0,
       })
       .execute();
     if (admitted.length) {
@@ -327,6 +331,19 @@ export async function ingest(
         .execute();
       counts.lines_matched = inserted.length;
       counts.lines_duplicate = admitted.length - inserted.length;
+      if (inserted.length)
+        await enforceSubjectRequest(
+          trx,
+          'crawl_project',
+          scope.projectId,
+          {
+            operation: 'crawl_logs.accepted_lines',
+            limit: crawlLogs.accepted_lines_per_project_per_day,
+            windowSeconds: 86400,
+            amount: inserted.length,
+          },
+          now,
+        );
     }
     const receipt = await trx
       .updateTable('crawl_log_batches')
@@ -339,7 +356,16 @@ export async function ingest(
     if (options.uploadId)
       await trx
         .updateTable('crawl_log_uploads')
-        .set({ last_ack_seq: options.seq!, updated_at: now })
+        .set({
+          last_ack_seq: options.seq!,
+          updated_at: now,
+          ...(unsupported
+            ? {
+                status: 'unsupported_format',
+                missing_fields: JSON.stringify(unsupported.missing_fields),
+              }
+            : {}),
+        })
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('id', '=', options.uploadId)
@@ -347,4 +373,13 @@ export async function ingest(
     await enqueueRollup(trx, scope, now);
     return receipt;
   });
+  if (receipt.status === 'unsupported_format')
+    throw new ApiError(
+      422,
+      'This log format does not contain the fields needed for crawler identification.',
+      {
+        details: { status: receipt.status, missing_fields: strings(receipt.missing_fields) },
+      },
+    );
+  return receipt;
 }

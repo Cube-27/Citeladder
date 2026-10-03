@@ -7498,6 +7498,8 @@ def upgrade() -> None:
         sa.Column("idempotency_key", sa.String(255), nullable=False),
         sa.Column("received_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("format", sa.String(24), nullable=False),
+        sa.Column("status", sa.String(24), nullable=False),
+        sa.Column("missing_fields", postgresql.JSONB, nullable=False),
         sa.Column("parser_version", sa.String(32), nullable=False),
         sa.Column("catalog_version", sa.String(32), nullable=False),
         sa.Column("lines_received", sa.Integer, nullable=False),

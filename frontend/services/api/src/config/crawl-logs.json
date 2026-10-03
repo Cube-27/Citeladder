@@ -47,7 +47,7 @@
       "timestamp_unit": "iso"
     }
   },
-  "max_batch_bytes": 2097152,
+  "max_batch_bytes": 5242880,
   "max_lines_per_batch": 5000,
   "max_line_bytes": 16384,
   "max_sources_per_project": 20,

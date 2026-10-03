@@ -49,6 +49,10 @@ export async function refreshCrawlLogs(db: Database, scope: CrawlScope, now = ne
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('source_id', '=', source.id)
+        .where('status', '=', 'accepted')
+        .where(
+          sql<boolean>`(lines_matched>0 or lines_duplicate>0 or lines_unmatched>0 or heartbeat)`,
+        )
         .where('received_at', '>=', cutoff)
         .execute();
       const uploads = await trx

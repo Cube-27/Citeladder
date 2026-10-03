@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { sql } from 'kysely';
 import { createApp } from '../src/app.ts';
@@ -43,7 +43,9 @@ const event = (changes: Record<string, unknown> = {}) => ({
   client_ip: '192.0.2.2',
   ...changes,
 });
-async function setup(kind: 'custom' | 'upload' | 'cloudflare_worker' = 'custom') {
+async function setup(
+  kind: 'custom' | 'upload' | 'cloudflare_worker' | 'cloudflare_logpush' = 'custom',
+) {
   const tenant = await fixtures.tenant();
   const result = await createSource(db, scope(tenant), tenant.userId, {
     setup: kind,
@@ -108,6 +110,51 @@ describe('bounded formats', () => {
   });
 });
 describe('sanitized durable admission', () => {
+  it('retains unsupported diagnostics and accepts Logpush validation without claiming coverage', async () => {
+    const custom = await setup();
+    const invalid = Buffer.from('{"path":"/without-identification"}');
+    await expect(ingest(db, custom.source, invalid, {})).rejects.toThrow(/crawler identification/);
+    const saved = await db
+      .selectFrom('crawl_log_batches')
+      .selectAll()
+      .where('source_id', '=', custom.source.id)
+      .executeTakeFirstOrThrow();
+    expect(saved).toMatchObject({
+      status: 'unsupported_format',
+      missing_fields: ['timestamp', 'user_agent'],
+      heartbeat: false,
+    });
+    expect(saved.idempotency_key).toBe(createHash('sha256').update(invalid).digest('hex'));
+    await expect(ingest(db, custom.source, invalid, {})).rejects.toThrow(/crawler identification/);
+    expect(
+      await db
+        .selectFrom('crawl_log_batches')
+        .select('id')
+        .where('source_id', '=', custom.source.id)
+        .execute(),
+    ).toHaveLength(1);
+    const cloudflare = await setup('cloudflare_logpush');
+    const probe = await send(
+      cloudflare.source.id,
+      cloudflare.token,
+      gzipSync(Buffer.from('{"content":"tests"}')),
+    );
+    expect(probe.status).toBe(202);
+    await refreshCrawlLogs(db, scope(cloudflare.tenant));
+    expect(await crawlSummary(db, scope(cloudflare.tenant))).toMatchObject({
+      coverage: 'unknown',
+      requests: null,
+      connection: 'awaiting_data',
+    });
+    // Crawl admission has its own authenticated bound, above the ordinary API limit.
+    const large = await send(
+      custom.source.id,
+      custom.token,
+      body(event({ ignored: 'x'.repeat(3 * 1024 * 1024) })),
+    );
+    expect(large.status).toBe(202);
+    expect(await large.json()).toMatchObject({ lines_rejected: 1, lines_matched: 0 });
+  });
   it('discards unmatched/out-of-scope/bounded lines, retains public UUID identity and redacts secrets', async () => {
     const { tenant, source } = await setup();
     const a = randomUUID(),
@@ -297,6 +344,62 @@ describe('verification vocabulary', () => {
   });
 });
 describe('uploads, coverage and serialized recomputation', () => {
+  it('a completed zero-match file scan excludes a different source on its reporting day', async () => {
+    const { tenant, source } = await setup('upload');
+    const upload = await createUpload(
+      db,
+      scope(tenant),
+      source.id,
+      { filename: 'zero.log', size_bytes: 100 },
+      tenant.userId,
+    );
+    const day = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
+    await completeUpload(
+      db,
+      scope(tenant),
+      source.id,
+      upload.id,
+      {
+        scanned_lines: 2,
+        first_line_at: day + 'T00:00:00Z',
+        last_line_at: day + 'T23:59:59Z',
+        scanned_dates: [{ date: day, complete: true }],
+      },
+      tenant.userId,
+    );
+    await refreshCrawlLogs(db, scope(tenant));
+    expect(await crawlSummary(db, scope(tenant), { start_date: day, end_date: day })).toMatchObject(
+      {
+        connection: 'connected',
+        coverage: 'declared_complete',
+        requests: 0,
+      },
+    );
+    const live = await createSource(db, scope(tenant), tenant.userId, {
+      setup: 'custom',
+      origin: source.origin,
+      format: 'ndjson',
+    });
+    const liveSource = await db
+      .selectFrom('crawl_log_sources')
+      .selectAll()
+      .where('id', '=', live.id)
+      .executeTakeFirstOrThrow();
+    const receipt = await ingest(
+      db,
+      liveSource,
+      body(event({ timestamp: day + 'T12:00:00Z' })),
+      {},
+    );
+    expect(receipt).toMatchObject({ lines_matched: 0, lines_overlapping: 1 });
+    expect(
+      await db
+        .selectFrom('bot_requests')
+        .select('id')
+        .where('workspace_id', '=', tenant.workspaceId)
+        .execute(),
+    ).toHaveLength(0);
+  });
   it('resumes/replays batches, re-filters client evidence and records a zero-match client scan', async () => {
     const { tenant, source } = await setup('upload');
     const upload = await createUpload(
@@ -387,6 +490,10 @@ describe('uploads, coverage and serialized recomputation', () => {
         .where('workspace_id', '=', tenant.workspaceId)
         .execute(),
     ).toHaveLength(1);
+    expect(
+      (await ingest(db, source, body(event({ path: '/after-rejected-overlap' })), {}))
+        .lines_matched,
+    ).toBe(1);
     await db
       .updateTable('crawl_log_uploads')
       .set({ updated_at: new Date(now.getTime() - 25 * 3600000) })
@@ -522,7 +629,7 @@ describe('persisted analytics and coverage decisions', () => {
       requests: 1,
       pages: 1,
       active_bots: 1,
-      error_share: 0,
+      error_share: null,
     });
     expect(
       (await crawlerPage(db, scope(tenant), { verification: 'failed_verification' })).items[0],

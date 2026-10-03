@@ -132,10 +132,27 @@ export async function completeUpload(
         .where('b.project_id', '=', scope.projectId)
         .where('s.host', '=', source.host)
         .where('b.source_id', '!=', sourceId)
+        .where('b.status', '=', 'accepted')
+        .where(
+          sql<boolean>`(b.lines_matched>0 or b.lines_duplicate>0 or b.lines_unmatched>0 or b.heartbeat)`,
+        )
         .where(sql<boolean>`${day.date}::date between (coalesce(b.first_line_at,b.received_at) at time zone ${state.reporting_timezone})::date
           and (coalesce(b.last_line_at,b.received_at) at time zone ${state.reporting_timezone})::date`)
         .executeTakeFirst();
-      if (overlap) throw new ApiError(409, 'Scanned day overlaps another source');
+      const declared = await trx
+        .selectFrom('crawl_log_uploads as u')
+        .innerJoin('crawl_log_sources as s', 's.id', 'u.source_id')
+        .select('u.id')
+        .where('u.workspace_id', '=', scope.workspaceId)
+        .where('u.project_id', '=', scope.projectId)
+        .where('s.host', '=', source.host)
+        .where('u.source_id', '!=', sourceId)
+        .where('u.status', '=', 'completed')
+        .where(
+          sql<boolean>`exists(select 1 from jsonb_array_elements(u.scanned_dates) d where d->>'date'=${day.date})`,
+        )
+        .executeTakeFirst();
+      if (overlap || declared) throw new ApiError(409, 'Scanned day overlaps another source');
     }
     const completed = await trx
       .updateTable('crawl_log_uploads')

@@ -155,6 +155,7 @@ export async function crawlerPage(db: Database, scope: CrawlScope, options: Craw
       const bot = crawlers.bots.find((b) => b.bot_id === row.bot_id)!;
       return {
         ...row,
+        pages: row.pages || null,
         label: bot.label,
         purpose: bot.purpose,
         last_seen: row.last_seen.toISOString(),
@@ -377,9 +378,10 @@ export async function crawlSummary(
         .sort()
         .at(-1) ?? null,
     requests: measured ? total.requests : null,
-    pages: measured ? total.pages : null,
+    pages: total.pages > 0 || adequate ? total.pages : null,
     active_bots: measured ? total.bots : null,
-    error_share: total.requests ? total.errors / total.requests : null,
+    error_share:
+      total.requests && (total.errors > 0 || adequate) ? total.errors / total.requests : null,
     failed_verification_requests: failed.count,
     series: [...purposes.values()],
   });

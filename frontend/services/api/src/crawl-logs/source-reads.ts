@@ -22,7 +22,10 @@ export async function sourceList(
       const batches = await db
         .selectFrom('crawl_log_batches')
         .select([
-          sql<Date | null>`max(received_at)`.as('last'),
+          sql<Date | null>`max(received_at) filter(where status='accepted')`.as('last'),
+          sql<number>`count(*) filter(where status='unsupported_format')::integer`.as(
+            'unsupported',
+          ),
           sql<number>`coalesce(sum(lines_rejected),0)::integer`.as('rejected'),
           sql<number>`coalesce(sum(lines_overlapping),0)::integer`.as('overlapping'),
         ])
@@ -32,11 +35,13 @@ export async function sourceList(
         .executeTakeFirstOrThrow();
       const unsupported = await db
         .selectFrom('crawl_log_uploads')
-        .select((eb) => eb.fn.countAll<number>().as('count'))
+        .select([
+          sql<number>`count(*) filter(where status='unsupported_format')::integer`.as('count'),
+          sql<number>`count(*) filter(where status='completed')::integer`.as('completed'),
+        ])
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('source_id', '=', s.id)
-        .where('status', '=', 'unsupported_format')
         .executeTakeFirstOrThrow();
       return {
         id: s.id,
@@ -51,12 +56,17 @@ export async function sourceList(
         status: s.status,
         token_prefix: s.token_prefix,
         connection:
-          s.status === 'revoked' ? 'not_connected' : batches.last ? 'connected' : 'awaiting_data',
+          s.status === 'revoked'
+            ? 'not_connected'
+            : batches.last || unsupported.completed
+              ? 'connected'
+              : 'awaiting_data',
         last_accepted_batch: batches.last?.toISOString() ?? null,
         last_processed_at: s.last_processed_at?.toISOString() ?? null,
         rejected_lines: batches.rejected,
         overlapping_lines: batches.overlapping,
         unsupported_uploads: Number(unsupported.count),
+        unsupported_batches: batches.unsupported,
       };
     }),
   );

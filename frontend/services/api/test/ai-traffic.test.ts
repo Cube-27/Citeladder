@@ -71,6 +71,12 @@ describe('GET /projects/{project_id}/ai-traffic', () => {
       formula_version: policy.analytics.ai_referral_formula_version,
     });
     expect((await referrals(tenant, empty.projectId)).status).toBe(404);
+    const retired = await app.request(`/api/v1/projects/${empty.projectId}/ai-referrals`, {
+      headers: {
+        cookie: `${config.session.cookieName}=${await sessionToken({ sub: empty.userId, ver: 0 })}`,
+      },
+    });
+    expect(retired.status).toBe(404);
   });
 
   it('resolves a preset to its marked snapshot, however stale its end date', async () => {

@@ -1104,11 +1104,13 @@ export interface CrawlLogBatches {
   lines_received: number;
   lines_rejected: number;
   lines_unmatched: number;
+  missing_fields: Json;
   parser_version: string;
   project_id: string;
   received_at: Timestamp;
   seq: number | null;
   source_id: string;
+  status: string;
   upload_id: string | null;
   workspace_id: string;
 }

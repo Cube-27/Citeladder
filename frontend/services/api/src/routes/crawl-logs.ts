@@ -118,9 +118,13 @@ export const crawlLogRoutes = [
       const type = c.req.header('content-type')?.split(';')[0];
       if (
         type &&
-        !['application/json', 'application/x-ndjson', 'text/plain', 'application/gzip'].includes(
-          type,
-        )
+        ![
+          'application/json',
+          'application/x-ndjson',
+          'text/plain',
+          'application/gzip',
+          'application/octet-stream',
+        ].includes(type)
       )
         throw new ApiError(415, 'Unsupported log media type');
       const receipt = await ingest(db, source, await boundedBody(c.req.raw), {

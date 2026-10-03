@@ -175,6 +175,8 @@ class CrawlLogBatch(Base):
         DateTime(timezone=True), nullable=False
     )
     format: Mapped[str] = mapped_column(String(24), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    missing_fields: Mapped[dict | list] = mapped_column(JSONB, nullable=False)
     parser_version: Mapped[str] = mapped_column(String(32), nullable=False)
     catalog_version: Mapped[str] = mapped_column(String(32), nullable=False)
     lines_received: Mapped[int] = mapped_column(Integer, nullable=False)

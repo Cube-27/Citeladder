@@ -61,15 +61,23 @@ export function createApp(
   app.use(originToken(config));
   const startRunner = options.startRunner ?? runnerStarter(config, db);
   app.use((_c, next) => observeCommittedWork(next, startRunner));
-  app.use(
-    '/api/*',
-    bodyLimit({
-      maxSize: policy.api.request_body_max_bytes,
-      onError: () => {
-        throw new ApiError(413, 'Request body too large');
-      },
-    }),
-  );
+  const ordinaryBodyLimit = bodyLimit<AppEnv>({
+    maxSize: policy.api.request_body_max_bytes,
+    onError: () => {
+      throw new ApiError(413, 'Request body too large');
+    },
+  });
+  app.use('/api/*', (c, next) => {
+    // These owners authenticate and spend attempt quota before streaming their
+    // own compressed/decompressed body bound. Do not pre-read their bodies.
+    const crawlBatch =
+      c.req.method === 'POST' &&
+      (/^\/api\/v1\/crawl-logs\/ingest\/[^/]+$/u.test(c.req.path) ||
+        /^\/api\/v1\/projects\/[^/]+\/crawl-logs\/sources\/[^/]+\/uploads\/[^/]+\/batches$/u.test(
+          c.req.path,
+        ));
+    return crawlBatch ? next() : ordinaryBodyLimit(c, next);
+  });
   app.onError(onError);
   app.notFound(onNotFound);
   registerMcpRoutes(app, config, db);
