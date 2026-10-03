@@ -50,7 +50,7 @@ describe('GoogleAnalytics', () => {
     };
     expect(gtag.mock.calls.filter(([command]) => command === 'event')).toEqual([
       ['event', 'marketing_cta_click', fields],
-      ['event', 'demo_outbound_click', fields],
+      ['event', 'demo_contact_click', fields],
     ]);
     gtag.mockClear();
     document.querySelector('header')!.removeAttribute('data-cta-placement');
@@ -67,10 +67,7 @@ describe('GoogleAnalytics', () => {
     expect(gtag).not.toHaveBeenCalled();
     view.unmount();
     act(() => writeConsent('accepted'));
-    document.body.insertAdjacentHTML(
-      'beforeend',
-      '<a href="https://www.cube27.com/contact/" id="detached-demo">Demo</a>',
-    );
+    document.body.insertAdjacentHTML('beforeend', '<a href="/contact" id="detached-demo">Demo</a>');
     const detached = document.getElementById('detached-demo')!;
     detached.addEventListener('click', (event) => event.preventDefault());
     await user.click(detached);

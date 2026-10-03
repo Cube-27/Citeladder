@@ -16,6 +16,12 @@ const privateNames = new Set([
   'worker-configuration.d.ts',
 ]);
 for (const file of files) {
+  if (/\.(js|html)$/.test(file)) {
+    const content = await readFile(new URL(`client/${file.split(sep).join('/')}`, root), 'utf8');
+    if (content.includes('RESEND_API_KEY') || content.includes('api.resend.com')) {
+      throw new Error(`Server-only contact email code in marketing client output: ${file}`);
+    }
+  }
   const privateSegment = file
     .split(/[/\\]/)
     .some(

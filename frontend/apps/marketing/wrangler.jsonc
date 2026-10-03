@@ -11,7 +11,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
   },
-  "secrets": { "required": ["ORIGIN_TOKEN"] },
+  "secrets": { "required": ["ORIGIN_TOKEN", "RESEND_API_KEY"] },
   "vars": {
     "ORIGIN_UPSTREAM": "https://citeladder-api-44437656491.us-central1.run.app",
     "PUBLIC_WEBSITE_HOST": "citeladder.com",

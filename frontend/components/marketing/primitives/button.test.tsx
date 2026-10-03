@@ -1,7 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
-import { IconButtonLink } from './button';
+import { DemoButtonLink, IconButtonLink } from './button';
+
+it('keeps demo enquiries on the CiteLadder contact page in the same tab', () => {
+  render(<DemoButtonLink />);
+  const link = screen.getByRole('link', { name: /Book a demo/ });
+  expect(link).toHaveAttribute('href', '/contact');
+  expect(link).not.toHaveAttribute('target');
+});
 
 describe('IconButtonLink', () => {
   it('uses the shared button primitive with its icon and new-tab behavior', () => {

@@ -55,6 +55,16 @@ describe('apex route ownership', () => {
       204,
     );
     expect(await routeApexRequest(new Request('https://citeladder.com/pricing'), env)).toBeNull();
+    expect(
+      await routeApexRequest(
+        new Request('https://citeladder.com/api/v1/contact', { method: 'POST' }),
+        env,
+      ),
+    ).toBeNull();
+    expect(
+      (await routeApexRequest(new Request('https://citeladder.com/api/v1/contact/other'), env))
+        ?.status,
+    ).toBe(404);
   });
 
   it('allows local Wrangler HTTP only with the explicit development binding', async () => {

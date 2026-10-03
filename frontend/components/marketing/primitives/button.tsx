@@ -52,10 +52,7 @@ export function ButtonLink({
 /**
  * The demo CTA, in one place.
  *
- * The funnel leaves this site for the parent company's contact form, so every
- * one of the dozen call sites would otherwise have to remember `target` and a
- * safe `rel`. They call this instead, and if the destination ever comes back
- * in-house only `DEMO_EXTERNAL` changes.
+ * The shared destination keeps demo enquiries on CiteLadder.
  */
 export function DemoButtonLink({
   variant = 'primary',

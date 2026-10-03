@@ -18,10 +18,9 @@ export const PRICING_RESUME_QUERY_PARAM = 'resumeActivation';
 export const PRICING_RETURN_PATH = '/pricing';
 
 /**
- * Fallback when a contact-only catalog plan has no `contact_url`. The local
- * `/demo` route is gone; sales intake lives on the parent company site.
+ * Fallback when a contact-only catalog plan has no `contact_url`.
  */
-export const CONTACT_SALES_HREF = 'https://www.cube27.com/contact/';
+export const CONTACT_SALES_HREF = '/contact';
 
 /** Same-tab storage key for a captured (untrusted) pricing intent. */
 export const PENDING_PRICING_INTENT_KEY = 'citeladder.pendingPricingIntent.v1';

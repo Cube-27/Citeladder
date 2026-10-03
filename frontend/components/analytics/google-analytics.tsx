@@ -76,12 +76,18 @@ function trackMarketingCta(event: MouseEvent) {
   if (!hasAnalyticsConsent() || !(event.target instanceof Element)) return;
   const anchor = event.target.closest('a');
   if (!(anchor instanceof HTMLAnchorElement)) return;
-  const demo = anchor.href === DEMO_HREF;
+  const demo = anchor.href === new URL(DEMO_HREF, window.location.origin).href;
   if (!demo && anchor.dataset.marketingCta === undefined) return;
   const fields = marketingCtaFields(anchor, demo);
   const gtag = (window as GtagWindow).gtag;
   gtag?.('event', 'marketing_cta_click', fields);
-  if (demo) gtag?.('event', 'demo_outbound_click', fields);
+  if (demo) gtag?.('event', 'demo_contact_click', fields);
+}
+
+/** Successful submissions carry no visitor-supplied analytics properties. */
+export function trackContactSubmitted() {
+  if (!hasAnalyticsConsent()) return;
+  (window as GtagWindow).gtag?.('event', 'contact_form_submitted', { source_page: '/contact' });
 }
 
 /** Load the optional Google tag only after an explicit analytics opt-in. */

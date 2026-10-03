@@ -18,7 +18,7 @@ import { DATA_PROCESSING_AGREEMENT, SUBPROCESSORS } from './legal-dpa';
 import { PRIVACY_POLICY } from './legal-privacy';
 import { TERMS_OF_SERVICE } from './legal-terms';
 import { LLMS_TXT } from './llms';
-import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF, NAV_DROPS, NAV_LINKS, type NavDropItem } from './nav';
+import { NAV_DROPS, NAV_LINKS, type NavDropItem } from './nav';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { PLAN_PRESENTATION, capabilityLabel } from './pricing';
 import { CITELADDER_LINKEDIN, CONTACT_EMAIL } from './social';
@@ -137,15 +137,6 @@ describe('marketing navigation', () => {
         }
       }
     }
-  });
-
-  it('sends the demo funnel to the parent company contact form', () => {
-    // CiteLadder is a Cube27 product and does not own a demo form, so the
-    // funnel leaves the site. An absolute https destination is the contract —
-    // a relative href here would 404 now that `/demo` is gone.
-    expect(DEMO_HREF).toBe('https://www.cube27.com/contact/');
-    expect(DEMO_EXTERNAL).toBe(true);
-    expect(DEMO_CTA.trim()).not.toBe('');
   });
 });
 
