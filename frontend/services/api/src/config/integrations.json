@@ -65,6 +65,24 @@
     ]
   },
   "settings": {
+    "sync_on_demand_active_limit": {
+      "env": ["INTEGRATION_SYNC_ON_DEMAND_ACTIVE_LIMIT"],
+      "type": "int",
+      "default": 20,
+      "exclusive_minimum": 0
+    },
+    "sync_on_demand_request_limit": {
+      "env": ["INTEGRATION_SYNC_ON_DEMAND_REQUEST_LIMIT"],
+      "type": "int",
+      "default": 10,
+      "exclusive_minimum": 0
+    },
+    "sync_on_demand_request_window_seconds": {
+      "env": ["INTEGRATION_SYNC_ON_DEMAND_REQUEST_WINDOW_SECONDS"],
+      "type": "int",
+      "default": 60,
+      "exclusive_minimum": 0
+    },
     "sync_default_window_days": {
       "env": ["INTEGRATION_SYNC_DEFAULT_WINDOW_DAYS"],
       "type": "int",
