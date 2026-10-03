@@ -154,8 +154,10 @@ everything else. No live provider calls, no production load tests.
 
 ## Rollout
 
-Ship each slice as its own PR through the normal deploy. Slice 7's spend cap is
-a console change that only the owner makes; this plan does not authorize it. Slice 1 changes an API
+The owner wants slices 1–7 as one PR (3 October 2026), with one commit per
+slice and one deploy. The PR includes slice 7's Terraform exclusion and runbook
+text. Slice 7's spend cap is a console change that only the owner makes; this
+plan does not authorize it. Slice 1 changes an API
 route and the frontend together, so release them in the same deploy. Rollback is
 a normal image revert. Signup, payments, model funding and the tick schedule do
 not change.

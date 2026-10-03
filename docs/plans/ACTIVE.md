@@ -108,6 +108,11 @@
   slices ordered by privacy, access and billing risk; Cloud Run IAM, database
   CA and identity split assessed and not planned. Listing is not execution or
   deployment authorization.
+- [Backend debt remediation](citeladder-backend-debt-remediation.md)
+  — plan saved on 3 October 2026 from the reconciled backend/migration debt
+  audit; not started. Six slices: queue lease safety, admission errors,
+  unbounded hot-path reads, visibility selection reads (persisted fanout
+  projection approved), Python/CI residue and authority-document repairs.
 - [AI Traffic analytics, crawl logs and authorized crawl](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026 and revised twice on 3 October 2026;
   implementation not started. Part A is three self-contained PRs: A1 bot
