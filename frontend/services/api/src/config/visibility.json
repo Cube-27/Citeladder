@@ -1,5 +1,6 @@
 {
   "selection_max_runs": 100,
+  "fanout_projection_version": "fanout-1",
   "evidence_default_limit": 100,
   "evidence_max_limit": 500,
   "trend_granularities": ["day", "month", "run", "week"],

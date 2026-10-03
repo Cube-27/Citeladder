@@ -132,6 +132,17 @@ const memberships = (seed: SiteSeed) =>
 const url = (path: string) => `https://example.test${path}`;
 
 describe('discover', () => {
+  it('settles concurrent discovers that link each other without a lock conflict', async () => {
+    const seed = await crawl({ siteFacts: {}, config: { automatic_monitor_limit: 2 } });
+    const a = await queued(seed, 'discover', '/a');
+    const b = await queued(seed, 'discover', '/b');
+    const site = worker({ '/a': { body: links('/b') }, '/b': { body: links('/a') } });
+    const claims = await Promise.all([lease(a, site.owner), lease(b, site.owner)]);
+    await Promise.all(claims.map((claim) => site.execute(claim)));
+    expect((await task(a)).status).toBe('succeeded');
+    expect((await task(b)).status).toBe('succeeded');
+    expect(await memberships(seed)).toHaveLength(2);
+  });
   it.each([
     ['https://elsewhere.test/landing', 'failed', ['/robots.txt', '/']],
     [

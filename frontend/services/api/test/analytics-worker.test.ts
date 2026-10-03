@@ -64,6 +64,45 @@ const tasks = (kind: string) =>
 const worker = (executors?: Record<string, Executor>) =>
   new AnalyticsWorker(db, settings, { owner: 'worker-test', executors });
 
+it('stops at the next I/O boundary after sustained heartbeat errors', async () => {
+  const id = await enqueue(db, {
+    workspaceId,
+    projectId,
+    kind: 'commerce_catalog_projection',
+    payload: {},
+  });
+  const beat = vi
+    .spyOn(TaskQueue.prototype, 'heartbeat')
+    .mockRejectedValue(new Error('renewal unavailable'));
+  let stopped = false;
+  const execute: Executor = async (_task, ctx) => {
+    try {
+      while (true) {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 10);
+        });
+        await ctx.checkCancelled('provider');
+      }
+    } finally {
+      stopped = true;
+    }
+  };
+  try {
+    await new AnalyticsWorker(
+      db,
+      { ...settings, heartbeatIntervalSeconds: 1 },
+      { executors: { commerce_catalog_projection: execute } },
+    ).runOnce();
+    expect(beat).toHaveBeenCalledTimes(2);
+    expect(stopped).toBe(true);
+    expect(
+      (await tasks('commerce_catalog_projection')).find((task) => task.id === id)?.status,
+    ).toBe('retry_wait');
+  } finally {
+    beat.mockRestore();
+  }
+});
+
 it('leaves a failed running transition leased without dispatching or consuming an executor attempt', async () => {
   const id = await enqueue(db, {
     workspaceId,

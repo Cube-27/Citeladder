@@ -38,6 +38,7 @@ const pageKeys = [
   'cursor',
   'as_of',
   'source_offset',
+  'source_cursor',
   'source_as_of',
   'query_offset',
   'prompt_page',

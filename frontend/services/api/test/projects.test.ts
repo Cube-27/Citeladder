@@ -12,6 +12,7 @@ import {
   deleteProject,
 } from '../src/projects/service.ts';
 import { commandCenter } from '../src/projects/command-center.ts';
+import { policy } from '../src/config.ts';
 import { billingAccount, grant, prompt, promptSet } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
@@ -425,6 +426,12 @@ describe('project owner', () => {
       return id;
     }
     const baseline = await measured('2026-03-01T00:00:00Z', 0, 0);
+    for (let index = 0; index < policy.projects.command_center_max_audits; index++) {
+      await measurements.audit(t, {
+        completedAt: new Date(Date.UTC(2025, 0, 1) + index * 86400000),
+        configuration: { ...configuration, panel_hash: 'older-panel' },
+      });
+    }
     await measured('2026-03-02T00:00:00Z', 1, 20, {
       ...configuration,
       panel_hash: 'different-panel',

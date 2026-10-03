@@ -6,6 +6,7 @@
  */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
+import { ApiError } from '../errors.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { debitUsage, ledgerBalances, releaseUsage, reserveUsage } from '../entitlements/ledger.ts';
@@ -14,6 +15,12 @@ import { crawlError } from './planner-policy.ts';
 import type { Crawl } from './task-fence.ts';
 
 const capability = 'site_health_page_fetches_per_period';
+
+export const unresolvedEntitlement = () =>
+  new ApiError(403, 'Site Health entitlements could not be resolved', {
+    code: 'entitlement_unresolved',
+    retryable: false,
+  });
 
 /** Capacity stays locked through reservation and the caller's admission commit. */
 export async function budgetedPageLimit(
@@ -30,7 +37,7 @@ export async function budgetedPageLimit(
   if (!account) return { limit: requested, accountId: null };
   await advisoryXactLock(db, policy.entitlements.capacity_lock, account.id);
   const state = await accountState(db, workspaceId, account.id, at);
-  if (state.error) throw new Error('entitlement_unresolved');
+  if (state.error) throw unresolvedEntitlement();
   const grants = state.selected.filter((grant) => grant.key === capability);
   if (!grants.length) return { limit: requested, accountId: null };
   const balances = await ledgerBalances(db, account.id);

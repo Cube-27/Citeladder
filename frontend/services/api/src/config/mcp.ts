@@ -68,7 +68,6 @@ export const mcp = {
     default_search_limit: 10,
     max_list_limit: 200,
     max_document_bytes: 256000,
-    max_visibility_source_offset: 20000,
     registration_max_body_bytes: 16384,
     authorization_max_query_bytes: 8192,
     authorization_max_state_bytes: 1024,

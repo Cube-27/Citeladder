@@ -27,7 +27,7 @@ export type SourceScope = {
   dimension: 'domain' | 'url';
   /** Set when drilling into one domain; the table then lists its pages. */
   domain: string | null;
-  offset: string | null;
+  cursor: string | null;
   asOf: string | null;
   sourceType: string | null;
   pageSize: number;
@@ -71,7 +71,7 @@ export function useSourceAnalysis(
     domain: set(scope.domain),
     source_type: set(scope.sourceType),
     dimension: scope.dimension,
-    offset: Math.max(0, Number.parseInt(scope.offset ?? '0', 10) || 0),
+    cursor: set(scope.cursor),
     as_of: set(scope.asOf),
     limit: scope.pageSize,
   };
@@ -152,7 +152,6 @@ export function useSourceDomains(filters: SourceFilters, queries: SourceQueries)
   const params = {
     ...selectionParams(filters, queries),
     dimension: 'domain' as const,
-    offset: 0,
     limit: SOURCE_DOMAIN_OPTIONS,
   };
   const query = useQuery({

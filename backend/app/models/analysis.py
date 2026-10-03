@@ -18,6 +18,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    ARRAY,
     Boolean,
     DateTime,
     ForeignKey,
@@ -126,6 +127,19 @@ class ResponseAnalysis(DerivedRowProvenanceMixin, Base):
     citation_count: Mapped[int] = mapped_column(Integer, default=0)
     search_used: Mapped[bool] = mapped_column(Boolean, default=False)
     search_query_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Settled fanout over this row's exact artifact/task evidence. Reads never
+    # normalize a selection's raw event JSON again. Blank events count, while
+    # only trimmed non-blank queries enter the query list (duplicates retained).
+    fanout_state: Mapped[str] = mapped_column(String(32), server_default="no_search")
+    fanout_queries: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), server_default=text("'{}'::text[]")
+    )
+    fanout_event_count: Mapped[int] = mapped_column(Integer, server_default="0")
+    fanout_event_source: Mapped[str] = mapped_column(String(16), server_default="none")
+    fanout_projection_version: Mapped[str] = mapped_column(
+        String(32), server_default="fanout-1"
+    )
 
     # Roadmap (B-2): nullable/absent until an LLM stage is added.
     sentiment: Mapped[str | None] = mapped_column(String(16), nullable=True)

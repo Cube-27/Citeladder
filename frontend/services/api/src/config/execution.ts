@@ -1,5 +1,7 @@
 import { ConfigError } from './config-error.ts';
 
+export const heartbeatFailureLimit = 2;
+
 const defaults = {
   budgetSeconds: 300,
   poolSize: 4,

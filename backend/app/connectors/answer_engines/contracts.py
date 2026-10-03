@@ -1,5 +1,7 @@
-"""Persisted finish-reason vocabulary used by the Python audit schema model
-until migration PR 20. Execution contracts and adapters are native."""
+"""Persisted finish-reason vocabulary for the Python audit schema model.
+
+Execution contracts and adapters are native; schema models retain this enum.
+"""
 
 from __future__ import annotations
 

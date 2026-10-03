@@ -141,7 +141,8 @@ COST_STATUS_UNKNOWN: Final = "unknown"
 
 # --- Deterministic quality scoring ---------------------------------------
 # Synthetic, non-project subject used only to exercise the deterministic
-# scorer (``app/analysis/scoring.py``) against measurement answers. Never a real
+# native scorer through ``evaluations.measurement.native_scoring`` against
+# measurement answers. Never a real
 # customer brand and never a project brand: the tracked brand/competitor list is
 # never sent to a provider and never embedded in a committed fixture
 # (invariant 6).

@@ -84,7 +84,6 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
       .where('workspace_id', '=', workspaceId)
       .where('id', '=', crawlId)
       .execute();
-    await settleCrawlFetches(trx, crawl);
     await trx
       .updateTable('site_crawl_tasks')
       .set({
@@ -99,6 +98,8 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
       .where('crawl_id', '=', crawlId)
       .where('status', 'not in', ['succeeded', 'failed', 'cancelled'])
       .execute();
+    // Task mutation precedes capacity/account locks taken by reservation release.
+    await settleCrawlFetches(trx, crawl);
     await recordCrawlEvent(trx, crawl, 'crawl.cancelled', 'crawl cancelled', {});
   });
 }

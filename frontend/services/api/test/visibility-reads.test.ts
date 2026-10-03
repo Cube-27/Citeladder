@@ -14,6 +14,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Json, type Tenant } from './visibility-fixtures.ts';
+import { compareSelection } from '../src/visibility/comparison.ts';
+import { record } from '../src/db/json.ts';
+import { sql } from 'kysely';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -109,6 +112,67 @@ async function measuredRun(
 afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
+});
+
+it('measures the baseline walk over 100 runs with alternating frozen routes (B21)', async () => {
+  const tenant = await fixtures.tenant();
+  const metrics = aggregate({ completed: 2, brand: 1 });
+  const ids: string[] = [];
+  let currentConfiguration: Json = {};
+  for (let index = 0; index < 100; index++) {
+    currentConfiguration = {
+      ...frozen(),
+      engine_routes: {
+        chatgpt: {
+          transport_provider: 'test',
+          transport_model: index % 2 ? 'model-b' : 'model-a',
+        },
+      },
+    };
+    ids.push(
+      await measuredRun(
+        tenant,
+        new Date(Date.UTC(2026, 0, 1) + index * 86400000).toISOString(),
+        metrics,
+        { configuration: currentConfiguration },
+      ),
+    );
+  }
+  let cellQueries = 0;
+  const counted = db.withPlugin({
+    transformQuery({ node }) {
+      const selections = record(node).selections;
+      if (
+        Array.isArray(selections) &&
+        selections.some(
+          (selection) =>
+            record(record(record(selection).selection).column).column &&
+            record(record(record(record(selection).selection).column).column).name ===
+              'request_snapshot',
+        )
+      )
+        cellQueries++;
+      return node;
+    },
+    transformResult: async ({ result }) => result,
+  });
+  const comparison = await compareSelection(
+    counted,
+    tenant,
+    {
+      auditId: ids[99]!,
+      workspaceId: tenant.workspaceId,
+      configuration: currentConfiguration,
+      completedAt: new Date(Date.UTC(2026, 0, 1) + 99 * 86400000).toISOString().replace(/Z$/u, ''),
+      analyzerVersion: 'test',
+      scoringRuleVersion: 'test',
+      metrics,
+    },
+    { cohort: 'core', engine: null, baselineId: null },
+  );
+  console.info(`B21: 100 alternating-route runs, loadComparisonCells calls = ${cellQueries}`);
+  expect(comparison).toMatchObject({ baseline_audit_id: ids[97], skipped_runs: 1 });
+  expect(cellQueries).toBeLessThan(10);
 });
 
 describe('workspace isolation', () => {
@@ -490,15 +554,77 @@ describe('GET /visibility/fanout and /visibility/evidence', () => {
     expect(searched.body).toMatchObject({
       distinct_queries: 3,
       matched_queries: 2,
-      next_offset: 1,
     });
     expect(searched.body.items as Row[]).toHaveLength(1);
+    expect(searched.body.next_cursor).toEqual(expect.any(String));
+    const next = await get(tenant, route(tenant, '/fanout'), {
+      audit_id: auditId,
+      search: 'BEST',
+      limit: '1',
+      cursor: searched.body.next_cursor as string,
+    });
+    expect(next.body).toMatchObject({
+      event_count: 3,
+      distinct_queries: 3,
+      matched_queries: 2,
+      next_cursor: null,
+    });
+    expect((next.body.items as Row[])[0]!.query).not.toBe((searched.body.items as Row[])[0]!.query);
+    expect(
+      (
+        await get(tenant, route(tenant, '/fanout'), {
+          audit_id: auditId,
+          search: 'pricing',
+          cursor: searched.body.next_cursor as string,
+        })
+      ).status,
+    ).toBe(422);
 
     const drilled = await get(tenant, route(tenant, '/fanout'), {
       audit_id: auditId,
-      query: 'crm pricing',
+      query: '  crm pricing  ',
     });
     expect(drilled.body).toMatchObject({ total_answers: 1, answers: [{ task_id: pricingTask }] });
+  });
+
+  it('pools persisted queries across runs, retaining duplicates and paging each answer once', async () => {
+    const pooled = await fixtures.tenant();
+    const runs: string[] = [];
+    const tasks: string[] = [];
+    for (let index = 0; index < 2; index++) {
+      const run = await fixtures.audit(pooled);
+      runs.push(run);
+      const execution = await fixtures.execution(pooled, {
+        auditId: run,
+        artifactEvents: [{ query: '  crm  ' }, { query: 'crm' }, { sequence: 3 }],
+        analysis: { brandMentioned: index === 0 },
+      });
+      tasks.push(execution.taskId);
+    }
+    const first = await get(pooled, route(pooled, '/fanout'), {
+      audit_ids: runs,
+      query: 'crm',
+      limit: '1',
+    });
+    expect(first.body).toMatchObject({
+      event_count: 6,
+      distinct_queries: 1,
+      total_answers: 2,
+      coverage: { queries_available: 2 },
+      items: [{ query: 'crm', event_count: 4, response_count: 2, brand_response_count: 1 }],
+    });
+    const next = await get(pooled, route(pooled, '/fanout'), {
+      audit_ids: runs,
+      query: 'crm',
+      limit: '1',
+      cursor: first.body.next_cursor as string,
+    });
+    expect(next.body).toMatchObject({ event_count: 6, total_answers: 2, next_cursor: null });
+    expect(
+      [...(first.body.answers as Row[]), ...(next.body.answers as Row[])]
+        .map((row) => row.task_id)
+        .sort(),
+    ).toEqual(tasks.sort());
   });
 
   it('serves normalized evidence newest first, one keyset page at a time', async () => {
@@ -518,6 +644,7 @@ describe('GET /visibility/fanout and /visibility/evidence', () => {
       as_of: first.body.as_of as string,
     });
     const [claude, chatgpt] = second.body.items as Row[];
+    expect(second.body.total).toBe(4);
     expect(second.body.truncated).toBe(false);
     expect(claude).toMatchObject({
       task_id: artifactTask,
@@ -552,9 +679,104 @@ describe('GET /visibility/fanout and /visibility/evidence', () => {
       (await get(tenant, route(tenant, '/evidence'), { outcome: 'competitor_gap' })).status,
     ).toBe(422);
   });
+
+  it('keeps frozen prompt options at the same microsecond cutoff as evidence', async () => {
+    const precise = await fixtures.tenant();
+    const run = await fixtures.audit(precise);
+    const execution = await fixtures.execution(precise, {
+      auditId: run,
+      promptText: 'Precise prompt',
+    });
+    const at = sql<Date>`'2026-03-01T00:00:00.000500Z'::timestamptz`;
+    await db
+      .updateTable('audit_prompt_snapshots')
+      .set({ created_at: at })
+      .where('audit_id', '=', run)
+      .execute();
+    await db
+      .updateTable('response_analyses')
+      .set({ created_at: at })
+      .where('id', '=', execution.analysisId!)
+      .execute();
+    const result = await get(precise, route(precise, '/evidence'), {
+      audit_id: run,
+      as_of: '2026-03-01T00:00:00.000750Z',
+    });
+    expect(result.body).toMatchObject({
+      total: 1,
+      items: [{ task_id: execution.taskId }],
+      prompt_options: [{ label: 'Precise prompt' }],
+    });
+  });
 });
 
 describe('GET /visibility/sources', () => {
+  it('pages a multi-run selection in both directions with stable totals and bound filters', async () => {
+    const tenant = await fixtures.tenant();
+    const runs: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const auditId = await fixtures.audit(tenant);
+      runs.push(auditId);
+      await fixtures.execution(tenant, {
+        auditId,
+        analysis: {
+          citations: [
+            { url: 'https://a.example/1', sourceClass: 'news' },
+            { url: `https://${i ? 'c' : 'b'}.example/1`, sourceClass: 'news' },
+          ],
+        },
+      });
+    }
+    const first = await get(tenant, route(tenant, '/sources'), { audit_ids: runs, limit: '1' });
+    expect(first.body).toMatchObject({
+      total: 3,
+      responses: 2,
+      total_citations: 4,
+      category_totals: { news: 4 },
+      previous_cursor: null,
+      items: [{ key: 'a.example', responses: 2 }],
+    });
+    const second = await get(tenant, route(tenant, '/sources'), {
+      audit_ids: [...runs].reverse(),
+      limit: '1',
+      cursor: first.body.next_cursor as string,
+    });
+    expect(second.body).toMatchObject({
+      total: 3,
+      responses: 2,
+      total_citations: 4,
+      category_totals: { news: 4 },
+      items: [{ key: 'b.example' }],
+    });
+    const last = await get(tenant, route(tenant, '/sources'), {
+      audit_ids: runs,
+      limit: '1',
+      cursor: second.body.next_cursor as string,
+    });
+    expect(last.body).toMatchObject({ next_cursor: null, items: [{ key: 'c.example' }] });
+    const back = await get(tenant, route(tenant, '/sources'), {
+      audit_ids: runs,
+      limit: '1',
+      cursor: last.body.previous_cursor as string,
+    });
+    expect(back.body.items).toEqual(second.body.items);
+    const start = await get(tenant, route(tenant, '/sources'), {
+      audit_ids: runs,
+      limit: '1',
+      cursor: back.body.previous_cursor as string,
+    });
+    expect(start.body).toMatchObject({ previous_cursor: null, items: first.body.items });
+    expect(
+      (
+        await get(tenant, route(tenant, '/sources'), {
+          audit_ids: runs,
+          limit: '1',
+          domain: 'a.example',
+          cursor: first.body.next_cursor as string,
+        })
+      ).status,
+    ).toBe(422);
+  });
   it('counts domains, then pages with their page record and co-named brands', async () => {
     const tenant = await fixtures.tenant();
     const auditId = await fixtures.audit(tenant);

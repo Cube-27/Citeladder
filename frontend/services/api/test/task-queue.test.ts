@@ -93,7 +93,7 @@ describe('TaskQueue', () => {
       });
       const [claimed] = await skewed.claim({ owner: 'skewed', kinds: TS_KINDS });
       expect(await skewed.markRunning(claimed!.id, 'skewed')).toBe(true);
-      expect(await skewed.heartbeat(claimed!.id, 'skewed')).toBe(true);
+      expect(await skewed.heartbeat(claimed!.id, 'skewed', claimed!.workspace_id)).toBe(true);
       const expiry = await db
         .selectFrom('analytics_tasks')
         .select(
@@ -110,7 +110,7 @@ describe('TaskQueue', () => {
         .set({ lease_expires_at: new Date(0) })
         .where('id', '=', claimed!.id)
         .execute();
-      expect(await skewed.heartbeat(claimed!.id, 'skewed')).toBe(false);
+      expect(await skewed.heartbeat(claimed!.id, 'skewed', claimed!.workspace_id)).toBe(false);
     },
   );
   it('re-checks eligibility on the locked relation, not only in the ranking', () => {
@@ -171,10 +171,11 @@ describe('TaskQueue', () => {
     const [claimed] = await queue.claim({ owner: 'holder', kinds: TS_KINDS });
 
     expect(await queue.markRunning(claimed!.id, 'intruder')).toBe(false);
-    expect(await queue.heartbeat(claimed!.id, 'intruder')).toBe(false);
+    expect(await queue.heartbeat(claimed!.id, 'intruder', claimed!.workspace_id)).toBe(false);
+    expect(await queue.heartbeat(claimed!.id, 'holder', workspaces[1]!)).toBe(false);
     expect(await queue.markRunning(claimed!.id, 'holder')).toBe(true);
     expect(await queue.markRunning(claimed!.id, 'holder')).toBe(false);
-    expect(await queue.heartbeat(claimed!.id, 'holder')).toBe(true);
+    expect(await queue.heartbeat(claimed!.id, 'holder', claimed!.workspace_id)).toBe(true);
   });
 
   it('skips rows that are not yet available or already terminal', async () => {

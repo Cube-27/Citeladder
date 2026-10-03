@@ -1,17 +1,5 @@
-; Backend architecture policy.
-;
-; The frontend has had an architecture gate (`pnpm check:policy`) for a while;
-; the backend had nothing, so the only thing keeping `app/domain` from importing
-; `app/api`, or a model from reaching into a worker, was reviewer attention.
-;
-; These contracts encode the directions that hold TODAY, with zero violations,
-; so the first import that reverses one fails the build instead of becoming the
-; new shape of the codebase. They are deliberately `forbidden` contracts rather
-; than one strict `layers` stack: `app/` still has genuine cycles between
-; `core`/`models`, `analysis`/`domain`, and `connectors`/`analysis`, and a
-; layers contract would have to be either false or almost entirely ignored.
-; Every remaining wart is named below in an `ignore_imports` line, which is the
-; point -- a wart with a name cannot quietly become two.
+; Retained Python schema/operator architecture policy. Executing analysis and
+; orchestration are native TypeScript owners, absent from this import graph.
 ;
 ; Run with `lint-imports` (see scripts/check.ps1 and .github/workflows/ci.yml).
 
@@ -33,9 +21,7 @@ type = forbidden
 source_modules =
     app.core
 forbidden_modules =
-    app.analysis
     app.domain
-    app.orchestration
 
 [importlinter:contract:models-are-persistence-only]
 ; One violation exists and is named: `Prompt._sync_normalized_hash` keeps the
@@ -47,9 +33,7 @@ type = forbidden
 source_modules =
     app.models
 forbidden_modules =
-    app.analysis
     app.domain
-    app.orchestration
 ignore_imports =
     app.models.prompt -> app.domain.prompts.normalization
 
@@ -61,38 +45,7 @@ type = forbidden
 source_modules =
     app.connectors
 forbidden_modules =
-    app.analysis
     app.domain
     app.models
-    app.orchestration
-; Direct imports only. The transitive form of this rule is broken by chains
-; that run through edges this policy deliberately allows (connectors -> core ->
-; models, models -> connectors, domain -> orchestration). Forbidding those
-; chains would mean forbidding the allowed edge, so the contract checks the
-; direct dependency it is actually about.
-allow_indirect_imports = True
-
-[importlinter:contract:orchestration-is-infrastructure]
-; Provider capacity and pacing are policy over the queue, not product logic.
-name = Orchestration depends on no product layer
-type = forbidden
-source_modules =
-    app.orchestration
-forbidden_modules =
-    app.analysis
-    app.connectors
-    app.domain
-allow_indirect_imports = True
-
-[importlinter:contract:analysis-does-not-reach-up]
-; `analysis` is the deterministic scoring/extraction layer. It reads domain
-; schemas and normalization helpers (allowed), but a rule or extractor that
-; needs an API type, a worker, or the capacity manager has the dependency
-; backwards.
-name = Analysis does not depend on orchestration
-type = forbidden
-source_modules =
-    app.analysis
-forbidden_modules =
-    app.orchestration
+; Direct imports only: connectors -> core -> models is deliberately allowed.
 allow_indirect_imports = True

@@ -38,6 +38,7 @@ export type SiteTaskContext = {
   owner: string;
   fetcher: SitePageFetcher;
   settings: SiteTaskSettings;
+  signal?: AbortSignal;
 };
 
 /** Exponential retry backoff with deterministic jitter (the attempt number, not a random draw). */
@@ -120,6 +121,7 @@ export async function startCrawl(db: Database, crawl: Crawl) {
  * when its crawl is no longer active) when it must not run.
  */
 export async function prepareTask(ctx: SiteTaskContext, claimed: SiteTask) {
+  ctx.signal?.throwIfAborted();
   const scope = await loadScope(ctx.db, claimed);
   if (!scope || !ACTIVE_CRAWL.has(scope.crawl.status)) {
     await cancelTask(ctx.db, claimed, ctx.owner);

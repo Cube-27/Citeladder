@@ -87,6 +87,42 @@ async function create(tenant: Tenant, options: Record<string, unknown> = {}) {
 }
 
 describe('crawl control admission', () => {
+  it('denies corrupt grants with a non-retryable entitlement error for creation and rerun', async () => {
+    const seed = await fixtures.crawl();
+    const account = await allow(seed, 1, 2);
+    const page = await fixtures.page(seed, '/a', {}, { observed: true });
+    await db
+      .transaction()
+      .execute((trx) => replaceMonitoredSet(trx, seed.workspaceId, seed.projectId, [page.id], 1));
+    await grant(db, account, { key: 'fanout', value: 2 });
+    for (const [path, body] of [
+      ['/site-crawls', { project_id: seed.projectId }],
+      [`/site-crawls/${seed.crawlId}/pages/${page.id}/rerun`, undefined],
+    ] as const) {
+      const response = await request(seed, path, 'POST', body);
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({
+        error: { code: 'entitlement_unresolved', retryable: false },
+      });
+    }
+  });
+  it('rejects an oversized monitored selection before opening its transaction', async () => {
+    const seed = await fixtures.crawl();
+    const transaction = vi.spyOn(db, 'transaction');
+    try {
+      const response = await request(seed, `/projects/${seed.projectId}/monitored-urls`, 'PUT', {
+        site_url_ids: Array.from(
+          { length: policy.site_health.crawl.monitored_url_selection_max + 1 },
+          () => randomUUID(),
+        ),
+        expected_selection_version: 1,
+      });
+      expect(response.status).toBe(422);
+      expect(transaction).not.toHaveBeenCalled();
+    } finally {
+      transaction.mockRestore();
+    }
+  });
   it('serializes two concurrent creates and seeds one root, setup and independent analysis plan', async () => {
     const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     await allow(tenant, 2);
@@ -619,6 +655,12 @@ describe('crawl-control HTTP contracts', () => {
     expect(firstResponse.status, await firstResponse.clone().text()).toBe(202);
     const first = rerunPageResponseSchema.parse(await firstResponse.json());
     expect(first.created_new_crawl).toBe(true);
+    const admitted = await db
+      .selectFrom('site_crawls')
+      .select('configuration')
+      .where('id', '=', first.crawl_id)
+      .executeTakeFirstOrThrow();
+    expect(record(admitted.configuration).requested_page_limit).toBe(1);
     const tasks = await db
       .selectFrom('site_crawl_tasks')
       .selectAll()

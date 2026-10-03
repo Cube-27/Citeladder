@@ -1952,6 +1952,11 @@ export interface ResponseAnalyses {
   cohort: Generated<string>;
   created_at: Timestamp;
   entity_assessments: Json;
+  fanout_event_count: Generated<number>;
+  fanout_event_source: Generated<string>;
+  fanout_projection_version: Generated<string>;
+  fanout_queries: Generated<string[]>;
+  fanout_state: Generated<string>;
   id: string;
   logical_engine: string;
   owned_citation_count: number;

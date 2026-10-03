@@ -39,7 +39,7 @@ function state(
   };
 }
 async function comparableAudits(db: Database, scope: ProjectScope, auditId: string | null) {
-  const audits = await db
+  const query = db
     .selectFrom('audits')
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
@@ -47,13 +47,21 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
     .where('status', '=', 'completed')
     .where('audit_scope', '=', policy.visibility.brand_audit_scope)
     .orderBy('completed_at', 'desc')
-    .orderBy('id', 'desc')
-    .execute();
-  const selected = auditId ? audits.find((audit) => audit.id === auditId) : audits[0];
+    .orderBy('id', 'desc');
+  const [latest, chosen] = await Promise.all([
+    query.limit(1).executeTakeFirst(),
+    auditId ? query.where('id', '=', auditId).executeTakeFirst() : undefined,
+  ]);
+  const selected = auditId ? chosen : latest;
   if (!selected) {
     if (auditId) throw notFound('Completed command-center measurement');
     return null;
   }
+  const audits = await query
+    .where(sql<boolean>`coalesce(completed_at, created_at) <= ${new Date(instant(selected))}`)
+    .limit(policy.projects.command_center_max_audits)
+    .execute();
+  if (!audits.some((audit) => audit.id === selected.id)) audits.push(selected);
   const ids = audits.map((audit) => audit.id);
   const engines = await db
     .selectFrom('audit_engine_snapshots')
@@ -70,8 +78,11 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
     [
       ...new Set(engines.filter((row) => row.audit_id === id).map((row) => row.logical_engine)),
     ].sort(compareText);
-  const identity = (audit: Audit) =>
-    JSON.stringify([
+  const identities = new Map<string, string>();
+  const identity = (audit: Audit) => {
+    const cached = identities.get(audit.id);
+    if (cached) return cached;
+    const key = JSON.stringify([
       frozenComparisonKey(audit.configuration) || audit.id,
       audit.analyzer_version,
       audit.benchmark_mode,
@@ -84,6 +95,9 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
         ),
       ].sort(compareText),
     ]);
+    identities.set(audit.id, key);
+    return key;
+  };
   const key = identity(selected);
   const previous =
     audits.find(
@@ -94,7 +108,7 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
     selected,
     previous,
     engines: engineNames(selected.id),
-    historical: selected.id !== audits[0]?.id,
+    historical: selected.id !== latest?.id,
   };
 }
 async function visibility(

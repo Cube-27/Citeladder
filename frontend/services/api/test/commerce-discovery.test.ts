@@ -310,7 +310,7 @@ it('discards publication after cancellation or reclaim even if the same owner is
         ).toHaveLength(1);
         expect(await queue.markRunning(id, 'discovery-test', 0)).toBe(false);
         expect(await queue.markRunning(id, 'discovery-test', 1)).toBe(true);
-        expect(await queue.heartbeat(id, 'discovery-test', 0)).toBe(false);
+        expect(await queue.heartbeat(id, 'discovery-test', t.workspaceId, 0)).toBe(false);
       }
       return successful('', '');
     };

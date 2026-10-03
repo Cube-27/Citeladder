@@ -18,6 +18,11 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { pydanticUtcOf, pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
 import { fromEpochMicros, type ParsedDatetime } from '../http/datetimes.ts';
+import {
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+  InvalidCursorError,
+} from '../http/keyset-cursor.ts';
 import { compareText } from '../text-order.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
 import { ratio } from './metrics.ts';
@@ -43,12 +48,34 @@ export type SourceQuery = {
   sourceClass: string | null;
   dimension: 'domain' | 'url';
   asOf: ParsedDatetime | null;
-  offset: number;
+  cursor: string | null;
   limit: number;
   baselineAuditIds: string[] | null;
 };
 
 type Scope = ReturnType<typeof scopeOf>;
+
+function sourcePosition(query: SourceQuery, filters: Record<string, unknown>) {
+  if (query.asOf !== null && query.asOf.offsetSeconds === null)
+    throw new TrendQueryError("'as_of' must be timezone-aware");
+  const position = query.cursor
+    ? decodeKeysetCursor(query.cursor, 'visibility-sources', filters)
+    : null;
+  const asOf =
+    position?.[0] ?? pydanticUtcOf(query.asOf ?? fromEpochMicros(BigInt(Date.now()) * 1000n));
+  if (!position) return { position, asOf };
+  if (
+    position.length !== 4 ||
+    !['next', 'prev'].includes(position[3]!) ||
+    !Number.isFinite(Date.parse(asOf)) ||
+    !Number.isSafeInteger(Number(position[1])) ||
+    Number(position[1]) < 0
+  )
+    throw new InvalidCursorError('invalid sources cursor');
+  if (query.asOf && pydanticUtcOf(query.asOf) !== asOf)
+    throw new InvalidCursorError('invalid sources cursor');
+  return { position, asOf };
+}
 
 /** Every answer in the selection up to `as_of`, with the prompt it answered. */
 function scopeOf(db: Database, selection: RunSelection, asOf: string) {
@@ -91,16 +118,56 @@ function filteredCitations(
     .where('page.page_format', '=', query.sourceClass);
 }
 
+/** The compact citation rows shared by source paging and category totals. */
+function citationSelection(
+  db: Database,
+  scope: Scope,
+  selection: RunSelection,
+  query: SourceQuery,
+  pages: boolean,
+) {
+  const key = pages ? 'citation.url' : 'citation.domain';
+  let citations = filteredCitations(db, scope, selection, query, pages);
+  if (pages)
+    citations = citations.leftJoin('source_pages as format_page', (join) =>
+      join
+        .onRef('format_page.url_hash', '=', 'citation.url_hash')
+        .on('format_page.workspace_id', '=', selection.workspaceId)
+        .on('format_page.project_id', '=', selection.projectId),
+    );
+  return citations.select([
+    'citation.id',
+    'citation.analysis_id',
+    'citation.url_hash',
+    'citation.url',
+    'citation.classification',
+    'citation.source_class',
+    'citation.source_taxonomy_version',
+    'scope.prompt_key',
+    'scope.observed_at',
+    sql<string>`${sql.ref(key)}`.as('key'),
+    (pages
+      ? sql<string | null>`format_page.page_format`
+      : sql<string | null>`citation.source_class`
+    ).as('category'),
+  ]);
+}
+
 export async function getVisibilitySources(
   db: Database,
   requested: RunSelection,
   query: SourceQuery,
 ): Promise<SourcesResponse> {
   const selection = await authorizedSelection(db, requested);
-  if (query.asOf !== null && query.asOf.offsetSeconds === null) {
-    throw new TrendQueryError("'as_of' must be timezone-aware");
-  }
-  const asOf = pydanticUtcOf(query.asOf ?? fromEpochMicros(BigInt(Date.now()) * 1000n));
+  const filters = {
+    ...selection,
+    auditIds: [...(selection.auditIds ?? [])].sort(compareText),
+    domain: query.domain,
+    sourceClass: query.sourceClass,
+    dimension: query.dimension,
+    baselineAuditIds: [...(query.baselineAuditIds ?? [])].sort(compareText),
+  };
+  const { position, asOf } = sourcePosition(query, filters);
   const scope = scopeOf(db, selection, asOf);
   const denominator = await db
     .selectFrom(scope)
@@ -114,43 +181,61 @@ export async function getVisibilitySources(
   // Selecting a domain is the drill-down into its pages; the URL dimension
   // is pages across every domain.
   const pages = Boolean(query.domain) || query.dimension === 'url';
-  const key = pages ? 'citation.url' : 'citation.domain';
-  const groups = filteredCitations(db, scope, selection, query, pages)
+  const selected = citationSelection(db, scope, selection, query, pages);
+  const base = db.with(
+    (cte) => cte('selected').materialized(),
+    () => selected,
+  );
+  const group = base
+    .selectFrom('selected')
     .select([
-      sql<string>`${sql.ref(key)}`.as('key'),
-      // Page identity, grouped here rather than looked up by URL, which
-      // `citations` has no index for.
-      sql<string | null>`min(citation.url_hash)`.as('url_hash'),
-      sql<number>`count(distinct citation.analysis_id)`.as('responses'),
-      sql<number>`count(distinct scope.prompt_key)`.as('prompts'),
-      // From the evidence itself: the inspection schedule holds no record of
-      // the project's own pages.
-      utcText(sql`max(scope.observed_at)`).as('last_cited_at'),
-      sql<number>`count(citation.id)`.as('annotations'),
-      sql<number>`count(distinct citation.url)`.as('urls'),
-      sql<(string | null)[]>`array_agg(distinct citation.classification)`.as('ownership'),
-      sql<(string | null)[]>`array_agg(distinct citation.source_class)`.as('categories'),
-      sql<(string | null)[]>`array_agg(distinct citation.source_taxonomy_version)`.as('versions'),
+      'key',
+      sql<string | null>`min(url_hash)`.as('url_hash'),
+      sql<number>`count(distinct analysis_id)::int`.as('responses'),
+      sql<number>`count(distinct prompt_key)::int`.as('prompts'),
+      utcText(sql`max(observed_at)`).as('last_cited_at'),
+      sql<number>`count(id)::int`.as('annotations'),
+      sql<number>`count(distinct url)::int`.as('urls'),
+      sql<(string | null)[]>`array_agg(distinct classification)`.as('ownership'),
+      sql<(string | null)[]>`array_agg(distinct source_class)`.as('categories'),
+      sql<(string | null)[]>`array_agg(distinct source_taxonomy_version)`.as('versions'),
     ])
-    .groupBy(key)
-    .as('groups');
-  const totals = await db
-    .selectFrom(groups)
-    .select([
-      sql<string>`count(*)`.as('total'),
-      sql<string>`coalesce(sum(groups.annotations), 0)`.as('citations'),
+    .groupBy('key');
+  const grouped = base.with('groups', () => group);
+  const backwards = position?.[3] === 'prev';
+  let page = grouped
+    .selectFrom('groups')
+    .selectAll()
+    .orderBy('responses', backwards ? 'asc' : 'desc')
+    .orderBy(sql`key collate "C"`, backwards ? 'desc' : 'asc')
+    .limit(query.limit + 1);
+  if (position)
+    page = page.where(
+      backwards
+        ? sql<boolean>`responses > ${Number(position[1])} or (responses = ${Number(position[1])} and key collate "C" < ${position[2]})`
+        : sql<boolean>`responses < ${Number(position[1])} or (responses = ${Number(position[1])} and key collate "C" > ${position[2]})`,
+    );
+  const summary = await grouped
+    .selectNoFrom([
+      sql<number>`(select count(*)::int from groups)`.as('total'),
+      sql<number>`(select coalesce(sum(annotations), 0)::int from groups)`.as('citations'),
+      sql<
+        Record<string, number>
+      >`(select coalesce(jsonb_object_agg(category, count), '{}'::jsonb) from
+      (select category, count(*)::int as count from selected where category is not null group by category) categories)`.as(
+        'category_totals',
+      ),
+      sql<
+        Awaited<ReturnType<typeof group.execute>>
+      >`(select coalesce(jsonb_agg(to_jsonb(page)), '[]'::jsonb) from (${page}) page)`.as('rows'),
     ])
     .executeTakeFirstOrThrow();
-  const total = Number(totals.total);
-  const totalCitations = Number(totals.citations);
-  const rows = await db
-    .selectFrom(groups)
-    .selectAll()
-    .orderBy('groups.responses', 'desc')
-    .orderBy('groups.key', 'asc')
-    .offset(query.offset)
-    .limit(query.limit)
-    .execute();
+  const total = summary.total;
+  const totalCitations = summary.citations;
+  const rows = summary.rows.slice(0, query.limit);
+  if (backwards) rows.reverse();
+  const last = rows.at(-1);
+  const first = rows[0];
   const items: SourceRow[] = rows.map((row) => {
     const rowResponses = Number(row.responses);
     const annotations = Number(row.annotations);
@@ -189,14 +274,32 @@ export async function getVisibilitySources(
   });
   await attachPageLinks(db, selection, items);
   if (pages) await attachRowMentions(db, selection, scope, items);
+  const hasPrevious = backwards ? summary.rows.length > query.limit : Boolean(position);
   const response: SourcesResponse = {
     total,
     responses,
     prompts,
     total_citations: totalCitations,
-    category_totals: await categoryTotals(db, scope, selection, query, pages),
+    category_totals: summary.category_totals,
     as_of: asOf,
-    next_offset: query.offset + query.limit < total ? query.offset + query.limit : null,
+    next_cursor:
+      (backwards || summary.rows.length > query.limit) && last
+        ? encodeKeysetCursor('visibility-sources', filters, [
+            asOf,
+            String(last.responses),
+            last.key,
+            'next',
+          ])
+        : null,
+    previous_cursor:
+      hasPrevious && first
+        ? encodeKeysetCursor('visibility-sources', filters, [
+            asOf,
+            String(first.responses),
+            first.key,
+            'prev',
+          ])
+        : null,
     comparison_status: 'no_baseline',
     items,
   };
@@ -209,45 +312,6 @@ export async function getVisibilitySources(
     });
   }
   return response;
-}
-
-/**
- * Citations per type across the whole filtered selection, never the loaded
- * page. Page rows count page formats through page identity, so a citation
- * whose identity never resolved is absent rather than an unknown kind.
- */
-async function categoryTotals(
-  db: Database,
-  scope: Scope,
-  selection: RunSelection,
-  query: SourceQuery,
-  pages: boolean,
-): Promise<Record<string, number>> {
-  const rows = pages
-    ? await filteredCitations(db, scope, selection, { ...query, sourceClass: null }, pages)
-        .innerJoin('source_pages as page', (join) =>
-          join
-            .onRef('page.url_hash', '=', 'citation.url_hash')
-            .on('page.workspace_id', '=', selection.workspaceId)
-            .on('page.project_id', '=', selection.projectId),
-        )
-        .$if(Boolean(query.sourceClass), (q) =>
-          q.where('page.page_format', '=', query.sourceClass!),
-        )
-        .select(['page.page_format as category', sql<string>`count(citation.id)`.as('citations')])
-        .groupBy('page.page_format')
-        .execute()
-    : await filteredCitations(db, scope, selection, query, pages)
-        .where('citation.source_class', 'is not', null)
-        .select([
-          'citation.source_class as category',
-          sql<string>`count(citation.id)`.as('citations'),
-        ])
-        .groupBy('citation.source_class')
-        .execute();
-  return Object.fromEntries(
-    rows.flatMap((row) => (row.category ? [[row.category, Number(row.citations)]] : [])),
-  );
 }
 
 /**

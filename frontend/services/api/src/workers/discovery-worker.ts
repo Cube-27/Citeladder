@@ -5,6 +5,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { queueRecovery } from '../config/queue-recovery.ts';
 import { recoverDiscoveryLeases } from '../queue/recovery.ts';
+import { leaseSignal, maintainLease } from '../queue/heartbeat.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { getLogger } from '../logging.ts';
@@ -48,16 +49,19 @@ export class DiscoveryWorker {
     await recoverDiscoveryLeases(this.db);
     const task = await this.queue.claim(owner);
     if (!task) return false;
-    let heartbeat: Promise<boolean> | null = null;
-    const timer = setInterval(() => {
-      if (heartbeat) return;
-      heartbeat = this.queue
-        .heartbeat(task, owner)
-        .catch(() => false)
-        .finally(() => {
-          heartbeat = null;
-        });
-    }, this.settings.heartbeat_interval_seconds * 1000);
+    const heartbeat = maintainLease(
+      () => this.queue.heartbeat(task, owner),
+      this.settings.heartbeat_interval_seconds * 1000,
+      (error) => logger.exception('discovery_heartbeat_failed', error, { task_id: task.id }),
+    );
+    const checkCancelled = () => heartbeat.signal.throwIfAborted();
+    const fetcher: typeof fetchWebsite = (url, options) => {
+      checkCancelled();
+      return (this.dependencies.fetcher ?? fetchWebsite)(url, {
+        ...options,
+        signal: leaseSignal(heartbeat.signal, options?.signal),
+      });
+    };
     try {
       const row = await discoveryRow(this.db, task.workspace_id, task.discovery_id);
       if ([cfg.discovery_status_ready, cfg.discovery_status_project_created].includes(row.status)) {
@@ -70,14 +74,29 @@ export class DiscoveryWorker {
       }
       const input = discoveryCreate.parse(row.input_data);
       await this.progress(task, owner, 'opening_website', 0);
-      const site = await resolveSite(input.website_url, this.dependencies.fetcher ?? fetchWebsite);
+      const site = await resolveSite(input.website_url, fetcher);
+      checkCancelled();
       await this.progress(task, owner, 'understanding_business', 1, site.url, site.domain);
       const result = await researchBrand(input, site, {
         ...this.dependencies,
-        onCompetitors: () => this.progress(task, owner, 'finding_competitors', 2),
+        fetcher,
+        checkCancelled,
+        transport: (url, options) => {
+          checkCancelled();
+          return (this.dependencies.transport ?? fetch)(url, {
+            ...options,
+            signal: leaseSignal(heartbeat.signal, options?.signal),
+          });
+        },
+        onCompetitors: async () => {
+          checkCancelled();
+          await this.progress(task, owner, 'finding_competitors', 2);
+        },
       });
+      checkCancelled();
       await this.finish(task, owner, result, null);
     } catch (error) {
+      if (heartbeat.signal.aborted) return true;
       logger.warning('brand discovery task failed', {
         task_id: task.id,
         workspace_id: task.workspace_id,
@@ -85,9 +104,7 @@ export class DiscoveryWorker {
       });
       await this.finish(task, owner, null, error);
     } finally {
-      clearInterval(timer);
-      // The timer callback may have assigned an in-flight Promise; drain it before returning.
-      if (heartbeat) await heartbeat;
+      await heartbeat.stop();
     }
     return true;
   }

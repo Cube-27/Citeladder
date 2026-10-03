@@ -116,9 +116,8 @@ catalog identity, recommendations and source provenance. The
 provider outcomes, target-aware verification, immutable attempts and lease loss
 against PostgreSQL with deterministic provider doubles.
 
-The retired [rebuild record](archive/plans/commerce-suite-atomic-rebuild.md)
-retains unverified manual migration/crawl/CSV, reference-evaluation, Tavily and
-audit/schedule gates. Archiving the plan does not satisfy them; applicable
+Manual migration/crawl/CSV, reference-evaluation, Tavily and
+audit/schedule gates remain unverified. Retiring a plan does not satisfy them; applicable
 acceptance remains in [release readiness](release-checklist.md).
 
 ## Current limits

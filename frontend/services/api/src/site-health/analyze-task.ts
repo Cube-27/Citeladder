@@ -164,7 +164,7 @@ const expectClassification = (db: Database, task: SiteTask, owner: string) =>
   owned(db, task, owner).set({ classification_expected: true, updated_at: new Date() }).execute();
 
 async function acquire(ctx: SiteTaskContext, task: SiteTask): Promise<Outcome> {
-  const fetched = await ctx.fetcher.fetch(task.requested_url);
+  const fetched = await ctx.fetcher.fetch(task.requested_url, { signal: ctx.signal });
   const base = { facts: null, page: null, reusedArtifactId: null };
   if (!fetched.ok)
     return {
@@ -246,6 +246,7 @@ async function recordProgress(trx: Database, crawl: Crawl) {
 
 /** Stage the evidence and settle the task in one transaction. */
 async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome) {
+  ctx.signal?.throwIfAborted();
   // Load the provisional page context and evaluate before taking quota/commit locks.
   const scope = outcome.facts ? await loadScope(ctx.db, claimed) : null;
   const context = scope?.task.site_url_id
@@ -324,6 +325,7 @@ async function prepare(
   ctx: SiteTaskContext,
   claimed: SiteTask,
 ): Promise<Outcome | 'deferred' | null> {
+  ctx.signal?.throwIfAborted();
   const scope = await loadScope(ctx.db, claimed);
   if (!scope || !ACTIVE_CRAWL.has(scope.crawl.status)) {
     await cancelTask(ctx.db, claimed, ctx.owner);

@@ -71,8 +71,6 @@ jobs:
           ENCRYPTION_KEY=compose-smoke-encryption-key-not-for-production
           FRONTEND_URL=http://127.0.0.1:3001
           TRUSTED_PROXY_CIDRS=
-          LOGFIRE_ENABLED=false
-          LOGFIRE_TOKEN=
           EOF
 
       # Build both frontend runtimes cold to verify clean-clone delivery.

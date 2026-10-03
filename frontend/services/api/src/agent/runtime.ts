@@ -114,21 +114,24 @@ export class AgentRuntime {
       };
     });
   }
-  async execute(lease: Lease) {
+  async execute(lease: Lease, signal?: AbortSignal) {
     try {
-      await this.turn(lease);
+      await this.turn(lease, signal);
     } catch (error) {
+      if (signal?.aborted) return;
       if (error instanceof AgentError && error.code === 'lease') return;
       if (error instanceof AgentError && error.retryable) throw error;
       await this.fail(lease, failureCode(error));
     }
   }
-  private async turn(lease: Lease) {
+  private async turn(lease: Lease, signal?: AbortSignal) {
+    signal?.throwIfAborted();
     const turn = await this.load(lease);
     const budget = budgetSchema.parse(turn.run.budget);
     const model = await this.deps.modelFor(turn.run);
     const state = this.initialState(turn);
     for (let ordinal = 1; ordinal <= budget.max_steps; ordinal++) {
+      signal?.throwIfAborted();
       const request = this.prompt(
         turn,
         state.skill,
@@ -137,6 +140,7 @@ export class AgentRuntime {
         budget.max_tool_calls - state.toolsUsed,
       );
       const result = await this.deps.models.call(lease, ordinal, model, request);
+      signal?.throwIfAborted();
       const step = this.parse(result.content, state);
       if (step?.action === 'respond') {
         await this.finish(lease, turn, step, state);

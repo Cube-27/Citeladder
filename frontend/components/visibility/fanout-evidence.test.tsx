@@ -74,7 +74,7 @@ describe('Fanout evidence scope', () => {
             distinct_queries: 20,
             matched_queries: 20,
             coverage: {},
-            next_offset: null,
+            next_cursor: null,
             total_answers: 50,
             answers: [],
             items: [],

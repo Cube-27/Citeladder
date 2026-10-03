@@ -34,7 +34,7 @@ const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid };
 const projectRoot = '/api/v1/projects/{project_id}/monitored-urls';
 const replaceBody = z.strictObject({
-  site_url_ids: z.array(z.uuid()),
+  site_url_ids: z.array(z.uuid()).max(policy.site_health.crawl.monitored_url_selection_max),
   expected_selection_version: z.int(),
 });
 const bulkBody = z.strictObject({

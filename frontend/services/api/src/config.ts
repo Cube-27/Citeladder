@@ -47,6 +47,7 @@ import { appModels } from './config/app-models.ts';
 import { productTourVersion } from './config/product-tour.ts';
 import { contentDifferentiation } from './config/content-differentiation.ts';
 import { agentContext } from './config/agent-context.ts';
+import { projectReads } from './config/projects.ts';
 import { agentSkills } from './config/agent-skills.ts';
 import { mcp } from './config/mcp.ts';
 import { promptGeneration } from './config/prompt-generation.ts';
@@ -103,6 +104,7 @@ export const policy = {
   visibility: { ...visibility, ...promptLibrary.cohorts },
   projects: {
     ...pythonConfig.projects,
+    ...projectReads,
     prompt_set_name: promptLibrary.prompt_set_name,
     min_repetitions: audits.min_repetitions,
     max_repetitions: audits.max_repetitions,

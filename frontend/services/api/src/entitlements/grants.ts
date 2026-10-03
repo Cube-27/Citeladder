@@ -65,6 +65,7 @@ export async function refreshRuntime(
     .values({ id: randomUUID(), workspace_id: workspaceId, created_at: at, ...projection })
     .onConflict((c) => c.column('workspace_id').doUpdateSet(projection))
     .execute();
+  return state;
 }
 
 async function bump(db: Database, workspaceId: string, accountId: string, at: Date) {

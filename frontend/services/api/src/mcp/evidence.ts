@@ -443,16 +443,13 @@ export async function readEvidence(
         pagination: pagination(items, page.next_cursor ?? null, page.total),
       };
     }
-    const offset = args.cursor ? Number(decodeCursor(text(args, 'cursor')!, 1)[0]) : 0;
-    if (!Number.isInteger(offset) || offset < 0 || offset > mcpPolicy.max_visibility_source_offset)
-      throw new McpInputError('cursor offset is outside the supported range');
     const dimension = text(args, 'level') === 'url' ? 'url' : 'domain';
     const page = await getVisibilitySources(db, selection, {
       domain: null,
       sourceClass: null,
       dimension,
       asOf: null,
-      offset,
+      cursor: text(args, 'cursor'),
       limit: limit(args),
       baselineAuditIds: null,
     });
@@ -496,11 +493,7 @@ export async function readEvidence(
         citations: page.total_citations,
       },
       items,
-      pagination: pagination(
-        items,
-        page.next_offset === null ? null : encodeCursor(page.next_offset),
-        page.total,
-      ),
+      pagination: pagination(items, page.next_cursor, page.total),
       as_of: page.as_of,
     };
   }

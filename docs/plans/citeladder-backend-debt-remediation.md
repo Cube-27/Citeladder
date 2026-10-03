@@ -2,8 +2,10 @@
 
 Date: 3 October 2026
 
-Status: proposed, implementation not started. Listing this plan is not
-execution or deployment authorization.
+Status: all six slices implemented on `codex/backend-debt-remediation`, in
+the packaging order below. [PR #256](https://github.com/Cube-27/Citeladder/pull/256)
+is open; stop before merging. CI and review acceptance remain PR gates.
+Deployment is not authorized by this plan.
 
 ## Scope
 

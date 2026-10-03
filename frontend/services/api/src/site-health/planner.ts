@@ -12,7 +12,7 @@ import type {
   WorkspaceSiteHealthRuntime,
 } from '../generated/db-schema.ts';
 import { addAutomaticRoot, crawlScope, lockRuntime } from './frontier.ts';
-import { budgetedPageLimit, reserveCrawlFetches } from './fetch-budget.ts';
+import { budgetedPageLimit, reserveCrawlFetches, unresolvedEntitlement } from './fetch-budget.ts';
 import {
   controls,
   crawlError,
@@ -39,7 +39,8 @@ export async function admissionRuntime(db: Database, workspaceId: string) {
   if (account) {
     // Billing takes capacity/account before runtime; match it before refreshing.
     await lockAccount(db, workspaceId, account.id);
-    await refreshRuntime(db, workspaceId, account.id, now);
+    const state = await refreshRuntime(db, workspaceId, account.id, now);
+    if (state.error) throw unresolvedEntitlement();
   } else
     await db
       .insertInto('workspace_site_health_runtime')
@@ -406,7 +407,7 @@ export async function createPageRerunCrawl(
   const budget = await budgetedPageLimit(db, workspaceId, 1, now);
   const configuration = frozenConfiguration(scope, runtime, {
     mode: 'auto',
-    limit: Number(crawlSetting('automatic_page_limit')),
+    limit: budget.limit,
     seeds: [],
     kinds: [],
   });
@@ -419,7 +420,7 @@ export async function createPageRerunCrawl(
     runtime,
     rerun: true,
   });
-  if (budget.accountId) await reserveCrawlFetches(db, crawl, budget.accountId, 1, now);
+  if (budget.accountId) await reserveCrawlFetches(db, crawl, budget.accountId, budget.limit, now);
   await seedObservation(db, crawl, url, true);
   await enqueueCrawlTask(db, crawl, {
     kind: 'analyze',

@@ -123,3 +123,5 @@ artifact were retired after their final mapped product route moved.
 4. Cover it in the relevant native API test under `frontend/services/api/test/`.
 Workspace creation additionally uses `workspace_limit_exceeded` with a safe
 `limit` detail when the account has reached the configured tenant-root cap.
+Site Health admission and page reruns return 403 `entitlement_unresolved`
+with `retryable: false` when persisted grants are corrupt or cannot be folded.

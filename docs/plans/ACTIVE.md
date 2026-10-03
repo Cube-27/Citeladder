@@ -2,6 +2,12 @@
 
 ## Active
 
+- [Backend debt remediation](citeladder-backend-debt-remediation.md)
+  — all six slices implemented on `codex/backend-debt-remediation` in one PR,
+  one commit per slice in order 6, 5, 1, 2, 3, 4.
+  [PR #256](https://github.com/Cube-27/Citeladder/pull/256) is open; stop before
+  merging. B20 remains deferred to the next legal revision.
+
 - [Security hardening](citeladder-security-hardening.md)
   — slices 1–7 implemented on `codex/security-hardening` as one PR, with one
   commit per slice. CI/review and merge remain pending; stop before merging.
@@ -109,11 +115,6 @@
   execution and project skill policy are deferred. D/E remain separate assignments.
 
 ## Queued
-- [Backend debt remediation](citeladder-backend-debt-remediation.md)
-  — plan saved on 3 October 2026 from the reconciled backend/migration debt
-  audit; not started. Six slices: queue lease safety, admission errors,
-  unbounded hot-path reads, visibility selection reads (persisted fanout
-  projection approved), Python/CI residue and authority-document repairs.
 - [AI Traffic analytics, crawl logs and authorized crawl](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026 and revised twice on 3 October 2026;
   implementation not started. Part A is three self-contained PRs: A1 bot
@@ -128,7 +129,7 @@
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
   — pending; remaining evidence/action and selected-query generation work.
 
-The owner retained [shell/commercial follow-up](citeladder-authed-shell-and-commercial-architecture.md)
+The owner retained [shell/commercial follow-up](../archive/plans/citeladder-authed-shell-and-commercial-architecture.md)
 for deferred sign-in selection and invitation delivery; it is not an active or
 additional queued assignment. Listed work is not authorization to execute it.
 
@@ -141,6 +142,6 @@ additional queued assignment. Listed work is not authorization to execute it.
   follow.
   Payments stay disabled until that sign-off.
 
-[Discovery simplification](citeladder-discovery-simplification.md)
+[Discovery simplification](../archive/plans/citeladder-discovery-simplification.md)
 — completion confirmed by the owner on 23 September 2026. This index update
 does not establish new validation.
