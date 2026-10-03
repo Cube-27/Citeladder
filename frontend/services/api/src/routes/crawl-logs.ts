@@ -34,15 +34,18 @@ import {
 const root = '/api/v1/projects/{project_id}/crawl-logs';
 const ingestPath = '/api/v1/crawl-logs/ingest/{source_id}';
 const uploadBatchPath = root + '/sources/{source_id}/uploads/{upload_id}/batches';
-const selfBounded = [ingestPath, uploadBatchPath].map(
-  (template) => new RegExp('^' + template.replaceAll(/\{[^}]+\}/gu, '[^/]+') + '$', 'u'),
-);
+const selfBounded = [ingestPath, uploadBatchPath].map((template) => template.split('/'));
+const matchesTemplate = (template: string[], segments: string[]) =>
+  template.length === segments.length &&
+  template.every((part, i) => (part.startsWith('{') ? segments[i] !== '' : part === segments[i]));
 /**
  * POST routes that authenticate and spend attempt quota before streaming their
  * own compressed/decompressed body bound; the app must not pre-read them.
  */
 export function streamsOwnBody(method: string, path: string) {
-  return method === 'POST' && selfBounded.some((pattern) => pattern.test(path));
+  if (method !== 'POST') return false;
+  const segments = path.split('/');
+  return selfBounded.some((template) => matchesTemplate(template, segments));
 }
 const path = { project_id: { scalar: { kind: 'uuid' }, required: true } } as const;
 const sourcePath = { ...path, source_id: { scalar: { kind: 'uuid' }, required: true } } as const;
@@ -129,7 +132,7 @@ export const crawlLogRoutes = [
     }),
     async handle({ c, db }, { path }) {
       const source = await authorizeToken(db, path.source_id, c.req.header('authorization'));
-      await batchQuota(db, source);
+      await batchQuota(db, source, new Date(), c.req.header('idempotency-key'));
       const type = c.req.header('content-type')?.split(';')[0];
       if (
         type &&

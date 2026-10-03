@@ -333,10 +333,18 @@ describe('sanitized durable admission', () => {
     const old = crawlLogs.batches_per_source_per_hour;
     crawlLogs.batches_per_source_per_hour = 1;
     try {
-      expect((await send(a.source.id, a.token, Buffer.alloc(0))).status).toBe(202);
+      const key = randomUUID();
+      const accepted = await send(a.source.id, a.token, Buffer.alloc(0), key);
+      expect(accepted.status).toBe(202);
       const refused = await send(a.source.id, a.token, Buffer.alloc(0));
       expect(refused.status).toBe(429);
       expect(Number(refused.headers.get('retry-after'))).toBeGreaterThan(0);
+      // A retried accepted key still receives its stored receipt after the quota is spent.
+      const replay = await send(a.source.id, a.token, Buffer.alloc(0), key);
+      expect(replay.status).toBe(202);
+      const receiptId = async (response: Response) =>
+        ((await response.json()) as { id: string }).id;
+      expect(await receiptId(replay)).toBe(await receiptId(accepted));
     } finally {
       crawlLogs.batches_per_source_per_hour = old;
     }

@@ -185,10 +185,17 @@ describe('local streaming upload privacy', () => {
       expect.anything(),
     );
   });
-  it('aborts lines older than the admission window before sending any batch', async () => {
-    vi.mocked(Date.now).mockReturnValue(Date.parse('2027-01-01T00:00:00Z'));
-    const lines = [event('known-robot'), event('known-robot')].map((row) => JSON.stringify(row));
-    await expect(run(file(lines.join('\n')))).rejects.toThrow(/older than 80 days/);
+  it('skips lines older than the admission window and refuses files with none inside it', async () => {
+    const old = { ...event('known-robot', '/old'), timestamp: '2026-01-01T12:00:00Z' };
+    await run(file([old, event('known-robot')].map((row) => JSON.stringify(row)).join('\n')));
+    expect(aiTrafficApi.uploadBatch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(aiTrafficApi.uploadBatch).mock.calls[0]![4].join()).not.toContain('/old');
+    expect(vi.mocked(aiTrafficApi.completeUpload).mock.calls[0]![3]).toMatchObject({
+      scanned_lines: 2,
+      first_line_at: '2026-10-02T12:00:00.000Z',
+    });
+    vi.clearAllMocks();
+    await expect(run(file(JSON.stringify(old)))).rejects.toThrow(/last 80 days/);
     expect(aiTrafficApi.uploadBatch).not.toHaveBeenCalled();
     expect(aiTrafficApi.completeUpload).not.toHaveBeenCalled();
   });

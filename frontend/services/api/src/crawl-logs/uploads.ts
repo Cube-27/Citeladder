@@ -84,17 +84,21 @@ export async function completeUpload(
   now = new Date(),
 ) {
   ingestionEnabled();
-  const first = input.first_line_at ? new Date(input.first_line_at) : null,
-    last = input.last_line_at ? new Date(input.last_line_at) : null;
-  if ((first === null) !== (last === null) || (first && last && first > last))
-    throw new ApiError(422, 'Invalid scan span');
-  if (input.scanned_lines > 0 && (!first || !last))
-    throw new ApiError(422, 'Scan timestamps are required');
+  const scanFirst = input.first_line_at ? new Date(input.first_line_at) : null,
+    scanLast = input.last_line_at ? new Date(input.last_line_at) : null;
   if (
-    (first && first.getTime() < now.getTime() - crawlLogs.max_backdate_days * 86400000) ||
-    (last && last.getTime() > now.getTime() + crawlLogs.max_clock_skew_hours * 3600000)
+    (scanFirst === null) !== (scanLast === null) ||
+    (scanFirst && scanLast && scanFirst > scanLast)
   )
-    throw new ApiError(422, 'Scan span outside admission window');
+    throw new ApiError(422, 'Invalid scan span');
+  if (input.scanned_lines > 0 && (!scanFirst || !scanLast))
+    throw new ApiError(422, 'Scan timestamps are required');
+  // A long-retention file is admitted for the part of its span inside the window.
+  const floor = new Date(now.getTime() - crawlLogs.max_backdate_days * 86400000),
+    ceiling = new Date(now.getTime() + crawlLogs.max_clock_skew_hours * 3600000);
+  const first = scanFirst && (scanFirst < floor ? floor : scanFirst),
+    last = scanLast && (scanLast > ceiling ? ceiling : scanLast);
+  if (first && last && first > last) throw new ApiError(422, 'Scan span outside admission window');
   if (new Set(input.scanned_dates.map((d) => d.date)).size !== input.scanned_dates.length)
     throw new ApiError(422, 'Duplicate scanned day');
   return await db.transaction().execute(async (trx) => {

@@ -181,7 +181,7 @@ export async function uploadCrawlFile(input: {
       batch: string[] = [],
       batchBytes = 0;
     const scan: Scan = { first: null, last: null, dates: new Map() };
-    // The server rejects older scan spans at completion; fail before transferring the file.
+    // Lines older than the admission window are neither sent nor counted in the scan span.
     const oldest = new Date(Date.now() - catalog.max_backdate_days * 86400000).toISOString();
     const envelopeBytes = () => new TextEncoder().encode(JSON.stringify({ seq, lines: [] })).length;
     let envelope = envelopeBytes();
@@ -201,12 +201,8 @@ export async function uploadCrawlFile(input: {
       if (options.signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError');
       scanned++;
       const row = parseLogLine(line, format, mapping);
-      if (!row) return;
+      if (!row || new Date(row.timestamp).toISOString() < oldest) return;
       const at = trackScan(scan, row.timestamp);
-      if (at < oldest)
-        throw new Error(
-          `Log lines older than ${catalog.max_backdate_days} days cannot be uploaded`,
-        );
       if (!catalog.bots.some((bot) => matchesCrawlerUserAgent(bot, row.user_agent))) return;
       const normalized = JSON.stringify({ ...row, timestamp: at });
       const size = new TextEncoder().encode(normalized).length;
@@ -227,6 +223,8 @@ export async function uploadCrawlFile(input: {
       if (next.done) break;
       await consume(next.value);
     }
+    if (!scan.first)
+      throw new Error(`No log lines from the last ${catalog.max_backdate_days} days to upload`);
     await flush();
     await aiTrafficApi.completeUpload(
       projectId,

@@ -31,14 +31,13 @@ export async function refreshCrawlLogs(
       : sql<boolean>`true`;
     const span = [...(reportingDates ?? [])].sort((a, b) => a.localeCompare(b));
     // The occurred_at range lets the index bound the scan; the local-day test stays exact.
-    const selectedRequest = reportingDates
-      ? sql<boolean>`(occurred_at at time zone ${tz})::date=any(${reportingDates}::date[])${
-          span.length
-            ? sql` and occurred_at >= (${span[0]}::date::timestamp at time zone ${tz})
-                and occurred_at < ((${span.at(-1)}::date + 1)::timestamp at time zone ${tz})`
-            : sql``
-        }`
-      : sql<boolean>`true`;
+    let selectedRequest = sql<boolean>`true`;
+    if (reportingDates)
+      selectedRequest = sql<boolean>`(occurred_at at time zone ${tz})::date=any(${reportingDates}::date[])`;
+    if (span.length)
+      selectedRequest = sql<boolean>`${selectedRequest}
+        and occurred_at >= (${span[0]}::date::timestamp at time zone ${tz})
+        and occurred_at < ((${span.at(-1)}::date + 1)::timestamp at time zone ${tz})`;
     await trx
       .deleteFrom('bot_activity_daily')
       .where('workspace_id', '=', scope.workspaceId)

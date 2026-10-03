@@ -45,7 +45,8 @@ transaction. No provider/model I/O occurs during admission. Request IDs dedupe
 across sources on a project/host; without them the hash of mapped original
 fields plus source ID collapses identical repeated lines, including distinct
 requests that lack distinguishing fields. Receipt replay returns the original
-result and spends no accepted-line quota. Attempt quotas still count retries.
+result and spends no accepted-line quota. A retried, already-accepted
+`Idempotency-Key` skips the attempt quota; other retries still count.
 Empty webhook heartbeats require an explicit unique `Idempotency-Key`; missing
 keys return 422. Replaying a key returns its original receipt and timestamp.
 
@@ -66,7 +67,7 @@ Owner/Admin can create, rotate or revoke through
 credential authority and append security events. A webhook's `clw_` credential
 contains 32 random bytes, is returned once, and is stored only as a hash and
 prefix. Rotation invalidates the old token; revocation retains history and
-frees the host. One active webhook per project/host is enforced by PostgreSQL.
+frees the host. Repeated revocation keeps the first `revoked_at` boundary. One active webhook per project/host is enforced by PostgreSQL.
 
 Public `POST /api/v1/crawl-logs/ingest/{source_id}` requires the source's Bearer
 token. The token identifies its existing authorized workspace/project; no
@@ -80,6 +81,9 @@ reapplies every admission rule. Upload batches use `upload_id:seq` idempotency
 and resume from `last_ack_seq` with the original file name and size. A completed
 zero-match scan still saves client-reported scan dates. Unfinished uploads are
 abandoned after the configured interval; accepted rows remain partial evidence.
+The client skips lines older than `max_backdate_days` and refuses a file with
+none inside that window; the server clamps the reported scan span to the
+admission window and rejects only a span entirely outside it.
 The server derives scanned dates and complete-day flags from the reported first
 and last timestamps using the persisted reporting timezone, ignoring client
 complete-day booleans. They do not become provider-confirmed coverage.

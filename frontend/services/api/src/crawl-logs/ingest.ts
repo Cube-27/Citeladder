@@ -51,7 +51,20 @@ export async function batchQuota(
   db: Database,
   source: Selectable<CrawlLogSources>,
   now = new Date(),
+  key?: string | null,
 ) {
+  // A retried, already-accepted key returns its stored receipt without spending quota.
+  if (
+    key &&
+    (await db
+      .selectFrom('crawl_log_batches')
+      .select('id')
+      .where('workspace_id', '=', source.workspace_id)
+      .where('source_id', '=', source.id)
+      .where('idempotency_key', '=', key)
+      .executeTakeFirst())
+  )
+    return;
   await enforceSubjectRequest(
     db,
     'crawl_source',
@@ -85,7 +98,7 @@ export async function ingest(
   const key = options.key ?? createHash('sha256').update(body).digest('hex');
   if (!key.trim() || key.length > 255) throw new ApiError(422, 'Invalid idempotency key');
   // Attempt quota commits before parsing; replay does not spend accepted-line quota.
-  if (!options.quotaChecked) await batchQuota(db, source, now);
+  if (!options.quotaChecked) await batchQuota(db, source, now, options.key);
   const {
     lines,
     validation,
