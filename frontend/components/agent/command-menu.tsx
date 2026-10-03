@@ -108,7 +108,7 @@ export function CommandField({
         ref={field}
         id={id}
         rows={rows}
-        // The composer's frame carries the edge and focus ring; the field is bare.
+        // The text field owns focus; the surrounding form keeps its resting edge.
         className="min-h-0 resize-none bg-transparent px-2 py-1 shadow-none hover:shadow-none"
 
         value={value}

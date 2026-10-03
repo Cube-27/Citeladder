@@ -142,6 +142,7 @@ function LinkDeclaration({
   )
     return null;
   const related = links.filter((item) => item.source.site_url_id === link.source.site_url_id);
+  const selectedIds = new Set(selected);
   return (
     <section className="space-y-3">
       <h3 className="type-section-title">Which links are live on this page?</h3>
@@ -151,7 +152,7 @@ function LinkDeclaration({
       {related.map((item) => (
         <Checkbox
           key={item.id}
-          checked={selected.includes(item.id)}
+          checked={selectedIds.has(item.id)}
           onCheckedChange={(checked) =>
             setSelected((ids) =>
               checked === true ? [...ids, item.id] : ids.filter((id) => id !== item.id),
