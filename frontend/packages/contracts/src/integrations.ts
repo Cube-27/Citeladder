@@ -125,7 +125,7 @@ export const integrationBackfillProgressSchema = responseObject({
   covered_through: z.string().nullable(),
 });
 
-// `GET /integrations/{id}/properties` — the provider properties this grant can
+// `POST /integrations/{id}/properties` — the provider properties this grant can
 // read, for the property picker. Discovery output, not stored state:
 // `property_ref` is the canonical ref posted back to create a mapping
 // (a GSC siteUrl, a bare GA4 numeric id); `label` is display-only.

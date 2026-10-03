@@ -17,7 +17,7 @@ import {
 } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { tagClasses } from '@/components/ui/filter-chip-variants';
@@ -80,7 +80,7 @@ function PropertyOption({
  * points `account_ref` at the property — so an unselected connection syncs
  * nothing and says so, rather than failing against an empty property id.
  *
- * Options come from the provider itself (`GET …/properties`), never free
+ * Options come from the provider itself (`POST …/properties`), never free
  * text, so a ref can't be typed wrong. That call is live and lazy: it runs
  * only once the dialog opens.
  */
@@ -114,21 +114,17 @@ export function PropertyPicker({
 }: Readonly<{ connection: IntegrationConnection; disabled?: boolean }>) {
   const queryClient = useQueryClient();
   const { activeProject } = useProjectContext();
+  const mayDiscover = useWorkspaceCapability('manage_credentials');
   const activeMapping = useActiveMapping(connection.workspace_id, connection.id);
   const [open, setOpen] = useState(false);
   const [pendingRef, setPendingRef] = useState<string | null>(null);
 
-  const propertiesQuery = useQuery({
-    queryKey: queryKeys.integrations.properties(connection.id),
-    queryFn: ({ signal }) =>
-      integrationsApi.listProperties(connection.id, {
-        signal,
+  const propertiesQuery = useMutation({
+    mutationFn: () =>
+      integrationsApi.discoverProperties(connection.id, {
         workspaceId: connection.workspace_id,
       }),
-    // Live provider call — only fetch once the picker is actually open.
-    enabled: open,
-    // Property lists barely change; don't re-hit Google on every reopen.
-    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 
   const selectMutation = useMutation({
@@ -176,15 +172,20 @@ export function PropertyPicker({
             No {noun} selected
           </span>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setOpen(true)}
-          disabled={disabled}
-          data-testid={`select-property-${connection.provider}`}
-        >
-          {selected ? 'Change' : 'Select'}
-        </Button>
+        {mayDiscover ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setOpen(true);
+              propertiesQuery.mutate();
+            }}
+            disabled={disabled}
+            data-testid={`select-property-${connection.provider}`}
+          >
+            {selected ? 'Change' : 'Select'}
+          </Button>
+        ) : null}
       </div>
 
       <Dialog
@@ -210,7 +211,7 @@ export function PropertyPicker({
             </Alert>
           ) : null}
 
-          {propertiesQuery.isLoading ? (
+          {propertiesQuery.isPending ? (
             <>
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />

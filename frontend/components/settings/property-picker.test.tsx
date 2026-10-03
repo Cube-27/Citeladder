@@ -29,7 +29,9 @@ const activeProject = makeProject({
 });
 
 let hasProject = true;
+let mayDiscover = true;
 vi.mock('@/lib/project/project-context', () => ({
+  useWorkspaceCapability: () => mayDiscover,
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     projects: hasProject ? [activeProject] : [],
@@ -67,7 +69,7 @@ const properties = [
 
 function mockProperties(items: unknown[] = properties) {
   mswServer.use(
-    http.get(`/api/v1/integrations/${CONN}/properties`, () => HttpResponse.json(items)),
+    http.post(`/api/v1/integrations/${CONN}/properties`, () => HttpResponse.json(items)),
   );
 }
 
@@ -95,10 +97,18 @@ beforeEach(() => mockMappings());
 afterEach(() => {
   mswServer.resetHandlers();
   hasProject = true;
+  mayDiscover = true;
 });
 afterAll(() => mswServer.close());
 
 describe('PropertyPicker', () => {
+  it('shows saved mappings without discovery controls for members and viewers', async () => {
+    mayDiscover = false;
+    mockMappings([mapping('sc-domain:example.com')]);
+    renderWithProviders(<PropertyPicker connection={connection()} />);
+    expect(await screen.findByText('sc-domain:example.com')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change' })).toBeNull();
+  });
   it('flags an unselected connection instead of showing an empty ref', () => {
     renderWithProviders(<PropertyPicker connection={connection()} />);
 
@@ -111,7 +121,7 @@ describe('PropertyPicker', () => {
     const ue = userEvent.setup();
     let calls = 0;
     mswServer.use(
-      http.get(`/api/v1/integrations/${CONN}/properties`, () => {
+      http.post(`/api/v1/integrations/${CONN}/properties`, () => {
         calls += 1;
         return HttpResponse.json(properties);
       }),
@@ -164,7 +174,7 @@ describe('PropertyPicker', () => {
   it('shows a provider failure rather than an empty property list', async () => {
     const ue = userEvent.setup();
     mswServer.use(
-      http.get(`/api/v1/integrations/${CONN}/properties`, () =>
+      http.post(`/api/v1/integrations/${CONN}/properties`, () =>
         // A rejected grant: the envelope's `retryable: false` is what stops
         // the shared query policy from retrying a 5xx, so the error surfaces
         // immediately instead of after a backoff chain.

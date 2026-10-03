@@ -98,6 +98,14 @@ async function get(path: string, selectedWorkspace = workspaceId, authenticated 
   return { status: response.status, body: (await response.json()) as unknown };
 }
 
+async function discover(id: string, userId = ownerId) {
+  const token = await sessionToken({ sub: userId, ver: 0 });
+  return app.request(`/api/v1/integrations/${id}/properties`, {
+    method: 'POST',
+    headers: { cookie: `${config.session.cookieName}=${token}`, 'x-workspace-id': workspaceId },
+  });
+}
+
 beforeAll(async () => {
   ownerId = await fixtures.user();
   const foreignOwnerId = await fixtures.user();
@@ -129,18 +137,43 @@ describe('integration connection routes', () => {
       .select('id')
       .where('operation', '=', 'integrations.properties')
       .execute();
-    expect((await get(`/api/v1/integrations/${foreignConnectionId}/properties`)).status).toBe(404);
-    expect((await get(`/api/v1/integrations/${randomUUID()}/properties`)).status).toBe(404);
+    expect((await discover(foreignConnectionId)).status).toBe(404);
+    expect((await discover(randomUUID())).status).toBe(404);
     const after = await db
       .selectFrom('usage_windows')
       .select('id')
       .where('operation', '=', 'integrations.properties')
       .execute();
     expect(after).toEqual(before);
-    const owned = await get(`/api/v1/integrations/${connectionId}/properties`);
+    const owned = await discover(connectionId);
     expect(owned.status).toBe(502);
-    expect(owned.body).toMatchObject({ error: { code: 'grant_auth_failed' } });
+    expect(await owned.json()).toMatchObject({ error: { code: 'grant_auth_failed' } });
   });
+
+  it.each(['member', 'viewer', 'owner', 'admin'])(
+    'gates %s discovery before provider I/O',
+    async (role) => {
+      const userId = await fixtures.user();
+      await fixtures.member(workspaceId, userId, role);
+      const token = vi
+        .spyOn(await import('../src/integrations/tokens.ts'), 'freshAccessToken')
+        .mockResolvedValue('recorded-token');
+      const provider = vi
+        .spyOn(IntegrationClient.prototype, 'properties')
+        .mockResolvedValue([{ property_ref: 'recorded', label: 'Recorded' }]);
+      try {
+        const result = await discover(connectionId, userId);
+        const allowed = role === 'owner' || role === 'admin';
+        expect(result.status).toBe(allowed ? 200 : 403);
+        expect(provider).toHaveBeenCalledTimes(allowed ? 1 : 0);
+        expect(token).toHaveBeenCalledTimes(allowed ? 1 : 0);
+        expect((await get(`/api/v1/integrations/${connectionId}/properties`)).status).toBe(405);
+      } finally {
+        token.mockRestore();
+        provider.mockRestore();
+      }
+    },
+  );
 
   it('reports a saved mapping whose history enqueue failed and allows retry without duplication', async () => {
     const token = await sessionToken({ sub: ownerId, ver: 0 });

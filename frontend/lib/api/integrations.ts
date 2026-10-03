@@ -108,12 +108,13 @@ export const integrationsApi = {
    * options. A live provider call, so it is slower than the other reads and
    * can fail with a 502 when the upstream is down.
    */
-  listProperties: async (connectionId: string, options?: ApiRequestOptions) => {
-    const res = await apiClient.get<IntegrationProperty[]>(
+  discoverProperties: async (connectionId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.post<IntegrationProperty[]>(
       `/integrations/${connectionId}/properties`,
+      undefined,
       options,
     );
-    return strictValidate(integrationPropertyListSchema, res, 'integrations.listProperties');
+    return strictValidate(integrationPropertyListSchema, res, 'integrations.discoverProperties');
   },
   listMappings: async (connectionId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<IntegrationPropertyMapping[]>(
