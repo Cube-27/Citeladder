@@ -1976,6 +1976,17 @@ export interface ResponseAnalyses {
   workspace_id: string;
 }
 
+export interface RobotsSnapshots {
+  body: string;
+  content_hash: string;
+  id: string;
+  origin: string;
+  project_id: string;
+  status_code: number | null;
+  truncated: boolean;
+  workspace_id: string;
+}
+
 export interface SearchIntelligenceCalls {
   completed_at: Timestamp | null;
   created_at: Timestamp;
@@ -2185,6 +2196,7 @@ export interface SiteCrawls {
   profile_id: string;
   project_id: string;
   random_seed: string;
+  robots_snapshot_id: string | null;
   root_url: string;
   rule_catalog_version: string;
   sample_mode: boolean;
@@ -2936,6 +2948,7 @@ export interface DB {
   referral_classifications: ReferralClassifications;
   referral_events: ReferralEvents;
   response_analyses: ResponseAnalyses;
+  robots_snapshots: RobotsSnapshots;
   search_intelligence_calls: SearchIntelligenceCalls;
   search_intelligence_datasets: SearchIntelligenceDatasets;
   search_intelligence_dispatch_attempts: SearchIntelligenceDispatchAttempts;

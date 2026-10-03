@@ -13,6 +13,8 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
 import { SitemapCollector, SitemapParseError, sitemapRef } from '../web-evidence/sitemaps.ts';
+import { crawlerPolicyFacts } from '../web-evidence/acquisition.ts';
+import { insertRobotsSnapshot } from './robots-snapshots.ts';
 import { admitCandidates, candidate, crawlScope, lockRuntime, type Candidate } from './frontier.ts';
 import {
   Abandoned,
@@ -29,12 +31,13 @@ import { classifyUrlAdmission } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
 const crawlPolicy = policy.site_health.crawl;
-const AI_CRAWLERS = policy.site_health.page_analysis.rules.ai_crawler_bots;
 
 export function setupSettings(env: Record<string, string | undefined> = process.env) {
   const spec = policy.site_health.settings;
   const number = (name: keyof typeof spec) => Number(resolveSettingSpec(spec[name], env));
   return {
+    policySampleSize: number('robots_policy_sample_size'),
+    snapshotBytes: number('robots_snapshot_max_bytes'),
     llmsBytes: number('llms_txt_max_decoded_bytes'),
     maxDocuments: number('max_sitemap_documents'),
     concurrency: Math.max(1, number('sitemap_fetch_concurrency')),
@@ -80,7 +83,6 @@ async function wellKnown(ctx: SiteTaskContext, url: string, settings: Settings) 
 /** The facts the root analysis waits on; the sitemap section is dashboard evidence only. */
 async function siteEvidence(
   ctx: SiteTaskContext,
-  requested: string,
   origin: string,
   walks: boolean,
   settings: Settings,
@@ -99,22 +101,21 @@ async function siteEvidence(
     }
   }
   return {
-    robots: {
-      fetched: robots?.body != null,
-      status: robotsStatus(robots),
-      url: origin ? `${origin}${crawlPolicy.robots_path}` : '',
-      status_code: robots?.status || null,
-      ai_crawlers: Object.fromEntries(
-        AI_CRAWLERS.map((bot) => [
-          bot,
-          !robots || robots.allows(requested, bot) ? 'allow' : 'block',
-        ]),
-      ),
-      crawler_roles: crawlPolicy.crawler_roles,
-      sitemaps: (robots?.sitemaps ?? []).slice(0, crawlPolicy.max_declared_sitemaps),
+    body: robots?.body ?? null,
+    facts: {
+      robots: {
+        fetched: robots?.body != null,
+        status: robotsStatus(robots),
+        url: origin ? `${origin}${crawlPolicy.robots_path}` : '',
+        status_code: robots?.status || null,
+        catalog_version: policy.crawlers.catalog_version,
+        robots_snapshot_id: null as string | null,
+        bots: crawlerPolicyFacts(origin, robots?.status ?? 0, robots?.body ?? '', []),
+        sitemaps: (robots?.sitemaps ?? []).slice(0, crawlPolicy.max_declared_sitemaps),
+      },
+      llms_txt: llms,
+      sitemap: { fetched: false, files: [] as string[], pending: walks },
     },
-    llms_txt: llms,
-    sitemap: { fetched: false, files: [] as string[], pending: walks },
   };
 }
 type SiteFacts = Record<string, unknown>;
@@ -343,10 +344,56 @@ async function persist(
       const locked = await lockRunningTask(trx, claimed, ctx.owner);
       if (!locked || !ACTIVE_CRAWL.has(locked.crawl.status)) throw new Abandoned();
       const { pending: _pending, ...sitemap } = record(facts.sitemap);
+      const robots = record(facts.robots);
+      const snapshot = crawl.robots_snapshot_id
+        ? await trx
+            .selectFrom('robots_snapshots')
+            .selectAll()
+            .where('workspace_id', '=', crawl.workspace_id)
+            .where('project_id', '=', crawl.project_id)
+            .where('id', '=', crawl.robots_snapshot_id)
+            .executeTakeFirst()
+        : undefined;
+      const discovered = await trx
+        .selectFrom('site_url_observations')
+        .select('final_url')
+        .where('workspace_id', '=', crawl.workspace_id)
+        .where('crawl_id', '=', crawl.id)
+        .orderBy('created_at')
+        .orderBy('id')
+        .limit(settings.policySampleSize)
+        .execute();
+      const origin = new URL(crawl.root_url).origin;
+      const sample = [
+        ...new Set([`${origin}/`, ...urls, ...discovered.map((row) => row.final_url)]),
+      ]
+        .filter((url) => new URL(url).origin === origin)
+        .slice(0, settings.policySampleSize);
+      const bots = crawlerPolicyFacts(
+        origin,
+        Number(robots.status_code ?? 0),
+        snapshot?.body ?? '',
+        sample,
+      );
+      if (snapshot?.truncated)
+        for (const bot of bots) {
+          bot.policy = 'unknown';
+          bot.evaluated_url_count = 0;
+          bot.disallowed_url_count = 0;
+        }
+      // Root access was published from the full response in commit one and stays frozen.
+      const rootFacts = Array.isArray(robots.bots) ? robots.bots.map(record) : [];
+      for (const bot of bots) {
+        const initial = rootFacts.find((fact) => fact.bot_id === bot.bot_id);
+        if (initial) {
+          bot.root_access = initial.root_access as typeof bot.root_access;
+          bot.matched = initial.matched as typeof bot.matched;
+        }
+      }
       await trx
         .updateTable('site_crawls')
         .set((eb) => ({
-          site_facts: JSON.stringify({ ...facts, sitemap }),
+          site_facts: JSON.stringify({ ...facts, sitemap, robots: { ...robots, bots } }),
           admitted_url_count: eb('admitted_url_count', '+', admitted),
           updated_at: new Date(),
         }))
@@ -386,13 +433,30 @@ export async function runSiteSetup(
   let facts: SiteFacts;
   if (published) facts = published;
   else {
-    facts = await siteEvidence(ctx, task.requested_url, origin, walks, settings);
+    const observed = await siteEvidence(ctx, origin, walks, settings);
+    facts = observed.facts;
     const evidence = facts;
     // Commit one: the root page's wait clears here, before the walk.
     const committed = await underLease(ctx, claimed, async (trx, locked) => {
+      const snapshot =
+        origin && observed.body !== null
+          ? await insertRobotsSnapshot(
+              trx,
+              locked,
+              origin,
+              observed.body,
+              observed.facts.robots.status_code,
+              settings.snapshotBytes,
+            )
+          : null;
+      observed.facts.robots.robots_snapshot_id = snapshot?.id ?? null;
       await trx
         .updateTable('site_crawls')
-        .set({ site_facts: JSON.stringify(evidence), updated_at: new Date() })
+        .set({
+          site_facts: JSON.stringify(evidence),
+          robots_snapshot_id: snapshot?.id ?? null,
+          updated_at: new Date(),
+        })
         .where('id', '=', locked.id)
         .where('workspace_id', '=', locked.workspace_id)
         .execute();

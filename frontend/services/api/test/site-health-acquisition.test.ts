@@ -375,10 +375,21 @@ describe('site setup', () => {
       status_code: 200,
       sitemaps: [url('/index.xml')],
     });
-    expect(record(record(facts.robots).ai_crawlers)).toMatchObject({
-      GPTBot: 'block',
-      ClaudeBot: 'allow',
-    });
+    expect(record(facts.robots).bots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'GPTBot',
+          root_access: 'disallowed',
+          policy: 'all_disallowed',
+          evaluated_url_count: 2,
+        }),
+        expect.objectContaining({
+          label: 'ClaudeBot',
+          root_access: 'allowed',
+          policy: 'all_allowed',
+        }),
+      ]),
+    );
     expect(facts.llms_txt).toMatchObject({ fetched: true, present: true, status_code: 200 });
     expect(facts.sitemap).toEqual({
       fetched: true,

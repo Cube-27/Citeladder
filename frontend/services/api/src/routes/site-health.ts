@@ -20,6 +20,7 @@ import {
   siteHealthOverviewSchema,
   siteIssueDetailSchema,
   siteIssuesPageSchema,
+  robotsHistoryPageSchema,
 } from '@citeladder/contracts/site-health';
 import { z } from 'zod';
 
@@ -47,6 +48,7 @@ import {
   overview,
 } from '../site-health/reads/projections.ts';
 import { entitlementView } from '../site-health/reads/runtime.ts';
+import { robotsHistory } from '../site-health/reads/robots-history.ts';
 import { defineGetRoute } from './define.ts';
 
 const family = 'site-health';
@@ -113,6 +115,19 @@ function exportRoute(format: 'csv' | 'md') {
 }
 
 export const siteHealthRoutes = [
+  defineGetRoute({
+    family,
+    path: `${projectRoot}/robots-history`,
+    params: { path: projectPath, query: paging },
+    response: robotsHistoryPageSchema,
+    handle: ({ c, db }, { path, query }) =>
+      withCursor(
+        robotsHistory(db, c.get('workspace').workspaceId, path.project_id, {
+          limit: query.limit,
+          cursor: query.cursor,
+        }),
+      ),
+  }),
   defineGetRoute({
     family,
     path: '/api/v1/entitlements',

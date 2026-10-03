@@ -1,6 +1,7 @@
 /** MCP adapters over the persisted product read owners. */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
+import { robotsFactsSchema } from '@citeladder/contracts/site-health';
 import { mcpPolicy } from './config.ts';
 import { readIntegrationStatus } from './evidence-integrations.ts';
 import type { Database } from '../db/database.ts';
@@ -59,6 +60,30 @@ async function siteSnapshot(db: Database, scope: ReadScope): Promise<Evidence> {
         omissions: [],
       }
     : unavailable('no_site_snapshot');
+}
+async function crawlability(db: Database, scope: ReadScope): Promise<Evidence> {
+  const row = await workspace(scope)
+    .selectFrom(db, 'site_crawls')
+    .select(['id', 'site_facts', 'robots_snapshot_id'])
+    .where('project_id', '=', scope.projectId)
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
+    .executeTakeFirst();
+  if (!row) return unavailable('no_site_crawl');
+  const parsed = robotsFactsSchema.safeParse(record(row.site_facts).robots);
+  if (!parsed.success) return unavailable('robots_not_observed');
+  return {
+    state: 'available',
+    crawl_id: row.id,
+    ...parsed.data,
+    artifact_refs: [
+      reference('site_crawl', row.id),
+      ...(row.robots_snapshot_id
+        ? [reference('robots_snapshot', row.robots_snapshot_id, false)]
+        : []),
+    ],
+    omissions: [],
+  };
 }
 async function demandSnapshot(db: Database, scope: ReadScope): Promise<Evidence> {
   const row = await workspace(scope)
@@ -252,6 +277,7 @@ export async function readEvidence(
 ): Promise<Evidence> {
   if (name === 'read_integration_status') return readIntegrationStatus(db, scope);
   if (name === 'read_site_health') return siteSnapshot(db, scope);
+  if (name === 'read_ai_crawlability') return crawlability(db, scope);
   if (name === 'read_demand') return demandSnapshot(db, scope);
   if (name === 'read_opportunities') return ranked(db, scope, args);
   if (name === 'read_visibility_audit') return audit(db, scope, args);
@@ -557,6 +583,7 @@ export async function readEvidence(
 
 const sectionTools: Record<string, string> = {
   site_health: 'read_site_health',
+  crawlability: 'read_ai_crawlability',
   demand: 'read_demand',
   opportunities: 'read_opportunities',
   visibility: 'read_visibility_audit',
@@ -577,6 +604,7 @@ export async function projectBusinessContext(
   const evidence: Evidence = {};
   const keys: Record<string, string> = {
     read_site_health: 'site.read_snapshot',
+    read_ai_crawlability: 'crawlability',
     read_demand: 'demand.read_snapshot',
     read_opportunities: 'opportunities.read_ranked',
     read_visibility_audit: 'audits.read_latest',

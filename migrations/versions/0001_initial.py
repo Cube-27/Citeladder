@@ -1950,6 +1950,22 @@ def upgrade() -> None:
         postgresql_where=sa.text("disposition = 'pending'"),
     )
     op.create_table(
+        "robots_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("origin", sa.String(length=2048), nullable=False),
+        sa.Column("content_hash", sa.String(length=64), nullable=False),
+        sa.Column("body", sa.Text(), nullable=False),
+        sa.Column("truncated", sa.Boolean(), nullable=False),
+        sa.Column("status_code", sa.Integer(), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["workspace_id", "project_id"], ["projects.workspace_id", "projects.id"], ondelete="CASCADE"),
+        sa.UniqueConstraint("workspace_id", "project_id", "origin", "content_hash", name="uq_robots_snapshots_content"),
+        sa.UniqueConstraint("workspace_id", "project_id", "id", name="uq_robots_snapshots_scope_id"),
+    )
+    op.create_table(
         "site_crawls",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
@@ -1972,6 +1988,11 @@ def upgrade() -> None:
         sa.Column("partial_reason", sa.String(length=48), nullable=False),
         sa.Column("score_summary", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("site_facts", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("robots_snapshot_id", sa.UUID(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "robots_snapshot_id"],
+            ["robots_snapshots.workspace_id", "robots_snapshots.project_id", "robots_snapshots.id"],
+        ),
         sa.Column("extractor_version", sa.String(length=32), nullable=False),
         sa.Column("analyzer_version", sa.String(length=32), nullable=False),
         sa.Column("rule_catalog_version", sa.String(length=32), nullable=False),
@@ -7422,6 +7443,7 @@ def downgrade() -> None:
         "audits",
         "traffic_query_stats",
         "site_crawls",
+        "robots_snapshots",
         "provider_capacity_leases",
         "prompt_candidates",
         "prompt_generation_runs",

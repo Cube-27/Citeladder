@@ -1,6 +1,9 @@
 /** Durable operator suppression, destination robots, and publisher pacing at every hop. */
 import { setTimeout as delay } from 'node:timers/promises';
 import robotsModule from 'robots-parser';
+import type { z } from 'zod';
+import type { crawlerBotFactSchema } from '@citeladder/contracts/site-health';
+import type { CrawlerBot } from '../config/crawlers.ts';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -19,6 +22,7 @@ const robotsParser = robotsModule as unknown as (
   isAllowed: (url: string, userAgent: string) => boolean | undefined;
   getCrawlDelay: (userAgent: string) => number | undefined;
   getSitemaps: () => string[];
+  _rules: Record<string, unknown>;
 };
 
 export function acquisitionSettings(env: Record<string, string | undefined> = process.env) {
@@ -144,6 +148,13 @@ export function robotsPolicy(
     /** Whether the publisher's rules admit `agent`, for reporting another crawler's stance. */
     allows: (url: string, agent: string) =>
       !fetched || !body.trim() || robots.isAllowed(url, agent) !== false,
+    matched: (tokens: string[]) => {
+      if (tokens.some((token) => Object.hasOwn(robots._rules, token.toLowerCase())))
+        return 'specific_group' as const;
+      return Object.hasOwn(robots._rules, '*')
+        ? ('wildcard_group' as const)
+        : ('no_rules' as const);
+    },
     sitemaps: robots.getSitemaps(),
     permits: (url: string) =>
       !unavailable &&
@@ -154,6 +165,41 @@ export function robotsPolicy(
   };
 }
 type RobotsPolicy = ReturnType<typeof robotsPolicy>;
+
+/** Report permissions for a bounded set of known URLs using the acquisition parser. */
+export function crawlerPolicyFacts(
+  origin: string,
+  status: number,
+  body: string,
+  urls: string[],
+  bots: readonly CrawlerBot[] = policy.crawlers.bots,
+): z.infer<typeof crawlerBotFactSchema>[] {
+  const robots = robotsPolicy(origin, status, body);
+  const unreadable = robots.unavailable || robots.restricted;
+  const root = `${origin}/`;
+  return bots.map((bot) => {
+    const matched = robots.matched(bot.robots_tokens);
+    const allowed = (url: string) => bot.robots_tokens.every((token) => robots.allows(url, token));
+    const disallowed = unreadable ? 0 : urls.filter((url) => !allowed(url)).length;
+    const summary =
+      disallowed === 0
+        ? 'all_allowed'
+        : disallowed === urls.length
+          ? 'all_disallowed'
+          : 'restricted';
+    return {
+      bot_id: bot.bot_id,
+      label: bot.label,
+      operator: bot.operator,
+      purpose: bot.purpose,
+      matched,
+      root_access: unreadable ? 'unknown' : allowed(root) ? 'allowed' : 'disallowed',
+      policy: unreadable || urls.length === 0 ? 'unknown' : summary,
+      evaluated_url_count: unreadable ? 0 : urls.length,
+      disallowed_url_count: disallowed,
+    };
+  });
+}
 
 export class PageAcquirer {
   readonly #cache = new Map<string, { expires: number; value: Promise<RobotsPolicy> }>();

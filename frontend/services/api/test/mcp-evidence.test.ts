@@ -63,6 +63,17 @@ afterAll(async () => {
 const read = (name: string, args: Record<string, unknown> = {}) =>
   dispatchTool(db, principal, name, { project_id: tenant.projectId, ...args }, origin);
 
+it('keeps crawlability unavailable without a crawl, including business context', async () => {
+  expect(await read('read_ai_crawlability')).toMatchObject({
+    state: 'unavailable',
+    reason: 'no_site_crawl',
+  });
+  const context = await read('get_project_business_context', { sections: ['crawlability'] });
+  expect(context.evidence).toMatchObject({
+    crawlability: { state: 'unavailable', reason: 'no_site_crawl' },
+  });
+});
+
 it('pages prompts stably while context includes only active prompts and foreign IDs cannot fetch', async () => {
   const set = await promptSet(db, tenant.projectId);
   // Distinct instants: same-millisecond fixtures would page in random-UUID order.

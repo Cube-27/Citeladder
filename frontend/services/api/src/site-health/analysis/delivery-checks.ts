@@ -29,17 +29,25 @@ export function serverRenderSignals(facts: Facts): [boolean, Record<string, unkn
 const delivery = (facts: Facts) => record(facts.delivery);
 const siteRobots = (facts: Facts) => record(record(facts.site).robots);
 
-function crawlerAccess(facts: Facts): CheckResult {
+function crawlerAccess(facts: Facts, check = 'ai_crawler_access'): CheckResult {
   const robots = siteRobots(facts);
-  const stance = record(robots.ai_crawlers);
-  const bounded = Object.fromEntries(r.ai_crawler_bots.map((bot) => [bot, stance[bot] ?? '']));
+  const bots = policy.crawlers.bots.filter((bot) => bot.checks.some((value) => value === check));
+  const stance = new Map(records(robots.bots).map((bot) => [text(bot.bot_id), bot.root_access]));
+  const bounded = Object.fromEntries(
+    bots.map((bot) => [bot.label, stance.get(bot.bot_id) ?? 'unknown']),
+  );
   if (!robots.fetched)
     return [
       'not_applicable',
-      { reason: 'robots_not_fetched', robots_fetched: false, ai_crawlers: bounded },
+      { reason: 'robots_not_fetched', robots_fetched: false, root_access: bounded },
     ];
-  const blocked = r.ai_crawler_bots.filter((bot) => stance[bot] === 'block');
-  return [passFail(!blocked.length), { robots_fetched: true, ai_crawlers: bounded, blocked }];
+  const blocked = bots
+    .filter((bot) => stance.get(bot.bot_id) === 'disallowed')
+    .map((bot) => bot.label);
+  return [
+    passFail(!blocked.length),
+    { robots_fetched: true, root_access: bounded, blocked, checked: bots.map((bot) => bot.label) },
+  ];
 }
 
 function robotsTxtPresent(facts: Facts): CheckResult {
@@ -57,15 +65,7 @@ function robotsTxtPresent(facts: Facts): CheckResult {
 }
 
 function searchCrawlerAccess(facts: Facts): CheckResult {
-  const robots = siteRobots(facts);
-  if (!robots.fetched)
-    return ['not_applicable', { reason: 'robots_not_fetched', crawler_role: 'search_citation' }];
-  const stance = record(robots.ai_crawlers);
-  const blocked = r.search_citation_crawler_bots.filter((bot) => stance[bot] === 'block');
-  return [
-    passFail(!blocked.length),
-    { crawler_role: 'search_citation', checked: r.search_citation_crawler_bots, blocked },
-  ];
+  return crawlerAccess(facts, 'search_crawler_access');
 }
 
 function snippetAccess(facts: Facts): CheckResult {

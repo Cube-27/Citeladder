@@ -83,12 +83,7 @@
       "application/xml",
       "text/xml"
     ],
-    "sitemap_path_suffixes": [".xml", ".xml.gz"],
-    "crawler_roles": {
-      "search_citation": ["Googlebot", "Bingbot", "OAI-SearchBot", "PerplexityBot"],
-      "training": ["GPTBot", "ClaudeBot", "Google-Extended"],
-      "user_triggered": ["ChatGPT-User", "Perplexity-User"]
-    }
+    "sitemap_path_suffixes": [".xml", ".xml.gz"]
   },
   "route_patterns": [
     ["article", "^/(?:[^/]+/)*?(blogs?|news|articles?)(/|$)"],

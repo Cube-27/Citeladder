@@ -1,4 +1,17 @@
 {
+  "robots_policy_sample_size": {
+    "env": ["SITE_HEALTH_ROBOTS_POLICY_SAMPLE_SIZE"],
+    "type": "int",
+    "default": 100,
+    "minimum": 1,
+    "maximum": 1000
+  },
+  "robots_snapshot_max_bytes": {
+    "env": ["SITE_HEALTH_ROBOTS_SNAPSHOT_MAX_BYTES"],
+    "type": "int",
+    "default": 524288,
+    "minimum": 1
+  },
   "advanced_controls_enabled": {
     "env": ["SITE_HEALTH_ADVANCED_CONTROLS_ENABLED"],
     "type": "bool",

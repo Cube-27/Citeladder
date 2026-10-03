@@ -27,6 +27,7 @@ const sections = z.enum([
   'profile',
   'prompts',
   'site_health',
+  'crawlability',
   'demand',
   'opportunities',
   'visibility',
@@ -72,6 +73,12 @@ export const definitions = {
   read_site_health: {
     title: 'Read latest Site Health',
     description: 'Read the latest persisted Site Health score and coverage projection.',
+    schema: z.strictObject(scope),
+  },
+  read_ai_crawlability: {
+    title: 'Read AI crawlability',
+    description:
+      'Read the latest crawl’s persisted per-bot robots policy, root access, fetch status, snapshot ID and catalog version. Robots policy describes permission, not observed retrieval.',
     schema: z.strictObject(scope),
   },
   read_demand: {

@@ -156,6 +156,7 @@ from app.models.site_health.analysis import (
 )
 from app.models.site_health.architecture import SiteObservedArchitecture
 from app.models.site_health.crawl import (
+    RobotsSnapshot,
     SiteCrawl,
     SiteDiscoveryFrontier,
 )
@@ -298,6 +299,7 @@ __all__ = [
     "ReferralClassification",
     "ReferralEvent",
     "ResponseAnalysis",
+    "RobotsSnapshot",
     "SearchIntelligenceCall",
     "SearchIntelligenceDataset",
     "SearchIntelligenceDispatchAttempt",
