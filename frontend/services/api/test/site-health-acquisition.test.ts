@@ -360,6 +360,19 @@ describe('site setup', () => {
           '/index.xml': {
             contentType: 'application/xml',
             body: '<sitemapindex><sitemap><loc>https://example.test/pages.xml</loc></sitemap></sitemapindex>',
+            onFetch: async () => {
+              const initial = await crawlRow(seed);
+              expect(initial.robots_snapshot_id).not.toBeNull();
+              expect(record(initial.site_facts).robots).toMatchObject({
+                bots: expect.arrayContaining([
+                  expect.objectContaining({
+                    label: 'GPTBot',
+                    root_access: 'disallowed',
+                    policy: 'unknown',
+                  }),
+                ]),
+              });
+            },
           },
           '/pages.xml': urlset(url('/a'), url('/cart'), 'https://other.test/b', url('/a')),
         },

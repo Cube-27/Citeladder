@@ -62,7 +62,7 @@ it.each([
     });
   },
 );
-it.each([0, 401, 403, 429, 503])('keeps unreadable robots %s unknown', (status) => {
+it.each([0, 301, 401, 403, 429, 503])('keeps unreadable robots %s unknown', (status) => {
   expect(crawlerPolicyFacts(origin, status, '', [`${origin}/`], [bot])[0]).toMatchObject({
     root_access: 'unknown',
     policy: 'unknown',

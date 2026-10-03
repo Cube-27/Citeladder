@@ -13,10 +13,9 @@ export async function insertRobotsSnapshot(
 ) {
   const bytes = Buffer.from(body, 'utf8');
   const contentHash = createHash('sha256').update(bytes).digest('hex');
-  const retained = bytes
-    .subarray(0, maxBytes)
-    .toString('utf8')
-    .replace(/\uFFFD$/u, '');
+  const retained = new TextDecoder().decode(bytes.subarray(0, maxBytes), {
+    stream: bytes.length > maxBytes,
+  });
   await db
     .insertInto('robots_snapshots')
     .values({

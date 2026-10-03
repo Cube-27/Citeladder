@@ -118,7 +118,16 @@ export const siteHealthRoutes = [
   defineGetRoute({
     family,
     path: `${projectRoot}/robots-history`,
-    params: { path: projectPath, query: paging },
+    params: {
+      path: projectPath,
+      query: {
+        cursor: text,
+        limit: {
+          scalar: { kind: 'int', ge: 1, le: policy.site_health.reads.robots_history_max_limit },
+          default: policy.site_health.reads.robots_history_default_limit,
+        },
+      },
+    },
     response: robotsHistoryPageSchema,
     handle: ({ c, db }, { path, query }) =>
       withCursor(

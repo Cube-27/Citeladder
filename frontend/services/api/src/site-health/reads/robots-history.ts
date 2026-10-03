@@ -2,7 +2,7 @@ import { robotsFactsSchema } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import type { Database } from '../../db/database.ts';
 import { record } from '../../db/json.ts';
-import { utcText } from '../../db/timestamps.ts';
+import { utcText, pydanticUtc } from '../../db/timestamps.ts';
 import {
   decodeKeysetCursor,
   encodeKeysetCursor,
@@ -20,10 +20,11 @@ export async function robotsHistory(
 ) {
   await loadProject(db, workspaceId, projectId);
   const filters = { workspace_id: workspaceId, project_id: projectId };
+  const observedAt = sql<Date>`(site_facts -> 'robots' ->> 'observed_at')::timestamptz`;
   let query = db
     .selectFrom('site_crawls')
     .select(['id', 'site_facts', 'robots_snapshot_id'])
-    .select(utcText(sql.ref('created_at')).$notNull().as('observed_at'))
+    .select(utcText(observedAt).$notNull().as('observed_at'))
     .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
     .where('site_facts', 'is not', null);
@@ -32,10 +33,10 @@ export async function robotsHistory(
     const id = parseUuid(keys[1]);
     if (keys.length !== 2 || !keys[0] || !Number.isFinite(Date.parse(keys[0])) || !id)
       throw new InvalidCursorError('invalid cursor');
-    query = query.where(sql<boolean>`(created_at, id) < (${keys[0]}::timestamptz, ${id}::uuid)`);
+    query = query.where(sql<boolean>`(${observedAt}, id) < (${keys[0]}::timestamptz, ${id}::uuid)`);
   }
   const rows = await query
-    .orderBy('created_at', 'desc')
+    .orderBy(observedAt, 'desc')
     .orderBy('id', 'desc')
     .limit(input.limit + 1)
     .execute();
@@ -56,13 +57,13 @@ export async function robotsHistory(
   return {
     items: page.map((row) => ({
       crawl_id: row.id,
-      observed_at: row.observed_at,
+      observed_at: pydanticUtc(row.observed_at),
       robots: robotsFactsSchema.parse(record(row.site_facts).robots),
     })),
     snapshots,
     next_cursor:
       rows.length > input.limit && last
-        ? encodeKeysetCursor('robots-history', filters, [last.observed_at, last.id])
+        ? encodeKeysetCursor('robots-history', filters, [pydanticUtc(last.observed_at), last.id])
         : null,
   };
 }

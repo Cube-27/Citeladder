@@ -40,6 +40,7 @@ async function observe(seed: SiteSeed, crawlId: string, body: string, time: numb
         robots_snapshot_id: snapshot.id,
         site_facts: JSON.stringify({
           robots: {
+            observed_at: new Date(time).toISOString(),
             catalog_version: '1',
             robots_snapshot_id: snapshot.id,
             fetched: true,

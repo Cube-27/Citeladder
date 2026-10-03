@@ -1,5 +1,7 @@
 {
   "reads": {
+    "robots_history_default_limit": 5,
+    "robots_history_max_limit": 20,
     "page_default_limit": 50,
     "page_max_limit": 200,
     "terminal_grace_polls": 2,

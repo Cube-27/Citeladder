@@ -37,6 +37,7 @@ export const crawlerBotFactSchema = responseObject({
   disallowed_url_count: z.number().int().nonnegative(),
 });
 export const robotsFactsSchema = responseObject({
+  observed_at: z.string(),
   catalog_version: z.string(),
   robots_snapshot_id: z.uuid().nullable(),
   bots: z.array(crawlerBotFactSchema),

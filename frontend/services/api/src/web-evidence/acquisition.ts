@@ -175,7 +175,8 @@ export function crawlerPolicyFacts(
   bots: readonly CrawlerBot[] = policy.crawlers.bots,
 ): z.infer<typeof crawlerBotFactSchema>[] {
   const robots = robotsPolicy(origin, status, body);
-  const unreadable = robots.unavailable || robots.restricted;
+  const unreadable =
+    robots.unavailable || robots.restricted || status < 200 || (status >= 300 && status < 400);
   const root = `${origin}/`;
   return bots.map((bot) => {
     const matched = robots.matched(bot.robots_tokens);

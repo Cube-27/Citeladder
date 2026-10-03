@@ -88,6 +88,7 @@ async function siteEvidence(
   settings: Settings,
 ) {
   const robots = origin ? await ctx.fetcher.acquirer.robots(origin) : null;
+  const observedAt = new Date().toISOString();
   const llmsUrl = origin ? `${origin}${crawlPolicy.llms_path}` : '';
   // A sample crawl ingests no sitemap, so it makes no llms.txt request it would not act on.
   const llms = { fetched: false, url: llmsUrl, status_code: null as number | null, present: false };
@@ -104,6 +105,7 @@ async function siteEvidence(
     body: robots?.body ?? null,
     facts: {
       robots: {
+        observed_at: observedAt,
         fetched: robots?.body != null,
         status: robotsStatus(robots),
         url: origin ? `${origin}${crawlPolicy.robots_path}` : '',
@@ -114,7 +116,7 @@ async function siteEvidence(
         sitemaps: (robots?.sitemaps ?? []).slice(0, crawlPolicy.max_declared_sitemaps),
       },
       llms_txt: llms,
-      sitemap: { fetched: false, files: [] as string[], pending: walks },
+      sitemap: { fetched: false, files: [] as string[], pending: true },
     },
   };
 }
