@@ -99,8 +99,8 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
         {purposes
           .filter((value) => purpose === 'all' || value === purpose)
           .map((group) => (
-            <div key={group} className="min-w-0">
-              <h3 className={textRole('itemTitle', 'mb-2')}>{purposeLabels[group]}</h3>
+            <div key={group} className="grid min-w-0 gap-2">
+              <h3 className={textRole('itemTitle')}>{purposeLabels[group]}</h3>
               <Table>
                 <caption className="sr-only">{purposeLabels[group]} robots policy</caption>
                 <TableHeader>

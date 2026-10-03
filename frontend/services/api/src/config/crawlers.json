@@ -135,7 +135,7 @@
       "purpose": "ai_training",
       "ai_source": "claude",
       "robots_tokens": ["ClaudeBot"],
-      "ua_patterns": ["claudebot/"],
+      "ua_patterns": ["claudebot"],
       "verification": {
         "method": "ip_ranges",
         "source_url": "https://claude.com/crawling/bots.json"
@@ -190,7 +190,7 @@
       "purpose": "ai_search",
       "ai_source": "claude",
       "robots_tokens": ["Claude-SearchBot"],
-      "ua_patterns": ["claude-searchbot/"],
+      "ua_patterns": ["claude-searchbot"],
       "verification": {
         "method": "ip_ranges",
         "source_url": "https://claude.com/crawling/bots.json"
@@ -204,7 +204,7 @@
       "purpose": "ai_user_fetch",
       "ai_source": "claude",
       "robots_tokens": ["Claude-User"],
-      "ua_patterns": ["claude-user/"],
+      "ua_patterns": ["claude-user"],
       "verification": {
         "method": "ip_ranges",
         "source_url": "https://claude.com/crawling/bots.json"

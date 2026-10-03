@@ -19,12 +19,7 @@ export const crawlerResourceClassSchema = z.enum([
   'other',
 ]);
 export const crawlerCheckSchema = z.enum(['ai_crawler_access', 'search_crawler_access']);
-export const crawlerPolicySchema = z.enum([
-  'all_allowed',
-  'restricted',
-  'all_disallowed',
-  'unknown',
-]);
+const crawlerPolicySchema = z.enum(['all_allowed', 'restricted', 'all_disallowed', 'unknown']);
 export const crawlerBotFactSchema = responseObject({
   bot_id: z.string(),
   label: z.string(),
