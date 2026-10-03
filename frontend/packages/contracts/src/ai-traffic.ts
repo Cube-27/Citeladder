@@ -44,9 +44,9 @@ export function matchesCrawlerUserAgent(
   return bot.ua_patterns.some((pattern) => value.includes(pattern.toLowerCase()));
 }
 export const verificationSchema = z.enum(['verified', 'unverifiable', 'failed_verification']);
-export const coverageSchema = z.enum(['complete', 'declared_complete', 'partial', 'unknown']);
-export const crawlConnectionSchema = z.enum(['not_connected', 'awaiting_data', 'connected']);
-export const crawlSamplingSchema = z.discriminatedUnion('kind', [
+const coverageSchema = z.enum(['complete', 'declared_complete', 'partial', 'unknown']);
+const crawlConnectionSchema = z.enum(['not_connected', 'awaiting_data', 'connected']);
+const crawlSamplingSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('none') }),
   z.object({ kind: z.literal('sampled'), rate: z.number().gt(0).max(1) }),
   z.object({ kind: z.literal('filtered'), description: z.string() }),
@@ -129,7 +129,7 @@ export const crawlCatalogSchema = z.object({
   max_line_bytes: z.number(),
   worker_timeout_ms: z.number(),
 });
-export const crawlCoverageDaySchema = z.object({
+const crawlCoverageDaySchema = z.object({
   source_id: z.uuid(),
   reporting_date: z.string(),
   reporting_timezone: z.string(),
@@ -144,7 +144,7 @@ export const crawlCoverageResponseSchema = z.object({
   sources: z.array(crawlSourceSchema),
   next_cursor: z.string().nullable(),
 });
-export const botRequestSchema = z.object({
+const botRequestSchema = z.object({
   id: z.uuid(),
   source_id: z.uuid(),
   batch_id: z.uuid(),
@@ -169,7 +169,7 @@ export const botActivityResponseSchema = z.object({
   items: z.array(botRequestSchema),
   next_cursor: z.string().nullable(),
 });
-export const botCrawlerRowSchema = z.object({
+const botCrawlerRowSchema = z.object({
   bot_id: z.string(),
   label: z.string(),
   purpose: crawlerPurposeSchema,

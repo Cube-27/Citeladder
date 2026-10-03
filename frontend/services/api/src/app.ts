@@ -61,7 +61,7 @@ export function createApp(
   app.use(originToken(config));
   const startRunner = options.startRunner ?? runnerStarter(config, db);
   app.use((_c, next) => observeCommittedWork(next, startRunner));
-  const ordinaryBodyLimit = bodyLimit<AppEnv>({
+  const ordinaryBodyLimit = bodyLimit({
     maxSize: policy.api.request_body_max_bytes,
     onError: () => {
       throw new ApiError(413, 'Request body too large');

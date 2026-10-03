@@ -8,7 +8,7 @@ import { recordSecurityEvent } from '../auth/security-events.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { lockCrawlState, type CrawlScope } from './state.ts';
 
-export const samplingSchema = z.discriminatedUnion('kind', [
+const samplingSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('none') }),
   z.strictObject({ kind: z.literal('sampled'), rate: z.number().gt(0).max(1) }),
   z.strictObject({ kind: z.literal('filtered'), description: z.string().trim().min(1).max(512) }),

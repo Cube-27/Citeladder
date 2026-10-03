@@ -34,7 +34,7 @@ export type CrawlReadOptions = {
   folder?: string | null;
   resource_class?: string | null;
 };
-export function verificationFilter(value?: string | null) {
+function verificationFilter(value?: string | null) {
   if (!value) return crawlLogs.default_verification_filter;
   const items = value.split(',').sort();
   if (!items.length || items.some((v) => !verificationSchema.safeParse(v).success))

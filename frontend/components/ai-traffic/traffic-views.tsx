@@ -50,7 +50,7 @@ export function TrafficOverview({
   );
   return (
     <TabPanel value="overview">
-      <div className="grid gap-6">
+      <div className="grid gap-[var(--workspace-gap)]">
         <div className="grid gap-4 lg:grid-cols-2">
           <CrawlSignalPanel data={data.crawl} onConnect={() => setConnectOpen(true)} />
           <Card>
