@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
+import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
 import { MarkImplementedButton } from '@/components/agent/action-declaration';
 import { formatCount } from '@/lib/format';
@@ -21,14 +22,9 @@ function PageSummary({
   return (
     <section className="space-y-2">
       <h3 className="type-section-title">{heading}</h3>
-      <a
-        className="type-body text-accent-text break-all"
-        href={page.url}
-        target="_blank"
-        rel="noreferrer"
-      >
+      <ExternalHttpLink className="type-body text-accent-text break-all" href={page.url}>
         {page.title || page.url}
-      </a>
+      </ExternalHttpLink>
       {page.description || page.excerpt ? (
         <p className="type-body">{page.description || page.excerpt}</p>
       ) : null}
