@@ -98,12 +98,15 @@ function pageBlock(row: PageRow) {
     body_text: clean(record(facts.body).text, p.content_context_per_page_body_chars),
   };
 }
-function score(row: PageRow, terms: Set<string>, target: string, monitored: Set<string>) {
-  if (
-    target &&
+/** Whether the row is the requested page, by either recorded URL. */
+function isTarget(row: PageRow, target: string) {
+  return (
+    Boolean(target) &&
     [row.final_url ?? '', row.normalized_url].some((url) => comparableUrl(url) === target)
-  )
-    return p.content_score_target_url;
+  );
+}
+function score(row: PageRow, terms: Set<string>, target: string, monitored: Set<string>) {
+  if (isTarget(row, target)) return p.content_score_target_url;
   const facts = record(row.normalized_facts),
     headings = record(facts.headings);
   const overlap = (value: unknown) =>
@@ -222,12 +225,7 @@ export async function selectContentFragments(
     if (home(row)) return 0;
     return monitored.has(row.site_url_id) ? 1 : 2;
   };
-  const background = (row: PageRow) =>
-    home(row) &&
-    !(
-      target &&
-      [row.final_url ?? '', row.normalized_url].some((url) => comparableUrl(url) === target)
-    );
+  const background = (row: PageRow) => home(row) && !isTarget(row, target);
   type Ranked = { row: PageRow; background: number; score: number; tier: number };
   const compare = (a: Ranked, b: Ranked) =>
     (terms.size || target ? a.background - b.background || b.score - a.score : a.tier - b.tier) ||
@@ -253,12 +251,7 @@ export async function selectContentFragments(
     candidates.sort(compare);
     let backgroundCount = 0;
     candidates = candidates.filter(({ row, tier }) => {
-      if (
-        tier < 2 ||
-        (target &&
-          [row.final_url ?? '', row.normalized_url].some((url) => comparableUrl(url) === target))
-      )
-        return true;
+      if (tier < 2 || isTarget(row, target)) return true;
       if (++backgroundCount <= p.content_context_background_max_pages) return true;
       omitted++;
       return false;

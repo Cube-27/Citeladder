@@ -5,7 +5,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { queueRecovery } from '../config/queue-recovery.ts';
 import { recoverDiscoveryLeases } from '../queue/recovery.ts';
-import { maintainLease } from '../queue/heartbeat.ts';
+import { leaseSignal, maintainLease } from '../queue/heartbeat.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { getLogger } from '../logging.ts';
@@ -59,7 +59,7 @@ export class DiscoveryWorker {
       checkCancelled();
       return (this.dependencies.fetcher ?? fetchWebsite)(url, {
         ...options,
-        signal: AbortSignal.any([heartbeat.signal, ...(options?.signal ? [options.signal] : [])]),
+        signal: leaseSignal(heartbeat.signal, options?.signal),
       });
     };
     try {
@@ -85,10 +85,7 @@ export class DiscoveryWorker {
           checkCancelled();
           return (this.dependencies.transport ?? fetch)(url, {
             ...options,
-            signal: AbortSignal.any([
-              heartbeat.signal,
-              ...(options?.signal ? [options.signal] : []),
-            ]),
+            signal: leaseSignal(heartbeat.signal, options?.signal),
           });
         },
         onCompetitors: async () => {

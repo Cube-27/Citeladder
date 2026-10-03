@@ -48,8 +48,11 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
     .where('audit_scope', '=', policy.visibility.brand_audit_scope)
     .orderBy('completed_at', 'desc')
     .orderBy('id', 'desc');
-  const latest = await query.limit(1).executeTakeFirst();
-  const selected = auditId ? await query.where('id', '=', auditId).executeTakeFirst() : latest;
+  const [latest, chosen] = await Promise.all([
+    query.limit(1).executeTakeFirst(),
+    auditId ? query.where('id', '=', auditId).executeTakeFirst() : undefined,
+  ]);
+  const selected = auditId ? chosen : latest;
   if (!selected) {
     if (auditId) throw notFound('Completed command-center measurement');
     return null;

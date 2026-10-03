@@ -37,10 +37,6 @@ import {
 export type VisibilityEvidenceResponse = z.input<typeof visibilityEvidenceResponseSchema>;
 type EvidenceItem = VisibilityEvidenceResponse['items'][number];
 
-// --- Stored search events and the fanout state they support ----------------
-
-// Search normalization is shared with analysis settlement.
-
 // --- The paged evidence read -----------------------------------------------
 
 export type EvidenceFilters = {

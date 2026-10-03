@@ -4,7 +4,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { getLogger } from '../logging.ts';
 import { AuditQueue, ownedAuditTask, parkAuditTask, type AuditTask } from '../queue/audit-queue.ts';
-import { maintainLease } from '../queue/heartbeat.ts';
+import { leaseSignal, maintainLease } from '../queue/heartbeat.ts';
 import { ProviderError } from '../answer-engines/contracts.ts';
 import { executeAnswer } from '../answer-engines/execute.ts';
 import { acquireCapacity, releaseCapacity, type CapacityDecision } from '../providers/capacity.ts';
@@ -118,7 +118,7 @@ export class AuditWorker {
       Math.max(1, this.#runtime.audits.heartbeat_interval_seconds) * 1000,
       () => logger.info('audit_heartbeat_failed', { task_id: claimed.id }),
     );
-    const dispatchSignal = AbortSignal.any([heartbeat.signal, ...(signal ? [signal] : [])]);
+    const dispatchSignal = leaseSignal(heartbeat.signal, signal);
     let context: ExecutionContext | null = null;
     const dispatch: DispatchState = { started: false };
     try {

@@ -243,7 +243,12 @@ function groupBy<T>(
   key: (row: T) => string | number,
 ): Map<string | number, T[]> {
   const groups = new Map<string | number, T[]>();
-  for (const row of rows) groups.set(key(row), [...(groups.get(key(row)) ?? []), row]);
+  for (const row of rows) {
+    const id = key(row);
+    const group = groups.get(id);
+    if (group) group.push(row);
+    else groups.set(id, [row]);
+  }
   return groups;
 }
 
@@ -271,7 +276,7 @@ async function baselineRun(
     : null;
 }
 
-/** Fill each row's frozen prompt facts, outcome counts and baseline change, in place. */
+/** Frozen prompts, answers and tasks for a set of runs, loaded once. */
 async function loadOutcomes(
   db: Database,
   scope: RunScope,
@@ -326,9 +331,11 @@ async function loadOutcomes(
     .where('prompt.cohort', 'in', [...selectedCohorts(cohort)])
     .where('task.audit_id', 'in', auditIds);
   if (engine) taskQuery = taskQuery.where('task.logical_engine', '=', engine);
-  return { prompts, answers: await answers.execute(), tasks: await taskQuery.execute() };
+  const [answerRows, tasks] = await Promise.all([answers.execute(), taskQuery.execute()]);
+  return { prompts, answers: answerRows, tasks };
 }
 
+/** Fill each row's frozen prompt facts, outcome counts and baseline change, in place. */
 async function enrichOutcomes(
   db: Database,
   scope: RunScope,
@@ -528,15 +535,17 @@ async function setRows(
   await authorizeRunSet(db, scope, auditIds);
   const ids = [...new Set(auditIds)];
   if (!ids.length) return [];
-  const audits = await db
-    .selectFrom('audits')
-    .select(['id', 'configuration', utcText(sql.ref('completed_at')).as('completed_at')])
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('id', 'in', ids)
-    .execute();
-  const rows = await scoreRows(db, scope, query, ids);
-  const data = await loadOutcomes(db, scope, ids, query.cohort, query.logicalEngine);
+  const [audits, rows, data] = await Promise.all([
+    db
+      .selectFrom('audits')
+      .select(['id', 'configuration', utcText(sql.ref('completed_at')).as('completed_at')])
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('id', 'in', ids)
+      .execute(),
+    scoreRows(db, scope, query, ids),
+    loadOutcomes(db, scope, ids, query.cohort, query.logicalEngine),
+  ]);
   const byAudit = groupBy(rows, (row) => row.item.audit_id);
   await Promise.all(
     audits.map((audit) =>

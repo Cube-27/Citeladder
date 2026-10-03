@@ -119,6 +119,7 @@ export async function getVisibilityFanout(
     .orderBy('event_count', 'desc')
     .orderBy(sql`query collate "C"`)
     .limit(options.limit + 1);
+  const drillDown = options.query !== null;
   const answerPage = base
     .selectFrom('answers')
     .select([
@@ -147,38 +148,35 @@ export async function getVisibilityFanout(
       from (select fanout_state as state, count(*)::int as count from answers group by fanout_state) states)`.as(
         'coverage',
       ),
-      sql<number>`(select count(*)::int from answers where fanout_queries @> array[${options.query ?? ''}]::text[])`.as(
-        'total_answers',
-      ),
+      sql<number>`${
+        drillDown
+          ? sql`(select count(*)::int from answers where fanout_queries @> array[${options.query}]::text[])`
+          : sql`0`
+      }`.as('total_answers'),
       sql<
         FanoutResponse['items']
       >`(select coalesce(jsonb_agg(to_jsonb(page)), '[]'::jsonb) from (${queryPage}) page)`.as(
         'items',
       ),
-      sql<
-        (FanoutResponse['answers'][number] & { id: string; created_at: string })[]
-      >`(select coalesce(jsonb_agg(to_jsonb(page)), '[]'::jsonb) from (${answerPage}) page)`.as(
-        'answers',
-      ),
+      sql<(FanoutResponse['answers'][number] & { id: string; created_at: string })[]>`${
+        drillDown
+          ? sql`(select coalesce(jsonb_agg(to_jsonb(page)), '[]'::jsonb) from (${answerPage}) page)`
+          : sql`'[]'::jsonb`
+      }`.as('answers'),
     ])
     .executeTakeFirstOrThrow();
-  const hasMore =
-    options.query === null
-      ? summary.items.length > options.limit
-      : summary.answers.length > options.limit;
+  const hasMore = (drillDown ? summary.answers : summary.items).length > options.limit;
   const items = summary.items.slice(0, options.limit);
-  const answers = options.query === null ? [] : summary.answers.slice(0, options.limit);
+  const answers = summary.answers.slice(0, options.limit);
   const lastQuery = items.at(-1);
   const lastAnswer = answers.at(-1);
   let keys: string[] | null = null;
-  if (options.query === null && lastQuery)
-    keys = [asOf, String(lastQuery.event_count), lastQuery.query];
+  if (!drillDown && lastQuery) keys = [asOf, String(lastQuery.event_count), lastQuery.query];
   else if (lastAnswer) keys = [asOf, lastAnswer.created_at, lastAnswer.id];
   return {
     ...summary,
     items,
     answers,
-    total_answers: options.query === null ? 0 : summary.total_answers,
     next_cursor: hasMore && keys ? encodeKeysetCursor('fanout', filters, keys) : null,
   };
 }
