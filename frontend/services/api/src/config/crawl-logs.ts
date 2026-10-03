@@ -53,6 +53,10 @@ const schema = z.strictObject({
   default_page_size: positive,
   max_page_size: positive,
   ip_range_max_bytes: positive,
+  ip_range_timeout_seconds: positive,
+  ip_range_max_redirects: positive,
+  task_max_attempts: positive,
+  max_export_rows: positive,
   worker_timeout_ms: positive,
 });
 export function loadCrawlLogs(value: unknown) {

@@ -59,7 +59,7 @@ export const NAV_GROUPS = [
         queryMatch: { key: 'tab', values: ['trends'], defaultValue: 'trends' },
       },
       { label: 'Runs', href: '/runs', icon: ICONS.runs },
-      { label: 'AI Referrals', href: '/ai-referrals', icon: ICONS.analytics },
+      { label: 'AI Traffic', href: '/ai-traffic', icon: ICONS.analytics },
     ],
   },
 ] as const satisfies readonly NavGroup[];

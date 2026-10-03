@@ -1,15 +1,16 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { AiReferralsEmptyState } from '@/components/ai-referrals/empty-state';
+import { AiReferralsEmptyState } from '@/components/ai-traffic/empty-state';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { rangeLabel, type AiReferralsRange } from '@/lib/ai-referrals/options';
-import { isAiReferralsEmpty } from '@/lib/ai-referrals/series';
-import type { AiReferrals } from '@/lib/api/ai-referrals';
+import { rangeLabel, type AiReferralsRange } from '@/lib/ai-traffic/options';
+import { isAiReferralsEmpty } from '@/lib/ai-traffic/series';
+import type { AiReferrals } from '@/lib/api/ai-traffic';
 
-import { AiReferralsDashboard } from './ai-referrals-dashboard';
+import { AiReferralsDashboard } from './referrals-dashboard';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
+import { TabPanel } from '@/components/ui/tabs';
 
 export function AiReferralsContent({
   projectId,
@@ -17,23 +18,28 @@ export function AiReferralsContent({
   range,
   query,
   toolbar,
+  tabs,
 }: Readonly<{
   projectId: string | null;
   projectLoading: boolean;
   range: AiReferralsRange;
   query: UseQueryResult<AiReferrals, Error>;
   toolbar: React.ReactNode;
+  tabs?: React.ReactNode;
 }>) {
   // The control band stays drawn while the project resolves. Hiding it left the
   // work jumping a row's height the moment data arrived.
+  const region = (
+    <AiReferralsDataRegion
+      projectId={projectId}
+      projectLoading={projectLoading}
+      range={range}
+      query={query}
+    />
+  );
   return (
-    <PageShell controls={toolbar}>
-      <AiReferralsDataRegion
-        projectId={projectId}
-        projectLoading={projectLoading}
-        range={range}
-        query={query}
-      />
+    <PageShell tabs={tabs} controls={toolbar}>
+      {tabs ? <TabPanel value="referrals">{region}</TabPanel> : region}
     </PageShell>
   );
 }

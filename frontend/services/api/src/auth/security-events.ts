@@ -2,6 +2,9 @@ import { randomUUID } from 'node:crypto';
 import type { Database } from '../db/database.ts';
 
 type SecurityEvent =
+  | 'crawl_log.create'
+  | 'crawl_log.rotate'
+  | 'crawl_log.revoke'
   | 'credential.create'
   | 'credential.update'
   | 'credential.delete'

@@ -74,5 +74,9 @@
   "default_page_size": 10,
   "max_page_size": 100,
   "ip_range_max_bytes": 1048576,
+  "ip_range_timeout_seconds": 15,
+  "ip_range_max_redirects": 3,
+  "task_max_attempts": 3,
+  "max_export_rows": 100000,
   "worker_timeout_ms": 5000
 }

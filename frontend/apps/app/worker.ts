@@ -97,6 +97,7 @@ async function dynamicRoute(
   // owner. Reject them before the general API proxy can create a second host.
   if (
     /^\/api\/v1\/billing\/webhooks(?:\/|$)/.test(path) ||
+    /^\/api\/v1\/crawl-logs\/ingest(?:\/|$)/.test(path) ||
     /^\/api\/v1\/(?:internal|health|ready)(?:\/|$)/.test(path)
   ) {
     return response('Not found.', 404);

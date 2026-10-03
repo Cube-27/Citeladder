@@ -11,6 +11,12 @@
  * terminal compensation run before every claim, including an empty drain.
  */
 import { randomBytes } from 'node:crypto';
+import { crawlLogRollupRefresh } from '../crawl-logs/rollup.ts';
+import {
+  botIpRangeRefresh,
+  botRequestRetentionSweep,
+  crawlLogUploadAbandonSweep,
+} from '../crawl-logs/maintenance.ts';
 import { sql } from 'kysely';
 import { recoverAnalyticsLeases } from '../queue/analytics-recovery.ts';
 import { maintainLease } from '../queue/heartbeat.ts';
@@ -47,6 +53,10 @@ const ERROR_DETAIL_LIMIT = 2000;
 
 /** Kind dispatch: exactly the kinds TypeScript owns. */
 export const EXECUTORS: Readonly<Record<string, Executor>> = {
+  crawl_log_rollup_refresh: crawlLogRollupRefresh,
+  bot_ip_range_refresh: botIpRangeRefresh(),
+  bot_request_retention_sweep: botRequestRetentionSweep,
+  crawl_log_upload_abandon_sweep: crawlLogUploadAbandonSweep,
   commerce_competitor_discovery: competitorDiscovery(),
   search_intelligence_acquisition: acquireResearch,
   source_page_inspection: sourcePageInspector(),

@@ -28,6 +28,7 @@ const sections = z.enum([
   'prompts',
   'site_health',
   'crawlability',
+  'crawl_logs',
   'demand',
   'opportunities',
   'visibility',
@@ -80,6 +81,32 @@ export const definitions = {
     description:
       'Read the latest crawl’s persisted per-bot robots policy, root access, fetch status, snapshot ID and catalog version. Robots policy describes permission, not observed retrieval.',
     schema: z.strictObject(scope),
+  },
+  read_crawl_logs: {
+    title: 'Read crawl log analytics',
+    description:
+      'Read persisted recognized automated request summary, crawlers or coverage. Requests, referral sessions and tracked citations are separate units. Missing coverage never implies zero.',
+    schema: z.strictObject({
+      ...scope,
+      view: z.enum(['summary', 'crawlers', 'coverage']).default('summary'),
+      range,
+      ...dates,
+      verification: nullable(z.enum(['verified', 'unverifiable', 'failed_verification'])),
+      ...page,
+    }),
+  },
+  list_bot_requests: {
+    title: 'List sanitized bot requests',
+    description:
+      'Read retained path-level automated requests, privacy redaction and IP verification provenance. No IPs, queries or full user agents are returned.',
+    schema: z.strictObject({
+      ...scope,
+      bot_id: nullable(z.string()),
+      status: nullable(z.int().min(100).max(599)),
+      folder: nullable(z.string().max(2048)),
+      resource_class: nullable(z.string()),
+      ...page,
+    }),
   },
   read_demand: {
     title: 'Read latest demand intelligence',

@@ -7,7 +7,7 @@ import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
 /**
- * Empty state for `/ai-referrals`. Referral measurement begins only after a
+ * Empty state for `/ai-traffic`. Referral measurement begins only after a
  * persisted GA4 source/medium report has been synced.
  */
 export function AiReferralsEmptyState() {

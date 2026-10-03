@@ -48,6 +48,10 @@
   "terminal_compensation_batch": 100,
   "terminal_compensation_max_failures": 5,
   "tasks": {
+    "crawl_log_rollup_refresh": "crawl_log_rollup_refresh",
+    "bot_ip_range_refresh": "bot_ip_range_refresh",
+    "bot_request_retention_sweep": "bot_request_retention_sweep",
+    "crawl_log_upload_abandon_sweep": "crawl_log_upload_abandon_sweep",
     "ai_referrals_snapshot_refresh": "ai_referrals_snapshot_refresh",
     "classify_referrals": "classify_referrals",
     "commerce_catalog_projection": "commerce_catalog_projection",

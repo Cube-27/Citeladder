@@ -1,6 +1,6 @@
 /** Display-only helpers for the persisted AI-referral projection. */
 import type { TrendPoint } from '@/components/ui/trend-chart';
-import type { AiReferrals, AiSource } from '@/lib/api/ai-referrals';
+import type { AiReferrals, AiSource } from '@/lib/api/ai-traffic';
 import { availabilityLabel, formatShortDate } from '@/lib/format';
 
 export { formatCount as formatInt } from '@/lib/format';

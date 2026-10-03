@@ -51,7 +51,7 @@ export async function enforceWorkspaceRequest(
 /** Autocommitted atomic counters, before hashing or provider I/O. */
 export async function enforceSubjectRequest(
   db: Database,
-  subjectKind: 'workspace' | 'client' | 'email',
+  subjectKind: 'workspace' | 'client' | 'email' | 'crawl_source' | 'crawl_project',
   subjectValue: string,
   { operation, limit, windowSeconds, amount = 1 }: UsageLimit,
   now: Date = new Date(),

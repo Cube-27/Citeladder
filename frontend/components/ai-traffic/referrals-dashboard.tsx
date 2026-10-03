@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { TrendChart, type TrendPoint } from '@/components/ui/trend-chart';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import type { AiReferrals } from '@/lib/api/ai-referrals';
+import type { AiReferrals } from '@/lib/api/ai-traffic';
 import {
   aiSourceLabel,
   countDomainMax,
@@ -20,8 +20,8 @@ import {
   toCountChartPoints,
   toPercentChartPoints,
   totalSourceSessions,
-} from '@/lib/ai-referrals/series';
-import { bucketCountLabel } from '@/lib/ai-referrals/options';
+} from '@/lib/ai-traffic/series';
+import { bucketCountLabel } from '@/lib/ai-traffic/options';
 import { formatWindowDate } from '@/lib/format';
 
 export function AiReferralsDashboard({

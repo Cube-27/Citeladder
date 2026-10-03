@@ -9,7 +9,7 @@
  *   - integrations.ts  — integrations (connections, sync runs)
  *   - performance.ts   — performance (dashboard, dimension tables, range task)
  *   - demand.ts        — search-demand projections
- *   - ai-referrals.ts  — AI-referral measurements
+ *   - ai-traffic.ts  — AI-referral measurements
  *   - opportunities.ts — opportunities (catalog, detail, summary)
  *   - actions.ts       — actions (work queue, detail)
  *   - agent.ts         — agent chats, outputs, skills, instructions
@@ -19,7 +19,7 @@
  */
 import { actionKeys } from './query-keys/actions';
 import { agentKeys } from './query-keys/agent';
-import { aiReferralsKeys } from './query-keys/ai-referrals';
+import { aiTrafficKeys } from './query-keys/ai-traffic';
 import { billingKeys } from './query-keys/billing';
 import { brandDiscoveryKeys } from './query-keys/brand-discovery';
 import { commerceKeys } from './query-keys/commerce';
@@ -59,7 +59,7 @@ export const queryKeys = {
   performance: performanceKeys,
   demand: demandKeys,
   searchIntelligence: searchIntelligenceKeys,
-  aiReferrals: aiReferralsKeys,
+  aiTraffic: aiTrafficKeys,
   opportunities: opportunityKeys,
   actions: actionKeys,
   agent: agentKeys,

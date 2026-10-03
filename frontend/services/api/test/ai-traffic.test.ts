@@ -33,7 +33,7 @@ async function referrals(
   }
   const search = new URLSearchParams(query);
   const response = await app.request(
-    `/api/v1/projects/${projectId}/ai-referrals${search.size ? `?${search}` : ''}`,
+    `/api/v1/projects/${projectId}/ai-traffic/referrals${search.size ? `?${search}` : ''}`,
     { headers },
   );
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };
@@ -50,7 +50,7 @@ afterAll(async () => {
   await db.destroy();
 });
 
-describe('GET /projects/{project_id}/ai-referrals', () => {
+describe('GET /projects/{project_id}/ai-traffic', () => {
   it('requires a session', async () => {
     expect((await referrals(null, tenant.projectId)).status).toBe(401);
   });

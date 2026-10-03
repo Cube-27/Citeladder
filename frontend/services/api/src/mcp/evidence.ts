@@ -1,5 +1,12 @@
 /** MCP adapters over the persisted product read owners. */
 import { sql } from 'kysely';
+import {
+  crawlSummary,
+  crawlerPage,
+  coveragePage,
+  activityPage,
+  type CrawlReadOptions,
+} from '../crawl-logs/reads.ts';
 import { policy } from '../config.ts';
 import { robotsFactsSchema } from '@citeladder/contracts/site-health';
 import { mcpPolicy } from './config.ts';
@@ -275,6 +282,29 @@ export async function readEvidence(
   name: string,
   args: ReadArguments,
 ): Promise<Evidence> {
+  if (name === 'read_crawl_logs' || name === 'list_bot_requests') {
+    const options: CrawlReadOptions = {
+      range: text(args, 'range'),
+      start_date: text(args, 'start_date'),
+      end_date: text(args, 'end_date'),
+      verification: text(args, 'verification'),
+      cursor: text(args, 'cursor'),
+      limit: limit(args),
+      bot_id: text(args, 'bot_id'),
+      status: typeof args.status === 'number' ? args.status : null,
+      folder: text(args, 'folder'),
+      resource_class: text(args, 'resource_class'),
+    };
+    const result =
+      name === 'list_bot_requests'
+        ? await activityPage(db, scope, options)
+        : args.view === 'crawlers'
+          ? await crawlerPage(db, scope, options)
+          : args.view === 'coverage'
+            ? await coveragePage(db, scope, options)
+            : await crawlSummary(db, scope, options);
+    return { state: 'available', ...result, artifact_refs: [], omissions: [] };
+  }
   if (name === 'read_integration_status') return readIntegrationStatus(db, scope);
   if (name === 'read_site_health') return siteSnapshot(db, scope);
   if (name === 'read_ai_crawlability') return crawlability(db, scope);
@@ -589,6 +619,7 @@ const sectionTools: Record<string, string> = {
   visibility: 'read_visibility_audit',
   performance: 'read_performance',
   referrals: 'read_ai_referrals',
+  crawl_logs: 'read_crawl_logs',
   integrations: 'read_integration_status',
   search_intelligence: 'read_search_intelligence',
 };
@@ -610,6 +641,7 @@ export async function projectBusinessContext(
     read_visibility_audit: 'audits.read_latest',
     read_performance: 'performance.read_snapshot',
     read_ai_referrals: 'referrals.read_snapshot',
+    read_crawl_logs: 'crawl_logs',
     read_integration_status: 'integrations.read_status',
   };
   for (const [section, name] of Object.entries(sectionTools))

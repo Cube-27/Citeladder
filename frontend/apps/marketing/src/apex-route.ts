@@ -31,7 +31,7 @@ const FORMER_PRODUCT_PATHS = new Set([
   'prompts',
   'content',
   'products',
-  'ai-referrals',
+  'ai-traffic',
   'settings',
   'invitations',
 ]);
@@ -76,7 +76,11 @@ export async function routeApexRequest(request: Request, env: ApexEnv): Promise<
     }
     return noStore(409, 'Restart authorization on the app.');
   }
-  if (path === '/api/v1/billing/webhooks/razorpay' && request.method === 'POST') {
+  if (
+    (path === '/api/v1/billing/webhooks/razorpay' ||
+      /^\/api\/v1\/crawl-logs\/ingest\/[0-9a-f-]+$/u.test(path)) &&
+    request.method === 'POST'
+  ) {
     return proxyWorkerRequest(request, config);
   }
   // Public contact intake is handled by Astro in this Worker, never the product API.

@@ -6,7 +6,7 @@
  * empty payload, never a recomputation, and reports the window it actually
  * resolved rather than the one requested.
  */
-import { aiReferralSourceRowSchema, aiReferralsSchema } from '@citeladder/contracts/ai-referrals';
+import { aiReferralSourceRowSchema, aiReferralsSchema } from '@citeladder/contracts/ai-traffic';
 import { sql } from 'kysely';
 import { z } from 'zod';
 

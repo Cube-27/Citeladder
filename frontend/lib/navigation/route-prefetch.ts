@@ -83,13 +83,13 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     const { runsQueries } = await import('@/lib/api/runs');
     warmQuery(client, runsQueries.list(workspaceId, projectId));
   },
-  '/ai-referrals': async (client, { projectId, workspaceId }) => {
-    const { aiReferralsApi } = await import('@/lib/api/ai-referrals');
+  '/ai-traffic': async (client, { projectId, workspaceId }) => {
+    const { aiTrafficApi } = await import('@/lib/api/ai-traffic');
     const params = { granularity: 'week' as const };
     warmQuery(client, {
-      queryKey: queryKeys.aiReferrals.dashboard(projectId, params),
+      queryKey: queryKeys.aiTraffic.dashboard(projectId, params),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        aiReferralsApi.getDashboard(projectId, params, { signal, workspaceId }),
+        aiTrafficApi.getDashboard(projectId, params, { signal, workspaceId }),
     });
   },
 };

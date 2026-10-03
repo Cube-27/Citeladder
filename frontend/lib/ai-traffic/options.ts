@@ -1,6 +1,6 @@
 /**
  * AI Referrals toolbar vocabulary: the date-range presets and snapshot
- * granularity driving the `/ai-referrals` screen.
+ * granularity driving the `/ai-traffic` screen.
  *
  * The range presets are OWNED here, mirroring the Performance surface's
  * server-resolved range contract (invariant 2): the default `latest` preset
@@ -14,7 +14,7 @@
  */
 import type { z } from 'zod';
 
-import type { AiReferralsRangeParams } from '@/lib/api/ai-referrals';
+import type { AiReferralsRangeParams } from '@/lib/api/ai-traffic';
 import type { snapshotGranularitySchema } from '@citeladder/contracts/analytics';
 /**
  * Date-range presets. `latest` sends no bounds — the backend serves the

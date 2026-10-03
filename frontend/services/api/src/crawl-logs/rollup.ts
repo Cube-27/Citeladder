@@ -1,0 +1,164 @@
+import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
+import type { Database } from '../db/database.ts';
+import { crawlLogs } from '../config/crawl-logs.ts';
+import { record } from '../db/json.ts';
+import { lockCrawlState, type CrawlScope } from './state.ts';
+import type { Executor } from '../workers/executor.ts';
+
+/** Full recomputation under the project row lock prevents stale publication. */
+export async function refreshCrawlLogs(db: Database, scope: CrawlScope, now = new Date()) {
+  return db.transaction().execute(async (trx) => {
+    const state = await lockCrawlState(trx, scope);
+    const tz = state.reporting_timezone;
+    const cutoff = new Date(
+      now.getTime() - (crawlLogs.retention_days - crawlLogs.rollup_freeze_margin_days) * 86400000,
+    );
+    const floor = sql<Date>`(${cutoff}::timestamptz at time zone ${tz})::date`;
+    await trx
+      .deleteFrom('bot_activity_daily')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('reporting_date', '>=', floor)
+      .execute();
+    await sql`insert into bot_activity_daily (id,workspace_id,project_id,reporting_date,reporting_timezone,bot_id,identity_key,
+      identity,url_hash,display_path,folder,resource_class,verification,status_code,requests,first_seen_at,last_seen_at,formula_version,source_batch_ids)
+      select gen_random_uuid(),workspace_id,project_id,(occurred_at at time zone ${tz})::date,${tz},bot_id,
+        coalesce(url_hash,folder || ':' || resource_class),identity,url_hash,min(display_path),folder,resource_class,
+        verification,status_code,count(*)::integer,min(occurred_at),max(occurred_at),${crawlLogs.formula_version},
+        to_jsonb((array_agg(distinct batch_id order by batch_id))[1:${crawlLogs.max_source_batch_ids}])
+      from bot_requests where workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid
+        and (occurred_at at time zone ${tz})::date >= ${floor}
+      group by 2,3,4,6,7,8,9,11,12,13,14`.execute(trx);
+    await trx
+      .deleteFrom('crawl_log_coverage_daily')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('reporting_date', '>=', floor)
+      .execute();
+    const sources = await trx
+      .selectFrom('crawl_log_sources')
+      .selectAll()
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .execute();
+    for (const source of sources) {
+      const batches = await trx
+        .selectFrom('crawl_log_batches')
+        .selectAll()
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('source_id', '=', source.id)
+        .where('received_at', '>=', cutoff)
+        .execute();
+      const uploads = await trx
+        .selectFrom('crawl_log_uploads')
+        .selectAll()
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('source_id', '=', source.id)
+        .where('updated_at', '>=', cutoff)
+        .execute();
+      // Database supplies timezone-aware midnight boundaries, including DST days.
+      const days = await sql<{
+        day: string;
+        start: Date;
+        end: Date;
+      }>`select to_char(d,'YYYY-MM-DD') as day,
+        d::timestamp at time zone ${tz} as start,(d+interval '1 day')::timestamp at time zone ${tz} as end
+        from generate_series(${floor},(${now}::timestamptz at time zone ${tz})::date,interval '1 day') d`.execute(
+        trx,
+      );
+      for (const day of days.rows) {
+        const receipts = batches.filter(
+          (b) => b.received_at >= day.start && b.received_at < day.end,
+        );
+        const evidence = batches.some(
+          (b) =>
+            b.first_line_at &&
+            b.last_line_at &&
+            b.first_line_at < day.end &&
+            b.last_line_at >= day.start,
+        );
+        const declarations = uploads
+          .flatMap((u) =>
+            Array.isArray(u.scanned_dates)
+              ? u.scanned_dates.map((d) => ({
+                  date: record(d).date,
+                  complete: record(d).complete,
+                  status: u.status,
+                }))
+              : [],
+          )
+          .filter((d) => d.date === day.day);
+        const times = [
+          day.start.getTime(),
+          ...receipts.map((b) => b.received_at.getTime()).sort((a, b) => a - b),
+          day.end.getTime(),
+        ];
+        const gap = Math.max(...times.slice(1).map((t, i) => (t - times[i]!) / 60000));
+        let coverage = 'unknown',
+          reason = 'no_data';
+        if (declarations.some((d) => d.status === 'completed' && d.complete === true)) {
+          coverage = 'declared_complete';
+          reason = 'client_reported';
+        } else if (receipts.length || evidence || declarations.length) {
+          coverage = 'partial';
+          reason = 'delivery_gaps_or_partial_scan';
+        }
+        if (
+          source.kind === 'webhook' &&
+          receipts.length &&
+          source.setup !== 'cloudflare_worker' &&
+          record(source.sampling).kind === 'none' &&
+          source.created_at <= day.start &&
+          (!source.revoked_at || source.revoked_at >= day.end) &&
+          day.end <= now &&
+          gap <= crawlLogs.max_delivery_gap_minutes
+        ) {
+          coverage = 'complete';
+          reason = 'unsampled_gap_free_declared_scope';
+        }
+        if (source.setup === 'cloudflare_worker' && coverage !== 'unknown') {
+          coverage = 'partial';
+          reason = 'best_effort_worker';
+        }
+        await trx
+          .insertInto('crawl_log_coverage_daily')
+          .values({
+            id: randomUUID(),
+            workspace_id: scope.workspaceId,
+            project_id: scope.projectId,
+            source_id: source.id,
+            reporting_date: day.day,
+            reporting_timezone: tz,
+            coverage,
+            reason,
+            batch_count: receipts.length,
+            heartbeat_count: receipts.filter((b) => b.heartbeat).length,
+            max_gap_minutes: gap,
+          })
+          .execute();
+      }
+      await trx
+        .updateTable('crawl_log_sources')
+        .set({ last_processed_at: now })
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('id', '=', source.id)
+        .execute();
+    }
+    await trx
+      .updateTable('crawl_log_states')
+      .set({ updated_at: now })
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .execute();
+    // A3 adds the insights successor when its executor exists. A2 never queues unowned work.
+  });
+}
+export const crawlLogRollupRefresh: Executor = async (task, { db, checkCancelled }) => {
+  await checkCancelled('crawl-log-rollup');
+  if (!task.project_id) throw new Error('Crawl rollup needs project');
+  await refreshCrawlLogs(db, { workspaceId: task.workspace_id, projectId: task.project_id });
+};
