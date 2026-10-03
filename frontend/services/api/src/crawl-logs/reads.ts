@@ -141,7 +141,7 @@ export async function crawlerPage(db: Database, scope: CrawlScope, options: Craw
         .groupBy('resource_class')
         .execute();
       const w = window(options);
-      const reasons = await db
+      let reasonQuery = db
         .selectFrom('bot_requests')
         .select(['verification_reason', sql<number>`count(*)::integer`.as('count')])
         .where('workspace_id', '=', scope.workspaceId)
@@ -150,8 +150,12 @@ export async function crawlerPage(db: Database, scope: CrawlScope, options: Craw
         .where('verification', 'in', verificationFilter(options.verification))
         .where('occurred_at', '>=', new Date(w.start + 'T00:00:00Z'))
         .where('occurred_at', '<', new Date(Date.parse(w.end) + 86400000))
-        .groupBy('verification_reason')
-        .execute();
+        .groupBy('verification_reason');
+      if (options.status) reasonQuery = reasonQuery.where('status_code', '=', options.status);
+      if (options.folder) reasonQuery = reasonQuery.where('folder', '=', options.folder);
+      if (options.resource_class)
+        reasonQuery = reasonQuery.where('resource_class', '=', options.resource_class);
+      const reasons = await reasonQuery.execute();
       const bot = crawlers.bots.find((b) => b.bot_id === row.bot_id)!;
       return {
         ...row,
@@ -216,6 +220,12 @@ export async function activityPage(
   if (options.status) query = query.where('status_code', '=', options.status);
   if (options.folder) query = query.where('folder', '=', options.folder);
   if (options.resource_class) query = query.where('resource_class', '=', options.resource_class);
+  if (options.range || options.start_date || options.end_date) {
+    const w = window(options);
+    query = query
+      .where('occurred_at', '>=', new Date(w.start + 'T00:00:00Z'))
+      .where('occurred_at', '<', new Date(Date.parse(w.end) + 86400000));
+  }
   if (binding.keys.length) {
     if (
       binding.keys.length !== 2 ||

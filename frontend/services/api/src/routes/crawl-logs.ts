@@ -54,6 +54,7 @@ export const crawlLogRoutes = [
         presets: crawlLogs.presets,
         max_batch_bytes: crawlLogs.max_batch_bytes,
         max_lines_per_batch: crawlLogs.max_lines_per_batch,
+        upload_sample_lines: crawlLogs.upload_sample_lines,
         max_line_bytes: crawlLogs.max_line_bytes,
         worker_timeout_ms: crawlLogs.worker_timeout_ms,
       };

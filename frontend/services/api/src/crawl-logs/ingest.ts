@@ -174,9 +174,9 @@ export async function ingest(
       continue;
     }
     let host = mapped.host?.toLowerCase() ?? source.host;
-    if (/^[a-z]+:\/\//iu.test(mapped.path)) {
+    {
       try {
-        const url = new URL(mapped.path);
+        const url = new URL(mapped.path, source.origin);
         if (mapped.host && url.hostname.toLowerCase() !== host) {
           counts.lines_out_of_scope++;
           continue;

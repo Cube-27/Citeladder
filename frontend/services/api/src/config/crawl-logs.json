@@ -49,6 +49,7 @@
   },
   "max_batch_bytes": 5242880,
   "max_lines_per_batch": 5000,
+  "upload_sample_lines": 50,
   "max_line_bytes": 16384,
   "max_sources_per_project": 20,
   "batches_per_source_per_hour": 120,

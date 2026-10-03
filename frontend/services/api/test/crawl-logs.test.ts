@@ -165,6 +165,7 @@ describe('sanitized durable admission', () => {
       body(
         event({ user_agent: 'Mozilla/5.0' }),
         event({ host: 'other.example' }),
+        event({ path: '//other.example/escape' }),
         event({ path: '/reset/very-private-token' }),
         event({ path: '/products/' + a }),
         event({ path: '/products/' + b }),
@@ -177,7 +178,7 @@ describe('sanitized durable admission', () => {
     expect(receipt).toMatchObject({
       lines_matched: 3,
       lines_unmatched: 1,
-      lines_out_of_scope: 1,
+      lines_out_of_scope: 2,
       lines_rejected: 3,
     });
     const rows = await db
@@ -341,6 +342,15 @@ describe('verification vocabulary', () => {
     expect(
       verifyBot(bot, '2001:db8::1', snapshot, new Date(now.getTime() - 48 * 3600000), now),
     ).toMatchObject({ verification: 'verified', verification_basis: 'later_snapshot' });
+    expect(
+      verifyBot(
+        bot,
+        '192.0.2.1',
+        { ...snapshot, fetched_at: new Date(now.getTime() - 48 * 3600000) },
+        now,
+        now,
+      ),
+    ).toMatchObject({ verification: 'unverifiable', verification_reason: 'stale_snapshot' });
   });
 });
 describe('uploads, coverage and serialized recomputation', () => {
@@ -483,6 +493,18 @@ describe('uploads, coverage and serialized recomputation', () => {
       { uploadId: upload.id, seq: 0, key: upload.id + ':0' },
     );
     expect(receipt.lines_overlapping).toBe(2);
+    const replay = await ingest(
+      db,
+      uploadSource,
+      body(
+        event({
+          request_id: 'shared-ray',
+          timestamp: new Date(now.getTime() - 86400000).toISOString(),
+        }),
+      ),
+      { uploadId: upload.id, seq: 1, key: upload.id + ':1' },
+    );
+    expect(replay).toMatchObject({ lines_matched: 0, lines_duplicate: 1, lines_overlapping: 0 });
     expect(
       await db
         .selectFrom('bot_requests')

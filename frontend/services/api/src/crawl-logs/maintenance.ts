@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import ipaddr from 'ipaddr.js';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { crawlers } from '../config/crawlers.ts';
@@ -30,7 +30,7 @@ export function botIpRangeRefresh(fetcher: WebsiteFetcher = fetchWebsite): Execu
         contentTypes: ['application/json'],
       });
       if (response.status < 200 || response.status >= 300) throw new Error('Range response failed');
-      contentHash = hash(response.body.toString('base64'));
+      contentHash = createHash('sha256').update(response.body).digest('hex');
       const value = record(
         JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(response.body)),
       );

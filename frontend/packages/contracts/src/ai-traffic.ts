@@ -125,6 +125,7 @@ export const crawlCatalogSchema = z.object({
   ),
   max_batch_bytes: z.number(),
   max_lines_per_batch: z.number(),
+  upload_sample_lines: z.number(),
   max_line_bytes: z.number(),
   worker_timeout_ms: z.number(),
 });

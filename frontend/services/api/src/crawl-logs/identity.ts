@@ -64,6 +64,11 @@ export function verifyBot(
   if (!snapshot || snapshot.status !== 'succeeded') return result('unverifiable', 'no_snapshot');
   if (now.getTime() - snapshot.fetched_at.getTime() > crawlLogs.ip_range_max_age_hours * 3600000)
     return result('unverifiable', 'stale_snapshot');
+  if (
+    at.getTime() - snapshot.fetched_at.getTime() >
+    crawlLogs.ip_range_contemporaneous_hours * 3600000
+  )
+    return result('unverifiable', 'stale_snapshot');
   try {
     const address = ipaddr.process(ip);
     const matches = strings(snapshot.cidrs).some((cidr) => {

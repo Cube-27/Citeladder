@@ -17,7 +17,7 @@ describe('customer Worker delivery', () => {
         headers: {
           'user-agent': 'GPTBot/1.0',
           'cf-connecting-ip': '192.0.2.1',
-          'cf-ray': 'test-ray',
+          'cf-ray': 'a1b2c3-LAX',
         },
       }),
       { CITELADDER_INGEST_URL: 'https://citeladder.test/ingest', CITELADDER_CRAWL_TOKEN: 'secret' },
@@ -29,7 +29,7 @@ describe('customer Worker delivery', () => {
     expect(JSON.parse(options.body as string)).toMatchObject({
       status: 404,
       path: '/page',
-      request_id: 'test-ray',
+      request_id: 'a1b2c3',
     });
     expect(timeout.mock.calls[0]![0]).toBeGreaterThan(0);
     expect(timeout.mock.calls[0]![0]).toBeLessThan(30000);

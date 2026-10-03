@@ -29,6 +29,7 @@ const schema = z.strictObject({
   presets: z.record(z.string(), preset),
   max_batch_bytes: positive,
   max_lines_per_batch: positive,
+  upload_sample_lines: positive,
   max_line_bytes: positive,
   max_sources_per_project: positive,
   batches_per_source_per_hour: positive,

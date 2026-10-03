@@ -59,7 +59,7 @@ const worker = {
         status: response.status,
         user_agent: userAgent,
         client_ip: request.headers.get('cf-connecting-ip'),
-        request_id: request.headers.get('cf-ray'),
+        request_id: request.headers.get('cf-ray')?.split('-')[0] ?? null,
       };
       // One best-effort send per recognized request; no batching or durability.
       ctx.waitUntil(

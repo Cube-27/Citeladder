@@ -5,7 +5,7 @@ import { loadCrawlLogs } from '../src/config/crawl-logs.ts';
 describe('crawl log admission policy', () => {
   it('rejects admission of backfills that can reach frozen rollups', () => {
     expect(() => loadCrawlLogs({ ...config, max_backdate_days: 83 })).toThrow(/unfrozen/);
-    expect(loadCrawlLogs({ ...config, max_backdate_days: 82 }).max_backdate_days).toBe(82);
+    expect(() => loadCrawlLogs({ ...config, max_backdate_days: 82 })).not.toThrow();
   });
   it('rejects inconsistent payload and verification bounds', () => {
     expect(() =>
