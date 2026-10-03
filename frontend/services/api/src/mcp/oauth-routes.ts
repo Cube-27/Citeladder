@@ -23,7 +23,12 @@ import {
   revokeToken,
   tokenHash,
 } from './oauth.ts';
-import { admitRegistration, registerClient, RegistrationLimit } from './registration.ts';
+import {
+  admitAuthorization,
+  admitRegistration,
+  registerClient,
+  RegistrationLimit,
+} from './registration.ts';
 
 async function registrationBody(request: Request): Promise<unknown> {
   const limit = mcpPolicy.registration_max_body_bytes;
@@ -164,14 +169,20 @@ export function registerOAuthRoutes(
     return c.json(await registerClient(db, mcp, await registrationBody(c.req.raw)), 201);
   });
   app.get('/authorize', async (c) => {
-    const q = new URL(c.req.url).searchParams;
+    const url = new URL(c.req.url);
+    const q = url.searchParams;
+    if (
+      Buffer.byteLength(url.search) > mcpPolicy.authorization_max_query_bytes ||
+      Buffer.byteLength(q.get('state') ?? '') > mcpPolicy.authorization_max_state_bytes
+    )
+      throw new OAuthError('invalid_request', 'Authorization query is too large');
     const transaction = mintToken();
     await db.transaction().execute(async (trx) => {
       const client = await trx
         .selectFrom('mcp_oauth_clients')
         .select(['client_id', 'client_metadata'])
         .where('client_id', '=', q.get('client_id') ?? '')
-        .forKeyShare()
+        .forUpdate()
         .executeTakeFirst();
       if (!client) throw new OAuthError('invalid_client', 'Client is not registered');
       const redirects = strings(record(client.client_metadata).redirect_uris);
@@ -190,6 +201,16 @@ export function registerOAuthRoutes(
       if (q.has('resource') && q.get('resource')?.replace(/\/$/u, '') !== resource)
         throw new OAuthError('invalid_target', 'The requested resource is not this MCP server');
       const now = new Date();
+      const outstanding = await trx
+        .selectFrom('mcp_authorization_requests')
+        .select(({ fn }) => fn.countAll<string>().as('count'))
+        .where('client_id', '=', client.client_id)
+        .where('consumed_at', 'is', null)
+        .where('expires_at', '>', now)
+        .executeTakeFirstOrThrow();
+      if (Number(outstanding.count) >= mcpPolicy.authorization_outstanding_limit)
+        throw new RegistrationLimit(Math.max(1, mcp.requestTtl));
+      await admitAuthorization(trx, client.client_id, trustedClientIdentity(c, config));
       await trx
         .insertInto('mcp_authorization_requests')
         .values({

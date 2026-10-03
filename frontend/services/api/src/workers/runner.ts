@@ -27,6 +27,7 @@ import { SiteHealthWorker } from './site-health-worker.ts';
 import { integrationSettings } from '../integrations/config.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { getLogger } from '../logging.ts';
+import { cleanupMcpProtocol } from '../mcp/maintenance.ts';
 
 export type RunnerLane = {
   name: string;
@@ -160,6 +161,10 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       },
     ] satisfies RunnerLane[],
     periodic: [
+      {
+        name: 'mcp-protocol-cleanup',
+        run: (canAdmit) => cleanupMcpProtocol(db, new Date(), canAdmit),
+      },
       { name: 'queue-recovery', run: (canAdmit) => recoverQueues(db, canAdmit) },
       {
         name: 'audit-maintenance',

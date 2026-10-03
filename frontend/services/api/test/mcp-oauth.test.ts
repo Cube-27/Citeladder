@@ -9,6 +9,8 @@ import { authorizedWorkspaceIds, authorizeProject } from '../src/mcp/data.ts';
 import { authenticateMcp, consentCsrf, tokenHash } from '../src/mcp/oauth.ts';
 import { admitRegistration, registerClient, RegistrationLimit } from '../src/mcp/registration.ts';
 import { registerMcpRoutes } from '../src/mcp/server.ts';
+import { cleanupMcpProtocol } from '../src/mcp/maintenance.ts';
+import { mcpPolicy } from '../src/mcp/config.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -81,7 +83,7 @@ async function client(method: 'none' | 'client_secret_basic' = 'none') {
   clients.push(result.client_id);
   return result;
 }
-async function pending(clientId: string) {
+function authorizationQuery(clientId: string) {
   const query = new URLSearchParams({
     client_id: clientId,
     redirect_uri: callback,
@@ -91,7 +93,10 @@ async function pending(clientId: string) {
     state: 'bound-state',
     resource: `${protocol}/mcp`,
   });
-  const response = await app.request(`${protocol}/authorize?${query}`);
+  return query;
+}
+async function pending(clientId: string) {
+  const response = await app.request(`${protocol}/authorize?${authorizationQuery(clientId)}`);
   expect(response.status).toBe(302);
   const location = new URL(response.headers.get('location')!);
   expect(location.origin).toBe(browser);
@@ -143,6 +148,215 @@ async function grant() {
   expect(principal).not.toBeNull();
   return { client: c, value, principal: principal! };
 }
+
+it('serializes parallel authorization admission at the per-client outstanding cap', async () => {
+  const c = await client();
+  const responses = await Promise.all(
+    Array.from({ length: 12 }, () =>
+      app.request(`${protocol}/authorize?${authorizationQuery(c.client_id)}`),
+    ),
+  );
+  expect(responses.filter((response) => response.status === 302)).toHaveLength(
+    mcpPolicy.authorization_outstanding_limit,
+  );
+  expect(responses.filter((response) => response.status === 429)).toHaveLength(7);
+  expect(
+    await db
+      .selectFrom('mcp_authorization_requests')
+      .select('id')
+      .where('client_id', '=', c.client_id)
+      .execute(),
+  ).toHaveLength(5);
+});
+
+it('bounds query bytes and decoded state before writing usage or requests', async () => {
+  const c = await client();
+  const before = await db
+    .selectFrom('usage_windows')
+    .select('id')
+    .where('operation', 'like', 'mcp.authorize.%')
+    .execute();
+  for (const [key, value] of [
+    ['state', 'é'.repeat(513)],
+    ['extra', 'x'.repeat(8192)],
+  ]) {
+    const query = authorizationQuery(c.client_id);
+    query.set(key!, value!);
+    expect((await app.request(`${protocol}/authorize?${query}`)).status).toBe(400);
+  }
+  expect(
+    await db
+      .selectFrom('usage_windows')
+      .select('id')
+      .where('operation', 'like', 'mcp.authorize.%')
+      .execute(),
+  ).toEqual(before);
+  expect(
+    await db
+      .selectFrom('mcp_authorization_requests')
+      .select('id')
+      .where('client_id', '=', c.client_id)
+      .execute(),
+  ).toEqual([]);
+});
+
+it.each([
+  ['mcp.authorize.source', 'client', 'unavailable', mcpPolicy.authorization_source_limit],
+  ['mcp.authorize.global', 'global', 'mcp.authorize', mcpPolicy.authorization_global_limit],
+] as const)(
+  'refuses an exhausted %s budget before allocating a request',
+  async (operation, kind, subject, limit) => {
+    const c = await client();
+    const hash = createHash('sha256').update(subject).digest('hex');
+    const now = new Date();
+    const start = Math.floor(now.getTime() / 60000) * 60000;
+    await db
+      .insertInto('usage_windows')
+      .values({
+        id: randomUUID(),
+        subject_kind: kind,
+        subject_hash: hash,
+        operation,
+        count: limit,
+        window_started_at: new Date(start),
+        expires_at: new Date(start + 60000),
+        created_at: now,
+        updated_at: now,
+      })
+      .onConflict((conflict) =>
+        conflict
+          .constraint('uq_usage_window_subject_operation_start')
+          .doUpdateSet({ count: limit }),
+      )
+      .execute();
+    try {
+      expect(
+        (await app.request(`${protocol}/authorize?${authorizationQuery(c.client_id)}`)).status,
+      ).toBe(429);
+      expect(
+        await db
+          .selectFrom('mcp_authorization_requests')
+          .select('id')
+          .where('client_id', '=', c.client_id)
+          .execute(),
+      ).toEqual([]);
+    } finally {
+      await db
+        .deleteFrom('usage_windows')
+        .where('operation', '=', operation)
+        .where('subject_hash', '=', hash)
+        .execute();
+    }
+  },
+);
+
+it('enforces the client rate budget without allocating another request', async () => {
+  const c = await client();
+  for (let i = 0; i < mcpPolicy.authorization_client_limit; i++) {
+    const transaction = await pending(c.client_id);
+    expect((await consent(transaction, [], undefined, 'deny')).status).toBe(303);
+  }
+  expect(
+    (await app.request(`${protocol}/authorize?${authorizationQuery(c.client_id)}`)).status,
+  ).toBe(429);
+  expect(
+    await db
+      .selectFrom('mcp_authorization_requests')
+      .select('id')
+      .where('client_id', '=', c.client_id)
+      .execute(),
+  ).toHaveLength(10);
+});
+
+it('cleans only expired unconsumed protocol rows and preserves grants and audit data', async () => {
+  const issued = await grant();
+  const c = issued.client;
+  await pending(c.client_id);
+  await pending(c.client_id);
+  const requests = await db
+    .selectFrom('mcp_authorization_requests')
+    .selectAll()
+    .where('client_id', '=', c.client_id)
+    .where('consumed_at', 'is', null)
+    .execute();
+  const expired = new Date(Date.now() - 60000);
+  await db
+    .updateTable('mcp_authorization_requests')
+    .set({ expires_at: expired })
+    .where('id', '=', requests[0]!.id)
+    .execute();
+  await db
+    .updateTable('mcp_authorization_requests')
+    .set({ expires_at: expired })
+    .where('client_id', '=', c.client_id)
+    .where('consumed_at', 'is not', null)
+    .execute();
+  const code = await db
+    .selectFrom('mcp_authorization_codes')
+    .selectAll()
+    .where('client_id', '=', c.client_id)
+    .executeTakeFirstOrThrow();
+  await db
+    .updateTable('mcp_authorization_codes')
+    .set({ expires_at: expired })
+    .where('id', '=', code.id)
+    .execute();
+  const staleCodeId = randomUUID();
+  await db
+    .insertInto('mcp_authorization_codes')
+    .values({
+      ...code,
+      workspace_ids: JSON.stringify(code.workspace_ids),
+      scopes: JSON.stringify(code.scopes),
+      id: staleCodeId,
+      code_hash: randomUUID(),
+      consumed_at: null,
+      expires_at: expired,
+    })
+    .execute();
+  const usageId = randomUUID();
+  await db
+    .insertInto('usage_windows')
+    .values({
+      id: usageId,
+      subject_kind: 'client',
+      subject_hash: randomUUID(),
+      operation: 'test.cleanup',
+      count: 1,
+      window_started_at: expired,
+      expires_at: expired,
+      created_at: expired,
+      updated_at: expired,
+    })
+    .execute();
+  await cleanupMcpProtocol(db);
+  expect(
+    await db
+      .selectFrom('mcp_authorization_requests')
+      .select('id')
+      .where('client_id', '=', c.client_id)
+      .execute(),
+  ).toHaveLength(2);
+  expect(
+    await db
+      .selectFrom('mcp_authorization_codes')
+      .select('id')
+      .where('client_id', '=', c.client_id)
+      .execute(),
+  ).toEqual([{ id: code.id }]);
+  expect(
+    await db.selectFrom('usage_windows').select('id').where('id', '=', usageId).execute(),
+  ).toEqual([]);
+  expect(
+    await authenticateMcp(
+      db,
+      config,
+      new Request(`${protocol}/mcp`, {
+        headers: { authorization: `Bearer ${issued.value.access_token}` },
+      }),
+    ),
+  ).not.toBeNull();
+});
 
 it('binds CSRF, explicit selection, PKCE and redirect before a code can be consumed once', async () => {
   const c = await client('client_secret_basic');
