@@ -34,6 +34,16 @@ const policyLabels = {
   all_disallowed: 'All disallowed',
   unknown: 'Unknown',
 } as const;
+const matchedLabels = {
+  no_rules: 'Not specified',
+  specific_group: 'Specific group',
+  wildcard_group: 'Wildcard group',
+} as const;
+const rootAccessLabels = {
+  allowed: 'Allowed',
+  disallowed: 'Disallowed',
+  unknown: 'Unknown',
+} as const;
 
 export function SiteFactsPanel({
   crawl,
@@ -52,6 +62,8 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
   const [historyOpen, setHistoryOpen] = useState(false);
   const purposes = [...new Set(view.robots.bots.map((bot) => bot.purpose))];
   const unknown = view.robots.status === 'fetch_failed' || view.robots.status === 'access_blocked';
+  let llmsStatus = 'not fetched';
+  if (view.llms_txt.fetched) llmsStatus = view.llms_txt.present ? 'present' : 'absent';
   return (
     <Card className="min-w-0">
       <CardContent className="grid min-w-0 gap-3 p-3">
@@ -75,7 +87,7 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
         <p className={textRole('caption')}>
           robots.txt: {view.robots.status.replaceAll('_', ' ')}
           {view.robots.status_code !== null ? ` (HTTP ${view.robots.status_code})` : ''} · llms.txt:{' '}
-          {view.llms_txt.fetched ? (view.llms_txt.present ? 'present' : 'absent') : 'not fetched'}
+          {llmsStatus}
         </p>
         {unknown ? (
           <Alert tone="warning">
@@ -119,21 +131,9 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
                       <TableRow key={bot.bot_id}>
                         <TableCell>{bot.label}</TableCell>
                         <TableCell>{bot.operator}</TableCell>
+                        <TableCell>{matchedLabels[bot.matched]}</TableCell>
                         <TableCell>
-                          {bot.matched === 'no_rules'
-                            ? 'Not specified'
-                            : bot.matched === 'specific_group'
-                              ? 'Specific group'
-                              : 'Wildcard group'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge>
-                            {bot.root_access === 'allowed'
-                              ? 'Allowed'
-                              : bot.root_access === 'disallowed'
-                                ? 'Disallowed'
-                                : 'Unknown'}
-                          </Badge>
+                          <Badge>{rootAccessLabels[bot.root_access]}</Badge>
                         </TableCell>
                         <TableCell>
                           <Badge>{policyLabels[bot.policy]}</Badge>
@@ -151,11 +151,7 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
           ))}
         <Disclosure title="robots.txt history" onOpenChange={setHistoryOpen}>
           {historyOpen ? (
-            <RobotsHistory
-              workspaceId={crawl.workspace_id}
-              projectId={crawl.project_id}
-              crawlId={crawl.id}
-            />
+            <RobotsHistory workspaceId={crawl.workspace_id} projectId={crawl.project_id} />
           ) : null}
         </Disclosure>
       </CardContent>

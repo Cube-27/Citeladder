@@ -306,9 +306,11 @@ export const siteHealthApi = {
  * place. Every `queryFn` forwards the abort signal.
  */
 export const siteHealthQueries = {
-  robotsHistory: (workspaceId: string, projectId: string, crawlId: string, cursor?: string) =>
+  robotsHistory: (workspaceId: string, projectId: string, cursor?: string) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.robotsHistory(workspaceId, projectId, crawlId, cursor),
+      queryKey: queryKeys.siteHealth.robotsHistory(workspaceId, projectId, cursor),
+      // Opening history refreshes the project's observation sequence, irrespective of selected crawl.
+      refetchOnMount: 'always',
       queryFn: ({ signal }) =>
         siteHealthApi.getRobotsHistory(projectId, cursor, { signal, workspaceId }),
     }),

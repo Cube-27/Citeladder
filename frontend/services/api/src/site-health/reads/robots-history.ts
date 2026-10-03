@@ -27,7 +27,7 @@ export async function robotsHistory(
     .select(utcText(observedAt).$notNull().as('observed_at'))
     .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
-    .where('site_facts', 'is not', null);
+    .where(sql<boolean>`site_facts -> 'robots' ->> 'observed_at' IS NOT NULL`);
   if (input.cursor) {
     const keys = decodeKeysetCursor(input.cursor, 'robots-history', filters);
     const id = parseUuid(keys[1]);

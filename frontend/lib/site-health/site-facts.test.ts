@@ -13,6 +13,7 @@ it('renders only the persisted catalog projection and rejects incomplete evidenc
   expect(readSiteFacts(null)).toBeNull();
 });
 it('diffs retained lines with stable prefix and suffix context', () => {
+  expect(robotsLineDiff('', '')).toBe('');
   expect(
     robotsLineDiff('User-agent: *\r\nDisallow: /\r\n# end', 'User-agent: *\nAllow: /\n# end'),
   ).toBe('  User-agent: *\n- Disallow: /\n+ Allow: /\n  # end');

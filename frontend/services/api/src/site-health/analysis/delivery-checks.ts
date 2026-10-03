@@ -29,24 +29,29 @@ export function serverRenderSignals(facts: Facts): [boolean, Record<string, unkn
 const delivery = (facts: Facts) => record(facts.delivery);
 const siteRobots = (facts: Facts) => record(record(facts.site).robots);
 
-function crawlerAccess(facts: Facts, check = 'ai_crawler_access'): CheckResult {
+function crawlerAccess(
+  facts: Facts,
+  check: 'ai_crawler_access' | 'search_crawler_access' = 'ai_crawler_access',
+): CheckResult {
   const robots = siteRobots(facts);
-  const bots = policy.crawlers.bots.filter((bot) => bot.checks.some((value) => value === check));
+  const bots = policy.crawlers.bots.filter((bot) => bot.checks.includes(check));
   const stance = new Map(records(robots.bots).map((bot) => [text(bot.bot_id), bot.root_access]));
   const bounded = Object.fromEntries(
-    bots.map((bot) => [bot.label, stance.get(bot.bot_id) ?? 'unknown']),
+    bots.map((bot) => [bot.bot_id, stance.get(bot.bot_id) ?? 'unknown']),
   );
-  if (!robots.fetched)
-    return [
-      'not_applicable',
-      { reason: 'robots_not_fetched', robots_fetched: false, root_access: bounded },
-    ];
+  const evidence = {
+    robots_fetched: Boolean(robots.fetched),
+    root_access: bounded,
+    catalog_version: robots.catalog_version,
+    robots_snapshot_id: robots.robots_snapshot_id,
+  };
+  if (!robots.fetched) return ['not_applicable', { ...evidence, reason: 'robots_not_fetched' }];
   const blocked = bots
     .filter((bot) => stance.get(bot.bot_id) === 'disallowed')
     .map((bot) => bot.label);
   return [
     passFail(!blocked.length),
-    { robots_fetched: true, root_access: bounded, blocked, checked: bots.map((bot) => bot.label) },
+    { ...evidence, blocked, checked: bots.map((bot) => bot.label) },
   ];
 }
 

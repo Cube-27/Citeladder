@@ -18,18 +18,14 @@ import { robotsLineDiff } from '@/lib/site-health/robots-diff';
 export function RobotsHistory({
   workspaceId,
   projectId,
-  crawlId,
 }: Readonly<{
   workspaceId: string;
   projectId: string;
-  crawlId: string;
 }>) {
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
   const [beforeId, setBeforeId] = useState('');
   const [afterId, setAfterId] = useState('');
-  const query = useQuery(
-    siteHealthQueries.robotsHistory(workspaceId, projectId, crawlId, cursors.at(-1)),
-  );
+  const query = useQuery(siteHealthQueries.robotsHistory(workspaceId, projectId, cursors.at(-1)));
   if (query.isPending) return <output>Loading robots.txt observations…</output>;
   if (query.isError) return <Alert tone="warning">robots.txt history is unavailable.</Alert>;
   const page = query.data;
@@ -101,16 +97,16 @@ export function RobotsHistory({
         </Button>
       </div>
       <Select
-        ariaLabel="Earlier robots.txt observation"
+        ariaLabel="Before robots.txt observation"
         value={beforeId}
         onValueChange={setBeforeId}
-        options={[{ value: '', label: 'Select earlier observation' }, ...versions]}
+        options={[{ value: '', label: 'Select before observation' }, ...versions]}
       />
       <Select
-        ariaLabel="Later robots.txt observation"
+        ariaLabel="After robots.txt observation"
         value={afterId}
         onValueChange={setAfterId}
-        options={[{ value: '', label: 'Select later observation' }, ...versions]}
+        options={[{ value: '', label: 'Select after observation' }, ...versions]}
       />
       {before && after ? (
         <>
@@ -120,8 +116,8 @@ export function RobotsHistory({
             </Alert>
           ) : null}
           <p className={textRole('caption')}>
-            Removed lines start with −; added lines start with +. Choose two observations on this
-            page.
+            Removed lines start with − from the Before observation; added lines start with + from
+            the After observation. Choose two observations on this page.
           </p>
           <pre
             aria-label="robots.txt line diff"

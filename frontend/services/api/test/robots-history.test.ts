@@ -67,6 +67,13 @@ it('deduplicates A→B→A while paging three observations and isolating workspa
   const firstSnapshot = await observe(seed, seed.crawlId, a, Date.UTC(2026, 0, 1));
   const secondSnapshot = await observe(seed, second, b, Date.UTC(2026, 0, 2));
   const thirdSnapshot = await observe(seed, third, a, Date.UTC(2026, 0, 3));
+  const unobserved = await fixtures.sibling(seed);
+  await db
+    .updateTable('site_crawls')
+    .set({ site_facts: JSON.stringify({}) })
+    .where('workspace_id', '=', seed.workspaceId)
+    .where('id', '=', unobserved)
+    .execute();
   expect(thirdSnapshot.id).toBe(firstSnapshot.id);
   expect(secondSnapshot.id).not.toBe(firstSnapshot.id);
   const response = await get(seed, seed.projectId, '?limit=2');

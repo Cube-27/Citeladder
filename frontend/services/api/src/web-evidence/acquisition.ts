@@ -182,19 +182,17 @@ export function crawlerPolicyFacts(
     const matched = robots.matched(bot.robots_tokens);
     const allowed = (url: string) => bot.robots_tokens.every((token) => robots.allows(url, token));
     const disallowed = unreadable ? 0 : urls.filter((url) => !allowed(url)).length;
-    const summary =
-      disallowed === 0
-        ? 'all_allowed'
-        : disallowed === urls.length
-          ? 'all_disallowed'
-          : 'restricted';
+    let summary: z.infer<typeof crawlerBotFactSchema>['policy'] = 'all_allowed';
+    if (disallowed > 0) summary = disallowed === urls.length ? 'all_disallowed' : 'restricted';
+    let rootAccess: z.infer<typeof crawlerBotFactSchema>['root_access'] = 'unknown';
+    if (!unreadable) rootAccess = allowed(root) ? 'allowed' : 'disallowed';
     return {
       bot_id: bot.bot_id,
       label: bot.label,
       operator: bot.operator,
       purpose: bot.purpose,
       matched,
-      root_access: unreadable ? 'unknown' : allowed(root) ? 'allowed' : 'disallowed',
+      root_access: rootAccess,
       policy: unreadable || urls.length === 0 ? 'unknown' : summary,
       evaluated_url_count: unreadable ? 0 : urls.length,
       disallowed_url_count: disallowed,

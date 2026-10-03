@@ -6,8 +6,8 @@
 import type { ListFilters } from './shared';
 
 export const siteHealthKeys = {
-  robotsHistory: (workspaceId: string, projectId: string, crawlId: string, cursor?: string) =>
-    ['site-health', 'robots-history', workspaceId, projectId, crawlId, cursor ?? 'first'] as const,
+  robotsHistory: (workspaceId: string, projectId: string, cursor?: string) =>
+    ['site-health', 'robots-history', workspaceId, projectId, cursor ?? 'first'] as const,
   internalLinks: (workspaceId: string, projectId: string, analysisId?: string) =>
     ['site-health', 'internal-links', workspaceId, projectId, analysisId ?? 'latest'] as const,
   all: ['site-health'] as const,

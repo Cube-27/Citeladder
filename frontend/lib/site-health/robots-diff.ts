@@ -1,5 +1,6 @@
 /** Linear-time line diff: unchanged prefix/suffix frame the replaced middle block. */
 export function robotsLineDiff(before: string, after: string): string {
+  if (!before && !after) return '';
   const a = before.split(/\r\n|\r|\n/u);
   const b = after.split(/\r\n|\r|\n/u);
   let start = 0;

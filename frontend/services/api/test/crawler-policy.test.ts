@@ -106,10 +106,21 @@ it('retains the root-access decision for training and search checks', () => {
     'User-agent: GPTBot\nDisallow: /\nAllow: /products/',
     [`${origin}/`, `${origin}/products/widget`],
   );
-  const facts = { site: { robots: { fetched: true, bots } } };
+  const robots = {
+    fetched: true,
+    bots,
+    catalog_version: '1',
+    robots_snapshot_id: 'capture-source',
+  };
+  const facts = { site: { robots } };
   expect(DELIVERY_CHECKS['technical.ai_crawler_access']!(facts)).toMatchObject([
     'missing',
-    { blocked: ['GPTBot'] },
+    {
+      blocked: ['GPTBot'],
+      root_access: { [bot.bot_id]: 'disallowed' },
+      robots_snapshot_id: robots.robots_snapshot_id,
+      catalog_version: robots.catalog_version,
+    },
   ]);
   expect(DELIVERY_CHECKS['search.crawler_access']!(facts)[0]).toBe('satisfied');
 });
