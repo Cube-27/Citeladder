@@ -177,10 +177,12 @@ export function PropertyPicker({
             variant="ghost"
             size="sm"
             onClick={() => {
+              if (propertiesQuery.isPending) return;
+              propertiesQuery.reset();
               setOpen(true);
               propertiesQuery.mutate();
             }}
-            disabled={disabled}
+            disabled={disabled || propertiesQuery.isPending}
             data-testid={`select-property-${connection.provider}`}
           >
             {selected ? 'Change' : 'Select'}

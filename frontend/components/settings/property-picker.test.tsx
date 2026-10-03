@@ -171,6 +171,33 @@ describe('PropertyPicker', () => {
     });
   });
 
+  it('blocks duplicate discovery while the provider request is pending', async () => {
+    const ue = userEvent.setup();
+    let complete!: (response: Response) => void;
+    const response = new Promise<Response>((resolve) => {
+      complete = resolve;
+    });
+    let calls = 0;
+    mswServer.use(
+      http.post(`/api/v1/integrations/${CONN}/properties`, () => {
+        calls++;
+        return response;
+      }),
+    );
+    renderWithProviders(<PropertyPicker connection={connection()} />);
+    try {
+      await ue.click(screen.getByRole('button', { name: 'Select' }));
+      await waitFor(() => expect(calls).toBe(1));
+      await ue.click(screen.getByRole('button', { name: 'Close dialog' }));
+      const select = screen.getByRole('button', { name: 'Select' });
+      expect(select).toBeDisabled();
+      await ue.click(select);
+      expect(calls).toBe(1);
+    } finally {
+      complete(HttpResponse.json(properties));
+    }
+  });
+
   it('shows a provider failure rather than an empty property list', async () => {
     const ue = userEvent.setup();
     mswServer.use(

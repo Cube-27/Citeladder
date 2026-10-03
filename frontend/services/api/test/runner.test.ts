@@ -250,15 +250,100 @@ describe('Cloud Run wake-up', () => {
       CLOUD_RUN_RUNNER_JOB: job,
       CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32),
     });
-    const send = vi.fn<typeof fetch>();
+    const send = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ access_token: 'recorded-access-token' }))
+      .mockResolvedValueOnce(Response.json({ name: 'operations/test' }));
+    const start = runnerStarter(config, db, send, () => 0);
     await exclusiveDrain(config, {
       signal: new AbortController().signal,
       deadline: Number.POSITIVE_INFINITY,
     })(async () => {
-      await runnerStarter(config, db, send)();
+      await start();
       expect(send).not.toHaveBeenCalled();
       return 0;
     });
+    await start();
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('continues a bounded launch when the drain probe fails', async () => {
+    const unavailable = createDatabase(testConfig());
+    await unavailable.destroy();
+    const send = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ access_token: 'recorded-access-token' }))
+      .mockResolvedValueOnce(Response.json({ name: 'operations/test' }));
+    const restore = setLogSink(() => {});
+    try {
+      const start = runnerStarter(
+        testConfig({ CLOUD_RUN_RUNNER_JOB: job, CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32) }),
+        unavailable,
+        send,
+        () => 0,
+      );
+      await start();
+      await start();
+      expect(send).toHaveBeenCalledTimes(2);
+    } finally {
+      setLogSink(restore);
+    }
+  });
+
+  it('bounds a stalled PostgreSQL lock probe by the wake deadline', async () => {
+    const delayed = db.withPlugin({
+      transformQuery: () => sql`select pg_sleep(0.2), false as held`.toOperationNode(),
+      transformResult: async ({ result }) => result,
+    });
+    const send = vi.fn<typeof fetch>();
+    const restore = setLogSink(() => {});
+    try {
+      await runnerStarter(
+        testConfig({
+          CLOUD_RUN_RUNNER_JOB: job,
+          CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32),
+          RUNNER_WAKE_TIMEOUT_MS: '20',
+        }),
+        delayed,
+        send,
+      )();
+      expect(send).not.toHaveBeenCalled();
+    } finally {
+      setLogSink(restore);
+    }
+  });
+
+  it('keeps a newer launch reservation when an older probe reports an active drain', async () => {
+    let probes = 0;
+    const delayed = db.withPlugin({
+      transformQuery: () =>
+        (++probes === 1
+          ? sql`select pg_sleep(0.1), true as held`
+          : sql`select false as held`
+        ).toOperationNode(),
+      transformResult: async ({ result }) => result,
+    });
+    let clock = 0;
+    const send = vi.fn<typeof fetch>(async (url) =>
+      Response.json(
+        String(url).startsWith('http:')
+          ? { access_token: 'recorded' }
+          : { name: 'operations/test' },
+      ),
+    );
+    const start = runnerStarter(
+      testConfig({ CLOUD_RUN_RUNNER_JOB: job, CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32) }),
+      delayed,
+      send,
+      () => clock,
+    );
+    const older = start();
+    clock = 5000;
+    await start();
+    await older;
+    clock = 5001;
+    await start();
+    expect(send).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -261,9 +261,12 @@ enforcement can overshoot. Cloud Logging is outside this service cap.
 
 After a cap triggers, the owner first investigates the abuse and estimated
 costs. In Billing → Budgets & alerts, edit the spend-cap budget and manually lift
-the cap to restore usage. Then verify the API and next scheduled tick recover;
-re-establish the owner's chosen protection after the incident. Do not delete
-resources or reset the database to restore service.
+the cap to restore usage. Recovery can take up to one hour; then verify the API
+and next scheduled tick recover. A cap lifted in the same billing month will
+not trigger again that month unless the owner increases its target. The owner
+must choose a higher target or another incident guard for the rest of the month;
+the cap resets for the next monthly period. Do not delete resources or reset
+the database to restore service.
 
 - **Suspected credential exposure:** disable the affected Secret Manager
   version or provider key, rotate it in GitHub, redeploy, and review GitHub and
