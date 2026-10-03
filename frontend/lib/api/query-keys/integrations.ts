@@ -14,9 +14,5 @@ export const integrationKeys = {
     ['integrations', 'backfill-progress', connectionId] as const,
   sync: (connectionId: string, syncId: string) =>
     ['integrations', 'sync', connectionId, syncId] as const,
-  // Property discovery hits the provider live, so it is fetched lazily (only
-  // once the picker opens) and cached per connection rather than with the
-  // connections list.
-  properties: (connectionId: string) => ['integrations', 'properties', connectionId] as const,
   mappings: (connectionId: string) => ['integrations', 'mappings', connectionId] as const,
 };

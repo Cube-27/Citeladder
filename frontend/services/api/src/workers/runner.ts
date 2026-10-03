@@ -27,6 +27,8 @@ import { SiteHealthWorker } from './site-health-worker.ts';
 import { integrationSettings } from '../integrations/config.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { getLogger } from '../logging.ts';
+import { cleanupMcpProtocol } from '../mcp/maintenance.ts';
+import { DRAIN_LOCK } from '../config/execution.ts';
 
 export type RunnerLane = {
   name: string;
@@ -72,9 +74,6 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
 }
 
 export type Exclusive = (drain: () => Promise<number>) => Promise<number>;
-
-// hashtextextended('citeladder-runner-drain', 0): one drain per database at a time.
-const DRAIN_LOCK = 'citeladder-runner-drain';
 
 /**
  * Each committed write may start an execution; without this a burst would open
@@ -160,6 +159,10 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       },
     ] satisfies RunnerLane[],
     periodic: [
+      {
+        name: 'mcp-protocol-cleanup',
+        run: (canAdmit) => cleanupMcpProtocol(db, new Date(), canAdmit),
+      },
       { name: 'queue-recovery', run: (canAdmit) => recoverQueues(db, canAdmit) },
       {
         name: 'audit-maintenance',

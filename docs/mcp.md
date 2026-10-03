@@ -53,6 +53,12 @@ protections are bounds and binding instead:
 - Authorization requires S256 PKCE and an exact match against a registered
   redirect. The token exchange rechecks that redirect and the verifier, and a
   code is single-use.
+- `/authorize` rejects queries over 8 KiB and states over 1,024 UTF-8 bytes
+  before writes. Atomic usage windows admit 10/client, 40/trusted source and
+  120/global per minute; the client row lock caps live unconsumed requests at
+  five. Limits belong to the native MCP configuration. The periodic runner
+  cleanup removes at most 100 expired unconsumed requests, codes and expired
+  usage windows per table per pass, preserving grants and consumed audit data.
 
 The consent page labels the client name as an unverified self-declaration and
 names the redirect host the flow actually enforces.

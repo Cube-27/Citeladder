@@ -4,6 +4,7 @@ const defaults = {
   budgetSeconds: 300,
   poolSize: 4,
   wakeTimeoutMs: 5000,
+  wakeMinIntervalMs: 5000,
   laneConcurrency: 1,
   drainLockWaitMs: 15_000,
   drainLockPollMs: 250,
@@ -60,8 +61,17 @@ export function executionSettings(env: Record<string, string | undefined>) {
     budgetSeconds: integer(env, 'RUNNER_BUDGET_SECONDS', defaults.budgetSeconds, 3600),
     poolSize: integer(env, 'RUNNER_DB_POOL_SIZE', defaults.poolSize, 4),
     wakeTimeoutMs: integer(env, 'RUNNER_WAKE_TIMEOUT_MS', defaults.wakeTimeoutMs, 30000),
+    wakeMinIntervalMs: integer(
+      env,
+      'RUNNER_WAKE_MIN_INTERVAL_MS',
+      defaults.wakeMinIntervalMs,
+      60000,
+    ),
   };
 }
+
+// hashtextextended(DRAIN_LOCK, 0): one drain per database at a time.
+export const DRAIN_LOCK = 'citeladder-runner-drain';
 
 /** Tables whose API mutations can leave executable or recoverable work. */
 export const executionTables = new Set([

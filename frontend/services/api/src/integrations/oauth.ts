@@ -4,6 +4,9 @@ import { SignJWT, jwtVerify } from 'jose';
 import type { Database } from '../db/database.ts';
 import { IntegrationClient, IntegrationError } from './client.ts';
 import { policy } from '../config.ts';
+import { resolveWorkspaceMember } from '../auth/workspace.ts';
+import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
+import { ApiError } from '../errors.ts';
 import {
   endpoints,
   integrationPolicy,
@@ -137,17 +140,7 @@ export async function completeOAuth(
     .returning('id')
     .executeTakeFirst();
   if (!consumed) throw new IntegrationError('oauth_state_invalid', 'Invalid OAuth state');
-  const member = await db
-    .selectFrom('users')
-    .innerJoin('workspace_members', 'workspace_members.user_id', 'users.id')
-    .innerJoin('workspaces', 'workspaces.id', 'workspace_members.workspace_id')
-    .select(['users.id'])
-    .where('users.id', '=', userId)
-    .where('users.is_active', '=', true)
-    .where('workspace_members.workspace_id', '=', workspaceId)
-    .where('workspaces.is_system', '=', false)
-    .executeTakeFirst();
-  if (!member) throw new IntegrationError('oauth_state_invalid', 'Invalid OAuth state');
+  await requireCredentialAuthority(db, workspaceId, userId);
 
   const transport = endpoints.INTEGRATION_PROVIDER_TRANSPORT[
     input.provider
@@ -160,6 +153,7 @@ export async function completeOAuth(
     redirect_uri: redirectUri,
   });
   await db.transaction().execute(async (trx) => {
+    await requireCredentialAuthority(trx, workspaceId, userId, true);
     const existing = await trx
       .selectFrom('integration_oauth_grants')
       .selectAll()
@@ -248,4 +242,26 @@ export async function completeOAuth(
       })
       .execute();
   });
+}
+
+/** Any authority failure reads as an invalid state; `lock` holds the workspace for the write. */
+async function requireCredentialAuthority(
+  db: Database,
+  workspaceId: string,
+  userId: string,
+  lock = false,
+) {
+  try {
+    if (lock) await lockAuthorizedWorkspace(db, workspaceId, userId, 'manage_credentials');
+    else (await resolveWorkspaceMember(db, userId, workspaceId)).require('manage_credentials');
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+    throw new IntegrationError('oauth_state_invalid', 'Invalid OAuth state');
+  }
+  const user = await db
+    .selectFrom('users')
+    .select('is_active')
+    .where('id', '=', userId)
+    .executeTakeFirst();
+  if (!user?.is_active) throw new IntegrationError('oauth_state_invalid', 'Invalid OAuth state');
 }

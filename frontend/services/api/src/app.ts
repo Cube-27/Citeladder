@@ -59,7 +59,7 @@ export function createApp(
   app.use(requestId(config.requestIdHeader));
   app.use(apiNoStore());
   app.use(originToken(config));
-  const startRunner = options.startRunner ?? runnerStarter(config);
+  const startRunner = options.startRunner ?? runnerStarter(config, db);
   app.use((_c, next) => observeCommittedWork(next, startRunner));
   app.use(
     '/api/*',

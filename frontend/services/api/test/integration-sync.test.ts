@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   integrationSyncEnqueueSchema,
@@ -156,6 +157,85 @@ async function progress(target: Target) {
 }
 
 describe('integration sync API and immutable windows', () => {
+  it('bounds distinct windows concurrently per workspace and leaves duplicates uncharged', async () => {
+    const target = await seedTarget();
+    const results = await Promise.all(
+      Array.from({ length: settings.sync_on_demand_request_limit + 2 }, (_, index) => {
+        const date = `2026-07-${String(index + 1).padStart(2, '0')}`;
+        return request(target, '/sync', { window_start: date, window_end: date }, ownerId, 'POST');
+      }),
+    );
+    expect(results.filter((result) => result.status === 202)).toHaveLength(
+      settings.sync_on_demand_request_limit,
+    );
+    expect(results.filter((result) => result.status === 429)).toHaveLength(2);
+    const run = await db
+      .selectFrom('integration_sync_runs')
+      .select(sql<string>`window_start::text`.as('date'))
+      .where('workspace_id', '=', target.workspaceId)
+      .executeTakeFirstOrThrow();
+    const date = run.date;
+    expect(
+      (await request(target, '/sync', { window_start: date, window_end: date }, ownerId, 'POST'))
+        .status,
+    ).toBe(409);
+    expect(
+      await db
+        .selectFrom('usage_windows')
+        .select('count')
+        .where('operation', '=', 'integrations.sync.on_demand')
+        .where(
+          'subject_hash',
+          '=',
+          (await import('node:crypto'))
+            .createHash('sha256')
+            .update(target.workspaceId)
+            .digest('hex'),
+        )
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ count: settings.sync_on_demand_request_limit });
+    expect((await enqueue(await seedTarget())).status).toBe('queued');
+  });
+
+  it('rejects a new window at capacity, frees terminal slots, and exempts scheduled/backfill work', async () => {
+    const target = await seedTarget();
+    for (let index = 0; index < settings.sync_on_demand_active_limit; index++) {
+      const date = `2026-06-${String(index + 1).padStart(2, '0')}`;
+      const run = await enqueueSyncRun(db, {
+        ...target,
+        windowStart: date,
+        windowEnd: date,
+        syncKind: 'backfill',
+      });
+      await db
+        .updateTable('integration_sync_runs')
+        .set({ status: ['queued', 'leased', 'running', 'retry_wait'][index % 4]! })
+        .where('id', '=', run.sync_run_id)
+        .execute();
+    }
+    expect(
+      (
+        await request(
+          target,
+          '/sync',
+          { window_start: '2026-07-01', window_end: '2026-07-01' },
+          ownerId,
+          'POST',
+        )
+      ).status,
+    ).toBe(429);
+    await enqueueSyncRun(db, { ...target, syncKind: 'scheduled' });
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ status: 'succeeded', completed_at: new Date() })
+      .where('workspace_id', '=', target.workspaceId)
+      .where('window_start', '<=', new Date('2026-06-02T00:00:00Z'))
+      .execute();
+    expect(
+      (await enqueue(target, { window_start: '2026-07-01', window_end: '2026-07-01' })).status,
+    ).toBe('queued');
+    expect((await enqueue(await seedTarget())).status).toBe('queued');
+  });
   it('returns a 202 enqueue identity and freezes the default UTC window without credentials', async () => {
     const target = await seedTarget();
     const before = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);

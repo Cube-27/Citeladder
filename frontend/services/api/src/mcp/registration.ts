@@ -88,39 +88,59 @@ export async function admitRegistration(
       value('mcp_register_global_window_seconds'),
     ],
   ] as const;
-  await db.transaction().execute(async (trx) => {
-    const now = new Date();
-    for (const [kind, subject, operation, limit, window] of budgets) {
-      const epoch = Math.floor(now.getTime() / 1000);
-      const start = epoch - (epoch % window);
-      const expires = new Date((start + window) * 1000);
-      const charged = await trx
-        .insertInto('usage_windows')
-        .values({
-          id: randomUUID(),
-          subject_kind: kind,
-          subject_hash: createHash('sha256').update(subject.trim().toLowerCase()).digest('hex'),
-          operation,
-          count: 1,
-          window_started_at: new Date(start * 1000),
-          expires_at: expires,
-          created_at: now,
-          updated_at: now,
-        })
-        .onConflict((c) =>
-          c
-            .constraint('uq_usage_window_subject_operation_start')
-            .doUpdateSet({ count: sql`usage_windows.count + 1`, updated_at: now })
-            .where(sql<boolean>`usage_windows.count + 1 <= ${limit}`),
-        )
-        .returning('count')
-        .executeTakeFirst();
-      if (!charged)
-        throw new RegistrationLimit(
-          Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000)),
-        );
-    }
-  });
+  await db.transaction().execute((trx) => admitBudgets(trx, budgets));
+}
+
+export function admitAuthorization(db: Database, clientId: string, source: string) {
+  const window = mcpPolicy.authorization_window_seconds;
+  return admitBudgets(db, [
+    ['client', clientId, 'mcp.authorize.client', mcpPolicy.authorization_client_limit, window],
+    ['client', source, 'mcp.authorize.source', mcpPolicy.authorization_source_limit, window],
+    [
+      'global',
+      'mcp.authorize',
+      'mcp.authorize.global',
+      mcpPolicy.authorization_global_limit,
+      window,
+    ],
+  ]);
+}
+
+async function admitBudgets(
+  trx: Database,
+  budgets: readonly (readonly [string, string, string, number, number])[],
+) {
+  const now = new Date();
+  for (const [kind, subject, operation, limit, window] of budgets) {
+    const epoch = Math.floor(now.getTime() / 1000);
+    const start = epoch - (epoch % window);
+    const expires = new Date((start + window) * 1000);
+    const charged = await trx
+      .insertInto('usage_windows')
+      .values({
+        id: randomUUID(),
+        subject_kind: kind,
+        subject_hash: createHash('sha256').update(subject.trim().toLowerCase()).digest('hex'),
+        operation,
+        count: 1,
+        window_started_at: new Date(start * 1000),
+        expires_at: expires,
+        created_at: now,
+        updated_at: now,
+      })
+      .onConflict((c) =>
+        c
+          .constraint('uq_usage_window_subject_operation_start')
+          .doUpdateSet({ count: sql`usage_windows.count + 1`, updated_at: now })
+          .where(sql<boolean>`usage_windows.count + 1 <= ${limit}`),
+      )
+      .returning('count')
+      .executeTakeFirst();
+    if (!charged)
+      throw new RegistrationLimit(
+        Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000)),
+      );
+  }
 }
 export async function registerClient(db: Database, mcp: McpConfig, input: unknown) {
   if (!mcp.enabled) throw new OAuthError('invalid_client_metadata', 'MCP access is not enabled');

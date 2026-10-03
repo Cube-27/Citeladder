@@ -342,9 +342,10 @@ export const integrationRoutes = [
       );
     },
   }),
-  defineGetRoute({
+  definePostRoute({
     family,
     path: '/api/v1/integrations/{connection_id}/properties',
+    capability: 'manage_credentials',
     params: { path: connectionPath, query: {} },
     response: integrationPropertyListSchema,
     async handle({ c, db }, { path }) {

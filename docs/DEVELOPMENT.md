@@ -302,6 +302,7 @@ new admission and lets claimed work finish before destroying the pool.
 | `RUNNER_BUDGET_SECONDS` | Runner/tick | 300; 1–3600 seconds, shared across phases and lanes |
 | `RUNNER_DB_POOL_SIZE` | Runner/tick and API with configured job | 4; 1–4 pooled connections, independent of legacy pool/overflow sizes; a draining execution also holds one lock session |
 | `RUNNER_WAKE_TIMEOUT_MS` | API | 5000; 1–30000 milliseconds for metadata plus job-start requests |
+| `RUNNER_WAKE_MIN_INTERVAL_MS` | API | 5000; 1–60000 milliseconds between job-start attempts per instance |
 
 The API's service account needs permission to execute that runner job
 (`roles/run.invoker` on the job); no new static Google key is needed. Metadata
@@ -315,7 +316,9 @@ supplied by Cloud Run and makes a missing origin secret a startup error. The
 runner and tick are separate jobs over the same image, and Cloud Scheduler
 starts the tick job. Each job's timeout allows in-flight work to finish beyond
 the admission budget; a forced termination leaves leased work for recovery.
-Only one execution drains at a time (a PostgreSQL advisory lock). A later
+The API skips wake-up while the PostgreSQL drain lock is held and coalesces
+launch attempts within the configured per-instance interval. Tick recovers
+work arriving as a drain ends. Only one execution drains at a time (a PostgreSQL advisory lock). A later
 execution waits up to 15 seconds and then leaves the work to the active drain,
 so a burst of writes cannot open one pool per execution. Locally, leave
 `CLOUD_RUN_RUNNER_JOB` unset; the Compose `runner` loop replaces wake-up.

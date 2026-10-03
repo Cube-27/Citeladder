@@ -5,6 +5,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
 import { integrationPolicy, integrationSettings } from './config.ts';
+import { enforceWorkspaceRequest } from '../abuse/usage.ts';
 
 const settings = integrationSettings();
 
@@ -50,13 +51,23 @@ function windowFor(start: string | undefined, end: string | undefined): [string,
 
 export function enqueueSyncRun(db: Database, input: SyncInput) {
   return db.transaction().execute(async (trx) => {
+    const workspace = await trx
+      .selectFrom('workspaces')
+      .select('id')
+      .where('id', '=', input.workspaceId)
+      .where('is_system', '=', false)
+      .forUpdate()
+      .executeTakeFirst();
+    if (!workspace) throw notFound('Workspace');
     const target = await resolveSyncTarget(trx, input);
     const [windowStart, windowEnd] = await syncWindow(trx, input, target.id);
+    const kind = input.syncKind ?? 'on_demand';
+    if (kind === 'on_demand')
+      await admitOnDemandSync(trx, input.workspaceId, target.id, windowStart, windowEnd);
     const prior = await previousSequence(trx, input, target);
     const sequence = (prior?.resync_seq ?? -1) + 1;
     const id = randomUUID();
     const now = new Date();
-    const kind = input.syncKind ?? 'on_demand';
     const key = `sync:${input.connectionId}:${target.id}:${kind}:${windowStart}:${windowEnd}:${sequence}`;
     try {
       await trx
@@ -99,6 +110,41 @@ export function enqueueSyncRun(db: Database, input: SyncInput) {
       throw error;
     }
     return { sync_run_id: id, connection_id: input.connectionId, status: 'queued' };
+  });
+}
+
+async function admitOnDemandSync(
+  trx: Database,
+  workspaceId: string,
+  mappingId: string,
+  start: string,
+  end: string,
+) {
+  const active = trx
+    .selectFrom('integration_sync_runs')
+    .where('workspace_id', '=', workspaceId)
+    .where('status', 'in', ['queued', 'leased', 'running', 'retry_wait']);
+  const duplicate = await active
+    .select('id')
+    .where('mapping_id', '=', mappingId)
+    .where('sync_kind', '=', 'on_demand')
+    .where('window_start', '=', new Date(`${start}T00:00:00Z`))
+    .where('window_end', '=', new Date(`${end}T00:00:00Z`))
+    .executeTakeFirst();
+  if (duplicate)
+    throw new ApiError(409, 'A sync window is already active for this connection', {
+      code: 'sync_active_window_conflict',
+      details: { enqueued_connection_ids: [] },
+    });
+  const count = await active
+    .select(({ fn }) => fn.countAll<string>().as('count'))
+    .executeTakeFirstOrThrow();
+  if (Number(count.count) >= settings.sync_on_demand_active_limit)
+    throw new ApiError(429, 'Workspace sync capacity exceeded');
+  await enforceWorkspaceRequest(trx, workspaceId, {
+    operation: 'integrations.sync.on_demand',
+    limit: settings.sync_on_demand_request_limit,
+    windowSeconds: settings.sync_on_demand_request_window_seconds,
   });
 }
 
