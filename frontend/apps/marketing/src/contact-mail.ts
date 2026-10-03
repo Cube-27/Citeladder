@@ -7,7 +7,7 @@ import {
 } from '@/lib/config/contact';
 
 function escapeHtml(value: string): string {
-  return value.replace(
+  return value.replaceAll(
     /[&<>"']/g,
     (character) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!,
@@ -22,13 +22,20 @@ export function contactEmail(submission: ContactSubmission) {
     ['Message', submission.message],
     ['Submitted from', 'citeladder.com/contact'],
   ];
+  const textFields = fields.map(([label, value]) => `${label}:\n${value}`).join('\n\n');
+  const htmlFields = fields
+    .map(
+      ([label, value]) =>
+        `<p><strong>${label}:</strong><br>${escapeHtml(value!).replaceAll('\n', '<br>')}</p>`,
+    )
+    .join('');
   return {
     from: CONTACT_SENDER,
     to: CONTACT_EMAIL,
     replyTo: submission.email,
     subject: `CiteLadder enquiry — ${submission.name}`,
-    text: `New CiteLadder enquiry\n\n${fields.map(([label, value]) => `${label}:\n${value}`).join('\n\n')}`,
-    html: `<h1>New CiteLadder enquiry</h1>${fields.map(([label, value]) => `<p><strong>${label}:</strong><br>${escapeHtml(value!).replace(/\n/g, '<br>')}</p>`).join('')}`,
+    text: `New CiteLadder enquiry\n\n${textFields}`,
+    html: `<h1>New CiteLadder enquiry</h1>${htmlFields}`,
   };
 }
 

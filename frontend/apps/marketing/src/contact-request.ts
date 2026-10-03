@@ -1,3 +1,4 @@
+import type { ZodError } from 'zod';
 import {
   CONTACT_MAX_BODY_BYTES,
   contactSubmissionSchema,
@@ -15,6 +16,15 @@ function result(status: number, outcome: string, fields?: Record<string, string>
     { outcome, ...(fields ? { fields } : {}) },
     { status, headers: { 'Cache-Control': 'no-store' } },
   );
+}
+
+function validationError(error: ZodError): Response {
+  const fields: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const field = String(issue.path[0] ?? '');
+    if (['name', 'email', 'company', 'message'].includes(field)) fields[field] ??= issue.message;
+  }
+  return result(400, 'validation_error', fields);
 }
 
 async function readPayload(request: Request): Promise<unknown> {
@@ -59,14 +69,7 @@ export async function handleContactRequest(
     return result(400, 'validation_error');
   }
   const parsed = contactSubmissionSchema.safeParse(payload);
-  if (!parsed.success) {
-    const fields: Record<string, string> = {};
-    for (const issue of parsed.error.issues) {
-      const field = String(issue.path[0] ?? '');
-      if (['name', 'email', 'company', 'message'].includes(field)) fields[field] ??= issue.message;
-    }
-    return result(400, 'validation_error', fields);
-  }
+  if (!parsed.success) return validationError(parsed.error);
   if (parsed.data.website.trim()) return result(403, 'spam_rejected');
   try {
     const ip = request.headers.get('CF-Connecting-IP');

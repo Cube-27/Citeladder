@@ -126,6 +126,20 @@ describe('contact intake', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it('returns errors only for editable enquiry fields', async () => {
+    const send = vi.fn();
+    const response = await handleContactRequest(
+      request({ ...valid, name: ' ', email: 'invalid', website: 'x'.repeat(201), extra: true }),
+      send,
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      outcome: 'validation_error',
+      fields: { name: 'Enter your name.', email: 'Enter a valid email address.' },
+    });
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('bounds streamed bodies and rejects malformed JSON and unsupported methods', async () => {
     const send = vi.fn();
     const headers = { Origin: 'https://citeladder.com', 'Content-Type': 'application/json' };

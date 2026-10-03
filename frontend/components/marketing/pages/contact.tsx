@@ -167,7 +167,7 @@ function ContactForm() {
           <a href={`mailto:${CONTACT_EMAIL}`} className="underline">
             {CONTACT_EMAIL}
           </a>
-          .
+          {'.'}
         </div>
       )}
       <Button type="submit" size="marketing" disabled={state === 'sending'}>
