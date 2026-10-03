@@ -9,7 +9,7 @@ import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
 export type TrafficDataTab = 'overview' | 'crawlers' | 'activity';
 const rangeCodec = stringUrlCodec(
   TRAFFIC_RANGES.map((t) => t.value),
-  '30d',
+  TRAFFIC_RANGES[0].value,
 );
 const verificationCodec = stringUrlCodec(
   VERIFICATION_OPTIONS.map((t) => t.value),
@@ -47,7 +47,8 @@ function selectedFilters(tab: TrafficDataTab, selection: ReturnType<typeof useTr
     verification: verification === 'default' ? undefined : verification,
     purpose: tab === 'crawlers' ? purpose : undefined,
     bot_id: tab === 'activity' ? bot : undefined,
-    status: tab === 'activity' && status ? Number(status) : undefined,
+    status:
+      tab === 'activity' && status && /^[1-5]\d{2}$/u.test(status) ? Number(status) : undefined,
     folder: tab === 'overview' ? undefined : folder || undefined,
     resource_class: tab === 'overview' ? undefined : resource || undefined,
   };

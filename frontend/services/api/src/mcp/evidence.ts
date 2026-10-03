@@ -6,6 +6,7 @@ import {
   coveragePage,
   activityPage,
   type CrawlReadOptions,
+  crawlReadArtifacts,
 } from '../crawl-logs/reads.ts';
 import { policy } from '../config.ts';
 import { robotsFactsSchema } from '@citeladder/contracts/site-health';
@@ -295,15 +296,50 @@ export async function readEvidence(
       folder: text(args, 'folder'),
       resource_class: text(args, 'resource_class'),
     };
-    const result =
-      name === 'list_bot_requests'
-        ? await activityPage(db, scope, options)
-        : args.view === 'crawlers'
-          ? await crawlerPage(db, scope, options)
-          : args.view === 'coverage'
-            ? await coveragePage(db, scope, options)
-            : await crawlSummary(db, scope, options);
-    return { state: 'available', ...result, artifact_refs: [], omissions: [] };
+    if (name === 'list_bot_requests') {
+      const result = await activityPage(db, scope, options);
+      return {
+        state: 'available',
+        ...result,
+        artifact_refs: result.items.map((row) => ({
+          ...reference('bot_request', row.id, false),
+          catalog_version: row.catalog_version,
+        })),
+        omissions: [],
+      };
+    }
+    if (args.view === 'coverage') {
+      const result = await coveragePage(db, scope, options);
+      return {
+        state: 'available',
+        ...result,
+        artifact_refs: result.sources.map((source) =>
+          reference('crawl_log_source', source.id, false),
+        ),
+        omissions: [],
+      };
+    }
+    const reader = args.view === 'crawlers' ? crawlerPage : crawlSummary;
+    const result = await reader(db, scope, options);
+    const artifacts = await crawlReadArtifacts(db, scope, options);
+    return {
+      state: 'available',
+      ...result,
+      artifact_refs: artifacts.slice(0, mcpPolicy.max_list_limit).map((row) => ({
+        ...reference('bot_activity_daily', row.id, false),
+        formula_version: row.formula_version,
+        source_batch_ids: row.source_batch_ids,
+      })),
+      omissions:
+        artifacts.length > mcpPolicy.max_list_limit
+          ? [
+              {
+                reason: 'artifact_refs_bounded',
+                count: artifacts.length - mcpPolicy.max_list_limit,
+              },
+            ]
+          : [],
+    };
   }
   if (name === 'read_integration_status') return readIntegrationStatus(db, scope);
   if (name === 'read_site_health') return siteSnapshot(db, scope);

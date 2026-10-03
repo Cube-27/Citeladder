@@ -48,13 +48,7 @@ export function CrawlLogSetup({
                 aria-pressed={setup === s.value}
                 onClick={() => {
                   setSetup(s.value);
-                  setPoint(
-                    s.value === 'custom'
-                      ? 'application'
-                      : s.value === 'upload'
-                        ? 'uploaded_file'
-                        : 'cdn_edge',
-                  );
+                  setPoint(s.collectionPoint);
                   setSampling(s.value === 'cloudflare_worker' ? 'filtered' : 'none');
                   setFilter(
                     s.value === 'cloudflare_worker'

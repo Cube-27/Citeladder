@@ -40,7 +40,7 @@ export async function lockCrawlState(db: Database, scope: CrawlScope) {
       id: randomUUID(),
       workspace_id: scope.workspaceId,
       project_id: scope.projectId,
-      reporting_timezone: 'UTC',
+      reporting_timezone: crawlLogs.default_reporting_timezone,
       updated_at: new Date(),
     })
     .onConflict((c) => c.constraint('uq_crawl_log_state_project').doNothing())
@@ -86,7 +86,7 @@ export async function enqueueRollup(
     ...new Set([...strings(record(pending?.payload).reporting_dates), ...dates]),
   ]
     .filter((day) => day >= floor)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   if (pending) {
     await db
       .updateTable('analytics_tasks')

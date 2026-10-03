@@ -172,7 +172,7 @@ export const botActivityResponseSchema = z.object({
 const botCrawlerRowSchema = z.object({
   bot_id: z.string(),
   label: z.string(),
-  purpose: crawlerPurposeSchema,
+  purpose: crawlerPurposeSchema.or(z.literal('unknown')),
   requests: z.number(),
   pages: z.number().nullable(),
   last_seen: z.string(),
@@ -197,9 +197,13 @@ export const crawlSummarySchema = z.object({
   pages: z.number().nullable(),
   active_bots: z.number().nullable(),
   error_share: z.number().nullable(),
-  failed_verification_requests: z.number(),
+  failed_verification_requests: z.number().nullable(),
   series: z.array(
-    z.object({ date: z.string(), purpose: crawlerPurposeSchema, requests: z.number() }),
+    z.object({
+      date: z.string(),
+      purpose: crawlerPurposeSchema.or(z.literal('unknown')),
+      requests: z.number(),
+    }),
   ),
 });
 export const aiTrafficOverviewSchema = z.object({

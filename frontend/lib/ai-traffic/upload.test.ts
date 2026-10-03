@@ -106,6 +106,26 @@ beforeEach(() => {
   });
 });
 describe('local streaming upload privacy', () => {
+  it('uses the whole scan span to declare middle days complete', async () => {
+    const rows = ['2026-10-01', '2026-10-02', '2026-10-03'].map((day) => ({
+      ...event('unmatched'),
+      timestamp: day + 'T12:00:00Z',
+    }));
+    await run(file(rows.map((row) => JSON.stringify(row)).join('\n')));
+    expect(aiTrafficApi.completeUpload).toHaveBeenCalledWith(
+      'project',
+      'source',
+      'upload',
+      expect.objectContaining({
+        scanned_dates: [
+          { date: '2026-10-01', complete: false },
+          { date: '2026-10-02', complete: true },
+          { date: '2026-10-03', complete: false },
+        ],
+      }),
+      expect.anything(),
+    );
+  });
   it('sends only recognized lines and completes zero-match scans without sending batches', async () => {
     await run(
       file(

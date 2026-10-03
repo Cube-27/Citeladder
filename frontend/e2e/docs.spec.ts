@@ -45,6 +45,12 @@ test('guides and local anchors resolve, and missing pages return 404', async ({ 
       );
     for (const link of links) {
       const url = new URL(link);
+      if (url.pathname.startsWith('/templates/')) {
+        const asset = await page.request.get(link);
+        expect(asset.status(), link).toBe(200);
+        expect((await asset.body()).byteLength, link).toBeGreaterThan(0);
+        continue;
+      }
       expect(routes, `Unregistered docs link ${link}`).toContain(url.pathname);
       if (url.hash) {
         await page.goto(link);

@@ -633,6 +633,7 @@ export interface BotActivityDaily {
   status_code: number;
   url_hash: string | null;
   verification: string;
+  verification_reasons: Json;
   workspace_id: string;
 }
 

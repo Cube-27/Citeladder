@@ -19,7 +19,7 @@ class JsonObjectArray {
   private ended = false;
   private needComma = false;
   private afterComma = false;
-  constructor(private maxLineBytes: number) {}
+  constructor(private readonly maxLineBytes: number) {}
   push(char: string): string | null {
     if (!this.depth) return this.outside(char);
     this.pending += char;
@@ -228,9 +228,9 @@ export async function uploadCrawlFile(input: {
         scanned_lines: scanned,
         first_line_at: scan.first,
         last_line_at: scan.last,
-        scanned_dates: [...scan.dates].map(([date, span]) => ({
+        scanned_dates: [...scan.dates.keys()].map((date) => ({
           date,
-          complete: span.first <= date + 'T00:00:00.000Z' && span.last >= date + 'T23:59:59.000Z',
+          complete: scan.first! <= date + 'T00:00:00.000Z' && scan.last! >= date + 'T23:59:59.000Z',
         })),
       },
       options,

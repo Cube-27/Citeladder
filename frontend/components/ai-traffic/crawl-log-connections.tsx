@@ -125,11 +125,8 @@ function SourceDiagnostics({
             </TableCell>
             <TableCell>
               {s.collection_point} · {s.sampling.kind}
-              {s.sampling.kind === 'sampled'
-                ? ' ' + s.sampling.rate
-                : s.sampling.kind === 'filtered'
-                  ? ' ' + s.sampling.description
-                  : ''}
+              {s.sampling.kind === 'sampled' ? ' ' + s.sampling.rate : ''}
+              {s.sampling.kind === 'filtered' ? ' ' + s.sampling.description : ''}
             </TableCell>
             <TableCell>
               Accepted: <DisplayTime value={s.last_accepted_batch} fallback="Awaiting data" />

@@ -27,7 +27,7 @@ const crawl = {
   pages: null,
   active_bots: null,
   error_share: null,
-  failed_verification_requests: 0,
+  failed_verification_requests: null,
   series: [],
 };
 const referrals = {

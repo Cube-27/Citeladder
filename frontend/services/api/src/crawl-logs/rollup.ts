@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { sql } from 'kysely';
+import { sql, type Selectable, type Insertable } from 'kysely';
+import type {
+  CrawlLogSources,
+  CrawlLogBatches,
+  CrawlLogUploads,
+  CrawlLogCoverageDaily,
+} from '../generated/db-schema.ts';
 import type { Database } from '../db/database.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { record, strings } from '../db/json.ts';
@@ -13,7 +19,7 @@ export async function refreshCrawlLogs(
   now = new Date(),
   reportingDates?: string[],
 ) {
-  return db.transaction().execute(async (trx) => {
+  return await db.transaction().execute(async (trx) => {
     const state = await lockCrawlState(trx, scope);
     const tz = state.reporting_timezone;
     const cutoff = new Date(
@@ -33,15 +39,19 @@ export async function refreshCrawlLogs(
       .where('reporting_date', '>=', floor)
       .where(selectedDay)
       .execute();
-    await sql`insert into bot_activity_daily (id,workspace_id,project_id,reporting_date,reporting_timezone,bot_id,identity_key,
-      identity,url_hash,display_path,folder,resource_class,verification,status_code,requests,first_seen_at,last_seen_at,formula_version,source_batch_ids)
-      select gen_random_uuid(),workspace_id,project_id,(occurred_at at time zone ${tz})::date,${tz},bot_id,
-        coalesce(url_hash,folder || ':' || resource_class),identity,url_hash,min(display_path),folder,resource_class,
-        verification,status_code,count(*)::integer,min(occurred_at),max(occurred_at),${crawlLogs.formula_version},
-        to_jsonb((array_agg(distinct batch_id order by batch_id))[1:${crawlLogs.max_source_batch_ids}])
+    await sql`with input_rows as (
+      select *,count(*) over(partition by workspace_id,project_id,(occurred_at at time zone ${tz})::date,bot_id,
+        coalesce(url_hash,folder || ':' || resource_class),identity,url_hash,folder,resource_class,verification,status_code,verification_reason) as reason_count
       from bot_requests where workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid
-        and (occurred_at at time zone ${tz})::date >= ${floor}
-        and ${selectedRequest}
+        and (occurred_at at time zone ${tz})::date >= ${floor} and ${selectedRequest}
+      ) insert into bot_activity_daily (id,workspace_id,project_id,reporting_date,reporting_timezone,bot_id,identity_key,
+      identity,url_hash,display_path,folder,resource_class,verification,status_code,requests,first_seen_at,last_seen_at,formula_version,source_batch_ids,verification_reasons)
+      select gen_random_uuid(),workspace_id,project_id,(occurred_at at time zone ${tz})::date,${tz},bot_id,
+        coalesce(url_hash,encode(sha256(convert_to(folder || ':' || resource_class,'UTF8')),'hex')),identity,url_hash,min(display_path),folder,resource_class,
+        verification,status_code,count(*)::integer,min(occurred_at),max(occurred_at),${crawlLogs.formula_version},
+        to_jsonb((array_agg(distinct batch_id order by batch_id))[1:${crawlLogs.max_source_batch_ids}]),
+        jsonb_object_agg(coalesce(verification_reason,'verified'),reason_count)
+      from input_rows
       group by 2,3,4,6,7,8,9,11,12,13,14`.execute(trx);
     await trx
       .deleteFrom('crawl_log_coverage_daily')
@@ -56,117 +66,51 @@ export async function refreshCrawlLogs(
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .execute();
-    for (const source of sources) {
-      const batches = await trx
-        .selectFrom('crawl_log_batches')
-        .selectAll()
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('source_id', '=', source.id)
-        .where('status', '=', 'accepted')
-        .where(
-          sql<boolean>`(lines_matched>0 or lines_duplicate>0 or lines_unmatched>0 or heartbeat)`,
-        )
-        .where('received_at', '>=', cutoff)
-        .execute();
-      const uploads = await trx
-        .selectFrom('crawl_log_uploads')
-        .selectAll()
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('source_id', '=', source.id)
-        .where('updated_at', '>=', cutoff)
-        .execute();
-      // Database supplies timezone-aware midnight boundaries, including DST days.
-      const days = await sql<{
-        day: string;
-        start: Date;
-        end: Date;
-      }>`select to_char(d,'YYYY-MM-DD') as day,
-        d::timestamp at time zone ${tz} as start,(d+interval '1 day')::timestamp at time zone ${tz} as end
-        from generate_series(${floor},(${now}::timestamptz at time zone ${tz})::date,interval '1 day') d`.execute(
-        trx,
-      );
-      for (const day of days.rows) {
-        if (reportingDates && !reportingDates.includes(day.day)) continue;
-        const receipts = batches.filter(
-          (b) => b.received_at >= day.start && b.received_at < day.end,
-        );
-        const evidence = batches.some(
-          (b) =>
-            b.first_line_at &&
-            b.last_line_at &&
-            b.first_line_at < day.end &&
-            b.last_line_at >= day.start,
-        );
-        const declarations = uploads
-          .flatMap((u) =>
-            Array.isArray(u.scanned_dates)
-              ? u.scanned_dates.map((d) => ({
-                  date: record(d).date,
-                  complete: record(d).complete,
-                  status: u.status,
-                }))
-              : [],
-          )
-          .filter((d) => d.date === day.day);
-        const times = [
-          day.start.getTime(),
-          ...receipts.map((b) => b.received_at.getTime()).sort((a, b) => a - b),
-          day.end.getTime(),
-        ];
-        const gap = Math.max(...times.slice(1).map((t, i) => (t - times[i]!) / 60000));
-        let coverage = 'unknown',
-          reason = 'no_data';
-        if (declarations.some((d) => d.status === 'completed' && d.complete === true)) {
-          coverage = 'declared_complete';
-          reason = 'client_reported';
-        } else if (receipts.length || evidence || declarations.length) {
-          coverage = 'partial';
-          reason = 'delivery_gaps_or_partial_scan';
-        }
-        if (
-          source.kind === 'webhook' &&
-          receipts.length &&
-          source.setup !== 'cloudflare_worker' &&
-          record(source.sampling).kind === 'none' &&
-          source.created_at <= day.start &&
-          (!source.revoked_at || source.revoked_at >= day.end) &&
-          day.end <= now &&
-          gap <= crawlLogs.max_delivery_gap_minutes
-        ) {
-          coverage = 'complete';
-          reason = 'unsampled_gap_free_declared_scope';
-        }
-        if (source.setup === 'cloudflare_worker' && coverage !== 'unknown') {
-          coverage = 'partial';
-          reason = 'best_effort_worker';
-        }
-        await trx
-          .insertInto('crawl_log_coverage_daily')
-          .values({
-            id: randomUUID(),
-            workspace_id: scope.workspaceId,
-            project_id: scope.projectId,
-            source_id: source.id,
-            reporting_date: day.day,
-            reporting_timezone: tz,
-            coverage,
-            reason,
-            batch_count: receipts.length,
-            heartbeat_count: receipts.filter((b) => b.heartbeat).length,
-            max_gap_minutes: gap,
-          })
-          .execute();
-      }
+    const batches = await trx
+      .selectFrom('crawl_log_batches')
+      .selectAll()
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('status', '=', 'accepted')
+      .where(sql<boolean>`(lines_matched>0 or lines_duplicate>0 or lines_unmatched>0 or heartbeat)`)
+      .where('received_at', '>=', sql<Date>`${floor}::timestamp at time zone ${tz}`)
+      .execute();
+    const uploads = await trx
+      .selectFrom('crawl_log_uploads')
+      .selectAll()
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('updated_at', '>=', sql<Date>`${floor}::timestamp at time zone ${tz}`)
+      .execute();
+    // PostgreSQL supplies timezone-aware midnight boundaries, including DST days.
+    const days = await sql<ReportingDay>`select to_char(d,'YYYY-MM-DD') as day,
+      d::timestamp at time zone ${tz} as start,(d+interval '1 day')::timestamp at time zone ${tz} as end
+      from generate_series(${floor},(${now}::timestamptz at time zone ${tz})::date,interval '1 day') d`.execute(
+      trx,
+    );
+    const coverage = sources.flatMap((source) =>
+      coverageRows(
+        source,
+        batches.filter((b) => b.source_id === source.id),
+        uploads.filter((u) => u.source_id === source.id),
+        days.rows.filter((day) => !reportingDates || reportingDates.includes(day.day)),
+        now,
+        tz,
+        scope,
+      ),
+    );
+    // Bound statements and serialize them on the same transaction connection.
+    for (let i = 0; i < coverage.length; i += crawlLogs.insert_rows_per_statement)
       await trx
-        .updateTable('crawl_log_sources')
-        .set({ last_processed_at: now })
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('id', '=', source.id)
+        .insertInto('crawl_log_coverage_daily')
+        .values(coverage.slice(i, i + crawlLogs.insert_rows_per_statement))
         .execute();
-    }
+    await trx
+      .updateTable('crawl_log_sources')
+      .set({ last_processed_at: now })
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .execute();
     await trx
       .updateTable('crawl_log_states')
       .set({ updated_at: now })
@@ -188,3 +132,95 @@ export const crawlLogRollupRefresh: Executor = async (task, { db, checkCancelled
     dates,
   );
 };
+type ReportingDay = { day: string; start: Date; end: Date };
+type Source = Selectable<CrawlLogSources>;
+type Batch = Selectable<CrawlLogBatches>;
+type Upload = Selectable<CrawlLogUploads>;
+function completeWebhook(source: Source, day: ReportingDay, now: Date, count: number, gap: number) {
+  return (
+    source.kind === 'webhook' &&
+    count > 0 &&
+    source.setup !== 'cloudflare_worker' &&
+    record(source.sampling).kind === 'none' &&
+    source.created_at <= day.start &&
+    (!source.revoked_at || source.revoked_at >= day.end) &&
+    day.end <= now &&
+    gap <= crawlLogs.max_delivery_gap_minutes
+  );
+}
+function coverageRows(
+  source: Source,
+  batches: Batch[],
+  uploads: Upload[],
+  days: ReportingDay[],
+  now: Date,
+  tz: string,
+  scope: CrawlScope,
+): Insertable<CrawlLogCoverageDaily>[] {
+  const declarations = uploads.flatMap((u) =>
+    Array.isArray(u.scanned_dates)
+      ? u.scanned_dates.map((d) => ({
+          date: record(d).date,
+          complete: record(d).complete,
+          status: u.status,
+        }))
+      : [],
+  );
+  return days.flatMap((day) => {
+    const receipts = batches.filter((b) => b.received_at >= day.start && b.received_at < day.end);
+    const evidence = batches.some(
+      (b) =>
+        b.first_line_at &&
+        b.last_line_at &&
+        b.first_line_at < day.end &&
+        b.last_line_at >= day.start,
+    );
+    const scans = declarations.filter((d) => d.date === day.day);
+    if (source.kind === 'upload' && !evidence && !scans.length && !receipts.length) return [];
+    if (
+      source.kind === 'webhook' &&
+      (source.created_at >= day.end || (source.revoked_at && source.revoked_at <= day.start))
+    )
+      return [];
+    const times = [
+      day.start.getTime(),
+      ...receipts.map((b) => b.received_at.getTime()).sort((a, b) => a - b),
+      day.end.getTime(),
+    ];
+    const gap = Math.max(...times.slice(1).map((t, i) => (t - times[i]!) / 60000));
+    const decision = coverageDecision(source, day, now, receipts.length, gap, evidence, scans);
+    return [
+      {
+        id: randomUUID(),
+        workspace_id: scope.workspaceId,
+        project_id: scope.projectId,
+        source_id: source.id,
+        reporting_date: day.day,
+        reporting_timezone: tz,
+        ...decision,
+        batch_count: receipts.length,
+        heartbeat_count: receipts.filter((b) => b.heartbeat).length,
+        max_gap_minutes: gap,
+      },
+    ];
+  });
+}
+function coverageDecision(
+  source: Source,
+  day: ReportingDay,
+  now: Date,
+  count: number,
+  gap: number,
+  evidence: boolean,
+  scans: { status: string; complete: unknown }[],
+) {
+  if (source.setup === 'cloudflare_worker' && (count || evidence || scans.length))
+    return { coverage: 'partial', reason: 'best_effort_worker' };
+  if (completeWebhook(source, day, now, count, gap))
+    return { coverage: 'complete', reason: 'unsampled_gap_free_declared_scope' };
+  if (scans.some((d) => d.status === 'completed' && d.complete === true))
+    return { coverage: 'declared_complete', reason: 'client_reported' };
+  if (count || evidence || scans.length)
+    return { coverage: 'partial', reason: 'delivery_gaps_or_partial_scan' };
+  return { coverage: 'unknown', reason: 'no_data' };
+}

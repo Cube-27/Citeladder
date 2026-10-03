@@ -1,5 +1,7 @@
 {
   "ingestion_enabled": false,
+  "default_reporting_timezone": "UTC",
+  "default_range": "30d",
   "parser_version": "1",
   "formula_version": "1",
   "formats": ["ndjson", "json_array", "combined"],

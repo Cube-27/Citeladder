@@ -13,7 +13,7 @@ import { enqueueRollup, lockCrawlState } from './state.ts';
 export function botIpRangeRefresh(fetcher: WebsiteFetcher = fetchWebsite): Executor {
   return async (task, { checkCancelled }) => {
     const bot = crawlers.bots.find((b) => b.bot_id === record(task.payload).bot_id);
-    if (!bot || bot.verification.method !== 'ip_ranges') throw new Error('Unknown IP range bot');
+    if (bot?.verification.method !== 'ip_ranges') throw new Error('Unknown IP range bot');
     await checkCancelled('ip-range-dispatch');
     const source = bot.verification.source_url;
     let cidrs: string[] = [],
@@ -134,13 +134,12 @@ export async function crawlLogTick(
   now = new Date(),
   canAdmit: () => boolean = () => true,
 ) {
-  if (!crawlLogs.ingestion_enabled) return;
   const system = await db
     .selectFrom('workspaces')
     .select('id')
     .where('is_system', '=', true)
     .executeTakeFirst();
-  if (system)
+  if (system && crawlLogs.ingestion_enabled)
     for (const bot of crawlers.bots.filter((b) => b.verification.method === 'ip_ranges')) {
       if (!canAdmit()) return;
       await enqueueTask(db, {

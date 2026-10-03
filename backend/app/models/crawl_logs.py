@@ -21,6 +21,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 
+_PROJECT_ID_FK = "projects.id"
+_PROJECT_WORKSPACE_FK = "projects.workspace_id"
+_SOURCE_ID_FK = "crawl_log_sources.id"
+_SOURCE_WORKSPACE_FK = "crawl_log_sources.workspace_id"
+_SOURCE_PROJECT_FK = "crawl_log_sources.project_id"
+
 
 class CrawlLogSource(Base):
     __tablename__ = "crawl_log_sources"
@@ -30,7 +36,7 @@ class CrawlLogSource(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id"],
-            ["projects.workspace_id", "projects.id"],
+            [_PROJECT_WORKSPACE_FK, _PROJECT_ID_FK],
             ondelete="CASCADE",
         ),
         Index(
@@ -81,15 +87,15 @@ class CrawlLogUpload(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id"],
-            ["projects.workspace_id", "projects.id"],
+            [_PROJECT_WORKSPACE_FK, _PROJECT_ID_FK],
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id", "source_id"],
             [
-                "crawl_log_sources.workspace_id",
-                "crawl_log_sources.project_id",
-                "crawl_log_sources.id",
+                _SOURCE_WORKSPACE_FK,
+                _SOURCE_PROJECT_FK,
+                _SOURCE_ID_FK,
             ],
             ondelete="CASCADE",
         ),
@@ -132,15 +138,15 @@ class CrawlLogBatch(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id"],
-            ["projects.workspace_id", "projects.id"],
+            [_PROJECT_WORKSPACE_FK, _PROJECT_ID_FK],
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id", "source_id"],
             [
-                "crawl_log_sources.workspace_id",
-                "crawl_log_sources.project_id",
-                "crawl_log_sources.id",
+                _SOURCE_WORKSPACE_FK,
+                _SOURCE_PROJECT_FK,
+                _SOURCE_ID_FK,
             ],
             ondelete="CASCADE",
         ),
@@ -217,15 +223,15 @@ class BotRequest(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id"],
-            ["projects.workspace_id", "projects.id"],
+            [_PROJECT_WORKSPACE_FK, _PROJECT_ID_FK],
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id", "source_id"],
             [
-                "crawl_log_sources.workspace_id",
-                "crawl_log_sources.project_id",
-                "crawl_log_sources.id",
+                _SOURCE_WORKSPACE_FK,
+                _SOURCE_PROJECT_FK,
+                _SOURCE_ID_FK,
             ],
             ondelete="CASCADE",
         ),
@@ -263,6 +269,7 @@ class BotRequest(Base):
             "occurred_at",
             "id",
         ),
+        Index("ix_bot_requests_retention", "workspace_id", "occurred_at", "id"),
     )
     id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
     workspace_id: Mapped[uuid.UUID] = mapped_column(
@@ -303,7 +310,7 @@ class BotActivityDaily(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id"],
-            ["projects.workspace_id", "projects.id"],
+            [_PROJECT_WORKSPACE_FK, _PROJECT_ID_FK],
             ondelete="CASCADE",
         ),
         UniqueConstraint(
@@ -326,7 +333,7 @@ class BotActivityDaily(Base):
     reporting_date: Mapped[date] = mapped_column(Date, nullable=False)
     reporting_timezone: Mapped[str] = mapped_column(String(64), nullable=False)
     bot_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    identity_key: Mapped[str] = mapped_column(String(2048), nullable=False)
+    identity_key: Mapped[str] = mapped_column(String(64), nullable=False)
     identity: Mapped[str] = mapped_column(String(24), nullable=False)
     url_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     display_path: Mapped[str] = mapped_column(String(2048), nullable=False)
@@ -343,6 +350,7 @@ class BotActivityDaily(Base):
     )
     formula_version: Mapped[str] = mapped_column(String(32), nullable=False)
     source_batch_ids: Mapped[dict | list] = mapped_column(JSONB, nullable=False)
+    verification_reasons: Mapped[dict] = mapped_column(JSONB, nullable=False)
 
 
 class CrawlLogCoverageDaily(Base):
@@ -353,15 +361,15 @@ class CrawlLogCoverageDaily(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id"],
-            ["projects.workspace_id", "projects.id"],
+            [_PROJECT_WORKSPACE_FK, _PROJECT_ID_FK],
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id", "source_id"],
             [
-                "crawl_log_sources.workspace_id",
-                "crawl_log_sources.project_id",
-                "crawl_log_sources.id",
+                _SOURCE_WORKSPACE_FK,
+                _SOURCE_PROJECT_FK,
+                _SOURCE_ID_FK,
             ],
             ondelete="CASCADE",
         ),
@@ -396,7 +404,7 @@ class CrawlLogState(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id"],
-            ["projects.workspace_id", "projects.id"],
+            [_PROJECT_WORKSPACE_FK, _PROJECT_ID_FK],
             ondelete="CASCADE",
         ),
         UniqueConstraint(

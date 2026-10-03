@@ -48,14 +48,11 @@ export async function createSource(
   )
     throw new ApiError(422, 'Use a site origin without a path or credentials');
   const host = origin.hostname.toLowerCase();
-  const preset =
-    input.setup === 'cloudflare_worker'
-      ? 'cloudflare_worker_template'
-      : input.setup === 'cloudflare_logpush'
-        ? 'cloudflare_logpush_http_requests'
-        : 'custom_ndjson';
+  let preset = 'custom_ndjson';
+  if (input.setup === 'cloudflare_worker') preset = 'cloudflare_worker_template';
+  if (input.setup === 'cloudflare_logpush') preset = 'cloudflare_logpush_http_requests';
   const defaults = crawlLogs.presets[preset]!;
-  return db.transaction().execute(async (trx) => {
+  return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
     const project = await trx
       .selectFrom('projects')
@@ -136,7 +133,7 @@ export async function mutateSource(
   id: string,
   action: 'rotate' | 'revoke',
 ) {
-  return db.transaction().execute(async (trx) => {
+  return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
     await lockCrawlState(trx, scope);
     const source = await trx

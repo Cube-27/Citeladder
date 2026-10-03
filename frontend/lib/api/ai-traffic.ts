@@ -2,8 +2,9 @@
 import type { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import { aiReferralsSchema, aiSourceSchema } from '@citeladder/contracts/ai-traffic';
 import {
+  aiReferralsSchema,
+  aiSourceSchema,
   aiTrafficOverviewSchema,
   botCrawlersResponseSchema,
   botActivityResponseSchema,

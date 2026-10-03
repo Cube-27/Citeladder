@@ -58,6 +58,12 @@ export function useCrawlConnections({
   const refresh = () => client.invalidateQueries({ queryKey: queryKeys.aiTraffic.all });
   const mutation = useMutation({
     mutationFn: async (action: { kind: 'create' } | { kind: 'rotate' | 'revoke'; id: string }) => {
+      let sourceSampling:
+        | { kind: 'none' }
+        | { kind: 'sampled'; rate: number }
+        | { kind: 'filtered'; description: string } = { kind: 'none' };
+      if (sampling === 'sampled') sourceSampling = { kind: sampling, rate: Number(rate) };
+      if (sampling === 'filtered') sourceSampling = { kind: sampling, description: filter };
       if (action.kind === 'create')
         return aiTrafficApi.createSource(
           projectId,
@@ -66,20 +72,16 @@ export function useCrawlConnections({
             origin,
             format,
             collection_point: point,
-            sampling:
-              sampling === 'sampled'
-                ? { kind: sampling, rate: Number(rate) }
-                : sampling === 'filtered'
-                  ? { kind: sampling, description: filter }
-                  : { kind: 'none' },
+            sampling: sourceSampling,
           },
           options,
         );
       return aiTrafficApi.mutateSource(projectId, action.id, action.kind, options);
     },
-    onSuccess: async (result) => {
+    onSuccess: async (result, action) => {
       setIssued(result);
-      if (setup === 'upload') setSourceId(result.id);
+      if (action.kind === 'create' && setup === 'upload') setSourceId(result.id);
+      if (action.kind === 'revoke' && sourceId === action.id) setSourceId('');
       await refresh();
     },
   });

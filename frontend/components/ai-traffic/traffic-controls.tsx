@@ -68,6 +68,7 @@ export function TrafficControls({ model }: Readonly<{ model: ReturnType<typeof u
             type="number"
             min={100}
             max={599}
+            step={1}
             value={status ?? ''}
             onChange={(e) => setStatus(e.target.value || null)}
           />

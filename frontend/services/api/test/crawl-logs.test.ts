@@ -14,6 +14,7 @@ import {
   abandonUploads,
   botRequestRetentionSweep,
   botIpRangeRefresh,
+  crawlLogTick,
 } from '../src/crawl-logs/maintenance.ts';
 import { crawlers } from '../src/config/crawlers.ts';
 import { crawlSummary, activityPage, crawlerPage } from '../src/crawl-logs/reads.ts';
@@ -110,6 +111,35 @@ describe('bounded formats', () => {
   });
 });
 describe('sanitized durable admission', () => {
+  it('requires distinct heartbeat keys and resets all counters on a mid-batch unsupported format', async () => {
+    const { source } = await setup();
+    await expect(ingest(db, source, Buffer.alloc(0), {})).rejects.toThrow(/idempotency key/);
+    const first = await ingest(db, source, Buffer.alloc(0), { key: 'heartbeat-1', now });
+    const later = new Date(now.getTime() + 60000);
+    const second = await ingest(db, source, Buffer.alloc(0), { key: 'heartbeat-2', now: later });
+    expect(second.id).not.toBe(first.id);
+    expect(second.received_at).toEqual(later);
+    expect((await ingest(db, source, Buffer.alloc(0), { key: 'heartbeat-2' })).id).toBe(second.id);
+    await expect(
+      ingest(db, source, body(event(), { path: '/missing-fields' }), { key: 'unsupported' }),
+    ).rejects.toThrow(/crawler identification/);
+    const rejected = await db
+      .selectFrom('crawl_log_batches')
+      .selectAll()
+      .where('source_id', '=', source.id)
+      .where('idempotency_key', '=', 'unsupported')
+      .executeTakeFirstOrThrow();
+    expect(rejected).toMatchObject({
+      lines_received: 2,
+      lines_parsed: 0,
+      lines_rejected: 2,
+      lines_matched: 0,
+      first_line_at: null,
+    });
+    expect(
+      await db.selectFrom('bot_requests').select('id').where('source_id', '=', source.id).execute(),
+    ).toHaveLength(0);
+  });
   it('admits a multi-statement batch atomically and coalesces affected reporting days', async () => {
     const { tenant, source } = await setup();
     const count = crawlLogs.insert_rows_per_statement + 1;
@@ -358,6 +388,10 @@ describe('verification vocabulary', () => {
       status: 'succeeded',
     };
     expect(verifyBot(bot, null, snapshot, now, now).verification_reason).toBe('missing_ip');
+    expect(verifyBot(bot, '192.0.2.1:443', snapshot, now, now)).toMatchObject({
+      verification: 'unverifiable',
+      verification_reason: 'invalid_ip',
+    });
     expect(
       verifyBot({ ...bot, verification: { method: 'none' } }, '192.0.2.1', undefined, now, now)
         .verification_reason,
@@ -397,6 +431,75 @@ describe('verification vocabulary', () => {
   });
 });
 describe('uploads, coverage and serialized recomputation', () => {
+  it('derives complete days from server reporting midnights and ignores client completeness flags', async () => {
+    const { tenant, source } = await setup('upload');
+    await db
+      .updateTable('crawl_log_states')
+      .set({ reporting_timezone: 'Asia/Kolkata' })
+      .where('workspace_id', '=', tenant.workspaceId)
+      .where('project_id', '=', tenant.projectId)
+      .execute();
+    const upload = await createUpload(
+      db,
+      scope(tenant),
+      source.id,
+      { filename: 'local-days.log', size_bytes: 100 },
+      tenant.userId,
+    );
+    const firstDay = new Date(now.getTime() - 3 * 86400000).toISOString().slice(0, 10);
+    const middleDay = new Date(now.getTime() - 2 * 86400000).toISOString().slice(0, 10);
+    const lastDay = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
+    const completed = await completeUpload(
+      db,
+      scope(tenant),
+      source.id,
+      upload.id,
+      {
+        scanned_lines: 3,
+        first_line_at: firstDay + 'T12:00:00Z',
+        last_line_at: lastDay + 'T12:00:00Z',
+        scanned_dates: [
+          { date: firstDay, complete: true },
+          { date: middleDay, complete: false },
+          { date: lastDay, complete: true },
+        ],
+      },
+      tenant.userId,
+    );
+    expect(completed.scanned_dates).toEqual([
+      { date: firstDay, complete: false },
+      { date: middleDay, complete: true },
+      { date: lastDay, complete: false },
+    ]);
+    await refreshCrawlLogs(db, scope(tenant));
+    expect(
+      await crawlSummary(db, scope(tenant), { start_date: middleDay, end_date: middleDay }),
+    ).toMatchObject({
+      coverage: 'declared_complete',
+      requests: 0,
+      reporting_timezone: 'Asia/Kolkata',
+    });
+    expect(
+      await crawlSummary(db, scope(tenant), { start_date: firstDay, end_date: firstDay }),
+    ).toMatchObject({ coverage: 'partial', requests: null });
+  });
+  it('publishes bounded keys for long multibyte redacted folders', async () => {
+    const { tenant, source } = await setup();
+    await ingest(
+      db,
+      source,
+      body(event({ path: '/' + '界'.repeat(1800) + '/reset/private-token' })),
+      {},
+    );
+    await refreshCrawlLogs(db, scope(tenant));
+    const row = await db
+      .selectFrom('bot_activity_daily')
+      .select(['identity_key', 'requests', 'url_hash'])
+      .where('workspace_id', '=', tenant.workspaceId)
+      .executeTakeFirstOrThrow();
+    expect(row).toMatchObject({ requests: 1, url_hash: null });
+    expect(row.identity_key).toMatch(/^[a-f0-9]{64}$/);
+  });
   it('a completed zero-match file scan excludes a different source on its reporting day', async () => {
     const { tenant, source } = await setup('upload');
     const upload = await createUpload(
@@ -620,7 +723,12 @@ describe('uploads, coverage and serialized recomputation', () => {
 describe('persisted analytics and coverage decisions', () => {
   it('requires a whole unsampled day with bounded receipt gaps before showing measured zero', async () => {
     const { tenant, source } = await setup();
-    const day = new Date(now.getTime() - 86400000).toISOString().slice(0, 10),
+    // Exercise the oldest unfrozen calendar day, including its early receipts.
+    const day = new Date(
+        now.getTime() - (crawlLogs.retention_days - crawlLogs.rollup_freeze_margin_days) * 86400000,
+      )
+        .toISOString()
+        .slice(0, 10),
       start = new Date(day + 'T00:00:00Z');
     await db
       .updateTable('crawl_log_sources')
@@ -635,6 +743,11 @@ describe('persisted analytics and coverage decisions', () => {
       received_at: new Date(start.getTime() + (i + 1) * 5 * 60000),
     }));
     await db.insertInto('crawl_log_batches').values(receipts).execute();
+    await createSource(db, scope(tenant), tenant.userId, {
+      setup: 'upload',
+      origin: 'https://acme.example',
+      format: 'ndjson',
+    });
     await refreshCrawlLogs(db, scope(tenant));
     const options = { start_date: day, end_date: day };
     expect(await crawlSummary(db, scope(tenant), options)).toMatchObject({
@@ -670,6 +783,20 @@ describe('persisted analytics and coverage decisions', () => {
         content_hash: 'test',
         cidrs: '["192.0.2.0/24"]',
         status: 'succeeded',
+      })
+      .execute();
+    const failedId = randomUUID();
+    snapshotIds.push(failedId);
+    await db
+      .insertInto('bot_ip_range_snapshots')
+      .values({
+        id: failedId,
+        bot_id: 'openai_gptbot',
+        source_url: 'https://openai.com/gptbot.json',
+        fetched_at: new Date(now.getTime() + 60000),
+        content_hash: 'failure',
+        cidrs: '[]',
+        status: 'failed',
       })
       .execute();
     await ingest(
@@ -721,7 +848,7 @@ describe('persisted analytics and coverage decisions', () => {
       db,
       principal,
       'read_crawl_logs',
-      { project_id: tenant.projectId, view: 'summary', verification: 'verified' },
+      { project_id: tenant.projectId, view: 'summary', verification: 'verified', range: '30d' },
       'https://citeladder.test',
     );
     expect(mcp).toMatchObject({ requests: 1, pages: 1, unit: 'requests' });
@@ -749,10 +876,29 @@ describe('persisted analytics and coverage decisions', () => {
 });
 
 describe('bounded maintenance', () => {
+  it('continues scheduling retention and upload cleanup with ingestion disabled', async () => {
+    const { tenant } = await setup();
+    crawlLogs.ingestion_enabled = false;
+    try {
+      await crawlLogTick(db, now);
+      const tasks = await db
+        .selectFrom('analytics_tasks')
+        .select('task_kind')
+        .where('workspace_id', '=', tenant.workspaceId)
+        .execute();
+      expect(tasks.map((task) => task.task_kind)).toEqual(
+        expect.arrayContaining(['bot_request_retention_sweep', 'crawl_log_upload_abandon_sweep']),
+      );
+      expect(tasks.some((task) => task.task_kind === 'bot_ip_range_refresh')).toBe(false);
+    } finally {
+      crawlLogs.ingestion_enabled = true;
+    }
+  });
   it('deletes expired raw requests while retaining receipts and projections', async () => {
     const { tenant, source } = await setup();
     await ingest(db, source, body(event()), {});
     await refreshCrawlLogs(db, scope(tenant));
+    const originalReasons = (await crawlerPage(db, scope(tenant))).items[0]!.verification_reasons;
     await db
       .updateTable('bot_requests')
       .set({ occurred_at: new Date(Date.now() - 91 * 86400000) })
@@ -785,10 +931,13 @@ describe('bounded maintenance', () => {
         .where('workspace_id', '=', tenant.workspaceId)
         .execute(),
     ).toMatchObject([{ requests: 1 }]);
+    expect((await crawlerPage(db, scope(tenant))).items[0]?.verification_reasons).toEqual(
+      originalReasons,
+    );
   });
   it('appends successful and failed IP snapshots through fenced settlement without live I/O', async () => {
     const { tenant, source } = await setup();
-    await ingest(db, source, Buffer.alloc(0), {});
+    await ingest(db, source, Buffer.alloc(0), { key: 'snapshot-dispatch-heartbeat' });
     const row = await db
       .selectFrom('analytics_tasks')
       .selectAll()

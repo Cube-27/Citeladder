@@ -42,6 +42,7 @@ citations have separate meanings; no cross-unit conversion rate is calculated.
 The default verification filter includes verified and unverifiable requests.
 Failed verification is separately available. Unverifiable reasons distinguish
 missing IPs, absent published ranges and missing/stale range snapshots. A
+malformed IP is unverifiable rather than a failed range check. A
 historical import may be verified against a **later snapshot** rather than one
 contemporaneous with the request; Activity discloses that basis.
 
@@ -80,6 +81,10 @@ This is per-request, best-effort forwarding. It provides neither batching nor
 durable delivery. Cloudflare cancels unfinished `waitUntil` work after about 30
 seconds. **Every routed request counts against your Workers quota**, even when
 no event is sent. Use Logpush or a durable shipper for reliable delivery.
+Each matched event uses one ingest request. The current source quota is 120
+batch attempts per hour, including retries and upload batches. Above that rate,
+use batched Logpush or a durable shipper; the Worker template does not buffer
+events or retry rejected requests. Quota sizing remains an enablement decision.
 See [Worker context](https://developers.cloudflare.com/workers/runtime-apis/context/),
 [Workers limits and fail-open behavior](https://developers.cloudflare.com/workers/platform/limits/)
 and [Cloudflare request headers](https://developers.cloudflare.com/fundamentals/reference/http-headers/).
@@ -103,8 +108,9 @@ and [Cloudflare request headers](https://developers.cloudflare.com/fundamentals/
 5. Cloudflare's gzipped `{"content":"tests"}` destination check is accepted
    with the token. It is a validation receipt and does not count as coverage.
 6. Check Logpush job health, delivery gaps and sampling. For periods without
-   deliveries, a customer-operated shipper must send unique-key empty
-   heartbeats to support complete coverage. Logpush alone does not prove those
+   deliveries, a customer-operated shipper must send empty heartbeats with a
+   unique `Idempotency-Key` for each delivery to support complete coverage.
+   Missing heartbeat keys return 422. Logpush alone does not prove those
    quiet periods complete.
 
 Field names, RFC3339 output and the HTTP probe/header protocol follow

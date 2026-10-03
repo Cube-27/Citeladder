@@ -251,7 +251,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": ["3_months", "6_months", "custom", "day", "last_synced", "month", "week"]
+                "enum": ["30d", "90d", "1y"]
               },
               {
                 "type": "null"

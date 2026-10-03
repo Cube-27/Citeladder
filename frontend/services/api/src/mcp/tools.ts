@@ -89,7 +89,7 @@ export const definitions = {
     schema: z.strictObject({
       ...scope,
       view: z.enum(['summary', 'crawlers', 'coverage']).default('summary'),
-      range,
+      range: nullable(z.enum(Object.keys(policy.analytics.preset_range_days))),
       ...dates,
       verification: nullable(z.enum(['verified', 'unverifiable', 'failed_verification'])),
       ...page,

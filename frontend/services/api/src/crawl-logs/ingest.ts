@@ -2,21 +2,16 @@ import { createHash, randomUUID } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import type { Insertable, Selectable } from 'kysely';
 import { sql } from 'kysely';
-import {
-  logLines,
-  parseLogLine,
-  UnsupportedLogFormat,
-} from '@citeladder/contracts/crawl-log-format';
+import { logLines, UnsupportedLogFormat } from '@citeladder/contracts/crawl-log-format';
 import type { Database } from '../db/database.ts';
 import type { BotRequests, CrawlLogSources } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
-import { crawlers, matchesCrawlerUserAgent } from '../config/crawlers.ts';
-import { hash } from '../traffic/normalization.ts';
+import { crawlers } from '../config/crawlers.ts';
 import { strings } from '../db/json.ts';
 import { enforceSubjectRequest } from '../abuse/usage.ts';
-import { pathIdentity, verifyBot } from './identity.ts';
-import { lockCrawlState, enqueueRollup, reportingDay } from './state.ts';
+import { prepareBatch } from './prepare.ts';
+import { lockCrawlState, enqueueRollup, reportingDay, type CrawlScope } from './state.ts';
 import { ingestionEnabled } from './sources.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 
@@ -91,130 +86,34 @@ export async function ingest(
   if (!key.trim() || key.length > 255) throw new ApiError(422, 'Invalid idempotency key');
   // Attempt quota commits before parsing; replay does not spend accepted-line quota.
   if (!options.quotaChecked) await batchQuota(db, source, now);
-  const encoding =
-    options.encoding ??
-    (source.setup === 'cloudflare_logpush' && body[0] === 0x1f && body[1] === 0x8b
-      ? 'gzip'
-      : undefined);
-  const text = decodedBody(body, encoding);
-  let lines: string[] = [];
-  let unsupported: UnsupportedLogFormat | null = null;
-  // Cloudflare validates HTTP destinations with this authenticated gzipped probe.
-  const validation =
-    source.setup === 'cloudflare_logpush' &&
-    /^\s*\{\s*"content"\s*:\s*"tests"\s*\}\s*$/u.test(text);
-  try {
-    lines = validation
-      ? []
-      : logLines(text, options.uploadId ? 'ndjson' : source.format, crawlLogs.max_lines_per_batch);
-  } catch (error) {
-    if (error instanceof RangeError) throw new ApiError(413, 'Too many log lines');
-    if (error instanceof UnsupportedLogFormat) unsupported = error;
-    else throw error;
-  }
-  const counts = {
-    lines_received: lines.length,
-    lines_parsed: 0,
-    lines_matched: 0,
-    lines_unmatched: 0,
-    lines_out_of_scope: 0,
-    lines_rejected: 0,
-    lines_duplicate: 0,
-    lines_overlapping: 0,
-  };
-  const prepared: Insertable<BotRequests>[] = [];
+  const {
+    lines,
+    validation,
+    format,
+    unsupported: formatError,
+  } = decodeBatch(source, body, options.encoding, Boolean(options.uploadId));
+  let unsupported = formatError;
   const snapshots = await db
     .selectFrom('bot_ip_range_snapshots')
     .selectAll()
+    .where('status', '=', 'succeeded')
     .distinctOn('bot_id')
     .orderBy('bot_id')
     .orderBy('fetched_at', 'desc')
     .orderBy('id', 'desc')
     .execute();
   const latest = new Map(snapshots.map((s) => [s.bot_id, s] as const));
+  if (!options.uploadId && !validation && !unsupported && lines.length === 0 && !options.key)
+    throw new ApiError(422, 'Heartbeat batches require an explicit unique idempotency key');
   const scope = { workspaceId: source.workspace_id, projectId: source.project_id };
-  let first: Date | null = null,
-    last: Date | null = null;
   const preset = crawlLogs.presets[options.uploadId ? 'custom_ndjson' : source.preset];
   if (!preset) throw new ApiError(415, 'Unsupported preset');
-  for (const line of lines) {
-    if (Buffer.byteLength(line) > crawlLogs.max_line_bytes) {
-      counts.lines_rejected++;
-      continue;
-    }
-    let mapped;
-    try {
-      mapped = parseLogLine(line, options.uploadId ? 'ndjson' : source.format, preset);
-    } catch (error) {
-      if (!(error instanceof UnsupportedLogFormat)) throw error;
-      unsupported = error;
-      prepared.length = 0;
-      counts.lines_rejected = lines.length;
-      first = last = null;
-      break;
-    }
-    if (!mapped) {
-      counts.lines_rejected++;
-      continue;
-    }
-    const at = new Date(mapped.timestamp);
-    if (
-      at.getTime() > now.getTime() + crawlLogs.max_clock_skew_hours * 3600000 ||
-      at.getTime() < now.getTime() - crawlLogs.max_backdate_days * 86400000
-    ) {
-      counts.lines_rejected++;
-      continue;
-    }
-    counts.lines_parsed++;
-    if (first === null || at.getTime() < first.getTime()) first = at;
-    if (last === null || at.getTime() > last.getTime()) last = at;
-    const bot = crawlers.bots.find((bot) => matchesCrawlerUserAgent(bot, mapped.user_agent));
-    if (!bot) {
-      counts.lines_unmatched++;
-      continue;
-    }
-    let host = mapped.host?.toLowerCase() ?? source.host;
-    {
-      try {
-        const url = new URL(mapped.path, source.origin);
-        if (mapped.host && url.hostname.toLowerCase() !== host) {
-          counts.lines_out_of_scope++;
-          continue;
-        }
-        host = url.hostname.toLowerCase();
-      } catch {
-        counts.lines_rejected++;
-        continue;
-      }
-    }
-    if (!strings(source.accepted_hosts).includes(host)) {
-      counts.lines_out_of_scope++;
-      continue;
-    }
-    const identity = pathIdentity(mapped.path, source.origin);
-    if (!identity || (mapped.request_id?.length ?? 0) > 255) {
-      counts.lines_rejected++;
-      continue;
-    }
-    const verification = verifyBot(bot, mapped.client_ip, latest.get(bot.bot_id), at, now);
-    prepared.push({
-      id: randomUUID(),
-      workspace_id: scope.workspaceId,
-      project_id: scope.projectId,
-      source_id: source.id,
-      batch_id: '',
-      occurred_at: at,
-      host,
-      ...identity,
-      method: mapped.method,
-      status_code: mapped.status,
-      bot_id: bot.bot_id,
-      catalog_version: crawlers.catalog_version,
-      ...verification,
-      provider_request_id: mapped.request_id || null,
-      line_hash: hash(JSON.stringify([source.id, mapped])),
-    });
-  }
+  const preparedBatch = prepareBatch({ source, lines, preset, latest, now, format });
+  const { counts, prepared, first, last } = preparedBatch;
+  unsupported ??= preparedBatch.unsupported;
+  let receiptStatus = 'accepted';
+  if (validation) receiptStatus = 'destination_validation';
+  if (unsupported) receiptStatus = 'unsupported_format';
   const receipt = await db.transaction().execute(async (trx) => {
     if (options.actorId)
       await lockAuthorizedWorkspace(trx, scope.workspaceId, options.actorId, 'manage_credentials');
@@ -239,61 +138,15 @@ export async function ingest(
       .where('idempotency_key', '=', key)
       .executeTakeFirst();
     if (original) return original;
-    if (options.uploadId) {
-      const upload = await trx
-        .selectFrom('crawl_log_uploads')
-        .selectAll()
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('source_id', '=', source.id)
-        .where('id', '=', options.uploadId)
-        .forUpdate()
-        .executeTakeFirst();
-      if (!upload) throw notFound('Upload');
-      if (upload.status !== 'open' || options.seq !== upload.last_ack_seq + 1)
-        throw new ApiError(409, 'Upload is closed or batch sequence is out of order');
-    }
-    const admitted: Insertable<BotRequests>[] = [];
-    const overlappingDays = new Map<string, boolean>();
-    for (const row of prepared) {
-      const day = reportingDay(row.occurred_at as Date, state.reporting_timezone);
-      if (!overlappingDays.has(day)) {
-        const overlap = await trx
-          .selectFrom('crawl_log_batches as b')
-          .innerJoin('crawl_log_sources as s', 's.id', 'b.source_id')
-          .select('b.id')
-          .where('b.workspace_id', '=', scope.workspaceId)
-          .where('b.project_id', '=', scope.projectId)
-          .where('s.host', '=', row.host)
-          .where('b.source_id', '!=', source.id)
-          .where('b.status', '=', 'accepted')
-          .where(
-            sql<boolean>`(b.lines_matched>0 or b.lines_duplicate>0 or b.lines_unmatched>0 or b.heartbeat)`,
-          )
-          .where(sql<boolean>`((${day}::date between (b.first_line_at at time zone ${state.reporting_timezone})::date and (b.last_line_at at time zone ${state.reporting_timezone})::date)
-          or (b.heartbeat and (b.received_at at time zone ${state.reporting_timezone})::date = ${day}::date))`)
-          .executeTakeFirst();
-        const declared = await trx
-          .selectFrom('crawl_log_uploads as u')
-          .innerJoin('crawl_log_sources as s', 's.id', 'u.source_id')
-          .select('u.id')
-          .where('u.workspace_id', '=', scope.workspaceId)
-          .where('u.project_id', '=', scope.projectId)
-          .where('s.host', '=', row.host)
-          .where('u.source_id', '!=', source.id)
-          .where('u.status', '=', 'completed')
-          .where(
-            sql<boolean>`exists(select 1 from jsonb_array_elements(u.scanned_dates) d where d->>'date'=${day})`,
-          )
-          .executeTakeFirst();
-        overlappingDays.set(day, Boolean(overlap || declared));
-      }
-      if (overlappingDays.get(day)) {
-        counts.lines_overlapping++;
-        continue;
-      }
-      admitted.push(row);
-    }
+    await assertUpload(trx, scope, source.id, options.uploadId, options.seq);
+    const admitted = await admitRequests(
+      trx,
+      scope,
+      current,
+      prepared,
+      state.reporting_timezone,
+      counts,
+    );
     const id = randomUUID();
     await trx
       .insertInto('crawl_log_batches')
@@ -306,12 +159,8 @@ export async function ingest(
         seq: options.seq ?? null,
         idempotency_key: key,
         received_at: now,
-        format: options.uploadId ? 'ndjson' : source.format,
-        status: unsupported
-          ? 'unsupported_format'
-          : validation
-            ? 'destination_validation'
-            : 'accepted',
+        format,
+        status: receiptStatus,
         missing_fields: JSON.stringify(unsupported?.missing_fields ?? []),
         parser_version: crawlLogs.parser_version,
         catalog_version: crawlers.catalog_version,
@@ -321,35 +170,7 @@ export async function ingest(
         heartbeat: !options.uploadId && !unsupported && !validation && lines.length === 0,
       })
       .execute();
-    if (admitted.length) {
-      for (let start = 0; start < admitted.length; start += crawlLogs.insert_rows_per_statement) {
-        const inserted = await trx
-          .insertInto('bot_requests')
-          .values(
-            admitted
-              .slice(start, start + crawlLogs.insert_rows_per_statement)
-              .map((row) => ({ ...row, batch_id: id })),
-          )
-          .onConflict((c) => c.doNothing())
-          .returning('id')
-          .execute();
-        counts.lines_matched += inserted.length;
-      }
-      counts.lines_duplicate = admitted.length - counts.lines_matched;
-      if (counts.lines_matched)
-        await enforceSubjectRequest(
-          trx,
-          'crawl_project',
-          scope.projectId,
-          {
-            operation: 'crawl_logs.accepted_lines',
-            limit: crawlLogs.accepted_lines_per_project_per_day,
-            windowSeconds: 86400,
-            amount: counts.lines_matched,
-          },
-          now,
-        );
-    }
+    await insertRequests(trx, scope, id, admitted, counts, now);
     const receipt = await trx
       .updateTable('crawl_log_batches')
       .set(counts)
@@ -387,4 +208,124 @@ export async function ingest(
       },
     );
   return receipt;
+}
+async function admitRequests(
+  trx: Database,
+  scope: CrawlScope,
+  source: Selectable<CrawlLogSources>,
+  prepared: Insertable<BotRequests>[],
+  tz: string,
+  counts: ReturnType<typeof prepareBatch>['counts'],
+) {
+  const days = [...new Set(prepared.map((row) => reportingDay(row.occurred_at as Date, tz)))];
+  if (!days.length) return [];
+  const excluded = await sql<{ day: string }>`with days as (select unnest(${days}::date[]) as day)
+    select to_char(day,'YYYY-MM-DD') as day from days where exists (
+      select 1 from crawl_log_batches b join crawl_log_sources s on s.id=b.source_id
+      where b.workspace_id=${scope.workspaceId}::uuid and b.project_id=${scope.projectId}::uuid
+      and s.host=${source.host} and b.source_id<>${source.id}::uuid and b.status='accepted'
+      and (b.lines_matched>0 or b.lines_duplicate>0 or b.lines_unmatched>0 or b.heartbeat)
+      and ((day between (b.first_line_at at time zone ${tz})::date and (b.last_line_at at time zone ${tz})::date)
+        or (b.heartbeat and (b.received_at at time zone ${tz})::date=day))
+    ) or exists (
+      select 1 from crawl_log_uploads u join crawl_log_sources s on s.id=u.source_id
+      where u.workspace_id=${scope.workspaceId}::uuid and u.project_id=${scope.projectId}::uuid
+      and s.host=${source.host} and u.source_id<>${source.id}::uuid and u.status='completed'
+      and exists(select 1 from jsonb_array_elements(u.scanned_dates) d where d->>'date'=to_char(day,'YYYY-MM-DD'))
+    )`.execute(trx);
+  const overlapping = new Set(excluded.rows.map((row) => row.day));
+  const admitted = prepared.filter(
+    (row) => !overlapping.has(reportingDay(row.occurred_at as Date, tz)),
+  );
+  counts.lines_overlapping += prepared.length - admitted.length;
+  return admitted;
+}
+async function insertRequests(
+  trx: Database,
+  scope: CrawlScope,
+  id: string,
+  admitted: Insertable<BotRequests>[],
+  counts: ReturnType<typeof prepareBatch>['counts'],
+  now: Date,
+) {
+  if (admitted.length) {
+    for (let start = 0; start < admitted.length; start += crawlLogs.insert_rows_per_statement) {
+      const inserted = await trx
+        .insertInto('bot_requests')
+        .values(
+          admitted
+            .slice(start, start + crawlLogs.insert_rows_per_statement)
+            .map((row) => ({ ...row, batch_id: id })),
+        )
+        .onConflict((c) => c.doNothing())
+        .returning('id')
+        .execute();
+      counts.lines_matched += inserted.length;
+    }
+    counts.lines_duplicate = admitted.length - counts.lines_matched;
+    if (counts.lines_matched)
+      await enforceSubjectRequest(
+        trx,
+        'crawl_project',
+        scope.projectId,
+        {
+          operation: 'crawl_logs.accepted_lines',
+          limit: crawlLogs.accepted_lines_per_project_per_day,
+          windowSeconds: 86400,
+          amount: counts.lines_matched,
+        },
+        now,
+      );
+  }
+}
+function decodeBatch(
+  source: Selectable<CrawlLogSources>,
+  body: Buffer,
+  explicitEncoding: string | undefined,
+  upload: boolean,
+) {
+  const encoding =
+    explicitEncoding ??
+    (source.setup === 'cloudflare_logpush' && body[0] === 0x1f && body[1] === 0x8b
+      ? 'gzip'
+      : undefined);
+  const text = decodedBody(body, encoding);
+  const format = upload ? 'ndjson' : source.format;
+  let lines: string[] = [];
+  let unsupported: UnsupportedLogFormat | null = null;
+  // Cloudflare validates HTTP destinations with this authenticated gzipped probe.
+  const validation =
+    source.setup === 'cloudflare_logpush' &&
+    /^\s*\{\s*"content"\s*:\s*"tests"\s*\}\s*$/u.test(text);
+  try {
+    lines = validation ? [] : logLines(text, format, crawlLogs.max_lines_per_batch);
+  } catch (error) {
+    if (error instanceof RangeError) throw new ApiError(413, 'Too many log lines');
+    if (error instanceof UnsupportedLogFormat) unsupported = error;
+    else throw error;
+  }
+
+  return { lines, validation, unsupported, format };
+}
+async function assertUpload(
+  trx: Database,
+  scope: CrawlScope,
+  sourceId: string,
+  uploadId: string | undefined,
+  seq: number | undefined,
+) {
+  if (uploadId) {
+    const upload = await trx
+      .selectFrom('crawl_log_uploads')
+      .selectAll()
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('source_id', '=', sourceId)
+      .where('id', '=', uploadId)
+      .forUpdate()
+      .executeTakeFirst();
+    if (!upload) throw notFound('Upload');
+    if (upload.status !== 'open' || seq !== upload.last_ack_seq + 1)
+      throw new ApiError(409, 'Upload is closed or batch sequence is out of order');
+  }
 }

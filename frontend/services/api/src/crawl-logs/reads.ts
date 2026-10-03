@@ -7,6 +7,7 @@ import {
   crawlSummarySchema,
   verificationSchema,
 } from '@citeladder/contracts/ai-traffic';
+import { record } from '../db/json.ts';
 import type { Database } from '../db/database.ts';
 import { crawlers } from '../config/crawlers.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
@@ -36,7 +37,7 @@ export type CrawlReadOptions = {
 };
 function verificationFilter(value?: string | null) {
   if (!value) return crawlLogs.default_verification_filter;
-  const items = value.split(',').sort();
+  const items = value.split(',').sort((a, b) => a.localeCompare(b));
   if (!items.length || items.some((v) => !verificationSchema.safeParse(v).success))
     throw new ApiError(422, 'Invalid verification filter');
   return [...new Set(items)];
@@ -49,14 +50,14 @@ function window(options: CrawlReadOptions) {
       !z.iso.date().safeParse(options.start_date).success ||
       !z.iso.date().safeParse(options.end_date).success ||
       options.start_date > options.end_date ||
-      (Date.parse(options.end_date) - Date.parse(options.start_date)) / 86400000 >
+      (Date.parse(options.end_date) - Date.parse(options.start_date)) / 86400000 + 1 >
         policy.analytics.max_window_days
     )
       throw new ApiError(422, 'Invalid crawl window');
     return { start: options.start_date, end: options.end_date };
   }
   const ranges: Record<string, number> = policy.analytics.preset_range_days;
-  const days = options.range ? ranges[options.range] : ranges['30d'];
+  const days = ranges[options.range ?? crawlLogs.default_range];
   if (!days) throw new ApiError(422, 'Invalid crawl range');
   const end = new Date().toISOString().slice(0, 10);
   return {
@@ -140,34 +141,21 @@ export async function crawlerPage(db: Database, scope: CrawlScope, options: Craw
         .select(['resource_class', sql<number>`sum(requests)::integer`.as('count')])
         .groupBy('resource_class')
         .execute();
-      const w = window(options);
-      let reasonQuery = db
-        .selectFrom('bot_requests')
-        .select(['verification_reason', sql<number>`count(*)::integer`.as('count')])
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('bot_id', '=', row.bot_id)
-        .where('verification', 'in', verificationFilter(options.verification))
-        .where('occurred_at', '>=', new Date(w.start + 'T00:00:00Z'))
-        .where('occurred_at', '<', new Date(Date.parse(w.end) + 86400000))
-        .groupBy('verification_reason');
-      if (options.status) reasonQuery = reasonQuery.where('status_code', '=', options.status);
-      if (options.folder) reasonQuery = reasonQuery.where('folder', '=', options.folder);
-      if (options.resource_class)
-        reasonQuery = reasonQuery.where('resource_class', '=', options.resource_class);
-      const reasons = await reasonQuery.execute();
-      const bot = crawlers.bots.find((b) => b.bot_id === row.bot_id)!;
+      const reasonRows = await base.select('verification_reasons').execute();
+      const reasons: Record<string, number> = {};
+      for (const row of reasonRows)
+        for (const [reason, count] of Object.entries(record(row.verification_reasons)))
+          if (typeof count === 'number') reasons[reason] = (reasons[reason] ?? 0) + count;
+      const bot = crawlers.bots.find((b) => b.bot_id === row.bot_id);
       return {
         ...row,
         pages: row.pages || null,
-        label: bot.label,
-        purpose: bot.purpose,
+        label: bot?.label ?? row.bot_id,
+        purpose: bot?.purpose ?? 'unknown',
         last_seen: row.last_seen.toISOString(),
         status_codes: Object.fromEntries(statuses.map((s) => [String(s.status_code), s.count])),
         verification: Object.fromEntries(verifications.map((s) => [s.verification, s.count])),
-        verification_reasons: Object.fromEntries(
-          reasons.map((s) => [s.verification_reason ?? 'verified', s.count]),
-        ),
+        verification_reasons: reasons,
         folders: Object.fromEntries(folders.map((s) => [s.folder, s.count])),
         resources: Object.fromEntries(resources.map((s) => [s.resource_class, s.count])),
       };
@@ -330,28 +318,19 @@ export async function crawlSummary(
     .executeTakeFirstOrThrow();
   const coverage = await db
     .selectFrom('crawl_log_coverage_daily')
-    .select(['coverage', 'reporting_timezone', isoDateText(sql.ref('reporting_date')).as('day')])
+    .select([
+      'coverage',
+      'reporting_timezone',
+      isoDateText(sql.ref('reporting_date')).as('day'),
+      sql<string>`(select host from crawl_log_sources s where s.id=source_id)`.as('host'),
+    ])
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('reporting_date', '>=', sql<Date>`${w.start}::date`)
     .where('reporting_date', '<=', sql<Date>`${w.end}::date`)
     .execute();
-  const days = (Date.parse(w.end) - Date.parse(w.start)) / 86400000 + 1;
-  const adequate =
-    coverage.length > 0 &&
-    new Set(
-      coverage
-        .filter((c) => c.coverage === 'complete' || c.coverage === 'declared_complete')
-        .map((c) => c.day),
-    ).size === days &&
-    coverage.every((c) => c.coverage === 'complete' || c.coverage === 'declared_complete');
-  const quality = adequate
-    ? coverage.every((c) => c.coverage === 'complete')
-      ? 'complete'
-      : 'declared_complete'
-    : coverage.some((c) => c.coverage !== 'unknown')
-      ? 'partial'
-      : 'unknown';
+  const quality = coverageQuality(coverage, w);
+  const adequate = quality === 'complete' || quality === 'declared_complete';
   const series = await rollups(db, scope, options)
     .select([
       isoDateText(sql.ref('reporting_date')).as('date'),
@@ -361,38 +340,69 @@ export async function crawlSummary(
     .groupBy(['reporting_date', 'bot_id'])
     .orderBy('reporting_date')
     .execute();
-  const purposes = new Map<string, { date: string; purpose: string; requests: number }>();
-  for (const row of series) {
-    const purpose = crawlers.bots.find((b) => b.bot_id === row.bot_id)!.purpose,
-      key = row.date + ':' + purpose;
-    const old = purposes.get(key);
-    if (old) old.requests += row.requests;
-    else purposes.set(key, { date: row.date, purpose, requests: row.requests });
-  }
-  const connection = !sources.some((s) => s.status === 'active')
-    ? 'not_connected'
-    : sources.some((s) => s.connection === 'connected')
-      ? 'connected'
-      : 'awaiting_data';
+  let connection = 'not_connected';
+  if (sources.some((s) => s.status === 'active'))
+    connection = sources.some((s) => s.connection === 'connected') ? 'connected' : 'awaiting_data';
   const measured = total.requests > 0 || adequate;
   return crawlSummarySchema.parse({
     unit: 'requests',
     identity_level: 'path',
     connection,
     coverage: quality,
-    reporting_timezone: [...new Set(coverage.map((c) => c.reporting_timezone))].join(', ') || 'UTC',
+    reporting_timezone:
+      [...new Set(coverage.map((c) => c.reporting_timezone))].join(', ') ||
+      crawlLogs.default_reporting_timezone,
     last_processed_at:
       sources
         .map((s) => s.last_processed_at)
         .filter((s): s is string => !!s)
-        .sort()
+        .sort((a, b) => a.localeCompare(b))
         .at(-1) ?? null,
     requests: measured ? total.requests : null,
     pages: total.pages > 0 || adequate ? total.pages : null,
     active_bots: measured ? total.bots : null,
     error_share:
       total.requests && (total.errors > 0 || adequate) ? total.errors / total.requests : null,
-    failed_verification_requests: failed.count,
-    series: [...purposes.values()],
+    failed_verification_requests: failed.count > 0 || adequate ? failed.count : null,
+    series: purposeSeries(series),
   });
+}
+
+function purposeSeries(series: { date: string; bot_id: string; requests: number }[]) {
+  const purposes = new Map<string, { date: string; purpose: string; requests: number }>();
+  for (const row of series) {
+    const purpose = crawlers.bots.find((bot) => bot.bot_id === row.bot_id)?.purpose ?? 'unknown';
+    const key = row.date + ':' + purpose;
+    const old = purposes.get(key);
+    if (old) old.requests += row.requests;
+    else purposes.set(key, { date: row.date, purpose, requests: row.requests });
+  }
+  return [...purposes.values()];
+}
+
+function coverageQuality(
+  rows: { coverage: string; day: string; host: string }[],
+  w: { start: string; end: string },
+) {
+  const expected = (Date.parse(w.end) - Date.parse(w.start)) / 86400000 + 1;
+  const hosts = new Set(rows.map((row) => row.host));
+  const keys = (row: (typeof rows)[number]) => row.day + ':' + row.host;
+  const complete = new Set(rows.filter((row) => row.coverage === 'complete').map(keys));
+  if (hosts.size > 0 && complete.size === expected * hosts.size) return 'complete';
+  const covered = new Set(
+    rows
+      .filter((row) => row.coverage === 'complete' || row.coverage === 'declared_complete')
+      .map(keys),
+  );
+  if (hosts.size > 0 && covered.size === expected * hosts.size) return 'declared_complete';
+  return rows.some((row) => row.coverage !== 'unknown') ? 'partial' : 'unknown';
+}
+
+/** Persisted projection references for bounded MCP evidence provenance. */
+export function crawlReadArtifacts(db: Database, scope: CrawlScope, options: CrawlReadOptions) {
+  return rollups(db, scope, options)
+    .select(['id', 'formula_version', 'source_batch_ids'])
+    .orderBy('id')
+    .limit(crawlLogs.max_page_size + 1)
+    .execute();
 }

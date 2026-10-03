@@ -14,6 +14,7 @@ import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useCursorTable } from '@/lib/table/use-cursor-table';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
+import { formatPercent } from '@/lib/ai-traffic/series';
 import { TabPanel } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -66,9 +67,7 @@ export function TrafficOverview({
                 <p className="type-body">
                   {data.referrals.referral_volume.at(-1)?.value ?? 'Unavailable'} AI referral
                   sessions in the latest day. Share:{' '}
-                  {data.referrals.referral_share.at(-1)?.value === null
-                    ? 'Unavailable'
-                    : (data.referrals.referral_share.at(-1)?.value ?? 'Unavailable')}
+                  {formatPercent(data.referrals.referral_share.at(-1)?.value ?? null, 1)}
                 </p>
               ) : (
                 <p className="type-body">
@@ -281,7 +280,7 @@ export function CrawlSignalPanel({
         {data.coverage === 'declared_complete' ? (
           <p className="type-caption">Complete within the client-reported file scan.</p>
         ) : null}
-        {data.failed_verification_requests > 0 ? (
+        {data.failed_verification_requests !== null && data.failed_verification_requests > 0 ? (
           <p className="type-caption">
             {data.failed_verification_requests} failed verification requests are shown separately.
           </p>
@@ -335,6 +334,11 @@ function CoverageTable({
               </TableRow>
             </TableHeader>
             <TableBody>
+              {query.data.items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5}>No persisted coverage in this range.</TableCell>
+                </TableRow>
+              ) : null}
               {query.data.items.map((r) => (
                 <TableRow key={r.source_id + r.reporting_date + r.reporting_timezone}>
                   <TableCell>

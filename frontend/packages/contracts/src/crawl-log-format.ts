@@ -30,44 +30,67 @@ export class UnsupportedLogFormat extends Error {
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function combined(line: string): Record<string, unknown> | null {
   const match =
-    /^(\S+) \S+ \S+ \[(\d{2})\/(\w{3})\/(\d{4}):(\d{2}:\d{2}:\d{2}) ([+-]\d{4})\] "([A-Z]+) ([^"]+) HTTP\/[\d.]+" (\d{3}) (?:\d+|-) "[^"]*" "([^"]*)"\s*$/u.exec(
+    /^(\S+) \S+ \S+ \[([^\]]+)\] "([A-Z]+) ([^"]+) HTTP\/[\d.]+" (\d{3}) (?:\d+|-) "[^"]*" "([^"]*)"\s*$/u.exec(
       line,
     );
   if (!match) return null;
-  const month = months.indexOf(match[3]!);
+  const date = /^(\d{2})\/(\w{3})\/(\d{4}):(\d{2}:\d{2}:\d{2}) ([+-]\d{4})$/u.exec(match[2]!);
+  if (!date) return null;
+  const month = months.indexOf(date[2]!);
   if (month < 0) return null;
   return {
     client_ip: match[1],
     timestamp:
-      match[4] +
+      date[3] +
       '-' +
       String(month + 1).padStart(2, '0') +
       '-' +
-      match[2] +
+      date[1] +
       'T' +
-      match[5] +
-      match[6]!.slice(0, 3) +
+      date[4] +
+      date[5]!.slice(0, 3) +
       ':' +
-      match[6]!.slice(3),
-    method: match[7],
-    path: match[8],
-    status: Number(match[9]),
-    user_agent: match[10],
+      date[5]!.slice(3),
+    method: match[3],
+    path: match[4],
+    status: Number(match[5]),
+    user_agent: match[6],
   };
 }
-export function parseLogLine(line: string, format: string, mapping: LogMapping): MappedLog | null {
-  let value: unknown;
+function logValue(line: string, format: string): unknown {
   if (format === 'combined') {
-    value = combined(line);
+    const value = combined(line);
     if (!value && /^\S+ \S+ \S+ \[[^\]]+\] "[^"]+" \d{3} (?:\d+|-)\s*$/u.test(line))
       throw new UnsupportedLogFormat(['user_agent']);
-  } else {
-    try {
-      value = JSON.parse(line);
-    } catch {
-      return null;
-    }
+    return value;
   }
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
+  }
+}
+function logTimestamp(value: unknown, unit: LogMapping['timestamp_unit']) {
+  let timestamp = String(value);
+  if (unit !== 'iso') {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+    const ms = value * { seconds: 1000, milliseconds: 1, nanoseconds: 1e-6 }[unit];
+    if (!Number.isFinite(ms) || Math.abs(ms) > 8.64e15) return null;
+    timestamp = new Date(ms).toISOString();
+  }
+  // Require an explicit timezone; machine-local parsing is never evidence.
+  return /(?:Z|[+-]\d{2}:\d{2})$/u.test(timestamp) && Number.isFinite(Date.parse(timestamp))
+    ? timestamp
+    : null;
+}
+function logStatus(value: unknown) {
+  const status = typeof value === 'string' && /^\d{3}$/u.test(value) ? Number(value) : value;
+  return typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599
+    ? status
+    : null;
+}
+export function parseLogLine(line: string, format: string, mapping: LogMapping): MappedLog | null {
+  const value = logValue(line, format);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
   const field = (key: keyof LogMapping) => row[format === 'combined' ? key : mapping[key]];
@@ -76,28 +99,12 @@ export function parseLogLine(line: string, format: string, mapping: LogMapping):
       typeof field(key) !== 'string' && !(key === 'timestamp' && typeof field(key) === 'number'),
   );
   if (missing.length) throw new UnsupportedLogFormat(missing);
-  let timestamp = String(field('timestamp'));
-  if (format !== 'combined' && mapping.timestamp_unit !== 'iso') {
-    const number = field('timestamp');
-    if (typeof number !== 'number' || !Number.isFinite(number)) return null;
-    const ms =
-      number * { seconds: 1000, milliseconds: 1, nanoseconds: 1e-6 }[mapping.timestamp_unit];
-    if (!Number.isFinite(ms) || Math.abs(ms) > 8.64e15) return null;
-    timestamp = new Date(ms).toISOString();
-  }
-  // Require an explicit timezone; machine-local parsing is never evidence.
-  if (!/(?:Z|[+-]\d{2}:\d{2})$/u.test(timestamp) || !Number.isFinite(Date.parse(timestamp)))
-    return null;
-  const status = field('status');
-  const parsedStatus =
-    typeof status === 'string' && /^\d{3}$/u.test(status) ? Number(status) : status;
-  if (
-    typeof parsedStatus !== 'number' ||
-    !Number.isInteger(parsedStatus) ||
-    parsedStatus < 100 ||
-    parsedStatus > 599
-  )
-    return null;
+  const timestamp = logTimestamp(
+    field('timestamp'),
+    format === 'combined' ? 'iso' : mapping.timestamp_unit,
+  );
+  const status = logStatus(field('status'));
+  if (timestamp === null || status === null) return null;
   const text = (key: keyof LogMapping) =>
     typeof field(key) === 'string' ? String(field(key)) : null;
   const path = text('path')!;
@@ -107,7 +114,7 @@ export function parseLogLine(line: string, format: string, mapping: LogMapping):
     timestamp,
     path,
     method,
-    status: parsedStatus,
+    status,
     user_agent: text('user_agent')!,
     host: text('host'),
     client_ip: text('client_ip'),

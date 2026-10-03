@@ -23,6 +23,8 @@ const preset = z.strictObject({
 });
 const schema = z.strictObject({
   ingestion_enabled: z.boolean(),
+  default_reporting_timezone: z.literal('UTC'),
+  default_range: z.enum(['30d', '90d', '1y']),
   parser_version: z.string().min(1),
   formula_version: z.string().min(1),
   formats: z.array(z.enum(['ndjson', 'json_array', 'combined'])).min(1),

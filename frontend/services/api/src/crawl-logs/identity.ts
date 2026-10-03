@@ -61,7 +61,7 @@ export function verifyBot(
   });
   if (!ip) return result('unverifiable', 'missing_ip');
   if (bot.verification.method === 'none') return result('unverifiable', 'no_published_ranges');
-  if (!snapshot || snapshot.status !== 'succeeded') return result('unverifiable', 'no_snapshot');
+  if (snapshot?.status !== 'succeeded') return result('unverifiable', 'no_snapshot');
   if (now.getTime() - snapshot.fetched_at.getTime() > crawlLogs.ip_range_max_age_hours * 3600000)
     return result('unverifiable', 'stale_snapshot');
   if (
@@ -83,6 +83,6 @@ export function verifyBot(
         : 'later_snapshot';
     return result('verified', null, basis);
   } catch {
-    return result('failed_verification', 'ip_outside_ranges');
+    return result('unverifiable', 'invalid_ip');
   }
 }

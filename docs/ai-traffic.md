@@ -32,8 +32,8 @@ Only path-level identities join: strip query and fragment, canonicalize with
 the shared page owner and hash the canonical URL. Public UUID path segments
 remain distinct. Configured secret path patterns become redacted,
 `non_joinable` observations with a null URL hash and an explicit reason.
-Folder/resource aggregates retain those observations without asserting an
-exact page. IPs, full user agents, bodies, cookies and auth headers are never
+Folder/resource aggregates retain those observations with a fixed-length hashed
+grain key without asserting an exact page. IPs, full user agents, bodies, cookies and auth headers are never
 persisted. IPs are used transiently for verification.
 
 The transaction locks the per-project state and source, rechecks authority,
@@ -46,6 +46,8 @@ across sources on a project/host; without them the hash of mapped original
 fields plus source ID collapses identical repeated lines, including distinct
 requests that lack distinguishing fields. Receipt replay returns the original
 result and spends no accepted-line quota. Attempt quotas still count retries.
+Empty webhook heartbeats require an explicit unique `Idempotency-Key`; missing
+keys return 422. Replaying a key returns its original receipt and timestamp.
 
 Unsupported formats retain a diagnostic receipt with missing fields and return
 422, never zero. Authenticated Cloudflare destination probes retain a separate
@@ -78,7 +80,9 @@ reapplies every admission rule. Upload batches use `upload_id:seq` idempotency
 and resume from `last_ack_seq` with the original file name and size. A completed
 zero-match scan still saves client-reported scan dates. Unfinished uploads are
 abandoned after the configured interval; accepted rows remain partial evidence.
-Client-reported complete dates do not become provider-confirmed coverage.
+The server derives scanned dates and complete-day flags from the reported first
+and last timestamps using the persisted reporting timezone, ignoring client
+complete-day booleans. They do not become provider-confirmed coverage.
 
 ## Coverage, verification and reporting
 
@@ -100,13 +104,13 @@ zero page counts/error shares remain unavailable there. Pages count exact,
 joinable path identities. Requests are not sessions or citations.
 
 Verification is `verified`, `unverifiable` or `failed_verification`. Reasons
-distinguish no published ranges, missing IP, missing/stale snapshot and IP
+distinguish no published ranges, missing/invalid IP, missing/stale snapshot and IP
 outside published ranges. Verified rows retain the snapshot ID and
 `contemporaneous` or `later_snapshot` basis. Historical imports verified using
 a later snapshot disclose that limitation. Default metrics include verified and
 unverifiable observations; failed verification is separately counted.
-Crawler reason breakdowns read retained raw evidence; status-code rollups remain
-available after raw expiry. Folder breakdowns are bounded to the top configured
+Crawler reason breakdowns and status-code counts are persisted in daily rollups
+and remain available after raw expiry. Folder breakdowns are bounded to the top configured
 page-size count; Activity exports contain retained observations only.
 
 A2 uses UTC reporting days; A3 owns adoption of captured GA4 property timezones.
@@ -115,6 +119,8 @@ current committed requests under the project lock. Dates older than
 `retention_days - rollup_freeze_margin_days` are frozen; raw retention deletes
 only observations, preserving receipts and projections. Rollups keep bounded
 source batch IDs. A3 will add its insights successor when that task has an owner.
+Retention and abandoned-upload cleanup continue when ingestion is disabled;
+IP-range provider refresh is gated by ingestion enablement.
 
 ## Read APIs, MCP and configuration
 

@@ -5,14 +5,15 @@
  * resolves the newest persisted snapshot of that length; `from`/`to` selects
  * one exact persisted window; neither serves the latest snapshot.
  */
-import { aiReferralsSchema } from '@citeladder/contracts/ai-traffic';
 import {
+  aiReferralsSchema,
   aiTrafficOverviewSchema,
   botCrawlersResponseSchema,
   botActivityResponseSchema,
   crawlCoverageResponseSchema,
 } from '@citeladder/contracts/ai-traffic';
 import { sql } from 'kysely';
+import { z } from 'zod';
 import {
   crawlSummary,
   crawlerPage,
@@ -66,6 +67,9 @@ export const aiTrafficRoutes = [
         fromDate: query.start_date,
         toDate: query.end_date,
         granularity: 'day',
+      }).catch((error: unknown) => {
+        if (error instanceof AiReferralsQueryError) throw new ApiError(422, error.message);
+        throw error;
       });
       let audits = db
         .selectFrom('audits')
@@ -79,7 +83,7 @@ export const aiTrafficRoutes = [
         .orderBy('id', 'desc');
       const end = query.end_date ?? new Date().toISOString().slice(0, 10);
       const days = (policy.analytics.preset_range_days as Record<string, number>)[
-        query.range ?? '30d'
+        query.range ?? crawlLogs.default_range
       ]!;
       const start =
         query.start_date ??
@@ -151,7 +155,7 @@ export const aiTrafficRoutes = [
       ...readBase,
       path: root + '/' + view + '/export',
       raw: true,
-      response: botActivityResponseSchema,
+      response: z.string().meta({ format: 'binary' }),
       async handle({ c, db }, { path, query }) {
         await requireProject(db, c.get('workspace'), path.project_id);
         const scope = { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id };

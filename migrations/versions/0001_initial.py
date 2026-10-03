@@ -32,6 +32,9 @@ _AGENT_CHAT_FK = "agent_chats.id"
 _AGENT_MESSAGE_FK = "agent_messages.id"
 _AGENT_RUN_FK = "agent_runs.id"
 _ACTION_FK = "actions.id"
+_CRAWL_SOURCE_WORKSPACE_FK = "crawl_log_sources.workspace_id"
+_CRAWL_SOURCE_PROJECT_FK = "crawl_log_sources.project_id"
+_CRAWL_SOURCE_ID_FK = "crawl_log_sources.id"
 
 
 def _create_indexes(table: str, columns: tuple[str, ...]) -> None:
@@ -7480,9 +7483,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["workspace_id", "project_id", "source_id"],
             [
-                "crawl_log_sources.workspace_id",
-                "crawl_log_sources.project_id",
-                "crawl_log_sources.id",
+                _CRAWL_SOURCE_WORKSPACE_FK,
+                _CRAWL_SOURCE_PROJECT_FK,
+                _CRAWL_SOURCE_ID_FK,
             ],
             ondelete="CASCADE",
         ),
@@ -7525,9 +7528,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["workspace_id", "project_id", "source_id"],
             [
-                "crawl_log_sources.workspace_id",
-                "crawl_log_sources.project_id",
-                "crawl_log_sources.id",
+                _CRAWL_SOURCE_WORKSPACE_FK,
+                _CRAWL_SOURCE_PROJECT_FK,
+                _CRAWL_SOURCE_ID_FK,
             ],
             ondelete="CASCADE",
         ),
@@ -7595,9 +7598,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["workspace_id", "project_id", "source_id"],
             [
-                "crawl_log_sources.workspace_id",
-                "crawl_log_sources.project_id",
-                "crawl_log_sources.id",
+                _CRAWL_SOURCE_WORKSPACE_FK,
+                _CRAWL_SOURCE_PROJECT_FK,
+                _CRAWL_SOURCE_ID_FK,
             ],
             ondelete="CASCADE",
         ),
@@ -7633,6 +7636,7 @@ def upgrade() -> None:
         "bot_requests",
         ["workspace_id", "project_id", "occurred_at", "id"],
     )
+    op.create_index("ix_bot_requests_retention", "bot_requests", ["workspace_id", "occurred_at", "id"])
     op.create_table(
         "bot_activity_daily",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -7641,7 +7645,7 @@ def upgrade() -> None:
         sa.Column("reporting_date", sa.Date, nullable=False),
         sa.Column("reporting_timezone", sa.String(64), nullable=False),
         sa.Column("bot_id", sa.String(64), nullable=False),
-        sa.Column("identity_key", sa.String(2048), nullable=False),
+        sa.Column("identity_key", sa.String(64), nullable=False),
         sa.Column("identity", sa.String(24), nullable=False),
         sa.Column("url_hash", sa.String(64), nullable=True),
         sa.Column("display_path", sa.String(2048), nullable=False),
@@ -7654,6 +7658,7 @@ def upgrade() -> None:
         sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("formula_version", sa.String(32), nullable=False),
         sa.Column("source_batch_ids", postgresql.JSONB, nullable=False),
+        sa.Column("verification_reasons", postgresql.JSONB, nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "workspace_id", "project_id", "id", name="uq_bot_activity_daily_scope"
@@ -7700,9 +7705,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["workspace_id", "project_id", "source_id"],
             [
-                "crawl_log_sources.workspace_id",
-                "crawl_log_sources.project_id",
-                "crawl_log_sources.id",
+                _CRAWL_SOURCE_WORKSPACE_FK,
+                _CRAWL_SOURCE_PROJECT_FK,
+                _CRAWL_SOURCE_ID_FK,
             ],
             ondelete="CASCADE",
         ),

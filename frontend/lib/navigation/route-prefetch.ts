@@ -85,8 +85,9 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
   },
   '/ai-traffic': async (client, { projectId, workspaceId }) => {
     const { aiTrafficApi } = await import('@/lib/api/ai-traffic');
+    const { TRAFFIC_RANGES } = await import('@/lib/config/crawl-logs');
     const params = {
-      range: '30d',
+      range: TRAFFIC_RANGES[0].value,
       verification: undefined,
       purpose: undefined,
       bot_id: undefined,

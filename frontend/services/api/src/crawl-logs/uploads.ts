@@ -45,7 +45,7 @@ export async function createUpload(
   actorId: string,
 ) {
   ingestionEnabled();
-  return db.transaction().execute(async (trx) => {
+  return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
     await lockCrawlState(trx, scope);
     await sourceForUpload(trx, scope, sourceId);
@@ -97,7 +97,7 @@ export async function completeUpload(
     throw new ApiError(422, 'Scan span outside admission window');
   if (new Set(input.scanned_dates.map((d) => d.date)).size !== input.scanned_dates.length)
     throw new ApiError(422, 'Duplicate scanned day');
-  return db.transaction().execute(async (trx) => {
+  return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
     const state = await lockCrawlState(trx, scope);
     const source = await sourceForUpload(trx, scope, sourceId);
@@ -113,47 +113,16 @@ export async function completeUpload(
     if (!upload) throw notFound('Upload');
     if (upload.status === 'completed') return upload;
     if (upload.status !== 'open') throw new ApiError(409, 'Upload is closed');
-    for (const day of input.scanned_dates) {
-      if (!first || !last) throw new ApiError(422, 'Scanned days require timestamps');
-      const bounds = await sql<{
-        first: string;
-        last: string;
-      }>`select to_char(${first}::timestamptz at time zone ${state.reporting_timezone}, 'YYYY-MM-DD') as first,
-        to_char(${last}::timestamptz at time zone ${state.reporting_timezone}, 'YYYY-MM-DD') as last`.execute(
-        trx,
-      );
-      if (day.date < bounds.rows[0]!.first || day.date > bounds.rows[0]!.last)
-        throw new ApiError(422, 'Scanned day outside scan span');
-      const overlap = await trx
-        .selectFrom('crawl_log_batches as b')
-        .innerJoin('crawl_log_sources as s', 's.id', 'b.source_id')
-        .select('b.id')
-        .where('b.workspace_id', '=', scope.workspaceId)
-        .where('b.project_id', '=', scope.projectId)
-        .where('s.host', '=', source.host)
-        .where('b.source_id', '!=', sourceId)
-        .where('b.status', '=', 'accepted')
-        .where(
-          sql<boolean>`(b.lines_matched>0 or b.lines_duplicate>0 or b.lines_unmatched>0 or b.heartbeat)`,
-        )
-        .where(sql<boolean>`${day.date}::date between (coalesce(b.first_line_at,b.received_at) at time zone ${state.reporting_timezone})::date
-          and (coalesce(b.last_line_at,b.received_at) at time zone ${state.reporting_timezone})::date`)
-        .executeTakeFirst();
-      const declared = await trx
-        .selectFrom('crawl_log_uploads as u')
-        .innerJoin('crawl_log_sources as s', 's.id', 'u.source_id')
-        .select('u.id')
-        .where('u.workspace_id', '=', scope.workspaceId)
-        .where('u.project_id', '=', scope.projectId)
-        .where('s.host', '=', source.host)
-        .where('u.source_id', '!=', sourceId)
-        .where('u.status', '=', 'completed')
-        .where(
-          sql<boolean>`exists(select 1 from jsonb_array_elements(u.scanned_dates) d where d->>'date'=${day.date})`,
-        )
-        .executeTakeFirst();
-      if (overlap || declared) throw new ApiError(409, 'Scanned day overlaps another source');
-    }
+    if (input.scanned_dates.length && (!first || !last))
+      throw new ApiError(422, 'Scanned days require timestamps');
+    const dates = await scannedDays(trx, {
+      scope,
+      sourceId,
+      host: source.host,
+      tz: state.reporting_timezone,
+      first,
+      last,
+    });
     const completed = await trx
       .updateTable('crawl_log_uploads')
       .set({
@@ -161,7 +130,7 @@ export async function completeUpload(
         scanned_lines: input.scanned_lines,
         first_line_at: first,
         last_line_at: last,
-        scanned_dates: JSON.stringify(input.scanned_dates),
+        scanned_dates: JSON.stringify(dates),
         updated_at: now,
         completed_at: now,
       })
@@ -173,4 +142,41 @@ export async function completeUpload(
     await enqueueRollup(trx, scope, now, { first, last });
     return completed;
   });
+}
+/** Check scan bounds against server reporting midnights; client booleans are not authority. */
+async function scannedDays(
+  db: Database,
+  input: {
+    scope: CrawlScope;
+    sourceId: string;
+    host: string;
+    tz: string;
+    first: Date | null;
+    last: Date | null;
+  },
+) {
+  const { scope, sourceId, host, tz, first, last } = input;
+  if (!first || !last) return [];
+  const result = await sql<{ date: string; complete: boolean; overlapping: boolean }>`
+    select to_char(day,'YYYY-MM-DD') as date,
+      ${first}::timestamptz <= (day::timestamp at time zone ${tz})
+      and ${last}::timestamptz >= ((day+interval '1 day')::timestamp at time zone ${tz}) - interval '1 second' as complete,
+      (exists (
+        select 1 from crawl_log_batches b join crawl_log_sources s on s.id=b.source_id
+        where b.workspace_id=${scope.workspaceId}::uuid and b.project_id=${scope.projectId}::uuid
+          and s.host=${host} and b.source_id<>${sourceId}::uuid and b.status='accepted'
+          and (b.lines_matched>0 or b.lines_duplicate>0 or b.lines_unmatched>0 or b.heartbeat)
+          and day::date between (coalesce(b.first_line_at,b.received_at) at time zone ${tz})::date
+            and (coalesce(b.last_line_at,b.received_at) at time zone ${tz})::date
+      ) or exists (
+        select 1 from crawl_log_uploads u join crawl_log_sources s on s.id=u.source_id
+        where u.workspace_id=${scope.workspaceId}::uuid and u.project_id=${scope.projectId}::uuid
+          and s.host=${host} and u.source_id<>${sourceId}::uuid and u.status='completed'
+          and exists(select 1 from jsonb_array_elements(u.scanned_dates) d where d->>'date'=to_char(day,'YYYY-MM-DD'))
+      )) as overlapping
+    from generate_series((${first}::timestamptz at time zone ${tz})::date,
+      (${last}::timestamptz at time zone ${tz})::date, interval '1 day') day`.execute(db);
+  if (result.rows.some((row) => row.overlapping))
+    throw new ApiError(409, 'Scanned day overlaps another source');
+  return result.rows.map(({ date, complete }) => ({ date, complete }));
 }

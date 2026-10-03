@@ -18,6 +18,7 @@ import {
   createSourceSchema,
   mutateSource,
   authorizeToken,
+  ingestionEnabled,
 } from '../crawl-logs/sources.ts';
 import { ingest, boundedBody, batchQuota } from '../crawl-logs/ingest.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
@@ -178,6 +179,7 @@ export const crawlLogRoutes = [
     body: uploadBatchSchema,
     response: crawlReceiptSchema,
     async handle({ c, db }, { path }) {
+      ingestionEnabled();
       const target = scope(c.get('workspace').workspaceId, path.project_id);
       // Recheck current credential authority before accepting client evidence.
       await db
