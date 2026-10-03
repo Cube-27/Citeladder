@@ -24,6 +24,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { ParamSpecs } from '../http/params.ts';
+import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import { requireProject } from '../projects/access.ts';
 import { getVisibility } from '../visibility/dashboard.ts';
 import { getVisibilityEvidence } from '../visibility/evidence.ts';
@@ -58,7 +59,6 @@ const LIMIT = {
   scalar: { kind: 'int', ge: 1, le: policy.visibility.evidence_max_limit },
   default: policy.visibility.evidence_default_limit,
 } as const;
-const OFFSET = { scalar: { kind: 'int', ge: 0 }, default: 0 } as const;
 const BASELINE_RUNS = { scalar: { kind: 'uuid' }, list: true } as const;
 // `citations.url` is unbounded text, so this cap decides which pages have a
 // detail view at all: the practical ceiling a query string survives.
@@ -77,7 +77,8 @@ async function selectionErrors<T>(
     return await read();
   } catch (error) {
     if (error instanceof AnalysisNotFoundError) throw missing();
-    if (error instanceof TrendQueryError) throw new ApiError(422, error.message);
+    if (error instanceof TrendQueryError || error instanceof InvalidCursorError)
+      throw new ApiError(422, error.message);
     throw error;
   }
 }
@@ -229,7 +230,7 @@ export const visibilityRoutes = [
         cohort: COHORT,
         query: { scalar: { kind: 'str', maxLength: 8192 } },
         search: { scalar: { kind: 'str', maxLength: 512 } },
-        offset: OFFSET,
+        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
         limit: LIMIT,
       },
     },
@@ -245,7 +246,7 @@ export const visibilityRoutes = [
             from_at: null,
             to_at: null,
           }),
-          { query: query.query, search: query.search, offset: query.offset, limit: query.limit },
+          { query: query.query, search: query.search, cursor: query.cursor, limit: query.limit },
         ),
       );
     },
@@ -265,7 +266,7 @@ export const visibilityRoutes = [
         dimension: { scalar: { kind: 'literal', values: ['domain', 'url'] }, default: 'domain' },
         ...WINDOW,
         as_of: { scalar: { kind: 'datetime' } },
-        offset: OFFSET,
+        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
         limit: LIMIT,
       },
     },
@@ -279,7 +280,7 @@ export const visibilityRoutes = [
           sourceClass: query.source_type,
           dimension: query.dimension,
           asOf: query.as_of,
-          offset: query.offset,
+          cursor: query.cursor,
           limit: query.limit,
           baselineAuditIds: query.baseline_audit_ids,
         }),

@@ -330,8 +330,10 @@ to Latest; historical windows remain separate from selected measurement.
 
 Sources has Domains and URLs, each with a usage series, a citation-type ring
 and a searchable, sortable, exportable table; a domain opens its URLs and the
-prompts that reached it, and a URL opens its own page. Source/fanout totals are
-server aggregates over the full selection; answer cursors bind filters and the
+prompts that reached it, and a URL opens its own page. Fanout state and trimmed
+queries settle on each response analysis, retaining its artifact/task provenance
+and fanout projection version. Source/fanout totals are server aggregates over
+the full selection; source, fanout and answer keyset cursors bind filters and the
 snapshot boundary. Original answers use /runs/{runId}?execution={taskId}.
 
 Citation rate is citations over the responses a source was RETRIEVED in, never

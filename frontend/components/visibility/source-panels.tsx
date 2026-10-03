@@ -5,12 +5,8 @@ import { setUrlParams } from '@/lib/navigation/url-state';
 import type { SourcesData } from '@/lib/visibility/sources';
 
 /**
- * The shared table footer, driven by the endpoint's offsets.
- *
- * The endpoint pages by offset rather than page number, so the page index is
- * derived from it. Using the app's one pagination control keeps this table
- * behaving like every other table in the product instead of growing its own
- * pair of buttons.
+ * The shared table footer uses server keyset cursors in both directions.
+ * The displayed offset only labels the current page; it never drives SQL.
  */
 export function SourcePaging({
   data,
@@ -44,21 +40,23 @@ export function SourcePaging({
       noun={dimension === 'url' || domain ? 'URLs' : 'domains'}
       pageSize={pageSize}
       onPageSizeChange={onPageSizeChange}
-      canPrev={Boolean(data) && offset > 0}
-      canNext={data?.next_offset != null}
+      canPrev={data?.previous_cursor != null}
+      canNext={data?.next_cursor != null}
       busy={busy}
       onPrev={() => {
-        if (!data) return;
+        if (!data?.previous_cursor) return;
         const nextOffset = Math.max(0, offset - pageSize);
         setUrlParams({
           source_offset: nextOffset ? String(nextOffset) : null,
+          source_cursor: data.previous_cursor,
           source_as_of: nextOffset ? (data.as_of ?? null) : null,
         });
       }}
       onNext={() => {
-        if (data?.next_offset == null) return;
+        if (data?.next_cursor == null) return;
         setUrlParams({
-          source_offset: String(data.next_offset),
+          source_offset: String(offset + pageSize),
+          source_cursor: data.next_cursor,
           source_as_of: data.as_of ?? null,
         });
       }}

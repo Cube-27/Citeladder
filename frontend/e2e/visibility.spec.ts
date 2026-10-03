@@ -329,7 +329,7 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
         total: 0,
         responses: 6,
         prompts: 2,
-        next_offset: null,
+        next_cursor: null,
         as_of: '2026-07-15T00:00:00Z',
         comparison_status: 'no_baseline',
       },
@@ -344,7 +344,7 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
         event_count: 2,
         distinct_queries: 2,
         coverage: { queries_available: 1 },
-        next_offset: null,
+        next_cursor: null,
       },
     }),
   );

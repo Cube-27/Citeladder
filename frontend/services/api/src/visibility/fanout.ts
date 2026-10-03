@@ -1,175 +1,168 @@
-/**
- * The search queries engines ran for a selection, summarized per query.
- *
- * Moved from `app/domain/analysis/fanout_projection.py`. Totals describe the
- * whole selection and never move with paging or `search`; `search` narrows
- * the query rows only, and `query` drills into the answers that ran that
- * query, which `offset` then pages instead of the table.
- */
+/** Selection-wide SQL tallies over fanout settled on each derived answer. */
 import type { visibilityFanoutSummarySchema } from '@citeladder/contracts/visibility-evidence';
 import { sql } from 'kysely';
 import type { z } from 'zod';
-
 import type { Database } from '../db/database.ts';
 import { storedInstant, utcTextOf } from '../db/timestamps.ts';
-import { compareText } from '../text-order.ts';
-import { fanoutState, selectEvents } from './evidence.ts';
+import {
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+  InvalidCursorError,
+} from '../http/keyset-cursor.ts';
+import { parseUuid } from '../http/uuid.ts';
 import { authorizedSelection, evidenceScope, type RunSelection } from './selection.ts';
 
 export type FanoutResponse = z.input<typeof visibilityFanoutSummarySchema>;
 
-// Answers are read in bounded batches, newest first, so a large selection
-// never sits in memory at once.
-const BATCH = 1000;
-
-type QueryTally = {
-  events: number;
-  prompts: Set<string>;
-  engines: Set<string>;
-  responses: Set<string>;
-  brand: Set<string>;
-};
-
-/** The selection's answers, newest first, read in bounded keyset batches. */
-async function* selectedAnswers(db: Database, selection: RunSelection) {
-  let position: { createdAt: string; id: string } | null = null;
-  for (;;) {
-    let batch = evidenceScope(db, selection)
-      .leftJoin('raw_response_artifacts as artifact', 'artifact.id', 'ra.artifact_id')
-      .select([
-        'ra.id',
-        'ra.audit_id',
-        'ra.task_id',
-        'ra.logical_engine',
-        'ra.brand_mentioned',
-        'ra.owned_domain_cited',
-        'ra.search_used',
-        'ra.search_query_count',
-        utcTextOf(sql.ref('ra.created_at')).as('created_at'),
-        'task.search_events as task_events',
-        'task.provider_metadata',
-        'snapshot.prompt_id',
-        'snapshot.text',
-        'artifact.search_events as artifact_events',
-      ])
-      .orderBy('ra.created_at', 'desc')
-      .orderBy('ra.id', 'desc')
-      .limit(BATCH);
-    if (position !== null) {
-      batch = batch.where(
-        sql<boolean>`(ra.created_at, ra.id) < (${storedInstant(position.createdAt)}, ${position.id}::uuid)`,
-      );
-    }
-    const rows = await batch.execute();
-    yield* rows;
-    if (rows.length < BATCH) return;
-    const last = rows.at(-1)!;
-    position = { createdAt: last.created_at, id: last.id };
-  }
-}
-
-/** What a query tally reads of one answer. */
-type Answer = {
-  id: string;
-  prompt_id: string | null;
-  text: string;
-  logical_engine: string;
-  brand_mentioned: boolean;
-};
-
-/** Count one answer's non-blank queries into the per-query tallies. */
-function tallyQueries(
-  queries: Map<string, QueryTally>,
-  answer: Answer,
-  events: readonly { query: string }[],
-): void {
-  for (const event of events) {
-    const text = event.query.trim();
-    if (!text) continue;
-    const tally = queries.get(text) ?? {
-      events: 0,
-      prompts: new Set(),
-      engines: new Set(),
-      responses: new Set(),
-      brand: new Set(),
-    };
-    tally.events += 1;
-    tally.prompts.add(answer.prompt_id ?? answer.text);
-    tally.engines.add(answer.logical_engine);
-    tally.responses.add(answer.id);
-    if (answer.brand_mentioned) tally.brand.add(answer.id);
-    queries.set(text, tally);
-  }
-}
-
 export async function getVisibilityFanout(
   db: Database,
   requested: RunSelection,
-  options: { query: string | null; search: string | null; offset: number; limit: number },
+  options: { query: string | null; search: string | null; cursor: string | null; limit: number },
 ): Promise<FanoutResponse> {
   const selection = await authorizedSelection(db, requested);
-  const states: Record<string, number> = {};
-  const queries = new Map<string, QueryTally>();
-  const answers: FanoutResponse['answers'] = [];
-  let totalEvents = 0;
-  let totalAnswers = 0;
-  const page = (index: number) => index >= options.offset && index < options.offset + options.limit;
-  for await (const answer of selectedAnswers(db, selection)) {
-    const { events } = selectEvents(answer.artifact_events, answer.task_events);
-    const { state } = fanoutState({
-      events,
-      searchUsed: Boolean(answer.search_used),
-      searchQueryCount: answer.search_query_count ?? 0,
-      providerMetadata: answer.provider_metadata,
-    });
-    states[state] = (states[state] ?? 0) + 1;
-    totalEvents += events.length;
-    const ranQuery = events.some((event) => event.query.trim() === options.query);
-    if (options.query !== null && ranQuery) {
-      if (page(totalAnswers)) {
-        answers.push({
-          audit_id: answer.audit_id,
-          task_id: answer.task_id,
-          prompt_text: answer.text,
-          logical_engine: answer.logical_engine,
-          brand_mentioned: answer.brand_mentioned,
-          owned_domain_cited: answer.owned_domain_cited,
-        });
-      }
-      totalAnswers += 1;
+  const filters = {
+    ...selection,
+    auditIds: [...(selection.auditIds ?? [])].sort(),
+    query: options.query,
+    search: options.search?.trim().toLowerCase() ?? '',
+  };
+  const position = options.cursor ? decodeKeysetCursor(options.cursor, 'fanout', filters) : null;
+  const asOf = position?.[0] ?? new Date().toISOString();
+  if (position && (position.length !== 3 || !Number.isFinite(Date.parse(asOf))))
+    throw new InvalidCursorError('invalid fanout cursor');
+  const base = db
+    .with(
+      (cte) => cte('answers').materialized(),
+      () =>
+        evidenceScope(db, selection)
+          .where('ra.created_at', '<=', new Date(asOf))
+          .select([
+            'ra.id',
+            'ra.audit_id',
+            'ra.task_id',
+            'ra.logical_engine',
+            'ra.brand_mentioned',
+            'ra.owned_domain_cited',
+            'ra.fanout_state',
+            'ra.fanout_queries',
+            'ra.fanout_event_count',
+            'ra.created_at',
+            'snapshot.text',
+            sql<string>`coalesce(snapshot.prompt_id::text, snapshot.text)`.as('prompt_key'),
+          ]),
+    )
+    .with('tallies', (db) =>
+      db
+        .selectFrom('answers')
+        .innerJoin(
+          sql<{ query: string }>`lateral (select unnest(answers.fanout_queries) as query)`.as(
+            'event',
+          ),
+          (join) => join.onTrue(),
+        )
+        .select([
+          'event.query',
+          sql<number>`count(*)::int`.as('event_count'),
+          sql<number>`count(distinct answers.prompt_key)::int`.as('prompt_count'),
+          sql<
+            string[]
+          >`array_agg(distinct answers.logical_engine collate "C" order by answers.logical_engine collate "C")`.as(
+            'engines',
+          ),
+          sql<number>`count(distinct answers.id)::int`.as('response_count'),
+          sql<number>`count(distinct answers.id) filter (where answers.brand_mentioned)::int`.as(
+            'brand_response_count',
+          ),
+        ])
+        .groupBy('event.query'),
+    );
+  const matched = base
+    .selectFrom('tallies')
+    .selectAll()
+    .$if(Boolean(filters.search), (query) =>
+      query.where(sql<boolean>`position(${filters.search} in lower(query)) > 0`),
+    );
+  let queryPage = matched
+    .orderBy('event_count', 'desc')
+    .orderBy(sql`query collate "C"`)
+    .limit(options.limit + 1);
+  let answerPage = base
+    .selectFrom('answers')
+    .select([
+      'audit_id',
+      'task_id',
+      'text as prompt_text',
+      'logical_engine',
+      'brand_mentioned',
+      'owned_domain_cited',
+      'id',
+      utcTextOf(sql.ref('created_at')).as('created_at'),
+    ])
+    .where(sql<boolean>`fanout_queries @> array[${options.query ?? ''}]::text[]`)
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
+    .limit(options.limit + 1);
+  if (position) {
+    if (options.query === null) {
+      const count = Number(position[1]);
+      if (!Number.isSafeInteger(count) || count < 0)
+        throw new InvalidCursorError('invalid fanout cursor');
+      queryPage = queryPage.where(
+        sql<boolean>`(event_count < ${count} or (event_count = ${count} and query collate "C" > ${position[2]}))`,
+      );
+    } else {
+      if (!Number.isFinite(Date.parse(position[1]!)) || !parseUuid(position[2]))
+        throw new InvalidCursorError('invalid fanout cursor');
+      answerPage = answerPage.where(
+        sql<boolean>`(created_at, id) < (${storedInstant(position[1]!)}, ${position[2]}::uuid)`,
+      );
     }
-    tallyQueries(queries, answer, events);
   }
-  const ordered = [...queries].toSorted(
-    ([leftText, left], [rightText, right]) =>
-      right.events - left.events || compareText(leftText, rightText),
-  );
-  // `search` filters the rows only; the totals stay those of the selection.
-  const needle = (options.search ?? '').trim().toLowerCase();
-  const matched = needle
-    ? ordered.filter(([text]) => text.toLowerCase().includes(needle))
-    : ordered;
-  // Drilling into one query pages its answers, never the table under it.
-  const rows =
+  const summary = await base
+    .selectNoFrom([
+      sql<number>`(select coalesce(sum(fanout_event_count), 0)::int from answers)`.as(
+        'event_count',
+      ),
+      sql<number>`(select count(*)::int from tallies)`.as('distinct_queries'),
+      sql<number>`(select count(*)::int from (${matched}) matched)`.as('matched_queries'),
+      sql<Record<string, number>>`(select coalesce(jsonb_object_agg(state, count), '{}'::jsonb)
+      from (select fanout_state as state, count(*)::int as count from answers group by fanout_state) states)`.as(
+        'coverage',
+      ),
+      sql<number>`(select count(*)::int from answers where fanout_queries @> array[${options.query ?? ''}]::text[])`.as(
+        'total_answers',
+      ),
+      sql<
+        FanoutResponse['items']
+      >`(select coalesce(jsonb_agg(to_jsonb(page)), '[]'::jsonb) from (${queryPage}) page)`.as(
+        'items',
+      ),
+      sql<
+        (FanoutResponse['answers'][number] & { id: string; created_at: string })[]
+      >`(select coalesce(jsonb_agg(to_jsonb(page)), '[]'::jsonb) from (${answerPage}) page)`.as(
+        'answers',
+      ),
+    ])
+    .executeTakeFirstOrThrow();
+  const hasMore =
     options.query === null
-      ? matched.slice(options.offset, options.offset + options.limit)
-      : matched.slice(0, options.limit);
-  const pageable = options.query === null ? matched.length : totalAnswers;
+      ? summary.items.length > options.limit
+      : summary.answers.length > options.limit;
+  const items = summary.items.slice(0, options.limit);
+  const answers = options.query === null ? [] : summary.answers.slice(0, options.limit);
+  const lastQuery = items.at(-1);
+  const lastAnswer = answers.at(-1);
+  const keys =
+    options.query === null && lastQuery
+      ? [asOf, String(lastQuery.event_count), lastQuery.query]
+      : lastAnswer
+        ? [asOf, lastAnswer.created_at, lastAnswer.id]
+        : null;
   return {
-    event_count: totalEvents,
-    distinct_queries: ordered.length,
-    matched_queries: matched.length,
-    coverage: states,
-    next_offset: options.offset + options.limit < pageable ? options.offset + options.limit : null,
+    ...summary,
+    items,
     answers,
-    total_answers: totalAnswers,
-    items: rows.map(([query, tally]) => ({
-      query,
-      event_count: tally.events,
-      prompt_count: tally.prompts.size,
-      engines: [...tally.engines].sort(compareText),
-      response_count: tally.responses.size,
-      brand_response_count: tally.brand.size,
-    })),
+    total_answers: options.query === null ? 0 : summary.total_answers,
+    next_cursor: hasMore && keys ? encodeKeysetCursor('fanout', filters, keys) : null,
   };
 }

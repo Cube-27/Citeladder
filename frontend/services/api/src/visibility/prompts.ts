@@ -103,13 +103,24 @@ async function runRows(
     .where('audit_scope', '=', visibility.brand_audit_scope)
     .executeTakeFirst();
   if (audit === undefined) throw new AnalysisNotFoundError('Audit not found');
+  const rows = await scoreRows(db, scope, query, [audit.id]);
+  await enrichOutcomes(db, scope, rows, { ...audit, cohort: query.cohort }, query);
+  return rows;
+}
+
+async function scoreRows(
+  db: Database,
+  scope: RunScope,
+  query: { cohort: string },
+  auditIds: readonly string[],
+): Promise<PromptRow[]> {
   const snapshots = await db
     .selectFrom('prompt_metric_snapshots')
     .selectAll()
     .select(utcTextOf(sql.ref('created_at')).as('created_at_text'))
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    .where('audit_id', '=', audit.id)
+    .where('audit_id', 'in', auditIds)
     .where('cohort', '=', query.cohort)
     .orderBy('composite_score', 'desc')
     .orderBy('prompt_index', 'asc')
@@ -151,7 +162,6 @@ async function runRows(
       outcomes: [],
     },
   }));
-  await enrichOutcomes(db, scope, rows, { ...audit, cohort: query.cohort }, query);
   return rows;
 }
 
@@ -262,27 +272,31 @@ async function baselineRun(
 }
 
 /** Fill each row's frozen prompt facts, outcome counts and baseline change, in place. */
-async function enrichOutcomes(
+async function loadOutcomes(
   db: Database,
   scope: RunScope,
-  rows: readonly PromptRow[],
-  audit: { id: string; configuration: unknown; completed_at: string | null; cohort: string },
-  query: { logicalEngine: string | null; baselineId: string | null },
-): Promise<void> {
-  if (rows.length === 0) return;
-  const engine = query.logicalEngine;
-  const prompts = new Map(
-    (
-      await db
-        .selectFrom('audit_prompt_snapshots')
-        .select(['id', 'prompt_index', 'prompt_id', 'text', 'theme', 'intent', 'prompt_intent'])
-        .where('audit_id', '=', audit.id)
-        .execute()
-    ).map((prompt) => [prompt.prompt_index, prompt]),
-  );
+  auditIds: readonly string[],
+  cohort: string,
+  engine: string | null,
+) {
+  const prompts = await db
+    .selectFrom('audit_prompt_snapshots')
+    .select([
+      'audit_id',
+      'id',
+      'prompt_index',
+      'prompt_id',
+      'text',
+      'theme',
+      'intent',
+      'prompt_intent',
+    ])
+    .where('audit_id', 'in', auditIds)
+    .execute();
   let answers = db
     .selectFrom('response_analyses')
     .select([
+      'audit_id',
       'prompt_index',
       'logical_engine',
       'transport_model',
@@ -292,20 +306,49 @@ async function enrichOutcomes(
       'score',
     ])
     .where('workspace_id', '=', scope.workspaceId)
-    .where('audit_id', '=', audit.id)
+    .where('audit_id', 'in', auditIds)
     // Scoped to the cohort these rows describe, so a comparison prompt never
     // absorbs the core answers at the same index.
-    .where('cohort', 'in', [...selectedCohorts(audit.cohort)]);
+    .where('cohort', 'in', [...selectedCohorts(cohort)]);
   if (engine) answers = answers.where('logical_engine', '=', engine);
-  const responses = groupBy(await answers.execute(), (row) => row.prompt_index);
   let taskQuery = db
     .selectFrom('audit_tasks as task')
     .innerJoin('audit_prompt_snapshots as prompt', 'prompt.id', 'task.prompt_snapshot_id')
-    .select(['prompt.prompt_index', 'task.status', 'task.logical_engine', 'task.transport_model'])
+    .select([
+      'task.audit_id',
+      'prompt.prompt_index',
+      'task.status',
+      'task.logical_engine',
+      'task.transport_model',
+    ])
     .where('task.workspace_id', '=', scope.workspaceId)
-    .where('task.audit_id', '=', audit.id);
+    .where('task.audit_id', 'in', auditIds);
   if (engine) taskQuery = taskQuery.where('task.logical_engine', '=', engine);
-  const tasks = groupBy(await taskQuery.execute(), (row) => row.prompt_index);
+  return { prompts, answers: await answers.execute(), tasks: await taskQuery.execute() };
+}
+
+async function enrichOutcomes(
+  db: Database,
+  scope: RunScope,
+  rows: readonly PromptRow[],
+  audit: { id: string; configuration: unknown; completed_at: string | null; cohort: string },
+  query: { logicalEngine: string | null; baselineId: string | null },
+  preloaded?: Awaited<ReturnType<typeof loadOutcomes>>,
+): Promise<void> {
+  if (rows.length === 0) return;
+  const data =
+    preloaded ?? (await loadOutcomes(db, scope, [audit.id], audit.cohort, query.logicalEngine));
+  const prompts = new Map(
+    data.prompts.filter((row) => row.audit_id === audit.id).map((row) => [row.prompt_index, row]),
+  );
+  const responses = groupBy(
+    data.answers.filter((row) => row.audit_id === audit.id),
+    (row) => row.prompt_index,
+  );
+  const tasks = groupBy(
+    data.tasks.filter((row) => row.audit_id === audit.id),
+    (row) => row.prompt_index,
+  );
   const previous = await baselineRun(db, scope, audit, query.baselineId);
   const runs = previous && {
     current: {
@@ -320,7 +363,9 @@ async function enrichOutcomes(
       completedAt: previous.completed_at,
     },
   };
-  const cells = runs ? await loadComparisonCells(db, runs, { cohort: audit.cohort, engine }) : null;
+  const cells = runs
+    ? await loadComparisonCells(db, runs, { cohort: audit.cohort, engine: query.logicalEngine })
+    : null;
   for (const { item } of rows) {
     const prompt = prompts.get(item.prompt_index);
     if (prompt === undefined) throw new Error('prompt score has no frozen prompt snapshot');
@@ -479,15 +524,26 @@ async function setRows(
   auditIds: readonly string[],
 ): Promise<PromptRow[]> {
   await authorizeRunSet(db, scope, auditIds);
-  const rows: PromptRow[] = [];
-  for (const auditId of new Set(auditIds)) {
-    rows.push(
-      ...(await runRows(db, scope, {
-        auditId,
-        logicalEngine: query.logicalEngine,
-        baselineId: null,
-        cohort: query.cohort,
-      })),
+  const ids = [...new Set(auditIds)];
+  if (!ids.length) return [];
+  const audits = await db
+    .selectFrom('audits')
+    .select(['id', 'configuration', utcText(sql.ref('completed_at')).as('completed_at')])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', 'in', ids)
+    .execute();
+  const rows = await scoreRows(db, scope, query, ids);
+  const data = await loadOutcomes(db, scope, ids, query.cohort, query.logicalEngine);
+  const byAudit = groupBy(rows, (row) => row.item.audit_id);
+  for (const audit of audits) {
+    await enrichOutcomes(
+      db,
+      scope,
+      byAudit.get(audit.id) ?? [],
+      { ...audit, cohort: query.cohort },
+      { logicalEngine: query.logicalEngine, baselineId: null },
+      data,
     );
   }
   return rows;

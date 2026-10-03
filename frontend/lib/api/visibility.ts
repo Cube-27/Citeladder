@@ -115,7 +115,7 @@ export const visibilityApi = {
       audit_ids?: string[];
       engine?: string;
       cohort?: string;
-      offset?: number;
+      cursor?: string;
       query?: string;
     },
     options?: ApiRequestOptions,
@@ -137,7 +137,7 @@ export const visibilityApi = {
       domain?: string;
       source_type?: string;
       dimension?: 'domain' | 'url';
-      offset?: number;
+      cursor?: string;
       as_of?: string;
       limit?: number;
     },

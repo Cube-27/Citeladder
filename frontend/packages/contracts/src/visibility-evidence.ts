@@ -88,6 +88,7 @@ export const visibilityEvidenceResponseSchema = responseObject({
 });
 
 export const visibilitySourcesSchema = responseObject({
+  previous_cursor: z.string().nullable().optional(),
   total: z.number().int(),
   responses: z.number().int(),
   prompts: z.number().int(),
@@ -97,7 +98,7 @@ export const visibilitySourcesSchema = responseObject({
   // Citations per source class across the WHOLE selection, so the breakdown is
   // not a picture of whichever page happens to be loaded.
   category_totals: z.record(z.string(), z.number().int()).optional(),
-  next_offset: z.number().int().nullable(),
+  next_cursor: z.string().nullable(),
   as_of: z.string(),
   comparison_status: z.string(),
   items: z.array(
@@ -230,7 +231,7 @@ export const visibilityFanoutSummarySchema = responseObject({
   // when no search is applied). What the table pages through.
   matched_queries: z.number().int(),
   coverage: z.record(z.string(), z.number().int()),
-  next_offset: z.number().int().nullable(),
+  next_cursor: z.string().nullable(),
   total_answers: z.number().int(),
   answers: z.array(
     responseObject({

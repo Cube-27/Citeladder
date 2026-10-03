@@ -245,7 +245,7 @@ describe('leased audit worker phases', () => {
               result: [
                 {
                   markdown: 'Acme Running shoes are available.',
-                  fan_out_queries: [],
+                  fan_out_queries: ['  running shoes  ', 'running shoes'],
                   sources: [{ url: 'https://acme.example/shoes' }],
                 },
               ],
@@ -292,9 +292,32 @@ describe('leased audit worker phases', () => {
       .executeTakeFirstOrThrow();
     expect(record(artifact.usage).provider_cost_microusd).toBe(1800);
     expect(record(artifact.provider_metadata)).toMatchObject({
-      fanout_availability: 'no_exposed_queries',
+      fanout_availability: 'queries_available',
       query_text_available: true,
     });
+    const analysis = await db
+      .selectFrom('response_analyses')
+      .selectAll()
+      .where('task_id', '=', t.task.id)
+      .executeTakeFirstOrThrow();
+    expect(analysis).toMatchObject({
+      artifact_id: artifact.id,
+      audit_id: t.task.audit_id,
+      workspace_id: t.task.workspace_id,
+      fanout_state: 'queries_available',
+      fanout_queries: ['running shoes', 'running shoes'],
+      fanout_event_count: 2,
+      fanout_event_source: 'raw_artifact',
+      fanout_projection_version: 'fanout-1',
+    });
+    await w.runOnce();
+    expect(
+      await db
+        .selectFrom('response_analyses')
+        .select('id')
+        .where('task_id', '=', t.task.id)
+        .execute(),
+    ).toEqual([{ id: analysis.id }]);
   });
   it('parks capacity without dispatch, attempt evidence or retry spending', async () => {
     const t = await seed();

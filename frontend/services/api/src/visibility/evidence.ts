@@ -14,15 +14,10 @@ import { sql } from 'kysely';
 import type { z } from 'zod';
 
 import { executionFrozenProvenance } from '../analysis/provenance.ts';
+import { fanoutState, selectEvents } from '../analysis/fanout.ts';
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { record } from '../db/json.ts';
-import {
-  pydanticUtcOf,
-  pydanticUtcOrNull,
-  storedInstant,
-  utcText,
-  utcTextOf,
-} from '../db/timestamps.ts';
+import { pydanticUtcOf, pydanticUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
 import { fromEpochMicros, type ParsedDatetime } from '../http/datetimes.ts';
 import {
   decodeKeysetCursor,
@@ -34,85 +29,17 @@ import { compareText } from '../text-order.ts';
 import {
   authorizedSelection,
   evidenceScope,
+  selectedCohorts,
   TrendQueryError,
   type RunSelection,
 } from './selection.ts';
 
 export type VisibilityEvidenceResponse = z.input<typeof visibilityEvidenceResponseSchema>;
 type EvidenceItem = VisibilityEvidenceResponse['items'][number];
-export type SearchEvent = EvidenceItem['search_events'][number];
-type FanoutState = EvidenceItem['state'];
 
 // --- Stored search events and the fanout state they support ----------------
 
-const EVENT_FIELDS = ['sequence', 'query', 'call_id', 'call_sequence', 'query_sequence'];
-
-function eventInt(value: unknown): number {
-  if (typeof value === 'number') return Number.isFinite(value) ? Math.trunc(value) : 0;
-  if (typeof value === 'string' && /^\s*[+-]?\d+\s*$/u.test(value)) return Number(value.trim());
-  return 0;
-}
-
-function eventText(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return value === null || value === undefined ? '' : (JSON.stringify(value) ?? '');
-}
-
-/**
- * A stored event list, tolerantly: a non-list is no events, an entry with no
- * recognized field is malformed and skipped, and an empty query stays empty.
- */
-function normalizeEvents(raw: unknown): SearchEvent[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((entry) => {
-    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return [];
-    const event = entry as Record<string, unknown>;
-    if (!EVENT_FIELDS.some((field) => Object.hasOwn(event, field))) return [];
-    return [
-      {
-        sequence: eventInt(event.sequence),
-        query: eventText(event.query),
-        call_id: eventText(event.call_id),
-        call_sequence: eventInt(event.call_sequence),
-        query_sequence: eventInt(event.query_sequence),
-      },
-    ];
-  });
-}
-
-export type EventSource = 'raw_artifact' | 'audit_task' | 'none';
-
-/** The artifact's events when it has any, else the task's copy; never both. */
-export function selectEvents(
-  artifactEvents: unknown,
-  taskEvents: unknown,
-): { events: SearchEvent[]; source: EventSource } {
-  const fromArtifact = normalizeEvents(artifactEvents);
-  if (fromArtifact.length) return { events: fromArtifact, source: 'raw_artifact' };
-  const fromTask = normalizeEvents(taskEvents);
-  if (fromTask.length) return { events: fromTask, source: 'audit_task' };
-  return { events: [], source: 'none' };
-}
-
-export function fanoutState(input: {
-  events: readonly SearchEvent[];
-  searchUsed: boolean;
-  searchQueryCount: number;
-  providerMetadata: unknown;
-}): { queryTextAvailable: boolean; state: FanoutState } {
-  if (input.events.some((event) => event.query.trim())) {
-    return { queryTextAvailable: true, state: 'queries_available' };
-  }
-  const availability = record(input.providerMetadata).fanout_availability;
-  if (availability === 'unavailable' || availability === 'no_exposed_queries') {
-    return { queryTextAvailable: false, state: availability };
-  }
-  if (input.searchUsed || input.searchQueryCount > 0) {
-    return { queryTextAvailable: false, state: 'count_only' };
-  }
-  return { queryTextAvailable: false, state: 'no_search' };
-}
+// Search normalization is shared with analysis settlement.
 
 // --- The paged evidence read -----------------------------------------------
 
@@ -216,7 +143,30 @@ export async function getVisibilityEvidence(
     '<=',
     sql<Date>`${asOf}::timestamptz`,
   );
-  const promptChoices = await base
+  let promptScope = db
+    .selectFrom('audit_prompt_snapshots as snapshot')
+    .innerJoin('audits as audit', 'audit.id', 'snapshot.audit_id')
+    .where('audit.workspace_id', '=', selection.workspaceId)
+    .where('audit.project_id', '=', selection.projectId)
+    .where('audit.status', 'in', policy.visibility.dashboard_audit_statuses)
+    .where('snapshot.cohort', 'in', [...selectedCohorts(selection.cohort)])
+    .where('snapshot.created_at', '<=', new Date(asOf));
+  if (selection.auditId) promptScope = promptScope.where('audit.id', '=', selection.auditId);
+  if (selection.auditIds?.length)
+    promptScope = promptScope.where('audit.id', 'in', selection.auditIds);
+  if (selection.fromAt)
+    promptScope = promptScope.where(
+      'audit.completed_at',
+      '>=',
+      sql<Date>`${pydanticUtcOf(selection.fromAt)}::timestamptz`,
+    );
+  if (selection.toAt)
+    promptScope = promptScope.where(
+      'audit.completed_at',
+      '<=',
+      sql<Date>`${pydanticUtcOf(selection.toAt)}::timestamptz`,
+    );
+  const promptChoices = await promptScope
     .select([
       sql<string>`coalesce(snapshot.prompt_id, snapshot.id)`.as('identity'),
       'snapshot.text',
@@ -224,10 +174,6 @@ export async function getVisibilityEvidence(
     .distinct()
     .execute();
   const statement = applyFilters(base, options);
-  const { total } = await db
-    .selectFrom(statement.select('ra.id').as('matched'))
-    .select(sql<string>`count(*)`.as('total'))
-    .executeTakeFirstOrThrow();
   const fingerprint = {
     workspace: selection.workspaceId,
     project: selection.projectId,
@@ -244,16 +190,10 @@ export async function getVisibilityEvidence(
     domain: options.domain,
     url: options.url,
   };
-  let page = statement;
-  if (options.cursor) {
-    const position = cursorPosition(options.cursor, fingerprint);
-    page = page.where(
-      sql<boolean>`(ra.created_at, ra.id) < (${storedInstant(position.createdAt)}, ${position.id}::uuid)`,
-    );
-  }
-  const rows = await page
+  const matched = statement
     .leftJoin('raw_response_artifacts as artifact', 'artifact.id', 'ra.artifact_id')
     .select([
+      sql<number>`count(*) over ()::int`.as('total'),
       'ra.id as analysis_id',
       'ra.audit_id',
       'ra.task_id',
@@ -277,8 +217,17 @@ export async function getVisibilityEvidence(
       'audit.configuration',
       'artifact.search_events as artifact_events',
     ])
-    .orderBy('ra.created_at', 'desc')
-    .orderBy('ra.id', 'desc')
+    .as('matched');
+  let page = db.selectFrom(matched).selectAll();
+  if (options.cursor) {
+    const position = cursorPosition(options.cursor, fingerprint);
+    page = page.where(
+      sql<boolean>`(matched.created_at, matched.analysis_id) < (${position.createdAt}, ${position.id}::uuid)`,
+    );
+  }
+  const rows = await page
+    .orderBy('created_at', 'desc')
+    .orderBy('analysis_id', 'desc')
     .limit(options.limit + 1)
     .execute();
   const truncated = rows.length > options.limit;
@@ -330,7 +279,7 @@ export async function getVisibilityEvidence(
       };
     }),
     truncated,
-    total: Number(total),
+    ...(rows[0] ? { total: rows[0].total } : {}),
     as_of: asOf,
     next_cursor:
       truncated && last

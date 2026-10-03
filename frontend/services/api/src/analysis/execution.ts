@@ -7,6 +7,7 @@ import { scoreExecution, scoringConfig, classifyCitation } from './scoring.ts';
 import { assessEntities } from './entity-assessment.ts';
 import { classifySourceDomain, classifySourceOrigin } from './opportunities/source-patterns.ts';
 import { citationIdentity } from '../source-pages/identity.ts';
+import { fanoutProjection } from './fanout.ts';
 
 /** Caller holds the scoped audit/task lock and commits alongside the immutable artifact. */
 export const analyzeExecution: DeriveExecution = async (db, task, audit, artifactId) => {
@@ -78,6 +79,13 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
       citation_count: score.citation_count,
       search_used: score.search_used,
       search_query_count: score.search_query_count,
+      ...fanoutProjection({
+        artifactEvents: artifact.search_events,
+        taskEvents: task.search_events,
+        searchUsed: score.search_used,
+        searchQueryCount: score.search_query_count,
+        providerMetadata: task.provider_metadata,
+      }),
       sentiment: null,
       avg_position: score.brand_position,
       score: JSON.stringify(score),

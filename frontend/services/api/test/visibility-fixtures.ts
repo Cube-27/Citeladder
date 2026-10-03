@@ -6,6 +6,7 @@
  * removed per workspace in `cleanup`, children before parents.
  */
 import { randomUUID } from 'node:crypto';
+import { fanoutProjection } from '../src/analysis/fanout.ts';
 
 import type { Database } from '../src/db/database.ts';
 import { Fixtures } from './support.ts';
@@ -373,6 +374,13 @@ export class VisibilityFixtures extends Fixtures {
         avg_position: spec.avgPosition ?? null,
         search_used: spec.searchUsed ?? false,
         search_query_count: spec.searchQueryCount ?? 0,
+        ...fanoutProjection({
+          artifactEvents: input.artifactEvents,
+          taskEvents: input.taskEvents,
+          searchUsed: spec.searchUsed ?? false,
+          searchQueryCount: spec.searchQueryCount ?? 0,
+          providerMetadata: input.providerMetadata,
+        }),
         entity_assessments: JSON.stringify([]),
         score: spec.score === undefined ? null : JSON.stringify(spec.score),
         created_at: spec.createdAt ?? now(),

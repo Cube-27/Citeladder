@@ -2,8 +2,9 @@
 
 Date: 3 October 2026
 
-Status: proposed, implementation not started. Listing this plan is not
-execution or deployment authorization.
+Status: all six slices implemented on `codex/backend-debt-remediation`, in
+the packaging order below. PR review and CI are pending; stop before merging.
+Deployment is not authorized by this plan.
 
 ## Scope
 

@@ -59,7 +59,7 @@ export function VisibilitySources({
   // Prompts tab was selected would otherwise land on that domain's Prompts,
   // which is not where a reader who clicked a row expects to be.
   const [domain, setDomain] = useUrlState('source_domain', optionalStringUrlCodec, {
-    clearKeys: ['source_offset', 'source_as_of', 'source_url', 'source_view'],
+    clearKeys: ['source_cursor', 'source_offset', 'source_as_of', 'source_url', 'source_view'],
   });
 
   if (openUrl) {
@@ -114,7 +114,7 @@ function SourcesInventory({
   // the type filter cannot carry over: page three of domains is not page three
   // of URLs, and `editorial` is not a page format.
   const [rawDimension, setDimension] = useUrlState('source_dim', optionalStringUrlCodec, {
-    clearKeys: ['source_offset', 'source_as_of', 'source_type'],
+    clearKeys: ['source_cursor', 'source_offset', 'source_as_of', 'source_type'],
   });
   const dimension = rawDimension === 'url' ? 'url' : 'domain';
   return (
@@ -186,9 +186,10 @@ export function SourcesPanel({
   onOpenDomain?: (domain: string) => void;
 }>) {
   const [offset] = useUrlState('source_offset', optionalStringUrlCodec);
+  const [cursor] = useUrlState('source_cursor', optionalStringUrlCodec);
   const [asOf] = useUrlState('source_as_of', optionalStringUrlCodec);
   const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
-    clearKeys: ['source_offset', 'source_as_of'],
+    clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
   });
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
@@ -210,11 +211,11 @@ export function SourcesPanel({
   // control is not offered there — it would let a reader contradict the
   // breadcrumb they arrived through.
   const [pickedDomain, setPickedDomain] = useUrlState('source_pick', optionalStringUrlCodec, {
-    clearKeys: ['source_offset', 'source_as_of'],
+    clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
   });
   const domainOptions = useSourceDomains(filters, queries);
   const activeDomain = domain ?? pickedDomain;
-  const scope = { dimension, domain: activeDomain, offset, asOf, sourceType, pageSize };
+  const scope = { dimension, domain: activeDomain, cursor, asOf, sourceType, pageSize };
   const { sourceQuery } = useSourceAnalysis(filters, queries, scope);
   const seriesQuery = useSourceSeries(filters, queries, {
     dimension,
@@ -316,7 +317,7 @@ export function SourcesPanel({
             busy={sourceQuery.isFetching}
             onPageSizeChange={(value) => {
               setPageSize(isTablePageSize(value) ? value : TABLE_DEFAULT_PAGE_SIZE);
-              setUrlParams({ source_offset: null, source_as_of: null });
+              setUrlParams({ source_cursor: null, source_offset: null, source_as_of: null });
             }}
           />
         </CardContent>
