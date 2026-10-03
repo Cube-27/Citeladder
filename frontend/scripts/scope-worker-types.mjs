@@ -7,8 +7,12 @@ if (!generated.includes('interface Env extends __BaseEnv_Env {}')) {
   throw new Error('Wrangler environment type shape changed.');
 }
 const withoutNodeEnvironment = generated.replace(/declare namespace NodeJS \{[\s\S]*?\n\}\s*$/, '');
+const rateLimitType = generated.includes(': RateLimit;')
+  ? 'type RateLimit = { limit(input: { key: string }): Promise<{ success: boolean }> };\n'
+  : '';
 const scoped = `export {};
 type Fetcher = { fetch(request: Request): Promise<Response> };
+${rateLimitType}
 ${withoutNodeEnvironment}
 export type WorkerEnv = Env;
 `;

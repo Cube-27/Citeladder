@@ -98,8 +98,13 @@ permit this sender. Missing configuration or failed delivery returns a generic
 `send_failed` response. No enquiry content or provider error is logged.
 Identical enquiries use a stable Resend idempotency key for its 24-hour retry
 window; a changed message creates a new send. Provider calls have a bounded
-timeout. Honeypot and same-origin validation add no interactive challenge;
-there is no application rate limiter or CAPTCHA for this flow.
+timeout. Honeypot and same-origin validation add no interactive challenge.
+The committed marketing Worker rate-limit bindings allow 5 valid enquiries per
+client IP and 30 aggregate enquiries per minute at each Cloudflare location.
+Only `CF-Connecting-IP` supplies the identity; absent identity or bindings and
+limiter failures block delivery. Throttling returns 429 and retains the form
+for a later retry. These edge limits mitigate bursts and are eventually
+consistent, not a strict global daily quota. No CAPTCHA is used.
 
 After an authorized deployment, open `/contact` on desktop and mobile, submit
 a controlled message with a mailbox you own, verify it arrives at

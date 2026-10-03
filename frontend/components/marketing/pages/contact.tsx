@@ -14,9 +14,9 @@ import { trackContactSubmitted } from '@/components/analytics/google-analytics';
 import { CONTACT_PAGE } from '@/lib/marketing-content/legal-billing';
 import { Linkify } from '../primitives/linkify';
 import { Section } from '../primitives/section';
-import { PageHero } from '../primitives/page-hero';
+import { Eyebrow } from '../primitives/label';
 
-type FormState = 'idle' | 'sending' | 'success' | 'error';
+type FormState = 'idle' | 'sending' | 'success' | 'error' | 'rate-limited';
 type FormErrors = Partial<Record<'name' | 'email' | 'company' | 'message', string>>;
 
 function ContactForm() {
@@ -27,7 +27,8 @@ function ContactForm() {
   const [state, setState] = useState<FormState>('idle');
   const [errors, setErrors] = useState<FormErrors>({});
   useEffect(() => {
-    if (state === 'success' || state === 'error') status.current?.focus();
+    if (state === 'success' || state === 'error' || state === 'rate-limited')
+      status.current?.focus();
     if (state === 'idle' && sent.current)
       form.current?.querySelector<HTMLElement>('[name="name"]')?.focus();
   }, [state]);
@@ -57,6 +58,10 @@ function ContactForm() {
         body: JSON.stringify(parsed.data),
         signal: AbortSignal.timeout(CONTACT_REQUEST_TIMEOUT_MS),
       });
+      if (response.status === 429) {
+        setState('rate-limited');
+        return;
+      }
       if (!response.ok) throw new Error('Send failed');
       sent.current = true;
       setState('success');
@@ -154,9 +159,11 @@ function ContactForm() {
           maxLength={CONTACT_LIMITS.company}
         />
       </div>
-      {state === 'error' && (
+      {(state === 'error' || state === 'rate-limited') && (
         <div ref={status} tabIndex={-1} role="alert" className="website-body text-danger-text">
-          We couldn&apos;t send your message. Please try again, or email us at{' '}
+          {state === 'rate-limited'
+            ? 'Too many enquiries right now. Please wait a minute and try again, or email us at '
+            : "We couldn't send your message. Please try again, or email us at "}
           <a href={`mailto:${CONTACT_EMAIL}`} className="underline">
             {CONTACT_EMAIL}
           </a>
@@ -173,47 +180,54 @@ function ContactForm() {
 export function ContactPage() {
   return (
     <main id="main">
-      <PageHero
-        eyebrow="Contact"
-        title="Let's talk about CiteLadder"
-        lead="Have a question, want to see CiteLadder in action, or want to discuss how it could fit your team? Send us a note and we'll get back to you."
-      >
-        <p className="website-body mt-6">
-          Prefer email?{' '}
-          <a
-            href={`mailto:${CONTACT_EMAIL}`}
-            className="text-accent-text underline underline-offset-2"
-          >
-            {CONTACT_EMAIL}
-          </a>
-        </p>
-      </PageHero>
-      <Section rhythm="tight">
-        <div className="w-full max-w-xl">
-          <ContactForm />
-        </div>
-        <noscript>
-          <p className="website-body">
-            Please email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> to get in touch.
-          </p>
-        </noscript>
-        <details className="border-border-subtle w-full max-w-3xl border-t pt-6">
-          <summary className="website-label cursor-pointer">
-            Company, support and grievance details
-          </summary>
-          <div className="grid gap-6 pt-6">
-            {CONTACT_PAGE.sections.map((section) => (
-              <section key={section.id} id={section.id} className="grid gap-3">
-                <h2 className="website-feature-heading">{section.title}</h2>
-                {section.paragraphs?.map((paragraph) => (
-                  <p key={paragraph} className="website-body text-muted">
-                    <Linkify text={paragraph} />
-                  </p>
+      <Section>
+        <div className="mx-auto grid w-full max-w-6xl items-start gap-12 lg:grid-cols-2 lg:gap-20">
+          <div className="min-w-0">
+            <header>
+              <Eyebrow>Contact</Eyebrow>
+              <h1 className="website-page-title mt-6 mb-6">Let&apos;s talk about CiteLadder</h1>
+              <p className="website-lead text-muted">
+                Have a question, want to see CiteLadder in action, or want to discuss how it could
+                fit your team? Send us a note and we&apos;ll get back to you.
+              </p>
+              <p className="website-body mt-6">
+                Prefer email?{' '}
+                <a
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className="text-accent-text underline underline-offset-2"
+                >
+                  {CONTACT_EMAIL}
+                </a>
+              </p>
+            </header>
+            <details className="border-border-subtle mt-8 border-t pt-6">
+              <summary className="website-label cursor-pointer">
+                Company, support and grievance details
+              </summary>
+              <div className="grid gap-6 pt-6">
+                {CONTACT_PAGE.sections.map((section) => (
+                  <section key={section.id} id={section.id} className="grid gap-3">
+                    <h2 className="website-feature-heading">{section.title}</h2>
+                    {section.paragraphs?.map((paragraph) => (
+                      <p key={paragraph} className="website-body text-muted">
+                        <Linkify text={paragraph} />
+                      </p>
+                    ))}
+                  </section>
                 ))}
-              </section>
-            ))}
+              </div>
+            </details>
           </div>
-        </details>
+          <div className="w-full max-w-xl min-w-0 lg:justify-self-end">
+            <ContactForm />
+            <noscript>
+              <p className="website-body mt-6">
+                Please email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> to get in
+                touch.
+              </p>
+            </noscript>
+          </div>
+        </div>
       </Section>
     </main>
   );

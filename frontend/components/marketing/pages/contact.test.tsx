@@ -82,3 +82,17 @@ it('retains the enquiry on delivery failure and supports a consent-free retry', 
   await screen.findByRole('heading', { name: 'Message sent' });
   expect(gtag).not.toHaveBeenCalled();
 });
+
+it('explains throttling and retains the enquiry for a later retry', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(Response.json({ outcome: 'rate_limited' }, { status: 429 })),
+  );
+  render(<ContactPage />);
+  const user = await fillForm();
+  await user.click(screen.getByRole('button', { name: 'Send message' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Please wait a minute');
+  expect(screen.getByRole('textbox', { name: /^How can we help/ })).toHaveValue(
+    'Please show us CiteLadder.',
+  );
+});

@@ -66,6 +66,7 @@ export function DemoButtonLink({
   return (
     <ButtonLink
       href={DEMO_HREF}
+      data-demo-cta=""
       variant={variant}
       className={className}
       {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
@@ -89,6 +90,7 @@ export function DemoTextLink({
   return (
     <TextLink
       href={DEMO_HREF}
+      data-demo-cta=""
       className={className}
       {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
     >

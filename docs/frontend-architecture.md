@@ -21,7 +21,8 @@ bounded rollback; later frontend releases use accepted Worker versions.
 
 The marketing Worker owns public `/contact` and its same-origin
 `POST /api/v1/contact` intake. It validates bounded JSON, checks Origin and a
-honeypot, and sends escaped HTML and plain text through Resend to
+honeypot, applies native Cloudflare limits by trusted client IP and aggregate
+contact traffic, and sends escaped HTML and plain text through Resend to
 `contact@citeladder.com`, with the visitor email as Reply-To. It stores no
 enquiries in the application database. The Resend key is a runtime Worker
 secret; no mail service enters the browser bundle. Demo CTAs use `/contact`;

@@ -5,6 +5,11 @@ import {
 } from '@/lib/config/contact';
 
 type SendContact = (submission: ContactSubmission) => Promise<boolean>;
+type ContactLimiter = { limit(input: { key: string }): Promise<{ success: boolean }> };
+export type ContactRateLimits = {
+  ip?: ContactLimiter;
+  burst?: ContactLimiter;
+};
 function result(status: number, outcome: string, fields?: Record<string, string>): Response {
   return Response.json(
     { outcome, ...(fields ? { fields } : {}) },
@@ -37,7 +42,11 @@ async function readPayload(request: Request): Promise<unknown> {
   return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 }
 
-export async function handleContactRequest(request: Request, send: SendContact): Promise<Response> {
+export async function handleContactRequest(
+  request: Request,
+  send: SendContact,
+  limits: ContactRateLimits,
+): Promise<Response> {
   if (request.method !== 'POST') return result(405, 'validation_error');
   if (request.headers.get('origin') !== new URL(request.url).origin)
     return result(403, 'spam_rejected');
@@ -60,6 +69,14 @@ export async function handleContactRequest(request: Request, send: SendContact):
   }
   if (parsed.data.website.trim()) return result(403, 'spam_rejected');
   try {
+    const ip = request.headers.get('CF-Connecting-IP');
+    if (!ip) return result(403, 'spam_rejected');
+    if (!limits.ip || !limits.burst) return result(503, 'send_failed');
+    if (
+      !(await limits.ip.limit({ key: ip })).success ||
+      !(await limits.burst.limit({ key: '/api/v1/contact' })).success
+    )
+      return result(429, 'rate_limited');
     return (await send(parsed.data)) ? result(200, 'success') : result(503, 'send_failed');
   } catch {
     console.error('Contact email delivery failed.');

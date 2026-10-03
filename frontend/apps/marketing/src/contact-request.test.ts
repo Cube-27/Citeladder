@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vite-plus/test';
-import { handleContactRequest } from './contact-request';
+import { handleContactRequest as handleRequest, type ContactRateLimits } from './contact-request';
 import { CONTACT_MAX_BODY_BYTES } from '@/lib/config/contact';
 
 const valid = {
@@ -12,12 +12,71 @@ const valid = {
 function request(payload: unknown, origin = 'https://citeladder.com') {
   return new Request('https://citeladder.com/api/v1/contact', {
     method: 'POST',
-    headers: { Origin: origin, 'Content-Type': 'application/json' },
+    headers: {
+      Origin: origin,
+      'Content-Type': 'application/json',
+      'CF-Connecting-IP': '192.0.2.10',
+    },
     body: JSON.stringify(payload),
   });
 }
 
+function allowedLimits() {
+  return {
+    ip: { limit: vi.fn().mockResolvedValue({ success: true }) },
+    burst: { limit: vi.fn().mockResolvedValue({ success: true }) },
+  };
+}
+
+function handleContactRequest(
+  input: Request,
+  send: (submission: unknown) => Promise<boolean>,
+  limits: ContactRateLimits = allowedLimits(),
+) {
+  return handleRequest(input, send, limits);
+}
+
 describe('contact intake', () => {
+  it('limits a trusted client across changed enquiries before reaching the mail provider', async () => {
+    const send = vi.fn().mockResolvedValue(true);
+    const limits = allowedLimits();
+    limits.ip.limit.mockResolvedValueOnce({ success: true }).mockResolvedValue({ success: false });
+    expect((await handleContactRequest(request(valid), send, limits)).status).toBe(200);
+    const retry = request({
+      ...valid,
+      email: 'another@example.com',
+      message: 'A different enquiry.',
+    });
+    retry.headers.set('X-Forwarded-For', '198.51.100.99');
+    const denied = await handleContactRequest(retry, send, limits);
+    expect(denied.status).toBe(429);
+    expect(await denied.json()).toEqual({ outcome: 'rate_limited' });
+    expect(limits.ip.limit.mock.calls).toEqual([[{ key: '192.0.2.10' }], [{ key: '192.0.2.10' }]]);
+    expect(limits.burst.limit).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks aggregate bursts and fails closed on missing identity, bindings or limiter failures', async () => {
+    const send = vi.fn();
+    const denied = allowedLimits();
+    denied.burst.limit.mockResolvedValue({ success: false });
+    expect((await handleContactRequest(request(valid), send, denied)).status).toBe(429);
+    const missingIp = request(valid);
+    missingIp.headers.delete('CF-Connecting-IP');
+    missingIp.headers.set('X-Forwarded-For', '198.51.100.99');
+    expect((await handleContactRequest(missingIp, send, allowedLimits())).status).toBe(403);
+    expect((await handleContactRequest(request(valid), send, {})).status).toBe(503);
+    const failed = allowedLimits();
+    failed.ip.limit.mockRejectedValue(new Error('private failure'));
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect((await handleContactRequest(request(valid), send, failed)).status).toBe(503);
+    } finally {
+      log.mockRestore();
+    }
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('normalizes a valid enquiry before delivery and accepts an omitted company', async () => {
     const send = vi.fn().mockResolvedValue(true);
     const response = await handleContactRequest(request(valid), send);

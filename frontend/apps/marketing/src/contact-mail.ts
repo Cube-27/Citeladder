@@ -37,7 +37,7 @@ export async function sendContactEmail(
   apiKey: string,
 ): Promise<boolean> {
   const email = contactEmail(submission);
-  // Retrying the same enquiry after a lost response must not deliver twice.
+  // Resend deduplicates retries of an identical enquiry within its 24-hour window.
   const digest = await crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(JSON.stringify(email)),

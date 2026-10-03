@@ -342,6 +342,7 @@ export function PlatformExplorer({
                   <a
                     className="cl-text-link"
                     href={DEMO_HREF}
+                    data-demo-cta=""
                     {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
                   >
                     {DEMO_CTA} <ArrowUpRight size={16} aria-hidden />

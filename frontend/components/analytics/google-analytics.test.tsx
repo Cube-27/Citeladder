@@ -34,6 +34,9 @@ describe('GoogleAnalytics', () => {
           <ButtonLink href="/pricing" onClick={(event) => event.preventDefault()}>
             View pricing
           </ButtonLink>
+          <a href="/contact" onClick={(event) => event.preventDefault()}>
+            Contact
+          </a>
         </header>
       </>,
     );
@@ -41,6 +44,9 @@ describe('GoogleAnalytics', () => {
     expect(gtag.mock.calls.filter(([command]) => command === 'event')).toHaveLength(0);
     act(() => writeConsent('accepted'));
     Reflect.set(window, 'gtag', gtag);
+    gtag.mockClear();
+    await user.click(screen.getByRole('link', { name: 'Contact' }));
+    expect(gtag).not.toHaveBeenCalled();
     await user.click(screen.getByText('Book a demo'));
     const fields = {
       page_path: '/ai-citation-tracking',

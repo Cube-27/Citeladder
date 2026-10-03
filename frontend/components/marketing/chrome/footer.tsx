@@ -13,7 +13,13 @@ import { COOKIE_PREFERENCES_ATTRIBUTE } from './cookie-banner';
 
 import { Container } from '../primitives/section';
 
-type FooterLink = { label: string; href: string; external?: boolean; app?: boolean };
+type FooterLink = {
+  label: string;
+  href: string;
+  external?: boolean;
+  app?: boolean;
+  demo?: boolean;
+};
 type FooterColumn = { key: string; label: string; links: readonly FooterLink[] };
 
 const FOOTER_COLUMNS: readonly FooterColumn[] = [
@@ -73,7 +79,7 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
       // its fragment is dropped, which a crawler then books as a broken
       // internal link on every page carrying this footer. `DEMO_CTA` already
       // reaches CiteLadder's own contact form.
-      { label: DEMO_CTA, href: DEMO_HREF, external: DEMO_EXTERNAL },
+      { label: DEMO_CTA, href: DEMO_HREF, external: DEMO_EXTERNAL, demo: true },
       { label: PARENT_COMPANY.name, href: PARENT_COMPANY.href, external: true },
       { label: 'CiteLadder on LinkedIn', href: CITELADDER_LINKEDIN, external: true },
       { label: 'Contact', href: '/contact' },
@@ -90,14 +96,24 @@ const LINK =
 function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   if (link.external) {
     return (
-      <a className={LINK} href={link.href} target="_blank" rel="noreferrer">
+      <a
+        className={LINK}
+        href={link.href}
+        target="_blank"
+        rel="noreferrer"
+        data-demo-cta={link.demo ? '' : undefined}
+      >
         {link.label}
         <ArrowUpRight className="size-3" aria-hidden />
       </a>
     );
   }
   return (
-    <a className={LINK} href={link.app ? appHref(link.href as `/${string}`) : link.href}>
+    <a
+      className={LINK}
+      href={link.app ? appHref(link.href as `/${string}`) : link.href}
+      data-demo-cta={link.demo ? '' : undefined}
+    >
       {link.label}
     </a>
   );

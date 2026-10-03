@@ -45,10 +45,7 @@ export function BillingSupport({
   contact,
 }: Readonly<{ contact: BillingCatalog['support_contact'] }>) {
   const email = contact?.email || PARENT_COMPANY.email;
-  const url = contactSalesHref(
-    contact?.contact_url,
-    new URL(websiteHref('/contact'), 'https://citeladder.com').href,
-  );
+  const url = contactSalesHref(contact?.contact_url, websiteHref('/contact'));
   return (
     <section className={panelClasses({}, 'grid gap-2')} aria-labelledby="billing-support-title">
       <h2 id="billing-support-title" className={textRole('sectionTitle')}>

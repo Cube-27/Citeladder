@@ -3,7 +3,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
 import { hasAnalyticsConsent, subscribeToConsent } from '@/lib/consent/cookie-consent';
-import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 /**
  * `gtag.js` installs this pair on `window` as it boots. Both are optional here
@@ -76,7 +75,7 @@ function trackMarketingCta(event: MouseEvent) {
   if (!hasAnalyticsConsent() || !(event.target instanceof Element)) return;
   const anchor = event.target.closest('a');
   if (!(anchor instanceof HTMLAnchorElement)) return;
-  const demo = anchor.href === new URL(DEMO_HREF, window.location.origin).href;
+  const demo = anchor.dataset.demoCta !== undefined;
   if (!demo && anchor.dataset.marketingCta === undefined) return;
   const fields = marketingCtaFields(anchor, demo);
   const gtag = (window as GtagWindow).gtag;

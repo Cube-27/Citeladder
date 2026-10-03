@@ -18,7 +18,15 @@ const privateNames = new Set([
 for (const file of files) {
   if (/\.(js|html)$/.test(file)) {
     const content = await readFile(new URL(`client/${file.split(sep).join('/')}`, root), 'utf8');
-    if (content.includes('RESEND_API_KEY') || content.includes('api.resend.com')) {
+    const urls = content.match(/https?:\/\/[^\s"'`<>\\]+/gu) ?? [];
+    const hasMailEndpoint = urls.some((value) => {
+      try {
+        return new URL(value).hostname === 'api.resend.com';
+      } catch {
+        return false;
+      }
+    });
+    if (content.includes('RESEND_API_KEY') || hasMailEndpoint) {
       throw new Error(`Server-only contact email code in marketing client output: ${file}`);
     }
   }

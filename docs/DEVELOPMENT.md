@@ -325,6 +325,13 @@ so a burst of writes cannot open one pool per execution. Locally, leave
 [AGENTS.md](../AGENTS.md#validation) owns when each tier runs. This section
 covers the commands.
 
+These commands are available tools, not a per-edit checklist. Small styling or
+layout edits use the staged format/lint hook and a focused visual inspection
+when needed. Run native tests for changed behavior; use the repository harness
+only for the higher-risk changes specified in AGENTS.md. Its cumulative branch
+scope can include earlier dependency edits, so it must not be used as the
+default validator for a small follow-up on that branch.
+
 The pre-commit hook (`vp staged`, configured in the root `vite.config.ts`) runs
 `vp check --fix` on staged JS/TS/CSS/JSON files and Ruff lint/format fixes on
 staged backend Python files.
