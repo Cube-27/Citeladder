@@ -28,15 +28,26 @@ export const SITE_HEALTH_ENTITLEMENT = {
 
 export const SITE_HEALTH_SITE_FACTS = {
   robots: {
+    observed_at: '2026-10-03T00:00:00Z',
     fetched: true,
     url: 'https://example.com/robots.txt',
     status_code: 200,
-    ai_crawlers: {
-      GPTBot: 'block',
-      ClaudeBot: 'allow',
-      PerplexityBot: 'allow',
-      'Google-Extended': 'allow',
-    },
+    status: 'fetched',
+    catalog_version: '1',
+    robots_snapshot_id: SITE_HEALTH_UUID_2,
+    bots: [
+      {
+        bot_id: 'openai_gptbot',
+        label: 'GPTBot',
+        operator: 'openai',
+        purpose: 'ai_training',
+        matched: 'specific_group',
+        root_access: 'disallowed',
+        policy: 'all_disallowed',
+        evaluated_url_count: 1,
+        disallowed_url_count: 1,
+      },
+    ],
     sitemaps: ['https://example.com/sitemap.xml'],
   },
   llms_txt: {

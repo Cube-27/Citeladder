@@ -19,6 +19,7 @@ const robotsParser = robotsModule as unknown as (
   isAllowed: (url: string, userAgent: string) => boolean | undefined;
   getCrawlDelay: (userAgent: string) => number | undefined;
   getSitemaps: () => string[];
+  _rules: Record<string, unknown>;
 };
 
 export function acquisitionSettings(env: Record<string, string | undefined> = process.env) {
@@ -131,6 +132,8 @@ export function robotsPolicy(
   const unavailable = status === 429 || status >= 500 || status === 0;
   const restricted = status === 401 || status === 403;
   const fetched = status >= 200 && status < 300;
+  // A missing file (other 4xx) is readable as "no rules"; 1xx, 3xx and failures are not.
+  const readable = fetched || (status >= 400 && status < 500 && !unavailable && !restricted);
   const robots = robotsParser(`${origin}/robots.txt`, fetched ? body : '');
   const declared = robots.getCrawlDelay(policy.web_fetch.user_agent);
   const seconds = declared === undefined ? settings.defaultDelay : Math.max(0, declared);
@@ -140,10 +143,18 @@ export function robotsPolicy(
     body: fetched ? body : null,
     unavailable,
     restricted,
+    readable,
     delay: seconds,
     /** Whether the publisher's rules admit `agent`, for reporting another crawler's stance. */
     allows: (url: string, agent: string) =>
       !fetched || !body.trim() || robots.isAllowed(url, agent) !== false,
+    matched: (tokens: string[]) => {
+      if (tokens.some((token) => Object.hasOwn(robots._rules, token.toLowerCase())))
+        return 'specific_group' as const;
+      return Object.hasOwn(robots._rules, '*')
+        ? ('wildcard_group' as const)
+        : ('no_rules' as const);
+    },
     sitemaps: robots.getSitemaps(),
     permits: (url: string) =>
       !unavailable &&
@@ -153,7 +164,7 @@ export function robotsPolicy(
       robots.isAllowed(url, policy.web_fetch.user_agent) === true,
   };
 }
-type RobotsPolicy = ReturnType<typeof robotsPolicy>;
+export type RobotsPolicy = ReturnType<typeof robotsPolicy>;
 
 export class PageAcquirer {
   readonly #cache = new Map<string, { expires: number; value: Promise<RobotsPolicy> }>();
@@ -215,7 +226,9 @@ export class PageAcquirer {
   /** `admit` screens each page hop (never robots.txt) before the shared authorization. */
   fetch(
     url: string,
-    options: Omit<FetchOptions, 'gate' | 'authorize'> & { admit?: (url: URL) => void },
+    options: Omit<FetchOptions, 'gate' | 'authorize'> & {
+      admit?: (url: URL) => void;
+    },
   ) {
     const { admit, ...rest } = options;
     return this.fetcher(url, {

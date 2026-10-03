@@ -47,8 +47,9 @@ network-bound kinds acquire outside any transaction, then re-check lease and
 crawl (and, for `analyze`, membership and entitlement) before committing their
 evidence and the task outcome together. `discover` commits its artifact, the
 URL's observation, frontier admission and the page's disposition; `site_setup`
-publishes robots and llms.txt evidence first, then commits the sitemap walk and
-its admission under the same lease. Python claims no tasks and runs no Site
+publishes robots root access, its snapshot link and llms.txt evidence first,
+then commits the sitemap admission and bounded robots-policy sample under the
+same lease. Python claims no tasks and runs no Site
 Health worker or crawl-control routes.
 
 The TypeScript worker also owns the crawl lifecycle, the only path to a
@@ -133,6 +134,44 @@ suppression includes subdomains; unblocking a domain rule does not override a
 global `*` stop. This command sends no HTTP requests. Operators must not enter
 credentials or customer content in its reason. Crawler-page publication still
 requires the audit plan's remaining authorization/robots/pacing acceptance.
+
+### Crawler permissions and robots history
+
+The validated [crawler catalog](../frontend/services/api/src/config/crawlers.json)
+owns bot identity, operator, purpose, documented HTTP UA patterns and IP-range
+sources. Robots-only tokens have no HTTP UA pattern. Catalog check membership
+preserves the existing nine-bot technical check and four-bot search/citation
+check; additional catalog entries do not expand scoring.
+
+`site_facts.robots` is the persisted projection. Each bot records its matched
+group (`specific_group`, `wildcard_group`, or `no_rules`), independent root
+permission and policy over a bounded URL sample. Specific groups override wildcard groups;
+repeated groups merge and longest matching Allow/Disallow wins, with Allow
+winning ties. No matching group is displayed as “Not specified”. Unreadable
+robots.txt and incomplete samples remain unknown. The first setup commit
+persists root access and the snapshot pointer; the second adds sample policy.
+The sample includes the root, admitted sitemap URLs and known observation URLs,
+bounded by `robots_policy_sample_size`. A truncated body cannot establish the
+sample policy. These permissions describe robots directives, not indexing,
+citations or actual bot visits.
+
+Append-only `robots_snapshots` retain a bounded UTF-8 body, truncation flag,
+status, origin and hash of the full fetched body. Inserts use
+`ON CONFLICT DO NOTHING` within workspace/project/origin/hash scope. Every
+crawl retains its observation time (the indexed `robots_observed_at` column,
+written with the snapshot pointer) and snapshot ID; A→B→A therefore produces
+three observations referencing two bodies. The crawl pointer has a composite
+workspace/project foreign key. `robots_snapshot_max_bytes` owns retention size.
+
+`GET /api/v1/projects/{project_id}/site-health/robots-history` authorizes the
+workspace and project, then keyset-pages persisted observations by observation
+time and crawl ID. It returns distinct referenced bodies alongside observations;
+read configuration owns its default and maximum page sizes. The Site Health
+panel groups bots by purpose, exposes history in a disclosure and computes a
+browser-side text diff between two observations on the loaded page. Ask agent
+uses the existing handoff codec. MCP `read_ai_crawlability` and the business
+context `crawlability` section read the same projection without acquisition.
+There is no legacy `ai_crawlers` or `crawler_roles` reader.
 
 - Crawls begin only from an explicit user request.
 - PostgreSQL is the queue. Tasks use leases, heartbeats, retries, idempotency and

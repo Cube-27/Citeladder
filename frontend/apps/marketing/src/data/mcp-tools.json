@@ -42,6 +42,7 @@
                     "profile",
                     "prompts",
                     "site_health",
+                    "crawlability",
                     "demand",
                     "opportunities",
                     "visibility",
@@ -87,6 +88,25 @@
             ]
           }
         },
+        "additionalProperties": false
+      },
+      "read_only": true
+    },
+    {
+      "name": "read_ai_crawlability",
+      "title": "Read AI crawlability",
+      "description": "Read the latest crawl’s persisted per-bot robots policy, root access, fetch status, snapshot ID and catalog version. Robots policy describes permission, not observed retrieval.",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true

@@ -13,6 +13,9 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
 import { SitemapCollector, SitemapParseError, sitemapRef } from '../web-evidence/sitemaps.ts';
+import { robotsPolicy } from '../web-evidence/acquisition.ts';
+import { crawlerRootFacts, crawlerSamplePolicy } from './crawler-policy.ts';
+import { insertRobotsSnapshot } from './robots-snapshots.ts';
 import { admitCandidates, candidate, crawlScope, lockRuntime, type Candidate } from './frontier.ts';
 import {
   Abandoned,
@@ -29,12 +32,13 @@ import { classifyUrlAdmission } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
 const crawlPolicy = policy.site_health.crawl;
-const AI_CRAWLERS = policy.site_health.page_analysis.rules.ai_crawler_bots;
 
 export function setupSettings(env: Record<string, string | undefined> = process.env) {
   const spec = policy.site_health.settings;
   const number = (name: keyof typeof spec) => Number(resolveSettingSpec(spec[name], env));
   return {
+    policySampleSize: number('robots_policy_sample_size'),
+    snapshotBytes: number('robots_snapshot_max_bytes'),
     llmsBytes: number('llms_txt_max_decoded_bytes'),
     maxDocuments: number('max_sitemap_documents'),
     concurrency: Math.max(1, number('sitemap_fetch_concurrency')),
@@ -53,11 +57,9 @@ type Robots = Awaited<ReturnType<SiteTaskContext['fetcher']['acquirer']['robots'
 /** How the robots.txt response reads in the dashboard: a missing file is not a failure. */
 function robotsStatus(robots: Robots | null) {
   if (robots?.body != null) return crawlPolicy.robots_statuses.fetched;
-  const status = robots?.status ?? 0;
-  if (status === 401 || status === 403) return crawlPolicy.robots_statuses.access_blocked;
+  if (robots?.restricted) return crawlPolicy.robots_statuses.access_blocked;
   // Unreachable, rate-limited, failing or unresolved redirects pause the crawl; other 4xx is a missing file.
-  if (status < 400 || status === 429 || status >= 500)
-    return crawlPolicy.robots_statuses.fetch_failed;
+  if (!robots?.readable) return crawlPolicy.robots_statuses.fetch_failed;
   return crawlPolicy.robots_statuses.not_found;
 }
 
@@ -80,12 +82,12 @@ async function wellKnown(ctx: SiteTaskContext, url: string, settings: Settings) 
 /** The facts the root analysis waits on; the sitemap section is dashboard evidence only. */
 async function siteEvidence(
   ctx: SiteTaskContext,
-  requested: string,
   origin: string,
   walks: boolean,
   settings: Settings,
 ) {
   const robots = origin ? await ctx.fetcher.acquirer.robots(origin) : null;
+  const observedAt = new Date().toISOString();
   const llmsUrl = origin ? `${origin}${crawlPolicy.llms_path}` : '';
   // A sample crawl ingests no sitemap, so it makes no llms.txt request it would not act on.
   const llms = { fetched: false, url: llmsUrl, status_code: null as number | null, present: false };
@@ -99,22 +101,22 @@ async function siteEvidence(
     }
   }
   return {
-    robots: {
-      fetched: robots?.body != null,
-      status: robotsStatus(robots),
-      url: origin ? `${origin}${crawlPolicy.robots_path}` : '',
-      status_code: robots?.status || null,
-      ai_crawlers: Object.fromEntries(
-        AI_CRAWLERS.map((bot) => [
-          bot,
-          !robots || robots.allows(requested, bot) ? 'allow' : 'block',
-        ]),
-      ),
-      crawler_roles: crawlPolicy.crawler_roles,
-      sitemaps: (robots?.sitemaps ?? []).slice(0, crawlPolicy.max_declared_sitemaps),
+    body: robots?.body ?? null,
+    facts: {
+      robots: {
+        observed_at: observedAt,
+        fetched: robots?.body != null,
+        status: robotsStatus(robots),
+        url: origin ? `${origin}${crawlPolicy.robots_path}` : '',
+        status_code: robots?.status || null,
+        catalog_version: policy.crawlers.catalog_version,
+        robots_snapshot_id: null as string | null,
+        bots: crawlerRootFacts(robots ?? robotsPolicy(origin, 0, ''), origin),
+        sitemaps: (robots?.sitemaps ?? []).slice(0, crawlPolicy.max_declared_sitemaps),
+      },
+      llms_txt: llms,
+      sitemap: { fetched: false, files: [] as string[], pending: true },
     },
-    llms_txt: llms,
-    sitemap: { fetched: false, files: [] as string[], pending: walks },
   };
 }
 type SiteFacts = Record<string, unknown>;
@@ -317,6 +319,37 @@ function underLease(
     });
 }
 
+/** Same-origin known URLs, root first: sitemap URLs, then those the crawl has observed. */
+async function policySample(
+  trx: Database,
+  crawl: Crawl,
+  origin: string,
+  urls: string[],
+  size: number,
+) {
+  const sample = new Set([`${origin}/`]);
+  const add = (values: Iterable<string>) => {
+    for (const url of values) {
+      if (sample.size >= size) return;
+      if (URL.parse(url)?.origin === origin) sample.add(url);
+    }
+  };
+  add(urls);
+  if (sample.size < size) {
+    const discovered = await trx
+      .selectFrom('site_url_observations')
+      .select('final_url')
+      .where('workspace_id', '=', crawl.workspace_id)
+      .where('crawl_id', '=', crawl.id)
+      .orderBy('created_at')
+      .orderBy('id')
+      .limit(size)
+      .execute();
+    add(discovered.map((row) => row.final_url));
+  }
+  return [...sample].slice(0, size);
+}
+
 /** The second commit: sitemap admission, the resolved facts and the task outcome. */
 async function persist(
   ctx: SiteTaskContext,
@@ -343,10 +376,34 @@ async function persist(
       const locked = await lockRunningTask(trx, claimed, ctx.owner);
       if (!locked || !ACTIVE_CRAWL.has(locked.crawl.status)) throw new Abandoned();
       const { pending: _pending, ...sitemap } = record(facts.sitemap);
+      const robots = record(facts.robots);
+      const snapshot = crawl.robots_snapshot_id
+        ? await trx
+            .selectFrom('robots_snapshots')
+            .select(['body', 'truncated'])
+            .where('workspace_id', '=', crawl.workspace_id)
+            .where('project_id', '=', crawl.project_id)
+            .where('id', '=', crawl.robots_snapshot_id)
+            .executeTakeFirst()
+        : undefined;
+      const origin = new URL(crawl.root_url).origin;
+      const sample = await policySample(trx, crawl, origin, urls, settings.policySampleSize);
+      const parsed = robotsPolicy(origin, Number(robots.status_code ?? 0), snapshot?.body ?? '');
+      const tokens = new Map(policy.crawlers.bots.map((bot) => [bot.bot_id, bot.robots_tokens]));
+      // Root access and the matched group were published in commit one and stay frozen.
+      const bots = (Array.isArray(robots.bots) ? robots.bots.map(record) : []).map((bot) => ({
+        ...bot,
+        ...crawlerSamplePolicy(
+          parsed,
+          tokens.get(String(bot.bot_id)) ?? [],
+          tokens.has(String(bot.bot_id)) ? sample : [],
+          snapshot?.truncated,
+        ),
+      }));
       await trx
         .updateTable('site_crawls')
         .set((eb) => ({
-          site_facts: JSON.stringify({ ...facts, sitemap }),
+          site_facts: JSON.stringify({ ...facts, sitemap, robots: { ...robots, bots } }),
           admitted_url_count: eb('admitted_url_count', '+', admitted),
           updated_at: new Date(),
         }))
@@ -386,13 +443,31 @@ export async function runSiteSetup(
   let facts: SiteFacts;
   if (published) facts = published;
   else {
-    facts = await siteEvidence(ctx, task.requested_url, origin, walks, settings);
+    const observed = await siteEvidence(ctx, origin, walks, settings);
+    facts = observed.facts;
     const evidence = facts;
     // Commit one: the root page's wait clears here, before the walk.
     const committed = await underLease(ctx, claimed, async (trx, locked) => {
+      const snapshot =
+        origin && observed.body !== null
+          ? await insertRobotsSnapshot(
+              trx,
+              locked,
+              origin,
+              observed.body,
+              observed.facts.robots.status_code,
+              settings.snapshotBytes,
+            )
+          : null;
+      observed.facts.robots.robots_snapshot_id = snapshot?.id ?? null;
       await trx
         .updateTable('site_crawls')
-        .set({ site_facts: JSON.stringify(evidence), updated_at: new Date() })
+        .set({
+          site_facts: JSON.stringify(evidence),
+          robots_snapshot_id: snapshot?.id ?? null,
+          robots_observed_at: new Date(observed.facts.robots.observed_at),
+          updated_at: new Date(),
+        })
         .where('id', '=', locked.id)
         .where('workspace_id', '=', locked.workspace_id)
         .execute();

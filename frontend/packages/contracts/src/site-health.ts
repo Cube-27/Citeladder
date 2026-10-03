@@ -13,3 +13,4 @@ export * from './site-health/inventory.ts';
 export * from './site-health/issues.ts';
 export * from './site-health/pages.ts';
 export * from './site-health/pagination.ts';
+export * from './site-health/robots.ts';

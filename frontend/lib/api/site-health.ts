@@ -35,6 +35,7 @@ import {
   siteIssueDetailSchema,
   siteIssuesPageSchema,
   urlPreviewResponseSchema,
+  robotsHistoryPageSchema,
 } from '@citeladder/contracts/site-health';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
@@ -129,6 +130,13 @@ type IssueDetailParams = { cursor?: string; limit?: number };
 type IssueHistoryParams = { cursor?: string; limit?: number };
 
 export const siteHealthApi = {
+  getRobotsHistory: async (projectId: string, cursor?: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get(
+      withQuery(`/projects/${projectId}/site-health/robots-history`, definedQuery({ cursor })),
+      options,
+    );
+    return strictValidate(robotsHistoryPageSchema, res, 'siteHealth.getRobotsHistory');
+  },
   getEntitlements: async (options?: ApiRequestOptions) => {
     const res = await apiClient.get<SiteHealthEntitlement>('/entitlements', options);
     return strictValidate(siteHealthEntitlementSchema, res, 'siteHealth.getEntitlements');
@@ -298,6 +306,14 @@ export const siteHealthApi = {
  * place. Every `queryFn` forwards the abort signal.
  */
 export const siteHealthQueries = {
+  robotsHistory: (workspaceId: string, projectId: string, cursor?: string) =>
+    queryOptions({
+      queryKey: queryKeys.siteHealth.robotsHistory(workspaceId, projectId, cursor),
+      // Opening history refreshes the project's observation sequence, irrespective of selected crawl.
+      refetchOnMount: 'always',
+      queryFn: ({ signal }) =>
+        siteHealthApi.getRobotsHistory(projectId, cursor, { signal, workspaceId }),
+    }),
   /** Site Health entitlement keyed and requested for one explicit workspace. */
   entitlements: (workspaceId: string | null) =>
     queryOptions({

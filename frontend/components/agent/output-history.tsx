@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
+import { LineDiff } from '@/components/ui/line-diff';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -15,7 +16,6 @@ import { OUTPUT_PHASE_LABEL } from '@/lib/agent/vocabulary';
 import { agentMutations, agentQueries, type AgentRevision } from '@/lib/api/agent';
 import { queryKeys } from '@/lib/api/query-keys';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
-import { cn } from '@/lib/utils';
 
 type View = { id: string; mode: 'view' | 'compare' } | null;
 
@@ -152,12 +152,6 @@ function RevisionRow({
   );
 }
 
-const DIFF_LINE = {
-  same: { mark: ' ', label: null, tone: 'text-muted' },
-  removed: { mark: '−', label: 'Removed', tone: 'bg-well text-secondary' },
-  added: { mark: '+', label: 'Added', tone: 'bg-panel-tonal text-secondary' },
-} as const;
-
 /** What changed from this revision to the current one, line by line. */
 function RevisionDiff({
   before,
@@ -176,36 +170,12 @@ function RevisionDiff({
   const changed = lines.filter((line) => line.kind !== 'same').length;
   const noun = changed === 1 ? 'line' : 'lines';
   const summary = changed === 0 ? 'no changes' : `${changed} changed ${noun}`;
-  const occurrences = new Map<string, number>();
-  const keyedLines = lines.map((line) => {
-    const content = JSON.stringify([line.kind, line.text]);
-    const occurrence = occurrences.get(content) ?? 0;
-    occurrences.set(content, occurrence + 1);
-    return { ...line, key: `${content}:${occurrence}` };
-  });
   return (
     <div className="grid gap-2">
       <p className={textRole('caption')}>
         Revision {before.number} → current (revision {after.number}): {summary}
       </p>
-      <ol
-        aria-label={`Changes from revision ${before.number}`}
-        className={textRole(
-          'caption',
-          'border-border-subtle grid overflow-x-auto rounded-[var(--radius-control)] border font-mono',
-        )}
-      >
-        {keyedLines.map((line) => {
-          const style = DIFF_LINE[line.kind];
-          return (
-            <li key={line.key} className={cn('flex gap-2 px-2 whitespace-pre-wrap', style.tone)}>
-              <span aria-hidden>{style.mark}</span>
-              {style.label ? <span className="sr-only">{style.label}:</span> : null}
-              <span>{line.text || ' '}</span>
-            </li>
-          );
-        })}
-      </ol>
+      <LineDiff lines={lines} label={`Changes from revision ${before.number}`} />
     </div>
   );
 }

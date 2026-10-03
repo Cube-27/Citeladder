@@ -360,6 +360,19 @@ describe('site setup', () => {
           '/index.xml': {
             contentType: 'application/xml',
             body: '<sitemapindex><sitemap><loc>https://example.test/pages.xml</loc></sitemap></sitemapindex>',
+            onFetch: async () => {
+              const initial = await crawlRow(seed);
+              expect(initial.robots_snapshot_id).not.toBeNull();
+              expect(record(initial.site_facts).robots).toMatchObject({
+                bots: expect.arrayContaining([
+                  expect.objectContaining({
+                    label: 'GPTBot',
+                    root_access: 'disallowed',
+                    policy: 'unknown',
+                  }),
+                ]),
+              });
+            },
           },
           '/pages.xml': urlset(url('/a'), url('/cart'), 'https://other.test/b', url('/a')),
         },
@@ -375,10 +388,21 @@ describe('site setup', () => {
       status_code: 200,
       sitemaps: [url('/index.xml')],
     });
-    expect(record(record(facts.robots).ai_crawlers)).toMatchObject({
-      GPTBot: 'block',
-      ClaudeBot: 'allow',
-    });
+    expect(record(facts.robots).bots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'GPTBot',
+          root_access: 'disallowed',
+          policy: 'all_disallowed',
+          evaluated_url_count: 2,
+        }),
+        expect.objectContaining({
+          label: 'ClaudeBot',
+          root_access: 'allowed',
+          policy: 'all_allowed',
+        }),
+      ]),
+    );
     expect(facts.llms_txt).toMatchObject({ fetched: true, present: true, status_code: 200 });
     expect(facts.sitemap).toEqual({
       fetched: true,

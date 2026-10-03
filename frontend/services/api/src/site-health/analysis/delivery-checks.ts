@@ -29,18 +29,30 @@ export function serverRenderSignals(facts: Facts): [boolean, Record<string, unkn
 const delivery = (facts: Facts) => record(facts.delivery);
 const siteRobots = (facts: Facts) => record(record(facts.site).robots);
 
-function crawlerAccess(facts: Facts): CheckResult {
-  const robots = siteRobots(facts);
-  const stance = record(robots.ai_crawlers);
-  const bounded = Object.fromEntries(r.ai_crawler_bots.map((bot) => [bot, stance[bot] ?? '']));
-  if (!robots.fetched)
+const crawlerAccess =
+  (check: 'ai_crawler_access' | 'search_crawler_access') =>
+  (facts: Facts): CheckResult => {
+    const robots = siteRobots(facts);
+    const bots = policy.crawlers.bots.filter((bot) => bot.checks.includes(check));
+    const stance = new Map(records(robots.bots).map((bot) => [text(bot.bot_id), bot.root_access]));
+    const bounded = Object.fromEntries(
+      bots.map((bot) => [bot.bot_id, stance.get(bot.bot_id) ?? 'unknown']),
+    );
+    const evidence = {
+      robots_fetched: Boolean(robots.fetched),
+      root_access: bounded,
+      catalog_version: robots.catalog_version,
+      robots_snapshot_id: robots.robots_snapshot_id,
+    };
+    if (!robots.fetched) return ['not_applicable', { ...evidence, reason: 'robots_not_fetched' }];
+    const blocked = bots
+      .filter((bot) => stance.get(bot.bot_id) === 'disallowed')
+      .map((bot) => bot.label);
     return [
-      'not_applicable',
-      { reason: 'robots_not_fetched', robots_fetched: false, ai_crawlers: bounded },
+      passFail(!blocked.length),
+      { ...evidence, blocked, checked: bots.map((bot) => bot.label) },
     ];
-  const blocked = r.ai_crawler_bots.filter((bot) => stance[bot] === 'block');
-  return [passFail(!blocked.length), { robots_fetched: true, ai_crawlers: bounded, blocked }];
-}
+  };
 
 function robotsTxtPresent(facts: Facts): CheckResult {
   const robots = siteRobots(facts);
@@ -54,18 +66,6 @@ function robotsTxtPresent(facts: Facts): CheckResult {
     return ['missing', evidence];
   // An unreadable file is not evidence of absence.
   return ['not_applicable', { ...evidence, reason: 'robots_not_fetched' }];
-}
-
-function searchCrawlerAccess(facts: Facts): CheckResult {
-  const robots = siteRobots(facts);
-  if (!robots.fetched)
-    return ['not_applicable', { reason: 'robots_not_fetched', crawler_role: 'search_citation' }];
-  const stance = record(robots.ai_crawlers);
-  const blocked = r.search_citation_crawler_bots.filter((bot) => stance[bot] === 'block');
-  return [
-    passFail(!blocked.length),
-    { crawler_role: 'search_citation', checked: r.search_citation_crawler_bots, blocked },
-  ];
 }
 
 function snippetAccess(facts: Facts): CheckResult {
@@ -129,9 +129,9 @@ const deliveryChecks: Record<string, (facts: Facts) => CheckResult> = {
       { content_encoding: d.content_encoding ?? '', is_compressed: Boolean(d.is_compressed) },
     ];
   },
-  'technical.ai_crawler_access': crawlerAccess,
+  'technical.ai_crawler_access': crawlerAccess('ai_crawler_access'),
   'technical.robots_txt_present': robotsTxtPresent,
-  'search.crawler_access': searchCrawlerAccess,
+  'search.crawler_access': crawlerAccess('search_crawler_access'),
   'search.snippet_access': snippetAccess,
   'aeo.llms_txt_present': (facts) => {
     const llms = record(record(facts.site).llms_txt);

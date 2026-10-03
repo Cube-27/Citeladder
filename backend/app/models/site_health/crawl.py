@@ -12,6 +12,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     String,
@@ -46,6 +47,41 @@ if TYPE_CHECKING:
     from .queue import SiteCrawlTask
 
 
+class RobotsSnapshot(Base):
+    """Append-only, content-addressed robots evidence owned by a project."""
+
+    __tablename__ = "robots_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "origin",
+            "content_hash",
+            name="uq_robots_snapshots_content",
+        ),
+        UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_robots_snapshots_scope_id"
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE)
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True))
+    origin: Mapped[str] = mapped_column(String(2048))
+    content_hash: Mapped[str] = mapped_column(String(64))
+    body: Mapped[str] = mapped_column(Text)
+    truncated: Mapped[bool] = mapped_column(Boolean, default=False)
+    status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
 class SiteCrawl(Base):
     """One crawl run with independent overall/discovery/analysis sub-states.
 
@@ -58,6 +94,21 @@ class SiteCrawl(Base):
 
     __tablename__ = "site_crawls"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id", "robots_snapshot_id"],
+            [
+                "robots_snapshots.workspace_id",
+                "robots_snapshots.project_id",
+                "robots_snapshots.id",
+            ],
+        ),
+        Index(
+            "ix_site_crawls_robots_history",
+            "workspace_id",
+            "project_id",
+            "robots_observed_at",
+            "id",
+        ),
         # Backs the composite (workspace_id, project_id, crawl_id) foreign key
         # from ``SiteUrlObservation`` that pins an observation's crawl to its
         # own workspace AND project (tenant-consistency guard). Including
@@ -125,6 +176,13 @@ class SiteCrawl(Base):
     # injection source for the site_root-scoped rules (facts["site"]); it
     # carries NO discovered totals, so Free non-disclosure is untouched.
     site_facts: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    robots_snapshot_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    # When site setup observed robots.txt; keys the paged observation history.
+    robots_observed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     extractor_version: Mapped[str] = mapped_column(String(32), default="")
     analyzer_version: Mapped[str] = mapped_column(String(32), default="")
     rule_catalog_version: Mapped[str] = mapped_column(String(32), default="")

@@ -536,18 +536,6 @@
       "schema_content_match_min_token_overlap": 0.6,
       "schema_content_match_max_candidates": 5,
       "ttfb_warn_ms": 800,
-      "ai_crawler_bots": [
-        "Googlebot",
-        "Bingbot",
-        "OAI-SearchBot",
-        "PerplexityBot",
-        "GPTBot",
-        "ClaudeBot",
-        "Google-Extended",
-        "ChatGPT-User",
-        "Perplexity-User"
-      ],
-      "search_citation_crawler_bots": ["Googlebot", "Bingbot", "OAI-SearchBot", "PerplexityBot"],
       "web_check_ids": [
         "technical.canonical_integrity",
         "technical.canonical_present",
