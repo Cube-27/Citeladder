@@ -27,6 +27,7 @@ import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import type { ActionStatus } from '@/lib/api/actions';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { internalLinksApi, internalLinksQuery } from '@/lib/api/site-health-internal-links';
+import type { UrlHistory } from '@/lib/navigation/url-state';
 import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import { downloadInternalLinksCsv } from '@/lib/site-health/internal-link-csv';
@@ -38,7 +39,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { InternalLinkReview } from './internal-link-review';
 
 type Scope = Readonly<{ projectId: string; workspaceId: string }>;
-type ParamChange = (key: string, value: string) => void;
+type ParamChange = (key: string, value: string, history?: UrlHistory) => void;
 const isRunning = (state: string | undefined) => state === 'queued' || state === 'running';
 
 const STATE_LABELS: Record<InternalLinkAnalysis['state'], string> = {
@@ -73,6 +74,11 @@ function useInternalLinks({ projectId, workspaceId }: Scope, update: ParamChange
       ),
     onSuccess: (result) => {
       setRequestKey(crypto.randomUUID());
+      void queryClient.invalidateQueries({
+        queryKey: internalLinksQuery(workspaceId, projectId).queryKey,
+        exact: true,
+        refetchType: 'none',
+      });
       if (!result.analysis) return;
       // Seed the selected-analysis key so the URL change does not flash a reload.
       queryClient.setQueryData(
@@ -103,14 +109,17 @@ function filterLinks(links: InternalLink[], search: string, status: string) {
 
 export function InternalLinksPanel(scope: Scope) {
   const [params, setParams] = useSearchParams();
-  const update: ParamChange = (key, value) =>
-    setParams((previous) => {
-      const next = new URLSearchParams(previous);
-      if (value) next.set(key, value);
-      else next.delete(key);
-      if (key === 'analysis') next.delete('link');
-      return next;
-    });
+  const update: ParamChange = (key, value, history = 'push') =>
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (value) next.set(key, value);
+        else next.delete(key);
+        if (key === 'analysis') next.delete('link');
+        return next;
+      },
+      { replace: history === 'replace' },
+    );
   const read = useInternalLinks(scope, update);
   const analysis = read.data?.analysis;
   const links = filterLinks(
@@ -345,7 +354,7 @@ function LinksBody({
             <SearchField
               size="compact"
               value={params.get('links_q') ?? ''}
-              onValueChange={(value) => update('links_q', value)}
+              onValueChange={(value) => update('links_q', value, 'replace')}
               placeholder="Search pages and anchors"
               aria-label="Search pages and anchors"
             />

@@ -26,6 +26,7 @@ import {
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
 import { queryKeys } from '@/lib/api/query-keys';
+import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityApi } from '@/lib/api/visibility';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { engineLabel } from '@/lib/visibility/dashboard';
@@ -402,7 +403,7 @@ function useFanoutSummary(
     enabled: Boolean(projectId && workspaceId) && scopeReady,
     // Totals for a selection do not change while the reader pages through it;
     // keeping the previous values avoids the headline flickering to blank.
-    placeholderData: (previous) => previous,
+    placeholderData: (data, query) => retainPreviousDataForScope(projectId ?? '', data, query),
   });
   return {
     distinctQueries: result.data?.distinct_queries ?? null,

@@ -242,9 +242,65 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
       };
     });
     expect(focused.edge).toBe(edge);
-    expect(focused.outline).not.toBe('none');
+    expect(focused.outline).toBe('none');
   }
   await page.emulateMedia({ forcedColors: 'active' });
   await field.focus();
-  expect(await field.evaluate((node) => getComputedStyle(node).outlineStyle)).not.toBe('none');
+  expect(await field.evaluate((node) => getComputedStyle(node).borderStyle)).toBe('solid');
+  expect(await field.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
+});
+
+test('password and Agent text entry paint one focus boundary', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('**/api/v1/auth/me', (route) =>
+    route.fulfill({ status: 401, json: { detail: 'Not authenticated' } }),
+  );
+  await page.goto('/login');
+  const password = page.getByLabel(/^Password/);
+  const frame = password.locator('..');
+  const restingEdge = await frame.evaluate((node) => getComputedStyle(node).borderColor);
+  await password.click();
+  await expect(password).toBeFocused();
+  await expect(async () => {
+    const edge = await frame.evaluate((node) => getComputedStyle(node).borderColor);
+    expect(edge).not.toBe(restingEdge);
+  }).toPass();
+  expect(await password.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
+  expect(await frame.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
+  await page.keyboard.press('Tab');
+  const reveal = page.getByRole('button', { name: 'Show Password' });
+  await expect(reveal).toBeFocused();
+  expect(
+    await reveal.evaluate((node) => Number.parseFloat(getComputedStyle(node).outlineOffset)),
+  ).toBeLessThan(0);
+
+  // A framed invalid field keeps its danger edge while it holds focus.
+  await password.evaluate((node) => node.setAttribute('aria-invalid', 'true'));
+  const invalidEdge = await frame.evaluate(async (node) => {
+    await Promise.all(node.getAnimations().map((animation) => animation.finished));
+    return getComputedStyle(node).borderColor;
+  });
+  expect(invalidEdge).not.toBe(restingEdge);
+  await password.focus();
+  await expect(password).toBeFocused();
+  await expect(async () => {
+    expect(await frame.evaluate((node) => getComputedStyle(node).borderColor)).toBe(invalidEdge);
+  }).toPass();
+  await password.evaluate((node) => node.removeAttribute('aria-invalid'));
+
+  await stubAuthedShell(page);
+  await page.goto(fixtureProjectPath('/agent'));
+  const prompt = page.locator('textarea');
+  const form = prompt.locator('xpath=ancestor::form');
+  const outerEdge = await form.evaluate((node) => getComputedStyle(node).borderColor);
+  const inputEdge = await prompt.evaluate((node) => getComputedStyle(node).borderColor);
+  await prompt.click();
+  await expect(prompt).toBeFocused();
+  await expect(async () => {
+    expect(await prompt.evaluate((node) => getComputedStyle(node).borderColor)).not.toBe(inputEdge);
+  }).toPass();
+  expect(await form.evaluate((node) => getComputedStyle(node).borderColor)).toBe(outerEdge);
+  expect(await form.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
+  expect(await prompt.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
+  await page.screenshot({ path: test.info().outputPath('agent-focus.png') });
 });

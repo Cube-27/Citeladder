@@ -179,13 +179,8 @@ export function PagesTable({
         {pages.map((page, index) => (
           <TableRow
             key={page.site_url_id}
-            // The row is the primary affordance, so it has to be reachable and
-            // operable from the keyboard too — the trailing `View` link is a
-            // shortcut, not a substitute for the row.
+            // Preserve native row/cell semantics; View is the announced link.
             tabIndex={0}
-            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A table row cannot be wrapped by an anchor; the row implements the link keyboard contract.
-            role="link"
-            aria-label={pageDisplayTitle(page.title, page.display_url)}
             onClick={() => openPage(page.site_url_id)}
             onKeyDown={(event) => {
               if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -227,8 +222,14 @@ export function PagesTable({
                 {statusLabel(page.analysis_status)}
               </Badge>
             </TableCell>
-            <TableCell numeric className="text-danger-text tabular-nums">
-              {formatIssueCount(page.issue_count)}
+            <TableCell
+              numeric
+              className={cn(
+                'tabular-nums',
+                page.issue_count !== null && page.issue_count > 0 && 'text-danger-text',
+              )}
+            >
+              <Measured value={formatIssueCount(page.issue_count)} />
             </TableCell>
             <TableCell numeric className={scoreTextClass(page.web_fundamentals_score)}>
               <MeasurementValue

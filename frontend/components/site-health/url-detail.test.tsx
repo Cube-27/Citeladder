@@ -210,6 +210,45 @@ function handlers(pageDetail: PageDetail) {
 }
 
 describe('UrlDetail', () => {
+  it('recovers a failed page read with its request reference and exact retry', async () => {
+    let reads = 0;
+    let available = false;
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () => {
+        reads += 1;
+        return available
+          ? HttpResponse.json(detail())
+          : HttpResponse.json(
+              { detail: 'Page temporarily unavailable' },
+              { status: 503, headers: { 'X-Request-ID': 'page-read-reference' } },
+            );
+      }),
+      ...handlers(detail()),
+    );
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    expect(
+      await screen.findByText('Reference: page-read-reference', {}, { timeout: 4500 }),
+    ).toBeInTheDocument();
+    const beforeRetry = reads;
+    available = true;
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
+    ).toBeInTheDocument();
+    expect(reads).toBe(beforeRetry + 1);
+  });
+
+  it('reports access failures without implying the page is missing or exposing retry', async () => {
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () =>
+        HttpResponse.json({ detail: 'Workspace access denied' }, { status: 403 }),
+      ),
+    );
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    expect(await screen.findByText('Workspace access denied')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/may not exist/)).not.toBeInTheDocument();
+  });
   it('renders scores, delivery metrics, and severity-ordered issues', async () => {
     mswServer.use(...handlers(detail()));
 

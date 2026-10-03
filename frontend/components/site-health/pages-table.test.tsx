@@ -40,6 +40,15 @@ describe('PagesTable', () => {
     expect(screen.getByText('64')).toBeInTheDocument();
   });
 
+  it('exposes scores as cells in a native row and keeps keyboard navigation', () => {
+    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
+    const row = screen.getByRole('row', { name: /Homepage/ });
+    expect(within(row).getByRole('cell', { name: '46' })).toBeInTheDocument();
+    expect(within(row).getByRole('link', { name: 'View' })).toBeInTheDocument();
+    fireEvent.keyDown(row, { key: 'Enter' });
+    expect(screen.getByTestId('location')).toHaveTextContent(`/site/crawls/${CRAWL}/pages/${UUID}`);
+  });
+
   it('shows a non-null limited-evidence score without an internal confidence subtitle', () => {
     renderPages(
       <PagesTable

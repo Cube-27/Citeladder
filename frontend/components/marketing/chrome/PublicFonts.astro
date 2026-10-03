@@ -69,8 +69,30 @@
     line-gap-override: 9%;
   }
 
+  /* Sora/Arial advance ratios at 400 and 600 over public heading text.
+     Vertical overrides use Sora's 970/-290/0 metrics (1000 UPM), divided
+     by size-adjust. Separate bold metrics avoid synthetic-bold reflow. */
+  @font-face {
+    font-family: 'Sora Fallback';
+    src: local('Arial');
+    font-weight: 200 500;
+    size-adjust: 113.62%;
+    ascent-override: 85.372%;
+    descent-override: 25.524%;
+    line-gap-override: 0%;
+  }
+  @font-face {
+    font-family: 'Sora Fallback';
+    src: local('Arial Bold'), local('Arial-BoldMT');
+    font-weight: 600;
+    size-adjust: 107.356%;
+    ascent-override: 90.354%;
+    descent-override: 27.014%;
+    line-gap-override: 0%;
+  }
+
   :root {
     --font-text: 'Switzer', 'Switzer Fallback';
-    --font-heading: 'Sora', Arial;
+    --font-heading: 'Sora', 'Sora Fallback', Arial;
   }
 </style>

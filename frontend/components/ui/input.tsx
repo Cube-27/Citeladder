@@ -2,7 +2,7 @@ import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
 
 import { cn } from '@/lib/utils';
 
-/** Fields share a hairline boundary and the central keyboard outline. */
+/** Fields share a hairline boundary whose colour shows keyboard focus. */
 export const inputClasses =
   'focus-input h-[var(--control-height-md)] w-full rounded-[var(--radius-control)] border border-border bg-input px-3 text-field text-foreground leading-[calc(var(--control-height-md)_-_2px)] transition-[border-color,background-color] placeholder:text-muted enabled:hover:border-border-strong aria-invalid:border-danger aria-invalid:enabled:hover:border-danger disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle';
 

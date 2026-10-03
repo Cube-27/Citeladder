@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,7 +105,15 @@ export function AeoReadinessPanel({
   if (readiness.isLoading) {
     return <output className="type-body block">Loading persisted AEO evaluations…</output>;
   }
-  if (readiness.isError) return <Alert tone="danger">Could not load AEO Readiness.</Alert>;
+  if (readiness.isError)
+    return (
+      <ReadError
+        error={readiness.error}
+        fallback="Could not load AEO Readiness."
+        onRetry={() => void readiness.refetch()}
+        pending={readiness.isFetching}
+      />
+    );
   if (!readiness.data || readiness.data.crawl_id === null) {
     return (
       <Alert tone="info">

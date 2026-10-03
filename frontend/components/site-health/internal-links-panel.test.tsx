@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
-import { screen, within } from '@testing-library/react';
+import { screen, within, waitFor } from '@testing-library/react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -63,11 +64,28 @@ const read = (value: unknown) => ({
   availability: 'ready',
   analysis: value,
 });
-function renderPanel() {
+function Navigation() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  return (
+    <>
+      <button onClick={() => navigate(-1)}>Back</button>
+      <output aria-label="Location">{location.pathname + location.search}</output>
+    </>
+  );
+}
+
+function renderPanel(withNavigation = false) {
   return renderWithProviders(
-    <InternalLinksPanel projectId={project.id} workspaceId={project.workspace_id} />,
+    <>
+      <InternalLinksPanel projectId={project.id} workspaceId={project.workspace_id} />
+      {withNavigation ? <Navigation /> : null}
+    </>,
     {
-      initialEntries: [`/site?tab=internal-links&project=${project.id}`],
+      initialEntries: [
+        ...(withNavigation ? ['/projects'] : []),
+        `/site?tab=internal-links&project=${project.id}`,
+      ],
       projectSelection: { activeProject: project, activeProjectId: project.id, status: 'ready' },
     },
   );
@@ -77,6 +95,49 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('Internal links', () => {
+  it('refreshes the default analysis after a rerun when navigating Back', async () => {
+    const previous = analysis({ page_count: 20 });
+    const next = analysis({ id: uuid(22), page_count: 42 });
+    let latest = previous;
+    mswServer.use(
+      http.get(endpoint, () => HttpResponse.json(read(latest))),
+      http.post(`${endpoint}/analyses`, () => {
+        latest = next;
+        return HttpResponse.json(read(next));
+      }),
+    );
+    renderPanel(true);
+    expect(await screen.findByText(/20 pages/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Analyze again' }));
+    expect(await screen.findByText(/42 pages/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await waitFor(() =>
+      expect(screen.getByLabelText('Location')).not.toHaveTextContent('analysis='),
+    );
+    expect(await screen.findByText(/42 pages/)).toBeInTheDocument();
+  });
+
+  it('replaces search history while preserving deliberate analysis navigation', async () => {
+    const link = {
+      id: uuid(200),
+      source: page(0, 'Source'),
+      target: page(1, 'Destination'),
+      anchor: 'Anchor',
+      placement: null,
+      usefulness: 0.9,
+      action_id: null,
+      action_status: null,
+    };
+    mswServer.use(
+      http.get(endpoint, () => HttpResponse.json(read(analysis({ recommendations: [link] })))),
+    );
+    renderPanel(true);
+    const search = await screen.findByRole('searchbox', { name: 'Search pages and anchors' });
+    await userEvent.type(search, 'Anchor');
+    expect(screen.getByLabelText('Location')).toHaveTextContent('links_q=Anchor');
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByLabelText('Location').textContent).toBe('/projects');
+  });
   it('runs only on request and reports unavailable checks instead of an empty result', async () => {
     const failed = analysis({
       state: 'unavailable',

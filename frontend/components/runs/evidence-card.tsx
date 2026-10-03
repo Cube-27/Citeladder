@@ -233,7 +233,9 @@ function outcomeToneClass(positive: boolean | null | undefined): string {
 
 function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   const brandDetail = evidence.brand_mentioned
-    ? `First match at character ${evidence.brand_first_offset ?? 0}`
+    ? evidence.brand_first_offset === null
+      ? 'Brand detected; match position unavailable'
+      : `First match at character ${evidence.brand_first_offset}`
     : 'No tracked brand alias appeared in the answer';
   const ownedNoun = evidence.owned_citation_count === 1 ? 'source' : 'sources';
   const ownedDetail = `${evidence.owned_citation_count} owned ${ownedNoun} found`;

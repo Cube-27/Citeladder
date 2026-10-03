@@ -906,24 +906,22 @@ a.focus-ring:active .type-caption {
   color: var(--color-foreground);
 }
 
-/* Keyboard focus is owned here. Composed fields ring their frame; other
-   controls ring only the element receiving focus. Filled actions use their
-   high-contrast label ink and an inset outline so clipping cannot hide it. */
+/* Focus paints the existing edge, never a second perimeter outside it.
+   Borderless controls use the same inset edge without changing their size. */
 :focus-visible,
-.focus-ring:focus-visible,
+.focus-ring:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
 .focus-input:focus-visible,
-.focus-frame:has(:focus-visible) {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
+.focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
+  border-color: var(--color-accent);
+  outline: none;
 }
 
 .focus-ring:is([data-button-variant='primary'], [data-button-variant='destructive']):focus-visible {
   outline-color: currentColor;
-  outline-offset: -2px;
-}
-
-.focus-ring:is([aria-current], [aria-selected='true'], [data-state='active']):focus-visible {
-  outline-offset: -2px;
 }
 
 /* Public CTAs keep the shared control semantics with a compact, raised face. */
@@ -963,10 +961,9 @@ a.focus-ring:active .type-caption {
   }
 }
 
-/* A frame can replace its child's outline only when focus has one destination.
-   Keep each child's outline when siblings include another interactive control. */
-.focus-frame:not(:has(:where(input:not([type='hidden']), textarea, select, button,
-  a[href], area[href], summary, [tabindex], [contenteditable]:not([contenteditable='false'])):not(:focus-visible))) :focus-visible {
+/* Text entry belongs to the field frame. Auxiliary buttons keep their own
+   focus edge and do not also highlight the surrounding frame. */
+.focus-frame :is(input, textarea, select):focus-visible {
   outline: none;
 }
 
@@ -983,8 +980,18 @@ a.focus-ring:active .type-caption {
   :focus-visible,
   .focus-ring:focus-visible,
   .focus-input:focus-visible,
-  .focus-frame:has(:focus-visible) {
+  .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
     outline-style: dotted;
+  }
+
+  .focus-input:focus-visible,
+  .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
+    border-style: dotted;
+    outline: none;
+  }
+
+  .focus-frame :is(input, textarea, select):focus-visible {
+    outline: none;
   }
 }
 
@@ -993,8 +1000,9 @@ a.focus-ring:active .type-caption {
   :focus-visible,
   .focus-ring:focus-visible,
   .focus-input:focus-visible,
-  .focus-frame:has(:focus-visible) {
+  .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
     outline-color: Highlight;
+    border-color: Highlight;
   }
 
   /* The radio dot is a filled span, which otherwise collapses to Canvas. */
@@ -1186,11 +1194,15 @@ input:-webkit-autofill:focus {
 .focus-ring[aria-invalid='true'],
 .focus-frame:has([aria-invalid='true']) {
   border: 1px solid var(--color-danger);
+  outline-color: var(--color-danger);
 }
 @media (forced-colors: active) {
   .focus-input[aria-invalid='true'],
   .focus-ring[aria-invalid='true'],
-  .focus-frame:has([aria-invalid='true']) { border-color: Mark; }
+  .focus-frame:has([aria-invalid='true']) {
+    border-color: Mark;
+    outline-color: Mark;
+  }
 }
 
 /* A spinner is a promise that the wait is long enough to be worth explaining.
@@ -1675,7 +1687,7 @@ samp {
 
 
 
-/* Skip link — the first tab stop on every route (app/layout.tsx). Off-screen
+/* Skip link — the first tab stop in AppShell. Off-screen
    until focused, then it lands as a normal control against the panel fill. */
 .skip-link {
   position: fixed;
