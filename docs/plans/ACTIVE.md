@@ -103,12 +103,15 @@
   execution and project skill policy are deferred. D/E remain separate assignments.
 
 ## Queued
-- [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)
-  — plan saved on 26 September 2026; implementation not started. Customer
-  authorization (domain verification or attestation) lets Site Health crawl
-  robots-excluded pages of the customer's own domain without bypassing access
-  controls. Also covers an expanded AI-bot crawlability report and CDN-log
-  crawl insights. Terms wording awaits legal review.
+- [AI Traffic analytics, crawl logs and authorized crawl](citeladder-authorized-crawl.md)
+  — plan saved on 26 September 2026 and revised twice on 3 October 2026;
+  implementation not started. Part A is three self-contained PRs: A1 bot
+  catalog and AI crawlability; A2 Crawl Logs and the AI Traffic screen, which
+  replaces AI Referrals; A3 GA4 extract contract fixes, the per-URL Pages
+  join, comparisons and insights. Part B (authorized crawl) follows
+  separately; its Terms wording awaits legal review. Production enablement of
+  A2 awaits the plan/quota, retention and privacy decisions recorded in the
+  plan.
 - [Subsequent prompt grounding](citeladder-subsequent-prompt-grounding.md)
   — pending; relevance-ranked persisted GSC evidence for later Generate prompts.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
