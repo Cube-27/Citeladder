@@ -160,12 +160,14 @@ describe('integration sync API and immutable windows', () => {
   it('bounds distinct windows concurrently per workspace and leaves duplicates uncharged', async () => {
     const target = await seedTarget();
     const results = await Promise.all(
-      Array.from({ length: 12 }, (_, index) => {
+      Array.from({ length: settings.sync_on_demand_request_limit + 2 }, (_, index) => {
         const date = `2026-07-${String(index + 1).padStart(2, '0')}`;
         return request(target, '/sync', { window_start: date, window_end: date }, ownerId, 'POST');
       }),
     );
-    expect(results.filter((result) => result.status === 202)).toHaveLength(10);
+    expect(results.filter((result) => result.status === 202)).toHaveLength(
+      settings.sync_on_demand_request_limit,
+    );
     expect(results.filter((result) => result.status === 429)).toHaveLength(2);
     const run = await db
       .selectFrom('integration_sync_runs')
@@ -191,13 +193,13 @@ describe('integration sync API and immutable windows', () => {
             .digest('hex'),
         )
         .executeTakeFirstOrThrow(),
-    ).toEqual({ count: 10 });
+    ).toEqual({ count: settings.sync_on_demand_request_limit });
     expect((await enqueue(await seedTarget())).status).toBe('queued');
   });
 
   it('rejects a new window at capacity, frees terminal slots, and exempts scheduled/backfill work', async () => {
     const target = await seedTarget();
-    for (let index = 0; index < 20; index++) {
+    for (let index = 0; index < settings.sync_on_demand_active_limit; index++) {
       const date = `2026-06-${String(index + 1).padStart(2, '0')}`;
       const run = await enqueueSyncRun(db, {
         ...target,

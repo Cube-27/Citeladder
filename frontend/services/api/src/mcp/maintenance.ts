@@ -16,7 +16,7 @@ async function cleanupExpired(
   canAdmit: () => boolean,
 ) {
   if (!canAdmit()) return 0;
-  return db.transaction().execute(async (trx) => {
+  const deleted = await db.transaction().execute(async (trx) => {
     let query = trx.selectFrom(table).select('id').where('expires_at', '<=', now);
     if (table !== 'usage_windows') query = query.where('consumed_at', 'is', null);
     const rows = await query
@@ -36,4 +36,5 @@ async function cleanupExpired(
       .executeTakeFirst();
     return Number(result.numDeletedRows);
   });
+  return deleted;
 }
