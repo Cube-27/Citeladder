@@ -47,6 +47,8 @@ export const LLMS_TXT = [
   '- https://citeladder.com/enterprise',
   '- https://citeladder.com/solutions',
   '- https://citeladder.com/faq',
+  '- https://citeladder.com/ai-instructions',
+  '- https://citeladder.com/entity-map',
   '- https://citeladder.com/blog',
   ...POSTS.map((post) => `- https://citeladder.com/blog/${post.slug}`),
   '- https://citeladder.com/compare',

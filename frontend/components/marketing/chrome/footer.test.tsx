@@ -49,6 +49,11 @@ describe('MarketingFooter', () => {
       'href',
       'https://app.citeladder.com/login',
     );
+    expect(screen.getByRole('link', { name: 'AI Instructions' })).toHaveAttribute(
+      'href',
+      '/ai-instructions',
+    );
+    expect(screen.getByRole('link', { name: 'Entity Map' })).toHaveAttribute('href', '/entity-map');
     vi.unstubAllEnvs();
   });
 

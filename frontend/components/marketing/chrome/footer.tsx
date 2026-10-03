@@ -77,6 +77,8 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
       { label: PARENT_COMPANY.name, href: PARENT_COMPANY.href, external: true },
       { label: 'CiteLadder on LinkedIn', href: CITELADDER_LINKEDIN, external: true },
       { label: 'Contact', href: '/contact' },
+      { label: 'AI Instructions', href: '/ai-instructions' },
+      { label: 'Entity Map', href: '/entity-map' },
       { label: 'Log in', href: '/login', app: true },
     ],
   },
@@ -131,7 +133,7 @@ export async function MarketingFooter() {
             >
               {FOOTER_COLUMNS.map((column) => (
                 <div key={column.key}>
-                  <h2 className="website-small-heading text-foreground mb-5">{column.label}</h2>
+                  <h2 className="website-nav text-foreground mb-5">{column.label}</h2>
                   <div className="grid justify-items-start gap-3.5">
                     {column.links.map((link) => (
                       <FooterColumnLink key={link.label} link={link} />

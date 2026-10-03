@@ -18,6 +18,8 @@ const staticRoutes: readonly RouteEntry[] = [
   { path: '/ai-citation-tracking', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/ai-search-share-of-voice', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/faq', changeFrequency: 'monthly', priority: 0.6 },
+  { path: '/ai-instructions', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/entity-map', changeFrequency: 'monthly', priority: 0.5 },
   { path: '/blog', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/compare', changeFrequency: 'monthly', priority: 0.6 },
 ];
