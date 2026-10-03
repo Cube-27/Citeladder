@@ -18,6 +18,7 @@ import { getLogger } from './logging.ts';
 import { requestId } from './request-id.ts';
 import { PRODUCT_ROUTES } from './routes/index.ts';
 import { registerMethodGuards } from './routes/define.ts';
+import { streamsOwnBody } from './routes/crawl-logs.ts';
 import { registerMcpRoutes } from './mcp/server.ts';
 import { observeCommittedWork } from './db/committed-work.ts';
 import { runnerStarter } from './workers/start-runner.ts';
@@ -61,14 +62,14 @@ export function createApp(
   app.use(originToken(config));
   const startRunner = options.startRunner ?? runnerStarter(config, db);
   app.use((_c, next) => observeCommittedWork(next, startRunner));
-  app.use(
-    '/api/*',
-    bodyLimit({
-      maxSize: policy.api.request_body_max_bytes,
-      onError: () => {
-        throw new ApiError(413, 'Request body too large');
-      },
-    }),
+  const ordinaryBodyLimit = bodyLimit({
+    maxSize: policy.api.request_body_max_bytes,
+    onError: () => {
+      throw new ApiError(413, 'Request body too large');
+    },
+  });
+  app.use('/api/*', (c, next) =>
+    streamsOwnBody(c.req.method, c.req.path) ? next() : ordinaryBodyLimit(c, next),
   );
   app.onError(onError);
   app.notFound(onNotFound);

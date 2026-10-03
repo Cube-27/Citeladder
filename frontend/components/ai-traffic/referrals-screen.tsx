@@ -3,9 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { AiReferralsContent } from '@/components/ai-referrals/ai-referrals-content';
+import { AiReferralsContent } from '@/components/ai-traffic/referrals-content';
 import { AnalyticsToolbar } from '@/components/ui/analytics-toolbar';
-import { aiReferralsApi } from '@/lib/api/ai-referrals';
+import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import {
@@ -15,19 +15,22 @@ import {
   rangeToParams,
   type AiReferralsGranularity,
   type AiReferralsRange,
-} from '@/lib/ai-referrals/options';
+} from '@/lib/ai-traffic/options';
 import { useProjectContext } from '@/lib/project/project-context';
 
-export function AiReferralsScreen() {
+export function AiReferralsScreen({ tabs }: Readonly<{ tabs?: React.ReactNode }> = {}) {
   const { activeProject, isLoading: isProjectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
   const [range, setRange] = useState<AiReferralsRange>('latest');
   const [granularity, setGranularity] = useState<AiReferralsGranularity>('week');
   const rangeParams = useMemo(() => rangeToParams(range), [range]);
   const dashboardQuery = useQuery({
-    queryKey: queryKeys.aiReferrals.dashboard(projectId ?? '', { ...rangeParams, granularity }),
+    queryKey: queryKeys.aiTraffic.dashboard(activeProject?.workspace_id ?? '', projectId ?? '', {
+      ...rangeParams,
+      granularity,
+    }),
     queryFn: ({ signal }) =>
-      aiReferralsApi.getDashboard(
+      aiTrafficApi.getDashboard(
         projectId!,
         { ...rangeParams, granularity },
         {
@@ -37,11 +40,14 @@ export function AiReferralsScreen() {
       ),
     enabled: Boolean(projectId && activeProject?.workspace_id),
     placeholderData: (previousData, previousQuery) =>
-      retainPreviousDataForScope(projectId!, previousData, previousQuery),
+      previousQuery?.queryKey[3] === activeProject?.workspace_id
+        ? retainPreviousDataForScope(projectId!, previousData, previousQuery)
+        : undefined,
   });
 
   return (
     <AiReferralsContent
+      tabs={tabs}
       projectId={projectId}
       projectLoading={isProjectLoading}
       range={range}
@@ -83,7 +89,7 @@ function AiReferralsToolbar({
       granularityOptions={GRANULARITY_OPTIONS}
       onChangeGranularity={onChangeGranularity}
       fetching={fetching}
-      testId="ai-referrals-toolbar"
+      testId="ai-traffic-toolbar"
     />
   );
 }

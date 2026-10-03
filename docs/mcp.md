@@ -119,6 +119,15 @@ neither read starts a crawl. Snapshot references identify provenance but are
 not raw-body fetch resolvers. The browser's separately paged robots history
 read owns retained text comparisons.
 
+`read_crawl_logs` reads persisted summary, crawler and coverage projections with
+the selected window and verification filter. `list_bot_requests` pages sanitized
+retained requests with bot/status/folder/resource filters. Business context accepts
+`crawl_logs`. These adapters share the [AI Traffic](ai-traffic.md) readers and
+workspace authorization. Missing or incomplete evidence remains unavailable;
+neither tool starts collection or refresh. `read_ai_referrals` retains its
+existing session/share contract. Requests, GA4 sessions and tracked citations
+remain separate units.
+
 Every retrievable evidence reference uses an allowlisted `citeladder://` record
 type. `fetch` reauthorizes the owning workspace and returns the normalized
 `id`/`title`/`text`/`url`/`metadata` document while preserving the structured

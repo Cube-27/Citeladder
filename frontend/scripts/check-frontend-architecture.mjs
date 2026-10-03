@@ -5,7 +5,7 @@ const root = process.cwd();
 const failures = [];
 
 for (const owner of [
-  'ai-referrals.ts',
+  'ai-traffic.ts',
   'auth.ts',
   'integrations.ts',
   'opportunities.ts',

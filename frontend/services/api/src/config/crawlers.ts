@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { aiSourceSchema } from '@citeladder/contracts/ai-referrals';
+import { aiSourceSchema } from '@citeladder/contracts/ai-traffic';
+export { matchesCrawlerUserAgent } from '@citeladder/contracts/ai-traffic';
 import {
   crawlerPurposeSchema,
   crawlerResourceClassSchema,
@@ -53,8 +54,3 @@ export function loadCrawlerCatalog(value: unknown) {
 }
 export const crawlers = loadCrawlerCatalog(catalog);
 export type CrawlerBot = (typeof crawlers.bots)[number];
-/** Robots-only tokens have no patterns and cannot identify an HTTP request. */
-export function matchesCrawlerUserAgent(bot: CrawlerBot, userAgent: string) {
-  const value = userAgent.toLowerCase();
-  return bot.ua_patterns.some((pattern) => value.includes(pattern.toLowerCase()));
-}

@@ -22,9 +22,9 @@ vi.mock('@/lib/project/project-context', () => ({
   }),
 }));
 
-import { AiReferralsScreen } from './ai-referrals-screen';
+import { AiReferralsScreen } from './referrals-screen';
 
-const endpoint = `/api/v1/projects/${PROJECT}/ai-referrals`;
+const endpoint = `/api/v1/projects/${PROJECT}/ai-traffic/referrals`;
 const dashboard = {
   project_id: PROJECT,
   window_start: '2026-07-20',
@@ -44,7 +44,7 @@ const dashboard = {
     { ai_source: 'chatgpt', sessions: 4, share: 0.2 },
     { ai_source: 'gemini', sessions: 1, share: 0.05 },
   ],
-  analyzer_version: 'ai-referrals-v2',
+  analyzer_version: 'ai-traffic-v2',
   formula_version: 'ai-referral-sessions-v2',
 };
 
@@ -71,7 +71,7 @@ describe('AiReferralsScreen', () => {
       'href',
       '/settings?tab=integrations&workspace=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     );
-    expect(screen.getByTestId('ai-referrals-toolbar')).toBeVisible();
+    expect(screen.getByTestId('ai-traffic-toolbar')).toBeVisible();
   });
 
   it('renders only persisted referral measurement, without visibility or event drill-downs', async () => {
@@ -111,7 +111,7 @@ describe('AiReferralsScreen', () => {
     expect(
       await screen.findByText(/no sessions matched a known AI source in this window/i),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('ai-referrals-toolbar')).toBeVisible();
+    expect(screen.getByTestId('ai-traffic-toolbar')).toBeVisible();
     expect(screen.queryByText('Other')).not.toBeInTheDocument();
   });
 

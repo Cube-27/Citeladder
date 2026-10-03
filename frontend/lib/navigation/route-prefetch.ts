@@ -83,13 +83,22 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     const { runsQueries } = await import('@/lib/api/runs');
     warmQuery(client, runsQueries.list(workspaceId, projectId));
   },
-  '/ai-referrals': async (client, { projectId, workspaceId }) => {
-    const { aiReferralsApi } = await import('@/lib/api/ai-referrals');
-    const params = { granularity: 'week' as const };
+  '/ai-traffic': async (client, { projectId, workspaceId }) => {
+    const { aiTrafficApi } = await import('@/lib/api/ai-traffic');
+    const { TRAFFIC_RANGES } = await import('@/lib/config/crawl-logs');
+    const params = {
+      range: TRAFFIC_RANGES[0].value,
+      verification: undefined,
+      purpose: undefined,
+      bot_id: undefined,
+      status: undefined,
+      folder: undefined,
+      resource_class: undefined,
+    };
     warmQuery(client, {
-      queryKey: queryKeys.aiReferrals.dashboard(projectId, params),
+      queryKey: queryKeys.aiTraffic.view(workspaceId, projectId, 'overview', params),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        aiReferralsApi.getDashboard(projectId, params, { signal, workspaceId }),
+        aiTrafficApi.overview(projectId, params, { signal, workspaceId }),
     });
   },
 };

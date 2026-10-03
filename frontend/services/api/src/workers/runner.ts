@@ -1,4 +1,5 @@
 import { randomInt, randomUUID } from 'node:crypto';
+import { crawlLogTick } from '../crawl-logs/maintenance.ts';
 import { setTimeout as sleep } from 'node:timers/promises';
 import pg from 'pg';
 import {
@@ -173,6 +174,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       },
       { name: 'audit-scheduler', run: (canAdmit) => scheduler.runOnce(scheduler.now(), canAdmit) },
       { name: 'integration-dispatcher', run: (canAdmit) => dispatcher.runOnce(canAdmit) },
+      { name: 'crawl-log-maintenance', run: (canAdmit) => crawlLogTick(db, new Date(), canAdmit) },
     ] satisfies RunnerLane[],
   };
 }

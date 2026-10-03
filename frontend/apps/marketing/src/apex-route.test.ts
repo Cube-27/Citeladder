@@ -72,4 +72,35 @@ describe('apex route ownership', () => {
     expect((await routeApexRequest(request, env))?.status).toBe(404);
     expect(await routeApexRequest(request, { ...env, LOCAL_WORKER_ORIGIN: 'true' })).toBeNull();
   });
+  it('forwards authenticated compressed crawl batches only through the public POST ingress', async () => {
+    const path = '/api/v1/crawl-logs/ingest/11111111-1111-4111-8111-111111111111';
+    const sent: Request[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (request: Request) => {
+        sent.push(request);
+        return new Response('{}', { status: 202 });
+      }),
+    );
+    const payload = new Uint8Array([31, 139, 1, 2]);
+    const response = await routeApexRequest(
+      new Request('https://citeladder.com' + path, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer clw_test',
+          'content-encoding': 'gzip',
+          'idempotency-key': 'batch',
+        },
+        body: payload,
+      }),
+      env,
+    );
+    expect(response?.status).toBe(202);
+    expect(new Uint8Array(await sent[0]!.arrayBuffer())).toEqual(payload);
+    expect(sent[0]!.headers.get('authorization')).toBe('Bearer clw_test');
+    expect(sent[0]!.headers.get('x-citeladder-origin-token')).toBe(env.ORIGIN_TOKEN);
+    expect(
+      (await routeApexRequest(new Request('https://citeladder.com' + path), env))?.status,
+    ).toBe(404);
+  });
 });

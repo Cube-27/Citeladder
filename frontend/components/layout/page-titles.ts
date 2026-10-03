@@ -11,7 +11,7 @@
  */
 const PAGE_TITLES: ReadonlyArray<readonly [prefix: string, title: string]> = [
   ['/visibility', 'AI Visibility'],
-  ['/ai-referrals', 'AI Referrals'],
+  ['/ai-traffic', 'AI Traffic'],
   ['/performance', 'Performance'],
   ['/prompts', 'Prompts'],
   ['/agent/actions', 'Actions'],

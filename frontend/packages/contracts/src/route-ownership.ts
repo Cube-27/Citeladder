@@ -4,7 +4,9 @@ export type RouteStack = 'typescript';
 export const ROUTE_OWNERSHIP = {
   actions: 'typescript',
   agent: 'typescript',
-  'ai-referrals': 'typescript',
+  'ai-traffic': 'typescript',
+  'crawl-logs': 'typescript',
+  'crawl-log-ingest': 'typescript',
   'audit-schedules': 'typescript',
   audits: 'typescript',
   auth: 'typescript',

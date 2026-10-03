@@ -1,4 +1,4 @@
-import { AiReferralsRouteContent } from '@/components/ai-referrals/ai-referrals-route-content';
+import { AiTrafficRouteContent } from '@/components/ai-traffic/ai-traffic-route-content';
 import { ProductsRouteContent } from '@/components/products/products-route-content';
 import { PromptsRouteContent } from '@/components/prompts/prompts-route-content';
 
@@ -12,7 +12,7 @@ export function ProductsRouteElement() {
   return <ProductsRouteContent />;
 }
 
-/** /ai-referrals: active-project, persisted AI referral measurement. */
-export function AiReferralsRouteElement() {
-  return <AiReferralsRouteContent />;
+/** /ai-traffic: active-project, persisted AI referral measurement. */
+export function AiTrafficRouteElement() {
+  return <AiTrafficRouteContent />;
 }

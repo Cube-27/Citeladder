@@ -1,5 +1,6 @@
 /** Every product route the TypeScript service serves, by family. */
-import { aiReferralRoutes } from './ai-referrals.ts';
+import { aiTrafficRoutes } from './ai-traffic.ts';
+import { crawlLogRoutes } from './crawl-logs.ts';
 import type { ProductRoute } from './define.ts';
 import { executionRoutes } from './executions.ts';
 import { visibilityRoutes } from './visibility.ts';
@@ -41,7 +42,8 @@ export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...siteHealthRoutes,
   ...siteHealthCrawlRoutes,
   ...executionRoutes,
-  ...aiReferralRoutes,
+  ...aiTrafficRoutes,
+  ...crawlLogRoutes,
   ...visibilityRoutes,
   ...performanceRoutes,
   ...demandRoutes,

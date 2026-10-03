@@ -16,7 +16,7 @@ describe('dev server proxy', () => {
       '/api',
       '/api?x=1',
       '/api/v1/executions/abc/events?cursor=1',
-      `${PROJECT}/ai-referrals?days=30`,
+      `${PROJECT}/ai-traffic/referrals?days=30`,
       '/mcp',
       '/mcp/sse',
       '/token?grant=1',

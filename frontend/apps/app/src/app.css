@@ -19,7 +19,7 @@
 
 @source '../../../apps/app/src';
 @source '../../../components/agent';
-@source '../../../components/ai-referrals';
+@source '../../../components/ai-traffic';
 @source '../../../components/analytics';
 @source '../../../components/auth';
 @source '../../../components/billing';

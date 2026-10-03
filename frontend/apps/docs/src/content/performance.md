@@ -37,4 +37,4 @@ For that relationship, use the saved query-page evidence surfaced through [Searc
 
 Reconnect expired credentials through the owning integration. If you mapped the wrong property, review the mapping before importing more data. Historical evidence keeps its original property identity; changing a mapping does not relabel it.
 
-Use [AI Referrals](/ai-referrals/) for visits attributed to recognized AI sources.
+Use the Referrals tab in [AI Traffic](/ai-traffic/) for visits attributed to recognized AI sources.

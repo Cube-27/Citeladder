@@ -3,8 +3,8 @@
  * date / count / URL / snapshot-granularity formatters the Traffic,
  * AI Referrals, and Settings→Integrations surfaces all render with.
  *
- * The domain modules (`lib/traffic/traffic`, `lib/ai-referrals/options`,
- * `lib/ai-referrals/series`) re-export these under their local names so
+ * The domain modules (`lib/traffic/traffic`, `lib/ai-traffic/options`,
+ * `lib/ai-traffic/series`) re-export these under their local names so
  * domain import sites stay local; new code should import from here.
  *
  * Everything is pure and framework-free. Calendar bucket dates are fixed to

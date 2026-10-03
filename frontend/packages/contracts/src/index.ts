@@ -10,7 +10,7 @@ export * from './source-pages.ts';
 export * from './integrations.ts';
 export * from './analytics.ts';
 export * from './performance.ts';
-export * from './ai-referrals.ts';
+export * from './ai-traffic.ts';
 export * from './commerce-suite.ts';
 export * from './opportunities.ts';
 export * from './actions.ts';

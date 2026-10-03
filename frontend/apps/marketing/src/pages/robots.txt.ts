@@ -2,7 +2,7 @@ import { absoluteUrl } from '@/lib/seo/site';
 
 const privateSegments = [
   'onboarding',
-  'ai-referrals',
+  'ai-traffic',
   'content',
   'demand',
   'issues',

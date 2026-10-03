@@ -154,18 +154,18 @@ export const appRoutes: RouteObject[] = [
             })),
           ),
           productRoute('/prompts', () =>
-            import('./product-routes-prompts-commerce-referrals').then(
-              ({ PromptsRouteElement }) => ({ default: PromptsRouteElement }),
-            ),
+            import('./product-routes-prompts-commerce-traffic').then(({ PromptsRouteElement }) => ({
+              default: PromptsRouteElement,
+            })),
           ),
           productRoute('/products', () =>
-            import('./product-routes-prompts-commerce-referrals').then(
+            import('./product-routes-prompts-commerce-traffic').then(
               ({ ProductsRouteElement }) => ({ default: ProductsRouteElement }),
             ),
           ),
-          productRoute('/ai-referrals', () =>
-            import('./product-routes-prompts-commerce-referrals').then(
-              ({ AiReferralsRouteElement }) => ({ default: AiReferralsRouteElement }),
+          productRoute('/ai-traffic', () =>
+            import('./product-routes-prompts-commerce-traffic').then(
+              ({ AiTrafficRouteElement }) => ({ default: AiTrafficRouteElement }),
             ),
           ),
           productRoute('/settings', () =>
