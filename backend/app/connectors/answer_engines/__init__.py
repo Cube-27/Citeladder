@@ -1,1 +1,1 @@
-"""Shared provider errors and persisted vocabulary bridges."""
+"""Persisted answer-engine vocabulary for schema models."""
