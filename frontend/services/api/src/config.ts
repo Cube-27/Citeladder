@@ -33,6 +33,7 @@ import { integrations, traffic, analytics, referrals, authOAuth } from './config
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
 import { siteHealth } from './config/site-health.ts';
 import { crawlers } from './config/crawlers.ts';
+import { crawlLogs } from './config/crawl-logs.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
 import { auditSchedules } from './config/audit-schedules.ts';
@@ -77,6 +78,7 @@ type SettingSpec = {
 export const policy = {
   ...pythonConfig,
   crawlers,
+  crawl_logs: crawlLogs,
   billing,
   task_queue: { ...pythonConfig.task_queue, ...queue },
   api,

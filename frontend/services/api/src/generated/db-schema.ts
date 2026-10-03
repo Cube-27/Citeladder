@@ -614,6 +614,64 @@ export interface BillingWebhookEvents {
   safe_summary: Json | null;
 }
 
+export interface BotActivityDaily {
+  bot_id: string;
+  display_path: string;
+  first_seen_at: Timestamp;
+  folder: string;
+  formula_version: string;
+  id: string;
+  identity: string;
+  identity_key: string;
+  last_seen_at: Timestamp;
+  project_id: string;
+  reporting_date: Timestamp;
+  reporting_timezone: string;
+  requests: number;
+  resource_class: string;
+  source_batch_ids: Json;
+  status_code: number;
+  url_hash: string | null;
+  verification: string;
+  workspace_id: string;
+}
+
+export interface BotIpRangeSnapshots {
+  bot_id: string;
+  cidrs: Json;
+  content_hash: string;
+  fetched_at: Timestamp;
+  id: string;
+  source_url: string;
+  status: string;
+}
+
+export interface BotRequests {
+  batch_id: string;
+  bot_id: string;
+  catalog_version: string;
+  display_path: string;
+  folder: string;
+  host: string;
+  id: string;
+  identity: string;
+  identity_reason: string | null;
+  ip_range_snapshot_id: string | null;
+  line_hash: string;
+  method: string;
+  occurred_at: Timestamp;
+  project_id: string;
+  provider_request_id: string | null;
+  resource_class: string;
+  source_id: string;
+  status_code: number;
+  url_hash: string | null;
+  verification: string;
+  verification_basis: string | null;
+  verification_reason: string | null;
+  workspace_id: string;
+}
+
 export interface BrandAliases {
   alias: string;
   brand_id: string;
@@ -1027,6 +1085,94 @@ export interface ContentDifferentiationReports {
   owned_site_url_id: string | null;
   project_id: string;
   report: Json;
+  workspace_id: string;
+}
+
+export interface CrawlLogBatches {
+  catalog_version: string;
+  first_line_at: Timestamp | null;
+  format: string;
+  heartbeat: boolean;
+  id: string;
+  idempotency_key: string;
+  last_line_at: Timestamp | null;
+  lines_duplicate: number;
+  lines_matched: number;
+  lines_out_of_scope: number;
+  lines_overlapping: number;
+  lines_parsed: number;
+  lines_received: number;
+  lines_rejected: number;
+  lines_unmatched: number;
+  parser_version: string;
+  project_id: string;
+  received_at: Timestamp;
+  seq: number | null;
+  source_id: string;
+  upload_id: string | null;
+  workspace_id: string;
+}
+
+export interface CrawlLogCoverageDaily {
+  batch_count: number;
+  coverage: string;
+  heartbeat_count: number;
+  id: string;
+  max_gap_minutes: number;
+  project_id: string;
+  reason: string;
+  reporting_date: Timestamp;
+  reporting_timezone: string;
+  source_id: string;
+  workspace_id: string;
+}
+
+export interface CrawlLogSources {
+  accepted_hosts: Json;
+  collection_point: string;
+  created_at: Timestamp;
+  created_by_member_id: string;
+  format: string;
+  host: string;
+  id: string;
+  kind: string;
+  last_processed_at: Timestamp | null;
+  origin: string;
+  preset: string;
+  project_id: string;
+  revoked_at: Timestamp | null;
+  sampling: Json;
+  setup: string;
+  status: string;
+  token_hash: string | null;
+  token_prefix: string | null;
+  workspace_id: string;
+}
+
+export interface CrawlLogStates {
+  id: string;
+  project_id: string;
+  reporting_timezone: string;
+  updated_at: Timestamp;
+  workspace_id: string;
+}
+
+export interface CrawlLogUploads {
+  completed_at: Timestamp | null;
+  created_at: Timestamp;
+  filename: string;
+  first_line_at: Timestamp | null;
+  id: string;
+  last_ack_seq: number;
+  last_line_at: Timestamp | null;
+  missing_fields: Json;
+  project_id: string;
+  scanned_dates: Json;
+  scanned_lines: number;
+  size_bytes: number;
+  source_id: string;
+  status: string;
+  updated_at: Timestamp;
   workspace_id: string;
 }
 
@@ -2868,6 +3014,9 @@ export interface DB {
   billing_payments: BillingPayments;
   billing_subscriptions: BillingSubscriptions;
   billing_webhook_events: BillingWebhookEvents;
+  bot_activity_daily: BotActivityDaily;
+  bot_ip_range_snapshots: BotIpRangeSnapshots;
+  bot_requests: BotRequests;
   brand_aliases: BrandAliases;
   brand_discoveries: BrandDiscoveries;
   brand_discovery_tasks: BrandDiscoveryTasks;
@@ -2894,6 +3043,11 @@ export interface DB {
   consumable_ledger: ConsumableLedger;
   content_differentiation_candidates: ContentDifferentiationCandidates;
   content_differentiation_reports: ContentDifferentiationReports;
+  crawl_log_batches: CrawlLogBatches;
+  crawl_log_coverage_daily: CrawlLogCoverageDaily;
+  crawl_log_sources: CrawlLogSources;
+  crawl_log_states: CrawlLogStates;
+  crawl_log_uploads: CrawlLogUploads;
   demand_signals: DemandSignals;
   demand_snapshots: DemandSnapshots;
   discovery_model_configs: DiscoveryModelConfigs;

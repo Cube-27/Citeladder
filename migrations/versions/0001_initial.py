@@ -51,7 +51,9 @@ def upgrade() -> None:
         sa.Column("signed_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("workspace_id", "reference", name="uq_enterprise_agreement_reference"),
+        sa.UniqueConstraint(
+            "workspace_id", "reference", name="uq_enterprise_agreement_reference"
+        ),
     )
     _create_indexes("enterprise_agreement_references", ("workspace_id",))
     op.create_table(
@@ -86,7 +88,12 @@ def upgrade() -> None:
         sa.Column("context", sa.String(length=32), nullable=False),
         sa.Column("accepted_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("actor_id", "workspace_id", "terms_revision", name="uq_policy_acceptance_revision"),
+        sa.UniqueConstraint(
+            "actor_id",
+            "workspace_id",
+            "terms_revision",
+            name="uq_policy_acceptance_revision",
+        ),
     )
     _create_indexes("policy_acceptances", ("workspace_id",))
     op.create_table(
@@ -237,7 +244,9 @@ def upgrade() -> None:
     )
     op.create_table(
         "mcp_authorization_codes",
-        sa.Column("workspace_ids", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "workspace_ids", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("code_hash", sa.String(length=64), nullable=False),
         sa.Column("client_id", sa.String(length=36), nullable=False),
@@ -265,7 +274,9 @@ def upgrade() -> None:
     )
     op.create_table(
         "mcp_oauth_grants",
-        sa.Column("workspace_ids", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "workspace_ids", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("client_id", sa.String(length=36), nullable=False),
         sa.Column("user_id", sa.UUID(), nullable=False),
@@ -1903,9 +1914,7 @@ def upgrade() -> None:
             "evidence_refs", postgresql.JSONB(astext_type=Text()), nullable=False
         ),
         sa.Column("validation", postgresql.JSONB(astext_type=Text()), nullable=False),
-        sa.Column(
-            "jev_decision", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
+        sa.Column("jev_decision", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("disposition", sa.String(length=16), nullable=False),
         sa.Column("prompt_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -1960,10 +1969,24 @@ def upgrade() -> None:
         sa.Column("truncated", sa.Boolean(), nullable=False),
         sa.Column("status_code", sa.Integer(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["workspace_id", "project_id"], ["projects.workspace_id", "projects.id"], ondelete="CASCADE"),
-        sa.UniqueConstraint("workspace_id", "project_id", "origin", "content_hash", name="uq_robots_snapshots_content"),
-        sa.UniqueConstraint("workspace_id", "project_id", "id", name="uq_robots_snapshots_scope_id"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "origin",
+            "content_hash",
+            name="uq_robots_snapshots_content",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_robots_snapshots_scope_id"
+        ),
     )
     op.create_table(
         "site_crawls",
@@ -1992,7 +2015,11 @@ def upgrade() -> None:
         sa.Column("robots_observed_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["workspace_id", "project_id", "robots_snapshot_id"],
-            ["robots_snapshots.workspace_id", "robots_snapshots.project_id", "robots_snapshots.id"],
+            [
+                "robots_snapshots.workspace_id",
+                "robots_snapshots.project_id",
+                "robots_snapshots.id",
+            ],
         ),
         sa.Column("extractor_version", sa.String(length=32), nullable=False),
         sa.Column("analyzer_version", sa.String(length=32), nullable=False),
@@ -3708,11 +3735,33 @@ def upgrade() -> None:
         sa.Column("citation_count", sa.Integer(), nullable=False),
         sa.Column("search_used", sa.Boolean(), nullable=False),
         sa.Column("search_query_count", sa.Integer(), nullable=False),
-        sa.Column("fanout_state", sa.String(length=32), server_default="no_search", nullable=False),
-        sa.Column("fanout_queries", sa.ARRAY(sa.Text()), server_default=sa.text("'{}'::text[]"), nullable=False),
-        sa.Column("fanout_event_count", sa.Integer(), server_default="0", nullable=False),
-        sa.Column("fanout_event_source", sa.String(length=16), server_default="none", nullable=False),
-        sa.Column("fanout_projection_version", sa.String(length=32), server_default="fanout-1", nullable=False),
+        sa.Column(
+            "fanout_state",
+            sa.String(length=32),
+            server_default="no_search",
+            nullable=False,
+        ),
+        sa.Column(
+            "fanout_queries",
+            sa.ARRAY(sa.Text()),
+            server_default=sa.text("'{}'::text[]"),
+            nullable=False,
+        ),
+        sa.Column(
+            "fanout_event_count", sa.Integer(), server_default="0", nullable=False
+        ),
+        sa.Column(
+            "fanout_event_source",
+            sa.String(length=16),
+            server_default="none",
+            nullable=False,
+        ),
+        sa.Column(
+            "fanout_projection_version",
+            sa.String(length=32),
+            server_default="fanout-1",
+            nullable=False,
+        ),
         sa.Column("sentiment", sa.String(length=16), nullable=True),
         sa.Column("avg_position", sa.Float(), nullable=True),
         sa.Column("score", postgresql.JSONB(astext_type=Text()), nullable=True),
@@ -7316,7 +7365,6 @@ def upgrade() -> None:
         ondelete="RESTRICT",
     )
 
-
     op.create_table(
         "site_internal_link_runs",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -7353,12 +7401,337 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(
             ["workspace_id", "project_id", "run_id"],
-            ["site_internal_link_runs.workspace_id", "site_internal_link_runs.project_id", "site_internal_link_runs.id"],
+            [
+                "site_internal_link_runs.workspace_id",
+                "site_internal_link_runs.project_id",
+                "site_internal_link_runs.id",
+            ],
             ondelete="CASCADE",
         ),
         sa.UniqueConstraint("run_id", "candidate_id", "kind"),
     )
     _create_indexes("site_internal_link_events", ("workspace_id", "project_id"))
+
+    op.create_table(
+        "crawl_log_sources",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("kind", sa.String(24), nullable=False),
+        sa.Column("setup", sa.String(32), nullable=False),
+        sa.Column("preset", sa.String(64), nullable=False),
+        sa.Column("format", sa.String(24), nullable=False),
+        sa.Column("collection_point", sa.String(24), nullable=False),
+        sa.Column("sampling", postgresql.JSONB, nullable=False),
+        sa.Column("origin", sa.String(512), nullable=False),
+        sa.Column("host", sa.String(255), nullable=False),
+        sa.Column("accepted_hosts", postgresql.JSONB, nullable=False),
+        sa.Column("token_hash", sa.String(64), nullable=True),
+        sa.Column("token_prefix", sa.String(24), nullable=True),
+        sa.Column("status", sa.String(24), nullable=False),
+        sa.Column("created_by_member_id", sa.UUID(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("last_processed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_crawl_log_sources_scope"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+    )
+    op.create_index(
+        "uq_crawl_log_live_host",
+        "crawl_log_sources",
+        ["workspace_id", "project_id", "host"],
+        unique=True,
+        postgresql_where=sa.text("status = 'active' AND kind = 'webhook'"),
+    )
+    op.create_table(
+        "crawl_log_uploads",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("source_id", sa.UUID(), nullable=False),
+        sa.Column("filename", sa.String(255), nullable=False),
+        sa.Column("size_bytes", sa.Integer, nullable=False),
+        sa.Column("status", sa.String(24), nullable=False),
+        sa.Column("missing_fields", postgresql.JSONB, nullable=False),
+        sa.Column("last_ack_seq", sa.Integer, nullable=False),
+        sa.Column("scanned_lines", sa.Integer, nullable=False),
+        sa.Column("first_line_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("last_line_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("scanned_dates", postgresql.JSONB, nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_crawl_log_uploads_scope"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "source_id"],
+            [
+                "crawl_log_sources.workspace_id",
+                "crawl_log_sources.project_id",
+                "crawl_log_sources.id",
+            ],
+            ondelete="CASCADE",
+        ),
+    )
+    op.create_table(
+        "crawl_log_batches",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("source_id", sa.UUID(), nullable=False),
+        sa.Column("upload_id", sa.UUID(), nullable=True),
+        sa.Column("seq", sa.Integer, nullable=True),
+        sa.Column("idempotency_key", sa.String(255), nullable=False),
+        sa.Column("received_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("format", sa.String(24), nullable=False),
+        sa.Column("parser_version", sa.String(32), nullable=False),
+        sa.Column("catalog_version", sa.String(32), nullable=False),
+        sa.Column("lines_received", sa.Integer, nullable=False),
+        sa.Column("lines_parsed", sa.Integer, nullable=False),
+        sa.Column("lines_matched", sa.Integer, nullable=False),
+        sa.Column("lines_unmatched", sa.Integer, nullable=False),
+        sa.Column("lines_out_of_scope", sa.Integer, nullable=False),
+        sa.Column("lines_rejected", sa.Integer, nullable=False),
+        sa.Column("lines_duplicate", sa.Integer, nullable=False),
+        sa.Column("lines_overlapping", sa.Integer, nullable=False),
+        sa.Column("first_line_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("last_line_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("heartbeat", sa.Boolean, nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_crawl_log_batches_scope"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "source_id"],
+            [
+                "crawl_log_sources.workspace_id",
+                "crawl_log_sources.project_id",
+                "crawl_log_sources.id",
+            ],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "upload_id"],
+            [
+                "crawl_log_uploads.workspace_id",
+                "crawl_log_uploads.project_id",
+                "crawl_log_uploads.id",
+            ],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id",
+            "source_id",
+            "idempotency_key",
+            name="uq_crawl_log_batch_key",
+        ),
+    )
+    op.create_table(
+        "bot_ip_range_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("bot_id", sa.String(64), nullable=False),
+        sa.Column("source_url", sa.String(1024), nullable=False),
+        sa.Column("fetched_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("content_hash", sa.String(64), nullable=False),
+        sa.Column("cidrs", postgresql.JSONB, nullable=False),
+        sa.Column("status", sa.String(24), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "bot_requests",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("source_id", sa.UUID(), nullable=False),
+        sa.Column("batch_id", sa.UUID(), nullable=False),
+        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("host", sa.String(255), nullable=False),
+        sa.Column("display_path", sa.String(2048), nullable=False),
+        sa.Column("identity", sa.String(24), nullable=False),
+        sa.Column("identity_reason", sa.String(32), nullable=True),
+        sa.Column("url_hash", sa.String(64), nullable=True),
+        sa.Column("folder", sa.String(2048), nullable=False),
+        sa.Column("resource_class", sa.String(24), nullable=False),
+        sa.Column("method", sa.String(16), nullable=False),
+        sa.Column("status_code", sa.Integer, nullable=False),
+        sa.Column("bot_id", sa.String(64), nullable=False),
+        sa.Column("catalog_version", sa.String(32), nullable=False),
+        sa.Column("verification", sa.String(24), nullable=False),
+        sa.Column("verification_reason", sa.String(32), nullable=True),
+        sa.Column("verification_basis", sa.String(32), nullable=True),
+        sa.Column("ip_range_snapshot_id", sa.UUID(), nullable=True),
+        sa.Column("provider_request_id", sa.String(255), nullable=True),
+        sa.Column("line_hash", sa.String(64), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_bot_requests_scope"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "source_id"],
+            [
+                "crawl_log_sources.workspace_id",
+                "crawl_log_sources.project_id",
+                "crawl_log_sources.id",
+            ],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "batch_id"],
+            [
+                "crawl_log_batches.workspace_id",
+                "crawl_log_batches.project_id",
+                "crawl_log_batches.id",
+            ],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["ip_range_snapshot_id"], ["bot_ip_range_snapshots.id"]
+        ),
+    )
+    op.create_index(
+        "uq_bot_request_provider",
+        "bot_requests",
+        ["workspace_id", "project_id", "host", "provider_request_id"],
+        unique=True,
+        postgresql_where=sa.text("provider_request_id IS NOT NULL"),
+    )
+    op.create_index(
+        "uq_bot_request_line",
+        "bot_requests",
+        ["workspace_id", "source_id", "line_hash"],
+        unique=True,
+        postgresql_where=sa.text("provider_request_id IS NULL"),
+    )
+    op.create_index(
+        "ix_bot_requests_activity",
+        "bot_requests",
+        ["workspace_id", "project_id", "occurred_at", "id"],
+    )
+    op.create_table(
+        "bot_activity_daily",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("reporting_date", sa.Date, nullable=False),
+        sa.Column("reporting_timezone", sa.String(64), nullable=False),
+        sa.Column("bot_id", sa.String(64), nullable=False),
+        sa.Column("identity_key", sa.String(2048), nullable=False),
+        sa.Column("identity", sa.String(24), nullable=False),
+        sa.Column("url_hash", sa.String(64), nullable=True),
+        sa.Column("display_path", sa.String(2048), nullable=False),
+        sa.Column("folder", sa.String(2048), nullable=False),
+        sa.Column("resource_class", sa.String(24), nullable=False),
+        sa.Column("verification", sa.String(24), nullable=False),
+        sa.Column("status_code", sa.Integer, nullable=False),
+        sa.Column("requests", sa.Integer, nullable=False),
+        sa.Column("first_seen_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("formula_version", sa.String(32), nullable=False),
+        sa.Column("source_batch_ids", postgresql.JSONB, nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_bot_activity_daily_scope"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "reporting_date",
+            "reporting_timezone",
+            "bot_id",
+            "identity_key",
+            "verification",
+            "status_code",
+            name="uq_bot_activity_grain",
+        ),
+    )
+    op.create_table(
+        "crawl_log_coverage_daily",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("source_id", sa.UUID(), nullable=False),
+        sa.Column("reporting_date", sa.Date, nullable=False),
+        sa.Column("reporting_timezone", sa.String(64), nullable=False),
+        sa.Column("coverage", sa.String(24), nullable=False),
+        sa.Column("reason", sa.String(64), nullable=False),
+        sa.Column("batch_count", sa.Integer, nullable=False),
+        sa.Column("heartbeat_count", sa.Integer, nullable=False),
+        sa.Column("max_gap_minutes", sa.Float, nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_crawl_log_coverage_daily_scope"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "source_id"],
+            [
+                "crawl_log_sources.workspace_id",
+                "crawl_log_sources.project_id",
+                "crawl_log_sources.id",
+            ],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id",
+            "source_id",
+            "reporting_date",
+            "reporting_timezone",
+            name="uq_crawl_log_coverage_day",
+        ),
+    )
+    op.create_table(
+        "crawl_log_states",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("reporting_timezone", sa.String(64), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_crawl_log_states_scope"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", name="uq_crawl_log_state_project"
+        ),
+    )
 
 
 def downgrade() -> None:
@@ -7374,6 +7747,14 @@ def downgrade() -> None:
     # installed, so replaying the generated reverse delta would recreate those
     # retired authorities. Drop the explicit final table set instead.
     final_tables = (
+        "crawl_log_states",
+        "crawl_log_coverage_daily",
+        "bot_activity_daily",
+        "bot_requests",
+        "crawl_log_batches",
+        "crawl_log_uploads",
+        "crawl_log_sources",
+        "bot_ip_range_snapshots",
         "agent_output_revisions",
         "agent_outputs",
         "agent_model_attempts",
