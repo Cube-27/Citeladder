@@ -57,7 +57,8 @@ The documentation Worker serves assets only, with no Worker script, so Astro emi
 |---|---|---|
 | Overview and company facts | /projects | [Onboarding](onboarding.md) |
 | Website and issues | /site, /issues | [Site Health](site-health.md) |
-| Search Demand, Search Intelligence, Performance, AI Referrals | /demand, /search-intelligence, /performance, /ai-referrals | [Connected data](integrations-traffic-analytics.md) |
+| Search Demand, Search Intelligence, Performance | /demand, /search-intelligence, /performance | [Connected data](integrations-traffic-analytics.md) |
+| AI Traffic: Overview, Crawlers, Referrals, Activity | /ai-traffic | [AI Traffic](ai-traffic.md) |
 | Agent: chats, Actions, Skills and Context | /agent, /agent/chats/:chatId, /agent/actions, /agent/actions/:actionId, /agent/skills, /agent/context | [Agent](agents.md), [Actions](opportunities.md#actions) |
 | Prompts, Visibility and runs | /prompts, /visibility, /runs | [Visibility](visibility-prompt.md) |
 | Commerce | /products | [Commerce](commerce-intelligence.md) |
@@ -180,7 +181,7 @@ screen from its internal presentation files.
 
 | Surface | Coordinator boundary | Focused owners |
 |---|---|---|
-| AI Referrals | `components/ai-referrals/ai-referrals-screen.tsx` owns project/range queries and toolbar selection | content and dashboard owners render the query states and measurements |
+| AI Traffic | `components/ai-traffic/ai-traffic-screen.tsx` owns URL tabs, scoped queries, verification filters and cursor tables | `crawl-log-connections.tsx` owns source setup and local streaming uploads; `referrals-screen.tsx` preserves referral controls and measurements |
 | Onboarding | `components/onboarding/onboarding-screen.tsx` selects the active stage and actions | `onboarding-flow.ts` owns transaction state, stage owners render domain UI, and `components/auth/flow-shell.tsx` owns shared auth/onboarding chrome |
 | Projects dashboard | `components/projects/dashboard-screen.tsx` owns query gates and project context | dashboard controls, primitives, sections, and command-center action hook own reusable UI and mutations |
 | Performance | `components/performance/performance-screen.tsx` owns project/range/compare selection and the range-projection hand-off | date-range dialog, metric cards, chart, dimension table, and synchronization hook own their scoped behavior |

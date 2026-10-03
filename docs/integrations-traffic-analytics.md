@@ -8,6 +8,10 @@ Console, GA4 and Bing Webmaster Tools are implemented connectors. Shopify
 OAuth/product/order sync is retired; [Commerce](commerce-intelligence.md)
 uses Site Health and CSV. Reports, agents and reads never call these providers.
 
+[AI Traffic](ai-traffic.md) owns the `/ai-traffic` screen and customer-supplied
+crawler logs. This document retains GA4 referral data, projections, tasks and
+the `analytics/ai-referrals.ts` reader; `read_ai_referrals` is unchanged.
+
 Native [connected-data config](../frontend/services/api/src/config/connected-data.ts)
 owns sync settings, transports, dataset grains, traffic and referral catalogs,
 analytics task kinds and OAuth policy. [Demand config](../frontend/services/api/src/config/demand.json)
@@ -213,14 +217,14 @@ that snapshot.
 
 Cursors bind project, snapshot, dimension, filters, sorting and page size.
 The browser resets cursor history when those inputs change.
-Search Demand is one /demand surface; AI Referrals exposes volume/share/source
-totals at /ai-referrals rather than copied Visibility metrics. Search Demand
+Search Demand is one /demand surface; the AI Traffic Referrals tab exposes
+persisted referral volume/share/source totals. Search Demand
 leads with an "Act on this" band of promoted signals, one entry per page's
 Action, then one table grouped by page with a signal chip per row; each signal
 type is explained once in a legend, and the evidence drawer keeps the reading,
 relevance, competing pages and provenance.
 Search Demand's missing-snapshot state links to the selected project's
-Performance setup. AI Referrals retains its range and granularity controls when
+Performance setup. The AI Traffic Referrals tab retains its range and granularity controls when
 the selected projection is empty because another persisted range or granularity
 may still be available; measured zero retains them as well.
 [Sync tests](../frontend/services/api/test/integration-sync.test.ts) and
