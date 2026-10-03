@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { drainLanes, exclusiveDrain, tickAndDrain } from '../src/workers/runner.ts';
 import { sql } from 'kysely';
 import { createDatabase } from '../src/db/database.ts';
@@ -183,18 +183,25 @@ describe('bounded runner', () => {
 
 describe('Cloud Run wake-up', () => {
   const job = 'projects/citeladder-test/locations/us-central1/jobs/runner';
-  it('uses service identity and starts each requested execution without waiting for completion', async () => {
+  const db = createDatabase(testConfig());
+  afterAll(() => db.destroy());
+  it('coalesces a burst and permits another launch after the interval', async () => {
     const send = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(Response.json({ access_token: 'recorded-access-token' }))
       .mockResolvedValueOnce(Response.json({ name: 'operations/test' }))
       .mockResolvedValueOnce(Response.json({ access_token: 'recorded-access-token' }))
       .mockResolvedValueOnce(Response.json({ name: 'operations/test2' }));
+    let clock = 0;
     const start = runnerStarter(
-      loadConfig({ CLOUD_RUN_RUNNER_JOB: job, CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32) }),
+      testConfig({ CLOUD_RUN_RUNNER_JOB: job, CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32) }),
+      db,
       send,
+      () => clock,
     );
-    await start();
+    await Promise.all(Array.from({ length: 20 }, () => start()));
+    expect(send).toHaveBeenCalledTimes(2);
+    clock = 5000;
     await start();
     expect(send).toHaveBeenCalledTimes(4);
     expect(send.mock.calls[0]).toMatchObject([
@@ -217,14 +224,15 @@ describe('Cloud Run wake-up', () => {
   });
   it('is disabled without a job, and failure leaves the committed response usable without secret diagnostics', async () => {
     const send = vi.fn<typeof fetch>().mockRejectedValue(new Error('private bearer token'));
-    await runnerStarter(loadConfig({}), send)();
+    await runnerStarter(loadConfig({}), db, send)();
     expect(send).not.toHaveBeenCalled();
     const records: Record<string, unknown>[] = [];
     const restore = setLogSink((line) => records.push(JSON.parse(line)));
     try {
       await expect(
         runnerStarter(
-          loadConfig({ CLOUD_RUN_RUNNER_JOB: job, CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32) }),
+          testConfig({ CLOUD_RUN_RUNNER_JOB: job, CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32) }),
+          db,
           send,
         )(),
       ).resolves.toBeUndefined();
@@ -235,6 +243,22 @@ describe('Cloud Run wake-up', () => {
       expect.objectContaining({ event: 'runner_start_failed', level: 'warning' }),
     ]);
     expect(JSON.stringify(records)).not.toContain('private bearer token');
+  });
+
+  it('skips Google requests while a runner holds the database drain lock', async () => {
+    const config = testConfig({
+      CLOUD_RUN_RUNNER_JOB: job,
+      CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32),
+    });
+    const send = vi.fn<typeof fetch>();
+    await exclusiveDrain(config, {
+      signal: new AbortController().signal,
+      deadline: Number.POSITIVE_INFINITY,
+    })(async () => {
+      await runnerStarter(config, db, send)();
+      expect(send).not.toHaveBeenCalled();
+      return 0;
+    });
   });
 });
 
