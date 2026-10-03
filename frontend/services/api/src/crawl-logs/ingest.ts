@@ -16,7 +16,7 @@ import { hash } from '../traffic/normalization.ts';
 import { strings } from '../db/json.ts';
 import { enforceSubjectRequest } from '../abuse/usage.ts';
 import { pathIdentity, verifyBot } from './identity.ts';
-import { lockCrawlState, enqueueRollup } from './state.ts';
+import { lockCrawlState, enqueueRollup, reportingDay } from './state.ts';
 import { ingestionEnabled } from './sources.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 
@@ -254,42 +254,41 @@ export async function ingest(
         throw new ApiError(409, 'Upload is closed or batch sequence is out of order');
     }
     const admitted: Insertable<BotRequests>[] = [];
+    const overlappingDays = new Map<string, boolean>();
     for (const row of prepared) {
-      const date = await sql<{
-        day: string;
-      }>`select to_char(${row.occurred_at}::timestamptz at time zone ${state.reporting_timezone}, 'YYYY-MM-DD') as day`.execute(
-        trx,
-      );
-      const day = date.rows[0]!.day;
-      const overlap = await trx
-        .selectFrom('crawl_log_batches as b')
-        .innerJoin('crawl_log_sources as s', 's.id', 'b.source_id')
-        .select('b.id')
-        .where('b.workspace_id', '=', scope.workspaceId)
-        .where('b.project_id', '=', scope.projectId)
-        .where('s.host', '=', row.host)
-        .where('b.source_id', '!=', source.id)
-        .where('b.status', '=', 'accepted')
-        .where(
-          sql<boolean>`(b.lines_matched>0 or b.lines_duplicate>0 or b.lines_unmatched>0 or b.heartbeat)`,
-        )
-        .where(sql<boolean>`((${day}::date between (b.first_line_at at time zone ${state.reporting_timezone})::date and (b.last_line_at at time zone ${state.reporting_timezone})::date)
+      const day = reportingDay(row.occurred_at as Date, state.reporting_timezone);
+      if (!overlappingDays.has(day)) {
+        const overlap = await trx
+          .selectFrom('crawl_log_batches as b')
+          .innerJoin('crawl_log_sources as s', 's.id', 'b.source_id')
+          .select('b.id')
+          .where('b.workspace_id', '=', scope.workspaceId)
+          .where('b.project_id', '=', scope.projectId)
+          .where('s.host', '=', row.host)
+          .where('b.source_id', '!=', source.id)
+          .where('b.status', '=', 'accepted')
+          .where(
+            sql<boolean>`(b.lines_matched>0 or b.lines_duplicate>0 or b.lines_unmatched>0 or b.heartbeat)`,
+          )
+          .where(sql<boolean>`((${day}::date between (b.first_line_at at time zone ${state.reporting_timezone})::date and (b.last_line_at at time zone ${state.reporting_timezone})::date)
           or (b.heartbeat and (b.received_at at time zone ${state.reporting_timezone})::date = ${day}::date))`)
-        .executeTakeFirst();
-      const declared = await trx
-        .selectFrom('crawl_log_uploads as u')
-        .innerJoin('crawl_log_sources as s', 's.id', 'u.source_id')
-        .select('u.id')
-        .where('u.workspace_id', '=', scope.workspaceId)
-        .where('u.project_id', '=', scope.projectId)
-        .where('s.host', '=', row.host)
-        .where('u.source_id', '!=', source.id)
-        .where('u.status', '=', 'completed')
-        .where(
-          sql<boolean>`exists(select 1 from jsonb_array_elements(u.scanned_dates) d where d->>'date'=${day})`,
-        )
-        .executeTakeFirst();
-      if (overlap || declared) {
+          .executeTakeFirst();
+        const declared = await trx
+          .selectFrom('crawl_log_uploads as u')
+          .innerJoin('crawl_log_sources as s', 's.id', 'u.source_id')
+          .select('u.id')
+          .where('u.workspace_id', '=', scope.workspaceId)
+          .where('u.project_id', '=', scope.projectId)
+          .where('s.host', '=', row.host)
+          .where('u.source_id', '!=', source.id)
+          .where('u.status', '=', 'completed')
+          .where(
+            sql<boolean>`exists(select 1 from jsonb_array_elements(u.scanned_dates) d where d->>'date'=${day})`,
+          )
+          .executeTakeFirst();
+        overlappingDays.set(day, Boolean(overlap || declared));
+      }
+      if (overlappingDays.get(day)) {
         counts.lines_overlapping++;
         continue;
       }
@@ -323,15 +322,21 @@ export async function ingest(
       })
       .execute();
     if (admitted.length) {
-      const inserted = await trx
-        .insertInto('bot_requests')
-        .values(admitted.map((row) => ({ ...row, batch_id: id })))
-        .onConflict((c) => c.doNothing())
-        .returning('id')
-        .execute();
-      counts.lines_matched = inserted.length;
-      counts.lines_duplicate = admitted.length - inserted.length;
-      if (inserted.length)
+      for (let start = 0; start < admitted.length; start += crawlLogs.insert_rows_per_statement) {
+        const inserted = await trx
+          .insertInto('bot_requests')
+          .values(
+            admitted
+              .slice(start, start + crawlLogs.insert_rows_per_statement)
+              .map((row) => ({ ...row, batch_id: id })),
+          )
+          .onConflict((c) => c.doNothing())
+          .returning('id')
+          .execute();
+        counts.lines_matched += inserted.length;
+      }
+      counts.lines_duplicate = admitted.length - counts.lines_matched;
+      if (counts.lines_matched)
         await enforceSubjectRequest(
           trx,
           'crawl_project',
@@ -340,7 +345,7 @@ export async function ingest(
             operation: 'crawl_logs.accepted_lines',
             limit: crawlLogs.accepted_lines_per_project_per_day,
             windowSeconds: 86400,
-            amount: inserted.length,
+            amount: counts.lines_matched,
           },
           now,
         );
@@ -370,7 +375,7 @@ export async function ingest(
         .where('project_id', '=', scope.projectId)
         .where('id', '=', options.uploadId)
         .execute();
-    await enqueueRollup(trx, scope, now);
+    await enqueueRollup(trx, scope, now, { first, last });
     return receipt;
   });
   if (receipt.status === 'unsupported_format')

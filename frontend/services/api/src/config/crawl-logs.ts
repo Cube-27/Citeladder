@@ -30,6 +30,7 @@ const schema = z.strictObject({
   max_batch_bytes: positive,
   max_lines_per_batch: positive,
   upload_sample_lines: positive,
+  insert_rows_per_statement: positive.max(1000),
   max_line_bytes: positive,
   max_sources_per_project: positive,
   batches_per_source_per_hour: positive,

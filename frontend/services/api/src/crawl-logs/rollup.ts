@@ -2,12 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
-import { record } from '../db/json.ts';
+import { record, strings } from '../db/json.ts';
 import { lockCrawlState, type CrawlScope } from './state.ts';
 import type { Executor } from '../workers/executor.ts';
 
 /** Full recomputation under the project row lock prevents stale publication. */
-export async function refreshCrawlLogs(db: Database, scope: CrawlScope, now = new Date()) {
+export async function refreshCrawlLogs(
+  db: Database,
+  scope: CrawlScope,
+  now = new Date(),
+  reportingDates?: string[],
+) {
   return db.transaction().execute(async (trx) => {
     const state = await lockCrawlState(trx, scope);
     const tz = state.reporting_timezone;
@@ -15,11 +20,18 @@ export async function refreshCrawlLogs(db: Database, scope: CrawlScope, now = ne
       now.getTime() - (crawlLogs.retention_days - crawlLogs.rollup_freeze_margin_days) * 86400000,
     );
     const floor = sql<Date>`(${cutoff}::timestamptz at time zone ${tz})::date`;
+    const selectedDay = reportingDates
+      ? sql<boolean>`reporting_date=any(${reportingDates}::date[])`
+      : sql<boolean>`true`;
+    const selectedRequest = reportingDates
+      ? sql<boolean>`(occurred_at at time zone ${tz})::date=any(${reportingDates}::date[])`
+      : sql<boolean>`true`;
     await trx
       .deleteFrom('bot_activity_daily')
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .where('reporting_date', '>=', floor)
+      .where(selectedDay)
       .execute();
     await sql`insert into bot_activity_daily (id,workspace_id,project_id,reporting_date,reporting_timezone,bot_id,identity_key,
       identity,url_hash,display_path,folder,resource_class,verification,status_code,requests,first_seen_at,last_seen_at,formula_version,source_batch_ids)
@@ -29,12 +41,14 @@ export async function refreshCrawlLogs(db: Database, scope: CrawlScope, now = ne
         to_jsonb((array_agg(distinct batch_id order by batch_id))[1:${crawlLogs.max_source_batch_ids}])
       from bot_requests where workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid
         and (occurred_at at time zone ${tz})::date >= ${floor}
+        and ${selectedRequest}
       group by 2,3,4,6,7,8,9,11,12,13,14`.execute(trx);
     await trx
       .deleteFrom('crawl_log_coverage_daily')
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .where('reporting_date', '>=', floor)
+      .where(selectedDay)
       .execute();
     const sources = await trx
       .selectFrom('crawl_log_sources')
@@ -74,6 +88,7 @@ export async function refreshCrawlLogs(db: Database, scope: CrawlScope, now = ne
         trx,
       );
       for (const day of days.rows) {
+        if (reportingDates && !reportingDates.includes(day.day)) continue;
         const receipts = batches.filter(
           (b) => b.received_at >= day.start && b.received_at < day.end,
         );
@@ -164,5 +179,12 @@ export async function refreshCrawlLogs(db: Database, scope: CrawlScope, now = ne
 export const crawlLogRollupRefresh: Executor = async (task, { db, checkCancelled }) => {
   await checkCancelled('crawl-log-rollup');
   if (!task.project_id) throw new Error('Crawl rollup needs project');
-  await refreshCrawlLogs(db, { workspaceId: task.workspace_id, projectId: task.project_id });
+  const dates = strings(record(task.payload).reporting_dates);
+  if (!dates.length) throw new Error('Crawl rollup needs affected reporting dates');
+  await refreshCrawlLogs(
+    db,
+    { workspaceId: task.workspace_id, projectId: task.project_id },
+    new Date(),
+    dates,
+  );
 };

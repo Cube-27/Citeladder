@@ -170,7 +170,7 @@ export async function completeUpload(
       .where('id', '=', id)
       .returningAll()
       .executeTakeFirstOrThrow();
-    await enqueueRollup(trx, scope, now);
+    await enqueueRollup(trx, scope, now, { first, last });
     return completed;
   });
 }

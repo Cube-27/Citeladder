@@ -110,6 +110,49 @@ describe('bounded formats', () => {
   });
 });
 describe('sanitized durable admission', () => {
+  it('admits a multi-statement batch atomically and coalesces affected reporting days', async () => {
+    const { tenant, source } = await setup();
+    const count = crawlLogs.insert_rows_per_statement + 1;
+    const receipt = await ingest(
+      db,
+      source,
+      body(...Array.from({ length: count }, (_, i) => event({ path: '/chunk/' + i }))),
+      {},
+    );
+    expect(receipt.lines_matched).toBe(count);
+    const older = new Date(now.getTime() - 5 * 86400000);
+    await ingest(db, source, body(event({ timestamp: older.toISOString() })), {});
+    const tasks = await db
+      .selectFrom('analytics_tasks')
+      .selectAll()
+      .where('workspace_id', '=', tenant.workspaceId)
+      .execute();
+    expect(tasks).toHaveLength(1);
+    const dates = (tasks[0]!.payload as { reporting_dates: string[] }).reporting_dates;
+    expect(dates).toContain(older.toISOString().slice(0, 10));
+    await refreshCrawlLogs(db, scope(tenant), now, dates);
+    const total = await db
+      .selectFrom('bot_activity_daily')
+      .select(sql<number>`sum(requests)::integer`.as('count'))
+      .where('workspace_id', '=', tenant.workspaceId)
+      .executeTakeFirstOrThrow();
+    expect(total.count).toBe(count + 1);
+    const ids = await db
+      .selectFrom('bot_activity_daily')
+      .select('id')
+      .where('workspace_id', '=', tenant.workspaceId)
+      .where('reporting_date', '=', new Date(older.toISOString().slice(0, 10) + 'T00:00:00Z'))
+      .execute();
+    await refreshCrawlLogs(db, scope(tenant), now, [now.toISOString().slice(0, 10)]);
+    expect(
+      await db
+        .selectFrom('bot_activity_daily')
+        .select('id')
+        .where('workspace_id', '=', tenant.workspaceId)
+        .where('reporting_date', '=', new Date(older.toISOString().slice(0, 10) + 'T00:00:00Z'))
+        .execute(),
+    ).toEqual(ids);
+  });
   it('retains unsupported diagnostics and accepts Logpush validation without claiming coverage', async () => {
     const custom = await setup();
     const invalid = Buffer.from('{"path":"/without-identification"}');
