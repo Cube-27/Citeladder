@@ -132,6 +132,30 @@ const memberships = (seed: SiteSeed) =>
 const url = (path: string) => `https://example.test${path}`;
 
 describe('discover', () => {
+  it.each([
+    ['https://elsewhere.test/landing', 'failed', ['/robots.txt', '/']],
+    [
+      'https://www.example.test/landing',
+      'succeeded',
+      ['/robots.txt', '/', '/robots.txt', '/landing'],
+    ],
+  ])(
+    'screens redirect %s before fetching its robots or page',
+    async (destination, status, sent) => {
+      const seed = await crawl();
+      const root = await queued(seed, 'discover');
+      const requests: string[] = [];
+      await run(
+        worker(
+          { '/': { status: 301, redirect: destination as string }, '/landing': { body: links() } },
+          requests,
+        ),
+        root,
+      );
+      expect(await task(root)).toMatchObject({ status });
+      expect(requests).toEqual(sent);
+    },
+  );
   it('commits the artifact, observation, ordered frontier and selected analysis with the task', async () => {
     const seed = await crawl({ config: { automatic_monitor_limit: 2 } });
     const root = await queued(seed, 'discover');

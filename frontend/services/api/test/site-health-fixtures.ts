@@ -500,10 +500,11 @@ export function recordedSite(
   return async (value: string, options: FetchOptions): Promise<FetchedPage> => {
     let url = new URL(value);
     for (let hop = 0; hop <= options.redirects; hop++) {
-      await options.authorize?.(url);
       const target = url;
       const served = pages[target.pathname];
       const send = async () => {
+        // Match the real transport: gate first, authorization immediately before send.
+        await options.authorize?.(target);
         requests.push(target.pathname);
         await served?.onFetch?.();
         const status = served?.status ?? (served ? 200 : 404);

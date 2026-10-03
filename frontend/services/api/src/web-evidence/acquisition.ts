@@ -227,6 +227,7 @@ export class PageAcquirer {
           }
         : this.authorize,
       gate: async (destination, send, signal) => {
+        admit?.(destination);
         const robots = await this.robots(destination.origin);
         if (!robots.permits(destination.href))
           throw new FetchError(robots.unavailable ? 'robots_unavailable' : 'robots_disallowed');
