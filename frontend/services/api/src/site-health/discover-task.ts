@@ -139,6 +139,7 @@ type Outcome = AttemptOutcome & {
 async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Promise<Outcome> {
   const scope = crawlScope(crawl);
   const fetched = await ctx.fetcher.fetch(task.requested_url, {
+    signal: ctx.signal,
     // Redirects may not leave the crawl's scope any more than links may.
     admit: scope.domain
       ? (hop) => classifyUrlAdmission(hop.href, scope).accepted
@@ -368,6 +369,7 @@ async function dispose(
 }
 
 async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome) {
+  ctx.signal?.throwIfAborted();
   await ctx.db
     .transaction()
     .execute(async (trx) => {
@@ -379,14 +381,14 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
       let sampleCapped = false;
       const { page, discovery } = outcome;
       if (page && discovery) {
+        // First rung of the lock DAG, before any URL write or frontier admission.
+        const runtime = await lockRuntime(trx, crawl.workspace_id);
         artifactId = await writeArtifact(trx, crawl, task, page, outcome.facts, {
           policyVersion: ctx.fetcher.settings.policyVersion,
           latencyMs: outcome.latencyMs ?? 0,
           purpose: 'discover',
         });
         await writeObservation(trx, crawl, task, page, discovery, artifactId);
-        // The runtime lock is the first rung of the Site Health lock order; taken late to keep it short.
-        const runtime = await lockRuntime(trx, crawl.workspace_id);
         const exact = record(crawl.configuration).input_mode === 'exact_urls';
         const admission = await admitCandidates(
           trx,

@@ -9,6 +9,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import { TaskQueue, type SiteTask } from '../queue/task-queue.ts';
+import { maintainLease } from '../queue/heartbeat.ts';
 import { persistLinkMetrics } from '../site-health/link-metrics.ts';
 import { persistArchitecture } from '../site-health/architecture.ts';
 import { runAnalyze } from '../site-health/analyze-task.ts';
@@ -173,7 +174,7 @@ export class SiteHealthWorker {
       ? acquisition[claimed.task_kind]
       : undefined;
     if (acquire) {
-      await this.#leased(claimed, () => acquire(this.acquisition, claimed));
+      await this.#leased(claimed, (signal) => acquire({ ...this.acquisition, signal }, claimed));
       // After the settlement commits; the stalled backstop covers a crash in between.
       await this.#guard('site health crawl reconcile failed', () =>
         reconcileAfterTask(this.db, claimed, this.#cadence),
@@ -181,42 +182,36 @@ export class SiteHealthWorker {
       return;
     }
     if (!(await this.queue.markRunning(claimed.id, this.owner))) return;
-    await this.#leased(claimed, () => this.#executeInTransaction(claimed));
+    await this.#leased(claimed, (signal) => this.#executeInTransaction(claimed, signal));
   }
   /** Heartbeat the lease for the whole body; a failure settles the task. */
-  async #leased(claimed: SiteTask, body: () => Promise<void>) {
-    const beat: { pending: Promise<unknown> | null } = { pending: null };
-    const timer = setInterval(() => {
-      if (beat.pending) return;
-      beat.pending = this.queue
-        .heartbeat(claimed.id, this.owner)
-        .catch((error: unknown) =>
-          logger.exception('heartbeat failed; retrying', error, { task_id: claimed.id }),
-        )
-        .finally(() => {
-          beat.pending = null;
-        });
-    }, this.settings.heartbeat * 1000);
+  async #leased(claimed: SiteTask, body: (signal: AbortSignal) => Promise<void>) {
+    const heartbeat = maintainLease(
+      () => this.queue.heartbeat(claimed.id, this.owner),
+      this.settings.heartbeat * 1000,
+      (error) => logger.exception('heartbeat failed', error, { task_id: claimed.id }),
+    );
     try {
-      await body();
+      await body(heartbeat.signal);
     } catch (error) {
-      if (!(error instanceof TaskCancelledError)) {
+      if (!heartbeat.signal.aborted && !(error instanceof TaskCancelledError)) {
         logger.exception('site health task failed', error, { task_id: claimed.id });
         await this.fail(claimed, error);
       }
     } finally {
-      clearInterval(timer);
-      await beat.pending;
+      await heartbeat.stop();
     }
   }
-  async #executeInTransaction(claimed: SiteTask) {
+  async #executeInTransaction(claimed: SiteTask, signal: AbortSignal) {
     await this.db.transaction().execute(async (trx) => {
+      signal.throwIfAborted();
       const { crawl, task } = await lockSiteTask(trx, claimed, this.owner, 'fence');
       const executor = Object.hasOwn(this.executors, task.task_kind)
         ? this.executors[task.task_kind]
         : undefined;
       if (!executor) throw new Error(`Site Health task '${task.task_kind}' has no executor`);
       await executor(trx, crawl, task);
+      signal.throwIfAborted();
       await lockSiteTask(trx, claimed, this.owner, 'acknowledge');
       await trx
         .updateTable('site_crawl_tasks')

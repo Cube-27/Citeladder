@@ -126,8 +126,13 @@ export class SitePageFetcher {
    */
   async fetch(
     requested: string,
-    options: { admit?: (hop: URL) => boolean; contentTypes?: readonly string[] } = {},
+    options: {
+      admit?: (hop: URL) => boolean;
+      contentTypes?: readonly string[];
+      signal?: AbortSignal;
+    } = {},
   ): Promise<SiteFetchResult | SiteFetchFailure> {
+    options.signal?.throwIfAborted();
     const admit = options.admit ?? ((hop: URL) => !hardExcluded(hop));
     const url = new URL(requested);
     const denied = await this.#robotsDenial(url);
@@ -136,6 +141,7 @@ export class SitePageFetcher {
     const started = performance.now();
     try {
       const page = await this.acquirer.fetch(url.href, {
+        signal: options.signal,
         maxBytes: this.settings.maxWireBytes,
         maxDecodedBytes: this.settings.maxDecodedBytes,
         timeoutSeconds: this.settings.acquisition.timeout,

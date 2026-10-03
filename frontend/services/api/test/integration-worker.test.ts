@@ -568,6 +568,42 @@ describe('integration worker paging and resume', () => {
     ).toEqual({ status: 'failed', error_code: 'provider_api_error' });
   });
 
+  it('does not dispatch a GA4 fallback after losing its real PostgreSQL lease', async () => {
+    const { runId } = await seedRun('ga4');
+    const requested: string[] = [];
+    const client: Pick<IntegrationClient, 'page'> = {
+      async page(_provider, _token, _property, template) {
+        requested.push(template.dataset);
+        if (template.dataset === 'ga4_item_source_medium_daily') {
+          await db
+            .updateTable('integration_sync_runs')
+            .set({ lease_owner: 'successor' })
+            .where('id', '=', runId)
+            .execute();
+          await new Promise((resolve) => {
+            setTimeout(resolve, 50);
+          });
+          throw new IntegrationError('ga4_dimension_incompatible', 'recorded incompatibility');
+        }
+        return { payload: { rows: [] }, rawRowCount: 0 };
+      },
+    };
+    await new IntegrationWorker(
+      db,
+      client,
+      { ...settings, heartbeat_interval_seconds: 0.01 },
+      async () => 'recorded-token',
+    ).runOnce();
+    expect(requested).not.toContain('ga4_item_channel_group_daily');
+    expect(
+      await db
+        .selectFrom('integration_sync_runs')
+        .select(['status', 'lease_owner'])
+        .where('id', '=', runId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ status: 'running', lease_owner: 'successor' });
+  });
+
   it('continues after a committed provider page when a later request fails', async () => {
     const recordedPage = async (name: string): Promise<Record<string, unknown>> =>
       JSON.parse(

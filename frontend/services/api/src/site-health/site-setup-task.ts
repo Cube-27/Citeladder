@@ -65,6 +65,7 @@ async function wellKnown(ctx: SiteTaskContext, url: string, settings: Settings) 
   const fetch = ctx.fetcher.settings.acquisition;
   try {
     return await ctx.fetcher.acquirer.fetch(url, {
+      signal: ctx.signal,
       maxBytes: settings.llmsBytes,
       maxDecodedBytes: settings.llmsBytes,
       timeoutSeconds: fetch.timeout,
@@ -122,6 +123,7 @@ async function sitemapDocument(ctx: SiteTaskContext, url: string, settings: Sett
   const fetch = ctx.fetcher.settings.acquisition;
   try {
     const page = await ctx.fetcher.acquirer.fetch(url, {
+      signal: ctx.signal,
       maxBytes: settings.sitemap.maxDecodedBytes,
       maxDecodedBytes: settings.sitemap.maxDecodedBytes,
       timeoutSeconds: fetch.timeout,
@@ -175,6 +177,7 @@ async function walkSitemaps(
     attempted += wave.length;
     // Waves are bounded and sequential: a wave's references feed the next one.
     const pages = await Promise.all(wave.map(({ url }) => sitemapDocument(ctx, url, settings))); // NOSONAR
+    ctx.signal?.throwIfAborted();
     for (const [index, entry] of wave.entries()) collect(walk, entry, pages[index] ?? null);
   }
   return {
@@ -301,9 +304,11 @@ function underLease(
   return ctx.db
     .transaction()
     .execute(async (trx) => {
+      ctx.signal?.throwIfAborted();
       const locked = await lockRunningTask(trx, claimed, ctx.owner);
       if (!locked || !ACTIVE_CRAWL.has(locked.crawl.status)) throw new Abandoned();
       await body(trx, locked.crawl, locked.task);
+      ctx.signal?.throwIfAborted();
       return true;
     })
     .catch((error: unknown) => {

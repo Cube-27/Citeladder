@@ -131,6 +131,51 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     await fixtures.runtime(scope, scripted([reply()])).execute(current);
     expect((await fixtures.run(queued.id)).status).toBe('succeeded');
   });
+  it('exhausts repeatedly recovered claims that never reached start', async () => {
+    const scope = await fixtures.scope();
+    const queued = await fixtures
+      .store()
+      .enqueue(scope, { key: randomUUID(), message: 'Question' });
+    await db
+      .updateTable('agent_runs')
+      .set({ max_attempts: 2 })
+      .where('id', '=', queued.id)
+      .execute();
+    const queue = new AgentQueue(db, 30);
+    const calls = new ModelCalls(db, zeroFunding);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      expect(await queue.claim('crashed', [scope.workspaceId])).not.toBeNull();
+      await db
+        .updateTable('agent_runs')
+        .set({ lease_expires_at: new Date(0) })
+        .where('id', '=', queued.id)
+        .execute();
+      expect(
+        await queue.recover([scope.workspaceId], 1, (trx, run) => calls.reconcile(trx, run)),
+      ).toBe(1);
+    }
+    expect(await fixtures.run(queued.id)).toMatchObject({
+      status: 'failed',
+      attempt_count: 2,
+      error_code: 'max_attempts_exceeded',
+    });
+    expect(await queue.claim('next', [scope.workspaceId])).toBeNull();
+  });
+  it('contains start failure without dispatching the runtime', async () => {
+    const scope = await fixtures.scope();
+    await fixtures.store().enqueue(scope, { key: randomUUID(), message: 'Question' });
+    const queue = new AgentQueue(db, 30);
+    const runtime = fixtures.runtime(scope, scripted([reply()]));
+    const start = vi.spyOn(queue, 'start').mockRejectedValueOnce(new AgentError('lease'));
+    const execute = vi.spyOn(runtime, 'execute');
+    try {
+      expect(await runAgentOnce(queue, runtime, 'lost', [scope.workspaceId], () => 0)).toBe(true);
+      expect(execute).not.toHaveBeenCalled();
+    } finally {
+      start.mockRestore();
+      execute.mockRestore();
+    }
+  });
   it('commits dispatch before model I/O, exposes progress, binds evidence and appends a reply atomically', async () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope);

@@ -13,6 +13,7 @@
 import { randomBytes } from 'node:crypto';
 import { sql } from 'kysely';
 import { recoverAnalyticsLeases } from '../queue/analytics-recovery.ts';
+import { maintainLease } from '../queue/heartbeat.ts';
 import { competitorDiscovery } from '../commerce/discovery.ts';
 import { compensateTerminalTasks } from './terminal-compensation.ts';
 
@@ -171,16 +172,10 @@ export class AnalyticsWorker {
     const executor = Object.hasOwn(this.#executors, claimed.task_kind)
       ? this.#executors[claimed.task_kind]
       : undefined;
-    const heartbeat = setInterval(
-      () => {
-        this.#queue
-          .heartbeat(claimed.id, this.owner, claimed.attempt_count)
-          .catch((error: unknown) => {
-            // A dead heartbeat silently expires the lease; keep beating instead.
-            logger.exception('analytics_heartbeat_failed', error, { task_id: claimed.id });
-          });
-      },
+    const heartbeat = maintainLease(
+      () => this.#queue.heartbeat(claimed.id, this.owner, claimed.attempt_count),
       Math.max(1, this.#settings.heartbeatIntervalSeconds) * 1000,
+      (error) => logger.exception('analytics_heartbeat_failed', error, { task_id: claimed.id }),
     );
     try {
       if (executor === undefined) {
@@ -192,7 +187,7 @@ export class AnalyticsWorker {
         db: this.#db,
         maxAttempts: this.#settings.taskMaxAttempts,
         checkCancelled: async (boundary) => {
-          if (await this.#queue.isTerminal(claimed.id)) {
+          if (heartbeat.signal.aborted || (await this.#queue.isTerminal(claimed.id))) {
             throw new TaskCancelledError(
               `analytics task ${claimed.id} reached a terminal status; stopping at the ${boundary} boundary`,
             );
@@ -203,7 +198,7 @@ export class AnalyticsWorker {
     } catch (error) {
       return error instanceof Error ? error : new Error(String(error));
     } finally {
-      clearInterval(heartbeat);
+      await heartbeat.stop();
     }
   }
 

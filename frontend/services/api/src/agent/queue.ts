@@ -190,7 +190,7 @@ export class AgentQueue {
       for (const run of rows) {
         // Ledger settlement and terminal writes share one ordered transaction.
         await reconcile(trx, run); // NOSONAR
-        const attempts = run.attempt_count;
+        const attempts = run.attempt_count + (run.status === statuses.leased ? 1 : 0);
         const exhausted = attempts >= run.max_attempts;
         await trx // NOSONAR
           .updateTable('agent_runs')

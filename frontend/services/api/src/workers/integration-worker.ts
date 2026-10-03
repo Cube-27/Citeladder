@@ -4,6 +4,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { queueRecovery } from '../config/queue-recovery.ts';
 import { recoverIntegrationLeases } from '../queue/recovery.ts';
+import { maintainLease } from '../queue/heartbeat.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import type { ImportPage } from '../integrations/client.ts';
@@ -85,30 +86,31 @@ export class IntegrationWorker {
     await recoverIntegrationLeases(this.#db);
     const run = await this.#claim();
     if (!run) return false;
-    const timer = setInterval(() => {
-      void this.#db
-        .updateTable('integration_sync_runs')
-        .set({
-          heartbeat_at: new Date(),
-          lease_expires_at: sql<Date>`clock_timestamp() + ${this.#settings.lease_ttl_seconds} * interval '1 second'`,
-          updated_at: new Date(),
-        })
-        .where('id', '=', run.id)
-        .where('lease_owner', '=', this.#owner)
-        .where('status', '=', statuses.running)
-        .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
-        .execute()
-        .catch((error: unknown) =>
-          logger.exception('integration_heartbeat_failed', error, { sync_run_id: run.id }),
-        );
-    }, this.#settings.heartbeat_interval_seconds * 1000);
+    const heartbeat = maintainLease(
+      () =>
+        this.#db
+          .updateTable('integration_sync_runs')
+          .set({
+            heartbeat_at: new Date(),
+            lease_expires_at: sql<Date>`clock_timestamp() + ${this.#settings.lease_ttl_seconds} * interval '1 second'`,
+            updated_at: new Date(),
+          })
+          .where('id', '=', run.id)
+          .where('lease_owner', '=', this.#owner)
+          .where('status', '=', statuses.running)
+          .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
+          .executeTakeFirst()
+          .then((result) => result.numUpdatedRows > 0n),
+      this.#settings.heartbeat_interval_seconds * 1000,
+      (error) => logger.exception('integration_heartbeat_failed', error, { sync_run_id: run.id }),
+    );
     try {
-      await this.#execute(run);
-      await this.#finish(run, null);
+      await this.#execute(run, heartbeat.signal);
+      if (!heartbeat.signal.aborted) await this.#finish(run, null);
     } catch (error) {
-      await this.#finish(run, error);
+      if (!heartbeat.signal.aborted) await this.#finish(run, error);
     } finally {
-      clearInterval(timer);
+      await heartbeat.stop();
     }
     return true;
   }
@@ -180,7 +182,8 @@ export class IntegrationWorker {
     return count;
   }
 
-  async #execute(run: Run): Promise<void> {
+  async #execute(run: Run, signal: AbortSignal): Promise<void> {
+    signal.throwIfAborted();
     await this.#db.transaction().execute(async (trx) => {
       await this.#ownedTarget(trx, run);
     });
@@ -211,7 +214,8 @@ export class IntegrationWorker {
       .execute();
     // Dataset imports share a token and lease; finish each before advancing.
     for (const template of this.#selectedTemplates(provider, connection.dataset_capabilities)) {
-      await this.#importDataset(run, provider, token, template, artifacts);
+      signal.throwIfAborted();
+      await this.#importDataset(run, provider, token, template, artifacts, signal);
     }
   }
 
@@ -233,6 +237,7 @@ export class IntegrationWorker {
     token: string,
     initial: Dataset,
     artifacts: Artifact[],
+    signal: AbortSignal,
   ): Promise<void> {
     let template = initial;
     const previousPages = artifacts.filter((item) => item.dataset === template.dataset);
@@ -251,6 +256,7 @@ export class IntegrationWorker {
     let offset = offsets.size ? lastOffset + this.#settings.sync_page_size : 0;
     // Commit each offset under the lease before fetching its successor.
     for (let pageNumber = 0; pageNumber < this.#settings.sync_max_pages; pageNumber += 1) {
+      signal.throwIfAborted();
       if (offsets.has(offset)) {
         offset += this.#settings.sync_page_size;
         continue;
@@ -265,7 +271,9 @@ export class IntegrationWorker {
         template,
         offset,
         offsets.size > 0,
+        signal,
       );
+      signal.throwIfAborted();
       template = fetched.template;
       await this.#persistPage(run, provider, template, offset, fetched.page);
       offsets.add(offset);
@@ -286,7 +294,9 @@ export class IntegrationWorker {
     template: Dataset,
     offset: number,
     hasPages: boolean,
+    signal: AbortSignal,
   ) {
+    signal.throwIfAborted();
     let page;
     try {
       page = await this.#client.page(
@@ -306,7 +316,9 @@ export class IntegrationWorker {
         hasPages
       )
         throw error;
+      signal.throwIfAborted();
       template = await this.#itemFallback(run);
+      signal.throwIfAborted();
       page = await this.#client.page(
         provider,
         token,

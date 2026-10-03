@@ -77,6 +77,7 @@ export type ResearchDependencies = {
   gateway?: ModelGateway | null;
   env?: Record<string, string | undefined>;
   onCompetitors?: () => Promise<void>;
+  checkCancelled?: () => void;
 };
 async function generateIdentity(
   gateway: ModelGateway | null | undefined,
@@ -220,6 +221,7 @@ export async function researchBrand(
   site: ResolvedSite,
   dependencies: ResearchDependencies = {},
 ) {
+  dependencies.checkCancelled?.();
   const settings = discoverySettings(dependencies.env);
   const budget = new ResearchBudget(settings.keenable_total_call_cap);
   const client = createResearchClient(settings, budget, dependencies.transport ?? fetch);
@@ -249,6 +251,7 @@ export async function researchBrand(
     }
   }
   const modelCalls: Record<string, unknown>[] = [];
+  dependencies.checkCancelled?.();
   const identity = await generateIdentity(gateway, input, items, modelCalls);
   const profile =
     identity?.profile ??
@@ -286,6 +289,7 @@ export async function researchBrand(
       competitorState = 'failed';
     }
   }
+  dependencies.checkCancelled?.();
   const { competitors, available } = await suggestCompetitors({
     gateway,
     identity,
