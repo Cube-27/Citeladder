@@ -4,6 +4,11 @@
   // while the two frontend runtimes are being validated together.
   "workspaces": {
     ".": {
+      "paths": {
+        // Knip strips :workers from Cloudflare's runtime module specifier.
+        // Resolve it to its existing declaration rather than an npm dependency.
+        "cloudflare": ["./apps/marketing/src/cloudflare-workers.d.ts"],
+      },
       "entry": [
         // Astro entrypoints own the public-site runtime graph; the Vite app is
         // entered explicitly because knip's vite plugin does not discover the
