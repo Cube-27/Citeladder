@@ -309,6 +309,16 @@ describe('sanitized durable admission', () => {
     expect((await send(a.source.id, a.token, body(event()))).status).toBe(401);
     expect((await send(a.source.id, rotated.token!, body(event()))).status).toBe(202);
     await mutateSource(db, scope(a.tenant), a.tenant.userId, a.source.id, 'revoke');
+    const revokedAt = () =>
+      db
+        .selectFrom('crawl_log_sources')
+        .select('revoked_at')
+        .where('id', '=', a.source.id)
+        .executeTakeFirstOrThrow();
+    const first = await revokedAt();
+    await mutateSource(db, scope(a.tenant), a.tenant.userId, a.source.id, 'revoke');
+    // A repeated revoke keeps the original coverage boundary.
+    expect(await revokedAt()).toEqual(first);
     expect((await send(a.source.id, rotated.token!, body(event()))).status).toBe(409);
     expect(
       await db

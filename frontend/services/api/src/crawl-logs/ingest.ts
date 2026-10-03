@@ -93,15 +93,19 @@ export async function ingest(
     unsupported: formatError,
   } = decodeBatch(source, body, options.encoding, Boolean(options.uploadId));
   let unsupported = formatError;
-  const snapshots = await db
-    .selectFrom('bot_ip_range_snapshots')
-    .selectAll()
-    .where('status', '=', 'succeeded')
-    .distinctOn('bot_id')
-    .orderBy('bot_id')
-    .orderBy('fetched_at', 'desc')
-    .orderBy('id', 'desc')
-    .execute();
+  // Only batches with lines to verify need the IP range snapshots.
+  const snapshots =
+    lines.length && !validation && !unsupported
+      ? await db
+          .selectFrom('bot_ip_range_snapshots')
+          .selectAll()
+          .where('status', '=', 'succeeded')
+          .distinctOn('bot_id')
+          .orderBy('bot_id')
+          .orderBy('fetched_at', 'desc')
+          .orderBy('id', 'desc')
+          .execute()
+      : [];
   const latest = new Map(snapshots.map((s) => [s.bot_id, s] as const));
   if (!options.uploadId && !validation && !unsupported && lines.length === 0 && !options.key)
     throw new ApiError(422, 'Heartbeat batches require an explicit unique idempotency key');

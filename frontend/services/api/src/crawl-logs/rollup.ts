@@ -29,8 +29,15 @@ export async function refreshCrawlLogs(
     const selectedDay = reportingDates
       ? sql<boolean>`reporting_date=any(${reportingDates}::date[])`
       : sql<boolean>`true`;
+    const span = [...(reportingDates ?? [])].sort((a, b) => a.localeCompare(b));
+    // The occurred_at range lets the index bound the scan; the local-day test stays exact.
     const selectedRequest = reportingDates
-      ? sql<boolean>`(occurred_at at time zone ${tz})::date=any(${reportingDates}::date[])`
+      ? sql<boolean>`(occurred_at at time zone ${tz})::date=any(${reportingDates}::date[])${
+          span.length
+            ? sql` and occurred_at >= (${span[0]}::date::timestamp at time zone ${tz})
+                and occurred_at < ((${span.at(-1)}::date + 1)::timestamp at time zone ${tz})`
+            : sql``
+        }`
       : sql<boolean>`true`;
     await trx
       .deleteFrom('bot_activity_daily')
@@ -43,6 +50,7 @@ export async function refreshCrawlLogs(
       select *,count(*) over(partition by workspace_id,project_id,(occurred_at at time zone ${tz})::date,bot_id,
         coalesce(url_hash,folder || ':' || resource_class),identity,url_hash,folder,resource_class,verification,status_code,verification_reason) as reason_count
       from bot_requests where workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid
+        and occurred_at >= (${floor}::timestamp at time zone ${tz})
         and (occurred_at at time zone ${tz})::date >= ${floor} and ${selectedRequest}
       ) insert into bot_activity_daily (id,workspace_id,project_id,reporting_date,reporting_timezone,bot_id,identity_key,
       identity,url_hash,display_path,folder,resource_class,verification,status_code,requests,first_seen_at,last_seen_at,formula_version,source_batch_ids,verification_reasons)

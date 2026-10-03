@@ -106,8 +106,6 @@ export function useCrawlConnections({
   });
 
   return {
-    projectId,
-    workspaceId,
     canManage,
     sources,
     open,

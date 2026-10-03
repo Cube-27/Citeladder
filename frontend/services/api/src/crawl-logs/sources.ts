@@ -147,6 +147,8 @@ export async function mutateSource(
     if (!source) throw notFound('Crawl log source');
     if (action === 'rotate' && (source.status !== 'active' || source.kind !== 'webhook'))
       throw new ApiError(409, 'Source cannot rotate');
+    // Revocation is idempotent: the first revoked_at is the audit and coverage boundary.
+    if (action === 'revoke' && source.status === 'revoked') return { id, token: null };
     const secret = action === 'rotate' ? token() : null;
     await trx
       .updateTable('crawl_log_sources')

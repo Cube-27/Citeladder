@@ -91,6 +91,7 @@ describe('AI Traffic state and navigation', () => {
           max_line_bytes: 1000,
           max_lines_per_batch: 10,
           upload_sample_lines: 50,
+          max_backdate_days: 80,
           worker_timeout_ms: 5000,
         }),
       ),

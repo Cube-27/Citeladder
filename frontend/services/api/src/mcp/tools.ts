@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { policy } from '../config.ts';
+import { crawlLogs } from '../config/crawl-logs.ts';
 import type { Database } from '../db/database.ts';
 import { mcpPolicy } from './config.ts';
 import { authorizeProject, listAccountProjects, searchBusinessContext } from './data.ts';
@@ -14,6 +15,8 @@ const pageLimit = nullable(z.number().int().min(1).max(mcpPolicy.max_list_limit)
 const cursor = nullable(z.string());
 const scope = { project_id: uuid };
 const page = { cursor, limit: pageLimit };
+// Crawl-log reads page at their own, smaller bound.
+const crawlPage = { cursor, limit: nullable(z.number().int().min(1).max(crawlLogs.max_page_size)) };
 const range = nullable(z.enum(policy.traffic.PERFORMANCE_RANGES));
 const dates = { start_date: nullable(z.iso.date()), end_date: nullable(z.iso.date()) };
 const visibility = {
@@ -92,7 +95,7 @@ export const definitions = {
       range: nullable(z.enum(Object.keys(policy.analytics.preset_range_days))),
       ...dates,
       verification: nullable(z.enum(['verified', 'unverifiable', 'failed_verification'])),
-      ...page,
+      ...crawlPage,
     }),
   },
   list_bot_requests: {
@@ -105,7 +108,7 @@ export const definitions = {
       status: nullable(z.int().min(100).max(599)),
       folder: nullable(z.string().max(2048)),
       resource_class: nullable(z.string()),
-      ...page,
+      ...crawlPage,
     }),
   },
   read_demand: {

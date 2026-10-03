@@ -43,6 +43,7 @@ const catalog = {
   max_lines_per_batch: 1,
   upload_sample_lines: 50,
   max_line_bytes: 1000,
+  max_backdate_days: 80,
   worker_timeout_ms: 5000,
 };
 const event = (ua: string, path = '/page') => ({
@@ -81,6 +82,8 @@ const run = (value: File, format = 'ndjson', resumeId?: string) =>
   });
 beforeEach(() => {
   vi.clearAllMocks();
+  // Fixture timestamps sit inside the admission window relative to this clock.
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-04T00:00:00Z'));
   vi.stubGlobal('TextDecoderStream', TextDecoderStream);
   vi.stubGlobal('DecompressionStream', DecompressionStream);
   vi.mocked(aiTrafficApi.createUpload).mockResolvedValue({
@@ -181,6 +184,13 @@ describe('local streaming upload privacy', () => {
       [expect.stringContaining('/two')],
       expect.anything(),
     );
+  });
+  it('aborts lines older than the admission window before sending any batch', async () => {
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2027-01-01T00:00:00Z'));
+    const lines = [event('known-robot'), event('known-robot')].map((row) => JSON.stringify(row));
+    await expect(run(file(lines.join('\n')))).rejects.toThrow(/older than 80 days/);
+    expect(aiTrafficApi.uploadBatch).not.toHaveBeenCalled();
+    expect(aiTrafficApi.completeUpload).not.toHaveBeenCalled();
   });
   it('rejects unsupported or malformed UTF-8 headers before transmitting file evidence', async () => {
     await expect(run(file('{"path":"/no-user-agent"}'))).rejects.toThrow(/crawler identification/);

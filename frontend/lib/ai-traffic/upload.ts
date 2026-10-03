@@ -181,6 +181,10 @@ export async function uploadCrawlFile(input: {
       batch: string[] = [],
       batchBytes = 0;
     const scan: Scan = { first: null, last: null, dates: new Map() };
+    // The server rejects older scan spans at completion; fail before transferring the file.
+    const oldest = new Date(Date.now() - catalog.max_backdate_days * 86400000).toISOString();
+    const envelopeBytes = () => new TextEncoder().encode(JSON.stringify({ seq, lines: [] })).length;
+    let envelope = envelopeBytes();
     const flush = async () => {
       if (!batch.length) return;
       if (seq > upload.last_ack_seq) {
@@ -188,6 +192,7 @@ export async function uploadCrawlFile(input: {
         ack = seq;
       }
       seq++;
+      envelope = envelopeBytes();
       batch = [];
       batchBytes = 0;
       input.onProgress({ uploadId: upload.id, scanned, matched, ack });
@@ -198,12 +203,15 @@ export async function uploadCrawlFile(input: {
       const row = parseLogLine(line, format, mapping);
       if (!row) return;
       const at = trackScan(scan, row.timestamp);
+      if (at < oldest)
+        throw new Error(
+          `Log lines older than ${catalog.max_backdate_days} days cannot be uploaded`,
+        );
       if (!catalog.bots.some((bot) => matchesCrawlerUserAgent(bot, row.user_agent))) return;
       const normalized = JSON.stringify({ ...row, timestamp: at });
       const size = new TextEncoder().encode(normalized).length;
       if (size > catalog.max_line_bytes) throw new Error('Mapped log line exceeds limit');
       const wireSize = new TextEncoder().encode(JSON.stringify(normalized)).length + 1;
-      const envelope = new TextEncoder().encode(JSON.stringify({ seq, lines: [] })).length;
       if (
         batch.length >= catalog.max_lines_per_batch ||
         batchBytes + wireSize + envelope > catalog.max_batch_bytes

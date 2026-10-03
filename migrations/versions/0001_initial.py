@@ -7460,7 +7460,7 @@ def upgrade() -> None:
         sa.Column("project_id", sa.UUID(), nullable=False),
         sa.Column("source_id", sa.UUID(), nullable=False),
         sa.Column("filename", sa.String(255), nullable=False),
-        sa.Column("size_bytes", sa.Integer, nullable=False),
+        sa.Column("size_bytes", sa.BigInteger, nullable=False),
         sa.Column("status", sa.String(24), nullable=False),
         sa.Column("missing_fields", postgresql.JSONB, nullable=False),
         sa.Column("last_ack_seq", sa.Integer, nullable=False),
@@ -7489,6 +7489,11 @@ def upgrade() -> None:
             ],
             ondelete="CASCADE",
         ),
+    )
+    op.create_index(
+        "ix_crawl_log_uploads_source",
+        "crawl_log_uploads",
+        ["workspace_id", "project_id", "source_id"],
     )
     op.create_table(
         "crawl_log_batches",
@@ -7549,6 +7554,11 @@ def upgrade() -> None:
             "idempotency_key",
             name="uq_crawl_log_batch_key",
         ),
+    )
+    op.create_index(
+        "ix_crawl_log_batches_upload",
+        "crawl_log_batches",
+        ["workspace_id", "project_id", "upload_id"],
     )
     op.create_table(
         "bot_ip_range_snapshots",
@@ -7637,6 +7647,17 @@ def upgrade() -> None:
         ["workspace_id", "project_id", "occurred_at", "id"],
     )
     op.create_index("ix_bot_requests_retention", "bot_requests", ["workspace_id", "occurred_at", "id"])
+    # Cascade paths: deleting a batch or source must not sequential-scan.
+    op.create_index(
+        "ix_bot_requests_batch",
+        "bot_requests",
+        ["workspace_id", "project_id", "batch_id"],
+    )
+    op.create_index(
+        "ix_bot_requests_source",
+        "bot_requests",
+        ["workspace_id", "project_id", "source_id"],
+    )
     op.create_table(
         "bot_activity_daily",
         sa.Column("id", sa.UUID(), nullable=False),

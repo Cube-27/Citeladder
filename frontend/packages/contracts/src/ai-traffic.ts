@@ -91,7 +91,8 @@ export const crawlReceiptSchema = z.object({
 export const crawlUploadSchema = z.object({
   id: z.uuid(),
   filename: z.string(),
-  size_bytes: z.number(),
+  // bigint column; the driver returns int8 as text.
+  size_bytes: z.coerce.number(),
   status: z.string(),
   last_ack_seq: z.number(),
   scanned_lines: z.number(),
@@ -127,6 +128,7 @@ export const crawlCatalogSchema = z.object({
   max_lines_per_batch: z.number(),
   upload_sample_lines: z.number(),
   max_line_bytes: z.number(),
+  max_backdate_days: z.number(),
   worker_timeout_ms: z.number(),
 });
 const crawlCoverageDaySchema = z.object({

@@ -7,7 +7,6 @@ import {
   crawlSummarySchema,
   verificationSchema,
 } from '@citeladder/contracts/ai-traffic';
-import { record } from '../db/json.ts';
 import type { Database } from '../db/database.ts';
 import { crawlers } from '../config/crawlers.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
@@ -42,7 +41,8 @@ function verificationFilter(value?: string | null) {
     throw new ApiError(422, 'Invalid verification filter');
   return [...new Set(items)];
 }
-function window(options: CrawlReadOptions) {
+/** The reporting window every crawl read and the overview route share. */
+export function crawlWindow(options: CrawlReadOptions) {
   if (Boolean(options.start_date) !== Boolean(options.end_date))
     throw new ApiError(422, 'Both dates are required');
   if (options.start_date && options.end_date) {
@@ -65,8 +65,15 @@ function window(options: CrawlReadOptions) {
     end,
   };
 }
+function purposeBots(purpose?: string | null) {
+  if (!purpose) return null;
+  const bots = crawlers.bots.filter((b) => b.purpose === purpose).map((b) => b.bot_id);
+  if (!bots.length) throw new ApiError(422, 'Invalid purpose');
+  return bots;
+}
 function rollups(db: Database, scope: CrawlScope, options: CrawlReadOptions) {
-  const w = window(options);
+  const w = crawlWindow(options),
+    bots = purposeBots(options.purpose);
   let q = db
     .selectFrom('bot_activity_daily')
     .where('workspace_id', '=', scope.workspaceId)
@@ -74,11 +81,7 @@ function rollups(db: Database, scope: CrawlScope, options: CrawlReadOptions) {
     .where('reporting_date', '>=', sql<Date>`${w.start}::date`)
     .where('reporting_date', '<=', sql<Date>`${w.end}::date`)
     .where('verification', 'in', verificationFilter(options.verification));
-  if (options.purpose) {
-    const bots = crawlers.bots.filter((b) => b.purpose === options.purpose).map((b) => b.bot_id);
-    if (!bots.length) throw new ApiError(422, 'Invalid purpose');
-    q = q.where('bot_id', 'in', bots);
-  }
+  if (bots) q = q.where('bot_id', 'in', bots);
   if (options.bot_id) q = q.where('bot_id', '=', options.bot_id);
   if (options.folder) q = q.where('folder', '=', options.folder);
   if (options.resource_class) q = q.where('resource_class', '=', options.resource_class);
@@ -120,47 +123,31 @@ export async function crawlerPage(db: Database, scope: CrawlScope, options: Craw
     .limit(limit + 1)
     .execute();
   const selected = rows.slice(0, limit);
-  const items = await Promise.all(
-    selected.map(async (row) => {
-      const base = rollups(db, scope, { ...options, bot_id: row.bot_id });
-      const statuses = await base
-        .select(['status_code', sql<number>`sum(requests)::integer`.as('count')])
-        .groupBy('status_code')
-        .execute();
-      const verifications = await base
-        .select(['verification', sql<number>`sum(requests)::integer`.as('count')])
-        .groupBy('verification')
-        .execute();
-      const folders = await base
-        .select(['folder', sql<number>`sum(requests)::integer`.as('count')])
-        .groupBy('folder')
-        .orderBy('count', 'desc')
-        .limit(crawlLogs.max_page_size)
-        .execute();
-      const resources = await base
-        .select(['resource_class', sql<number>`sum(requests)::integer`.as('count')])
-        .groupBy('resource_class')
-        .execute();
-      const reasonRows = await base.select('verification_reasons').execute();
-      const reasons: Record<string, number> = {};
-      for (const row of reasonRows)
-        for (const [reason, count] of Object.entries(record(row.verification_reasons)))
-          if (typeof count === 'number') reasons[reason] = (reasons[reason] ?? 0) + count;
-      const bot = crawlers.bots.find((b) => b.bot_id === row.bot_id);
-      return {
-        ...row,
-        pages: row.pages || null,
-        label: bot?.label ?? row.bot_id,
-        purpose: bot?.purpose ?? 'unknown',
-        last_seen: row.last_seen.toISOString(),
-        status_codes: Object.fromEntries(statuses.map((s) => [String(s.status_code), s.count])),
-        verification: Object.fromEntries(verifications.map((s) => [s.verification, s.count])),
-        verification_reasons: reasons,
-        folders: Object.fromEntries(folders.map((s) => [s.folder, s.count])),
-        resources: Object.fromEntries(resources.map((s) => [s.resource_class, s.count])),
-      };
-    }),
-  );
+  const breakdowns = selected.length
+    ? await crawlerBreakdowns(
+        db,
+        scope,
+        options,
+        selected.map((row) => row.bot_id),
+      )
+    : null;
+  const items = selected.map((row) => {
+    const bot = crawlers.bots.find((b) => b.bot_id === row.bot_id);
+    const of = (key: keyof NonNullable<typeof breakdowns>) =>
+      breakdowns?.[key].get(row.bot_id) ?? {};
+    return {
+      ...row,
+      pages: row.pages || null,
+      label: bot?.label ?? row.bot_id,
+      purpose: bot?.purpose ?? 'unknown',
+      last_seen: row.last_seen.toISOString(),
+      status_codes: of('statuses'),
+      verification: of('verifications'),
+      verification_reasons: of('reasons'),
+      folders: of('folders'),
+      resources: of('resources'),
+    };
+  });
   const last = selected.at(-1);
   return botCrawlersResponseSchema.parse({
     items,
@@ -169,6 +156,59 @@ export async function crawlerPage(db: Database, scope: CrawlScope, options: Craw
         ? encodeKeysetCursor(binding.endpoint, binding.filters, [last.bot_id])
         : null,
   });
+}
+/** One grouped query per breakdown for a whole crawler page, bucketed by bot. */
+async function crawlerBreakdowns(
+  db: Database,
+  scope: CrawlScope,
+  options: CrawlReadOptions,
+  botIds: string[],
+) {
+  const base = () => rollups(db, scope, options).where('bot_id', 'in', botIds);
+  const count = sql<number>`sum(requests)::integer`.as('count');
+  const [statuses, verifications, folders, resources, reasons] = await Promise.all([
+    base().select(['bot_id', 'status_code', count]).groupBy(['bot_id', 'status_code']).execute(),
+    base().select(['bot_id', 'verification', count]).groupBy(['bot_id', 'verification']).execute(),
+    base()
+      .select(['bot_id', 'folder', count])
+      .groupBy(['bot_id', 'folder'])
+      .orderBy('count', 'desc')
+      .execute(),
+    base()
+      .select(['bot_id', 'resource_class', count])
+      .groupBy(['bot_id', 'resource_class'])
+      .execute(),
+    base()
+      .crossJoin(sql`jsonb_each(verification_reasons)`.as('r'))
+      .select([
+        'bot_id',
+        sql<string>`r.key`.as('reason'),
+        sql<number>`sum((r.value)::numeric)::integer`.as('count'),
+      ])
+      .where(sql<boolean>`jsonb_typeof(r.value) = 'number'`)
+      .groupBy(['bot_id', sql`r.key`])
+      .execute(),
+  ]);
+  const bucket = <T extends { bot_id: string; count: number }>(
+    list: T[],
+    key: (row: T) => string,
+    cap = Infinity,
+  ) => {
+    const out = new Map<string, Record<string, number>>();
+    for (const row of list) {
+      const counts = out.get(row.bot_id) ?? {};
+      if (Object.keys(counts).length < cap) counts[key(row)] = row.count;
+      out.set(row.bot_id, counts);
+    }
+    return out;
+  };
+  return {
+    statuses: bucket(statuses, (s) => String(s.status_code)),
+    verifications: bucket(verifications, (s) => s.verification),
+    folders: bucket(folders, (s) => s.folder, crawlLogs.max_page_size),
+    resources: bucket(resources, (s) => s.resource_class),
+    reasons: bucket(reasons, (s) => s.reason),
+  };
 }
 export async function activityPage(
   db: Database,
@@ -204,12 +244,14 @@ export async function activityPage(
     .where('project_id', '=', scope.projectId)
     .where('occurred_at', '>=', new Date(Date.now() - crawlLogs.retention_days * 86400000))
     .where('verification', 'in', verificationFilter(options.verification));
+  const bots = purposeBots(options.purpose);
+  if (bots) query = query.where('bot_id', 'in', bots);
   if (options.bot_id) query = query.where('bot_id', '=', options.bot_id);
   if (options.status) query = query.where('status_code', '=', options.status);
   if (options.folder) query = query.where('folder', '=', options.folder);
   if (options.resource_class) query = query.where('resource_class', '=', options.resource_class);
   if (options.range || options.start_date || options.end_date) {
-    const w = window(options);
+    const w = crawlWindow(options);
     query = query
       .where('occurred_at', '>=', new Date(w.start + 'T00:00:00Z'))
       .where('occurred_at', '<', new Date(Date.parse(w.end) + 86400000));
@@ -247,7 +289,7 @@ export async function coveragePage(
   scope: CrawlScope,
   options: CrawlReadOptions = {},
 ) {
-  const w = window(options),
+  const w = crawlWindow(options),
     limit = pageLimit(options),
     binding = cursorParts(scope, 'coverage', options);
   let q = db
@@ -277,17 +319,20 @@ export async function coveragePage(
       sql<boolean>`(reporting_date,source_id,reporting_timezone)>(${binding.keys[0]}::date,${binding.keys[1]}::uuid,${binding.keys[2]})`,
     );
   }
-  const rows = await q
+  const [rows, sources] = await Promise.all([
+    q
       .orderBy('reporting_date')
       .orderBy('source_id')
       .orderBy('reporting_timezone')
       .limit(limit + 1)
       .execute(),
-    items = rows.slice(0, limit),
+    sourceList(db, scope),
+  ]);
+  const items = rows.slice(0, limit),
     last = items.at(-1);
   return crawlCoverageResponseSchema.parse({
     items,
-    sources: (await sourceList(db, scope)).items,
+    sources: sources.items,
     next_cursor:
       rows.length > limit && last
         ? encodeKeysetCursor(binding.endpoint, binding.filters, [
@@ -303,43 +348,46 @@ export async function crawlSummary(
   scope: CrawlScope,
   options: CrawlReadOptions = {},
 ) {
-  const sources = (await sourceList(db, scope)).items,
-    w = window(options);
-  const total = await rollups(db, scope, options)
-    .select([
-      sql<number>`coalesce(sum(requests),0)::integer`.as('requests'),
-      sql<number>`count(distinct url_hash)::integer`.as('pages'),
-      sql<number>`count(distinct bot_id)::integer`.as('bots'),
-      sql<number>`coalesce(sum(requests) filter(where status_code>=400),0)::integer`.as('errors'),
-    ])
-    .executeTakeFirstOrThrow();
-  const failed = await rollups(db, scope, { ...options, verification: 'failed_verification' })
-    .select(sql<number>`coalesce(sum(requests),0)::integer`.as('count'))
-    .executeTakeFirstOrThrow();
-  const coverage = await db
-    .selectFrom('crawl_log_coverage_daily')
-    .select([
-      'coverage',
-      'reporting_timezone',
-      isoDateText(sql.ref('reporting_date')).as('day'),
-      sql<string>`(select host from crawl_log_sources s where s.id=source_id)`.as('host'),
-    ])
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('reporting_date', '>=', sql<Date>`${w.start}::date`)
-    .where('reporting_date', '<=', sql<Date>`${w.end}::date`)
-    .execute();
+  const w = crawlWindow(options),
+    filtered = rollups(db, scope, options);
+  const [total, failed, coverage, series, { items: sources }] = await Promise.all([
+    filtered
+      .select([
+        sql<number>`coalesce(sum(requests),0)::integer`.as('requests'),
+        sql<number>`count(distinct url_hash)::integer`.as('pages'),
+        sql<number>`count(distinct bot_id)::integer`.as('bots'),
+        sql<number>`coalesce(sum(requests) filter(where status_code>=400),0)::integer`.as('errors'),
+      ])
+      .executeTakeFirstOrThrow(),
+    rollups(db, scope, { ...options, verification: 'failed_verification' })
+      .select(sql<number>`coalesce(sum(requests),0)::integer`.as('count'))
+      .executeTakeFirstOrThrow(),
+    db
+      .selectFrom('crawl_log_coverage_daily')
+      .select([
+        'coverage',
+        'reporting_timezone',
+        isoDateText(sql.ref('reporting_date')).as('day'),
+        sql<string>`(select host from crawl_log_sources s where s.id=source_id)`.as('host'),
+      ])
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('reporting_date', '>=', sql<Date>`${w.start}::date`)
+      .where('reporting_date', '<=', sql<Date>`${w.end}::date`)
+      .execute(),
+    filtered
+      .select([
+        isoDateText(sql.ref('reporting_date')).as('date'),
+        'bot_id',
+        sql<number>`sum(requests)::integer`.as('requests'),
+      ])
+      .groupBy(['reporting_date', 'bot_id'])
+      .orderBy('reporting_date')
+      .execute(),
+    sourceList(db, scope),
+  ]);
   const quality = coverageQuality(coverage, w);
   const adequate = quality === 'complete' || quality === 'declared_complete';
-  const series = await rollups(db, scope, options)
-    .select([
-      isoDateText(sql.ref('reporting_date')).as('date'),
-      'bot_id',
-      sql<number>`sum(requests)::integer`.as('requests'),
-    ])
-    .groupBy(['reporting_date', 'bot_id'])
-    .orderBy('reporting_date')
-    .execute();
   let connection = 'not_connected';
   if (sources.some((s) => s.status === 'active'))
     connection = sources.some((s) => s.connection === 'connected') ? 'connected' : 'awaiting_data';

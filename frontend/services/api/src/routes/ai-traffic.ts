@@ -16,6 +16,7 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 import {
   crawlSummary,
+  crawlWindow,
   crawlerPage,
   activityPage,
   coveragePage,
@@ -81,16 +82,10 @@ export const aiTrafficRoutes = [
         .orderBy('audit_scope')
         .orderBy('created_at', 'desc')
         .orderBy('id', 'desc');
-      const end = query.end_date ?? new Date().toISOString().slice(0, 10);
-      const days = (policy.analytics.preset_range_days as Record<string, number>)[
-        query.range ?? crawlLogs.default_range
-      ]!;
-      const start =
-        query.start_date ??
-        new Date(Date.parse(end) - (days - 1) * 86400000).toISOString().slice(0, 10);
+      const w = crawlWindow(query);
       audits = audits
-        .where('created_at', '>=', new Date(start + 'T00:00:00Z'))
-        .where('created_at', '<', new Date(Date.parse(end) + 86400000));
+        .where('created_at', '>=', new Date(w.start + 'T00:00:00Z'))
+        .where('created_at', '<', new Date(Date.parse(w.end) + 86400000));
       const ids = (await audits.execute()).map((a) => a.id);
       const citations = ids.length
         ? await db

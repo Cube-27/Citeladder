@@ -32,6 +32,18 @@ import {
 } from '../crawl-logs/uploads.ts';
 
 const root = '/api/v1/projects/{project_id}/crawl-logs';
+const ingestPath = '/api/v1/crawl-logs/ingest/{source_id}';
+const uploadBatchPath = root + '/sources/{source_id}/uploads/{upload_id}/batches';
+const selfBounded = [ingestPath, uploadBatchPath].map(
+  (template) => new RegExp('^' + template.replaceAll(/\{[^}]+\}/gu, '[^/]+') + '$', 'u'),
+);
+/**
+ * POST routes that authenticate and spend attempt quota before streaming their
+ * own compressed/decompressed body bound; the app must not pre-read them.
+ */
+export function streamsOwnBody(method: string, path: string) {
+  return method === 'POST' && selfBounded.some((pattern) => pattern.test(path));
+}
 const path = { project_id: { scalar: { kind: 'uuid' }, required: true } } as const;
 const sourcePath = { ...path, source_id: { scalar: { kind: 'uuid' }, required: true } } as const;
 const uploadPath = {
@@ -57,6 +69,7 @@ export const crawlLogRoutes = [
         max_lines_per_batch: crawlLogs.max_lines_per_batch,
         upload_sample_lines: crawlLogs.upload_sample_lines,
         max_line_bytes: crawlLogs.max_line_bytes,
+        max_backdate_days: crawlLogs.max_backdate_days,
         worker_timeout_ms: crawlLogs.worker_timeout_ms,
       };
     },
@@ -105,7 +118,7 @@ export const crawlLogRoutes = [
     family: 'crawl-log-ingest',
     authorize: 'public',
     raw: true,
-    path: '/api/v1/crawl-logs/ingest/{source_id}',
+    path: ingestPath,
     params: { path: { source_id: sourcePath.source_id }, query: {} },
     response: crawlReceiptSchema,
     status: 202,
@@ -174,7 +187,7 @@ export const crawlLogRoutes = [
   }),
   definePostRoute({
     ...writes,
-    path: root + '/sources/{source_id}/uploads/{upload_id}/batches',
+    path: uploadBatchPath,
     params: { path: uploadPath, query: {} },
     body: uploadBatchSchema,
     response: crawlReceiptSchema,

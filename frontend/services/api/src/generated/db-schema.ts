@@ -1172,7 +1172,7 @@ export interface CrawlLogUploads {
   project_id: string;
   scanned_dates: Json;
   scanned_lines: number;
-  size_bytes: number;
+  size_bytes: Int8;
   source_id: string;
   status: string;
   updated_at: Timestamp;

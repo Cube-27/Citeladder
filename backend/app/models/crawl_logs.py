@@ -4,6 +4,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Date,
     DateTime,
@@ -99,6 +100,7 @@ class CrawlLogUpload(Base):
             ],
             ondelete="CASCADE",
         ),
+        Index("ix_crawl_log_uploads_source", "workspace_id", "project_id", "source_id"),
     )
     id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
     workspace_id: Mapped[uuid.UUID] = mapped_column(
@@ -107,7 +109,7 @@ class CrawlLogUpload(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     source_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False)
     missing_fields: Mapped[dict | list] = mapped_column(JSONB, nullable=False)
     last_ack_seq: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -165,6 +167,7 @@ class CrawlLogBatch(Base):
             "idempotency_key",
             name="uq_crawl_log_batch_key",
         ),
+        Index("ix_crawl_log_batches_upload", "workspace_id", "project_id", "upload_id"),
     )
     id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
     workspace_id: Mapped[uuid.UUID] = mapped_column(
@@ -270,6 +273,8 @@ class BotRequest(Base):
             "id",
         ),
         Index("ix_bot_requests_retention", "workspace_id", "occurred_at", "id"),
+        Index("ix_bot_requests_batch", "workspace_id", "project_id", "batch_id"),
+        Index("ix_bot_requests_source", "workspace_id", "project_id", "source_id"),
     )
     id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
     workspace_id: Mapped[uuid.UUID] = mapped_column(
