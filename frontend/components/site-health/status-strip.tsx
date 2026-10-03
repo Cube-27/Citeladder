@@ -376,7 +376,7 @@ function analysisCounts(crawl: SiteCrawl, selected: number): ProgressCount[] {
       .map((code) => ({
         label: code === 'timeout' ? 'Timeouts' : code.replace('_', ' ').toUpperCase(),
         value: counters.failure_breakdown[code],
-        className: 'text-run-failed',
+        className: 'text-danger-text',
       })),
   ];
 }
