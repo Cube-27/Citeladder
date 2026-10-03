@@ -187,7 +187,7 @@ export class SiteHealthWorker {
   /** Heartbeat the lease for the whole body; a failure settles the task. */
   async #leased(claimed: SiteTask, body: (signal: AbortSignal) => Promise<void>) {
     const heartbeat = maintainLease(
-      () => this.queue.heartbeat(claimed.id, this.owner),
+      () => this.queue.heartbeat(claimed.id, this.owner, claimed.workspace_id),
       this.settings.heartbeat * 1000,
       (error) => logger.exception('heartbeat failed', error, { task_id: claimed.id }),
     );

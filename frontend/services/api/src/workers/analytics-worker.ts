@@ -173,7 +173,8 @@ export class AnalyticsWorker {
       ? this.#executors[claimed.task_kind]
       : undefined;
     const heartbeat = maintainLease(
-      () => this.#queue.heartbeat(claimed.id, this.owner, claimed.attempt_count),
+      () =>
+        this.#queue.heartbeat(claimed.id, this.owner, claimed.workspace_id, claimed.attempt_count),
       Math.max(1, this.#settings.heartbeatIntervalSeconds) * 1000,
       (error) => logger.exception('analytics_heartbeat_failed', error, { task_id: claimed.id }),
     );

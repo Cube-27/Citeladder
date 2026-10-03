@@ -292,6 +292,7 @@ async function loadOutcomes(
       'prompt_intent',
     ])
     .where('audit_id', 'in', auditIds)
+    .where('cohort', 'in', [...selectedCohorts(cohort)])
     .execute();
   let answers = db
     .selectFrom('response_analyses')
@@ -322,6 +323,7 @@ async function loadOutcomes(
       'task.transport_model',
     ])
     .where('task.workspace_id', '=', scope.workspaceId)
+    .where('prompt.cohort', 'in', [...selectedCohorts(cohort)])
     .where('task.audit_id', 'in', auditIds);
   if (engine) taskQuery = taskQuery.where('task.logical_engine', '=', engine);
   return { prompts, answers: await answers.execute(), tasks: await taskQuery.execute() };
@@ -536,16 +538,18 @@ async function setRows(
   const rows = await scoreRows(db, scope, query, ids);
   const data = await loadOutcomes(db, scope, ids, query.cohort, query.logicalEngine);
   const byAudit = groupBy(rows, (row) => row.item.audit_id);
-  for (const audit of audits) {
-    await enrichOutcomes(
-      db,
-      scope,
-      byAudit.get(audit.id) ?? [],
-      { ...audit, cohort: query.cohort },
-      { logicalEngine: query.logicalEngine, baselineId: null },
-      data,
-    );
-  }
+  await Promise.all(
+    audits.map((audit) =>
+      enrichOutcomes(
+        db,
+        scope,
+        byAudit.get(audit.id) ?? [],
+        { ...audit, cohort: query.cohort },
+        { logicalEngine: query.logicalEngine, baselineId: null },
+        data,
+      ),
+    ),
+  );
   return rows;
 }
 

@@ -4,8 +4,9 @@
 
 - [Backend debt remediation](citeladder-backend-debt-remediation.md)
   — all six slices implemented on `codex/backend-debt-remediation` in one PR,
-  one commit per slice in order 6, 5, 1, 2, 3, 4. CI/review remain pending;
-  stop before merging. B20 remains deferred to the next legal revision.
+  one commit per slice in order 6, 5, 1, 2, 3, 4.
+  [PR #256](https://github.com/Cube-27/Citeladder/pull/256) is open; stop before
+  merging. B20 remains deferred to the next legal revision.
 
 - [Security hardening](citeladder-security-hardening.md)
   — slices 1–7 implemented on `codex/security-hardening` as one PR, with one

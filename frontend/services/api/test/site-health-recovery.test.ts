@@ -82,7 +82,7 @@ it('reclaims retryable leases, spends one attempt, and fences the old owner afte
   const tasks = await worker.queue.claim({ owner: worker.owner, kinds: ['link_metrics'] });
   expect(tasks.map((task) => task.id)).toEqual([id]);
   expect(await worker.queue.markRunning(id, worker.owner)).toBe(true);
-  expect(await worker.queue.heartbeat(id, 'dead-worker')).toBe(false);
+  expect(await worker.queue.heartbeat(id, 'dead-worker', seed.workspaceId)).toBe(false);
   await expect(
     db.transaction().execute((trx) => lockSiteTask(trx, claimed, 'dead-worker')),
   ).rejects.toBeInstanceOf(TaskCancelledError);

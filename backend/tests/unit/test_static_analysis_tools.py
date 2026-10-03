@@ -109,8 +109,6 @@ class TestArchitecturePolicy:
             "core-is-the-floor",
             "models-are-persistence-only",
             "connectors-are-transport-only",
-            "orchestration-is-infrastructure",
-            "analysis-does-not-reach-up",
         }
 
     def test_core_contract_is_checked_transitively(self) -> None:

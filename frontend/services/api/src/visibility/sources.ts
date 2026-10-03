@@ -55,6 +55,28 @@ export type SourceQuery = {
 
 type Scope = ReturnType<typeof scopeOf>;
 
+function sourcePosition(query: SourceQuery, filters: Record<string, unknown>) {
+  if (query.asOf !== null && query.asOf.offsetSeconds === null)
+    throw new TrendQueryError("'as_of' must be timezone-aware");
+  const position = query.cursor
+    ? decodeKeysetCursor(query.cursor, 'visibility-sources', filters)
+    : null;
+  const asOf =
+    position?.[0] ?? pydanticUtcOf(query.asOf ?? fromEpochMicros(BigInt(Date.now()) * 1000n));
+  if (!position) return { position, asOf };
+  if (
+    position.length !== 4 ||
+    !['next', 'prev'].includes(position[3]!) ||
+    !Number.isFinite(Date.parse(asOf)) ||
+    !Number.isSafeInteger(Number(position[1])) ||
+    Number(position[1]) < 0
+  )
+    throw new InvalidCursorError('invalid sources cursor');
+  if (query.asOf && pydanticUtcOf(query.asOf) !== asOf)
+    throw new InvalidCursorError('invalid sources cursor');
+  return { position, asOf };
+}
+
 /** Every answer in the selection up to `as_of`, with the prompt it answered. */
 function scopeOf(db: Database, selection: RunSelection, asOf: string) {
   return evidenceScope(db, selection)
@@ -102,32 +124,15 @@ export async function getVisibilitySources(
   query: SourceQuery,
 ): Promise<SourcesResponse> {
   const selection = await authorizedSelection(db, requested);
-  if (query.asOf !== null && query.asOf.offsetSeconds === null) {
-    throw new TrendQueryError("'as_of' must be timezone-aware");
-  }
   const filters = {
     ...selection,
-    auditIds: [...(selection.auditIds ?? [])].sort(),
+    auditIds: [...(selection.auditIds ?? [])].sort(compareText),
     domain: query.domain,
     sourceClass: query.sourceClass,
     dimension: query.dimension,
-    baselineAuditIds: [...(query.baselineAuditIds ?? [])].sort(),
+    baselineAuditIds: [...(query.baselineAuditIds ?? [])].sort(compareText),
   };
-  const position = query.cursor
-    ? decodeKeysetCursor(query.cursor, 'visibility-sources', filters)
-    : null;
-  const asOf =
-    position?.[0] ?? pydanticUtcOf(query.asOf ?? fromEpochMicros(BigInt(Date.now()) * 1000n));
-  if (
-    position &&
-    (position.length !== 4 ||
-      !['next', 'prev'].includes(position[3]!) ||
-      !Number.isFinite(Date.parse(asOf)) ||
-      !Number.isSafeInteger(Number(position[1])) ||
-      Number(position[1]) < 0 ||
-      (query.asOf && pydanticUtcOf(query.asOf) !== asOf))
-  )
-    throw new InvalidCursorError('invalid sources cursor');
+  const { position, asOf } = sourcePosition(query, filters);
   const scope = scopeOf(db, selection, asOf);
   const denominator = await db
     .selectFrom(scope)
@@ -258,6 +263,7 @@ export async function getVisibilitySources(
   });
   await attachPageLinks(db, selection, items);
   if (pages) await attachRowMentions(db, selection, scope, items);
+  const hasPrevious = backwards ? summary.rows.length > query.limit : Boolean(position);
   const response: SourcesResponse = {
     total,
     responses,
@@ -275,7 +281,7 @@ export async function getVisibilitySources(
           ])
         : null,
     previous_cursor:
-      (backwards ? summary.rows.length > query.limit : Boolean(position)) && first
+      hasPrevious && first
         ? encodeKeysetCursor('visibility-sources', filters, [
             asOf,
             String(first.responses),

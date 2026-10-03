@@ -150,7 +150,7 @@ export async function getVisibilityEvidence(
     .where('audit.project_id', '=', selection.projectId)
     .where('audit.status', 'in', policy.visibility.dashboard_audit_statuses)
     .where('snapshot.cohort', 'in', [...selectedCohorts(selection.cohort)])
-    .where('snapshot.created_at', '<=', new Date(asOf));
+    .where('snapshot.created_at', '<=', sql<Date>`${asOf}::timestamptz`);
   if (selection.auditId) promptScope = promptScope.where('audit.id', '=', selection.auditId);
   if (selection.auditIds?.length)
     promptScope = promptScope.where('audit.id', 'in', selection.auditIds);

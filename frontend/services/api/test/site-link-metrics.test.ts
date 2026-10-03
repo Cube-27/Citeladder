@@ -279,7 +279,7 @@ it('lets the heartbeat extend the lease while an executor holds the task fence',
         const blocked = new Promise((resolve) => {
           setTimeout(() => resolve('blocked'), 2000);
         });
-        beat = await Promise.race([worker.queue.heartbeat(id, 'beat'), blocked]);
+        beat = await Promise.race([worker.queue.heartbeat(id, 'beat', seed.workspaceId), blocked]);
       },
     },
   });
@@ -317,5 +317,5 @@ it('requeues database contention without spending a page attempt and fences expi
     })
     .where('id', '=', id)
     .execute();
-  expect(await worker.queue.heartbeat(id, 'expired')).toBe(false);
+  expect(await worker.queue.heartbeat(id, 'expired', seed.workspaceId)).toBe(false);
 });

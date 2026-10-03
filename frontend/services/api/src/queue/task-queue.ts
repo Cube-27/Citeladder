@@ -198,7 +198,12 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
   }
 
   /** Extend the lease of a leased or running row this owner still holds. */
-  async heartbeat(taskId: string, owner: string, attemptCount?: number): Promise<boolean> {
+  async heartbeat(
+    taskId: string,
+    owner: string,
+    workspaceId: string,
+    attemptCount?: number,
+  ): Promise<boolean> {
     const now = this.#now();
     const updated = await queueDatabase(this.#db)
       .updateTable(this.#table)
@@ -208,6 +213,7 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
         updated_at: now,
       })
       .where('id', '=', taskId)
+      .where('workspace_id', '=', workspaceId)
       .where('lease_owner', '=', owner)
       .where('status', 'in', [statuses.leased, statuses.running])
       .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)

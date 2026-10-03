@@ -152,7 +152,6 @@ export function useSourceDomains(filters: SourceFilters, queries: SourceQueries)
   const params = {
     ...selectionParams(filters, queries),
     dimension: 'domain' as const,
-    offset: 0,
     limit: SOURCE_DOMAIN_OPTIONS,
   };
   const query = useQuery({

@@ -16,6 +16,7 @@ import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Json, type Tenant } from './visibility-fixtures.ts';
 import { compareSelection } from '../src/visibility/comparison.ts';
 import { record } from '../src/db/json.ts';
+import { sql } from 'kysely';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -581,7 +582,7 @@ describe('GET /visibility/fanout and /visibility/evidence', () => {
 
     const drilled = await get(tenant, route(tenant, '/fanout'), {
       audit_id: auditId,
-      query: 'crm pricing',
+      query: '  crm pricing  ',
     });
     expect(drilled.body).toMatchObject({ total_answers: 1, answers: [{ task_id: pricingTask }] });
   });
@@ -677,6 +678,35 @@ describe('GET /visibility/fanout and /visibility/evidence', () => {
     expect(
       (await get(tenant, route(tenant, '/evidence'), { outcome: 'competitor_gap' })).status,
     ).toBe(422);
+  });
+
+  it('keeps frozen prompt options at the same microsecond cutoff as evidence', async () => {
+    const precise = await fixtures.tenant();
+    const run = await fixtures.audit(precise);
+    const execution = await fixtures.execution(precise, {
+      auditId: run,
+      promptText: 'Precise prompt',
+    });
+    const at = sql<Date>`'2026-03-01T00:00:00.000500Z'::timestamptz`;
+    await db
+      .updateTable('audit_prompt_snapshots')
+      .set({ created_at: at })
+      .where('audit_id', '=', run)
+      .execute();
+    await db
+      .updateTable('response_analyses')
+      .set({ created_at: at })
+      .where('id', '=', execution.analysisId!)
+      .execute();
+    const result = await get(precise, route(precise, '/evidence'), {
+      audit_id: run,
+      as_of: '2026-03-01T00:00:00.000750Z',
+    });
+    expect(result.body).toMatchObject({
+      total: 1,
+      items: [{ task_id: execution.taskId }],
+      prompt_options: [{ label: 'Precise prompt' }],
+    });
   });
 });
 

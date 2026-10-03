@@ -10,26 +10,58 @@ import {
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
 import { parseUuid } from '../http/uuid.ts';
+import { compareText } from '../text-order.ts';
 import { authorizedSelection, evidenceScope, type RunSelection } from './selection.ts';
 
 export type FanoutResponse = z.input<typeof visibilityFanoutSummarySchema>;
 
+type FanoutOptions = {
+  query: string | null;
+  search: string | null;
+  cursor: string | null;
+  limit: number;
+};
+
+function fanoutPosition(options: FanoutOptions, filters: Record<string, unknown>) {
+  const position = options.cursor ? decodeKeysetCursor(options.cursor, 'fanout', filters) : null;
+  const asOf = position?.[0] ?? new Date().toISOString();
+  const all = sql<boolean>`true`;
+  if (!position) return { asOf, queryAfter: all, answerAfter: all };
+  if (position.length !== 3 || !Number.isFinite(Date.parse(asOf)))
+    throw new InvalidCursorError('invalid fanout cursor');
+  if (options.query === null) {
+    const count = Number(position[1]);
+    if (!Number.isSafeInteger(count) || count < 0)
+      throw new InvalidCursorError('invalid fanout cursor');
+    return {
+      asOf,
+      answerAfter: all,
+      queryAfter: sql<boolean>`(event_count < ${count} or (event_count = ${count} and query collate "C" > ${position[2]}))`,
+    };
+  }
+  if (!Number.isFinite(Date.parse(position[1]!)) || !parseUuid(position[2]))
+    throw new InvalidCursorError('invalid fanout cursor');
+  return {
+    asOf,
+    queryAfter: all,
+    answerAfter: sql<boolean>`(created_at, id) < (${storedInstant(position[1]!)}, ${position[2]}::uuid)`,
+  };
+}
+
 export async function getVisibilityFanout(
   db: Database,
   requested: RunSelection,
-  options: { query: string | null; search: string | null; cursor: string | null; limit: number },
+  requestedOptions: FanoutOptions,
 ): Promise<FanoutResponse> {
+  const options = { ...requestedOptions, query: requestedOptions.query?.trim() ?? null };
   const selection = await authorizedSelection(db, requested);
   const filters = {
     ...selection,
-    auditIds: [...(selection.auditIds ?? [])].sort(),
+    auditIds: [...(selection.auditIds ?? [])].sort(compareText),
     query: options.query,
     search: options.search?.trim().toLowerCase() ?? '',
   };
-  const position = options.cursor ? decodeKeysetCursor(options.cursor, 'fanout', filters) : null;
-  const asOf = position?.[0] ?? new Date().toISOString();
-  if (position && (position.length !== 3 || !Number.isFinite(Date.parse(asOf))))
-    throw new InvalidCursorError('invalid fanout cursor');
+  const { asOf, queryAfter, answerAfter } = fanoutPosition(options, filters);
   const base = db
     .with(
       (cte) => cte('answers').materialized(),
@@ -82,11 +114,12 @@ export async function getVisibilityFanout(
     .$if(Boolean(filters.search), (query) =>
       query.where(sql<boolean>`position(${filters.search} in lower(query)) > 0`),
     );
-  let queryPage = matched
+  const queryPage = matched
+    .where(queryAfter)
     .orderBy('event_count', 'desc')
     .orderBy(sql`query collate "C"`)
     .limit(options.limit + 1);
-  let answerPage = base
+  const answerPage = base
     .selectFrom('answers')
     .select([
       'audit_id',
@@ -99,25 +132,10 @@ export async function getVisibilityFanout(
       utcTextOf(sql.ref('created_at')).as('created_at'),
     ])
     .where(sql<boolean>`fanout_queries @> array[${options.query ?? ''}]::text[]`)
+    .where(answerAfter)
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .limit(options.limit + 1);
-  if (position) {
-    if (options.query === null) {
-      const count = Number(position[1]);
-      if (!Number.isSafeInteger(count) || count < 0)
-        throw new InvalidCursorError('invalid fanout cursor');
-      queryPage = queryPage.where(
-        sql<boolean>`(event_count < ${count} or (event_count = ${count} and query collate "C" > ${position[2]}))`,
-      );
-    } else {
-      if (!Number.isFinite(Date.parse(position[1]!)) || !parseUuid(position[2]))
-        throw new InvalidCursorError('invalid fanout cursor');
-      answerPage = answerPage.where(
-        sql<boolean>`(created_at, id) < (${storedInstant(position[1]!)}, ${position[2]}::uuid)`,
-      );
-    }
-  }
   const summary = await base
     .selectNoFrom([
       sql<number>`(select coalesce(sum(fanout_event_count), 0)::int from answers)`.as(
@@ -152,12 +170,10 @@ export async function getVisibilityFanout(
   const answers = options.query === null ? [] : summary.answers.slice(0, options.limit);
   const lastQuery = items.at(-1);
   const lastAnswer = answers.at(-1);
-  const keys =
-    options.query === null && lastQuery
-      ? [asOf, String(lastQuery.event_count), lastQuery.query]
-      : lastAnswer
-        ? [asOf, lastAnswer.created_at, lastAnswer.id]
-        : null;
+  let keys: string[] | null = null;
+  if (options.query === null && lastQuery)
+    keys = [asOf, String(lastQuery.event_count), lastQuery.query];
+  else if (lastAnswer) keys = [asOf, lastAnswer.created_at, lastAnswer.id];
   return {
     ...summary,
     items,

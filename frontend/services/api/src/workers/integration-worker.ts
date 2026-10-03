@@ -212,11 +212,30 @@ export class IntegrationWorker {
       .where('sync_run_id', '=', run.id)
       .where('workspace_id', '=', run.workspace_id)
       .execute();
-    // Dataset imports share a token and lease; finish each before advancing.
-    for (const template of this.#selectedTemplates(provider, connection.dataset_capabilities)) {
-      signal.throwIfAborted();
-      await this.#importDataset(run, provider, token, template, artifacts, signal);
-    }
+    await this.#importTemplates(
+      run,
+      provider,
+      token,
+      this.#selectedTemplates(provider, connection.dataset_capabilities),
+      artifacts,
+      signal,
+    );
+  }
+
+  /** Dataset imports share a token and lease; finish each before advancing. */
+  async #importTemplates(
+    run: Run,
+    provider: IntegrationProvider,
+    token: string,
+    templates: Dataset[],
+    artifacts: Artifact[],
+    signal: AbortSignal,
+  ): Promise<void> {
+    const [template, ...remaining] = templates;
+    if (!template) return;
+    signal.throwIfAborted();
+    await this.#importDataset(run, provider, token, template, artifacts, signal);
+    await this.#importTemplates(run, provider, token, remaining, artifacts, signal);
   }
 
   #selectedTemplates(provider: IntegrationProvider, capabilities: unknown) {

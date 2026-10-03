@@ -3,7 +3,8 @@
 Date: 3 October 2026
 
 Status: all six slices implemented on `codex/backend-debt-remediation`, in
-the packaging order below. PR review and CI are pending; stop before merging.
+the packaging order below. [PR #256](https://github.com/Cube-27/Citeladder/pull/256)
+is open; stop before merging. CI and review acceptance remain PR gates.
 Deployment is not authorized by this plan.
 
 ## Scope
