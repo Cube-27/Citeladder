@@ -23,6 +23,12 @@ sign-in OAuth client, preserving incremental consent, login_hint and
 include_granted_scopes. Bing uses separate Microsoft consent even if the Bing
 account was created with a Google identity. Property discovery supplies verified
 sites or GA4 account summaries; users do not type a property reference.
+Discovery is an Owner/Admin `manage_credentials` POST on
+`/integrations/{connection_id}/properties`, initiated when the picker opens
+with no retries or background refetch. Members/viewers read saved mappings.
+OAuth completion rechecks current credential authority before code exchange
+and under the workspace lock before grant persistence; exchange holds no
+database transaction open.
 
 [Integration routes](../frontend/services/api/src/routes/integrations.ts) use
 the TypeScript integration owner in
@@ -46,6 +52,13 @@ enqueue, history and coverage projections regardless of server timezone.
 Dispatcher fan-out is per mapping. Fetch and resume use frozen identity, never
 the mutable connection pointer. A retired mapping fails its in-flight work rather than
 relabeling imported evidence.
+
+On-demand enqueue takes the workspace lock before the connection lock. New
+windows require fewer than 20 active sync runs in that workspace and use a
+10/workspace/minute request budget. Queued, leased, running and retry-wait runs
+count toward capacity; terminal runs free it. An identical active window keeps
+the existing 409 conflict without spending another budget unit or slot.
+Scheduled imports and approved backfills bypass these admission limits.
 
 [Integration workers](../frontend/services/api/src/workers/integration-worker.ts)
 claim leased PostgreSQL work, commit before I/O, persist append-only import

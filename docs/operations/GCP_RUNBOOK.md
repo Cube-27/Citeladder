@@ -242,6 +242,29 @@ stops the deploy before the API changes.
 
 ## 5. Incidents
 
+### Budget and log controls
+
+The existing Terraform `google_billing_budget.monthly` remains alert-only.
+[`logging.tf`](../../infra/gcp/logging.tf) excludes only API Cloud Run request
+logs with HTTP 403; application logs and other request statuses remain.
+Applying the exclusion requires a separately authorized deployment. It removes
+that ingestion cost, not request fees or all Cloud Logging costs.
+
+**Deferred owner action, console only:** if available, create a separate monthly
+Cloud Run spend-cap budget for this project at roughly ₹8,500 ($100), keeping
+the existing hosting-alert budget. It is not configured by this change.
+[Google's spend-cap guidance](https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps)
+describes this Preview control; an alerts-only budget cannot be converted in place.
+The cap pauses new Cloud Run usage across the project, including API and jobs,
+so the product becomes unavailable. Persistent VM/storage costs continue;
+enforcement can overshoot. Cloud Logging is outside this service cap.
+
+After a cap triggers, the owner first investigates the abuse and estimated
+costs. In Billing → Budgets & alerts, edit the spend-cap budget and manually lift
+the cap to restore usage. Then verify the API and next scheduled tick recover;
+re-establish the owner's chosen protection after the incident. Do not delete
+resources or reset the database to restore service.
+
 - **Suspected credential exposure:** disable the affected Secret Manager
   version or provider key, rotate it in GitHub, redeploy, and review GitHub and
   GCP audit logs. Never paste secrets into issues, inputs, commands or logs.

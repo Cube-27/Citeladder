@@ -2,8 +2,9 @@
 
 Date: 3 October 2026
 
-Status: proposed, implementation not started. Deployment and external mutations
-are separate assignments.
+Status: slices 1–7 implemented on `codex/security-hardening`; PR review and CI
+pending. Slice 7 includes only the log exclusion and runbook text. Spend-cap
+configuration, Terraform apply and deployment remain separate owner assignments.
 
 ## Scope
 

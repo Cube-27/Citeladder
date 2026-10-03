@@ -2,6 +2,12 @@
 
 ## Active
 
+- [Security hardening](citeladder-security-hardening.md)
+  — slices 1–7 implemented on `codex/security-hardening` as one PR, with one
+  commit per slice. CI/review and merge remain pending; stop before merging.
+  Slice 7 is Terraform log exclusion and runbook text only. Spend-cap setup,
+  Terraform apply and deployment are deferred owner actions.
+
 - [Design-system contract refresh](citeladder-design-contract-refresh.md)
   — implemented in committed slices on `codex/design-contract-refresh`.
   The owner authorized rebasing onto main, review, simplification and PR creation
@@ -103,11 +109,6 @@
   execution and project skill policy are deferred. D/E remain separate assignments.
 
 ## Queued
-- [Security hardening](citeladder-security-hardening.md)
-  — plan saved and simplified on 3 October 2026; not started. Six schema-free
-  slices ordered by privacy, access and billing risk; Cloud Run IAM, database
-  CA and identity split assessed and not planned. Listing is not execution or
-  deployment authorization.
 - [Backend debt remediation](citeladder-backend-debt-remediation.md)
   — plan saved on 3 October 2026 from the reconciled backend/migration debt
   audit; not started. Six slices: queue lease safety, admission errors,
