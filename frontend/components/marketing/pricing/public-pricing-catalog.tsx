@@ -17,6 +17,7 @@ import {
 } from '@/lib/billing/catalog';
 import { publicPricingSelectionHref } from '@/lib/billing/public-pricing-selection';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
+import { contactSalesHref } from '@/lib/config/contact';
 import {
   BYOK_DISCLOSURE,
   BYOK_SWITCH_LABEL,
@@ -56,7 +57,7 @@ function PlanAction({ plan, href }: Readonly<{ plan: CatalogPlan; href: string |
     return (
       <a
         className="border-border-subtle mt-auto rounded-[var(--radius-control)] border px-5 py-3 text-center font-medium"
-        href={plan.contact_url ?? CONTACT_SALES_HREF}
+        href={contactSalesHref(plan.contact_url, CONTACT_SALES_HREF)}
       >
         Contact sales
       </a>

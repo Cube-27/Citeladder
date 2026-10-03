@@ -6,6 +6,65 @@ import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { filterAndSortPosts, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 
 test.describe('marketing routes', () => {
+  test('contact form supports validation, delivery retry and success at public viewport sizes', async ({
+    page,
+  }) => {
+    let attempts = 0;
+    await page.route('**/api/v1/contact', async (route) => {
+      const enquiry = route.request().postDataJSON();
+      expect(enquiry).toMatchObject({
+        name: 'Ada',
+        email: 'ada@example.com',
+        company: '',
+        message: 'Please show us CiteLadder.',
+      });
+      attempts += 1;
+      await route.fulfill({
+        status: attempts % 2 === 1 ? 503 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ outcome: attempts % 2 === 1 ? 'send_failed' : 'success' }),
+      });
+    });
+    for (const width of [390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/contact');
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('astro-island')].some(
+          (island) =>
+            island.getAttribute('component-url')?.includes('/contact.') &&
+            !island.hasAttribute('ssr'),
+        ),
+      );
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        "Let's talk about CiteLadder",
+      );
+      await expect(page).toHaveTitle('Contact CiteLadder');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      await page.screenshot({
+        path: test.info().outputPath(`contact-${width}.png`),
+        fullPage: true,
+      });
+      await page.getByRole('button', { name: 'Send message', exact: true }).click();
+      const name = page.getByRole('textbox', { name: /^Name/ });
+      await expect(name).toHaveAttribute('aria-invalid', 'true');
+      await expect(name).toBeFocused();
+      await name.fill('Ada');
+      await page.getByRole('textbox', { name: /^Work email/ }).fill('ada@example.com');
+      await page
+        .getByRole('textbox', { name: /^How can we help/ })
+        .fill('Please show us CiteLadder.');
+      await page.getByRole('button', { name: 'Send message', exact: true }).click();
+      await expect(page.getByRole('alert')).toContainText("We couldn't send your message.");
+      await page.getByRole('button', { name: 'Send message', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Message sent' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Message sent' })).toBeFocused();
+      await page.getByRole('button', { name: 'Send another message' }).click();
+      await expect(name).toHaveValue('');
+    }
+  });
+
   test('guides and comparisons deliver their evidence and contextual links without JavaScript', async ({
     browser,
     baseURL,

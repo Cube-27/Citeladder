@@ -19,6 +19,18 @@ transport without visitor credentials. Production delivery and acceptance remain
 operator gated. The first release retains captured prior VM artifacts for a
 bounded rollback; later frontend releases use accepted Worker versions.
 
+The marketing Worker owns public `/contact` and its same-origin
+`POST /api/v1/contact` intake. It validates bounded JSON, checks Origin and a
+honeypot, applies native Cloudflare limits by trusted client IP and aggregate
+contact traffic, and sends escaped HTML and plain text through Resend to
+`contact@citeladder.com`, with the visitor email as Reply-To. It stores no
+enquiries in the application database. The Resend key is a runtime Worker
+secret; no mail service enters the browser bundle. Demo CTAs use `/contact`;
+legacy Cube27 contact URLs from published billing catalogs resolve to this
+intake without altering persisted catalogs. Cube27 product and legal identity
+remain in the public chrome and policies. Successful submission analytics
+require existing cookie consent and contain only the source page.
+
 The product Worker runs before asset matching, so root, deep-link and direct
 HTML responses all carry the same enforced Content Security Policy and no-store
 policy. Fingerprinted resources retain immutable caching. Marketing static

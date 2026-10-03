@@ -81,6 +81,38 @@ are **INTERNAL ONLY**. No **TEMPORARY LEGACY** browser endpoint is approved by
 source inspection alone; each exception needs a verified caller, exact path and
 method, owner, focused test and removal condition in the release record.
 
+## Contact email on the marketing Worker
+
+Provision `RESEND_API_KEY` as a secret on **citeladder-marketing** only, using
+`pnpm exec wrangler secret put RESEND_API_KEY -c apps/marketing/wrangler.jsonc`
+from `frontend/` and the interactive prompt. Never put the key in build vars,
+browser configuration or a committed `.env`. For local development, use an
+ignored `frontend/apps/marketing/.dev.vars` only when intentionally testing
+delivery; ordinary tests mock delivery and must not receive a live key.
+
+`POST /api/v1/contact` is **APEX-OWNED** by the marketing Worker, with no origin
+API proxy or database persistence. Resend sends from
+`CiteLadder Website <notifications@citeladder.com>` to `contact@citeladder.com`
+and sets Reply-To to the visitor. The verified CiteLadder sending domain must
+permit this sender. Missing configuration or failed delivery returns a generic
+`send_failed` response. No enquiry content or provider error is logged.
+Identical enquiries use a stable Resend idempotency key for its 24-hour retry
+window; a changed message creates a new send. Provider calls have a bounded
+timeout. Honeypot and same-origin validation add no interactive challenge.
+The committed marketing Worker rate-limit bindings allow 5 valid enquiries per
+client IP and 30 aggregate enquiries per minute at each Cloudflare location.
+Only `CF-Connecting-IP` supplies the identity; absent identity or bindings and
+limiter failures block delivery. Throttling returns 429 and retains the form
+for a later retry. These edge limits mitigate bursts and are eventually
+consistent, not a strict global daily quota. No CAPTCHA is used.
+
+After an authorized deployment, open `/contact` on desktop and mobile, submit
+a controlled message with a mailbox you own, verify it arrives at
+`contact@citeladder.com`, check the CiteLadder sender and Reply-To, and test
+Reply in Titan. Check required-field errors, retry behavior, the email fallback,
+and demo/contact CTAs. Confirm the browser assets and responses carry no
+credential. Configure no Titan incoming-mail or DNS changes for this feature.
+
 ## Protected origin (Cloud Run)
 
 The Workers call the Cloud Run API directly; there is no origin hostname,

@@ -1,6 +1,7 @@
 import type { BillingCatalog } from '@/lib/api/billing';
 import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
+import { contactSalesHref } from '@/lib/config/contact';
 
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
@@ -44,7 +45,7 @@ export function BillingSupport({
   contact,
 }: Readonly<{ contact: BillingCatalog['support_contact'] }>) {
   const email = contact?.email || PARENT_COMPANY.email;
-  const url = contact?.contact_url || PARENT_COMPANY.contactHref;
+  const url = contactSalesHref(contact?.contact_url, websiteHref('/contact'));
   return (
     <section className={panelClasses({}, 'grid gap-2')} aria-labelledby="billing-support-title">
       <h2 id="billing-support-title" className={textRole('sectionTitle')}>

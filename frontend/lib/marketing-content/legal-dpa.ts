@@ -205,6 +205,7 @@ export const SUBPROCESSORS: LegalDocument = {
       id: 'independent',
       title: 'Independent service providers',
       bullets: [
+        'Resend delivers messages submitted through the CiteLadder contact form, including your name, email, optional company and message. These enquiries are not stored in the application database or used to subscribe you to marketing.',
         'Razorpay processes payments as an independent payment provider under its own terms. We never receive full card details.',
         'Google Analytics measures website visits only when it is enabled and you accept optional cookies.',
       ],

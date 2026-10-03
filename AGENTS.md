@@ -69,15 +69,21 @@ Validation has three tiers; each one owns what the one before it skips.
    behavior at risk. The pre-commit hook formats and lints staged files.
    Authorization, persistence, concurrency and shared runtime changes need
    stronger affected-owner coverage.
-2. **Once, when the executable diff is complete**, run `./scripts/check.ps1`.
-   It checks only the owners the working diff touches, builds only affected
-   production artifacts, applies formatting fixes and skips a tree that already
-   passed. Use `-All` only for shared-config changes or when asked for a release
-   check; `-CheckOnly` is the non-mutating form.
+2. **For changes to contracts, persistence, authorization, concurrency, shared
+   runtime, dependencies or build configuration**, run `./scripts/check.ps1`
+   once when the executable diff is complete. Use `-All` only for shared-config
+   changes or an explicitly requested release check; `-CheckOnly` is non-mutating.
+   Routine feature fixes use focused checks for the changed behavior instead.
 3. **CI** runs the full selected owner suites, every production build, E2E and
    release validation. Do not reproduce it locally, including the full backend suite.
 
 Ordinary copy/documentation edits need only cheap whitespace/reference checks.
+Small styling and layout-only edits need `git diff --check` and the staged
+format/lint hook; inspect the affected view when layout is uncertain. Do not
+run behavior tests, production builds or the repository quality harness merely
+because a file changed. A commit, push, PR or previously changed branch file is
+not a reason to repeat validation. Broaden only for a concrete risk or failure
+in the current change, and explain that reason before running a costly check.
 Documentation consumed by the application as runtime or packaged input, including
 Agent skills and templates, needs validation of the affected consumer instead.
 

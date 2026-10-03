@@ -79,6 +79,8 @@ export async function routeApexRequest(request: Request, env: ApexEnv): Promise<
   if (path === '/api/v1/billing/webhooks/razorpay' && request.method === 'POST') {
     return proxyWorkerRequest(request, config);
   }
+  // Public contact intake is handled by Astro in this Worker, never the product API.
+  if (path === '/api/v1/contact') return null;
   if (path === '/mcp' || path.startsWith('/mcp/') || PROTOCOL_PATHS.has(path)) {
     return proxyWorkerRequest(request, config);
   }

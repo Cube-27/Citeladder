@@ -93,7 +93,7 @@ describe('public pricing handoff', () => {
     );
     expect(screen.getByRole('link', { name: 'Request early access' })).toHaveAttribute(
       'href',
-      'https://www.cube27.com/contact/',
+      '/contact',
     );
     expect(screen.queryByRole('link', { name: /^Choose / })).not.toBeInTheDocument();
     expect(screen.getByText('$12')).toBeInTheDocument();

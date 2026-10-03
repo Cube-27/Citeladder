@@ -15,7 +15,8 @@ import {
   type HeadlinePrice,
 } from '@/lib/billing/catalog';
 import { billingReasonMessage } from '@/lib/billing/reason-copy';
-import { CONTACT_SALES_HREF } from '@/lib/config/billing';
+import { websiteHref } from '@/lib/config/app-link';
+import { contactSalesHref } from '@/lib/config/contact';
 
 import { Button } from '@/components/ui/button';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
@@ -68,7 +69,12 @@ export function PlanRow({
       <div className="shrink-0">
         {plan.contact_only ? (
           <Button asChild variant="secondary" size="sm">
-            <ExternalHttpLink href={plan.contact_url ?? CONTACT_SALES_HREF}>
+            <ExternalHttpLink
+              href={contactSalesHref(
+                plan.contact_url,
+                new URL(websiteHref('/contact'), 'https://citeladder.com').href,
+              )}
+            >
               Contact sales <ExternalLink className="size-3.5" aria-hidden />
             </ExternalHttpLink>
           </Button>

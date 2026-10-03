@@ -1,4 +1,5 @@
 import { LEGAL_ENTITY, PARENT_COMPANY, type LegalDocument } from './legal';
+import { CONTACT_EMAIL } from '@/lib/config/contact';
 
 /**
  * Refund, cancellation and contact pages. The mechanics (period-end
@@ -158,7 +159,7 @@ export const CONTACT_PAGE: LegalDocument = {
       id: 'support',
       title: 'Support, billing and privacy',
       paragraphs: [
-        `For support, billing, cancellation, refunds, privacy requests or crawler concerns, email ${email}. You can also reach us through ${PARENT_COMPANY.contactHref}.`,
+        `For support, billing, cancellation, refunds, privacy requests or crawler concerns, email ${CONTACT_EMAIL}. You can also use the form on this page.`,
         'Include your workspace or account email and any relevant invoice, payment or request reference. Never send passwords, API keys, full payment-card numbers or one-time payment codes.',
       ],
     },
@@ -167,8 +168,8 @@ export const CONTACT_PAGE: LegalDocument = {
       title: 'Complaints and grievances',
       paragraphs: [
         LEGAL_ENTITY.grievanceContact
-          ? `Grievance contact: ${LEGAL_ENTITY.grievanceContact}, ${email}.`
-          : `Send complaints and grievances to ${email}, marked “Grievance”.`,
+          ? `Grievance contact: ${LEGAL_ENTITY.grievanceContact}, ${CONTACT_EMAIL}.`
+          : `Send complaints and grievances to ${CONTACT_EMAIL}, marked “Grievance”.`,
         'We acknowledge every complaint and explain the next steps where more information or investigation is needed. This process does not remove your right to approach a competent authority or forum.',
       ],
     },

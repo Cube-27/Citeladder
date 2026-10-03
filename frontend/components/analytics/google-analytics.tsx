@@ -3,7 +3,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
 import { hasAnalyticsConsent, subscribeToConsent } from '@/lib/consent/cookie-consent';
-import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 /**
  * `gtag.js` installs this pair on `window` as it boots. Both are optional here
@@ -76,12 +75,18 @@ function trackMarketingCta(event: MouseEvent) {
   if (!hasAnalyticsConsent() || !(event.target instanceof Element)) return;
   const anchor = event.target.closest('a');
   if (!(anchor instanceof HTMLAnchorElement)) return;
-  const demo = anchor.href === DEMO_HREF;
+  const demo = anchor.dataset.demoCta !== undefined;
   if (!demo && anchor.dataset.marketingCta === undefined) return;
   const fields = marketingCtaFields(anchor, demo);
   const gtag = (window as GtagWindow).gtag;
   gtag?.('event', 'marketing_cta_click', fields);
-  if (demo) gtag?.('event', 'demo_outbound_click', fields);
+  if (demo) gtag?.('event', 'demo_contact_click', fields);
+}
+
+/** Successful submissions carry no visitor-supplied analytics properties. */
+export function trackContactSubmitted() {
+  if (!hasAnalyticsConsent()) return;
+  (window as GtagWindow).gtag?.('event', 'contact_form_submitted', { source_page: '/contact' });
 }
 
 /** Load the optional Google tag only after an explicit analytics opt-in. */

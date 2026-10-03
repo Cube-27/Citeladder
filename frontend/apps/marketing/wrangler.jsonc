@@ -11,7 +11,19 @@
     "directory": "./dist",
     "binding": "ASSETS",
   },
-  "secrets": { "required": ["ORIGIN_TOKEN"] },
+  "secrets": { "required": ["ORIGIN_TOKEN", "RESEND_API_KEY"] },
+  "ratelimits": [
+    {
+      "name": "CONTACT_IP_LIMITER",
+      "namespace_id": "27001",
+      "simple": { "limit": 5, "period": 60 },
+    },
+    {
+      "name": "CONTACT_BURST_LIMITER",
+      "namespace_id": "27002",
+      "simple": { "limit": 30, "period": 60 },
+    },
+  ],
   "vars": {
     "ORIGIN_UPSTREAM": "https://citeladder-api-44437656491.us-central1.run.app",
     "PUBLIC_WEBSITE_HOST": "citeladder.com",
