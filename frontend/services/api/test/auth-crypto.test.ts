@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { jwtVerify } from 'jose';
 import { describe, it, expect } from 'vitest';
 import { hashPassword, verifyPassword } from '../src/auth/password.ts';
@@ -8,20 +8,26 @@ import { testConfig } from './support.ts';
 
 describe('persisted authentication crypto', () => {
   const config = testConfig();
-  it('reads a recorded Python Argon2 hash and HS256 token and preserves native session claims', async () => {
+  it('reads recorded Python Argon2 and HS256 serialization and preserves native session claims', async () => {
     const password = 'unicode-password-δ🔒';
     const storedHash =
       '$argon2id$v=19$m=65536,t=3,p=4$vV2ls3S+l2VxhYw633OYVw$GSAcbcffuYmEAcH9QdunQ4Md+ChceiwTv7ugkP9DU4g';
     expect(await verifyPassword(password, storedHash)).toBe(true);
     expect(await verifyPassword('incorrect', storedHash)).toBe(false);
-    expect(
-      (
-        await jwtVerify(
-          'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMTExMTExMS0xMTExLTQxMTEtODExMS0xMTExMTExMTExMTEiLCJ2ZXIiOjIsImV4cCI6NDEwMjQ0NDgwMH0.ul_MFGJuwHJsZ_sKr1GZSYUO4Q5WbmNMsM7SMe9cIKo',
-          new TextEncoder().encode(config.session.secretKey),
-        )
-      ).payload,
-    ).toMatchObject({ sub: '11111111-1111-4111-8111-111111111111', ver: 2 });
+    // Keep Python's recorded signing bytes; create the signature with a fresh
+    // test key so the repository contains no reusable signed session token.
+    const key = randomBytes(32);
+    const signingInput = [
+      '{"typ":"JWT","alg":"HS256"}',
+      '{"sub":"11111111-1111-4111-8111-111111111111","ver":2,"exp":4102444800}',
+    ]
+      .map((value) => Buffer.from(value).toString('base64url'))
+      .join('.');
+    const pythonToken = `${signingInput}.${createHmac('sha256', key).update(signingInput).digest('base64url')}`;
+    expect((await jwtVerify(pythonToken, key)).payload).toMatchObject({
+      sub: '11111111-1111-4111-8111-111111111111',
+      ver: 2,
+    });
     const id = randomUUID();
     const token = await issueSession(config, {
       id,

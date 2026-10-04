@@ -8,7 +8,7 @@ import { IntegrationClient } from '../integrations/client.ts';
 export function seedAnswer(prompt: string, generation = 0) {
   const bucket = Math.min(
     2,
-    Number(BigInt('0x' + createHash('md5').update(prompt).digest('hex')) % 3n) + generation,
+    Number(BigInt('0x' + createHash('sha256').update(prompt).digest('hex')) % 3n) + generation,
   );
   const own = devSeed.products
     .map((p, i) => `${i + 1}. ${p.name} - $${p.price.toFixed(2)} (${p.url}) - lifetime warranty.`)
