@@ -197,7 +197,8 @@ accepted. Automation does not change this copy.
   ```
 
 - **Operator account tool:** forward the database over the same SSH session.
-  Then run the interactive tool from `backend/` against `127.0.0.1:15432`
+  Then run `pnpm --filter @citeladder/api account:manage --actor <email>
+  --workspace-id <uuid>` from `frontend/` against `127.0.0.1:15432`
   with the production secrets exported in that shell only:
 
   ```powershell

@@ -476,9 +476,25 @@ Billing/operator utilities:
 
 ```bash
 uv run python -m scripts.billing_admin --help
-uv run python -m scripts.provision_platform_provider_connections --help
 uv run python -m scripts.provision_razorpay_plans --help
 ```
+
+Bounded identity/acquisition/provider operators are native. From `frontend/`:
+
+```bash
+pnpm --filter @citeladder/api provision:platform --credential-ref openai=vault://platform/openai --dry-run
+pnpm --filter @citeladder/api acquisition:control --actor <admin-email> --domain <domain-or-*> --reason <reason>
+pnpm --filter @citeladder/api agreement:record --actor <admin-email> --input <local-reference-json>
+pnpm --filter @citeladder/api account:manage --actor <owner-or-admin-email> --workspace-id <uuid>
+```
+
+Acquisition and agreement commands roll back unless `--apply` is supplied.
+Platform provisioning retains explicit `--dry-run` preview and applies by default;
+it accepts only opaque references and makes no provider calls. The account manager
+requires an interactive terminal for passwords and confirmation for mutations.
+The native API image also supports these entrypoints via
+`node src/cli/<entrypoint>.ts`; the root Python image defaults to `alembic --help`
+and remains usable for migrations/bootstrap.
 
 Execution repricing is native: from `frontend/`, run
 `pnpm --filter @citeladder/api audit:reprice --help`. Preview is the default;

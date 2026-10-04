@@ -1,0 +1,176 @@
+import { afterAll, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { provisionPlatformConnections } from '../src/providers/platform-provisioning.ts';
+import { providerPolicy } from '../src/providers/config.ts';
+import { Fixtures, testDatabase } from './support.ts';
+
+const db = testDatabase(),
+  fixtures = new Fixtures(db);
+let system: string;
+afterAll(async () => {
+  await fixtures.cleanup();
+  await db.destroy();
+});
+
+it('previews, converges concurrently and rotates only platform metadata without touching BYOK', async () => {
+  const reference = 'vault://platform/openai';
+  await expect(
+    provisionPlatformConnections(db, { openai: reference }, true),
+  ).resolves.toMatchObject([{ status: 'created' }]);
+  expect(
+    await db.selectFrom('workspaces').select('id').where('is_system', '=', true).execute(),
+  ).toEqual([]);
+  system = await fixtures.systemWorkspace();
+  const customer = await fixtures.ownedWorkspace(await fixtures.user()),
+    byokId = randomUUID(),
+    now = new Date();
+  await db
+    .insertInto('provider_connections')
+    .values({
+      id: byokId,
+      workspace_id: customer,
+      label: 'Customer',
+      transport_provider: 'openai',
+      credential_source: 'byok',
+      credential_revision: randomUUID(),
+      api_key_encrypted: 'recorded-ciphertext',
+      base_url: '',
+      active: true,
+      last_test_status: '',
+      last_tested_at: null,
+      paused_at: null,
+      pause_until: null,
+      created_at: now,
+      updated_at: now,
+    })
+    .execute();
+  const [first, second] = await Promise.all([
+    provisionPlatformConnections(db, { openai: reference }),
+    provisionPlatformConnections(db, { openai: reference }),
+  ]);
+  expect(first[0]!.connection_id).toBe(second[0]!.connection_id);
+  expect([first[0]!.status, second[0]!.status].sort()).toEqual(['created', 'unchanged']);
+  const connectionId = first[0]!.connection_id;
+  const prior = await db
+    .selectFrom('provider_connections')
+    .selectAll()
+    .where('id', '=', connectionId)
+    .executeTakeFirstOrThrow();
+  await db
+    .updateTable('provider_connections')
+    .set({
+      paused_at: now,
+      pause_until: new Date(now.getTime() + 60_000),
+      pause_reason: 'rate_limit',
+      last_test_status: 'failed',
+      last_tested_at: now,
+    })
+    .where('id', '=', connectionId)
+    .execute();
+  const route = await db
+    .selectFrom('provider_routes')
+    .selectAll()
+    .where('connection_id', '=', connectionId)
+    .executeTakeFirstOrThrow();
+  await db
+    .updateTable('provider_routes')
+    .set({ active: false, is_default: false, transport_model: 'retired' })
+    .where('id', '=', route.id)
+    .execute();
+  expect((await provisionPlatformConnections(db, { openai: reference }))[0]!.status).toBe(
+    'updated',
+  );
+  expect(
+    (
+      await db
+        .selectFrom('provider_connections')
+        .select('paused_at')
+        .where('id', '=', connectionId)
+        .executeTakeFirstOrThrow()
+    ).paused_at,
+  ).not.toBeNull();
+  await provisionPlatformConnections(db, { openai: `${reference}-v2` }, true);
+  expect(
+    (
+      await db
+        .selectFrom('provider_connections')
+        .select('credential_revision')
+        .where('id', '=', connectionId)
+        .executeTakeFirstOrThrow()
+    ).credential_revision,
+  ).toBe(prior.credential_revision);
+  await provisionPlatformConnections(db, { openai: `${reference}-v2` });
+  const rotated = await db
+    .selectFrom('provider_connections')
+    .selectAll()
+    .where('id', '=', connectionId)
+    .executeTakeFirstOrThrow();
+  expect(rotated).toMatchObject({
+    workspace_id: system,
+    api_key_encrypted: '',
+    paused_at: null,
+    pause_until: null,
+    pause_reason: '',
+    last_tested_at: null,
+    last_test_status: '',
+  });
+  expect(rotated.credential_revision).not.toBe(prior.credential_revision);
+  expect(
+    await db
+      .selectFrom('provider_routes')
+      .selectAll()
+      .where('id', '=', route.id)
+      .executeTakeFirstOrThrow(),
+  ).toMatchObject({
+    transport_model: providerPolicy.routes.chatgpt.transport_model,
+    active: true,
+    is_default: true,
+  });
+  expect(
+    (
+      await db
+        .selectFrom('provider_connections')
+        .select('api_key_encrypted')
+        .where('id', '=', byokId)
+        .executeTakeFirstOrThrow()
+    ).api_key_encrypted,
+  ).toBe('recorded-ciphertext');
+  const anthropic = await provisionPlatformConnections(db, {
+    anthropic: 'vault://platform/anthropic',
+  });
+  expect(
+    (
+      await db
+        .selectFrom('provider_routes')
+        .select('logical_engine')
+        .where('connection_id', '=', anthropic[0]!.connection_id)
+        .execute()
+    ).map((row) => row.logical_engine),
+  ).toEqual(['claude']);
+});
+
+it.each(['', 'sk-live-value', 'production-secret', 'password-value'])(
+  'refuses secret-shaped reference %s atomically',
+  async (reference) => {
+    const before = await db
+      .selectFrom('provider_connections')
+      .selectAll()
+      .where('workspace_id', '=', system)
+      .execute();
+    expect(() => provisionPlatformConnections(db, { openai: reference })).toThrow(
+      'non-secret opaque',
+    );
+    expect(
+      await db
+        .selectFrom('provider_connections')
+        .selectAll()
+        .where('workspace_id', '=', system)
+        .execute(),
+    ).toEqual(before);
+  },
+);
+it('refuses unsupported transports', () => {
+  expect(() => provisionPlatformConnections(db, { mistral: 'vault://platform/mistral' })).toThrow(
+    'unknown transport',
+  );
+});

@@ -33,15 +33,6 @@ WORKSPACE_ROLES: Final = (
     WORKSPACE_ROLE_VIEWER,
 )
 
-#: Roles an invitation or a role change may name. ``owner`` is excluded: the
-#: single designated Owner changes only through an ownership transfer, which
-#: installs the replacement in the same transaction.
-ASSIGNABLE_WORKSPACE_ROLES: Final = (
-    WORKSPACE_ROLE_ADMIN,
-    WORKSPACE_ROLE_MEMBER,
-    WORKSPACE_ROLE_VIEWER,
-)
-
 
 class WorkspaceCapability(StrEnum):
     """What a role may do inside one workspace."""
@@ -120,7 +111,6 @@ def roles_with(capability: WorkspaceCapability) -> tuple[str, ...]:
 
 
 __all__ = [
-    "ASSIGNABLE_WORKSPACE_ROLES",
     "WORKSPACE_ROLES",
     "WORKSPACE_ROLE_ADMIN",
     "WORKSPACE_ROLE_MEMBER",

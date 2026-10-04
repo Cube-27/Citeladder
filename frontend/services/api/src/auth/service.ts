@@ -34,26 +34,31 @@ export async function registerUser(db: Database, email: string, password: string
   // Duplicate addresses pay the same hashing cost and receive the same response.
   const encoded = await hashPassword(password);
   const registeredId = await db.transaction().execute(async (trx) => {
-    const now = new Date();
-    const user = await trx
-      .insertInto('users')
-      .values({
-        id: randomUUID(),
-        email: email.toLowerCase(),
-        hashed_password: encoded,
-        role: 'user',
-        is_active: true,
-        session_version: 0,
-        created_at: now,
-        updated_at: now,
-      })
-      .onConflict((conflict) => conflict.column('email').doNothing())
-      .returningAll()
-      .executeTakeFirst();
+    const user = await createPasswordIdentity(trx, email, encoded);
     if (user) await provisionAccount(trx, user);
     return user?.id;
   });
   if (registeredId) logger.info('auth.registered', { user_id: registeredId });
+}
+
+/** Identity insertion only; caller explicitly chooses workspace/access provisioning. */
+export function createPasswordIdentity(db: Database, email: string, encoded: string) {
+  const now = new Date();
+  return db
+    .insertInto('users')
+    .values({
+      id: randomUUID(),
+      email: email.trim().toLowerCase(),
+      hashed_password: encoded,
+      role: 'user',
+      is_active: true,
+      session_version: 0,
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict((conflict) => conflict.column('email').doNothing())
+    .returningAll()
+    .executeTakeFirst();
 }
 
 export async function authenticateUser(

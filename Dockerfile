@@ -50,11 +50,11 @@ RUN groupadd --gid 10001 appuser \
 COPY --from=dependencies --chown=0:0 /app/backend/.venv ./.venv
 
 COPY --chown=0:0 backend/app ./app
-COPY --chown=0:0 backend/scripts/account_manager.py ./scripts/account_manager.py
 COPY --chown=0:0 backend/alembic.ini ./alembic.ini
 COPY --chown=0:0 migrations /app/migrations
 
 USER 10001:10001
 
-# Schema and operator image. Deployments explicitly select migrations/bootstrap.
-CMD ["python", "-m", "scripts.account_manager", "--help"]
+# Schema image. Identity administration uses the native API image/CLI.
+# Deployments explicitly select migrations/bootstrap.
+CMD ["alembic", "--help"]

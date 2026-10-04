@@ -959,7 +959,7 @@ Authorized mode changes only how robots directives are applied. It never
 adds credentials, cookies, header spoofing, challenge solving, higher rate
 limits or an alternative user agent. Host pacing, concurrency, admission,
 SSRF controls, durable suppression and the platform kill switch apply
-unchanged. Operator suppression (`scripts.acquisition_control`) always
+unchanged. Operator suppression (native `acquisition:control`) always
 overrides authorization.
 
 Authorization never applies to competitor, source-page or earned-source

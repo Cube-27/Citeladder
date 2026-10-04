@@ -126,8 +126,8 @@ host instead of shortening the requested delay. The shared fetcher invokes a dur
 every URL/redirect hop, including discovery, logos, commerce and source inspection.
 An in-flight HTTP request cannot be recalled; subsequent hops recheck the stop.
 
-Trusted platform administrators can dry-run `uv run python -m scripts.acquisition_control
---actor <admin-email> --domain <domain-or-*> --reason <reason>` from `backend/`.
+Trusted platform administrators can dry-run `pnpm --filter @citeladder/api acquisition:control
+--actor <admin-email> --domain <domain-or-*> --reason <reason>` from `frontend/`.
 `--apply` persists the stop; `--resume --apply` marks that persisted rule
 unblocked (the row and its actor/reason remain). Parent-domain
 suppression includes subdomains; unblocking a domain rule does not override a
