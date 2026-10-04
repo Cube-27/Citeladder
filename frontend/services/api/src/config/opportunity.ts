@@ -2,6 +2,9 @@
 export const opportunityDeclaration = { output_phase_outline: 'outline' };
 
 export const opportunities = {
+  ANALYZER_VERSION: 'opp-analyzer-1',
+  RULE_VERSION: 'opp-rules-2',
+  FORMULA_VERSION: 'opp-formula-1',
   CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: 'implementation_idempotency_conflict',
   CODE_IMPLEMENTATION_TARGET_CONFLICT: 'implementation_target_conflict',
   CODE_OPPORTUNITY_ORDER_CONFLICT: 'opportunity_order_conflict',
@@ -500,4 +503,12 @@ export const opportunities = {
   LIST_DEFAULT_LIMIT: 50,
   LIST_MAX_LIMIT: 200,
   MAX_EXPORT_ITEMS: 20000,
+};
+
+export const opportunityDefaults = {
+  refresh: {
+    task_kind: 'opportunity_refresh',
+    evidence_crawl_statuses: ['completed', 'partially_completed', 'cancelled'],
+    crawl_status_completed: 'completed',
+  },
 };

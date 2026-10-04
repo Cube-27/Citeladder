@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import auditRuntime from '../src/config/audits.json' with { type: 'json' };
 import trafficRuntime from '../src/config/traffic.json' with { type: 'json' };
-import shared from '../src/generated/python-config.json' with { type: 'json' };
 
 import {
   ConfigError,
@@ -43,25 +42,10 @@ describe('loadConfig', () => {
     }));
     try {
       await expect(import('../src/config/audits.ts')).rejects.toThrow(
-        'Audit engine unregistered has no shared provider route',
+        'Audit engine unregistered has no provider route',
       );
     } finally {
       vi.doUnmock('../src/config/audits.json');
-      vi.resetModules();
-    }
-  });
-
-  it('refuses a shared policy that overwrites a native connected-data value', async () => {
-    vi.resetModules();
-    vi.doMock('../src/generated/python-config.json', () => ({
-      default: { ...shared, traffic: { ...shared.traffic, TRAFFIC_DEFAULT_WINDOW_DAYS: 99 } },
-    }));
-    try {
-      await expect(import('../src/config/connected-data.ts')).rejects.toThrow(
-        'Duplicate connected-data policy: traffic.TRAFFIC_DEFAULT_WINDOW_DAYS',
-      );
-    } finally {
-      vi.doUnmock('../src/generated/python-config.json');
       vi.resetModules();
     }
   });

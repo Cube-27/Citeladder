@@ -70,15 +70,14 @@ test('contracts and shared configuration invalidate both sides', () => {
   }
 });
 
-test('the TypeScript API service runs for its code and every Python input it is built from', () => {
+test('the native API runs for its code and canonical schema inputs', () => {
   for (const path of [
     'frontend/services/api/src/app.ts',
     'frontend/services/api/assets/agent-skills/skills/gsc_optimize/SKILL.md',
     'frontend/pnpm-lock.yaml',
     'migrations/versions/0001_initial.py',
-    'backend/app/core/config/errors.py',
-    'backend/app/domain/workspaces/policy.py',
-    'backend/scripts/site_health_policy.py',
+    'backend/app/core/migration_config.py',
+    'backend/app/models/integrations.py',
     'frontend/packages/contracts/src/route-ownership.ts',
     'frontend/services/api/src/routes/projects.ts',
   ]) {
@@ -87,6 +86,8 @@ test('the TypeScript API service runs for its code and every Python input it is 
   for (const path of [
     'backend/app/analysis/costs.py',
     'backend/scripts/seed_dev_data.py',
+    'backend/scripts/check_test_shape.py',
+    'backend/app/domain/workspaces/policy.py',
     'frontend/components/card.tsx',
   ]) {
     assert.equal(classifyPaths([path]).api, false, path);

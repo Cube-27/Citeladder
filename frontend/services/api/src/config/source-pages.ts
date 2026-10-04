@@ -83,6 +83,8 @@ export const sourcePages = {
 };
 
 export const sourcePageVocabulary = {
+  INSPECTION_NOT_INSPECTED: 'not_inspected',
+  PAGE_FORMAT_UNRESOLVED: 'unresolved',
   INSPECTION_QUEUED: 'queued',
   INSPECTION_INSPECTED: 'inspected',
   INSPECTION_BLOCKED: 'blocked',

@@ -50,8 +50,8 @@ from app.core.config.analytics import (
     AI_REFERRAL_RULE_VERSION,
     AI_SOURCE_OTHER,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+    ANALYTICS_TASK_MAX_ATTEMPTS,
     REFERRAL_SANITIZE_VERSION,
-    analytics_settings,
 )
 from app.core.database import Base
 from app.models.queue_mixins import QueueLeaseStateMixin
@@ -118,7 +118,7 @@ class AnalyticsTask(QueueLeaseStateMixin, Base):
     idempotency_key: Mapped[str] = mapped_column(String(160))
 
     max_attempts: Mapped[int] = mapped_column(
-        Integer, default=analytics_settings.task_max_attempts
+        Integer, default=ANALYTICS_TASK_MAX_ATTEMPTS
     )
 
 

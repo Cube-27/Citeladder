@@ -181,11 +181,8 @@ and account management's workspace → membership → user order without lock
 inversion, including password resets across workspaces. Terminal prompts never
 hold this lock.
 
-Remaining Python bridges and their deletion gates are explicit:
-
-| Bridge                                                     | Current callers                                                                                 | Removal condition                                                    |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `domain/workspaces/policy.py`, `core/config/workspaces.py` | `scripts/auth_policy.py` exports the role matrix; SQLAlchemy models consume structural defaults | PR 5 removes the final policy exporter and isolates schema constants |
+The native workspace config owns the role matrix. The Python workspace-policy
+bridge and its exporter are retired; SQLAlchemy models retain structural defaults.
 
 Python identity, abuse, workspace mutations, grants, bootstrap and seed/login
 services and their exclusive tests are retired. Their native PostgreSQL replacements cover authorization,

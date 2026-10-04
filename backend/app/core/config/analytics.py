@@ -1,11 +1,8 @@
-"""Shared Python model/operator defaults; runtime policy is native."""
+"""Persisted schema vocabulary; application policy is native."""
 
 from __future__ import annotations
 
 from typing import Final
-
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 AI_REFERRAL_RULE_VERSION: Final = "ai-referral-rules-1"
 
@@ -19,14 +16,4 @@ AI_SOURCE_OTHER: Final = "other"
 
 ANALYTICS_TASK_KIND_INGEST_REFERRALS: Final = "ingest_referrals"
 
-ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH: Final = "opportunity_refresh"
-
-
-class AnalyticsSettings(BaseSettings):
-    """Shared model/operator attempt default."""
-
-    model_config = SettingsConfigDict(env_prefix="ANALYTICS_", extra="ignore")
-    task_max_attempts: int = Field(default=3, gt=0)
-
-
-analytics_settings = AnalyticsSettings()
+ANALYTICS_TASK_MAX_ATTEMPTS: Final = 3

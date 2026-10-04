@@ -22,7 +22,7 @@ from app.core.config.site_health_contracts import (
     INITIAL_TASK_GENERATION,
     TASK_KIND_DISCOVER,
 )
-from app.core.config.site_health_runtime import site_health_settings
+from app.core.config.site_health_runtime import CRAWL_MAX_ATTEMPTS
 from app.core.database import Base
 from app.models.queue_mixins import QueueLeaseStateMixin
 
@@ -121,9 +121,7 @@ class SiteCrawlTask(QueueLeaseStateMixin, Base):
     generation: Mapped[int] = mapped_column(Integer, default=INITIAL_TASK_GENERATION)
     idempotency_key: Mapped[str] = mapped_column(String(160))
 
-    max_attempts: Mapped[int] = mapped_column(
-        Integer, default=site_health_settings.max_attempts
-    )
+    max_attempts: Mapped[int] = mapped_column(Integer, default=CRAWL_MAX_ATTEMPTS)
     # Database serialization/deadlock retries are not page/network attempts.
     # They have their own bound so contention cannot consume acquisition budget.
     conflict_count: Mapped[int] = mapped_column(Integer, default=0)

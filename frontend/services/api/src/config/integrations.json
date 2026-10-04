@@ -220,6 +220,12 @@
       "type": "int",
       "default": 30,
       "exclusive_minimum": 0
+    },
+    "sync_max_attempts": {
+      "env": ["INTEGRATION_SYNC_MAX_ATTEMPTS"],
+      "type": "int",
+      "default": 4,
+      "exclusive_minimum": 0
     }
   },
   "contracts": {
@@ -266,7 +272,11 @@
     "READINESS_IMPORTING": "importing",
     "READINESS_CORE_DATA_READY": "core_data_ready",
     "READINESS_ANALYSIS_READY": "analysis_ready",
-    "READINESS_IMPORT_FAILED": "import_failed"
+    "READINESS_IMPORT_FAILED": "import_failed",
+    "GRANT_STATUS_CONNECTED": "connected",
+    "MAPPING_STATUS_ACTIVE": "active",
+    "SYNC_KIND_ON_DEMAND": "on_demand",
+    "INTEGRATION_IMPORTER_VERSION": "integrations-importer-1"
   },
   "datasets": {
     "gsc_page_daily": {
@@ -410,5 +420,8 @@
     "90d": 90,
     "12mo": 365,
     "24mo": 730
-  }
+  },
+  "importer_version": "integrations-importer-1",
+  "history_window_values": ["unset", "90d", "12mo", "24mo"],
+  "history_window_capability_key": "history_window"
 }

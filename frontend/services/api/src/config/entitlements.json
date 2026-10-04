@@ -1,0 +1,174 @@
+{
+  "registry_revision": "entitlements-v3",
+  "capabilities": {
+    "audit_cadence": {
+      "type": "level",
+      "levels": 3,
+      "ordered_values": ["unset", "weekly", "daily"],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "history_window": {
+      "type": "level",
+      "levels": 4,
+      "ordered_values": ["unset", "90d", "12mo", "24mo"],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "support_tier": {
+      "type": "level",
+      "levels": 2,
+      "ordered_values": ["standard", "priority"],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "audit_credits": {
+      "type": "counter.consumable",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "ai_credits": {
+      "type": "counter.consumable",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "project_slots": {
+      "type": "counter.occupancy",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "prompt_slots": {
+      "type": "counter.occupancy",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "monitored_urls": {
+      "type": "counter.occupancy",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "fanout": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "provider.grok": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "provider.perplexity": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "provider.copilot": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": false,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "exports": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "manual_runs_per_day": {
+      "type": "counter.rate",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": 86400
+    },
+    "serp_tasks_per_period": {
+      "type": "counter.consumable",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "site_health_page_fetches_per_period": {
+      "type": "counter.consumable",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "agent": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "project_deletion": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": false,
+      "rolling_window_seconds": null
+    }
+  },
+  "grant_source_kinds": ["addon", "override", "plan", "topup", "trial"],
+  "draw_source_order": ["trial", "plan", "addon", "override", "topup"],
+  "paid_access_sources": ["addon", "topup"],
+  "base_subscription_kind": "base",
+  "prompt_slots": "prompt_slots",
+  "project_slots": "project_slots",
+  "project_deletion": "project_deletion",
+  "capacity_lock": {
+    "namespace": 1128353857,
+    "person": "citeladder-cap"
+  },
+  "baseline": {
+    "revision": "signup-baseline-v1",
+    "source_kind": "override",
+    "grants": {
+      "project_slots": 1,
+      "prompt_slots": 10,
+      "monitored_urls": 20
+    }
+  },
+  "codes": {
+    "limit_exceeded": "occupancy_limit_exceeded",
+    "unresolved": "occupancy_unresolved",
+    "capability_not_granted": "capability_not_granted"
+  }
+}

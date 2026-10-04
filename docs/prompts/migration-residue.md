@@ -12,7 +12,7 @@ report, not code changes.
 
 **Read first:**
 
-1. `docs/prompts/_contract.md` (Python models/Alembic/operators are intentional).
+1. `docs/prompts/_contract.md` (Python models/Alembic/schema maintenance are intentional).
 2. `docs/invariants.md` section 1, especially "Replacement and retirement".
 3. `docs/architecture.md` sections "Languages and the TypeScript service" and
    "Delivery topology".

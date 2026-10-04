@@ -384,5 +384,35 @@
     "type": "int",
     "default": 1000,
     "exclusive_minimum": 0
+  },
+  "automatic_page_limit": {
+    "env": ["SITE_HEALTH_AUTOMATIC_PAGE_LIMIT"],
+    "type": "int",
+    "default": 500,
+    "exclusive_minimum": 0
+  },
+  "max_requested_page_limit": {
+    "env": ["SITE_HEALTH_MAX_REQUESTED_PAGE_LIMIT"],
+    "type": "int",
+    "default": 500,
+    "exclusive_minimum": 0
+  },
+  "max_attempts": {
+    "env": ["SITE_HEALTH_MAX_ATTEMPTS"],
+    "type": "int",
+    "default": 4,
+    "minimum": 1
+  },
+  "sample_discovery_url_cap": {
+    "env": ["SITE_HEALTH_SAMPLE_DISCOVERY_URL_CAP"],
+    "type": "int",
+    "default": 200,
+    "minimum": 0
+  },
+  "sample_url_limit": {
+    "env": ["SITE_HEALTH_SAMPLE_URL_LIMIT"],
+    "type": "int",
+    "default": 10,
+    "minimum": 0
   }
 }

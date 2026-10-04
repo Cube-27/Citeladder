@@ -26,7 +26,7 @@ wrong finding.
 - **Runtime is TypeScript.** Every HTTP route, worker and protocol endpoint is in
   `frontend/services/api/src/` (Node, Hono, Kysely). Python under `backend/` has
   **no web process and no executing worker**; it keeps SQLAlchemy models,
-  Alembic, bootstrap and offline operators. Python models are not dead code
+  Alembic and schema maintenance/check tooling. Python models are not dead code
   because no Python route imports them.
 - **Single migration baseline is intentional.** Schema changes live in
   `migrations/versions/0001_initial.py`; there is deliberately no `0002+`.
@@ -74,17 +74,17 @@ type-checker or linter already rejects.
 
 ## 5. Severity and confidence
 
-| Severity | Meaning |
-|---|---|
-| **P0** | Cross-workspace data exposure, auth bypass, secret leak, money/credit loss, data corruption or loss |
-| **P1** | Invariant violation or wrong user-visible result on a normal path |
-| **P2** | Edge-case failure, latent bug, robustness or performance defect with measurable impact |
-| **P3** | Low-impact correctness polish (use sparingly) |
+| Severity | Meaning                                                                                             |
+| -------- | --------------------------------------------------------------------------------------------------- |
+| **P0**   | Cross-workspace data exposure, auth bypass, secret leak, money/credit loss, data corruption or loss |
+| **P1**   | Invariant violation or wrong user-visible result on a normal path                                   |
+| **P2**   | Edge-case failure, latent bug, robustness or performance defect with measurable impact              |
+| **P3**   | Low-impact correctness polish (use sparingly)                                                       |
 
-| Confidence | Meaning |
-|---|---|
-| **Confirmed** | You traced entry point → defect → outcome in code you read |
-| **Likely** | Defect is clear, one link of reachability is unverified (say which) |
+| Confidence    | Meaning                                                             |
+| ------------- | ------------------------------------------------------------------- |
+| **Confirmed** | You traced entry point → defect → outcome in code you read          |
+| **Likely**    | Defect is clear, one link of reachability is unverified (say which) |
 
 Anything weaker is not a finding: put it under **Open questions** with the one
 check that would settle it.
@@ -107,32 +107,42 @@ the report. Drop candidates you cannot verify; never merge them unread.
 
 ## 8. Report format
 
-```markdown
+````markdown
 # <Audit name> — <YYYY-MM-DD> — <git short SHA>
 
 ## Summary
+
 <2–4 sentences: what was covered, overall risk, top issue.>
 
 ## Findings
 
 ### F1. <one-line defect statement> — P1 · Confirmed
+
 - **Where:** `path/to/file.ts:123` (+ other locations)
 - **Rule:** Invariant N / owner doc section / none (plain bug)
 - **Evidence:**
   ```ts
   <≤6 quoted lines>
   ```
+````
+
 - **Failure scenario:** <input/state → path → wrong outcome>
 - **Why not guarded elsewhere:** <what you checked>
 - **Smallest fix:** <one or two sentences; no code dump>
 
 ## Open questions
+
 - <suspicion> — settle by <one concrete check>
 
 ## Coverage
+
 - Read: <directories/files actually inspected>
 - Not covered: <what you skipped and why>
 
 ## Out-of-scope observations
+
 - <one line each, optional>
+
+```
+
 ```

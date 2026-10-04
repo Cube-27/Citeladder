@@ -1,11 +1,4 @@
-/**
- * Service configuration: native policy, shared Python policy and environment overrides.
- *
- * Migrated policy belongs in `./config/`; policy with remaining Python readers
- * arrives through the drift-checked `generated/python-config.json` export.
- * Each section has one authority. Environment overrides are validated here.
- */
-import pythonConfig from './generated/python-config.json' with { type: 'json' };
+/** Native service policy and validated environment overrides. */
 import ipaddr from 'ipaddr.js';
 import { ConfigError } from './config/config-error.ts';
 import { executionSettings } from './config/execution.ts';
@@ -18,6 +11,7 @@ import agentRuntime from './config/agent-runtime.json' with { type: 'json' };
 import modelGateway from './config/model-gateway.json' with { type: 'json' };
 import { discovery } from './config/discovery.ts';
 import promptLibrary from './config/prompt-library.json' with { type: 'json' };
+import { entitlements } from './config/entitlements.ts';
 import api from './config/api.json' with { type: 'json' };
 import searchIntelligence from './config/search-intelligence.json' with { type: 'json' };
 import demand from './config/demand.json' with { type: 'json' };
@@ -31,14 +25,18 @@ import queue from './config/queue.json' with { type: 'json' };
 import { billing } from './config/billing.ts';
 import { integrations, traffic, analytics, referrals, authOAuth } from './config/connected-data.ts';
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
-import { siteHealth } from './config/site-health.ts';
+import { siteHealth, siteHealthRuntime } from './config/site-health.ts';
 import { crawlers } from './config/crawlers.ts';
 import { crawlLogs } from './config/crawl-logs.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
 import { auditSchedules } from './config/audit-schedules.ts';
 import { industryLibrary } from './config/industry-library.ts';
-import { opportunities, opportunityDeclaration } from './config/opportunity.ts';
+import {
+  opportunities,
+  opportunityDeclaration,
+  opportunityDefaults,
+} from './config/opportunity.ts';
 import { earnedActions } from './config/earned-actions.ts';
 import { actions } from './config/actions.ts';
 import { placement } from './config/placement.ts';
@@ -76,13 +74,15 @@ type SettingSpec = {
 };
 
 export const policy = {
-  ...pythonConfig,
+  entitlements,
+  development_env_names: api.development_env_names,
+  secret_policy: authRuntime.secret_policy,
   crawlers,
   crawl_logs: crawlLogs,
   billing,
-  task_queue: { ...pythonConfig.task_queue, ...queue },
+  task_queue: queue,
   api,
-  settings: { ...pythonConfig.settings, ...integrationCredentials, ...authRuntime.settings },
+  settings: { ...api.settings, ...integrationCredentials, ...authRuntime.settings },
   integrations,
   dataforseo,
   costs,
@@ -96,18 +96,15 @@ export const policy = {
   },
   search_intelligence: {
     ...searchIntelligence,
-    ...pythonConfig.search_intelligence,
     task_kind: analytics.tasks.search_intelligence_acquisition,
     connection_test_ok: providers.test_status_ok,
   },
   demand: {
     ...demand,
-    ...pythonConfig.demand,
     query_page_dataset: traffic.DATASET_GSC_QUERY_PAGE_DAILY,
   },
   visibility: { ...visibility, ...promptLibrary.cohorts },
   projects: {
-    ...pythonConfig.projects,
     ...projectReads,
     prompt_set_name: promptLibrary.prompt_set_name,
     min_repetitions: audits.min_repetitions,
@@ -116,10 +113,9 @@ export const policy = {
     language_codes: dataforseo.constants.language_codes,
   },
   errors,
-  agent: { ...agentRuntime, ...pythonConfig.agent },
+  agent: { ...agentRuntime },
   abuse,
   audit_schedules: {
-    ...pythonConfig.audit_schedules,
     ...auditSchedules,
     selectable_engines: selectableEngines,
     min_interval_minutes: auditSchedules.settings.min_interval_minutes,
@@ -129,23 +125,20 @@ export const policy = {
   audits: { ...audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },
   commerce: {
     ...commerce,
-    ...pythonConfig.commerce,
-    discovery: { ...commerce.discovery, ...pythonConfig.commerce.discovery },
-    buyer_prompts: { ...commerce.buyer_prompts, ...pythonConfig.commerce.buyer_prompts },
   },
   opportunity: {
-    ...pythonConfig.opportunity,
+    ...opportunityDefaults,
     measurement_policy_key: audits.constants.measurement_policy_key,
     declaration: opportunityDeclaration,
-    opportunities: { ...opportunities, ...pythonConfig.opportunity.opportunities },
-    actions: { ...actions, ...pythonConfig.opportunity.actions },
+    opportunities: { ...opportunities },
+    actions: { ...actions },
     earned_actions: earnedActions,
-    placement: { ...placement, ...pythonConfig.opportunity.placement },
-    source_patterns: { ...sourcePatterns, ...pythonConfig.opportunity.source_patterns },
-    source_pages: { ...sourcePageVocabulary, ...pythonConfig.opportunity.source_pages },
+    placement: { ...placement },
+    source_patterns: { ...sourcePatterns },
+    source_pages: { ...sourcePageVocabulary },
     tracking_query_params: siteHealth.tracking_params,
     refresh: {
-      ...pythonConfig.opportunity.refresh,
+      ...opportunityDefaults.refresh,
       finding_class_defect: 'defect',
       change_analyzer_version: siteHealth.change_intel.analyzer_version,
       change_class_regression: siteHealth.change_intel.class_regression,
@@ -157,13 +150,14 @@ export const policy = {
     },
   },
   models: { ...modelGateway, jev, quality },
-  workspaces: { ...pythonConfig.workspaces, ...workspaceRuntime, tour_version: productTourVersion },
+  workspaces: { ...workspaceRuntime, tour_version: productTourVersion },
   providers: { ...providers, app: appModels },
   content_differentiation: {
     ...contentDifferentiation,
     stop_words: demand.stop_words,
   },
   site_health: siteHealth,
+  site_health_runtime: siteHealthRuntime,
   web_fetch: siteHealth.web_fetch,
   traffic: {
     ...traffic,
@@ -185,18 +179,14 @@ export const policy = {
   },
   prompts: {
     ...promptLibrary.prompts,
-    ...pythonConfig.prompts,
-    origins: { ...promptLibrary.prompts.origins, ...pythonConfig.prompts.origins },
     generation: promptGeneration,
     candidate: {
       ...promptLibrary.prompts.candidate,
-      ...pythonConfig.prompts.candidate,
       quality_gates_reported: qualityGatesReported,
     },
   },
   brand_identity: {
     ...brandIdentity,
-    ...pythonConfig.brand_identity,
     suggestion_pending: audits.observed_competitors.status_pending,
     suggestion_accepted: audits.observed_competitors.status_accepted,
   },
@@ -209,7 +199,7 @@ const TRUE_VALUES = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
 const FALSE_VALUES = new Set(['0', 'off', 'f', 'false', 'n', 'no']);
 
 function envValue(spec: SettingSpec, env: Record<string, string | undefined>): string | undefined {
-  // pydantic-settings matches environment names case-insensitively.
+  // Environment aliases are case-insensitive.
   const byLowerName = new Map(
     Object.entries(env).map(([name, value]) => [name.toLowerCase(), value]),
   );
@@ -355,7 +345,7 @@ function isDevelopmentEnv(appEnv: string): boolean {
   return policy.development_env_names.includes(appEnv.trim().toLowerCase());
 }
 
-/** Mirror of `secret_is_weak` in `backend/app/core/config`, from its exported policy. */
+/** Native deployment secret-strength admission. */
 export function secretIsWeak(value: string): boolean {
   const rules = policy.secret_policy;
   return (
@@ -560,7 +550,7 @@ export type WorkerSettings = {
   retryDelaySeconds: number;
 };
 
-/** One exported setting after its environment override, as pydantic-settings resolves it. */
+/** Resolve one native policy setting with its environment override. */
 export function resolveSettingSpec(
   spec: SettingSpec,
   env: Record<string, string | undefined> = process.env,

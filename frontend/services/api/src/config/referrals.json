@@ -180,5 +180,9 @@
   "datasets": {
     "referrer_daily": "ga4_referrer_daily",
     "source_medium_daily": "ga4_source_medium_daily"
-  }
+  },
+  "rule_version": "ai-referral-rules-1",
+  "analyzer_version": "grounded-analysis-v1",
+  "sanitize_version": "referral-sanitize-1",
+  "other_source": "other"
 }

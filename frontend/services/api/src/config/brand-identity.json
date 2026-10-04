@@ -6,5 +6,8 @@
   "map_value_max_chars": 120,
   "map_max_entries_per_dimension": 20,
   "map_max_exclusions": 40,
-  "max_project_competitors": 5
+  "max_project_competitors": 5,
+  "profile_fields": ["description", "positioning", "products_services", "target_audience"],
+  "profile_source_manual": "manual",
+  "profile_review_confirmed": "confirmed"
 }

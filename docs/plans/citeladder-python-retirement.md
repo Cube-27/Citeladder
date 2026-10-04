@@ -1,6 +1,6 @@
 # TypeScript application with Python schema tooling
 
-Requested 4 October 2026. **PRs 1–4 implemented; PR 5 remains unassigned.**
+Requested 4 October 2026. **PRs 1–5 implemented; migration ends at the schema-only Python boundary.**
 This is the continuation after the product/API/worker TypeScript migration.
 It orders remaining work by increasing complexity and operational risk, subject
 to dependencies. It does not resume earlier migration waves or authorize
@@ -514,6 +514,25 @@ No new service/job resource or additional schema author is introduced.
 Re-scan direct imports, dynamic CLI/driver loading, images and CI at each
 checkpoint. Remove declarations and resolved lock entries together; no
 unused-dependency exemptions for incomplete cutovers.
+
+## Retirement disposition
+
+PR 5 transfers the remaining exported policy into existing native config owners
+and deletes the exporter/builders/artifact, workspace-role bridge and Python
+capability registry. Python queue metadata uses fixed defaults; native writers
+freeze configured limits explicitly. `core/database.py` retains only `Base`;
+Alembic uses standard-library schema configuration and SQLAlchemy URL/TLS
+handling. The direct runtime dependencies are SQLAlchemy, Alembic and asyncpg.
+
+Removed Python production-security and referral-secret tests retain coverage in
+native `production-security.test.ts` and `config.test.ts`. Crawl-control behavior
+is covered by native `site-health-config.test.ts` and `entitlement-config.test.ts`.
+Registry-construction tests transfer to native capability validation; literal
+vocabulary/type/mapping assertions have no independent contract. Exporter parity
+and duplicate native/shared-owner checks retire with the exporter. Dotenv
+isolation is tested at the schema configuration boundary; schema constraint and
+static-tooling tests remain. No application bridge remains for a future PR.
+Deployment/provider/payment acceptance remains separately authorized.
 
 ## Final validation and handoff
 

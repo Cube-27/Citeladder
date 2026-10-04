@@ -29,5 +29,6 @@
   "differentiation_report_limit": 10,
   "worker_poll_seconds": 1.0,
   "recovery_batch_size": 100,
-  "heartbeat_seconds": 20.0
+  "heartbeat_seconds": 20.0,
+  "run_max_attempts": 3
 }

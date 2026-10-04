@@ -3,6 +3,7 @@
  * Bump SOURCE_TAXONOMY_VERSION with classification changes.
  */
 export const sourcePatterns = {
+  SOURCE_ORIGIN_EXTERNAL: 'external',
   SOURCE_TAXONOMY_VERSION: 'source-taxonomy-1',
   SOURCE_MIX_PROJECTION_VERSION: 'opportunity-source-mix-1',
   CONTENT_HANDOFF_TEMPLATE_VERSION: 'opportunity-content-handoff-1',

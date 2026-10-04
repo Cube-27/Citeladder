@@ -1,9 +1,7 @@
 /**
  * The PostgreSQL task queue for `analytics_tasks` (invariant 8).
  *
- * Ports the claim, lease and heartbeat of
- * `backend/app/orchestration/postgres_task_queue.py`, which keeps serving
- * retained Python queues. TypeScript owns every analytics kind and recovery,
+ * TypeScript owns every analytics kind and recovery,
  * so this module must make exactly the
  * same promises: a claim locks eligible rows `FOR UPDATE SKIP LOCKED`, commits
  * before the caller does any work, and gives each workspace one task before

@@ -21,12 +21,14 @@
     "branded_cohorts": ["brand_diagnostic", "comparison"],
     "origins": {
       "imported": "imported",
-      "generated": "generated"
+      "generated": "generated",
+      "manual": "manual"
     },
     "candidate": {
       "accepted": "accepted",
       "rejected": "rejected",
-      "outcomes": ["gate_rejected", "rejected"]
+      "outcomes": ["gate_rejected", "rejected"],
+      "pending": "pending"
     },
     "generation_settings": {
       "default_count": {
@@ -280,7 +282,10 @@
       "accepted": "accepted",
       "off_topic": "prompt_off_topic",
       "vocabulary_empty": "binding_vocabulary_empty"
-    }
+    },
+    "trailing_punctuation": " \t\n\r\u000b\f?.!,;:",
+    "status_active": "active",
+    "topic_origin_manual": "manual"
   },
   "cohorts": {
     "core_cohort": "core",

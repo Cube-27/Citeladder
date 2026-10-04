@@ -10,7 +10,7 @@ import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { auditTenant } from './audit-fixtures.ts';
-import shared from '../src/generated/python-config.json' with { type: 'json' };
+import providers from '../src/config/providers.json' with { type: 'json' };
 
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
@@ -34,15 +34,12 @@ describe('atomic audit admission', () => {
   it('rejects unshipped catalog engines before persisting an audit', async () => {
     const t = await auditTenant(db, fixtures);
     vi.resetModules();
-    vi.doMock('../src/generated/python-config.json', () => ({
+    vi.doMock('../src/config/providers.json', () => ({
       default: {
-        ...shared,
-        providers: {
-          ...shared.providers,
-          catalog: shared.providers.catalog.map((row) =>
-            row.key === 'chatgpt' ? { ...row, adapter_shipped: false } : row,
-          ),
-        },
+        ...providers,
+        catalog: providers.catalog.map((row) =>
+          row.key === 'chatgpt' ? { ...row, adapter_shipped: false } : row,
+        ),
       },
     }));
     try {
@@ -56,7 +53,7 @@ describe('atomic audit admission', () => {
           .success,
       ).toBe(false);
     } finally {
-      vi.doUnmock('../src/generated/python-config.json');
+      vi.doUnmock('../src/config/providers.json');
       vi.resetModules();
     }
     expect(await queued(t.workspaceId)).toEqual([]);

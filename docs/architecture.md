@@ -26,8 +26,8 @@ positioning; [the index](README.md) routes to substantive feature documents.
 TypeScript owns billing checkout, subscription changes, webhook receipt,
 leased recovery, invoice issuance, consumable-ledger writes and, under the
 `billing-documents` family, receipt list/PDF reads, and commercial operator
-administration. Python retains identity/seed bootstrap. Both stacks
-use the same durable rows and follow the lock order below; see
+administration, identity bootstrap and seed tools. Native owners
+use the durable rows and follow the lock order below; see
 [Billing and entitlements](billing-entitlements.md) for the owner boundaries.
 
 Site Health, Content Intelligence, Demand Intelligence and the Agent are the
@@ -81,17 +81,13 @@ Every route family, task kind and table has one writing owner. Every native
 OpenAPI operation declares one family from the manifest in
 `frontend/packages/contracts/src/route-ownership.ts`.
 
-Python retains SQLAlchemy models, Alembic, deploy-time bootstrap, supported
-offline operators and policy still read by those consumers. It has no web
-process or executing queue worker. The root Dockerfile builds this schema and
-operator image; the API image supplies all long-running application processes.
-
-Python code a moved route still shares with Python callers stays until its last
-Python caller moves. Acquisition, URL admission, suppression and failure reads
-are native; Python persistence fixtures supply explicit canonical test URLs.
-The supported Python acquisition-control operator still writes the durable stop
-switch consumed by native per-hop authorization. TypeScript owners are covered by their own TypeScript and
-PostgreSQL tests; no golden files compare them with Python.
+Python retains SQLAlchemy models, Alembic and schema maintenance/check tooling.
+The root Dockerfile packages this schema runtime with the existing native
+bootstrap CLI; API and worker images remain Python-free. Product operators,
+login/seeding and acquisition controls run under their native owners and use
+the same PostgreSQL authorization, provenance and lock contracts. Native owners
+are covered by TypeScript and PostgreSQL tests; Python tests cover schema
+constraints and migration decisions.
 
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
 contracts the browser app validates with (TypeScript routes publish the same
@@ -99,24 +95,13 @@ schemas, and each handler's return type is checked against its schema), the rout
 hand-owned API error-code vocabulary. Native config owns HTTP status defaults
 and retry classification; neither is generated from Python.
 
-Native-only policy lives in TypeScript config. Shared Python policy reaches the
-service through a generated, drift-checked export. Site Health catalogs and
-worker policy are native; Python retains its model defaults, terminal statuses
-and supported operator/entitlement allowance settings.
-Checkout execution, provider request policy, auth HTTP settings and packaged
-Agent parsing are native. The retained export carries model defaults and
-provenance, frozen provider routes/catalogs, security, role and entitlement
-registries, plus settings used by bootstrap and supported operators. Billing
-catalog authoring, tax/seller policy and read-only plan verification are native.
-The existing migration job sequences Alembic upgrade/check, retained Python
-identity/grant bootstrap, then native catalog initialization. API/worker rollout
-requires successful completion of both bootstrap stages.
-The auth and workspace HTTP families
-are TypeScript-owned, including session issuance, Google identity sign-in,
-membership/invitation mutations, policy acceptance and product-tour state.
-Both stacks verify the same session claims and persisted session version;
-remaining Python/operator bridges and their lock orders are recorded in
-[workspace access](workspace-access.md) and the migration plan.
+Application policy lives in native config, including security, roles,
+capabilities, provider catalogs and queue bounds. Python metadata uses small
+dependency-free schema constants and fixed defaults. There is no shared Python
+policy export. The existing migration job sequences Alembic upgrade/check,
+then native identity/grant/catalog bootstrap; successful job completion admits
+API/worker rollout. Auth, workspace, commercial and product writes are native.
+
 Alembic stays the only schema author, so the service holds Kysely types
 generated from the migrated schema.
 

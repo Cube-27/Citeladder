@@ -99,7 +99,8 @@ confirmed offerings.
 
 - [Native discovery configuration](../frontend/services/api/src/config/discovery.ts)
   owns research budgets, templates and worker policy. Python retains the queued
-  status, task kind and maximum-attempt model defaults in the shared export.
+  status, task kind and fixed maximum-attempt schema defaults. Native discovery
+  writes freeze the configured attempt limit on each queued task.
   Model/provider routing and encrypted
   credential custody stay in their existing owners.
 - Project creation checks workspace role and occupancy. Discovery IDs and

@@ -32,10 +32,10 @@ report, not code changes.
    `/\b(0\.\d+|\d{2,})\b/` near words like `limit`, `max`, `threshold`,
    `timeout`, `weight`, `score`, `retry`; model IDs (`gpt-`, `claude-`,
    `gemini`); `https://` hosts.
-2. **Restated shared policy.** A TypeScript constant that duplicates a value
-   from the Python export (`backend/scripts/export_ts_platform.py` output)
-   instead of reading the generated export, or two TypeScript modules
-   defining the same constant.
+2. **Restated application policy.** Two native config modules defining the
+   same policy, or a service restating its config owner. Python retains only
+   structural schema constants/defaults; it never supplies application policy
+   through an exporter.
 3. **Second owner.** A new store, crawler, page-analysis path, opportunity
    list, prompt resource, content queue or memory store that parallels an
    existing owner (`SitePageAnalysis` is the only page-understanding owner).

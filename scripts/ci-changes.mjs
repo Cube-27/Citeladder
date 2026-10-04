@@ -47,9 +47,8 @@ function isFrontend(path) {
 }
 
 // The TypeScript API service, the contracts package it imports, and the
-// Python inputs it is built from: the policy export reads `app/core` and the
-// workspace policy, and its Kysely types are generated from the
-// Alembic-migrated schema. The route-ownership gate reads native route contracts.
+// schema inputs used by its PostgreSQL tests and generated Kysely types.
+// Application policy and route contracts are native and need no Python exporter.
 
 function isApiService(path) {
   return (
@@ -60,9 +59,7 @@ function isApiService(path) {
     path === 'frontend/pnpm-workspace.yaml' ||
     path.startsWith('migrations/') ||
     (path.startsWith('backend/app/core/') && path.endsWith('.py')) ||
-    path === 'backend/app/domain/workspaces/policy.py' ||
-    path === 'backend/scripts/export_ts_platform.py' ||
-    /^backend\/scripts\/(?:ts_platform_[a-z_]+|[a-z_]+_policy)\.py$/u.test(path) ||
+    path.startsWith('backend/app/models/') ||
     path === 'backend/pyproject.toml' ||
     path === 'backend/uv.lock'
   );

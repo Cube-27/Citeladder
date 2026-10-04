@@ -18,8 +18,8 @@ The owner chose this stopping point to avoid migrating established schema
 tooling merely to remove the remaining Python. Alembic remains the sole schema
 author under [invariant 17](invariants.md#17-the-migration-baseline-remains-singular).
 The migration reuses existing infrastructure; it requires no additional
-always-on service. This is a target boundary, not a claim that remaining
-operators and bootstrap have already moved.
+always-on service. PRs 1–5 implement this boundary: operators, bootstrap, seed
+tools and application policy are native; Python retains schema maintenance.
 
 Source: owner-selected target in the 4 October 2026 migration-planning
 conversation. The [remaining migration plan](plans/citeladder-python-retirement.md)

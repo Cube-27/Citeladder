@@ -2,6 +2,8 @@
  * Retry only coverage/missing-verdict results; changed rosters require a new baseline.
  */
 export const placement = {
+  PLACEMENT_CHECKER_VERSION: 'placement-checker-1',
+  PLACEMENT_STATE_PENDING: 'pending',
   PLACEMENT_CHECK_KIND: 'placement',
   PLACEMENT_CHANGE_BRAND_LISTED: 'brand_listed',
   PLACEMENT_CHANGE_DISCREPANCY_RESOLVED: 'discrepancy_resolved',

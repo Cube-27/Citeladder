@@ -28,6 +28,63 @@
       "default": 50000,
       "minimum": 1,
       "maximum": 50000
+    },
+    "jwt_secret_key": {
+      "env": ["JWT_SECRET_KEY"],
+      "type": "str",
+      "default": "change-me-32-bytes-minimum-change-me"
+    },
+    "jwt_algorithm": {
+      "env": ["JWT_ALGORITHM"],
+      "type": "literal",
+      "values": ["HS256"],
+      "default": "HS256"
+    },
+    "jwt_expire_hours": {
+      "env": ["JWT_EXPIRE_HOURS"],
+      "type": "int",
+      "default": 24
+    },
+    "frontend_url": {
+      "env": ["FRONTEND_URL"],
+      "type": "str",
+      "default": "http://127.0.0.1:3000"
+    },
+    "trusted_proxy_cidrs": {
+      "env": ["TRUSTED_PROXY_CIDRS"],
+      "type": "str",
+      "default": ""
+    },
+    "demo_mode": {
+      "env": ["DEMO_MODE"],
+      "type": "bool",
+      "default": false
+    },
+    "demo_expires_at": {
+      "env": ["DEMO_EXPIRES_AT"],
+      "type": "datetime",
+      "nullable": true,
+      "default": null
+    },
+    "encryption_key": {
+      "env": ["ENCRYPTION_KEY"],
+      "type": "str",
+      "default": "replace-with-32-byte-minimum-secret"
+    },
+    "referral_hash_salt": {
+      "env": ["REFERRAL_HASH_SALT"],
+      "type": "str",
+      "default": "replace-with-64-byte-random-secret"
+    },
+    "dev_login_email": {
+      "env": ["DEV_LOGIN_EMAIL"],
+      "type": "str",
+      "default": "dev@citeladder.com"
+    },
+    "dev_login_password": {
+      "env": ["DEV_LOGIN_PASSWORD"],
+      "type": "str",
+      "default": ""
     }
   },
   "terms_revision": "2026-09-24",
@@ -37,5 +94,22 @@
     "timeCost": 3,
     "parallelism": 4,
     "outputLen": 32
+  },
+  "secret_policy": {
+    "min_bytes": 32,
+    "min_unique_chars": 12,
+    "insecure_values": [
+      "change-me",
+      "change-me-32-bytes-minimum-change-me",
+      "replace-with-32-byte-minimum-secret",
+      "replace-with-64-byte-random-secret"
+    ],
+    "weak_words": ["changeme", "citeladder", "password", "secret"],
+    "login_password": {
+      "min_chars": 8,
+      "max_chars": 128,
+      "min_unique_chars": 4,
+      "weak_words": ["changeme", "citeladder", "password"]
+    }
   }
 }

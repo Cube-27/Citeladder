@@ -1,53 +1,7 @@
-# Async database engine, declarative Base, and session factory.
-from __future__ import annotations
+"""Schema metadata only; importing models never configures a connection."""
 
-from sqlalchemy.engine import make_url
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
-
-from app.core.config import settings
 
 
 class Base(DeclarativeBase):
-    """Declarative base for all ORM models. Models register on this metadata."""
-
-
-_database_url = make_url(settings.database_url)
-_engine_kwargs: dict[str, object] = {
-    "future": True,
-    "echo": False,
-}
-# Pool tuning only applies to real servers, not SQLite (used in some tests).
-if not _database_url.drivername.startswith("sqlite"):
-    _engine_kwargs["pool_size"] = settings.db_pool_size
-    _engine_kwargs["max_overflow"] = settings.db_max_overflow
-    _engine_kwargs["pool_pre_ping"] = settings.db_pool_pre_ping
-    _engine_kwargs["pool_recycle"] = settings.db_pool_recycle_seconds
-    _engine_kwargs["pool_timeout"] = settings.db_pool_timeout_seconds
-    if _database_url.drivername.startswith("postgresql+asyncpg"):
-        _engine_kwargs["connect_args"] = {
-            "timeout": settings.db_connect_timeout_seconds,
-            "command_timeout": settings.db_command_timeout_seconds,
-            "ssl": settings.db_ssl_mode,
-            "server_settings": {
-                "statement_timeout": str(settings.db_statement_timeout_ms),
-                "lock_timeout": str(settings.db_lock_timeout_ms),
-                "idle_in_transaction_session_timeout": str(
-                    settings.db_idle_transaction_timeout_ms
-                ),
-                "application_name": settings.app_name,
-            },
-        }
-
-engine = create_async_engine(settings.database_url, **_engine_kwargs)
-SessionLocal = async_sessionmaker(
-    engine,
-    expire_on_commit=False,
-    class_=AsyncSession,
-    autoflush=False,
-)
-
-
-async def dispose_engine() -> None:
-    """Dispose the connection pool after an operator or bootstrap run."""
-    await engine.dispose()
+    """The single metadata registry consumed by Alembic and schema tests."""
