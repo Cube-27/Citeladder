@@ -32,7 +32,9 @@ export function InsightStrip({
             onRetry={() => query.refetch()}
           />
         ) : null}
-        {query.isLoading ? <p>Loading persisted insights…</p> : null}
+        {query.isLoading ? (
+          <p className="type-body text-secondary">Loading persisted insights…</p>
+        ) : null}
         {data?.coverage.notice ? <Alert tone="info">{data.coverage.notice}</Alert> : null}
         {data ? (
           <p className="type-caption">
@@ -40,37 +42,44 @@ export function InsightStrip({
             referrers.
           </p>
         ) : null}
-        {data?.patterns.map((r) => (
-          <div key={r.pattern} className="grid gap-2">
-            <p>{r.copy}</p>
-            <Link
-              to={projectDestination(
-                '/ai-traffic',
-                new URLSearchParams({
-                  tab: 'pages',
-                  range,
-                  sort:
-                    r.pattern === 'key_event_concentration' ? 'key_events_desc' : 'requests_desc',
-                  pattern: r.pattern,
-                }),
-                projectId,
-              )}
-            >
-              Inspect pages
-            </Link>
-            <div className="flex flex-wrap gap-2">
-              {r.url_hashes.slice(0, 3).map((hash, index) => (
-                <TrafficUrlButton
-                  key={hash}
-                  urlHash={hash}
-                  filters={{ start_date: data.window_start, end_date: data.window_end }}
-                >
-                  Inspect page {index + 1}
-                </TrafficUrlButton>
-              ))}
-            </div>
-          </div>
-        ))}
+        {data?.patterns.length ? (
+          <ul className="divide-border-subtle grid divide-y">
+            {data.patterns.map((r) => (
+              <li key={r.pattern} className="grid gap-2 py-3 first:pt-0 last:pb-0">
+                <p className="type-body">{r.copy}</p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <Link
+                    className="type-control text-accent-text hover:underline"
+                    to={projectDestination(
+                      '/ai-traffic',
+                      new URLSearchParams({
+                        tab: 'pages',
+                        range,
+                        sort:
+                          r.pattern === 'key_event_concentration'
+                            ? 'key_events_desc'
+                            : 'requests_desc',
+                        pattern: r.pattern,
+                      }),
+                      projectId,
+                    )}
+                  >
+                    Inspect pages
+                  </Link>
+                  {r.url_hashes.slice(0, 3).map((hash, index) => (
+                    <TrafficUrlButton
+                      key={hash}
+                      urlHash={hash}
+                      filters={{ start_date: data.window_start, end_date: data.window_end }}
+                    >
+                      Inspect page {index + 1}
+                    </TrafficUrlButton>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -215,9 +215,11 @@ describe('AI Traffic state and navigation', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('activity');
+    // No retained rows: one contextual empty state instead of headers over nothing.
+    expect(await screen.findByRole('heading', { name: 'No matching requests' })).toBeVisible();
     expect(
-      await screen.findByRole('table', { name: 'Retained automated request activity' }),
-    ).toBeVisible();
+      screen.queryByRole('table', { name: 'Retained automated request activity' }),
+    ).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Response status' }), {
       target: { value: '404' },
     });
@@ -232,7 +234,7 @@ describe('AI Traffic state and navigation', () => {
       target: { value: '/page' },
     });
     await user.click(screen.getByRole('combobox', { name: 'Resource class' }));
-    await user.click(screen.getByRole('option', { name: 'page' }));
+    await user.click(screen.getByRole('option', { name: 'Page' }));
     await user.click(screen.getByRole('combobox', { name: 'Sort pages' }));
     await user.click(screen.getByRole('option', { name: 'AI referral sessions' }));
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));

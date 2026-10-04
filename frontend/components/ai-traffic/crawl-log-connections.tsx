@@ -19,11 +19,18 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { CrawlLogSetup } from './crawl-log-setup';
+import { CrawlLogSetup, CrawlLogSetupSubmit } from './crawl-log-setup';
+import { collectionPointLabel, words } from '@/lib/ai-traffic/vocabulary';
 export function CrawlLogConnections({
   open,
   onOpenChange,
-}: Readonly<{ open?: boolean; onOpenChange?: (open: boolean) => void }> = {}) {
+  headerWhenEmpty = true,
+}: Readonly<{
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Overview already offers Connect on its Crawlers card, so it hides an empty section. */
+  headerWhenEmpty?: boolean;
+}> = {}) {
   const { activeProject } = useProjectContext(),
     canManage = useWorkspaceCapability('manage_credentials');
   if (!activeProject) return null;
@@ -36,26 +43,33 @@ export function CrawlLogConnections({
       canManage={canManage}
       open={open}
       onOpenChange={onOpenChange}
+      headerWhenEmpty={headerWhenEmpty}
     />
   );
 }
-function Connections(input: CrawlConnectionInput) {
+function Connections({
+  headerWhenEmpty,
+  ...input
+}: CrawlConnectionInput & { headerWhenEmpty: boolean }) {
   const model = useCrawlConnections(input);
   const { sources, canManage, open, setOpen, setIssued, mutation } = model;
+  const showHeader = headerWhenEmpty || Boolean(sources.data?.items.length);
   return (
-    <section id="crawl-log-connections" className="grid gap-4" aria-label="Crawl log connections">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="type-section-title">Crawl logs</h2>
-        <Button
-          onClick={() => {
-            setIssued(null);
-            setOpen(true);
-          }}
-          disabled={!canManage}
-        >
-          Connect crawl logs
-        </Button>
-      </div>
+    <section id="crawl-log-connections" className="grid gap-3" aria-label="Crawl log connections">
+      {showHeader ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="type-section-title">Crawl logs</h2>
+          <Button
+            onClick={() => {
+              setIssued(null);
+              setOpen(true);
+            }}
+            disabled={!canManage}
+          >
+            Connect crawl logs
+          </Button>
+        </div>
+      ) : null}
       {sources.isError ? (
         <ReadError
           error={sources.error}
@@ -86,6 +100,8 @@ function Connections(input: CrawlConnectionInput) {
         }}
         title="Connect crawl logs"
         description="Choose the collection method you operate. One live source per host; uploads are backfill."
+        className="w-[36rem]"
+        footer={<CrawlLogSetupSubmit model={model} />}
       >
         <CrawlLogSetup model={model} />
       </Dialog>
@@ -119,19 +135,28 @@ function SourceDiagnostics({
         {items.map((s) => (
           <TableRow key={s.id}>
             <TableCell>
-              {s.host}
-              <br />
-              {s.setup} · {s.connection} · {s.status}
+              <div className="grid gap-0.5">
+                <span>{s.host}</span>
+                <span className="type-caption">
+                  {words(s.setup)} · {words(s.connection)} · {words(s.status)}
+                </span>
+              </div>
             </TableCell>
             <TableCell>
-              {s.collection_point} · {s.sampling.kind}
+              {collectionPointLabel(s.collection_point)} · {words(s.sampling.kind)}
               {s.sampling.kind === 'sampled' ? ' ' + s.sampling.rate : ''}
               {s.sampling.kind === 'filtered' ? ' ' + s.sampling.description : ''}
             </TableCell>
             <TableCell>
-              Accepted: <DisplayTime value={s.last_accepted_batch} fallback="Awaiting data" />
-              <br />
-              Processed: <DisplayTime value={s.last_processed_at} fallback="Awaiting processing" />
+              <div className="grid gap-0.5">
+                <span>
+                  Accepted: <DisplayTime value={s.last_accepted_batch} fallback="Awaiting data" />
+                </span>
+                <span className="type-caption">
+                  Processed:{' '}
+                  <DisplayTime value={s.last_processed_at} fallback="Awaiting processing" />
+                </span>
+              </div>
             </TableCell>
             <TableCell>
               {s.rejected_lines} rejected · {s.overlapping_lines} overlapping ·{' '}

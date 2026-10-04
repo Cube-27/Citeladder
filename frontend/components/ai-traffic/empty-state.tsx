@@ -1,10 +1,22 @@
 import { Link } from 'react-router-dom';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, SearchX } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
+
+/**
+ * A filtered AI Traffic table with no matching rows. It replaces the table
+ * rather than drawing column headers over nothing, and says absence is an
+ * observation within the available logs, not proof of no traffic.
+ */
+export function TrafficNoResults({
+  heading,
+  description,
+}: Readonly<{ heading: string; description: string }>) {
+  return <EmptyState icon={SearchX} heading={heading} description={description} />;
+}
 
 /**
  * Empty state for `/ai-traffic`. Referral measurement begins only after a
