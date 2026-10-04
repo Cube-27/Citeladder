@@ -43,8 +43,7 @@ function Hero() {
           <h1>AI visibility software for brands that want to be found.</h1>
           <p>
             Understand where your brand appears in AI answers, which sources get cited, and how your
-            visibility compares with competitors. Bring answer evidence and website findings
-            together so your team can decide what to improve next.
+            visibility compares with competitors.
           </p>
           <div className="cl-hero-actions">
             <DemoLink />
