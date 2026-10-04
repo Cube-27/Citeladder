@@ -64,7 +64,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             <a href="#main" className="skip-link">
               Skip to main content
             </a>
-            <aside className="bg-sidebar sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col min-[981px]:flex">
+            <aside className="shell-rail bg-sidebar sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col min-[981px]:flex">
               {/* The project selector is the sidebar's first row, at the same
                   height as the header beside it. The rail reads project →
                   tools → destinations → brand: the switcher is the thing a

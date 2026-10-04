@@ -7,11 +7,11 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'bg-accent text-accent-fg border border-transparent not-disabled:hover:bg-accent-hover active:bg-accent-active',
+          'control-raised bg-accent text-accent-fg border border-transparent not-disabled:hover:bg-accent-hover active:bg-accent-active',
         accent:
           'bg-accent-soft text-accent-text border border-accent-border not-disabled:hover:bg-accent not-disabled:hover:text-accent-fg active:bg-accent-hover',
         secondary:
-          'bg-input text-foreground border border-border not-disabled:hover:bg-hover not-disabled:hover:border-border-strong active:bg-active',
+          'control-raised bg-input text-foreground border border-border not-disabled:hover:bg-hover not-disabled:hover:border-border-strong active:bg-active',
         tonal:
           'bg-accent-subtle text-accent-text border border-border not-disabled:hover:bg-accent-border active:bg-accent-border',
         neutral:

@@ -7,8 +7,8 @@ import { cardClasses, type CardTone } from './card-variants';
 
 /**
  * Card is reserved for a meaningful semantic object. It owns a white fill, the
- * card radius. Cards do not float: elevation is reserved for controls and
- * overlays. Structural layout uses metric groups, ledgers, editorial sections,
+ * card radius, fine edge and subtle layered elevation. Structural layout uses
+ * metric groups, ledgers, editorial sections,
  * and workspace panes.
  *
  * Optional eyebrow header hook: render <CardEyebrow> above <CardTitle> for the
