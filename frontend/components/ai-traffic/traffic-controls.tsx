@@ -100,6 +100,25 @@ export function TrafficControls({ model }: Readonly<{ model: ReturnType<typeof u
           </Button>
         </>
       ) : null}
+      {tab === 'pages' ? (
+        <Select
+          ariaLabel="Sort pages"
+          value={model.selection.sort}
+          onValueChange={model.selection.setSort}
+          options={[
+            { value: 'requests_desc', label: 'Requests' },
+            { value: 'sessions_desc', label: 'AI referral sessions' },
+            { value: 'key_events_desc', label: 'Key events' },
+            { value: 'citations_desc', label: 'Tracked citations' },
+            { value: 'url_asc', label: 'URL' },
+          ]}
+        />
+      ) : null}
+      {tab === 'pages' && model.selection.pattern ? (
+        <Button variant="ghost" onClick={() => model.selection.setPattern(null)}>
+          Clear insight filter
+        </Button>
+      ) : null}
     </>
   );
 }

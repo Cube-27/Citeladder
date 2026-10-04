@@ -23,18 +23,42 @@ import {
 } from '@/lib/ai-traffic/series';
 import { bucketCountLabel } from '@/lib/ai-traffic/options';
 import { formatWindowDate } from '@/lib/format';
+import { useState } from 'react';
+import { Tabs, TabPanel } from '@/components/ui/tabs';
+import { ReferralComparison, ReferralLandingPages, ReferralQuality } from './referral-details';
 
 export function AiReferralsDashboard({
   data,
   fetching,
 }: Readonly<{ data: AiReferrals; fetching: boolean }>) {
+  const [tab, setTab] = useState('overview');
   return (
     <div aria-busy={fetching} className="grid gap-[var(--workspace-gap)]">
-      <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-2">
-        <ReferralVolumeCard data={data} />
-        <ReferralShareCard data={data} />
-      </div>
-      <SourceTotals data={data} />
+      <ReferralQuality data={data} />
+      <Tabs
+        value={tab}
+        onValueChange={setTab}
+        ariaLabel="Referral views"
+        items={[
+          { value: 'overview', label: 'Overview' },
+          { value: 'sources', label: 'Sources' },
+          { value: 'landing', label: 'Landing pages' },
+        ]}
+      >
+        <TabPanel value="overview">
+          <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-2">
+            <ReferralVolumeCard data={data} />
+            <ReferralShareCard data={data} />
+          </div>
+          <ReferralComparison data={data} />
+        </TabPanel>
+        <TabPanel value="sources">
+          <SourceTotals data={data} />
+        </TabPanel>
+        <TabPanel value="landing">
+          <ReferralLandingPages data={data} />
+        </TabPanel>
+      </Tabs>
     </div>
   );
 }
@@ -161,6 +185,12 @@ function SourceTotalsTable({ data }: Readonly<{ data: AiReferrals }>) {
           <TableHead>Source</TableHead>
           <TableHead numeric>Sessions</TableHead>
           <TableHead numeric>Share of GA4 sessions</TableHead>
+          <TableHead numeric>Engagement rate</TableHead>
+          <TableHead numeric>Key events</TableHead>
+          <TableHead numeric>Transactions</TableHead>
+          <TableHead numeric>
+            Purchase revenue ({data.currency_code ?? 'currency unavailable'})
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -176,6 +206,25 @@ function SourceTotalsTable({ data }: Readonly<{ data: AiReferrals }>) {
               ) : (
                 <span className="tabular-nums">{formatPercent(source.share, 1)}</span>
               )}
+            </TableCell>
+            <TableCell numeric>
+              {formatPercent(
+                data.source_measures.find((r) => r.ai_source === source.ai_source)
+                  ?.engagement_rate ?? null,
+                1,
+              )}
+            </TableCell>
+            <TableCell numeric>
+              {data.source_measures.find((r) => r.ai_source === source.ai_source)?.key_events ??
+                'Unavailable'}
+            </TableCell>
+            <TableCell numeric>
+              {data.source_measures.find((r) => r.ai_source === source.ai_source)?.transactions ??
+                'Unavailable'}
+            </TableCell>
+            <TableCell numeric>
+              {data.source_measures.find((r) => r.ai_source === source.ai_source)
+                ?.purchase_revenue ?? 'Unavailable'}
             </TableCell>
           </TableRow>
         ))}

@@ -30,6 +30,7 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
+import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
 
 /** Queued is neither "running" nor "ready to ask again": it is its own state. */
 function rerunLabel(pending: boolean, queued: boolean): string {
@@ -53,9 +54,12 @@ export function UrlDetailView({
     <PageShell
       title={pageDisplayTitle(detail.title, detail.display_url)}
       actions={
-        <Button size="sm" onClick={onRerun} disabled={rerunPending}>
-          {rerunLabel(rerunPending, rerunQueued)}
-        </Button>
+        <>
+          {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
+          <Button size="sm" onClick={onRerun} disabled={rerunPending}>
+            {rerunLabel(rerunPending, rerunQueued)}
+          </Button>
+        </>
       }
     >
       <Stack gap="workspace">

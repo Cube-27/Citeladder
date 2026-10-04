@@ -11,6 +11,8 @@ import { CursorPager } from '@/components/ui/cursor-pager';
 import { AiReferralsScreen } from './referrals-screen';
 import { TrafficControls } from './traffic-controls';
 import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-views';
+import { TrafficPages } from './pages-view';
+import { TabPanel } from '@/components/ui/tabs';
 export { CrawlSignalPanel } from './traffic-views';
 const tabCodec = stringUrlCodec(
   TRAFFIC_TABS.map((t) => t.value),
@@ -43,9 +45,32 @@ function TrafficDataView({ tab, tabs }: Readonly<{ tab: TrafficDataTab; tabs: Re
           range={model.selection.range}
         />
       ) : null}
-      {tab === 'crawlers' && crawlers.data ? <TrafficCrawlers data={crawlers.data} /> : null}
+      {tab === 'crawlers' && crawlers.data ? (
+        <TrafficCrawlers
+          data={crawlers.data}
+          filters={{
+            range: model.selection.range,
+            verification:
+              model.selection.verification === 'default' ? undefined : model.selection.verification,
+          }}
+        />
+      ) : null}
       {tab === 'activity' && activity.data ? (
         <TrafficActivity data={activity.data} catalog={catalog.data} />
+      ) : null}
+      {tab === 'pages' && model.pages.data ? (
+        <TabPanel value="pages">
+          <TrafficPages
+            data={model.pages.data}
+            filters={{
+              range: model.selection.range,
+              verification:
+                model.selection.verification === 'default'
+                  ? undefined
+                  : model.selection.verification,
+            }}
+          />
+        </TabPanel>
       ) : null}
       {tab !== 'overview' ? (
         <div className="flex justify-end gap-2">

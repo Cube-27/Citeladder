@@ -32,6 +32,9 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { CrawlLogConnections } from './crawl-log-connections';
+import { InsightStrip } from './insight-strip';
+import { CrawlerPages } from './crawler-pages';
+import type { TrafficFilters } from '@/lib/api/ai-traffic';
 export function TrafficOverview({
   data,
   projectId,
@@ -52,6 +55,7 @@ export function TrafficOverview({
   return (
     <TabPanel value="overview">
       <div className="grid gap-[var(--workspace-gap)]">
+        <InsightStrip projectId={projectId} workspaceId={workspaceId} range={range} />
         <div className="grid gap-4 lg:grid-cols-2">
           <CrawlSignalPanel data={data.crawl} onConnect={() => setConnectOpen(true)} />
           <Card>
@@ -128,7 +132,9 @@ export function TrafficOverview({
 }
 export function TrafficCrawlers({
   data,
-}: Readonly<{ data: z.infer<typeof botCrawlersResponseSchema> }>) {
+  filters = {},
+}: Readonly<{ data: z.infer<typeof botCrawlersResponseSchema>; filters?: TrafficFilters }>) {
+  const [botId, setBotId] = useState<string | null>(null);
   return (
     <TabPanel value="crawlers">
       <Table>
@@ -150,7 +156,11 @@ export function TrafficCrawlers({
               <TableCell>{b.label}</TableCell>
               <TableCell>{b.purpose.replaceAll('_', ' ')}</TableCell>
               <TableCell numeric>{b.requests}</TableCell>
-              <TableCell numeric>{b.pages ?? 'Unavailable'}</TableCell>
+              <TableCell numeric>
+                <Button variant="ghost" size="sm" onClick={() => setBotId(b.bot_id)}>
+                  {b.pages ?? 'Unavailable'} paths
+                </Button>
+              </TableCell>
               <TableCell>
                 <DisplayTime value={b.last_seen} />
               </TableCell>
@@ -176,6 +186,7 @@ export function TrafficCrawlers({
           interpreting absence.
         </Alert>
       ) : null}
+      <CrawlerPages botId={botId} onClose={() => setBotId(null)} filters={filters} />
     </TabPanel>
   );
 }

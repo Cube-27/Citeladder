@@ -80,6 +80,7 @@ describe('AiReferralsScreen', () => {
 
     expect(await screen.findByText('AI-referred sessions')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Share of GA4 sessions' })).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Sources' }));
     expect(screen.getByText('AI referral sources')).toBeInTheDocument();
     expect(screen.getByText('ChatGPT')).toBeInTheDocument();
     expect(screen.getByText('20.0%')).toBeInTheDocument();
@@ -108,6 +109,7 @@ describe('AiReferralsScreen', () => {
     );
     renderWithProviders(<AiReferralsScreen />);
 
+    await userEvent.setup().click(await screen.findByRole('tab', { name: 'Sources' }));
     expect(
       await screen.findByText(/no sessions matched a known AI source in this window/i),
     ).toBeInTheDocument();
@@ -133,6 +135,7 @@ describe('AiReferralsScreen', () => {
       ),
     );
     renderWithProviders(<AiReferralsScreen />);
+    await userEvent.setup().click(await screen.findByRole('tab', { name: 'Sources' }));
     expect(
       await screen.findByText(/classification is not complete for this window/i),
     ).toBeInTheDocument();

@@ -6,7 +6,7 @@ import { stringUrlCodec, optionalStringUrlCodec, useUrlState } from '@/lib/navig
 import { useCursorTable } from '@/lib/table/use-cursor-table';
 import { saveBlob } from '@/lib/download';
 import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
-export type TrafficDataTab = 'overview' | 'crawlers' | 'activity';
+export type TrafficDataTab = 'overview' | 'crawlers' | 'activity' | 'pages';
 const rangeCodec = stringUrlCodec(
   TRAFFIC_RANGES.map((t) => t.value),
   TRAFFIC_RANGES[0].value,
@@ -23,6 +23,14 @@ function useTrafficSelection() {
   const [status, setStatus] = useUrlState('status', optionalStringUrlCodec),
     [folder, setFolder] = useUrlState('folder', optionalStringUrlCodec);
   const [resource, setResource] = useUrlState('resource', optionalStringUrlCodec);
+  const [pattern, setPattern] = useUrlState('pattern', optionalStringUrlCodec);
+  const [sort, setSort] = useUrlState(
+    'sort',
+    stringUrlCodec(
+      ['requests_desc', 'sessions_desc', 'key_events_desc', 'citations_desc', 'url_asc'],
+      'requests_desc',
+    ),
+  );
   return {
     range,
     setRange,
@@ -38,6 +46,10 @@ function useTrafficSelection() {
     setFolder,
     resource,
     setResource,
+    sort,
+    setSort,
+    pattern,
+    setPattern,
   };
 }
 function selectedFilters(tab: TrafficDataTab, selection: ReturnType<typeof useTrafficSelection>) {
@@ -51,6 +63,8 @@ function selectedFilters(tab: TrafficDataTab, selection: ReturnType<typeof useTr
       tab === 'activity' && status && /^[1-5]\d{2}$/u.test(status) ? Number(status) : undefined,
     folder: tab === 'overview' ? undefined : folder || undefined,
     resource_class: tab === 'overview' ? undefined : resource || undefined,
+    sort: tab === 'pages' ? selection.sort : undefined,
+    pattern: tab === 'pages' ? selection.pattern : undefined,
   };
 }
 export function useTrafficData(tab: TrafficDataTab) {
@@ -78,6 +92,11 @@ export function useTrafficData(tab: TrafficDataTab) {
     queryFn: ({ signal }) => aiTrafficApi.activity(projectId, tableFilters, { ...options, signal }),
     enabled: enabled && tab === 'activity',
   });
+  const pages = useQuery({
+    queryKey: queryKeys.aiTraffic.view(workspaceId, projectId, 'pages', tableFilters),
+    queryFn: ({ signal }) => aiTrafficApi.pages(projectId, tableFilters, { ...options, signal }),
+    enabled: enabled && tab === 'pages',
+  });
   const catalog = useQuery({
     queryKey: queryKeys.aiTraffic.view(workspaceId, projectId, 'catalog'),
     queryFn: ({ signal }) => aiTrafficApi.catalog(projectId, { ...options, signal }),
@@ -92,11 +111,12 @@ export function useTrafficData(tab: TrafficDataTab) {
       );
     },
   });
-  const current = { overview: summary, crawlers, activity }[tab];
+  const current = { overview: summary, crawlers, activity, pages }[tab];
   const next = {
     overview: null,
     crawlers: crawlers.data?.next_cursor,
     activity: activity.data?.next_cursor,
+    pages: pages.data?.next_cursor,
   }[tab];
   return {
     tab,
@@ -108,6 +128,7 @@ export function useTrafficData(tab: TrafficDataTab) {
     summary,
     crawlers,
     activity,
+    pages,
     catalog,
     exporting,
     current,
