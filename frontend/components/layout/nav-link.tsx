@@ -32,7 +32,7 @@ export function NavLink({
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'focus-ring group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-[var(--radius-control)] px-3 transition-colors duration-[var(--motion-fast)]',
+        'shell-link focus-ring group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-[var(--radius-control)] px-3 transition-colors duration-[var(--motion-fast)]',
         // Current destinations use neutral selection; hover remains a lighter tint.
         active
           ? textRole('control', 'bg-selected text-foreground active:bg-active')

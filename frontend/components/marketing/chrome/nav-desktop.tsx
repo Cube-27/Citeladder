@@ -9,7 +9,7 @@ import { NavItemLink } from './nav-items';
 
 const NAV_LINK =
   'website-nav text-foreground relative z-1 inline-flex items-center gap-1.5 ' +
-  'rounded-full px-4 py-2.5 font-medium transition-colors duration-300';
+  'rounded-[var(--radius-control)] px-4 py-2.5 font-medium transition-colors duration-300';
 
 type DropLayout = Record<NavDropKey, { width: number; twoColumn: boolean }>;
 
@@ -54,7 +54,7 @@ export function DesktopNavigation({
     // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- Escape and blur are delegated from the focusable links inside this navigation boundary.
     <div
       ref={linksRef}
-      className="relative mx-auto hidden items-center lg:flex"
+      className="marketing-nav-track relative mx-auto hidden items-center lg:flex"
       onMouseEnter={clearDropClose}
       onMouseLeave={() => {
         // Leaving the nav is what re-arms hover after a selection.
@@ -74,7 +74,7 @@ export function DesktopNavigation({
           aria-hidden
           style={{ left: lens.left, width: lens.width }}
           className={cn(
-            'bg-active pointer-events-none absolute inset-y-0 rounded-full',
+            'marketing-nav-selection bg-panel pointer-events-none absolute inset-y-1 rounded-[var(--radius-control)]',
             !reduceMotion && 'transition-[left,width] duration-200 ease-out',
           )}
         />

@@ -432,6 +432,7 @@
    buttons line up with the pane, but it is a row on the ground. */
 .flow-content {
   padding: var(--flow-block) var(--flow-gutter);
+  border-radius: var(--radius-marketing-card);
 }
 
 .flow-footer,

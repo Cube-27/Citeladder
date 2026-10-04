@@ -262,6 +262,7 @@
   border: 1px solid var(--cl-warm-line);
   border-radius: var(--radius-marketing-card);
   background: var(--cl-raised);
+  box-shadow: var(--elevation-card);
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -604,6 +605,7 @@
   border: 1px solid var(--cl-warm-line);
   border-radius: var(--radius-marketing-card);
   background: var(--cl-raised);
+  box-shadow: var(--elevation-card);
   display: flex;
   gap: 16px;
 }

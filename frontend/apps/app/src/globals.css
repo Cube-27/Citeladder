@@ -204,13 +204,14 @@
   --radius-xs: 4px;
   --radius-full: 9999px;
 
-  /* Resting surfaces use boundaries; only detached surfaces cast a shadow. */
+  /* Detached elevation; resting objects use the surface recipes below. */
   --shadow-*: initial;
   --shadow-none: none;
   --shadow-overlay:
-    0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
+    0 5px 15px rgb(15 23 42 / 8%), 0 15px 35px -5px rgb(15 23 42 / 16%);
   --shadow-modal:
-    0 24px 64px rgb(26 31 54 / 0.2), 0 8px 16px rgb(26 31 54 / 0.12);
+    0 0 0 1px rgb(15 23 42 / 6%), 0 5px 15px rgb(15 23 42 / 8%),
+    0 15px 35px -5px rgb(15 23 42 / 20%);
 
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
@@ -242,8 +243,8 @@
   --motion-fast: 110ms;
   --motion-normal: 150ms;
   --motion-slow: 240ms;
-  --ease-standard: cubic-bezier(0.2, 0, 0.38, 0.9);
-  --ease-enter: cubic-bezier(0, 0, 0.38, 0.9);
+  --ease-standard: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-enter: cubic-bezier(0.33, 1, 0.68, 1);
   --ease-exit: cubic-bezier(0.2, 0, 1, 0.9);
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
@@ -288,9 +289,26 @@
   --control-height-lg: 36px;
   --marketing-cta-height: 34px;
   --marketing-hero-cta-height: 44px;
-  --shadow-marketing-cta:
-    inset 0 1px 0 color-mix(in srgb, var(--color-accent-fg) 16%, transparent),
-    0 2px 0 var(--color-accent-active);
+  /* Clerk-inspired material, using CiteLadder's existing palette. The fine
+     inset edge preserves layout geometry; ambient layers establish depth. */
+  --surface-highlight: rgb(255 255 255 / 70%);
+  --surface-sheen: rgb(255 255 255 / 10%);
+  --elevation-control:
+    inset 0 1px 0 var(--surface-highlight),
+    0 1px 2px rgb(15 23 42 / 6%), 0 2px 3px -1px rgb(15 23 42 / 8%);
+  --elevation-primary:
+    inset 0 1px 0 rgb(255 255 255 / 18%),
+    inset 0 0 0 1px rgb(0 0 0 / 10%), 0 1px 3px rgb(15 23 42 / 20%);
+  --elevation-card:
+    inset 0 0 0 1px var(--color-border-subtle),
+    0 1px 1px rgb(15 23 42 / 4%), 0 4px 6px rgb(15 23 42 / 3%),
+    0 24px 68px rgb(15 23 42 / 4%);
+  --elevation-flow:
+    inset 0 0 0 1px var(--color-border-subtle),
+    0 5px 15px rgb(15 23 42 / 6%), 0 15px 35px -5px rgb(15 23 42 / 12%);
+  --elevation-track: inset 0 1px 2px rgb(15 23 42 / 8%), inset 0 0 0 1px var(--color-border-subtle);
+  --elevation-field: inset 0 1px 2px rgb(15 23 42 / 3%), 0 1px 0 var(--surface-highlight);
+  --shadow-marketing-cta: var(--elevation-primary);
   --field-end-target: var(--control-height-sm);
   --menu-item-height: 32px;
   --badge-height-sm: 20px;
@@ -313,14 +331,14 @@
   --table-cell-padding-y: 0px;
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
   --radius-control: 6px;
-  --radius-card: 8px;
+  --radius-card: 12px;
   --radius-overlay: 12px;
   --radius-workspace: 12px;
-  /* Public marketing objects have their own geometry; app cards stay at 8px. */
-  --radius-marketing-card: 20px;
+  /* Public objects use the roomier bento radius. */
+  --radius-marketing-card: 16px;
   --radius-marketing-well: 16px;
-  --radius-marketing-preview: 24px;
-  --radius-marketing-control: 10px;
+  --radius-marketing-preview: 16px;
+  --radius-marketing-control: 6px;
   /* Public-surface rhythm. Marketing consumes these directly; the phone values
      are the base and the media queries below step them up. */
   --site-gutter: 20px;
@@ -924,6 +942,78 @@ a.focus-ring:active .type-caption {
   outline-color: currentColor;
 }
 
+/* Shared material recipes. No extra DOM, clipping or hitbox changes. */
+.surface-card {
+  box-shadow: var(--elevation-card);
+}
+
+.flow-content.app-pane {
+  box-shadow: var(--elevation-flow);
+}
+
+.flow-step-mark-current {
+  box-shadow: var(--elevation-primary);
+}
+
+.control-raised:not(:disabled, [aria-disabled='true']) {
+  background-image: linear-gradient(var(--surface-sheen), transparent);
+  box-shadow: var(--elevation-control);
+}
+
+.control-raised[data-button-variant='primary']:not(:disabled, [aria-disabled='true']) {
+  box-shadow: var(--elevation-primary);
+}
+
+.control-raised:not(:disabled, [aria-disabled='true']):active {
+  background-image: none;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 12%);
+}
+
+.selection-track {
+  box-shadow: var(--elevation-track);
+  background-image: linear-gradient(var(--surface-sheen), transparent);
+}
+
+.selection-raised:not(:disabled) {
+  box-shadow: var(--elevation-control);
+  background-image: linear-gradient(var(--surface-sheen), transparent);
+}
+
+.shell-rail {
+  border-right: 1px solid var(--color-border-subtle);
+  background-image: linear-gradient(var(--surface-sheen), transparent 12rem);
+}
+
+.marketing-nav-track {
+  padding: 4px;
+  border-radius: var(--radius-overlay);
+  background: var(--color-background-alt);
+  box-shadow: var(--elevation-track);
+}
+
+.marketing-nav-selection {
+  box-shadow: var(--elevation-control);
+}
+
+[data-marketing-nav][data-scrolled='true'] {
+  background-color: var(--color-panel);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 4%), 0 4px 12px rgb(15 23 42 / 3%);
+}
+
+.shell-link[aria-current='page'] {
+  background-color: var(--color-panel);
+  box-shadow: var(--elevation-control), inset 0 0 0 1px var(--color-border-subtle);
+}
+
+.shell-link[aria-current='page']:active {
+  background-color: var(--color-active);
+}
+
+.focus-input:not(:disabled),
+.focus-frame:has(:enabled) {
+  box-shadow: var(--elevation-field);
+}
+
 /* Public CTAs keep the shared control semantics with a compact, raised face. */
 [data-public-surface] .marketing-cta-button {
   height: auto;
@@ -945,9 +1035,7 @@ a.focus-ring:active .type-caption {
 
 [data-public-surface] .marketing-cta-button[data-button-variant='primary']:not([aria-disabled='true']):active {
   transform: translateY(1px);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--color-accent-fg) 12%, transparent),
-    0 1px 0 var(--color-accent-active);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 12%);
 }
 
 @media (max-width: 540px) {
@@ -1179,6 +1267,14 @@ input:-webkit-autofill:focus {
   --skeleton-highlight: #292929;
   --shadow-overlay: 0 12px 32px rgb(0 0 0 / 40%);
   --shadow-modal: 0 24px 64px rgb(0 0 0 / 60%);
+  --surface-highlight: rgb(255 255 255 / 8%);
+  --surface-sheen: rgb(255 255 255 / 4%);
+  --elevation-control: inset 0 1px 0 var(--surface-highlight), inset 0 0 0 1px rgb(255 255 255 / 3%);
+  --elevation-primary: inset 0 1px 0 rgb(255 255 255 / 18%), inset 0 0 0 1px rgb(0 0 0 / 12%);
+  --elevation-card: inset 0 0 0 1px var(--color-border-subtle), inset 0 1px 0 var(--surface-highlight);
+  --elevation-flow: inset 0 0 0 1px var(--color-border), inset 0 1px 0 var(--surface-highlight);
+  --elevation-track: inset 0 0 0 1px var(--color-border-subtle), inset 0 1px 2px rgb(0 0 0 / 24%);
+  --elevation-field: inset 0 1px 0 var(--surface-highlight);
 }
 
 :root[data-theme='dark'] .brand-wordmark {
@@ -1252,7 +1348,7 @@ input:-webkit-autofill:focus {
 .app-pane {
   background: var(--color-panel);
   border-radius: var(--radius-workspace);
-  box-shadow: none;
+  box-shadow: var(--elevation-flow);
 }
 
 /* The workspace pane fills the shell rather than floating in it: it meets the
@@ -1262,6 +1358,7 @@ input:-webkit-autofill:focus {
 .app-pane-workspace {
   background: var(--color-shell);
   border-radius: var(--radius-workspace) 0 0;
+  box-shadow: none;
 }
 
 /* A 16px corner against the viewport edge reads as a rendering artefact rather

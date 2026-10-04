@@ -1,7 +1,7 @@
 import { cva } from 'class-variance-authority';
 
 export const segmentedTrackVariants = cva(
-  'bg-track inline-flex max-w-full overflow-x-auto scroll-px-1 min-h-[var(--control-height-sm)] items-center gap-0.5 rounded-[var(--radius-control)] p-0.5',
+  'selection-track bg-track inline-flex max-w-full overflow-x-auto scroll-px-1 min-h-[var(--control-height-sm)] items-center gap-0.5 rounded-[var(--radius-control)] p-0.5',
 );
 
 export const segmentedItemVariants = cva(
@@ -9,7 +9,7 @@ export const segmentedItemVariants = cva(
   {
     variants: {
       selected: {
-        true: 'bg-selected text-foreground enabled:hover:bg-selected enabled:active:bg-active',
+        true: 'selection-raised bg-panel text-foreground enabled:hover:bg-panel enabled:active:bg-active',
         false:
           'text-secondary enabled:hover:bg-hover enabled:hover:text-foreground enabled:active:bg-active',
       },
