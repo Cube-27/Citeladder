@@ -1,4 +1,6 @@
-import { mkdtemp, cp, appendFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, cp, appendFile, rm, writeFile, mkdir } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -15,6 +17,31 @@ describe('packaged Agent model inputs', () => {
     expect(formats.get('page')?.body).toContain('##id is prose');
   });
   const root = agentSettings({}).skillsDirectory;
+  it('loads the same catalog from a standalone API package using its default asset path', async () => {
+    const temporary = await mkdtemp(join(tmpdir(), 'agent-package-'));
+    try {
+      await cp(root, join(temporary, 'assets/agent-skills'), { recursive: true });
+      await mkdir(join(temporary, 'src/config'), { recursive: true });
+      const resolver = join(temporary, 'src/config/skill-inputs.ts');
+      await cp(new URL('../src/config/skill-inputs.ts', import.meta.url), resolver);
+      const { stdout } = await promisify(execFile)(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          "import { pathToFileURL } from 'node:url'; const { resolveSkillsDirectory } = await import(pathToFileURL(process.argv[1]).href); process.stdout.write(resolveSkillsDirectory(''));",
+          resolver,
+        ],
+        { cwd: temporary },
+      );
+      const packaged = await loadSkillCatalog(stdout);
+      expect(packaged).toEqual(await loadSkillCatalog(root));
+      await rm(join(temporary, 'assets'), { recursive: true });
+      await expect(loadSkillCatalog(stdout)).rejects.toThrow();
+    } finally {
+      await rm(temporary, { recursive: true, force: true });
+    }
+  });
   it('keeps example headings inside fenced methodology text and continues at the next format', () => {
     const { formats } = parseContentFormats(
       '# Formats\n## page — Page\nBody\n~~~markdown\n## example — Example\nLiteral example.\n~~~\n## briefing — Briefing\nBrief.',

@@ -16,6 +16,7 @@ COPY frontend/services/api/package.json ./services/api/
 RUN pnpm install --frozen-lockfile --ignore-scripts --prod --filter "@citeladder/api..."
 COPY frontend/packages/contracts/src ./packages/contracts/src
 COPY frontend/services/api/src ./services/api/src
+COPY frontend/services/api/assets ./services/api/assets
 # Export only this service's production graph, not the workspace-wide store.
 RUN pnpm --filter @citeladder/api deploy --prod --ignore-scripts /runtime
 # Node strips our workspace TypeScript only outside node_modules. Keep the
@@ -31,13 +32,11 @@ LABEL org.opencontainers.image.title="citeladder-api-service" \
       org.opencontainers.image.revision="${BUILD_REVISION}"
 
 ENV NODE_ENV=production \
-    PORT=8100 \
-    AGENT_SKILLS_DIRECTORY=/app/agent-skills
+    PORT=8100
 WORKDIR /app
 
 # Dependencies and source stay root-owned and read-only to the runtime user.
 COPY --from=dependencies --chown=0:0 /runtime ./
-COPY --chown=0:0 backend/app/core/config/agent_skills ./agent-skills
 
 USER node
 EXPOSE 8100

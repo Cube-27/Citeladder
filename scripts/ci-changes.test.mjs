@@ -73,6 +73,7 @@ test('contracts and shared configuration invalidate both sides', () => {
 test('the TypeScript API service runs for its code and every Python input it is built from', () => {
   for (const path of [
     'frontend/services/api/src/app.ts',
+    'frontend/services/api/assets/agent-skills/skills/gsc_optimize/SKILL.md',
     'frontend/pnpm-lock.yaml',
     'migrations/versions/0001_initial.py',
     'backend/app/core/config/errors.py',
@@ -86,7 +87,6 @@ test('the TypeScript API service runs for its code and every Python input it is 
   for (const path of [
     'backend/app/analysis/costs.py',
     'backend/scripts/seed_dev_data.py',
-    'backend/app/core/config/agent_skills/skills/gsc_optimize/SKILL.md',
     'frontend/components/card.tsx',
   ]) {
     assert.equal(classifyPaths([path]).api, false, path);
@@ -142,17 +142,17 @@ test('root governance and product prose avoid implementation suites', () => {
   });
 });
 
-test('packaged Agent skills remain backend production inputs', () => {
+test('packaged Agent skills select their native API and image owners', () => {
   assert.deepEqual(
-    classifyPaths(['backend/app/core/config/agent_skills/skills/gsc_optimize/SKILL.md']),
+    classifyPaths(['frontend/services/api/assets/agent-skills/skills/gsc_optimize/SKILL.md']),
     {
-      backend: true,
-      frontend: false,
+      backend: false,
+      frontend: true,
       contract: false,
-      api: false,
+      api: true,
       e2e: false,
       security: false,
-      compose: false,
+      compose: true,
     },
   );
 });
