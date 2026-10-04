@@ -146,6 +146,8 @@ export const integrationPropertyMappingSchema = responseObject({
   property_ref: z.string(),
   project_id: uuid(),
   status: z.enum(['active', 'disabled']),
+  reporting_timezone: z.string().nullable().optional(),
+  currency_code: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });

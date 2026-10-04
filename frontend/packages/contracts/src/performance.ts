@@ -12,7 +12,7 @@ import { integrationProviderSchema } from './integrations.ts';
 //   - null clicks/impressions mean the window has no `gsc_day_daily` evidence
 //     at all, not that nobody clicked;
 //   - null ctr/position mean the aggregate had zero impressions;
-//   - null sessions/conversions mean no included GA4 row fed the window;
+//   - null sessions/key events mean no included GA4 row fed the window;
 //   - a null `comparison` means none was requested, and a comparison block
 //     with a null `snapshot_id` means one was requested but is not projected.
 // ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ const performanceTotalsSchema = responseObject({
   ctr: z.number().nullable(),
   position: z.number().nullable(),
   sessions: z.number().int().nullable(),
-  conversions: z.number().int().nullable(),
+  key_events: z.number().nullable(),
 });
 
 // GA4 is deliberately absent from the series: it renders as a compact,
@@ -86,6 +86,14 @@ const performanceCoverageSchema = responseObject({
   earliest_date: z.string().nullable(),
   latest_date: z.string().nullable(),
   covered_days: z.number().int(),
+  analytics_quality: z
+    .record(
+      z.string(),
+      z.array(
+        z.object({ day: z.string(), revision: z.number().nullable(), flags: z.array(z.string()) }),
+      ),
+    )
+    .default({}),
 });
 
 const performanceDimensionCountsSchema = responseObject({
@@ -153,8 +161,8 @@ export const performanceDashboardSchema = responseObject({
 });
 
 const performanceMetricsSchema = responseObject({
-  clicks: z.number().int(),
-  impressions: z.number().int(),
+  clicks: z.number().int().nullable(),
+  impressions: z.number().int().nullable(),
   ctr: z.number().nullable(),
   position: z.number().nullable(),
 });

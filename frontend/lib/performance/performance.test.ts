@@ -33,7 +33,7 @@ function window(overrides: Partial<PerformanceWindow> = {}): PerformanceWindow {
       ctr: 0.0353,
       position: 8.4,
       sessions: 20,
-      conversions: 2,
+      key_events: 2,
     },
     series: { clicks: [], impressions: [], ctr: [], position: [] },
     ...overrides,

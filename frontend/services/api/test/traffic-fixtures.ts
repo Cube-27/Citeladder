@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import type { z } from 'zod';
 import {
   performanceDashboardSchema,
@@ -14,6 +15,7 @@ import {
 import type { Database } from '../src/db/database.ts';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
+import { compareText } from '../src/text-order.ts';
 import { enqueue, seedImport, seedProject, type ImportSeed } from './referral-fixtures.ts';
 import { Fixtures, sessionToken, testConfig } from './support.ts';
 
@@ -52,20 +54,90 @@ export async function metric(
 ) {
   const id = randomUUID(),
     day = options.date ?? WINDOW[1];
+  const original = await db
+    .selectFrom('integration_sync_runs')
+    .selectAll()
+    .where('id', '=', seed.syncRunId)
+    .executeTakeFirstOrThrow();
+  const dataset = options.dataset ?? seed.dataset,
+    revision = options.revision ?? original.resync_seq;
+  let run = await db
+    .selectFrom('integration_sync_runs')
+    .selectAll()
+    .select([
+      sql<string>`window_start::text`.as('window_start'),
+      sql<string>`window_end::text`.as('window_end'),
+    ])
+    .where('connection_id', '=', seed.connectionId)
+    .where('resync_seq', '=', revision)
+    .executeTakeFirst();
+  if (!run)
+    run = await db
+      .insertInto('integration_sync_runs')
+      .values({
+        ...original,
+        id: randomUUID(),
+        resync_seq: revision,
+        idempotency_key: randomUUID(),
+      })
+      .returningAll()
+      .returning([
+        sql<string>`window_start::text`.as('window_start'),
+        sql<string>`window_end::text`.as('window_end'),
+      ])
+      .executeTakeFirstOrThrow();
+  const start = run.window_start,
+    end = run.window_end;
+  if (day < start || day > end)
+    await db
+      .updateTable('integration_sync_runs')
+      .set({
+        window_start: [day, start].sort(compareText)[0]!,
+        window_end: [day, end].sort(compareText)[1]!,
+      })
+      .where('id', '=', run.id)
+      .execute();
+  let artifact = await db
+    .selectFrom('integration_import_artifacts')
+    .selectAll()
+    .where('sync_run_id', '=', run.id)
+    .where('dataset', '=', dataset)
+    .executeTakeFirst();
+  if (!artifact) {
+    let provider = 'gsc';
+    if (dataset.startsWith('ga4_')) provider = 'ga4';
+    else if (dataset.startsWith('bing_')) provider = 'bing';
+    const originalArtifact = await db
+      .selectFrom('integration_import_artifacts')
+      .selectAll()
+      .where('id', '=', seed.artifactId)
+      .executeTakeFirstOrThrow();
+    artifact = await db
+      .insertInto('integration_import_artifacts')
+      .values({
+        ...originalArtifact,
+        id: randomUUID(),
+        sync_run_id: run.id,
+        dataset,
+        provider,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  }
   await db
     .insertInto('integration_metric_rows')
     .values({
       id,
       workspace_id: seed.workspaceId,
       project_id: seed.projectId,
-      property_ref: options.property ?? 'property',
-      provider: 'gsc',
-      dataset: options.dataset ?? seed.dataset,
+      property_ref: options.property ?? run.property_ref,
+      provider: artifact.provider,
+      dataset,
       date: day,
       dimension_key: (options.values ?? [day]).join(policy.traffic.dimension_key_separator),
       metrics: JSON.stringify(options.metrics ?? { impressions: 100, clicks: 1, position: 8.25 }),
-      source_artifact_id: seed.artifactId,
-      resync_seq: options.revision ?? 0,
+      source_artifact_id: artifact.id,
+      resync_seq: revision,
       importer_version: 'test-1',
       created_at: new Date(),
     })
@@ -73,7 +145,7 @@ export async function metric(
   return id;
 }
 export async function importSeed(db: Database, t: Tenant, dataset = 'gsc_day_daily') {
-  return seedImport(db, { ...t, dataset, window: WINDOW });
+  return seedImport(db, { ...t, dataset, window: WINDOW, provider: dataset.split('_')[0] });
 }
 export async function task(db: Database, t: Tenant, kind: string, window = WINDOW) {
   const id = await enqueue(db, {

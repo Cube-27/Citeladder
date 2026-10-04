@@ -9,6 +9,10 @@ import {
   crawlReadArtifacts,
 } from '../crawl-logs/reads.ts';
 import { policy } from '../config.ts';
+import { crawlLogs } from '../config/crawl-logs.ts';
+import { pagesRead, urlRead } from '../crawl-logs/pages.ts';
+import { insightsRead } from '../crawl-logs/insights.ts';
+import { canonicalPage, hash } from '../traffic/normalization.ts';
 import { robotsFactsSchema } from '@citeladder/contracts/site-health';
 import { mcpPolicy } from './config.ts';
 import { readIntegrationStatus } from './evidence-integrations.ts';
@@ -283,6 +287,55 @@ export async function readEvidence(
   name: string,
   args: ReadArguments,
 ): Promise<Evidence> {
+  if (['read_ai_traffic_pages', 'read_ai_traffic_url', 'read_ai_traffic_insights'].includes(name)) {
+    const options = {
+      range: text(args, 'range'),
+      start_date: text(args, 'start_date'),
+      end_date: text(args, 'end_date'),
+      folder: text(args, 'folder'),
+      resource_class: text(args, 'resource_class'),
+      verification: text(args, 'verification'),
+      sort: text(args, 'sort'),
+      cursor: text(args, 'cursor'),
+      limit: Number(args.limit ?? crawlLogs.default_page_size),
+    };
+    if (name === 'read_ai_traffic_pages')
+      return {
+        state: 'available',
+        ...(await pagesRead(db, scope, options)),
+        artifact_refs: [],
+        omissions: [],
+      };
+    if (name === 'read_ai_traffic_insights') {
+      const result = await insightsRead(db, scope, options);
+      return {
+        state: result.snapshot_id ? 'available' : 'unavailable',
+        ...result,
+        artifact_refs: result.snapshot_id
+          ? [reference('ai_traffic_insights', result.snapshot_id, false)]
+          : [],
+        omissions: [],
+      };
+    }
+    const project = await workspace(scope)
+      .selectFrom(db, 'projects')
+      .select('website_url')
+      .where('id', '=', scope.projectId)
+      .executeTakeFirstOrThrow();
+    const canonical = canonicalPage(text(args, 'url')!, project.website_url);
+    if (!canonical || new URL(canonical).origin !== new URL(project.website_url).origin)
+      throw new McpInputError('URL must be on the project origin');
+    const url = canonicalPage(canonical.split('?')[0]!, project.website_url)!;
+    const result = await urlRead(db, scope, hash(url), options);
+    return {
+      state: result.page ? 'available' : 'unavailable',
+      ...result,
+      artifact_refs: result.crawls.flatMap((r) =>
+        r.source_rollup_ids.map((id) => reference('bot_activity_daily', id, false)),
+      ),
+      omissions: result.provenance.bounded ? [{ reason: 'timeline_bounded', count: 1 }] : [],
+    };
+  }
   if (name === 'read_crawl_logs' || name === 'list_bot_requests') {
     const options: CrawlReadOptions = {
       range: text(args, 'range'),
@@ -423,6 +476,14 @@ export async function readEvidence(
           referral_volume: result.referral_volume,
           referral_share: result.referral_share,
           sources: result.sources,
+          scope: result.scope,
+          reporting_timezone: result.reporting_timezone,
+          currency_code: result.currency_code,
+          source_measures: result.source_measures,
+          landing_pages: result.landing_pages,
+          analytics_quality: result.analytics_quality,
+          channel_comparison: result.channel_comparison,
+          unattributed_landing: result.unattributed_landing,
           versions: { analyzer: result.analyzer_version, formula: result.formula_version },
           artifact_refs: [reference('ai_referrals_snapshot', projection.snapshotId, false)],
           omissions: [],

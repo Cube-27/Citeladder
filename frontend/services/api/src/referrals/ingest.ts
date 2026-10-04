@@ -18,6 +18,7 @@ import { payloadArtifactId, requireProject, type Executor } from '../workers/exe
 import { enqueueClassifyReferrals } from './enqueue.ts';
 import { referralEventFields } from './events.ts';
 import { compareText } from '../text-order.ts';
+import { selectedPartition } from '../integrations/partitions.ts';
 
 const { referrals } = policy;
 const REFERRAL_DATASETS = Object.values(referrals.datasets).sort(compareText);
@@ -25,12 +26,23 @@ const REFERRAL_DATASETS = Object.values(referrals.datasets).sort(compareText);
 const INSERT_CHUNK = 1000;
 
 /** The workspace's import artifact, or an error that fails the attempt. */
-export async function ownedArtifact(db: Database, workspaceId: string, artifactId: string) {
+export async function ownedArtifact(
+  db: Database,
+  workspaceId: string,
+  artifactId: string,
+  projectId: string,
+) {
   const artifact = await db
-    .selectFrom('integration_import_artifacts')
-    .select(['id', 'provider', 'sync_run_id'])
-    .where('workspace_id', '=', workspaceId)
-    .where('id', '=', artifactId)
+    .selectFrom('integration_import_artifacts as artifact')
+    .innerJoin('integration_sync_runs as run', (join) =>
+      join
+        .onRef('run.id', '=', 'artifact.sync_run_id')
+        .onRef('run.workspace_id', '=', 'artifact.workspace_id'),
+    )
+    .select(['artifact.id', 'artifact.provider', 'artifact.sync_run_id'])
+    .where('artifact.workspace_id', '=', workspaceId)
+    .where('artifact.id', '=', artifactId)
+    .where('run.project_id', '=', projectId)
     .executeTakeFirst();
   // Never project rows for an artifact outside the claimed task's workspace.
   if (artifact === undefined) {
@@ -40,10 +52,14 @@ export async function ownedArtifact(db: Database, workspaceId: string, artifactI
 }
 
 /**
- * The artifact's referral-dataset rows with no later-`resync_seq` revision
- * of the same identity; a superseded row is stale evidence.
+ * The artifact's rows in the selected complete partition revision.
  */
-function latestReferralRows(db: Database, artifactId: string) {
+function latestReferralRows(
+  db: Database,
+  artifactId: string,
+  workspaceId: string,
+  projectId: string,
+) {
   return db
     .selectFrom('integration_metric_rows as row')
     .select([
@@ -53,22 +69,10 @@ function latestReferralRows(db: Database, artifactId: string) {
       isoDateText(sql.ref('row.date')).as('date'),
     ])
     .where('row.source_artifact_id', '=', artifactId)
+    .where('row.workspace_id', '=', workspaceId)
+    .where('row.project_id', '=', projectId)
     .where('row.dataset', 'in', REFERRAL_DATASETS)
-    .where(({ not, exists, selectFrom }) =>
-      not(
-        exists(
-          selectFrom('integration_metric_rows as newer')
-            .select('newer.id')
-            .whereRef('newer.project_id', '=', 'row.project_id')
-            .whereRef('newer.property_ref', '=', 'row.property_ref')
-            .whereRef('newer.provider', '=', 'row.provider')
-            .whereRef('newer.dataset', '=', 'row.dataset')
-            .whereRef('newer.date', '=', 'row.date')
-            .whereRef('newer.dimension_key', '=', 'row.dimension_key')
-            .whereRef('newer.resync_seq', '>', 'row.resync_seq'),
-        ),
-      ),
-    )
+    .where(selectedPartition('row'))
     .orderBy('row.date', 'asc')
     .orderBy('row.id', 'asc')
     .execute();
@@ -78,9 +82,11 @@ export const ingestReferrals: Executor = async (task, { db, maxAttempts }) => {
   const projectId = requireProject(task);
   const artifactId = payloadArtifactId(task);
   await db.transaction().execute(async (trx) => {
-    const artifact = await ownedArtifact(trx, task.workspace_id, artifactId);
+    const artifact = await ownedArtifact(trx, task.workspace_id, artifactId, projectId);
     const now = new Date();
-    const events = (await latestReferralRows(trx, artifact.id)).flatMap((row) => {
+    const events = (
+      await latestReferralRows(trx, artifact.id, task.workspace_id, projectId)
+    ).flatMap((row) => {
       const fields = referralEventFields(row);
       if (fields === null) return [];
       return [

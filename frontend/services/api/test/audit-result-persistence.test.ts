@@ -343,6 +343,15 @@ describe('atomic audit execution persistence', () => {
       .execute();
     const metric = await finalizeAudit(db, t.workspaceId, t.auditId, async () => {});
     expect(metric).toMatchObject({ total_completed: 1, total_failed: 2 });
+    expect(
+      await db
+        .selectFrom('analytics_tasks')
+        .select('id')
+        .where('workspace_id', '=', t.workspaceId)
+        .where('project_id', '=', t.projectId)
+        .where('task_kind', '=', 'ai_traffic_insights_refresh')
+        .execute(),
+    ).toHaveLength(1);
     expect(record(record(metric!.metrics).coverage)).toEqual({
       requested: 3,
       completed: 1,

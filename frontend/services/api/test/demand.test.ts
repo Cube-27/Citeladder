@@ -210,7 +210,7 @@ describe('demand projections and admission', () => {
     });
     await demand();
     page = await request(`demand/query-evidence?window_start=${WINDOW[0]}&window_end=${WINDOW[1]}`);
-    expect(page.body.snapshot.state).toBe('observed_zero');
+    expect(page.body.snapshot.state).toBe('unavailable');
     expect(page.body.items).toEqual([]);
     expect(page.body.snapshot.limitations).toContain('malformed_source_rows_excluded');
   });
@@ -470,7 +470,7 @@ describe('demand projections and admission', () => {
           id: randomUUID(),
           workspace_id: t.workspaceId,
           project_id: t.projectId,
-          property_ref: 'p',
+          property_ref: 'properties/123456789',
           provider: 'gsc',
           dataset: seed.dataset,
           date: WINDOW[1],

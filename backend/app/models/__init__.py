@@ -27,7 +27,9 @@ from app.models.analysis import (
     ResponseAnalysis,
 )
 from app.models.analytics import (
+    AiReferralLandingDaily,
     AiReferralsSnapshot,
+    AiTrafficInsights,
     AnalyticsTask,
     ReferralClassification,
     ReferralEvent,
@@ -205,7 +207,9 @@ __all__ = [
     "AgentOutputRevision",
     "AgentRun",
     "AgentToolAttempt",
+    "AiReferralLandingDaily",
     "AiReferralsSnapshot",
+    "AiTrafficInsights",
     "AioEntityLink",
     "AioObservation",
     "AnalyticsTask",

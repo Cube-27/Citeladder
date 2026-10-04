@@ -5,19 +5,14 @@ import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-export function TrafficControls({ model }: Readonly<{ model: ReturnType<typeof useTrafficData> }>) {
+type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
+export function TrafficControls({ model }: ControlProps) {
   const { tab } = model;
   const {
     range,
     setRange,
     verification,
     setVerification,
-    purpose,
-    setPurpose,
-    bot,
-    setBot,
-    status,
-    setStatus,
     folder,
     setFolder,
     resource,
@@ -37,43 +32,8 @@ export function TrafficControls({ model }: Readonly<{ model: ReturnType<typeof u
         onValueChange={setVerification}
         options={VERIFICATION_OPTIONS}
       />
-      {tab === 'crawlers' ? (
-        <Select
-          ariaLabel="Crawler purpose"
-          value={purpose ?? ''}
-          onValueChange={(v) => setPurpose(v || null)}
-          options={[
-            { value: '', label: 'All purposes' },
-            ...[...new Set(model.catalog.data?.bots.map((b) => b.purpose) ?? [])].map((value) => ({
-              value,
-              label: value.replaceAll('_', ' '),
-            })),
-          ]}
-        />
-      ) : null}
-      {tab === 'activity' ? (
-        <>
-          <Select
-            ariaLabel="Bot"
-            value={bot ?? ''}
-            onValueChange={(v) => setBot(v || null)}
-            options={[
-              { value: '', label: 'All bots' },
-              ...(model.catalog.data?.bots.map((b) => ({ value: b.bot_id, label: b.label })) ?? []),
-            ]}
-          />
-          <Input
-            aria-label="Response status"
-            placeholder="Response status"
-            type="number"
-            min={100}
-            max={599}
-            step={1}
-            value={status ?? ''}
-            onChange={(e) => setStatus(e.target.value || null)}
-          />
-        </>
-      ) : null}
+      {tab === 'crawlers' ? <CrawlerPurposeControl model={model} /> : null}
+      {tab === 'activity' ? <ActivityControls model={model} /> : null}
       {tab !== 'overview' ? (
         <>
           <Input
@@ -100,6 +60,68 @@ export function TrafficControls({ model }: Readonly<{ model: ReturnType<typeof u
           </Button>
         </>
       ) : null}
+      {tab === 'pages' ? (
+        <Select
+          ariaLabel="Sort pages"
+          value={model.selection.sort}
+          onValueChange={model.selection.setSort}
+          options={[
+            { value: 'requests_desc', label: 'Requests' },
+            { value: 'sessions_desc', label: 'AI referral sessions' },
+            { value: 'key_events_desc', label: 'Key events' },
+            { value: 'citations_desc', label: 'Tracked citations' },
+            { value: 'url_asc', label: 'URL' },
+          ]}
+        />
+      ) : null}
+      {tab === 'pages' && model.selection.pattern ? (
+        <Button variant="ghost" onClick={() => model.selection.setPattern(null)}>
+          Clear insight filter
+        </Button>
+      ) : null}
+    </>
+  );
+}
+function CrawlerPurposeControl({ model }: ControlProps) {
+  const { purpose, setPurpose } = model.selection;
+  return (
+    <Select
+      ariaLabel="Crawler purpose"
+      value={purpose ?? ''}
+      onValueChange={(v) => setPurpose(v || null)}
+      options={[
+        { value: '', label: 'All purposes' },
+        ...[...new Set(model.catalog.data?.bots.map((b) => b.purpose) ?? [])].map((value) => ({
+          value,
+          label: value.replaceAll('_', ' '),
+        })),
+      ]}
+    />
+  );
+}
+function ActivityControls({ model }: ControlProps) {
+  const { bot, setBot, status, setStatus } = model.selection;
+  return (
+    <>
+      <Select
+        ariaLabel="Bot"
+        value={bot ?? ''}
+        onValueChange={(v) => setBot(v || null)}
+        options={[
+          { value: '', label: 'All bots' },
+          ...(model.catalog.data?.bots.map((b) => ({ value: b.bot_id, label: b.label })) ?? []),
+        ]}
+      />
+      <Input
+        aria-label="Response status"
+        placeholder="Response status"
+        type="number"
+        min={100}
+        max={599}
+        step={1}
+        value={status ?? ''}
+        onChange={(e) => setStatus(e.target.value || null)}
+      />
     </>
   );
 }

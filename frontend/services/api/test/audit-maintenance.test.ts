@@ -330,6 +330,7 @@ describe('audit recovery against PostgreSQL', () => {
       .selectFrom('analytics_tasks')
       .select(['task_kind', 'payload'])
       .where('workspace_id', '=', t.workspaceId)
+      .where('task_kind', '=', 'source_page_inspection')
       .execute();
     expect(inspection).toEqual([
       { task_kind: 'source_page_inspection', payload: { audit_id: t.auditId } },

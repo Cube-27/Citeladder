@@ -33,6 +33,159 @@ export const aiReferralsSchema = responseObject({
   sources: z.array(aiReferralSourceRowSchema),
   analyzer_version: z.string(),
   formula_version: z.string(),
+  scope: z.literal('property-wide').default('property-wide'),
+  reporting_timezone: z.string().nullable().default(null),
+  currency_code: z.string().nullable().default(null),
+  analytics_quality: z
+    .record(
+      z.string(),
+      z.array(
+        z.object({
+          day: z.string(),
+          revision: z.number().nullable(),
+          flags: z.array(z.string()),
+          artifact_ids: z.array(z.string()),
+          reporting_timezone: z.string().nullable(),
+          currency_code: z.string().nullable(),
+          excluded_hosts: z.number(),
+        }),
+      ),
+    )
+    .default({}),
+  unattributed_landing: z.number().nonnegative().nullable().default(null),
+  source_measures: z
+    .array(
+      z.object({
+        ai_source: aiSourceSchema,
+        sessions: z.number().nullable(),
+        key_events: z.number().nullable(),
+        engagement_rate: z.number().nullable(),
+        transactions: z.number().nullable(),
+        purchase_revenue: z.number().nullable(),
+      }),
+    )
+    .default([]),
+  channel_comparison: z
+    .array(
+      z.object({
+        channel: z.string(),
+        sessions: z.number().nullable(),
+        key_events: z.number().nullable(),
+        engagement_rate: z.number().nullable(),
+      }),
+    )
+    .default([]),
+  landing_pages: z
+    .array(
+      z.object({
+        url_hash: z.string(),
+        canonical_url: z.string(),
+        ai_source: aiSourceSchema,
+        sessions: z.number().nullable(),
+        key_events: z.number().nullable(),
+        analytics_quality: z.array(z.string()),
+      }),
+    )
+    .default([]),
+});
+
+export const trafficLegSchema = z.object({
+  state: z.enum([
+    'not_connected',
+    'unknown',
+    'unavailable',
+    'zero',
+    'value',
+    'non_comparable',
+    'flagged',
+  ]),
+  value: z.number().nullable(),
+  coverage: z.string().nullable(),
+  reason: z.string().nullable(),
+});
+const aiTrafficPageSchema = z.object({
+  url_hash: z.string(),
+  canonical_url: z.string(),
+  display_path: z.string(),
+  folder: z.string(),
+  resource_class: z.string(),
+  crawl: trafficLegSchema,
+  referrals: trafficLegSchema,
+  citations: trafficLegSchema,
+  findings: trafficLegSchema,
+  key_events: z.number().nullable(),
+  last_crawl: z.string().nullable(),
+  errors_4xx: z.number().nullable(),
+  errors_5xx: z.number().nullable(),
+});
+export const aiTrafficPagesSchema = z.object({
+  window_start: z.string(),
+  window_end: z.string(),
+  items: z.array(aiTrafficPageSchema),
+  next_cursor: z.string().nullable(),
+  observed_crawl_coverage: z.object({
+    state: z.string(),
+    share: z.number().nullable(),
+    known_pages: z.number(),
+    observed_pages: z.number().nullable(),
+    inventory_date: z.string().nullable(),
+    inventory_complete: z.boolean(),
+    sample_mode: z.boolean(),
+    label: z.literal('Observed crawl coverage'),
+  }),
+});
+export const aiTrafficUrlSchema = z.object({
+  page: aiTrafficPageSchema.nullable(),
+  window_start: z.string(),
+  window_end: z.string(),
+  crawls: z.array(
+    z.object({
+      bot_id: z.string(),
+      first_seen: z.string(),
+      last_seen: z.string(),
+      requests: z.number(),
+      source_rollup_ids: z.array(z.string()),
+    }),
+  ),
+  referrals: z.array(
+    z.object({
+      ai_source: z.string(),
+      first_referral: z.string(),
+      sessions: z.number(),
+      source_metric_row_ids: z.array(z.string()),
+    }),
+  ),
+  citations: z.array(z.object({ date: z.string(), citation_id: z.string(), audit_id: z.string() })),
+  provenance: z.object({
+    crawl_id: z.string().nullable(),
+    formula_version: z.string(),
+    bounded: z.boolean(),
+  }),
+});
+export const aiTrafficInsightsSchema = z.object({
+  snapshot_id: z.string().nullable(),
+  window_start: z.string(),
+  window_end: z.string(),
+  formula_version: z.string(),
+  coverage: z.object({
+    crawl: z.string(),
+    ga4_complete: z.boolean(),
+    notice: z.string().nullable(),
+  }),
+  patterns: z.array(
+    z.object({
+      pattern: z.enum([
+        'crawled_without_referrals',
+        'referrals_without_recent_crawl',
+        'crawler_errors_on_valuable_pages',
+        'key_event_concentration',
+      ]),
+      copy: z.string(),
+      url_hashes: z.array(z.string()),
+      numbers: z.record(z.string(), z.number()),
+      coverage: z.record(z.string(), z.string()),
+    }),
+  ),
 });
 
 /** Shared UA matcher: browser pre-filtering and trusted admission use identical rules. */

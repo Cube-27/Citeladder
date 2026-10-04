@@ -15,8 +15,33 @@ guides describe the supported setup once ingestion is authorized and enabled.
 
 Overview shows each signal's units and freshness. Crawlers breaks recognized bots
 down by purpose, verification, response status, folder and resource. Referrals
-keeps the saved GA4 source/medium report's range and interval controls. Activity
-shows sanitized requests within retention and exports the selected filters.
+keeps the saved GA4 source/medium report's range and interval controls, with
+Overview, Sources and Landing pages views. Sources show key events as configured
+in your GA4, engagement rate, transactions and revenue in the property's currency.
+Overview compares AI referrals, Organic Search and all other sessions across the
+whole property. Landing pages include only project-owned hosts and disclose
+unattributed sessions and excluded hosts. Activity shows sanitized requests
+within retention and exports the selected filters.
+
+Pages joins each path's crawler requests, AI referral sessions and key events,
+tracked citations and latest Site Health findings. Each measure shows its own
+coverage and availability. Filter by folder, resource class and verification,
+choose the sort, page through saved results or export matching rows as CSV.
+Open a path from Pages, referral landing pages, crawler drill-downs or Site Health
+to see its first/last crawl, first referral, citation dates and links to each
+owning view. Query strings and fragments are excluded from path identity.
+
+Observed crawl coverage compares recognized AI search/user-fetch requests with
+known URLs in the latest terminal Site Health inventory. It requires complete
+or declared-complete collection and shows the inventory date and sampling limits.
+It does not prove that a page is indexed.
+
+Overview's observed patterns describe co-occurrence: verified requests without
+identifiable referrals, referrals without recent recognized AI requests, crawler
+errors on valuable pages and concentration of AI-referral key events. Absence
+patterns require complete collection and complete, unflagged GA4 extracts for
+the whole window. Incomplete coverage shows a notice. AI apps can strip referrers;
+these patterns cannot establish causation or attribute a session to a crawl.
 
 GA4 AI-source sessions are the share numerator; all sessions in that same report
 are the denominator. The visible AI-source rows are not total site traffic. An
@@ -36,7 +61,12 @@ through Settings → Integrations and sync before interpreting the Referrals tab
 Zero is measured only under complete or declared-complete coverage. Otherwise,
 absence means no matching requests were observed in the available logs. Review
 source diagnostics, sampling and receipt gaps before drawing conclusions.
-Reporting days use UTC in this release. Requests, path-level pages, sessions and
+Reporting days use the captured GA4 property timezone, or UTC before capture.
+Older rollups retain their recorded timezone; a mismatch marks the crawl and
+referral measures non-comparable. Thresholding, other-row loss, sampling or a
+failed/truncated replacement report are disclosed as quality flags. A failed
+partition uses the prior complete revision; missing flagged evidence never
+becomes measured zero. Requests, path-level pages, sessions and
 citations have separate meanings; no cross-unit conversion rate is calculated.
 
 The default verification filter includes verified and unverifiable requests.

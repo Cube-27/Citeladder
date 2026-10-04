@@ -353,7 +353,7 @@
       "dataset": "ga4_landing_daily",
       "provider": "ga4",
       "api_method": "runReport",
-      "dimensions": ["landingPage", "sessionSource", "sessionMedium", "date"],
+      "dimensions": ["landingPage", "sessionSource", "sessionMedium", "hostName", "date"],
       "metrics": ["sessions", "engagedSessions", "keyEvents"],
       "paging_mode": "offset"
     },

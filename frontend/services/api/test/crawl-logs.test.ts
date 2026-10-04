@@ -156,6 +156,7 @@ describe('sanitized durable admission', () => {
       .selectFrom('analytics_tasks')
       .selectAll()
       .where('workspace_id', '=', tenant.workspaceId)
+      .where('task_kind', '=', 'crawl_log_rollup_refresh')
       .execute();
     expect(tasks).toHaveLength(1);
     const dates = (tasks[0]!.payload as { reporting_dates: string[] }).reporting_dates;
@@ -272,6 +273,7 @@ describe('sanitized durable admission', () => {
       .selectFrom('analytics_tasks')
       .selectAll()
       .where('workspace_id', '=', tenant.workspaceId)
+      .where('task_kind', '=', 'crawl_log_rollup_refresh')
       .execute();
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({ task_kind: 'crawl_log_rollup_refresh', status: 'queued' });
@@ -719,6 +721,7 @@ describe('uploads, coverage and serialized recomputation', () => {
         .selectFrom('analytics_tasks')
         .select('id')
         .where('workspace_id', '=', tenant.workspaceId)
+        .where('task_kind', '=', 'crawl_log_rollup_refresh')
         .execute(),
     ).toHaveLength(1);
   });

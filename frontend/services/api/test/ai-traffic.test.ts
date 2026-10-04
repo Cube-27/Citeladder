@@ -59,7 +59,7 @@ describe('GET /projects/{project_id}/ai-traffic', () => {
     const empty = await fixtures.tenant();
     const { status, body } = await referrals(empty, empty.projectId);
     expect(status).toBe(200);
-    expect(body).toEqual({
+    expect(body).toMatchObject({
       project_id: empty.projectId,
       window_start: '',
       window_end: '',
@@ -67,6 +67,8 @@ describe('GET /projects/{project_id}/ai-traffic', () => {
       referral_volume: [],
       referral_share: [],
       sources: [],
+      landing_pages: [],
+      channel_comparison: [],
       analyzer_version: policy.analytics.ai_referral_analyzer_version,
       formula_version: policy.analytics.ai_referral_formula_version,
     });

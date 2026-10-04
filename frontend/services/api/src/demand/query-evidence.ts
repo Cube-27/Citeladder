@@ -12,6 +12,7 @@ import { normalizeQuery } from './classification.ts';
 import { resolveOwnedPages } from './page-equivalence.ts';
 import { stableHash, unique } from './projection.ts';
 import { compareText } from '../text-order.ts';
+import { selectedPartition, partitionQuality, partitionEpoch } from '../integrations/partitions.ts';
 
 const p = policy.demand;
 export type DemandScope = {
@@ -44,6 +45,7 @@ async function sourceRows(db: Database, scope: DemandScope) {
     .select(isoDateText(sql.ref('date')).as('day'))
     .where('project_id', '=', scope.projectId)
     .where('dataset', '=', p.query_page_dataset)
+    .where(selectedPartition())
     .where('date', '>=', sql<Date>`${scope.windowStart}::date`)
     .where('date', '<=', sql<Date>`${scope.windowEnd}::date`)
     .distinctOn([...identity]);
@@ -58,6 +60,7 @@ async function sourceRows(db: Database, scope: DemandScope) {
 }
 
 async function sourceMaterial(db: Database, scope: DemandScope) {
+  const epoch = await partitionEpoch(db, scope);
   const rows = await sourceRows(db, scope);
   const material = rows.flatMap((row) => {
     const parts = row.dimension_key.split(policy.traffic.dimension_key_separator);
@@ -85,47 +88,48 @@ async function sourceMaterial(db: Database, scope: DemandScope) {
       },
     ];
   });
-  const artifacts = await db
-    .selectFrom('integration_import_artifacts as a')
-    .innerJoin('integration_property_mappings as m', (join) =>
-      join
-        .onRef('m.workspace_id', '=', 'a.workspace_id')
-        .onRef('m.connection_id', '=', 'a.connection_id'),
-    )
-    .selectAll('a')
-    .where('a.workspace_id', '=', scope.workspaceId)
-    .where('m.project_id', '=', scope.projectId)
-    .where('a.dataset', '=', p.query_page_dataset)
-    .where(
-      sql<boolean>`((a.query_snapshot ->> 'start_date' = ${scope.windowStart} and a.query_snapshot ->> 'end_date' = ${scope.windowEnd}) or (a.query_snapshot ->> 'startDate' = ${scope.windowStart} and a.query_snapshot ->> 'endDate' = ${scope.windowEnd}))`,
-    )
-    .orderBy('a.fetched_at', 'desc')
-    .orderBy('a.id', 'desc')
-    .limit(p.QUERY_EVIDENCE_MAX_ARTIFACTS)
-    .execute();
-  const matched = artifacts.filter((a) => {
-    const q = record(a.query_snapshot);
-    return (
-      (q.start_date || q.startDate || '') === scope.windowStart &&
-      (q.end_date || q.endDate || '') === scope.windowEnd
-    );
-  });
+  const quality = await partitionQuality(
+    db,
+    {
+      workspaceId: scope.workspaceId,
+      projectId: scope.projectId,
+      start: scope.windowStart,
+      end: scope.windowEnd,
+    },
+    p.query_page_dataset,
+  );
+  const artifactIds = unique(quality.flatMap((q) => q.artifact_ids));
+  const matched = artifactIds.length
+    ? await db
+        .selectFrom('integration_import_artifacts')
+        .selectAll()
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('id', 'in', artifactIds.slice(0, p.QUERY_EVIDENCE_MAX_ARTIFACTS))
+        .orderBy('id')
+        .execute()
+    : [];
+  if ((await partitionEpoch(db, scope)) !== epoch)
+    throw new Error('Integration partitions changed during Demand projection; retry');
   const selected = material.slice(0, p.QUERY_EVIDENCE_MAX_ROWS);
   const sourceHash = stableHash({
     window: [scope.windowStart, scope.windowEnd],
     rows: selected.map((r) => [r.source.id, r.source.resync_seq]),
     zero_artifacts: matched.map((r) => [r.id, r.payload_hash]),
+    partitions: quality,
     analyzer_version: p.QUERY_EVIDENCE_ANALYZER_VERSION,
     resolver_version: p.PAGE_EQUIVALENCE_RESOLVER_VERSION,
   });
-  return { rows, material, selected, artifacts: matched, sourceHash };
+  return { rows, material, selected, artifacts: matched, sourceHash, quality };
 }
 export async function queryEvidenceRevision(db: Database, scope: DemandScope) {
   return (await sourceMaterial(db, scope)).sourceHash.slice(0, 24);
 }
 
 export async function buildQueryEvidence(db: Database, scope: DemandScope) {
-  const { rows, material, selected, artifacts, sourceHash } = await sourceMaterial(db, scope);
+  const { rows, material, selected, artifacts, sourceHash, quality } = await sourceMaterial(
+    db,
+    scope,
+  );
   const existingQuery = () =>
     querySnapshots(db, scope)
       .where('source_hash', '=', sourceHash)
@@ -141,9 +145,18 @@ export async function buildQueryEvidence(db: Database, scope: DemandScope) {
   );
   const truncated = rows.length > p.QUERY_EVIDENCE_MAX_ROWS || material.length > selected.length;
   const limitations = [
+    ...unique(quality.flatMap((q) => q.flags)),
     ...(truncated ? ['query_evidence_row_limit'] : []),
     ...(material.length !== rows.length ? ['malformed_source_rows_excluded'] : []),
   ];
+  let state = p.QUERY_EVIDENCE_STATE_UNAVAILABLE;
+  if (selected.length) state = p.QUERY_EVIDENCE_STATE_AVAILABLE;
+  else if (
+    artifacts.length &&
+    rows.length === material.length &&
+    quality.every((q) => q.revision !== null && q.flags.length === 0)
+  )
+    state = p.QUERY_EVIDENCE_STATE_OBSERVED_ZERO;
   const snapshot = await db
     .insertInto('query_evidence_snapshots')
     .values({
@@ -154,11 +167,7 @@ export async function buildQueryEvidence(db: Database, scope: DemandScope) {
       window_end: scope.windowEnd,
       source_hash: sourceHash,
       supersedes_snapshot_id: prior?.id ?? null,
-      state: selected.length
-        ? p.QUERY_EVIDENCE_STATE_AVAILABLE
-        : artifacts.length && artifacts.every((r) => r.row_count === 0)
-          ? p.QUERY_EVIDENCE_STATE_OBSERVED_ZERO
-          : p.QUERY_EVIDENCE_STATE_UNAVAILABLE,
+      state,
       source_metric_row_ids: JSON.stringify(selected.map((r) => r.source.id)),
       source_artifact_ids: JSON.stringify(
         unique([
@@ -167,6 +176,7 @@ export async function buildQueryEvidence(db: Database, scope: DemandScope) {
         ]),
       ),
       coverage: JSON.stringify({
+        analytics_quality: quality,
         source_row_count: rows.length,
         usable_row_count: material.length,
         projected_row_count: selected.length,

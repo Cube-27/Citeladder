@@ -36,6 +36,7 @@ export const TRAFFIC_TABS = [
   { value: 'overview', label: 'Overview' },
   { value: 'crawlers', label: 'Crawlers' },
   { value: 'referrals', label: 'Referrals' },
+  { value: 'pages', label: 'Pages' },
   { value: 'activity', label: 'Activity' },
 ] as const;
 export const TRAFFIC_RANGES = [

@@ -149,6 +149,7 @@ const internalLinksSchema = responseObject({
 
 // Full analyzed-page detail (persisted facts/delivery/scores/issues/provenance).
 export const pageDetailSchema = responseObject({
+  url_hash: z.string().optional(),
   site_url_id: uuid(),
   crawl_id: uuid(),
   normalized_url: z.string(),

@@ -9,6 +9,7 @@ import {
 } from '../opportunities/enqueue.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import type { Crawl } from './task-fence.ts';
+import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
 
 /**
  * Enqueue analytics after change persistence, or with the crawl's own identity
@@ -27,6 +28,7 @@ export async function enqueueTerminalAnalyticsRefresh(
     maxAttempts: loadWorkerSettings().taskMaxAttempts,
   };
   const triggerKind = changeSnapshotId ? 'site_change' : 'site_crawl';
+  await enqueueTrafficInsights(db, scope);
   const triggerId = changeSnapshotId ?? crawl.id;
   await enqueueImplementationVerification(db, {
     ...scope,

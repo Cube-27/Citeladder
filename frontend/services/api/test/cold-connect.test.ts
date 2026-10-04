@@ -65,6 +65,27 @@ it('takes a first connect through both workers to analysis_ready without provide
   });
   const worker = new AnalyticsWorker(db, loadWorkerSettings({}));
   expect(await worker.runUntilIdle()).toBeGreaterThanOrEqual(2);
+  const tasks = await db
+    .selectFrom('analytics_tasks')
+    .select(['task_kind', 'status', 'error_detail'])
+    .select(sql<boolean>`available_at > now()`.as('deferred'))
+    .where('workspace_id', '=', t.workspaceId)
+    .execute();
+  // Insight refresh is coalesced and debounced independently of readiness.
+  expect(tasks.filter((row) => row.task_kind === 'ai_traffic_insights_refresh')).toEqual([
+    {
+      task_kind: 'ai_traffic_insights_refresh',
+      status: 'queued',
+      error_detail: '',
+      deferred: true,
+    },
+  ]);
+  expect(
+    tasks
+      .filter((row) => row.task_kind !== 'ai_traffic_insights_refresh')
+      .every((row) => row.status === 'succeeded'),
+    JSON.stringify(tasks),
+  ).toBe(true);
   const request = requests(db, t);
   const dashboard = await request('performance?range=month');
   const tablePath = `performance/table?snapshot_id=${dashboard.body.selected.snapshot_id}`;
@@ -73,6 +94,7 @@ it('takes a first connect through both workers to analysis_ready without provide
   const queries = await request(
     `demand/query-evidence?window_start=${WINDOW[0]}&window_end=${WINDOW[1]}&limit=2`,
   );
+  expect(queries.response.status, JSON.stringify(queries.body)).toBe(200);
   expect(queries.body.items).toHaveLength(2);
   const next = await request(
     `demand/query-evidence?window_start=${WINDOW[0]}&window_end=${WINDOW[1]}&limit=2&cursor=${encodeURIComponent(queries.body.next_cursor!)}`,
@@ -81,7 +103,7 @@ it('takes a first connect through both workers to analysis_ready without provide
   expect(
     next.body.items.some((row) => queries.body.items.some((first) => first.id === row.id)),
   ).toBe(false);
-  // The TS worker drains the whole chain, Opportunity refresh included.
+  // The TS worker drains the readiness chain, Opportunity refresh included.
   expect(await readProjectReadiness(db, t)).toMatchObject({
     stage: 'analysis_ready',
     connection_count: 2,
@@ -90,13 +112,4 @@ it('takes a first connect through both workers to analysis_ready without provide
     has_demand_snapshot: true,
     imported_through: WINDOW[1],
   });
-  const tasks = await db
-    .selectFrom('analytics_tasks')
-    .select(['status', 'error_detail'])
-    .where('workspace_id', '=', t.workspaceId)
-    .execute();
-  expect(
-    tasks.every((row) => row.status === 'succeeded'),
-    JSON.stringify(tasks),
-  ).toBe(true);
 }, 30_000);

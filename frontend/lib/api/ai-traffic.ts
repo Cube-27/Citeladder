@@ -14,6 +14,9 @@ import {
   crawlCatalogSchema,
   crawlUploadSchema,
   crawlReceiptSchema,
+  aiTrafficPagesSchema,
+  aiTrafficUrlSchema,
+  aiTrafficInsightsSchema,
 } from '@citeladder/contracts/ai-traffic';
 import { type snapshotGranularitySchema } from '@citeladder/contracts/analytics';
 import { strictValidate } from '@citeladder/contracts/validation';
@@ -41,6 +44,16 @@ export type AiReferralsWindowParams = (AiReferralsWindow | AiReferralsRangeParam
 };
 
 export const aiTrafficApi = {
+  pages: (projectId: string, filters: TrafficFilters = {}, options?: ApiRequestOptions) =>
+    read(projectId, 'ai-traffic/pages', aiTrafficPagesSchema, filters, options),
+  url: (
+    projectId: string,
+    urlHash: string,
+    filters: TrafficFilters = {},
+    options?: ApiRequestOptions,
+  ) => read(projectId, 'ai-traffic/pages/' + urlHash, aiTrafficUrlSchema, filters, options),
+  insights: (projectId: string, filters: TrafficFilters = {}, options?: ApiRequestOptions) =>
+    read(projectId, 'ai-traffic/insights', aiTrafficInsightsSchema, filters, options),
   overview: (projectId: string, filters: TrafficFilters = {}, options?: ApiRequestOptions) =>
     read(projectId, 'ai-traffic/overview', aiTrafficOverviewSchema, filters, options),
   crawlers: (projectId: string, filters: TrafficFilters = {}, options?: ApiRequestOptions) =>
@@ -126,7 +139,7 @@ export const aiTrafficApi = {
     ),
   export: (
     projectId: string,
-    view: 'crawlers' | 'activity',
+    view: 'crawlers' | 'activity' | 'pages',
     filters: TrafficFilters = {},
     options?: ApiRequestOptions,
   ) =>

@@ -296,6 +296,7 @@ describe('crawl lifecycle', () => {
       task_kind: 'opportunity_verification',
       payload: expect.objectContaining({ trigger_kind: 'site_crawl', trigger_id: seed.crawlId }),
     });
+    expect(handoff).toContainEqual({ task_kind: 'ai_traffic_insights_refresh', payload: {} });
   });
 
   it('ignores a settled task named under another workspace', async () => {

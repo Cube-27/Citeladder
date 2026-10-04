@@ -14,6 +14,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { metricSeriesPoints } from './metric-series.ts';
+import { record } from '../db/json.ts';
 
 const analytics = policy.analytics;
 const PRESET_DAYS: Readonly<Record<string, number>> = analytics.preset_range_days;
@@ -22,7 +23,7 @@ const DAY_MS = 86_400_000;
 /** An invalid granularity, range or window: the route answers 422. */
 export class AiReferralsQueryError extends Error {}
 
-export type AiReferralsResponse = z.input<typeof aiReferralsSchema>;
+export type AiReferralsResponse = z.infer<typeof aiReferralsSchema>;
 const granularitySchema = aiReferralsSchema.shape.granularity;
 
 export type AiReferralsQuery = {
@@ -131,7 +132,7 @@ export async function readAiReferrals(
   if (snapshot === undefined) {
     return {
       snapshotId: null,
-      response: {
+      response: aiReferralsSchema.parse({
         project_id: query.projectId,
         window_start: query.fromDate ?? '',
         window_end: query.toDate ?? '',
@@ -140,7 +141,7 @@ export async function readAiReferrals(
         referral_share: [],
         sources: [],
         ...versions,
-      },
+      }),
     };
   }
   if (snapshot.metrics != null && !isObject(snapshot.metrics)) {
@@ -159,8 +160,61 @@ export async function readAiReferrals(
       sources: aiReferralSources(metrics.sources),
       analyzer_version: snapshot.analyzer_version,
       formula_version: snapshot.formula_version,
+      scope: 'property-wide',
+      reporting_timezone:
+        typeof metrics.reporting_timezone === 'string' ? metrics.reporting_timezone : null,
+      currency_code: typeof metrics.currency_code === 'string' ? metrics.currency_code : null,
+      analytics_quality: aiReferralsSchema.shape.analytics_quality.parse(metrics.analytics_quality),
+      unattributed_landing: aiReferralsSchema.shape.unattributed_landing.parse(
+        metrics.unattributed_landing,
+      ),
+      source_measures: aiReferralsSchema.shape.source_measures.parse(metrics.source_measures),
+      channel_comparison: aiReferralsSchema.shape.channel_comparison.parse(
+        metrics.channel_comparison,
+      ),
+      landing_pages: aiReferralsSchema.shape.landing_pages.parse(landingSummary(metrics.landing)),
     },
   };
+}
+
+function landingSummary(raw: unknown) {
+  const groups = new Map<
+    string,
+    {
+      url_hash: string;
+      canonical_url: string;
+      ai_source: string;
+      sessions: number;
+      key_events: number;
+      analytics_quality: string[];
+    }
+  >();
+  for (const value of Array.isArray(raw) ? raw : []) {
+    const r = record(value),
+      key = String(r.url_hash) + ':' + String(r.ai_source);
+    const row = groups.get(key) ?? {
+      url_hash: String(r.url_hash),
+      canonical_url: String(r.canonical_url),
+      ai_source: String(r.ai_source),
+      sessions: 0,
+      key_events: 0,
+      analytics_quality: [],
+    };
+    row.sessions += Number(r.sessions);
+    row.key_events += Number(r.key_events);
+    row.analytics_quality = [
+      ...new Set([
+        ...row.analytics_quality,
+        ...(Array.isArray(r.analytics_quality) ? (r.analytics_quality as string[]) : []),
+      ]),
+    ];
+    groups.set(key, row);
+  }
+  return [...groups.values()].map((r) => ({
+    ...r,
+    sessions: r.sessions === 0 && r.analytics_quality.length ? null : r.sessions,
+    key_events: r.key_events === 0 && r.analytics_quality.length ? null : r.key_events,
+  }));
 }
 
 export async function getAiReferrals(

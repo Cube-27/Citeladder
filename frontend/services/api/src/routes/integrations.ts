@@ -10,6 +10,7 @@ import {
 } from '@citeladder/contracts/integrations';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { z } from 'zod';
+import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { readBody, readOptionalBody } from '../http/body.ts';
 import { IntegrationClient, IntegrationError } from '../integrations/client.ts';
@@ -480,17 +481,23 @@ export const integrationRoutes = [
     async handle({ c, db }, { path }) {
       const mapping = await db
         .selectFrom('integration_property_mappings')
-        .select('id')
+        .select(['id', 'project_id'])
         .where('id', '=', path.mapping_id)
         .where('workspace_id', '=', c.get('workspace').workspaceId)
         .executeTakeFirst();
       if (mapping === undefined) throw notFound('Integration property mapping');
-      await db
-        .updateTable('integration_property_mappings')
-        .set({ status: 'disabled', updated_at: new Date() })
-        .where('id', '=', path.mapping_id)
-        .where('workspace_id', '=', c.get('workspace').workspaceId)
-        .execute();
+      await db.transaction().execute(async (trx) => {
+        await trx
+          .updateTable('integration_property_mappings')
+          .set({ status: 'disabled', updated_at: new Date() })
+          .where('id', '=', path.mapping_id)
+          .where('workspace_id', '=', c.get('workspace').workspaceId)
+          .execute();
+        await enqueueTrafficInsights(trx, {
+          workspaceId: c.get('workspace').workspaceId,
+          projectId: mapping.project_id,
+        });
+      });
     },
   }),
   definePostRoute({
@@ -567,6 +574,7 @@ export const integrationRoutes = [
           .where('status', '=', 'active')
           .forUpdate()
           .executeTakeFirst();
+        await enqueueTrafficInsights(trx, { workspaceId, projectId: project.id });
         if (existing)
           return {
             ...existing,

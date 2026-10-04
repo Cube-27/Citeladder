@@ -443,6 +443,8 @@ export async function listMappings(db: Database, workspaceId: string, connection
       'status',
       'created_at',
       'updated_at',
+      'reporting_timezone',
+      'currency_code',
     ])
     .where('workspace_id', '=', workspaceId)
     .where('connection_id', '=', connectionId)

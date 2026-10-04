@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
@@ -6,6 +6,7 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { AiTrafficScreen, CrawlSignalPanel } from './ai-traffic-screen';
+import { InsightStrip } from './insight-strip';
 const project = makeProject({
   id: '88888888-8888-4888-8888-888888888888',
   workspace_id: '11111111-1111-4111-8111-111111111111',
@@ -48,6 +49,40 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 describe('AI Traffic state and navigation', () => {
+  it('carries the insight project and filters into the Pages destination', async () => {
+    mswServer.use(
+      http.get(root + '/ai-traffic/insights', () =>
+        HttpResponse.json({
+          snapshot_id: 'saved',
+          window_start: '2026-10-01',
+          window_end: '2026-10-04',
+          formula_version: '1',
+          patterns: [
+            {
+              pattern: 'key_event_concentration',
+              copy: 'Key events co-occurred on these pages.',
+              url_hashes: [],
+              numbers: { key_events: 10 },
+              coverage: { ga4: 'complete' },
+            },
+          ],
+          coverage: { crawl: 'complete', ga4_complete: true, notice: null },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <InsightStrip projectId={project.id} workspaceId={project.workspace_id} range="90d" />,
+    );
+    const link = await screen.findByRole('link', { name: 'Inspect pages' });
+    const destination = new URL(link.getAttribute('href')!, window.location.origin);
+    expect(Object.fromEntries(destination.searchParams)).toEqual({
+      project: project.id,
+      tab: 'pages',
+      range: '90d',
+      sort: 'key_events_desc',
+      pattern: 'key_event_concentration',
+    });
+  });
   it('keeps missing, awaiting, incomplete and measured zero distinct', () => {
     const view = renderWithProviders(
       <CrawlSignalPanel data={{ ...crawl, connection: 'not_connected' }} />,
@@ -68,6 +103,27 @@ describe('AI Traffic state and navigation', () => {
   });
   it('persists tab selection, renders accessible activity and exports the selected filters', async () => {
     let exportStatus: string | null = null;
+    const exportedPages = { value: null as URLSearchParams | null };
+    const page = {
+      url_hash: 'a'.repeat(64),
+      canonical_url: 'https://example.test/page',
+      display_path: '/page',
+      folder: '/page',
+      resource_class: 'page',
+      crawl: { state: 'zero', value: 0, coverage: 'complete', reason: null },
+      referrals: { state: 'flagged', value: null, coverage: 'partial', reason: 'thresholding' },
+      citations: { state: 'not_connected', value: null, coverage: null, reason: null },
+      findings: {
+        state: 'unavailable',
+        value: null,
+        coverage: null,
+        reason: 'incomplete_coverage',
+      },
+      key_events: null,
+      errors_4xx: 0,
+      errors_5xx: 0,
+      last_crawl: null,
+    };
     mswServer.use(
       http.get(root + '/ai-traffic/overview', () =>
         HttpResponse.json({
@@ -105,9 +161,57 @@ describe('AI Traffic state and navigation', () => {
         });
       }),
       http.get(root + '/ai-traffic/referrals', () => HttpResponse.json(referrals)),
+      http.get(root + '/ai-traffic/insights', () =>
+        HttpResponse.json({
+          snapshot_id: null,
+          window_start: '2026-10-01',
+          window_end: '2026-10-04',
+          formula_version: '1',
+          patterns: [],
+          coverage: {
+            crawl: 'partial',
+            ga4_complete: false,
+            notice: 'Coverage is incomplete. Absence-based insights are unavailable.',
+          },
+        }),
+      ),
+      http.get(root + '/ai-traffic/pages', () =>
+        HttpResponse.json({
+          window_start: '2026-10-01',
+          window_end: '2026-10-04',
+          items: [page],
+          next_cursor: null,
+          observed_crawl_coverage: {
+            state: 'unavailable',
+            share: null,
+            known_pages: 10,
+            observed_pages: null,
+            inventory_date: null,
+            inventory_complete: false,
+            sample_mode: true,
+            label: 'Observed crawl coverage',
+          },
+        }),
+      ),
+      http.get(root + '/ai-traffic/pages/' + page.url_hash, () =>
+        HttpResponse.json({
+          page,
+          window_start: '2026-10-01',
+          window_end: '2026-10-04',
+          crawls: [],
+          referrals: [],
+          citations: [],
+          provenance: { crawl_id: null, formula_version: '1', bounded: false },
+        }),
+      ),
+      http.get(root + '/ai-traffic/pages/export', ({ request }) => {
+        exportedPages.value = new URL(request.url).searchParams;
+        return new HttpResponse('path\n/page', { headers: { 'content-type': 'text/csv' } });
+      }),
     );
-    renderWithProviders(<AiTrafficScreen />);
+    const view = renderWithProviders(<AiTrafficScreen />);
     await screen.findByText(/No matching requests were observed/);
+    expect(await screen.findByText(/Absence-based insights are unavailable/)).toBeVisible();
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('activity');
@@ -122,5 +226,42 @@ describe('AI Traffic state and navigation', () => {
     await user.click(screen.getByRole('tab', { name: 'Referrals' }));
     expect(await screen.findByText('No AI-referral data yet')).toBeVisible();
     expect(screen.getByLabelText('Chart interval')).toBeVisible();
+    await user.click(screen.getByRole('tab', { name: 'Pages' }));
+    await screen.findByRole('table', { name: 'Path-level AI Traffic with separate signal units' });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Folder' }), {
+      target: { value: '/page' },
+    });
+    await user.click(screen.getByRole('combobox', { name: 'Resource class' }));
+    await user.click(screen.getByRole('option', { name: 'page' }));
+    await user.click(screen.getByRole('combobox', { name: 'Sort pages' }));
+    await user.click(screen.getByRole('option', { name: 'AI referral sessions' }));
+    await user.click(screen.getByRole('button', { name: 'Export CSV' }));
+    await waitFor(() => expect(exportedPages.value?.get('folder')).toBe('/page'));
+    expect(exportedPages.value?.get('resource_class')).toBe('page');
+    expect(exportedPages.value?.get('sort')).toBe('sessions_desc');
+    await user.click(screen.getByRole('button', { name: '/page' }));
+    const panel = await screen.findByRole('dialog', { name: '/page' });
+    expect(
+      new URL(
+        within(panel).getByRole('link', { name: 'Referrals' }).getAttribute('href')!,
+        window.location.origin,
+      ).searchParams.get('project'),
+    ).toBe(project.id);
+    expect(within(panel).getByText(/0 requests · zero/)).toBeVisible();
+    expect(within(panel).getByText(/Unavailable AI referral sessions · flagged/)).toBeVisible();
+    expect(within(panel).getByText(/Unavailable tracked citations · not connected/)).toBeVisible();
+    expect(
+      within(panel).getByText(/Unavailable open Site Health findings · unavailable/),
+    ).toBeVisible();
+    mswServer.use(
+      http.get(
+        root + '/ai-traffic/pages/' + page.url_hash,
+        () => new HttpResponse(null, { status: 403 }),
+      ),
+    );
+    await view.queryClient.refetchQueries({ predicate: (q) => q.queryKey.includes('url') });
+    await waitFor(() =>
+      expect(within(panel).queryByText(/0 requests · zero/)).not.toBeInTheDocument(),
+    );
   });
 });

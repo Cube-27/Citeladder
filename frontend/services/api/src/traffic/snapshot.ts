@@ -19,6 +19,13 @@ import { windowDays } from './performance.ts';
 import { record } from '../db/json.ts';
 import { TrafficProjectionBuilder, type Projection } from './projection.ts';
 import { compareText } from '../text-order.ts';
+import {
+  selectedPartition,
+  partitionQuality,
+  partitionAnchor,
+  partitionEpoch,
+} from '../integrations/partitions.ts';
+import { projectHosts } from '../integrations/host-scope.ts';
 
 const p = policy.traffic;
 type Target = {
@@ -218,6 +225,7 @@ async function scan(
       .select(isoDateText(sql.ref('date')).as('day'))
       .where('project_id', '=', requireProject(task))
       .where('dataset', 'in', p.TRAFFIC_PROJECTED_DATASETS)
+      .where(selectedPartition())
       .where('date', '>=', sql<Date>`${start}::date`)
       .where('date', '<=', sql<Date>`${end}::date`)
       .limit(p.TRAFFIC_METRIC_ROW_BATCH_SIZE);
@@ -238,6 +246,8 @@ async function scan(
 function executor(displayOnly: boolean): Executor {
   return async (task, { db, checkCancelled, maxAttempts }) => {
     const projectId = await taskProject(db, task);
+    const partitionScope = { workspaceId: task.workspace_id, projectId };
+    const epoch = await partitionEpoch(db, partitionScope);
     const { windowStart, windowEnd } = payloadWindow(task);
     const scope = new WorkspaceScope(task.workspace_id);
     const origin = await scope
@@ -245,12 +255,9 @@ function executor(displayOnly: boolean): Executor {
       .select('root_url')
       .where('project_id', '=', projectId)
       .executeTakeFirst();
-    const anchor = await scope
-      .selectFrom(db, 'integration_metric_rows')
-      .select(isoDateText(sql`max(date)`).as('day'))
-      .where('project_id', '=', projectId)
-      .where('dataset', '=', p.DATASET_GSC_DAY_DAILY)
-      .executeTakeFirst();
+    const anchor = {
+      day: await partitionAnchor(db, task.workspace_id, projectId, p.DATASET_GSC_DAY_DAILY),
+    };
     const existing = displayOnly
       ? await scope
           .selectFrom(db, 'traffic_snapshots')
@@ -261,6 +268,7 @@ function executor(displayOnly: boolean): Executor {
           .execute()
       : [];
     const targets: Target[] = [];
+    const allowedHosts = await projectHosts(db, task.workspace_id, projectId);
     const add = (
       start: string,
       end: string,
@@ -279,6 +287,7 @@ function executor(displayOnly: boolean): Executor {
           windowEnd: end,
           granularity: grain,
           projectOrigin: origin?.root_url,
+          allowedHosts,
         }),
       });
     for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
@@ -311,8 +320,31 @@ function executor(displayOnly: boolean): Executor {
     await checkCancelled('snapshot write');
     await db.transaction().execute(async (trx) => {
       const verifying: string[] = [];
+      const allQuality: Record<string, Awaited<ReturnType<typeof partitionQuality>>> = {};
+      const qualityScope = {
+        workspaceId: task.workspace_id,
+        projectId,
+        start: targets.map((t) => t.start).sort(compareText)[0]!,
+        end: targets
+          .map((t) => t.end)
+          .sort(compareText)
+          .at(-1)!,
+      };
+      // Reads and writes share the snapshot transaction, so they run in order.
+      for (const dataset of p.TRAFFIC_PROJECTED_DATASETS)
+        allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset); // NOSONAR
+      if ((await partitionEpoch(trx, partitionScope)) !== epoch)
+        throw new Error('Integration partitions changed during Traffic projection; retry');
       for (const target of targets) {
-        const snapshotId = await persist(trx, task, target, coverage, displayOnly);
+        const quality: Record<string, Awaited<ReturnType<typeof partitionQuality>>> = {};
+        for (const dataset of p.TRAFFIC_PROJECTED_DATASETS) {
+          quality[dataset] = allQuality[dataset]!.filter(
+            (q) => q.day >= target.start && q.day <= target.end,
+          );
+          target.builder.partitionQuality(dataset, quality[dataset]!);
+        }
+        const evidence = { ...coverage, analytics_quality: quality };
+        const snapshotId = await persist(trx, task, target, evidence, displayOnly); // NOSONAR
         if (snapshotId && target.verifies) verifying.push(snapshotId);
       }
       await Promise.all(

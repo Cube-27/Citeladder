@@ -34,7 +34,7 @@ export type CrawlReadOptions = {
   folder?: string | null;
   resource_class?: string | null;
 };
-function verificationFilter(value?: string | null) {
+export function verificationFilter(value?: string | null) {
   if (!value) return crawlLogs.default_verification_filter;
   const items = value.split(',').sort((a, b) => a.localeCompare(b));
   if (!items.length || items.some((v) => !verificationSchema.safeParse(v).success))
@@ -98,7 +98,7 @@ function cursorParts(scope: CrawlScope, view: string, options: CrawlReadOptions)
     throw error;
   }
 }
-function pageLimit(options: CrawlReadOptions) {
+export function pageLimit(options: CrawlReadOptions) {
   const limit = options.limit ?? crawlLogs.default_page_size;
   if (!Number.isInteger(limit) || limit < 1 || limit > crawlLogs.max_page_size)
     throw new ApiError(422, 'Invalid page size');

@@ -27,6 +27,7 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
@@ -280,6 +281,76 @@ class ReferralClassification(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
+
+
+class AiReferralLandingDaily(Base):
+    """Replacement rollup from host-scoped session-attributed landing evidence."""
+
+    __tablename__ = "ai_referral_landing_daily"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "reporting_date",
+            "reporting_timezone",
+            "url_hash",
+            "ai_source",
+            name="uq_ai_referral_landing_grain",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", _FK_PROJECT],
+            ondelete="CASCADE",
+        ),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True))
+    project_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True))
+    reporting_date: Mapped[date] = mapped_column(Date)
+    reporting_timezone: Mapped[str] = mapped_column(String(128))
+    url_hash: Mapped[str] = mapped_column(String(64))
+    canonical_url: Mapped[str] = mapped_column(String(4096))
+    display_path: Mapped[str] = mapped_column(String(2048))
+    folder: Mapped[str] = mapped_column(String(2048))
+    resource_class: Mapped[str] = mapped_column(String(24))
+    ai_source: Mapped[str] = mapped_column(String(64))
+    sessions: Mapped[int] = mapped_column(Integer)
+    engaged_sessions: Mapped[int] = mapped_column(Integer)
+    key_events: Mapped[float] = mapped_column(Float)
+    analytics_quality: Mapped[list] = mapped_column(JSONB)
+    source_metric_row_ids: Mapped[list] = mapped_column(JSONB)
+    formula_version: Mapped[str] = mapped_column(String(64))
+
+
+class AiTrafficInsights(Base):
+    """Persisted bounded co-occurrence patterns, never computed during reads."""
+
+    __tablename__ = "ai_traffic_insights"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "window_start",
+            "window_end",
+            name="uq_ai_traffic_insights_window",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", _FK_PROJECT],
+            ondelete="CASCADE",
+        ),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True))
+    project_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True))
+    window_start: Mapped[date] = mapped_column(Date)
+    window_end: Mapped[date] = mapped_column(Date)
+    formula_version: Mapped[str] = mapped_column(String(64))
+    thresholds: Mapped[dict] = mapped_column(JSONB)
+    patterns: Mapped[list] = mapped_column(JSONB)
+    coverage: Mapped[dict] = mapped_column(JSONB)
+    provenance: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class AiReferralsSnapshot(Base):

@@ -23,13 +23,20 @@ type Input = {
 };
 function requestHost(mapped: MappedLog, source: Input['source']) {
   try {
-    const host = new URL(mapped.path, source.origin).hostname.toLowerCase();
+    const base = new URL(source.origin);
+    if (mapped.host) {
+      base.hostname = mapped.host;
+      if (base.hostname !== mapped.host.toLowerCase())
+        return { kind: 'lines_out_of_scope' as const };
+    }
+    const target = new URL(mapped.path, base.origin);
+    const host = target.hostname.toLowerCase();
     if (
       (mapped.host && host !== mapped.host.toLowerCase()) ||
       !strings(source.accepted_hosts).includes(host)
     )
       return { kind: 'lines_out_of_scope' as const };
-    return { kind: 'accepted' as const, host };
+    return { kind: 'accepted' as const, host, origin: target.origin };
   } catch {
     return { kind: 'lines_rejected' as const };
   }
@@ -50,7 +57,7 @@ function prepareLine(line: string, input: Input) {
   if (!bot) return { kind: 'lines_unmatched' as const, at };
   const host = requestHost(mapped, source);
   if (host.kind !== 'accepted') return { ...host, at };
-  const identity = pathIdentity(mapped.path, source.origin);
+  const identity = pathIdentity(mapped.path, host.origin);
   if (!identity || (mapped.request_id?.length ?? 0) > 255)
     return { kind: 'lines_rejected' as const, at };
   const row: Insertable<BotRequests> = {

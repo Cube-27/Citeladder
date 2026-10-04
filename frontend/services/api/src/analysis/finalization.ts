@@ -14,6 +14,7 @@ import { persistObservedCompetitors } from './observed-competitors.ts';
 import { round } from './round.ts';
 import { getLogger } from '../logging.ts';
 import { compareText } from '../text-order.ts';
+import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
 
 type ScopedTask = Selectable<AuditTasks> & { cohort: string };
 function coverage(tasks: ScopedTask[], completed: number) {
@@ -281,6 +282,7 @@ export async function finalizeAudit(
     await transitionAudit(trx, workspaceId, auditId, 'reporting', at, 'aggregating metrics');
     const status = metric.total_failed ? 'partially_completed' : 'completed';
     await transitionAudit(trx, workspaceId, auditId, status, at, `audit ${status}`);
+    await enqueueTrafficInsights(trx, { workspaceId, projectId: audit.project_id }, at);
     await auditEvent(
       trx,
       auditId,

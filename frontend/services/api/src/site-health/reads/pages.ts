@@ -23,6 +23,7 @@ import {
   type PageSort,
 } from './page-rows.ts';
 import { issueOccurrence, ruleTitle, severityOrder, type IssueRow } from './rules.ts';
+import { hash } from '../../traffic/normalization.ts';
 
 type Paging = { limit: number; cursor: string | null };
 // A pathological artifact never balloons a detail response.
@@ -273,6 +274,7 @@ export async function pageDetail(
     site_url_id: row.site_url_id,
     crawl_id: crawl.id,
     normalized_url: row.normalized_url,
+    url_hash: hash(row.normalized_url),
     display_url: row.display_url,
     title: row.title,
     analysis_status: row.analysis_status,

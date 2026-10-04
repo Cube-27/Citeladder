@@ -1623,6 +1623,8 @@ def upgrade() -> None:
         sa.Column("property_ref", sa.String(length=512), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("reporting_timezone", sa.String(length=128), nullable=True),
+        sa.Column("currency_code", sa.String(length=3), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
@@ -2217,6 +2219,7 @@ def upgrade() -> None:
         sa.Column("fetched_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("row_count", sa.Integer(), nullable=False),
         sa.Column("payload", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("extract_metadata", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
             ["workspace_id", "connection_id"],
@@ -7581,6 +7584,7 @@ def upgrade() -> None:
         sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("host", sa.String(255), nullable=False),
         sa.Column("display_path", sa.String(2048), nullable=False),
+        sa.Column("canonical_url", sa.String(4096), nullable=True),
         sa.Column("identity", sa.String(24), nullable=False),
         sa.Column("identity_reason", sa.String(32), nullable=True),
         sa.Column("url_hash", sa.String(64), nullable=True),
@@ -7670,6 +7674,7 @@ def upgrade() -> None:
         sa.Column("identity", sa.String(24), nullable=False),
         sa.Column("url_hash", sa.String(64), nullable=True),
         sa.Column("display_path", sa.String(2048), nullable=False),
+        sa.Column("canonical_url", sa.String(4096), nullable=True),
         sa.Column("folder", sa.String(2048), nullable=False),
         sa.Column("resource_class", sa.String(24), nullable=False),
         sa.Column("verification", sa.String(24), nullable=False),
@@ -7760,9 +7765,65 @@ def upgrade() -> None:
             "workspace_id", "project_id", name="uq_crawl_log_state_project"
         ),
     )
+    op.create_table(
+        "ai_referral_landing_daily",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("reporting_date", sa.Date(), nullable=False),
+        sa.Column("reporting_timezone", sa.String(128), nullable=False),
+        sa.Column("url_hash", sa.String(64), nullable=False),
+        sa.Column("canonical_url", sa.String(4096), nullable=False),
+        sa.Column("display_path", sa.String(2048), nullable=False),
+        sa.Column("folder", sa.String(2048), nullable=False),
+        sa.Column("resource_class", sa.String(24), nullable=False),
+        sa.Column("ai_source", sa.String(64), nullable=False),
+        sa.Column("sessions", sa.Integer(), nullable=False),
+        sa.Column("engaged_sessions", sa.Integer(), nullable=False),
+        sa.Column("key_events", sa.Float(), nullable=False),
+        sa.Column("analytics_quality", postgresql.JSONB(), nullable=False),
+        sa.Column("source_metric_row_ids", postgresql.JSONB(), nullable=False),
+        sa.Column("formula_version", sa.String(64), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "reporting_date", "reporting_timezone",
+            "url_hash", "ai_source", name="uq_ai_referral_landing_grain",
+        ),
+    )
+    op.create_table(
+        "ai_traffic_insights",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("window_start", sa.Date(), nullable=False),
+        sa.Column("window_end", sa.Date(), nullable=False),
+        sa.Column("formula_version", sa.String(64), nullable=False),
+        sa.Column("thresholds", postgresql.JSONB(), nullable=False),
+        sa.Column("patterns", postgresql.JSONB(), nullable=False),
+        sa.Column("coverage", postgresql.JSONB(), nullable=False),
+        sa.Column("provenance", postgresql.JSONB(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "window_start", "window_end",
+            name="uq_ai_traffic_insights_window",
+        ),
+    )
 
 
 def downgrade() -> None:
+    op.drop_table("ai_traffic_insights")
+    op.drop_table("ai_referral_landing_daily")
     op.drop_table("site_internal_link_events")
     op.drop_table("site_internal_link_runs")
     op.drop_table("enterprise_agreement_references")
