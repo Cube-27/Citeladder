@@ -34,7 +34,12 @@ def test_main_accepts_password_stdin_without_forwarding_an_argument(
 
 
 @pytest.mark.parametrize(
-    "email,password", [("invalid", "fixture-password"), ("dev@example.com", "short")]
+    "email,password",
+    [
+        ("invalid", "fixture-password"),
+        ("dev@example.com\nextra", "fixture-password"),
+        ("dev@example.com", "short"),
+    ],
 )
 def test_main_rejects_invalid_credentials_before_provisioning(
     monkeypatch: pytest.MonkeyPatch, email: str, password: str

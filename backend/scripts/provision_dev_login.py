@@ -16,8 +16,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+from email.errors import HeaderParseError
+from email.headerregistry import Address
 
-from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 
@@ -122,8 +123,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--counter-allowance", required=True, type=int)
     args = parser.parse_args(argv)
     try:
-        email = str(TypeAdapter(EmailStr).validate_python(args.email))
-    except ValidationError:
+        address = Address(addr_spec=args.email.strip())
+        if not address.username or not address.domain:
+            raise ValueError("incomplete email address")
+        email = address.addr_spec
+    except (ValueError, HeaderParseError):
         parser.error("a valid email address is required")
     password = args.password
     if args.password_stdin:
