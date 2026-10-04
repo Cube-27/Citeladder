@@ -64,11 +64,14 @@ export class Fixtures {
 
   /** A tenant workspace created with its Owner, as workspace creation does. */
   async ownedWorkspace(ownerId: string): Promise<string> {
-    const id = await this.db.transaction().execute(async (trx) => {
+    const insert = async (trx: Database) => {
       const workspaceId = await this.insertWorkspace(trx, false);
       await this.insertMember(trx, workspaceId, ownerId, 'owner');
       return workspaceId;
-    });
+    };
+    const id = this.db.isTransaction
+      ? await insert(this.db)
+      : await this.db.transaction().execute(insert);
     this.workspaces.push(id);
     return id;
   }

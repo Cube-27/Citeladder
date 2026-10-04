@@ -1,7 +1,7 @@
 /** Action cutover: real routes, authorization, concurrency and frozen evidence. */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import {
   actionDetailSchema,
@@ -13,7 +13,6 @@ import { settlePlacements } from '../src/source-pages/placement-settlement.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
-vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 const config = testConfig();
 const db = testDatabase(config);
 const app = createApp(config, db);
