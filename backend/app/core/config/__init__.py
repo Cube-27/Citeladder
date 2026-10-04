@@ -94,14 +94,6 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("DEMO_EXPIRES_AT", "demo_expires_at"),
     )
-    demo_monitored_url_limit: int = Field(
-        default=50_000,
-        ge=1,
-        le=50_000,
-        validation_alias=AliasChoices(
-            "DEMO_MONITORED_URL_LIMIT", "demo_monitored_url_limit"
-        ),
-    )
     dev_login_email: str = Field(
         default="dev@citeladder.com",
         validation_alias=AliasChoices("DEV_LOGIN_EMAIL", "dev_login_email"),
@@ -111,14 +103,6 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DEV_LOGIN_PASSWORD", "dev_login_password"),
         repr=False,
         json_schema_extra={"secret": True},
-    )
-    dev_login_counter_allowance: int = Field(
-        default=200,
-        ge=1,
-        le=50_000,
-        validation_alias=AliasChoices(
-            "DEV_LOGIN_COUNTER_ALLOWANCE", "dev_login_counter_allowance"
-        ),
     )
     encryption_key: str = Field(
         default="replace-with-32-byte-minimum-secret",

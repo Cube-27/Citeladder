@@ -5,11 +5,7 @@ description = "CiteLadder AI-Visibility backend"
 requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.16.5,<2",
-  "argon2-cffi>=25.1.0,<26",
   "asyncpg>=0.30.0,<1",
-  "cryptography>=50.0.0,<51",
-  "httpx>=0.28.1,<1",
-  "joserfc>=1.6.8,<2",
   "pydantic>=2.13,<3",
   "pydantic-settings>=2.10.0,<3",
   "sqlalchemy[asyncio]>=2.1.1,<3",
@@ -177,12 +173,9 @@ DEP002 = [
 [tool.mypy]
 python_version = "3.12"
 # Operational scripts are not part of the runtime package (setuptools ships
-# ``app*`` only, and the API/worker image copies ``backend/app``). They are typechecked here
+# ``app*`` only). They are typechecked here
 # anyway: an operational script that silently rots is a script nobody can run
-# on the day they need it. ``scripts`` joining this list immediately caught two
-# dead seams in ``seed_dev_data`` -- a monkeypatch onto an attribute that had
-# moved packages, and an ``httpx.MockTransport`` passed where the Site Health
-# worker wants an ``AcquisitionTransport``, both of which broke the seeder.
+# on the day they need it.
 files = ["app", "scripts"]
 plugins = ["pydantic.mypy"]
 warn_unused_ignores = true

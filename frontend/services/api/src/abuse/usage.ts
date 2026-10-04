@@ -1,9 +1,7 @@
 /**
- * Durable per-workspace usage windows (`usage_windows`), shared with the
- * Python limiter (`app/domain/abuse/service.py`) while both stacks count the
- * same operations: the fixed window start and conflict target are identical,
- * and the subject hash matches Python's `casefold()` for ASCII subjects (JS has
- * no full case folding), so one budget spans both.
+ * Durable per-workspace usage windows (`usage_windows`), preserving the fixed
+ * window and subject identity of the retired Python limiter. ASCII subject
+ * folding keeps existing counters readable across the cutover.
  *
  * A request consumes its budget in its own committed transaction before the
  * work it guards starts, so a failed import still spends its attempt.

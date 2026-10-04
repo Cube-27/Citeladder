@@ -673,14 +673,6 @@
     "importer_version": "commerce-catalog-importer-1",
     "projector_version": "commerce-projector-1"
   },
-  "auth": {
-    "password": {
-      "memoryCost": 65536,
-      "timeCost": 3,
-      "parallelism": 4,
-      "outputLen": 32
-    }
-  },
   "site_health_runtime": {
     "settings": {
       "automatic_page_limit": {
