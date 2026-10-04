@@ -166,11 +166,16 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
           f.occurred_date >= window.start &&
           f.occurred_date <= window.end,
       );
+      const extras = referralExtras(evidence, window.start, window.end);
       const content = {
         preset_window_days: window.presetDays,
         metrics: JSON.stringify({
           ...projection.metrics,
-          ...referralExtras(evidence, window.start, window.end),
+          ...extras,
+          landing: extras.landing.map(({ source_metric_row_ids, ...landing }) => ({
+            ...landing,
+            source_metric_row_count: source_metric_row_ids.length,
+          })),
           ...Object.fromEntries(
             ['referral_volume', 'referral_share'].map((series) => [
               series,
@@ -182,17 +187,18 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
                     (window.granularity !== 'day' || q.day === point.date),
                 );
                 const bad = days.some((q) => q.flags.length > 0 || q.revision === null);
+                let value = point.value;
+                if (bad && value === 0) value = null;
+                else if (
+                  series === 'referral_volume' &&
+                  value === null &&
+                  !bad &&
+                  !classificationPending
+                )
+                  value = 0;
                 return {
                   ...point,
-                  value:
-                    bad && point.value === 0
-                      ? null
-                      : series === 'referral_volume' &&
-                          point.value === null &&
-                          !bad &&
-                          !classificationPending
-                        ? 0
-                        : point.value,
+                  value,
                 };
               }),
             ]),

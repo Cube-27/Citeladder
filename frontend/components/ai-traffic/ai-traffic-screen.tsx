@@ -4,7 +4,7 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useTrafficData, type TrafficDataTab } from '@/lib/ai-traffic/use-traffic-data';
 import { PageShell } from '@/components/layout/page-shell';
 import { PageLoading } from '@/components/layout/page-loading';
-import { TabsRoot, TabsBar } from '@/components/ui/tabs';
+import { TabsRoot, TabsBar, TabPanel } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
 import { CursorPager } from '@/components/ui/cursor-pager';
@@ -12,7 +12,6 @@ import { AiReferralsScreen } from './referrals-screen';
 import { TrafficControls } from './traffic-controls';
 import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-views';
 import { TrafficPages } from './pages-view';
-import { TabPanel } from '@/components/ui/tabs';
 export { CrawlSignalPanel } from './traffic-views';
 const tabCodec = stringUrlCodec(
   TRAFFIC_TABS.map((t) => t.value),
@@ -58,20 +57,7 @@ function TrafficDataView({ tab, tabs }: Readonly<{ tab: TrafficDataTab; tabs: Re
       {tab === 'activity' && activity.data ? (
         <TrafficActivity data={activity.data} catalog={catalog.data} />
       ) : null}
-      {tab === 'pages' && model.pages.data ? (
-        <TabPanel value="pages">
-          <TrafficPages
-            data={model.pages.data}
-            filters={{
-              range: model.selection.range,
-              verification:
-                model.selection.verification === 'default'
-                  ? undefined
-                  : model.selection.verification,
-            }}
-          />
-        </TabPanel>
-      ) : null}
+      {tab === 'pages' ? <PagesPanel model={model} /> : null}
       {tab !== 'overview' ? (
         <div className="flex justify-end gap-2">
           <CursorPager
@@ -84,6 +70,21 @@ function TrafficDataView({ tab, tabs }: Readonly<{ tab: TrafficDataTab; tabs: Re
         </div>
       ) : null}
     </PageShell>
+  );
+}
+function PagesPanel({ model }: Readonly<{ model: ReturnType<typeof useTrafficData> }>) {
+  const { pages, selection } = model;
+  if (pages.isError || !pages.data) return null;
+  return (
+    <TabPanel value="pages">
+      <TrafficPages
+        data={pages.data}
+        filters={{
+          range: selection.range,
+          verification: selection.verification === 'default' ? undefined : selection.verification,
+        }}
+      />
+    </TabPanel>
   );
 }
 function TrafficStatus({ model }: Readonly<{ model: ReturnType<typeof useTrafficData> }>) {

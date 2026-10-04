@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
-import { workspaceDestination } from '@/lib/navigation/project-destination';
+import { projectDestination } from '@/lib/navigation/project-destination';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -44,7 +44,7 @@ export function InsightStrip({
           <div key={r.pattern} className="grid gap-2">
             <p>{r.copy}</p>
             <Link
-              to={workspaceDestination(
+              to={projectDestination(
                 '/ai-traffic',
                 new URLSearchParams({
                   tab: 'pages',
@@ -53,7 +53,7 @@ export function InsightStrip({
                     r.pattern === 'key_event_concentration' ? 'key_events_desc' : 'requests_desc',
                   pattern: r.pattern,
                 }),
-                workspaceId,
+                projectId,
               )}
             >
               Inspect pages

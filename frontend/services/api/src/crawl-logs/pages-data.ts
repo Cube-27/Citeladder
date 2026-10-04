@@ -1,5 +1,5 @@
 /** Each population reaches one row per path hash before the cross-signal join. */
-import { sql } from 'kysely';
+import { sql, type RawBuilder } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { CrawlScope } from './state.ts';
 import { crawlWindow, verificationFilter, type CrawlReadOptions } from './reads.ts';
@@ -50,6 +50,17 @@ export type JoinedPage = {
   citation_ids: unknown;
   audit_ids: unknown;
 };
+function pageCursor(sortValue: RawBuilder<unknown>, ascending: boolean, after: string[]) {
+  if (!after.length) return sql`true`;
+  if (
+    after.length !== 2 ||
+    !/^[a-f0-9]{64}$/u.test(after[1]!) ||
+    (!ascending && !Number.isFinite(Number(after[0])))
+  )
+    throw new ApiError(422, 'Invalid Pages cursor');
+  if (ascending) return sql`(${sortValue},url_hash)>(${after[0]},${after[1]})`;
+  return sql`(${sortValue},url_hash)<(${Number(after[0])},${after[1]})`;
+}
 export async function pageDataset(db: Database, scope: CrawlScope, options: PageOptions = {}) {
   const w = crawlWindow(options),
     verification = verificationFilter(options.verification);
@@ -85,19 +96,7 @@ export async function pageDataset(db: Database, scope: CrawlScope, options: Page
     ),
     sql` `,
   )} else 'page' end`;
-  const after = options.after ?? [];
-  if (
-    after.length &&
-    (after.length !== 2 ||
-      !/^[a-f0-9]{64}$/u.test(after[1]!) ||
-      (!ascending && !Number.isFinite(Number(after[0]))))
-  )
-    throw new ApiError(422, 'Invalid Pages cursor');
-  const cursor = after.length
-    ? ascending
-      ? sql`(${sortValue},url_hash)>(${after[0]},${after[1]})`
-      : sql`(${sortValue},url_hash)<(${Number(after[0])},${after[1]})`
-    : sql`true`;
+  const cursor = pageCursor(sortValue, ascending, options.after ?? []);
   const rows = await sql<JoinedPage>`with
     bot as (select url_hash,min(canonical_url) as canonical_url,min(display_path) as display_path,min(folder) as folder,min(resource_class) as resource_class,sum(requests)::integer as requests,
       sum(requests) filter(where verification='verified' and bot_id in (select value from jsonb_array_elements_text(${JSON.stringify(aiBots())}::jsonb)))::integer as verified_requests,

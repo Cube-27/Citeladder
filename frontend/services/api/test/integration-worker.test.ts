@@ -12,6 +12,8 @@ import { referralEventFields } from '../src/referrals/events.ts';
 import { seedProject } from './referral-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
 import { setLogSink } from '../src/logging.ts';
+import { crawlLogs } from '../src/config/crawl-logs.ts';
+import { policy } from '../src/config.ts';
 
 const db = testDatabase();
 const fixtures = new Fixtures(db);
@@ -187,7 +189,22 @@ describe('integration worker paging and resume', () => {
         };
       },
     };
-    await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+    const originalRetention = crawlLogs.retention_days;
+    crawlLogs.retention_days = policy.referrals.retention_days + 30;
+    try {
+      await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+    } finally {
+      crawlLogs.retention_days = originalRetention;
+    }
+    const rollup = await db
+      .selectFrom('analytics_tasks')
+      .select('payload')
+      .where('project_id', '=', run.projectId)
+      .where('task_kind', '=', 'crawl_log_rollup_refresh')
+      .executeTakeFirstOrThrow();
+    expect(
+      (rollup.payload as { reporting_dates: string[] }).reporting_dates.length,
+    ).toBeGreaterThan(policy.referrals.retention_days);
     expect(
       await db
         .selectFrom('integration_property_mappings')

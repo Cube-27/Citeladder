@@ -90,8 +90,13 @@ GA4 reports retain property `timeZone`, `currencyCode`, thresholding,
 other-row loss and sampling metadata on every immutable artifact. The mapping
 exposes the latest timezone/currency by revision, including when an older sync
 finishes later. Quality flags travel with projections;
-flagged or unavailable evidence cannot establish zero. Captured timezone updates
-the existing Crawl Logs reporting state and queues a rebuild inside raw retention;
+flagged or unavailable evidence cannot establish zero.
+Legacy landing extracts with incompatible recorded dimensions are excluded from
+complete partition selection and disclose `extract_contract_mismatch`; a compatible
+prior revision is retained where available. Otherwise the landing leg remains
+unavailable until a compatible resync completes.
+Captured timezone updates the existing Crawl Logs reporting state and queues
+a rebuild inside raw retention;
 older daily rollups retain their original timezone.
 
 `ga4_landing_daily` uses landingPage × sessionSource × sessionMedium × hostName ×
@@ -100,6 +105,8 @@ counts. Unresolvable or secret-redacted paths cannot join and contribute to
 unattributed landing sessions. Source/medium and channel reports remain
 property-wide, labelled on their consuming views. Every referral fold uses
 session-scoped attribution; first-user and event-scoped sources are not substituted.
+Referral snapshot metrics retain contributing row counts and deduplicated,
+bounded artifact IDs. Exact landing metric-row IDs remain on the daily rollups.
 
 ## Projection chain
 

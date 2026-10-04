@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
+import { crawlLogs } from '../config/crawl-logs.ts';
 import { queueRecovery } from '../config/queue-recovery.ts';
 import { recoverIntegrationLeases } from '../queue/recovery.ts';
 import { maintainLease } from '../queue/heartbeat.ts';
@@ -489,7 +490,7 @@ export class IntegrationWorker {
               .where('project_id', '=', run.project_id)
               .execute();
             await enqueueRollup(trx, scope, new Date(), {
-              first: new Date(Date.now() - (policy.referrals.retention_days - 1) * 86400000),
+              first: new Date(Date.now() - (crawlLogs.retention_days - 1) * 86400000),
               last: new Date(),
             });
           }

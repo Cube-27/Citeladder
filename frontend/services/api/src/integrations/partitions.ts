@@ -3,6 +3,14 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
+import { policy } from '../config.ts';
+
+const landingDimensions = JSON.stringify(policy.integrations.datasets.ga4_landing_daily.dimensions);
+const incompatibleLanding = (
+  alias: string,
+) => sql<boolean>`${sql.ref(`${alias}.dataset`)}='ga4_landing_daily'
+  and ${sql.ref(`${alias}.query_snapshot`)} ? 'dimensions'
+  and ${sql.ref(`${alias}.query_snapshot`)}->'dimensions' <> ${landingDimensions}::jsonb`;
 
 // A successful run completed every selected dataset. A terminal page can also
 // complete one dataset before another dataset in that run fails. Raw artifacts
@@ -10,7 +18,7 @@ import { compareText } from '../text-order.ts';
 const complete = sql<boolean>`a.id is not null and (r.status = 'succeeded' or a.query_snapshot->>'partition_complete' = 'true')
   and not exists (select 1 from integration_import_artifacts bad
     where bad.workspace_id=r.workspace_id and bad.sync_run_id=r.id and bad.dataset=a.dataset
-      and (bad.extract_metadata->>'truncated' = 'true'))`;
+      and (bad.extract_metadata->>'truncated' = 'true' or ${incompatibleLanding('bad')}))`;
 
 /** Apply to an integration_metric_rows query (plain table or the given alias). */
 export function selectedPartition(alias = 'integration_metric_rows') {
@@ -65,7 +73,8 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
     excluded_hosts: number;
   }>`
     with days as (select d::date as day from generate_series(${scope.start}::date,${scope.end}::date,interval '1 day') d),
-    revisions as (select d.day,r.resync_seq,r.property_ref,a.id,a.extract_metadata,${complete} as complete
+    revisions as (select d.day,r.resync_seq,r.property_ref,a.id,a.extract_metadata,${complete} as complete,
+      ${incompatibleLanding('a')} as incompatible
       from days d join integration_sync_runs r on d.day between r.window_start and r.window_end
       join integration_connections connection on connection.id=r.connection_id and connection.workspace_id=r.workspace_id
       left join integration_import_artifacts a on a.workspace_id=r.workspace_id and a.sync_run_id=r.id and a.dataset=${dataset}
@@ -86,6 +95,8 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
       left join revisions v on v.day=s.day and v.property_ref=s.property_ref and v.resync_seq=s.revision
       left join lateral (select jsonb_array_elements_text(coalesce(v.extract_metadata->'analytics_quality','[]')) as flag
         union select 'partition_fallback' where s.newest>s.revision
+        union select 'extract_contract_mismatch' where exists(select 1 from revisions old
+          where old.day=d.day and old.property_ref=s.property_ref and old.resync_seq=s.newest and old.incompatible)
         union select 'unavailable' where s.revision is null) f on true
     group by d.day order by d.day`.execute(db);
   return result.rows.map((r) => ({

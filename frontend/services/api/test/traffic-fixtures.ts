@@ -100,6 +100,9 @@ export async function metric(
     .where('dataset', '=', dataset)
     .executeTakeFirst();
   if (!artifact) {
+    let provider = 'gsc';
+    if (dataset.startsWith('ga4_')) provider = 'ga4';
+    else if (dataset.startsWith('bing_')) provider = 'bing';
     const originalArtifact = await db
       .selectFrom('integration_import_artifacts')
       .selectAll()
@@ -112,7 +115,7 @@ export async function metric(
         id: randomUUID(),
         sync_run_id: run.id,
         dataset,
-        provider: dataset.startsWith('ga4_') ? 'ga4' : dataset.startsWith('bing_') ? 'bing' : 'gsc',
+        provider,
       })
       .returningAll()
       .executeTakeFirstOrThrow();

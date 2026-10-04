@@ -299,7 +299,7 @@ class AiReferralLandingDaily(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id"],
-            ["projects.workspace_id", "projects.id"],
+            ["projects.workspace_id", _FK_PROJECT],
             ondelete="CASCADE",
         ),
     )
@@ -336,7 +336,7 @@ class AiTrafficInsights(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id"],
-            ["projects.workspace_id", "projects.id"],
+            ["projects.workspace_id", _FK_PROJECT],
             ondelete="CASCADE",
         ),
     )

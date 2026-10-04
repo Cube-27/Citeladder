@@ -6,6 +6,7 @@ import { seedImport } from './referral-fixtures.ts';
 import { task, requests } from './traffic-fixtures.ts';
 import { createSource } from '../src/crawl-logs/sources.ts';
 import { crawlLogs } from '../src/config/crawl-logs.ts';
+import { aiTraffic } from '../src/config/ai-traffic.ts';
 import { ingest } from '../src/crawl-logs/ingest.ts';
 import { refreshCrawlLogs } from '../src/crawl-logs/rollup.ts';
 import { refreshAiReferralsSnapshot } from '../src/referrals/snapshot.ts';
@@ -159,6 +160,40 @@ afterAll(async () => {
 });
 
 describe('A3 persisted Pages join', () => {
+  it('distinguishes pending insight filters from a persisted empty pattern', async () => {
+    const options = { ...filters, pattern: 'crawled_without_referrals' };
+    await expect(pagesRead(db, scope(), options)).rejects.toMatchObject({
+      status: 409,
+      retryable: true,
+    });
+    await refreshInsightWindow(db, scope(), filters);
+    expect((await pagesRead(db, scope(), options)).items).toEqual([]);
+  });
+  it('selects the highest detail aggregates deterministically when capped, including ties', async () => {
+    const originalCap = aiTraffic.max_timeline_items;
+    aiTraffic.max_timeline_items = 1;
+    try {
+      const detail = await urlRead(db, scope(), guide, filters);
+      expect(detail.crawls.map((r) => r.bot_id)).toEqual(['openai_oai_searchbot']);
+      expect(detail.referrals.map((r) => [r.ai_source, r.sessions])).toEqual([['claude', 5]]);
+      expect(detail.provenance.bounded).toBe(true);
+      await db
+        .updateTable('ai_referral_landing_daily')
+        .set({ sessions: 5 })
+        .where('project_id', '=', seed.projectId)
+        .where('ai_source', '=', 'chatgpt')
+        .execute();
+      expect((await urlRead(db, scope(), guide, filters)).referrals[0]?.ai_source).toBe('chatgpt');
+    } finally {
+      aiTraffic.max_timeline_items = originalCap;
+      await db
+        .updateTable('ai_referral_landing_daily')
+        .set({ sessions: 3 })
+        .where('project_id', '=', seed.projectId)
+        .where('ai_source', '=', 'chatgpt')
+        .execute();
+    }
+  });
   it('aggregates bots, sources and citations independently, gates inventory coverage and preserves detail totals', async () => {
     const result = await pagesRead(db, scope(), filters),
       row = result.items.find((r) => r.url_hash === guide)!;
@@ -454,6 +489,12 @@ describe('A3 persisted insight gates', () => {
     ).toEqual([]);
     expect(insightPatterns(examples, { ...quality, ga4Complete: false })).toEqual([]);
     expect(
+      insightPatterns(examples, {
+        ...quality,
+        quality: quality.quality.map((q) => ({ ...q, flags: ['timezone_mismatch'] })),
+      }),
+    ).toEqual([]);
+    expect(
       insightPatterns(
         examples.map((r) => ({ ...r, referral_timezones: ['Asia/Kolkata'] })),
         quality,
@@ -472,6 +513,20 @@ describe('A3 persisted insight gates', () => {
       .execute();
     expect(pending).toHaveLength(1);
     expect(pending[0]!.available_at.getTime()).toBeGreaterThan(now.getTime());
+    await db
+      .transaction()
+      .execute((trx) =>
+        enqueueTrafficInsights(trx, scope(), new Date(pending[0]!.available_at.getTime() + 1000)),
+      );
+    expect(
+      (
+        await db
+          .selectFrom('analytics_tasks')
+          .select('available_at')
+          .where('id', '=', pending[0]!.id)
+          .executeTakeFirstOrThrow()
+      ).available_at,
+    ).toEqual(pending[0]!.available_at);
     await refreshTrafficInsights(pending[0]!, context);
     const saved = await db
       .selectFrom('ai_traffic_insights')

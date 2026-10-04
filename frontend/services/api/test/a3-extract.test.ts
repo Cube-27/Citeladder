@@ -11,6 +11,8 @@ import { refreshAiReferralsSnapshot } from '../src/referrals/snapshot.ts';
 import { partitionQuality, selectedPartition } from '../src/integrations/partitions.ts';
 import { getAiReferrals } from '../src/analytics/ai-referrals.ts';
 import { pagesRead } from '../src/crawl-logs/pages.ts';
+import { referralEvidence, referralExtras } from '../src/referrals/landing.ts';
+import { policy } from '../src/config.ts';
 
 const db = testDatabase(),
   fixtures = new Fixtures(db),
@@ -22,6 +24,74 @@ const providers = new Map<string, ImportSeed>();
 beforeEach(async () => {
   t = await tenant(db, fixtures);
   providers.clear();
+});
+
+it('falls back from a legacy landing contract and flags wholly incompatible evidence', async () => {
+  const current = await imported('ga4_landing_daily');
+  const retained = await row(current, ['/guide', 'chatgpt.com', 'referral', 'example.test', day], {
+    sessions: 4,
+    keyEvents: 1,
+  });
+  const legacy = await imported('ga4_landing_daily', current, 1);
+  await row(legacy, ['/guide', 'chatgpt.com', 'referral', day], { sessions: 100 });
+  const oldDimensions = ['landingPage', 'sessionSource', 'sessionMedium', 'date'];
+  await db
+    .updateTable('integration_import_artifacts')
+    .set({ query_snapshot: JSON.stringify({ dimensions: oldDimensions }) })
+    .where('id', '=', legacy.artifactId)
+    .execute();
+  const scope = { workspaceId: t.workspaceId, projectId: t.projectId, start: day, end: day };
+  const evidence = await referralEvidence(db, scope);
+  expect(evidence.rows.map((r) => r.id)).toEqual([retained]);
+  expect(evidence.quality.ga4_landing_daily?.[0]).toMatchObject({
+    revision: 0,
+    flags: expect.arrayContaining(['extract_contract_mismatch', 'partition_fallback']),
+  });
+  await db
+    .updateTable('integration_import_artifacts')
+    .set({ query_snapshot: JSON.stringify({ dimensions: oldDimensions }) })
+    .where('id', '=', current.artifactId)
+    .execute();
+  const unavailable = await referralEvidence(db, scope);
+  expect(unavailable.rows).toEqual([]);
+  expect(unavailable.quality.ga4_landing_daily?.[0]).toMatchObject({
+    revision: null,
+    flags: expect.arrayContaining(['extract_contract_mismatch', 'unavailable']),
+  });
+  expect(referralExtras(unavailable, day, day).unattributed_landing).toBeNull();
+});
+
+it('joins mixed-case owned hosts and bounds deduplicated snapshot provenance without losing rollup IDs', async () => {
+  const importedLanding = await imported('ga4_landing_daily');
+  const metricId = await row(
+    importedLanding,
+    ['/guide?token=removed', 'chatgpt.com', 'referral', 'ExAmPlE.TeSt', day],
+    { sessions: 4, keyEvents: 1 },
+  );
+  const evidence = await referralEvidence(db, {
+    workspaceId: t.workspaceId,
+    projectId: t.projectId,
+    start: day,
+    end: day,
+  });
+  const extras = referralExtras(evidence, day, day);
+  expect(extras.landing[0]).toMatchObject({
+    canonical_url: 'https://example.test/guide',
+    sessions: 4,
+    source_metric_row_ids: [metricId],
+  });
+  const metric = evidence.rows[0]!;
+  const rows = Array.from({ length: policy.traffic.TRAFFIC_PROVENANCE_ID_LIMIT + 1 }, () => ({
+    ...metric,
+    id: randomUUID(),
+    source_artifact_id: randomUUID(),
+  }));
+  const bounded = referralExtras({ ...evidence, rows: [...rows, rows[0]!] }, day, day);
+  expect(bounded.source_metric_row_count).toBe(rows.length + 1);
+  expect(bounded.source_artifact_ids).toHaveLength(policy.traffic.TRAFFIC_PROVENANCE_ID_LIMIT);
+  expect(new Set(bounded.source_artifact_ids).size).toBe(bounded.source_artifact_ids.length);
+  expect(bounded).not.toHaveProperty('source_metric_row_ids');
+  expect(bounded.landing[0]?.source_metric_row_ids).toHaveLength(rows.length + 1);
 });
 afterAll(async () => {
   await fixtures.cleanup();

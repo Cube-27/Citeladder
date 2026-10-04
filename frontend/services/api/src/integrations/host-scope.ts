@@ -22,8 +22,9 @@ export async function projectHosts(db: Database, workspaceId: string, projectId:
   ]);
 }
 export function landingPage(path: string, host: string, hosts: ReadonlySet<string>) {
-  if (!hosts.has(host.toLowerCase()) || path === '(not set)') return null;
-  const origin = `https://${host}`;
+  const normalizedHost = host.toLowerCase();
+  if (!hosts.has(normalizedHost) || path === '(not set)') return null;
+  const origin = `https://${normalizedHost}`;
   const page = canonicalPage(path.split(/[?#]/u)[0]!, origin);
   return page && new URL(page).origin === origin && pathIdentity(page, origin)?.identity === 'exact'
     ? page

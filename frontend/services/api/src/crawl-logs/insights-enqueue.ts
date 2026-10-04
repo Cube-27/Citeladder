@@ -23,7 +23,9 @@ export async function enqueueTrafficInsights(db: Database, scope: CrawlScope, no
   if (pending) {
     await db
       .updateTable('analytics_tasks')
-      .set({ available_at: new Date(now.getTime() + aiTraffic.refresh_delay_seconds * 1000) })
+      .set({
+        available_at: sql<Date>`least(available_at, ${new Date(now.getTime() + aiTraffic.refresh_delay_seconds * 1000)}::timestamptz)`,
+      })
       .where('workspace_id', '=', scope.workspaceId)
       .where('id', '=', pending.id)
       .execute();

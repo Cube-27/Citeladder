@@ -6,6 +6,7 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { AiTrafficScreen, CrawlSignalPanel } from './ai-traffic-screen';
+import { InsightStrip } from './insight-strip';
 const project = makeProject({
   id: '88888888-8888-4888-8888-888888888888',
   workspace_id: '11111111-1111-4111-8111-111111111111',
@@ -48,6 +49,40 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 describe('AI Traffic state and navigation', () => {
+  it('carries the insight project and filters into the Pages destination', async () => {
+    mswServer.use(
+      http.get(root + '/ai-traffic/insights', () =>
+        HttpResponse.json({
+          snapshot_id: 'saved',
+          window_start: '2026-10-01',
+          window_end: '2026-10-04',
+          formula_version: '1',
+          patterns: [
+            {
+              pattern: 'key_event_concentration',
+              copy: 'Key events co-occurred on these pages.',
+              url_hashes: [],
+              numbers: { key_events: 10 },
+              coverage: { ga4: 'complete' },
+            },
+          ],
+          coverage: { crawl: 'complete', ga4_complete: true, notice: null },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <InsightStrip projectId={project.id} workspaceId={project.workspace_id} range="90d" />,
+    );
+    const link = await screen.findByRole('link', { name: 'Inspect pages' });
+    const destination = new URL(link.getAttribute('href')!, window.location.origin);
+    expect(Object.fromEntries(destination.searchParams)).toEqual({
+      project: project.id,
+      tab: 'pages',
+      range: '90d',
+      sort: 'key_events_desc',
+      pattern: 'key_event_concentration',
+    });
+  });
   it('keeps missing, awaiting, incomplete and measured zero distinct', () => {
     const view = renderWithProviders(
       <CrawlSignalPanel data={{ ...crawl, connection: 'not_connected' }} />,
@@ -206,6 +241,12 @@ describe('AI Traffic state and navigation', () => {
     expect(exportedPages.value?.get('sort')).toBe('sessions_desc');
     await user.click(screen.getByRole('button', { name: '/page' }));
     const panel = await screen.findByRole('dialog', { name: '/page' });
+    expect(
+      new URL(
+        within(panel).getByRole('link', { name: 'Referrals' }).getAttribute('href')!,
+        window.location.origin,
+      ).searchParams.get('project'),
+    ).toBe(project.id);
     expect(within(panel).getByText(/0 requests · zero/)).toBeVisible();
     expect(within(panel).getByText(/Unavailable AI referral sessions · flagged/)).toBeVisible();
     expect(within(panel).getByText(/Unavailable tracked citations · not connected/)).toBeVisible();

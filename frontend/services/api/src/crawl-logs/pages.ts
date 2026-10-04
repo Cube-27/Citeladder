@@ -81,11 +81,7 @@ export async function pageContext(db: Database, scope: CrawlScope, options: Craw
     crawlComplete: ['complete', 'declared_complete'].includes(crawl.coverage),
   };
 }
-function pageRow(
-  r: JoinedPage,
-  context: Awaited<ReturnType<typeof pageContext>>,
-  hasInventory: boolean,
-) {
+export function pageComparable(r: JoinedPage, context: Awaited<ReturnType<typeof pageContext>>) {
   const { crawl, quality } = context;
   const timezone = [
     ...new Set([
@@ -95,13 +91,22 @@ function pageRow(
       ...quality.map((q) => q.reporting_timezone).filter((v): v is string => !!v),
     ]),
   ];
-  const mismatch =
+  return !(
     timezone.length > 1 ||
     quality.some((q) => q.flags.includes('timezone_mismatch')) ||
     (r.requests !== null &&
       quality.some(
         (q) => q.reporting_timezone && q.reporting_timezone !== crawl.reporting_timezone,
-      ));
+      ))
+  );
+}
+function pageRow(
+  r: JoinedPage,
+  context: Awaited<ReturnType<typeof pageContext>>,
+  hasInventory: boolean,
+) {
+  const { crawl, quality } = context;
+  const comparable = pageComparable(r, context);
   const leg = (
     value: number | null,
     available: boolean,
@@ -113,7 +118,7 @@ function pageRow(
     if (!comparable)
       return {
         state: 'non_comparable',
-        value: flags.length && value === 0 ? null : value,
+        value: flags.length > 0 && value === 0 ? null : value,
         coverage,
         reason: 'timezone_mismatch',
       };
@@ -126,8 +131,10 @@ function pageRow(
       };
     if (value !== null && value > 0) return { state: 'value', value, coverage, reason: null };
     if (available) return { state: 'zero', value: 0, coverage, reason: null };
+    let state: Leg['state'] = 'not_connected';
+    if (connected) state = coverage === 'unknown' ? 'unknown' : 'unavailable';
     return {
-      state: connected ? (coverage === 'unknown' ? 'unknown' : 'unavailable') : 'not_connected',
+      state,
       value: null,
       coverage,
       reason: connected ? 'incomplete_coverage' : null,
@@ -137,6 +144,9 @@ function pageRow(
     ...strings(r.analytics_quality),
     ...quality.flatMap((q) => q.flags).filter((f) => f !== 'unavailable'),
   ];
+  let keyEvents = r.key_events;
+  if (keyEvents === null) keyEvents = context.ga4Complete ? 0 : null;
+  else if (keyEvents === 0 && flags.length > 0) keyEvents = null;
   return {
     url_hash: r.url_hash,
     canonical_url: r.canonical_url,
@@ -149,7 +159,7 @@ function pageRow(
       crawl.connection !== 'not_connected',
       crawl.coverage,
       [],
-      !mismatch,
+      comparable,
     ),
     referrals: leg(
       r.sessions,
@@ -157,18 +167,11 @@ function pageRow(
       context.ga4Connected,
       context.ga4Complete ? 'complete' : 'partial',
       flags,
-      !mismatch,
+      comparable,
     ),
     citations: leg(r.citations, context.citationsAvailable, context.citationsAvailable, null),
     findings: leg(r.findings, r.findings !== null, hasInventory, null),
-    key_events:
-      r.key_events === null
-        ? context.ga4Complete
-          ? 0
-          : null
-        : r.key_events === 0 && flags.length
-          ? null
-          : r.key_events,
+    key_events: keyEvents,
     errors_4xx: r.errors_4xx ?? (context.crawlComplete ? 0 : null),
     errors_5xx: r.errors_5xx ?? (context.crawlComplete ? 0 : null),
     last_crawl: r.last_crawl,
@@ -195,8 +198,10 @@ async function observedCoverage(
     db,
   );
   const counts = result.rows[0]!;
+  let state = 'unavailable';
+  if (crawl && complete) state = counts.known ? 'value' : 'unknown';
   return {
-    state: !crawl ? 'unavailable' : !complete ? 'unavailable' : counts.known ? 'value' : 'unknown',
+    state,
     share: complete && counts.known ? counts.observed / counts.known : null,
     known_pages: counts.known,
     observed_pages: complete ? counts.observed : null,
@@ -232,6 +237,10 @@ export async function pagesRead(db: Database, scope: CrawlScope, options: PageOp
       .where('window_end', '=', sql<Date>`${w.end}::date`)
       .where('formula_version', '=', aiTraffic.formula_version)
       .executeTakeFirst();
+    if (!saved)
+      throw new ApiError(409, 'Insights are awaiting a persisted refresh. Try again shortly.', {
+        retryable: true,
+      });
     const patterns = Array.isArray(saved?.patterns) ? saved.patterns : [];
     const match = patterns.find(
       (r) => typeof r === 'object' && r !== null && 'pattern' in r && r.pattern === options.pattern,
@@ -281,17 +290,15 @@ export async function urlRead(
     sql`select bot_id,to_char(min(first_seen_at) at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as first_seen,
       to_char(max(last_seen_at) at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as last_seen,sum(requests)::integer as requests,jsonb_agg(id) as source_rollup_ids
       from bot_activity_daily where workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid and url_hash=${urlHash}
-      and reporting_date between ${w.start}::date and ${w.end}::date and verification=any(${verificationFilter(options.verification)}::text[]) group by bot_id limit ${cap + 1}`.execute(
-      db,
-    ),
+      and reporting_date between ${w.start}::date and ${w.end}::date and verification=any(${verificationFilter(options.verification)}::text[])
+      group by bot_id order by sum(requests) desc,bot_id asc limit ${cap + 1}`.execute(db),
     sql`select ai_source,to_char(min(reporting_date),'YYYY-MM-DD') as first_referral,sum(sessions)::integer as sessions,
       (select jsonb_agg(distinct metric_id) from ai_referral_landing_daily q,jsonb_array_elements_text(q.source_metric_row_ids) metric_id
         where q.workspace_id=${scope.workspaceId}::uuid and q.project_id=${scope.projectId}::uuid and q.url_hash=${urlHash}
         and q.ai_source=l.ai_source and q.reporting_date between ${w.start}::date and ${w.end}::date) as source_metric_row_ids from ai_referral_landing_daily l
       where workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid and url_hash=${urlHash}
-      and reporting_date between ${w.start}::date and ${w.end}::date group by ai_source limit ${cap + 1}`.execute(
-      db,
-    ),
+      and reporting_date between ${w.start}::date and ${w.end}::date
+      group by ai_source order by sum(sessions) desc,ai_source asc limit ${cap + 1}`.execute(db),
     sql`with selected_audits as (select distinct on (audit_scope) id from audits where workspace_id=${scope.workspaceId}::uuid
       and project_id=${scope.projectId}::uuid and status='completed' and created_at>=${w.start}::date and created_at<${w.end}::date+1
       order by audit_scope,created_at desc,id desc)

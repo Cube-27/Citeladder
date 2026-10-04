@@ -162,7 +162,10 @@ off-origin input. Reads never enqueue or rebuild insights.
 existing analytics queue. Terminal crawl-log/referral refreshes, Visibility audit
 completion, Site Health terminalization and source/mapping changes enqueue it in
 their owning transaction. Queued work is coalesced and debounced; leased/running
-work gets a queued successor. Snapshots retain formula version, configured
+work gets a queued successor. Repeated queued triggers preserve the earliest
+refresh deadline. Pattern-filtered Pages reads return a retryable unavailable
+response while that window's insight snapshot is pending, rather than an empty
+observed population. Snapshots retain formula version, configured
 thresholds and exact rollup, audit, artifact and crawl IDs. Four bounded patterns
 cover verified crawls without identifiable referrals, referrals without recent
 recognized AI crawls, exact-code verified errors on valuable pages, and key-event

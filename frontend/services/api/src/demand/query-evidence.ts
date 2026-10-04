@@ -149,6 +149,14 @@ export async function buildQueryEvidence(db: Database, scope: DemandScope) {
     ...(truncated ? ['query_evidence_row_limit'] : []),
     ...(material.length !== rows.length ? ['malformed_source_rows_excluded'] : []),
   ];
+  let state = p.QUERY_EVIDENCE_STATE_UNAVAILABLE;
+  if (selected.length) state = p.QUERY_EVIDENCE_STATE_AVAILABLE;
+  else if (
+    artifacts.length &&
+    rows.length === material.length &&
+    quality.every((q) => q.revision !== null && q.flags.length === 0)
+  )
+    state = p.QUERY_EVIDENCE_STATE_OBSERVED_ZERO;
   const snapshot = await db
     .insertInto('query_evidence_snapshots')
     .values({
@@ -159,13 +167,7 @@ export async function buildQueryEvidence(db: Database, scope: DemandScope) {
       window_end: scope.windowEnd,
       source_hash: sourceHash,
       supersedes_snapshot_id: prior?.id ?? null,
-      state: selected.length
-        ? p.QUERY_EVIDENCE_STATE_AVAILABLE
-        : artifacts.length &&
-            rows.length === material.length &&
-            quality.every((q) => q.revision !== null && q.flags.length === 0)
-          ? p.QUERY_EVIDENCE_STATE_OBSERVED_ZERO
-          : p.QUERY_EVIDENCE_STATE_UNAVAILABLE,
+      state,
       source_metric_row_ids: JSON.stringify(selected.map((r) => r.source.id)),
       source_artifact_ids: JSON.stringify(
         unique([

@@ -13,7 +13,7 @@ import { PageLoading } from '@/components/layout/page-loading';
 import { aiTrafficApi, type TrafficFilters } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext } from '@/lib/project/project-context';
-import { workspaceDestination } from '@/lib/navigation/project-destination';
+import { projectDestination } from '@/lib/navigation/project-destination';
 
 export function TrafficLeg({
   leg,
@@ -60,18 +60,16 @@ export function UrlPanel({
           onRetry={() => query.refetch()}
         />
       ) : null}
-      {data ? <UrlEvidence data={data} projectId={projectId} workspaceId={workspaceId} /> : null}
+      {data ? <UrlEvidence data={data} projectId={projectId} /> : null}
     </Drawer>
   );
 }
 function UrlEvidence({
   data,
   projectId,
-  workspaceId,
 }: Readonly<{
   data: z.infer<typeof aiTrafficUrlSchema>;
   projectId: string;
-  workspaceId: string;
 }>) {
   const page = data.page;
   if (!page)
@@ -81,11 +79,7 @@ function UrlEvidence({
       </Alert>
     );
   const link = (tab: string) =>
-    workspaceDestination(
-      '/ai-traffic',
-      new URLSearchParams({ tab, project: projectId }),
-      workspaceId,
-    );
+    projectDestination('/ai-traffic', new URLSearchParams({ tab }), projectId);
   return (
     <div className="grid gap-4">
       <p className="type-caption">
@@ -101,27 +95,11 @@ function UrlEvidence({
       <p>{page.key_events ?? 'Unavailable'} key events as configured in GA4</p>
       <p>
         <TrafficLeg leg={page.citations} unit="tracked citations" />{' '}
-        <Link
-          to={workspaceDestination(
-            '/visibility',
-            new URLSearchParams({ project: projectId }),
-            workspaceId,
-          )}
-        >
-          Visibility
-        </Link>
+        <Link to={projectDestination('/visibility', null, projectId)}>Visibility</Link>
       </p>
       <p>
         <TrafficLeg leg={page.findings} unit="open Site Health findings" />{' '}
-        <Link
-          to={workspaceDestination(
-            '/site',
-            new URLSearchParams({ project: projectId }),
-            workspaceId,
-          )}
-        >
-          Site Health
-        </Link>
+        <Link to={projectDestination('/site', null, projectId)}>Site Health</Link>
       </p>
       <p className="type-caption">First and last observations in this window</p>
       {data.crawls.map((r) => (
@@ -144,15 +122,7 @@ function UrlEvidence({
       <p className="type-caption">
         Timeline uses saved crawler rollups, GA4 metric rows and tracked citations.
         {data.provenance.crawl_id ? (
-          <Link
-            to={workspaceDestination(
-              '/site',
-              new URLSearchParams({ project: projectId }),
-              workspaceId,
-            )}
-          >
-            View Site Health inventory
-          </Link>
+          <Link to={projectDestination('/site', null, projectId)}>View Site Health inventory</Link>
         ) : (
           ' Inventory unavailable'
         )}

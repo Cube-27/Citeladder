@@ -15,6 +15,7 @@ import { hash } from '../traffic/normalization.ts';
 import { aiTraffic } from '../config/ai-traffic.ts';
 import { pathIdentity } from '../crawl-logs/identity.ts';
 import { policy } from '../config.ts';
+import { compareText } from '../text-order.ts';
 
 const datasets = [
   'ga4_landing_daily',
@@ -71,9 +72,15 @@ function add(target: Counts, m: Record<string, unknown>) {
   target.engaged_sessions += count(m, 'engagedSessions');
   target.key_events += count(m, 'keyEvents');
 }
-export function referralExtras(evidence: Evidence, start: string, end: string) {
-  const sources = new Map<string, Counts & { transactions: number; purchase_revenue: number }>();
-  const channels = { ai: empty(), organic: empty(), total: empty() };
+function dimensionParts(row: Evidence['rows'][number]) {
+  const split = row.dimension_key.split(policy.integrations.dimension_separator);
+  const arity = arities[row.dataset]!;
+  return [
+    split.slice(0, split.length - arity + 1).join(policy.integrations.dimension_separator),
+    ...split.slice(split.length - arity + 1),
+  ];
+}
+function landingExtras(rows: Evidence['rows'], evidence: Evidence) {
   let unattributed = 0;
   const landing = new Map<
     string,
@@ -90,51 +97,55 @@ export function referralExtras(evidence: Evidence, start: string, end: string) {
       source_metric_row_ids: string[];
     }
   >();
-  const rows = evidence.rows.filter((r) => r.day >= start && r.day <= end);
   for (const row of rows) {
-    const split = row.dimension_key.split(policy.integrations.dimension_separator);
-    const arity = arities[row.dataset]!;
-    const parts = [
-        split.slice(0, split.length - arity + 1).join(policy.integrations.dimension_separator),
-        ...split.slice(split.length - arity + 1),
-      ],
+    if (row.dataset !== 'ga4_landing_daily') continue;
+    const parts = dimensionParts(row),
       m = record(row.metrics);
+    const match = signals(parts.slice(1, 3));
+    if (!match) continue;
     const quality = evidence.quality[row.dataset]!.find((q) => q.day === row.day)!;
+    const page = landingPage(parts[0]!, parts.at(-2)!, evidence.hosts);
+    if (!page) {
+      if (evidence.hosts.has(parts.at(-2)!.toLowerCase())) unattributed += count(m, 'sessions');
+      continue;
+    }
+    const tz = quality.reporting_timezone ?? 'unknown',
+      urlHash = hash(page),
+      key = [row.day, tz, urlHash, match.ai_source].join(':');
+    const identity = pathIdentity(page, new URL(page).origin)!;
+    const item = landing.get(key) ?? {
+      ...empty(),
+      url_hash: urlHash,
+      canonical_url: page,
+      display_path: identity.display_path,
+      folder: identity.folder,
+      resource_class: identity.resource_class,
+      ai_source: match.ai_source,
+      reporting_date: row.day,
+      reporting_timezone: tz,
+      analytics_quality: quality.flags,
+      source_metric_row_ids: [],
+    };
+    add(item, m);
+    item.source_metric_row_ids.push(row.id);
+    landing.set(key, item);
+  }
+  return { landing: [...landing.values()], unattributed };
+}
+function sourceExtras(rows: Evidence['rows']) {
+  const sources = new Map<string, Counts & { transactions: number; purchase_revenue: number }>();
+  const channels = { ai: empty(), organic: empty(), total: empty() };
+  for (const row of rows) {
+    if (row.dataset === 'ga4_landing_daily') continue;
+    const parts = dimensionParts(row),
+      m = record(row.metrics);
     if (row.dataset === 'ga4_channel_daily') {
       add(channels.total, m);
       if (parts[0] === 'Organic Search') add(channels.organic, m);
       continue;
     }
-    const match = signals(row.dataset === 'ga4_landing_daily' ? parts.slice(1, 3) : parts);
+    const match = signals(parts);
     if (!match) continue;
-    if (row.dataset === 'ga4_landing_daily') {
-      const page = landingPage(parts[0]!, parts.at(-2)!, evidence.hosts);
-      if (!page) {
-        if (evidence.hosts.has(parts.at(-2)!.toLowerCase())) unattributed += count(m, 'sessions');
-        continue;
-      }
-      const tz = quality.reporting_timezone ?? 'unknown',
-        urlHash = hash(page),
-        key = [row.day, tz, urlHash, match.ai_source].join(':');
-      const identity = pathIdentity(page, new URL(page).origin)!;
-      const item = landing.get(key) ?? {
-        ...empty(),
-        url_hash: urlHash,
-        canonical_url: page,
-        display_path: identity.display_path,
-        folder: identity.folder,
-        resource_class: identity.resource_class,
-        ai_source: match.ai_source,
-        reporting_date: row.day,
-        reporting_timezone: tz,
-        analytics_quality: quality.flags,
-        source_metric_row_ids: [],
-      };
-      add(item, m);
-      item.source_metric_row_ids.push(row.id);
-      landing.set(key, item);
-      continue;
-    }
     const source = sources.get(match.ai_source) ?? {
       ...empty(),
       transactions: 0,
@@ -149,6 +160,12 @@ export function referralExtras(evidence: Evidence, start: string, end: string) {
     }
     sources.set(match.ai_source, source);
   }
+  return { sources, channels };
+}
+export function referralExtras(evidence: Evidence, start: string, end: string) {
+  const rows = evidence.rows.filter((r) => r.day >= start && r.day <= end);
+  const { landing, unattributed } = landingExtras(rows, evidence);
+  const { sources, channels } = sourceExtras(rows);
   const quality = Object.fromEntries(
     Object.entries(evidence.quality).map(([dataset, q]) => [
       dataset,
@@ -179,7 +196,7 @@ export function referralExtras(evidence: Evidence, start: string, end: string) {
     ),
   ];
   return {
-    landing: [...landing.values()],
+    landing,
     unattributed_landing: usable('ga4_landing_daily') || unattributed > 0 ? unattributed : null,
     analytics_quality: quality,
     scope: 'property-wide',
@@ -206,8 +223,10 @@ export function referralExtras(evidence: Evidence, start: string, end: string) {
           : { sessions: null, key_events: null, engagement_rate: null }),
       },
     ],
-    source_metric_row_ids: rows.map((r) => r.id),
-    source_artifact_ids: rows.map((r) => r.source_artifact_id),
+    source_metric_row_count: rows.length,
+    source_artifact_ids: [...new Set(rows.map((r) => r.source_artifact_id))]
+      .sort(compareText)
+      .slice(0, policy.traffic.TRAFFIC_PROVENANCE_ID_LIMIT),
   };
 }
 export async function replaceReferralLandings(
