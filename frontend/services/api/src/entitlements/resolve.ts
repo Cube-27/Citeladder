@@ -2,7 +2,7 @@
  * Entitlement resolution: fold one billing account's grants into capability
  * values at an instant.
  *
- * Python billing writes grants, revocations and subscriptions; this reads
+ * Native billing writes grants, revocations and subscriptions; this reads
  * them in the caller's transaction on every call (no cache, since
  * authorization must see the rows that transaction sees). One corrupt grant
  * makes the whole account unresolved, which callers treat as a denial.

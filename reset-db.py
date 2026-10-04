@@ -10,10 +10,13 @@ from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 import asyncpg
-from dotenv import dotenv_values
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 BACKEND_DIR = PROJECT_ROOT / "backend"
+sys.path.insert(0, str(BACKEND_DIR))
+
+from app.core.config.dotenv import read_env_file  # noqa: E402
+
 ROOT_ENV_FILE = PROJECT_ROOT / ".env"
 PROTECTED_DATABASES = frozenset({"postgres", "template0", "template1"})
 DEVELOPMENT_ENVS = frozenset({"development", "dev", "local", "test", "testing"})
@@ -50,11 +53,7 @@ def _configuration() -> dict[str, str]:
 def _read_env_file(env_file: Path) -> dict[str, str]:
     if not env_file.is_file():
         return {}
-    return {
-        key: str(value)
-        for key, value in dotenv_values(env_file).items()
-        if value is not None
-    }
+    return read_env_file(env_file, os.environ)
 
 
 def _docker_database_url(values: dict[str, str]) -> str:

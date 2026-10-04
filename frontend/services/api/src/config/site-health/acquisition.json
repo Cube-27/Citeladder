@@ -72,7 +72,8 @@
     "max_declared_sitemaps": 16,
     "max_url_chars": 2048,
     "frontier_statuses": {
-      "admitted": "admitted"
+      "admitted": "admitted",
+      "pending": "pending"
     },
     "sample_analysis_selection_sources": ["bootstrap", "free_sample"],
     "llms_path": "/llms.txt",

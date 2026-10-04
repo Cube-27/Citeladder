@@ -263,11 +263,10 @@ API_TEST_DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<dispos
 TYPES_DATABASE_URL="<same disposable database>" pnpm db:types   # regenerate Kysely types after a schema change
 ```
 
-After changing an exported shared setting or the workspace role matrix,
-regenerate the Python-owned inputs from `backend/` with
-`uv run python -m scripts.export_ts_platform` and commit them. From the
-repository root, `node scripts/quality.mjs --mode check --scope api` checks types,
-schema authority, export freshness and route ownership (`pnpm check:routes`: every
+Application policy and the workspace role matrix live in native config; there
+is no Python policy export to regenerate. From the repository root,
+`node scripts/quality.mjs --mode check --scope api` needs only Node/pnpm and checks
+types, schema authority and route ownership (`pnpm check:routes`: every
 native operation declares exactly one manifest family); CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
 Site Health, analytics, discovery and integration lanes recover their own
@@ -432,9 +431,10 @@ migrations remain covered by static policy gates.
 ### Architecture policy
 
 `backend/.importlinter` is the backend counterpart to the frontend's
-`pnpm check:policy`. Seven contracts pin the directions that hold today: the API
-and the workers are leaves nothing imports, `core` depends on no business logic,
-and `models`, `connectors`, `orchestration` and `analysis` do not reach up.
+`pnpm check:policy`. Four contracts guard the schema boundary: `core` imports no model/business
+owners, models import no migration environment, the retained finish-reason
+vocabulary imports no upper layer, and schema tooling imports no retired
+application dependencies. Native architecture contracts guard API/worker owners.
 The retired Prompt normalization callback has no Python writer; retained
 imports obey the layer contracts without exceptions.
 
@@ -557,6 +557,17 @@ host is refused even under `APP_ENV=development`; the exceptional case requires
 the explicit `RESET_CONFIRM_DESTRUCTIVE=drop-and-recreate` token.
 
 ## Migrations (single greenfield baseline)
+
+Python runs only schema/migration maintenance and its checks. The three direct
+runtime dependencies are `sqlalchemy[asyncio]`, `alembic` and `asyncpg`;
+Ruff, mypy, import/dependency, complexity and schema tests remain development
+tooling. Metadata imports are environment-independent and do not open connections.
+Alembic requires an explicit `DATABASE_URL` from the environment or root/backend
+`.env` files (process values win); `CITELADDER_DISABLE_DOTENV=1` prevents file
+loading for tests. Both PostgreSQL URL schemes are accepted; encoded passwords
+are preserved. `DB_SSL_MODE` accepts `disable`/`require`, and migrations outside
+development/test require `require`. Conflicting URL/env TLS settings are refused.
+Native startup owns application-secret and runtime validation.
 
 CiteLadder is greenfield and keeps one complete `0001_initial` revision. Fold
 every schema change into that baseline, reset only disposable databases, and

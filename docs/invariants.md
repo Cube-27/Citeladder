@@ -35,7 +35,7 @@ For route families the route-ownership manifest is the single record, and
 ingress must route each family's paths only to the stack it names. For
 analytics task kinds the native catalog in
 `frontend/services/api/src/config/connected-data.ts` owns execution and recovery;
-Python operators may enqueue the shared Opportunity kind but have no executor.
+Product operators and Opportunity enqueue/execution are native.
 
 ## 2. Product policy is configuration
 
@@ -46,8 +46,9 @@ budgets, models, and templates live under
 do not embed alternate policy. A public check has at most one AEO pillar and
 equal weight within that pillar. Rule count and page-kind cohort size cannot
 manufacture score influence. Policy used only by TypeScript belongs to its
-owning frontend config. Policy still shared with Python is read through the
-generated export (`backend/scripts/export_ts_platform.py`), never a restated copy.
+owning frontend config. Python retains only structural schema vocabulary and fixed metadata defaults;
+application policy has one native config owner. Native writes explicitly supply
+policy-dependent values, and PostgreSQL/schema coverage guards their contracts.
 
 ## 3. Workspace authorization is mandatory
 

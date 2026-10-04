@@ -2,13 +2,6 @@
 
 ## Active
 
-- [TypeScript application / Python schema tooling](citeladder-python-retirement.md)
-  — PRs 1–3 merged in #263, #264 and #265. PR 4 is implemented on
-  `feat/python-retirement-pr4`: native login/seeding/deployment bootstrap and
-  application bridge retirement. CI and merge remain pending. PR 5 is unassigned.
-  Alembic remains the sole schema author; deployment and merging remain separate
-  owner actions.
-
 - [Backend debt remediation](citeladder-backend-debt-remediation.md)
   — all six slices implemented on `codex/backend-debt-remediation` in one PR,
   one commit per slice in order 6, 5, 1, 2, 3, 4.
@@ -142,6 +135,11 @@ for deferred sign-in selection and invitation delivery; it is not an active or
 additional queued assignment. Listed work is not authorization to execute it.
 
 ## Last completed
+
+- [TypeScript application / Python schema tooling](citeladder-python-retirement.md)
+  — PRs 1–4 merged in #263–#266; PR 5 implements the permanent schema-only
+  boundary and retires application policy/export debt. Alembic remains the sole
+  schema author. PR 5 publication/CI and deployment remain separate owner actions.
 
 - [Razorpay activation](citeladder-razorpay-activation.md) — owner-approved
   on 24 September 2026. PR A (commercial core) and PR B (payment paths)

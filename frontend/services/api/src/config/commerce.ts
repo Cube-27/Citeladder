@@ -1,6 +1,10 @@
 /** Native Commerce admission, acquisition and buyer-prompt policy. */
 export const commerce = {
+  importer_version: 'commerce-catalog-importer-1',
+  projector_version: 'commerce-projector-1',
   discovery: {
+    provider_version: 'tavily-commerce-1',
+    validator_version: 'commerce-competitor-validator-1',
     result_limit: 5,
     provider_result_limit: 10,
     response_max_bytes: 1000000,
@@ -82,6 +86,7 @@ export const commerce = {
     },
   },
   buyer_prompts: {
+    version: 'commerce-buyer-prompts-1',
     min: 2,
     max: 10,
     default: 5,

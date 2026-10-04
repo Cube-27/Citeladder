@@ -50,7 +50,7 @@ from app.core.config.integrations_contracts import (
     SYNC_KIND_ON_DEMAND,
 )
 from app.core.config.integrations_settings import (
-    integration_settings,
+    SYNC_MAX_ATTEMPTS,
 )
 from app.core.config.task_queue import (
     TASK_CLAIMABLE_STATUSES,
@@ -309,9 +309,7 @@ class IntegrationSyncRun(QueueLeaseStateMixin, Base):
     resync_seq: Mapped[int] = mapped_column(Integer, default=0)
     idempotency_key: Mapped[str] = mapped_column(String(160))
 
-    max_attempts: Mapped[int] = mapped_column(
-        Integer, default=integration_settings.sync_max_attempts
-    )
+    max_attempts: Mapped[int] = mapped_column(Integer, default=SYNC_MAX_ATTEMPTS)
 
 
 class IntegrationImportArtifact(Base):

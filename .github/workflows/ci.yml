@@ -69,7 +69,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: citeladder
-        ports: ["5432:5432"]
+        ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
@@ -86,7 +86,7 @@ jobs:
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
-          python-version: "3.12"
+          python-version: '3.12'
       - name: Install dependencies (frozen lock)
         # No `--no-build` here, unlike the Dockerfile: this sync installs the
         # project itself as an editable, which is a local build by definition.
@@ -247,14 +247,14 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: citeladder
-        ports: ["5432:5432"]
+        ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      CITELADDER_DISABLE_DOTENV: "1"
+      CITELADDER_DISABLE_DOTENV: '1'
       # Alembic authors the schema (migration D4); the service only reads it.
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder
       TYPES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
@@ -267,15 +267,18 @@ jobs:
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
-          python-version: "3.12"
-      - name: Install backend runtime (frozen lock)
+          python-version: '3.12'
+      - name: Install schema tooling (frozen lock)
         working-directory: backend
         # Published wheels only and no project install, as in the backend
-        # image: Alembic and the export run from backend/ on the source tree.
+        # image: only Alembic schema initialization needs Python.
         run: uv sync --frozen --no-dev --no-install-project --no-build
       - name: Apply the Alembic schema
         working-directory: backend
         run: .venv/bin/alembic upgrade head
+      - name: Verify schema drift
+        working-directory: backend
+        run: .venv/bin/alembic check
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           package_json_file: frontend/package.json
@@ -287,7 +290,7 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: API service quality (types, schema authority, Python export, route ownership)
+      - name: API service quality (types, schema authority, route ownership)
         working-directory: frontend
         run: node ../scripts/quality.mjs --mode check --scope api
       - name: Generated database types match the migrated schema
@@ -370,7 +373,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.12"
+          python-version: '3.12'
       - name: Dependency audit (SCA)
         working-directory: backend
         run: |

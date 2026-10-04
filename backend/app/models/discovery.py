@@ -19,9 +19,9 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config.brand_discovery import (
+    DISCOVERY_MAXIMUM_ATTEMPTS,
     DISCOVERY_STATUS_QUEUED,
     TASK_KIND_BRAND_DISCOVERY,
-    brand_discovery_settings,
 )
 from app.core.database import Base
 from app.models.queue_mixins import QueueLeaseStateMixin
@@ -112,7 +112,7 @@ class BrandDiscoveryTask(QueueLeaseStateMixin, Base):
     )
     idempotency_key: Mapped[str] = mapped_column(String(160))
     max_attempts: Mapped[int] = mapped_column(
-        Integer, default=brand_discovery_settings.maximum_attempts
+        Integer, default=DISCOVERY_MAXIMUM_ATTEMPTS
     )
 
 

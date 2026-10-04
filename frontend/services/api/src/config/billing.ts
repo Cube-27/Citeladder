@@ -1,9 +1,9 @@
-/** Native commercial execution policy with shared operator/schema inputs. */
+/** Native commercial execution policy and persisted vocabulary. */
+import { providers } from './providers.ts';
 import runtime from './billing.json' with { type: 'json' };
-import shared from '../generated/python-config.json' with { type: 'json' };
 import { compareText } from '../text-order.ts';
 
-const c = { ...shared.billing.contracts, ...runtime.contracts };
+const c = runtime.contracts;
 export const billing = {
   ...runtime,
   contracts: {
@@ -71,8 +71,8 @@ export const billing = {
       c.telemetry_duplicate_grant_prevented,
     ],
   },
-  providers: shared.providers.catalog.map((entry) => {
-    const route = shared.providers.routes[entry.key as keyof typeof shared.providers.routes];
+  providers: providers.catalog.map((entry) => {
+    const route = providers.routes[entry.key as keyof typeof providers.routes];
     return {
       ...entry,
       routes: route

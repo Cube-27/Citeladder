@@ -331,12 +331,6 @@ function apiServiceChecks() {
       `Schema changes belong in Alembic migrations, not a TS service:\n${violations.join('\n')}\n`,
     );
   }
-  step(
-    'API service Python export',
-    backendPython(),
-    ['-m', 'scripts.export_ts_platform', '--check'],
-    backendRoot,
-  );
   pnpm('API route ownership', ['--filter', '@citeladder/api', 'check:routes']);
 }
 

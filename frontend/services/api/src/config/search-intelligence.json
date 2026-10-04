@@ -101,5 +101,8 @@
     "rank_absolute",
     "referring_domains",
     "referring_pages"
-  ]
+  ],
+  "parser_version": "1",
+  "price_version": "dataforseo-standard-2026-09-20",
+  "transport_provider": "dataforseo"
 }

@@ -220,7 +220,8 @@
         "comparison",
         "alternative",
         "case_study_review",
-        "trust_policy"
+        "trust_policy",
+        "other"
       ],
       "faq_min_headings": 3,
       "schema_type_map": [

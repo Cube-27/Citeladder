@@ -50,7 +50,7 @@ RUN uv sync --frozen --no-dev --no-install-project --no-build
 FROM python@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e AS runtime
 
 ARG BUILD_REVISION=unknown
-LABEL org.opencontainers.image.title="citeladder-backend" \
+LABEL org.opencontainers.image.title="citeladder-schema" \
       org.opencontainers.image.revision="${BUILD_REVISION}"
 
 ENV PATH="/app/backend/.venv/bin:${PATH}" \

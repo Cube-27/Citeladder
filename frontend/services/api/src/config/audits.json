@@ -33,7 +33,8 @@
       "service": ["click and collect", "delivery", "returns", "shipping"],
       "freshness": ["latest", "current", "today", "2026"],
       "product_evidence": ["material", "fabric", "size", "multipack", "availability", "stock"]
-    }
+    },
+    "analyzer_version": "grounded-analysis-v1"
   },
   "observed_competitors": {
     "analyzer_version": "observed-competitor-v1",
@@ -279,7 +280,9 @@
     "error_no_connection": "provider_connection_missing",
     "localized_instruction": "Answer for a shopper in the market identified by ISO country code {country_code}, using language {language_code}. Prioritize retailers that serve that market and sources relevant to that market.",
     "forced_grounded_instruction": "Answer the shopping question using current web information. Cite the sources supporting your recommendations.",
-    "measurement_policy_key": "measurement_policy"
+    "measurement_policy_key": "measurement_policy",
+    "audit_scope_brand": "brand",
+    "audit_status_draft": "draft"
   },
   "benchmark_modes": ["consumer_like", "controlled_localized", "forced_grounded"],
   "min_repetitions": 1,
@@ -303,5 +306,16 @@
     "gemini_consumer": {
       "batch_enabled": false
     }
+  },
+  "dev_test_allow_platform": {
+    "env": ["DEV_TEST_LOGIN_ALLOW_PLATFORM_CREDENTIALS"],
+    "type": "bool",
+    "default": false
+  },
+  "commerce_versions": {
+    "template_version": "commerce-buyer-prompts-1",
+    "parser_version": "commerce-recommendation-parser-1",
+    "matcher_version": "commerce-recommendation-matcher-1",
+    "formula_version": "commerce-shelf-formulas-1"
   }
 }

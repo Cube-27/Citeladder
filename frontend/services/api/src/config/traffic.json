@@ -144,5 +144,7 @@
   "PERFORMANCE_COMPARE_CUSTOM": "custom",
   "PERFORMANCE_COMPARE_MODES": ["custom", "none", "previous", "year_over_year"],
   "PERFORMANCE_DEFAULT_COMPARE": "none",
-  "PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS": 364
+  "PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS": 364,
+  "TRAFFIC_FORMULA_VERSION": "traffic-formula-1",
+  "TRAFFIC_NORMALIZATION_VERSION": "traffic-normalization-1"
 }

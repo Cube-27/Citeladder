@@ -1,111 +1,63 @@
-"""The suite must never read a developer's ``.env``.
+"""Configuration precedence and isolation for schema maintenance."""
 
-This is the enforcement for the rule stated in ``tests/conftest.py`` and
-``app/core/config/dotenv.py``. Without it the guard is a convention: someone
-adds a sixth settings class with its own hard-coded ``env_file`` tuple, and a
-real provider key silently loads into the next test run.
-
-A developer's provider or database credentials must never silently load into
-a Python model/operator test. Native model-gateway tests separately cover the
-TypeScript runtime, which has no dotenv loader.
-"""
-
-from __future__ import annotations
-
-import os
 from pathlib import Path
 
-import pytest
-from pydantic_settings import BaseSettings
-
-from app.core.config import (
-    BASE_DIR,
-    PROJECT_ROOT,
-    Settings,
-    encryption_key_configured,
-    settings,
-)
-from app.core.config.dotenv import (
-    DISABLE_DOTENV_VAR,
-    dotenv_disabled,
-    dotenv_sources,
-)
-from app.core.config.integrations_settings import IntegrationSettings
-from app.core.config.site_health_runtime import SiteHealthSettings
-
-# Every ``BaseSettings`` subclass in the config package that declares an
-# ``env_file``. A new one must be added here — and must route through
-# ``dotenv_sources()`` — or the sweep below fails.
-DOTENV_SETTINGS_CLASSES: tuple[type[BaseSettings], ...] = (
-    Settings,
-    SiteHealthSettings,
-    IntegrationSettings,
-)
+from app.core.config.dotenv import schema_environment
 
 
-def test_the_guard_is_active_for_this_run() -> None:
-    assert os.environ.get(DISABLE_DOTENV_VAR) == "1"
-    assert dotenv_disabled() is True
+def test_schema_environment_precedence_and_test_opt_out(tmp_path: Path) -> None:
+    root = tmp_path / "root.env"
+    backend = tmp_path / "backend.env"
+    root.write_text(
+        'DATABASE_URL="postgresql://root:quoted%40password@localhost/root"\n'
+        "APP_ENV=development\nDB_SSL_MODE=disable\n",
+        encoding="utf-8",
+    )
+    backend.write_text(
+        "database_url=postgresql://backend:fixture@localhost/backend\n"
+        "DB_SSL_MODE=require # local policy override\n",
+        encoding="utf-8",
+    )
+    files = (root, backend)
+    assert schema_environment({}, files=files)["DATABASE_URL"].endswith("/backend")
+    assert schema_environment({}, files=files)["DB_SSL_MODE"] == "require"
+    process = {"DATABASE_URL": "postgresql://process:fixture@localhost/process"}
+    assert (
+        schema_environment(process, files=files)["DATABASE_URL"]
+        == process["DATABASE_URL"]
+    )
+    isolated = {**process, "CITELADDER_DISABLE_DOTENV": "1"}
+    assert schema_environment(isolated, files=files) == isolated
 
 
-def test_no_env_file_is_resolved_while_the_guard_is_active() -> None:
-    # ``None`` is pydantic-settings' "read no file at all".
-    assert dotenv_sources() is None
+def test_schema_environment_expands_without_executing_shell(tmp_path: Path) -> None:
+    path = tmp_path / "schema.env"
+    path.write_text(
+        "export DATABASE_NAME=local\n"
+        "DATABASE_URL='postgresql://fixture:${PASSWORD}@localhost/${DATABASE_NAME}'\n"
+        "APP_ENV=${MISSING:-development}\n",
+        encoding="utf-8",
+    )
+    result = schema_environment({"PASSWORD": "encoded%40fixture"}, files=(path,))
+    assert (
+        result["DATABASE_URL"]
+        == "postgresql://fixture:encoded%40fixture@localhost/local"
+    )
+    assert result["APP_ENV"] == "development"
 
 
-@pytest.mark.parametrize(
-    "settings_class", DOTENV_SETTINGS_CLASSES, ids=lambda cls: cls.__name__
-)
-def test_no_settings_class_loads_a_dotenv_file(
-    settings_class: type[BaseSettings],
+def test_schema_environment_preserves_multiline_quotes_and_quoted_comments(
+    tmp_path: Path,
 ) -> None:
-    assert settings_class.model_config.get("env_file") is None
-
-
-def test_every_config_module_routes_through_the_dotenv_owner() -> None:
-    """No settings module may build its own ``.env`` path.
-
-    A hard-coded tuple would bypass the opt-out entirely, which is exactly the
-    state this repository was in before.
-    """
-    config_dir = Path(__file__).resolve().parents[2] / "app" / "core" / "config"
-    offenders = [
-        path.name
-        for path in sorted(config_dir.glob("*.py"))
-        if "env_file=" in path.read_text(encoding="utf-8")
-        and "env_file=dotenv_sources()" not in path.read_text(encoding="utf-8")
-    ]
-
-    assert offenders == [], (
-        f"{offenders} declare env_file without app.core.config.dotenv."
-        " Route it through dotenv_sources() so tests stay isolated."
+    path = tmp_path / "schema.env"
+    path.write_text(
+        'UNRELATED="first line\n'
+        'second line with \\"quotes\\"" # comment with "quotes"\n'
+        'DATABASE_URL="postgresql://fixture:fixture@localhost/app" # use "local"\n'
+        "OTHER='single\nquoted value'\n",
+        encoding="utf-8",
     )
-
-
-def test_the_suite_supplies_its_own_database_url() -> None:
-    # Whatever the developer's `.env` says, the suite's URL is the one the
-    # runner exported (or the documented default) — never a file read.
-    assert settings.database_url == os.environ["DATABASE_URL"]
-
-
-def test_crypto_secrets_are_the_declared_test_values() -> None:
-    # Deterministic everywhere, and distinct from the shipped placeholders so
-    # crypto-dependent paths actually run instead of failing closed.
-    assert settings.encryption_key == os.environ["ENCRYPTION_KEY"]
-    assert settings.jwt_secret_key == os.environ["JWT_SECRET_KEY"]
-    assert encryption_key_configured(settings) is True
-
-
-def test_a_developer_dotenv_is_not_being_read_even_when_present() -> None:
-    """Skip when there is no `.env`; assert isolation when there is one."""
-    candidates = [PROJECT_ROOT / ".env", BASE_DIR / ".env"]
-    present = [path for path in candidates if path.exists()]
-    if not present:
-        pytest.skip("no .env in this checkout; the sweep above covers the rule")
-
-    # The file exists and still contributed nothing: every settings class
-    # resolved `env_file` to None.
-    assert all(
-        settings_class.model_config.get("env_file") is None
-        for settings_class in DOTENV_SETTINGS_CLASSES
-    )
+    result = schema_environment({}, files=(path,))
+    assert result["DATABASE_URL"] == "postgresql://fixture:fixture@localhost/app"
+    assert result["UNRELATED"] == 'first line\nsecond line with "quotes"'
+    assert result["OTHER"] == "single\nquoted value"

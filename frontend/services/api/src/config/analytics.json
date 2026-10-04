@@ -41,6 +41,12 @@
       "type": "float",
       "default": 300.0,
       "exclusive_minimum": 0
+    },
+    "task_max_attempts": {
+      "env": ["ANALYTICS_TASK_MAX_ATTEMPTS"],
+      "type": "int",
+      "default": 3,
+      "exclusive_minimum": 0
     }
   },
   "executor_not_wired_error": "executor_not_wired",
@@ -65,6 +71,10 @@
     "referral_retention_sweep": "referral_retention_sweep",
     "search_intelligence_acquisition": "search_intelligence_acquisition",
     "source_page_inspection": "source_page_inspection",
-    "traffic_snapshot_refresh": "traffic_snapshot_refresh"
-  }
+    "traffic_snapshot_refresh": "traffic_snapshot_refresh",
+    "ingest_referrals": "ingest_referrals",
+    "opportunity_refresh": "opportunity_refresh"
+  },
+  "ai_referral_analyzer_version": "ai-referrals-v1",
+  "ai_referral_formula_version": "ai-referral-sessions-v1"
 }

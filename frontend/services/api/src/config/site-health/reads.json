@@ -125,6 +125,7 @@
       "profile": "sh-profiles-1",
       "schema_contract": "sh-schema-1",
       "presentation": "sh-presentation-1"
-    }
+    },
+    "terminal_crawl_statuses": ["cancelled", "completed", "failed", "partially_completed"]
   }
 }

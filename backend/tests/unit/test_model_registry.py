@@ -2,9 +2,37 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+
 from sqlalchemy.orm import configure_mappers
 
 import app.models as models
+
+
+def test_metadata_import_ignores_application_and_queue_environment() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import app.models; from sqlalchemy.orm import configure_mappers; "
+            "configure_mappers()",
+        ],
+        env={
+            **os.environ,
+            "DATABASE_URL": "not-a-database-url",
+            "APP_ENV": "production",
+            "ANALYTICS_TASK_MAX_ATTEMPTS": "not-an-integer",
+            "BRAND_DISCOVERY_MAXIMUM_ATTEMPTS": "not-an-integer",
+            "INTEGRATION_SYNC_MAX_ATTEMPTS": "not-an-integer",
+            "SITE_HEALTH_MAX_ATTEMPTS": "not-an-integer",
+        },
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0
 
 
 def test_models_are_exported_and_registered_once() -> None:

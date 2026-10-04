@@ -1,12 +1,11 @@
-/** Native discovery policy; queue model defaults remain shared. */
+/** Native discovery policy and queue admission bounds. */
 import native from './discovery.json' with { type: 'json' };
-import shared from '../generated/python-config.json' with { type: 'json' };
 
 // keenable_api_key is a plain runtime string: resolve only in discovery and never log settings.
 
 export const discovery = {
-  constants: { ...native.constants, ...shared.discovery.constants },
-  settings: { ...native.settings, ...shared.discovery.settings },
+  constants: { ...native.constants },
+  settings: { ...native.settings },
 };
 
 export function competitorSuggestionPrompt(maximum: number) {

@@ -47,9 +47,7 @@ if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
 
 # --- Test configuration, before the first `app` import ---------------------
-# Order matters: pydantic-settings reads env_file and environment at class
-# definition time, so every one of these has to be set before `app.core.config`
-# is imported below.
+# Schema commands and child migration processes inherit only deterministic inputs.
 
 # The server the suite may create its throwaway database on. `.env` is NOT a
 # source: the runner supplies this explicitly, or accepts the local default.
@@ -62,23 +60,12 @@ _RESOLVED_DATABASE_URL = (
     or _DEFAULT_TEST_DATABASE_URL
 )
 
-# Deterministic, non-secret stand-ins. These are published test values, not
-# credentials: they exist so crypto-dependent code paths (Fernet encryption,
-# JWT signing, referral hashing) run identically everywhere. They must not be
-# any of the shipped placeholders, which `encryption_key_configured` treats as
-# MISSING so a real deployment fails closed.
+# Python tests exercise schema tooling, without application secrets or settings.
 _TEST_ENVIRONMENT = {
     "CITELADDER_DISABLE_DOTENV": "1",
     "DATABASE_URL": _RESOLVED_DATABASE_URL,
-    "APP_ENV": "development",
-    # Keep operator tests independent of inherited production redirect origins.
-    "FRONTEND_URL": "http://127.0.0.1:3000",
-    "MCP_PUBLIC_BASE_URL": "http://127.0.0.1:3000",
-    "JWT_SECRET_KEY": "citeladder-test-jwt-secret-key-not-a-real-secret",
-    "ENCRYPTION_KEY": "citeladder-test-encryption-key-not-a-real-secret",
-    "REFERRAL_HASH_SALT": "citeladder-test-referral-salt-not-a-real-secret",
-    # Registration is off by default; the suite creates its users through it.
-    "PUBLIC_SIGNUP_ENABLED": "true",
+    "APP_ENV": "test",
+    "DB_SSL_MODE": "disable",
 }
 for _name, _value in _TEST_ENVIRONMENT.items():
     os.environ[_name] = _value
@@ -92,6 +79,10 @@ _PROVIDER_CREDENTIAL_SUFFIXES = ("_API_KEY", "_CLIENT_SECRET", "_CLIENT_ID")
 _DEFAULT_AGENT_VARIABLES = (
     "DEFAULT_AGENT_BASE_URL",
     "DEFAULT_AGENT_MODEL",
+    "JWT_SECRET_KEY",
+    "ENCRYPTION_KEY",
+    "REFERRAL_HASH_SALT",
+    "DEV_LOGIN_PASSWORD",
 )
 for _name in [
     name
@@ -104,7 +95,6 @@ for _name in [
 ] + list(_DEFAULT_AGENT_VARIABLES):
     os.environ.pop(_name, None)
 
-from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
 
 _TEST_RUN_ID = uuid.uuid4().hex[:12]
@@ -157,30 +147,6 @@ def _cleanup_sql() -> str:
     )
 
 
-@pytest.fixture(autouse=True)
-def _pin_site_health_sample_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Isolate the suite from dev ``.env`` sample-policy overrides.
-
-    The neutral Site Health sample policy is settings-driven (the dev ``.env``
-    ships a raised ``SITE_HEALTH_SAMPLE_URL_LIMIT`` for full-feature testing).
-    Tests assert the SHIPPED defaults, so pin both the analysis budget and the
-    decoupled inventory cap back to their constants for every test regardless
-    of the developer's local env.
-    """
-    from app.core.config.site_health_crawl_policy import (
-        SAMPLE_DISCOVERY_URL_CAP,
-        SAMPLE_URL_LIMIT,
-    )
-    from app.core.config.site_health_runtime import (
-        site_health_settings,
-    )
-
-    monkeypatch.setattr(site_health_settings, "sample_url_limit", SAMPLE_URL_LIMIT)
-    monkeypatch.setattr(
-        site_health_settings, "sample_discovery_url_cap", SAMPLE_DISCOVERY_URL_CAP
-    )
-
-
 @pytest.fixture(scope="session")
 def test_database_url() -> Iterator[str]:
     """Create a throwaway session database on the configured Postgres server.
@@ -191,7 +157,7 @@ def test_database_url() -> Iterator[str]:
     ``citeladder_tests_<runid>`` database is created up front and force-dropped
     on teardown, so test state can never persist between runs.
     """
-    base = make_url(settings.database_url)
+    base = make_url(_RESOLVED_DATABASE_URL)
     db_name = f"citeladder_tests_{_TEST_RUN_ID}"
     admin_dsn = base.set(drivername="postgresql", database="postgres").render_as_string(
         hide_password=False
@@ -270,7 +236,7 @@ async def session_factory(
     sessions: they need genuinely separate connections, which a rollback-based
     fixture could not give them.
 
-    The keyword arguments MUST mirror ``app.core.database.SessionLocal``.
+    Schema fixtures use explicit session semantics:
     ``autoflush`` was the one that did not: production disables it, the fixture
     inherited SQLAlchemy's ``True``, and so every component test ran with
     different write-visibility semantics than the code it was testing. Under

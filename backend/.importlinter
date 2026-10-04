@@ -1,27 +1,22 @@
-; Retained Python schema/operator architecture policy. Executing analysis and
+; Python schema architecture policy. Executing analysis and
 ; orchestration are native TypeScript owners, absent from this import graph.
 ;
 ; Run with `lint-imports` (see scripts/check.ps1 and .github/workflows/ci.yml).
 
 [importlinter]
 root_package = app
-include_external_packages = False
+include_external_packages = True
 
 [importlinter:contract:core-is-the-floor]
-; `app.core` holds configuration, database wiring and security primitives:
-; the things every other package is allowed to sit on. It must not
-; acquire a dependency on business logic, or the import graph gains a cycle
-; through the one module everything already imports.
-;
-; `core -> models` and `core -> connectors` are NOT forbidden here: the config
-; package legitimately references ORM types and transport contracts. That is a
-; deliberate exclusion, not an oversight.
+; Metadata and migration connection wiring never import model or business owners.
 name = Core depends on no business logic
 type = forbidden
 source_modules =
     app.core
 forbidden_modules =
     app.domain
+    app.models
+    app.connectors
 
 [importlinter:contract:models-are-persistence-only]
 name = Models depend on no upper layer
@@ -30,6 +25,8 @@ source_modules =
     app.models
 forbidden_modules =
     app.domain
+    app.core.migration_config
+    app.core.config.dotenv
 
 [importlinter:contract:connectors-are-transport-only]
 ; Connectors own outbound I/O (answer engines, web evidence) and must stay
@@ -43,3 +40,17 @@ forbidden_modules =
     app.models
 ; Direct imports only: connectors -> core -> models is deliberately allowed.
 allow_indirect_imports = True
+
+[importlinter:contract:schema-dependencies-only]
+name = Schema tooling imports no retired application dependencies
+type = forbidden
+source_modules =
+    app
+forbidden_modules =
+    pydantic
+    pydantic_settings
+    dotenv
+    httpx
+    cryptography
+    argon2
+    joserfc

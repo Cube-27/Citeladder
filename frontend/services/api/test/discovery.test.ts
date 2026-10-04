@@ -88,6 +88,26 @@ describe('durable onboarding', () => {
       .execute();
     return row;
   }
+  it('freezes configured attempts on creation and preserves them on idempotent replay', async () => {
+    const t = await tenant();
+    const key = randomUUID();
+    vi.stubEnv('BRAND_DISCOVERY_MAXIMUM_ATTEMPTS', '7');
+    try {
+      const created = await createDiscovery(db, t.workspaceId, input, key);
+      vi.stubEnv('BRAND_DISCOVERY_MAXIMUM_ATTEMPTS', '9');
+      expect((await createDiscovery(db, t.workspaceId, input, key)).id).toBe(created.id);
+      const task = await db
+        .selectFrom('brand_discovery_tasks')
+        .selectAll()
+        .where('workspace_id', '=', t.workspaceId)
+        .where('discovery_id', '=', created.id)
+        .executeTakeFirstOrThrow();
+      expect(task).toMatchObject({ max_attempts: 7, status: 'queued', attempt_count: 0 });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('reclaims leases once across sweepers, bounds batches and atomically reconciles exhausted parents', async () => {
     const first = await tenant(),
       second = await tenant();

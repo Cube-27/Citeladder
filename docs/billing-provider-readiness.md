@@ -35,8 +35,8 @@ is evidence that money can be taken correctly.
 
 Paths above are relative to `frontend/services/api/`. Native config owns billing
 execution, authoring, tax/seller policy and read-only operator credentials.
-Python retains schema vocabulary and the temporary identity/bootstrap/seed grant
-bridge until PR 4; it has no metering worker bridge. Public pricing
+Python retains only schema vocabulary and migration/check tooling. Identity,
+bootstrap, seeding and grants are native. Public pricing
 and billing reads consume persisted state without provider calls.
 
 ## Configuration

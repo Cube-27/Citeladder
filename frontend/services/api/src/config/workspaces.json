@@ -10,5 +10,12 @@
     "manage_billing": "Workspace owner or admin access is required",
     "manage_members": "Workspace owner or admin access is required",
     "manage_credentials": "Workspace owner or admin access is required"
+  },
+  "max_owned": 1,
+  "roles": {
+    "owner": ["manage_billing", "manage_credentials", "manage_members", "read", "run", "write"],
+    "admin": ["manage_billing", "manage_credentials", "manage_members", "read", "run", "write"],
+    "member": ["read", "run", "write"],
+    "viewer": ["read"]
   }
 }
