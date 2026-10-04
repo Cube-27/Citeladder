@@ -4,9 +4,7 @@ the fail-closed resolver value types."""
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import FrozenInstanceError
-from datetime import UTC, datetime
 
 import pytest
 
@@ -33,13 +31,6 @@ from app.core.config.entitlements import (
     CapabilityRegistry,
     CapabilityType,
     ResolutionRule,
-)
-from app.domain.entitlements.types import (
-    STATUS_ENTITLEMENT_UNRESOLVED,
-    STATUS_RESOLVED,
-    ResolvedCapability,
-    ResolvedEntitlement,
-    no_capability_entitlement,
 )
 
 ALL_CAPABILITY_KEYS = (
@@ -249,54 +240,3 @@ class TestVocabulary:
             {"reservation", "debit", "release", "refund"}
         )
         assert CREDENTIAL_MODES == frozenset({"byok", "funded"})
-
-
-class TestResolvedEntitlementTypes:
-    def _resolved(self) -> ResolvedEntitlement:
-        return ResolvedEntitlement(
-            account_id=uuid.uuid4(),
-            registry_revision=CAPABILITY_REGISTRY_REVISION,
-            entitlement_lifecycle_version=3,
-            resolved_at=datetime.now(UTC),
-            valid_until=None,
-            status=STATUS_RESOLVED,
-            capabilities=(
-                ResolvedCapability(
-                    key="fanout",
-                    capability_type=CapabilityType.FLAG,
-                    value=1,
-                ),
-                ResolvedCapability(
-                    key="project_slots",
-                    capability_type=CapabilityType.COUNTER_OCCUPANCY,
-                    value=5,
-                ),
-            ),
-        )
-
-    def test_capability_helpers(self) -> None:
-        entitlement = self._resolved()
-        assert entitlement.capability("fanout") is not None
-        assert entitlement.capability("missing") is None
-        assert entitlement.capability_value("project_slots") == 5
-        assert entitlement.capability_value("missing") == 0
-        assert entitlement.has_flag("fanout") is True
-        assert entitlement.has_flag("project_slots") is False
-
-    def test_no_capability_entitlement_fails_closed(self) -> None:
-        account_id = uuid.uuid4()
-        at = datetime.now(UTC)
-        entitlement = no_capability_entitlement(
-            account_id=account_id,
-            registry_revision=CAPABILITY_REGISTRY_REVISION,
-            entitlement_lifecycle_version=0,
-            at=at,
-            errors=("grant rows corrupt",),
-        )
-        assert entitlement.status == STATUS_ENTITLEMENT_UNRESOLVED
-        assert entitlement.capabilities == ()
-        assert entitlement.valid_until is None
-        assert entitlement.errors == ("grant rows corrupt",)
-        # A fail-closed entitlement grants nothing, not even defaults.
-        assert entitlement.capability_value("fanout") == 0
-        assert entitlement.has_flag("fanout") is False

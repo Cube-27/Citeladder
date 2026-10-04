@@ -127,6 +127,7 @@ async def _seed_base(
         prompt = Prompt(
             prompt_set_id=prompt_set.id,
             text=text,
+            normalized_text_hash=hashlib.sha256(text.encode()).hexdigest(),
             theme="crm",
             intent=intent,
             enabled=True,
