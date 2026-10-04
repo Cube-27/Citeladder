@@ -8,7 +8,7 @@ import { providerPolicy } from './config.ts';
 export function provisionPlatformConnections(
   db: Database,
   references: Record<string, string>,
-  dryRun = false,
+  options: { apply?: boolean } = {},
 ) {
   for (const [transport, reference] of Object.entries(references)) {
     if (!providerPolicy.transports.includes(transport)) throw new Error('unknown transport');
@@ -19,7 +19,7 @@ export function provisionPlatformConnections(
     )
       throw new Error('credential reference must be a non-secret opaque name');
   }
-  return operatorTransaction(db, !dryRun, async (trx) => {
+  return operatorTransaction(db, options.apply === true, async (trx) => {
     await subjectXactLock(trx, 'platform.provider.provision');
     const now = new Date();
     const workspace =

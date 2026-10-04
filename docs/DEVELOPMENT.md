@@ -488,9 +488,10 @@ pnpm --filter @citeladder/api agreement:record --actor <admin-email> --input <lo
 pnpm --filter @citeladder/api account:manage --actor <owner-or-admin-email> --workspace-id <uuid>
 ```
 
-Acquisition and agreement commands roll back unless `--apply` is supplied.
-Platform provisioning retains explicit `--dry-run` preview and applies by default;
-it accepts only opaque references and makes no provider calls. The account manager
+Acquisition, agreement and platform provisioning commands roll back unless
+`--apply` is supplied. Platform provisioning also accepts explicit `--dry-run`
+preview; combining it with `--apply` is refused. Platform provisioning
+accepts only opaque references and makes no provider calls. The account manager
 requires an interactive terminal for passwords and confirmation for mutations.
 The native API image also supports these entrypoints via
 `node src/cli/<entrypoint>.ts`; the root Python image defaults to `alembic --help`

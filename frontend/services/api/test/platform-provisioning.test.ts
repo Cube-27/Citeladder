@@ -1,10 +1,14 @@
 import { afterAll, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { provisionPlatformConnections } from '../src/providers/platform-provisioning.ts';
 import { providerPolicy } from '../src/providers/config.ts';
-import { Fixtures, testDatabase } from './support.ts';
+import { Fixtures, testConfig, testDatabase } from './support.ts';
 
-const db = testDatabase(),
+const config = testConfig(),
+  db = testDatabase(config),
   fixtures = new Fixtures(db);
 let system: string;
 afterAll(async () => {
@@ -14,9 +18,9 @@ afterAll(async () => {
 
 it('previews, converges concurrently and rotates only platform metadata without touching BYOK', async () => {
   const reference = 'vault://platform/openai';
-  await expect(
-    provisionPlatformConnections(db, { openai: reference }, true),
-  ).resolves.toMatchObject([{ status: 'created' }]);
+  await expect(provisionPlatformConnections(db, { openai: reference })).resolves.toMatchObject([
+    { status: 'created' },
+  ]);
   expect(
     await db.selectFrom('workspaces').select('id').where('is_system', '=', true).execute(),
   ).toEqual([]);
@@ -45,8 +49,8 @@ it('previews, converges concurrently and rotates only platform metadata without 
     })
     .execute();
   const [first, second] = await Promise.all([
-    provisionPlatformConnections(db, { openai: reference }),
-    provisionPlatformConnections(db, { openai: reference }),
+    provisionPlatformConnections(db, { openai: reference }, { apply: true }),
+    provisionPlatformConnections(db, { openai: reference }, { apply: true }),
   ]);
   expect(first[0]!.connection_id).toBe(second[0]!.connection_id);
   expect([first[0]!.status, second[0]!.status].sort()).toEqual(['created', 'unchanged']);
@@ -77,9 +81,9 @@ it('previews, converges concurrently and rotates only platform metadata without 
     .set({ active: false, is_default: false, transport_model: 'retired' })
     .where('id', '=', route.id)
     .execute();
-  expect((await provisionPlatformConnections(db, { openai: reference }))[0]!.status).toBe(
-    'updated',
-  );
+  expect(
+    (await provisionPlatformConnections(db, { openai: reference }, { apply: true }))[0]!.status,
+  ).toBe('updated');
   expect(
     (
       await db
@@ -89,7 +93,7 @@ it('previews, converges concurrently and rotates only platform metadata without 
         .executeTakeFirstOrThrow()
     ).paused_at,
   ).not.toBeNull();
-  await provisionPlatformConnections(db, { openai: `${reference}-v2` }, true);
+  await provisionPlatformConnections(db, { openai: `${reference}-v2` });
   expect(
     (
       await db
@@ -99,7 +103,7 @@ it('previews, converges concurrently and rotates only platform metadata without 
         .executeTakeFirstOrThrow()
     ).credential_revision,
   ).toBe(prior.credential_revision);
-  await provisionPlatformConnections(db, { openai: `${reference}-v2` });
+  await provisionPlatformConnections(db, { openai: `${reference}-v2` }, { apply: true });
   const rotated = await db
     .selectFrom('provider_connections')
     .selectAll()
@@ -135,9 +139,13 @@ it('previews, converges concurrently and rotates only platform metadata without 
         .executeTakeFirstOrThrow()
     ).api_key_encrypted,
   ).toBe('recorded-ciphertext');
-  const anthropic = await provisionPlatformConnections(db, {
-    anthropic: 'vault://platform/anthropic',
-  });
+  const anthropic = await provisionPlatformConnections(
+    db,
+    {
+      anthropic: 'vault://platform/anthropic',
+    },
+    { apply: true },
+  );
   expect(
     (
       await db
@@ -147,6 +155,65 @@ it('previews, converges concurrently and rotates only platform metadata without 
         .execute()
     ).map((row) => row.logical_engine),
   ).toEqual(['claude']);
+});
+
+it('previews CLI rotation unless apply is explicit and refuses conflicting mutation flags', async () => {
+  const reference = 'vault://platform/openai-cli';
+  const run = (flags: string[]) =>
+    promisify(execFile)(
+      process.execPath,
+      [
+        fileURLToPath(new URL('../src/cli/provision-platform-providers.ts', import.meta.url)),
+        '--credential-ref',
+        `openai=${reference}`,
+        ...flags,
+      ],
+      {
+        env: {
+          PATH: process.env.PATH,
+          SystemRoot: process.env.SystemRoot,
+          APP_ENV: 'test',
+          CITELADDER_DISABLE_DOTENV: '1',
+          DATABASE_URL: config.databaseUrl,
+          JWT_SECRET_KEY: config.session.secretKey,
+        },
+        timeout: 10_000,
+        windowsHide: true,
+      },
+    );
+  const prior = await db
+    .selectFrom('provider_connections')
+    .selectAll()
+    .where('workspace_id', '=', system)
+    .where('transport_provider', '=', 'openai')
+    .executeTakeFirstOrThrow();
+  for (const flags of [[], ['--dry-run']]) {
+    const { stdout } = await run(flags);
+    expect(JSON.parse(stdout)).toMatchObject([{ connection_id: prior.id, status: 'updated' }]);
+    expect(
+      await db
+        .selectFrom('provider_connections')
+        .selectAll()
+        .where('id', '=', prior.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual(prior);
+  }
+  await expect(run(['--apply', '--dry-run'])).rejects.toMatchObject({ code: 1 });
+  expect(
+    await db
+      .selectFrom('provider_connections')
+      .selectAll()
+      .where('id', '=', prior.id)
+      .executeTakeFirstOrThrow(),
+  ).toEqual(prior);
+  await run(['--apply']);
+  const applied = await db
+    .selectFrom('provider_connections')
+    .selectAll()
+    .where('id', '=', prior.id)
+    .executeTakeFirstOrThrow();
+  expect(applied.platform_credential_ref).toBe(reference);
+  expect(applied.credential_revision).not.toBe(prior.credential_revision);
 });
 
 it.each(['', 'sk-live-value', 'production-secret', 'password-value'])(
