@@ -170,10 +170,10 @@ export function CrawlLogSetup({
 export function CrawlLogSetupSubmit({
   model,
 }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
-  const { canManage, sources, mutation } = model;
+  const { canManage, sources, mutation, issued } = model;
   return (
     <Button
-      disabled={!canManage || !sources.data?.ingestion_enabled}
+      disabled={!canManage || !sources.data?.ingestion_enabled || issued !== null}
       pending={mutation.isPending}
       onClick={() => mutation.mutate({ kind: 'create' })}
     >

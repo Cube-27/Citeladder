@@ -210,8 +210,8 @@ function CellLines({ lines }: Readonly<{ lines: string[] }>) {
   return (
     <div className="grid gap-0.5">
       <span>{first}</span>
-      {rest.map((line) => (
-        <span key={line} className="type-caption">
+      {rest.map((line, index) => (
+        <span key={index} className="type-caption">
           {line}
         </span>
       ))}
