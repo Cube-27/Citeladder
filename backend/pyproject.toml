@@ -103,10 +103,9 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Assertions are the assertion mechanism of the test suite and of the offline
-# eval corpus. Every other S rule stays on for both trees.
+# Assertions are the assertion mechanism of the test suite. Every other S rule
+# stays on for tests as well as application code.
 "tests/**" = ["S101"]
-"evaluations/**" = ["S101"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -136,11 +135,10 @@ source = ["app"]
 relative_files = true
 branch = true
 omit = [
-  # Not runtime code: the offline eval corpus, one-shot scripts, and the
+  # Not runtime code: the one-shot scripts and the
   # single Alembic revision are exercised by their own gates, not by pytest.
   # `scripts/` is now covered by ruff, mypy, vulture and the CC/LOC policy --
   # every gate except the suite, which cannot run one-shot operational scripts.
-  "evaluations/*",
   "scripts/*",
   "migrations/*",
   "tests/*",
@@ -181,15 +179,14 @@ DEP002 = [
 
 [tool.mypy]
 python_version = "3.12"
-# ``evaluations`` and ``scripts`` are offline eval code and operational scripts,
-# deliberately NOT part of the runtime package (setuptools ships ``app*`` only,
-# and the API/worker image copies ``backend/app``). They are typechecked here
+# Operational scripts are not part of the runtime package (setuptools ships
+# ``app*`` only, and the API/worker image copies ``backend/app``). They are typechecked here
 # anyway: an operational script that silently rots is a script nobody can run
 # on the day they need it. ``scripts`` joining this list immediately caught two
 # dead seams in ``seed_dev_data`` -- a monkeypatch onto an attribute that had
 # moved packages, and an ``httpx.MockTransport`` passed where the Site Health
 # worker wants an ``AcquisitionTransport``, both of which broke the seeder.
-files = ["app", "evaluations", "scripts"]
+files = ["app", "scripts"]
 plugins = ["pydantic.mypy"]
 warn_unused_ignores = true
 warn_redundant_casts = true

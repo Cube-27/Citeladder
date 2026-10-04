@@ -3,8 +3,8 @@
 Pending, selected by the owner; no active implementation is established.
 [Connected data](../integrations-traffic-analytics.md),
 [Visibility](../visibility-prompt.md) and [Opportunities](../opportunities.md)
-own shipped behavior. The [original audit follow-up](../archive/plans/citeladder-integrations-audit-followups.md)
-preserves evidence and historical suggestions. Queue order is not inferred.
+own shipped behavior. Git and PRs retain prior audit evidence and historical
+suggestions. Queue order is not inferred.
 
 ## Remaining scope
 

@@ -90,7 +90,7 @@ evidence for the release candidate satisfies them:
   [operator guide](operations/billing-operator-guide.md) govern execution.
 - Infrastructure: durability, backup/restore, observability and deployment
   acceptance remain operational requirements, not completed work inferred from
-  the retired [hardening proposal](archive/plans/citeladder-production-hardening.md).
+  a retired hardening proposal.
   [Google Cloud acceptance](operations/GOOGLE_CLOUD.md) and the
   [runbook](operations/GCP_RUNBOOK.md) remain live procedures.
 

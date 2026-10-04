@@ -64,8 +64,8 @@ Update `plans/ACTIVE.md` only when plan selection, queue, blocker or completion
 state changes, and `decisions.md` only for a qualifying cross-feature decision.
 Routine implementation/validation evidence belongs in the PR or CI record, not
 new summary, progress or evidence sidecars. There is no blanket multi-document
-checklist per edit. When retiring a document, repair inbound links and preserve
-historical evidence where it remains useful; archiving does not resolve a finding.
+checklist per edit. When retiring a document, repair inbound links. Git and PRs
+retain superseded history; deleting a document does not resolve an open finding.
 
 ## Operations and retained evidence
 
@@ -77,11 +77,9 @@ origin provisioning, configuration and cutover release records.
 [Operations](operations/) contains live deployment, billing and recovery
 procedures; use the procedure relevant to the requested operation.
 
-[Evaluation corpora](evaluations/README.md) and their fixtures remain live inputs
-where tooling uses them. [Archive](archive/) preserves retired plans, audits and
-dated evidence, including unresolved observations; relocation is not completion.
-Do not search the archive for ordinary implementation unless a specific
-historical question requires it.
+Fixtures consumed by current tests remain with those tests. Git and PRs retain
+retired plans, audits and dated evidence. Historical observations do not
+establish current acceptance.
 
 Published blog content belongs to
 [the marketing content modules](../frontend/lib/marketing-content/blog-posts/),

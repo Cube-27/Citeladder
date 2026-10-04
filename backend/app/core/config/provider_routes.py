@@ -9,7 +9,7 @@ credential metadata. Native config owns execution policy, pacing and endpoints.
 
 Nothing here imports ``provider_catalog``, which is what keeps the split free
 of a cycle. ``provider_catalog`` re-exports the vocabulary still read by Python
-models, offline evaluation and supported operators.
+models and supported operators.
 """
 
 from __future__ import annotations

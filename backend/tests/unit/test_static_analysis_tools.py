@@ -58,7 +58,7 @@ class TestSuppressionGate:
         per_file = _pyproject()["tool"]["ruff"]["lint"].get("per-file-ignores", {})
 
         for pattern, codes in per_file.items():
-            assert pattern.startswith(("tests/", "evaluations/")), (
+            assert pattern.startswith("tests/"), (
                 f"{pattern} exempts application code from {codes}; suppress at "
                 "the line with a reason instead"
             )
@@ -74,17 +74,19 @@ class TestSuppressionGate:
 class TestGateScope:
     """Every Python tree ships or is operated; all of them are gated."""
 
-    def test_mypy_checks_scripts_and_evaluations(self) -> None:
+    def test_mypy_checks_application_and_operator_scripts(self) -> None:
         files = _pyproject()["tool"]["mypy"]["files"]
 
-        assert set(files) == {"app", "evaluations", "scripts"}
+        assert set(files) == {"app", "scripts"}
 
-    def test_complexity_policy_covers_the_same_trees(self) -> None:
+    def test_complexity_policy_keeps_active_and_retired_roots_guarded(self) -> None:
         with (BACKEND / "scripts/complexity_policy.json").open(
             encoding="utf-8"
         ) as handle:
             policy = json.load(handle)
 
+        # The retired evaluation root remains guarded if code is reintroduced;
+        # retirement must not relax the monotonic complexity policy.
         assert set(policy["roots"]) == {"app", "evaluations", "scripts"}
         # The ceilings are fixed and the exception lists stay empty; a
         # regression is refactored, never budgeted.

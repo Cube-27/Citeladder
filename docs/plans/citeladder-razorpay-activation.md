@@ -11,8 +11,7 @@ everything is implemented.
 
 This plan supersedes the pause in
 [provider readiness](../billing-provider-readiness.md) and the retired local
-test-integration plan (its original record stays in
-[the archive](../archive/plans/citeladder-razorpay-local-test-integration.md)).
+test-integration plan.
 Commercial terms come from the
 [launch configuration](../operations/CiteLadder_Launch_Config.md)
 (`launch-pricing-v1`), as amended by the owner decisions below.

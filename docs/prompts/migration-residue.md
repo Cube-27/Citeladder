@@ -25,7 +25,7 @@ report, not code changes.
 - `frontend/services/api/src/` and `frontend/packages/contracts/src/route-ownership.ts`.
 - `docker-compose.yml`, `Dockerfile`, `frontend/**/Dockerfile`, `infra/`,
   `.github/workflows/`, `scripts/`.
-- Active documents listed in `docs/README.md` (not `docs/archive/`).
+- Active documents listed in `docs/README.md`.
 
 ## Hunt list
 
@@ -53,7 +53,7 @@ report, not code changes.
 
 ## Not a finding
 
-- Historical content inside `docs/archive/` or completed plans.
+- Historical content retained in Git and PRs, or completed plans.
 - SQLAlchemy models, Alembic, bootstrap and supported operators in Python.
 - Generated files under `frontend/services/api/src/generated/`.
 

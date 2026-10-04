@@ -186,7 +186,7 @@ inventory importers first, delete, then re-grep.
 - `invariants.md:246`: change the path to `frontend/apps/app/src/globals.css`.
 - `visibility-prompt.md:148`: point to
   `frontend/services/api/src/prompts/calibration.ts`.
-- Point the two `ACTIVE.md` links to `../archive/plans/…`. Repoint or drop the
+- Repair retired-plan references in `ACTIVE.md`. Repoint or drop the
   links at `visibility-prompt.md:84`, `:348`, `commerce-intelligence.md:119`
   and `integrations-traffic-analytics.md:213`.
 - Validation: reference/link checks and `git diff --check` only.

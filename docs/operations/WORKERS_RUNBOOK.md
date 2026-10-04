@@ -1,7 +1,6 @@
 # Workers migration operations
 
-This is the operator procedure for the four-PR
-[Workers migration plan](../archive/plans/CiteLadder_Workers_Migration_Implementation_Plan.md).
+This is the operator procedure for the four-PR Workers migration.
 PRs 1–3 prepared protected ingress and two Workers. PR 4 removes the superseded
 production frontend serving layer before the owner authorizes a fresh release.
 There is no staging environment or staging Worker target. Repository availability
@@ -298,7 +297,7 @@ procedure itself does not authorize dispatch or DNS changes.
    `workers-marketing-production` and verify initial HTML, direct app links,
    public pricing, genuine 404s, sitemap, canonicals and apex MCP/webhook
    ownership.
-5. Run [the architecture acceptance matrix](../archive/plans/CiteLadder_Workers_Migration_Architecture.md#12-acceptance-matrix-evidence-required-before-completion)
+5. Run the [release acceptance checks](../release-checklist.md)
    on the deployed topology. Record unavailable external checks as unexecuted.
    Fix actual failures before accepting the release.
 

@@ -266,7 +266,7 @@ function backendChecks() {
   step(
     'Dead-code policy',
     backendTool('vulture'),
-    ['app', 'evaluations', 'scripts', '--min-confidence', '80'],
+    ['app', 'scripts', '--min-confidence', '80'],
     backendRoot,
   );
   step('Dependency hygiene', backendTool('deptry'), ['.'], backendRoot);
