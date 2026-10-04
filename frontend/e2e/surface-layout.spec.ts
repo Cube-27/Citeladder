@@ -153,7 +153,7 @@ test('long segments stay on one row and keyboard focus reveals the selected opti
             ctr: null,
             position: null,
             sessions: null,
-            conversions: null,
+            key_events: null,
           },
           series: { clicks: [], impressions: [], ctr: [], position: [] },
         },
