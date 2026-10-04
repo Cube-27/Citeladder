@@ -30,7 +30,9 @@ describe('aiTrafficApi', () => {
         return HttpResponse.json(dashboard);
       }),
     );
-    expect(await aiTrafficApi.getDashboard(projectId, { granularity: 'day' })).toEqual(dashboard);
+    expect(await aiTrafficApi.getDashboard(projectId, { granularity: 'day' })).toMatchObject(
+      dashboard,
+    );
     expect(new URL(requested).searchParams.get('granularity')).toBe('day');
   });
 

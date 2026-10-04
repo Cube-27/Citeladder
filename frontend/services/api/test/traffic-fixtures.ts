@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import type { z } from 'zod';
 import {
   performanceDashboardSchema,
@@ -62,6 +63,10 @@ export async function metric(
   let run = await db
     .selectFrom('integration_sync_runs')
     .selectAll()
+    .select([
+      sql<string>`window_start::text`.as('window_start'),
+      sql<string>`window_end::text`.as('window_end'),
+    ])
     .where('connection_id', '=', seed.connectionId)
     .where('resync_seq', '=', revision)
     .executeTakeFirst();
@@ -75,11 +80,13 @@ export async function metric(
         idempotency_key: randomUUID(),
       })
       .returningAll()
+      .returning([
+        sql<string>`window_start::text`.as('window_start'),
+        sql<string>`window_end::text`.as('window_end'),
+      ])
       .executeTakeFirstOrThrow();
-  const dateText = (date: unknown) =>
-    date instanceof Date ? date.toISOString().slice(0, 10) : String(date).slice(0, 10);
-  const start = dateText(run.window_start),
-    end = dateText(run.window_end);
+  const start = run.window_start,
+    end = run.window_end;
   if (day < start || day > end)
     await db
       .updateTable('integration_sync_runs')

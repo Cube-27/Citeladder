@@ -2,6 +2,7 @@
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
+import { compareText } from '../text-order.ts';
 
 // A successful run completed every selected dataset. A terminal page can also
 // complete one dataset before another dataset in that run fails. Raw artifacts
@@ -89,8 +90,8 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
     group by d.day order by d.day`.execute(db);
   return result.rows.map((r) => ({
     ...r,
-    flags: strings(r.flags).sort(),
-    artifact_ids: strings(r.artifact_ids).sort(),
+    flags: strings(r.flags).sort(compareText),
+    artifact_ids: strings(r.artifact_ids).sort(compareText),
   }));
 }
 

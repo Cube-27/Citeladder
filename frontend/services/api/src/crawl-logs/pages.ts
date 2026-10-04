@@ -20,6 +20,7 @@ import {
 } from '../http/keyset-cursor.ts';
 import { ApiError } from '../errors.ts';
 import { inventoryCrawlIds } from '../site-health/reads/crawl.ts';
+import { compareText } from '../text-order.ts';
 
 type Leg = z.infer<typeof trafficLegSchema>;
 export async function pageContext(db: Database, scope: CrawlScope, options: CrawlReadOptions = {}) {
@@ -62,8 +63,8 @@ export async function pageContext(db: Database, scope: CrawlScope, options: Craw
     const match = Array.isArray(saved) ? saved.find((v) => record(v).day === q.day) : null;
     const fresh =
       match &&
-      JSON.stringify(strings(record(match).artifact_ids).sort()) ===
-        JSON.stringify([...q.artifact_ids].sort());
+      JSON.stringify(strings(record(match).artifact_ids).sort(compareText)) ===
+        JSON.stringify([...q.artifact_ids].sort(compareText));
     return {
       ...q,
       flags: q.revision !== null && !fresh ? [...q.flags, 'projection_pending'] : q.flags,

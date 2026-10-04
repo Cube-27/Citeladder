@@ -253,6 +253,7 @@ describe('change_intel task', () => {
     });
     expect(snapshot!.source_analysis_ids).toHaveLength(4);
     expect(await analyticsTasks(b)).toEqual([
+      { task_kind: 'ai_traffic_insights_refresh', payload: {} },
       {
         task_kind: 'opportunity_refresh',
         payload: { trigger_kind: 'site_change', trigger_id: snapshot!.id },
