@@ -1,5 +1,20 @@
 import { ConfigError, policy, resolveSettingSpec } from '../config.ts';
 
+/** Same validated identity-bootstrap admission and defaults as the shared setting owner. */
+export function catalogBootstrapSettings(env: Record<string, string | undefined> = process.env) {
+  const setting = (key: 'app_env' | 'demo_mode' | 'dev_login_email' | 'dev_login_password') =>
+    resolveSettingSpec(policy.settings[key], env);
+  const development = policy.development_env_names.includes(
+    String(setting('app_env')).trim().toLowerCase(),
+  );
+  return {
+    skip:
+      Boolean(setting('demo_mode')) ||
+      (development && !String(setting('dev_login_password')).trim()),
+    actor: String(setting('dev_login_email')).trim().toLowerCase(),
+  };
+}
+
 /** Resolve native/shared policy; tests pass a deterministic environment. */
 export function billingSettings(env: Record<string, string | undefined> = process.env) {
   const specs = policy.billing.settings;
@@ -12,6 +27,12 @@ export function billingSettings(env: Record<string, string | undefined> = proces
   }
   if (!['http:', 'https:'].includes(contactUrl.protocol))
     throw new ConfigError('Billing contact URL must be an absolute HTTP(S) URL');
+  const sellerEmail = (get('seller_email') as string).trim();
+  if (sellerEmail && !/^[^@\s]+@[^@.\s]+(?:\.[^@.\s]+)+$/u.test(sellerEmail))
+    throw new ConfigError('seller_email must be an email address');
+  const invoicePrefix = (get('invoice_prefix') as string).trim().toUpperCase();
+  if (!/^[A-Z0-9]{1,3}$/u.test(invoicePrefix))
+    throw new ConfigError('invoice_prefix must be 1-3 uppercase letters or digits');
   return {
     enabled: get('checkout_enabled') as boolean,
     provider: get('checkout_provider') as string,
@@ -37,13 +58,13 @@ export function billingSettings(env: Record<string, string | undefined> = proces
     seller: {
       legal_name: get('seller_legal_name') as string,
       address: get('seller_legal_address') as string,
-      email: get('seller_email') as string,
+      email: sellerEmail,
       gstin: get('seller_gstin') as string,
       state_code: get('seller_gst_state_code') as string,
       state_name: get('seller_gst_state_name') as string,
       sac: get('seller_sac') as string,
       lut_reference: get('seller_lut_reference') as string,
-      invoice_prefix: get('invoice_prefix') as string,
+      invoice_prefix: invoicePrefix,
       gst_approval_reference: get('india_gst_approval_reference') as string,
     },
   };

@@ -5,9 +5,7 @@ import { compareText } from '../text-order.ts';
 
 const c = { ...shared.billing.contracts, ...runtime.contracts };
 export const billing = {
-  ...shared.billing,
-  settings: { ...shared.billing.settings, ...runtime.settings },
-  razorpay_settings: { ...shared.billing.razorpay_settings, ...runtime.razorpay_settings },
+  ...runtime,
   contracts: {
     ...c,
     cadences: [c.cadence_monthly].sort(compareText),

@@ -419,9 +419,11 @@ def upgrade() -> None:
         sa.Column("publication_state", sa.String(length=16), nullable=False),
         sa.Column("created_by_user_id", sa.UUID(), nullable=False),
         sa.Column("created_reason", sa.String(length=255), nullable=False),
+        sa.Column("created_idempotency_key", sa.String(length=255), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("published_by_user_id", sa.UUID(), nullable=True),
         sa.Column("published_reason", sa.String(length=255), nullable=True),
+        sa.Column("published_idempotency_key", sa.String(length=255), nullable=True),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["created_by_user_id"], ["users.id"], ondelete="RESTRICT"
@@ -431,6 +433,8 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("payload_sha256"),
+        sa.UniqueConstraint("created_idempotency_key"),
+        sa.UniqueConstraint("published_idempotency_key"),
         sa.UniqueConstraint("revision"),
     )
     op.create_index(
@@ -2219,7 +2223,9 @@ def upgrade() -> None:
         sa.Column("fetched_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("row_count", sa.Integer(), nullable=False),
         sa.Column("payload", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column("extract_metadata", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "extract_metadata", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
             ["workspace_id", "connection_id"],
@@ -7650,7 +7656,11 @@ def upgrade() -> None:
         "bot_requests",
         ["workspace_id", "project_id", "occurred_at", "id"],
     )
-    op.create_index("ix_bot_requests_retention", "bot_requests", ["workspace_id", "occurred_at", "id"])
+    op.create_index(
+        "ix_bot_requests_retention",
+        "bot_requests",
+        ["workspace_id", "occurred_at", "id"],
+    )
     # Cascade paths: deleting a batch or source must not sequential-scan.
     op.create_index(
         "ix_bot_requests_batch",
@@ -7791,8 +7801,13 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.UniqueConstraint(
-            "workspace_id", "project_id", "reporting_date", "reporting_timezone",
-            "url_hash", "ai_source", name="uq_ai_referral_landing_grain",
+            "workspace_id",
+            "project_id",
+            "reporting_date",
+            "reporting_timezone",
+            "url_hash",
+            "ai_source",
+            name="uq_ai_referral_landing_grain",
         ),
     )
     op.create_table(
@@ -7815,7 +7830,10 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.UniqueConstraint(
-            "workspace_id", "project_id", "window_start", "window_end",
+            "workspace_id",
+            "project_id",
+            "window_start",
+            "window_end",
             name="uq_ai_traffic_insights_window",
         ),
     )

@@ -213,6 +213,27 @@ export async function revokeBundle(
     .forUpdate()
     .execute();
   if (rows.length !== new Set(input.grantIds).size) conflict('grant_not_found');
+  if (!Number.isFinite(input.at.getTime())) conflict('invalid_revocation_time');
+  const prior = await db
+    .selectFrom('grant_revocations')
+    .innerJoin('account_grants', 'account_grants.id', 'grant_revocations.grant_id')
+    .selectAll('grant_revocations')
+    .where('account_grants.billing_account_id', '=', input.accountId)
+    .where('grant_revocations.idempotency_key', '=', input.key)
+    .execute();
+  if (
+    (prior.length > 0 &&
+      (prior.length !== rows.length ||
+        prior.some((row) => !input.grantIds.includes(row.grant_id)))) ||
+    prior.some(
+      (row) =>
+        row.effective_from.getTime() !== input.at.getTime() ||
+        row.reason !== input.reason ||
+        row.actor_kind !== input.actorKind ||
+        row.actor_user_id !== input.actorId,
+    )
+  )
+    conflict('revocation_idempotency_conflict');
   const inserted = await db
     .insertInto('grant_revocations')
     .values(

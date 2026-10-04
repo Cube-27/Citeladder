@@ -10,23 +10,23 @@ positioning; [the index](README.md) routes to substantive feature documents.
 
 ## Cross-system ownership
 
-| Owner | Writes | Downstream contract |
-|---|---|---|
-| Workspace/project access | Identity, membership and project boundaries | Every product action/read is authorized |
-| Onboarding | Research evidence and reviewed company/competitor context | Confirmed context and a project with an empty prompt set |
-| Site Health | Acquisition, normalized facts, classifications, findings, snapshots and bounded internal-link analyses | Persisted site evidence, contextual-link suggestions and change observations |
-| Integrations / Demand | Imported observations, projections and demand signals | Exact-window/source evidence |
-| Prompts / Visibility | Portfolios, frozen audits, answer artifacts and measurements | Comparable observed mentions/citations |
-| Opportunities | Ranked actions, target-level Actions, declarations and verification observations | One Action per target and one implementation record |
-| Commerce | Catalog projections and target-specific shelf observations | Reuses acquisition, Prompt and audit owners |
-| Agent | Chats, frozen run context, tool/model attempts and versioned outputs | Reviewable deliverable over shared persisted readers; never automatic business truth |
-| MCP | OAuth authorization records | Read-only access to the same owners |
-| Billing / Entitlements | Commercial evidence, grants and ledger | Admission, availability and settlement |
+| Owner                    | Writes                                                                                                 | Downstream contract                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| Workspace/project access | Identity, membership and project boundaries                                                            | Every product action/read is authorized                                              |
+| Onboarding               | Research evidence and reviewed company/competitor context                                              | Confirmed context and a project with an empty prompt set                             |
+| Site Health              | Acquisition, normalized facts, classifications, findings, snapshots and bounded internal-link analyses | Persisted site evidence, contextual-link suggestions and change observations         |
+| Integrations / Demand    | Imported observations, projections and demand signals                                                  | Exact-window/source evidence                                                         |
+| Prompts / Visibility     | Portfolios, frozen audits, answer artifacts and measurements                                           | Comparable observed mentions/citations                                               |
+| Opportunities            | Ranked actions, target-level Actions, declarations and verification observations                       | One Action per target and one implementation record                                  |
+| Commerce                 | Catalog projections and target-specific shelf observations                                             | Reuses acquisition, Prompt and audit owners                                          |
+| Agent                    | Chats, frozen run context, tool/model attempts and versioned outputs                                   | Reviewable deliverable over shared persisted readers; never automatic business truth |
+| MCP                      | OAuth authorization records                                                                            | Read-only access to the same owners                                                  |
+| Billing / Entitlements   | Commercial evidence, grants and ledger                                                                 | Admission, availability and settlement                                               |
 
 TypeScript owns billing checkout, subscription changes, webhook receipt,
 leased recovery, invoice issuance, consumable-ledger writes and, under the
-`billing-documents` family, receipt list/PDF reads. Python retains
-catalog/operator administration. Both stacks
+`billing-documents` family, receipt list/PDF reads, and commercial operator
+administration. Python retains identity/seed bootstrap. Both stacks
 use the same durable rows and follow the lock order below; see
 [Billing and entitlements](billing-entitlements.md) for the owner boundaries.
 
@@ -107,7 +107,10 @@ Checkout execution, provider request policy, auth HTTP settings and packaged
 Agent parsing are native. The retained export carries model defaults and
 provenance, frozen provider routes/catalogs, security, role and entitlement
 registries, plus settings used by bootstrap and supported operators. Billing
-tax/catalog authoring and read-only plan verification remain Python consumers.
+catalog authoring, tax/seller policy and read-only plan verification are native.
+The existing migration job sequences Alembic upgrade/check, retained Python
+identity/grant bootstrap, then native catalog initialization. API/worker rollout
+requires successful completion of both bootstrap stages.
 The auth and workspace HTTP families
 are TypeScript-owned, including session issuance, Google identity sign-in,
 membership/invitation mutations, policy acceptance and product-tour state.

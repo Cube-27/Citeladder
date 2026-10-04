@@ -71,6 +71,9 @@ jobs:
           ENCRYPTION_KEY=compose-smoke-encryption-key-not-for-production
           FRONTEND_URL=http://127.0.0.1:3001
           TRUSTED_PROXY_CIDRS=
+          DEV_LOGIN_EMAIL=smoke@example.test
+          DEV_LOGIN_PASSWORD=compose-smoke-development-password
+          DEV_LOGIN_COUNTER_ALLOWANCE=100
           EOF
 
       # Build both frontend runtimes cold to verify clean-clone delivery.
@@ -111,6 +114,10 @@ jobs:
             }
           done
           "${compose[@]}" run --rm --no-deps migrate python -c 'import sys; assert sys.version_info[:2] == (3, 12)'
+          "${compose[@]}" run --rm --no-deps migrate node /app/native/src/cli/bootstrap-catalog.ts --help
+          "${compose[@]}" run --rm --no-deps migrate node /app/native/src/cli/billing-admin.ts --help
+          # Repeated composed startup must retain the same immutable catalog.
+          "${compose[@]}" run --rm --no-deps migrate /bin/sh /app/bootstrap-environment.sh
           "${compose[@]}" exec -T api-service node --input-type=module -e "await import('@citeladder/contracts')"
           for _ in $(seq 1 45); do
             if curl --fail --silent --show-error http://127.0.0.1:8100/health | grep -qx '{"status":"ok"}'; then

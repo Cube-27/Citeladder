@@ -2,31 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Any
-
-from pydantic_settings import BaseSettings
 
 from app.core.config import billing_contracts
 from app.core.config import entitlements as entitlements_config
 from app.core.config.billing_contracts import SUBSCRIPTION_KIND_BASE
-from app.core.config.billing_settings import BillingSettings
-from app.core.config.razorpay_settings import RAZORPAY_API_ORIGIN, RazorpaySettings
-
-Setting = Callable[[str, type[BaseSettings]], dict[str, Any]]
 
 
-def billing_policy(setting: Setting) -> dict[str, Any]:
+def billing_policy() -> dict[str, Any]:
     return {
-        "settings": {
-            name: setting(name, BillingSettings)
-            for name in BillingSettings.model_fields
-        },
-        "razorpay_settings": {
-            name: setting(name, RazorpaySettings)
-            for name in RazorpaySettings.model_fields
-        },
-        "razorpay_origin": RAZORPAY_API_ORIGIN,
         "contracts": {
             name.lower(): sorted(value) if isinstance(value, frozenset) else value
             for name, value in vars(billing_contracts).items()

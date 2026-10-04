@@ -64,6 +64,9 @@ class BillingCatalogRevision(Base):
         PGUUID(as_uuid=True), ForeignKey(FK_USERS_ID, ondelete="RESTRICT")
     )
     created_reason: Mapped[str] = mapped_column(String(255))
+    created_idempotency_key: Mapped[str | None] = mapped_column(
+        String(255), unique=True, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
@@ -73,6 +76,9 @@ class BillingCatalogRevision(Base):
         nullable=True,
     )
     published_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    published_idempotency_key: Mapped[str | None] = mapped_column(
+        String(255), unique=True, nullable=True
+    )
     published_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

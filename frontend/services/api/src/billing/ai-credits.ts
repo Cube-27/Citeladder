@@ -25,7 +25,7 @@ const rateSchema = z
         rate.reasoning_credits_per_million,
       ].some((value) => value > 0),
   );
-const creditPolicy = z
+export const creditPolicy = z
   .strictObject({ version: z.string().min(1).max(64), rates: z.array(rateSchema) })
   .refine(
     (value) =>

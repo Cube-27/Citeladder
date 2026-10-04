@@ -1,5 +1,6 @@
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
+import { parseUuid } from '../http/uuid.ts';
 
 /** Bounded identity operators serialize before row locks, including cross-workspace resets. */
 export function lockIdentityAdministration(db: Database) {
@@ -9,10 +10,11 @@ export function lockIdentityAdministration(db: Database) {
 /** Operator admission is independent of customer workspace roles. Held until commit. */
 export async function requirePlatformAdmin(db: Database, email: string) {
   await lockIdentityAdministration(db);
+  const identity = parseUuid(email);
   const actor = await db
     .selectFrom('users')
     .selectAll()
-    .where('email', '=', email.trim().toLowerCase())
+    .where(identity ? 'id' : 'email', '=', identity ?? email.trim().toLowerCase())
     .where('is_active', '=', true)
     .where('role', '=', 'admin')
     .forUpdate()

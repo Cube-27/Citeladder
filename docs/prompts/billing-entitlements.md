@@ -60,7 +60,7 @@ in this area as at least P1. Your output is a findings report, not code changes.
 ## Not a finding
 
 - Checkout or card trial being disabled — intended until activation.
-- Python billing catalog/operator code existing alongside TypeScript runtime —
+- The temporary Python bootstrap/seed grant bridge alongside native billing —
   documented split.
 
 ## Subagent split

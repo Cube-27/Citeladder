@@ -192,7 +192,7 @@ def build_config() -> dict[str, Any]:
         "auth": auth_policy(),
         "site_health_runtime": site_health_runtime_policy(_setting),
         "entitlements": entitlements_policy(),
-        "billing": billing_policy(_setting),
+        "billing": billing_policy(),
         "prompts": _prompts_policy(),
         "agent": {"run_max_attempts": agent_config.AGENT_RUN_MAX_ATTEMPTS},
     }

@@ -21,28 +21,28 @@ is evidence that money can be taken correctly.
 
 ## What the boundary guarantees today
 
-| Guarantee | Where it is enforced | Verified by |
-| --- | --- | --- |
-| Unknown or unconfigured providers fail closed before transport, without fallback | `src/billing/razorpay.ts` | `billing-boundaries.test.ts` |
-| A new intent commits its provider/environment and frozen terms before network I/O | `src/billing/purchases.ts` | `billing.test.ts` |
-| Disabled checkout still permits stored-intent replay and originating-environment recovery | `src/billing/purchases.ts`, `src/billing/recovery.ts` | `billing.test.ts` |
-| Foreign environments cannot cancel or settle a record | Frozen provider/mode checks in purchases, settlement and receipts | `billing.test.ts` |
-| Webhook authentication uses bounded exact bytes and vendor headers | `src/billing/webhooks.ts` | `billing.test.ts` |
-| Duplicate events settle once; conflicting event digests quarantine | `src/billing/webhooks.ts`, shared settlement | `billing.test.ts` |
-| Recurring paid evidence binds the captured payment to its subscription invoice and period | `src/billing/razorpay.ts` | `billing-boundaries.test.ts` |
-| Uncertain creation is recovered without another create request | `src/billing/recovery.ts` | `billing.test.ts` |
-| Quote signing uses an independent secret with no gateway fallback | `src/billing/razorpay.ts` | `billing-boundaries.test.ts` |
+| Guarantee                                                                                 | Where it is enforced                                              | Verified by                  |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------- |
+| Unknown or unconfigured providers fail closed before transport, without fallback          | `src/billing/razorpay.ts`                                         | `billing-boundaries.test.ts` |
+| A new intent commits its provider/environment and frozen terms before network I/O         | `src/billing/purchases.ts`                                        | `billing.test.ts`            |
+| Disabled checkout still permits stored-intent replay and originating-environment recovery | `src/billing/purchases.ts`, `src/billing/recovery.ts`             | `billing.test.ts`            |
+| Foreign environments cannot cancel or settle a record                                     | Frozen provider/mode checks in purchases, settlement and receipts | `billing.test.ts`            |
+| Webhook authentication uses bounded exact bytes and vendor headers                        | `src/billing/webhooks.ts`                                         | `billing.test.ts`            |
+| Duplicate events settle once; conflicting event digests quarantine                        | `src/billing/webhooks.ts`, shared settlement                      | `billing.test.ts`            |
+| Recurring paid evidence binds the captured payment to its subscription invoice and period | `src/billing/razorpay.ts`                                         | `billing-boundaries.test.ts` |
+| Uncertain creation is recovered without another create request                            | `src/billing/recovery.ts`                                         | `billing.test.ts`            |
+| Quote signing uses an independent secret with no gateway fallback                         | `src/billing/razorpay.ts`                                         | `billing-boundaries.test.ts` |
 
 Paths above are relative to `frontend/services/api/`. Native config owns billing
-execution policy. Python retains shared tax/catalog inputs, operator credentials
-and catalog administration; it has no metering worker bridge. Public pricing
+execution, authoring, tax/seller policy and read-only operator credentials.
+Python retains schema vocabulary and the temporary identity/bootstrap/seed grant
+bridge until PR 4; it has no metering worker bridge. Public pricing
 and billing reads consume persisted state without provider calls.
 
 ## Configuration
 
-Provider-independent execution policy (`frontend/services/api/src/config/billing.json`),
-composed with shared tax/seller and operator settings from
-`backend/app/core/config/billing_settings.py`:
+Provider-independent execution, tax/seller and operator policy lives in
+`frontend/services/api/src/config/billing.json`:
 
 - `BILLING_CHECKOUT_ENABLED` — the operational kill switch.
 - `BILLING_CHECKOUT_PROVIDER` — which provider identity admits NEW checkout.
@@ -58,7 +58,7 @@ environment settings: they live in the published `BillingCatalogRevision`.
 The contact-sales display URL is configured by `BILLING_CONTACT_SALES_URL`.
 
 Razorpay-owned (native `config/billing.json` and shared operator credentials in
-`backend/app/core/config/razorpay_settings.py`): `BILLING_RAZORPAY_MODE`,
+`frontend/services/api/src/config/billing.json`): `BILLING_RAZORPAY_MODE`,
 `BILLING_RAZORPAY_KEY_ID`, `BILLING_RAZORPAY_KEY_SECRET`,
 `BILLING_RAZORPAY_WEBHOOK_SECRET`, the readiness flags and the fixed API origin.
 

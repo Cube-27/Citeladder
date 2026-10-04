@@ -529,6 +529,7 @@ export interface BillingAccounts {
 export interface BillingCatalogRevisions {
   created_at: Timestamp;
   created_by_user_id: string;
+  created_idempotency_key: string | null;
   created_reason: string;
   id: string;
   payload: Json;
@@ -536,6 +537,7 @@ export interface BillingCatalogRevisions {
   publication_state: string;
   published_at: Timestamp | null;
   published_by_user_id: string | null;
+  published_idempotency_key: string | null;
   published_reason: string | null;
   revision: string;
 }

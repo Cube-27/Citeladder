@@ -49,11 +49,9 @@ try {
                 try { & pnpm --filter '@citeladder/api' runner @CommandArgs } finally { Pop-Location }
                 break
             }
-            $modules = @{ admin = 'scripts.billing_admin'; plans = 'scripts.provision_razorpay_plans' }
-            $python = Join-Path $root 'backend/.venv/Scripts/python.exe'
-            if (-not (Test-Path -LiteralPath $python)) { throw 'Install backend dependencies with uv sync --frozen --extra dev first.' }
-            Push-Location (Join-Path $root 'backend')
-            try { & $python -m $modules[$Action] @CommandArgs } finally { Pop-Location }
+            # Keep the repository as the authorized file root for .runtime inputs.
+            $commands = @{ admin = 'billing-admin.ts'; plans = 'provision-razorpay-plans.ts' }
+            & node (Join-Path $root ('frontend/services/api/src/cli/' + $commands[$Action])) @CommandArgs
         }
     }
     if ($LASTEXITCODE -ne 0) { throw 'Billing staging command failed.' }

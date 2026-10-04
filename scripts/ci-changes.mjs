@@ -164,6 +164,7 @@ function isComposeSensitive(path) {
   return (
     path === '.github/workflows/compose-smoke.yml' ||
     path === 'scripts/frontend-ingress-smoke.mjs' ||
+    path === 'scripts/bootstrap-environment.sh' ||
     path === '.dockerignore' ||
     path === '.env.example' ||
     // Both images. `frontend/Dockerfile` matched nothing here and reached

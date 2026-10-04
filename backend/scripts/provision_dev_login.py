@@ -16,16 +16,17 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+from email.errors import HeaderParseError
+from email.headerregistry import Address
 
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 
-from app.core.config import settings
+from app.core.config import LOGIN_PASSWORD_MAX_CHARS, LOGIN_PASSWORD_MIN_CHARS, settings
 from app.core.database import SessionLocal, dispose_engine
 from app.domain.auth.service import authenticate_user, get_user_by_email, register_user
 from app.domain.billing.bootstrap import (
     development_access_grants,
-    ensure_initial_catalog,
     ensure_workspace_billing,
     issue_development_access,
 )
@@ -89,7 +90,6 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
                 key_family=f"dev-full-access:{user.id}",
                 initial_key=f"dev-full-access:{user.id}",
             )
-            await ensure_initial_catalog(session, operator=user)
             await session.commit()
             print(f"email={user.email}")
             print(f"workspace_id={workspace.id}")
@@ -117,12 +117,30 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--email", required=True)
-    parser.add_argument("--password", required=True)
+    password_input = parser.add_mutually_exclusive_group(required=True)
+    password_input.add_argument("--password")
+    password_input.add_argument("--password-stdin", action="store_true")
     parser.add_argument("--counter-allowance", required=True, type=int)
     args = parser.parse_args(argv)
+    try:
+        address = Address(addr_spec=args.email.strip())
+        if not address.username or not address.domain:
+            raise ValueError("incomplete email address")
+        email = address.addr_spec
+    except (ValueError, HeaderParseError):
+        parser.error("a valid email address is required")
+    password = args.password
+    if args.password_stdin:
+        password = (
+            sys.stdin.readline(LOGIN_PASSWORD_MAX_CHARS + 2)
+            .removesuffix("\n")
+            .removesuffix("\r")
+        )
+    if not LOGIN_PASSWORD_MIN_CHARS <= len(password) <= LOGIN_PASSWORD_MAX_CHARS:
+        parser.error("password length does not meet the configured login policy")
     if args.counter_allowance < 1:
         parser.error("--counter-allowance must be positive")
-    asyncio.run(_run(args.email, args.password, args.counter_allowance))
+    asyncio.run(_run(email, password, args.counter_allowance))
     return 0
 
 

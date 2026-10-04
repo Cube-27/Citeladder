@@ -1,12 +1,57 @@
 from __future__ import annotations
 
 import asyncio
+from io import StringIO
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
 from scripts import provision_dev_login
+
+
+def test_main_accepts_password_stdin_without_forwarding_an_argument(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run = AsyncMock()
+    monkeypatch.setattr(provision_dev_login, "_run", run)
+    monkeypatch.setattr(
+        provision_dev_login.sys, "stdin", StringIO("fixture-password\n")
+    )
+    assert (
+        provision_dev_login.main(
+            [
+                "--email",
+                "dev@example.com",
+                "--password-stdin",
+                "--counter-allowance",
+                "100",
+            ]
+        )
+        == 0
+    )
+    run.assert_awaited_once_with("dev@example.com", "fixture-password", 100)
+
+
+@pytest.mark.parametrize(
+    "email,password",
+    [
+        ("invalid", "fixture-password"),
+        ("dev@example.com\nextra", "fixture-password"),
+        ("dev@example.com", "short"),
+    ],
+)
+def test_main_rejects_invalid_credentials_before_provisioning(
+    monkeypatch: pytest.MonkeyPatch, email: str, password: str
+) -> None:
+    run = AsyncMock()
+    monkeypatch.setattr(provision_dev_login, "_run", run)
+    monkeypatch.setattr(provision_dev_login.sys, "stdin", StringIO(password + "\n"))
+    with pytest.raises(SystemExit):
+        provision_dev_login.main(
+            ["--email", email, "--password-stdin", "--counter-allowance", "100"]
+        )
+    run.assert_not_called()
 
 
 class _SessionContext:
@@ -44,7 +89,6 @@ def _arrange_existing_login(monkeypatch: pytest.MonkeyPatch):
         provision_dev_login, "ensure_workspace_billing", AsyncMock(return_value=account)
     )
     monkeypatch.setattr(provision_dev_login, "issue_development_access", AsyncMock())
-    monkeypatch.setattr(provision_dev_login, "ensure_initial_catalog", AsyncMock())
     dispose_engine = AsyncMock()
     monkeypatch.setattr(provision_dev_login, "dispose_engine", dispose_engine)
     return user, session, dispose_engine

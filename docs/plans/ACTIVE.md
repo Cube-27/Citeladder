@@ -3,10 +3,11 @@
 ## Active
 
 - [TypeScript application / Python schema tooling](citeladder-python-retirement.md)
-  — PRs 1–2 implemented on 4 October 2026: native persistence fixtures, API-owned
-  Agent assets and bounded provider/acquisition/agreement/account operators.
-  PR 1 merged in #263. PR 2 is implemented on `codex/python-retirement-pr2`;
-  CI/review and merge remain pending. PRs 3–5 remain unassigned.
+  — PRs 1–3 implemented on 4 October 2026: native persistence fixtures, API-owned
+  Agent assets, bounded operators, commercial catalog/grant commands and composed
+  migration/identity/catalog bootstrap. PRs 1–2 merged in #263 and #264.
+  PR 3 is implemented on `feat/native-commercial-operators`; CI/review and merge
+  remain pending. PRs 4–5 remain unassigned.
   Alembic remains the sole schema author; deployment and merging remain separate
   owner actions.
 
@@ -123,6 +124,7 @@
   execution and project skill policy are deferred. D/E remain separate assignments.
 
 ## Queued
+
 - [AI Traffic analytics, crawl logs and authorized crawl](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026 and revised twice on 3 October 2026;
   A1 bot catalog and AI crawlability merged in PR #257. A2 Crawl Logs and the AI

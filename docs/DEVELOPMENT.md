@@ -30,14 +30,14 @@ repository check script includes the documentation build.
 
 ### Versions
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| Python | 3.12+ | Backend |
-| [`uv`](https://docs.astral.sh/uv/) | latest | Backend dependency + venv manager |
-| Node.js | 26+ | Frontend and TypeScript services. 26 is the supported minimum and CI version; protected production delivery uses Cloudflare Workers. |
-| pnpm | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json). |
-| PostgreSQL | 15+ | Via Docker or local |
-| Docker + Compose | latest | Local stack |
+| Tool                               | Version        | Notes                                                                                                                                |
+| ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Python                             | 3.12+          | Backend                                                                                                                              |
+| [`uv`](https://docs.astral.sh/uv/) | latest         | Backend dependency + venv manager                                                                                                    |
+| Node.js                            | 26+            | Frontend and TypeScript services. 26 is the supported minimum and CI version; protected production delivery uses Cloudflare Workers. |
+| pnpm                               | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json).                                       |
+| PostgreSQL                         | 15+            | Via Docker or local                                                                                                                  |
+| Docker + Compose                   | latest         | Local stack                                                                                                                          |
 
 ## Backend setup
 
@@ -294,15 +294,15 @@ run them only against an authorized target. They use the API image with commands
 No HTTP server or perpetual polling loop runs in a job. SIGTERM/SIGINT stops
 new admission and lets claimed work finish before destroying the pool.
 
-| Environment variable | Scope | Default / requirement |
-|---|---|---|
-| `CLOUD_RUN_RUNNER_JOB` | API | Unset disables wake-up; otherwise `projects/<project>/locations/us-central1/jobs/<job>` |
-| `CITELADDER_ORIGIN_TOKEN` | Cloud Run API | Existing secret matching both Workers' `ORIGIN_TOKEN`; at least 32 characters |
-| `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | Cloud Run API | Optional previous token during rotation |
-| `RUNNER_BUDGET_SECONDS` | Runner/tick | 300; 1–3600 seconds, shared across phases and lanes |
-| `RUNNER_DB_POOL_SIZE` | Runner/tick and API with configured job | 4; 1–4 pooled connections, independent of legacy pool/overflow sizes; a draining execution also holds one lock session |
-| `RUNNER_WAKE_TIMEOUT_MS` | API | 5000; 1–30000 milliseconds for metadata plus job-start requests |
-| `RUNNER_WAKE_MIN_INTERVAL_MS` | API | 5000; 1–60000 milliseconds between job-start attempts per instance |
+| Environment variable               | Scope                                   | Default / requirement                                                                                                  |
+| ---------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `CLOUD_RUN_RUNNER_JOB`             | API                                     | Unset disables wake-up; otherwise `projects/<project>/locations/us-central1/jobs/<job>`                                |
+| `CITELADDER_ORIGIN_TOKEN`          | Cloud Run API                           | Existing secret matching both Workers' `ORIGIN_TOKEN`; at least 32 characters                                          |
+| `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | Cloud Run API                           | Optional previous token during rotation                                                                                |
+| `RUNNER_BUDGET_SECONDS`            | Runner/tick                             | 300; 1–3600 seconds, shared across phases and lanes                                                                    |
+| `RUNNER_DB_POOL_SIZE`              | Runner/tick and API with configured job | 4; 1–4 pooled connections, independent of legacy pool/overflow sizes; a draining execution also holds one lock session |
+| `RUNNER_WAKE_TIMEOUT_MS`           | API                                     | 5000; 1–30000 milliseconds for metadata plus job-start requests                                                        |
+| `RUNNER_WAKE_MIN_INTERVAL_MS`      | API                                     | 5000; 1–60000 milliseconds between job-start attempts per instance                                                     |
 
 The API's service account needs permission to execute that runner job
 (`roles/run.invoker` on the job); no new static Google key is needed. Metadata
@@ -414,7 +414,7 @@ guarded if code is reintroduced. The frontend policy has its own ceilings.
 The exception lists are empty and should stay that way, and there
 is no rebaseline command: CI compares the policy with the PR base and rejects
 higher ceilings, higher exceptions, and newly added exceptions. Roots may be
-*added* (widening the gate is a tightening) but never removed.
+_added_ (widening the gate is a tightening) but never removed.
 
 ### Coverage
 
@@ -467,16 +467,21 @@ APP_ENV=development uv run python -m scripts.seed_dev_data
 
 Provision a local development login, or grant a Site Health allowance:
 
-```bash
-uv run python -m scripts.provision_dev_login --help
-uv run python -m scripts.set_site_health_entitlement <workspace_uuid> <monitored_urls>
+From the repository root in PowerShell:
+
+```powershell
+./scripts/provision-dev-login.ps1 -Email <email> -CounterAllowance <allowance>
+# Enter the password at the secure prompt; the child command receives it on stdin.
+# Identity/login admission remains Python until PR 4; this wrapper also initializes the native catalog.
+# Run the following native commands from frontend/:
+pnpm --filter @citeladder/api entitlement:site-health --actor <admin-email> --workspace-id <workspace-uuid> --account-id <account-uuid> --reason "local allowance" --idempotency-key <key> --monitored-urls <allowance> --valid-from <ISO-date> # add --apply after preview
 ```
 
-Billing/operator utilities:
+Billing/operator utilities (from `frontend/`):
 
 ```bash
-uv run python -m scripts.billing_admin --help
-uv run python -m scripts.provision_razorpay_plans --help
+pnpm --filter @citeladder/api billing:admin --help
+pnpm --filter @citeladder/api billing:plans --help
 ```
 
 Bounded identity/acquisition/provider operators are native. From `frontend/`:
@@ -517,7 +522,7 @@ provider key to the provisioning command. Creation and credential rotation
 leave probe status unverified; this metadata command does not establish route
 readiness. Admission remains closed until a successful provider test is recorded.
 
-`billing_admin` mutations are dry-run by default and require an explicit target,
+`billing:admin` mutations are dry-run by default and require an explicit target,
 active admin actor, reason, and idempotency key; repeat the reviewed command with
 `--apply` to commit. Use the
 [billing operator guide](operations/billing-operator-guide.md) for exact catalog
@@ -571,16 +576,16 @@ UPDATE` quota-serialization lock.
 
 A workspace with no grants resolves to the **zero-allowance sample policy** (fail-closed:
 sample discovery, zero selectable monitored URLs, no count disclosure). To grant a
-monitored-URL allowance locally, use the operator/dev command, run from `backend/` with
+monitored-URL allowance locally, use the native operator command from `frontend/` with
 `DATABASE_URL` pointing at the target database:
 
 ```bash
-cd backend
-uv run python -m scripts.set_site_health_entitlement <workspace_uuid> <monitored_urls>
+cd frontend
+pnpm --filter @citeladder/api entitlement:site-health --actor <admin-email> --workspace-id <workspace-uuid> --account-id <account-uuid> --reason "local allowance" --idempotency-key <key> --monitored-urls <allowance> --valid-from <ISO-date> # add --apply after preview
 ```
 
 The command issues an audited operator `override` grant through the append-only write
-service (`app.domain.entitlements.grants.issue_override_bundle`), re-projects the
+service (`services/api/src/entitlements/grants.ts`), re-projects the
 workspace runtime row, and emits a single audit-safe log line (no secrets). Allowances
 SUM across grants — a second grant adds to the first; revoking earlier grants is a
 separate audited operation.
@@ -599,7 +604,7 @@ credentials/database even though `.env` looks correct.
 
 **Cause:** this machine exports `POSTGRES_PASSWORD`, `POSTGRES_USER`, `POSTGRES_DB`, and
 `DATABASE_URL` into **every shell**. Compose resolves `${VAR}` in `docker-compose.yml` from
-the **shell environment before `.env`** (`env_file:` only injects vars *inside* the
+the **shell environment before `.env`** (`env_file:` only injects vars _inside_ the
 container, not into `${VAR}` interpolation). The shell values win and silently override the
 repo values.
 
