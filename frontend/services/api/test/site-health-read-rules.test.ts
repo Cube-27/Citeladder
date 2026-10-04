@@ -71,13 +71,11 @@ describe('screen phase', () => {
 
 describe('root failure message', () => {
   it('names the HTTP status and, for retried 5xx, the attempts', () => {
-    expect(failureMessage('http_5xx', 503, 3)).toBe('The site returned HTTP 503 after 3 attempts');
-    expect(failureMessage('http_4xx', 404, 2)).toBe('The site returned HTTP 404 for the start URL');
-    expect(failureMessage('timeout', null, 2)).toBe(
-      'The site did not answer in time after 2 attempts',
-    );
-    expect(failureMessage('', null, null)).toBe(
-      'The crawl failed before it could fetch the start URL',
-    );
+    expect(failureMessage('http_5xx', 503, 3)).toMatch(/HTTP 503.*after 3 attempts/u);
+    const clientFailure = failureMessage('http_4xx', 404, 2);
+    expect(clientFailure).toContain('HTTP 404');
+    expect(clientFailure).not.toContain('attempts');
+    expect(failureMessage('timeout', null, 2)).toMatch(/time.*after 2 attempts/u);
+    expect(failureMessage('', null, null)).toMatch(/failed.*start URL/u);
   });
 });

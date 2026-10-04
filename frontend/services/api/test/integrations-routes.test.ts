@@ -167,13 +167,16 @@ describe('integration connection routes', () => {
         expect(result.status).toBe(allowed ? 200 : 403);
         expect(provider).toHaveBeenCalledTimes(allowed ? 1 : 0);
         expect(token).toHaveBeenCalledTimes(allowed ? 1 : 0);
-        expect((await get(`/api/v1/integrations/${connectionId}/properties`)).status).toBe(405);
       } finally {
         token.mockRestore();
         provider.mockRestore();
       }
     },
   );
+
+  it('rejects GET property discovery', async () => {
+    expect((await get(`/api/v1/integrations/${connectionId}/properties`)).status).toBe(405);
+  });
 
   it('reports a saved mapping whose history enqueue failed and allows retry without duplication', async () => {
     const token = await sessionToken({ sub: ownerId, ver: 0 });

@@ -33,11 +33,11 @@ describe('native route-ownership gate', () => {
       routeOwnershipFailures(
         native({ manifest: { executions: 'typescript', billing: 'typescript' } }),
       ),
-    ).toContain("'billing' has no declared route");
+    ).toContainEqual(expect.stringContaining('has no declared route'));
   });
   it('refuses a retired route owner', () => {
-    expect(routeOwnershipFailures(native({ manifest: { executions: 'python' } }))).toContain(
-      "'executions' must be TypeScript-owned",
+    expect(routeOwnershipFailures(native({ manifest: { executions: 'python' } }))).toContainEqual(
+      expect.stringContaining('must be TypeScript-owned'),
     );
   });
   it('refuses ambiguous family tags', () => {

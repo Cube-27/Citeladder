@@ -233,8 +233,7 @@ describe('schedule input decisions', () => {
     expect(scheduleCreate.safeParse({ ...base, ...patch }).success).toBe(false);
   });
   it.each([
-    ['Asia/Kolkata', 'Asia/Kolkata'],
-    ['Etc/UTC', 'Etc/UTC'],
+    ['etc/utc', 'Etc/UTC'],
     ['utc', 'UTC'],
     ['Asia/KOLKATA', 'Asia/Kolkata'],
     ['not/a_zone', null],

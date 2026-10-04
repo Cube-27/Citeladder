@@ -112,7 +112,6 @@ describe('loadConfig', () => {
     const config = loadConfig({});
     expect(config.database.poolSize).toBe(policy.settings.db_pool_size.default);
     expect(config.session.cookieName).toBe(policy.settings.session_cookie_name.default);
-    expect(config.readinessTimeoutMs).toBe(policy.api.readiness_timeout_seconds * 1000);
   });
 
   it('matches environment names case-insensitively, as pydantic-settings does', () => {

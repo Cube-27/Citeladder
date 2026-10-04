@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { sessionUser } from '../src/auth/session.ts';
 import { workspaceMember } from '../src/auth/workspace.ts';
+import { policy } from '../src/config.ts';
 import type { AppEnv } from '../src/context.ts';
 import { onError } from '../src/errors.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
@@ -112,7 +113,7 @@ describe('workspace membership', () => {
   it('authorizes a member with the role capability set', async () => {
     const { status, body } = await call(`/w/${viewed}`, viewerToken);
     expect(status).toBe(200);
-    expect(body).toEqual({ id: viewed, capabilities: ['read'] });
+    expect(body).toEqual({ id: viewed, capabilities: policy.workspaces.roles.viewer });
   });
 
   it('refuses a capability the role lacks with the backend wording', async () => {

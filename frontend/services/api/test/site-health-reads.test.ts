@@ -626,8 +626,10 @@ describe('snapshot projections', () => {
     const tree = await (
       await get(seed, `/site-crawls/${seed.crawlId}/export.md?view=architecture`)
     ).text();
-    for (const path of ['/a', '/b'])
-      expect(tree).toContain(`https://example.test${path}  [product]`);
+    for (const path of ['/a', '/b']) {
+      const line = tree.split('\n').find((line) => line.includes(`https://example.test${path}`));
+      expect(line).toContain('[product]');
+    }
   });
 });
 

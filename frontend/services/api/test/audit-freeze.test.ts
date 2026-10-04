@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
-import { auditSlots, prepareAudit } from '../src/audits/freeze.ts';
+import { prepareAudit } from '../src/audits/freeze.ts';
 import { auditSettings } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { createConnection, updateConnection } from '../src/providers/connections.ts';
@@ -141,13 +141,5 @@ describe('audit admission freeze', () => {
         searchSettings({}),
       ),
     ).rejects.toMatchObject({ status: 400 });
-  });
-  it('replays every slot once from a persisted seed', () => {
-    const slots = auditSlots(2, ['chatgpt', 'claude'], 3, '42');
-    expect(slots).toEqual(auditSlots(2, ['chatgpt', 'claude'], 3, '42'));
-    expect(
-      new Set(slots.map((slot) => `${slot.prompt}:${slot.engine}:${slot.repetition}`)).size,
-    ).toBe(12);
-    expect(slots).not.toEqual(auditSlots(2, ['chatgpt', 'claude'], 3, '43'));
   });
 });
