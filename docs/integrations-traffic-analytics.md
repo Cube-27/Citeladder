@@ -10,7 +10,7 @@ uses Site Health and CSV. Reports, agents and reads never call these providers.
 
 [AI Traffic](ai-traffic.md) owns the `/ai-traffic` screen and customer-supplied
 crawler logs. This document retains GA4 referral data, projections, tasks and
-the `analytics/ai-referrals.ts` reader; `read_ai_referrals` is unchanged.
+the `analytics/ai-referrals.ts` reader and its extended `read_ai_referrals` contract.
 
 Native [connected-data config](../frontend/services/api/src/config/connected-data.ts)
 owns sync settings, transports, dataset grains, traffic and referral catalogs,
@@ -75,10 +75,31 @@ token is saved only while the claim and credential revision still match.
 
 resync_seq increases across overlapping windows, with a target-identity floor
 so a remapped property remains comparable across connections. Readers select the
-latest revision per metric identity and never sum revisions. Missing rows in a
-later response do not mean zero. Incremental sync re-reads the configured late-data
+latest complete, untruncated revision of each project/property/provider/dataset/day
+partition, including empty successful extracts, and never sum revisions. A row
+missing from a replacement is removed; a failed or truncated partition uses the
+prior complete revision with `partition_fallback`. Incremental sync re-reads the configured late-data
 window. History is imported once per project/property and resumes missing/failed
 chunks, bounded by the resolved history_window allowance.
+
+Traffic, Demand and Referrals reject a mixed-revision projection if a sync
+changes the project's partition epoch between their persisted-input scans.
+The existing analytics task retries; no partial snapshot family is published.
+
+GA4 reports retain property `timeZone`, `currencyCode`, thresholding,
+other-row loss and sampling metadata on every immutable artifact. The mapping
+exposes the latest timezone/currency by revision, including when an older sync
+finishes later. Quality flags travel with projections;
+flagged or unavailable evidence cannot establish zero. Captured timezone updates
+the existing Crawl Logs reporting state and queues a rebuild inside raw retention;
+older daily rollups retain their original timezone.
+
+`ga4_landing_daily` uses landingPage × sessionSource × sessionMedium × hostName ×
+date. Landing folds include only project-owned hosts and disclose excluded-host
+counts. Unresolvable or secret-redacted paths cannot join and contribute to
+unattributed landing sessions. Source/medium and channel reports remain
+property-wide, labelled on their consuming views. Every referral fold uses
+session-scoped attribution; first-user and event-scoped sources are not substituted.
 
 ## Projection chain
 
@@ -112,6 +133,16 @@ ga4_source_medium_daily as the canonical session grain. AI-source sessions are
 the numerator; all sessions of that same report are the denominator. Alternate
 referrer reports retain provenance but are not added again. Public rows show
 AI sources only. Formula changes require explicit derived rebuilds, never reads.
+
+The same referral refresh replaces `ai_referral_landing_daily` over its selected
+window, with canonical path hash, property-local reporting day, AI source,
+persisted display path/folder/resource labels from the shared path owner,
+sessions, engaged sessions, key events, quality and exact metric-row provenance.
+It also persists per-source engagement, key events, transactions and purchase
+revenue in the property currency. Key events retain the customer's GA4 definition.
+The property-wide channel comparison separates AI referrals, Organic Search and
+all other sessions. Engagement rate is engaged sessions divided by sessions;
+there is no key-events/session rate. Incompatible or missing measures stay unavailable.
 
 ## Search Intelligence acquisition
 

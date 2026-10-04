@@ -124,8 +124,15 @@ the selected window and verification filter. `list_bot_requests` pages sanitized
 retained requests with bot/status/folder/resource filters. Business context accepts
 `crawl_logs`. These adapters share the [AI Traffic](ai-traffic.md) readers and
 workspace authorization. Missing or incomplete evidence remains unavailable;
-neither tool starts collection or refresh. `read_ai_referrals` retains its
-existing session/share contract. Requests, GA4 sessions and tracked citations
+neither tool starts collection or refresh. `read_ai_referrals` adds per-source
+key events/commerce in the property currency, landing pages, quality flags and
+the property-wide channel comparison to its session/share measures.
+`read_ai_traffic_pages` pages the independently aggregated path-level signal
+join with filters, verification and sorting; `read_ai_traffic_url` canonicalizes
+through `canonicalPage`, rejects off-origin URLs and reads the persisted detail
+timeline. `read_ai_traffic_insights` returns the persisted preset-window snapshot
+or an awaiting-refresh notice. These tools cannot repair missing data or enqueue
+work. Requests, GA4 sessions and tracked citations
 remain separate units.
 
 Every retrievable evidence reference uses an allowlisted `citeladder://` record

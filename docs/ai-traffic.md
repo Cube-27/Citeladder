@@ -6,16 +6,34 @@ This owner maintains customer-supplied crawl evidence, source credentials,
 coverage, persisted crawler reads and the `/ai-traffic` screen. The
 [connected-data owner](integrations-traffic-analytics.md) retains GA4 referral
 observations, projections, tasks and `analytics/ai-referrals.ts`. The existing
-`read_ai_referrals` MCP tool keeps its contract. [Site Health](site-health.md)
-owns robots acquisition and crawlability; a request observation does not
+`read_ai_referrals` MCP tool adds landing pages, quality and comparisons.
+[Site Health](site-health.md) owns robots acquisition and crawlability; a request observation does not
 establish that a crawler is allowed by robots policy.
 
-The screen has Overview, Crawlers, Referrals and Activity tabs. Overview shows
+The screen has Overview, Crawlers, Referrals, Pages and Activity tabs. Overview shows
 recognized automated **requests**, GA4 **sessions**, and citations **observed
 in CiteLadder's tracked answers** as separate signals. Referrals preserves its
 existing range and granularity controls. Activity is a sanitized, paged view
-within raw retention. Pages, cross-signal comparisons and insights belong to
-the separately assigned A3 work.
+within raw retention. Referrals has Overview, Sources and Landing pages sub-tabs,
+including property-wide session/engagement/key-event comparisons and purchase
+revenue in the captured property currency. Key events use the customer's GA4
+definition; no key-events/session rate is calculated.
+
+Pages separately aggregates requests, AI-referral sessions/key events, tracked
+citations and current Site Health findings to `url_hash` before joining. Counts
+cannot multiply across bots, sources or citations. Each leg retains connection,
+coverage, zero/value, unavailable, unknown or quality-flagged state. Crawl and
+referral legs become `non_comparable` on a timezone mismatch. Non-joinable paths
+remain folder aggregates. A newer extract awaiting referral publication is
+`flagged` (`projection_pending`), so prior counts cannot establish a new zero.
+The shared URL panel opens from Pages, referral landing
+pages, crawler drill-downs and Site Health detail, with first/last bot observations,
+first referrals, citation dates and provenance. Units link to their owning views.
+
+Observed crawl coverage is the share of known URLs in the latest terminal Site
+Health inventory requested by an AI search/user-fetch bot in the selected window.
+It requires complete or declared-complete logs and discloses inventory date,
+completeness and sampling. It does not establish indexing coverage.
 
 ## Admission and privacy
 
@@ -117,23 +135,41 @@ Crawler reason breakdowns and status-code counts are persisted in daily rollups
 and remain available after raw expiry. Folder breakdowns are bounded to the top configured
 page-size count; Activity exports contain retained observations only.
 
-A2 uses UTC reporting days; A3 owns adoption of captured GA4 property timezones.
+Reporting days use the captured GA4 property timezone, with UTC before capture.
 Every rollup records its timezone and formula version. Refresh recomputes from
 current committed requests under the project lock. Dates older than
 `retention_days - rollup_freeze_margin_days` are frozen; raw retention deletes
 only observations, preserving receipts and projections. Rollups keep bounded
-source batch IDs. A3 will add its insights successor when that task has an owner.
+source batch IDs and the canonical queryless URL for joinable identities.
 Retention and abandoned-upload cleanup continue when ingestion is disabled;
 IP-range provider refresh is gated by ingestion enablement.
 
 ## Read APIs, MCP and configuration
 
 The `ai-traffic` family replaces the old browser API family: overview, crawlers,
-referrals, activity, coverage, and crawler/activity CSV exports. Shared
+referrals, pages, page detail, insights, activity, coverage, and crawler/activity/Pages
+CSV exports. Shared
 [`ai-traffic.ts` contracts](../frontend/packages/contracts/src/ai-traffic.ts)
 own the wire shapes. All reads render persisted data without crawling,
 refreshing or calling providers. Cursors bind workspace, project, view, filters
 and page size; exports use the same filters, sanitization and bounded paging.
+
+`read_ai_traffic_pages`, `read_ai_traffic_url` and `read_ai_traffic_insights` share
+these reads. The URL tool canonicalizes with the existing page owner and rejects
+off-origin input. Reads never enqueue or rebuild insights.
+
+`ai_traffic_insights_refresh` writes one snapshot per preset window through the
+existing analytics queue. Terminal crawl-log/referral refreshes, Visibility audit
+completion, Site Health terminalization and source/mapping changes enqueue it in
+their owning transaction. Queued work is coalesced and debounced; leased/running
+work gets a queued successor. Snapshots retain formula version, configured
+thresholds and exact rollup, audit, artifact and crawl IDs. Four bounded patterns
+cover verified crawls without identifiable referrals, referrals without recent
+recognized AI crawls, exact-code verified errors on valuable pages, and key-event
+concentration. Absence patterns require complete logs and unflagged complete GA4
+partitions for the whole window; concentration additionally requires the full
+input population. Partial coverage displays a notice. Copy describes co-occurrence
+only, and Overview links to persisted pattern-filtered Pages and URL detail.
 
 `read_crawl_logs` supplies summary, crawler and coverage views;
 `list_bot_requests` supplies retained activity. Business context accepts the
@@ -141,7 +177,9 @@ and page size; exports use the same filters, sanitization and bounded paging.
 
 [`crawl-logs.json`](../frontend/services/api/src/config/crawl-logs.json) owns
 formats, mappings, quotas, privacy patterns, retention, dispatch/debounce and
-safe-fetch bounds. Its loader rejects backdating at or beyond
+safe-fetch bounds. [`ai-traffic.json`](../frontend/services/api/src/config/ai-traffic.json)
+owns insight thresholds, bounds and debounce. The Crawl Logs loader rejects
+backdating at or beyond
 `retention_days - rollup_freeze_margin_days`. The analytics worker owns refresh,
 IP-range snapshot refresh, retention and abandonment; PostgreSQL owns their
 dispatch and leases. IP fetches begin only after durable dispatch, use the shared

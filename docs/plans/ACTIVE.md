@@ -118,9 +118,9 @@
 - [AI Traffic analytics, crawl logs and authorized crawl](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026 and revised twice on 3 October 2026;
   A1 bot catalog and AI crawlability merged in PR #257. A2 Crawl Logs and the AI
-  Traffic screen replacement is implemented on `feat/ai-traffic-a2`, pending
-  PR review, CI and merge. A3 GA4 extract contract fixes, the per-URL Pages
-  join, comparisons and insights. Part B (authorized crawl) follows
+  Traffic screen replacement merged in PR #258 (`43cce367`). A3 GA4 extract
+  contract fixes, the per-URL Pages join, comparisons and insights are in
+  progress. Part B (authorized crawl) follows
   separately; its Terms wording awaits legal review. Production enablement of
   A2 awaits the plan/quota, retention and privacy decisions recorded in the
   plan.
