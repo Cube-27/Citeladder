@@ -10,7 +10,7 @@ const emptyTotals = {
   ctr: null,
   position: null,
   sessions: null,
-  conversions: null,
+  key_events: null,
 };
 const emptySeries = { clicks: [], impressions: [], ctr: [], position: [] };
 const emptyCounts = {

@@ -1,15 +1,13 @@
 /** Reviewed commercial entry-page copy. Routes remain owned by Astro pages. */
 export type CommercialPage = {
+  kind: 'citation' | 'share';
   eyebrow: string;
   heading: string;
   introduction: string;
   secondary: { label: string; href: string };
-  sections: readonly {
-    heading: string;
-    paragraphs: readonly string[];
-    questions?: readonly { heading: string; body: string }[];
-    note?: string;
-  }[];
+  overview: { heading: string; lead: string };
+  definitions: readonly { heading: string; body: string }[];
+  workflow: { heading: string; lead: string; steps: readonly { heading: string; body: string }[] };
   contextHeading: string;
   context: string;
   /** Internal next steps rendered after the context section. */
@@ -20,54 +18,44 @@ export type CommercialPage = {
 };
 
 export const CITATION_PAGE: CommercialPage = {
+  kind: 'citation',
   eyebrow: 'AI citation tracking',
   heading: 'See the sources behind AI answers.',
   introduction:
-    'Your brand can appear in an answer while another website supplies the supporting information. AI citation tracking helps you understand which domains and pages are being referenced, so you can investigate the sources behind your visibility.',
+    'Find the domains and pages referenced in your tracked AI answers. Separate a brand mention from a source citation, then investigate the evidence behind your visibility.',
   secondary: { label: 'Compare visibility metrics', href: '/ai-search-share-of-voice' },
-  sections: [
+  overview: {
+    heading: 'Your brand is in the answer. Is your website the source?',
+    lead: 'CiteLadder brings cited-source analysis together with your tracked answers. Keep these two observations separate to understand what actually appeared.',
+  },
+  definitions: [
     {
-      heading: 'A mention and a citation tell you different things',
-      paragraphs: [
-        'A brand mention means your name appears in the answer. A citation identifies a source the answer points to. An answer may mention your brand without linking to your website, or cite one of your pages without recommending your product.',
-        'Keep these observations separate. They answer different questions about how your brand and information appear.',
-      ],
+      heading: 'Brand mention',
+      body: 'Your brand, product or domain appears in the answer. It may be a recommendation, a comparison or a passing reference. It does not mean your website was cited.',
     },
     {
-      heading: 'Look beyond the domain',
-      paragraphs: [
-        'A domain-level view shows which websites recur across your tracked answers. The URL-level view helps you identify the actual material being referenced: a product page, category guide, comparison, review or another resource.',
-        'CiteLadder brings cited-source analysis into the same workspace as your tracked answers. Use the source context to narrow the investigation before deciding what content to change.',
-      ],
-    },
-    {
-      heading: 'Three questions to investigate',
-      paragraphs: [],
-      questions: [
-        {
-          heading: 'Are your own pages being cited?',
-          body: 'Review whether the relevant page appears as a source for the questions it is meant to answer. If it does not, investigate access, relevance and the completeness of the information before drawing conclusions.',
-        },
-        {
-          heading: 'Which outside sources appear repeatedly?',
-          body: 'Look for recurring publications, directories and comparison pages. Check the underlying material for accuracy and relevance to your business.',
-        },
-        {
-          heading: 'Do competitors appear through different sources?',
-          body: 'Compare the sources associated with the same buyer questions. A pattern can help identify a research question; it does not establish why the engine selected a particular answer.',
-        },
-      ],
-    },
-    {
-      heading: 'An illustrative investigation',
-      paragraphs: [
-        'A buyer asks about scheduling software for several clinic locations. The answer names your product but cites an independent comparison.',
-        'Start by reading that comparison. Does it describe your current features correctly? Does your own product page answer the same multi-location question clearly? Are the supporting details accessible without signing in?',
-        'Those checks lead to specific work: correct inaccurate information, clarify a capability, or improve an explanation. Buying links or repeating a keyword is not a substitute for that investigation.',
-      ],
-      note: 'This example is illustrative and is not a CiteLadder customer result.',
+      heading: 'Source citation',
+      body: 'The answer points to a source. That may be your own page, a competitor’s site or a third-party publication. A citation is not necessarily a recommendation.',
     },
   ],
+  workflow: {
+    heading: 'Turn a source reference into a useful next step.',
+    lead: 'Move from the observed answer to the exact page, then decide what deserves attention.',
+    steps: [
+      {
+        heading: 'Read the answer in context',
+        body: 'Start with the buyer question. Check how your brand appears and which sources the answer references. Compare competitors against the same question.',
+      },
+      {
+        heading: 'Investigate the domain and the URL',
+        body: 'Look for recurring sources, then read the actual page: a guide, product page, review or comparison. Is the information current and relevant? Does your own page answer the same question clearly?',
+      },
+      {
+        heading: 'Choose the work the evidence supports',
+        body: 'Correct an inaccurate third-party statement through the publisher’s correction process. For owned pages, investigate access, relevance and missing detail. A source pattern does not establish why an engine chose it.',
+      },
+    ],
+  },
   contextHeading: 'Use citations alongside visibility and traffic',
   context:
     'A citation is evidence of a source reference in an observed answer. It does not by itself measure a visit, a lead or a sale. Pair source analysis with your tracked brand observations and your website analytics to understand the different stages.',
@@ -104,50 +92,44 @@ export const CITATION_PAGE: CommercialPage = {
 };
 
 export const SHARE_OF_VOICE_PAGE: CommercialPage = {
+  kind: 'share',
   eyebrow: 'AI search share of voice',
-  heading: 'Compare your brand’s presence across the questions that matter.',
+  heading: 'Know where your brand stands in AI answers.',
   introduction:
-    'Understand how your brand appears alongside competitors in a defined set of AI answers. Use consistent buyer questions, inspect the underlying responses, and give changes in visibility the context they need.',
+    'Compare your brand with competitors across a defined set of buyer questions. Keep the measurement scope visible and inspect the answers behind a change in visibility.',
   secondary: { label: 'Explore cited sources', href: '/ai-citation-tracking' },
-  sections: [
+  overview: {
+    heading: 'A percentage only helps when you know what it counts.',
+    lead: '“Share of voice” can describe different calculations. Read the definition and denominator before comparing brands, tools or reporting periods.',
+  },
+  definitions: [
     {
-      heading: 'Start with a relevant set of questions',
-      paragraphs: [
-        'A useful benchmark reflects real buying decisions. Include the needs, constraints and use cases your customers care about, rather than relying only on questions that already name your brand.',
-        'For a service business, that might mean delivery location, project scope and specialist experience. For a product business, it might mean compatibility, features and intended use.',
-        'Keep branded and non-branded questions distinguishable so the comparison remains meaningful.',
-      ],
+      heading: 'Answer-level mention rate',
+      body: 'The percentage of completed answers that mention your brand. Several brands can appear in the same answer, so their mention rates do not need to add up to 100%.',
     },
     {
-      heading: 'Compare the same observation set',
-      paragraphs: [
-        'A competitor comparison is easier to interpret when the brands are measured against the same prompts and collection conditions. Keep the time window, engine or source, language and other available context visible.',
-        'When you change the prompt portfolio, mark that change. Otherwise, a shift in the questions being asked can look like a shift in performance.',
-      ],
-    },
-    {
-      heading: 'Inspect the answers behind the pattern',
-      paragraphs: [
-        'An aggregate number is a starting point. Review the responses that contributed to it.',
-        'Was your brand included? Was the answer a recommendation, a passing mention or a comparison? Did it cite your own website or another source? These details help your team decide what to investigate.',
-      ],
-    },
-    {
-      heading: 'Keep the measurement definition visible',
-      paragraphs: [
-        '“Share of voice” can refer to different calculations. A share of tracked brand appearances is different from the percentage of answers that mention your brand. Both can be useful, but they need a clear denominator.',
-        'Compare like with like. Keep missing or failed observations distinguishable from completed answers where the brand was absent.',
-      ],
-    },
-    {
-      heading: 'Illustrative example',
-      paragraphs: [
-        'Suppose a report contains 100 completed answers. Your brand appears in 30 of them. Its answer-level mention rate is 30%.',
-        'That alone does not tell you its share of all tracked brands’ appearances. Several brands can occur in the same answer, so that calculation needs the competitor counts and a stated counting rule.',
-      ],
-      note: 'This is a teaching example, not a product screenshot, industry benchmark or statement of CiteLadder’s current scoring formula.',
+      heading: 'Share of tracked brand appearances',
+      body: 'Your brand’s portion of appearances across the brands being compared. This needs competitor counts and a stated counting rule. It cannot be inferred from your mention rate alone.',
     },
   ],
+  workflow: {
+    heading: 'Build a comparison your team can explain.',
+    lead: 'A useful benchmark starts with buyer questions and ends with the evidence behind the numbers.',
+    steps: [
+      {
+        heading: 'Choose questions that reflect buying decisions',
+        body: 'Include customer needs, constraints and use cases: location and specialist experience for a service, or compatibility and features for a product. Keep branded questions separate from non-branded discovery.',
+      },
+      {
+        heading: 'Hold the comparison scope steady',
+        body: 'Compare brands against the same prompts and collection conditions. Keep the engine, time window and language visible. Mark changes to the prompt portfolio, and distinguish failed observations from completed answers where the brand was absent.',
+      },
+      {
+        heading: 'Inspect the answers behind a change',
+        body: 'Check whether the brand was recommended, compared or simply mentioned, and which sources were cited. Use the pattern to choose a research question. Repeated observations do not prove that a website change caused the movement.',
+      },
+    ],
+  },
   contextHeading: 'Put visibility in business context',
   context:
     'A visibility observation is not a sales result. Use it to identify questions, sources and pages worth investigating. Then examine referral visits and relevant business outcomes separately.',

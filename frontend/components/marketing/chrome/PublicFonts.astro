@@ -1,11 +1,11 @@
 <!-- Discover the fonts at first paint instead of after the stylesheet
-    loads. Switzer (text) and Sora (headings) are not in this
+    loads. Switzer (text) and General Sans (headings) are not in this
     repository: `pnpm fonts:pull` copies them into public/fonts from the
     private Cube27 font repo, and delivery does the same. A build without
     them renders in the fallbacks below. -->
 <link
   rel="preload"
-  href="/fonts/Sora-Variable.woff2"
+  href="/fonts/GeneralSans-Variable.woff2"
   as="font"
   type="font/woff2"
   crossorigin="anonymous"
@@ -34,8 +34,8 @@
      — enough for a preloaded, same-origin file on any connection that
      was going to succeed at all. */
   @font-face {
-    font-family: 'Sora';
-    src: url('/fonts/Sora-Variable.woff2') format('woff2');
+    font-family: 'General Sans';
+    src: url('/fonts/GeneralSans-Variable.woff2') format('woff2');
     /* 600 is the design ceiling: a heavier request clamps to it. */
     font-weight: 200 600;
     font-style: normal;
@@ -69,30 +69,30 @@
     line-gap-override: 9%;
   }
 
-  /* Sora/Arial advance ratios at 400 and 600 over public heading text.
-     Vertical overrides use Sora's 970/-290/0 metrics (1000 UPM), divided
+  /* General Sans/Arial advance ratios at 400 and 600 over public heading text.
+     Vertical overrides use General Sans's 1010/-240/100 metrics (1000 UPM), divided
      by size-adjust. Separate bold metrics avoid synthetic-bold reflow. */
   @font-face {
-    font-family: 'Sora Fallback';
+    font-family: 'General Sans Fallback';
     src: local('Arial');
     font-weight: 200 500;
-    size-adjust: 113.62%;
-    ascent-override: 85.372%;
-    descent-override: 25.524%;
-    line-gap-override: 0%;
+    size-adjust: 101.273%;
+    ascent-override: 99.73%;
+    descent-override: 23.698%;
+    line-gap-override: 9.874%;
   }
   @font-face {
-    font-family: 'Sora Fallback';
+    font-family: 'General Sans Fallback';
     src: local('Arial Bold'), local('Arial-BoldMT');
     font-weight: 600;
-    size-adjust: 107.356%;
-    ascent-override: 90.354%;
-    descent-override: 27.014%;
-    line-gap-override: 0%;
+    size-adjust: 99.835%;
+    ascent-override: 101.166%;
+    descent-override: 24.04%;
+    line-gap-override: 10.016%;
   }
 
   :root {
     --font-text: 'Switzer', 'Switzer Fallback';
-    --font-heading: 'Sora', 'Sora Fallback', Arial;
+    --font-heading: 'General Sans', 'General Sans Fallback', Arial;
   }
 </style>

@@ -6,6 +6,23 @@ import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { filterAndSortPosts, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 
 test.describe('marketing routes', () => {
+  test('homepage FAQ schema describes the rendered questions and answers', async ({ page }) => {
+    await page.goto('/');
+    const { schemas, visible } = await page.evaluate(() => ({
+      schemas: [...document.querySelectorAll('script[type="application/ld+json"]')]
+        .map((script) => JSON.parse(script.textContent ?? '{}'))
+        .filter((schema) => schema['@type'] === 'FAQPage'),
+      visible: [...document.querySelectorAll('#landing-faq details')].map((faq) => ({
+        '@type': 'Question',
+        name: faq.querySelector('summary')?.textContent?.trim(),
+        acceptedAnswer: { '@type': 'Answer', text: faq.querySelector('p')?.textContent?.trim() },
+      })),
+    }));
+    expect(visible.length).toBeGreaterThan(0);
+    expect(schemas).toHaveLength(1);
+    expect(schemas[0].mainEntity).toEqual(visible);
+  });
+
   test('product previews reserve their scaled height before hydration', async ({
     browser,
     baseURL,
@@ -41,9 +58,12 @@ test.describe('marketing routes', () => {
         // Builds without the private font files settle on the fallback faces.
         await page.evaluate(() =>
           Promise.allSettled(
-            ['400 16px Sora', '600 16px Sora', '400 16px Switzer', '600 16px Switzer'].map((font) =>
-              document.fonts.load(font),
-            ),
+            [
+              '400 16px "General Sans"',
+              '600 16px "General Sans"',
+              '400 16px Switzer',
+              '600 16px Switzer',
+            ].map((font) => document.fonts.load(font)),
           ),
         );
         const boxes = () =>
@@ -271,7 +291,11 @@ test.describe('marketing routes', () => {
     baseURL,
     request,
   }) => {
-    const context = await browser.newContext({ baseURL, javaScriptEnabled: false });
+    const context = await browser.newContext({
+      baseURL,
+      javaScriptEnabled: false,
+      reducedMotion: 'reduce',
+    });
     const page = await context.newPage();
     const entries = [
       { path: '/ai-citation-tracking', copy: CITATION_PAGE },
@@ -316,11 +340,21 @@ test.describe('marketing routes', () => {
         await demo.focus();
         await expect(demo).toBeFocused();
         await expect(demo).toHaveAttribute('href', DEMO_HREF);
+        const faq = page.locator('main details').first();
+        await faq.locator('summary').focus();
+        await page.keyboard.press('Enter');
+        await expect(faq.locator('p')).toBeVisible();
+        await page.keyboard.press('Enter');
+        await expect(faq.locator('p')).toBeHidden();
         for (const target of [copy.secondary.href, '/solutions', '/pricing']) {
           const link = page.locator(`main a[href="${target}"]`).first();
           await expect(link).toBeAttached();
           expect((await request.get(target)).status()).toBe(200);
         }
+        await page.evaluate(() => {
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+          window.scrollTo(0, 0);
+        });
         await page.screenshot({
           path: test.info().outputPath(`${path.slice(1)}-${width}.png`),
           fullPage: true,

@@ -3,7 +3,7 @@
    this scope changes type scale only. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Switzer carries body, UI and data type; Sora carries display type. */
+     Switzer carries body, UI and data type; General Sans carries display type. */
   /* One ladder, one ratio. Each rung is ~1.2x its neighbour (the minor third
      the display rungs already used), so the steps are even instead of the old
      mix of 1.14x at the bottom and 1.27x at the top. The bottom three rungs are
@@ -118,7 +118,7 @@
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs use Sora at the display role's natural
+   Display rungs use General Sans at the display role's natural
    medium weight, without faux-bold browser synthesis.
    Body rungs render in Switzer at 400/500/600. */
 .website-hero-display,
