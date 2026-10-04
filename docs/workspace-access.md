@@ -64,8 +64,8 @@ renewed acceptance and never overwrites an earlier row. Privacy is a notice;
 optional analytics consent remains separate. The approved revision registry is
 `frontend/services/api/src/config/auth-runtime.json`; internal proposals never enter it.
 Signed enterprise-agreement references are separate append-only records. A
-platform administrator uses `pnpm --filter @citeladder/api agreement:record
---actor <admin-email> --input <local-json-file>` from `frontend/`; the command
+platform administrator pipes local reference JSON into `pnpm --filter
+@citeladder/api agreement:record --actor <admin-email>` from `frontend/`; the command
 rolls back unless `--apply` is supplied. The JSON names `workspace_id`,
 `signatory_id`, an opaque `reference`, `document_sha256`, timezone-aware
 `signed_at`, and `authority_verified: true`. The operator must verify the

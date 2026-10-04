@@ -1,9 +1,10 @@
 import { parseArgs } from 'node:util';
 import { provisionPlatformConnections } from '../providers/platform-provisioning.ts';
-import { withOperatorDatabase } from './operator.ts';
+import { required, withOperatorDatabase } from './operator.ts';
 
 const { values } = parseArgs({
   options: {
+    actor: { type: 'string' },
     'credential-ref': { type: 'string', multiple: true },
     apply: { type: 'boolean', default: false },
     'dry-run': { type: 'boolean', default: false },
@@ -12,7 +13,7 @@ const { values } = parseArgs({
 });
 if (values.help) {
   console.log(
-    'provision:platform --credential-ref TRANSPORT=OPAQUE_REFERENCE [--apply | --dry-run] (preview by default; no keys, no provider calls)',
+    'provision:platform --actor ADMIN_EMAIL --credential-ref TRANSPORT=OPAQUE_REFERENCE [--apply | --dry-run] (preview by default; no keys, no provider calls)',
   );
 } else {
   if (values.apply && values['dry-run']) throw new Error('Choose either --apply or --dry-run');
@@ -25,7 +26,11 @@ if (values.help) {
   if (!Object.keys(references).length) throw new Error('At least one --credential-ref is required');
   await withOperatorDatabase(async (db) =>
     console.log(
-      JSON.stringify(await provisionPlatformConnections(db, references, { apply: values.apply })),
+      JSON.stringify(
+        await provisionPlatformConnections(db, required(values.actor, 'actor'), references, {
+          apply: values.apply,
+        }),
+      ),
     ),
   );
 }

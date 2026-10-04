@@ -34,7 +34,7 @@ export async function registerUser(db: Database, email: string, password: string
   // Duplicate addresses pay the same hashing cost and receive the same response.
   const encoded = await hashPassword(password);
   const registeredId = await db.transaction().execute(async (trx) => {
-    const user = await createPasswordIdentity(trx, email, encoded);
+    const user = await createIdentity(trx, email, encoded);
     if (user) await provisionAccount(trx, user);
     return user?.id;
   });
@@ -42,14 +42,14 @@ export async function registerUser(db: Database, email: string, password: string
 }
 
 /** Identity insertion only; caller explicitly chooses workspace/access provisioning. */
-export function createPasswordIdentity(db: Database, email: string, encoded: string) {
+export function createIdentity(db: Database, email: string, passwordHash: string) {
   const now = new Date();
   return db
     .insertInto('users')
     .values({
       id: randomUUID(),
       email: email.trim().toLowerCase(),
-      hashed_password: encoded,
+      hashed_password: passwordHash,
       role: 'user',
       is_active: true,
       session_version: 0,

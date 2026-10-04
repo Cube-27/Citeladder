@@ -6,6 +6,7 @@ export function required(value: string | undefined, name: string): string {
   return value;
 }
 
+/** Connection lifecycle only. Each command's domain owner enforces its own operator authority. */
 export async function withOperatorDatabase(run: (db: Database) => Promise<void>) {
   const db = createDatabase(loadConfig());
   try {

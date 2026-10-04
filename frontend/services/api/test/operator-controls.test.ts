@@ -1,19 +1,23 @@
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { setAcquisitionControl, acquisitionDomain } from '../src/web-evidence/control.ts';
 import { authorizeAcquisition } from '../src/web-evidence/acquisition.ts';
 import {
   recordAgreementReference,
   agreementReferenceSchema,
 } from '../src/workspaces/enterprise-agreements.ts';
-import { Fixtures, testDatabase } from './support.ts';
+import { Fixtures, testConfig, testDatabase } from './support.ts';
 import { sql } from 'kysely';
 import { setTimeout as delay } from 'node:timers/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
+import { policy } from '../src/config.ts';
 import { hashPassword } from '../src/auth/password.ts';
 import { authenticateOperator, manageAccount } from '../src/workspaces/account-manager.ts';
 
 const db = testDatabase(),
   fixtures = new Fixtures(db);
-let admin: string, signer: string, workspace: string, foreign: string;
+let admin: string, signer: string, workspace: string, foreign: string, cliWorkspace: string;
 const email = (id: string) => `${id}@example.test`;
 const agreement = () => ({
   workspace_id: workspace,
@@ -24,21 +28,25 @@ const agreement = () => ({
   authority_verified: true,
 });
 beforeAll(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-02-01T00:00:00Z'));
   admin = await fixtures.user();
   signer = await fixtures.user();
   await db.updateTable('users').set({ role: 'admin' }).where('id', '=', admin).execute();
   workspace = await fixtures.ownedWorkspace(signer);
+  cliWorkspace = await fixtures.ownedWorkspace(signer);
   foreign = await fixtures.ownedWorkspace(await fixtures.user());
 });
 afterAll(async () => {
   await db.deleteFrom('web_acquisition_controls').where('actor_id', '=', admin).execute();
   await db
     .deleteFrom('enterprise_agreement_references')
-    .where('workspace_id', 'in', [workspace, foreign])
+    .where('workspace_id', 'in', [workspace, foreign, cliWorkspace])
     .execute();
   await db.deleteFrom('security_events').where('actor_id', 'in', [admin, signer]).execute();
   await fixtures.cleanup();
   await db.destroy();
+  vi.useRealTimers();
 });
 
 it.each([
@@ -136,6 +144,58 @@ it('requires active operator and signatory authority in the exact workspace', as
     'platform administrator',
   );
   await db.updateTable('users').set({ is_active: true }).where('id', '=', admin).execute();
+});
+
+it('reads bounded agreement reference JSON from stdin, previews by default and applies only explicitly', async () => {
+  const config = testConfig();
+  const input = {
+    ...agreement(),
+    workspace_id: cliWorkspace,
+    reference: 'MSA-stdin',
+    signed_at: '1970-01-01T00:00:00Z',
+  };
+  const run = (json: string, flags: string[] = []) => {
+    const running = promisify(execFile)(
+      process.execPath,
+      [
+        fileURLToPath(new URL('../src/cli/enterprise-agreement.ts', import.meta.url)),
+        '--actor',
+        email(admin),
+        ...flags,
+      ],
+      {
+        env: {
+          PATH: process.env.PATH,
+          SystemRoot: process.env.SystemRoot,
+          APP_ENV: 'test',
+          CITELADDER_DISABLE_DOTENV: '1',
+          DATABASE_URL: config.databaseUrl,
+          JWT_SECRET_KEY: config.session.secretKey,
+        },
+        windowsHide: true,
+        timeout: 10_000,
+      },
+    );
+    running.child.stdin!.end(json);
+    return running;
+  };
+  const rows = () =>
+    db
+      .selectFrom('enterprise_agreement_references')
+      .select('id')
+      .where('workspace_id', '=', cliWorkspace)
+      .where('reference', '=', input.reference)
+      .execute();
+  await run(JSON.stringify(input));
+  expect(await rows()).toEqual([]);
+  await expect(run('not-json', ['--apply'])).rejects.toMatchObject({ code: 1 });
+  await expect(
+    run(' '.repeat(policy.workspaces.agreement_input_max_bytes + 1), ['--apply']),
+  ).rejects.toMatchObject({ code: 1 });
+  expect(await rows()).toEqual([]);
+  const { stdout } = await run(JSON.stringify(input), ['--apply']);
+  expect(JSON.parse(stdout)).toMatchObject({ reference: input.reference, apply: true });
+  expect(await rows()).toHaveLength(1);
 });
 
 it.each([

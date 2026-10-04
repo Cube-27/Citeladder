@@ -1,8 +1,8 @@
 import { sql } from 'kysely';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
-import { hashPassword, verifyAccountPassword } from '../auth/password.ts';
-import { createPasswordIdentity } from '../auth/service.ts';
+import { hashPassword, passwordSchema, verifyAccountPassword } from '../auth/password.ts';
+import { createIdentity } from '../auth/service.ts';
 import { WorkspaceContext } from '../auth/workspace.ts';
 import { lockIdentityAdministration } from '../auth/operators.ts';
 import { issueInvitationInTransaction } from './invitations.ts';
@@ -24,7 +24,6 @@ export type AccountAction =
   | { kind: 'invite'; email: string; role: string; password?: string }
   | { kind: 'role'; email: string; role: string }
   | { kind: 'password'; email: string; password: string };
-const passwordSchema = z.string().min(8).max(128);
 const emailSchema = z
   .email()
   .max(255)
@@ -121,7 +120,7 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
         .executeTakeFirst();
       if (!existing) {
         if (!encoded) throw new Error('New identity requires a terminal password');
-        const user = await createPasswordIdentity(trx, email!, encoded);
+        const user = await createIdentity(trx, email!, encoded);
         if (!user) throw new Error('user_already_exists');
         await provisionAccount(trx, user, { provisionAccess: false });
       }

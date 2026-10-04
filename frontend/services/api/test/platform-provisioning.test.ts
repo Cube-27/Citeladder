@@ -1,4 +1,4 @@
-import { afterAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -11,6 +11,12 @@ const config = testConfig(),
   db = testDatabase(config),
   fixtures = new Fixtures(db);
 let system: string;
+let actor: string, member: string;
+beforeAll(async () => {
+  actor = `${await fixtures.user()}@example.test`;
+  member = `${await fixtures.user()}@example.test`;
+  await db.updateTable('users').set({ role: 'admin' }).where('email', '=', actor).execute();
+});
 afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
@@ -18,9 +24,9 @@ afterAll(async () => {
 
 it('previews, converges concurrently and rotates only platform metadata without touching BYOK', async () => {
   const reference = 'vault://platform/openai';
-  await expect(provisionPlatformConnections(db, { openai: reference })).resolves.toMatchObject([
-    { status: 'created' },
-  ]);
+  await expect(
+    provisionPlatformConnections(db, actor, { openai: reference }),
+  ).resolves.toMatchObject([{ status: 'created' }]);
   expect(
     await db.selectFrom('workspaces').select('id').where('is_system', '=', true).execute(),
   ).toEqual([]);
@@ -49,8 +55,8 @@ it('previews, converges concurrently and rotates only platform metadata without 
     })
     .execute();
   const [first, second] = await Promise.all([
-    provisionPlatformConnections(db, { openai: reference }, { apply: true }),
-    provisionPlatformConnections(db, { openai: reference }, { apply: true }),
+    provisionPlatformConnections(db, actor, { openai: reference }, { apply: true }),
+    provisionPlatformConnections(db, actor, { openai: reference }, { apply: true }),
   ]);
   expect(first[0]!.connection_id).toBe(second[0]!.connection_id);
   expect([first[0]!.status, second[0]!.status].sort()).toEqual(['created', 'unchanged']);
@@ -82,7 +88,8 @@ it('previews, converges concurrently and rotates only platform metadata without 
     .where('id', '=', route.id)
     .execute();
   expect(
-    (await provisionPlatformConnections(db, { openai: reference }, { apply: true }))[0]!.status,
+    (await provisionPlatformConnections(db, actor, { openai: reference }, { apply: true }))[0]!
+      .status,
   ).toBe('updated');
   expect(
     (
@@ -93,7 +100,7 @@ it('previews, converges concurrently and rotates only platform metadata without 
         .executeTakeFirstOrThrow()
     ).paused_at,
   ).not.toBeNull();
-  await provisionPlatformConnections(db, { openai: `${reference}-v2` });
+  await provisionPlatformConnections(db, actor, { openai: `${reference}-v2` });
   expect(
     (
       await db
@@ -103,7 +110,7 @@ it('previews, converges concurrently and rotates only platform metadata without 
         .executeTakeFirstOrThrow()
     ).credential_revision,
   ).toBe(prior.credential_revision);
-  await provisionPlatformConnections(db, { openai: `${reference}-v2` }, { apply: true });
+  await provisionPlatformConnections(db, actor, { openai: `${reference}-v2` }, { apply: true });
   const rotated = await db
     .selectFrom('provider_connections')
     .selectAll()
@@ -141,6 +148,7 @@ it('previews, converges concurrently and rotates only platform metadata without 
   ).toBe('recorded-ciphertext');
   const anthropic = await provisionPlatformConnections(
     db,
+    actor,
     {
       anthropic: 'vault://platform/anthropic',
     },
@@ -164,6 +172,8 @@ it('previews CLI rotation unless apply is explicit and refuses conflicting mutat
       process.execPath,
       [
         fileURLToPath(new URL('../src/cli/provision-platform-providers.ts', import.meta.url)),
+        '--actor',
+        actor,
         '--credential-ref',
         `openai=${reference}`,
         ...flags,
@@ -224,7 +234,7 @@ it.each(['', 'sk-live-value', 'production-secret', 'password-value'])(
       .selectAll()
       .where('workspace_id', '=', system)
       .execute();
-    expect(() => provisionPlatformConnections(db, { openai: reference })).toThrow(
+    expect(() => provisionPlatformConnections(db, actor, { openai: reference })).toThrow(
       'non-secret opaque',
     );
     expect(
@@ -237,7 +247,34 @@ it.each(['', 'sk-live-value', 'production-secret', 'password-value'])(
   },
 );
 it('refuses unsupported transports', () => {
-  expect(() => provisionPlatformConnections(db, { mistral: 'vault://platform/mistral' })).toThrow(
-    'unknown transport',
-  );
+  expect(() =>
+    provisionPlatformConnections(db, actor, { mistral: 'vault://platform/mistral' }),
+  ).toThrow('unknown transport');
+});
+
+it('refuses non-admin, inactive and unknown operators without changing metadata', async () => {
+  const before = await db
+    .selectFrom('provider_connections')
+    .selectAll()
+    .where('workspace_id', '=', system)
+    .execute();
+  for (const email of [member, 'missing@example.test']) {
+    await expect(
+      provisionPlatformConnections(db, email, { openai: 'vault://changed' }, { apply: true }),
+    ).rejects.toThrow('active platform administrator');
+  }
+  await db.updateTable('users').set({ is_active: false }).where('email', '=', actor).execute();
+  await expect(
+    provisionPlatformConnections(db, actor, { openai: 'vault://changed' }),
+  ).rejects.toThrow('active platform administrator');
+  await expect(
+    provisionPlatformConnections(db, actor, { openai: 'vault://changed' }, { apply: true }),
+  ).rejects.toThrow('active platform administrator');
+  expect(
+    await db
+      .selectFrom('provider_connections')
+      .selectAll()
+      .where('workspace_id', '=', system)
+      .execute(),
+  ).toEqual(before);
 });
