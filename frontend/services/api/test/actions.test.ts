@@ -10,7 +10,7 @@ import {
 } from '@citeladder/contracts/actions';
 import { searchConsoleState } from '../src/opportunities/measurement-legs.ts';
 import { settlePlacements } from '../src/source-pages/placement-settlement.ts';
-import { actionFixture, type ActionSeed } from './action-support.ts';
+import { actionFixture, sourcePage, type ActionSeed } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
@@ -349,6 +349,11 @@ describe('Action routes', () => {
       'earned',
       s.workspace_id,
       s.project_id,
+    );
+    await sourcePage(
+      db,
+      { workspace_id: s.workspace_id, project_id: s.project_id },
+      'https://review.example/another-list',
     );
     s.actions.earned = earned.action_id;
     const result = await declare(s, 'earned', 'earned');

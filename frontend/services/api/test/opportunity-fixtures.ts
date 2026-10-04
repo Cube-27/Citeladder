@@ -2,7 +2,7 @@
  * Reuse native fixtures for ORM-only defaults; never run providers or a worker.
  */
 import { randomUUID } from 'node:crypto';
-import type { Insertable } from 'kysely';
+import type { Insertable, RawBuilder } from 'kysely';
 import type { Database } from '../src/db/database.ts';
 import type { Actions, Opportunities, OpportunitySnapshots } from '../src/generated/db-schema.ts';
 import { extractPageFacts, factSettings } from '../src/site-health/analysis/facts.ts';
@@ -24,6 +24,11 @@ export type OpportunitySeed = {
   issue_thin_id: string;
 };
 
+type SiteEvidence = {
+  facts: Record<string, unknown>;
+  fetchedAt: Date | RawBuilder<Date>;
+};
+
 async function issue(
   db: Database,
   fixtures: SiteFixtures,
@@ -31,12 +36,12 @@ async function issue(
   path: string,
   rule: string,
   severity: string,
-  content: boolean,
+  options: { content: boolean; evidence?: SiteEvidence },
 ) {
   const names = ['Garden soil guide', 'Soil testing kit', 'Compost for healthy soil'];
   const name = names[['/a', '/b', '/c'].indexOf(path)]!;
   const url = new URL(path, seed.root).href;
-  const facts = content
+  const facts = options.content
     ? extractPageFacts(
         Buffer.from(
           `<html><title>${name} | Acme</title><main><h1>${name}</h1><p>Use a soil testing kit to understand nutrient levels before planting.</p><p>Add compost to improve moisture retention and support a thriving garden.</p></main></html>`,
@@ -45,7 +50,9 @@ async function issue(
         factSettings({}),
       )
     : { has_html: true };
-  const page = await fixtures.page(seed, path, facts);
+  const page = await fixtures.page(seed, path, options.evidence?.facts ?? facts, {
+    fetchedAt: options.evidence?.fetchedAt,
+  });
   const now = new Date();
   const evaluationId = randomUUID();
   const issueId = randomUUID();
@@ -85,7 +92,7 @@ async function issue(
       source_evaluation_ids: [evaluationId],
       source_artifact_ids: [page.artifactId],
       finalized_at: now,
-      ...(content ? { main_content_indexable: true } : {}),
+      ...(options.content ? { main_content_indexable: true } : {}),
     })
     .where('id', '=', page.analysisId)
     .execute();
@@ -116,9 +123,10 @@ async function issue(
   return issueId;
 }
 
-export async function seedOpportunityScenario(
+export function seedOpportunityScenario(
   db: Database,
   content = false,
+  siteEvidence?: SiteEvidence,
 ): Promise<OpportunitySeed> {
   return db.transaction().execute(async (trx) => {
     const fixtures = new SiteFixtures(trx);
@@ -184,6 +192,8 @@ export async function seedOpportunityScenario(
         theme: 'crm',
         engine: 'gemini',
         transportModel: 'gemini-flash-latest',
+        transportProvider: 'google',
+        answerText: 'fixture answer',
         analysis: {
           competitorMentions: index === 0 ? ['Globex'] : [],
           citations:
@@ -204,19 +214,8 @@ export async function seedOpportunityScenario(
         .set({
           analyzer_version: 'b6-analysis-1',
           scoring_rule_version: 'scoring-v1',
-          transport_provider: 'google',
         })
         .where('id', '=', execution.analysisId!)
-        .execute();
-      await trx
-        .updateTable('raw_response_artifacts')
-        .set({ transport_provider: 'google', answer_text: 'fixture answer' })
-        .where('task_id', '=', execution.taskId)
-        .execute();
-      await trx
-        .updateTable('audit_tasks')
-        .set({ transport_provider: 'google' })
-        .where('id', '=', execution.taskId)
         .execute();
       await trx
         .updateTable('citations')
@@ -233,11 +232,6 @@ export async function seedOpportunityScenario(
         .where('analysis_id', '=', execution.analysisId!)
         .execute();
     }
-    await trx
-      .updateTable('audit_engine_snapshots')
-      .set({ transport_provider: 'google' })
-      .where('audit_id', '=', auditId)
-      .execute();
     const metricId = await fixtures.metricSnapshot(seed, auditId, {
       metrics: {},
       visibilityScore: 50,
@@ -256,10 +250,12 @@ export async function seedOpportunityScenario(
       '/a',
       'aeo.structured_data_present',
       'medium',
-      content,
+      { content, evidence: siteEvidence },
     );
-    const thinId = await issue(trx, fixtures, seed, '/b', 'technical.thin_content', 'low', content);
-    await issue(trx, fixtures, seed, '/c', 'technical.title_missing', 'high', content);
+    const thinId = await issue(trx, fixtures, seed, '/b', 'technical.thin_content', 'low', {
+      content,
+    });
+    await issue(trx, fixtures, seed, '/c', 'technical.title_missing', 'high', { content });
     return {
       user_id: seed.userId,
       workspace_id: seed.workspaceId,

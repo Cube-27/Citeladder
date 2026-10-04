@@ -25,7 +25,10 @@ const moment = sql<Date>`'2026-09-27T10:00:00.123456Z'::timestamptz`;
 const declared = sql<Date>`${moment} - interval '1 day'`;
 
 export async function seedVerification(db: Database): Promise<VerificationSeed> {
-  const scn = await seedOpportunityScenario(db);
+  const scn = await seedOpportunityScenario(db, false, {
+    facts: { secure: true },
+    fetchedAt: moment,
+  });
   return db.transaction().execute(async (trx) => {
     const scope = { workspace_id: scn.workspace_id, project_id: scn.project_id };
     const snapshot = snapshotRow(scope, {
@@ -41,11 +44,6 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
       .selectAll()
       .where('id', '=', scn.issue_structured_id)
       .executeTakeFirstOrThrow();
-    await trx
-      .updateTable('site_fetch_artifacts')
-      .set({ fetched_at: moment, normalized_facts: JSON.stringify({ secure: true }) })
-      .where('id', '=', issue.source_artifact_id)
-      .execute();
     await trx
       .updateTable('site_rule_evaluations')
       .set({ outcome: 'partial' })

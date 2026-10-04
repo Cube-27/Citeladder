@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Insertable } from 'kysely';
+import type { Insertable, RawBuilder } from 'kysely';
 import type { Database } from '../src/db/database.ts';
 import type { SiteCrawls } from '../src/generated/db-schema.ts';
 import { policy } from '../src/config.ts';
@@ -119,7 +119,13 @@ export class SiteFixtures extends VisibilityFixtures {
     seed: SiteSeed,
     path: string,
     facts: Record<string, unknown>,
-    options: { current?: boolean; status?: string; siteUrlId?: string; observed?: boolean } = {},
+    options: {
+      current?: boolean;
+      status?: string;
+      siteUrlId?: string;
+      observed?: boolean;
+      fetchedAt?: Date | RawBuilder<Date>;
+    } = {},
   ) {
     const identity = canonicalIdentity(path, seed.root);
     const now = new Date();
@@ -166,7 +172,7 @@ export class SiteFixtures extends VisibilityFixtures {
         content_hash: randomUUID().replaceAll('-', ''),
         normalized_facts: JSON.stringify(facts),
         extractor_version: policy.site_health.versions.extractor,
-        fetched_at: now,
+        fetched_at: options.fetchedAt ?? now,
         created_at: now,
         fetch_purpose: 'analyze',
         acquisition_policy_version: 'fixture',

@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Database } from '../src/db/database.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
@@ -24,7 +24,11 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
       site_crawl_id: scn.crawl_id,
       total_count: 4,
       source_analysis_ids: JSON.stringify([scn.analysis0_id]),
-      source_issue_ids: JSON.stringify([scn.issue_structured_id, scn.issue_thin_id].sort()),
+      source_issue_ids: JSON.stringify(
+        [scn.issue_structured_id, scn.issue_thin_id].sort((left, right) =>
+          left.localeCompare(right),
+        ),
+      ),
     });
     await trx.insertInto('opportunity_snapshots').values(snapshot).execute();
     const prompt = {
@@ -97,7 +101,8 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
         'ai_visibility',
       ],
     ] as const) {
-      const rows = specs.filter((row) => rules.some((rule) => rule === row.rule_id));
+      const selectedRules: readonly string[] = rules;
+      const rows = specs.filter((row) => selectedRules.includes(row.rule_id));
       const action = actionRow(scope, {
         group_key: key,
         target_kind: kind,
@@ -124,13 +129,7 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
   });
 }
 
-async function revision(
-  db: Database,
-  workspace: string,
-  project: string,
-  action: string,
-  phase: string,
-) {
+function revision(db: Database, workspace: string, project: string, action: string, phase: string) {
   return db.transaction().execute(async (trx) => {
     const scope = { workspace_id: workspace, project_id: project };
     const now = new Date();
@@ -191,8 +190,7 @@ export async function sourcePage(
   inspected = false,
 ) {
   const id = randomUUID();
-  // Fixed evidence identity is scoped by project, just as the previous fixture.
-  const hash = 'b'.repeat(64);
+  const hash = createHash('sha256').update(url).digest('hex');
   await db
     .insertInto('source_pages')
     .values({
