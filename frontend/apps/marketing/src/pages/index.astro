@@ -1,5 +1,7 @@
 ---
 import { LandingPage } from '@/components/marketing/landing/landing-page';
+import { FAQS } from '@/components/marketing/landing/landing-data';
+import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import './landing.css';
 
@@ -11,6 +13,7 @@ const description =
   title="AI Visibility Software for Brands and Teams | CiteLadder"
   description={description}
   canonical="/"
+  jsonLd={[faqPageJsonLd([{ heading: 'Homepage FAQ', items: FAQS.map(([q, a]) => ({ q, a })) }])]}
 >
   <main id="main">
     <LandingPage client:load />
