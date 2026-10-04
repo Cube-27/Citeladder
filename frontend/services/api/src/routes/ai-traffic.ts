@@ -30,6 +30,7 @@ import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { requireProject } from '../projects/access.ts';
 import { defineGetRoute } from './define.ts';
+import { trafficPageRoutes } from './ai-traffic-pages.ts';
 
 const projectPath = { project_id: { scalar: { kind: 'uuid' }, required: true } } as const;
 const readQuery = {
@@ -53,6 +54,7 @@ const readBase = {
 const root = '/api/v1/projects/{project_id}/ai-traffic';
 
 export const aiTrafficRoutes = [
+  ...trafficPageRoutes,
   defineGetRoute({
     ...readBase,
     path: root + '/overview',

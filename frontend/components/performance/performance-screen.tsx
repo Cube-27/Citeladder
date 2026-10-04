@@ -94,7 +94,7 @@ function evidenceAvailability(data: PerformanceDashboard) {
     data.dimension_counts.day,
   ].some((count) => count > 0);
   const hasSearchConsoleBreakdowns = hasSearchConsoleTotals || hasSearchConsoleDimensions;
-  const hasGa4 = totals.sessions !== null || totals.conversions !== null;
+  const hasGa4 = totals.sessions !== null || totals.key_events !== null;
   const hasBing =
     snapshotId !== null &&
     (data.dimension_counts.bing_query > 0 || data.dimension_counts.bing_page > 0);
@@ -352,6 +352,14 @@ export function PerformanceScreen() {
           selectedMissing={coverage.selectedMissing}
           comparisonMissing={coverage.comparisonMissing}
         />
+        {Object.values(data.coverage.analytics_quality).some((days) =>
+          days.some((day) => day.flags.length > 0),
+        ) ? (
+          <Alert tone="info">
+            Some imported partitions are missing, flagged or using a prior complete revision.
+            Zero-valued observations are unavailable for those extracts.
+          </Alert>
+        ) : null}
 
         {!hasEvidence ? (
           <PerformanceEmptyState data={data} projecting={projection.projecting} />

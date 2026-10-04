@@ -12,7 +12,11 @@ type CompletedSync = {
   resync_seq: number;
 };
 
-export async function enqueuePostSyncProjections(trx: Database, run: CompletedSync): Promise<void> {
+export async function enqueuePostSyncProjections(
+  trx: Database,
+  run: CompletedSync,
+  failed = false,
+): Promise<void> {
   const artifacts = await trx
     .selectFrom('integration_import_artifacts')
     .select(['id', 'dataset'])
@@ -35,7 +39,7 @@ export async function enqueuePostSyncProjections(trx: Database, run: CompletedSy
       maxAttempts,
     });
   }
-  if (artifacts.some((artifact) => trafficDatasets.has(artifact.dataset))) {
+  if (failed || artifacts.some((artifact) => trafficDatasets.has(artifact.dataset))) {
     const start = run.window_start.slice(0, 10);
     const end = run.window_end.slice(0, 10);
     const sourceRevision = run.id;
@@ -48,4 +52,23 @@ export async function enqueuePostSyncProjections(trx: Database, run: CompletedSy
       maxAttempts,
     });
   }
+  if (
+    failed ||
+    artifacts.some((a) =>
+      ['ga4_landing_daily', 'ga4_channel_daily', 'ga4_ecommerce_source_medium_daily'].includes(
+        a.dataset,
+      ),
+    )
+  )
+    await enqueueTask(trx, {
+      workspaceId: run.workspace_id,
+      projectId: run.project_id,
+      kind: 'ai_referrals_snapshot_refresh',
+      payload: {
+        window_start: run.window_start.slice(0, 10),
+        window_end: run.window_end.slice(0, 10),
+      },
+      keyParts: [run.project_id, run.id, failed ? 'failed' : 'ga4-extras'],
+      maxAttempts,
+    });
 }

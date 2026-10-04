@@ -19,6 +19,12 @@ import { windowDays } from './performance.ts';
 import { record } from '../db/json.ts';
 import { TrafficProjectionBuilder, type Projection } from './projection.ts';
 import { compareText } from '../text-order.ts';
+import {
+  selectedPartition,
+  partitionQuality,
+  partitionAnchor,
+} from '../integrations/partitions.ts';
+import { projectHosts } from '../integrations/host-scope.ts';
 
 const p = policy.traffic;
 type Target = {
@@ -218,6 +224,7 @@ async function scan(
       .select(isoDateText(sql.ref('date')).as('day'))
       .where('project_id', '=', requireProject(task))
       .where('dataset', 'in', p.TRAFFIC_PROJECTED_DATASETS)
+      .where(selectedPartition())
       .where('date', '>=', sql<Date>`${start}::date`)
       .where('date', '<=', sql<Date>`${end}::date`)
       .limit(p.TRAFFIC_METRIC_ROW_BATCH_SIZE);
@@ -245,12 +252,9 @@ function executor(displayOnly: boolean): Executor {
       .select('root_url')
       .where('project_id', '=', projectId)
       .executeTakeFirst();
-    const anchor = await scope
-      .selectFrom(db, 'integration_metric_rows')
-      .select(isoDateText(sql`max(date)`).as('day'))
-      .where('project_id', '=', projectId)
-      .where('dataset', '=', p.DATASET_GSC_DAY_DAILY)
-      .executeTakeFirst();
+    const anchor = {
+      day: await partitionAnchor(db, task.workspace_id, projectId, p.DATASET_GSC_DAY_DAILY),
+    };
     const existing = displayOnly
       ? await scope
           .selectFrom(db, 'traffic_snapshots')
@@ -261,6 +265,7 @@ function executor(displayOnly: boolean): Executor {
           .execute()
       : [];
     const targets: Target[] = [];
+    const allowedHosts = await projectHosts(db, task.workspace_id, projectId);
     const add = (
       start: string,
       end: string,
@@ -279,6 +284,7 @@ function executor(displayOnly: boolean): Executor {
           windowEnd: end,
           granularity: grain,
           projectOrigin: origin?.root_url,
+          allowedHosts,
         }),
       });
     for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
@@ -311,8 +317,33 @@ function executor(displayOnly: boolean): Executor {
     await checkCancelled('snapshot write');
     await db.transaction().execute(async (trx) => {
       const verifying: string[] = [];
+      const allQuality: Record<string, Awaited<ReturnType<typeof partitionQuality>>> = {};
+      const qualityScope = {
+        workspaceId: task.workspace_id,
+        projectId,
+        start: targets.map((t) => t.start).sort(compareText)[0]!,
+        end: targets
+          .map((t) => t.end)
+          .sort(compareText)
+          .at(-1)!,
+      };
+      for (const dataset of p.TRAFFIC_PROJECTED_DATASETS)
+        allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset);
       for (const target of targets) {
-        const snapshotId = await persist(trx, task, target, coverage, displayOnly);
+        const quality: Record<string, Awaited<ReturnType<typeof partitionQuality>>> = {};
+        for (const dataset of p.TRAFFIC_PROJECTED_DATASETS) {
+          quality[dataset] = allQuality[dataset]!.filter(
+            (q) => q.day >= target.start && q.day <= target.end,
+          );
+          target.builder.partitionQuality(dataset, quality[dataset]!);
+        }
+        const snapshotId = await persist(
+          trx,
+          task,
+          target,
+          { ...coverage, analytics_quality: quality },
+          displayOnly,
+        );
         if (snapshotId && target.verifies) verifying.push(snapshotId);
       }
       await Promise.all(

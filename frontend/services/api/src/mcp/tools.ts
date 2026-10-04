@@ -176,7 +176,45 @@ export const definitions = {
   read_ai_referrals: {
     title: 'Read AI referral traffic',
     description:
-      'Read persisted referral sessions, share and sources for a range or an explicit date window.',
+      'Read persisted property-wide referral sessions, share, key events per source, host-scoped landing pages, quality flags and channel comparison.',
+    schema: z.strictObject({
+      ...scope,
+      range: nullable(z.enum(Object.keys(policy.analytics.preset_range_days))),
+      ...dates,
+    }),
+  },
+  read_ai_traffic_pages: {
+    title: 'Read AI Traffic pages',
+    description:
+      'Read path-level crawler requests, AI referral sessions, tracked citations and Site Health findings with independent leg states.',
+    schema: z.strictObject({
+      ...scope,
+      range: nullable(z.enum(Object.keys(policy.analytics.preset_range_days))),
+      ...dates,
+      folder: nullable(z.string().max(2048)),
+      resource_class: nullable(z.string().max(24)),
+      verification: nullable(z.string().max(128)),
+      sort: nullable(
+        z.enum(['requests_desc', 'sessions_desc', 'key_events_desc', 'citations_desc', 'url_asc']),
+      ),
+      ...crawlPage,
+    }),
+  },
+  read_ai_traffic_url: {
+    title: 'Read AI Traffic for a URL',
+    description:
+      'Read a persisted path timeline for a canonical same-origin project URL. Refuses off-origin URLs.',
+    schema: z.strictObject({
+      ...scope,
+      url: z.string().trim().min(1).max(4096),
+      range: nullable(z.enum(Object.keys(policy.analytics.preset_range_days))),
+      ...dates,
+    }),
+  },
+  read_ai_traffic_insights: {
+    title: 'Read AI Traffic insights',
+    description:
+      'Read persisted coverage-gated co-occurrence patterns. Never implies causation or starts refresh work.',
     schema: z.strictObject({
       ...scope,
       range: nullable(z.enum(Object.keys(policy.analytics.preset_range_days))),

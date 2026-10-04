@@ -167,15 +167,11 @@ describe('traffic projections and Performance', () => {
     const id = dashboard.body.selected.snapshot_id;
     const first = await request(`performance/table?snapshot_id=${id}`);
     expect(first.body.total_count).toBe(12);
-    expect(first.body.items.map((r: { metrics: { clicks: number } }) => r.metrics.clicks)).toEqual([
-      11, 10, 9, 8, 7, 6, 5, 4, 3, 2,
-    ]);
+    expect(first.body.items.map((r) => r.metrics.clicks)).toEqual([11, 10, 9, 8, 7, 6, 5, 4, 3, 2]);
     const second = await request(
       `performance/table?snapshot_id=${id}&cursor=${encodeURIComponent(first.body.next_cursor!)}`,
     );
-    expect(second.body.items.map((r: { metrics: { clicks: number } }) => r.metrics.clicks)).toEqual(
-      [1, 0],
-    );
+    expect(second.body.items.map((r) => r.metrics.clicks)).toEqual([1, 0]);
     expect(second.body.next_cursor).toBeNull();
     for (const changed of ['page_size=25', 'sort=clicks', 'dimension=page'])
       expect(
@@ -270,22 +266,26 @@ describe('traffic projections and Performance', () => {
     expect((await request(`performance/table?snapshot_id=${randomUUID()}`)).body.items).toEqual([]);
   });
 
-  it('streams revisions across SQL batch boundaries and cancels without publishing partial projections', async () => {
-    const seed = await importSeed(db, t);
+  it('streams selected partition rows across SQL batch boundaries and cancels without publishing partial projections', async () => {
+    const seed = await importSeed(db, t, 'gsc_page_daily');
+    await metric(db, seed, {
+      dataset: 'gsc_day_daily',
+      metrics: { impressions: 1000, clicks: policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE },
+    });
     const values = Array.from(
       { length: policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE + 1 },
       (_, i) => ({
         id: randomUUID(),
         workspace_id: t.workspaceId,
         project_id: t.projectId,
-        property_ref: 'property',
+        property_ref: 'properties/123456789',
         provider: 'gsc',
         dataset: seed.dataset,
         date: WINDOW[1],
-        dimension_key: WINDOW[1],
+        dimension_key: `https://example.test/page-${i} | ${WINDOW[1]}`,
         metrics: JSON.stringify({ impressions: 100, clicks: i }),
         source_artifact_id: seed.artifactId,
-        resync_seq: i,
+        resync_seq: 0,
         importer_version: 'test',
         created_at: new Date(),
       }),

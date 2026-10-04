@@ -116,6 +116,107 @@ async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
 }
 
 describe('integration worker paging and resume', () => {
+  it('keeps metadata from the newest revision when an older sync finishes later', async () => {
+    const run = await seedRun('ga4');
+    const original = await db
+      .selectFrom('integration_sync_runs')
+      .selectAll()
+      .where('id', '=', run.runId)
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto('integration_sync_runs')
+      .values({
+        ...original,
+        id: randomUUID(),
+        idempotency_key: `sync-test:newer:${run.runId}`,
+        window_start: new Date('2026-07-19T00:00:00Z'),
+        resync_seq: 2,
+        priority: 10,
+      })
+      .execute();
+    let metadata = { timeZone: 'UTC', currencyCode: 'USD' };
+    const client: Pick<IntegrationClient, 'page'> = {
+      async page() {
+        return { payload: { rows: [], metadata }, rawRowCount: 0 };
+      },
+    };
+    const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token');
+    expect(await worker.runOnce()).toBe(true);
+    metadata = { timeZone: 'Asia/Kolkata', currencyCode: 'INR' };
+    expect(await worker.runOnce()).toBe(true);
+    expect(
+      await db
+        .selectFrom('integration_property_mappings')
+        .select(['reporting_timezone', 'currency_code'])
+        .where('id', '=', run.mappingId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ reporting_timezone: 'UTC', currency_code: 'USD' });
+    expect(
+      await db
+        .selectFrom('crawl_log_states')
+        .select('reporting_timezone')
+        .where('project_id', '=', run.projectId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ reporting_timezone: 'UTC' });
+  });
+  it('captures GA4 property metadata, session attribution and excluded-host counts on immutable extract pages', async () => {
+    const run = await seedRun('ga4');
+    const client: Pick<IntegrationClient, 'page'> = {
+      async page(_provider, _token, _property, template, _start, _end, offset) {
+        const rows =
+          template.dataset === 'ga4_landing_daily' && offset === 0
+            ? ['example.test', 'foreign.test'].map((host) => ({
+                dimensionValues: ['/guide', 'chatgpt.com', 'referral', host, '20260720'].map(
+                  (value) => ({ value }),
+                ),
+                metricValues: ['4', '2', '0'].map((value) => ({ value })),
+              }))
+            : [];
+        return {
+          payload: {
+            rows,
+            metadata: {
+              timeZone: 'Asia/Kolkata',
+              currencyCode: 'INR',
+              subjectToThresholding: true,
+              dataLossFromOtherRow: true,
+              samplingMetadatas: [{ samplesReadCount: '50', samplingSpaceSize: '100' }],
+            },
+          },
+          rawRowCount: rows.length,
+        };
+      },
+    };
+    await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+    expect(
+      await db
+        .selectFrom('integration_property_mappings')
+        .select(['reporting_timezone', 'currency_code'])
+        .where('id', '=', run.mappingId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ reporting_timezone: 'Asia/Kolkata', currency_code: 'INR' });
+    const artifacts = await db
+      .selectFrom('integration_import_artifacts')
+      .select(['extract_metadata', 'query_snapshot'])
+      .where('sync_run_id', '=', run.runId)
+      .where('dataset', '=', 'ga4_landing_daily')
+      .execute();
+    expect(
+      artifacts.some(
+        (a) => (a.extract_metadata as { excluded_host_rows: number }).excluded_host_rows === 1,
+      ),
+    ).toBe(true);
+    expect(artifacts[0]?.extract_metadata).toMatchObject({
+      analytics_quality: ['thresholding', 'other_row_loss', 'sampling'],
+    });
+    expect((artifacts[0]!.query_snapshot as { dimensions: string[] }).dimensions).toEqual([
+      'landingPage',
+      'sessionSource',
+      'sessionMedium',
+      'hostName',
+      'date',
+    ]);
+  });
   it('publishes with a live database lease despite a skewed application clock', async () => {
     const run = await seedRun();
     vi.useFakeTimers({ toFake: ['Date'] });

@@ -6,7 +6,8 @@ import { crawlLogs } from '../config/crawl-logs.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
-import { lockCrawlState, type CrawlScope } from './state.ts';
+import { lockCrawlState, enqueueRollup, type CrawlScope } from './state.ts';
+import { enqueueTrafficInsights } from './insights-enqueue.ts';
 
 const samplingSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('none') }),
@@ -123,6 +124,7 @@ export async function createSource(
       })
       .execute();
     await recordSecurityEvent(trx, 'crawl_log.create', actorId, scope.workspaceId, id);
+    await enqueueTrafficInsights(trx, scope);
     return { id, token: secret };
   });
 }
@@ -168,6 +170,8 @@ export async function mutateSource(
       scope.workspaceId,
       id,
     );
+    if (action === 'revoke') await enqueueRollup(trx, scope, new Date());
+    await enqueueTrafficInsights(trx, scope);
     return { id, token: secret };
   });
 }

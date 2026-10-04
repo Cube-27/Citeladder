@@ -19,6 +19,9 @@ import { isoDateText } from '../db/timestamps.ts';
 import { payloadWindow, requireProject, type Executor } from '../workers/executor.ts';
 import { addDays, buildAiReferralsProjection, type ReferralFact } from './projection.ts';
 import { compareText } from '../text-order.ts';
+import { selectedPartition, partitionAnchor } from '../integrations/partitions.ts';
+import { referralEvidence, referralExtras, replaceReferralLandings } from './landing.ts';
+import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
 
 const { analytics, referrals } = policy;
 const BATCH_SIZE = 1000;
@@ -98,6 +101,7 @@ function factBatch(
     .where('row.date', '>=', sql<Date>`${scope.start}::date`)
     .where('row.date', '<=', sql<Date>`${scope.end}::date`)
     .where('row.dataset', '=', SOURCE_MEDIUM)
+    .where(selectedPartition('row'))
     .orderBy('row.id', 'asc')
     .limit(BATCH_SIZE);
   if (afterId !== null) query = query.where('row.id', '>', afterId);
@@ -107,46 +111,45 @@ function factBatch(
 export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCancelled }) => {
   const projectId = requireProject(task);
   const { windowStart, windowEnd } = payloadWindow(task);
-  const anchorRow = await db
-    .selectFrom('integration_metric_rows')
-    .select(isoDateText(sql`max(date)`).as('anchor'))
-    .where('workspace_id', '=', task.workspace_id)
-    .where('project_id', '=', projectId)
-    .where('dataset', '=', SOURCE_MEDIUM)
-    .executeTakeFirst();
-  const windows = refreshWindows(windowStart, windowEnd, anchorRow?.anchor ?? null);
-  // The family is nested and ends at the anchor, so one scan covers them all.
-  const scope = {
-    workspaceId: task.workspace_id,
-    projectId,
-    start: windows.map((window) => window.start).sort(compareText)[0]!,
-    end: windows
-      .map((window) => window.end)
-      .sort(compareText)
-      .at(-1)!,
-  };
-
-  const facts: ReferralFact[] = [];
-  let afterId: string | null = null;
-  for (;;) {
-    await checkCancelled('classification batch');
-    const batch = await factBatch(db, scope, afterId);
-    for (const row of batch) {
-      facts.push({
-        classification_id: row.classification_id,
-        is_ai_referral: row.classification_id === null ? null : Boolean(row.is_ai_referral),
-        ai_source: row.ai_source ?? '',
-        occurred_date: row.date,
-        sessions: sessionCount(row.metrics),
-        row_identity: [row.property_ref, row.provider, row.dataset, row.date, row.dimension_key],
-        resync_seq: row.resync_seq,
-      });
-    }
-    if (batch.length < BATCH_SIZE) break;
-    afterId = batch.at(-1)!.id;
-  }
-
   await db.transaction().execute(async (trx) => {
+    await sql`select pg_advisory_xact_lock(hashtextextended(${task.workspace_id + ':' + projectId + ':referrals'},0))`.execute(
+      trx,
+    );
+    const anchor = await partitionAnchor(trx, task.workspace_id, projectId, SOURCE_MEDIUM);
+    const windows = refreshWindows(windowStart, windowEnd, anchor);
+    // The family is nested and ends at the anchor, so one scan covers them all.
+    const scope = {
+      workspaceId: task.workspace_id,
+      projectId,
+      start: windows.map((window) => window.start).sort(compareText)[0]!,
+      end: windows
+        .map((window) => window.end)
+        .sort(compareText)
+        .at(-1)!,
+    };
+
+    const facts: ReferralFact[] = [];
+    let afterId: string | null = null;
+    for (;;) {
+      await checkCancelled('classification batch');
+      const batch = await factBatch(trx, scope, afterId);
+      for (const row of batch) {
+        facts.push({
+          classification_id: row.classification_id,
+          is_ai_referral: row.classification_id === null ? null : Boolean(row.is_ai_referral),
+          ai_source: row.ai_source ?? '',
+          occurred_date: row.date,
+          sessions: sessionCount(row.metrics),
+          row_identity: [row.property_ref, row.provider, row.dataset, row.date, row.dimension_key],
+          resync_seq: row.resync_seq,
+        });
+      }
+      if (batch.length < BATCH_SIZE) break;
+      afterId = batch.at(-1)!.id;
+    }
+
+    const evidence = await referralEvidence(trx, scope);
+    await replaceReferralLandings(trx, scope, referralExtras(evidence, scope.start, scope.end));
     for (const window of windows) {
       const projection = buildAiReferralsProjection({
         facts,
@@ -154,9 +157,44 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
         windowEnd: window.end,
         granularity: window.granularity,
       });
+      const classificationPending = facts.some(
+        (f) =>
+          f.is_ai_referral === null &&
+          f.occurred_date >= window.start &&
+          f.occurred_date <= window.end,
+      );
       const content = {
         preset_window_days: window.presetDays,
-        metrics: JSON.stringify(projection.metrics),
+        metrics: JSON.stringify({
+          ...projection.metrics,
+          ...referralExtras(evidence, window.start, window.end),
+          ...Object.fromEntries(
+            ['referral_volume', 'referral_share'].map((series) => [
+              series,
+              projection.metrics[series as 'referral_volume' | 'referral_share'].map((point) => {
+                const days = evidence.quality[SOURCE_MEDIUM]!.filter(
+                  (q) =>
+                    q.day >= window.start &&
+                    q.day <= window.end &&
+                    (window.granularity !== 'day' || q.day === point.date),
+                );
+                const bad = days.some((q) => q.flags.length > 0 || q.revision === null);
+                return {
+                  ...point,
+                  value:
+                    bad && point.value === 0
+                      ? null
+                      : series === 'referral_volume' &&
+                          point.value === null &&
+                          !bad &&
+                          !classificationPending
+                        ? 0
+                        : point.value,
+                };
+              }),
+            ]),
+          ),
+        }),
         source_classification_ids: JSON.stringify(projection.source_classification_ids),
         analyzer_version: analytics.ai_referral_analyzer_version,
         formula_version: analytics.ai_referral_formula_version,
@@ -180,5 +218,6 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
         )
         .execute();
     }
+    await enqueueTrafficInsights(trx, { workspaceId: task.workspace_id, projectId });
   });
 };

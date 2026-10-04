@@ -5,6 +5,7 @@ import { addDays } from '../referrals/projection.ts';
 import { Ga4Accum, GscAccum, provenance, sourceFields, type MetricRow } from './accumulators.ts';
 import { canonicalPage, hash, normalizeQuery } from './normalization.ts';
 import { compareText } from '../text-order.ts';
+import { landingPage } from '../integrations/host-scope.ts';
 
 const p = policy.traffic;
 type Measures = Record<string, number | null>;
@@ -31,6 +32,7 @@ export type ProjectionWindow = {
   windowEnd: string;
   granularity: string;
   projectOrigin?: string | null;
+  allowedHosts?: ReadonlySet<string>;
 };
 
 function bucketStart(day: string, grain: string): string {
@@ -79,6 +81,11 @@ export class TrafficProjectionBuilder {
   private pages = new Map<string, { gsc: GscAccum; ga4: Ga4Accum }>();
   private queries = new Map<string, GscAccum>();
   private dimensions = new Map<string, Map<string, GscAccum>>();
+  private excludedHostRows = 0;
+  private qualities = new Map<
+    string,
+    { day: string; flags: string[]; revision: number | null }[]
+  >();
 
   constructor(window: ProjectionWindow) {
     if (
@@ -101,6 +108,42 @@ export class TrafficProjectionBuilder {
       const previous = this.pending.get(key);
       if (!previous || row.resync_seq > previous.resync_seq) this.pending.set(key, row);
     }
+  }
+  partitionQuality(
+    dataset: string,
+    days: { day: string; flags: string[]; revision: number | null }[],
+  ) {
+    this.qualities.set(dataset, days);
+    if (dataset !== p.DATASET_GSC_DAY_DAILY) return;
+    for (const q of days) {
+      const day = q.day;
+      if (
+        q.flags.length ||
+        q.revision === null ||
+        day < this.window.windowStart ||
+        day > this.window.windowEnd
+      )
+        continue;
+      this.totalsGsc.hasRows = true;
+      this.buckets.get(bucketStart(day, this.window.granularity))!.gsc.hasRows = true;
+    }
+  }
+  private measures(
+    value: Measures,
+    datasets: string[],
+    start = this.window.windowStart,
+    end = this.window.windowEnd,
+  ) {
+    const flagged = datasets.some((dataset) =>
+      this.qualities
+        .get(dataset)
+        ?.some(
+          (q) => q.day >= start && q.day <= end && (q.flags.length > 0 || q.revision === null),
+        ),
+    );
+    return flagged
+      ? Object.fromEntries(Object.entries(value).map(([key, v]) => [key, v === 0 ? null : v]))
+      : value;
   }
 
   private flush() {
@@ -158,11 +201,20 @@ export class TrafficProjectionBuilder {
     const ai = (source: string, medium: string) =>
       classifyReferralSignals({ utm_source: source, utm_medium: medium }) !== null;
     if (row.dataset === p.DATASET_GA4_LANDING_DAILY) {
+      const hosts =
+        this.window.allowedHosts ??
+        new Set(this.window.projectOrigin ? [new URL(this.window.projectOrigin).hostname] : []);
+      const host = values[3]!;
+      if (!hosts.has(host.toLowerCase())) {
+        this.excludedHostRows++;
+        return;
+      }
+      const canonical = landingPage(values[0]!, host, hosts);
       if (
         p.TRAFFIC_GA4_ORGANIC_MEDIUMS.includes(values[2]!.trim().toLowerCase()) ||
         ai(values[1]!, values[2]!)
       )
-        this.page(values[0]!)?.ga4.add(row);
+        if (canonical) this.page(canonical)?.ga4.add(row);
       return;
     }
     const included =
@@ -182,26 +234,55 @@ export class TrafficProjectionBuilder {
       canonical_url: url,
       url_hash: hash(url),
       ...stat(a.gsc, a.ga4),
+      metrics: {
+        ...this.measures(a.gsc.measures(), [p.DATASET_GSC_PAGE_DAILY]),
+        ...this.measures(a.ga4.measures(), [p.DATASET_GA4_LANDING_DAILY]),
+        ...sourceFields(a.gsc, a.ga4).counts,
+      },
     }));
     const queries = ordered(this.queries).map(([query, a]) => ({
       normalized_query: query,
       ...stat(a),
+      metrics: {
+        ...this.measures(a.measures(), [p.DATASET_GSC_QUERY_DAILY]),
+        ...sourceFields(a).counts,
+      },
     }));
     const dimensions: Dimension[] = [];
     const dimensionCounts: Record<string, number> = {};
     for (const dimension of p.PERFORMANCE_TABLE_DIMENSION_ORDER) {
       const bucket = this.dimensions.get(dimension) ?? new Map<string, GscAccum>();
       dimensionCounts[dimension] = bucket.size;
-      for (const [key, a] of ordered(bucket))
-        dimensions.push({ dimension, dimension_key: key, display_value: key, ...stat(a) });
+      for (const [key, a] of ordered(bucket)) {
+        const datasets = Object.entries(p.PERFORMANCE_DATASET_DIMENSIONS)
+          .filter(([, d]) => d === dimension)
+          .map(([dataset]) => dataset);
+        dimensions.push({
+          dimension,
+          dimension_key: key,
+          display_value: key,
+          ...stat(a),
+          metrics: { ...this.measures(a.measures(), datasets), ...sourceFields(a).counts },
+        });
+      }
     }
-    const totals = { ...this.totalsGsc.measures(true), ...this.totalsGa4.measures() };
+    const ga4Datasets = [p.DATASET_GA4_CHANNEL_DAILY, p.DATASET_GA4_SOURCE_MEDIUM_DAILY];
+    const totals = {
+      ...this.measures(this.totalsGsc.measures(true), [p.DATASET_GSC_DAY_DAILY]),
+      ...this.measures(this.totalsGa4.measures(), ga4Datasets),
+    };
     const series: Record<string, Point[]> = Object.fromEntries(
       Object.keys(totals).map((key) => [key, []]),
     );
     for (const start of this.starts) {
       const bucket = this.buckets.get(start)!;
-      const measures = { ...bucket.gsc.measures(true), ...bucket.ga4.measures() };
+      const end = this.starts[this.starts.indexOf(start) + 1]
+        ? addDays(this.starts[this.starts.indexOf(start) + 1]!, -1)
+        : this.window.windowEnd;
+      const measures = {
+        ...this.measures(bucket.gsc.measures(true), [p.DATASET_GSC_DAY_DAILY], start, end),
+        ...this.measures(bucket.ga4.measures(), ga4Datasets, start, end),
+      };
       for (const [key, value] of Object.entries(measures))
         series[key]!.push({
           date: start < this.window.windowStart ? this.window.windowStart : start,
@@ -226,6 +307,7 @@ export class TrafficProjectionBuilder {
         series,
         provenance: {
           id_limit: p.TRAFFIC_PROVENANCE_ID_LIMIT,
+          excluded_host_rows: this.excludedHostRows,
           metric_row_total: rows.total,
           artifact_total: artifacts.total,
           metric_rows_sampled: rows.ids.length < rows.total,

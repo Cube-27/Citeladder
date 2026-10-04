@@ -274,11 +274,11 @@ export function MetricCards({
 
 const GA4_SUMMARY_ENTRIES = [
   { key: 'sessions' as const, label: 'Sessions' },
-  { key: 'conversions' as const, label: 'Conversions' },
+  { key: 'key_events' as const, label: 'Key events' },
 ];
 
 /**
- * Sessions and Conversions for the selected range: one compact,
+ * Sessions and key events for the selected range: one compact,
  * non-interactive row beneath the GSC cards.
  *
  * GA4 measures a different population than Search Console, so they never join
@@ -326,7 +326,9 @@ export function Ga4SummaryRow({
           </div>
         );
       })}
-      <p className="type-caption">Google Analytics 4</p>
+      <p className="type-caption">
+        Google Analytics 4 · Property-wide organic and AI sessions · Key events as configured in GA4
+      </p>
     </dl>
   );
 }

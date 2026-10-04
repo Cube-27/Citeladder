@@ -35,6 +35,7 @@ export function pathIdentity(path: string, origin: string) {
   );
   return {
     display_path: display,
+    canonical_url: redacted ? null : canonical,
     identity: redacted ? 'non_joinable' : 'exact',
     identity_reason: redacted ? 'redacted_secret' : null,
     url_hash: redacted ? null : hash(canonical),

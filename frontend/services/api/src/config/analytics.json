@@ -48,6 +48,7 @@
   "terminal_compensation_batch": 100,
   "terminal_compensation_max_failures": 5,
   "tasks": {
+    "ai_traffic_insights_refresh": "ai_traffic_insights_refresh",
     "crawl_log_rollup_refresh": "crawl_log_rollup_refresh",
     "bot_ip_range_refresh": "bot_ip_range_refresh",
     "bot_request_retention_sweep": "bot_request_retention_sweep",

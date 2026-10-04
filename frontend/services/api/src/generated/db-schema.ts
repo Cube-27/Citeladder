@@ -301,6 +301,26 @@ export interface AioObservations {
   workspace_id: string;
 }
 
+export interface AiReferralLandingDaily {
+  ai_source: string;
+  analytics_quality: Json;
+  canonical_url: string;
+  display_path: string;
+  engaged_sessions: number;
+  folder: string;
+  formula_version: string;
+  id: string;
+  key_events: number;
+  project_id: string;
+  reporting_date: Timestamp;
+  reporting_timezone: string;
+  resource_class: string;
+  sessions: number;
+  source_metric_row_ids: Json;
+  url_hash: string;
+  workspace_id: string;
+}
+
 export interface AiReferralsSnapshots {
   analyzer_version: string;
   created_at: Timestamp;
@@ -311,6 +331,20 @@ export interface AiReferralsSnapshots {
   preset_window_days: number | null;
   project_id: string;
   source_classification_ids: Json | null;
+  window_end: Timestamp;
+  window_start: Timestamp;
+  workspace_id: string;
+}
+
+export interface AiTrafficInsights {
+  coverage: Json;
+  created_at: Timestamp;
+  formula_version: string;
+  id: string;
+  patterns: Json;
+  project_id: string;
+  provenance: Json;
+  thresholds: Json;
   window_end: Timestamp;
   window_start: Timestamp;
   workspace_id: string;
@@ -616,6 +650,7 @@ export interface BillingWebhookEvents {
 
 export interface BotActivityDaily {
   bot_id: string;
+  canonical_url: string | null;
   display_path: string;
   first_seen_at: Timestamp;
   folder: string;
@@ -650,6 +685,7 @@ export interface BotIpRangeSnapshots {
 export interface BotRequests {
   batch_id: string;
   bot_id: string;
+  canonical_url: string | null;
   catalog_version: string;
   display_path: string;
   folder: string;
@@ -1321,6 +1357,7 @@ export interface IntegrationImportArtifacts {
   connection_id: string;
   created_at: Timestamp;
   dataset: string;
+  extract_metadata: Json | null;
   fetched_at: Timestamp;
   id: string;
   payload: Json | null;
@@ -1378,10 +1415,12 @@ export interface IntegrationOauthStates {
 export interface IntegrationPropertyMappings {
   connection_id: string;
   created_at: Timestamp;
+  currency_code: string | null;
   id: string;
   project_id: string;
   property_ref: string;
   provider: string;
+  reporting_timezone: string | null;
   status: string;
   updated_at: Timestamp;
   workspace_id: string;
@@ -2999,7 +3038,9 @@ export interface DB {
   agent_outputs: AgentOutputs;
   agent_runs: AgentRuns;
   agent_tool_attempts: AgentToolAttempts;
+  ai_referral_landing_daily: AiReferralLandingDaily;
   ai_referrals_snapshots: AiReferralsSnapshots;
+  ai_traffic_insights: AiTrafficInsights;
   aio_entity_links: AioEntityLinks;
   aio_observations: AioObservations;
   analytics_tasks: AnalyticsTasks;

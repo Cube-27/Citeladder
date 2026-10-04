@@ -23,7 +23,7 @@ const BATCH_SIZE = 500;
 
 export const classifyReferrals: Executor = async (task, { db, checkCancelled, maxAttempts }) => {
   const projectId = requireProject(task);
-  const artifact = await ownedArtifact(db, task.workspace_id, payloadArtifactId(task));
+  const artifact = await ownedArtifact(db, task.workspace_id, payloadArtifactId(task), projectId);
   // The refresh window comes from the artifact's sync run.
   const run = await db
     .selectFrom('integration_sync_runs')
@@ -34,6 +34,7 @@ export const classifyReferrals: Executor = async (task, { db, checkCancelled, ma
       isoDateText(sql.ref('window_end')).as('window_end'),
     ])
     .where('workspace_id', '=', task.workspace_id)
+    .where('project_id', '=', projectId)
     .where('id', '=', artifact.sync_run_id)
     .executeTakeFirst();
   if (run === undefined) throw new Error(`unknown sync run: ${artifact.sync_run_id}`);
@@ -51,6 +52,7 @@ export const classifyReferrals: Executor = async (task, { db, checkCancelled, ma
         'event.user_agent',
       ])
       .where('event.workspace_id', '=', task.workspace_id)
+      .where('event.project_id', '=', projectId)
       .where('event.import_id', '=', artifact.id)
       .where(({ not, exists, selectFrom }) =>
         not(

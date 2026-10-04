@@ -13,6 +13,9 @@ import { IntegrationClient, IntegrationError } from '../integrations/client.ts';
 import { integrationPolicy, integrationSettings } from '../integrations/config.ts';
 import { freshAccessToken } from '../integrations/tokens.ts';
 import { normalizedRows } from '../integrations/normalize.ts';
+import { extractMetadata } from '../integrations/partitions.ts';
+import { projectHosts } from '../integrations/host-scope.ts';
+import { lockCrawlState, enqueueRollup } from '../crawl-logs/state.ts';
 import {
   activeSyncTarget,
   artifactOffset,
@@ -372,6 +375,7 @@ export class IntegrationWorker {
       metrics: template.metrics,
       date_range: { start: valueDate(run.window_start), end: valueDate(run.window_end) },
       startRow: offset,
+      partition_complete: provider === 'bing' || page.rawRowCount < this.#settings.sync_page_size,
     };
     const rows = normalizedRows(
       provider,
@@ -381,8 +385,27 @@ export class IntegrationWorker {
       valueDate(run.window_start),
       valueDate(run.window_end),
     );
+    const metadata = extractMetadata(page.payload, rows.length !== page.rawRowCount, provider);
     await this.#db.transaction().execute(async (trx) => {
       await this.#ownedTarget(trx, run);
+      const hosts =
+        template.dataset === 'ga4_landing_daily'
+          ? await projectHosts(trx, run.workspace_id, run.project_id)
+          : null;
+      const excludedRows = hosts
+        ? rows.filter(
+            (row) =>
+              !hosts.has(
+                row.dimension_key
+                  .split(integrationPolicy.dimension_separator)
+                  .at(-2)!
+                  .toLowerCase(),
+              ),
+          )
+        : [];
+      const excludedByDate: Record<string, number> = {};
+      for (const row of excludedRows)
+        excludedByDate[row.date] = (excludedByDate[row.date] ?? 0) + 1;
       await trx
         .insertInto('integration_import_artifacts')
         .values({
@@ -397,6 +420,11 @@ export class IntegrationWorker {
           fetched_at: new Date(),
           row_count: page.rawRowCount,
           payload: encoded,
+          extract_metadata: JSON.stringify({
+            ...metadata,
+            excluded_host_rows: excludedRows.length,
+            excluded_host_rows_by_date: excludedByDate,
+          }),
           created_at: new Date(),
         })
         .execute();
@@ -433,6 +461,39 @@ export class IntegrationWorker {
               .doNothing(),
           )
           .execute();
+      }
+      if (provider === 'ga4') {
+        const updated = await trx
+          .updateTable('integration_property_mappings')
+          .set({
+            reporting_timezone: metadata.timeZone,
+            currency_code: metadata.currencyCode,
+          })
+          .where('workspace_id', '=', run.workspace_id)
+          .where('id', '=', run.mapping_id)
+          .where(sql<boolean>`not exists (
+            select 1 from integration_sync_runs newer
+            join integration_import_artifacts artifact on artifact.workspace_id=newer.workspace_id and artifact.sync_run_id=newer.id
+            where newer.workspace_id=${run.workspace_id}::uuid and newer.mapping_id=${run.mapping_id}::uuid
+              and newer.resync_seq>${run.resync_seq} and artifact.provider='ga4')`)
+          .returning('id')
+          .executeTakeFirst();
+        if (updated && metadata.timeZone) {
+          const scope = { workspaceId: run.workspace_id, projectId: run.project_id };
+          const state = await lockCrawlState(trx, scope);
+          if (state.reporting_timezone !== metadata.timeZone) {
+            await trx
+              .updateTable('crawl_log_states')
+              .set({ reporting_timezone: metadata.timeZone })
+              .where('workspace_id', '=', run.workspace_id)
+              .where('project_id', '=', run.project_id)
+              .execute();
+            await enqueueRollup(trx, scope, new Date(), {
+              first: new Date(Date.now() - (policy.referrals.retention_days - 1) * 86400000),
+              last: new Date(),
+            });
+          }
+        }
       }
     });
   }
@@ -611,6 +672,7 @@ export class IntegrationWorker {
       error_code: failure instanceof IntegrationError ? failure.code : 'provider_api_error',
       retry,
     });
+    if (!retry) await enqueuePostSyncProjections(trx, run, true);
   }
 
   #retryDelay(run: Run, failure: unknown): number {

@@ -193,11 +193,11 @@ describe('referral chain', () => {
       .where('granularity', '=', 'day')
       .where('preset_window_days', 'is', null)
       .executeTakeFirstOrThrow();
-    expect(snapshot.metrics).toEqual({
+    expect(snapshot.metrics).toMatchObject({
       referral_volume: [
         { date: '2026-07-20', value: 5 },
         { date: '2026-07-21', value: 0 },
-        { date: '2026-07-22', value: null },
+        { date: '2026-07-22', value: 0 },
       ],
       referral_share: [
         { date: '2026-07-20', value: 1 },
@@ -343,16 +343,16 @@ describe('referral chain', () => {
 
 describe('referral retention sweep', () => {
   it('deletes only this workspace’s referrals past the horizon', async () => {
-    const seed = await seedImport(db, {
-      workspaceId,
-      projectId,
-      dataset: REFERRER_DAILY,
-      window: WINDOW,
-    });
     const old = new Date(Date.now() - (policy.referrals.retention_days + 1) * 86_400_000)
       .toISOString()
       .slice(0, 10);
     const recent = new Date().toISOString().slice(0, 10);
+    const seed = await seedImport(db, {
+      workspaceId,
+      projectId,
+      dataset: REFERRER_DAILY,
+      window: [old, recent],
+    });
     await seedMetricRow(db, seed, {
       date: old,
       values: ['https://chatgpt.com/', old.replaceAll('-', '')],

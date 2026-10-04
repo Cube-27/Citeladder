@@ -1,5 +1,8 @@
 /** Persisted Performance reads, shared with the retained Python Agent reader. */
-import { performanceDimensionSchema } from '@citeladder/contracts/performance';
+import {
+  performanceDimensionSchema,
+  performanceDashboardSchema,
+} from '@citeladder/contracts/performance';
 import { type RawBuilder, sql } from 'kysely';
 import type { z } from 'zod';
 
@@ -110,9 +113,9 @@ function performanceWindow(
     ctr: numberOrNull(m.ctr),
     position: numberOrNull(m.position),
     sessions: integer(m.sessions),
-    conversions: integer(m.conversions),
+    key_events: numberOrNull(m.key_events),
   };
-  const observed = [totals.clicks, totals.impressions, totals.sessions, totals.conversions];
+  const observed = [totals.clicks, totals.impressions, totals.sessions, totals.key_events];
   const series = record(raw.series);
   const evidenceState: 'not_run' | 'available' | 'observed_zero' = observed.every((v) => v === null)
     ? 'not_run'
@@ -185,6 +188,9 @@ export async function getPerformance(
       earliest_date: text(coverage.earliest_date),
       latest_date: text(coverage.latest_date),
       covered_days: integer(coverage.covered_days) ?? 0,
+      analytics_quality: performanceDashboardSchema.shape.coverage.shape.analytics_quality.parse(
+        coverage.analytics_quality ?? {},
+      ),
     },
     dimension_counts: Object.fromEntries(
       performanceDimensionSchema.options.map((d) => [d, integer(counts[d]) ?? 0]),
@@ -198,8 +204,8 @@ export async function getPerformance(
 function tableMetrics(value: unknown) {
   const m = record(value);
   return {
-    clicks: integer(m.clicks) ?? 0,
-    impressions: integer(m.impressions) ?? 0,
+    clicks: integer(m.clicks),
+    impressions: integer(m.impressions),
     ctr: numberOrNull(m.ctr),
     position: numberOrNull(m.position),
   };

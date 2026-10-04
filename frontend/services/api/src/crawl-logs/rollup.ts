@@ -11,6 +11,7 @@ import { crawlLogs } from '../config/crawl-logs.ts';
 import { record, strings } from '../db/json.ts';
 import { lockCrawlState, type CrawlScope } from './state.ts';
 import type { Executor } from '../workers/executor.ts';
+import { enqueueTrafficInsights } from './insights-enqueue.ts';
 
 /** Full recomputation under the project row lock prevents stale publication. */
 export async function refreshCrawlLogs(
@@ -52,12 +53,12 @@ export async function refreshCrawlLogs(
         and occurred_at >= (${floor}::timestamp at time zone ${tz})
         and (occurred_at at time zone ${tz})::date >= ${floor} and ${selectedRequest}
       ) insert into bot_activity_daily (id,workspace_id,project_id,reporting_date,reporting_timezone,bot_id,identity_key,
-      identity,url_hash,display_path,folder,resource_class,verification,status_code,requests,first_seen_at,last_seen_at,formula_version,source_batch_ids,verification_reasons)
+      identity,url_hash,display_path,folder,resource_class,verification,status_code,requests,first_seen_at,last_seen_at,formula_version,source_batch_ids,verification_reasons,canonical_url)
       select gen_random_uuid(),workspace_id,project_id,(occurred_at at time zone ${tz})::date,${tz},bot_id,
         coalesce(url_hash,encode(sha256(convert_to(folder || ':' || resource_class,'UTF8')),'hex')),identity,url_hash,min(display_path),folder,resource_class,
         verification,status_code,count(*)::integer,min(occurred_at),max(occurred_at),${crawlLogs.formula_version},
         to_jsonb((array_agg(distinct batch_id order by batch_id))[1:${crawlLogs.max_source_batch_ids}]),
-        jsonb_object_agg(coalesce(verification_reason,'verified'),reason_count)
+        jsonb_object_agg(coalesce(verification_reason,'verified'),reason_count),min(canonical_url)
       from input_rows
       group by 2,3,4,6,7,8,9,11,12,13,14`.execute(trx);
     await trx
@@ -124,7 +125,7 @@ export async function refreshCrawlLogs(
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .execute();
-    // A3 adds the insights successor when its executor exists. A2 never queues unowned work.
+    await enqueueTrafficInsights(trx, scope, now);
   });
 }
 export const crawlLogRollupRefresh: Executor = async (task, { db, checkCancelled }) => {

@@ -12,6 +12,7 @@
  */
 import { randomBytes } from 'node:crypto';
 import { crawlLogRollupRefresh } from '../crawl-logs/rollup.ts';
+import { refreshTrafficInsights } from '../crawl-logs/insights.ts';
 import {
   botIpRangeRefresh,
   botRequestRetentionSweep,
@@ -53,6 +54,7 @@ const ERROR_DETAIL_LIMIT = 2000;
 
 /** Kind dispatch: exactly the kinds TypeScript owns. */
 export const EXECUTORS: Readonly<Record<string, Executor>> = {
+  ai_traffic_insights_refresh: refreshTrafficInsights,
   crawl_log_rollup_refresh: crawlLogRollupRefresh,
   bot_ip_range_refresh: botIpRangeRefresh(),
   bot_request_retention_sweep: botRequestRetentionSweep,

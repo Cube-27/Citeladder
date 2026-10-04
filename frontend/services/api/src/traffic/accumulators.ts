@@ -73,10 +73,7 @@ export class Ga4Accum {
     this.hasRows = true;
     this.sessions += metricCount(row, 'sessions');
     this.engaged += metricCount(row, 'engagedSessions');
-    this.events += metricCount(
-      row,
-      Object.hasOwn(row.metrics ?? {}, 'keyEvents') ? 'keyEvents' : 'conversions',
-    );
+    this.events += numberOrNull(row.metrics?.keyEvents) ?? 0;
     this.rowIds.add(row.id);
     this.artifactIds.add(row.source_artifact_id);
   }
@@ -86,7 +83,6 @@ export class Ga4Accum {
       sessions: this.hasRows ? this.sessions : null,
       engaged_sessions: this.hasRows ? this.engaged : null,
       key_events: this.hasRows ? this.events : null,
-      conversions: this.hasRows ? this.events : null,
     };
   }
 }

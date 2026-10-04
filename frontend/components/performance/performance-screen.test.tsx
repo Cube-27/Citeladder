@@ -47,7 +47,7 @@ const emptyTotals: PerformanceDashboard['selected']['totals'] = {
   ctr: null,
   position: null,
   sessions: null,
-  conversions: null,
+  key_events: null,
 };
 const emptySeries = { clicks: [], impressions: [], ctr: [], position: [] };
 const dimensionCounts = {
@@ -76,7 +76,7 @@ function dashboard(overrides: Record<string, unknown> = {}) {
       series: emptySeries,
     },
     comparison: null,
-    coverage: { earliest_date: null, latest_date: null, covered_days: 0 },
+    coverage: { earliest_date: null, latest_date: null, covered_days: 0, analytics_quality: {} },
     dimension_counts: dimensionCounts,
     unavailable_dimensions: ['search_appearance'],
     formula_version: 'traffic-formula-1',
@@ -288,7 +288,7 @@ describe('PerformanceScreen evidence states', () => {
   it('keeps GA4-only evidence visible without empty GSC tables', async () => {
     const tableDimensions: string[] = [];
     const response = dashboard({
-      selected: measuredWindow({ ...emptyTotals, sessions: 0, conversions: 0 }),
+      selected: measuredWindow({ ...emptyTotals, sessions: 0, key_events: 0 }),
       coverage: { earliest_date: '2026-08-01', latest_date: '2026-08-28', covered_days: 28 },
     });
     mswServer.use(
