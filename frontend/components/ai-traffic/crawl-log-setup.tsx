@@ -1,19 +1,29 @@
 'use client';
 import { useId } from 'react';
+import { collectionPointLabel, COLLECTION_POINTS } from '@/lib/ai-traffic/vocabulary';
 import type { useCrawlConnections } from '@/lib/ai-traffic/use-crawl-connections';
 import { CRAWL_LOG_SETUPS, CRAWL_INGEST_ORIGIN } from '@/lib/config/crawl-logs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Field } from '@/components/ui/field';
+import { Stack } from '@/components/ui/layout';
+import { panelClasses } from '@/components/ui/panel';
+import { RadioGroup } from '@/components/ui/radio-group';
 import { Alert } from '@/components/ui/alert';
 import { CopyButton } from '@/components/ui/copy-button';
+const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], string>> = {
+  cloudflare_worker:
+    'Deploy the downloadable template yourself. Store the token as a Worker secret, use a fail-open route, and expect partial coverage. Every routed request uses your Workers quota.',
+  cloudflare_logpush:
+    'Select HTTP requests, the documented field list and RFC3339 timestamps. Set the Authorization header in the HTTP destination and bound batches to the documented limits. Logpush can reach complete coverage only with unsampled delivery and heartbeats.',
+  custom:
+    'Map timestamp, host, path, method, status and user_agent to the documented JSON fields. Batch at least 60 seconds apart; send empty heartbeat batches when no crawler requests occur.',
+};
 export function CrawlLogSetup({
   model,
 }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const {
-    canManage,
-    sources,
     setup,
     setSetup,
     origin,
@@ -32,117 +42,106 @@ export function CrawlLogSetup({
     mutation,
   } = model;
   const chosen = CRAWL_LOG_SETUPS.find((s) => s.value === setup)!;
-  const formId = useId();
+  const steps = SETUP_STEPS[chosen.value];
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {CRAWL_LOG_SETUPS.map((s) => (
-          <Card key={s.value}>
-            <CardHeader>
-              <CardTitle>{s.label}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              <p className="type-body">{s.description}</p>
-              <Button
-                variant="secondary"
-                aria-pressed={setup === s.value}
-                onClick={() => {
-                  setSetup(s.value);
-                  setPoint(s.collectionPoint);
-                  setSampling(s.value === 'cloudflare_worker' ? 'filtered' : 'none');
-                  setFilter(
-                    s.value === 'cloudflare_worker'
-                      ? 'Best-effort recognized automated requests'
-                      : '',
-                  );
-                }}
-              >
-                Choose {s.label}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <a className="type-link" href={chosen.guide} target="_blank" rel="noreferrer">
-        Setup guide: {chosen.label}
-      </a>
-      {setup === 'cloudflare_worker' ? (
-        <p className="type-body">
-          Deploy the downloadable template yourself. Store the token as a Worker secret, use a
-          fail-open route, and expect partial coverage. Every routed request uses your Workers
-          quota.
-        </p>
-      ) : null}
-      {setup === 'cloudflare_logpush' ? (
-        <p className="type-body">
-          Select HTTP requests, the documented field list and RFC3339 timestamps. Set the
-          Authorization header in the HTTP destination and bound batches to the documented limits.
-          Logpush can reach complete coverage only with unsampled delivery and heartbeats.
-        </p>
-      ) : null}
-      {setup === 'custom' ? (
-        <p className="type-body">
-          Map timestamp, host, path, method, status and user_agent to the documented JSON fields.
-          Batch at least 60 seconds apart; send empty heartbeat batches when no crawler requests
-          occur.
-        </p>
-      ) : null}
-      <label htmlFor={`${formId}-origin`} className="type-label grid gap-2">
-        Site origin
-        <Input id={`${formId}-origin`} value={origin} onChange={(e) => setOrigin(e.target.value)} />
-      </label>
-      <Select
-        ariaLabel="Log format"
-        value={format}
-        onValueChange={setFormat}
-        options={[
-          { value: 'ndjson', label: 'NDJSON' },
-          { value: 'json_array', label: 'JSON array' },
-          { value: 'combined', label: 'Apache/Nginx Combined' },
-        ]}
-      />
-      <Select
-        ariaLabel="Collection point"
-        value={point}
-        onValueChange={setPoint}
-        options={['cdn_edge', 'origin', 'application', 'uploaded_file'].map((value) => ({
-          value,
-          label: value,
+    <Stack gap="section">
+      <RadioGroup
+        variant="row"
+        ariaLabel="Collection method"
+        value={setup}
+        onValueChange={(value) => {
+          const next = CRAWL_LOG_SETUPS.find((s) => s.value === value)!;
+          setSetup(next.value);
+          setPoint(next.collectionPoint);
+          setSampling(next.value === 'cloudflare_worker' ? 'filtered' : 'none');
+          setFilter(
+            next.value === 'cloudflare_worker' ? 'Best-effort recognized automated requests' : '',
+          );
+        }}
+        options={CRAWL_LOG_SETUPS.map((s) => ({
+          value: s.value,
+          label: (
+            <span className="grid gap-0.5 py-2">
+              <span className="type-control text-foreground">{s.label}</span>
+              <span className="type-caption">{s.description}</span>
+            </span>
+          ),
         }))}
       />
-      <Select
-        ariaLabel="Sampling"
-        value={sampling}
-        onValueChange={setSampling}
-        options={[
-          { value: 'none', label: 'Unsampled' },
-          { value: 'sampled', label: 'Sampled' },
-          { value: 'filtered', label: 'Filtered' },
-        ]}
-      />
-      {sampling === 'sampled' ? (
-        <label htmlFor={`${formId}-rate`} className="type-label grid gap-2">
-          Sampling rate (0–1)
-          <Input id={`${formId}-rate`} value={rate} onChange={(e) => setRate(e.target.value)} />
-        </label>
-      ) : null}
-      {sampling === 'filtered' ? (
-        <label htmlFor={`${formId}-filter`} className="type-label grid gap-2">
-          Filtering limitations
-          <Input
-            id={`${formId}-filter`}
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
-        </label>
-      ) : null}
-      <Button
-        disabled={!canManage || !sources.data?.ingestion_enabled}
-        pending={mutation.isPending}
-        onClick={() => mutation.mutate({ kind: 'create' })}
-      >
-        Create source
-      </Button>
+      <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-2')}>
+        {steps ? <p className="type-body text-secondary">{steps}</p> : null}
+        <a
+          className="type-control text-accent-text w-fit hover:underline"
+          href={chosen.guide}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Setup guide: {chosen.label}
+        </a>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Site origin" className="sm:col-span-2">
+          {(field) => (
+            <Input {...field} value={origin} onChange={(e) => setOrigin(e.target.value)} />
+          )}
+        </Field>
+        <Field label="Log format">
+          {({ id }) => (
+            <Select
+              id={id}
+              ariaLabel="Log format"
+              value={format}
+              onValueChange={setFormat}
+              options={[
+                { value: 'ndjson', label: 'NDJSON' },
+                { value: 'json_array', label: 'JSON array' },
+                { value: 'combined', label: 'Apache/Nginx Combined' },
+              ]}
+            />
+          )}
+        </Field>
+        <Field label="Collection point">
+          {({ id }) => (
+            <Select
+              id={id}
+              ariaLabel="Collection point"
+              value={point}
+              onValueChange={setPoint}
+              options={COLLECTION_POINTS.map((value) => ({
+                value,
+                label: collectionPointLabel(value),
+              }))}
+            />
+          )}
+        </Field>
+        <Field label="Sampling">
+          {({ id }) => (
+            <Select
+              id={id}
+              ariaLabel="Sampling"
+              value={sampling}
+              onValueChange={setSampling}
+              options={[
+                { value: 'none', label: 'Unsampled' },
+                { value: 'sampled', label: 'Sampled' },
+                { value: 'filtered', label: 'Filtered' },
+              ]}
+            />
+          )}
+        </Field>
+        {sampling === 'sampled' ? (
+          <Field label="Sampling rate (0–1)">
+            {(field) => <Input {...field} value={rate} onChange={(e) => setRate(e.target.value)} />}
+          </Field>
+        ) : null}
+        {sampling === 'filtered' ? (
+          <Field label="Filtering limitations" className="sm:col-span-2">
+            {(field) => (
+              <Input {...field} value={filter} onChange={(e) => setFilter(e.target.value)} />
+            )}
+          </Field>
+        ) : null}
+      </div>
       {mutation.isError ? <Alert tone="danger">{mutation.error.message}</Alert> : null}
       {issued ? (
         <Alert tone="info">
@@ -164,7 +163,22 @@ export function CrawlLogSetup({
         </Alert>
       ) : null}
       {setup === 'upload' ? <UploadForm model={model} /> : null}
-    </div>
+    </Stack>
+  );
+}
+/** The dialog's one committing action, held in its footer. */
+export function CrawlLogSetupSubmit({
+  model,
+}: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
+  const { canManage, sources, mutation, issued } = model;
+  return (
+    <Button
+      disabled={!canManage || !sources.data?.ingestion_enabled || issued !== null}
+      pending={mutation.isPending}
+      onClick={() => mutation.mutate({ kind: 'create' })}
+    >
+      Create source
+    </Button>
   );
 }
 
@@ -173,15 +187,20 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
   const { sources, sourceId, setSourceId, file, setFile, resume, setResume, upload, progress } =
     model;
   return (
-    <div className="grid gap-3">
-      <Select
-        ariaLabel="Upload source"
-        value={sourceId}
-        onValueChange={setSourceId}
-        options={(sources.data?.items ?? [])
-          .filter((s) => s.kind === 'upload' && s.status === 'active')
-          .map((s) => ({ value: s.id, label: s.host + ' · ' + s.id }))}
-      />
+    <div className="grid gap-4">
+      <Field label="Upload source">
+        {({ id }) => (
+          <Select
+            id={id}
+            ariaLabel="Upload source"
+            value={sourceId}
+            onValueChange={setSourceId}
+            options={(sources.data?.items ?? [])
+              .filter((s) => s.kind === 'upload' && s.status === 'active')
+              .map((s) => ({ value: s.id, label: s.host + ' · ' + s.id }))}
+          />
+        )}
+      </Field>
       <label htmlFor={`${formId}-file`} className="type-label grid gap-2">
         Log file
         <Input
@@ -196,6 +215,8 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
         <Input id={`${formId}-resume`} value={resume} onChange={(e) => setResume(e.target.value)} />
       </label>
       <Button
+        variant="secondary"
+        className="w-fit"
         disabled={!file || !sourceId || !sources.data?.ingestion_enabled}
         pending={upload.isPending}
         onClick={() => upload.mutate()}

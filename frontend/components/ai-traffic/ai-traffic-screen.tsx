@@ -4,13 +4,14 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useTrafficData, type TrafficDataTab } from '@/lib/ai-traffic/use-traffic-data';
 import { PageShell } from '@/components/layout/page-shell';
 import { PageLoading } from '@/components/layout/page-loading';
+import { Stack } from '@/components/ui/layout';
 import { TabsRoot, TabsBar, TabPanel } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
-import { CursorPager } from '@/components/ui/cursor-pager';
 import { AiReferralsScreen } from './referrals-screen';
 import { TrafficControls } from './traffic-controls';
 import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-views';
+import { TrafficPager } from './traffic-pager';
 import { TrafficPages } from './pages-view';
 export { CrawlSignalPanel } from './traffic-views';
 const tabCodec = stringUrlCodec(
@@ -35,40 +36,42 @@ function TrafficDataView({ tab, tabs }: Readonly<{ tab: TrafficDataTab; tabs: Re
   const { projectId, workspaceId, summary, crawlers, activity, catalog, pager, next } = model;
   return (
     <PageShell title="AI Traffic" tabs={tabs} controls={<TrafficControls model={model} />}>
-      <TrafficStatus model={model} />
-      {tab === 'overview' && summary.data ? (
-        <TrafficOverview
-          data={summary.data}
-          projectId={projectId}
-          workspaceId={workspaceId}
-          range={model.selection.range}
-        />
-      ) : null}
-      {tab === 'crawlers' && crawlers.data ? (
-        <TrafficCrawlers
-          data={crawlers.data}
-          filters={{
-            range: model.selection.range,
-            verification:
-              model.selection.verification === 'default' ? undefined : model.selection.verification,
-          }}
-        />
-      ) : null}
-      {tab === 'activity' && activity.data ? (
-        <TrafficActivity data={activity.data} catalog={catalog.data} />
-      ) : null}
-      {tab === 'pages' ? <PagesPanel model={model} /> : null}
-      {tab !== 'overview' ? (
-        <div className="flex justify-end gap-2">
-          <CursorPager
+      <Stack gap="workspace">
+        <TrafficStatus model={model} />
+        {tab === 'overview' && summary.data ? (
+          <TrafficOverview
+            data={summary.data}
+            projectId={projectId}
+            workspaceId={workspaceId}
+            range={model.selection.range}
+          />
+        ) : null}
+        {tab === 'crawlers' && crawlers.data ? (
+          <TrafficCrawlers
+            data={crawlers.data}
+            filters={{
+              range: model.selection.range,
+              verification:
+                model.selection.verification === 'default'
+                  ? undefined
+                  : model.selection.verification,
+            }}
+          />
+        ) : null}
+        {tab === 'activity' && activity.data ? (
+          <TrafficActivity data={activity.data} catalog={catalog.data} />
+        ) : null}
+        {tab === 'pages' ? <PagesPanel model={model} /> : null}
+        {tab === 'overview' ? null : (
+          <TrafficPager
             page={pager.page}
             canPrev={pager.canPrev}
             canNext={!!next}
             onPrev={pager.pop}
             onNext={() => pager.push(next ?? null)}
           />
-        </div>
-      ) : null}
+        )}
+      </Stack>
     </PageShell>
   );
 }

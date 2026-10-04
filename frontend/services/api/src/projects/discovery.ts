@@ -18,8 +18,7 @@ import {
   type DiscoveryCompletion,
   type DiscoveryInput,
 } from './discovery-inputs.ts';
-import { resolveSite } from './site-resolution.ts';
-import { fetchWebsite, websiteIdentity, type WebsiteFetcher } from './safe-fetch.ts';
+import { websiteIdentity } from './safe-fetch.ts';
 import { insertProject } from './service.ts';
 
 export type DiscoveryRow = Selectable<BrandDiscoveries>;
@@ -279,7 +278,6 @@ export async function completeDiscovery(
   id: string,
   input: DiscoveryCompletion,
   key: string,
-  fetcher: WebsiteFetcher = fetchWebsite,
 ) {
   const before = await discoveryRow(db, workspaceId, id);
   if (replay(before, key) && before.status !== cfg.legacy_discovery_status_completing)
@@ -294,20 +292,9 @@ export async function completeDiscovery(
     if (error instanceof ApiError) throw error;
     throw new ApiError(409, 'Confirmed domains must be public domains');
   }
-  if (!replay(before, key)) {
-    if (before.status !== cfg.discovery_status_ready)
-      throw new ApiError(409, 'Discovery is not ready for completion');
-    const outcomes = await Promise.allSettled(
-      competitors.flatMap((item) =>
-        item.domains.map(async (domain) => {
-          const site = await resolveSite(domain, fetcher);
-          if (site.domain !== domain) throw new Error('domain_redirected');
-        }),
-      ),
-    );
-    if (outcomes.some((result) => result.status === 'rejected'))
-      throw new ApiError(409, 'Could not resolve a selected competitor website');
-  }
+  // Competitors were found by discovery and reviewed by the reader; their
+  // websites are not fetched again here, so an unreachable site cannot block
+  // project creation. Domains are still validated as public domains above.
   return db.transaction().execute(async (trx) => {
     const row = await discoveryRow(trx, workspaceId, id, true);
     if (replay(row, key)) {

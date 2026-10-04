@@ -7,6 +7,7 @@ import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { AiTrafficScreen, CrawlSignalPanel } from './ai-traffic-screen';
 import { InsightStrip } from './insight-strip';
+import { CrawlLogConnections } from './crawl-log-connections';
 const project = makeProject({
   id: '88888888-8888-4888-8888-888888888888',
   workspace_id: '11111111-1111-4111-8111-111111111111',
@@ -49,6 +50,38 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 describe('AI Traffic state and navigation', () => {
+  it('preserves the issued token until the source dialog is closed', async () => {
+    let creates = 0;
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({ ingestion_enabled: true, items: [] }),
+      ),
+      http.post(root + '/crawl-logs/sources', () => {
+        creates += 1;
+        return HttpResponse.json({
+          id: '99999999-9999-4999-8999-999999999999',
+          token: 'clw_test_token',
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
+    const create = within(dialog).getByRole('button', { name: 'Create source' });
+    await waitFor(() => expect(create).toBeEnabled());
+    await user.click(create);
+    await within(dialog).findByRole('button', { name: 'Copy token' });
+    await waitFor(() => expect(create).not.toHaveAttribute('aria-busy'));
+    expect(create).toBeDisabled();
+    await user.click(create);
+    expect(creates).toBe(1);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    expect(screen.getByRole('button', { name: 'Create source' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Copy token' })).not.toBeInTheDocument();
+  });
   it('carries the insight project and filters into the Pages destination', async () => {
     mswServer.use(
       http.get(root + '/ai-traffic/insights', () =>
@@ -215,9 +248,11 @@ describe('AI Traffic state and navigation', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('activity');
+    // No retained rows: one contextual empty state instead of headers over nothing.
+    expect(await screen.findByRole('heading', { name: 'No matching requests' })).toBeVisible();
     expect(
-      await screen.findByRole('table', { name: 'Retained automated request activity' }),
-    ).toBeVisible();
+      screen.queryByRole('table', { name: 'Retained automated request activity' }),
+    ).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Response status' }), {
       target: { value: '404' },
     });
@@ -232,7 +267,7 @@ describe('AI Traffic state and navigation', () => {
       target: { value: '/page' },
     });
     await user.click(screen.getByRole('combobox', { name: 'Resource class' }));
-    await user.click(screen.getByRole('option', { name: 'page' }));
+    await user.click(screen.getByRole('option', { name: 'Page' }));
     await user.click(screen.getByRole('combobox', { name: 'Sort pages' }));
     await user.click(screen.getByRole('option', { name: 'AI referral sessions' }));
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));

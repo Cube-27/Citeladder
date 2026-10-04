@@ -159,7 +159,7 @@ describe('durable onboarding', () => {
       .where('id', '=', missing.id)
       .execute();
     await expect(
-      completeDiscovery(db, t.workspaceId, t.userId, missing.id, completion, randomUUID(), fetcher),
+      completeDiscovery(db, t.workspaceId, t.userId, missing.id, completion, randomUUID()),
     ).rejects.toMatchObject({ status: 409, message: 'Discovery research evidence is unavailable' });
     const row = await ready(t.workspaceId);
     await expect(
@@ -176,7 +176,6 @@ describe('durable onboarding', () => {
           ],
         }),
         randomUUID(),
-        fetcher,
       ),
     ).rejects.toMatchObject({ status: 409 });
     expect((await discoveryRow(db, t.workspaceId, row.id)).project_id).toBeNull();
@@ -207,8 +206,8 @@ describe('durable onboarding', () => {
     const row = await ready(t.workspaceId);
     const key = randomUUID();
     const outcomes = await Promise.all([
-      completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, key, fetcher),
-      completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, key, fetcher),
+      completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, key),
+      completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, key),
     ]);
     expect(outcomes[0]!.project_id).toBe(outcomes[1]!.project_id);
     const projectId = outcomes[0]!.project_id!;
@@ -238,7 +237,7 @@ describe('durable onboarding', () => {
       field_sources: { category: 'reviewed', primary_market: 'reviewed' },
     });
     await expect(
-      completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, 'different', fetcher),
+      completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, 'different'),
     ).rejects.toMatchObject({ status: 409 });
   });
   it('rolls back completion on capacity denial without freezing a partial review', async () => {
@@ -246,7 +245,7 @@ describe('durable onboarding', () => {
     await grant(db, t.accountId, { key: 'project_slots', value: 0 });
     const row = await ready(t.workspaceId);
     await expect(
-      completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, randomUUID(), fetcher),
+      completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, randomUUID()),
     ).rejects.toMatchObject({ code: 'occupancy_limit_exceeded' });
     const after = await discoveryRow(db, t.workspaceId, row.id);
     expect(after.project_id).toBeNull();
@@ -259,23 +258,31 @@ describe('durable onboarding', () => {
         .execute(),
     ).toEqual([]);
   });
-  it('rejects selected competitor redirects and leaves the review editable', async () => {
+  it('creates the project with reviewed competitors without fetching their websites', async () => {
     const t = await tenant();
     const row = await ready(t.workspaceId);
     const selected = discoveryComplete.parse({
       ...completion,
-      competitors: [{ name: 'Globex', domains: ['globex.com'] }],
+      competitors: [{ name: 'Globex', domains: ['www.globex.com'] }],
     });
-    const redirect: WebsiteFetcher = async () => ({
-      url: 'https://unrelated.com',
-      status: 200,
-      contentType: 'text/html',
-      body: Buffer.from('hello'),
-    });
-    await expect(
-      completeDiscovery(db, t.workspaceId, t.userId, row.id, selected, randomUUID(), redirect),
-    ).rejects.toMatchObject({ status: 409 });
-    expect((await discoveryRow(db, t.workspaceId, row.id)).status).toBe('ready');
+    const network = vi.spyOn(globalThis, 'fetch');
+    try {
+      const result = await completeDiscovery(
+        db,
+        t.workspaceId,
+        t.userId,
+        row.id,
+        selected,
+        randomUUID(),
+      );
+      expect(result.project_id).not.toBeNull();
+      expect(network).not.toHaveBeenCalled();
+    } finally {
+      network.mockRestore();
+    }
+    expect((await discoveryRow(db, t.workspaceId, row.id)).competitors).toEqual([
+      { name: 'Globex', aliases: [], domains: ['globex.com'] },
+    ]);
   });
   it('research persists a degraded review and immutable provenance using recorded responses', async () => {
     const t = await tenant();
@@ -384,7 +391,6 @@ describe('durable onboarding', () => {
       legacy.id,
       completion,
       randomUUID(),
-      fetcher,
     );
     await db
       .updateTable('brand_discoveries')
