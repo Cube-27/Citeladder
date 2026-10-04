@@ -4,6 +4,28 @@ Keep accepted, still-applicable choices with their reason, scope and actual
 source. Feature-local rationale belongs in its feature owner; correctness
 rules belong in [invariants](invariants.md). Git and PRs retain superseded history.
 
+## TypeScript application, Python schema tooling
+
+The final migration target is a TypeScript application using Hono, Kysely and
+Zod, with Python retained for schema metadata, Alembic migrations and their
+maintenance/check tooling. Product operators, account bootstrap, development
+seed/login tools and application policy move to the existing TypeScript owners.
+The retained Python package targets SQLAlchemy, Alembic and asyncpg as its direct
+schema dependencies; schema test/static-analysis tools remain development
+dependencies. Kysely types continue to come from the Alembic-migrated database.
+
+The owner chose this stopping point to avoid migrating established schema
+tooling merely to remove the remaining Python. Alembic remains the sole schema
+author under [invariant 17](invariants.md#17-the-migration-baseline-remains-singular).
+The migration reuses existing infrastructure; it requires no additional
+always-on service. This is a target boundary, not a claim that remaining
+operators and bootstrap have already moved.
+
+Source: owner-selected target in the 4 October 2026 migration-planning
+conversation. The [remaining migration plan](plans/citeladder-python-retirement.md)
+records the slices; schema migration and full Python-environment retirement
+are outside its scope.
+
 ## One commercial account per workspace
 
 A workspace owns exactly one billing account. A user owns one workspace and may

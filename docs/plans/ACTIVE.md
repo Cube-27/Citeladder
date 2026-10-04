@@ -115,6 +115,15 @@
   execution and project skill policy are deferred. D/E remain separate assignments.
 
 ## Queued
+- [TypeScript application / Python schema tooling](citeladder-python-retirement.md)
+  — plan requested and saved on 4 October 2026; implementation not started.
+  The owner selected schema-only Python as the final target: SQLAlchemy,
+  Alembic and asyncpg remain; application policy, operators and bootstrap move
+  to TypeScript in five PRs with internal slices. The owner-defined workflow
+  implements the selected PR fully, uses one Astra Medium diff review, then
+  batches fixes and final targeted validation. No browser testing or file quota.
+  Schema migration is out of scope.
+  This entry authorizes no execution.
 - [AI Traffic analytics, crawl logs and authorized crawl](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026 and revised twice on 3 October 2026;
   A1 bot catalog and AI crawlability merged in PR #257. A2 Crawl Logs and the AI
