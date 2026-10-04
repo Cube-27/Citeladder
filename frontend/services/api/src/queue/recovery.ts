@@ -8,12 +8,21 @@ import { getLogger } from '../logging.ts';
 const { statuses } = policy.task_queue;
 type Queue = 'brand_discovery_tasks' | 'integration_sync_runs';
 
-async function reclaim(db: Database, table: Queue, increment: number, batchSize: number) {
+async function reclaim(
+  db: Database,
+  table: Queue,
+  increment: number,
+  batchSize: number,
+  scope?: { workspaceId: string; runId: string },
+) {
   const expired = await db
     .selectFrom(table)
     .select(['id', 'workspace_id'])
     .where('status', 'in', [statuses.leased, statuses.running])
     .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
+    .$if(!!scope, (q) =>
+      q.where('workspace_id', '=', scope!.workspaceId).where('id', '=', scope!.runId),
+    )
     .orderBy('lease_expires_at')
     .orderBy('id')
     .limit(batchSize)
@@ -114,11 +123,15 @@ export async function recoverDiscoveryLeases(db: Database, batchSize = queueReco
   return tasks.length;
 }
 
-export async function recoverIntegrationLeases(db: Database, batchSize = queueRecovery.batchSize) {
+export async function recoverIntegrationLeases(
+  db: Database,
+  batchSize = queueRecovery.batchSize,
+  scope?: { workspaceId: string; runId: string },
+) {
   // Integration claims already charge the attempt. Reclaiming must not charge it twice.
   const tasks = await db
     .transaction()
-    .execute((trx) => reclaim(trx, 'integration_sync_runs', 0, batchSize));
+    .execute((trx) => reclaim(trx, 'integration_sync_runs', 0, batchSize, scope));
   logExhausted('integration_sync_runs', tasks);
   return tasks.length;
 }

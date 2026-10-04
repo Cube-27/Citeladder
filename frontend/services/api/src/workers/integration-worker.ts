@@ -73,21 +73,24 @@ export class IntegrationWorker {
   readonly #client: Pick<IntegrationClient, 'page'>;
   readonly #settings: ReturnType<typeof integrationSettings>;
   readonly #tokenResolver: typeof freshAccessToken;
+  readonly #scope?: { workspaceId: string; runId: string };
 
   constructor(
     db: Database,
     client: Pick<IntegrationClient, 'page'> = new IntegrationClient(),
     settings: ReturnType<typeof integrationSettings> = integrationSettings(),
     tokenResolver: typeof freshAccessToken = freshAccessToken,
+    scope?: { workspaceId: string; runId: string },
   ) {
     this.#db = db;
     this.#client = client;
     this.#settings = settings;
     this.#tokenResolver = tokenResolver;
+    this.#scope = scope;
   }
 
   async runOnce(): Promise<boolean> {
-    await recoverIntegrationLeases(this.#db);
+    await recoverIntegrationLeases(this.#db, queueRecovery.batchSize, this.#scope);
     const run = await this.#claim();
     if (!run) return false;
     const heartbeat = maintainLease(
@@ -127,6 +130,11 @@ export class IntegrationWorker {
         .where('status', 'in', [statuses.queued, statuses.retry_wait])
         .where('available_at', '<=', sql<Date>`clock_timestamp()`)
         .whereRef('attempt_count', '<', 'max_attempts')
+        .$if(this.#scope !== undefined, (q) =>
+          q
+            .where('workspace_id', '=', this.#scope!.workspaceId)
+            .where('id', '=', this.#scope!.runId),
+        )
         .orderBy('priority', 'desc')
         .orderBy('available_at', 'asc')
         .orderBy('randomized_position', 'asc')

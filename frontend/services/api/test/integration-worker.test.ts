@@ -118,6 +118,70 @@ async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
 }
 
 describe('integration worker paging and resume', () => {
+  it('recovers only the selected seed run, leaving sibling and foreign leases untouched', async () => {
+    const selected = await seedRun();
+    const foreign = await seedRun();
+    try {
+      const original = await db
+        .selectFrom('integration_sync_runs')
+        .selectAll()
+        .where('id', '=', selected.runId)
+        .executeTakeFirstOrThrow();
+      const sibling = randomUUID();
+      await db
+        .insertInto('integration_sync_runs')
+        .values({
+          ...original,
+          id: sibling,
+          window_start: new Date('2026-07-19'),
+          resync_seq: 2,
+          idempotency_key: `sync-test:${sibling}`,
+        })
+        .execute();
+      await db
+        .updateTable('integration_sync_runs')
+        .set({
+          status: 'running',
+          lease_owner: 'dead',
+          lease_expires_at: new Date(0),
+          attempt_count: 1,
+        })
+        .where('id', 'in', [selected.runId, sibling, foreign.runId])
+        .execute();
+      const client: Pick<IntegrationClient, 'page'> = {
+        page: async () => ({ payload: { rows: [] }, rawRowCount: 0 }),
+      };
+      const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token', {
+        workspaceId: selected.workspaceId,
+        runId: selected.runId,
+      });
+      expect(await worker.runOnce()).toBe(true);
+      expect(
+        (
+          await db
+            .selectFrom('integration_sync_runs')
+            .select('status')
+            .where('id', '=', selected.runId)
+            .executeTakeFirstOrThrow()
+        ).status,
+      ).toBe('succeeded');
+      expect(
+        await db
+          .selectFrom('integration_sync_runs')
+          .select(['status', 'attempt_count'])
+          .where('id', 'in', [sibling, foreign.runId])
+          .execute(),
+      ).toEqual([
+        { status: 'running', attempt_count: 1 },
+        { status: 'running', attempt_count: 1 },
+      ]);
+    } finally {
+      await db
+        .deleteFrom('workspaces')
+        .where('id', 'in', [selected.workspaceId, foreign.workspaceId])
+        .execute();
+    }
+  });
   it('keeps metadata from the newest revision when an older sync finishes later', async () => {
     const run = await seedRun('ga4');
     const original = await db
