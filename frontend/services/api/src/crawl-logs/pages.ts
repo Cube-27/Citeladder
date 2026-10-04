@@ -80,7 +80,7 @@ export async function pageContext(db: Database, scope: CrawlScope, options: Craw
     crawlComplete: ['complete', 'declared_complete'].includes(crawl.coverage),
   };
 }
-export function pageRow(
+function pageRow(
   r: JoinedPage,
   context: Awaited<ReturnType<typeof pageContext>>,
   hasInventory: boolean,
@@ -88,6 +88,7 @@ export function pageRow(
   const { crawl, quality } = context;
   const timezone = [
     ...new Set([
+      ...(context.crawlComplete ? [crawl.reporting_timezone] : []),
       ...strings(r.crawl_timezones),
       ...strings(r.referral_timezones),
       ...quality.map((q) => q.reporting_timezone).filter((v): v is string => !!v),

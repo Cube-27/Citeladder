@@ -117,6 +117,17 @@ function performanceCoverage(data: PerformanceDashboard, hasEvidence: boolean) {
   };
 }
 
+function AnalyticsQualityNotice({
+  quality,
+}: Readonly<{ quality: PerformanceDashboard['coverage']['analytics_quality'] }>) {
+  return Object.values(quality).some((days) => days.some((day) => day.flags.length > 0)) ? (
+    <Alert tone="info">
+      Some imported partitions are missing, flagged or using a prior complete revision. Zero-valued
+      observations are unavailable for those extracts.
+    </Alert>
+  ) : null;
+}
+
 function PerformanceEmptyState({
   data,
   projecting,
@@ -352,14 +363,7 @@ export function PerformanceScreen() {
           selectedMissing={coverage.selectedMissing}
           comparisonMissing={coverage.comparisonMissing}
         />
-        {Object.values(data.coverage.analytics_quality).some((days) =>
-          days.some((day) => day.flags.length > 0),
-        ) ? (
-          <Alert tone="info">
-            Some imported partitions are missing, flagged or using a prior complete revision.
-            Zero-valued observations are unavailable for those extracts.
-          </Alert>
-        ) : null}
+        <AnalyticsQualityNotice quality={data.coverage.analytics_quality} />
 
         {!hasEvidence ? (
           <PerformanceEmptyState data={data} projecting={projection.projecting} />

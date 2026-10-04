@@ -19,7 +19,7 @@ import { isoDateText } from '../db/timestamps.ts';
 import { payloadWindow, requireProject, type Executor } from '../workers/executor.ts';
 import { addDays, buildAiReferralsProjection, type ReferralFact } from './projection.ts';
 import { compareText } from '../text-order.ts';
-import { selectedPartition, partitionAnchor } from '../integrations/partitions.ts';
+import { selectedPartition, partitionAnchor, partitionEpoch } from '../integrations/partitions.ts';
 import { referralEvidence, referralExtras, replaceReferralLandings } from './landing.ts';
 import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
 
@@ -116,6 +116,7 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
       trx,
     );
     const anchor = await partitionAnchor(trx, task.workspace_id, projectId, SOURCE_MEDIUM);
+    const epoch = await partitionEpoch(trx, { workspaceId: task.workspace_id, projectId });
     const windows = refreshWindows(windowStart, windowEnd, anchor);
     // The family is nested and ends at the anchor, so one scan covers them all.
     const scope = {
@@ -149,6 +150,8 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
     }
 
     const evidence = await referralEvidence(trx, scope);
+    if ((await partitionEpoch(trx, scope)) !== epoch)
+      throw new Error('Integration partitions changed during Referrals projection; retry');
     await replaceReferralLandings(trx, scope, referralExtras(evidence, scope.start, scope.end));
     for (const window of windows) {
       const projection = buildAiReferralsProjection({

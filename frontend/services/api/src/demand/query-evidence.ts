@@ -12,7 +12,7 @@ import { normalizeQuery } from './classification.ts';
 import { resolveOwnedPages } from './page-equivalence.ts';
 import { stableHash, unique } from './projection.ts';
 import { compareText } from '../text-order.ts';
-import { selectedPartition, partitionQuality } from '../integrations/partitions.ts';
+import { selectedPartition, partitionQuality, partitionEpoch } from '../integrations/partitions.ts';
 
 const p = policy.demand;
 export type DemandScope = {
@@ -60,6 +60,7 @@ async function sourceRows(db: Database, scope: DemandScope) {
 }
 
 async function sourceMaterial(db: Database, scope: DemandScope) {
+  const epoch = await partitionEpoch(db, scope);
   const rows = await sourceRows(db, scope);
   const material = rows.flatMap((row) => {
     const parts = row.dimension_key.split(policy.traffic.dimension_key_separator);
@@ -104,8 +105,11 @@ async function sourceMaterial(db: Database, scope: DemandScope) {
         .selectAll()
         .where('workspace_id', '=', scope.workspaceId)
         .where('id', 'in', artifactIds.slice(0, p.QUERY_EVIDENCE_MAX_ARTIFACTS))
+        .orderBy('id')
         .execute()
     : [];
+  if ((await partitionEpoch(db, scope)) !== epoch)
+    throw new Error('Integration partitions changed during Demand projection; retry');
   const selected = material.slice(0, p.QUERY_EVIDENCE_MAX_ROWS);
   const sourceHash = stableHash({
     window: [scope.windowStart, scope.windowEnd],

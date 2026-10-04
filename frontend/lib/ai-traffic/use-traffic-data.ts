@@ -53,19 +53,26 @@ function useTrafficSelection() {
   };
 }
 function selectedFilters(tab: TrafficDataTab, selection: ReturnType<typeof useTrafficSelection>) {
-  const { range, verification, purpose, bot, status, folder, resource } = selection;
+  const { range, verification, folder, resource } = selection;
   return {
     range,
     verification: verification === 'default' ? undefined : verification,
-    purpose: tab === 'crawlers' ? purpose : undefined,
-    bot_id: tab === 'activity' ? bot : undefined,
-    status:
-      tab === 'activity' && status && /^[1-5]\d{2}$/u.test(status) ? Number(status) : undefined,
     folder: tab === 'overview' ? undefined : folder || undefined,
     resource_class: tab === 'overview' ? undefined : resource || undefined,
-    sort: tab === 'pages' ? selection.sort : undefined,
-    pattern: tab === 'pages' ? selection.pattern : undefined,
+    ...viewFilters(tab, selection),
   };
+}
+function viewFilters(tab: TrafficDataTab, selection: ReturnType<typeof useTrafficSelection>) {
+  if (tab === 'crawlers') return { purpose: selection.purpose };
+  if (tab === 'pages') return { sort: selection.sort, pattern: selection.pattern };
+  if (tab === 'activity') {
+    const status = selection.status;
+    return {
+      bot_id: selection.bot,
+      status: status && /^[1-5]\d{2}$/u.test(status) ? Number(status) : undefined,
+    };
+  }
+  return {};
 }
 export function useTrafficData(tab: TrafficDataTab) {
   const { activeProject, isLoading } = useProjectContext();

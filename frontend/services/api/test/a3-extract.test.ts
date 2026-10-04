@@ -111,6 +111,63 @@ async function classify(seed: ImportSeed) {
   await classifyReferrals({ ...queueTask, task_kind: 'classify_referrals' }, context);
 }
 describe('A3 integration partition replacement', () => {
+  it.each(['traffic', 'referrals'] as const)(
+    'retries %s publication when a resync commits between projection scans',
+    async (owner) => {
+      const first = await imported(
+        owner === 'traffic' ? 'gsc_day_daily' : 'ga4_source_medium_daily',
+      );
+      await row(
+        first,
+        owner === 'traffic' ? [day] : ['chatgpt.com', 'referral', day],
+        owner === 'traffic'
+          ? { clicks: 99, impressions: 100 }
+          : { sessions: 9, engagedSessions: 5, keyEvents: 2 },
+      );
+      if (owner === 'referrals') await classify(first);
+      const executor = owner === 'traffic' ? refreshTrafficSnapshot : refreshAiReferralsSnapshot;
+      const queueTask = await task(
+        db,
+        t,
+        owner === 'traffic' ? 'traffic_snapshot_refresh' : 'ai_referrals_snapshot_refresh',
+        window,
+      );
+      let replaced = false;
+      await expect(
+        executor(queueTask, {
+          ...context,
+          checkCancelled: async (boundary) => {
+            if (
+              !replaced &&
+              boundary === (owner === 'traffic' ? 'snapshot write' : 'classification batch')
+            ) {
+              replaced = true;
+              await imported(first.dataset, first, 1);
+            }
+          },
+        }),
+      ).rejects.toThrow(/partitions changed/);
+      const table = owner === 'traffic' ? 'traffic_snapshots' : 'ai_referrals_snapshots';
+      expect(
+        await db.selectFrom(table).select('id').where('project_id', '=', t.projectId).execute(),
+      ).toEqual([]);
+      await executor(queueTask, context);
+      if (owner === 'traffic') {
+        const response = await requests(db, t)(`performance?range=custom&from=${day}&to=${day}`);
+        expect(response.body.selected.totals.clicks).toBe(0);
+      } else {
+        const response = await getAiReferrals(db, {
+          workspaceId: t.workspaceId,
+          projectId: t.projectId,
+          fromDate: day,
+          toDate: day,
+          rangeToken: null,
+          granularity: 'day',
+        });
+        expect(response.referral_volume).toEqual([{ date: day, value: 0 }]);
+      }
+    },
+  );
   it('preserves pending classification and reports source key events, property currency and channel populations', async () => {
     const source = await imported('ga4_source_medium_daily');
     await row(source, ['chatgpt.com', 'referral', day], {

@@ -47,7 +47,7 @@
   "TRAFFIC_METRIC_ROW_BATCH_SIZE": 1000,
   "TRAFFIC_PAGE_SORT_WHITELIST": [
     "clicks",
-    "conversions",
+    "key_events",
     "ctr",
     "impressions",
     "position",

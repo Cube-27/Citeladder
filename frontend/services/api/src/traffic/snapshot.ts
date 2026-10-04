@@ -23,6 +23,7 @@ import {
   selectedPartition,
   partitionQuality,
   partitionAnchor,
+  partitionEpoch,
 } from '../integrations/partitions.ts';
 import { projectHosts } from '../integrations/host-scope.ts';
 
@@ -245,6 +246,8 @@ async function scan(
 function executor(displayOnly: boolean): Executor {
   return async (task, { db, checkCancelled, maxAttempts }) => {
     const projectId = await taskProject(db, task);
+    const partitionScope = { workspaceId: task.workspace_id, projectId };
+    const epoch = await partitionEpoch(db, partitionScope);
     const { windowStart, windowEnd } = payloadWindow(task);
     const scope = new WorkspaceScope(task.workspace_id);
     const origin = await scope
@@ -329,6 +332,8 @@ function executor(displayOnly: boolean): Executor {
       };
       for (const dataset of p.TRAFFIC_PROJECTED_DATASETS)
         allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset);
+      if ((await partitionEpoch(trx, partitionScope)) !== epoch)
+        throw new Error('Integration partitions changed during Traffic projection; retry');
       for (const target of targets) {
         const quality: Record<string, Awaited<ReturnType<typeof partitionQuality>>> = {};
         for (const dataset of p.TRAFFIC_PROJECTED_DATASETS) {

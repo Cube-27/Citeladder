@@ -247,6 +247,27 @@ describe('A3 persisted Pages join', () => {
       .set({ reporting_timezone: 'UTC' })
       .where('project_id', '=', seed.projectId)
       .execute();
+    // Even a complete empty crawl leg has a reporting timezone to compare.
+    await db
+      .updateTable('crawl_log_coverage_daily')
+      .set({ reporting_timezone: 'Asia/Kolkata' })
+      .where('project_id', '=', seed.projectId)
+      .execute();
+    const quiet = (await pagesRead(db, scope(), filters)).items.find(
+      (r) => r.display_path === '/quiet',
+    )!;
+    expect([quiet.crawl.state, quiet.referrals.state]).toEqual([
+      'non_comparable',
+      'non_comparable',
+    ]);
+    await refreshInsightWindow(db, scope(), filters);
+    expect((await insightsRead(db, scope(), filters)).patterns).toEqual([]);
+    expect((await insightsRead(db, scope(), filters)).coverage.notice).toContain('non-comparable');
+    await db
+      .updateTable('crawl_log_coverage_daily')
+      .set({ reporting_timezone: 'UTC' })
+      .where('project_id', '=', seed.projectId)
+      .execute();
     await db
       .updateTable('integration_import_artifacts')
       .set({
@@ -456,6 +477,7 @@ describe('A3 persisted insight gates', () => {
       .selectFrom('ai_traffic_insights')
       .select(['patterns', 'provenance'])
       .where('project_id', '=', seed.projectId)
+      .where('window_end', '=', new Date(now.toISOString().slice(0, 10)))
       .execute();
     expect(saved).toHaveLength(3);
     expect(saved[0]!.provenance).toHaveProperty('crawl_rollup_ids');

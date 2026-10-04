@@ -18,6 +18,7 @@ function comparable(rows: JoinedPage[], context: Awaited<ReturnType<typeof pageC
   return rows.every(
     (r) =>
       new Set([
+        ...(context.crawlComplete ? [context.crawl.reporting_timezone] : []),
         ...strings(r.crawl_timezones),
         ...strings(r.referral_timezones),
         ...context.quality.map((q) => q.reporting_timezone).filter(Boolean),

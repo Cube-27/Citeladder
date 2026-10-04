@@ -7765,8 +7765,6 @@ def upgrade() -> None:
             "workspace_id", "project_id", name="uq_crawl_log_state_project"
         ),
     )
-
-
     op.create_table(
         "ai_referral_landing_daily",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -7787,8 +7785,15 @@ def upgrade() -> None:
         sa.Column("source_metric_row_ids", postgresql.JSONB(), nullable=False),
         sa.Column("formula_version", sa.String(64), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(["workspace_id", "project_id"], ["projects.workspace_id", "projects.id"], ondelete="CASCADE"),
-        sa.UniqueConstraint("workspace_id", "project_id", "reporting_date", "reporting_timezone", "url_hash", "ai_source", name="uq_ai_referral_landing_grain"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "reporting_date", "reporting_timezone",
+            "url_hash", "ai_source", name="uq_ai_referral_landing_grain",
+        ),
     )
     op.create_table(
         "ai_traffic_insights",
@@ -7804,8 +7809,15 @@ def upgrade() -> None:
         sa.Column("provenance", postgresql.JSONB(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(["workspace_id", "project_id"], ["projects.workspace_id", "projects.id"], ondelete="CASCADE"),
-        sa.UniqueConstraint("workspace_id", "project_id", "window_start", "window_end", name="uq_ai_traffic_insights_window"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "window_start", "window_end",
+            name="uq_ai_traffic_insights_window",
+        ),
     )
 
 

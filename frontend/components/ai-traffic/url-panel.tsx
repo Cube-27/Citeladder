@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { z } from 'zod';
-import type { trafficLegSchema } from '@citeladder/contracts/ai-traffic';
+import type { trafficLegSchema, aiTrafficUrlSchema } from '@citeladder/contracts/ai-traffic';
 import { Drawer } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
@@ -43,12 +43,6 @@ export function UrlPanel({
   });
   const data = query.isError ? undefined : query.data,
     page = data?.page;
-  const link = (tab: string) =>
-    workspaceDestination(
-      '/ai-traffic',
-      new URLSearchParams({ tab, project: projectId }),
-      workspaceId,
-    );
   return (
     <Drawer
       open={!!urlHash}
@@ -66,86 +60,104 @@ export function UrlPanel({
           onRetry={() => query.refetch()}
         />
       ) : null}
-      {data && !page ? (
-        <Alert tone="info">
-          No joinable evidence is available for this path in the selected window.
-        </Alert>
-      ) : null}
-      {page && data ? (
-        <div className="grid gap-4">
-          <p className="type-caption">
-            {data.window_start} – {data.window_end} · Path-level identity
-          </p>
-          <p>
-            <TrafficLeg leg={page.crawl} unit="requests" />{' '}
-            <Link to={link('crawlers')}>Crawlers</Link>
-          </p>
-          <p>
-            <TrafficLeg leg={page.referrals} unit="AI referral sessions" />{' '}
-            <Link to={link('referrals')}>Referrals</Link>
-          </p>
-          <p>{page.key_events ?? 'Unavailable'} key events as configured in GA4</p>
-          <p>
-            <TrafficLeg leg={page.citations} unit="tracked citations" />{' '}
-            <Link
-              to={workspaceDestination(
-                '/visibility',
-                new URLSearchParams({ project: projectId }),
-                workspaceId,
-              )}
-            >
-              Visibility
-            </Link>
-          </p>
-          <p>
-            <TrafficLeg leg={page.findings} unit="open Site Health findings" />{' '}
-            <Link
-              to={workspaceDestination(
-                '/site',
-                new URLSearchParams({ project: projectId }),
-                workspaceId,
-              )}
-            >
-              Site Health
-            </Link>
-          </p>
-          <p className="type-caption">First and last observations in this window</p>
-          {data.crawls.map((r) => (
-            <p key={r.bot_id}>
-              {r.bot_id}: {r.requests} requests · <DisplayTime value={r.first_seen} /> –{' '}
-              <DisplayTime value={r.last_seen} />
-            </p>
-          ))}
-          {data.referrals.map((r) => (
-            <p key={r.ai_source}>
-              {r.ai_source}: first referral {r.first_referral} · {r.sessions} sessions
-            </p>
-          ))}
-          {data.citations.map((r) => (
-            <p key={r.citation_id}>Tracked citation: {r.date}</p>
-          ))}
-          {data.provenance.bounded ? (
-            <Alert tone="info">The timeline reached its display bound.</Alert>
-          ) : null}
-          <p className="type-caption">
-            Timeline uses saved crawler rollups, GA4 metric rows and tracked citations.
-            {data.provenance.crawl_id ? (
-              <Link
-                to={workspaceDestination(
-                  '/site',
-                  new URLSearchParams({ project: projectId }),
-                  workspaceId,
-                )}
-              >
-                View Site Health inventory
-              </Link>
-            ) : (
-              ' Inventory unavailable'
-            )}
-          </p>
-        </div>
-      ) : null}
+      {data ? <UrlEvidence data={data} projectId={projectId} workspaceId={workspaceId} /> : null}
     </Drawer>
+  );
+}
+function UrlEvidence({
+  data,
+  projectId,
+  workspaceId,
+}: Readonly<{
+  data: z.infer<typeof aiTrafficUrlSchema>;
+  projectId: string;
+  workspaceId: string;
+}>) {
+  const page = data.page;
+  if (!page)
+    return (
+      <Alert tone="info">
+        No joinable evidence is available for this path in the selected window.
+      </Alert>
+    );
+  const link = (tab: string) =>
+    workspaceDestination(
+      '/ai-traffic',
+      new URLSearchParams({ tab, project: projectId }),
+      workspaceId,
+    );
+  return (
+    <div className="grid gap-4">
+      <p className="type-caption">
+        {data.window_start} – {data.window_end} · Path-level identity
+      </p>
+      <p>
+        <TrafficLeg leg={page.crawl} unit="requests" /> <Link to={link('crawlers')}>Crawlers</Link>
+      </p>
+      <p>
+        <TrafficLeg leg={page.referrals} unit="AI referral sessions" />{' '}
+        <Link to={link('referrals')}>Referrals</Link>
+      </p>
+      <p>{page.key_events ?? 'Unavailable'} key events as configured in GA4</p>
+      <p>
+        <TrafficLeg leg={page.citations} unit="tracked citations" />{' '}
+        <Link
+          to={workspaceDestination(
+            '/visibility',
+            new URLSearchParams({ project: projectId }),
+            workspaceId,
+          )}
+        >
+          Visibility
+        </Link>
+      </p>
+      <p>
+        <TrafficLeg leg={page.findings} unit="open Site Health findings" />{' '}
+        <Link
+          to={workspaceDestination(
+            '/site',
+            new URLSearchParams({ project: projectId }),
+            workspaceId,
+          )}
+        >
+          Site Health
+        </Link>
+      </p>
+      <p className="type-caption">First and last observations in this window</p>
+      {data.crawls.map((r) => (
+        <p key={r.bot_id}>
+          {r.bot_id}: {r.requests} requests · <DisplayTime value={r.first_seen} /> –{' '}
+          <DisplayTime value={r.last_seen} />
+        </p>
+      ))}
+      {data.referrals.map((r) => (
+        <p key={r.ai_source}>
+          {r.ai_source}: first referral {r.first_referral} · {r.sessions} sessions
+        </p>
+      ))}
+      {data.citations.map((r) => (
+        <p key={r.citation_id}>Tracked citation: {r.date}</p>
+      ))}
+      {data.provenance.bounded ? (
+        <Alert tone="info">The timeline reached its display bound.</Alert>
+      ) : null}
+      <p className="type-caption">
+        Timeline uses saved crawler rollups, GA4 metric rows and tracked citations.
+        {data.provenance.crawl_id ? (
+          <Link
+            to={workspaceDestination(
+              '/site',
+              new URLSearchParams({ project: projectId }),
+              workspaceId,
+            )}
+          >
+            View Site Health inventory
+          </Link>
+        ) : (
+          ' Inventory unavailable'
+        )}
+      </p>
+    </div>
   );
 }
 export function TrafficUrlButton({

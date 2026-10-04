@@ -103,7 +103,7 @@ export const trafficLegSchema = z.object({
   coverage: z.string().nullable(),
   reason: z.string().nullable(),
 });
-export const aiTrafficPageSchema = z.object({
+const aiTrafficPageSchema = z.object({
   url_hash: z.string(),
   canonical_url: z.string(),
   display_path: z.string(),

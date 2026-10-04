@@ -24,6 +24,20 @@ export function selectedPartition(alias = 'integration_metric_rows') {
 }
 
 export type PartitionScope = { workspaceId: string; projectId: string; start: string; end: string };
+/** Guard multi-query projections against a revision committing between scans. */
+export async function partitionEpoch(
+  db: Database,
+  scope: Pick<PartitionScope, 'workspaceId' | 'projectId'>,
+) {
+  const result = await sql<{ epoch: string }>`select md5(coalesce(string_agg(
+    r.id::text || ':' || r.status || ':' || coalesce(a.id::text,''), ',' order by r.id,a.id),'')) as epoch
+    from integration_sync_runs r left join integration_import_artifacts a
+      on a.workspace_id=r.workspace_id and a.sync_run_id=r.id
+    where r.workspace_id=${scope.workspaceId}::uuid and r.project_id=${scope.projectId}::uuid`.execute(
+    db,
+  );
+  return result.rows[0]!.epoch;
+}
 export async function partitionAnchor(
   db: Database,
   workspaceId: string,
