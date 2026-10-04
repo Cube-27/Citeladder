@@ -20,10 +20,9 @@ session-version checks invalidate stale sessions. The frontend crosses the
 identity boundary with full-document navigation so a prefetched anonymous
 layout cannot be reused.
 
-TypeScript issues sessions, owns OAuth and abuse policy, and reads shared Argon2
-parameters from the generated Python config export. Native account administration
-shares the password owner; Python demo/bootstrap tools retain provisioning until
-PR 4 of the retirement plan. Google sign-in
+TypeScript issues sessions and owns OAuth, abuse policy and Argon2 parameters.
+Native account administration, local login and deployment bootstrap share the
+password owner. Google sign-in
 uses a signed state bound to an HttpOnly transaction cookie and verified email
 before linking a new provider subject. Provider requests have host, redirect,
 deadline and response-size bounds. PostgreSQL abuse counters commit before
@@ -39,11 +38,11 @@ do not reveal product data.
 The [role policy](../backend/app/domain/workspaces/policy.py) is the sole matrix,
 exported for TypeScript authorization:
 
-| Role | Product read | Product write/run | Billing, members, credentials |
-|---|---|---|---|
-| Owner / Admin | Yes | Yes | Yes |
-| Member | Yes | Yes | No |
-| Viewer | Yes | No | No |
+| Role          | Product read | Product write/run | Billing, members, credentials |
+| ------------- | ------------ | ----------------- | ----------------------------- |
+| Owner / Admin | Yes          | Yes               | Yes                           |
+| Member        | Yes          | Yes               | No                            |
+| Viewer        | Yes          | No                | No                            |
 
 Unknown roles fail closed. Role authorization and entitlement availability are
 separate checks; both must permit an action. Workspace Admin is not an operator
@@ -184,15 +183,11 @@ hold this lock.
 
 Remaining Python bridges and their deletion gates are explicit:
 
-| Bridge | Current callers | Removal condition |
-|---|---|---|
-| `domain/auth/service.py`, `core/security.py` | `app/demo/bootstrap.py`, `scripts/provision_dev_login.py`, `scripts/seed_dev_data.py`, `test_demo_bootstrap.py`, `test_workspace_auth.py`; native `test/auth-interop.py` probes crypto | PR 4 moves bootstrap/login/seeding and remaining application tests, then retires crypto interoperability probe |
-| `domain/workspaces/service.py` | auth provisioning, demo/bootstrap, login/seeding and `test_workspace_auth.py` | PR 4 removes those provisioning and application-test consumers |
-| `domain/abuse/service.py` | `domain/workspaces/service.py`, Python billing/operator provisioning and `test_abuse_controls.py` | PRs 3–4 move the final provisioning/test consumers |
-| `domain/workspaces/policy.py`, `core/config/workspaces.py` | Python workspace/bootstrap, billing bootstrap, Site Health operator, occupancy fixtures and `scripts/auth_policy.py` export | PRs 3–4 move operators/bootstrap/tests; PR 5 removes the final policy exporter/schema readers |
-| Billing bootstrap/grants and Site Health projection | demo/login/seed, commercial operators and entitlement/schema fixtures | PR 3 moves commercial operators; PR 4 moves remaining bootstrap/fixture consumers; PR 5 isolates schema constants |
+| Bridge                                                     | Current callers                                                                                 | Removal condition                                                    |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `domain/workspaces/policy.py`, `core/config/workspaces.py` | `scripts/auth_policy.py` exports the role matrix; SQLAlchemy models consume structural defaults | PR 5 removes the final policy exporter and isolates schema constants |
 
-Python invitation/member mutations, agreement recording and their exclusive
-tests are retired. Their native PostgreSQL replacements cover authorization,
+Python identity, abuse, workspace mutations, grants, bootstrap and seed/login
+services and their exclusive tests are retired. Their native PostgreSQL replacements cover authorization,
 replay, revocation, rollback and workspace isolation. SQLAlchemy schema models
 and meaningful schema tests remain; Alembic still owns the schema.

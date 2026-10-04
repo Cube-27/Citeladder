@@ -435,8 +435,8 @@ migrations remain covered by static policy gates.
 `pnpm check:policy`. Seven contracts pin the directions that hold today: the API
 and the workers are leaves nothing imports, `core` depends on no business logic,
 and `models`, `connectors`, `orchestration` and `analysis` do not reach up.
-Two remaining warts are recorded as named `ignore_imports` lines rather than
-softened rules -- a wart with a name cannot quietly become two.
+The retired Prompt normalization callback has no Python writer; retained
+imports obey the layer contracts without exceptions.
 
 ### Suppressions
 
@@ -457,12 +457,18 @@ unless stated otherwise. Use `--help` when arguments are not shown here.
 Seed local demo data (**development or disposable database only**):
 
 The host-side seeder requires Node 26 and installed frontend dependencies. It
-invokes `frontend/services/api/scripts/seed-site-health.ts` for crawl admission
-and monitored selection against the same local development database; the
-TypeScript Site Health worker must be running to acquire and finish the crawls.
+uses the native identity, project, prompt, provider, audit, integration, Site Health
+and Opportunity owners with explicit recorded transports. It requires a local
+development database and clears inherited provider credentials. No separately
+running worker is needed. Repeated static seeding preserves the same identities
+and rows; execution appends fresh evidence. The agency workspace has its own
+Owner and grants; the demo identity joins it as Admin.
+
+From `frontend/`:
 
 ```bash
-APP_ENV=development uv run python -m scripts.seed_dev_data
+pnpm --filter @citeladder/api seed:dev
+pnpm --filter @citeladder/api seed:dev --static-only
 ```
 
 Provision a local development login, or grant a Site Health allowance:
@@ -472,7 +478,7 @@ From the repository root in PowerShell:
 ```powershell
 ./scripts/provision-dev-login.ps1 -Email <email> -CounterAllowance <allowance>
 # Enter the password at the secure prompt; the child command receives it on stdin.
-# Identity/login admission remains Python until PR 4; this wrapper also initializes the native catalog.
+# Native login admission and catalog initialization; an existing login must authenticate.
 # Run the following native commands from frontend/:
 pnpm --filter @citeladder/api entitlement:site-health --actor <admin-email> --workspace-id <workspace-uuid> --account-id <account-uuid> --reason "local allowance" --idempotency-key <key> --monitored-urls <allowance> --valid-from <ISO-date> # add --apply after preview
 ```
@@ -536,8 +542,14 @@ From the repository root, reset and recreate the database named by
 `DATABASE_URL` (**never against shared, staging, or production data**):
 
 ```bash
-uv run --project backend python reset-db.py
+./scripts/reset-db.ps1
 ```
+
+`reset-db.py` performs only the protected reset and Alembic upgrade; the PowerShell
+wrapper resolves the explicit target once, then sequences bounded native
+login/catalog provisioning with the same environment. Dotenv-disable admission
+applies to both stages. Failures stop the sequence. Run the Python command
+directly only for a schema-only reset.
 
 The reset runs without an extra token only when `APP_ENV` is a development
 value and `DATABASE_URL` targets `localhost`, `127.0.0.1`, or `::1`. A remote

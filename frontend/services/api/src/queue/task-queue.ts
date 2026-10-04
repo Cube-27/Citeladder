@@ -60,6 +60,7 @@ export type TaskQueueOptions = {
   /** The clock; tests pin it. */
   now?: () => Date;
 };
+export type ClaimScope = { workspaceId: string; taskIds: readonly string[] };
 
 /**
  * The locking SELECT one claim runs.
@@ -74,7 +75,7 @@ export type TaskQueueOptions = {
  */
 export function claimStatement(
   db: Database,
-  options: { now: Date; limit: number; kinds: readonly string[] },
+  options: { now: Date; limit: number; kinds: readonly string[]; scope?: ClaimScope },
   table: QueueTable = QUEUE_TABLE,
 ) {
   const { now, limit, kinds } = options;
@@ -90,6 +91,11 @@ export function claimStatement(
     .where('status', 'in', claimable)
     .where('available_at', '<=', now)
     .where('task_kind', 'in', kinds)
+    .$if(options.scope !== undefined, (q) =>
+      q
+        .where('workspace_id', '=', options.scope!.workspaceId)
+        .where('id', 'in', options.scope!.taskIds),
+    )
     .as('fair_queue_candidates');
   return (
     queueDb
@@ -103,6 +109,11 @@ export function claimStatement(
       .selectAll('queued')
       .where('queued.status', 'in', claimable)
       .where('queued.available_at', '<=', now)
+      .$if(options.scope !== undefined, (q) =>
+        q
+          .where('queued.workspace_id', '=', options.scope!.workspaceId)
+          .where('queued.id', 'in', options.scope!.taskIds),
+      )
       // One task per workspace before any workspace receives its second.
       .orderBy('fair_queue_candidates.workspace_position', 'asc')
       .orderBy(sql`queue_workspace_turns.last_claimed_at asc nulls first`)
@@ -134,12 +145,17 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
     owner: string;
     kinds: readonly string[];
     limit?: number;
+    scope?: ClaimScope;
   }): Promise<TaskFor<T>[]> {
     const { owner, kinds, limit = 1 } = options;
-    if (kinds.length === 0) return Promise.resolve([]);
+    if (kinds.length === 0 || options.scope?.taskIds.length === 0) return Promise.resolve([]);
     const now = this.#now();
     return this.#db.transaction().execute(async (trx) => {
-      const locked = await claimStatement(trx, { now, limit, kinds }, this.#table).execute();
+      const locked = await claimStatement(
+        trx,
+        { now, limit, kinds, scope: options.scope },
+        this.#table,
+      ).execute();
       if (locked.length === 0) return [];
       const claimed = await queueDatabase(trx)
         .updateTable(this.#table)

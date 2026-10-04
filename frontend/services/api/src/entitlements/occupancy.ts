@@ -5,9 +5,8 @@
  * Every prompt in the workspace counts, whatever its status or origin; only
  * deletion frees a slot. The check runs under the account capacity lock in
  * the same transaction as the insert it guards, so concurrent writers on
- * either stack cannot exceed the grant. The capacity lock is the last lock a
- * path takes (after the project and prompt-set locks), as Python's
- * `domain/entitlements/enforcement.py` also requires.
+ * cannot exceed the grant. The capacity lock is the last lock a path takes
+ * after the project and prompt-set locks.
  *
  * Fail closed: a workspace with no billing account, or an account whose
  * grants cannot resolve, is a 403 `occupancy_unresolved`. A resolved account

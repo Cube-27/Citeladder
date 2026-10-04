@@ -27,7 +27,7 @@ import { compensateTerminalTasks } from './terminal-compensation.ts';
 import { policy, type WorkerSettings } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
-import { TaskQueue, type QueueTask } from '../queue/task-queue.ts';
+import { TaskQueue, type QueueTask, type ClaimScope } from '../queue/task-queue.ts';
 import { classifyReferrals } from '../referrals/classify.ts';
 import { ingestReferrals } from '../referrals/ingest.ts';
 import { referralRetentionSweep } from '../referrals/retention.ts';
@@ -121,29 +121,36 @@ export class AnalyticsWorker {
   readonly #queue: TaskQueue;
   readonly #settings: WorkerSettings;
   readonly #executors: Readonly<Record<string, Executor>>;
+  readonly #scope?: ClaimScope;
 
   constructor(
     db: Database,
     settings: WorkerSettings,
-    options: { owner?: string; executors?: Readonly<Record<string, Executor>> } = {},
+    options: {
+      owner?: string;
+      executors?: Readonly<Record<string, Executor>>;
+      taskScope?: ClaimScope;
+    } = {},
   ) {
     this.#db = db;
     this.#settings = settings;
     this.#queue = new TaskQueue(db, { leaseTtlSeconds: settings.leaseTtlSeconds });
     this.#executors = options.executors ?? EXECUTORS;
+    this.#scope = options.taskScope;
     this.owner = options.owner ?? `analytics-worker-ts-${randomBytes(6).toString('hex')}`;
   }
 
   /** Claim one row of a TypeScript-owned kind and run it; the count run. */
   async runOnce(): Promise<number> {
-    await recoverAnalyticsLeases(this.#db, this.#settings.leaseReclaimBatchSize);
+    await recoverAnalyticsLeases(this.#db, this.#settings.leaseReclaimBatchSize, this.#scope);
     // Compensation is secondary: its failure must not block claiming new work.
-    await compensateTerminalTasks(this.#db).catch((error: unknown) =>
+    await compensateTerminalTasks(this.#db, this.#scope).catch((error: unknown) =>
       logger.exception('analytics_terminal_compensation_failed', error),
     );
     const rows = await this.#queue.claim({
       owner: this.owner,
-      kinds: policy.analytics.ts_owned_task_kinds,
+      kinds: this.#scope ? Object.keys(this.#executors) : policy.analytics.ts_owned_task_kinds,
+      scope: this.#scope,
     });
     for (const row of rows) await this.#execute(row);
     return rows.length;

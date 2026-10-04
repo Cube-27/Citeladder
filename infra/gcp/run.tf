@@ -15,7 +15,7 @@ locals {
                 raise
             time.sleep(5)
     PY
-    # Alembic drift admission, Python identity/grants, then native catalog.
+    # Alembic drift admission, then native identity/grants/catalog bootstrap.
     # Any failure prevents the API rollout; the job can be retried idempotently.
     exec /bin/sh /app/bootstrap-environment.sh
   EOT

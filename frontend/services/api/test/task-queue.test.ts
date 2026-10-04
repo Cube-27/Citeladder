@@ -78,6 +78,43 @@ function referencedColumns(node: unknown, into = new Set<string>()): Set<string>
 }
 
 describe('TaskQueue', () => {
+  it('scopes seed claims and lease recovery to explicit task IDs and their workspace', async () => {
+    const selected = await task(workspaces[0]!, TS_KINDS[0]!);
+    const sibling = await task(workspaces[0]!, TS_KINDS[0]!);
+    const foreign = await task(workspaces[1]!, TS_KINDS[0]!);
+    const scope = { workspaceId: workspaces[0]!, taskIds: [selected, foreign] };
+    expect(
+      (await queue.claim({ owner: 'seed', kinds: TS_KINDS, scope })).map((row) => row.id),
+    ).toEqual([selected]);
+    expect(
+      await queue.claim({ owner: 'empty', kinds: TS_KINDS, scope: { ...scope, taskIds: [] } }),
+    ).toEqual([]);
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'running', lease_expires_at: new Date(0) })
+      .where('id', 'in', [selected, sibling, foreign])
+      .execute();
+    const { recoverAnalyticsLeases } = await import('../src/queue/analytics-recovery.ts');
+    expect(await recoverAnalyticsLeases(db, 10, scope)).toBe(1);
+    expect(
+      (
+        await db
+          .selectFrom('analytics_tasks')
+          .select('status')
+          .where('id', '=', selected)
+          .executeTakeFirstOrThrow()
+      ).status,
+    ).toBe('retry_wait');
+    expect(
+      (
+        await db
+          .selectFrom('analytics_tasks')
+          .select('status')
+          .where('id', 'in', [sibling, foreign])
+          .execute()
+      ).map((row) => row.status),
+    ).toEqual(['running', 'running']);
+  });
   it.each([-86400000, 86400000])(
     'keeps leases live with application clock skew %s',
     async (skew) => {

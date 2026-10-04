@@ -1,84 +1,52 @@
-import { execFileSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { jwtVerify } from 'jose';
-import { beforeAll, describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { hashPassword, verifyPassword } from '../src/auth/password.ts';
 import { issueSession } from '../src/auth/service.ts';
 import { clientIdentity, parseTrustedProxies } from '../src/auth/client-identity.ts';
 import { testConfig } from './support.ts';
 
-const backend = fileURLToPath(new URL('../../../../backend/', import.meta.url));
-const python = fileURLToPath(
-  new URL(
-    process.platform === 'win32'
-      ? '../../../../backend/.venv/Scripts/python.exe'
-      : '../../../../backend/.venv/bin/python',
-    import.meta.url,
-  ),
-);
-function interop(input: object): {
-  token: string;
-  hash: string;
-  verified: boolean;
-  claims: { sub: string; ver: number };
-} {
-  return JSON.parse(
-    execFileSync(python, [fileURLToPath(new URL('./auth-interop.py', import.meta.url))], {
-      cwd: backend,
-      input: JSON.stringify(input),
-      encoding: 'utf8',
-      env: {
-        PATH: process.env.PATH,
-        SYSTEMROOT: process.env.SYSTEMROOT,
-        PYTHONPATH: backend,
-        PYTHONUTF8: '1',
-        DATABASE_URL: 'postgresql+asyncpg://postgres:test@localhost/test',
-        CITELADDER_DISABLE_DOTENV: '1',
-      },
-    }),
-  );
-}
-
-describe('cross-stack authentication crypto', () => {
-  const id = randomUUID();
-  const password = 'unicode-password-δ🔒';
+describe('persisted authentication crypto', () => {
   const config = testConfig();
-  let issued: ReturnType<typeof interop>;
-  let result: ReturnType<typeof interop>;
-  // Provision live crypto inputs in the suite setup; Windows process startup
-  // belongs to fixture setup rather than the assertion path's 5-second budget.
-  beforeAll(async () => {
-    issued = interop({ operation: 'issue', user_id: id, password });
+  it('reads recorded Python Argon2 and HS256 serialization and preserves native session claims', async () => {
+    const password = 'unicode-password-δ🔒';
+    const storedHash =
+      '$argon2id$v=19$m=65536,t=3,p=4$vV2ls3S+l2VxhYw633OYVw$GSAcbcffuYmEAcH9QdunQ4Md+ChceiwTv7ugkP9DU4g';
+    expect(await verifyPassword(password, storedHash)).toBe(true);
+    expect(await verifyPassword('incorrect', storedHash)).toBe(false);
+    // Keep Python's recorded signing bytes; create the signature with a fresh
+    // test key so the repository contains no reusable signed session token.
+    const key = randomBytes(32);
+    const signingInput = [
+      '{"typ":"JWT","alg":"HS256"}',
+      '{"sub":"11111111-1111-4111-8111-111111111111","ver":2,"exp":4102444800}',
+    ]
+      .map((value) => Buffer.from(value).toString('base64url'))
+      .join('.');
+    const pythonToken = `${signingInput}.${createHmac('sha256', key).update(signingInput).digest('base64url')}`;
+    expect((await jwtVerify(pythonToken, key)).payload).toMatchObject({
+      sub: '11111111-1111-4111-8111-111111111111',
+      ver: 2,
+    });
+    const id = randomUUID();
     const token = await issueSession(config, {
       id,
       session_version: 2,
       email: 'interop@example.test',
       role: 'user',
       is_active: true,
-      hashed_password: null,
+      hashed_password: await hashPassword(password),
       created_at: new Date(),
       updated_at: new Date(),
     });
-    result = interop({ operation: 'verify', token, hash: await hashPassword(password), password });
+    expect(
+      (await jwtVerify(token, new TextEncoder().encode(config.session.secretKey))).payload,
+    ).toMatchObject({ sub: id, ver: 2 });
   });
-  it('verifies each stack’s Argon2 hashes and signed session claims in the other stack', async () => {
-    expect(await verifyPassword(password, issued.hash)).toBe(true);
-    expect(await verifyPassword('incorrect', issued.hash)).toBe(false);
-    const pythonClaims = await jwtVerify(
-      issued.token,
-      new TextEncoder().encode(config.session.secretKey),
-    );
-    expect(pythonClaims.payload).toMatchObject({ sub: id, ver: 2 });
-    expect(result.verified).toBe(true);
-    expect(result.claims).toMatchObject({ sub: id, ver: 2 });
-  });
-
   it('refuses malformed and absent password hashes', async () => {
     expect(await verifyPassword('password123', null)).toBe(false);
     expect(await verifyPassword('password123', '$argon2id$invalid')).toBe(false);
   });
-
   it('accepts a forwarding chain only from a trusted peer and stops at its first untrusted hop', () => {
     expect(clientIdentity('203.0.113.9', '198.51.100.1', parseTrustedProxies('127.0.0.0/8'))).toBe(
       '203.0.113.9',

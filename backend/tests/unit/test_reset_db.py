@@ -75,3 +75,56 @@ def test_connection_details_redact_credentials() -> None:
     assert target == "citeladder"
     assert "secret" not in redacted
     assert "user:***@localhost:5432/postgres" in redacted
+
+
+def test_main_reports_reset_refusal_without_connecting_or_exposing_credentials(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = _reset_module()
+    monkeypatch.setattr(
+        module,
+        "_configuration",
+        lambda: {
+            "APP_ENV": "production",
+            "DATABASE_URL": "postgresql://user:secret@shared.example.com/db?password=hidden",
+        },
+    )
+    monkeypatch.setattr(
+        module.asyncpg, "connect", lambda *_args, **_kwargs: pytest.fail("connected")
+    )
+
+    with pytest.raises(SystemExit) as exit_info:
+        module.main()
+
+    assert exit_info.value.code == 1
+    output = capsys.readouterr()
+    assert "APP_ENV is 'production'" in output.err
+    assert "target host is 'shared.example.com'" in output.err
+    assert "RESET_CONFIRM_DESTRUCTIVE=drop-and-recreate" in output.err
+    assert "secret" not in output.out + output.err
+    assert "hidden" not in output.out + output.err
+
+
+def test_main_keeps_external_failure_details_private(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = _reset_module()
+    monkeypatch.setattr(
+        module,
+        "_configuration",
+        lambda: {
+            "APP_ENV": "development",
+            "DATABASE_URL": "postgresql://user:secret@localhost/db",
+        },
+    )
+
+    async def failed_reset(_url: str) -> None:
+        raise RuntimeError("connection failed with password=secret")
+
+    monkeypatch.setattr(module, "reset_database", failed_reset)
+    with pytest.raises(SystemExit):
+        module.main()
+
+    output = capsys.readouterr()
+    assert "Database reset failed: RuntimeError" in output.err
+    assert "secret" not in output.out + output.err

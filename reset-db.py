@@ -2,9 +2,8 @@
 """Reset the CiteLadder database: drop, recreate, and run migrations."""
 
 import asyncio
+import math
 import os
-import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -20,16 +19,25 @@ PROTECTED_DATABASES = frozenset({"postgres", "template0", "template1"})
 DEVELOPMENT_ENVS = frozenset({"development", "dev", "local", "test", "testing"})
 LOCAL_DATABASE_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 SUPPORTED_DATABASE_SCHEMES = frozenset({"postgresql", "postgresql+asyncpg"})
-DEFAULT_PROVISION_TIMEOUT_SECONDS = 300.0
 DESTRUCTIVE_RESET_VARIABLE = "RESET_CONFIRM_DESTRUCTIVE"
 DESTRUCTIVE_RESET_TOKEN = "drop-and-recreate"
 
 
+class ResetConfigurationError(RuntimeError):
+    """An actionable reset refusal that is safe to display to the operator."""
+
+
 def _configuration() -> dict[str, str]:
     """Load repository env files, with the process environment taking priority."""
-    values = _read_env_file(ROOT_ENV_FILE)
+    disabled = os.environ.get("CITELADDER_DISABLE_DOTENV", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    values = {} if disabled else _read_env_file(ROOT_ENV_FILE)
     backend_env_file = BACKEND_DIR / ".env"
-    if backend_env_file.is_file():
+    if not disabled and backend_env_file.is_file():
         values.update(_read_env_file(backend_env_file))
     values.update(os.environ)
     if not values.get("DATABASE_URL", "").strip():
@@ -71,7 +79,7 @@ def _database_url() -> str:
     """Resolve DATABASE_URL with the same precedence as the backend settings."""
     database_url = _configuration().get("DATABASE_URL", "").strip()
     if not database_url:
-        raise RuntimeError(
+        raise ResetConfigurationError(
             "DATABASE_URL is required in the environment, .env, or backend/.env, "
             "or as POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_HOST, "
             "and POSTGRES_HOST_PORT (the Docker Compose components)"
@@ -82,16 +90,20 @@ def _database_url() -> str:
 def _connection_details(database_url: str) -> tuple[str, str, str]:
     parsed_input = urlsplit(database_url)
     if parsed_input.scheme.casefold() not in SUPPORTED_DATABASE_SCHEMES:
-        raise RuntimeError("DATABASE_URL must use PostgreSQL with the asyncpg driver")
+        raise ResetConfigurationError(
+            "DATABASE_URL must use PostgreSQL with the asyncpg driver"
+        )
     if not parsed_input.hostname:
-        raise RuntimeError("DATABASE_URL must name a database host")
+        raise ResetConfigurationError("DATABASE_URL must name a database host")
     driver_url = database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
     parsed = urlsplit(driver_url)
     target_db = unquote(parsed.path.removeprefix("/"))
     if not target_db:
-        raise RuntimeError("DATABASE_URL must name the database to reset")
+        raise ResetConfigurationError("DATABASE_URL must name the database to reset")
     if target_db.casefold() in PROTECTED_DATABASES:
-        raise RuntimeError(f"Refusing to reset protected database '{target_db}'")
+        raise ResetConfigurationError(
+            f"Refusing to reset protected database '{target_db}'"
+        )
 
     admin_url = urlunsplit(parsed._replace(path="/postgres"))
     hostname = parsed.hostname or ""
@@ -139,7 +151,7 @@ def authorize_reset(database_url: str) -> None:
             f"{DESTRUCTIVE_RESET_VARIABLE} authorizes it."
         )
         return
-    raise RuntimeError(
+    raise ResetConfigurationError(
         f"Refusing to drop the database: APP_ENV is '{app_env or '(unset)'}' "
         f"and the target host is '{host or '(missing)'}'. Automatic reset "
         f"requires a development APP_ENV and a host in "
@@ -154,7 +166,7 @@ async def reset_database(database_url: str) -> None:
     admin_url, redacted_url, target_db = _connection_details(database_url)
     quoted_target = _quote_identifier(target_db)
     print(f"Connecting to {redacted_url}...")
-    conn = await asyncpg.connect(admin_url)
+    conn = await asyncpg.connect(admin_url, timeout=30, command_timeout=60)
     try:
         print(f"Dropping database '{target_db}' if exists...")
         await conn.execute(f"DROP DATABASE IF EXISTS {quoted_target} WITH (FORCE)")
@@ -174,7 +186,11 @@ def run_migrations(database_url: str) -> None:
     # value can live in a .env file. The process environment still wins: it is
     # merged last in `_configuration`.
     timeout_value = _configuration().get("RESET_MIGRATION_TIMEOUT_SECONDS", "").strip()
-    migration_timeout = float(timeout_value) if timeout_value else None
+    migration_timeout = float(timeout_value) if timeout_value else 300
+    if not math.isfinite(migration_timeout) or migration_timeout <= 0:
+        raise ResetConfigurationError(
+            "RESET_MIGRATION_TIMEOUT_SECONDS must be positive and finite"
+        )
     try:
         result = subprocess.run(
             [sys.executable, "-m", "alembic", "upgrade", "head"],
@@ -192,112 +208,9 @@ def run_migrations(database_url: str) -> None:
         )
         raise SystemExit(1) from None
     if result.returncode != 0:
-        print(f"Migration failed:\n{result.stderr}")
+        print(f"Migration failed with exit code {result.returncode}.", file=sys.stderr)
         sys.exit(1)
-    print(result.stdout)
     print("Migrations complete.")
-
-
-def provision_dev_login(database_url: str) -> None:
-    """Provision the configured local-development login after every reset."""
-    configuration = _configuration()
-    app_env = configuration.get("APP_ENV", "").strip().lower()
-    if app_env not in DEVELOPMENT_ENVS:
-        # Say so. This used to return in silence, so a reset run with APP_ENV
-        # unset — or overridden in the shell, which wins over every .env file
-        # here — wiped the database, printed "completed successfully", and left
-        # no account to log in with. The reset still succeeds; only the login
-        # is skipped, and now that is visible.
-        print(
-            f"APP_ENV is '{app_env or '(unset)'}', not one of "
-            f"{sorted(DEVELOPMENT_ENVS)} — skipping development login "
-            "provisioning. No account was created."
-        )
-        return
-
-    email = configuration.get("DEV_LOGIN_EMAIL", "").strip()
-    password = configuration.get("DEV_LOGIN_PASSWORD", "").strip()
-    counter_allowance = configuration.get("DEV_LOGIN_COUNTER_ALLOWANCE", "").strip()
-    if not email or not password or not counter_allowance:
-        raise RuntimeError(
-            "DEV_LOGIN_EMAIL, DEV_LOGIN_PASSWORD, and DEV_LOGIN_COUNTER_ALLOWANCE "
-            "are required for a development database reset"
-        )
-
-    print("Provisioning development login...")
-    provision_environment = os.environ.copy()
-    provision_environment.update(configuration)
-    provision_environment["DATABASE_URL"] = database_url
-    timeout_value = configuration.get("RESET_PROVISION_TIMEOUT_SECONDS", "").strip()
-    provision_timeout = (
-        float(timeout_value) if timeout_value else DEFAULT_PROVISION_TIMEOUT_SECONDS
-    )
-    try:
-        result = subprocess.run(  # noqa: S603 - command is a fixed Python module invocation
-            [
-                sys.executable,
-                "-m",
-                "scripts.provision_dev_login",
-                "--email",
-                email,
-                "--password-stdin",
-                "--counter-allowance",
-                counter_allowance,
-            ],
-            cwd=BACKEND_DIR,
-            capture_output=True,
-            input=password + "\n",
-            text=True,
-            timeout=provision_timeout,
-            check=False,
-            env=provision_environment,
-        )
-    except subprocess.TimeoutExpired as exc:
-        print(
-            f"Development login provisioning timed out after {exc.timeout:g} seconds.",
-            file=sys.stderr,
-        )
-        raise SystemExit(1) from None
-    if result.returncode != 0:
-        print(f"Development login provisioning failed:\n{result.stderr}")
-        raise SystemExit(1)
-    print(result.stdout)
-    node_executable = shutil.which("node")
-    if node_executable is None:
-        raise RuntimeError("Node is required for native catalog initialization")
-    try:
-        catalog = subprocess.run(  # noqa: S603 - fixed native catalog entrypoint
-            [
-                node_executable,
-                str(
-                    PROJECT_ROOT / "frontend/services/api/src/cli/bootstrap-catalog.ts"
-                ),
-                "--actor",
-                email,
-            ],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=provision_timeout,
-            check=False,
-            env=provision_environment,
-        )
-    except subprocess.TimeoutExpired as exc:
-        print(
-            f"Catalog initialization timed out after {exc.timeout:g} seconds.",
-            file=sys.stderr,
-        )
-        raise SystemExit(1) from None
-    if catalog.returncode != 0:
-        diagnostic = catalog.stderr.strip()
-        if len(diagnostic) <= 64 and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", diagnostic):
-            print(diagnostic, file=sys.stderr)
-        print(
-            "Native catalog initialization failed; retry provisioning.", file=sys.stderr
-        )
-        raise SystemExit(1)
-    print(catalog.stdout)
-    print("Development login ready.")
 
 
 def main() -> None:
@@ -311,9 +224,16 @@ def main() -> None:
         authorize_reset(database_url)
         asyncio.run(reset_database(database_url))
         run_migrations(database_url)
-        provision_dev_login(database_url)
-    except (RuntimeError, ValueError, OSError, asyncpg.PostgresError) as exc:
+    except ResetConfigurationError as exc:
         print(f"Database reset failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+    except (
+        RuntimeError,
+        ValueError,
+        OSError,
+        asyncpg.PostgresError,
+    ) as exc:
+        print(f"Database reset failed: {type(exc).__name__}", file=sys.stderr)
         raise SystemExit(1) from None
 
     print("=" * 50)

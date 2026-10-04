@@ -13,10 +13,10 @@ default; implemented adapters are not evidence of provider acceptance.
 [Workspace billing lookup](../frontend/services/api/src/billing/purchases.ts) resolves
 the one persisted account for a workspace. TypeScript
 [account provisioning](../frontend/services/api/src/entitlements/bootstrap.ts)
-owns runtime workspace bootstrap. Native operators use the same account owner. Python account/grant helpers remain
-only for `app/demo/bootstrap.py`, `scripts/provision_dev_login.py`,
-`scripts/seed_dev_data.py`, and retained Python entitlement/schema fixture tests;
-PR 4 removes those application consumers and helpers.
+owns runtime workspace bootstrap. Native operators, login, seed tooling and
+[deployment bootstrap](../frontend/services/api/src/auth/deployment-bootstrap.ts)
+use the same account/grant owners. Python retains schema declarations and shared
+policy/export inputs until PR 5; it has no application grant or entitlement engine.
 Owner-user metadata is not a payer-selection rule.
 [Workspace roles](workspace-access.md) gate billing and credentials to
 Owner/Admin; product Members receive safe effective allowances rather than
@@ -153,7 +153,7 @@ Native [execution config](../frontend/services/api/src/config/billing.ts) owns
 checkout, reconciliation, webhook settings and commercial runtime vocabularies.
 Native authoring owns exact rational currency/GST rounding, seller configuration
 and read-only Razorpay admission. Python retains schema catalog vocabulary and
-entitlement registry/algebra used by the temporary bootstrap/seed bridge. Native provider display derives from the shared catalog and frozen
+entitlement registry declarations exported until PR 5. Native provider display derives from the shared catalog and frozen
 routes; it has no separate Python builder.
 
 The shared transaction lock order remains in [architecture](architecture.md).

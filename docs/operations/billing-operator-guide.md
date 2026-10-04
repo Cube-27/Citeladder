@@ -28,7 +28,7 @@ private `.runtime/` files remain inside the authorized root.
 
 The CLI cannot create or promote its first admin. Bootstrap an administrator
 through the deployment's separately reviewed identity/database procedure; never
-use `provision_dev_login.py` outside development and never pass a password or
+use `provision:dev` outside local development and never pass a password or
 secret on argv.
 
 Every `billing:admin` mutation requires all of:

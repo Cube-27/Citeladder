@@ -7,6 +7,7 @@ reach their own verdicts without seeing each other's.
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from datetime import UTC, datetime
 
@@ -20,15 +21,39 @@ from app.core.config.source_pages import (
     PAGE_FORMAT_UNRESOLVED,
 )
 from app.models.project import Project
+from app.models.prompt import Prompt
 from app.models.source_pages import (
     SourcePage,
     SourcePageEntityPresence,
     SourcePageInspectionSpend,
     SourcePageSnapshot,
 )
-from tests.component.opportunity_helpers import _seed_scenario
+from tests.component.opportunity_helpers import _seed_base, _seed_scenario
 
 pytestmark = pytest.mark.asyncio
+
+
+async def test_seeded_prompts_dedupe_normalization_equivalent_text(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        _, _, prompt_ids = await _seed_base(
+            session,
+            prompt_texts=("  Best\tCRM  for small teams?!  ", "what is a crm"),
+        )
+        prompt = await session.get(Prompt, prompt_ids[0])
+        assert prompt is not None
+        session.add(
+            Prompt(
+                prompt_set_id=prompt.prompt_set_id,
+                text="best crm for small teams",
+                normalized_text_hash=hashlib.sha256(
+                    b"best crm for small teams"
+                ).hexdigest(),
+            )
+        )
+        with pytest.raises(IntegrityError):
+            await session.flush()
 
 
 def _page(

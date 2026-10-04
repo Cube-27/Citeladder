@@ -124,8 +124,8 @@ class TestArchitecturePolicy:
 
         assert "allow_indirect_imports" not in contracts["core-is-the-floor"]
 
-    def test_recorded_exceptions_stay_at_two(self) -> None:
-        """Only the retained Prompt normalization boundary exception remains."""
+    def test_architecture_has_no_recorded_exceptions(self) -> None:
+        """All retained Python imports obey the layer contracts."""
         ignored = [
             line.strip()
             for contract in self._contracts().values()
@@ -133,9 +133,7 @@ class TestArchitecturePolicy:
             if line.strip()
         ]
 
-        assert sorted(ignored) == [
-            "app.models.prompt -> app.domain.prompts.normalization",
-        ]
+        assert not ignored
 
 
 class TestDependencyHygiene:

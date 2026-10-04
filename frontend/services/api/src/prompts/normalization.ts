@@ -1,9 +1,8 @@
 /**
  * Prompt-text identity: the per-set dedupe key.
  *
- * Python generation stages candidates keyed by the same hash
- * (`app/domain/prompts/normalization.py`), so both stacks must agree until
- * generation moves (migration section 7).
+ * Native writers compute this persisted hash before insertion; schema fixtures
+ * supply it explicitly after retirement of the Python normalization callback.
  */
 import { policy } from '../config.ts';
 import { collapseIdentityWhitespace, hash } from '../traffic/normalization.ts';

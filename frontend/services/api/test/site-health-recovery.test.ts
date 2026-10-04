@@ -2,6 +2,7 @@ import { afterAll, expect, it, vi } from 'vitest';
 import { sql } from 'kysely';
 
 import { policy } from '../src/config.ts';
+import * as lifecycle from '../src/site-health/lifecycle.ts';
 import { recoverExpiredLeases } from '../src/site-health/lease-recovery.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
@@ -267,4 +268,40 @@ it('drains every bounded recovery batch before treating an empty claim as idle',
     'failed',
     'failed',
   ]);
+});
+
+it('guards scoped maintenance failures and throttles reconciliation while continuing scoped claims', async () => {
+  const seed = await fixtures.crawl();
+  const other = await fixtures.crawl();
+  const id = await fixtures.task(seed);
+  const unrelated = await fixtures.task(other);
+  let now = Date.now();
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+  const reconcile = vi
+    .spyOn(lifecycle, 'reconcileCrawl')
+    .mockRejectedValueOnce(new Error('temporary reconcile failure'));
+  const worker = new SiteHealthWorker(db, {
+    settings: { ...settings, poll: 1 },
+    taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
+    executors: { link_metrics: async () => {} },
+  });
+  try {
+    expect(await worker.runOnce()).toBe(1);
+    expect((await row(id)).status).toBe('succeeded');
+    expect(await worker.runOnce()).toBe(0);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    now += 1000;
+    expect(await worker.runOnce()).toBe(0);
+    expect(reconcile).toHaveBeenCalledTimes(2);
+    expect(reconcile).toHaveBeenLastCalledWith(db, seed.workspaceId, seed.crawlId);
+    expect((await row(unrelated)).status).toBe('queued');
+  } finally {
+    clock.mockRestore();
+    reconcile.mockRestore();
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'cancelled' })
+      .where('id', '=', unrelated)
+      .execute();
+  }
 });

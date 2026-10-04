@@ -57,6 +57,7 @@ export class SiteHealthWorker {
   readonly queue: TaskQueue<'site_crawl_tasks'>;
   readonly executors: Record<string, SiteExecutor>;
   readonly acquisition: SiteTaskContext;
+  readonly taskScope?: { workspaceId: string; crawlId: string };
   readonly #cadence: ScoreRefreshCadence;
   #recovery: Promise<number> | null = null;
   #nextRecovery = 0;
@@ -69,9 +70,11 @@ export class SiteHealthWorker {
       settings?: ReturnType<typeof siteWorkerSettings>;
       executors?: Record<string, SiteExecutor>;
       fetcher?: SitePageFetcher;
+      taskScope?: { workspaceId: string; crawlId: string };
     } = {},
   ) {
     this.db = db;
+    this.taskScope = options.taskScope;
     this.owner = options.owner ?? `site-worker-ts-${randomUUID().slice(0, 12)}`;
     this.settings = options.settings ?? siteWorkerSettings();
     this.executors = options.executors ?? executors;
@@ -91,10 +94,24 @@ export class SiteHealthWorker {
     return this.#claimAndExecute(limit);
   }
   async #claimAndExecute(limit: number) {
+    const scope = this.taskScope
+      ? {
+          workspaceId: this.taskScope.workspaceId,
+          taskIds: (
+            await this.db
+              .selectFrom('site_crawl_tasks')
+              .select('id')
+              .where('workspace_id', '=', this.taskScope.workspaceId)
+              .where('crawl_id', '=', this.taskScope.crawlId)
+              .execute()
+          ).map((row) => row.id),
+        }
+      : undefined;
     const tasks = await this.queue.claim({
       owner: this.owner,
       kinds: policy.site_health.ts_owned_task_kinds,
       limit,
+      scope,
     });
     const results = await Promise.allSettled(tasks.map((task) => this.execute(task)));
     for (const result of results) if (result.status === 'rejected') throw result.reason;
@@ -104,7 +121,12 @@ export class SiteHealthWorker {
     // Another slot owns the in-flight pass; this slot keeps claiming instead of waiting.
     if (this.#recovery) return 0;
     if (Date.now() < this.#nextRecovery) return 0;
-    this.#recovery = recoverExpiredLeases(this.db, this.settings.reclaimBatch)
+    this.#recovery = recoverExpiredLeases(
+      this.db,
+      this.settings.reclaimBatch,
+      new Date(),
+      this.taskScope,
+    )
       .then(async (result) => {
         this.#nextRecovery =
           result.reclaimed === this.settings.reclaimBatch
@@ -129,6 +151,13 @@ export class SiteHealthWorker {
     if (Date.now() < this.#nextMaintenance) return;
     const lifecycle = this.settings.lifecycle;
     this.#maintenance = (async () => {
+      if (this.taskScope) {
+        const { workspaceId, crawlId } = this.taskScope;
+        await this.#guard('scoped crawl reconcile failed', () =>
+          reconcileCrawl(this.db, workspaceId, crawlId),
+        );
+        return;
+      }
       await this.#guard('stalled crawl reconcile failed', () =>
         reconcileStalled(this.db, lifecycle),
       );

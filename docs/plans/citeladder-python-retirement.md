@@ -1,6 +1,6 @@
 # TypeScript application with Python schema tooling
 
-Requested 4 October 2026. **PRs 1–3 implemented; PRs 4–5 remain unassigned.**
+Requested 4 October 2026. **PRs 1–4 implemented; PR 5 remains unassigned.**
 This is the continuation after the product/API/worker TypeScript migration.
 It orders remaining work by increasing complexity and operational risk, subject
 to dependencies. It does not resume earlier migration waves or authorize

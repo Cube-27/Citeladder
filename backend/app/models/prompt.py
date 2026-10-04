@@ -25,12 +25,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.config.projects import DEFAULT_PROMPT_ORIGIN
 from app.core.config.prompts import DEFAULT_PROMPT_STATUS, TOPIC_ORIGIN_MANUAL
 from app.core.database import Base
-from app.domain.prompts.normalization import prompt_text_hash
 from app.models.constants import CASCADE_ALL_DELETE_ORPHAN, ON_DELETE_SET_NULL
 
 
@@ -161,7 +160,7 @@ class Prompt(Base):
         index=True,
     )
     text: Mapped[str] = mapped_column(Text)
-    # sha256 hex of the normalized text (domain/prompts/normalization.py) —
+    # sha256 hex of the normalized text (computed by native Prompt writers) —
     # the dedupe key backing the per-set uniqueness constraint.
     normalized_text_hash: Mapped[str] = mapped_column(String(64), default="")
     theme: Mapped[str] = mapped_column(String(255), default="")
@@ -200,13 +199,6 @@ class Prompt(Base):
 
     prompt_set: Mapped[PromptSet] = relationship("PromptSet", back_populates="prompts")
     topic: Mapped[Topic | None] = relationship("Topic", back_populates="prompts")
-
-    @validates("text")
-    def _sync_normalized_hash(self, _key: str, value: str) -> str:
-        # Keeps the dedupe key correct on every ORM write path (create, edit,
-        # test seeds) without each caller having to remember it.
-        self.normalized_text_hash = prompt_text_hash(value)
-        return value
 
 
 from app.models.project import Project  # noqa: E402
