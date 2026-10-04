@@ -1,6 +1,0 @@
-{
-  "access_token": "eyJ0eXAiOi.fake-microsoft-access-token-not-a-real-credential",
-  "refresh_token": "0.A fake-microsoft-refresh-token-not-a-real-credential",
-  "expires_in": 3600,
-  "token_type": "Bearer"
-}

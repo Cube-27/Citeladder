@@ -17,9 +17,9 @@ seat billing or a second account-link entity. Ownership is counted separately
 from invited membership. Workspace selection is explicit; project resolution
 must still authorize the project's workspace.
 
-Source: owner-confirmed sections 0 and 0.1 of the
-[retained original shell plan](archive/plans/citeladder-authed-shell-and-commercial-architecture.md),
-implemented in #61 (44fc0d22), with shell selection in #58 (cae5717f).
+Source: owner-confirmed commercial and workspace decisions, implemented in
+[PR #61](https://github.com/Cube-27/Citeladder/pull/61) (44fc0d22), with shell
+selection in [PR #58](https://github.com/Cube-27/Citeladder/pull/58) (cae5717f).
 [Workspace access](workspace-access.md) and [billing](billing-entitlements.md)
 own shipped behavior. Sign-in selection and invitation delivery remain deferred.
 
@@ -31,9 +31,9 @@ each intent/subscription/receipt to its originating provider and environment;
 vendor keys and webhook vocabulary remain vendor-owned. This avoids rewriting
 commercial accounting to change a payment transport.
 
-Source: owner-confirmed section 0 of the
-[original shell plan](archive/plans/citeladder-authed-shell-and-commercial-architecture.md),
-implemented in #61 (44fc0d22). On 24 September 2026 the owner resumed
+Source: owner-confirmed provider-portability decision, implemented in
+[PR #61](https://github.com/Cube-27/Citeladder/pull/61) (44fc0d22).
+On 24 September 2026 the owner resumed
 Razorpay under the [activation plan](plans/citeladder-razorpay-activation.md);
 payments stay disabled until that plan's sign-off.
 

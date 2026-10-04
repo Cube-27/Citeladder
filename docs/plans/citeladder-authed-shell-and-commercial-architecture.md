@@ -23,7 +23,6 @@ per-workspace commercial model and provider-neutral settlement.
 [Decisions](../decisions.md) records accepted cross-feature choices.
 [Provider readiness](../billing-provider-readiness.md) retains external gates.
 
-The [historical original](../archive/plans/citeladder-authed-shell-and-commercial-architecture.md)
-preserves owner-confirmed decisions in sections 0 and 0.1, the delivery sequence,
-and the code/acceptance distinction. Its past implementation instructions and
-recovery permissions are not current task authority.
+Git and PRs retain the original owner-confirmed decisions and delivery sequence.
+Past implementation instructions and recovery permissions are not current task
+authority.

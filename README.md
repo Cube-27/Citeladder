@@ -189,8 +189,6 @@ migrations/versions/0001_initial.py    pre-launch canonical database baseline
 docs/README.md                         sole active documentation index
 docs/plans/                            live plans, indexed by docs/plans/ACTIVE.md
 docs/decisions.md                      accepted cross-feature decisions and rationale
-docs/evaluations/                      evaluation corpora, provenance, and labels
-docs/archive/                          verified historical records; not implementation authority
 ```
 
 <a id="full-validation"></a>

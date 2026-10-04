@@ -91,16 +91,9 @@ jobs:
         # No `--no-build` here, unlike the Dockerfile: this sync installs the
         # project itself as an editable, which is a local build by definition.
         run: uv sync --frozen --extra dev
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: frontend/package.json
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: Install native measurement scorer dependencies
-        run: pnpm --dir ../frontend install --frozen-lockfile --ignore-scripts
       - name: Backend quality
         env:
           COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}

@@ -392,10 +392,10 @@ Static-analysis commands, pinned by the frozen locks:
 
 ```powershell
 # From backend/. Vulture, import-linter and deptry are CI gates; Radon is an
-# advisory report. `app`, `evaluations` and `scripts` are all gated: an
+# advisory report. `app` and `scripts` are gated: an
 # operational script that silently rots is a script nobody can run on the day
 # they need it.
-uv run vulture app evaluations scripts --min-confidence 80
+uv run vulture app scripts --min-confidence 80
 uv run lint-imports          # layer contracts, backend/.importlinter
 uv run deptry .              # declared-but-unused / used-but-undeclared deps
 uv run radon cc app -s -n C
@@ -409,8 +409,9 @@ pnpm report:duplicates:tests
 ```
 
 The backend complexity policy enforces **CC 12 per function and 800 LOC per
-module** across `app`, `evaluations` and `scripts`; the frontend policy has its
-own ceilings. The exception lists are empty and should stay that way, and there
+module** across `app` and `scripts`; the retired `evaluations` root remains
+guarded if code is reintroduced. The frontend policy has its own ceilings.
+The exception lists are empty and should stay that way, and there
 is no rebaseline command: CI compares the policy with the PR base and rejects
 higher ceilings, higher exceptions, and newly added exceptions. Roots may be
 *added* (widening the gate is a tightening) but never removed.
@@ -471,18 +472,14 @@ uv run python -m scripts.provision_dev_login --help
 uv run python -m scripts.set_site_health_entitlement <workspace_uuid> <monitored_urls>
 ```
 
-Measurement and billing/operator utilities:
+Billing/operator utilities:
 
 ```bash
-uv run python -m scripts.measure_answer_engine_matrix --help
 uv run python -m scripts.billing_admin --help
 uv run python -m scripts.provision_platform_provider_connections --help
 uv run python -m scripts.provision_razorpay_plans --help
 ```
 
-The offline measurement harness batches fixtures through the native scorer;
-install the frontend dependencies with pnpm and use Node 24 before running it.
-Fixture results remain synthetic and cannot satisfy a live acceptance gate.
 Execution repricing is native: from `frontend/`, run
 `pnpm --filter @citeladder/api audit:reprice --help`. Preview is the default;
 applying a versioned cost projection requires an explicit operator action.

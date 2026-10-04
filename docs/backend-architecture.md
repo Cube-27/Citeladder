@@ -26,7 +26,7 @@ limited to model/read defaults and five operator/entitlement settings.
 Native audit config owns lifecycle, scoring, read limits and runtime settings;
 native provider/DataForSEO config owns endpoints, capacity, request policy and
 pricing. Python keeps frozen route identities and the public provider catalog
-for offline evaluation, launch authoring and non-secret provisioning, plus model
+for launch authoring and non-secret provisioning, plus model
 defaults and provenance versions. No Python connector executes an answer engine.
 Commerce competitor discovery uses the native
 analytics worker and Site Health acquisition, parsing and classification owners.
