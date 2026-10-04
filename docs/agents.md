@@ -71,8 +71,9 @@ skill catalog changed before it ran (a deploy in between) ends with
 `skills_changed` before any model call. Budgets live in
 [Agent runtime configuration](../frontend/services/api/src/config/agent-runtime.json)
 and [gateway settings](../frontend/services/api/src/config/model-gateway.json).
-`AGENT_SKILLS_DIRECTORY` still selects the image's read-only packaged skills;
-the development fallback remains the checked-in Python asset directory.
+`AGENT_SKILLS_DIRECTORY` can override the read-only packaged skills directory;
+the default resolves relative to the native API source in both development and
+the deployed package.
 
 A chat owns one deliverable of one kind. Agent saves and user edits both append
 an immutable [output revision](../frontend/services/api/src/agent/outputs.ts); an edit
@@ -240,7 +241,8 @@ loads the packaged `SKILL.md` methodologies, one shared operating contract and a
 content-format reference that the `content_create` skill draws on one format at
 a time. These files are production model input, not coding-agent skills.
 The [API image](../frontend/services/api/Dockerfile) packages the same files from
-`backend/app/core/config/agent_skills` as read-only assets. The catalog version is a
+[`frontend/services/api/assets/agent-skills`](../frontend/services/api/assets/agent-skills/)
+as read-only assets in the API package. The catalog version is a
 content fingerprint of those files after vocabulary expansion. A body may name
 an application-owned vocabulary as `{{name}}`, which the loader expands from its owner's one listing
 (prompt buyer stages and intents), so the list is never hand-copied. The loader

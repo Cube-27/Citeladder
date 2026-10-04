@@ -2,6 +2,13 @@
 
 ## Active
 
+- [TypeScript application / Python schema tooling](citeladder-python-retirement.md)
+  — PR 1 implemented on 4 October 2026: native persistence fixtures and API-owned
+  Agent asset packaging. The owner authorized Markdown formatting, branch push
+  and PR creation; CI/review and merge remain pending. PRs 2–5 remain unassigned.
+  Alembic remains the sole schema author; deployment and merging remain separate
+  owner actions.
+
 - [Backend debt remediation](citeladder-backend-debt-remediation.md)
   — all six slices implemented on `codex/backend-debt-remediation` in one PR,
   one commit per slice in order 6, 5, 1, 2, 3, 4.
@@ -115,15 +122,6 @@
   execution and project skill policy are deferred. D/E remain separate assignments.
 
 ## Queued
-- [TypeScript application / Python schema tooling](citeladder-python-retirement.md)
-  — plan requested and saved on 4 October 2026; implementation not started.
-  The owner selected schema-only Python as the final target: SQLAlchemy,
-  Alembic and asyncpg remain; application policy, operators and bootstrap move
-  to TypeScript in five PRs with internal slices. The owner-defined workflow
-  implements the selected PR fully, uses one Astra Medium diff review, then
-  batches fixes and final targeted validation. No browser testing or file quota.
-  Schema migration is out of scope.
-  This entry authorizes no execution.
 - [AI Traffic analytics, crawl logs and authorized crawl](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026 and revised twice on 3 October 2026;
   A1 bot catalog and AI crawlability merged in PR #257. A2 Crawl Logs and the AI
