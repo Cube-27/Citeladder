@@ -9,20 +9,16 @@ import { pageDataset, type JoinedPage } from './pages-data.ts';
 import { pageContext, pageComparable } from './pages.ts';
 import { aiTraffic } from '../config/ai-traffic.ts';
 import { policy } from '../config.ts';
-import { strings, record } from '../db/json.ts';
+import { strings, record, numberRecord } from '../db/json.ts';
 import { taskProject, type Executor } from '../workers/executor.ts';
 import { isoDateText } from '../db/timestamps.ts';
 
 type Pattern = z.infer<typeof aiTrafficInsightsSchema>['patterns'][number];
-function comparable(rows: JoinedPage[], context: Awaited<ReturnType<typeof pageContext>>) {
-  return rows.every((r) => pageComparable(r, context));
-}
 function verifiedErrorCounts(rows: JoinedPage[]) {
   const codes: Record<string, number> = {};
   for (const row of rows)
-    for (const [code, count] of Object.entries(record(row.verified_errors)))
-      if (typeof count === 'number')
-        codes['status_' + code] = (codes['status_' + code] ?? 0) + count;
+    for (const [code, count] of Object.entries(numberRecord(row.verified_errors)))
+      codes['status_' + code] = (codes['status_' + code] ?? 0) + count;
   return codes;
 }
 export function insightPatterns(
@@ -33,7 +29,8 @@ export function insightPatterns(
   const patterns: Pattern[] = [],
     ga4 = context.ga4Complete;
   const crawl = context.crawlComplete;
-  const compatible = comparable(rows, context);
+  const compatible = rows.every((r) => pageComparable(r, context));
+  const absenceReady = crawl && ga4 && compatible;
   const add = (
     pattern: Pattern['pattern'],
     items: JoinedPage[],
@@ -49,7 +46,7 @@ export function insightPatterns(
       coverage: { crawl: context.crawl.coverage, ga4: ga4 ? 'complete' : 'incomplete' },
     });
   };
-  if (crawl && ga4 && compatible) {
+  if (absenceReady) {
     const absent = rows.filter(
       (r) =>
         (r.verified_requests ?? 0) >= aiTraffic.min_verified_requests && (r.sessions ?? 0) === 0,
@@ -60,19 +57,15 @@ export function insightPatterns(
       'Verified AI requests and no identifiable AI referrals co-occurred in this window.',
       { requests: absent.reduce((s, r) => s + (r.verified_requests ?? 0), 0) },
     );
-  }
-  if (crawl && ga4 && compatible) {
-    const absent = rows.filter(
+    const unseen = rows.filter(
       (r) => (r.sessions ?? 0) >= aiTraffic.min_referral_sessions && (r.ai_requests ?? 0) === 0,
     );
     add(
       'referrals_without_recent_crawl',
-      absent,
+      unseen,
       'AI referrals co-occurred with no recognized AI requests in the complete available logs.',
-      { sessions: absent.reduce((s, r) => s + (r.sessions ?? 0), 0) },
+      { sessions: unseen.reduce((s, r) => s + (r.sessions ?? 0), 0) },
     );
-  }
-  if (crawl && ga4 && compatible) {
     const valuable = rows.filter(
       (r) =>
         Object.keys(record(r.verified_errors)).length > 0 &&
@@ -111,9 +104,10 @@ export const refreshTrafficInsights: Executor = async (task, { db, checkCancelle
     await sql`select pg_advisory_xact_lock(hashtextextended(${scope.workspaceId + ':' + projectId + ':ai-traffic-insights-publication'},0))`.execute(
       trx,
     );
+    // Windows share one locked transaction; each checks cancellation first.
     for (const range of Object.keys(policy.analytics.preset_range_days)) {
-      await checkCancelled('AI Traffic insight window');
-      await refreshInsightWindow(trx, scope, { range });
+      await checkCancelled('AI Traffic insight window'); // NOSONAR
+      await refreshInsightWindow(trx, scope, { range }); // NOSONAR
     }
   });
 };
@@ -132,7 +126,7 @@ export async function refreshInsightWindow(
   const rows = data.rows.slice(0, aiTraffic.max_timeline_items),
     patterns = insightPatterns(rows, context, bounded);
   let notice: string | null = null;
-  if (!comparable(rows, context))
+  if (!rows.every((r) => pageComparable(r, context)))
     notice = 'Reporting timezones are non-comparable. Patterns are unavailable.';
   else if (!context.crawlComplete || !context.ga4Complete)
     notice = 'Coverage is incomplete. Absence-based insights are unavailable.';

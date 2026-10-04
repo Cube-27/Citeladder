@@ -330,8 +330,9 @@ function executor(displayOnly: boolean): Executor {
           .sort(compareText)
           .at(-1)!,
       };
+      // Reads and writes share the snapshot transaction, so they run in order.
       for (const dataset of p.TRAFFIC_PROJECTED_DATASETS)
-        allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset);
+        allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset); // NOSONAR
       if ((await partitionEpoch(trx, partitionScope)) !== epoch)
         throw new Error('Integration partitions changed during Traffic projection; retry');
       for (const target of targets) {
@@ -342,13 +343,8 @@ function executor(displayOnly: boolean): Executor {
           );
           target.builder.partitionQuality(dataset, quality[dataset]!);
         }
-        const snapshotId = await persist(
-          trx,
-          task,
-          target,
-          { ...coverage, analytics_quality: quality },
-          displayOnly,
-        );
+        const evidence = { ...coverage, analytics_quality: quality };
+        const snapshotId = await persist(trx, task, target, evidence, displayOnly); // NOSONAR
         if (snapshotId && target.verifies) verifying.push(snapshotId);
       }
       await Promise.all(

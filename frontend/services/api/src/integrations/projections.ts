@@ -28,6 +28,7 @@ export async function enqueuePostSyncProjections(
   ) as number;
   const referralDatasets = new Set(policy.traffic.TRAFFIC_GA4_REFERRAL_DATASETS);
   const trafficDatasets = new Set(policy.traffic.TRAFFIC_REFRESH_TRIGGER_DATASETS);
+  const referralExtraDatasets = new Set(policy.traffic.AI_REFERRALS_REFRESH_TRIGGER_DATASETS);
   for (const artifact of artifacts) {
     if (!referralDatasets.has(artifact.dataset)) continue;
     await enqueueTask(trx, {
@@ -52,14 +53,7 @@ export async function enqueuePostSyncProjections(
       maxAttempts,
     });
   }
-  if (
-    failed ||
-    artifacts.some((a) =>
-      ['ga4_landing_daily', 'ga4_channel_daily', 'ga4_ecommerce_source_medium_daily'].includes(
-        a.dataset,
-      ),
-    )
-  )
+  if (failed || artifacts.some((a) => referralExtraDatasets.has(a.dataset)))
     await enqueueTask(trx, {
       workspaceId: run.workspace_id,
       projectId: run.project_id,

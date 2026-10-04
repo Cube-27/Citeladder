@@ -15,6 +15,7 @@ import {
 import type { Database } from '../src/db/database.ts';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
+import { compareText } from '../src/text-order.ts';
 import { enqueue, seedImport, seedProject, type ImportSeed } from './referral-fixtures.ts';
 import { Fixtures, sessionToken, testConfig } from './support.ts';
 
@@ -90,7 +91,10 @@ export async function metric(
   if (day < start || day > end)
     await db
       .updateTable('integration_sync_runs')
-      .set({ window_start: day < start ? day : start, window_end: day > end ? day : end })
+      .set({
+        window_start: [day, start].sort(compareText)[0]!,
+        window_end: [day, end].sort(compareText)[1]!,
+      })
       .where('id', '=', run.id)
       .execute();
   let artifact = await db

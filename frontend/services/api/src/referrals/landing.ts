@@ -242,7 +242,8 @@ export async function replaceReferralLandings(
     .where('reporting_date', '<=', sql<Date>`${scope.end}::date`)
     .execute();
   for (let i = 0; i < extras.landing.length; i += policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE) {
-    await db
+    // Chunks stay under the bind-parameter limit on one connection.
+    await db // NOSONAR
       .insertInto('ai_referral_landing_daily')
       .values(
         extras.landing.slice(i, i + policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE).map((r) => ({

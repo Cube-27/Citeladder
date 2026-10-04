@@ -6,11 +6,12 @@ import { compareText } from '../text-order.ts';
 import { policy } from '../config.ts';
 
 const landingDimensions = JSON.stringify(policy.integrations.datasets.ga4_landing_daily.dimensions);
-const incompatibleLanding = (
-  alias: string,
-) => sql<boolean>`${sql.ref(`${alias}.dataset`)}='ga4_landing_daily'
-  and ${sql.ref(`${alias}.query_snapshot`)} ? 'dimensions'
-  and ${sql.ref(`${alias}.query_snapshot`)}->'dimensions' <> ${landingDimensions}::jsonb`;
+const aliased = (alias: string, name: string) => sql.ref(`${alias}.${name}`);
+const incompatibleLanding = (alias: string) => {
+  const snapshot = aliased(alias, 'query_snapshot');
+  return sql<boolean>`${aliased(alias, 'dataset')}='ga4_landing_daily'
+  and ${snapshot} ? 'dimensions' and ${snapshot}->'dimensions' <> ${landingDimensions}::jsonb`;
+};
 
 // A successful run completed every selected dataset. A terminal page can also
 // complete one dataset before another dataset in that run fails. Raw artifacts
@@ -22,7 +23,7 @@ const complete = sql<boolean>`a.id is not null and (r.status = 'succeeded' or a.
 
 /** Apply to an integration_metric_rows query (plain table or the given alias). */
 export function selectedPartition(alias = 'integration_metric_rows') {
-  const col = (name: string) => sql.ref(`${alias}.${name}`);
+  const col = (name: string) => aliased(alias, name);
   return sql<boolean>`${col('resync_seq')} = (
     select max(r.resync_seq) from integration_sync_runs r
     join integration_import_artifacts a on a.workspace_id=r.workspace_id and a.sync_run_id=r.id

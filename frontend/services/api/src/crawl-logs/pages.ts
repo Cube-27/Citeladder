@@ -6,13 +6,18 @@ import {
 } from '@citeladder/contracts/ai-traffic';
 import type { z } from 'zod';
 import type { Database } from '../db/database.ts';
-import { crawlSummary, crawlWindow, verificationFilter, type CrawlReadOptions } from './reads.ts';
+import {
+  crawlSummary,
+  crawlWindow,
+  pageLimit,
+  verificationFilter,
+  type CrawlReadOptions,
+} from './reads.ts';
 import type { CrawlScope } from './state.ts';
 import { pageDataset, pageSorts, aiBots, type JoinedPage, type PageOptions } from './pages-data.ts';
 import { partitionQuality } from '../integrations/partitions.ts';
 import { strings, record } from '../db/json.ts';
 import { aiTraffic } from '../config/ai-traffic.ts';
-import { crawlLogs } from '../config/crawl-logs.ts';
 import {
   encodeKeysetCursor,
   decodeKeysetCursor,
@@ -27,7 +32,7 @@ export async function pageContext(db: Database, scope: CrawlScope, options: Craw
   const w = crawlWindow(options);
   const [crawl, partitions, mapping, audits, snapshot] = await Promise.all([
     crawlSummary(db, scope, options),
-    partitionQuality(db, { ...scope, ...w, start: w.start, end: w.end }, 'ga4_landing_daily'),
+    partitionQuality(db, { ...scope, ...w }, 'ga4_landing_daily'),
     db
       .selectFrom('integration_property_mappings')
       .select('id')
@@ -213,9 +218,7 @@ async function observedCoverage(
 }
 export async function pagesRead(db: Database, scope: CrawlScope, options: PageOptions = {}) {
   const w = crawlWindow(options),
-    limit = options.limit ?? crawlLogs.default_page_size;
-  if (!Number.isInteger(limit) || limit < 1 || limit > crawlLogs.max_page_size)
-    throw new ApiError(422, 'Invalid page size');
+    limit = pageLimit(options);
   const { cursor, ...rest } = options,
     filters = { ...rest, ...w, limit, sort: options.sort ?? 'requests_desc' },
     endpoint = [scope.workspaceId, scope.projectId, 'pages'].join(':');

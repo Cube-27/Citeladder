@@ -75,6 +75,7 @@ export async function pageDataset(db: Database, scope: CrawlScope, options: Page
     .executeTakeFirst();
   const owned = sql`workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid`;
   const days = sql`reporting_date between ${w.start}::date and ${w.end}::date`;
+  const botFilter = options.bot_id ? sql`bot_id=${options.bot_id}` : sql`true`;
   const sort = options.sort ?? 'requests_desc';
   if (!Object.hasOwn(pageSorts, sort)) throw new ApiError(422, 'Invalid Pages sort');
   const ascending = sort === 'url_asc',
@@ -106,11 +107,11 @@ export async function pageDataset(db: Database, scope: CrawlScope, options: Page
       to_char(max(last_seen_at) at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as last_crawl,
       jsonb_agg(distinct reporting_timezone) as crawl_timezones,jsonb_agg(id) as crawl_ids
       from bot_activity_daily where ${owned} and ${days} and identity='exact' and url_hash is not null
-        and verification=any(${verification}::text[]) and ${options.bot_id ? sql`bot_id=${options.bot_id}` : sql`true`} group by url_hash),
+        and verification=any(${verification}::text[]) and ${botFilter} group by url_hash),
     errors as (select url_hash,jsonb_object_agg(status_code,n) as verified_errors from
       (select url_hash,status_code,sum(requests)::integer n from bot_activity_daily where ${owned} and ${days}
         and identity='exact' and verification='verified' and status_code>=400
-        and ${options.bot_id ? sql`bot_id=${options.bot_id}` : sql`true`} group by url_hash,status_code) e group by url_hash),
+        and ${botFilter} group by url_hash,status_code) e group by url_hash),
     landing as (select url_hash,min(canonical_url) as canonical_url,min(display_path) as display_path,min(folder) as folder,min(resource_class) as resource_class,sum(sessions)::integer as sessions,sum(key_events) as key_events,
       jsonb_agg(distinct reporting_timezone) as referral_timezones,jsonb_agg(id) as landing_ids,
       (select coalesce(jsonb_agg(distinct flag),'[]') from ai_referral_landing_daily q,
@@ -151,7 +152,7 @@ export async function pageDataset(db: Database, scope: CrawlScope, options: Page
     limit ${options.dataset_limit ?? (options.limit ?? crawlLogs.default_page_size) + 1}`.execute(
     db,
   );
-  return { rows: rows.rows, crawl, window: w };
+  return { rows: rows.rows, crawl };
 }
 export function aiBots(includeTraining = false) {
   return crawlers.bots

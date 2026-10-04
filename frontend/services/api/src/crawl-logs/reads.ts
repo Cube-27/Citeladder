@@ -98,7 +98,7 @@ function cursorParts(scope: CrawlScope, view: string, options: CrawlReadOptions)
     throw error;
   }
 }
-function pageLimit(options: CrawlReadOptions) {
+export function pageLimit(options: CrawlReadOptions) {
   const limit = options.limit ?? crawlLogs.default_page_size;
   if (!Number.isInteger(limit) || limit < 1 || limit > crawlLogs.max_page_size)
     throw new ApiError(422, 'Invalid page size');

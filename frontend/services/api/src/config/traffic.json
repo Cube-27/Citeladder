@@ -19,6 +19,11 @@
     "gsc_page_daily",
     "gsc_query_daily"
   ],
+  "AI_REFERRALS_REFRESH_TRIGGER_DATASETS": [
+    "ga4_channel_daily",
+    "ga4_ecommerce_source_medium_daily",
+    "ga4_landing_daily"
+  ],
   "TRAFFIC_REFRESH_TRIGGER_DATASETS": [
     "bing_page_daily",
     "bing_query_daily",
