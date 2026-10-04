@@ -1,6 +1,6 @@
 # TypeScript application with Python schema tooling
 
-Requested 4 October 2026. **PR 1 implemented; PRs 2–5 remain unassigned.**
+Requested 4 October 2026. **PRs 1–2 implemented; PRs 3–5 remain unassigned.**
 This is the continuation after the product/API/worker TypeScript migration.
 It orders remaining work by increasing complexity and operational risk, subject
 to dependencies. It does not resume earlier migration waves or authorize
@@ -92,7 +92,7 @@ D4 of the [earlier migration plan](citeladder-typescript-migration.md#4-decision
 continue to require Alembic as sole schema author. Kysely types remain generated
 from the Alembic-migrated database. The accepted boundary is recorded in
 [decisions](../decisions.md#typescript-application-python-schema-tooling).
-The owner assigned PR 1 on 4 October 2026; this decision does not assign later PRs.
+The owner assigned PRs 1 and 2 on 4 October 2026; this decision does not assign later PRs.
 
 Reuse the existing Node services, PostgreSQL database and deployment jobs.
 Do not add always-on services or provision infrastructure for this migration.

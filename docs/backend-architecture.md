@@ -26,7 +26,7 @@ limited to model/read defaults and five operator/entitlement settings.
 Native audit config owns lifecycle, scoring, read limits and runtime settings;
 native provider/DataForSEO config owns endpoints, capacity, request policy and
 pricing. Python keeps frozen route identities and the public provider catalog
-for launch authoring and non-secret provisioning, plus model
+for launch authoring and shared schema/seed readers, plus model
 defaults and provenance versions. No Python connector executes an answer engine.
 Commerce competitor discovery uses the native
 analytics worker and Site Health acquisition, parsing and classification owners.
@@ -56,7 +56,9 @@ for convenience.
 Python 3.12, async SQLAlchemy/asyncpg and Pydantic settings own the remaining
 Python runtime; Node 26, Hono and Kysely own the native service and workers.
 Compose names the native API `api-service` on port 8100. The Python image runs
-one-shot migrations/bootstrap and offline operators. Browser calls stay same-origin
+one-shot migrations/bootstrap and remaining commercial/seed operators. Bounded
+provider provisioning, acquisition control, agreement references and interactive
+account administration run in the native API package/image. Browser calls stay same-origin
 `/api/v1`. Native startup enforces the shared production secret, database, proxy,
 demo and redirect-origin admission policy; Python keeps the same safeguards for
 migration and operator tooling.

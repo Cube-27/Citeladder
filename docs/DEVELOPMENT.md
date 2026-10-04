@@ -476,9 +476,29 @@ Billing/operator utilities:
 
 ```bash
 uv run python -m scripts.billing_admin --help
-uv run python -m scripts.provision_platform_provider_connections --help
 uv run python -m scripts.provision_razorpay_plans --help
 ```
+
+Bounded identity/acquisition/provider operators are native. From `frontend/`:
+
+```bash
+pnpm --filter @citeladder/api provision:platform --actor <admin-email> --credential-ref openai=vault://platform/openai --dry-run
+pnpm --filter @citeladder/api acquisition:control --actor <admin-email> --domain <domain-or-*> --reason <reason>
+pnpm --filter @citeladder/api agreement:record --actor <admin-email> < local-reference.json
+pnpm --filter @citeladder/api account:manage --actor <owner-or-admin-email> --workspace-id <uuid>
+```
+
+Acquisition, agreement and platform provisioning commands roll back unless
+`--apply` is supplied. Platform provisioning also accepts explicit `--dry-run`
+preview; combining it with `--apply` is refused. Platform provisioning
+requires an active platform administrator, accepts only opaque references and
+makes no provider calls. Agreement reference JSON is read from bounded stdin
+(PowerShell: `Get-Content -Raw local-reference.json | pnpm --filter
+@citeladder/api agreement:record --actor <admin-email>`). The account manager
+requires an interactive terminal for passwords and confirmation for mutations.
+The native API image also supports these entrypoints via
+`node src/cli/<entrypoint>.ts`; the root Python image defaults to `alembic --help`
+and remains usable for migrations/bootstrap.
 
 Execution repricing is native: from `frontend/`, run
 `pnpm --filter @citeladder/api audit:reprice --help`. Preview is the default;
@@ -493,7 +513,9 @@ Platform provider provisioning stores only each non-secret opaque reference.
 At execution, that reference must exactly match the corresponding
 `PROVIDER_PLATFORM_<TRANSPORT>_CREDENTIAL_REF`; the deployment secret manager
 injects the key into `PROVIDER_PLATFORM_<TRANSPORT>_API_KEY`. Never pass a raw
-provider key to the provisioning command.
+provider key to the provisioning command. Creation and credential rotation
+leave probe status unverified; this metadata command does not establish route
+readiness. Admission remains closed until a successful provider test is recorded.
 
 `billing_admin` mutations are dry-run by default and require an explicit target,
 active admin actor, reason, and idempotency key; repeat the reviewed command with

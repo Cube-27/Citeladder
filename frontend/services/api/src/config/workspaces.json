@@ -1,4 +1,7 @@
 {
+  "invitation_ttl_hours": 168,
+  "max_pending_invitations": 50,
+  "agreement_input_max_bytes": 16384,
   "forbidden_code": "workspace_role_forbidden",
   "denial_messages": {
     "read": "Workspace access is required",

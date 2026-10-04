@@ -1,0 +1,97 @@
+import { createInterface } from 'node:readline/promises';
+import { parseArgs } from 'node:util';
+import type { Database } from '../db/database.ts';
+import {
+  authenticateOperator,
+  manageAccount,
+  type AccountAction,
+  type OperatorSession,
+} from '../workspaces/account-manager.ts';
+import { required, withOperatorDatabase } from './operator.ts';
+import { terminalPassword } from './terminal-password.ts';
+
+async function ask(label: string) {
+  const terminal = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    return (await terminal.question(`${label}: `)).trim();
+  } finally {
+    terminal.close();
+  }
+}
+
+async function collectAction(
+  db: Database,
+  choice: string,
+): Promise<Exclude<AccountAction, { kind: 'list' }> | null> {
+  if (!['2', '3', '4'].includes(choice)) {
+    console.log('Choose 0-4.');
+    return null;
+  }
+  const email = await ask('Email');
+  if (choice === '4')
+    return { kind: 'password', email, password: await terminalPassword('New password') };
+  const role = (await ask('Workspace role (admin/member/viewer)')).toLowerCase();
+  if (choice === '3') return { kind: 'role', email, role };
+  const existing = await db
+    .selectFrom('users')
+    .select('id')
+    .where('email', '=', email.toLowerCase())
+    .executeTakeFirst();
+  return {
+    kind: 'invite',
+    email,
+    role,
+    ...(!existing ? { password: await terminalPassword('New login password') } : {}),
+  };
+}
+
+async function manageChoice(db: Database, session: OperatorSession): Promise<boolean> {
+  console.log('1 List members  2 Create/invite user  3 Change role  4 Reset password  0 Exit');
+  const choice = await ask('Choice');
+  if (choice === '0') return false;
+  try {
+    // Recheck between choices; no transaction/locks remain open during prompts.
+    const members = await manageAccount(db, session, { kind: 'list' });
+    if (choice === '1') console.log(members);
+    else {
+      const action = await collectAction(db, choice);
+      if (
+        action &&
+        (await ask(`Confirm ${action.kind} for ${action.email} [type yes]`)).toLowerCase() === 'yes'
+      )
+        console.log(await manageAccount(db, session, action));
+    }
+  } catch (error) {
+    console.log(`No change: ${error instanceof Error ? error.message : 'operation failed'}`);
+  }
+  return true;
+}
+
+const { values } = parseArgs({
+  options: {
+    actor: { type: 'string' },
+    'workspace-id': { type: 'string' },
+    help: { type: 'boolean' },
+  },
+});
+if (values.help)
+  console.log(
+    'account:manage --actor WORKSPACE_OWNER_OR_ADMIN_EMAIL --workspace-id UUID (terminal passwords only)',
+  );
+else {
+  const actor = required(values.actor, 'actor'),
+    workspaceId = required(values['workspace-id'], 'workspace-id');
+  await withOperatorDatabase(async (db) => {
+    const session = await authenticateOperator(
+      db,
+      actor,
+      workspaceId,
+      await terminalPassword('Operator password'),
+    );
+    console.log(`Managing ${workspaceId} as ${actor}`);
+    // A choice includes prompts and confirmation; finish it before asking for another.
+    while (await manageChoice(db, session)) {
+      /* interactive session */
+    }
+  });
+}

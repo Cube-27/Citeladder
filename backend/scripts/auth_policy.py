@@ -48,9 +48,5 @@ def workspace_policy() -> dict[str, Any]:
     """Workspace limits and the role matrix the TypeScript owner enforces."""
     return {
         "max_owned": workspace_config.MAX_OWNED_WORKSPACES_PER_USER,
-        "invitation_ttl_hours": workspace_config.INVITATION_TTL_HOURS,
-        "max_pending_invitations": (
-            workspace_config.MAX_PENDING_INVITATIONS_PER_WORKSPACE
-        ),
         "roles": {role: list(effective_capabilities(role)) for role in WORKSPACE_ROLES},
     }

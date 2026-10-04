@@ -38,10 +38,11 @@ import { trustedClientIdentity } from '../auth/client-identity.ts';
 import { enforceSubjectRequest } from '../abuse/usage.ts';
 import type { Context } from 'hono';
 import type { Database } from '../db/database.ts';
+import { passwordSchema } from '../auth/password.ts';
 
 const credentialsSchema = z.object({
   email: z.email().trim().max(255),
-  password: z.string().min(8).max(128),
+  password: passwordSchema,
 });
 const base = { family: 'auth', authorize: 'public', params: { path: {}, query: {} } } as const;
 const oauthPath = { provider: { scalar: { kind: 'str' }, required: true } } as const;

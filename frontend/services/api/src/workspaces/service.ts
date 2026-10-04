@@ -22,6 +22,10 @@ type Role = keyof typeof policy.workspaces.roles;
 const roleSchema = z.enum(Object.keys(policy.workspaces.roles) as [Role, ...Role[]]);
 export const assignableRoleSchema = roleSchema.exclude(['owner']);
 export type AssignableRole = z.infer<typeof assignableRoleSchema>;
+export type MemberMutation =
+  | { memberId: string; role: AssignableRole }
+  | { memberId: string; remove: true }
+  | { leave: true };
 
 export function workspaceView(
   workspace: Selectable<Workspaces>,
@@ -84,7 +88,11 @@ async function insertWorkspace(
 }
 
 /** Login repair is a write; /me and workspace GETs never call this. */
-export async function provisionAccount(db: Database, user: User): Promise<string | null> {
+export async function provisionAccount(
+  db: Database,
+  user: User,
+  options: { provisionAccess?: boolean } = {},
+): Promise<string | null> {
   await subjectXactLock(db, `workspace.create:${user.id}`);
   let owned = await ownedWorkspaces(db, user.id);
   let createdId: string | null = null;
@@ -97,7 +105,7 @@ export async function provisionAccount(db: Database, user: User): Promise<string
     createdId = created.id;
     owned = [created];
   }
-  for (const workspace of owned) await ensureWorkspaceBilling(db, workspace.id, user);
+  for (const workspace of owned) await ensureWorkspaceBilling(db, workspace.id, user, options);
   return createdId;
 }
 
@@ -174,60 +182,66 @@ export function mutateMember(
   db: Database,
   workspaceId: string,
   actorId: string,
-  target:
-    | { memberId: string; role: AssignableRole }
-    | { memberId: string; remove: true }
-    | { leave: true },
+  target: MemberMutation,
 ) {
-  return db.transaction().execute(async (trx) => {
-    await lockAuthorizedWorkspace(
-      trx,
-      workspaceId,
-      actorId,
-      'leave' in target ? 'read' : 'manage_members',
-    );
-    const query = trx
-      .selectFrom('workspace_members')
-      .selectAll()
-      .where('workspace_id', '=', workspaceId);
-    const member = await (
-      'leave' in target
-        ? query.where('user_id', '=', actorId)
-        : query.where('id', '=', target.memberId)
-    )
-      .forUpdate()
-      .executeTakeFirst();
-    if (!member)
-      throw new ApiError(404, 'member_not_found', { code: 'workspace_member_not_found' });
-    if (member.role === 'owner') ownerRequired('Transfer ownership first');
-    if ('role' in target) {
-      if (member.role !== target.role) {
-        await trx
-          .updateTable('workspace_members')
-          .set({ role: target.role, updated_at: new Date() })
-          .where('id', '=', member.id)
-          .where('workspace_id', '=', workspaceId)
-          .execute();
-        await recordSecurityEvent(trx, 'membership.role', actorId, workspaceId, member.user_id);
-      }
-    } else {
+  return db
+    .transaction()
+    .execute((trx) => mutateMemberInTransaction(trx, workspaceId, actorId, target));
+}
+
+export async function mutateMemberInTransaction(
+  trx: Database,
+  workspaceId: string,
+  actorId: string,
+  target: MemberMutation,
+) {
+  if ('role' in target) assignableRoleSchema.parse(target.role);
+  await lockAuthorizedWorkspace(
+    trx,
+    workspaceId,
+    actorId,
+    'leave' in target ? 'read' : 'manage_members',
+  );
+  const query = trx
+    .selectFrom('workspace_members')
+    .selectAll()
+    .where('workspace_id', '=', workspaceId);
+  const member = await (
+    'leave' in target
+      ? query.where('user_id', '=', actorId)
+      : query.where('id', '=', target.memberId)
+  )
+    .forUpdate()
+    .executeTakeFirst();
+  if (!member) throw new ApiError(404, 'member_not_found', { code: 'workspace_member_not_found' });
+  if (member.role === 'owner') ownerRequired('Transfer ownership first');
+  if ('role' in target) {
+    if (member.role !== target.role) {
       await trx
-        .deleteFrom('workspace_members')
+        .updateTable('workspace_members')
+        .set({ role: target.role, updated_at: new Date() })
         .where('id', '=', member.id)
         .where('workspace_id', '=', workspaceId)
         .execute();
-      await recordSecurityEvent(
-        trx,
-        'leave' in target ? 'membership.leave' : 'membership.remove',
-        actorId,
-        workspaceId,
-        member.user_id,
-      );
+      await recordSecurityEvent(trx, 'membership.role', actorId, workspaceId, member.user_id);
     }
-    return 'role' in target
-      ? (await listMembers(trx, workspaceId, actorId)).find((row) => row.id === member.id)!
-      : null;
-  });
+  } else {
+    await trx
+      .deleteFrom('workspace_members')
+      .where('id', '=', member.id)
+      .where('workspace_id', '=', workspaceId)
+      .execute();
+    await recordSecurityEvent(
+      trx,
+      'leave' in target ? 'membership.leave' : 'membership.remove',
+      actorId,
+      workspaceId,
+      member.user_id,
+    );
+  }
+  return 'role' in target
+    ? (await listMembers(trx, workspaceId, actorId)).find((row) => row.id === member.id)!
+    : null;
 }
 
 export function transferOwnership(

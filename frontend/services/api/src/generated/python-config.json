@@ -228,8 +228,6 @@
   },
   "workspaces": {
     "max_owned": 1,
-    "invitation_ttl_hours": 168,
-    "max_pending_invitations": 50,
     "roles": {
       "owner": [
         "manage_billing",

@@ -3,9 +3,10 @@
 ## Active
 
 - [TypeScript application / Python schema tooling](citeladder-python-retirement.md)
-  — PR 1 implemented on 4 October 2026: native persistence fixtures and API-owned
-  Agent asset packaging. The owner authorized Markdown formatting, branch push
-  and PR creation; CI/review and merge remain pending. PRs 2–5 remain unassigned.
+  — PRs 1–2 implemented on 4 October 2026: native persistence fixtures, API-owned
+  Agent assets and bounded provider/acquisition/agreement/account operators.
+  PR 1 merged in #263. PR 2 is implemented on `codex/python-retirement-pr2`;
+  CI/review and merge remain pending. PRs 3–5 remain unassigned.
   Alembic remains the sole schema author; deployment and merging remain separate
   owner actions.
 

@@ -36,19 +36,6 @@ from app.core.config.provider_routes import (
     measurement_routes_for_engine as measurement_routes_for_engine,
 )
 
-
-def engines_for_transport(transport_provider: str) -> tuple[str, ...]:
-    """Logical engines reachable through a transport, in catalog order."""
-    return tuple(
-        engine
-        for engine in LOGICAL_ENGINES
-        if any(
-            route.transport_provider == transport_provider
-            for route in measurement_routes_for_engine(engine)
-        )
-    )
-
-
 PROVIDER_GROK: Final = "grok"
 
 PROVIDER_PERPLEXITY: Final = "perplexity"
@@ -215,5 +202,3 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
 CREDENTIAL_SOURCE_BYOK: Final = "byok"
 
 CREDENTIAL_SOURCE_PLATFORM: Final = "platform"
-
-SYSTEM_WORKSPACE_NAME: Final = "CiteLadder Platform (system)"

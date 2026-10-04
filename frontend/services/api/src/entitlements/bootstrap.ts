@@ -50,6 +50,7 @@ export async function ensureWorkspaceBilling(
   db: Database,
   workspaceId: string,
   user: Selectable<Users>,
+  options: { provisionAccess?: boolean } = {},
 ): Promise<void> {
   const now = new Date();
   await db
@@ -74,6 +75,7 @@ export async function ensureWorkspaceBilling(
     .where('workspace_id', '=', workspaceId)
     .forUpdate()
     .executeTakeFirstOrThrow();
+  if (options.provisionAccess === false) return;
   const cfg = policy.entitlements.baseline;
   const idempotencyKey = `${cfg.revision}:system:public-signup`;
   const existing = await db

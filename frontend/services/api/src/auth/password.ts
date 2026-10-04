@@ -1,5 +1,11 @@
 import { hash, verify } from '@node-rs/argon2';
 import { policy } from '../config.ts';
+import { z } from 'zod';
+
+export const passwordSchema = z
+  .string()
+  .min(policy.secret_policy.login_password.min_chars)
+  .max(policy.secret_policy.login_password.max_chars);
 
 export function hashPassword(password: string): Promise<string> {
   return hash(password, policy.auth.password);

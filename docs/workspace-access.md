@@ -13,7 +13,7 @@ The designation is distinct from platform/operator administration.
 [auth service](../frontend/services/api/src/auth/service.ts) own session establishment.
 Registration returns a generic acknowledgement rather than a session, and is
 refused unless `PUBLIC_SIGNUP_ENABLED` is set; operators otherwise create
-accounts with `backend/scripts/account_manager.py`. Google sign-in, which
+accounts with the native `account:manage` CLI. Google sign-in, which
 creates an account on first use, is separately gated by `OAUTH_GOOGLE_ENABLED`.
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. The frontend crosses the
@@ -21,8 +21,9 @@ identity boundary with full-document navigation so a prefetched anonymous
 layout cannot be reused.
 
 TypeScript issues sessions, owns OAuth and abuse policy, and reads shared Argon2
-parameters from the generated Python config export. Python account/demo operators
-retain password and provisioning behavior. Google sign-in
+parameters from the generated Python config export. Native account administration
+shares the password owner; Python demo/bootstrap tools retain provisioning until
+PR 4 of the retirement plan. Google sign-in
 uses a signed state bound to an HttpOnly transaction cookie and verified email
 before linking a new provider subject. Provider requests have host, redirect,
 deadline and response-size bounds. PostgreSQL abuse counters commit before
@@ -63,8 +64,8 @@ renewed acceptance and never overwrites an earlier row. Privacy is a notice;
 optional analytics consent remains separate. The approved revision registry is
 `frontend/services/api/src/config/auth-runtime.json`; internal proposals never enter it.
 Signed enterprise-agreement references are separate append-only records. A
-platform administrator uses `uv run python -m scripts.enterprise_agreement
---actor <admin-email> --input <local-json-file>` from `backend/`; the command
+platform administrator pipes local reference JSON into `pnpm --filter
+@citeladder/api agreement:record --actor <admin-email>` from `frontend/`; the command
 rolls back unless `--apply` is supplied. The JSON names `workspace_id`,
 `signatory_id`, an opaque `reference`, `document_sha256`, timezone-aware
 `signed_at`, and `authority_verified: true`. The operator must verify the
@@ -146,7 +147,8 @@ cover the central boundaries. Accepted rationale is in
 ## Operator account management
 
 Trusted workspace operators can run the interactive
-[account manager](../backend/scripts/account_manager.py) from a backend terminal.
+[account manager](../frontend/services/api/src/cli/account-manager.ts) from a terminal
+with Node 26 and installed frontend dependencies (or the native API image).
 It requires an active Owner or Admin of the explicit target workspace. It lists
 members, creates or invites a user, changes
 an existing member's assignable role, and resets a member's password while
@@ -155,26 +157,42 @@ delivery to the invitee; the invitee accepts while signed in. The tool does not
 issue grants or set project or prompt limits.
 
 ```bash
-cd backend
-uv run python -m scripts.account_manager \
+cd frontend
+pnpm --filter @citeladder/api account:manage \
   --actor <workspace-owner-or-admin-email> --workspace-id <workspace-uuid>
 ```
 
 Against production, open the IAP database tunnel from the
 [GCP runbook](operations/GCP_RUNBOOK.md#3-daily-operation) and run the same
-command from `backend/` with `DATABASE_URL` pointing at `127.0.0.1:15432`.
+command from `frontend/` with `DATABASE_URL` pointing at `127.0.0.1:15432`.
 
 Passwords are prompted without echo and are never command-line arguments.
 
-The Python account-manager bridge retains invitation issuance and assignable
-role changes. It locks the workspace root before actor/target membership rows,
-matching the TypeScript owner; password updates follow those locks. Auth
-provisioning takes the creation advisory lock and billing-account lock before
-the final user lock and credential/version recheck. Failed rechecks roll back
-the repair. Both stacks serialize baseline grant issuance on the billing
-account and use the same idempotency key; the registration cohort remains frozen.
+The native account manager locks the workspace root before actor/target membership
+rows and user password updates. It rechecks active membership, the authenticated
+password hash and session version after confirmation and between choices; prompts
+hold no database locks. Invitation issuance and assignable role changes use the
+same owners as the workspace API. Creating an invited identity preserves its
+personal workspace and billing account bootstrap without issuing signup grants.
+Identity provisioning and the invitation commit atomically. Password resets increment
+the session version; resetting the operator's own password requires a new login.
+Bounded identity operators share a transaction advisory lock before taking row
+locks. This preserves agreement recording's actor → workspace → member order
+and account management's workspace → membership → user order without lock
+inversion, including password resets across workspaces. Terminal prompts never
+hold this lock.
 
-Python registration, workspace bootstrap and password/session helpers remain
-for operator/demo scripts and unmigrated APIs/MCP. Their removal depends on the
-last caller moving, as recorded in the migration plan; they serve no auth or
-workspace HTTP routes.
+Remaining Python bridges and their deletion gates are explicit:
+
+| Bridge | Current callers | Removal condition |
+|---|---|---|
+| `domain/auth/service.py`, `core/security.py` | `app/demo/bootstrap.py`, `scripts/provision_dev_login.py`, `scripts/seed_dev_data.py`, `test_demo_bootstrap.py`, `test_workspace_auth.py`; native `test/auth-interop.py` probes crypto | PR 4 moves bootstrap/login/seeding and remaining application tests, then retires crypto interoperability probe |
+| `domain/workspaces/service.py` | auth provisioning, demo/bootstrap, login/seeding and `test_workspace_auth.py` | PR 4 removes those provisioning and application-test consumers |
+| `domain/abuse/service.py` | `domain/workspaces/service.py`, Python billing/operator provisioning and `test_abuse_controls.py` | PRs 3–4 move the final provisioning/test consumers |
+| `domain/workspaces/policy.py`, `core/config/workspaces.py` | Python workspace/bootstrap, billing bootstrap, Site Health operator, occupancy fixtures and `scripts/auth_policy.py` export | PRs 3–4 move operators/bootstrap/tests; PR 5 removes the final policy exporter/schema readers |
+| Billing bootstrap/grants and Site Health projection | demo/login/seed, commercial operators and entitlement/schema fixtures | PR 3 moves commercial operators; PR 4 moves remaining bootstrap/fixture consumers; PR 5 isolates schema constants |
+
+Python invitation/member mutations, agreement recording and their exclusive
+tests are retired. Their native PostgreSQL replacements cover authorization,
+replay, revocation, rollback and workspace isolation. SQLAlchemy schema models
+and meaningful schema tests remain; Alembic still owns the schema.

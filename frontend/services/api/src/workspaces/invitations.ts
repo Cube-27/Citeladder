@@ -66,68 +66,80 @@ export function issueInvitation(
   email: string,
   role: AssignableRole,
 ) {
-  return db.transaction().execute(async (trx) => {
-    await lockAuthorizedWorkspace(trx, workspaceId, actorId, 'manage_members');
-    const now = new Date();
-    const normalized = email.trim().toLowerCase();
-    const member = await trx
-      .selectFrom('workspace_members')
-      .innerJoin('users', 'users.id', 'workspace_members.user_id')
-      .select('workspace_members.id')
-      .where('workspace_id', '=', workspaceId)
-      .where(sql`lower(${sql.ref('users.email')})`, '=', normalized)
-      .executeTakeFirst();
-    if (member) refusal('already_a_member');
-    const live = await liveInvitations(trx, workspaceId, now)
-      .select(['id', 'email_normalized'])
-      .execute();
-    if (live.length >= policy.workspaces.max_pending_invitations)
-      throw new ApiError(409, 'invitation_limit_exceeded', {
-        code: 'workspace_invitation_limit_exceeded',
-      });
-    if (live.some((row) => row.email_normalized === normalized))
-      refusal('invitation_already_pending');
-    const { token, token_sha256 } = tokenValues();
-    const values = {
-      role,
-      token_sha256,
-      invited_by_user_id: actorId,
-      expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3_600_000),
-      updated_at: now,
-    };
-    // Reuse an expired slot because the partial unique index cannot use a clock.
-    const expired = await trx
-      .selectFrom('workspace_invitations')
-      .select('id')
-      .where('workspace_id', '=', workspaceId)
-      .where('email_normalized', '=', normalized)
-      .where('accepted_at', 'is', null)
-      .where('revoked_at', 'is', null)
-      .executeTakeFirst();
-    const row = expired
-      ? await trx
-          .updateTable('workspace_invitations')
-          .set(values)
-          .where('id', '=', expired.id)
-          .where('workspace_id', '=', workspaceId)
-          .returningAll()
-          .executeTakeFirstOrThrow()
-      : await trx
-          .insertInto('workspace_invitations')
-          .values({
-            id: randomUUID(),
-            workspace_id: workspaceId,
-            email_normalized: normalized,
-            accepted_at: null,
-            accepted_by_user_id: null,
-            revoked_at: null,
-            created_at: now,
-            ...values,
-          })
-          .returningAll()
-          .executeTakeFirstOrThrow();
-    return { invitation: invitationView(row), token };
-  });
+  return db
+    .transaction()
+    .execute((trx) => issueInvitationInTransaction(trx, workspaceId, actorId, email, role));
+}
+
+/** Caller transaction keeps operator identity creation atomic with invitation issuance. */
+export async function issueInvitationInTransaction(
+  trx: Database,
+  workspaceId: string,
+  actorId: string,
+  email: string,
+  role: AssignableRole,
+) {
+  assignableRoleSchema.parse(role);
+  await lockAuthorizedWorkspace(trx, workspaceId, actorId, 'manage_members');
+  const now = new Date();
+  const normalized = email.trim().toLowerCase();
+  const member = await trx
+    .selectFrom('workspace_members')
+    .innerJoin('users', 'users.id', 'workspace_members.user_id')
+    .select('workspace_members.id')
+    .where('workspace_id', '=', workspaceId)
+    .where(sql`lower(${sql.ref('users.email')})`, '=', normalized)
+    .executeTakeFirst();
+  if (member) refusal('already_a_member');
+  const live = await liveInvitations(trx, workspaceId, now)
+    .select(['id', 'email_normalized'])
+    .execute();
+  if (live.length >= policy.workspaces.max_pending_invitations)
+    throw new ApiError(409, 'invitation_limit_exceeded', {
+      code: 'workspace_invitation_limit_exceeded',
+    });
+  if (live.some((row) => row.email_normalized === normalized))
+    refusal('invitation_already_pending');
+  const { token, token_sha256 } = tokenValues();
+  const values = {
+    role,
+    token_sha256,
+    invited_by_user_id: actorId,
+    expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3_600_000),
+    updated_at: now,
+  };
+  // Reuse an expired slot because the partial unique index cannot use a clock.
+  const expired = await trx
+    .selectFrom('workspace_invitations')
+    .select('id')
+    .where('workspace_id', '=', workspaceId)
+    .where('email_normalized', '=', normalized)
+    .where('accepted_at', 'is', null)
+    .where('revoked_at', 'is', null)
+    .executeTakeFirst();
+  const row = expired
+    ? await trx
+        .updateTable('workspace_invitations')
+        .set(values)
+        .where('id', '=', expired.id)
+        .where('workspace_id', '=', workspaceId)
+        .returningAll()
+        .executeTakeFirstOrThrow()
+    : await trx
+        .insertInto('workspace_invitations')
+        .values({
+          id: randomUUID(),
+          workspace_id: workspaceId,
+          email_normalized: normalized,
+          accepted_at: null,
+          accepted_by_user_id: null,
+          revoked_at: null,
+          created_at: now,
+          ...values,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+  return { invitation: invitationView(row), token };
 }
 
 export function updateInvitation(
