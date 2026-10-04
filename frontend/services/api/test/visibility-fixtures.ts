@@ -28,6 +28,8 @@ export type ExecutionInput = {
   auditId: string;
   engine?: string;
   transportModel?: string;
+  transportProvider?: string;
+  answerText?: string;
   promptIndex?: number;
   promptText?: string;
   theme?: string;
@@ -215,7 +217,12 @@ export class VisibilityFixtures extends Fixtures {
     return id;
   }
 
-  private async engineSnapshot(auditId: string, engine: string, model: string): Promise<string> {
+  private async engineSnapshot(
+    auditId: string,
+    engine: string,
+    model: string,
+    provider: string,
+  ): Promise<string> {
     const existing = await this.database
       .selectFrom('audit_engine_snapshots')
       .select('id')
@@ -230,7 +237,7 @@ export class VisibilityFixtures extends Fixtures {
         id,
         audit_id: auditId,
         logical_engine: engine,
-        transport_provider: 'test',
+        transport_provider: provider,
         transport_model: model,
         base_url: '',
         created_at: now(),
@@ -246,6 +253,7 @@ export class VisibilityFixtures extends Fixtures {
   ): Promise<{ taskId: string; analysisId: string | null }> {
     const engine = input.engine ?? 'chatgpt';
     const model = input.transportModel ?? 'test-model';
+    const provider = input.transportProvider ?? 'test';
     // One prompt snapshot per (run, index): unnamed indexes count up per run.
     const promptIndex = input.promptIndex ?? this.promptIndexes.get(input.auditId) ?? 0;
     this.promptIndexes.set(
@@ -286,12 +294,12 @@ export class VisibilityFixtures extends Fixtures {
         workspace_id: tenant.workspaceId,
         project_id: tenant.projectId,
         prompt_snapshot_id: snapshotId,
-        engine_snapshot_id: await this.engineSnapshot(input.auditId, engine, model),
+        engine_snapshot_id: await this.engineSnapshot(input.auditId, engine, model, provider),
         prompt_index: promptIndex,
         repetition: input.repetition ?? 0,
         randomized_position: 0,
         logical_engine: engine,
-        transport_provider: 'test',
+        transport_provider: provider,
         transport_model: model,
         prompt_text: input.promptText ?? `prompt ${promptIndex}`,
         idempotency_key: taskId,
@@ -300,7 +308,7 @@ export class VisibilityFixtures extends Fixtures {
         available_at: now(),
         attempt_count: 0,
         max_attempts: 5,
-        answer_text: '',
+        answer_text: input.answerText ?? '',
         search_used: false,
         search_events: input.taskEvents === undefined ? null : JSON.stringify(input.taskEvents),
         provider_metadata:
@@ -336,9 +344,9 @@ export class VisibilityFixtures extends Fixtures {
         audit_id: input.auditId,
         task_id: taskId,
         logical_engine: engine,
-        transport_provider: 'test',
+        transport_provider: input.transportProvider ?? 'test',
         transport_model: model,
-        answer_text: '',
+        answer_text: input.answerText ?? '',
         search_used: false,
         search_events:
           input.artifactEvents === undefined ? null : JSON.stringify(input.artifactEvents),
@@ -359,7 +367,7 @@ export class VisibilityFixtures extends Fixtures {
         analyzer_version: 'test',
         scoring_rule_version: 'test',
         logical_engine: engine,
-        transport_provider: 'test',
+        transport_provider: input.transportProvider ?? 'test',
         transport_model: model,
         prompt_index: input.promptIndex ?? 0,
         repetition: input.repetition ?? 0,

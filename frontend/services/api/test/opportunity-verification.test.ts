@@ -1,8 +1,5 @@
-import { execFile } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { verifyImplementationEvents } from '../src/opportunities/verification.ts';
 import { enqueueImplementationVerification } from '../src/opportunities/enqueue.ts';
@@ -13,69 +10,19 @@ import {
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import type { QueueTask } from '../src/queue/task-queue.ts';
 import type { Json } from '../src/generated/db-schema.ts';
+import { record } from '../src/db/json.ts';
+import { seedVerification, type VerificationSeed } from './verification-support.ts';
 import { testDatabase } from './support.ts';
 import { sql } from 'kysely';
-// Each Python fixture call starts an interpreter.
-vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 const db = testDatabase();
-type Seed = {
-  workspaceId: string;
-  projectId: string;
-  userId: string;
-  auditId: string;
-  metricId: string;
-  crawlId: string;
-  trafficId: string;
-  snapshotId: string;
-  analysisId: string;
-  artifactId: string;
-  ruleId: string;
-  declarations: Record<string, string>;
-};
+type Seed = VerificationSeed;
 const seeds: Seed[] = [];
-async function python(phase: string, workspace = '') {
-  const backend = fileURLToPath(new URL('../../../../backend/', import.meta.url));
-  const executable = fileURLToPath(
-    new URL(
-      process.platform === 'win32'
-        ? '../../../../backend/.venv/Scripts/python.exe'
-        : '../../../../backend/.venv/bin/python',
-      import.meta.url,
-    ),
-  );
-  const system = Object.fromEntries(
-    ['PATH', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'HOME'].flatMap((k) =>
-      process.env[k] ? [[k, process.env[k]!]] : [],
-    ),
-  );
-  const { stdout } = await promisify(execFile)(
-    executable,
-    [fileURLToPath(new URL('./verification-fixture.py', import.meta.url)), phase, workspace],
-    {
-      cwd: backend,
-      env: {
-        ...system,
-        PYTHONPATH: backend,
-        CITELADDER_DISABLE_DOTENV: '1',
-        APP_ENV: 'test',
-        DATABASE_URL: process.env.API_TEST_DATABASE_URL!.replace(
-          'postgresql://',
-          'postgresql+asyncpg://',
-        ),
-        JWT_SECRET_KEY: 'pr6-test-jwt-key-not-a-real-secret-123',
-        ENCRYPTION_KEY: 'pr6-test-encryption-key-not-a-real-secret',
-        REFERRAL_HASH_SALT: 'pr6-test-referral-salt-not-a-real-secret',
-      },
-    },
-  );
-  return JSON.parse(stdout.trim().split('\n').at(-1)!) as unknown;
-}
 let own: Seed;
 let foreign: Seed;
 let taskTemplate: QueueTask;
 async function seed() {
-  const created = (await python('seed')) as Seed;
+  const created = await seedVerification(db);
   seeds.push(created);
   await db.transaction().execute(async (trx) => {
     for (const [triggerKind, triggerId] of [
@@ -134,7 +81,7 @@ async function declaration(id: string): Promise<Declaration> {
     declared_implemented_at: row.declared_implemented_at.toISOString(),
   };
 }
-it('TS claims every verification trigger and model reads retain append-only results', async () => {
+it('claims every verification trigger and persisted reads retain append-only results', async () => {
   const tasks = await db
     .selectFrom('analytics_tasks')
     .select(['status', 'error_detail'])
@@ -145,18 +92,22 @@ it('TS claims every verification trigger and model reads retain append-only resu
     tasks.every((t) => t.status === 'succeeded'),
     JSON.stringify(tasks),
   ).toBe(true);
-  const rows = (await python('read', own.workspaceId)) as {
-    declaration: string;
-    kind: string;
-    result: { placement: { state: string } | null; legs: Record<string, unknown> };
-    key: string;
-  }[];
+  const rows = await db
+    .selectFrom('opportunity_verification_events')
+    .select([
+      'implementation_event_id as declaration',
+      'observation_kind as kind',
+      'result',
+      'idempotency_key as key',
+    ])
+    .where('workspace_id', '=', own.workspaceId)
+    .execute();
   expect(rows).toHaveLength(4);
   expect(rows.map((r) => r.declaration)).not.toContain(own.declarations.missing_prompt);
   expect(rows.every((r) => r.kind === 'verified')).toBe(true);
-  const placement = rows.find((r) => r.declaration === own.declarations.placement)!;
-  expect(placement.result.placement?.state).toBe('satisfied');
-  expect(placement.result.legs).not.toHaveProperty('placement');
+  const placement = record(rows.find((r) => r.declaration === own.declarations.placement)!.result);
+  expect(record(placement.placement).state).toBe('satisfied');
+  expect(placement.legs).not.toHaveProperty('placement');
   const keys = rows.map((r) => r.key).sort();
   await Promise.all([
     verifyImplementationEvents(task(own), context),

@@ -4,8 +4,7 @@ Builds a workspace + project + owned domain + two prompts, one completed
 audit with prompt snapshots / analyses / citations / a metric snapshot, and
 one completed site crawl with two mapped issues (plus one unmapped), directly
 through the ORM. The refresh that turns this evidence into Opportunities is
-TypeScript (migration PR 7a); ``seed_live_set`` writes the live set and
-Actions it produces for the scenario, for TypeScript route test fixtures.
+TypeScript-owned; this builder remains only for Python schema persistence tests.
 
 Expected scores for the seeded scenario (severity * value * gap * 10):
 - brand_absent_high_value_prompt: high 3.0 * purchase 2.0 * gap 2.0 = 120.0
@@ -44,7 +43,6 @@ from app.models.audit import (
     RawResponseArtifact,
 )
 from app.models.brand import OwnedDomain
-from app.models.opportunity import Action, Opportunity, OpportunitySnapshot
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.site_health.acquisition import SiteFetchArtifact
@@ -64,11 +62,6 @@ ROOT_URL = "https://acme.test/"
 URL_A = "https://acme.test/a"
 URL_B = "https://acme.test/b"
 URL_C = "https://acme.test/c"
-
-SCORE_BRAND_ABSENT = 120.0
-SCORE_OWNED_PAGE = 80.0
-SCORE_STRUCTURED_DATA = 20.0
-SCORE_THIN_CONTENT = 10.0
 
 
 @dataclass
@@ -521,130 +514,3 @@ async def _seed_scenario(
         issue_structured_id=issue_structured.id,
         issue_thin_id=issue_thin.id,
     )
-
-
-async def seed_action_for(
-    session: AsyncSession, opportunity: Opportunity, *, target_kind: str
-) -> uuid.UUID:
-    """Group one hand-seeded Opportunity into its own Action, as the refresh would."""
-    action = Action(
-        workspace_id=opportunity.workspace_id,
-        project_id=opportunity.project_id,
-        group_key=f"{target_kind}:{opportunity.target_key}",
-        target_kind=target_kind,
-        target_label=opportunity.target_url or opportunity.title,
-        target_url=opportunity.target_url,
-        origin="evidence",
-        member_opportunity_ids=[str(opportunity.id)],
-    )
-    session.add(action)
-    await session.flush()
-    live = await session.get(Opportunity, opportunity.id)
-    assert live is not None
-    live.action_id = action.id
-    await session.commit()
-    return action.id
-
-
-async def seed_live_set(session: AsyncSession, scn: Scenario) -> dict[str, Opportunity]:
-    """The live Opportunities and Actions the TypeScript refresh writes for ``scn``.
-
-    Keyed by rule id; the two prompt-0 visibility rows share one prompt Action,
-    each owned page has its own page Action.
-    """
-    scope = {"workspace_id": scn.workspace_id, "project_id": scn.project_id}
-    snapshot = OpportunitySnapshot(
-        **scope,
-        audit_id=scn.audit_id,
-        site_crawl_id=scn.crawl_id,
-        total_count=4,
-        source_analysis_ids=[str(scn.analysis0_id)],
-        source_issue_ids=sorted([str(scn.issue_structured_id), str(scn.issue_thin_id)]),
-    )
-    session.add(snapshot)
-    await session.flush()
-    prompt = {
-        "target_key": f"prompt:{scn.prompt0_id}",
-        "target_prompt_id": scn.prompt0_id,
-        "target_theme": "crm",
-        "opportunity_type": "visibility",
-        "evidence": {"prompt_text": "best crm for small teams"},
-        "source_analysis_ids": [str(scn.analysis0_id)],
-        "source_metric_ids": [str(scn.metric_snapshot_id)],
-        "source_issue_ids": [],
-    }
-    specs = {
-        "brand_absent_high_value_prompt": {
-            **prompt,
-            "severity": "high",
-            "priority_score": SCORE_BRAND_ABSENT,
-        },
-        "owned_page_not_cited": {
-            **prompt,
-            "severity": "medium",
-            "priority_score": SCORE_OWNED_PAGE,
-        },
-        "missing_structured_data": {
-            "target_key": f"url:{URL_A}",
-            "target_url": URL_A,
-            "opportunity_type": "site",
-            "severity": "medium",
-            "priority_score": SCORE_STRUCTURED_DATA,
-            "evidence": {"issue_rule_id": "aeo.structured_data_present"},
-            "source_issue_ids": [str(scn.issue_structured_id)],
-        },
-        "thin_content": {
-            "target_key": f"url:{URL_B}",
-            "target_url": URL_B,
-            "opportunity_type": "site",
-            "severity": "low",
-            "priority_score": SCORE_THIN_CONTENT,
-            "evidence": {"issue_rule_id": "technical.thin_content"},
-            "source_issue_ids": [str(scn.issue_thin_id)],
-        },
-    }
-    rows = {
-        rule: Opportunity(**scope, rule_id=rule, title=rule, **spec)
-        for rule, spec in specs.items()
-    }
-    session.add_all(rows.values())
-    await session.flush()
-    groups = [
-        (
-            "page",
-            "page:acme.test/a",
-            URL_A,
-            None,
-            ["missing_structured_data"],
-            "site_health",
-        ),
-        ("page", "page:acme.test/b", URL_B, None, ["thin_content"], "site_health"),
-        (
-            "prompt",
-            f"prompt:{scn.prompt0_id}",
-            None,
-            scn.prompt0_id,
-            ["brand_absent_high_value_prompt", "owned_page_not_cited"],
-            "ai_visibility",
-        ),
-    ]
-    for kind, key, url, prompt_id, members, family in groups:
-        action = Action(
-            **scope,
-            group_key=key,
-            target_kind=kind,
-            target_label=url or "best crm for small teams",
-            target_url=url,
-            target_prompt_id=prompt_id,
-            origin="evidence",
-            priority_score=max(rows[rule].priority_score for rule in members),
-            families=[family],
-            member_opportunity_ids=[str(rows[rule].id) for rule in members],
-            opportunity_snapshot_id=snapshot.id,
-        )
-        session.add(action)
-        await session.flush()
-        for rule in members:
-            rows[rule].action_id = action.id
-    await session.commit()
-    return rows

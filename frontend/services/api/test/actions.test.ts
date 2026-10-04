@@ -1,7 +1,7 @@
 /** Action cutover: real routes, authorization, concurrency and frozen evidence. */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import {
   actionDetailSchema,
@@ -10,10 +10,9 @@ import {
 } from '@citeladder/contracts/actions';
 import { searchConsoleState } from '../src/opportunities/measurement-legs.ts';
 import { settlePlacements } from '../src/source-pages/placement-settlement.ts';
-import { actionFixture, type ActionSeed } from './action-support.ts';
+import { actionFixture, sourcePage, type ActionSeed } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
-vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 const config = testConfig();
 const db = testDatabase(config);
 const app = createApp(config, db);
@@ -350,6 +349,11 @@ describe('Action routes', () => {
       'earned',
       s.workspace_id,
       s.project_id,
+    );
+    await sourcePage(
+      db,
+      { workspace_id: s.workspace_id, project_id: s.project_id },
+      'https://review.example/another-list',
     );
     s.actions.earned = earned.action_id;
     const result = await declare(s, 'earned', 'earned');

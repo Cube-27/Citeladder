@@ -129,7 +129,16 @@ at the end of the body with this shape (replace the topic ID with a returned
 UUID); the app hides it from the readable view:
 
 ```json
-{"prompts":[{"topic_id":"<existing-topic-uuid>","text":"A natural question expressing one useful buyer decision","buyer_stage":"consideration","prompt_intent":"recommend"}]}
+{
+  "prompts": [
+    {
+      "topic_id": "<existing-topic-uuid>",
+      "text": "A natural question expressing one useful buyer decision",
+      "buyer_stage": "consideration",
+      "prompt_intent": "recommend"
+    }
+  ]
+}
 ```
 
 Include only new unbranded core questions in that block, at most 100.

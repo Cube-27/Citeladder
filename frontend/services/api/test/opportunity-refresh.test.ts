@@ -1,17 +1,14 @@
 /**
- * Opportunity refresh and routes against real PostgreSQL. Model fixtures seed
- * evidence; the retained Python producer enqueues and TypeScript owns execution.
+ * Opportunity refresh and routes against real PostgreSQL. Native fixtures seed
+ * evidence and the native enqueue owner admits execution.
  *
  * Ported from the Python recompute suites this refresh retired
  * (`test_opportunities_service*.py`, `test_actions.py`), plus the queue,
  * lock and cross-stack Action handoffs the move introduced.
  */
-import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { updateActionStatus, attachOrCreateAction } from '../src/opportunities/actions.ts';
@@ -19,10 +16,9 @@ import { loadWorkerSettings, policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
 import { recomputeOpportunities, refreshOpportunities } from '../src/opportunities/refresh.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
+import { enqueueOpportunityRefresh } from '../src/opportunities/enqueue.ts';
+import { seedOpportunityScenario, type OpportunitySeed } from './opportunity-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
-
-// Each Python fixture call starts an interpreter.
-vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -30,62 +26,21 @@ const app = createApp(config, db);
 const o = policy.opportunity.opportunities;
 const URL_B = 'https://acme.test/b';
 
-type Seed = {
-  user_id: string;
-  workspace_id: string;
-  project_id: string;
-  prompt0_id: string;
-  prompt1_id: string;
-  audit_id: string;
-  analysis0_id: string;
-  analysis1_id: string;
-  metric_snapshot_id: string;
-  crawl_id: string;
-  issue_structured_id: string;
-  issue_thin_id: string;
-};
+type Seed = OpportunitySeed;
 const seeds: Seed[] = [];
 
-async function python<T>(...args: string[]): Promise<T> {
-  const backend = fileURLToPath(new URL('../../../../backend/', import.meta.url));
-  const executable = fileURLToPath(
-    new URL(
-      process.platform === 'win32'
-        ? '../../../../backend/.venv/Scripts/python.exe'
-        : '../../../../backend/.venv/bin/python',
-      import.meta.url,
-    ),
-  );
-  const system = Object.fromEntries(
-    ['PATH', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'HOME'].flatMap((k) =>
-      process.env[k] ? [[k, process.env[k]!]] : [],
-    ),
-  );
-  const { stdout } = await promisify(execFile)(
-    executable,
-    [fileURLToPath(new URL('./refresh-fixture.py', import.meta.url)), ...args],
-    {
-      cwd: backend,
-      env: {
-        ...system,
-        PYTHONPATH: backend,
-        CITELADDER_DISABLE_DOTENV: '1',
-        APP_ENV: 'test',
-        DATABASE_URL: process.env.API_TEST_DATABASE_URL!.replace(
-          'postgresql://',
-          'postgresql+asyncpg://',
-        ),
-        JWT_SECRET_KEY: 'pr7-test-jwt-key-not-a-real-secret-1234',
-        ENCRYPTION_KEY: 'pr7-test-encryption-key-not-a-real-secret',
-        REFERRAL_HASH_SALT: 'pr7-test-referral-salt-not-a-real-secret',
-      },
-    },
-  );
-  return JSON.parse(stdout.trim().split('\n').at(-1)!) as T;
-}
-
 async function seed(): Promise<Seed> {
-  const created = await python<Seed>('seed');
+  const created = await seedOpportunityScenario(db);
+  await db.transaction().execute(async (trx) => {
+    for (let replay = 0; replay < 2; replay++)
+      await enqueueOpportunityRefresh(trx, {
+        workspaceId: created.workspace_id,
+        projectId: created.project_id,
+        triggerKind: 'audit',
+        triggerId: created.audit_id,
+        maxAttempts: loadWorkerSettings({}).taskMaxAttempts,
+      });
+  });
   seeds.push(created);
   return created;
 }
@@ -177,7 +132,7 @@ describe('opportunity_refresh', () => {
       'retired_format',
     );
   });
-  it('claims the one Python-enqueued task and persists exact provenance', async () => {
+  it('claims the one native-enqueued task and persists exact provenance', async () => {
     const tasks = await db
       .selectFrom('analytics_tasks')
       .select(['status', 'attempt_count', 'error_code'])
@@ -308,7 +263,31 @@ describe('opportunity_refresh', () => {
     const s = await seed();
     await recomputeOpportunities(db, scope(s));
     const first = await live(s);
-    await python('cite', s.workspace_id, s.analysis0_id);
+    const analysis = await db
+      .selectFrom('response_analyses')
+      .selectAll()
+      .where('workspace_id', '=', s.workspace_id)
+      .where('id', '=', s.analysis0_id)
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto('citations')
+      .values({
+        id: randomUUID(),
+        workspace_id: s.workspace_id,
+        audit_id: analysis.audit_id,
+        analysis_id: analysis.id,
+        artifact_id: analysis.artifact_id,
+        analyzer_version: 'b6-analysis-1',
+        ordinal: 2,
+        url: 'https://acme.com/crm',
+        title: 'Acme CRM',
+        domain: 'acme.com',
+        classification: 'owned',
+        is_owned: true,
+        is_unintended: false,
+        created_at: new Date(),
+      })
+      .execute();
 
     const snapshot = await recomputeOpportunities(db, scope(s));
 

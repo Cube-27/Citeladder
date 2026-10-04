@@ -13,7 +13,7 @@ import {
 import { catalog } from '../src/commerce/reads.ts';
 import { record } from '../src/db/json.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
-import { commerceIsland } from './commerce-support.ts';
+import { commerceFixture } from './commerce-support.ts';
 import { freezeCommerceContext } from '../src/commerce/audit-context.ts';
 import { enqueue } from './referral-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -27,9 +27,9 @@ type Seed = {
   tasks: string[];
 };
 const seeds: Seed[] = [];
-/** Python seeds the analyzed catalog pages; the TS analyzer's enqueue queues their projections. */
+/** Native fixtures seed catalog evidence; the analyzer owner enqueues its projections. */
 async function seed() {
-  const value = await commerceIsland<Omit<Seed, 'tasks'>>('seed');
+  const value = await commerceFixture<Omit<Seed, 'tasks'>>('seed');
   const tasks = await projectionTasks(value);
   const seeded = { ...value, tasks: tasks.map((task) => task.id) };
   seeds.push(seeded);
@@ -72,7 +72,7 @@ async function execute(taskId: string) {
 
 describe('catalog projection PostgreSQL boundary', () => {
   it('queues one projection per analysis only for a catalog-selling business model', async () => {
-    const scope = await commerceIsland<Omit<Seed, 'tasks'>>('seed');
+    const scope = await commerceFixture<Omit<Seed, 'tasks'>>('seed');
     seeds.push({ ...scope, tasks: [] });
     await businessContext(scope, { business_model: 'b2b_saas' });
     expect(await projectionTasks(scope)).toEqual([]);
@@ -169,7 +169,7 @@ describe('catalog projection PostgreSQL boundary', () => {
     ).toEqual(['succeeded', 'succeeded']);
     expect(tasks.find((row) => row.id === otherTask)!.status).toBe('queued');
     const id = result.categories.find((row) => row.name === 'Tools')!.id;
-    const seeded = await commerceIsland<{ promptId: string }>(
+    const seeded = await commerceFixture<{ promptId: string }>(
       'prompt',
       s.workspaceId,
       s.projectId,

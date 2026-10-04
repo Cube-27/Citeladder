@@ -2,10 +2,7 @@
 import { fileURLToPath } from 'node:url';
 
 export function resolveSkillsDirectory(configured: string): string {
-  return (
-    configured ||
-    fileURLToPath(new URL('../../../../../backend/app/core/config/agent_skills/', import.meta.url))
-  );
+  return configured || fileURLToPath(new URL('../../assets/agent-skills/', import.meta.url));
 }
 
 function formatSections(body: string): string[] {

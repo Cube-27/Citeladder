@@ -10,7 +10,7 @@ import type {
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
-import { commerceIsland } from './commerce-support.ts';
+import { commerceFixture } from './commerce-support.ts';
 import { freezeCommerceContext } from '../src/commerce/audit-context.ts';
 import { enqueue } from './referral-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -248,7 +248,7 @@ describe('decisions and persisted reads', () => {
   it('serializes decisions and makes TS catalog and approvals consumable by Python audit context', async () => {
     const imported = await importCsv();
     const productId = imported.body.row_outcomes[0]!.product_id!;
-    const ids = await commerceIsland<{ promptId: string; candidateId: string }>(
+    const ids = await commerceFixture<{ promptId: string; candidateId: string }>(
       'prompt',
       t.workspaceId,
       t.projectId,

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { internalLinksReadSchema } from '@citeladder/contracts/site-health';
 
 import { createApp } from '../src/app.ts';
@@ -17,7 +17,6 @@ import { policy } from '../src/config.ts';
 const config = testConfig();
 const db = testDatabase(config);
 const app = createApp(config, db);
-vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 const seeds: ActionSeed[] = [];
 async function request(seed: ActionSeed, suffix = '', body?: unknown) {
   return app.request(`/api/v1/projects/${seed.project_id}/site-health/internal-links${suffix}`, {

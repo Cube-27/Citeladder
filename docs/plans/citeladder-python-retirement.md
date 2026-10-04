@@ -1,6 +1,6 @@
 # TypeScript application with Python schema tooling
 
-Requested 4 October 2026. **Planning only; implementation has not started.**
+Requested 4 October 2026. **PR 1 implemented; PRs 2–5 remain unassigned.**
 This is the continuation after the product/API/worker TypeScript migration.
 It orders remaining work by increasing complexity and operational risk, subject
 to dependencies. It does not resume earlier migration waves or authorize
@@ -92,7 +92,7 @@ D4 of the [earlier migration plan](citeladder-typescript-migration.md#4-decision
 continue to require Alembic as sole schema author. Kysely types remain generated
 from the Alembic-migrated database. The accepted boundary is recorded in
 [decisions](../decisions.md#typescript-application-python-schema-tooling).
-Implementation of the slices has not been assigned by this planning decision.
+The owner assigned PR 1 on 4 October 2026; this decision does not assign later PRs.
 
 Reuse the existing Node services, PostgreSQL database and deployment jobs.
 Do not add always-on services or provision infrastructure for this migration.
@@ -216,6 +216,9 @@ passwords and issues/verifies tokens. It is a real compatibility check.
 **1c: Native Agent asset packaging.**
 Move the 14 Markdown files under `backend/app/core/config/agent_skills/` to a
 native API-owned asset directory. Preserve bodies and content-derived versions.
+The owner subsequently authorized formatting the two moved methodologies on
+4 October 2026 and accepting the resulting catalog fingerprint change; do not
+add formatter exemptions.
 Update `src/config/skill-inputs.ts`, the API Dockerfile, package-data declarations,
 change selection, `agent-skills.test.ts` and the Agent owner document. Remove
 the empty Python asset package only after all packaging references move.
