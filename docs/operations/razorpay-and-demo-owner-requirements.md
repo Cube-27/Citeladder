@@ -7,10 +7,10 @@
 
 Runtime commercial authority is the single published
 `BillingCatalogRevision`, validated by
-`backend/app/domain/billing/catalog_revisions.py`; emergency/provider readiness
-switches remain in `billing_settings.py`. The billing domain, connector code,
-`backend/scripts/billing_admin.py`, and
-`backend/scripts/provision_razorpay_plans.py` own their respective operations.
+`frontend/services/api/src/billing/admin.ts`; emergency/provider readiness
+switches live in native `frontend/services/api/src/config/billing.json`. The billing domain, connector code,
+`frontend/services/api/src/cli/billing-admin.ts`, and
+`frontend/services/api/src/cli/provision-razorpay-plans.ts` own their respective operations.
 Earlier V6/V8 plans and legacy config catalog builders are historical or
 provisioning compatibility context and do not override the published catalog or
 API contracts. Follow the tested command and incident procedures in
@@ -74,7 +74,7 @@ Customer communications handled by Razorpay? yes/no:
 ```
 
 Why this is a live-plan gate: Razorpay requires a concrete amount and currency.
-The catalog author (`billing_admin catalog-seed`) derives each India price once
+The catalog author (`billing:admin catalog-seed`) derives each India price once
 with the published rule at the recorded authoring rate and freezes the
 **GST-exclusive INR price and its GST amount** in the revision; the Razorpay
 plan carries their sum as the final charge. CiteLadder never reprices an active recurring mandate from an exchange
@@ -136,10 +136,10 @@ that the selected INR/USD route charges the exact application total, keep
 
 Record the merchant-specific approval against this launch matrix:
 
-| Launch route | Currency | Cards | UPI AutoPay | eMandate |
-| ------------ | -------- | ----- | ----------- | --------- |
-| India | INR | Allowed only when enabled for the live merchant | India/INR only and only when enabled | India/INR only and only when enabled |
-| Non-India | USD | Allowed only after international cards/currency approval | Excluded unless Razorpay gives written support for this exact USD route | Excluded unless Razorpay gives written support for this exact USD route |
+| Launch route | Currency | Cards                                                    | UPI AutoPay                                                             | eMandate                                                                |
+| ------------ | -------- | -------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| India        | INR      | Allowed only when enabled for the live merchant          | India/INR only and only when enabled                                    | India/INR only and only when enabled                                    |
+| Non-India    | USD      | Allowed only after international cards/currency approval | Excluded unless Razorpay gives written support for this exact USD route | Excluded unless Razorpay gives written support for this exact USD route |
 
 Do not infer one method's approval from another. The USD route requires
 `BILLING_RAZORPAY_INTERNATIONAL_READY=true`; the India/INR route does not.

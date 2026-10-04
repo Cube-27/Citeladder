@@ -2,8 +2,8 @@
 
 The application API, health/readiness and executing workers are TypeScript-owned.
 Python has no HTTP process. The native queue sweeper backs
-up discovery and integration lease recovery. The Python migration job runs Alembic
-and demo bootstrap.
+up discovery and integration lease recovery. The one-shot migration job runs Alembic upgrade/check, retained Python identity/grant
+bootstrap, then native catalog initialization before admitting API rollout.
 PostgreSQL owns durable
 state and queues. Domain behavior is documented in the feature owners listed in
 [the documentation index](README.md); this file owns shared backend mechanics.
@@ -26,7 +26,7 @@ limited to model/read defaults and five operator/entitlement settings.
 Native audit config owns lifecycle, scoring, read limits and runtime settings;
 native provider/DataForSEO config owns endpoints, capacity, request policy and
 pricing. Python keeps frozen route identities and the public provider catalog
-for launch authoring and shared schema/seed readers, plus model
+for shared schema/seed readers, plus model
 defaults and provenance versions. No Python connector executes an answer engine.
 Commerce competitor discovery uses the native
 analytics worker and Site Health acquisition, parsing and classification owners.
@@ -37,15 +37,15 @@ integrations charge at claim and recovery does not charge a second time.
 
 ## Layers and extension
 
-| Layer | Responsibility |
-|---|---|
-| Native routes/ | HTTP translation, request validation and coded errors |
-| Python core/ | Shared configuration, database and operator security |
-| models/ | SQLAlchemy persistence and relational integrity |
-| domain/ | Business policy, authorized mutations and persisted projections |
-| connectors/ | External acquisition and provider transports |
-| analysis/ | Bounded deterministic derivation |
-| Native workers/ | Lease, I/O/analysis and atomic terminal persistence |
+| Layer           | Responsibility                                                  |
+| --------------- | --------------------------------------------------------------- |
+| Native routes/  | HTTP translation, request validation and coded errors           |
+| Python core/    | Shared configuration, database and operator security            |
+| models/         | SQLAlchemy persistence and relational integrity                 |
+| domain/         | Business policy, authorized mutations and persisted projections |
+| connectors/     | External acquisition and provider transports                    |
+| analysis/       | Bounded deterministic derivation                                |
+| Native workers/ | Lease, I/O/analysis and atomic terminal persistence             |
 
 Search the owning domain, callers, types, configuration and tests before adding
 another module. Routers do not acquire evidence during a read; connectors do not
@@ -56,7 +56,8 @@ for convenience.
 Python 3.12, async SQLAlchemy/asyncpg and Pydantic settings own the remaining
 Python runtime; Node 26, Hono and Kysely own the native service and workers.
 Compose names the native API `api-service` on port 8100. The Python image runs
-one-shot migrations/bootstrap and remaining commercial/seed operators. Bounded
+one-shot migrations/bootstrap and remaining seed/login tools. Commercial operators
+are native and packaged into that same job image. Bounded
 provider provisioning, acquisition control, agreement references and interactive
 account administration run in the native API package/image. Browser calls stay same-origin
 `/api/v1`. Native startup enforces the shared production secret, database, proxy,
@@ -150,8 +151,9 @@ Markdown; Python no longer parses those model inputs. Opportunity reads preserve
 frozen format identifiers, including identifiers retired from the current
 catalog. Queue execution bounds are native; schema status vocabulary remains shared.
 Billing checkout, reconciliation, webhook policy and provider-display composition
-are native. Python retains seller/tax configuration, catalog identities and
-read-only Razorpay credentials for catalog authoring, provisioning and bootstrap.
+are native. Native configuration owns seller/tax settings, catalog authoring and read-only
+Razorpay credentials. Python retains schema vocabulary and the baseline/grant
+bridge for identity/bootstrap, local login, seeding and schema fixtures until PR 4.
 Entitlement registry/algebra, operator grants and account-capacity locks stay
 shared; no exported section remains solely for a native runtime consumer.
 Do not introduce Redis without measured need.

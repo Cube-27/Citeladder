@@ -101,7 +101,7 @@ async def test_public_bootstrap_rotates_only_the_configured_dev_account(
 
 
 @pytest.mark.asyncio
-async def test_empty_public_bootstrap_creates_login_and_published_pricing_once(
+async def test_empty_public_bootstrap_commits_identity_before_native_catalog(
     db_session: AsyncSession,
 ) -> None:
     candidate = _demo_settings().model_copy(update={"demo_mode": False})
@@ -110,18 +110,11 @@ async def test_empty_public_bootstrap_creates_login_and_published_pricing_once(
     assert user is not None
     assert user.role == "admin"
     assert verify_password(candidate.dev_login_password, user.hashed_password)
-    catalog = await db_session.scalar(select(BillingCatalogRevision))
-    assert catalog is not None
-    assert catalog.publication_state == "published"
-    assert catalog.published_by_user_id == user.id
-    assert "checkout_enabled" not in catalog.payload
-    assert len(catalog.payload["plans"]) == 4
-    assert catalog.payload["campaign"]["enabled"] is False
-    original_publication = catalog.published_at
+    assert await db_session.scalar(select(BillingCatalogRevision)) is None
     await ensure_configured_dev_account(db_session, candidate)
-    catalogs = list((await db_session.scalars(select(BillingCatalogRevision))).all())
-    assert len(catalogs) == 1
-    assert catalogs[0].published_at == original_publication
+    users = list((await db_session.scalars(select(User))).all())
+    assert len(users) == 1
+    assert users[0].id == user.id
 
 
 @pytest.mark.asyncio
@@ -141,4 +134,4 @@ async def test_local_bootstrap_uses_development_transport_policy(
     )
     assert user is not None
     assert verify_password(candidate.dev_login_password, user.hashed_password)
-    assert await db_session.scalar(select(BillingCatalogRevision.id)) is not None
+    assert await db_session.scalar(select(BillingCatalogRevision.id)) is None

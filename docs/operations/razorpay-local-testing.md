@@ -139,11 +139,11 @@ Select **Test mode** in the Razorpay Dashboard. Confirm Subscriptions and the
 INR recurring methods you intend to exercise. Create three monthly plans with
 interval 1, using the exact names and terms printed by `propose`.
 
-| Plan | Taxable base, paise | CiteLadder GST, paise | Razorpay plan amount, paise |
-|---|---:|---:|---:|
-| Starter | 449900 | 80982 | 530882 |
-| Growth | 899900 | 161982 | 1061882 |
-| Scale | 1799900 | 323982 | 2123882 |
+| Plan    | Taxable base, paise | CiteLadder GST, paise | Razorpay plan amount, paise |
+| ------- | ------------------: | --------------------: | --------------------------: |
+| Starter |              449900 |                 80982 |                      530882 |
+| Growth  |              899900 |                161982 |                     1061882 |
+| Scale   |             1799900 |                323982 |                     2123882 |
 
 The fixture follows the launch currency rule at ₹90/USD with a fixture GST rate
 of 0.18, rounding the GST once with decimal HALF_UP. Regenerate it from
@@ -233,7 +233,7 @@ Inspect the activation response in browser Network and the account with:
 
 ```powershell
 $accountId = 'REPLACE_WITH_BILLING_ACCOUNT_UUID'
-.\scripts\billing-test.ps1 -Action admin -CommandArgs @('account-inspect','--account-id',$accountId,'--actor',$actor,'--reason','Inspect sandbox payment','--idempotency-key','inspect-inr-1')
+.\scripts\billing-test.ps1 -Action admin -CommandArgs @('account-inspect','--workspace-id',$workspaceId,'--account-id',$accountId,'--actor',$actor,'--reason','Inspect sandbox payment','--idempotency-key','inspect-inr-1')
 docker logs --tail 30 citeladder-billing-test-runner-1
 ```
 
@@ -249,23 +249,23 @@ Record each row as passed, failed, merchant-disabled, or not simulatable in
 sandbox. Until attempted it is **unverified**. Repeat applicable payment flows
 for all tiers and each merchant-enabled INR method.
 
-| Action | Expected evidence |
-|---|---|
-| Dismiss the modal, then retry | No paid access; retry reuses the activation/idempotency identity. |
-| Block `checkout.razorpay.com/v1/checkout.js` in browser request blocking | Bounded script timeout/error, retry available, no paid access. |
-| Trigger `payment.failed`, retry in the modal | Visible error; a later valid success can still reconcile. |
-| Modify a callback signature or omit a required field | Rejection, no paid access; another account's activation is inaccessible. |
-| Authorize without capture | Pending/authenticated state, no captured receipt or paid bundle. |
-| Complete initial capture | Exact invoice/total/period and one receipt-backed grant bundle. |
-| Redeliver or reorder webhook events | No duplicate receipt/grants and no stale state resurrection. |
-| Charge a renewal through test controls | A distinct verified period and receipt; reused or overlapping periods grant nothing. |
-| Fail renewal; recover from pending/halted | No unpaid-period grants; verified recovery restores only paid time. |
-| Cancel, complete or expire subscription | Verified paid time remains usable; terminal expiry releases the base slot. |
-| Stop tunnel during capture, run reconciliation, then restore tunnel | Same final receipt/grants; delayed webhook creates no duplicate. |
-| Set checkout enabled false and restart | New checkout blocked; existing recovery continues. |
-| Reopen existing project evidence after expiry | Historical evidence remains readable under workspace authorization. |
-| Sign in as an invited workspace member | Only the correct workspace sponsor's access applies. |
-| Select international before USD plans, webhook delivery and sandbox acceptance are verified | Purchase unavailable; no USD subscription created. |
+| Action                                                                                      | Expected evidence                                                                    |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Dismiss the modal, then retry                                                               | No paid access; retry reuses the activation/idempotency identity.                    |
+| Block `checkout.razorpay.com/v1/checkout.js` in browser request blocking                    | Bounded script timeout/error, retry available, no paid access.                       |
+| Trigger `payment.failed`, retry in the modal                                                | Visible error; a later valid success can still reconcile.                            |
+| Modify a callback signature or omit a required field                                        | Rejection, no paid access; another account's activation is inaccessible.             |
+| Authorize without capture                                                                   | Pending/authenticated state, no captured receipt or paid bundle.                     |
+| Complete initial capture                                                                    | Exact invoice/total/period and one receipt-backed grant bundle.                      |
+| Redeliver or reorder webhook events                                                         | No duplicate receipt/grants and no stale state resurrection.                         |
+| Charge a renewal through test controls                                                      | A distinct verified period and receipt; reused or overlapping periods grant nothing. |
+| Fail renewal; recover from pending/halted                                                   | No unpaid-period grants; verified recovery restores only paid time.                  |
+| Cancel, complete or expire subscription                                                     | Verified paid time remains usable; terminal expiry releases the base slot.           |
+| Stop tunnel during capture, run reconciliation, then restore tunnel                         | Same final receipt/grants; delayed webhook creates no duplicate.                     |
+| Set checkout enabled false and restart                                                      | New checkout blocked; existing recovery continues.                                   |
+| Reopen existing project evidence after expiry                                               | Historical evidence remains readable under workspace authorization.                  |
+| Sign in as an invited workspace member                                                      | Only the correct workspace sponsor's access applies.                                 |
+| Select international before USD plans, webhook delivery and sandbox acceptance are verified | Purchase unavailable; no USD subscription created.                                   |
 
 Razorpay provides test subsequent-charge controls such as **Charge this now**.
 Schedule card renewal checks within its documented three-day test token window;
@@ -294,16 +294,16 @@ For a one-shot recovery pass (the Compose worker also runs bounded sweeps):
 
 ## 8. Troubleshooting and secret rotation
 
-| Symptom | Check / next action |
-|---|---|
-| `active_admin_required` | Separate operator exists, is active and has admin role in the isolated database. |
-| Empty or unavailable pricing | Import and publish the reviewed catalog; reads never seed it. |
-| Missing plan or verification mismatch | Match all referenced provider plans to the exact revision; import a new revision for corrections. |
-| Provider authentication failure | Test key pair and explicit test mode agree; do not paste secrets into logs or tickets. |
-| GST verification failure | Record actual provider support and keep INR checkout disabled pending resolution. |
-| Callback remains pending | Inspect provider capture/invoice and recovery logs; authorization is insufficient. |
-| Webhook deliveries fail | Current HTTPS hostname, exact POST path, matching independent secret, proxy and API health. |
-| Bounded recovery retries exhausted | Inspect persisted failure and provider evidence before retrying; do not repeatedly create subscriptions. |
+| Symptom                               | Check / next action                                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `active_admin_required`               | Separate operator exists, is active and has admin role in the isolated database.                         |
+| Empty or unavailable pricing          | Import and publish the reviewed catalog; reads never seed it.                                            |
+| Missing plan or verification mismatch | Match all referenced provider plans to the exact revision; import a new revision for corrections.        |
+| Provider authentication failure       | Test key pair and explicit test mode agree; do not paste secrets into logs or tickets.                   |
+| GST verification failure              | Record actual provider support and keep INR checkout disabled pending resolution.                        |
+| Callback remains pending              | Inspect provider capture/invoice and recovery logs; authorization is insufficient.                       |
+| Webhook deliveries fail               | Current HTTPS hostname, exact POST path, matching independent secret, proxy and API health.              |
+| Bounded recovery retries exhausted    | Inspect persisted failure and provider evidence before retrying; do not repeatedly create subscriptions. |
 
 For planned webhook secret rotation, configure the previous secret plus
 `BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_STARTED_AT` and

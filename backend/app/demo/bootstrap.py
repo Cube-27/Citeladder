@@ -19,7 +19,6 @@ from app.core.database import SessionLocal, dispose_engine
 from app.core.security import hash_password, verify_password
 from app.domain.auth.service import get_user_by_email, register_user
 from app.domain.billing.bootstrap import (
-    ensure_initial_catalog,
     owned_workspace_account,
     provision_development_access,
 )
@@ -131,7 +130,6 @@ async def ensure_configured_dev_account(
         account=account,
         allowance=candidate.dev_login_counter_allowance,
     )
-    await ensure_initial_catalog(session, operator=user)
     await session.commit()
 
 

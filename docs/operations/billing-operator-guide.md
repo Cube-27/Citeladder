@@ -16,7 +16,7 @@ remain unverified until the owner runs those checks.
 
 ## Safety contract
 
-Run commands from `backend/` against the explicitly selected database. Never put
+Run commands from `frontend/` against the explicitly selected database. Never put
 provider secrets, customer payment data, operator codes, or raw webhook bodies on
 the command line or in an incident ticket.
 
@@ -25,15 +25,15 @@ through the deployment's separately reviewed identity/database procedure; never
 use `provision_dev_login.py` outside development and never pass a password or
 secret on argv.
 
-Every `billing_admin` mutation requires all of:
+Every `billing:admin` mutation requires all of:
 
-- an explicit target (`--revision`, `--account-id`, or `--grant-id`);
+- an explicit target (`--revision`, or both `--workspace-id` and `--account-id` plus any `--grant-id`);
 - `--actor`, resolving to a persisted, active admin UUID or email;
 - a concise `--reason` (maximum 255 characters);
 - a unique, stable `--idempotency-key` for the logical operation;
 - a reviewed default dry-run before the same command is repeated with `--apply`.
 
-`billing_admin` is dry-run by default. There is no `--dry-run` flag: omitting
+`billing:admin` is dry-run by default. There is no `--dry-run` flag: omitting
 `--apply` rolls the transaction back and returns `"dry_run": true`. Validation
 and diff commands are read-only and do not require mutation metadata. CLI output
 is redacted and exceptions expose only their type.
@@ -43,8 +43,8 @@ key only to replay the same request. Save the command, redacted output, reviewer
 time, database/environment, and resulting row IDs in the change record.
 
 ```bash
-cd backend
-uv run python -m scripts.billing_admin --help
+cd frontend
+pnpm --filter @citeladder/api billing:admin --help
 ```
 
 ## Catalog validation, publication, and recovery
@@ -58,12 +58,13 @@ already frozen on accepted subscriptions or periods.
 
 `catalog-seed` authors the `launch-pricing-v1` draft from the launch terms.
 Pass the provider environment whose checkout prices it should author and,
-optionally, the INR authoring rate (default 90); without an environment only
+optionally, the INR authoring rate (default 90); without an explicit environment
+the admitted configured Razorpay mode is used, otherwise only
 the USD display prices are authored, and without an approved GST rate India is
 left unauthored. Omitting `--apply` is the dry-run.
 
 ```bash
-uv run python -m scripts.billing_admin catalog-seed \
+pnpm --filter @citeladder/api billing:admin catalog-seed \
   --environment test --usd-inr-rate 90 \
   --actor billing-operator@example.com --reason "Author launch pricing" \
   --idempotency-key catalog-seed:launch-pricing-v1
@@ -78,25 +79,25 @@ payload for a NEW revision, which is imported and published as below. Existing
 subscribers stay pinned to the plans they authorised.
 
 ```bash
-uv run python -m scripts.provision_razorpay_plans propose \
+pnpm --filter @citeladder/api billing:plans propose \
   --revision launch-pricing-v1 --environment test
 # plans.json: {"tier_1:international": "plan_…", "tier_2:international": …}
-uv run python -m scripts.provision_razorpay_plans bind \
+pnpm --filter @citeladder/api billing:plans bind \
   --revision launch-pricing-v1 --environment test \
-  --plans /review/plans.json --output /review/catalog.json
+  --plans /review/plans.json --output review/catalog.json
 ```
 
 ### Import and publish a revision
 
 ```bash
 # Pure schema and approved-policy validation.
-uv run python -m scripts.billing_admin catalog-validate --file /review/catalog.json
+pnpm --filter @citeladder/api billing:admin catalog-validate --file /review/catalog.json
 
 # Compare the candidate with the currently published payload.
-uv run python -m scripts.billing_admin catalog-diff --file /review/catalog.json
+pnpm --filter @citeladder/api billing:admin catalog-diff --file /review/catalog.json
 
 # Dry-run the immutable draft import.
-uv run python -m scripts.billing_admin catalog-import \
+pnpm --filter @citeladder/api billing:admin catalog-import \
   --revision commercial-2026-09-08-r1 \
   --file /review/catalog.json \
   --actor admin@example.com \
@@ -104,7 +105,7 @@ uv run python -m scripts.billing_admin catalog-import \
   --idempotency-key catalog-import:commercial-2026-09-08-r1
 
 # Repeat exactly, adding --apply after review.
-uv run python -m scripts.billing_admin catalog-import \
+pnpm --filter @citeladder/api billing:admin catalog-import \
   --revision commercial-2026-09-08-r1 \
   --file /review/catalog.json \
   --actor admin@example.com \
@@ -113,7 +114,7 @@ uv run python -m scripts.billing_admin catalog-import \
   --apply
 
 # Dry-run, then apply publication.
-uv run python -m scripts.billing_admin catalog-publish \
+pnpm --filter @citeladder/api billing:admin catalog-publish \
   --revision commercial-2026-09-08-r1 \
   --actor admin@example.com \
   --reason "publish approved catalog CR-123" \
@@ -161,7 +162,8 @@ publication or environment flag enables it.
 Inspect the account before and after every correction:
 
 ```bash
-uv run python -m scripts.billing_admin account-inspect \
+pnpm --filter @citeladder/api billing:admin account-inspect \
+  --workspace-id <workspace-uuid> \
   --account-id <billing-account-uuid> \
   --actor admin@example.com \
   --reason "investigate support case BILL-42" \
@@ -174,10 +176,12 @@ payment data or secrets. Mutations still use the standard dry-run/apply contract
 Issue an additive override grant:
 
 ```bash
-uv run python -m scripts.billing_admin grant \
+pnpm --filter @citeladder/api billing:admin grant \
+  --workspace-id <workspace-uuid> \
   --account-id <billing-account-uuid> \
   --key monitored_urls \
   --value 50 \
+  --valid-from 2026-10-04T00:00:00Z \
   --actor admin@example.com \
   --reason "approved correction BILL-42" \
   --idempotency-key grant:BILL-42:monitored-urls
@@ -189,7 +193,10 @@ row. Never “correct” a value by issuing an uncalculated opposite grant. Revo
 the exact erroneous grant, then issue the approved replacement if required:
 
 ```bash
-uv run python -m scripts.billing_admin revoke \
+pnpm --filter @citeladder/api billing:admin revoke \
+  --workspace-id <workspace-uuid> \
+  --account-id <account-uuid> \
+  --effective-from 2026-10-04T00:00:00Z \
   --grant-id <grant-uuid> \
   --actor admin@example.com \
   --reason "revoke erroneous grant from BILL-42" \

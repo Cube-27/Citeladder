@@ -101,7 +101,7 @@ export const catalogSchema = z
 export type CatalogPlan = z.infer<typeof plan>;
 export type CatalogItem = z.infer<typeof item>;
 
-export async function catalog(db: Database, revision?: string) {
+export async function catalogRevision(db: Database, revision?: string) {
   let query = db.selectFrom('billing_catalog_revisions').selectAll();
   query = revision
     ? query.where('revision', '=', revision)
@@ -110,8 +110,13 @@ export async function catalog(db: Database, revision?: string) {
   if (!row) throw new ApiError(503, 'catalog_unavailable');
   return {
     revision: row.revision,
-    payload: catalogSchema.parse(jsonObject(row.payload, 'billing_catalog_revisions.payload')),
+    payload: jsonObject(row.payload, 'billing_catalog_revisions.payload'),
   };
+}
+
+export async function catalog(db: Database, revision?: string) {
+  const saved = await catalogRevision(db, revision);
+  return { revision: saved.revision, payload: catalogSchema.parse(saved.payload) };
 }
 
 export function capabilityValue(key: string, value: number): boolean | number | string {

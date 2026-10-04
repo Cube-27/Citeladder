@@ -12,6 +12,12 @@ export function billingSettings(env: Record<string, string | undefined> = proces
   }
   if (!['http:', 'https:'].includes(contactUrl.protocol))
     throw new ConfigError('Billing contact URL must be an absolute HTTP(S) URL');
+  const sellerEmail = (get('seller_email') as string).trim();
+  if (sellerEmail && !/^[^@\s]+@[^@.\s]+(?:\.[^@.\s]+)+$/u.test(sellerEmail))
+    throw new ConfigError('seller_email must be an email address');
+  const invoicePrefix = (get('invoice_prefix') as string).trim().toUpperCase();
+  if (!/^[A-Z0-9]{1,3}$/u.test(invoicePrefix))
+    throw new ConfigError('invoice_prefix must be 1-3 uppercase letters or digits');
   return {
     enabled: get('checkout_enabled') as boolean,
     provider: get('checkout_provider') as string,
@@ -37,13 +43,13 @@ export function billingSettings(env: Record<string, string | undefined> = proces
     seller: {
       legal_name: get('seller_legal_name') as string,
       address: get('seller_legal_address') as string,
-      email: get('seller_email') as string,
+      email: sellerEmail,
       gstin: get('seller_gstin') as string,
       state_code: get('seller_gst_state_code') as string,
       state_name: get('seller_gst_state_name') as string,
       sac: get('seller_sac') as string,
       lut_reference: get('seller_lut_reference') as string,
-      invoice_prefix: get('invoice_prefix') as string,
+      invoice_prefix: invoicePrefix,
       gst_approval_reference: get('india_gst_approval_reference') as string,
     },
   };

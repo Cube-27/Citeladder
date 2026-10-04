@@ -25,7 +25,6 @@ from app.core.config import (
     encryption_key_configured,
     settings,
 )
-from app.core.config.billing_settings import BillingSettings
 from app.core.config.dotenv import (
     DISABLE_DOTENV_VAR,
     dotenv_disabled,
@@ -39,7 +38,6 @@ from app.core.config.site_health_runtime import SiteHealthSettings
 # ``dotenv_sources()`` — or the sweep below fails.
 DOTENV_SETTINGS_CLASSES: tuple[type[BaseSettings], ...] = (
     Settings,
-    BillingSettings,
     SiteHealthSettings,
     IntegrationSettings,
 )

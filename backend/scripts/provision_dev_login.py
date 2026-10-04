@@ -25,7 +25,6 @@ from app.core.database import SessionLocal, dispose_engine
 from app.domain.auth.service import authenticate_user, get_user_by_email, register_user
 from app.domain.billing.bootstrap import (
     development_access_grants,
-    ensure_initial_catalog,
     ensure_workspace_billing,
     issue_development_access,
 )
@@ -89,7 +88,6 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
                 key_family=f"dev-full-access:{user.id}",
                 initial_key=f"dev-full-access:{user.id}",
             )
-            await ensure_initial_catalog(session, operator=user)
             await session.commit()
             print(f"email={user.email}")
             print(f"workspace_id={workspace.id}")

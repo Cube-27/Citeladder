@@ -33,7 +33,7 @@ from app.domain.billing.accounts import billing_account_for
 from app.domain.entitlements.grants import issue_grant_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.workspaces.policy import WORKSPACE_ROLE_OWNER
-from app.models.billing import AccountGrant, BillingAccount, BillingCatalogRevision
+from app.models.billing import AccountGrant, BillingAccount
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 
@@ -282,40 +282,3 @@ async def provision_development_access(
         key_family=f"development-bootstrap:{user.id}:",
         initial_key=f"development-bootstrap:{user.id}:{allowance}",
     )
-
-
-async def ensure_initial_catalog(session: AsyncSession, *, operator: User) -> None:
-    """Explicit environment bootstrap; never called by public auth or reads."""
-    from app.domain.billing.admin import OperatorContext, publish_catalog, seed_catalog
-
-    if not operator.is_active or operator.role != "admin":
-        raise PermissionError("active_admin_required")
-    existing = await session.scalar(
-        select(BillingCatalogRevision.id).where(
-            BillingCatalogRevision.publication_state == "published"
-        )
-    )
-    if existing is not None:
-        return
-    context = OperatorContext(
-        actor=operator,
-        reason="initialize approved pricing for a provisioned environment",
-        idempotency_key="environment-initial-catalog",
-        dry_run=False,
-    )
-    from app.core.config.billing_settings import billing_settings
-    from app.core.config.razorpay_settings import razorpay_settings
-    from app.domain.billing.launch_catalog import ProviderMode
-
-    # Checkout-capable regional prices are authored only for the configured
-    # provider environment; without one the region stays unavailable.
-    mode = (
-        razorpay_settings.configured_mode()
-        if billing_settings.checkout_provider == "razorpay"
-        else None
-    )
-    provider_mode: ProviderMode | None = (
-        "live" if mode == "live" else "test" if mode == "test" else None
-    )
-    draft = await seed_catalog(session, context=context, provider_mode=provider_mode)
-    await publish_catalog(session, revision=draft.revision, context=context)

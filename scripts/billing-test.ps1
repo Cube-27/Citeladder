@@ -49,11 +49,9 @@ try {
                 try { & pnpm --filter '@citeladder/api' runner @CommandArgs } finally { Pop-Location }
                 break
             }
-            $modules = @{ admin = 'scripts.billing_admin'; plans = 'scripts.provision_razorpay_plans' }
-            $python = Join-Path $root 'backend/.venv/Scripts/python.exe'
-            if (-not (Test-Path -LiteralPath $python)) { throw 'Install backend dependencies with uv sync --frozen --extra dev first.' }
-            Push-Location (Join-Path $root 'backend')
-            try { & $python -m $modules[$Action] @CommandArgs } finally { Pop-Location }
+            $commands = @{ admin = 'billing:admin'; plans = 'billing:plans' }
+            Push-Location (Join-Path $root 'frontend')
+            try { & pnpm --filter '@citeladder/api' $commands[$Action] @CommandArgs } finally { Pop-Location }
         }
     }
     if ($LASTEXITCODE -ne 0) { throw 'Billing staging command failed.' }

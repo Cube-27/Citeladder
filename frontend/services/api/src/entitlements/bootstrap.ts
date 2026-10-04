@@ -1,10 +1,14 @@
 /** Public auth provisions only the configured free baseline. Billing owns other grants. */
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { Users } from '../generated/db-schema.ts';
-import { runtimeProjection } from './grants.ts';
+import { runtimeProjection, issueBundle, lockAccount } from './grants.ts';
+import { operatorTransaction } from '../db/operator-transaction.ts';
+import { requirePlatformAdmin } from '../auth/operators.ts';
+import { parseUuid } from '../http/uuid.ts';
+import { getLogger } from '../logging.ts';
 import { resolveAccountEntitlement } from './resolve.ts';
 
 async function projectRuntime(
@@ -73,9 +77,9 @@ export async function ensureWorkspaceBilling(
     .selectFrom('billing_accounts')
     .select(['id', 'entitlement_lifecycle_version'])
     .where('workspace_id', '=', workspaceId)
-    .forUpdate()
     .executeTakeFirstOrThrow();
   if (options.provisionAccess === false) return;
+  const locked = await lockAccount(db, workspaceId, account.id);
   const cfg = policy.entitlements.baseline;
   const idempotencyKey = `${cfg.revision}:system:public-signup`;
   const existing = await db
@@ -122,5 +126,123 @@ export async function ensureWorkspaceBilling(
     .set({ entitlement_lifecycle_version: sql`entitlement_lifecycle_version + 1`, updated_at: now })
     .where('id', '=', account.id)
     .execute();
-  await projectRuntime(db, workspaceId, account.id, account.entitlement_lifecycle_version + 1, now);
+  await projectRuntime(db, workspaceId, account.id, locked.entitlement_lifecycle_version + 1, now);
+}
+
+function developmentAccessGrants(allowance: number) {
+  if (!Number.isSafeInteger(allowance) || allowance < 1)
+    throw new Error('invalid_development_allowance');
+  return Object.entries(policy.entitlements.capabilities)
+    .filter(([, def]) => def.issuable)
+    .map(([key, def]) => ({
+      key,
+      value: def.type === 'flag' ? 1 : def.type === 'level' ? def.levels - 1 : allowance,
+    }));
+}
+/** Same family/source keys as the temporary Python bootstrap bridge. */
+async function issueDevelopmentAccess(
+  db: Database,
+  input: {
+    workspaceId: string;
+    accountId: string;
+    userId: string;
+    allowance: number;
+    reason: string;
+    keyFamily: string;
+    initialKey: string;
+    dryRun?: boolean;
+  },
+) {
+  await lockAccount(db, input.workspaceId, input.accountId);
+  const existing = await db
+    .selectFrom('account_grants')
+    .select(['key', 'value', 'idempotency_key'])
+    .where('billing_account_id', '=', input.accountId)
+    .execute();
+  const family = existing.filter((row) => row.idempotency_key.startsWith(input.keyFamily));
+  const transitions: string[] = [];
+  const specs = developmentAccessGrants(input.allowance).flatMap((spec) => {
+    const def =
+      policy.entitlements.capabilities[spec.key as keyof typeof policy.entitlements.capabilities];
+    const values = family.filter((row) => row.key === spec.key).map((row) => row.value);
+    const summed = def.type !== 'flag' && def.type !== 'level';
+    const current = summed
+      ? values.reduce((total, value) => total + value, 0)
+      : Math.max(0, ...values);
+    if (values.length && spec.value <= current) return [];
+    transitions.push(`${spec.key}:${current}->${spec.value}`);
+    return [{ key: spec.key, value: summed && values.length ? spec.value - current : spec.value }];
+  });
+  if (!specs.length) return;
+  const key = family.length
+    ? `${input.keyFamily.replace(/:+$/u, '')}:+${createHash('sha256').update(transitions.join('\n')).digest('hex').slice(0, 16)}`
+    : input.initialKey;
+  await issueBundle(db, {
+    workspaceId: input.workspaceId,
+    accountId: input.accountId,
+    key,
+    sourceKind: 'override',
+    sourceRef: `override:${input.userId}`,
+    specs,
+    revision: policy.entitlements.registry_revision,
+    from: new Date(),
+    until: null,
+    primary: false,
+    profile: '',
+    priority: 0,
+  });
+  getLogger('api.billing.operator').info('billing.override_grant_issued', {
+    actor_id: input.userId,
+    account_id: input.accountId,
+    reason: input.reason,
+    dry_run: input.dryRun === true,
+  });
+}
+/** Explicit workspace operator repair. Public signup never calls development issuance. */
+export function provisionWorkspaceBilling(
+  db: Database,
+  input: {
+    actor: string;
+    workspaceId: string;
+    reason: string;
+    apply?: boolean;
+    developmentAllowance?: number;
+  },
+) {
+  const workspaceId = parseUuid(input.workspaceId);
+  if (!workspaceId) throw new Error('invalid_workspace_id');
+  if (!input.reason.trim() || input.reason.length > 255) throw new Error('reason_required');
+  return operatorTransaction(db, input.apply === true, async (trx) => {
+    const actor = await requirePlatformAdmin(trx, input.actor);
+    const owner = await trx
+      .selectFrom('workspace_members')
+      .innerJoin('users', 'users.id', 'workspace_members.user_id')
+      .innerJoin('workspaces', 'workspaces.id', 'workspace_members.workspace_id')
+      .selectAll('users')
+      .where('workspace_members.workspace_id', '=', workspaceId)
+      .where('workspace_members.role', '=', 'owner')
+      .where('workspaces.is_system', '=', false)
+      .executeTakeFirstOrThrow();
+    await ensureWorkspaceBilling(trx, workspaceId, owner);
+    const account = await trx
+      .selectFrom('billing_accounts')
+      .select('id')
+      .where('workspace_id', '=', workspaceId)
+      .executeTakeFirstOrThrow();
+    if (input.developmentAllowance !== undefined) {
+      if (!owner.is_active || owner.role !== 'admin' || owner.id !== actor.id)
+        throw new Error('development_target_must_be_operator');
+      await issueDevelopmentAccess(trx, {
+        workspaceId,
+        accountId: account.id,
+        userId: owner.id,
+        allowance: input.developmentAllowance,
+        reason: input.reason,
+        keyFamily: `development-bootstrap:${owner.id}:`,
+        initialKey: `development-bootstrap:${owner.id}:${input.developmentAllowance}`,
+        dryRun: input.apply !== true,
+      });
+    }
+    return { workspace_id: workspaceId, account_id: account.id };
+  });
 }

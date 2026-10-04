@@ -53,7 +53,7 @@ def validate_availability(availability: str, reason: str | None) -> None:
     """Shared availability/reason consistency rule for any catalog row.
 
     An unavailable row needs a safe, non-leaking reason; an available row
-    carries none. The commercial catalog (``config/billing_catalog.py``) reuses this so
+    carries none. The native commercial catalog reuses this so
     the two-token vocabulary has exactly one owner (invariant 2).
     """
     if availability == AVAILABILITY_AVAILABLE:

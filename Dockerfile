@@ -1,3 +1,20 @@
+FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS native
+ENV PNPM_HOME=/pnpm
+ENV PATH="${PNPM_HOME}:${PATH}"
+WORKDIR /app
+RUN npm install --global --ignore-scripts pnpm@12.8.1
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+COPY frontend/packages/contracts/package.json ./packages/contracts/
+COPY frontend/services/api/package.json ./services/api/
+RUN pnpm install --frozen-lockfile --ignore-scripts --prod --filter "@citeladder/api..."
+COPY frontend/packages/contracts/src ./packages/contracts/src
+COPY frontend/services/api/src ./services/api/src
+COPY frontend/services/api/assets ./services/api/assets
+RUN pnpm --filter @citeladder/api deploy --prod --ignore-scripts /runtime \
+    && mkdir -p /runtime/packages \
+    && mv "$(readlink -f /runtime/node_modules/@citeladder/contracts)" /runtime/packages/contracts \
+    && ln -sfn ../../packages/contracts /runtime/node_modules/@citeladder/contracts
+
 # Runtime interpreter. Pinned to 3.12 so the image, backend/.python-version,
 # the CI gate, and the `requires-python` floor are one version: a Dependabot
 # bump had moved this to 3.14 while every gate still validated 3.12, so the
@@ -46,6 +63,12 @@ RUN groupadd --gid 10001 appuser \
     && useradd --no-create-home --uid 10001 --gid 10001 --shell /usr/sbin/nologin appuser \
     && install -d -o 10001 -g 10001 /app/backend/.runtime
 
+RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 libatomic1 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=native --chown=0:0 /usr/local/bin/node /usr/local/bin/node
+COPY --from=native --chown=0:0 /runtime /app/native
+COPY --chown=0:0 --chmod=755 scripts/bootstrap-environment.sh /app/bootstrap-environment.sh
+
 # Dependencies and source remain root-owned/read-only to the runtime identity.
 COPY --from=dependencies --chown=0:0 /app/backend/.venv ./.venv
 
@@ -55,6 +78,6 @@ COPY --chown=0:0 migrations /app/migrations
 
 USER 10001:10001
 
-# Schema image. Identity administration uses the native API image/CLI.
+# One-shot schema/identity/catalog image. API and worker images stay Python-free.
 # Deployments explicitly select migrations/bootstrap.
 CMD ["alembic", "--help"]

@@ -13,18 +13,21 @@ default; implemented adapters are not evidence of provider acceptance.
 [Workspace billing lookup](../frontend/services/api/src/billing/purchases.ts) resolves
 the one persisted account for a workspace. TypeScript
 [account provisioning](../frontend/services/api/src/entitlements/bootstrap.ts)
-owns runtime workspace bootstrap. Python account helpers remain for operator work.
+owns runtime workspace bootstrap. Native operators use the same account owner. Python account/grant helpers remain
+only for `app/demo/bootstrap.py`, `scripts/provision_dev_login.py`,
+`scripts/seed_dev_data.py`, and retained Python entitlement/schema fixture tests;
+PR 4 removes those application consumers and helpers.
 Owner-user metadata is not a payer-selection rule.
 [Workspace roles](workspace-access.md) gate billing and credentials to
 Owner/Admin; product Members receive safe effective allowances rather than
 private billing records.
 
 [Native catalog reads](../frontend/services/api/src/billing/catalog.ts) resolve
-persisted commercial authority. Python [catalog administration](../backend/app/domain/billing/catalog_revisions.py)
+persisted commercial authority. Native [catalog administration](../frontend/services/api/src/billing/admin.ts)
 validates and publishes revisions. Validated revisions are immutable, and publication
-retires the former published revision. [Launch catalog](../backend/app/domain/billing/launch_catalog.py)
+retires the former published revision. [Launch catalog](../frontend/services/api/src/billing/catalog-authoring.ts)
 authors `launch-pricing-v1`; regional amounts are frozen at authoring by the
-[currency rule](../backend/app/core/config/billing_pricing.py) and never
+[currency rule](../frontend/services/api/src/config/billing-authoring.ts) and never
 converted at runtime. India is charged in INR plus GST; every other country in
 USD. Add-ons and top-ups are one-time catalog items: their grants last
 `expiry_days` after purchase or until the base subscription ends, whichever is
@@ -141,15 +144,16 @@ format are incompatible and fail closed on replay; they require fresh disposable
 pre-launch data rather than rewriting immutable history. No reset is implicit.
 Runtime metering, grants, resolution and admission use their TypeScript owners.
 Each subject has one ledger-writing stack. Operator
-catalog publication, grant correction and plan verification remain Python-owned;
-the read-only Razorpay plan reader has no checkout or settlement methods and
-retires when that operator CLI migrates.
+catalog publication, grant correction and read-only plan verification are native.
+Catalog commands serialize publication and persist creation/publication request
+keys on immutable revisions; grants/revocations use their existing evidence keys.
+Preview executes the real mutation and rolls back its transaction.
 
 Native [execution config](../frontend/services/api/src/config/billing.ts) owns
 checkout, reconciliation, webhook settings and commercial runtime vocabularies.
-Python retains tax/seller settings, read-only Razorpay credentials, catalog
-identities and entitlement registry/algebra used by supported operators and
-bootstrap. Native provider display derives from the shared catalog and frozen
+Native authoring owns exact rational currency/GST rounding, seller configuration
+and read-only Razorpay admission. Python retains schema catalog vocabulary and
+entitlement registry/algebra used by the temporary bootstrap/seed bridge. Native provider display derives from the shared catalog and frozen
 routes; it has no separate Python builder.
 
 The shared transaction lock order remains in [architecture](architecture.md).

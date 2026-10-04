@@ -3,6 +3,7 @@
 
 import asyncio
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -260,6 +261,38 @@ def provision_dev_login(database_url: str) -> None:
         print(f"Development login provisioning failed:\n{result.stderr}")
         raise SystemExit(1)
     print(result.stdout)
+    node_executable = shutil.which("node")
+    if node_executable is None:
+        raise RuntimeError("Node is required for native catalog initialization")
+    try:
+        catalog = subprocess.run(  # noqa: S603 - fixed native catalog entrypoint
+            [
+                node_executable,
+                str(
+                    PROJECT_ROOT / "frontend/services/api/src/cli/bootstrap-catalog.ts"
+                ),
+                "--actor",
+                email,
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=provision_timeout,
+            check=False,
+            env=provision_environment,
+        )
+    except subprocess.TimeoutExpired as exc:
+        print(
+            f"Catalog initialization timed out after {exc.timeout:g} seconds.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1) from None
+    if catalog.returncode != 0:
+        print(
+            "Native catalog initialization failed; retry provisioning.", file=sys.stderr
+        )
+        raise SystemExit(1)
+    print(catalog.stdout)
     print("Development login ready.")
 
 

@@ -292,7 +292,7 @@ jobs:
           jq --slurpfile optional /tmp/optional.json '.optional_secrets=$optional[0]' \
             deploy.auto.tfvars.json > /tmp/tfvars
           mv /tmp/tfvars deploy.auto.tfvars.json
-      - name: Converge the database and migrate before the API rolls forward
+      - name: Converge migrations, identity and native catalog before API rollout
         working-directory: infra/gcp
         shell: bash
         env:

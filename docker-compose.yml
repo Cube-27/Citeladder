@@ -26,11 +26,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     ports:
-      - "55432:5432"
+      - '55432:5432'
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-citeladder}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-citeladder}']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -41,7 +41,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: "no"
+    restart: 'no'
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
     environment: &backend_env
@@ -53,7 +53,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["/bin/sh", "-c", "alembic upgrade head && python -m app.demo.bootstrap"]
+    command: ['/bin/sh', '/app/bootstrap-environment.sh']
 
   # Each Worker runs under `wrangler dev` as production serves it:
   # marketing http://127.0.0.1:3000, app http://127.0.0.1:3001 (proxies /api
@@ -80,7 +80,7 @@ services:
       api-service:
         condition: service_healthy
     ports:
-      - "127.0.0.1:3000:3000"
+      - '127.0.0.1:3000:3000'
 
   docs:
     build:
@@ -90,7 +90,7 @@ services:
         PUBLIC_DOCS_ORIGIN: http://127.0.0.1:4322
     restart: unless-stopped
     ports:
-      - "127.0.0.1:4322:4322"
+      - '127.0.0.1:4322:4322'
 
   vite-app:
     build:
@@ -108,7 +108,7 @@ services:
       api-service:
         condition: service_healthy
     ports:
-      - "127.0.0.1:3001:3001"
+      - '127.0.0.1:3001:3001'
 
   # Production runs the same image as Cloud Run jobs: the API starts a runner
   # after committed work and Cloud Scheduler starts a tick. Locally one service
@@ -127,7 +127,7 @@ services:
       migrate:
         condition: service_completed_successfully
     # A failing tick ends the loop, so Compose restarts and surfaces it.
-    command: ["/bin/sh", "-c", "while node src/tick.ts; do sleep 10; done"]
+    command: ['/bin/sh', '-c', 'while node src/tick.ts; do sleep 10; done']
     healthcheck:
       disable: true
 
@@ -148,7 +148,7 @@ services:
         condition: service_completed_successfully
     ports:
       # Loopback only: nothing may reach this service except from this host.
-      - "127.0.0.1:8100:8100"
+      - '127.0.0.1:8100:8100'
 
 volumes:
   pg_data:

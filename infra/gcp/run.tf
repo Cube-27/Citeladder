@@ -15,11 +15,9 @@ locals {
                 raise
             time.sleep(5)
     PY
-    alembic upgrade head
-    # A pre-launch baseline edit cannot upgrade a stamped database: fail before
-    # the API rolls forward and require an explicit database reset instead.
-    alembic check
-    python -m app.demo.bootstrap
+    # Alembic drift admission, Python identity/grants, then native catalog.
+    # Any failure prevents the API rollout; the job can be retried idempotently.
+    exec /bin/sh /app/bootstrap-environment.sh
   EOT
 }
 
