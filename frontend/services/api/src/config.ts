@@ -89,7 +89,7 @@ export const policy = {
   analytics,
   referrals,
   auth: {
-    ...pythonConfig.auth,
+    password: authRuntime.password,
     terms_revision: authRuntime.terms_revision,
     privacy_revision: authRuntime.privacy_revision,
     oauth: authOAuth,

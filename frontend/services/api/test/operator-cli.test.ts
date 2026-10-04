@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { mkdtemp, writeFile, mkdir, copyFile, rm } from 'node:fs/promises';
 import { expect, it, vi } from 'vitest';
 import { operatorMain } from '../src/cli/operator.ts';
+import { resetSequence } from '../src/cli/reset-sequence.ts';
 
 const execute = promisify(execFile);
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -91,74 +92,96 @@ it.each(['invalid', '0', '1.5'])(
   },
 );
 
-it('local wrapper resolves dotenv once for both stages and honors process precedence and disable', async () => {
+it('native local configuration preserves dotenv precedence/disable and the wrapper keeps passwords on stdin', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'provision-config-'));
-  const python = join(
-    root,
-    'backend/.venv',
-    process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python',
-  );
+  const cli = join(directory, 'frontend/services/api/src/cli');
+  await mkdir(cli, { recursive: true });
   await mkdir(join(directory, 'scripts'));
   await mkdir(join(directory, 'backend'));
+  await copyFile(
+    join(root, 'frontend/services/api/src/cli/local-environment.ts'),
+    join(cli, 'local-environment.ts'),
+  );
   await copyFile(
     join(root, 'scripts/provision-dev-login.ps1'),
     join(directory, 'scripts/provision-dev-login.ps1'),
   );
-  await copyFile(join(root, 'reset-db.py'), join(directory, 'reset-db.py'));
   await writeFile(join(directory, '.env'), 'DATABASE_URL=postgresql://root-fixture/one\n');
   await writeFile(
     join(directory, 'backend/.env'),
     'DATABASE_URL=postgresql://backend-fixture/two\n',
   );
-  const psQuote = (value: string) => `'${value.replaceAll("'", "''")}'`;
+  await writeFile(
+    join(cli, 'probe.ts'),
+    "import { localEnvironment } from './local-environment.ts'; console.log(localEnvironment().DATABASE_URL ?? 'missing');",
+  );
+  const probe = async (env: Record<string, string> = {}) =>
+    (
+      await execute(process.execPath, [join(cli, 'probe.ts')], { env: { ...systemEnv, ...env } })
+    ).stdout.trim();
+  const psQuote = (value: string) => "'" + value.replaceAll("'", "''") + "'";
   const script = `
-function uv {
-  if ($args[2] -eq '-c') { & ${psQuote(python)} @($args[2..($args.Length - 1)]); $global:LASTEXITCODE = $LASTEXITCODE; return }
+function node {
   if ($args -notcontains '--password-stdin' -or $args -contains 'fixture-local') { throw 'Unsafe password arguments' }
   if (@($input)[0] -ne 'fixture-local') { throw 'Missing password stdin' }
-  Write-Output ('identity=' + $env:DATABASE_URL)
+  Write-Output 'native-provision'
   $global:LASTEXITCODE = 0
 }
-function node { Write-Output ('catalog=' + $env:DATABASE_URL); $global:LASTEXITCODE = 0 }
 $password = ConvertTo-SecureString 'fixture-local' -AsPlainText -Force
 & ${psQuote(join(directory, 'scripts/provision-dev-login.ps1'))} -Email fixture@example.test -Password $password -CounterAllowance 100
-Write-Output ('restored=' + $env:DATABASE_URL)
 `;
   try {
-    const run = (env: Record<string, string> = {}) =>
-      execute('pwsh', ['-NoProfile', '-Command', script], {
-        env: { ...systemEnv, ...env },
-        timeout: 30000,
-      });
-    expect((await run()).stdout.trim().split(/\r?\n/u)).toEqual([
-      'identity=postgresql://backend-fixture/two',
-      'catalog=postgresql://backend-fixture/two',
-      'restored=',
-    ]);
+    expect(await probe()).toBe('postgresql://backend-fixture/two');
+    expect(await probe({ DATABASE_URL: 'postgresql://process-fixture/three' })).toBe(
+      'postgresql://process-fixture/three',
+    );
+    expect(await probe({ CITELADDER_DISABLE_DOTENV: '1' })).toBe('missing');
     expect(
-      (await run({ DATABASE_URL: 'postgresql://process-fixture/three' })).stdout
-        .trim()
-        .split(/\r?\n/u),
-    ).toEqual([
-      'identity=postgresql://process-fixture/three',
-      'catalog=postgresql://process-fixture/three',
-      'restored=postgresql://process-fixture/three',
-    ]);
+      await probe({
+        CITELADDER_DISABLE_DOTENV: '1',
+        DATABASE_URL: 'postgresql://isolated-fixture/four',
+      }),
+    ).toBe('postgresql://isolated-fixture/four');
     expect(
       (
-        await run({
-          CITELADDER_DISABLE_DOTENV: '1',
-          DATABASE_URL: 'postgresql://isolated-fixture/four',
+        await execute('pwsh', ['-NoProfile', '-Command', script], {
+          env: systemEnv,
+          timeout: 30000,
         })
-      ).stdout
-        .trim()
-        .split(/\r?\n/u),
-    ).toEqual([
-      'identity=postgresql://isolated-fixture/four',
-      'catalog=postgresql://isolated-fixture/four',
-      'restored=postgresql://isolated-fixture/four',
-    ]);
+      ).stdout.trim(),
+    ).toBe('native-provision');
   } finally {
     await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 }, 90000);
+
+it('reset passes one explicit target to both bounded stages and stops on a reset failure', async () => {
+  const env = {
+    DATABASE_URL: 'postgresql://127.0.0.1/disposable',
+    DEV_LOGIN_PASSWORD: 'fixture-password',
+  };
+  const executeReset = vi.fn(async () => {});
+  await resetSequence(env, executeReset);
+  expect(executeReset).toHaveBeenCalledTimes(2);
+  const first = executeReset.mock.calls[0] as unknown as [
+    string,
+    string[],
+    { env: Record<string, string>; timeout: number },
+  ];
+  const second = executeReset.mock.calls[1] as unknown as typeof first;
+  expect(first[2].env).toEqual({ ...env, CITELADDER_DISABLE_DOTENV: '1' });
+  expect(second[2].env).toEqual(first[2].env);
+  expect(first[2].timeout).toBe(420000);
+  expect(second[2].timeout).toBe(301000);
+  const failure = vi.fn(async () => {
+    throw new Error('reset failed');
+  });
+  await expect(resetSequence(env, failure)).rejects.toThrow('reset failed');
+  expect(failure).toHaveBeenCalledTimes(1);
+  const missing = vi.fn(async () => {});
+  await expect(resetSequence({}, missing)).rejects.toThrow('explicit_reset_database_required');
+  expect(missing).not.toHaveBeenCalled();
+  await expect(
+    resetSequence({ ...env, RESET_MIGRATION_TIMEOUT_SECONDS: '0' }, missing),
+  ).rejects.toThrow('invalid_reset_timeout');
+});

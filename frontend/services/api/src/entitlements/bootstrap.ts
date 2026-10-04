@@ -143,7 +143,7 @@ function developmentAccessGrants(allowance: number) {
     });
 }
 /** Same family/source keys as the temporary Python bootstrap bridge. */
-async function issueDevelopmentAccess(
+export async function issueDevelopmentAccess(
   db: Database,
   input: {
     workspaceId: string;

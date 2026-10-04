@@ -14,8 +14,28 @@
       "env": ["PUBLIC_SIGNUP_ENABLED"],
       "type": "bool",
       "default": false
+    },
+    "dev_login_counter_allowance": {
+      "env": ["DEV_LOGIN_COUNTER_ALLOWANCE", "dev_login_counter_allowance"],
+      "type": "int",
+      "default": 200,
+      "minimum": 1,
+      "maximum": 50000
+    },
+    "demo_monitored_url_limit": {
+      "env": ["DEMO_MONITORED_URL_LIMIT", "demo_monitored_url_limit"],
+      "type": "int",
+      "default": 50000,
+      "minimum": 1,
+      "maximum": 50000
     }
   },
   "terms_revision": "2026-09-24",
-  "privacy_revision": "2026-09-28"
+  "privacy_revision": "2026-09-28",
+  "password": {
+    "memoryCost": 65536,
+    "timeCost": 3,
+    "parallelism": 4,
+    "outputLen": 32
+  }
 }
