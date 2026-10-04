@@ -115,6 +115,7 @@ jobs:
           done
           "${compose[@]}" run --rm --no-deps migrate python -c 'import sys; assert sys.version_info[:2] == (3, 12)'
           "${compose[@]}" run --rm --no-deps migrate node /app/native/src/cli/bootstrap-catalog.ts --help
+          "${compose[@]}" run --rm --no-deps migrate node /app/native/src/cli/bootstrap-account.ts --help
           "${compose[@]}" run --rm --no-deps migrate node /app/native/src/cli/billing-admin.ts --help
           # Repeated composed startup must retain the same immutable catalog.
           "${compose[@]}" run --rm --no-deps migrate /bin/sh /app/bootstrap-environment.sh

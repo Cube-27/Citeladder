@@ -431,8 +431,12 @@ function productionSecretProblems(
   return issues;
 }
 
-function assertDeployable(config: ServiceConfig, env: Record<string, string | undefined>): void {
-  if (isDevelopmentEnv(config.appEnv)) return;
+export function assertDeployable(
+  config: ServiceConfig,
+  env: Record<string, string | undefined>,
+  force = false,
+): void {
+  if (isDevelopmentEnv(config.appEnv) && !force) return;
   const issues = productionSecretProblems(config, env);
   if (config.database.sslMode !== 'require') {
     issues.push('db_ssl_mode must be require in production');
@@ -451,7 +455,7 @@ function assertDeployable(config: ServiceConfig, env: Record<string, string | un
     (config.demo.expiresAt === null || !Number.isFinite(config.demo.expiresAt.getTime()))
   )
     issues.push('demo_expires_at must be a timezone-aware timestamp in demo mode');
-  if (!productionFrontendUrl(config.auth.frontendUrl))
+  if (!isDevelopmentEnv(config.appEnv) && !productionFrontendUrl(config.auth.frontendUrl))
     issues.push('frontend_url must be a non-loopback credential-free HTTPS origin in production');
   if (issues.length) throw new ConfigError(issues.join('; '));
 }

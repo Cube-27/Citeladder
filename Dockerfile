@@ -78,6 +78,6 @@ COPY --chown=0:0 migrations /app/migrations
 
 USER 10001:10001
 
-# One-shot schema/identity/catalog image. API and worker images stay Python-free.
+# One-shot schema image with native identity/access/catalog bootstrap. API and worker images stay Python-free.
 # Deployments explicitly select migrations/bootstrap.
 CMD ["alembic", "--help"]

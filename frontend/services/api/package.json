@@ -21,6 +21,7 @@
     "billing:backfill": "node src/cli/backfill-billing.ts",
     "entitlement:site-health": "node src/cli/set-site-health-entitlement.ts",
     "bootstrap:catalog": "node src/cli/bootstrap-catalog.ts",
+    "bootstrap:account": "node src/cli/bootstrap-account.ts",
     "provision:dev": "node src/cli/provision-dev-login.ts",
     "reset:db": "node src/cli/reset-database.ts",
     "seed:site-health": "node scripts/seed-site-health.ts",
