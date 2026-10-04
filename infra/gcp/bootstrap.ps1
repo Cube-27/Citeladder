@@ -109,6 +109,8 @@ $projectRoles = @(
     'roles/compute.admin',
     'roles/iam.serviceAccountAdmin',
     'roles/iam.serviceAccountUser',
+    # Terraform manages the API request-log exclusion.
+    'roles/logging.configWriter',
     'roles/resourcemanager.projectIamAdmin',
     # Deploys services/jobs and executes migration and smoke executions.
     'roles/run.admin',

@@ -50,7 +50,8 @@ and state bucket:
 
 `gcloud billing projects describe project-setup-20260711` shows the billing
 account. The script is idempotent. It enables Cloud Run and Cloud Scheduler,
-grants the deployer `run.admin` and `cloudscheduler.admin`, and removes the
+grants the deployer `run.admin`, `cloudscheduler.admin` and
+`logging.configWriter` (for the API request-log exclusion), and removes the
 retired SSH/IAP and project-deletion grants. It also relabels the project
 `environment=production` and keeps the existing GitHub OIDC trust for
 `Cube-27/Citeladder`, `refs/heads/main` and the `gcp-demo` environment. Its
