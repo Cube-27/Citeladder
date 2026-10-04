@@ -130,7 +130,6 @@ describe('ReviewStep competitor limit', () => {
         domains={[]}
         competitors={[{ id: 'manual', name: '', aliases: [], domains: [], selected: true }]}
         maximumCompetitors={5}
-        resolutionError="Could not resolve website for Peer: peer.com"
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
         onEditCompetitor={edit}
@@ -146,7 +145,6 @@ describe('ReviewStep competitor limit', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(edit).toHaveBeenCalledWith(0, 'Peer', 'peer.com');
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not resolve website for Peer');
   });
 
   it('can cancel an unsaved fifth manual choice and free the selection slot', async () => {

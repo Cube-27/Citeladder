@@ -6,7 +6,6 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { humanizeApiError } from '@/lib/api/errors';
 import { MarketSelect } from '@/components/ui/market-select';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
@@ -232,16 +231,12 @@ export function ReviewStage({
     setProfile,
     toggle,
   } = flow;
-  const completionMessage = complete.isError ? humanizeApiError(complete.error).message : '';
-  const resolutionError = completionMessage.startsWith('Could not resolve website for ')
-    ? `${completionMessage}. Edit that competitor's website and try again.`
-    : undefined;
   return (
     <div>
       <StageHeader title="Does this look right?">
         Confirm what we found before we create your project.
       </StageHeader>
-      <ReviewNotices failed={complete.isError && !resolutionError}>
+      <ReviewNotices failed={complete.isError}>
         {catalog.isError ? (
           <Alert tone="warning">
             <div className="flex items-center justify-between gap-3">
@@ -252,7 +247,7 @@ export function ReviewStage({
             </div>
           </Alert>
         ) : null}
-        {complete.isError && !resolutionError ? (
+        {complete.isError ? (
           <Alert tone="warning">{onboardingErrorMessage(complete.error)}</Alert>
         ) : null}
         <CompletionStateAlert failed={completionFailed} />
@@ -278,7 +273,6 @@ export function ReviewStage({
             }
             onAddCompetitor={() => addCompetitor(setCompetitors, maximumCompetitors)}
             maximumCompetitors={maximumCompetitors}
-            resolutionError={resolutionError}
           />
           {!hasSelectedDomain ? (
             <p className="flow-review-hint">Keep at least one website address selected.</p>

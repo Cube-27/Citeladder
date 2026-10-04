@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Plus } from 'lucide-react';
 
 import { FlowGroup } from '@/components/auth/flow-shell';
@@ -122,19 +122,6 @@ function CompetitorRow({
   );
 }
 
-/** The competitor website that stopped creation, brought into view where it can be fixed. */
-function ResolutionError({ message }: Readonly<{ message: string }>) {
-  const alert = useRef<HTMLParagraphElement>(null);
-  useEffect(() => {
-    alert.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-  }, [message]);
-  return (
-    <p ref={alert} role="alert" className="flow-review-hint mt-[var(--flow-answer)]">
-      {message}
-    </p>
-  );
-}
-
 export function ReviewStep({
   domains,
   competitors,
@@ -144,7 +131,6 @@ export function ReviewStep({
   onRemoveCompetitor,
   onAddCompetitor,
   maximumCompetitors,
-  resolutionError,
 }: Readonly<{
   domains: ReviewDomain[];
   competitors: ReviewCompetitor[];
@@ -154,7 +140,6 @@ export function ReviewStep({
   onRemoveCompetitor: (index: number) => void;
   onAddCompetitor: () => void;
   maximumCompetitors: number | undefined;
-  resolutionError?: string;
 }>) {
   const selectedDomains = domains.filter((item) => item.selected).length;
   const selectedCompetitors = competitors.filter((item) => item.selected).length;
@@ -220,7 +205,6 @@ export function ReviewStep({
             ))}
           </ul>
         )}
-        {resolutionError ? <ResolutionError message={resolutionError} /> : null}
       </FlowGroup>
     </>
   );
