@@ -1,5 +1,20 @@
 import { ConfigError, policy, resolveSettingSpec } from '../config.ts';
 
+/** Same validated identity-bootstrap admission and defaults as the shared setting owner. */
+export function catalogBootstrapSettings(env: Record<string, string | undefined> = process.env) {
+  const setting = (key: 'app_env' | 'demo_mode' | 'dev_login_email' | 'dev_login_password') =>
+    resolveSettingSpec(policy.settings[key], env);
+  const development = policy.development_env_names.includes(
+    String(setting('app_env')).trim().toLowerCase(),
+  );
+  return {
+    skip:
+      Boolean(setting('demo_mode')) ||
+      (development && !String(setting('dev_login_password')).trim()),
+    actor: String(setting('dev_login_email')).trim().toLowerCase(),
+  };
+}
+
 /** Resolve native/shared policy; tests pass a deterministic environment. */
 export function billingSettings(env: Record<string, string | undefined> = process.env) {
   const specs = policy.billing.settings;

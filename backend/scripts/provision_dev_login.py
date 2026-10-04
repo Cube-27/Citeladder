@@ -17,10 +17,11 @@ import argparse
 import asyncio
 import sys
 
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 
-from app.core.config import settings
+from app.core.config import LOGIN_PASSWORD_MAX_CHARS, LOGIN_PASSWORD_MIN_CHARS, settings
 from app.core.database import SessionLocal, dispose_engine
 from app.domain.auth.service import authenticate_user, get_user_by_email, register_user
 from app.domain.billing.bootstrap import (
@@ -115,12 +116,27 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--email", required=True)
-    parser.add_argument("--password", required=True)
+    password_input = parser.add_mutually_exclusive_group(required=True)
+    password_input.add_argument("--password")
+    password_input.add_argument("--password-stdin", action="store_true")
     parser.add_argument("--counter-allowance", required=True, type=int)
     args = parser.parse_args(argv)
+    try:
+        email = str(TypeAdapter(EmailStr).validate_python(args.email))
+    except ValidationError:
+        parser.error("a valid email address is required")
+    password = args.password
+    if args.password_stdin:
+        password = (
+            sys.stdin.readline(LOGIN_PASSWORD_MAX_CHARS + 2)
+            .removesuffix("\n")
+            .removesuffix("\r")
+        )
+    if not LOGIN_PASSWORD_MIN_CHARS <= len(password) <= LOGIN_PASSWORD_MAX_CHARS:
+        parser.error("password length does not meet the configured login policy")
     if args.counter_allowance < 1:
         parser.error("--counter-allowance must be positive")
-    asyncio.run(_run(args.email, args.password, args.counter_allowance))
+    asyncio.run(_run(email, password, args.counter_allowance))
     return 0
 
 

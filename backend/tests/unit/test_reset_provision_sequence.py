@@ -9,9 +9,20 @@ import pytest
 from tests.unit.test_reset_db import _reset_module
 
 
-@pytest.mark.parametrize("catalog_status", [0, 1])
+@pytest.mark.parametrize(
+    "catalog_status,diagnostic,visible",
+    [
+        (0, "", False),
+        (1, "active_admin_required", True),
+        (1, "fixture sensitive value", False),
+    ],
+)
 def test_reset_sequences_identity_before_catalog_and_fails_on_catalog_error(
-    monkeypatch: pytest.MonkeyPatch, catalog_status: int
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    catalog_status: int,
+    diagnostic: str,
+    visible: bool,
 ) -> None:
     module = _reset_module()
     monkeypatch.setattr(module.shutil, "which", lambda _name: "/fixture/bin/node")
@@ -29,7 +40,7 @@ def test_reset_sequences_identity_before_catalog_and_fails_on_catalog_error(
         side_effect=[
             SimpleNamespace(returncode=0, stdout="identity ready", stderr=""),
             SimpleNamespace(
-                returncode=catalog_status, stdout="catalog ready", stderr=""
+                returncode=catalog_status, stdout="catalog ready", stderr=diagnostic
             ),
         ]
     )
@@ -45,8 +56,12 @@ def test_reset_sequences_identity_before_catalog_and_fails_on_catalog_error(
         )
     first, second = run.call_args_list
     assert first.args[0][2] == "scripts.provision_dev_login"
+    assert "fixture-password" not in first.args[0]
+    assert first.kwargs["input"] == "fixture-password\n"
     assert second.args[0][0] == "/fixture/bin/node"
     assert second.kwargs["env"]["DATABASE_URL"] == first.kwargs["env"]["DATABASE_URL"]
+    errors = capsys.readouterr().err.splitlines()
+    assert (diagnostic in errors) is visible
 
 
 def test_reset_does_not_initialize_catalog_when_identity_times_out(

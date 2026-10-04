@@ -6,7 +6,6 @@ import {
   bindPlanRefs,
   verifyPlan,
   RazorpayPlanReader,
-  workspacePath,
   readOperatorJson,
   writeBoundCatalog,
 } from '../billing/plan-operators.ts';
@@ -37,10 +36,7 @@ await operatorMain(async () => {
       const saved = await catalogRevision(db, required(values.revision, 'revision'));
       const payload =
         operation === 'bind'
-          ? bindPlanRefs(
-              saved.payload,
-              await readOperatorJson(await workspacePath(required(values.plans, 'plans'))),
-            )
+          ? bindPlanRefs(saved.payload, await readOperatorJson(required(values.plans, 'plans')))
           : saved.payload;
       const entries = recurringPrices(payload);
       if (!entries.length || entries.some(({ price }) => price.provider_mode !== environment))
@@ -56,10 +52,13 @@ await operatorMain(async () => {
       if (!configured(adapter) || adapter.mode !== environment)
         throw new Error('configured_provider_environment_mismatch');
       const reader = new RazorpayPlanReader(billingSettings(), adapter);
-      for (const { key, price } of entries) {
-        verifyPlan(await reader.fetchPlan(price.provider_price_ref), price);
-        console.log(`verified ${saved.revision} ${key}`);
-      }
+      // Authoring admits at most four plans and two regions: this is bounded to eight GETs.
+      await Promise.all(
+        entries.map(async ({ price }) => {
+          verifyPlan(await reader.fetchPlan(price.provider_price_ref), price);
+        }),
+      );
+      for (const { key } of entries) console.log(`verified ${saved.revision} ${key}`);
       if (operation === 'bind') await writeBoundCatalog(required(values.output, 'output'), payload);
     });
   }

@@ -8,7 +8,7 @@ import {
   inspectAccount,
   initializeCatalog,
 } from '../src/billing/admin.ts';
-import { launchCatalog } from '../src/billing/catalog-authoring.ts';
+import { launchCatalog, catalogDigest, validateCatalog } from '../src/billing/catalog-authoring.ts';
 import { billingSettings } from '../src/billing/config.ts';
 import {
   ensureWorkspaceBilling,
@@ -161,7 +161,16 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   const baseline = await resolveAccountEntitlement(db, target(), new Date());
   const baselineLimit = baseline.status === 'resolved' && baseline.values.get('monitored_urls');
   expect(typeof baselineLimit).toBe('number');
-  await grantMutation(db, { ...ctx, apply: false }, target(), operation);
+  const previewRecords: unknown[] = [];
+  const previousSink = setLogSink((line) => previewRecords.push(JSON.parse(line)));
+  try {
+    await grantMutation(db, { ...ctx, apply: false }, target(), operation);
+  } finally {
+    setLogSink(previousSink);
+  }
+  expect(previewRecords).toContainEqual(
+    expect.objectContaining({ event: 'billing.override_grant_previewed', dry_run: true }),
+  );
   expect(await version()).toBe(initialVersion);
   await expect(
     grantMutation(db, ctx, { ...target(), workspaceId: foreignWorkspace }, operation),
@@ -199,6 +208,14 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   await expect(
     grantMutation(db, revokeCtx, target(), { ...revoked, at: new Date(revoked.at.getTime() + 1) }),
   ).rejects.toThrow('idempotency_conflict');
+  const another = await grantMutation(db, context(), target(), {
+    ...operation,
+    key: 'ai_credits',
+    value: 10,
+  });
+  await expect(
+    grantMutation(db, revokeCtx, target(), { ...revoked, grantId: another.grant_ids![0]! }),
+  ).rejects.toThrow('revocation_idempotency_conflict');
   await expect(
     inspectAccount(db, context(), { workspaceId: foreignWorkspace, accountId }),
   ).rejects.toThrow();
@@ -272,4 +289,47 @@ it('requires a persisted active admin even when initial catalog already exists',
   await expect(initializeCatalog(db, `${deniedId}@example.test`, null)).rejects.toThrow(
     'administrator',
   );
+});
+
+it('rejects reattributing bootstrap imports and preserves previously published runtime terms', async () => {
+  const revision = `bootstrap-${randomUUID()}`;
+  revisions.push(revision);
+  const payload = authored(revision);
+  await db
+    .insertInto('billing_catalog_revisions')
+    .values({
+      id: randomUUID(),
+      revision,
+      payload: JSON.stringify(payload),
+      payload_sha256: catalogDigest(payload),
+      publication_state: 'draft',
+      created_by_user_id: actorId,
+      created_reason: 'original bootstrap',
+      created_at: new Date(),
+    })
+    .execute();
+  await expect(
+    catalogMutation(db, context(), { kind: 'import', revision, payload }),
+  ).rejects.toThrow('catalog_bootstrap_revision_exists');
+  const original = await db
+    .selectFrom('billing_catalog_revisions')
+    .selectAll()
+    .where('revision', '=', revision)
+    .executeTakeFirstOrThrow();
+  expect(original.created_idempotency_key).toBeNull();
+  expect(original.created_reason).toBe('original bootstrap');
+  // The historical runtime shape supports HTTP contacts; new authoring requires HTTPS.
+  payload.support_contact!.contact_url = 'http://example.test/legacy';
+  expect(() => validateCatalog(payload)).toThrow();
+  await db
+    .updateTable('billing_catalog_revisions')
+    .set({ publication_state: 'retired' })
+    .where('publication_state', '=', 'published')
+    .execute();
+  await db
+    .updateTable('billing_catalog_revisions')
+    .set({ payload: JSON.stringify(payload), publication_state: 'published' })
+    .where('revision', '=', revision)
+    .execute();
+  expect((await initializeCatalog(db, `${actorId}@example.test`, null)).revision).toBe(revision);
 });

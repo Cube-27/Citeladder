@@ -216,11 +216,15 @@ export async function revokeBundle(
   if (!Number.isFinite(input.at.getTime())) conflict('invalid_revocation_time');
   const prior = await db
     .selectFrom('grant_revocations')
-    .selectAll()
-    .where('grant_id', 'in', input.grantIds)
-    .where('idempotency_key', '=', input.key)
+    .innerJoin('account_grants', 'account_grants.id', 'grant_revocations.grant_id')
+    .selectAll('grant_revocations')
+    .where('account_grants.billing_account_id', '=', input.accountId)
+    .where('grant_revocations.idempotency_key', '=', input.key)
     .execute();
   if (
+    (prior.length > 0 &&
+      (prior.length !== rows.length ||
+        prior.some((row) => !input.grantIds.includes(row.grant_id)))) ||
     prior.some(
       (row) =>
         row.effective_from.getTime() !== input.at.getTime() ||

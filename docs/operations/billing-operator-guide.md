@@ -20,6 +20,12 @@ Run commands from `frontend/` against the explicitly selected database. Never pu
 provider secrets, customer payment data, operator codes, or raw webhook bodies on
 the command line or in an incident ticket.
 
+File inputs and outputs are confined to the command's working directory,
+including real symlink targets. `pnpm --filter @citeladder/api` runs in
+`frontend/services/api`; put the `review/` files below that directory. The local
+`billing-test.ps1` wrapper runs native commands from the repository root so its
+private `.runtime/` files remain inside the authorized root.
+
 The CLI cannot create or promote its first admin. Bootstrap an administrator
 through the deployment's separately reviewed identity/database procedure; never
 use `provision_dev_login.py` outside development and never pass a password or
@@ -36,10 +42,15 @@ Every `billing:admin` mutation requires all of:
 `billing:admin` is dry-run by default. There is no `--dry-run` flag: omitting
 `--apply` rolls the transaction back and returns `"dry_run": true`. Validation
 and diff commands are read-only and do not require mutation metadata. CLI output
-is redacted and exceptions expose only their type.
+is redacted. Failures expose a reviewed domain slug or error type, never arbitrary
+input or database diagnostics.
 
 Use a fresh idempotency key for a different logical request. Reuse the original
-key only to replay the same request. Save the command, redacted output, reviewer,
+key only to replay the same request. Import/seed and publish are separate requests
+and need separate keys; cross-operation reuse reports `catalog_idempotency_operation_conflict`.
+A bootstrap-created revision cannot be reimported to replace its attribution:
+`catalog_bootstrap_revision_exists` requires preparing a new reviewed revision.
+Save the command, redacted output, reviewer,
 time, database/environment, and resulting row IDs in the change record.
 
 ```bash
@@ -84,22 +95,22 @@ pnpm --filter @citeladder/api billing:plans propose \
 # plans.json: {"tier_1:international": "plan_…", "tier_2:international": …}
 pnpm --filter @citeladder/api billing:plans bind \
   --revision launch-pricing-v1 --environment test \
-  --plans /review/plans.json --output review/catalog.json
+  --plans review/plans.json --output review/catalog.json
 ```
 
 ### Import and publish a revision
 
 ```bash
 # Pure schema and approved-policy validation.
-pnpm --filter @citeladder/api billing:admin catalog-validate --file /review/catalog.json
+pnpm --filter @citeladder/api billing:admin catalog-validate --file review/catalog.json
 
 # Compare the candidate with the currently published payload.
-pnpm --filter @citeladder/api billing:admin catalog-diff --file /review/catalog.json
+pnpm --filter @citeladder/api billing:admin catalog-diff --file review/catalog.json
 
 # Dry-run the immutable draft import.
 pnpm --filter @citeladder/api billing:admin catalog-import \
   --revision commercial-2026-09-08-r1 \
-  --file /review/catalog.json \
+  --file review/catalog.json \
   --actor admin@example.com \
   --reason "approved catalog change CR-123" \
   --idempotency-key catalog-import:commercial-2026-09-08-r1
@@ -107,7 +118,7 @@ pnpm --filter @citeladder/api billing:admin catalog-import \
 # Repeat exactly, adding --apply after review.
 pnpm --filter @citeladder/api billing:admin catalog-import \
   --revision commercial-2026-09-08-r1 \
-  --file /review/catalog.json \
+  --file review/catalog.json \
   --actor admin@example.com \
   --reason "approved catalog change CR-123" \
   --idempotency-key catalog-import:commercial-2026-09-08-r1 \

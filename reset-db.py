@@ -3,6 +3,7 @@
 
 import asyncio
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -239,13 +240,13 @@ def provision_dev_login(database_url: str) -> None:
                 "scripts.provision_dev_login",
                 "--email",
                 email,
-                "--password",
-                password,
+                "--password-stdin",
                 "--counter-allowance",
                 counter_allowance,
             ],
             cwd=BACKEND_DIR,
             capture_output=True,
+            input=password + "\n",
             text=True,
             timeout=provision_timeout,
             check=False,
@@ -288,6 +289,9 @@ def provision_dev_login(database_url: str) -> None:
         )
         raise SystemExit(1) from None
     if catalog.returncode != 0:
+        diagnostic = catalog.stderr.strip()
+        if len(diagnostic) <= 64 and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", diagnostic):
+            print(diagnostic, file=sys.stderr)
         print(
             "Native catalog initialization failed; retry provisioning.", file=sys.stderr
         )

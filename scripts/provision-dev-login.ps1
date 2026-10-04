@@ -1,9 +1,10 @@
 param(
     [Parameter(Mandatory)][string] $Email,
-    [Parameter(Mandatory)][string] $Password,
+    [Security.SecureString] $Password,
     [Parameter(Mandatory)][int] $CounterAllowance
 )
 $ErrorActionPreference = 'Stop'
+if (-not $Password) { $Password = Read-Host 'Development login password' -AsSecureString }
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $saved = @{}
 Push-Location (Join-Path $root 'backend')
@@ -30,7 +31,10 @@ print(json.dumps(dict(os.environ) if disabled else module._configuration()))
         $saved['CITELADDER_DISABLE_DOTENV'] = [Environment]::GetEnvironmentVariable('CITELADDER_DISABLE_DOTENV', 'Process')
     }
     $env:CITELADDER_DISABLE_DOTENV = '1'
-    & uv run python -m scripts.provision_dev_login --email $Email --password $Password --counter-allowance $CounterAllowance
+    $plaintext = [Net.NetworkCredential]::new('', $Password).Password
+    try {
+        $plaintext | & uv run python -m scripts.provision_dev_login --email $Email --password-stdin --counter-allowance $CounterAllowance
+    } finally { $plaintext = $null }
     if ($LASTEXITCODE -ne 0) { throw 'Development identity provisioning failed.' }
     & node (Join-Path $root 'frontend/services/api/src/cli/bootstrap-catalog.ts') --actor $Email
     if ($LASTEXITCODE -ne 0) { throw 'Catalog initialization failed; retry provisioning.' }

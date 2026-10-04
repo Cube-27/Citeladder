@@ -1,4 +1,5 @@
-FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS native
+# node:26-bookworm-slim
+FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS native
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
 WORKDIR /app
@@ -61,9 +62,8 @@ WORKDIR /app/backend
 
 RUN groupadd --gid 10001 appuser \
     && useradd --no-create-home --uid 10001 --gid 10001 --shell /usr/sbin/nologin appuser \
-    && install -d -o 10001 -g 10001 /app/backend/.runtime
-
-RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 libatomic1 \
+    && install -d -o 10001 -g 10001 /app/backend/.runtime \
+    && apt-get update && apt-get install -y --no-install-recommends libstdc++6 libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=native --chown=0:0 /usr/local/bin/node /usr/local/bin/node
 COPY --from=native --chown=0:0 /runtime /app/native

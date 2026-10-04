@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { mkdtemp, mkdir, symlink, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, symlink, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -15,6 +15,8 @@ import {
   verifyPlan,
   RazorpayPlanReader,
   workspacePath,
+  readOperatorJson,
+  writeBoundCatalog,
 } from '../src/billing/plan-operators.ts';
 import { chargeCredits } from '../src/billing/ai-credits.ts';
 import { redact } from '../src/billing/admin.ts';
@@ -239,6 +241,9 @@ it('contains existing and new output paths, including symlink escapes', async ()
   const previous = process.cwd();
   await mkdir(join(root, 'inside'));
   await mkdir(join(root, 'outside'));
+  await mkdir(join(root, 'inside', '.runtime'));
+  await writeFile(join(root, 'inside', '.runtime', 'catalog.json'), '{"revision":"fixture"}');
+  await writeFile(join(root, 'outside', 'catalog.json'), '{"secret":"fixture-private"}');
   await symlink(
     join(root, 'outside'),
     join(root, 'inside', 'escape'),
@@ -246,6 +251,25 @@ it('contains existing and new output paths, including symlink escapes', async ()
   );
   process.chdir(join(root, 'inside'));
   try {
+    await expect(readOperatorJson('.runtime/catalog.json')).resolves.toEqual({
+      revision: 'fixture',
+    });
+    await expect(
+      readOperatorJson(join(root, 'inside', '.runtime', 'catalog.json')),
+    ).resolves.toEqual({ revision: 'fixture' });
+    await expect(readOperatorJson('../outside/catalog.json')).rejects.toThrow(
+      'path_outside_workspace',
+    );
+    await expect(readOperatorJson(join(root, 'outside', 'catalog.json'))).rejects.toThrow(
+      'path_outside_workspace',
+    );
+    await expect(readOperatorJson('escape/catalog.json')).rejects.toThrow('path_outside_workspace');
+    await expect(
+      writeBoundCatalog(
+        'escape/new.json',
+        launchCatalog({ mode: null, settings: billingSettings({}) }),
+      ),
+    ).rejects.toThrow('path_outside_workspace');
     await expect(workspacePath('new.json', true)).resolves.toBe(join(root, 'inside', 'new.json'));
     await expect(workspacePath('../outside/new.json', true)).rejects.toThrow('outside_workspace');
     await expect(workspacePath('escape/new.json', true)).rejects.toThrow('outside_workspace');

@@ -16,7 +16,16 @@ await operatorMain(async () => {
     console.log(
       'billing:backfill --actor ADMIN_EMAIL --workspace-id UUID --reason REASON [--apply] [--development-allowance N]. Default preview; target one workspace.',
     );
-  else
+  else {
+    const developmentAllowance =
+      values['development-allowance'] === undefined
+        ? undefined
+        : Number(values['development-allowance']);
+    if (
+      developmentAllowance !== undefined &&
+      (!Number.isSafeInteger(developmentAllowance) || developmentAllowance < 1)
+    )
+      throw new Error('invalid_development_allowance');
     await withOperatorDatabase(async (db) => {
       console.log(
         JSON.stringify(
@@ -25,12 +34,10 @@ await operatorMain(async () => {
             workspaceId: required(values['workspace-id'], 'workspace-id'),
             reason: required(values.reason, 'reason'),
             apply: values.apply,
-            developmentAllowance:
-              values['development-allowance'] === undefined
-                ? undefined
-                : Number(values['development-allowance']),
+            developmentAllowance,
           }),
         ),
       );
     });
+  }
 });

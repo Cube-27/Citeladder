@@ -25,8 +25,8 @@ positioning; [the index](README.md) routes to substantive feature documents.
 
 TypeScript owns billing checkout, subscription changes, webhook receipt,
 leased recovery, invoice issuance, consumable-ledger writes and, under the
-`billing-documents` family, receipt list/PDF reads. Python retains
-catalog/operator administration. Both stacks
+`billing-documents` family, receipt list/PDF reads, and commercial operator
+administration. Python retains identity/seed bootstrap. Both stacks
 use the same durable rows and follow the lock order below; see
 [Billing and entitlements](billing-entitlements.md) for the owner boundaries.
 

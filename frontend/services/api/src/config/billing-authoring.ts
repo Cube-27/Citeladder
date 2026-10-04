@@ -3,6 +3,7 @@ export const catalogAuthoring = {
   revision: 'launch-pricing-v1',
   usdInrRate: '90',
   expiryDays: 30,
+  quantityMax: 20,
   maximumInputBytes: 1_048_576,
   contactUrl: 'https://www.cube27.com/contact/',
   supportEmail: 'contact@cube27.com',

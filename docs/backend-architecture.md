@@ -56,7 +56,8 @@ for convenience.
 Python 3.12, async SQLAlchemy/asyncpg and Pydantic settings own the remaining
 Python runtime; Node 26, Hono and Kysely own the native service and workers.
 Compose names the native API `api-service` on port 8100. The Python image runs
-one-shot migrations/bootstrap and remaining seed/login tools. Commercial operators
+one-shot migrations/bootstrap. Remaining Python seed/login tools run from the
+local checkout. Commercial operators
 are native and packaged into that same job image. Bounded
 provider provisioning, acquisition control, agreement references and interactive
 account administration run in the native API package/image. Browser calls stay same-origin

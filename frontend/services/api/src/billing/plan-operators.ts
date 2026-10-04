@@ -73,12 +73,15 @@ export class RazorpayPlanReader {
   }
   async fetchPlan(reference: string) {
     planReference.parse(reference);
+    const credentials = Buffer.from(this.adapter.keyId + ':' + this.adapter.keySecret).toString(
+      'base64',
+    );
     const response = await this.transport(`${policy.billing.razorpay_origin}/plans/${reference}`, {
       method: 'GET',
       redirect: 'error',
       signal: AbortSignal.timeout(this.shared.timeoutMs),
       headers: {
-        authorization: `Basic ${Buffer.from(`${this.adapter.keyId}:${this.adapter.keySecret}`).toString('base64')}`,
+        authorization: `Basic ${credentials}`,
       },
     });
     if (!response.ok || response.redirected || !response.body) throw new ProviderError(false);
@@ -126,7 +129,7 @@ export async function workspacePath(path: string, output = false) {
   return actual;
 }
 export async function readOperatorJson(path: string) {
-  const data = await readFile(path);
+  const data = await readFile(await workspacePath(path));
   if (data.length > catalogAuthoring.maximumInputBytes) throw new Error('operator_input_too_large');
   return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(data)) as unknown;
 }

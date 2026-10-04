@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtemp, writeFile, mkdir, copyFile, rm } from 'node:fs/promises';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
+import { operatorMain } from '../src/cli/operator.ts';
 
 const execute = promisify(execFile);
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -29,13 +30,66 @@ it('billing administration returns nonzero without echoing malformed secret-bear
           '--file',
           file,
         ],
-        { env: { ...systemEnv, CITELADDER_DISABLE_DOTENV: '1', APP_ENV: 'test' } },
+        { cwd: directory, env: { ...systemEnv, CITELADDER_DISABLE_DOTENV: '1', APP_ENV: 'test' } },
       ),
     ).rejects.toMatchObject({ code: 1, stderr: 'SyntaxError\n' });
+    await expect(
+      execute(
+        process.execPath,
+        [
+          join(root, 'frontend/services/api/src/cli/billing-admin.ts'),
+          'catalog-validate',
+          '--file',
+          file,
+        ],
+        {
+          cwd: root,
+          env: { ...systemEnv, CITELADDER_DISABLE_DOTENV: '1', APP_ENV: 'test' },
+        },
+      ),
+    ).rejects.toMatchObject({ code: 1, stderr: 'path_outside_workspace\n' });
   } finally {
     await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
+
+it('reports actionable reviewed failures while withholding arbitrary error messages', async () => {
+  const stderr = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const originalExitCode = process.exitCode;
+  try {
+    await operatorMain(async () => {
+      throw new Error('catalog_idempotency_conflict');
+    });
+    expect(stderr).toHaveBeenLastCalledWith('catalog_idempotency_conflict');
+    await operatorMain(async () => {
+      throw new Error('fixture-sensitive-value');
+    });
+    expect(stderr).toHaveBeenLastCalledWith('Error');
+    expect(process.exitCode).toBe(1);
+  } finally {
+    process.exitCode = originalExitCode;
+    stderr.mockRestore();
+  }
+});
+
+it.each(['invalid', '0', '1.5'])(
+  'rejects development allowance %s before opening a database',
+  async (allowance) => {
+    await expect(
+      execute(
+        process.execPath,
+        [
+          join(root, 'frontend/services/api/src/cli/backfill-billing.ts'),
+          '--development-allowance',
+          allowance,
+        ],
+        {
+          env: { ...systemEnv, CITELADDER_DISABLE_DOTENV: '1', APP_ENV: 'test' },
+        },
+      ),
+    ).rejects.toMatchObject({ code: 1, stderr: 'invalid_development_allowance\n' });
+  },
+);
 
 it('local wrapper resolves dotenv once for both stages and honors process precedence and disable', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'provision-config-'));
@@ -60,11 +114,14 @@ it('local wrapper resolves dotenv once for both stages and honors process preced
   const script = `
 function uv {
   if ($args[2] -eq '-c') { & ${psQuote(python)} @($args[2..($args.Length - 1)]); $global:LASTEXITCODE = $LASTEXITCODE; return }
+  if ($args -notcontains '--password-stdin' -or $args -contains 'fixture-local') { throw 'Unsafe password arguments' }
+  if (@($input)[0] -ne 'fixture-local') { throw 'Missing password stdin' }
   Write-Output ('identity=' + $env:DATABASE_URL)
   $global:LASTEXITCODE = 0
 }
 function node { Write-Output ('catalog=' + $env:DATABASE_URL); $global:LASTEXITCODE = 0 }
-& ${psQuote(join(directory, 'scripts/provision-dev-login.ps1'))} -Email fixture@example.test -Password fixture-local -CounterAllowance 100
+$password = ConvertTo-SecureString 'fixture-local' -AsPlainText -Force
+& ${psQuote(join(directory, 'scripts/provision-dev-login.ps1'))} -Email fixture@example.test -Password $password -CounterAllowance 100
 Write-Output ('restored=' + $env:DATABASE_URL)
 `;
   try {

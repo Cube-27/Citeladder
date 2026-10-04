@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import { withOperatorDatabase, operatorMain } from './operator.ts';
 import { initializeCatalog } from '../billing/admin.ts';
-import { billingSettings, razorpaySettings } from '../billing/config.ts';
+import { billingSettings, razorpaySettings, catalogBootstrapSettings } from '../billing/config.ts';
 import { configured } from '../billing/razorpay.ts';
 
 await operatorMain(async () => {
@@ -13,15 +13,11 @@ await operatorMain(async () => {
       'bootstrap:catalog [--actor ADMIN_EMAIL]. Runs after identity provisioning; without actor, configured-development branch only.',
     );
   else {
-    const demo = /^(true|1|yes|on|t|y)$/iu.test(process.env.DEMO_MODE ?? 'false');
-    const localSkip =
-      ['development', 'dev', 'local', 'test', 'testing'].includes(
-        (process.env.APP_ENV ?? 'development').trim().toLowerCase(),
-      ) && !process.env.DEV_LOGIN_PASSWORD;
-    if (!values.actor && (demo || localSkip))
+    const bootstrap = catalogBootstrapSettings();
+    if (!values.actor && bootstrap.skip)
       console.log('Catalog initialization skipped with identity bootstrap.');
     else {
-      const actor = values.actor ?? process.env.DEV_LOGIN_EMAIL ?? 'dev@citeladder.com';
+      const actor = values.actor ?? bootstrap.actor;
       const adapter = razorpaySettings();
       const mode =
         billingSettings().provider === 'razorpay' && configured(adapter) ? adapter.mode : null;

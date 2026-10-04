@@ -26,7 +26,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     ports:
-      - '55432:5432'
+      - '127.0.0.1:55432:5432'
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -127,7 +127,7 @@ services:
       migrate:
         condition: service_completed_successfully
     # A failing tick ends the loop, so Compose restarts and surfaces it.
-    command: ['/bin/sh', '-c', 'while node src/tick.ts; do sleep 10; done']
+    command: ['/bin/sh', '-c', 'while true; do node src/tick.ts || exit $?; sleep 10; done']
     healthcheck:
       disable: true
 

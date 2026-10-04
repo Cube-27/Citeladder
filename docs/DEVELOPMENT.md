@@ -470,7 +470,8 @@ Provision a local development login, or grant a Site Health allowance:
 From the repository root in PowerShell:
 
 ```powershell
-./scripts/provision-dev-login.ps1 -Email <email> -Password <local-password> -CounterAllowance <allowance>
+./scripts/provision-dev-login.ps1 -Email <email> -CounterAllowance <allowance>
+# Enter the password at the secure prompt; the child command receives it on stdin.
 # Identity/login admission remains Python until PR 4; this wrapper also initializes the native catalog.
 # Run the following native commands from frontend/:
 pnpm --filter @citeladder/api entitlement:site-health --actor <admin-email> --workspace-id <workspace-uuid> --account-id <account-uuid> --reason "local allowance" --idempotency-key <key> --monitored-urls <allowance> --valid-from <ISO-date> # add --apply after preview

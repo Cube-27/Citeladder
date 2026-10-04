@@ -5,6 +5,7 @@ import { catalogAuthoring as cfg } from '../config/billing-authoring.ts';
 import { catalogSchema } from './catalog.ts';
 import { creditPolicy } from './ai-credits.ts';
 import { billingSettings, type BillingSettings } from './config.ts';
+import { compareText } from '../text-order.ts';
 
 /** Decimal strings are converted to rational integers, never binary floating-point money. */
 function fraction(value: string) {
@@ -137,95 +138,114 @@ export function catalogDigest(payload: AuthoredCatalog) {
     if (key) keys.add(key);
     return value;
   });
-  const encoded = JSON.stringify(payload, [...keys].sort()).replace(
+  const encoded = JSON.stringify(payload, [...keys].sort(compareText)).replace(
     /[\u0080-\uffff]/g,
-    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`,
+    (char) => String.raw`\u${char.codePointAt(0)!.toString(16).padStart(4, '0')}`,
   );
   return createHash('sha256').update(encoded).digest('hex');
 }
-export function validateCatalog(input: unknown): AuthoredCatalog {
-  const payload = authoringSchema.parse(input);
-  if (payload.plans.length !== 4 || new Set(payload.plans.map((row) => row.key)).size !== 4)
-    throw new Error('catalog_plan_set_invalid');
-  const refs: string[] = [];
-  for (const row of payload.plans) {
-    if (
-      row.contact_only
-        ? row.self_serve || row.byok_price || row.funded_price || row.grants.length
-        : !row.byok_price
-    )
+type AuthoredPlan = AuthoredCatalog['plans'][number];
+type AuthoredItem = AuthoredCatalog['addons'][number];
+type RegionalPrice = z.infer<typeof regionalPrice>;
+
+function validatePlanShape(row: AuthoredPlan) {
+  if (row.contact_only) {
+    if (row.self_serve || row.byok_price || row.funded_price || row.grants.length)
       throw new Error('catalog_plan_shape_invalid');
+    return;
+  }
+  if (!row.byok_price) throw new Error('catalog_plan_shape_invalid');
+}
+
+function validatePlanBundle(row: AuthoredPlan) {
+  if (
+    row.byok_price &&
+    row.funded_price &&
+    row.funded_price.amount_minor < row.byok_price.amount_minor
+  )
+    throw new Error('funded_below_byok');
+  const hasAgent = row.grants.some((g) => g.key === 'agent');
+  if (row.key === 'tier_1' && hasAgent) throw new Error('catalog_agent_bundle_invalid');
+  if (['tier_2', 'tier_3'].includes(row.key) && !hasAgent)
+    throw new Error('catalog_agent_bundle_invalid');
+}
+
+function validateRegionalPrice(region: string, price: RegionalPrice, usdMinor: number) {
+  if (region === 'international') {
     if (
-      row.byok_price &&
-      row.funded_price &&
-      row.funded_price.amount_minor < row.byok_price.amount_minor
+      price.currency !== 'USD' ||
+      price.amount_minor !== usdMinor ||
+      price.tax_minor ||
+      price.tax_behavior !== 'inclusive'
     )
-      throw new Error('funded_below_byok');
-    if (
-      row.key === 'tier_1'
-        ? row.grants.some((g) => g.key === 'agent')
-        : ['tier_2', 'tier_3'].includes(row.key) && !row.grants.some((g) => g.key === 'agent')
-    )
-      throw new Error('catalog_agent_bundle_invalid');
-    for (const [region, price] of Object.entries(row.regional_byok_prices)) {
+      throw new Error('international_price_invalid');
+    return;
+  }
+  const expected = inrMinor(usdMinor, price.fx_inr_per_usd);
+  if (
+    price.currency !== 'INR' ||
+    price.tax_behavior !== 'exclusive' ||
+    price.amount_minor !== expected ||
+    price.tax_minor !== taxMinor(expected, price.tax_rate)
+  )
+    throw new Error('india_price_invalid');
+}
+
+function validatePlanPrices(row: AuthoredPlan): string[] {
+  const refs: string[] = [];
+  for (const [region, price] of Object.entries(row.regional_byok_prices)) {
+    if (!price) continue;
+    if (!row.byok_price || row.contact_only) throw new Error('contact_only_regional_price');
+    if (price.provider_price_ref) refs.push(price.provider_price_ref);
+    validateRegionalPrice(region, price, row.byok_price.amount_minor);
+  }
+  return refs;
+}
+
+function validateItem(row: AuthoredItem) {
+  if (
+    row.quantity_min > row.quantity_max ||
+    !row.modes.byok ||
+    new Set(row.eligible_plan_keys).size !== row.eligible_plan_keys.length
+  )
+    throw new Error('catalog_item_invalid');
+  for (const mode of Object.values(row.modes).filter((value) => value !== undefined))
+    for (const [region, price] of Object.entries(mode.regional_prices)) {
       if (!price) continue;
-      if (!row.byok_price || row.contact_only) throw new Error('contact_only_regional_price');
-      if (price.provider_price_ref) refs.push(price.provider_price_ref);
-      if (region === 'international') {
-        if (
-          price.currency !== 'USD' ||
-          price.amount_minor !== row.byok_price.amount_minor ||
-          price.tax_minor ||
-          price.tax_behavior !== 'inclusive'
-        )
-          throw new Error('international_price_invalid');
-      } else {
-        const expected = inrMinor(row.byok_price.amount_minor, price.fx_inr_per_usd);
-        if (
-          price.currency !== 'INR' ||
-          price.tax_behavior !== 'exclusive' ||
-          price.amount_minor !== expected ||
-          price.tax_minor !== taxMinor(expected, price.tax_rate)
-        )
-          throw new Error('india_price_invalid');
-      }
+      validateItemPrice(region, price, mode.usd_minor);
     }
-  }
-  if (new Set(refs).size !== refs.length) throw new Error('provider_plan_reference_shared');
-  const items = [...payload.addons, ...payload.topups];
-  if (new Set(items.map((row) => row.key)).size !== items.length)
-    throw new Error('catalog_item_keys_duplicate');
-  for (const row of items) {
+}
+
+function validateItemPrice(region: string, price: z.infer<typeof itemPrice>, usdMinor: number) {
+  if (region === 'international') {
     if (
-      row.quantity_min > row.quantity_max ||
-      !row.modes.byok ||
-      new Set(row.eligible_plan_keys).size !== row.eligible_plan_keys.length
+      price.currency !== 'USD' ||
+      price.tax_behavior !== 'inclusive' ||
+      price.amount_minor !== usdMinor
     )
-      throw new Error('catalog_item_invalid');
-    for (const mode of Object.values(row.modes).filter((value) => value !== undefined))
-      for (const [region, price] of Object.entries(mode.regional_prices)) {
-        if (!price) continue;
-        if (
-          region === 'international'
-            ? price.currency !== 'USD' ||
-              price.tax_behavior !== 'inclusive' ||
-              price.amount_minor !== mode.usd_minor
-            : price.currency !== 'INR' ||
-              price.tax_behavior !== 'exclusive' ||
-              price.amount_minor !== inrMinor(mode.usd_minor, price.fx_inr_per_usd)
-        )
-          throw new Error('catalog_item_price_invalid');
-      }
+      throw new Error('catalog_item_price_invalid');
+    return;
   }
-  for (const row of payload.topups)
-    for (const mode of Object.values(row.modes).filter((value) => value !== undefined))
-      for (const g of mode.grants) {
-        if (
-          policy.entitlements.capabilities[g.key as keyof typeof policy.entitlements.capabilities]
-            .type !== 'counter.consumable'
-        )
-          throw new Error('topup_requires_consumable');
-      }
+  if (
+    price.currency !== 'INR' ||
+    price.tax_behavior !== 'exclusive' ||
+    price.amount_minor !== inrMinor(usdMinor, price.fx_inr_per_usd)
+  )
+    throw new Error('catalog_item_price_invalid');
+}
+
+function validateTopup(row: AuthoredItem) {
+  for (const mode of Object.values(row.modes).filter((value) => value !== undefined))
+    for (const g of mode.grants) {
+      if (
+        policy.entitlements.capabilities[g.key as keyof typeof policy.entitlements.capabilities]
+          .type !== 'counter.consumable'
+      )
+        throw new Error('topup_requires_consumable');
+    }
+}
+
+function validateCampaign(payload: AuthoredCatalog) {
   const c = payload.campaign;
   const active = c.state === 'enabled';
   if (
@@ -238,6 +258,24 @@ export function validateCatalog(input: unknown): AuthoredCatalog {
     throw new Error('campaign_lifecycle_invalid');
   if (active && !payload.plans.find((p) => p.key === c.plan_key)?.grants.length)
     throw new Error('campaign_bundle_missing');
+}
+
+export function validateCatalog(input: unknown): AuthoredCatalog {
+  const payload = authoringSchema.parse(input);
+  if (payload.plans.length !== 4 || new Set(payload.plans.map((row) => row.key)).size !== 4)
+    throw new Error('catalog_plan_set_invalid');
+  const refs = payload.plans.flatMap((row) => {
+    validatePlanShape(row);
+    validatePlanBundle(row);
+    return validatePlanPrices(row);
+  });
+  if (new Set(refs).size !== refs.length) throw new Error('provider_plan_reference_shared');
+  const items = [...payload.addons, ...payload.topups];
+  if (new Set(items.map((row) => row.key)).size !== items.length)
+    throw new Error('catalog_item_keys_duplicate');
+  items.forEach(validateItem);
+  payload.topups.forEach(validateTopup);
+  validateCampaign(payload);
   return payload;
 }
 
@@ -363,7 +401,7 @@ export function launchCatalog(options: {
       available: i.available,
       eligible_plan_keys: i.upperOnly ? ['tier_2', 'tier_3'] : ['tier_1', 'tier_2', 'tier_3'],
       quantity_min: 1,
-      quantity_max: 20,
+      quantity_max: cfg.quantityMax,
       expiry_days: cfg.expiryDays,
       modes: { byok: terms(i.byok, i.grants), funded: terms(i.funded, i.fundedGrants ?? i.grants) },
     };

@@ -49,9 +49,9 @@ try {
                 try { & pnpm --filter '@citeladder/api' runner @CommandArgs } finally { Pop-Location }
                 break
             }
-            $commands = @{ admin = 'billing:admin'; plans = 'billing:plans' }
-            Push-Location (Join-Path $root 'frontend')
-            try { & pnpm --filter '@citeladder/api' $commands[$Action] @CommandArgs } finally { Pop-Location }
+            # Keep the repository as the authorized file root for .runtime inputs.
+            $commands = @{ admin = 'billing-admin.ts'; plans = 'provision-razorpay-plans.ts' }
+            & node (Join-Path $root ('frontend/services/api/src/cli/' + $commands[$Action])) @CommandArgs
         }
     }
     if ($LASTEXITCODE -ne 0) { throw 'Billing staging command failed.' }

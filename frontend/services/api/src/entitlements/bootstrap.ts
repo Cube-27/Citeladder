@@ -9,6 +9,7 @@ import { operatorTransaction } from '../db/operator-transaction.ts';
 import { requirePlatformAdmin } from '../auth/operators.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { getLogger } from '../logging.ts';
+import { stripTrailing } from '../text-order.ts';
 import { resolveAccountEntitlement } from './resolve.ts';
 
 async function projectRuntime(
@@ -134,10 +135,12 @@ function developmentAccessGrants(allowance: number) {
     throw new Error('invalid_development_allowance');
   return Object.entries(policy.entitlements.capabilities)
     .filter(([, def]) => def.issuable)
-    .map(([key, def]) => ({
-      key,
-      value: def.type === 'flag' ? 1 : def.type === 'level' ? def.levels - 1 : allowance,
-    }));
+    .map(([key, def]) => {
+      let value = allowance;
+      if (def.type === 'flag') value = 1;
+      else if (def.type === 'level') value = def.levels - 1;
+      return { key, value };
+    });
 }
 /** Same family/source keys as the temporary Python bootstrap bridge. */
 async function issueDevelopmentAccess(
@@ -175,7 +178,7 @@ async function issueDevelopmentAccess(
   });
   if (!specs.length) return;
   const key = family.length
-    ? `${input.keyFamily.replace(/:+$/u, '')}:+${createHash('sha256').update(transitions.join('\n')).digest('hex').slice(0, 16)}`
+    ? `${stripTrailing(input.keyFamily, ':')}:+${createHash('sha256').update(transitions.join('\n')).digest('hex').slice(0, 16)}`
     : input.initialKey;
   await issueBundle(db, {
     workspaceId: input.workspaceId,
@@ -191,12 +194,15 @@ async function issueDevelopmentAccess(
     profile: '',
     priority: 0,
   });
-  getLogger('api.billing.operator').info('billing.override_grant_issued', {
-    actor_id: input.userId,
-    account_id: input.accountId,
-    reason: input.reason,
-    dry_run: input.dryRun === true,
-  });
+  getLogger('api.billing.operator').info(
+    input.dryRun ? 'billing.override_grant_previewed' : 'billing.override_grant_issued',
+    {
+      actor_id: input.userId,
+      account_id: input.accountId,
+      reason: input.reason,
+      dry_run: input.dryRun === true,
+    },
+  );
 }
 /** Explicit workspace operator repair. Public signup never calls development issuance. */
 export function provisionWorkspaceBilling(
