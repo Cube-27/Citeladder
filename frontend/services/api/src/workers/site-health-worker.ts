@@ -147,14 +147,17 @@ export class SiteHealthWorker {
   }
   /** Crawl backstops, at most once per poll interval across this worker's slots. */
   async #maintain() {
-    if (this.taskScope) {
-      await reconcileCrawl(this.db, this.taskScope.workspaceId, this.taskScope.crawlId);
-      return;
-    }
     if (this.#maintenance) return;
     if (Date.now() < this.#nextMaintenance) return;
     const lifecycle = this.settings.lifecycle;
     this.#maintenance = (async () => {
+      if (this.taskScope) {
+        const { workspaceId, crawlId } = this.taskScope;
+        await this.#guard('scoped crawl reconcile failed', () =>
+          reconcileCrawl(this.db, workspaceId, crawlId),
+        );
+        return;
+      }
       await this.#guard('stalled crawl reconcile failed', () =>
         reconcileStalled(this.db, lifecycle),
       );

@@ -23,6 +23,10 @@ DESTRUCTIVE_RESET_VARIABLE = "RESET_CONFIRM_DESTRUCTIVE"
 DESTRUCTIVE_RESET_TOKEN = "drop-and-recreate"
 
 
+class ResetConfigurationError(RuntimeError):
+    """An actionable reset refusal that is safe to display to the operator."""
+
+
 def _configuration() -> dict[str, str]:
     """Load repository env files, with the process environment taking priority."""
     disabled = os.environ.get("CITELADDER_DISABLE_DOTENV", "").lower() in {
@@ -75,7 +79,7 @@ def _database_url() -> str:
     """Resolve DATABASE_URL with the same precedence as the backend settings."""
     database_url = _configuration().get("DATABASE_URL", "").strip()
     if not database_url:
-        raise RuntimeError(
+        raise ResetConfigurationError(
             "DATABASE_URL is required in the environment, .env, or backend/.env, "
             "or as POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_HOST, "
             "and POSTGRES_HOST_PORT (the Docker Compose components)"
@@ -86,16 +90,20 @@ def _database_url() -> str:
 def _connection_details(database_url: str) -> tuple[str, str, str]:
     parsed_input = urlsplit(database_url)
     if parsed_input.scheme.casefold() not in SUPPORTED_DATABASE_SCHEMES:
-        raise RuntimeError("DATABASE_URL must use PostgreSQL with the asyncpg driver")
+        raise ResetConfigurationError(
+            "DATABASE_URL must use PostgreSQL with the asyncpg driver"
+        )
     if not parsed_input.hostname:
-        raise RuntimeError("DATABASE_URL must name a database host")
+        raise ResetConfigurationError("DATABASE_URL must name a database host")
     driver_url = database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
     parsed = urlsplit(driver_url)
     target_db = unquote(parsed.path.removeprefix("/"))
     if not target_db:
-        raise RuntimeError("DATABASE_URL must name the database to reset")
+        raise ResetConfigurationError("DATABASE_URL must name the database to reset")
     if target_db.casefold() in PROTECTED_DATABASES:
-        raise RuntimeError(f"Refusing to reset protected database '{target_db}'")
+        raise ResetConfigurationError(
+            f"Refusing to reset protected database '{target_db}'"
+        )
 
     admin_url = urlunsplit(parsed._replace(path="/postgres"))
     hostname = parsed.hostname or ""
@@ -143,7 +151,7 @@ def authorize_reset(database_url: str) -> None:
             f"{DESTRUCTIVE_RESET_VARIABLE} authorizes it."
         )
         return
-    raise RuntimeError(
+    raise ResetConfigurationError(
         f"Refusing to drop the database: APP_ENV is '{app_env or '(unset)'}' "
         f"and the target host is '{host or '(missing)'}'. Automatic reset "
         f"requires a development APP_ENV and a host in "
@@ -180,7 +188,7 @@ def run_migrations(database_url: str) -> None:
     timeout_value = _configuration().get("RESET_MIGRATION_TIMEOUT_SECONDS", "").strip()
     migration_timeout = float(timeout_value) if timeout_value else 300
     if not math.isfinite(migration_timeout) or migration_timeout <= 0:
-        raise RuntimeError(
+        raise ResetConfigurationError(
             "RESET_MIGRATION_TIMEOUT_SECONDS must be positive and finite"
         )
     try:
@@ -216,12 +224,14 @@ def main() -> None:
         authorize_reset(database_url)
         asyncio.run(reset_database(database_url))
         run_migrations(database_url)
+    except ResetConfigurationError as exc:
+        print(f"Database reset failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
     except (
         RuntimeError,
         ValueError,
         OSError,
         asyncpg.PostgresError,
-        TimeoutError,
     ) as exc:
         print(f"Database reset failed: {type(exc).__name__}", file=sys.stderr)
         raise SystemExit(1) from None

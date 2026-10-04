@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.prompts import PROMPT_TRAILING_PUNCTUATION
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
     INITIAL_TASK_GENERATION,
@@ -85,7 +86,10 @@ def _url_hash(url: str) -> str:
 
 
 async def _seed_base(
-    session: AsyncSession, *, email: str | None = None
+    session: AsyncSession,
+    *,
+    email: str | None = None,
+    prompt_texts: tuple[str, str] = ("best crm for small teams", "what is a crm"),
 ) -> tuple[uuid.UUID, uuid.UUID, list[uuid.UUID]]:
     workspace = Workspace(name="Opp WS")
     session.add(workspace)
@@ -120,14 +124,14 @@ async def _seed_base(
     session.add(prompt_set)
     await session.flush()
     prompt_ids: list[uuid.UUID] = []
-    for text, intent in (
-        ("best crm for small teams", "purchase"),
-        ("what is a crm", "discovery"),
-    ):
+    for text, intent in zip(prompt_texts, ("purchase", "discovery"), strict=True):
+        normalized_text = (
+            " ".join(text.split()).lower().rstrip(PROMPT_TRAILING_PUNCTUATION)
+        )
         prompt = Prompt(
             prompt_set_id=prompt_set.id,
             text=text,
-            normalized_text_hash=hashlib.sha256(text.encode()).hexdigest(),
+            normalized_text_hash=hashlib.sha256(normalized_text.encode()).hexdigest(),
             theme="crm",
             intent=intent,
             enabled=True,
