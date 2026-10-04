@@ -6,7 +6,12 @@ import { getLogger } from '../logging.ts';
 
 const logger = getLogger('app.workers.site_health_worker');
 
-export function recoverExpiredLeases(db: Database, batchSize: number, now = new Date()) {
+export function recoverExpiredLeases(
+  db: Database,
+  batchSize: number,
+  now = new Date(),
+  scope?: { workspaceId: string; crawlId: string },
+) {
   return db
     .transaction()
     .execute(async (trx) => {
@@ -15,6 +20,9 @@ export function recoverExpiredLeases(db: Database, batchSize: number, now = new 
         .select('id')
         .where('status', 'in', ['leased', 'running'])
         .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
+        .$if(!!scope, (q) =>
+          q.where('workspace_id', '=', scope!.workspaceId).where('crawl_id', '=', scope!.crawlId),
+        )
         .orderBy('lease_expires_at')
         .orderBy('id')
         .limit(batchSize)

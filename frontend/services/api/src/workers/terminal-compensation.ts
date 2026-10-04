@@ -5,7 +5,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { getLogger } from '../logging.ts';
-import type { QueueTask } from '../queue/task-queue.ts';
+import type { QueueTask, ClaimScope } from '../queue/task-queue.ts';
 import { compensateInternalLinks } from '../site-health/internal-link-judgments.ts';
 import { compensateInspection } from '../source-pages/inspector.ts';
 
@@ -29,7 +29,8 @@ function mark(db: Database, task: QueueTask, fields: Record<string, unknown>) {
  * failed `terminal_compensation_max_failures` times; then the task is
  * abandoned as compensated so it stops recurring.
  */
-export async function compensateTerminalTasks(db: Database) {
+export async function compensateTerminalTasks(db: Database, scope?: ClaimScope) {
+  if (scope && !scope.taskIds.length) return;
   const { terminal_compensation_batch: batch, terminal_compensation_max_failures: maxFailures } =
     policy.analytics;
   const tasks = await db
@@ -37,6 +38,9 @@ export async function compensateTerminalTasks(db: Database) {
     .selectAll()
     .where('task_kind', 'in', Object.keys(compensators))
     .where('status', '=', 'failed')
+    .$if(!!scope, (q) =>
+      q.where('workspace_id', '=', scope!.workspaceId).where('id', 'in', [...scope!.taskIds]),
+    )
     .where(sql<boolean>`payload->>'terminal_compensated_at' is null`)
     .orderBy(sql`payload->>'terminal_compensation_failed_at' asc nulls first`)
     .orderBy('completed_at')

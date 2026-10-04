@@ -1,8 +1,7 @@
 /** Local dev seeder bridge; reuse the crawl owner without exposing an HTTP writer. */
 import { loadConfig } from '../src/config.ts';
 import { createDatabase } from '../src/db/database.ts';
-import { createCrawl } from '../src/site-health/planner.ts';
-import { bulkMonitoredSet } from '../src/site-health/selection.ts';
+import { seedCrawl, seedSelection } from '../src/site-health/seed.ts';
 import { z } from 'zod';
 
 const config = loadConfig();
@@ -33,27 +32,10 @@ const input = z
   .parse(JSON.parse(raw));
 const db = createDatabase(config);
 try {
-  const id = await db.transaction().execute(async (trx) => {
-    if (input.operation === 'create')
-      return (
-        await createCrawl(trx, input.workspace_id, {
-          project_id: input.project_id,
-          seed: input.seed,
-        })
-      ).id;
-    const profile = await trx
-      .selectFrom('site_health_profiles')
-      .select('selection_version')
-      .where('workspace_id', '=', input.workspace_id)
-      .where('project_id', '=', input.project_id)
-      .executeTakeFirstOrThrow();
-    await bulkMonitoredSet(trx, input.workspace_id, input.project_id, {
-      crawl_id: input.crawl_id,
-      mode: 'all',
-      expected_selection_version: profile.selection_version,
-    });
-    return input.crawl_id;
-  });
+  const id =
+    input.operation === 'create'
+      ? await seedCrawl(db, input.workspace_id, input.project_id, input.seed)
+      : await seedSelection(db, input.workspace_id, input.project_id, input.crawl_id);
   process.stdout.write(`${JSON.stringify({ id })}\n`);
 } finally {
   await db.destroy();

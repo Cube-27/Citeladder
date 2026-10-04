@@ -24,6 +24,7 @@
     "provision:dev": "node src/cli/provision-dev-login.ts",
     "reset:db": "node src/cli/reset-database.ts",
     "seed:site-health": "node scripts/seed-site-health.ts",
+    "seed:dev": "node src/cli/seed-dev-data.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
     "check:routes": "node scripts/check-route-ownership.ts",

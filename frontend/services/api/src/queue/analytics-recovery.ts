@@ -3,9 +3,11 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
+import type { ClaimScope } from './task-queue.ts';
 const { statuses } = policy.task_queue;
 
-export async function recoverAnalyticsLeases(db: Database, batchSize: number) {
+export async function recoverAnalyticsLeases(db: Database, batchSize: number, scope?: ClaimScope) {
+  if (scope && !scope.taskIds.length) return 0;
   const rows = await db.transaction().execute(async (trx) => {
     const expired = await trx
       .selectFrom('analytics_tasks')
@@ -13,6 +15,9 @@ export async function recoverAnalyticsLeases(db: Database, batchSize: number) {
       .where('task_kind', 'in', policy.analytics.ts_owned_task_kinds)
       .where('status', 'in', [statuses.leased, statuses.running])
       .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
+      .$if(!!scope, (q) =>
+        q.where('workspace_id', '=', scope!.workspaceId).where('id', 'in', [...scope!.taskIds]),
+      )
       .orderBy('lease_expires_at')
       .orderBy('id')
       .limit(batchSize)
