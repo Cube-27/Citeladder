@@ -104,6 +104,18 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
   ];
 }
 
+function captureChats(actions: ReturnType<typeof actionItem>[] = []) {
+  const bodies: unknown[] = [];
+  mswServer.use(
+    ...baseHandlers(actions),
+    http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
+      bodies.push(await request.json());
+      return HttpResponse.json(ACCEPTED, { status: 202 });
+    }),
+  );
+  return bodies;
+}
+
 describe('NewChatScreen', () => {
   it('opens skills only for a typed slash and marks the automatic default selected', async () => {
     mswServer.use(...baseHandlers());
@@ -123,14 +135,7 @@ describe('NewChatScreen', () => {
   });
 
   it('submits the earned-source skill selected by a next-step link', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      ...baseHandlers(),
-      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(ACCEPTED, { status: 202 });
-      }),
-    );
+    const bodies = captureChats();
     const user = userEvent.setup();
     renderNewChat('?skill=earned_authority&prompt=Find+source+opportunities');
     await screen.findByLabelText('Message the agent');
@@ -204,14 +209,10 @@ describe('NewChatScreen', () => {
   });
 
   it('picks a skill with / and mentions an Action with @', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      ...baseHandlers([actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog hub')]),
-      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(ACCEPTED, { status: 202 });
-      }),
-    );
+    const bodies = captureChats([
+      actionItem(PRICING, 'Pricing page'),
+      actionItem(BLOG, 'Blog hub'),
+    ]);
     const user = userEvent.setup();
     renderNewChat('');
 
@@ -250,14 +251,7 @@ describe('NewChatScreen', () => {
   });
 
   it('preserves an explicit Automatic selection in the create request', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      ...baseHandlers(),
-      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(ACCEPTED, { status: 202 });
-      }),
-    );
+    const bodies = captureChats();
     const user = userEvent.setup();
     renderNewChat('');
     const message = await screen.findByLabelText('Message the agent');
@@ -271,14 +265,7 @@ describe('NewChatScreen', () => {
   });
 
   it('closes the command menu on Escape so Enter sends the message', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      ...baseHandlers(),
-      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(ACCEPTED, { status: 202 });
-      }),
-    );
+    const bodies = captureChats();
     const user = userEvent.setup();
     renderNewChat('');
 
@@ -294,14 +281,10 @@ describe('NewChatScreen', () => {
   });
 
   it('briefs on the top open Actions with the growth plan skill', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      ...baseHandlers([actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog hub')]),
-      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(ACCEPTED, { status: 202 });
-      }),
-    );
+    const bodies = captureChats([
+      actionItem(PRICING, 'Pricing page'),
+      actionItem(BLOG, 'Blog hub'),
+    ]);
     const user = userEvent.setup();
     renderNewChat('');
 

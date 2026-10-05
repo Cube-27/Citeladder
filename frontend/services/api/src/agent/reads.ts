@@ -132,6 +132,8 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
   const current = await currentOutput(db, chat);
   const parsedManifest = run ? manifestSchema.safeParse(run.context_manifest) : null;
   const manifest = parsedManifest?.success ? parsedManifest.data : null;
+  let limitations = manifest?.package.summary.omissions ?? [];
+  if (run && !manifest) limitations = [{ reason: 'context_manifest_unavailable' }];
   const approvals = await db
     .selectFrom('agent_runs')
     .select(['id', 'user_message_id', 'context_manifest'])
@@ -178,11 +180,7 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
       mentions:
         manifest?.mentions.map((action) => ({ id: action.id, label: action.target_label })) ?? [],
       sources: manifest?.package.summary.provenance ?? [],
-      limitations: manifest
-        ? (manifest.package.summary.omissions ?? [])
-        : run
-          ? [{ reason: 'context_manifest_unavailable' }]
-          : [],
+      limitations,
       prompt: {
         ...manifest?.prompt_summary,
         ...(manifest
