@@ -16,5 +16,9 @@ export function IssueEvidence({ occurrence }: Readonly<{ occurrence: IssueOccurr
   // remediation already stand on their own, and an empty-state sentence in a
   // two-hundred-row catalog is two hundred lines of apology.
   if (facts.length === 0) return null;
-  return <p className="type-caption [overflow-wrap:anywhere] tabular-nums">{facts.join(', ')}</p>;
+  return (
+    <p className="type-caption [overflow-wrap:anywhere]">
+      <code>{facts.join(', ')}</code>
+    </p>
+  );
 }

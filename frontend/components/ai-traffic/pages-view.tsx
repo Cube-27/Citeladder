@@ -10,6 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
+import { Pressable } from '@/components/ui/pressable';
+import { MISSING_MARK } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { UrlPanel, TrafficLeg } from './url-panel';
@@ -25,13 +28,21 @@ export function TrafficPages({
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       <p className="type-caption">
-        {coverage.label}:{' '}
-        {coverage.share === null ? 'Unavailable' : (coverage.share * 100).toFixed(1) + '%'} of{' '}
-        {coverage.known_pages} known pages. Inventory{' '}
+        {coverage.share === null
+          ? 'Crawl coverage unavailable'
+          : `${coverage.label}: ${(coverage.share * 100).toFixed(1)}%`}{' '}
+        · {coverage.known_pages} known pages. Inventory{' '}
         <DisplayTime value={coverage.inventory_date} /> ·{' '}
         {coverage.inventory_complete ? 'Complete inventory' : 'Limited inventory'}
         {coverage.sample_mode ? ' · Sampled inventory' : ''}
       </p>
+      <DisconnectedSources items={data.items} />
+      {data.items.length > 0 ? (
+        <p className="type-caption">
+          Unavailable metrics show a dash. Focus a value for its source, coverage, and availability
+          details. Known pages and open findings remain visible.
+        </p>
+      ) : null}
       {data.items.length ? null : (
         <TrafficNoResults
           heading="No joinable paths were observed"
@@ -39,53 +50,141 @@ export function TrafficPages({
         />
       )}
       {data.items.length ? (
-        <Table>
+        <Table className="min-w-[64rem]">
           <caption className="sr-only">Path-level AI Traffic with separate signal units</caption>
           <TableHeader>
             <TableRow>
               <TableHead>Path</TableHead>
-              <TableHead numeric>Crawler requests</TableHead>
-              <TableHead numeric>AI referral sessions</TableHead>
-              <TableHead numeric>Key events</TableHead>
-              <TableHead numeric>Tracked citations</TableHead>
-              <TableHead numeric>Open findings</TableHead>
+              <TableHead numeric="end">Crawler requests</TableHead>
+              <TableHead numeric="end">AI referral sessions</TableHead>
+              <TableHead numeric="end">Key events</TableHead>
+              <TableHead numeric="end">Tracked citations</TableHead>
+              <TableHead numeric="end">Open findings</TableHead>
               <TableHead>Last crawl</TableHead>
-              <TableHead numeric>4xx / 5xx</TableHead>
+              <TableHead numeric="end">4xx / 5xx</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.items.map((r) => (
-              <TableRow key={r.url_hash}>
-                <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => setUrlHash(r.url_hash)}>
-                    {r.display_path}
-                  </Button>
-                </TableCell>
-                <TableCell numeric>
-                  <TrafficLeg leg={r.crawl} unit="requests" />
-                </TableCell>
-                <TableCell numeric>
-                  <TrafficLeg leg={r.referrals} unit="sessions" />
-                </TableCell>
-                <TableCell numeric>{r.key_events ?? 'Unavailable'}</TableCell>
-                <TableCell numeric>
-                  <TrafficLeg leg={r.citations} unit="citations" />
-                </TableCell>
-                <TableCell numeric>
-                  <TrafficLeg leg={r.findings} unit="findings" />
-                </TableCell>
-                <TableCell>
-                  <DisplayTime value={r.last_crawl} />
-                </TableCell>
-                <TableCell numeric>
-                  {r.errors_4xx ?? 'Unavailable'} / {r.errors_5xx ?? 'Unavailable'}
-                </TableCell>
-              </TableRow>
+              <TrafficPageRow key={r.url_hash} r={r} onOpen={setUrlHash} />
             ))}
           </TableBody>
         </Table>
       ) : null}
       <UrlPanel urlHash={urlHash} onClose={() => setUrlHash(null)} filters={filters} />
     </div>
+  );
+}
+
+function UnavailableTrafficValue({ reason }: Readonly<{ reason: string }>) {
+  return (
+    <TooltipProvider>
+      <Tooltip content={reason}>
+        <Pressable type="button" className="w-auto text-center" aria-label={reason}>
+          {MISSING_MARK}
+        </Pressable>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function TrafficErrors({
+  page,
+}: Readonly<{ page: z.infer<typeof aiTrafficPagesSchema>['items'][number] }>) {
+  const reason = [
+    page.crawl.state.replaceAll('_', ' '),
+    page.crawl.coverage,
+    page.crawl.reason?.replaceAll('_', ' '),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  if (page.errors_4xx === null && page.errors_5xx === null)
+    return <UnavailableTrafficValue reason={`4xx and 5xx unavailable: ${reason}`} />;
+  return (
+    <>
+      {page.errors_4xx ?? <UnavailableTrafficValue reason={`4xx unavailable: ${reason}`} />} /{' '}
+      {page.errors_5xx ?? <UnavailableTrafficValue reason={`5xx unavailable: ${reason}`} />}
+    </>
+  );
+}
+function TrafficPageRow({
+  r,
+  onOpen,
+}: Readonly<{
+  r: z.infer<typeof aiTrafficPagesSchema>['items'][number];
+  onOpen: (hash: string) => void;
+}>) {
+  return (
+    <TableRow density="multiline">
+      <TableCell>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onOpen(r.url_hash)}
+          className="max-w-72"
+          aria-label={`View AI Traffic for ${r.canonical_url}`}
+        >
+          <span className="truncate" title={r.canonical_url}>
+            {r.display_path}
+          </span>
+        </Button>
+      </TableCell>
+      <TableCell numeric="end">
+        <TrafficLeg compact leg={r.crawl} unit="requests" />
+      </TableCell>
+      <TableCell numeric="end">
+        <TrafficLeg compact leg={r.referrals} unit="sessions" />
+      </TableCell>
+      <TableCell numeric="end">
+        {r.key_events === null ? (
+          <TrafficLeg
+            compact
+            leg={{
+              ...r.referrals,
+              state: r.referrals.value === null ? r.referrals.state : 'unavailable',
+              value: null,
+            }}
+            unit="Key events"
+          />
+        ) : (
+          r.key_events
+        )}
+      </TableCell>
+      <TableCell numeric="end">
+        <TrafficLeg compact leg={r.citations} unit="citations" />
+      </TableCell>
+      <TableCell numeric="end">
+        <TrafficLeg compact leg={r.findings} unit="findings" />
+      </TableCell>
+      <TableCell>
+        {r.last_crawl ? (
+          <DisplayTime value={r.last_crawl} />
+        ) : (
+          <UnavailableTrafficValue reason="Last crawl is unavailable for this path in the selected window." />
+        )}
+      </TableCell>
+      <TableCell numeric="end">
+        <TrafficErrors page={r} />
+      </TableCell>
+    </TableRow>
+  );
+}
+function DisconnectedSources({
+  items,
+}: Readonly<{ items: z.infer<typeof aiTrafficPagesSchema>['items'] }>) {
+  const sources = (
+    [
+      ['crawl', 'Crawler logs'],
+      ['referrals', 'Referral analytics'],
+      ['citations', 'Citation tracking'],
+    ] as const
+  )
+    .filter(([key]) => items.length > 0 && items.every((row) => row[key].state === 'not_connected'))
+    .map(([, label]) => label);
+  if (sources.length === 0) return null;
+  return (
+    <p className="type-body">
+      {sources.join(', ')} not connected. Showing known pages and open findings.
+    </p>
   );
 }

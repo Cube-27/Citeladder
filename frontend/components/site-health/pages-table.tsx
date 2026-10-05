@@ -122,7 +122,7 @@ export function PagesTable({
     router(projectHref(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`));
   };
   return (
-    <Table className="table-dense min-w-[72rem]">
+    <Table className="min-w-[72rem]">
       <TableHeader>
         <TableRow>
           <TableHead numeric className="w-10">
@@ -179,6 +179,7 @@ export function PagesTable({
         {pages.map((page, index) => (
           <TableRow
             key={page.site_url_id}
+            density="multiline"
             // Preserve native row/cell semantics; View is the announced link.
             tabIndex={0}
             onClick={() => openPage(page.site_url_id)}
@@ -202,7 +203,7 @@ export function PagesTable({
                 default `table-layout: auto` browsers treat `max-width` on a
                 cell as advisory and size the column to content anyway. */}
             <TableCell>
-              <span className="flex max-w-[26rem] min-w-0 flex-col">
+              <span className="flex w-72 max-w-[26rem] min-w-0 flex-col gap-1">
                 <span
                   className={textRole('emphasis', 'text-foreground truncate')}
                   title={pageDisplayTitle(page.title, page.display_url)}
@@ -276,6 +277,7 @@ export function PagesTable({
               <ProjectLink
                 href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
                 onClick={(event) => event.stopPropagation()}
+                aria-label={`View ${pageDisplayTitle(page.title, page.display_url)} — ${page.display_url}`}
                 className={textRole('label', 'text-accent-text hover:underline')}
               >
                 View

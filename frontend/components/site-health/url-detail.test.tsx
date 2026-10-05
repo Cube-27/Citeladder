@@ -368,8 +368,8 @@ describe('UrlDetail', () => {
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.getByRole('img', { name: 'Web Fundamentals: 46' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'AEO Readiness: 64' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Web Fundamentals score: 46' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'AEO Readiness score: 64' })).toBeInTheDocument();
     expect(screen.getByText('Partial audit · 50% coverage')).toBeInTheDocument();
     expect(screen.getAllByText('Partial audit · 75% coverage')).toHaveLength(2);
   });

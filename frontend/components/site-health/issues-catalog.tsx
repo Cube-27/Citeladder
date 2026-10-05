@@ -126,7 +126,7 @@ export function IssuesCatalog({
     <div
       // `min-h` matches the loading placeholder's, so the pane keeps its height
       // while the rail's own read lands rather than growing under the reader.
-      className="border-border grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
+      className="bg-panel border-border grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[22rem_minmax(0,1fr)]"
       aria-busy={issuesQuery.isFetching}
     >
       <IssueGroupList
@@ -180,15 +180,33 @@ export function IssuesCatalog({
             />
           </div>
           <div className="max-w-full min-w-0 max-[700px]:w-full">
-            <SegmentedControl
-              value={issueFilterClass(filters)}
-              onChange={(value) => updateFilters(issueFilterClassChange(value))}
-              ariaLabel="Issue filters"
-              options={issueFilterClasses(findingView).map((item) => ({
-                value: item.key,
-                label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
-              }))}
-            />
+            <div className="flex flex-wrap items-end gap-4">
+              {(['All issues', 'Severity', 'Category'] as const).map((group) => {
+                const keys =
+                  group === 'Severity'
+                    ? ['high', 'medium', 'low']
+                    : group === 'Category'
+                      ? ['technical', 'aeo']
+                      : ['all'];
+                const options = issueFilterClasses(findingView).filter((item) =>
+                  keys.includes(item.key),
+                );
+                return options.length > 0 ? (
+                  <div key={group} className="grid gap-1">
+                    <span className="type-caption">{group}</span>
+                    <SegmentedControl
+                      value={issueFilterClass(filters)}
+                      onChange={(value) => updateFilters(issueFilterClassChange(value))}
+                      ariaLabel={group}
+                      options={options.map((item) => ({
+                        value: item.key,
+                        label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
+                      }))}
+                    />
+                  </div>
+                ) : null;
+              })}
+            </div>
           </div>
         </>
       }
@@ -334,17 +352,19 @@ function IssueGroupList({
             onClick={() => onSelect(issue.group_id)}
             aria-pressed={selected}
             className={cn(
-              'focus-ring grid w-[272px] shrink-0 gap-2 px-4 py-3 text-left transition-colors min-[701px]:w-full',
-              selected ? 'bg-selected text-foreground' : 'hover:bg-hover active:bg-active',
+              'focus-ring border-l grid w-[272px] shrink-0 gap-2 px-4 py-3 text-left transition-colors min-[701px]:w-full',
+              selected
+                ? 'border-accent bg-selected text-foreground'
+                : 'border-transparent bg-panel hover:bg-hover active:bg-active',
             )}
           >
-            <span className="flex items-center justify-between gap-3">
+            <span className={textRole('itemTitle')}>{issueTitle(issue)}</span>
+            <span className="flex flex-wrap items-center justify-between gap-2">
               <IssueMetadata issue={issue} />
               <span className="type-caption whitespace-nowrap">
                 {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}
               </span>
             </span>
-            <span className={textRole('itemTitle')}>{issueTitle(issue)}</span>
             <span className="type-caption line-clamp-2">{issue.description}</span>
           </Pressable>
         );

@@ -84,7 +84,11 @@ describe('Actions', () => {
           ...current,
           diagnosis: {
             approach: 'improve_existing',
-            families: { site_health: 'observed', search_console: 'unavailable' },
+            families: {
+              site_health: 'observed',
+              search_console: 'unavailable',
+              ai_visibility: 'no_finding',
+            },
             donts: ['Do not create another URL for a target that already has a page.'],
             measure_with: ['next_crawl'],
           },
@@ -109,8 +113,14 @@ describe('Actions', () => {
       { initialEntries: [`/agent/actions/${ACTION}`], projectSelection: selection },
     );
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Actions' })).toBeVisible();
-    expect(await screen.findByText('https://acme.test/pricing')).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'https://acme.test/pricing' }),
+    ).toBeVisible();
+    expect(screen.getByRole('link', { name: 'https://acme.test/pricing' })).toBeVisible();
+    expect(screen.getByText('Observed')).toBeVisible();
+    expect(screen.getByText('Unavailable')).not.toBeVisible();
+    await user.click(screen.getByText('Other sources (2)'));
+    expect(screen.getByText('No finding')).toBeVisible();
     const evidence = screen.getByText('Search Console').closest('div');
     expect(within(evidence as HTMLElement).getByText('Unavailable')).toBeVisible();
     expect(screen.getByText('The next crawl of this page')).toBeVisible();
