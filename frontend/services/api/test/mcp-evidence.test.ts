@@ -4,6 +4,7 @@ import { afterAll, beforeEach, expect, it } from 'vitest';
 import { authorizedWorkspaceIds } from '../src/mcp/data.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 import { fetchRecord } from '../src/mcp/retrieval.ts';
+import { agentTools } from '../src/agent/tool-adapters.ts';
 import type { McpPrincipal } from '../src/mcp/types.ts';
 import { prompt, promptSet } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -208,9 +209,10 @@ it('fetches the exact page analysis after a newer analysis replaces it, with fac
       .set({ is_current: false })
       .where('id', '=', source.id)
       .execute();
+    const finalId = randomUUID();
     await db
       .insertInto('site_page_analyses')
-      .values({ ...source, id: randomUUID(), is_current: true, aeo_readiness_score: 99 })
+      .values({ ...source, id: finalId, is_current: true, aeo_readiness_score: 99 })
       .execute();
     const fetched = await fetchRecord(db, principal, `citeladder://site_page/${source.id}`, origin);
     expect(fetched.metadata).toMatchObject({
@@ -230,6 +232,30 @@ it('fetches the exact page analysis after a newer analysis replaces it, with fac
         (r) => r.id,
       ),
     ).toContain(evaluation.id);
+    const final = await fetchRecord(db, principal, `citeladder://site_page/${finalId}`, origin);
+    expect(final.evaluations).toEqual(fetched.evaluations);
+    expect(final.issues).toEqual(fetched.issues);
+    expect(final.issues).not.toEqual([]);
+    const scope = {
+      userId: seed.user_id,
+      workspaceId: seed.workspace_id,
+      projectId: seed.project_id,
+    };
+    const tool = agentTools(db);
+    const readPart = async (id: string) => {
+      const result = await tool.execute(db, scope, 'fetch', { id }, AbortSignal.timeout(5000));
+      expect(result.status).toBe('completed');
+      expect(result.omissions).toEqual([]);
+      expect(result.text.length).toBeLessThanOrEqual(policy.agent.tool_result_max_chars);
+      return JSON.parse(result.text);
+    };
+    const first = await readPart(`citeladder://site_page/${finalId}`);
+    const parts = first.metadata.part_uris as string[];
+    const record = parts.length
+      ? JSON.parse((await Promise.all(parts.map(readPart))).map((part) => part.text).join(''))
+      : first.metadata.record;
+    expect(record.issues).toEqual(final.issues);
+    expect(record.evaluations).toEqual(final.evaluations);
   } finally {
     await db.deleteFrom('mcp_oauth_grants').where('id', '=', principal.grantId).execute();
     await db.deleteFrom('workspaces').where('id', '=', seed.workspace_id).execute();

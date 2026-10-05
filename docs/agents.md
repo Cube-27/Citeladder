@@ -223,6 +223,9 @@ Each [tool attempt](../backend/app/models/agent.py) records tool, arguments,
 status, evidence references, omissions, output hash and latency. `unavailable`
 is distinct from a successful read and from a failure. Oversized results are
 truncated with an explicit marker, never presented as complete.
+Exact record fetches use continuation documents sized to the Agent's read
+budget and retain the fetched record reference for citations. Page diagnoses
+follow the analysis's persisted evaluation IDs, including final revisions.
 
 Content differentiation reports are persisted by the source-page inspection
 pipeline and read only through `list_content_differentiation`. They compare one

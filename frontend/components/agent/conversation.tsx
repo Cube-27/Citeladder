@@ -230,9 +230,7 @@ function FollowUps({
 function stepLabel(step: AgentMessage['steps'][number]): string {
   if (step.kind === 'skill') return 'Chose a skill';
   if (step.kind === 'tool')
-    return step.status === 'completed'
-      ? 'Read CiteLadder data'
-      : 'A data read returned nothing usable';
+    return runStepLabel({ tool: step.tool ?? 'read_data', status: step.status ?? 'unknown' });
   return 'Worked on the reply';
 }
 

@@ -340,6 +340,7 @@ export async function dispatchTool(
   name: string,
   input: unknown,
   origin: string,
+  documentMaxBytes?: number,
 ): Promise<Evidence> {
   if (!Object.hasOwn(definitions, name)) throw new McpInputError('Unknown tool');
   const definition = definitions[name as keyof typeof definitions];
@@ -363,7 +364,8 @@ export async function dispatchTool(
       Number(args.limit),
       origin,
     );
-  else if (name === 'fetch') result = await fetchRecord(db, principal, String(args.id), origin);
+  else if (name === 'fetch')
+    result = await fetchRecord(db, principal, String(args.id), origin, documentMaxBytes);
   else if (name === 'get_project_business_context')
     result = await projectBusinessContext(
       db,

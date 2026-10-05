@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { definitions, dispatchTool } from '../mcp/tools.ts';
+import { parseRecordId } from '../mcp/retrieval.ts';
 import { getAction, listActions, requireAction } from '../opportunities/actions.ts';
 import { listDifferentiationReports } from '../source-pages/differentiation-reads.ts';
 import { ToolRegistry, type ReadTool } from './tools.ts';
@@ -45,26 +46,33 @@ function sharedTools(db: Database): ReadTool[] {
         name,
         description: definition.description,
         arguments: z.strictObject(fields) as z.ZodType<Record<string, Json>>,
-        read: async (scope: Scope, args: Record<string, Json>) =>
-          outcome(
-            await dispatchTool(
-              db,
-              {
-                kind: 'member',
-                userId: scope.userId,
-                workspaceId: scope.workspaceId,
-                projectId: scope.projectId,
-              },
-              name,
-              { ...args, ...(_project ? { project_id: scope.projectId } : {}) },
-              '',
-            ),
+        read: async (scope: Scope, args: Record<string, Json>) => {
+          const data = await dispatchTool(
+            db,
+            {
+              kind: 'member',
+              userId: scope.userId,
+              workspaceId: scope.workspaceId,
+              projectId: scope.projectId,
+            },
+            name,
+            { ...args, ...(_project ? { project_id: scope.projectId } : {}) },
+            '',
+            policy.agent.tool_result_max_chars,
+          );
+          const result = outcome(
+            data,
             // Successful search, exact fetch and aggregate context have no
             // top-level availability field in their MCP contracts.
             ['search', 'fetch', 'get_project_business_context'].includes(name)
               ? 'available'
               : undefined,
-          ),
+          );
+          if (name === 'fetch' && typeof data.id === 'string') {
+            result.artifactRefs.push({ id: parseRecordId(data.id).id, record_uri: data.id });
+          }
+          return result;
+        },
       };
     });
 }

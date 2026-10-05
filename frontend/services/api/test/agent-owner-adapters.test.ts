@@ -34,6 +34,18 @@ describe('Agent bindings to the evidence and Action owners', () => {
       foreign = await fixtures.scope();
     const sibling = await fixtures.project(scope.workspaceId);
     const tools = agentTools(db);
+    const fetched = await tools.execute(
+      db,
+      scope,
+      'fetch',
+      { id: `citeladder://project/${scope.projectId}` },
+      signal(),
+    );
+    expect(fetched.status).toBe('completed');
+    expect(fetched.refs).toEqual([
+      { id: scope.projectId, record_uri: `citeladder://project/${scope.projectId}` },
+    ]);
+    expect(JSON.parse(fetched.text).metadata.project_id).toBe(scope.projectId);
     expect(await tools.execute(db, scope, 'list_projects', {}, signal())).toMatchObject({
       status: 'refused',
     });

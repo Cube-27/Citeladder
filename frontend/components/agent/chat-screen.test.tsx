@@ -509,6 +509,26 @@ describe('ChatScreen', () => {
     ]);
   });
 
+  it('retains tool identity and distinguishes failed and unavailable reads after completion', async () => {
+    const completed = detail(revision(REV1, 1, 'agent', 'Body.'));
+    completed.messages[1]!.steps = [
+      { kind: 'tool', tool: 'read_site_health', status: 'completed' },
+      { kind: 'tool', tool: 'fetch', status: 'failed' },
+      { kind: 'tool', tool: 'read_site_pages', status: 'unavailable' },
+    ];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(completed)),
+    );
+    const user = userEvent.setup();
+    renderChat();
+    await user.click(await screen.findByText(/Run complete/));
+    const reply = within(screen.getByRole('article', { name: 'Agent reply' }));
+    expect(reply.getByText('Read site health')).toBeVisible();
+    expect(reply.getByText('Fetch · failed')).toBeVisible();
+    expect(reply.getByText('Read site pages · no data yet')).toBeVisible();
+  });
+
   it('refuses edits while a turn is running and offers Stop', async () => {
     const cancels: string[] = [];
     mswServer.use(
