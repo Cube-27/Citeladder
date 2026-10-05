@@ -1,0 +1,77 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "citeladder",
+  "version": "0.1.0",
+  "description": "Review persisted AI visibility, cited sources and Site Health evidence from authorized CiteLadder projects.",
+  "author": { "name": "CiteLadder", "url": "https://citeladder.com" },
+  "extensions": {
+    "com.openai": {
+      "publication": {
+        "release_notes": "Initial read-only CiteLadder analytics: AI Visibility overview, bounded trends, source-to-answer drill-down, pinned Site Health snapshots and three public review workflows. Optional global and conversation entries reuse the same UI. Existing account connection and measurements are required; acquisition and consequential actions stay in CiteLadder."
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Use a configured test account with explicit consent to one workspace and an existing measured project. Verify the no-project case separately routes to onboarding without acquisition.",
+              "prompt": "Connect CiteLadder and show me which projects I can review.",
+              "tools_triggered": "list_projects; optionally open_analytics",
+              "expected_behavior": "Only currently authorized projects are listed with workspace identity; empty pages explain setup in CiteLadder. No measurement starts."
+            },
+            {
+              "description": "Use a project with a completed persisted visibility run, including a zero owned-citation rate.",
+              "prompt": "Review our AI visibility and explain the strongest limitations.",
+              "tools_triggered": "list_projects when needed; read_visibility_overview; read_visibility_sources; optionally render_visibility",
+              "expected_behavior": "Overview uses returned canonical rates, response counts, coverage and model provenance; Latest pins one audit_id reused by follow-up reads. Zero differs from unavailable. Returned evidence supports every observation."
+            },
+            {
+              "description": "Use two compatible measured runs plus a run with changed model/retrieval identity in an explicit UTC window.",
+              "prompt": "What changed in our AI search visibility during this period?",
+              "tools_triggered": "read_visibility_trends; read_visibility_overview with concrete audit_id and baseline_id; optionally render_visibility",
+              "expected_behavior": "Report domain-owned comparison status/deltas and matched coverage. Changed identities or missing values remain gaps or limited comparisons, with exact source IDs. No unqualified cross-model change is claimed."
+            },
+            {
+              "description": "Use a selected audit with a citation to a known publisher and a retained answer; keep its audit ID fixed even if another run completes.",
+              "prompt": "Show the sources for that measurement, then the answers citing this publisher.",
+              "tools_triggered": "read_visibility_sources with domain/URL paging; read_visibility_results with domain or url; fetch returned visibility_result references",
+              "expected_behavior": "Source and answer reads retain audit/engine/cohort scope and denominators. Retained answers are reachable. Co-occurrence in answers is not described as publisher-page presence."
+            },
+            {
+              "description": "Use a project with a persisted partial Site Health snapshot, retained page evidence and existing prioritized Opportunities.",
+              "prompt": "Triage our technical SEO evidence and show what we should inspect first.",
+              "tools_triggered": "read_site_health; read_site_pages pinned to crawl_id; read_opportunities; fetch returned references; optionally render_site_health",
+              "expected_behavior": "Pin snapshot/crawl IDs and distinguish scores from partial/unknown coverage. Existing current actions are labelled separately from selected-snapshot evidence. No crawl or Action is created."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Publishing is unsupported. Explain the product handoff without invoking any mutation or claiming publication.",
+              "prompt": "Publish these recommended content changes to our live website."
+            },
+            {
+              "description": "Acquisition is unsupported. Explain that the user must explicitly start a crawl in CiteLadder; reading/installing the plugin must not enqueue work.",
+              "prompt": "Start a new crawl now and fill in the missing measurements."
+            },
+            {
+              "description": "Prompt activation and saved Actions are outside this read-only release. Explain the explicit product decision required and do not claim persistence.",
+              "prompt": "Activate these prompts and save all the recommendations as implemented Actions."
+            }
+          ]
+        }
+      },
+      "interface": {
+        "displayName": "CiteLadder",
+        "shortDescription": "AI visibility and site health",
+        "longDescription": "Connect a CiteLadder account to inspect existing project measurements, compare compatible visibility runs, trace citations to answers and triage persisted Site Health findings. Requires a configured project and existing measurements. Acquisition and consequential actions remain in CiteLadder.",
+        "developerName": "CiteLadder",
+        "category": "Productivity",
+        "capabilities": ["Interactive"],
+        "defaultPrompt": [
+          "Review our AI visibility",
+          "What changed in our AI search visibility?",
+          "Triage our technical SEO evidence"
+        ]
+      }
+    }
+  }
+}
