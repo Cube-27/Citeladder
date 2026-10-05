@@ -57,7 +57,7 @@ export function useCreateChat(
   const start = ({ message, skillId, actionId, context, mentions = [] }: NewChatInput) => {
     const input = {
       message: message.trim(),
-      skill_id: skillId ?? undefined,
+      skill_id: skillId,
       action_id: actionId,
       context,
       ...(mentions.length > 0 ? { mentions } : {}),

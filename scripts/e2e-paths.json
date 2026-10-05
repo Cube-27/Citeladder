@@ -1,5 +1,9 @@
 [
   {
+    "sources": ["frontend/components/agent/new-chat-screen.tsx"],
+    "frontendE2E": ["e2e/surface-layout.spec.ts"]
+  },
+  {
     "sources": ["frontend/apps/app/src/globals.css", "frontend/apps/app/src/website-type.css"],
     "frontendE2E": ["e2e/shell.spec.ts", "e2e/marketing-pages.spec.ts"]
   },

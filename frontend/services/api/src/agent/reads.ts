@@ -178,8 +178,21 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
       mentions:
         manifest?.mentions.map((action) => ({ id: action.id, label: action.target_label })) ?? [],
       sources: manifest?.package.summary.provenance ?? [],
-      limitations: manifest?.package.summary.omissions ?? [],
-      prompt: manifest?.prompt_summary ?? {},
+      limitations: manifest
+        ? (manifest.package.summary.omissions ?? [])
+        : run
+          ? [{ reason: 'context_manifest_unavailable' }]
+          : [],
+      prompt: {
+        ...manifest?.prompt_summary,
+        ...(manifest
+          ? {
+              context_version: manifest.version,
+              package_version: manifest.package.version,
+              selection_policy_version: manifest.package.summary.selection_policy_version ?? null,
+            }
+          : {}),
+      },
     },
     messages: messages.map((message) =>
       agentMessageSchema.parse({

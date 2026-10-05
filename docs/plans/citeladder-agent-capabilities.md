@@ -201,21 +201,21 @@ stay in the current chat.
 
 The TypeScript migration is complete. The native Agent runtime, funding,
 provider custody and shared MCP readers are established; application policy is
-native. D/E and future streaming or memory work extend those owners in separately
+native. Future runtime refinements, streaming or memory work extend those owners in separately
 assigned slices. The [archived migration](../archive/citeladder-typescript-migration.md)
 retains the historical sequence, not a prerequisite queue.
 
 ## Delivery slices and acceptance
 
 The identifiers 0–8 above retain historical meaning. Slices A–C are the assigned
-first release scope. D and E remain separate later assignments.
+first release scope. D is complete; E remains a separate later assignment.
 
 | Slice | Scope | Exit evidence |
 |---|---|---|
 | A. Conversation baseline (implemented) | Scripted questions, clarification, audience corrections, artifact requests and discussion of a user-edited outline | Offline behavior checks distinguish reply-only turns from revision-producing work; existing outline/revision safety coverage retained |
 | B. Conversation behavior (implemented) | Operating contract, content/comparison/portfolio skills and prompting aligned; outline enforcement retained | Questions and clarification allow null output; the runtime continues with bounded history and latest user edits |
 | C. Chat interaction polish (implemented) | Inherited workflow wording, shared follow-latest behavior, activity disclosure, optional suggestion prefills, drafting during runs and exact submission retry | Full chat and Dashboard use the same owners; component and offline browser coverage exercise reading position, commands, Stop and recovery |
-| D. TS Agent baseline | Migration PR 19 in its approved sequence | One writer/worker owner, affected PostgreSQL coverage and migration release gates |
+| D. TS Agent baseline (completed) | Native runtime delivered through migration PR 19 | One writer/worker owner, affected PostgreSQL coverage and migration release gates |
 | E. Optional streaming | Persisted progress delivery first; provider text only after its safety/transport contract is ready | Reconnect cannot start/replay a turn; incomplete text cannot become a saved or approved artifact |
 
 A and C can be developed independently. B follows A. A–C are the first release

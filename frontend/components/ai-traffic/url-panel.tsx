@@ -56,7 +56,7 @@ function CompactTrafficLeg({
         <Pressable
           type="button"
           className="w-auto text-center tabular-nums"
-          aria-label={`${leg.value ?? 'Unavailable'} ${detail}`}
+          aria-label={`${leg.value ?? 'Unavailable'} ${unit}`}
         >
           {value}
         </Pressable>

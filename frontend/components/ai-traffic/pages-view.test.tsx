@@ -67,10 +67,10 @@ it('keeps inventory, zero, partial values and distinct unavailable reasons reada
   expect(within(row).getAllByRole('cell', { name: '0' })).toHaveLength(2);
   expect(within(row).getByRole('cell', { name: '1' })).toBeVisible();
   const partial = within(row).getByRole('button', {
-    name: /12 citations.*partial.*limited window/,
+    name: '12 citations',
   });
   expect(partial).toHaveTextContent('12Partial');
-  const missing = within(row).getByRole('button', { name: /Unavailable requests: not connected/ });
+  const missing = within(row).getByRole('button', { name: 'Unavailable requests' });
   expect(missing).toHaveTextContent('–');
   act(() => missing.focus());
   expect(await screen.findByRole('tooltip')).toHaveTextContent('requests: not connected');
@@ -80,9 +80,7 @@ it('keeps inventory, zero, partial values and distinct unavailable reasons reada
   );
   const second = screen.getByRole('row', { name: /\/second/ });
   expect(
-    within(second)
-      .getByRole('button', { name: /5xx unavailable.*missing days/ })
-      .closest('td'),
+    within(second).getByRole('button', { name: '5xx unavailable' }).closest('td'),
   ).toHaveTextContent('0 / –');
   expect(screen.getByText(/Crawl coverage unavailable · 200 known pages/)).toBeVisible();
 });

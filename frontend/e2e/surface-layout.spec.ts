@@ -96,9 +96,10 @@ test('working surfaces preserve their actions without viewport overflow', async 
         ).toBeTruthy();
       }
       await page.evaluate(() => document.fonts.ready);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-        true,
-      );
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        `${route} at ${width}px must fit the viewport`,
+      ).toBe(true);
       await page.screenshot({
         path: test
           .info()

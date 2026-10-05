@@ -6,7 +6,8 @@ Completed implementation plans are retained in [the archive](../archive/).
 ## Active
 
 - [Agent capabilities](citeladder-agent-capabilities.md): foundations and MVP
-  merged in #203/#206; conversation slices A–C merged in #207. D/E, streaming,
+  merged in #203/#206; conversation slices A–C merged in #207 and D in the
+  completed TypeScript migration. E, streaming,
   memory promotion, durable execution and project skill policy remain later
   assignments.
 - [Audit remediation and enterprise readiness](citeladder-audit-remediation.md):

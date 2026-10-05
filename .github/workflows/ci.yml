@@ -342,7 +342,7 @@ jobs:
           else
             status=$?
             echo "Playwright failed (exit $status); first server errors:"
-            rg -m 5 '\[WebServer\].*\[ERROR\]' "$log" || true
+            grep -m 5 -E '\[WebServer\].*\[ERROR\]' "$log" || true
             echo 'Last 120 log lines:'
             tail -n 120 "$log"
             exit "$status"

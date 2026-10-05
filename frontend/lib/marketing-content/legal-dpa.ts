@@ -136,7 +136,7 @@ export const SUBPROCESSORS: LegalDocument = {
   slug: 'subprocessors',
   title: 'Subprocessors',
   description: 'The service providers that process data for CiteLadder, and why.',
-  lastUpdated: '2026-09-28',
+  lastUpdated: '2026-10-05',
   sections: [
     {
       id: 'subprocessors',

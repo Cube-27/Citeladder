@@ -192,9 +192,7 @@ function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
         >
           {action.target_url}
         </ExternalHttpLink>
-      ) : (
-        <p className={textRole('itemTitle', 'break-all')}>{action.target_label}</p>
-      )}
+      ) : null}
 
       <dl className="flex flex-wrap items-center gap-x-6 gap-y-3">
         {facts.map((fact) => (

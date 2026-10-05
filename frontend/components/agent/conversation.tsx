@@ -218,7 +218,7 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
         <p className={textRole('caption')}>
           {included.length
             ? included.map((section) => labels[String(section)] ?? String(section)).join(' · ')
-            : 'No model context has been supplied yet.'}
+            : 'No supplied context sections are recorded.'}
         </p>
         {context.instructions ? (
           <p className={textRole('caption')}>

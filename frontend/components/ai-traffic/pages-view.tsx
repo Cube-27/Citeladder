@@ -76,11 +76,14 @@ export function TrafficPages({
   );
 }
 
-function UnavailableTrafficValue({ reason }: Readonly<{ reason: string }>) {
+function UnavailableTrafficValue({
+  reason,
+  label = 'Unavailable',
+}: Readonly<{ reason: string; label?: string }>) {
   return (
     <TooltipProvider>
       <Tooltip content={reason}>
-        <Pressable type="button" className="w-auto text-center" aria-label={reason}>
+        <Pressable type="button" className="w-auto text-center" aria-label={label}>
           {MISSING_MARK}
         </Pressable>
       </Tooltip>
@@ -99,11 +102,21 @@ function TrafficErrors({
     .filter(Boolean)
     .join(' · ');
   if (page.errors_4xx === null && page.errors_5xx === null)
-    return <UnavailableTrafficValue reason={`4xx and 5xx unavailable: ${reason}`} />;
+    return (
+      <UnavailableTrafficValue
+        label="4xx and 5xx unavailable"
+        reason={`4xx and 5xx unavailable: ${reason}`}
+      />
+    );
   return (
     <>
-      {page.errors_4xx ?? <UnavailableTrafficValue reason={`4xx unavailable: ${reason}`} />} /{' '}
-      {page.errors_5xx ?? <UnavailableTrafficValue reason={`5xx unavailable: ${reason}`} />}
+      {page.errors_4xx ?? (
+        <UnavailableTrafficValue label="4xx unavailable" reason={`4xx unavailable: ${reason}`} />
+      )}{' '}
+      /{' '}
+      {page.errors_5xx ?? (
+        <UnavailableTrafficValue label="5xx unavailable" reason={`5xx unavailable: ${reason}`} />
+      )}
     </>
   );
 }
@@ -137,14 +150,9 @@ function TrafficPageRow({
       </TableCell>
       <TableCell numeric="end">
         {r.key_events === null ? (
-          <TrafficLeg
-            compact
-            leg={{
-              ...r.referrals,
-              state: r.referrals.value === null ? r.referrals.state : 'unavailable',
-              value: null,
-            }}
-            unit="Key events"
+          <UnavailableTrafficValue
+            label="Key events unavailable"
+            reason="Key events are unavailable for this path in the selected window."
           />
         ) : (
           r.key_events
@@ -160,7 +168,10 @@ function TrafficPageRow({
         {r.last_crawl ? (
           <DisplayTime value={r.last_crawl} />
         ) : (
-          <UnavailableTrafficValue reason="Last crawl is unavailable for this path in the selected window." />
+          <UnavailableTrafficValue
+            label="Last crawl unavailable"
+            reason="Last crawl is unavailable for this path in the selected window."
+          />
         )}
       </TableCell>
       <TableCell numeric="end">
