@@ -3,7 +3,7 @@
 This is the owner procedure for production hosting. The design target is under
 ₹500 a month in fixed hosting, excluding provider usage (models, JEV,
 DataForSEO) and the domain. Background and decisions are in the
-[low-cost hosting plan](../plans/citeladder-typescript-migration.md#9-low-cost-hosting-prs-2124-proposed-1-october-2026).
+[low-cost hosting plan](../archive/citeladder-typescript-migration.md#9-low-cost-hosting-prs-2124-proposed-1-october-2026).
 Terraform lives in [`infra/gcp`](../../infra/gcp/README.md). Never place a
 long-lived Google service-account key in GitHub.
 
@@ -138,15 +138,19 @@ verification review.
 - After the first successful cutover, delete the `origin.citeladder.com` DNS
   record and revoke its Cloudflare Origin CA certificate.
 
-### 1.7 Before go-live: legal hosting location (owner action)
+### 1.7 Legal hosting location
 
-The published DPA (`frontend/lib/marketing-content/legal-dpa.ts`) states
-"CiteLadder is hosted in India" and lists "India (Mumbai region)". After
-cutover, data is stored in the United States (`us-central1`). Have the legal
-pages and subprocessor list updated and approved before customer data is
-accepted. Automation does not change this copy.
+The DPA and subprocessor list (`frontend/lib/marketing-content/legal-dpa.ts`)
+describe the current Google Cloud application/database hosting in the
+United States (`us-central1`). Cloudflare delivers the website, product and
+documentation through its global Worker network.
 
-## 2. First deployment (clean rebuild)
+## 2. Completed cutover and acceptance
+
+The clean rebuild and GCP/Product/Marketing/Documentation delivery workflows
+have succeeded on current main. The original first-deployment sequence below
+is retained as cutover history; it is not a pending task or reset instruction.
+Routine releases use section 4. Manual acceptance remains evidence-dependent.
 
 1. Merge the hosting PR to `main` and wait for CI.
 2. Actions → **GCP - Deploy** → Run workflow from `main` and approve

@@ -10,7 +10,7 @@ experience of talking to the Agent without adding a more complicated workspace.
 Slices A–C were assigned for implementation on 30 September 2026 through the
 owner's implement-plan request. They now have scripted conversation coverage,
 conditional artifact instructions and shared chat interaction refinements;
-CI/merge and deployment acceptance are tracked separately. Foundations and MVP
+Slices A–C merged in #207; manual acceptance remains separate. Foundations and MVP
 items 1–4 are present in this checkout: local history records the MVP in
 `6a490d78` (#203) and evidence/handoff fixes in `f7c369fc` (#206). This replaces
 the earlier branch-only status; it does not establish deployment or fresh
@@ -23,9 +23,9 @@ Owner: [Agent](../agents.md). Follow [Design](../design.md), the
 
 **No pending TypeScript migration blocks conversation UI refinement.** The
 frontend and shared contracts are already TypeScript. The Agent API and worker
-remain Python. Small operating-contract/prompting improvements can accompany
+are native TypeScript. Small operating-contract/prompting improvements can accompany
 the UI with focused coverage; substantial runtime, persistence and streaming
-work should follow the Agent's TypeScript cutover.
+work belongs to the existing native Agent owner.
 
 ## Product outcome
 
@@ -197,53 +197,13 @@ handoff instead of making the user discover it through a failed send. Do not
 silently copy generated prose as evidence. Questions about the current work
 stay in the current chat.
 
-## TypeScript migration: what must happen first?
+## Runtime ownership
 
-The [migration sequence](citeladder-typescript-migration.md#6-pr-sequence)
-records PRs 1–11 implemented and PRs 12–20 pending. Its opening status line
-lags its PR 11 section. Deployment and the required one-week cutover soaks
-remain pending from PR 3 onward; implementation is not release acceptance.
-
-Current code confirms the relevant boundary:
-[the route manifest](../../frontend/packages/contracts/src/route-ownership.ts)
-assigns `agent` to Python; the UI/contracts are TS; the
-[TS model gateway](../../frontend/services/api/src/models/gateway.ts) exists,
-but Agent funding, customer routes and execution still use Python owners.
-
-| Planned work | Must finish migration first? |
-|---|---|
-| Composer, scrolling, progress disclosure, suggestion presentation and recovery | No; use current contracts |
-| Conversation instructions and narrow prompting corrections | No; change the existing owner, test it, then carry it into PR 19 |
-| Offline Agent behavior coverage | No; establish it before model-input changes |
-| New runtime services, durable plan state, source-aware memory promotion or project skill policy | Yes: land the PR 19 Agent owner first |
-| SSE progress / provider reply streaming | After PR 19 baseline, in separate slices |
-| PR 20 policy transfer and remaining bridge cleanup | Not a prerequisite for this chat refinement |
-
-**Recommended sequence:** refine chat now, continue the approved migration order,
-then add runtime enhancements in TypeScript only when they solve a demonstrated
-remaining problem. Do not make the user wait for the entire migration to receive
-a better conversation experience.
-
-[PR 19](citeladder-typescript-migration.md#pr-19-agent-runtime) depends on more
-than the already-implemented PR 11 transport:
-
-- PR 15 moves the shared MCP readers/catalog.
-- PR 16 moves billing and the funded entitlement ledger.
-- PR 17 moves customer provider routes and credential handling.
-- The earlier project/access/integration owners and PR 18 evidence owners help
-  retire remaining Python readers and bridges. Follow the approved sequence;
-  this is not a claim that every preceding PR directly blocks a UI change.
-
-Moving PR 19 earlier would need a separate caller/writer/lock inventory and
-reviewed migration resequencing. This plan does not introduce cross-stack
-services or dual Agent writers to bypass that work.
-
-Keep the first PR 19 slice focused on the current API, admission, frozen context,
-tool catalog, worker, funding, revisions and progress contracts, including
-this plan's implemented improvements at that time. Transfer route/worker
-ownership coherently, drain or fence active leases, preserve funding settlement,
-update ingress and delete replaced Python owners/tests. Retain a bridge only
-for a named remaining caller with a deletion condition.
+The TypeScript migration is complete. The native Agent runtime, funding,
+provider custody and shared MCP readers are established; application policy is
+native. D/E and future streaming or memory work extend those owners in separately
+assigned slices. The [archived migration](../archive/citeladder-typescript-migration.md)
+retains the historical sequence, not a prerequisite queue.
 
 ## Delivery slices and acceptance
 
@@ -273,6 +233,11 @@ authority and preserve cancellation, usage settlement and output atomicity.
 Multi-read steps are deferred until measurements justify a protocol change.
 
 ## Deferred proposals from the original plan
+
+- Structured measurement-plan outputs remain deferred from the
+  [Agent/Action implementation](../archive/citeladder-action-center.md#pr-3--implementation-measurement-and-search-demand).
+  Verification currently uses member-rule checks; free-text chat plans cannot
+  add expected checks without a separately approved structured output contract.
 
 These are optional later work, not prerequisites for chat refinement:
 

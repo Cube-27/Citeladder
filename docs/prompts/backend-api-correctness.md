@@ -66,7 +66,7 @@ area's response schemas.
 - Handlers that return persisted "missing"/"unavailable" states — that is the
   intended read behaviour.
 - `version = 1` constants.
-- Python modules under `backend/app/domain` — not the runtime.
+- Python SQLAlchemy metadata under `backend/app/models` — not the application runtime.
 
 ## Subagent split
 

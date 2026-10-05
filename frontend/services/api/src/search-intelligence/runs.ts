@@ -74,7 +74,7 @@ async function assertConfirmable(trx: Database, scope: Scope, run: LockedRun, no
     );
 }
 
-/** Enqueue the Python-owned acquisition; the existing task when already enqueued. */
+/** Enqueue native acquisition; return the existing task when already enqueued. */
 async function enqueueAcquisition(trx: Database, scope: Scope, runId: string): Promise<string> {
   const created = await enqueueTask(trx, {
     workspaceId: scope.workspace.workspaceId,

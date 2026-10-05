@@ -1,5 +1,8 @@
 # TypeScript application with Python schema tooling
 
+> Historical implementation plan. PRs 1–5 merged in #263–#266 and #268. Python is retained only for schema/Alembic tooling.
+> The original sequence and observations below are retained as dated evidence, not current work.
+
 Requested 4 October 2026. **PRs 1–5 implemented; migration ends at the schema-only Python boundary.**
 This is the continuation after the product/API/worker TypeScript migration.
 It orders remaining work by increasing complexity and operational risk, subject
@@ -556,7 +559,7 @@ reason for extra manual validation runs.
 The handoff records the selected PR/slices, changed owners and removals,
 remaining bridges, Astra findings and their resolution, exact validation
 commands/results, checks not run and any unresolved blocker. Update
-[plan status](ACTIVE.md) and changed owner documentation once; do not create
+[plan status](../plans/ACTIVE.md) and changed owner documentation once; do not create
 progress sidecars. Honor the user's publication instructions and stop after
 the assigned PR.
 

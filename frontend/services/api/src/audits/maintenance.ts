@@ -223,7 +223,7 @@ export class AuditMaintenance {
           auditId: candidate.audit_id,
         });
     }
-    // Reconcile funding left owing by older workers or the retained cross-queue Python sweeper.
+    // Reconcile funding left owing by older workers or cross-queue sweeper terminalization.
     const owing = await this.db
       .selectFrom('consumable_ledger as l')
       .innerJoin('audit_tasks as t', (join) =>

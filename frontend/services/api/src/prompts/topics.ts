@@ -1,7 +1,7 @@
 /**
  * Topics: per-project prompt categories, nested at most one level.
  *
- * Python generation and Commerce also create topics, under the same project
+ * Native generation and Commerce also create topics, under the same project
  * advisory lock every TypeScript topic writer takes first, so a delete or a
  * re-parent never interleaves with generation's topic resolution. Names are
  * unique per project case-insensitively (`uq_topic_project_name`); deleting a

@@ -2,7 +2,7 @@
 
 ## Status and boundaries
 
-Status: queued. Plan history:
+Status: A1–A3 merged in #257/#258/#260; Part B and operational decisions remain queued. Plan history:
 
 - Saved on 26 September 2026.
 - Revised on 3 October 2026: Part A became three self-contained PRs.
@@ -11,8 +11,8 @@ Status: queued. Plan history:
   source-overlap decisions.
 
 Authorized crawl (Part B) remains a separate, later assignment.
-Implementation has not started. This document specifies future work. It
-does not describe shipped behavior and does not authorize execution; a PR is
+Part A implementation is shipped; Part B specifies future work. This plan
+does not authorize execution; a PR is
 authorized only when the owner assigns it.
 
 Extend the existing owners named below. Do not create a second bot
@@ -93,7 +93,7 @@ writer, crawl policy engine, credential store or queue.
 | Bot vocabulary | Three copies: `page_analysis.rules.ai_crawler_bots` and `search_citation_crawler_bots` in [analysis.json](../../frontend/services/api/src/config/site-health/analysis.json), `crawl.crawler_roles` in [acquisition.json](../../frontend/services/api/src/config/site-health/acquisition.json), and `AI_CRAWLER_BOTS`/`AI_CRAWLER_ENGINE_LABELS` in [site-facts.ts](../../frontend/lib/site-health/site-facts.ts) | A1 replaces all three with one catalog |
 | robots.txt parsing | `robots-parser` wrapped in [web-evidence/acquisition.ts](../../frontend/services/api/src/web-evidence/acquisition.ts); the stance is written by [site-setup-task.ts](../../frontend/services/api/src/site-health/site-setup-task.ts) into `site_crawls.site_facts` | Extend this wrapper; no second parser |
 | Page identity | `canonicalPage` + `hash` in [traffic/normalization.ts](../../frontend/services/api/src/traffic/normalization.ts), which deliberately shares the Site Health `url_hash` keyspace ([url-identity.ts](../../frontend/services/api/src/site-health/url-identity.ts)) | Every joinable row stores `url_hash` from `canonicalPage`. Never `normalizedUrlForCompare` (Action grouping); no fourth normalizer |
-| AI source vocabulary | `aiSourceSchema` in [contracts/ai-referrals.ts](../../frontend/packages/contracts/src/ai-referrals.ts) and the rules in [referrals.json](../../frontend/services/api/src/config/referrals.json) | Catalog entries map to these tokens; no parallel engine list |
+| AI source vocabulary | `aiSourceSchema` in [contracts/ai-referrals.ts](../../frontend/packages/contracts/src/ai-traffic.ts) and the rules in [referrals.json](../../frontend/services/api/src/config/referrals.json) | Catalog entries map to these tokens; no parallel engine list |
 | GA4 evidence | `integration_metric_rows`. `ga4_landing_daily` (landingPage × sessionSource × sessionMedium × date), `ga4_channel_daily` and `ga4_ecommerce_source_medium_daily` are synced. **They carry no hostName, property timezone, currency or sampling/thresholding metadata, and a row missing from a newer sync keeps its old value** | A3.1 extends the integration owner narrowly before any join |
 | Analytics tasks | [analytics-worker.ts](../../frontend/services/api/src/workers/analytics-worker.ts) and the referral chain in [referrals/](../../frontend/services/api/src/referrals/) | New refresh and sweep kinds join this worker |
 | Rate and usage windows | `usage_windows` (pattern in [mcp/registration.ts](../../frontend/services/api/src/mcp/registration.ts)) | Webhook quotas use it |

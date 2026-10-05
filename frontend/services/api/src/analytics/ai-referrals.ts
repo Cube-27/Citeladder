@@ -1,8 +1,7 @@
 /**
  * AI Referrals: the persisted referral projection for one project.
  *
- * Ports `get_ai_referrals` from `app/domain/analytics/service.py` (Python
- * keeps it for the Agent's tools). It serves a persisted snapshot or the
+ * Shared native reader for API and Agent tools. It serves a persisted snapshot or the
  * empty payload, never a recomputation, and reports the window it actually
  * resolved rather than the one requested.
  */

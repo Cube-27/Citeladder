@@ -1,8 +1,8 @@
 /**
  * Prompt sets: a project's prompt library containers.
  *
- * Python onboarding and Commerce also create sets; deleting one takes the
- * project lock and then the set lock, the order Python generation holds while
+ * Native project bootstrap and Commerce also create sets; deleting one takes the
+ * project lock and then the set lock, the order native generation holds while
  * it stages candidates, so a delete never lands between its re-resolution and
  * its inserts.
  */

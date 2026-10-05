@@ -2,11 +2,9 @@
  * Which roster judged a persisted source-page reading, and the passages it
  * quoted.
  *
- * Python source-page inspection stamps `roster_version` on every presence it
- * writes (`app/domain/source_pages/roster.project_roster`), and the
- * earned-page detector only compares readings taken on the current roster, so
- * `projectRoster` must hash exactly what Python hashes until source-page
- * inspection moves.
+ * Native inspection stamps `roster_version` on every presence. The earned-page
+ * detector compares readings taken on the current roster. Preserve the historical
+ * Python serialization so existing readings remain comparable.
  */
 import { createHash } from 'node:crypto';
 

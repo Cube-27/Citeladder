@@ -110,7 +110,6 @@ class TestArchitecturePolicy:
         assert set(self._contracts()) == {
             "core-is-the-floor",
             "models-are-persistence-only",
-            "connectors-are-transport-only",
             "schema-dependencies-only",
         }
 

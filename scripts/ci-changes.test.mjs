@@ -10,7 +10,7 @@ import {
 } from './ci-changes.mjs';
 
 test('backend and frontend paths select only their owning suites', () => {
-  assert.deepEqual(classifyPaths(['backend/app/analysis/costs.py']), {
+  assert.deepEqual(classifyPaths(['backend/scripts/check_complexity.py']), {
     backend: true,
     frontend: false,
     contract: false,
@@ -55,19 +55,37 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   assert.equal(classifyPaths(['scripts/check.ps1', '.github/workflows/ci.yml']).e2e, false);
 });
 
-test('contracts and shared configuration invalidate both sides', () => {
+test('native contracts select API and browser checks without schema checks', () => {
   for (const path of [
     'frontend/services/api/src/routes/projects.ts',
     'frontend/services/api/src/openapi/routes.ts',
     'frontend/lib/api/projects.ts',
     'frontend/packages/contracts/src/project.ts',
-    'scripts/quality.mjs',
   ]) {
     const result = classifyPaths([path]);
-    assert.equal(result.backend, true, path);
+    assert.equal(result.backend, false, path);
     assert.equal(result.frontend, true, path);
     assert.equal(result.contract, true, path);
   }
+  assert.equal(classifyPaths(['scripts/quality.mjs']).backend, true);
+});
+
+test('schema inputs retain schema and native API coverage', () => {
+  for (const path of [
+    'backend/app/models/audit.py',
+    'backend/app/models/constants.py',
+    'backend/app/core/migration_config.py',
+    'migrations/versions/0001_initial.py',
+    'backend/pyproject.toml',
+    'backend/uv.lock',
+  ]) {
+    const result = classifyPaths([path]);
+    assert.equal(result.backend, true, path);
+    assert.equal(result.api, true, path);
+  }
+  assert.equal(classifyPaths(['reset-db.py']).backend, true);
+  assert.equal(classifyPaths(['frontend/services/api/src/config/audits.ts']).backend, false);
+  assert.equal(classifyPaths(['frontend/services/api/src/config/audits.ts']).api, true);
 });
 
 test('the native API runs for its code and canonical schema inputs', () => {
@@ -84,10 +102,9 @@ test('the native API runs for its code and canonical schema inputs', () => {
     assert.equal(classifyPaths([path]).api, true, path);
   }
   for (const path of [
-    'backend/app/analysis/costs.py',
-    'backend/scripts/seed_dev_data.py',
+    'backend/tests/component/test_billing_schema.py',
+    'backend/scripts/check_complexity.py',
     'backend/scripts/check_test_shape.py',
-    'backend/app/domain/workspaces/policy.py',
     'frontend/components/card.tsx',
   ]) {
     assert.equal(classifyPaths([path]).api, false, path);
@@ -126,7 +143,7 @@ test('external-service and deploy-only configuration runs only the security owne
 
 test('main skips full validation only for an owner-free push', () => {
   assert.equal(isOwnerFreeChange(['docs/README.md', '.sonarcloud.properties']), true);
-  assert.equal(isOwnerFreeChange(['docs/README.md', 'backend/app/main.py']), false);
+  assert.equal(isOwnerFreeChange(['docs/README.md', 'backend/app/models/audit.py']), false);
   // An unknown range must never read as an owner-free change.
   assert.equal(isOwnerFreeChange([]), false);
 });
@@ -163,7 +180,7 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
   // owners already cover it. `{ initial: true }` is asserted alongside the plain
   // call because a PR's first push used to escalate to Compose on any changed
   // application file -- re-adding that option must not bring the escalation back.
-  for (const path of ['backend/app/main.py', 'frontend/components/card.tsx', 'reset-db.py']) {
+  for (const path of ['backend/app/models/audit.py', 'frontend/components/card.tsx', 'reset-db.py']) {
     assert.equal(classifyPaths([path], { initial: true }).compose, false, path);
     assert.equal(classifyPaths([path]).compose, false, path);
   }
@@ -201,9 +218,9 @@ test('previous CI evidence requires every owner to be successful or intentionall
   const complete = [
     { name: 'Classify affected owners', status: 'completed', conclusion: 'success' },
     ...[
-      'Backend (quality, pytest)',
+      'Schema / Alembic (quality, pytest)',
       'Frontend (quality, coverage, build)',
-      'API contract (backend to frontend)',
+      'API contract and ingress',
       'API service (TypeScript)',
       'E2E (playwright)',
       'Security (pip-audit, detect-secrets)',

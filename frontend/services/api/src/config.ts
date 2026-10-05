@@ -246,7 +246,7 @@ function parseBoolean(name: string, raw: string): boolean {
 
 function parseDatetimeSetting(name: string, raw: string): Date | null {
   if (!raw.trim()) return null;
-  // A calendar-invalid or free-form value is refused, as Python refuses it.
+  // Refuse calendar-invalid or free-form timestamps.
   const parsed = parseDatetime(raw.trim());
   if (parsed === null) throw new ConfigError(`${name} must be a timestamp`);
   // A naive timestamp is kept as "present but unusable"; demo access then
@@ -480,7 +480,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     appName: setting('app_name') as string,
     appEnv: setting('app_env') as string,
     // Every interface by default, as a bridged container needs; a host-network
-    // deployment pins loopback, as the Python web process does.
+    // local deployment pins loopback.
     host: env.HOST?.trim() || '0.0.0.0',
     port: parsePort(env.PORT),
     databaseUrl: setting('database_url') as string,

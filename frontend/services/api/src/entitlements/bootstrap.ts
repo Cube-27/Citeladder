@@ -142,7 +142,7 @@ function developmentAccessGrants(allowance: number) {
       return { key, value };
     });
 }
-/** Same family/source keys as the temporary Python bootstrap bridge. */
+/** Preserve family/source keys for idempotent replay of existing baseline grants. */
 export async function issueDevelopmentAccess(
   db: Database,
   input: {

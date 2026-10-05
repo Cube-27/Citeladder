@@ -35,7 +35,7 @@ export function decideBuyerPrompt(
   approved: boolean,
 ) {
   return db.transaction().execute(async (trx) => {
-    // Shared with Python: Prompt first, then its Commerce target. Creation uses
+    // Lock Prompt first, then its Commerce target. Creation uses
     // the same parent-before-child order; generic Prompt writes touch only p.
     const prompt = await trx
       .selectFrom('prompts as p')

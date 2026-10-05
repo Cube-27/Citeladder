@@ -6,10 +6,10 @@ rules belong in [invariants](invariants.md). Git and PRs retain superseded histo
 
 ## TypeScript application, Python schema tooling
 
-The final migration target is a TypeScript application using Hono, Kysely and
+The application uses TypeScript with Hono, Kysely and
 Zod, with Python retained for schema metadata, Alembic migrations and their
 maintenance/check tooling. Product operators, account bootstrap, development
-seed/login tools and application policy move to the existing TypeScript owners.
+seed/login tools and application policy belong to the existing TypeScript owners.
 The retained Python package targets SQLAlchemy, Alembic and asyncpg as its direct
 schema dependencies; schema test/static-analysis tools remain development
 dependencies. Kysely types continue to come from the Alembic-migrated database.
@@ -22,7 +22,7 @@ always-on service. PRs 1–5 implement this boundary: operators, bootstrap, seed
 tools and application policy are native; Python retains schema maintenance.
 
 Source: owner-selected target in the 4 October 2026 migration-planning
-conversation. The [remaining migration plan](plans/citeladder-python-retirement.md)
+conversation. The [completed migration plan](archive/citeladder-python-retirement.md)
 records the slices; schema migration and full Python-environment retirement
 are outside its scope.
 
@@ -81,7 +81,7 @@ place to converge. The retired `content_creation` and `growth_agent` keys were
 then renamed to one `agent` capability, route and rate key without read-time
 aliases; pre-launch, the demo database is reset instead (26 September 2026).
 
-Source: owner-settled [Agent workspace plan](plans/citeladder-action-center.md),
+Source: owner-settled [Agent workspace plan](archive/citeladder-action-center.md),
 25 September 2026. [Agent](agents.md) and [Opportunities](opportunities.md)
 own shipped behavior.
 

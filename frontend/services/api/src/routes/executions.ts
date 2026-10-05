@@ -1,7 +1,7 @@
 /**
  * `executions`: one execution's persisted analysis and citation evidence.
  *
- * Moved from `backend/app/api/executions.py`. `execution_id` is the
+ * `execution_id` is the
  * execution (`AuditTask`) id from `GET /audits/{id}/executions`; the read is
  * workspace-scoped and projection-only.
  */

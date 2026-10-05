@@ -1,5 +1,8 @@
 # TypeScript migration plan
 
+> Historical implementation plan. Completed TypeScript application and GCP delivery migration; Python schema-only follow-through merged in PR #268.
+> The original sequence and observations below are retained as dated evidence, not current work.
+
 Status: PRs 1–14 implemented (27–30 September 2026), each at the owner's
 request. PRs 7, 8 and 9 were split at the owner's direction (7a, 7a-cleanup,
 7b; 8a, 8b; 9a, 9b), and a golden-retirement pass and contract convergence

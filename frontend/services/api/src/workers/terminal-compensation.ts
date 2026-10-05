@@ -1,4 +1,4 @@
-/** Durable recovery of failed TS work, including tasks terminalized by the Python sweeper. */
+/** Durable recovery of failed native work, including sweeper-terminalized tasks. */
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';

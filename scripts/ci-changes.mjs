@@ -207,7 +207,7 @@ export function classifyPaths(paths, { full = false } = {}) {
   const shared = unowned.length > 0;
   const e2eFiles = selectE2EFiles(normalized);
   const contract = shared || normalized.some(isContract);
-  const backend = shared || contract || normalized.some(isBackend);
+  const backend = shared || normalized.some(isBackend);
   const frontend = shared || contract || normalized.some(isFrontend);
 
   return {
@@ -280,9 +280,9 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
       ? ['Classify affected owners', 'Clean-clone Compose smoke']
       : [
           'Classify affected owners',
-          'Backend (quality, pytest)',
+          'Schema / Alembic (quality, pytest)',
           'Frontend (quality, coverage, build)',
-          'API contract (backend to frontend)',
+          'API contract and ingress',
           'API service (TypeScript)',
           'E2E (playwright)',
           'Security (pip-audit, detect-secrets)',

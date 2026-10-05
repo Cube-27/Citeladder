@@ -1,4 +1,4 @@
-/** The exported Python policy the page analyzer reads (`site_health.page_analysis`). */
+/** Native Site Health page-analysis policy consumed by the analyzer. */
 import { policy } from '../../config.ts';
 
 export const analysisPolicy = policy.site_health.page_analysis;

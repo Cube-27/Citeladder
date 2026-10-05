@@ -29,8 +29,8 @@ sets, prompts, topics, import, generation and candidate review
 ([`src/prompts/`](../frontend/services/api/src/prompts/)).
 Native `config/prompt-library.json` owns library bounds, cohorts, write locks,
 binding and generation settings; `config/api.json` owns HTTP admission limits.
-Python exports model defaults and the shared normalization punctuation used by
-the prompt model's persisted identity. Generation defaults resolve at use time.
+Native prompt normalization owns persisted identity; Python retains fixed schema
+defaults. Generation defaults resolve at use time.
 `POST /prompt-sets/{id}/candidates/review` takes `accept_ids`/`reject_ids`:
 accept runs prompt-slot occupancy
 ([`src/entitlements/`](../frontend/services/api/src/entitlements/)) and the
@@ -228,8 +228,8 @@ same rule to drafted and proposed text.
 [Audit config](../frontend/services/api/src/config/audits.ts) owns lifecycle,
 scoring and read policy; [provider config](../frontend/services/api/src/config/providers.ts)
 owns transport/capacity policy and [cost config](../frontend/services/api/src/config/costs.json)
-owns versioned pricing and measured envelopes. Python exports only the shared
-route/catalog identities, model defaults, provenance and operator security inputs.
+owns versioned pricing and measured envelopes. Python retains only schema
+defaults and structural provenance vocabulary.
 Provider error bodies do not become public failure details.
 
 The [audit API](../frontend/services/api/src/routes/audits.ts),
@@ -306,7 +306,7 @@ acceptance remains a separate, explicitly authorized release step.
 
 ## Measurement and comparisons
 
-[Analysis](../backend/app/analysis/) derives versioned persisted metrics from
+[Analysis](../frontend/services/api/src/analysis/) derives versioned persisted metrics from
 the selected evidence. The [visibility readers](../frontend/services/api/src/visibility/)
 project source and prompt outcomes and brand and competitor rankings from them.
 Mention, citation, recommendation identity, citation URL and

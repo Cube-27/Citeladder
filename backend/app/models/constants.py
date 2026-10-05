@@ -6,6 +6,25 @@
 # behavior change.
 from __future__ import annotations
 
+from enum import StrEnum
+
+
+class FinishReason(StrEnum):
+    """Persisted provider-neutral generation stop reason.
+
+    Native execution records the raw provider token separately from this closed
+    schema vocabulary. SQLAlchemy uses UNKNOWN as the fixed metadata default.
+    """
+
+    STOP = "stop"
+    LENGTH = "length"
+    TOOL_ERROR = "tool_error"
+    CONTENT_FILTER = "content_filter"
+    CANCELLED = "cancelled"
+    ERROR = "error"
+    UNKNOWN = "unknown"
+
+
 # ForeignKey targets, repeated wherever a model hangs off one of these tables.
 FK_AUDITS_ID = "audits.id"
 FK_PROVIDER_CONNECTIONS_ID = "provider_connections.id"

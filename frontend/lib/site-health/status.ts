@@ -216,7 +216,7 @@ export function canShowDiscoveredTotal(
 /**
  * Which phase of the Site Health flow to render.
  *
- * RESOLVED SERVER-SIDE (backend/app/domain/site_health/phase.py) and read off
+ * RESOLVED SERVER-SIDE by the native Site Health phase owner and read off
  * the dashboard projection. `'resolving'` is the one value the server never
  * sends: it means the dashboard request itself has not landed yet.
  */

@@ -1,9 +1,9 @@
 /**
  * Path and query parameters, validated into the published 422 contract.
  *
- * A route declares its parameters in FastAPI's order; every failure is
+ * Every parameter failure is
  * collected, path parameters first, and answered with the envelope the
- * Python handler sends: `code: validation_error`,
+ * native API publishes: `code: validation_error`,
  * `details.errors[{loc, message, type}]` and the first error as the message.
  * `loc` and `type` are the contract; messages are human-readable and not
  * byte-matched to Pydantic. Repeated keys take the last value (every value

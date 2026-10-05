@@ -3,11 +3,10 @@
  *
  * The parameter specs are the single declaration: they validate requests
  * (`http/params.ts`) and generate the route's OpenAPI parameters. A route
- * resolves its workspace like FastAPI's `require_active_workspace` (the
- * default) or, with `authorize: 'project'`, like `require_project_member`:
+ * resolves the active workspace (the default) or, with `authorize: 'project'`,
+ * the project's membership:
  * session first (401), then the workspace or project (400/404), the
- * capability (403) and the parameters (422), as FastAPI resolves dependencies
- * before parameters.
+ * capability (403) and the parameters (422). Authorization precedes parameter validation.
  */
 import type { Context, Hono, MiddlewareHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
@@ -104,7 +103,7 @@ function scalarSchema(spec: ParamSpec): z.ZodType {
   }
 }
 
-/** The OpenAPI view of the specs: FastAPI's parameter schemas, by wire name. */
+/** The OpenAPI view of the parameter specs, by wire name. */
 function parameterObject(specs: ParamSpecs): z.ZodObject {
   const shape: Record<string, z.ZodType> = {};
   for (const [name, spec] of Object.entries(specs)) {
@@ -123,7 +122,7 @@ const SESSION_COOKIE = z.object({
   [String(resolveSettingSpec(policy.settings.session_cookie_name))]: optionalString,
 });
 
-/** FastAPI's `{name}` path template as a Hono pattern. */
+/** An OpenAPI `{name}` path template as a Hono pattern. */
 function honoPath(path: string): string {
   return path.replaceAll(/\{([^}]+)\}/gu, ':$1');
 }

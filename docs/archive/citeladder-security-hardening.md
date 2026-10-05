@@ -1,5 +1,8 @@
 # CiteLadder security hardening plan
 
+> Historical implementation plan. Implementation merged in PR #255. The deferred console spend cap remains in the GCP runbook.
+> The original sequence and observations below are retained as dated evidence, not current work.
+
 Date: 3 October 2026
 
 Status: slices 1–7 implemented on `codex/security-hardening`; PR review and CI

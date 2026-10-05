@@ -1,8 +1,7 @@
 /**
  * The marks and websites behind recorded brand names.
  *
- * Ports `app/domain/analysis/brand_identity.py`, which Python keeps for the
- * mention tables. A mention is persisted as a NAME, resolved against this
+ * A mention is persisted as a NAME, resolved against this
  * project's brand and competitor records (every competitor alias included);
  * the tracked brand wins a name collision, and a name that resolves to
  * nothing has no mark rather than a borrowed one.

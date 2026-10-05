@@ -1,9 +1,8 @@
 /**
  * Workspace membership and the role/capability matrix.
  *
- * Mirrors `require_workspace_member` and `WorkspaceContext` in
- * `backend/app/api/deps.py`. The matrix and refusal wording come from the
- * Python policy export; a role missing from it confers nothing (fail closed).
+ * Native workspace config owns the matrix and refusal wording; a role
+ * missing from it confers nothing (fail closed).
  * A non-member cannot tell an existing workspace from a missing one: both 404.
  */
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';

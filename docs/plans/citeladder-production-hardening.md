@@ -2,14 +2,21 @@
 
 Date: 25 September 2026
 
-Status: approved repository-side Phase 1 subset implemented locally on 26 September
-2026 in `codex/production-hardening`, based on main at `bd1faf74`. Deployment,
-remaining cloud changes and runtime acceptance are pending. The owner authorized
-implementation separately; this document does not authorize deployment.
+Status: repository-side Phase 1 controls are shipped in the native owners.
+Remaining operational evidence, cloud inventory and Phase 2 decisions are
+retained below. This document does not authorize deployment.
 
 Repository baseline: `8d079f09c3c682181a89a639378ec5e765d92a56`.
 
-## Implementation status — 26 September 2026
+## Current status — 5 October 2026
+
+The replay checks, saved-window/manual-refresh admission and CSP controls are
+present on main in native owners. GCP and Worker delivery workflows succeeded;
+manual TLS/cache/provisioning evidence, cloud dependency inventory and Phase 2
+policy decisions are still open. The 26 September inventory below describes the
+retired VM topology and local branch state, not current deployment status.
+
+## Historical implementation status — 26 September 2026
 
 The implementation remains uncommitted in the separate
 `Citeladder-production-hardening` worktree. It has not been merged, deployed or
@@ -232,11 +239,11 @@ and one-time side effects; prove behavior with isolated PostgreSQL tests.
 ### P1-2. Bound manual Demand recompute (SEC-02)
 
 Owners:
-[request](../../backend/app/domain/demand/schemas.py),
-[route](../../backend/app/api/demand.py),
+[request](../../frontend/services/api/src/demand/admission.ts),
+[route](../../frontend/services/api/src/routes/demand.ts),
 [enqueue](../../frontend/services/api/src/integrations/projections.ts),
-[abuse controls](../../backend/app/domain/abuse/service.py),
-`backend/app/core/config/demand.py` and `abuse.py`.
+[abuse controls](../../frontend/services/api/src/abuse/usage.ts),
+Native Demand and abuse configuration under `frontend/services/api/src/config/`.
 
 The actual UI at `frontend/components/demand/demand-projection.tsx:169`
 resubmits the persisted snapshot window. It has no recompute date-range picker.

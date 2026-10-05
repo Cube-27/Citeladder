@@ -1,9 +1,12 @@
 # Agent workspace — CiteLadder's MCP capabilities and skills, inside the app
 
+> Historical implementation plan. Agent/Action implementation is shipped; current behavior belongs to docs/agents.md and docs/opportunities.md. Deferred Agent proposals remain in the current Agent capabilities plan.
+> The original sequence and observations below are retained as dated evidence, not current work.
+
 **Status: proposed, awaiting owner approval (25 September 2026).** This
 revision replaces the earlier Action Center draft. Owner decisions are recorded
 in §1. This document does not authorize execution until it is listed as active
-in [plan status](ACTIVE.md).
+in [plan status](../plans/ACTIVE.md).
 
 **Core idea.** The in-app agent gives a user what a customer gets by connecting
 the CiteLadder MCP server and running the CiteLadder growth skills in their own

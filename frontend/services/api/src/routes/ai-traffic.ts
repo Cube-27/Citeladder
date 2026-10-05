@@ -1,7 +1,7 @@
 /**
  * AI Traffic persisted signal reads, with the retained referral data owner.
  *
- * Moved from `backend/app/api/ai_referrals.py`. `range` names a preset and
+ * `range` names a preset and
  * resolves the newest persisted snapshot of that length; `from`/`to` selects
  * one exact persisted window; neither serves the latest snapshot.
  */

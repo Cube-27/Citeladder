@@ -15,7 +15,8 @@ Docs Worker (static, no origin)                            │ starts runner aft
                                                  e2-micro PostgreSQL 16 VM (no public IP)
 ```
 
-- One reused GCP project in `us-central1`; there is no project-creation or
+- Current application/database hosting: Google Cloud, United States (`us-central1`).
+  One reused GCP project; there is no project-creation or
   project-deletion automation.
 - Target under ₹500 a month in fixed hosting. The e2-micro with a 30 GB
   standard disk is free-tier, and Cloud Run scales to zero. A monthly budget

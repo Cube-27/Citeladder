@@ -1,5 +1,8 @@
 # CiteLadder backend debt remediation plan
 
+> Historical implementation plan. Implementation merged in PR #256. Deferred B20 legal wording remains with the current legal review draft.
+> The original sequence and observations below are retained as dated evidence, not current work.
+
 Date: 3 October 2026
 
 Status: all six slices implemented on `codex/backend-debt-remediation`, in

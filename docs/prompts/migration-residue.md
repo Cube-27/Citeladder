@@ -54,7 +54,8 @@ report, not code changes.
 ## Not a finding
 
 - Historical content retained in Git and PRs, or completed plans.
-- SQLAlchemy models, Alembic, bootstrap and supported operators in Python.
+- SQLAlchemy models, Alembic, migration configuration, schema checks and protected
+  local database reset tooling in Python. Bootstrap and product operators are native.
 - Generated files under `frontend/services/api/src/generated/`.
 
 ## Subagent split

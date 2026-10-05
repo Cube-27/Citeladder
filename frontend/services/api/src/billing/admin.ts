@@ -280,7 +280,7 @@ export function inspectAccount(
   });
 }
 
-/** Run after the Python identity transaction commits. Skip branches stay catalog-free. */
+/** Run after native identity bootstrap commits. Skip branches stay catalog-free. */
 export function initializeCatalog(db: Database, actorEmail: string, mode: 'test' | 'live' | null) {
   return db.transaction().execute(async (trx) => {
     const actor = await requirePlatformAdmin(trx, actorEmail);

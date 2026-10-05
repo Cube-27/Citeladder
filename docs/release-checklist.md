@@ -84,6 +84,10 @@ evidence for the release candidate satisfies them:
 - Commerce: disposable-database migration/crawl/CSV and 100-product reference
   evaluation, a bounded credentialed Tavily check with call count, and
   credentialed audit/schedule validation.
+- AI Visibility: bounded live DataForSEO acceptance for both scrapers, all-six
+  coexistence, citations, available ChatGPT fanouts, costs and partial failure.
+  The [archived release boundaries](archive/citeladder-dataforseo-llm-visibility.md#release-boundaries)
+  retain the acceptance scope; native tests alone do not establish it.
 - Billing: commercial/tax confirmation, real provider test-mode acceptance,
   separate live-readiness approval and observed production alert delivery.
   [Provider readiness](billing-provider-readiness.md) and the

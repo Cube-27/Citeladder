@@ -32,7 +32,7 @@ repository check script includes the documentation build.
 
 | Tool                               | Version        | Notes                                                                                                                                |
 | ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Python                             | 3.12+          | Backend                                                                                                                              |
+| Python                             | 3.12+          | Schema and Alembic tooling                                                                                                           |
 | [`uv`](https://docs.astral.sh/uv/) | latest         | Backend dependency + venv manager                                                                                                    |
 | Node.js                            | 26+            | Frontend and TypeScript services. 26 is the supported minimum and CI version; protected production delivery uses Cloudflare Workers. |
 | pnpm                               | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json).                                       |
@@ -50,6 +50,17 @@ cd ../frontend
 pnpm install
 pnpm --filter @citeladder/api start
 ```
+
+### Dependency license inventory
+
+`docs/operations/dependency-licenses.json` records resolved production packages,
+not deployed artifact or legal acceptance. Its `sources` record the package-manager
+commands used to refresh it; no repository-specific generator exists. Frontend
+license metadata comes from `pnpm licenses list --prod --json` after frozen install.
+Python production membership comes from `uv export --frozen --no-dev --no-emit-project
+--no-hashes --no-header`, with license metadata from that frozen environment.
+Local optional packages depend on the installation platform; confirm the actual
+Linux image and Worker artifacts separately for release notices.
 
 The API process enqueues work and never performs provider calls or long-running
 crawl/sync/generation work inline. Every background owner (analytics, discovery,
@@ -370,13 +381,14 @@ initial pull-request run it classifies the complete PR diff. A later push uses
 the previous-head range only when the previous owner results are attributable
 and complete; missing, ambiguous, cancelled, or incomplete evidence falls back
 to the cumulative PR diff, which includes every failed or unexecuted owner from
-the PR. Backend-only and frontend-only pushes do not repeat unrelated
+the PR. Schema-only and frontend-only pushes do not repeat unrelated
 successful suites, and ordinary frontend edits do not automatically launch
 browser E2E. Browser-sensitive paths run only the specs mapped in
 `scripts/e2e-paths.json`; the complete default Playwright suite is reserved
 for `main`, merge-queue validation, unknown shared paths, and changes to
 Playwright's global configuration. Shared, configuration, and
-contract paths retain their broader owners. The clean-clone Compose smoke runs
+contract paths select native API/browser checks; schema inputs also select the
+Python schema owner and native API checks. The clean-clone Compose smoke runs
 on application/Compose-sensitive PR
 changes, merge queue validation, and every push to `main`.
 
