@@ -8,23 +8,25 @@ evidence and discuss it in ChatGPT. Extend the hosted MCP owner with a compact
 analytics UI and public workflow skills. Keep CiteLadder's application as the
 place for onboarding, acquisition, configuration and consequential actions.
 
-The recommended first release is a read-only pre-launch prototype: Visibility,
-Trends, Sources and Site Health, followed by sidebar/context integration and
-public-directory submission. Events are a separately gated expansion. This
-plan does not authorize implementation, deployment, publication or live tests.
+The first milestone is one installed read-only Visibility experience: Overview,
+Trends, Sources and an AI Visibility Review skill. Prove it in ChatGPT before
+adding Site Health, sidebar/context integration and public-directory submission.
+[MCP Events](citeladder-mcp-events.md) has its own retained plan and is outside
+this implementation roadmap. This plan does not authorize implementation,
+deployment, publication or live tests.
 
 ## Product assumptions and decisions
 
 The user confirmed that CiteLadder has no customers yet. There is no existing
 customer cohort to pilot with. The proposed sequence is to prove the experience
-using founder-owned projects and sample data, then make it accessible to new
-users through public discovery. Alerts follow later. This is a recommendation,
+using founder-owned projects and private test fixtures, then make it accessible
+to new users through public discovery. Alerts follow later. This is a recommendation,
 not a claim that a customer pilot or demand validation has already happened.
 
 Proposed defaults:
 
 - Design for growth, content and search teams; validate first with the founder
-  and realistic sample workspaces. Support multiple authorized workspaces, with
+  and private test workspaces. Support multiple authorized workspaces, with
   one explicit project per analytical view.
 - Make the first experience useful without sidebar extensions: ask a question,
   inspect a card, follow evidence, and open the full product when needed.
@@ -38,9 +40,9 @@ Proposed defaults:
 The initial test audience is the founder; invited testers can join when
 available, but are not a prerequisite. Before public release, decide eligible
 product plans, supported ChatGPT surfaces,
-support ownership and privacy disclosures. Before events, decide thresholds,
-notification volume, retention and entitlement policy. These decisions do not
-block retaining this plan.
+support ownership and privacy disclosures. V1 requires account connection and
+uses existing project data. Public sample/demo mode is explicitly out of scope
+at the user's direction; do not add public fixture tools or mixed authentication.
 
 ## Verified platform capabilities
 
@@ -52,7 +54,7 @@ verification of the pasted text's precise DevDay announcement date.
 | Plugin packaging and discovery | Plugins can bundle skills and MCP capabilities with optional UI; ChatGPT and Codex share a directory, but individual capabilities remain surface-specific. Keep a useful text/structured-data path. [Architecture](https://developers.openai.com/plugins/concepts/plugins) |
 | Interactive UI | MCP Apps supports UI resources and tool-result interaction. Use the standard bridge first and optional ChatGPT extensions only where needed. [UI guide](https://developers.openai.com/plugins/build/chatgpt-ui) |
 | Sidebar and conversation context | Sidebar fullscreen apps, conversation panels, deep links and bidirectional Model-App Context are documented. Web extensions are still described as coming soon for Free and Go; composer mentions are desktop-only. Feature-detect and verify the actual pilot surface. [Extensions](https://developers.openai.com/plugins/build/extensions) |
-| Authentication | OAuth 2.1, S256 PKCE, resource metadata and resource binding apply. DCR remains a supported client-registration path; CIMD is not mandatory for this plan. [Authentication](https://developers.openai.com/plugins/build/auth) |
+| Authentication | OAuth 2.1, S256 PKCE, resource metadata and resource binding apply. CIMD is preferred when supported and chosen by the builder; DCR remains supported. Keep DCR for the prototype and assess CIMD before public submission. [Authentication](https://developers.openai.com/plugins/build/auth) |
 | Events | Requires MCP `2026-07-28`; documented for Work web, Work desktop with Cloud selected, and dots. ChatGPT supports webhook delivery and callback verification, not polling or streaming delivery. Treat this as a later capability. [MCP Events](https://developers.openai.com/plugins/build/mcp-events) |
 | Sign in with ChatGPT | Commercial access remains a selected-partner trial. Identity and optional ChatGPT-plan inference usage are separate permissions; neither is required for MCP OAuth. Defer both. [Sign-in quickstart](https://developers.openai.com/siwc/quickstart) |
 | Public release | Packaging, MCP connection/domain verification, automated scans, reviewer access and review materials are separate from approval and publication. Directory placement or acquisition is not guaranteed. [Submission](https://developers.openai.com/plugins/deploy/submission) |
@@ -90,9 +92,11 @@ workspaces, selects an authorized project and asks, "What changed in our AI
 visibility?" The plugin shows measured changes when comparable evidence exists,
 offers source drill-down, and distinguishes observations from possible explanations.
 
-A new user arriving from ChatGPT gets a clear account-connection path. If they
-have no project or measurements, explain what is missing and link to existing
-CiteLadder signup/onboarding or the relevant acquisition screen. After the user
+A new user chooses **Connect my CiteLadder account** and follows the existing
+sign-in/signup flow. There is no sample workspace or anonymous exploration mode.
+
+For a connected user with no project or measurements, explain what is missing
+and link to CiteLadder onboarding or the relevant acquisition screen. After the user
 completes setup and explicitly starts any required measurement in CiteLadder,
 they can return and read the persisted results. Installation must not imply an
 instant visibility audit. A dedicated in-ChatGPT onboarding flow can be evaluated
@@ -129,9 +133,13 @@ definitions and access policy retain their existing owners.
 - Product reads recheck the live grant, selected workspaces and current member
   capabilities. UI selection, model context and deep links are untrusted input,
   never authorization. Resource loads must not contain another user's data.
-- Serve a small UI bundle through the MCP resource path. It calls tools through
-  the host bridge; it does not receive bearer tokens or depend on CiteLadder
-  browser cookies. Existing browser API calls remain same-origin `/api/v1`.
+- Serve static, versioned HTML/JS through a resource such as
+  `ui://citeladder/analytics/v1`. UI resources contain no user or project data;
+  data arrives only in authenticated tool results. V1 makes no direct CiteLadder API
+  calls or other application-initiated network requests from the iframe. Bundle
+  assets locally, use the MCP Apps bridge for reads, and keep CSP minimal. No
+  bearer tokens or CiteLadder session cookies enter the UI. Existing product
+  browser APIs remain same-origin `/api/v1`.
 - Treat tool results and third-party evidence as untrusted data. Validate bridge
   messages, restrict resource/network origins through CSP, and bound payloads.
   Keep credentials and unrelated evidence out of UI state, URLs and logs.
@@ -149,14 +157,39 @@ See [invariants](../invariants.md), [workspace access](../workspace-access.md),
 [Visibility](../visibility-prompt.md), [architecture](../architecture.md) and
 [design](../design.md) for binding constraints and domain semantics.
 
+### Data and presentation tools
+
+Keep `read_*`, search and fetch tools free of widget metadata. Add dedicated
+`render_visibility` and, in the later Site Health slice, `render_site_health`.
+Only presentation tools attach the UI resource. The split follows the
+[OpenAI UI guidance](https://developers.openai.com/plugins/build/chatgpt-ui#separate-data-processing-from-ui-rendering).
+
+CiteLadder's render tools accept strict selections and stable identifiers,
+never model-computed totals or arbitrary datasets. `render_visibility` takes
+`project_id`, `view` (overview, trends or sources) and applicable audit/period,
+engine, cohort and competitor selections. Validate combinations, reauthorize
+every referenced object and obtain canonical projections through existing
+readers. Pin Latest to concrete IDs and return the resolved selection. A renderer
+must not silently replace evidence already discussed with a newer measurement.
+`render_site_health` follows the same rule for its supported snapshot selection.
+
+Handlers compose existing readers; they own no scoring or alternative metric
+logic. Local UI interactions call data tools through the bridge and update the
+mounted view. Model reasoning can use the same tools without opening a widget.
+
 ## Dependency ordered implementation
 
 ### Slice 1 Connection and compatibility
 
 Inventory current protocol routes, OAuth metadata, tool schemas and current
 client callers. Build a compatibility matrix for ChatGPT Work web, the selected
-desktop mode and headless Codex. Keep DCR unless testing proves a concrete need
-for another registration method; do not advertise unsupported CIMD.
+desktop mode and headless Codex. Keep the existing DCR path for the initial
+prototype; do not advertise unsupported CIMD. Before public submission, perform
+a bounded CIMD assessment under the existing OAuth owner. Prefer adding it if
+URL client IDs, SSRF-bounded cached metadata retrieval, redirect validation,
+consent display and supported token authentication can be implemented and tested
+without destabilizing current grants. Retain DCR compatibility. Record the
+decision and any deferral reason; this is not an identity-provider migration.
 
 Use a disposable test workspace to exercise linking, explicit workspace consent,
 denial, reconnect, token rotation, grant revocation and membership removal.
@@ -167,30 +200,30 @@ Exit: selected clients can discover and read authorized persisted evidence;
 foreign project IDs and revoked access fail. Record deployed-host evidence
 separately from repository tests. This plan itself performs no live acceptance.
 
-### Slice 2 Interactive analytics
+### Slice 2 Visibility vertical slice
 
 Add MCP App resource metadata and a minimal UI bundle under the existing pnpm
 workspace. Choose its exact package location after inspecting frontend build
 owners; avoid a second product shell. Begin with one complete overview-to-source
-journey, then add Trends and Site Health.
+journey covering Overview, Trends and Sources through `render_visibility`.
+Site Health is deliberately a later slice.
 
 Add the missing trend adapter over the current visibility service. Preserve
 shared DTOs, explicit selection and provenance. Adapt existing source/summary
 contracts only when the desired view requires it. Keep existing tools useful
-without UI; add a small presentation entry only if attaching metadata to the
-existing reads cannot support the journey cleanly.
+without UI; implement the separate presentation contract above.
 
-Exit: the four surfaces render real persisted fixtures, match domain totals,
+Exit: the Visibility views render real persisted fixtures, match domain totals,
 retain audit/window identity on drill-down and work with keyboard navigation.
 Zero, missing, partial and incompatible comparisons remain distinguishable.
 
 ### Slice 3 Public workflows and pilot package
 
-Create public skills for AI Visibility Review and Technical SEO Triage. Add a
-user-invoked Weekly AI Search Review once compatible period reads exist. Each
+Create the public AI Visibility Review skill. Add a
+user-invoked AI Search Change Review once compatible period reads exist. Each
 selects an authorized project, checks evidence availability, makes bounded
 reads, cites returned evidence and separates observations from recommendations.
-The weekly workflow is not a scheduling promise.
+These are user-invoked reviews, not scheduling promises.
 
 Use existing methodologies as design input, but review every publicly shipped
 instruction and tool reference. No internal Agent-only tools, private templates,
@@ -201,13 +234,32 @@ cutover under the Agent owner, with both consumers validated.
 Package a stable plugin identity, public skills and the existing MCP connection
 using the current [packaging guide](https://developers.openai.com/plugins/build/plugins).
 Keep the bundle in repository source control; exclude fixtures containing
-customer data and credentials. Start with a private/personal pilot.
+customer data and credentials. Register the MCP connection in developer mode,
+map its actual connection ID into the package and install the complete plugin
+from a personal/local marketplace in the ChatGPT desktop app. Verify the
+installed package in a new chat, not just a directly connected MCP server;
+test the web surface separately where supported. Follow the
+[local testing instructions](https://developers.openai.com/plugins/build/plugins#create-and-test-a-plugin-locally-with-an-mcp-server).
 
 Exit: each workflow completes with actual public tool names, handles absent
 evidence honestly and gives a useful headless answer. The package can be
 installed on the founder's chosen test surface without changing product permissions.
+Prove OAuth → skill/tool selection → canonical data → UI → follow-up question
+end to end, including reconnect and an unavailable-evidence case, before
+expanding to Site Health. Record usability failures as well as protocol failures.
 
-### Slice 4 Sidebar and shared conversation context
+### Slice 4 Site Health and SEO triage
+
+After the installed Visibility journey works, add `render_site_health`, its
+score/coverage/evidence UI and the public Technical SEO Triage skill. Reuse
+the persisted Site Health and Opportunity readers. Retain snapshot identity,
+partial/unknown states and the latest-only selection limits.
+
+Exit: triage reaches evidence and existing prioritized findings without starting
+a crawl or creating actions. Validate the skill and UI in the installed plugin,
+including absent snapshots and incomplete coverage.
+
+### Slice 5 Sidebar and shared conversation context
 
 Reuse the same UI as a sidebar/fullscreen entry and conversation panel where
 supported. Add deep links and the minimal selection context described above.
@@ -220,7 +272,7 @@ update the visible view correctly, and project switches cannot display late
 results from another context. Lack of extension access does not block the
 Slice 3 pilot or the headless experience.
 
-### Slice 5 Public release
+### Slice 6 Public release
 
 After founder testing and any available invited-user feedback, prepare a
 dedicated reviewer account with sample data,
@@ -235,56 +287,20 @@ comparison; Sources drill-down; Site Health triage. Negative cases: foreign
 project access; unsupported publish/crawl request; absent or incompatible
 evidence. Also test a new user with no account/project through the onboarding
 handoff and return to the plugin. Run review cases on the reviewer account
-before submission.
+before submission. Record the CIMD assessment outcome.
 
 Exit: reviewer materials reflect supported behavior, engineering checks pass,
 pilot acceptance is recorded, and required commercial/privacy decisions are
 resolved. Submission, approval and publication remain distinct milestones.
 
-### Slice 6 Optional event subscriptions
+### Separate follow-up MCP Events
 
-Start with one proposed `visibility.changed` event over compatible persisted
-measurements. Do not launch the pasted nine-event catalog at once. An initial
-product rule should specify a named metric, eligible denominator, engine/cohort,
-two concrete measurements, minimum coverage, relative percent versus percentage
-points, and a deduplication/cooldown policy. A zero baseline or incompatible
-measurement yields no claimed percentage movement. Thresholds require a product
-decision, not a hardcoded interpretation of "10%".
-
-Protocol work includes authenticated event discovery, subscription/refresh and
-unsubscribe, verified HTTPS callbacks, signed delivery, expiry and stable retry
-IDs. Validate callback addresses at connection time, refuse private destinations
-and redirects, and keep signing secrets encrypted. Follow the current
-[event contract](https://developers.openai.com/plugins/build/mcp-events).
-
-Proposed CiteLadder design: reuse domain-owned comparison results and produce a
-delivery intent when the relevant measurement transaction commits, or through
-an idempotent bounded reconciliation owner. Add subscription and delivery state
-under the existing MCP and PostgreSQL worker architecture, never on a read path.
-Use leases, bounded retries, delivery limits and commit-before-network-I/O.
-Do not add a separate alert metric store or a second acquisition scheduler.
-
-Authorize subscriptions against the grant and project; recheck continuing
-membership and consent immediately before delivery. Bind lifecycle identity to
-the grant rather than a rotating access-token string, with explicit revocation
-and expiry semantics. Remove queued eligibility after unsubscribe, workspace
-removal or disconnection. Already transmitted data cannot be recalled.
-
-Events should carry minimal evidence IDs and a measured-change summary, not raw
-private answers or instructions to execute actions. User-requested monitoring
-authorizes that notification flow only. Host analysis must not trigger product
-mutations or recursively generate notifications.
-
-This expands MCP ownership beyond OAuth records to subscription/delivery state.
-Before implementing it, settle that cross-feature decision and update the
-architecture/MCP owners with the accepted boundary. Update schema metadata and
-the singular initial migration, generate types and verify on disposable data.
-
-Exit: real PostgreSQL tests cover duplicate producer commits, concurrent
-subscription refresh, restart/retry, revocation and unsubscribe races; callback
-verification and delivery tests use controlled endpoints. A separately
-authorized ChatGPT acceptance run proves the full lifecycle. Disable new
-subscriptions and delivery independently during rollout.
+[The Events plan](citeladder-mcp-events.md) retains subscription, authorization,
+delivery, persistence and rollout design. Its proposed first event is
+`visibility.measurement_changed`: domain owners determine measured deltas,
+subscriptions specify which changes matter, and ChatGPT follows the user's
+requested response. Events do not block this plugin's release and must be
+assigned separately; implementing this plan does not include that subsystem.
 
 ## Validation and rollout
 
@@ -297,11 +313,13 @@ For implementation, select the smallest affected suites:
   `visibility-reads.test.ts` or `visibility-folding.test.ts` cases. Include
   workspace isolation, stale cursors, explicit run binding and provenance.
 - UI: behavioral tests for selection/drill-down, late responses, reconnect and
-  unavailable evidence; inspect cards and fullscreen on supported hosts.
+  unavailable evidence; inspect cards and fullscreen on supported hosts. Verify
+  resource delivery is independent of the user's project and does not access
+  evidence, iframe interactions make no direct
+  network calls, data tools do not launch widgets, and render tools reject
+  forged totals or foreign evidence IDs through parsed-contract/behavior tests.
 - Skills: scenario evaluation with persisted fixtures and mocked host/tool
   results. Run `agent-skills.test.ts` only if internal packaged inputs change.
-- Events: real PostgreSQL concurrency/lifecycle tests plus mocked outbound
-  HTTP, signatures and forbidden destinations. No live provider credentials.
 
 Native API tests run from `frontend/services/api` with
 `pnpm exec vitest run <selected-test-paths>`, using `API_TEST_DATABASE_URL` for an
@@ -318,12 +336,11 @@ complete. Use `-All` only when the repository's shared-config rule applies.
 CI owns the full selected suites, production builds and E2E. Review each final
 diff with [Review.md](../../Review.md); report local and external evidence separately.
 
-Roll out in order: fixture-backed development → founder testing on owned/sample
+Roll out in order: fixture-backed development → founder testing on owned/test
 projects → optional invited testers → public review/release → separately enabled
-events. Add config-owned UI/extension
+events under their separate plan. Add config-owned UI/extension
 toggles that preserve base MCP reads; roll back through those toggles without
-revoking unaffected OAuth grants. Event rollback pauses dispatch and new
-subscriptions while preserving audit evidence and explicit unsubscribe.
+revoking unaffected OAuth grants. Event rollback belongs to the separate Events plan.
 
 Before users arrive, acceptance means successful connection-to-first-evidence,
 completion of the five positive journeys and the empty-project handoff, and no
@@ -336,6 +353,8 @@ customer prompts or evidence bodies.
 ## Deferred scope and remaining risks
 
 - Sign in with ChatGPT, ChatGPT-plan inference funding and any Clerk migration.
+- Public sample/demo mode, anonymous fixture tools and mixed-authentication work.
+  Private fixtures and the dedicated reviewer account remain validation inputs.
 - Public anonymous domain audits, free acquisition, an embedded replacement for
   existing onboarding, and new pricing. The existing onboarding handoff is in scope.
 - Publishing, prompt activation, new crawls, live provider pulls, billing
