@@ -1,5 +1,5 @@
 # Node 26 bookworm-slim; preserve this image family when updating the digest.
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS dependencies
+FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -14,7 +14,7 @@ COPY frontend/services/api/package.json ./services/api/
 COPY frontend/packages/mcp-app/package.json ./packages/mcp-app/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder
+FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder
 
 ARG BUILD_REVISION=unknown
 ARG NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS
@@ -44,7 +44,7 @@ COPY frontend/scripts ./scripts
 COPY frontend/postcss.config.mjs frontend/tsconfig.json ./
 RUN pnpm build:marketing
 
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
+FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
 
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="citeladder-marketing" \
