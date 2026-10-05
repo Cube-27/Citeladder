@@ -207,7 +207,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     await fixtures
       .runtime(
         scope,
-        scripted([deliverable(), { action: 'select_skill', skill_id: 'plan' }, deliverable()]),
+        scripted([deliverable(), { ...deliverable(), skill_id: 'plan' }, deliverable()]),
       )
       .execute(first.lease);
     expect((await readChat(db, scope, first.run.chat_id)).output?.latest_revision?.body).toBe(
@@ -218,7 +218,15 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const failed = await readChat(db, scope, second.run.chat_id);
     expect(failed.latest_run).toMatchObject({ status: 'failed', error_code: 'protocol_violation' });
     expect(failed.output).toBeNull();
-    expect(failed.messages).toHaveLength(1);
+    expect(failed.messages.map((message) => message.role)).toEqual(['user', 'agent']);
+    const retry = await fixtures.claimed(scope, {
+      chatId: second.run.chat_id,
+      message: 'Try a narrower question',
+    });
+    await fixtures.runtime(scope, scripted([reply('Recovered answer')])).execute(retry.lease);
+    expect((await readChat(db, scope, second.run.chat_id)).messages.at(-1)?.content).toBe(
+      'Recovered answer',
+    );
   });
   it('repairs invalid content formats and reports the effective outline and format', async () => {
     const scope = await fixtures.scope();
@@ -327,8 +335,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const uri = `citeladder://project/${scope.projectId}`;
     const fake = scripted(
       [
-        { action: 'select_skill', skill_id: 'plan' },
-        { action: 'call_tool', tool: 'read_evidence', arguments: {} },
+        { action: 'call_tool', skill_id: 'plan', tool: 'read_evidence', arguments: {} },
         {
           action: 'respond',
           reply: `Read ${uri}; invented citeladder://project/${randomUUID()}.`,
@@ -354,19 +361,19 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const detail = await readChat(db, scope, run.chat_id);
     expect(detail.latest_run).toMatchObject({
       status: 'succeeded',
-      steps_used: 3,
+      steps_used: 2,
       skill_id: 'plan',
     });
     expect(detail.messages.at(-1)).toMatchObject({ role: 'agent', evidence_refs: [uri] });
     expect(detail.messages.at(-1)?.content).toContain('[unverified reference]');
     expect(detail.output?.latest_revision).toMatchObject({ number: 1, source_refs: [uri] });
+    expect(detail.output?.message_id).toBe(detail.messages.at(-1)?.id);
     const attempts = await db
       .selectFrom('agent_model_attempts')
       .selectAll()
       .where('run_id', '=', run.id)
       .execute();
     expect(attempts.map((attempt) => attempt.settlement_status)).toEqual([
-      'zero_debit',
       'zero_debit',
       'zero_debit',
     ]);
@@ -555,7 +562,8 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       })
       .execute(lease);
     const detail = await readChat(db, scope, run.chat_id);
-    expect(detail.messages).toHaveLength(1);
+    expect(detail.messages.map((message) => message.role)).toEqual(['user', 'agent']);
+    expect(detail.messages.at(-1)?.content).not.toContain('Saved your document');
     expect(detail.output).toBeNull();
     expect(detail.latest_run?.error_code).toBe('output_conflict');
   });
@@ -780,7 +788,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const model = {
       ...scripted(
         [
-          { action: 'select_skill', skill_id: 'plan' },
+          { action: 'call_tool', skill_id: 'plan', tool: 'read_evidence', arguments: {} },
           { action: 'call_tool', tool: 'read_evidence', arguments: {} },
         ],
         async (_request, ordinal) => {
@@ -1023,7 +1031,12 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .execute(followup.lease);
     const detail = await readChat(db, scope, first.run.chat_id);
     expect(detail.latest_run?.error_code).toBe('output_conflict');
-    expect(detail.messages.map((message) => message.role)).toEqual(['user', 'agent', 'user']);
+    expect(detail.messages.map((message) => message.role)).toEqual([
+      'user',
+      'agent',
+      'user',
+      'agent',
+    ]);
     expect(detail.output!.latest_revision!.id).toBe(changedId);
   });
   it('leaves unsettled dispatches recoverable when accounting is temporarily unavailable', async () => {
@@ -1069,16 +1082,50 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .runtime(
         scope,
         scripted([
-          { action: 'select_skill', skill_id: 'unknown' },
-          { action: 'select_skill', skill_id: 'plan' },
-          reply(),
+          { ...reply(), skill_id: 'unknown' },
+          { ...reply(), skill_id: 'plan' },
         ]),
       )
       .execute(lease);
     expect(await fixtures.run(run.id)).toMatchObject({
       status: 'succeeded',
       skill_id: 'plan',
-      steps_used: 3,
+      steps_used: 2,
     });
+  });
+  it('answers ordinary questions without choosing a skill and narrows the final step to a response', async () => {
+    const scope = await fixtures.scope();
+    const { run, lease } = await fixtures.claimed(scope);
+    await db
+      .updateTable('agent_runs')
+      .set({ budget: { ...(run.budget as object), max_steps: 2, max_tool_calls: 1 } })
+      .where('id', '=', run.id)
+      .execute();
+    await fixtures
+      .runtime(
+        scope,
+        scripted(
+          [
+            { action: 'call_tool', tool: 'read_evidence', arguments: {} },
+            reply('The observed value is zero.'),
+          ],
+          async (request, ordinal) => {
+            const actions = (request.schema.properties as Record<string, { enum: string[] }>)
+              .action!.enum;
+            expect(actions).toEqual(ordinal === 1 ? ['respond', 'call_tool'] : ['respond']);
+            if (ordinal === 2) {
+              expect(request.schema.properties).toMatchObject({
+                skill_id: { type: 'null' },
+                output: { type: 'null' },
+              });
+            }
+          },
+        ),
+      )
+      .execute(lease);
+    const detail = await readChat(db, scope, run.chat_id);
+    expect(detail.latest_run).toMatchObject({ status: 'succeeded', steps_used: 2, skill_id: null });
+    expect(detail.messages.at(-1)?.content).toBe('The observed value is zero.');
+    expect(detail.output).toBeNull();
   });
 });

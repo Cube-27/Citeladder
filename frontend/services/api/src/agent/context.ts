@@ -112,6 +112,55 @@ export function suppliedManifest(
     omissions,
   };
   const size = () => JSON.stringify(supplied).length;
+  // Background loses its place before the evidence the user selected. JSONB
+  // key order is not selection priority.
+  if (size() > limit && Object.hasOwn(supplied.package.sections, 'related_site')) {
+    delete supplied.package.sections.related_site;
+    omissions.push('package.sections.related_site');
+  }
+  const group = supplied.package.sections.issue_group;
+  if (group && typeof group === 'object' && !Array.isArray(group)) {
+    const issueReference = manifest.refs.issue_group_reference;
+    const selectedPage =
+      manifest.refs.target_url ||
+      manifest.refs.target_site_url_id ||
+      (issueReference &&
+        typeof issueReference === 'object' &&
+        !Array.isArray(issueReference) &&
+        issueReference.site_url_id);
+    // Preserve the selected issue before optional company/page background.
+    // A specifically selected page remains evidence, not background.
+    for (const key of ['target_page', 'brand']) {
+      if (key === 'target_page' && selectedPage) continue;
+      if (size() > limit && Object.hasOwn(supplied.package.sections, key)) {
+        delete supplied.package.sections[key];
+        omissions.push(`package.sections.${key}`);
+      }
+    }
+    const occurrences = group.occurrences;
+    const sample = group.sample;
+    if (
+      Array.isArray(occurrences) &&
+      sample &&
+      typeof sample === 'object' &&
+      !Array.isArray(sample)
+    ) {
+      const selected = [...occurrences];
+      const suppliedSample = { ...sample };
+      supplied.package.sections.issue_group = {
+        ...group,
+        occurrences: selected,
+        sample: suppliedSample,
+      };
+      while (size() > limit && selected.length) {
+        selected.pop();
+        suppliedSample.supplied_occurrences = selected.length;
+        suppliedSample.complete = false;
+        if (!omissions.includes('package.sections.issue_group.occurrences'))
+          omissions.push('package.sections.issue_group.occurrences');
+      }
+    }
+  }
   for (const key of Object.keys(supplied.package.sections).reverse()) {
     if (size() <= limit) break;
     // Selected upstream documents must remain exact, even when they cannot fit.

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import { menuItemVariants, menuPanelClasses } from '@/components/ui/menu-variants';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,6 +61,7 @@ export function CommandField({
   rows: number;
 }>) {
   const field = useRef<HTMLTextAreaElement>(null);
+  const pendingCaret = useRef<number | null>(null);
   const [caret, setCaret] = useState(0);
   const [active, setActive] = useState(0);
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -68,17 +69,21 @@ export function CommandField({
   const state = menuState(commands, disabled ? null : tokenAt(value, caret), dismissed, active);
   const open = state.options.length > 0;
 
+  useLayoutEffect(() => {
+    if (pendingCaret.current === null) return;
+    field.current?.focus();
+    field.current?.setSelectionRange(pendingCaret.current, pendingCaret.current);
+    pendingCaret.current = null;
+  }, [value, caret]);
+
   const pick = (option: CommandOption) => {
     if (!state.token || !commands) return;
     const next = applyOption(value, state.token, option);
+    pendingCaret.current = next.caret;
     onChange(next.text);
     commands.onPick(option, state.token);
     setCaret(next.caret);
     setActive(0);
-    requestAnimationFrame(() => {
-      field.current?.focus();
-      field.current?.setSelectionRange(next.caret, next.caret);
-    });
   };
 
   /** Handles a key the open menu owns; false lets the field handle it. */

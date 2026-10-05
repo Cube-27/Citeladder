@@ -12,6 +12,7 @@ import { agentSettings } from '../src/agent/config.ts';
 import { AgentQueue } from '../src/agent/queue.ts';
 import { AgentOutputs } from '../src/agent/outputs.ts';
 import { readAgentContext } from '../src/agent/context-adapter.ts';
+import { SiteFixtures } from './site-health-fixtures.ts';
 
 describe('Agent bindings to the evidence and Action owners', () => {
   const db = testDatabase(),
@@ -21,6 +22,47 @@ describe('Agent bindings to the evidence and Action owners', () => {
     await db.destroy();
   });
   const signal = () => AbortSignal.timeout(5000);
+  it('sizes page reads to the turn budget while retaining owner cursors and every row', async () => {
+    const site = new SiteFixtures(db);
+    try {
+      const scope = await site.crawl();
+      const expected = [];
+      for (let index = 0; index < 12; index++) {
+        expected.push(
+          (
+            await site.page(
+              scope,
+              `/page-${index}`,
+              { title: 'Title '.repeat(50) },
+              { observed: true },
+            )
+          ).id,
+        );
+      }
+      const tools = agentTools(db);
+      const seen: string[] = [];
+      let cursor: string | null = null;
+      do {
+        const outcome = await tools.execute(
+          db,
+          scope,
+          'read_site_pages',
+          { crawl_id: scope.crawlId, limit: 100, cursor },
+          signal(),
+          5000,
+        );
+        expect(outcome.status).toBe('completed');
+        expect(outcome.omissions).toEqual([]);
+        const page = JSON.parse(outcome.text);
+        expect(page.items.length).toBeGreaterThan(0);
+        seen.push(...page.items.map((item: { site_url_id: string }) => item.site_url_id));
+        cursor = page.pagination.next_cursor;
+      } while (cursor && seen.length <= expected.length);
+      expect(seen.sort()).toEqual(expected.sort());
+    } finally {
+      await site.cleanup();
+    }
+  });
   it('offers every read tool referenced by the packaged model methodologies', async () => {
     const packaged = await loadSkillCatalog(agentSettings({}).skillsDirectory);
     const named = new Set(
@@ -221,6 +263,9 @@ describe('Agent bindings to the evidence and Action owners', () => {
       'Buyer guide',
       'User edited draft',
     );
+    expect((await readChat(db, scope, first.chat_id)).output?.message_id).toBe(
+      drafted.messages.at(-1)!.id,
+    );
     await store.enqueue(scope, {
       key: randomUUID(),
       chatId: first.chat_id,
@@ -237,6 +282,7 @@ describe('Agent bindings to the evidence and Action owners', () => {
     );
     const accepted = refined.output!.latest_revision!;
     expect(accepted.parent_revision_id).toBe(edited.id);
+    expect(refined.output!.message_id).toBe(refined.messages.at(-1)!.id);
     await store.enqueue(scope, {
       key: randomUUID(),
       message: 'Plan distribution',

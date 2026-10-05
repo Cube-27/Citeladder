@@ -13,6 +13,8 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 }));
 
 import { NewChatScreen } from './new-chat-screen';
+import { ChatScreen } from './chat-screen';
+import { detail, revision, REV1 } from '@/test/agent-chat-fixture';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const CHAT = '22222222-2222-4222-8222-222222222222';
@@ -97,6 +99,9 @@ const GROWTH_SKILL = {
 
 function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
   return [
+    http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+      HttpResponse.json({ ...detail(revision(REV1, 1, 'agent', '')), output: null }),
+    ),
     http.get('/api/v1/agent/skills', () => HttpResponse.json({ skills: [GROWTH_SKILL] })),
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
       HttpResponse.json({ items: actions, next_cursor: null, status_counts: {} }),
@@ -117,6 +122,50 @@ function captureChats(actions: ReturnType<typeof actionItem>[] = []) {
 }
 
 describe('NewChatScreen', () => {
+  it('keeps one composer during Enter submission and opens the cached conversation without a loading gap', async () => {
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let reading = false;
+    mswServer.use(
+      ...baseHandlers(),
+      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
+        HttpResponse.json(ACCEPTED, { status: 202 }),
+      ),
+    );
+    mswServer.use(
+      http.get(`/api/v1/agent/chats/${CHAT}`, async () => {
+        reading = true;
+        await ready;
+        return HttpResponse.json({ ...detail(revision(REV1, 1, 'agent', '')), output: null });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/agent" element={<NewChatScreen />} />
+        <Route path="/agent/chats/:chatId" element={<ChatScreen />} />
+      </Routes>,
+      {
+        initialEntries: ['/agent'],
+        projectSelection: {
+          activeProjectId: PROJECT,
+          activeProject: { id: PROJECT } as never,
+          status: 'ready',
+        },
+      },
+    );
+    const composer = await screen.findByLabelText('Message the agent');
+    await user.type(composer, 'What should I focus on?{Enter}');
+    await waitFor(() => expect(reading).toBe(true));
+    expect(screen.getAllByRole('combobox')).toEqual([composer]);
+    expect(composer).toHaveValue('What should I focus on?');
+    release();
+    const reply = await screen.findByLabelText('Reply to the agent');
+    expect(screen.getAllByRole('combobox')).toEqual([reply]);
+    expect(screen.getByRole('list', { name: 'Messages' })).toBeVisible();
+  });
   it('opens skills only for a typed slash and marks the automatic default selected', async () => {
     mswServer.use(...baseHandlers());
     const user = userEvent.setup();
@@ -289,6 +338,7 @@ describe('NewChatScreen', () => {
     const user = userEvent.setup();
     renderNewChat('');
 
+    await user.click(await screen.findByText('Work on an Action'));
     const briefing = await screen.findByRole('region', { name: 'What should I work on?' });
     expect(await within(briefing).findByText(/top 2 open Actions/)).toBeVisible();
     await user.click(within(briefing).getByRole('button', { name: 'Brief me' }));

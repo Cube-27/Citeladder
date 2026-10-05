@@ -21,8 +21,8 @@ import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
 
 /**
- * The chat's append-only messages, then the output (rendered in the thread,
- * not beside it), the latest run's state and quick refinements.
+ * Messages and the saved output in conversational order, followed by current
+ * activity and recovery. Follow-ups never jump ahead of earlier work.
  */
 export function Conversation({
   detail,
@@ -48,17 +48,23 @@ export function Conversation({
   const skills = useSkillCatalog();
   const outcome = runOutcome(detail.latest_run);
   const output = detail.output;
+  const outputMessageId = output?.message_id ?? legacyOutputMessage(detail);
   return (
     <div className="grid gap-4">
       <ContextUsed context={detail.context} />
       <ol aria-label="Messages" className="grid gap-4">
         {detail.messages.map((message) => (
-          <li key={message.id}>
+          <li key={message.id} className="grid gap-4">
             <MessageBubble message={message} skill={skillLabel(skills, message.skill_id)} />
+            {outputView && message.id === outputMessageId ? (
+              <div className={panelClasses({}, 'min-w-0')}>{outputView}</div>
+            ) : null}
           </li>
         ))}
       </ol>
-      {outputView ? <div className={panelClasses({}, 'min-w-0')}>{outputView}</div> : null}
+      {outputView && !outputMessageId ? (
+        <div className={panelClasses({}, 'min-w-0')}>{outputView}</div>
+      ) : null}
       <RunState
         outcome={outcome}
         progress={detail.latest_run?.progress ?? []}
@@ -89,14 +95,28 @@ export function Conversation({
   );
 }
 
-/** Current DTOs expose timestamps, but no revision-to-message link. Be conservative. */
+/** Historical revisions without a generating reply use their persisted time. */
+function legacyOutputMessage(detail: AgentChatDetail) {
+  const revision = detail.output?.latest_revision;
+  if (!revision) return undefined;
+  return [...detail.messages]
+    .reverse()
+    .find(
+      (message) =>
+        message.role === 'agent' &&
+        Date.parse(message.created_at) <= Date.parse(revision.created_at),
+    )?.id;
+}
+
 function hasFreshDeliverable(detail: AgentChatDetail): boolean {
   const revision = detail.output?.latest_revision;
   const reply = detail.messages.at(-1);
   return (
     revision?.author === 'agent' &&
     reply?.role === 'agent' &&
-    Date.parse(revision.created_at) >= Date.parse(reply.created_at) &&
+    (detail.output?.message_id
+      ? detail.output.message_id === reply.id
+      : Date.parse(revision.created_at) >= Date.parse(reply.created_at)) &&
     detail.latest_run?.status === 'succeeded'
   );
 }

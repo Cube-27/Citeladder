@@ -62,7 +62,7 @@ export function outputSchema(bounds: OutputBounds = agentPolicy) {
 // Wire fields are nullable for structured providers; decisions narrow to a union.
 const wireStep = z
   .object({
-    action: z.enum(['select_skill', 'call_tool', 'respond']),
+    action: z.enum(['call_tool', 'respond']),
     skill_id: z.string().nullish(),
     tool: z.string().nullish(),
     arguments: z.record(z.string(), z.json()).nullish(),
@@ -73,9 +73,14 @@ const wireStep = z
   .strict();
 export type OutputPayload = z.infer<typeof outputPayloadSchema>;
 export type Step =
-  | { action: 'select_skill'; skillId: string }
-  | { action: 'call_tool'; tool: string; arguments: Record<string, Json> }
-  | { action: 'respond'; reply: string; evidence: string[]; output: OutputPayload | null };
+  | { action: 'call_tool'; skillId?: string; tool: string; arguments: Record<string, Json> }
+  | {
+      action: 'respond';
+      skillId?: string;
+      reply: string;
+      evidence: string[];
+      output: OutputPayload | null;
+    };
 export function parseStep(
   content: string,
   skills?: ReadonlyMap<string, Skill>,
@@ -83,15 +88,15 @@ export function parseStep(
 ): Step {
   try {
     const value = wireSchema(bounds).parse(JSON.parse(content));
-    if (value.action === 'select_skill' && skills && !skills.has(value.skill_id ?? ''))
+    if (value.skill_id && skills && !skills.has(value.skill_id))
       throw new AgentError('protocol_violation');
-    if (value.action === 'select_skill' && value.skill_id)
-      return { action: value.action, skillId: value.skill_id };
+    const skill = value.skill_id ? { skillId: value.skill_id } : {};
     if (value.action === 'call_tool' && value.tool)
-      return { action: value.action, tool: value.tool, arguments: value.arguments ?? {} };
+      return { action: value.action, ...skill, tool: value.tool, arguments: value.arguments ?? {} };
     if (value.action === 'respond' && value.reply?.trim())
       return {
         action: value.action,
+        ...skill,
         reply: value.reply,
         evidence: value.evidence ?? [],
         output: value.output ?? null,
@@ -119,6 +124,14 @@ export type SkillCatalog = {
 function wireSchema(bounds: OutputBounds) {
   return wireStep.extend({ output: outputSchema(bounds).nullish() });
 }
-export function stepJsonSchemaFor(bounds: OutputBounds) {
-  return z.toJSONSchema(wireSchema(bounds));
+export function stepJsonSchemaFor(
+  bounds: OutputBounds,
+  actions?: Step['action'][],
+  replyOnly = false,
+) {
+  const schema = wireSchema(bounds).extend({
+    ...(actions ? { action: z.enum(actions) } : {}),
+    ...(replyOnly ? { skill_id: z.null().optional(), output: z.null().optional() } : {}),
+  });
+  return z.toJSONSchema(schema);
 }
