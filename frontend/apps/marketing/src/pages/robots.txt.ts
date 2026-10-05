@@ -33,6 +33,7 @@ const aiCrawlers = [
 const rule = (userAgent: string, allow: readonly string[]) =>
   [
     `User-agent: ${userAgent}`,
+    'Content-Signal: search=yes, ai-input=yes, ai-train=no',
     ...allow.map((path) => `Allow: ${path}`),
     ...privatePaths.map((path) => `Disallow: ${path}`),
   ].join('\n');
