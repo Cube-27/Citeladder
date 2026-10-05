@@ -130,6 +130,18 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
     .limit(1)
     .executeTakeFirst();
   const current = await currentOutput(db, chat);
+  const generated = current.output
+    ? await db
+        .selectFrom('agent_output_revisions')
+        .select('message_id')
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('output_id', '=', current.output.id)
+        .where('author', '=', 'agent')
+        .orderBy('number', 'desc')
+        .limit(1)
+        .executeTakeFirst()
+    : undefined;
   const parsedManifest = run ? manifestSchema.safeParse(run.context_manifest) : null;
   const manifest = parsedManifest?.success ? parsedManifest.data : null;
   let limitations = manifest?.package.summary.omissions ?? [];
@@ -204,6 +216,7 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
     output: current.output
       ? agentOutputSchema.parse({
           ...current.output,
+          message_id: generated?.message_id ?? null,
           latest_revision: current.revision
             ? agentRevisionSchema.parse({
                 ...current.revision,

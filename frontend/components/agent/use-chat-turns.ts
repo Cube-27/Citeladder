@@ -48,9 +48,12 @@ export function useCreateChat(
   const requestKey = useRequestKey();
   const mutation = useMutation({
     ...agentMutations.createChat(workspaceId),
-    onSuccess: (accepted) => {
+    onSuccess: async (accepted) => {
       requestKey.accepted();
       void queryClient.invalidateQueries({ queryKey: queryKeys.agent.chatLists(projectId) });
+      // Keep the current composer until the saved conversation is available.
+      // prefetchQuery contains read failures; an accepted send stays accepted.
+      await queryClient.prefetchQuery(agentQueries.chat(workspaceId, accepted.chat_id));
       onCreated(accepted.chat_id);
     },
   });

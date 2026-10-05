@@ -100,6 +100,7 @@ export function detail(
     },
     output: {
       id: OUTPUT,
+      message_id: '77777777-7777-4777-8777-777777777772',
       action_id: null,
       kind: 'page_edits',
       skill_id: 'gsc_optimize',

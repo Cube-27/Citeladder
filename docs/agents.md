@@ -3,8 +3,8 @@
 ## Responsibility
 
 The Agent is CiteLadder's one in-app assistant runtime. A user asks a question
-or picks up an Action; the Agent gathers persisted CiteLadder evidence, applies
-an internal skill and answers directly or produces a requested deliverable that
+or picks up an Action; the Agent gathers persisted CiteLadder evidence and
+answers directly, or applies an optional internal skill to a requested deliverable that
 the user refines.
 It owns chats, runs, tool and model attempts, outputs and their revisions. It
 does not own business evidence, Actions or measurement, and it has no second
@@ -115,6 +115,12 @@ section. History compares any earlier revision with the current one. Cited
 evidence on replies and in Sources links to the screen (or record) that shows
 it. After a freshly produced deliverable, optional refinements prefill a message
 for review before the user sends it. Later discussion suppresses those suggestions.
+The output read names its latest generating reply so the document renders
+immediately after that reply, before later discussion. User edits and restores
+retain this placement; a newly generated revision moves with its producing turn.
+Historical revisions with no message link use their persisted creation time.
+New-chat submission keeps its composer in place while the accepted conversation
+is prefetched, then opens the populated thread without a launch animation.
 Requested refinements revise it in the same chat, and next steps
 open a new chat with the skill that takes the work forward, carrying the attached
 Action and the exact selected output/revision reference. The next chat freezes
@@ -168,8 +174,11 @@ disclosure with selected identities, source provenance, instruction revision,
 included sections and limitations; full frozen context remains on the run.
 
 The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a bounded loop of
-structured model steps. Each step does exactly one of `select_skill`,
-`call_tool` or `respond`. The runtime enforces the step, tool-call, transcript
+structured model steps. Each step either reads a tool or responds. Ordinary
+questions need no skill selection. A requested deliverable can name `skill_id`
+on the same read or response; its methodology is supplied before saving work.
+The final call advertises only a response, and calls with no read budget omit
+the tool catalog. The runtime enforces the step, tool-call, transcript
 and output limits; the final step cannot spend a tool call, and a turn that
 exhausts its budget stops without saving a partial deliverable. Only evidence
 references an executed tool returned in an observation actually supplied to
@@ -177,6 +186,12 @@ the current model call, or supplied attached/mentioned Action diagnoses named,
 survive; the rest of the context package carries no record references. Any other
 `citeladder://` reference is dropped from the evidence list and replaced in the
 visible reply and output text.
+Context sizing drops background pages before the selected issue, retaining exact
+issue totals and whole occurrence rows in a disclosed smaller sample. Paged
+tools ask their existing owner for a smaller page and its exact cursor until
+the result fits; an oversized overview retains whole smaller evidence families
+with named omissions. Tool failures are observations the model can explain;
+terminal runtime failures append a recovery reply without changing saved work.
 Bounded prior attempt/revision references are navigation hints only. Exact
 owner reads reauthorize them and consume the same turn's read budget before
 they can support facts or citations; prior model prose is not evidence.
@@ -193,9 +208,9 @@ users still accept candidates separately. The Agent gains no write tool.
 The composer takes inline commands: `/` picks a skill and `@` mentions up to
 five of the project's Actions. Mentions are typed Action IDs that admission
 authorizes to the chat's project (a foreign one refuses the turn), records on
-the user message and freezes into the manifest. New chat also offers **Brief
-me**, which starts a `growth_plan` chat mentioning the top open Actions; it
-runs only when clicked.
+the user message and freezes into the manifest. New chat's **Work on an Action**
+disclosure offers **Brief me**, which starts a `growth_plan` chat mentioning the
+top open Actions; it runs only when clicked.
 
 The product shell switches between Dashboard and Agent modes, derived from the
 route. Agent mode holds New chat, Actions, Skills, Context and the searchable
@@ -290,7 +305,8 @@ The catalog endpoint explicitly projects only its ID, label,
 description, group and output kind; skill bodies are never returned to users or
 exposed through MCP. A turn's skill is taken, in order, from the user's pick,
 the chat's previous skill, the attached Action's diagnosis, and otherwise the
-model's `select_skill` step. Follow-up selection is tri-state: omitted inherits,
+model's optional `skill_id` on a read or response. Follow-up selection is
+tri-state: omitted inherits,
 null clears the explicit pin, and an ID pins it. Automatic still respects the
 existing deliverable kind and attached Action. Model selection receives public
 description/output metadata; capabilities never imply automatic specialist

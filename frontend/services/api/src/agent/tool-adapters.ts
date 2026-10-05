@@ -45,19 +45,35 @@ function sharedTools(db: Database): ReadTool[] {
         description: definition.description,
         arguments: z.strictObject(fields) as z.ZodType<Record<string, Json>>,
         read: async (scope: Scope, args: Record<string, Json>, _signal, maxChars) => {
-          const data = await dispatchTool(
-            db,
-            {
-              kind: 'member',
-              userId: scope.userId,
-              workspaceId: scope.workspaceId,
-              projectId: scope.projectId,
-            },
-            name,
-            { ...args, ...(_project ? { project_id: scope.projectId } : {}) },
-            '',
-            maxChars,
-          );
+          const input: Record<string, Json> = {
+            ...args,
+            ...(_project ? { project_id: scope.projectId } : {}),
+          };
+          const dispatch = () =>
+            dispatchTool(
+              db,
+              {
+                kind: 'member',
+                userId: scope.userId,
+                workspaceId: scope.workspaceId,
+                projectId: scope.projectId,
+              },
+              name,
+              input,
+              '',
+              maxChars,
+            );
+          let data = await dispatch();
+          // Let the existing owner construct a smaller page and its exact
+          // continuation cursor. Never discard rows behind a later cursor.
+          if (Object.hasOwn(fields, 'limit') && Array.isArray(data.items)) {
+            let limit = data.items.length;
+            while (JSON.stringify(data).length > maxChars && limit > 1) {
+              limit = Math.max(1, Math.floor(limit / 2));
+              input.limit = limit;
+              data = await dispatch();
+            }
+          }
           const result = outcome(
             data,
             definition.availability === 'successful_read' ? 'available' : undefined,

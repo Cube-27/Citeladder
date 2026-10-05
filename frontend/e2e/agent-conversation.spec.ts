@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import type { AgentChatDetail } from '../lib/api/agent';
+import { detail, revision, REV1 } from '../test/agent-chat-fixture';
 import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 const CHAT = '22222222-2222-4222-8222-222222222222';
@@ -75,6 +76,76 @@ function chatDetail(): AgentChatDetail {
 }
 
 for (const width of [1280, 390]) {
+  test(`new chat keeps one composer and follow-ups stay after the result at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const current = detail(revision(REV1, 1, 'agent', 'Use clearer pricing and buyer examples.'));
+    current.chat.project_id = FIXTURE_PROJECT.id;
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let reading = false;
+    await stubAuthedShell(page, [
+      ['**/api/v1/agent/skills', { skills: SKILLS }],
+      [
+        `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`,
+        { items: [], next_cursor: null, status_counts: {} },
+      ],
+      [`**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`, { items: [], next_cursor: null }],
+    ]);
+    await page.route(`**/api/v1/agent/chats/${CHAT}`, async (route) => {
+      reading = true;
+      await ready;
+      await route.fulfill({ json: current });
+    });
+    await page.route(`**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats`, (route) =>
+      route.fulfill({ status: 202, json: { chat_id: CHAT, run: current.latest_run } }),
+    );
+    await page.route(`**/api/v1/agent/chats/${CHAT}/messages`, (route) => {
+      current.messages.push({
+        ...current.messages[0]!,
+        id: '77777777-7777-4777-8777-777777777773',
+        sequence: 3,
+        content: 'Explain the first recommendation.',
+      });
+      current.latest_run.status = 'queued';
+      return route.fulfill({ status: 202, json: { chat_id: CHAT, run: current.latest_run } });
+    });
+    await page.goto(fixtureProjectPath('/agent'));
+    const composer = page.getByLabel('Message the agent');
+    await composer.fill('Improve our pricing page snippet.');
+    const before = await composer.boundingBox();
+    await composer.press('Enter');
+    await expect.poll(() => reading).toBe(true);
+    await expect(page.getByRole('combobox')).toHaveCount(1);
+    await expect(composer).toHaveValue('Improve our pricing page snippet.');
+    const pending = await composer.boundingBox();
+    expect(Math.abs(pending!.y - before!.y)).toBeLessThanOrEqual(1);
+    release();
+    const reply = page.getByLabel('Reply to the agent');
+    await expect(reply).toBeVisible();
+    await expect(page.getByRole('combobox')).toHaveCount(1);
+    await reply.fill('Explain the first recommendation.');
+    await reply.press('Enter');
+    const followUp = page.getByText('Explain the first recommendation.', { exact: true });
+    await expect(followUp).toBeVisible();
+    const result = page.getByRole('region', { name: 'Pricing page edits' });
+    expect(
+      await result.evaluate((element) => {
+        const messages = element.closest('ol')!;
+        const followUp = messages.lastElementChild!;
+        return Boolean(
+          element.compareDocumentPosition(followUp) & Node.DOCUMENT_POSITION_FOLLOWING,
+        );
+      }),
+    ).toBe(true);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    await page.screenshot({ path: test.info().outputPath(`ordered-chat-${width}.png`) });
+  });
   for (const surface of ['page', 'panel']) {
     test(`${surface} conversation preserves reading and recovers a send at ${width}px`, async ({
       page,

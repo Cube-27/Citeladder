@@ -64,6 +64,8 @@ export const agentRevisionSchema = responseObject({
 
 export const agentOutputSchema = responseObject({
   id: uuid(),
+  // Latest generating reply; user edits and restores keep this placement.
+  message_id: uuid().nullish(),
   action_id: uuid().nullable(),
   kind: z.string(),
   skill_id: z.string(),
