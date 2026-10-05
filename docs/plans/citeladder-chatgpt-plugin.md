@@ -1,6 +1,6 @@
 # CiteLadder ChatGPT plugin plan
 
-Status: proposed, retained planning; implementation is not assigned.
+Status: repository implementation complete on 5 October 2026; installed-client acceptance and public release remain open.
 Prepared: 5 October 2026. Platform documentation checked on the same date.
 
 Build a CiteLadder plugin that lets users inspect their CiteLadder project
@@ -8,12 +8,15 @@ evidence and discuss it in ChatGPT. Extend the hosted MCP owner with a compact
 analytics UI and public workflow skills. Keep CiteLadder's application as the
 place for onboarding, acquisition, configuration and consequential actions.
 
-The first milestone is one installed read-only Visibility experience: Overview,
-Trends, Sources and an AI Visibility Review skill. Prove it in ChatGPT before
-adding Site Health, sidebar/context integration and public-directory submission.
+The first milestone is one read-only Visibility experience: Overview,
+Trends, Sources and an AI Visibility Review skill. On implementation assignment,
+the user waived founder-pilot gating and requested fixture/mock-host verification
+without requiring their participation. Repository work may include Site Health
+and sidebar/context integration; actual client acceptance remains an external
+release check, never a claim inferred from mocks.
 [MCP Events](citeladder-mcp-events.md) has its own retained plan and is outside
-this implementation roadmap. This plan does not authorize implementation,
-deployment, publication or live tests.
+this implementation roadmap. The user's assignment authorizes repository
+implementation and disposable mock-account tests, not deployment or publication.
 
 ## Product assumptions and decisions
 
@@ -250,7 +253,7 @@ expanding to Site Health. Record usability failures as well as protocol failures
 
 ### Slice 4 Site Health and SEO triage
 
-After the installed Visibility journey works, add `render_site_health`, its
+Under the assigned mock-host validation path, add `render_site_health`, its
 score/coverage/evidence UI and the public Technical SEO Triage skill. Reuse
 the persisted Site Health and Opportunity readers. Retain snapshot identity,
 partial/unknown states and the latest-only selection limits.

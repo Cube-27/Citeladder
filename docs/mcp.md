@@ -147,6 +147,98 @@ URLs, tables, SQL and filesystem paths are not resolvers.
 
 ## Client experience and limits
 
+### Plugin analytics and public workflows
+
+[The source plugin](../plugins/citeladder/) packages AI Visibility Review,
+AI Search Change Review and Technical SEO Triage. Its workflows use only public
+read tools and host reasoning, with no internal Agent run or saved deliverable.
+The repository marketplace is `.agents/plugins/marketplace.json`; portable
+clients use the package's `mcp.json`. Registered ChatGPT app mappings require a
+real connection ID and are not fabricated in source. Installation, deployed-host
+acceptance and public-directory approval remain separate from repository checks.
+
+`read_visibility_overview` adapts the existing dashboard owner, including
+counts, rates, model provenance and domain-owned comparison status. An explicit
+`baseline_id` must be a ready run in the same authorized project. Latest resolves
+to a concrete `audit_id`; explicit unavailable measurements never fall back.
+`read_visibility_trends` adapts the existing trend owner with an explicit,
+timezone-aware window, engine/cohort, granularity and optional frozen
+model/retrieval filters. It retains source audit/snapshot IDs, comparison keys,
+versions and nullable rates. It does not manufacture period movement or fill gaps.
+Sources remains audit-scoped; optional domain filtering and result domain/URL
+filters support source-to-answer drill-down without a provider call.
+
+`MCP_UI_ENABLED` defaults off. When enabled, `render_visibility`,
+`render_site_health` and `open_analytics` attach
+`ui://citeladder/analytics/v1`; data/search/fetch tools carry no widget metadata.
+Render tools accept strict identifiers/selections, never arbitrary datasets or
+model-computed totals. Overview and Sources pin a concrete audit. Trends requires
+an explicit window and has no audit selector; clicking Sources selects one run.
+Site Health pins `snapshot_id` and `crawl_id` and reports persisted coverage
+states separately from scores. `read_site_health` accepts that snapshot ID;
+foreign or missing explicit snapshots are refused. Current Opportunities are
+labelled separately from the selected snapshot's evidence.
+
+Build from `frontend` with `pnpm --filter @citeladder/mcp-app build`; source-run
+development reads the resulting `packages/mcp-app/dist/analytics.html`. The API image
+build generates and packages static HTML from the isolated workspace entry and
+shared design primitives. Resource requests are authenticated, contain no
+user/project data, and never invoke a product reader. Scripts/styles are bundled
+inline; CSP declares no network/resource/frame origins. Data arrives exclusively
+through the MCP Apps bridge. No cookies or bearer tokens enter UI state.
+Selections clear prior results and invalidate pending responses; access errors
+clear cached evidence. Unknown, unavailable, partial and observed-zero states
+remain distinct in accessible tables and charts.
+
+`MCP_EXTENSIONS_ENABLED` also defaults off and, with UI enabled, advertises the
+same app as global and thread entries through `open_analytics`, which accepts
+empty arguments. Hosts without extensions still use cards or text. Standard
+model-context updates contain the current selection, evidence references and
+limitations; model tool results
+update the view through the same validated selection contract. Host deep links
+use `/analytics?project_id=<uuid>&view=<view>&audit_id=<uuid>` in
+`openai/deepLink`; they contain identifiers, never credentials or evidence
+bodies, and every resulting tool read reauthorizes access.
+
+#### Client compatibility and release acceptance
+
+| Client | Repository path | External acceptance |
+| --- | --- | --- |
+| ChatGPT Work web | OAuth DCR/PKCE, MCP Apps card, optional global/thread entry | Actual connection, ingress/resource binding and installed workflow not verified |
+| ChatGPT desktop | Same protocol and UI, repository marketplace package | Installed package/new-chat OAuth and UI journey not verified |
+| Headless Codex | Portable MCP connection, structured/text reads and public skills | Actual client linking not verified; no UI is required |
+
+CIMD assessment: retain DCR for this release. URL-shaped client resolution,
+SSRF-bounded cached metadata retrieval, document-bound redirects and consent
+identity are not implemented by the current OAuth owner. Advertising CIMD now
+would direct clients into an unsupported flow; it remains unadvertised. A future
+CIMD slice must preserve existing DCR grants and independently validate those
+boundaries. The plugin adds no authentication migration.
+
+The package includes five positive and three negative review cases and draft
+release notes. They are prepared from supported behavior, not a recorded demo
+or evidence of portal acceptance:
+
+1. Connect, consent to selected workspaces and select an authorized project.
+2. Review Overview rates, counts, measurement identity and evidence freshness.
+3. Select a trend window; discuss change only using compatible canonical
+   comparisons and keep missing points as gaps.
+4. Drill down from a concrete audit to domains, URLs and retained cited answers.
+5. Read a pinned Site Health snapshot, coverage, its pages and current findings.
+
+The three negative tool-selection cases cover publication, acquisition and
+prompt/Action mutation requests; none has a write tool. Additional safety cases
+verify foreign project/audit/snapshot access is denied and absent or incompatible
+evidence produces an honest unavailable/limited result. Also exercise the no-account/no-project onboarding
+handoff, reconnect, token rotation/revocation and removed membership.
+
+Before public submission, publisher verification, eligible commercial plans,
+support ownership, privacy/retention disclosures, verified support/privacy/terms
+URLs, reviewer account, accessible recorded walkthrough, supported countries,
+domain verification and portal scans still need release-owner acceptance.
+Reviewer credentials belong only in secure portal fields, never the package.
+No deployment, public sample mode, events, acquisition or publication is implied.
+
 Clients discover authorized projects, inspect the available-dataset inventory,
 then page through or fetch specific evidence. The browser account menu links to
 public setup instructions. Settings has an MCP connections tab: users revoke
