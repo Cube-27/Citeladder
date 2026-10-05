@@ -52,6 +52,13 @@ export const outputPayloadSchema = z
     format_id: z.string().nullish(),
   })
   .strict();
+type OutputBounds = Pick<typeof agentPolicy, 'output_title_max_chars' | 'output_body_max_chars'>;
+export function outputSchema(bounds: OutputBounds = agentPolicy) {
+  return outputPayloadSchema.extend({
+    title: z.string().trim().min(1).max(bounds.output_title_max_chars),
+    body: z.string().trim().min(1).max(bounds.output_body_max_chars),
+  });
+}
 // Wire fields are nullable for structured providers; decisions narrow to a union.
 const wireStep = z
   .object({
@@ -69,9 +76,13 @@ export type Step =
   | { action: 'select_skill'; skillId: string }
   | { action: 'call_tool'; tool: string; arguments: Record<string, Json> }
   | { action: 'respond'; reply: string; evidence: string[]; output: OutputPayload | null };
-export function parseStep(content: string, skills?: ReadonlyMap<string, Skill>): Step {
+export function parseStep(
+  content: string,
+  skills?: ReadonlyMap<string, Skill>,
+  bounds: OutputBounds = agentPolicy,
+): Step {
   try {
-    const value = wireStep.parse(JSON.parse(content));
+    const value = wireSchema(bounds).parse(JSON.parse(content));
     if (value.action === 'select_skill' && skills && !skills.has(value.skill_id ?? ''))
       throw new AgentError('protocol_violation');
     if (value.action === 'select_skill' && value.skill_id)
@@ -105,4 +116,9 @@ export type SkillCatalog = {
   formatPreamble?: string;
   formats?: ReadonlyMap<string, { id: string; label: string; body: string }>;
 };
-export const stepJsonSchema = z.toJSONSchema(wireStep);
+function wireSchema(bounds: OutputBounds) {
+  return wireStep.extend({ output: outputSchema(bounds).nullish() });
+}
+export function stepJsonSchemaFor(bounds: OutputBounds) {
+  return z.toJSONSchema(wireSchema(bounds));
+}

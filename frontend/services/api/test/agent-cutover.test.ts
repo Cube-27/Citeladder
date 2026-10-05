@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { sql } from 'kysely';
+import { z } from 'zod';
 import { createApp } from '../src/app.ts';
 import { createAgentBindings } from '../src/agent/bindings.ts';
 import * as bindingsOwner from '../src/agent/bindings.ts';
@@ -30,7 +31,13 @@ describe('served Agent cutover on PostgreSQL', () => {
       bindings = await createAgentBindings(db, {});
     bindings.store.dependencies.admission = fixtures.store().dependencies.admission;
     bindings.runtime.deps.models = new ModelCalls(db, zeroFunding);
-    bindings.runtime.deps.modelFor = () => scripted([deliverable('outline')]);
+    bindings.runtime.deps.modelFor = () =>
+      scripted([
+        {
+          ...deliverable('outline'),
+          output: { ...deliverable('outline').output, format_id: 'content_page' },
+        },
+      ]);
     bindings.models = bindings.runtime.deps.models;
     vi.spyOn(bindingsOwner, 'agentBindings').mockResolvedValue(bindings);
     const token = await sessionToken({ sub: scope.userId, ver: 0 });
@@ -50,7 +57,9 @@ describe('served Agent cutover on PostgreSQL', () => {
     const { headers } = await setup();
     const response = await app.request('/api/v1/agent/skills', { headers });
     expect(response.status).toBe(200);
-    const raw = await response.json();
+    const raw = z
+      .object({ skills: z.array(z.record(z.string(), z.unknown())) })
+      .parse(await response.json());
     expect(raw.skills.length).toBeGreaterThan(0);
     expect(Object.keys(raw.skills[0]).sort()).toEqual([
       'description',
@@ -59,11 +68,9 @@ describe('served Agent cutover on PostgreSQL', () => {
       'label',
       'output_kind',
     ]);
-    expect(raw.skills.find((skill: { id: string }) => skill.id === 'content_create')).toMatchObject(
-      {
-        output_kind: 'content',
-      },
-    );
+    expect(raw.skills.find((skill) => skill.id === 'content_create')).toMatchObject({
+      output_kind: 'content',
+    });
   });
   it('serves instructions, a queued outline, optimistic edits, restoration and archive without model calls on reads', async () => {
     const { scope, headers, worker } = await setup();

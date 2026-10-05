@@ -83,23 +83,11 @@ export function agentHandoffHref(input: HandoffInput): string {
  * authorizes each one when the chat is created.
  */
 export function agentHandoff(input: HandoffInput): AgentHandoff {
-  const context: AgentContextRefs = {};
+  const context = originContext(input);
   if (input.opportunityId) context.opportunity_id = input.opportunityId;
   if (input.demandSignalId) context.demand_signal_id = input.demandSignalId;
   if (input.siteUrlId) context.target_site_url_id = input.siteUrlId;
   if (input.targetUrl) context.target_url = input.targetUrl;
-  if (input.issueGroup)
-    context.issue_group_reference = {
-      crawl_id: input.issueGroup.crawlId,
-      group_id: input.issueGroup.groupId,
-      ...(input.issueGroup.siteUrlId ? { site_url_id: input.issueGroup.siteUrlId } : {}),
-    };
-  if (input.siteFacts) context.site_facts_reference = { crawl_id: input.siteFacts.crawlId };
-  if (input.outputRevision)
-    context.output_revision_reference = {
-      output_id: input.outputRevision.outputId,
-      revision_id: input.outputRevision.revisionId,
-    };
   if (input.searchIntelligence && input.searchIntelligence.rowIds.length > 0) {
     context.search_intelligence_reference = {
       dataset_id: input.searchIntelligence.datasetId,
@@ -118,20 +106,23 @@ function uuidParam(params: URLSearchParams, key: string): string | undefined {
   const value = params.get(key);
   return value && UUID.test(value) ? value : undefined;
 }
-
-function httpUrlParam(params: URLSearchParams, key: string): string | undefined {
-  const value = params.get(key);
-  if (!value) return undefined;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:' ? value : undefined;
-  } catch {
-    return undefined;
-  }
+function originContext(input: HandoffInput): AgentContextRefs {
+  const context: AgentContextRefs = {};
+  if (input.issueGroup)
+    context.issue_group_reference = {
+      crawl_id: input.issueGroup.crawlId,
+      group_id: input.issueGroup.groupId,
+      ...(input.issueGroup.siteUrlId ? { site_url_id: input.issueGroup.siteUrlId } : {}),
+    };
+  if (input.siteFacts) context.site_facts_reference = { crawl_id: input.siteFacts.crawlId };
+  if (input.outputRevision)
+    context.output_revision_reference = {
+      output_id: input.outputRevision.outputId,
+      revision_id: input.outputRevision.revisionId,
+    };
+  return context;
 }
-
-/** The handoff a New chat URL carries, with malformed values dropped. */
-export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
+function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
   const context: AgentContextRefs = {};
   const issueCrawl = uuidParam(params, PARAM.issueCrawl),
     issueGroup = uuidParam(params, PARAM.issueGroup);
@@ -149,6 +140,23 @@ export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
     revision = uuidParam(params, PARAM.revision);
   if (output && revision)
     context.output_revision_reference = { output_id: output, revision_id: revision };
+  return context;
+}
+
+function httpUrlParam(params: URLSearchParams, key: string): string | undefined {
+  const value = params.get(key);
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The handoff a New chat URL carries, with malformed values dropped. */
+export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
+  const context = parsedOriginContext(params);
   const opportunity = uuidParam(params, PARAM.opportunity);
   if (opportunity) context.opportunity_id = opportunity;
   const signal = uuidParam(params, PARAM.demandSignal);

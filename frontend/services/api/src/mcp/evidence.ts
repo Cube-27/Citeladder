@@ -91,12 +91,12 @@ export async function crawlability(
   if (!row) return unavailable('no_site_crawl');
   const parsed = robotsFactsSchema.safeParse(record(row.site_facts).robots);
   if (!parsed.success)
-    return { ...unavailable('robots_not_observed'), crawl_id: row.id, status: row.status };
+    return { ...unavailable('robots_not_observed'), crawl_id: row.id, crawl_status: row.status };
   return {
     state: 'available',
     crawl_id: row.id,
-    status: row.status,
-    observed_at: row.created_at.toISOString(),
+    crawl_status: row.status,
+    crawl_created_at: row.created_at.toISOString(),
     ...parsed.data,
     artifact_refs: [
       reference('site_crawl', row.id),

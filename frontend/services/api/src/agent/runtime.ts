@@ -7,7 +7,7 @@ import {
   AgentError,
   budgetSchema,
   parseStep,
-  stepJsonSchema,
+  stepJsonSchemaFor,
   type Lease,
   type Scope,
   type Skill,
@@ -216,9 +216,9 @@ export class AgentRuntime {
         }
         if (
           step.output &&
-          this.deps.catalog.formats &&
-          ((step.output.format_id && !this.deps.catalog.formats.has(step.output.format_id)) ||
+          ((step.output.format_id && !this.deps.catalog.formats?.has(step.output.format_id)) ||
             (state.skill?.outputKind === 'content' &&
+              this.deps.catalog.formats &&
               !this.deps.catalog.formats.has(
                 step.output.format_id ?? turn.current.output?.format_id ?? '',
               )))
@@ -255,7 +255,7 @@ export class AgentRuntime {
   /** Returns null for a recoverable protocol error, which still spends its step. */
   private parse(content: string, state: TurnState): Step | null {
     try {
-      return parseStep(content, this.deps.catalog.skills);
+      return parseStep(content, this.deps.catalog.skills, state.budget);
     } catch {
       this.repair(state, 'Return a valid structured step.');
       return null;
@@ -354,7 +354,7 @@ export class AgentRuntime {
     const context = suppliedManifest(turn.manifest, turn.budget.context_package_max_chars);
     const assembled = assemblePrompt({
       system,
-      schema: stepJsonSchema,
+      schema: stepJsonSchemaFor(turn.budget),
       request: turn.request,
       context: context.text,
       revision: turn.current.revision,
@@ -456,6 +456,7 @@ export class AgentRuntime {
           chat,
           {
             skill,
+            bounds: budget,
             payload: {
               ...response.output,
               format_id: formatId,

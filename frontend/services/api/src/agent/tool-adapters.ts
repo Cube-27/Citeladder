@@ -18,20 +18,18 @@ const availability = z.enum([
 ]);
 function outcome(value: unknown, defaultState?: 'available') {
   const data = z.record(z.string(), z.json()).parse(JSON.parse(JSON.stringify(value)));
-  const refs = Array.isArray(data.artifact_refs) ? data.artifact_refs : [];
+  const refs = z.array(reference).parse(data.artifact_refs ?? []);
   return {
     state:
       availability.parse(data.state ?? defaultState) === 'unavailable'
         ? ('unavailable' as const)
         : ('available' as const),
     data,
-    artifactRefs: refs.flatMap((ref) => {
-      const parsed = reference.safeParse(ref);
-      if (!parsed.success) return [];
-      const { record_uri, ...rest } = parsed.data;
-      return [{ ...rest, ...(record_uri ? { record_uri } : {}) }];
+    artifactRefs: refs.map((ref) => {
+      const { record_uri, ...rest } = ref;
+      return { ...rest, ...(record_uri ? { record_uri } : {}) };
     }),
-    omissions: Array.isArray(data.omissions) ? data.omissions : [],
+    omissions: z.array(z.json()).parse(data.omissions ?? []),
   };
 }
 function sharedTools(db: Database): ReadTool[] {

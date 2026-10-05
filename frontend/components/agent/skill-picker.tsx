@@ -68,13 +68,7 @@ export function SkillPicker({
     groups.set(label, [...(groups.get(label) ?? []), skill]);
   }
   const inherited = skillLabel(skills, inheritedSkillId ?? null);
-  const defaultLabel = inherited
-    ? `Continue with ${inherited}`
-    : outputKind
-      ? 'Continue chat workflow'
-      : hasAction
-        ? 'From attached Action'
-        : 'Automatic';
+  const defaultLabel = inheritedLabel(inherited, outputKind, hasAction);
   const current =
     value === null ? 'Automatic' : (skillLabel(skills, value ?? null) ?? defaultLabel);
   return (
@@ -90,7 +84,7 @@ export function SkillPicker({
           value={value === undefined ? INHERIT : (value ?? AUTOMATIC)}
           onValueChange={(next) => {
             onSelect?.();
-            onChange(next === INHERIT ? undefined : next === AUTOMATIC ? null : next);
+            onChange(selectedValue(next));
           }}
         >
           {defaultLabel !== 'Automatic' ? (
@@ -112,4 +106,17 @@ export function SkillPicker({
       </DropdownContent>
     </Dropdown>
   );
+}
+function inheritedLabel(
+  skill: string | null,
+  outputKind: string | null | undefined,
+  hasAction: boolean,
+) {
+  if (skill) return `Continue with ${skill}`;
+  if (outputKind) return 'Continue chat workflow';
+  return hasAction ? 'From attached Action' : 'Automatic';
+}
+function selectedValue(next: string) {
+  if (next === INHERIT) return undefined;
+  return next === AUTOMATIC ? null : next;
 }

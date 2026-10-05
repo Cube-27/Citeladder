@@ -245,9 +245,7 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
           <ul aria-label="Context limitations" className="grid gap-1">
             {omissions.map((omission, index) => (
               <li key={index} className={textRole('caption')}>
-                {typeof omission === 'string'
-                  ? omission.replaceAll('_', ' ')
-                  : JSON.stringify(omission)}
+                {omissionLabel(omission)}
               </li>
             ))}
           </ul>
@@ -255,6 +253,9 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
       </div>
     </Disclosure>
   );
+}
+function omissionLabel(omission: unknown) {
+  return typeof omission === 'string' ? omission.replaceAll('_', ' ') : JSON.stringify(omission);
 }
 
 /**

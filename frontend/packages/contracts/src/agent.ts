@@ -123,7 +123,7 @@ export const agentChatsPageSchema = responseObject({
   next_cursor: z.string().nullable(),
 });
 
-export const agentContextDisclosureSchema = responseObject({
+const agentContextDisclosureSchema = responseObject({
   refs: z.record(z.string(), z.json()).default({}),
   instructions: responseObject({ revision: z.number().int() }).nullable().default(null),
   action: responseObject({ id: uuid(), label: z.string() }).nullable().default(null),

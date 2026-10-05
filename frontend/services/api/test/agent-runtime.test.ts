@@ -101,7 +101,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
   it('refuses another active member replaying a workspace key', async () => {
     const scope = await fixtures.scope();
     const userId = await fixtures.user();
-    await fixtures.member(scope.workspaceId, userId, 'editor');
+    await fixtures.member(scope.workspaceId, userId, 'member');
     const request = { key: randomUUID(), message: 'Private submission' };
     const run = await fixtures.store().enqueue(scope, request);
     await expect(fixtures.store().enqueue({ ...scope, userId }, request)).rejects.toMatchObject({
@@ -159,6 +159,27 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     expect(failed.latest_run).toMatchObject({ status: 'failed', error_code: 'protocol_violation' });
     expect(failed.output).toBeNull();
     expect(failed.messages).toHaveLength(1);
+  });
+  it('repairs invalid content formats and reports the effective outline and format', async () => {
+    const scope = await fixtures.scope();
+    const { run, lease } = await fixtures.claimed(scope, { skillId: 'content' });
+    const formats = new Map([
+      ['page', { id: 'page', label: 'Website page', body: 'Write a page.' }],
+    ]);
+    await fixtures
+      .runtime(
+        scope,
+        scripted([
+          { ...deliverable(), output: { ...deliverable().output, format_id: 'unknown' } },
+          { ...deliverable(), output: { ...deliverable().output, format_id: 'page' } },
+        ]),
+        { catalog: { ...catalog, formats } },
+      )
+      .execute(lease);
+    const detail = await readChat(db, scope, run.chat_id);
+    expect(detail.output).toMatchObject({ phase: 'outline', format_id: 'page' });
+    expect(detail.messages.at(-1)?.content).toContain('Saved outline in Website page format');
+    expect(detail.messages.filter((message) => message.role === 'agent')).toHaveLength(1);
   });
   it('claims once under contention, never revives expiry, and fences previous attempts after recovery', async () => {
     const scope = await fixtures.scope();
@@ -375,6 +396,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     let detail = await readChat(db, scope, run.chat_id);
     const original = detail.output!.latest_revision!;
     expect(original.phase).toBe('outline');
+    expect(detail.messages.at(-1)?.content).toContain('Saved outline');
     await expect(
       fixtures.store().enqueue(scope, {
         chatId: run.chat_id,
@@ -407,6 +429,11 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       parent_revision_id: original.id,
     });
     expect((await fixtures.run(draft.id)).status).toBe('succeeded');
+    expect(detail.messages.find((message) => message.event)?.event).toMatchObject({
+      kind: 'outline_approved',
+      revision_id: original.id,
+      run_id: draft.id,
+    });
   });
   it('appends user edits and restores while refusing stale bases', async () => {
     const scope = await fixtures.scope();

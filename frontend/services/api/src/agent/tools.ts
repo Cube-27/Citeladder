@@ -75,7 +75,7 @@ export class ToolRegistry {
       return {
         status: result.state === 'unavailable' ? 'unavailable' : 'completed',
         text: bounded.text,
-        refs: bounded.supplied ? result.artifactRefs : [],
+        refs: serialized.length <= maxChars ? result.artifactRefs : [],
         omissions: [...result.omissions, ...bounded.omissions],
         hash: createHash('sha256').update(serialized).digest('hex'),
         error: '',

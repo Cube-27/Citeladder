@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import * as sharedTools from '../src/mcp/tools.ts';
 import { AgentFixtures, catalog, deliverable, scripted } from './agent-support.ts';
@@ -81,6 +80,10 @@ describe('Agent bindings to the evidence and Action owners', () => {
           status: 'failed',
         });
       }
+      read.mockResolvedValueOnce({ state: 'available', artifact_refs: [{ wrong: 'malformed' }] });
+      expect(await tools.execute(db, scope, 'read_demand', {}, signal())).toMatchObject({
+        status: 'failed',
+      });
       read.mockResolvedValueOnce({ state: 'observed_zero', items: [] });
       const zero = await tools.execute(
         db,
@@ -161,7 +164,6 @@ describe('Agent bindings to the evidence and Action owners', () => {
               phase: 'outline',
               target_kind: 'planned_page',
               target: 'Buyer guide',
-              format_id: randomUUID(),
             },
           },
         ]),

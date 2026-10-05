@@ -130,7 +130,8 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
     .limit(1)
     .executeTakeFirst();
   const current = await currentOutput(db, chat);
-  const manifest = run ? manifestSchema.parse(run.context_manifest) : null;
+  const parsedManifest = run ? manifestSchema.safeParse(run.context_manifest) : null;
+  const manifest = parsedManifest?.success ? parsedManifest.data : null;
   const approvals = await db
     .selectFrom('agent_runs')
     .select(['id', 'user_message_id', 'context_manifest'])
