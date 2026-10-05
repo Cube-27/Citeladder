@@ -120,6 +120,23 @@ export function suppliedManifest(
   }
   const group = supplied.package.sections.issue_group;
   if (group && typeof group === 'object' && !Array.isArray(group)) {
+    const issueReference = manifest.refs.issue_group_reference;
+    const selectedPage =
+      manifest.refs.target_url ||
+      manifest.refs.target_site_url_id ||
+      (issueReference &&
+        typeof issueReference === 'object' &&
+        !Array.isArray(issueReference) &&
+        issueReference.site_url_id);
+    // Preserve the selected issue before optional company/page background.
+    // A specifically selected page remains evidence, not background.
+    for (const key of ['target_page', 'brand']) {
+      if (key === 'target_page' && selectedPage) continue;
+      if (size() > limit && Object.hasOwn(supplied.package.sections, key)) {
+        delete supplied.package.sections[key];
+        omissions.push(`package.sections.${key}`);
+      }
+    }
     const occurrences = group.occurrences;
     const sample = group.sample;
     if (

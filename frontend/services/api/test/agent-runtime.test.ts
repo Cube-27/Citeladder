@@ -1113,6 +1113,12 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
             const actions = (request.schema.properties as Record<string, { enum: string[] }>)
               .action!.enum;
             expect(actions).toEqual(ordinal === 1 ? ['respond', 'call_tool'] : ['respond']);
+            if (ordinal === 2) {
+              expect(request.schema.properties).toMatchObject({
+                skill_id: { type: 'null' },
+                output: { type: 'null' },
+              });
+            }
           },
         ),
       )

@@ -177,8 +177,9 @@ The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a bounded loop
 structured model steps. Each step either reads a tool or responds. Ordinary
 questions need no skill selection. A requested deliverable can name `skill_id`
 on the same read or response; its methodology is supplied before saving work.
-The final call advertises only a response, and calls with no read budget omit
-the tool catalog. The runtime enforces the step, tool-call, transcript
+The final call advertises only a response; without a selected methodology it
+allows only a reply, reserving selection for an earlier step. Calls with no read
+budget omit the tool catalog. The runtime enforces the step, tool-call, transcript
 and output limits; the final step cannot spend a tool call, and a turn that
 exhausts its budget stops without saving a partial deliverable. Only evidence
 references an executed tool returned in an observation actually supplied to
@@ -189,8 +190,8 @@ visible reply and output text.
 Context sizing drops background pages before the selected issue, retaining exact
 issue totals and whole occurrence rows in a disclosed smaller sample. Paged
 tools ask their existing owner for a smaller page and its exact cursor until
-the result fits; an oversized overview retains whole smaller evidence families
-with named omissions. Tool failures are observations the model can explain;
+the result fits; an oversized business overview retains whole smaller evidence
+families with named omissions. Tool failures are observations the model can explain;
 terminal runtime failures append a recovery reply without changing saved work.
 Bounded prior attempt/revision references are navigation hints only. Exact
 owner reads reauthorize them and consume the same turn's read budget before

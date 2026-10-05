@@ -73,7 +73,7 @@ export class ToolRegistry {
     try {
       const result = await abortable(() => tool.read(scope, parsed.data, signal, maxChars), signal);
       const serialized = JSON.stringify(result.data);
-      const bounded = boundToolData(result.data, maxChars);
+      const bounded = boundToolData(result.data, maxChars, name === 'get_project_business_context');
       return {
         status: result.state === 'unavailable' ? 'unavailable' : 'completed',
         text: bounded.text,
@@ -88,7 +88,7 @@ export class ToolRegistry {
     }
   }
 }
-export function boundToolData(data: Json, maxChars: number) {
+export function boundToolData(data: Json, maxChars: number, splitOverview = false) {
   const full = JSON.stringify(data);
   if (full.length <= maxChars) return { text: full, supplied: true, omissions: [] };
   const selected: Record<string, Json> = {};
@@ -105,7 +105,13 @@ export function boundToolData(data: Json, maxChars: number) {
       omitted.splice(index, 0, key);
       // Composite overviews contain independent evidence families. Keep whole
       // smaller families instead of losing the entire overview to one large one.
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (
+        splitOverview &&
+        key === 'evidence' &&
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value)
+      ) {
         const nested: Record<string, Json> = {};
         selected[key] = nested;
         omitted.splice(

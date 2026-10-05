@@ -45,7 +45,7 @@ describe('structurally bounded Agent prompts', () => {
     const occurrences = Array.from({ length: 10 }, (_, index) => ({
       site_url_id: `page-${index}`,
       display_url: `https://example.test/${index}`,
-      evidence: { descriptors: 'x'.repeat(2300) },
+      evidence: { descriptors: 'x'.repeat(3000) },
     }));
     const manifest = {
       version: 'agent-context-1',
@@ -82,11 +82,35 @@ describe('structurally bounded Agent prompts', () => {
     expect(supplied.omissions).toContain('package.sections.issue_group.occurrences');
     expect(supplied.text.length).toBeLessThanOrEqual(input.budget.context_package_max_chars);
   });
+  it('drops oversized company background without trimming the selected issue or page', () => {
+    const group = {
+      affected_url_count: 94,
+      occurrences: [{ site_url_id: 'selected-page', evidence: { observed: true } }],
+      sample: { supplied_occurrences: 1, total_occurrences: 94, complete: false },
+    };
+    const page = { site_url_id: 'selected-page', title: 'Exact selected page' };
+    const supplied = suppliedManifest({
+      version: 'agent-context-1',
+      refs: { issue_group_reference: { site_url_id: 'selected-page' } },
+      instructions: null,
+      action: null,
+      mentions: [],
+      package: {
+        ...emptyPackage,
+        sections: { issue_group: group, target_page: page, brand: { facts: 'x'.repeat(30000) } },
+      },
+    });
+    expect(JSON.parse(supplied.text).package.sections.issue_group).toEqual(group);
+    expect(JSON.parse(supplied.text).package.sections.target_page).toEqual(page);
+    expect(supplied.omissions).toContain('package.sections.brand');
+    expect(supplied.omissions).not.toContain('package.sections.issue_group.occurrences');
+  });
   it('retains small evidence families when one family makes the overview oversized', () => {
     const health = { state: 'available', count: 94 };
     const bounded = boundToolData(
       { evidence: { health, opportunities: { items: 'x'.repeat(10000) } } },
       300,
+      true,
     );
     expect(JSON.parse(bounded.text)).toEqual({
       data: { evidence: { health } },
@@ -96,6 +120,20 @@ describe('structurally bounded Agent prompts', () => {
     expect(bounded.omissions).toContainEqual(
       expect.objectContaining({ sections: ['evidence.opportunities'] }),
     );
+  });
+  it('keeps arbitrary state-bearing projections atomic under size pressure', () => {
+    const bounded = boundToolData(
+      {
+        evidence: { state: { kind: 'historical', explanation: 'x'.repeat(10000) }, count: 94 },
+        summary: 'Other available context',
+      },
+      300,
+    );
+    expect(JSON.parse(bounded.text)).toEqual({
+      data: { summary: 'Other available context' },
+      complete: false,
+      omitted_sections: ['evidence'],
+    });
   });
   it('omits a large diagnosis as one section and withdraws its citation grant', () => {
     const source = '00000000-0000-4000-8000-000000000001';

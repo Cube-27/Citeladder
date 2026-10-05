@@ -124,7 +124,14 @@ export type SkillCatalog = {
 function wireSchema(bounds: OutputBounds) {
   return wireStep.extend({ output: outputSchema(bounds).nullish() });
 }
-export function stepJsonSchemaFor(bounds: OutputBounds, actions?: Step['action'][]) {
-  const schema = wireSchema(bounds);
-  return z.toJSONSchema(actions ? schema.extend({ action: z.enum(actions) }) : schema);
+export function stepJsonSchemaFor(
+  bounds: OutputBounds,
+  actions?: Step['action'][],
+  replyOnly = false,
+) {
+  const schema = wireSchema(bounds).extend({
+    ...(actions ? { action: z.enum(actions) } : {}),
+    ...(replyOnly ? { skill_id: z.null().optional(), output: z.null().optional() } : {}),
+  });
+  return z.toJSONSchema(schema);
 }

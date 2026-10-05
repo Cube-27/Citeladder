@@ -368,6 +368,11 @@ export class AgentRuntime {
       remaining === 1
         ? 'This is the final step: respond now using the supplied evidence, naming any remaining limitation. Do not select a skill or request another read.'
         : 'Use selected context first. Read only missing evidence; request narrow sections and small pages. Never repeat a truncated read unchanged.',
+      !skill && remaining <= 2
+        ? remaining === 2
+          ? 'For a requested deliverable, choose its skill_id now so the final step can apply its methodology. Otherwise answer the question directly.'
+          : 'No methodology was selected in time. Return only a reply, describe any remaining deliverable work, and leave skill_id and output null.'
+        : '',
       skill?.outlineFirst && !turn.current.outlineApproved
         ? 'Deliverables require an outline; questions require only a reply.'
         : 'Return an output only when requested.',
@@ -377,7 +382,7 @@ export class AgentRuntime {
     const context = suppliedManifest(turn.manifest, turn.budget.context_package_max_chars);
     const assembled = assemblePrompt({
       system,
-      schema: stepJsonSchemaFor(turn.budget, actions),
+      schema: stepJsonSchemaFor(turn.budget, actions, !skill && remaining === 1),
       request: turn.request,
       context: context.text,
       revision: turn.current.revision,
