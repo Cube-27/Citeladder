@@ -143,6 +143,22 @@ export class AgentRuntime {
       signal?.throwIfAborted();
       const step = this.parse(result.content, state);
       if (step?.action === 'respond') {
+        if (step.output && !state.skill) {
+          this.repair(state, 'Select a valid skill before returning an output.');
+          continue;
+        }
+        if (
+          step.output &&
+          this.deps.catalog.formats &&
+          ((step.output.format_id && !this.deps.catalog.formats.has(step.output.format_id)) ||
+            (state.skill?.outputKind === 'content' &&
+              !this.deps.catalog.formats.has(
+                step.output.format_id ?? turn.current.output?.format_id ?? '',
+              )))
+        ) {
+          this.repair(state, 'Return a valid output.format_id from the supplied content formats.');
+          continue;
+        }
         await this.finish(lease, turn, step, state);
         return;
       }
@@ -173,12 +189,14 @@ export class AgentRuntime {
     try {
       return parseStep(content, this.deps.catalog.skills);
     } catch {
-      state.errors++;
-      if (state.errors >= agentPolicy.max_protocol_errors)
-        throw new AgentError('protocol_violation');
-      state.transcript.push('Protocol error: return a valid structured step.');
+      this.repair(state, 'Return a valid structured step.');
       return null;
     }
+  }
+  private repair(state: TurnState, instruction: string) {
+    state.errors++;
+    if (state.errors >= agentPolicy.max_protocol_errors) throw new AgentError('protocol_violation');
+    state.transcript.push(`Protocol error: ${instruction}`);
   }
   private selectSkill(skillId: string, state: TurnState) {
     const selected = this.deps.catalog.skills.get(skillId);
@@ -336,14 +354,21 @@ export class AgentRuntime {
       await authorize(trx, turn.scope);
       const chat = await getChat(trx, turn.scope, run.chat_id, true);
       const refs = [...new Set(response.evidence.filter((ref) => allowed.has(ref)))];
+      const phase =
+        skill?.outlineFirst && !turn.current.outlineApproved ? 'outline' : response.output?.phase;
+      const formatId = response.output?.format_id ?? turn.current.output?.format_id ?? null;
+      const completion = response.output
+        ? `\n\nSaved ${phase}${formatId ? ` in ${this.deps.catalog.formats?.get(formatId)?.label ?? formatId} format` : ''}.${phase === 'outline' ? ' Approve this outline before requesting a draft.' : ''}`
+        : '';
       const message = await appendMessage(trx, chat, {
         role: 'agent',
         replyTo: run.user_message_id,
-        content: bounded(
-          stripUnverifiedRefs(response.reply, allowed),
-          agentPolicy.reply_max_chars,
-          '\n[reply truncated at its size bound]',
-        ),
+        content:
+          bounded(
+            stripUnverifiedRefs(response.reply, allowed),
+            agentPolicy.reply_max_chars,
+            '\n[reply truncated at its size bound]',
+          ) + completion,
         evidence: refs,
         steps,
         skillId: skill?.id,
@@ -357,9 +382,7 @@ export class AgentRuntime {
             skill,
             payload: {
               ...response.output,
-              format_id: this.deps.catalog.formats?.has(response.output.format_id ?? '')
-                ? response.output.format_id
-                : null,
+              format_id: formatId,
               title: stripUnverifiedRefs(response.output.title, allowed),
               body: stripUnverifiedRefs(response.output.body, allowed),
             },

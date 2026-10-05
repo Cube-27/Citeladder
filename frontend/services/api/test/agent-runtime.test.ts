@@ -96,6 +96,36 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     });
     expect((await store.enqueue(scope, request)).id).toBe(run.id);
   });
+  it('refuses another active member replaying a workspace key', async () => {
+    const scope = await fixtures.scope();
+    const userId = await fixtures.user();
+    await fixtures.member(scope.workspaceId, userId, 'editor');
+    const request = { key: randomUUID(), message: 'Private submission' };
+    const run = await fixtures.store().enqueue(scope, request);
+    await expect(fixtures.store().enqueue({ ...scope, userId }, request)).rejects.toMatchObject({
+      code: 'agent_idempotency_conflict',
+    });
+    expect((await readChat(db, scope, run.chat_id)).messages).toHaveLength(1);
+  });
+  it('repairs outputs without a selected skill and fails exhausted repairs without artifacts', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope);
+    await fixtures
+      .runtime(
+        scope,
+        scripted([deliverable(), { action: 'select_skill', skill_id: 'plan' }, deliverable()]),
+      )
+      .execute(first.lease);
+    expect((await readChat(db, scope, first.run.chat_id)).output?.latest_revision?.body).toBe(
+      'Requested document',
+    );
+    const second = await fixtures.claimed(scope);
+    await fixtures.runtime(scope, scripted([deliverable(), deliverable()])).execute(second.lease);
+    const failed = await readChat(db, scope, second.run.chat_id);
+    expect(failed.latest_run).toMatchObject({ status: 'failed', error_code: 'protocol_violation' });
+    expect(failed.output).toBeNull();
+    expect(failed.messages).toHaveLength(1);
+  });
   it('claims once under contention, never revives expiry, and fences previous attempts after recovery', async () => {
     const scope = await fixtures.scope();
     const queued = await fixtures

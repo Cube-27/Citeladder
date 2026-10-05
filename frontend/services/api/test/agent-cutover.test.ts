@@ -46,6 +46,25 @@ describe('served Agent cutover on PostgreSQL', () => {
       worker: new AgentWorker(db, bindings, 'cutover-test-worker', scope.workspaceId),
     };
   }
+  it('projects only public skill metadata on the raw HTTP wire', async () => {
+    const { headers } = await setup();
+    const response = await app.request('/api/v1/agent/skills', { headers });
+    expect(response.status).toBe(200);
+    const raw = await response.json();
+    expect(raw.skills.length).toBeGreaterThan(0);
+    expect(Object.keys(raw.skills[0]).sort()).toEqual([
+      'description',
+      'group',
+      'id',
+      'label',
+      'output_kind',
+    ]);
+    expect(raw.skills.find((skill: { id: string }) => skill.id === 'content_create')).toMatchObject(
+      {
+        output_kind: 'content',
+      },
+    );
+  });
   it('serves instructions, a queued outline, optimistic edits, restoration and archive without model calls on reads', async () => {
     const { scope, headers, worker } = await setup();
     const instructions = `/api/v1/projects/${scope.projectId}/agent/instructions`;

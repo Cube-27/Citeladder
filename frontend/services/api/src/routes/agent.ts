@@ -94,7 +94,15 @@ export const agentRoutes = [
     response: agentSkillCatalogSchema,
     async handle({ db }) {
       const { catalog } = await agentBindings(db);
-      return { skills: [...catalog.skills.values()] };
+      return {
+        skills: [...catalog.skills.values()].map((skill) => ({
+          id: skill.id,
+          label: skill.label,
+          group: skill.group,
+          output_kind: skill.outputKind,
+          description: skill.description,
+        })),
+      };
     },
   }),
   defineGetRoute({
