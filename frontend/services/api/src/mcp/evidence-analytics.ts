@@ -16,6 +16,44 @@ import { McpInputError, type Evidence, type ReadScope } from './types.ts';
 import { mcpPolicy } from './config.ts';
 
 const ref = (kind: string, id: string) => ({ kind, id, record_uri: `citeladder://${kind}/${id}` });
+const textArg = (args: ReadArguments, key: string) =>
+  typeof args[key] === 'string' ? args[key] : null;
+
+async function readTrends(db: Database, scope: ReadScope, args: ReadArguments): Promise<Evidence> {
+  if (typeof args.from_at !== 'string' || typeof args.to_at !== 'string')
+    throw new McpInputError('Trends requires an explicit window');
+  const fromAt = parseDatetime(args.from_at);
+  const toAt = parseDatetime(args.to_at);
+  if (!fromAt || !toAt) throw new McpInputError('Trends window must contain valid datetimes');
+  if (
+    Date.parse(args.to_at) - Date.parse(args.from_at) >
+    mcpPolicy.trend_max_window_days * 86400000
+  )
+    throw new McpInputError(`Trend windows are limited to ${mcpPolicy.trend_max_window_days} days`);
+  const points = visibilityTrendListSchema.parse(
+    await getVisibilityTrends(db, scope, {
+      logicalEngine: textArg(args, 'engine'),
+      fromAt,
+      toAt,
+      granularity: textArg(args, 'granularity') ?? 'run',
+      transportModel: textArg(args, 'transport_model'),
+      retrievalEnabled: typeof args.retrieval_enabled === 'boolean' ? args.retrieval_enabled : null,
+      cohort: textArg(args, 'cohort') ?? 'core',
+    }),
+  );
+  return {
+    state: points.length ? 'available' : 'unavailable',
+    reason: points.length ? null : 'no_measured_runs',
+    window: { from_at: args.from_at, to_at: args.to_at },
+    points,
+    artifact_refs: [...new Set(points.flatMap((p) => p.source_audit_ids ?? []))].map((id) =>
+      ref('audit', id),
+    ),
+    limitations: [
+      'Bounded persisted history; compare only matching comparison keys and versions. Missing points are not zero.',
+    ],
+  };
+}
 
 export async function readAnalytics(
   db: Database,
@@ -24,55 +62,18 @@ export async function readAnalytics(
   args: ReadArguments,
 ): Promise<Evidence> {
   try {
-    if (name === 'read_visibility_trends') {
-      if (typeof args.from_at !== 'string' || typeof args.to_at !== 'string')
-        throw new McpInputError('Trends requires an explicit window');
-      const fromAt = parseDatetime(args.from_at);
-      const toAt = parseDatetime(args.to_at);
-      if (!fromAt || !toAt) throw new McpInputError('Trends window must contain valid datetimes');
-      if (
-        Date.parse(args.to_at) - Date.parse(args.from_at) >
-        mcpPolicy.trend_max_window_days * 86400000
-      )
-        throw new McpInputError(
-          `Trend windows are limited to ${mcpPolicy.trend_max_window_days} days`,
-        );
-      const points = visibilityTrendListSchema.parse(
-        await getVisibilityTrends(db, scope, {
-          logicalEngine: typeof args.engine === 'string' ? args.engine : null,
-          fromAt,
-          toAt,
-          granularity: typeof args.granularity === 'string' ? args.granularity : 'run',
-          transportModel: typeof args.transport_model === 'string' ? args.transport_model : null,
-          retrievalEnabled:
-            typeof args.retrieval_enabled === 'boolean' ? args.retrieval_enabled : null,
-          cohort: typeof args.cohort === 'string' ? args.cohort : 'core',
-        }),
-      );
-      return {
-        state: points.length ? 'available' : 'unavailable',
-        reason: points.length ? null : 'no_measured_runs',
-        window: { from_at: args.from_at, to_at: args.to_at },
-        points,
-        artifact_refs: [...new Set(points.flatMap((p) => p.source_audit_ids ?? []))].map((id) =>
-          ref('audit', id),
-        ),
-        limitations: [
-          'Bounded persisted history; compare only matching comparison keys and versions. Missing points are not zero.',
-        ],
-      };
-    }
+    if (name === 'read_visibility_trends') return await readTrends(db, scope, args);
     if (typeof args.baseline_id === 'string') await authorizeRunSet(db, scope, [args.baseline_id]);
     const projection = visibilitySchema.parse(
       await getVisibility(db, scope, {
-        auditId: typeof args.audit_id === 'string' ? args.audit_id : null,
-        logicalEngine: typeof args.engine === 'string' ? args.engine : null,
-        baselineId: typeof args.baseline_id === 'string' ? args.baseline_id : null,
+        auditId: textArg(args, 'audit_id'),
+        logicalEngine: textArg(args, 'engine'),
+        baselineId: textArg(args, 'baseline_id'),
         selectionMode: args.audit_id ? 'run' : 'latest',
         fromAt: null,
         toAt: null,
         configurationKey: null,
-        cohort: typeof args.cohort === 'string' ? args.cohort : 'core',
+        cohort: textArg(args, 'cohort') ?? 'core',
       }),
     );
     return {
@@ -97,12 +98,7 @@ export async function readAnalytics(
   }
 }
 
-export async function renderAnalytics(
-  db: Database,
-  scope: ReadScope,
-  selection: AnalyticsSelection,
-  origin: string,
-): Promise<Evidence> {
+function validateFilters(selection: AnalyticsSelection) {
   const { view } = selection;
   if (
     (selection.from_at ||
@@ -112,19 +108,50 @@ export async function renderAnalytics(
     view !== 'trends'
   )
     throw new McpInputError('Period and model filters apply only to Trends');
-  if (view === 'trends' && (!selection.from_at || !selection.to_at || selection.audit_id))
-    throw new McpInputError('Trends requires an explicit window and no audit_id');
   if ((selection.domain || selection.cursor || selection.level === 'url') && view !== 'sources')
     throw new McpInputError('Source paging filters apply only to Sources');
   if (selection.snapshot_id && view !== 'site_health')
     throw new McpInputError('snapshot_id applies only to Site Health');
+  if (selection.competitor && view !== 'overview' && view !== 'trends')
+    throw new McpInputError('Competitor selection applies only to Overview and Trends');
+}
+
+function validateRequiredScope(selection: AnalyticsSelection) {
+  if (selection.view === 'trends' && (!selection.from_at || !selection.to_at || selection.audit_id))
+    throw new McpInputError('Trends requires an explicit window and no audit_id');
   if (
-    view === 'site_health' &&
+    selection.view === 'site_health' &&
     (selection.audit_id || selection.engine || selection.competitor || selection.cohort !== 'core')
   )
     throw new McpInputError('Site Health does not support visibility filters');
-  if (selection.competitor && view !== 'overview' && view !== 'trends')
-    throw new McpInputError('Competitor selection applies only to Overview and Trends');
+}
+
+function validateCompetitor(selection: AnalyticsSelection, evidence: Evidence) {
+  // Names must occur in canonical evidence; they select display, not new scoring.
+  if (!selection.competitor || evidence.state !== 'available') return;
+  const rankings = Array.isArray(evidence.rankings) ? evidence.rankings : [];
+  const points = Array.isArray(evidence.points) ? evidence.points : [];
+  const rows = [
+    ...rankings,
+    ...points.flatMap((p) =>
+      p && typeof p === 'object' && 'rankings' in p && Array.isArray(p.rankings) ? p.rankings : [],
+    ),
+  ];
+  if (
+    !rows.some((r) => r && typeof r === 'object' && 'name' in r && r.name === selection.competitor)
+  )
+    throw new McpInputError('Competitor is absent from the selected evidence');
+}
+
+export async function renderAnalytics(
+  db: Database,
+  scope: ReadScope,
+  selection: AnalyticsSelection,
+  origin: string,
+): Promise<Evidence> {
+  validateRequiredScope(selection);
+  validateFilters(selection);
+  const { view } = selection;
   const resolved = { ...selection };
   let evidence: Evidence;
   if (view === 'site_health') {
@@ -143,26 +170,7 @@ export async function renderAnalytics(
         ? await readEvidence(db, scope, 'read_visibility_sources', resolved)
         : overview;
   }
-  // Never accept arbitrary model-computed datasets. Competitor names must occur
-  // in the canonical selection, and remain display selection, not new scoring.
-  if (selection.competitor && evidence.state === 'available') {
-    const rankings = Array.isArray(evidence.rankings) ? evidence.rankings : [];
-    const points = Array.isArray(evidence.points) ? evidence.points : [];
-    const rows = [
-      ...rankings,
-      ...points.flatMap((p) => {
-        return p && typeof p === 'object' && 'rankings' in p && Array.isArray(p.rankings)
-          ? p.rankings
-          : [];
-      }),
-    ];
-    if (
-      !rows.some(
-        (r) => r && typeof r === 'object' && 'name' in r && r.name === selection.competitor,
-      )
-    )
-      throw new McpInputError('Competitor is absent from the selected evidence');
-  }
+  validateCompetitor(selection, evidence);
   return {
     surface: 'citeladder_analytics',
     selection: resolved,

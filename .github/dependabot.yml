@@ -43,8 +43,8 @@ updates:
           - version-update:semver-minor
           - version-update:semver-patch
 
-  # Keep frontend and API Node updates in one group. The API uses an explicit
-  # slim tag; the frontend Dockerfiles share their own base digest.
+  # Keep frontend and API Node updates in one group. Their immutable base
+  # digest identifies Node 26 bookworm-slim; preserve that family on updates.
   #
   # The `node` group omits `update-types` on purpose. A digest bump is neither
   # patch nor minor, so `patch-and-minor` does not catch it — which is exactly

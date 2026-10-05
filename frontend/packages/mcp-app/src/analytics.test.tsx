@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Analytics } from './analytics';
 import { createController, deepLinkSelection } from './controller';
+import { appPolicy } from './config';
 
 const project = '11111111-1111-4111-8111-111111111111';
 const foreign = '22222222-2222-4222-8222-222222222222';
@@ -37,6 +38,117 @@ const siteEvidence = {
 };
 
 describe('CiteLadder MCP App', () => {
+  it.each([
+    {
+      name: 'oversized',
+      payload: { ...result(), evidence: { retained: 'x'.repeat(appPolicy.maxResultBytes) } },
+      error: /display limit/,
+    },
+    { name: 'malformed', payload: {}, error: /unavailable/ },
+    { name: 'wrong selection', payload: result(foreign), error: /unavailable/ },
+  ])('surfaces a $name host result and exits loading with a retry', ({ payload, error }) => {
+    const controller = createController({
+      call: vi.fn(async () => undefined),
+      context: vi.fn(async () => undefined),
+    });
+    controller.begin({ project_id: project }, 'render_visibility');
+    expect(() => controller.receive(payload)).not.toThrow();
+    render(<Analytics controller={controller} />);
+    expect(screen.getByRole('alert').textContent).toMatch(error);
+    expect(screen.queryByText('Loading persisted evidence…')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+  });
+  it('prevents overlapping crawl page reads and identifies their failure separately from findings', async () => {
+    const user = userEvent.setup();
+    let reject!: (error: Error) => void;
+    const call = vi.fn(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        }),
+    );
+    const controller = createController({ call, context: vi.fn(async () => undefined) });
+    controller.receive({
+      ...result(),
+      selection: { project_id: project, view: 'site_health', snapshot_id: audit },
+      evidence: siteEvidence,
+    });
+    render(<Analytics controller={controller} />);
+    const button = screen.getByRole('button', { name: 'Read pages from this crawl' });
+    await user.click(button);
+    expect(button).toBeDisabled();
+    await user.click(button);
+    expect(call).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      reject(new Error('page read unavailable'));
+    });
+    expect(screen.getByRole('alert').textContent).toMatch(/Page evidence is unavailable/);
+    expect(screen.queryByText('Loading persisted pages…')).not.toBeInTheDocument();
+  });
+  it('applies overlapping project pages once and ignores superseded listing failures', async () => {
+    const first = { id: project, workspace_name: 'Team', name: 'Acme' };
+    const next = { id: foreign, workspace_name: 'Team', name: 'Second' };
+    const page = { projects: [next], pagination: { next_cursor: null } };
+    const call = vi.fn(async (): Promise<unknown> => ({
+      projects: [first],
+      pagination: { next_cursor: 'next' },
+    }));
+    const controller = createController({ call, context: vi.fn(async () => undefined) });
+    await controller.loadProjects();
+    let finish!: (value: typeof page) => void;
+    call.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const older = controller.loadProjects('next');
+    call.mockResolvedValueOnce(page);
+    await controller.loadProjects('next');
+    finish(page);
+    await older;
+    expect(controller.getSnapshot().projects).toEqual([first, next]);
+    let reject!: (error: Error) => void;
+    call.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        }),
+    );
+    const oldFailure = controller.loadProjects();
+    await controller.loadProjects();
+    reject(new Error('superseded read failure'));
+    await oldFailure;
+    expect(controller.getSnapshot().projects).toEqual([first]);
+    expect(controller.getSnapshot().error).toBeNull();
+  });
+  it('recovers a host read failure without claiming account loss or letting late host errors clear local evidence', async () => {
+    const user = userEvent.setup();
+    const context = vi.fn(async () => undefined);
+    const call = vi.fn(async () => result().evidence as unknown);
+    const controller = createController({ call, context });
+    call.mockResolvedValueOnce({
+      projects: [{ id: project, workspace_name: 'Team', name: 'Acme' }],
+      pagination: { next_cursor: null },
+    });
+    await controller.loadProjects();
+    controller.receive(result());
+    controller.begin({ project_id: project }, 'render_visibility');
+    controller.failHostRead();
+    render(<Analytics controller={controller} />);
+    expect(screen.getByRole('combobox', { name: 'Project and workspace' })).toHaveTextContent(
+      'Team / Acme',
+    );
+    expect(screen.getByRole('alert').textContent).toMatch(/Evidence is unavailable/);
+    expect(controller.getSnapshot().result).toBeNull();
+    await vi.waitFor(() => expect(context).toHaveBeenLastCalledWith(null, undefined));
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText(/No completed measurement/)).toBeInTheDocument();
+    await act(() => controller.select({ project_id: foreign }));
+    act(() => controller.failHostRead());
+    expect(controller.getSnapshot().result?.selection?.project_id).toBe(foreign);
+  });
   it.each(['render_site_health', undefined])(
     'accepts a Site Health host result with tool identity %s',
     (toolName) => {
@@ -176,9 +288,15 @@ describe('CiteLadder MCP App', () => {
   });
   it('renders observed zero separately from missing metrics and exposes keyboard view navigation', async () => {
     const user = userEvent.setup();
+    const call = vi.fn(async () => ({
+      state: 'unavailable',
+      reason: 'no_measured_runs',
+      points: [],
+    }));
+    const context = vi.fn(async () => undefined);
     const controller = createController({
-      call: vi.fn(async () => ({ state: 'unavailable', reason: 'no_measured_runs', points: [] })),
-      context: vi.fn(async () => undefined),
+      call,
+      context,
     });
     controller.receive({
       ...result(),
@@ -193,7 +311,18 @@ describe('CiteLadder MCP App', () => {
         visibility_score: null,
         visibility_rate: 0.5,
         owned_citation_rate: 0,
-        rankings: [],
+        rankings: [
+          {
+            name: 'Competitor',
+            is_brand: false,
+            mention_rate: 0.25,
+            citation_rate: null,
+            share_of_voice: null,
+            mention_count: 1,
+            sentiment: null,
+            avg_position: null,
+          },
+        ],
         per_engine: [],
         sentiment: null,
         avg_position: null,
@@ -203,6 +332,15 @@ describe('CiteLadder MCP App', () => {
     render(<Analytics controller={controller} />);
     expect(screen.getByText('50.0%')).toBeInTheDocument();
     expect(screen.getByText('0.0%')).toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'Overview competitor' }));
+    await user.click(screen.getByRole('option', { name: 'Competitor' }));
+    expect(call).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(context).toHaveBeenLastCalledWith(
+        expect.objectContaining({ competitor: 'Competitor', audit_id: audit }),
+        expect.objectContaining({ audit_id: audit }),
+      ),
+    );
     const tab = screen.getByRole('tab', { name: 'Overview' });
     tab.focus();
     await user.keyboard('{ArrowRight}');
@@ -301,6 +439,15 @@ describe('CiteLadder MCP App', () => {
     ).toBe(audit);
     expect(deepLinkSelection({ url: `//evil.example/analytics?project_id=${project}` })).toBeNull();
     expect(deepLinkSelection({ url: `/analytics?project_id=${project}&total=100` })).toBeNull();
+    expect(
+      deepLinkSelection({
+        url: `/analytics?project_id=${project}&view=trends&retrieval_enabled=false&limit=25`,
+      }),
+    ).toMatchObject({ project_id: project, view: 'trends', retrieval_enabled: false, limit: 25 });
+    expect(
+      deepLinkSelection({ url: `/analytics?project_id=${project}&retrieval_enabled=yes` }),
+    ).toBeNull();
+    expect(deepLinkSelection({ url: `/analytics?project_id=${project}&limit=25junk` })).toBeNull();
     act(() =>
       controller.receive({ ...result(), links: { ...links, application: 'javascript:alert(1)' } }),
     );

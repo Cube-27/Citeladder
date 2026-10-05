@@ -19,7 +19,7 @@ import {
 import { TrendChart } from '@/components/ui/trend-chart';
 import { SectionTitle, Label, Metric, textRole } from '@/components/ui/typography';
 import { appPolicy } from './config';
-import type { Controller } from './controller';
+import type { AppState, Controller } from './controller';
 import { SourcesView, SiteHealthView } from './evidence-views';
 import { rate } from './format';
 
@@ -33,8 +33,12 @@ const views = [
 function Overview({
   data,
   selection,
-  select,
-}: Readonly<{ data: unknown; selection: AnalyticsSelection; select: Controller['select'] }>) {
+  selectCompetitor,
+}: Readonly<{
+  data: unknown;
+  selection: AnalyticsSelection;
+  selectCompetitor: Controller['selectCompetitor'];
+}>) {
   const parsed = visibilitySchema.safeParse(data);
   if (!parsed.success) {
     const unavailable = z
@@ -60,9 +64,7 @@ function Overview({
             .filter((row) => !row.is_brand)
             .map((row) => ({ value: row.name, label: row.name })),
         ]}
-        onValueChange={(competitor) =>
-          void select({ ...selection, competitor: competitor || null })
-        }
+        onValueChange={(competitor) => selectCompetitor(competitor || null)}
       />
       <div className="flex flex-wrap gap-6">
         <div>
@@ -128,10 +130,12 @@ function Trends({
   data,
   selection,
   select,
+  selectCompetitor,
 }: Readonly<{
   data: Record<string, unknown>;
   selection: AnalyticsSelection;
   select: Controller['select'];
+  selectCompetitor: Controller['selectCompetitor'];
 }>) {
   const [metric, setMetric] = useState<string>('brand_mention_rate');
   const parsed = visibilityTrendListSchema.safeParse(data.points);
@@ -149,14 +153,13 @@ function Trends({
       ),
     ),
   ];
-  const value = (point: (typeof points)[number]) =>
-    selection.competitor
-      ? (point.rankings.find((row) => row.name === selection.competitor)?.[
-          metric === 'brand_mention_rate' ? 'mention_rate' : 'citation_rate'
-        ] ?? null)
-      : metric === 'brand_mention_rate'
-        ? point.brand_mention_rate
-        : point.owned_citation_rate;
+  const value = (point: (typeof points)[number]) => {
+    if (selection.competitor) {
+      const field = metric === 'brand_mention_rate' ? 'mention_rate' : 'citation_rate';
+      return point.rankings.find((row) => row.name === selection.competitor)?.[field] ?? null;
+    }
+    return metric === 'brand_mention_rate' ? point.brand_mention_rate : point.owned_citation_rate;
+  };
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
@@ -173,9 +176,7 @@ function Trends({
             { value: '', label: 'Your brand' },
             ...competitors.map((name) => ({ value: name, label: name })),
           ]}
-          onValueChange={(competitor) =>
-            void select({ ...selection, competitor: competitor || null })
-          }
+          onValueChange={(competitor) => selectCompetitor(competitor || null)}
         />
       </div>
       <TrendChart
@@ -244,6 +245,46 @@ function Trends({
       </p>
     </div>
   );
+}
+
+function selectedEvidenceLabel(selection: AnalyticsSelection) {
+  if (selection.audit_id) return `Audit ${selection.audit_id}`;
+  if (selection.snapshot_id) return `Snapshot ${selection.snapshot_id}`;
+  return 'No audit selected';
+}
+
+function viewContent(view: AnalyticsSelection['view'], state: AppState, controller: Controller) {
+  if (!state.result || !state.selection) return null;
+  const selection = state.selection;
+  switch (view) {
+    case 'overview':
+      return (
+        <Overview
+          data={state.result.evidence}
+          selection={selection}
+          selectCompetitor={controller.selectCompetitor}
+        />
+      );
+    case 'trends':
+      return (
+        <Trends
+          data={state.result.evidence}
+          selection={selection}
+          select={controller.select}
+          selectCompetitor={controller.selectCompetitor}
+        />
+      );
+    case 'sources':
+      return <SourcesView state={state} controller={controller} />;
+    case 'site_health':
+      return (
+        <SiteHealthView
+          key={`${selection.project_id}:${selection.snapshot_id}`}
+          state={state}
+          controller={controller}
+        />
+      );
+  }
 }
 
 export function Analytics({ controller }: Readonly<{ controller: Controller }>) {
@@ -320,12 +361,7 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
       {selection && (
         <>
           <p className={textRole('caption')}>
-            Project {selection.project_id} ·{' '}
-            {selection.audit_id
-              ? `Audit ${selection.audit_id}`
-              : selection.snapshot_id
-                ? `Snapshot ${selection.snapshot_id}`
-                : 'No audit selected'}
+            Project {selection.project_id} · {selectedEvidenceLabel(selection)}
           </p>
           {selection.view !== 'site_health' && (
             <div className="flex flex-wrap gap-3">
@@ -395,28 +431,7 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
           >
             {views.map((view) => (
               <TabPanel key={view.value} value={view.value}>
-                {state.result &&
-                  (view.value === 'overview' ? (
-                    <Overview
-                      data={state.result.evidence}
-                      selection={selection}
-                      select={controller.select}
-                    />
-                  ) : view.value === 'trends' ? (
-                    <Trends
-                      data={state.result.evidence}
-                      selection={selection}
-                      select={controller.select}
-                    />
-                  ) : view.value === 'sources' ? (
-                    <SourcesView state={state} controller={controller} />
-                  ) : (
-                    <SiteHealthView
-                      key={`${selection.project_id}:${selection.snapshot_id}`}
-                      state={state}
-                      controller={controller}
-                    />
-                  ))}
+                {viewContent(view.value, state, controller)}
               </TabPanel>
             ))}
           </Tabs>

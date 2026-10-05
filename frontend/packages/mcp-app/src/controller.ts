@@ -32,18 +32,72 @@ export type AppState = {
   answers: Record<string, unknown>[];
 };
 
+class ResultSizeError extends Error {
+  constructor() {
+    super('Result exceeds the display limit');
+    this.name = 'ResultSizeError';
+  }
+}
 function bounded(value: unknown): unknown {
   if (new TextEncoder().encode(JSON.stringify(value)).byteLength > appPolicy.maxResultBytes)
-    throw new Error('Result exceeds the display limit');
+    throw new ResultSizeError();
   return value;
 }
 function evidence(value: unknown): Record<string, unknown> {
   return z.record(z.string(), z.json()).parse(bounded(value));
 }
 
+async function readSelection(host: Host, input: AnalyticsSelection) {
+  const selection = { ...input };
+  const base = {
+    project_id: selection.project_id,
+    engine: selection.engine,
+    cohort: selection.cohort,
+  };
+  let data: Record<string, unknown>;
+  if (selection.view === 'trends') {
+    data = evidence(
+      await host.call('read_visibility_trends', {
+        ...base,
+        from_at: selection.from_at,
+        to_at: selection.to_at,
+        transport_model: selection.transport_model,
+        retrieval_enabled: selection.retrieval_enabled,
+      }),
+    );
+  } else if (selection.view === 'site_health') {
+    data = evidence(
+      await host.call('read_site_health', {
+        project_id: selection.project_id,
+        snapshot_id: selection.snapshot_id,
+      }),
+    );
+    if (typeof data.snapshot_id === 'string') selection.snapshot_id = data.snapshot_id;
+  } else {
+    data = evidence(
+      await host.call('read_visibility_overview', { ...base, audit_id: selection.audit_id }),
+    );
+    if (typeof data.audit_id === 'string') selection.audit_id = data.audit_id;
+    if (selection.view === 'sources' && selection.audit_id) {
+      data = evidence(
+        await host.call('read_visibility_sources', {
+          ...base,
+          audit_id: selection.audit_id,
+          level: selection.level,
+          domain: selection.domain,
+          cursor: selection.cursor,
+          limit: selection.limit,
+        }),
+      );
+    }
+  }
+  return { selection, data };
+}
+
 /** One generation per selection. Late reads can never repopulate old scope. */
 export function createController(host: Host) {
   let generation = 0;
+  let projectRequest = 0;
   // Initial hosts may send only a result. Subsequent results must belong to
   // a tool-input generation, never to a local selection or disconnected view.
   let hostGeneration: number | null = 0;
@@ -72,30 +126,50 @@ export function createController(host: Host) {
       })
       .catch(() => undefined);
   };
+  const failHostRead = (error?: unknown) => {
+    if (hostGeneration !== generation) return;
+    hostGeneration = null;
+    ++generation;
+    set({
+      result: null,
+      answers: [],
+      busy: false,
+      error:
+        error instanceof ResultSizeError
+          ? 'Evidence exceeds the display limit. Narrow the selection in CiteLadder and retry.'
+          : 'Evidence is unavailable. Retry or check the connection and access.',
+    });
+    context(null, generation);
+  };
   const receive = (value: unknown) => {
     if (hostGeneration !== generation) return;
-    const parsed = analyticsResultSchema.safeParse(bounded(value));
-    if (!parsed.success) return;
-    const resolved = parsed.data.selection;
-    if (requestedSelection) {
-      if (!resolved) return;
-      const matches = Object.entries(requestedSelection).every(([key, expected]) => {
-        // Latest resolves to concrete IDs. All other filters retain their scope.
-        if ((key === 'audit_id' || key === 'snapshot_id') && expected == null) return true;
-        return (resolved[key as keyof AnalyticsSelection] ?? null) === (expected ?? null);
-      });
-      if (!matches) return;
+    let result: AnalyticsResult;
+    try {
+      result = analyticsResultSchema.parse(bounded(value));
+      const resolved = result.selection;
+      if (requestedSelection) {
+        if (!resolved) throw new Error('Missing requested selection');
+        const matches = Object.entries(requestedSelection).every(([key, expected]) => {
+          // Latest resolves to concrete IDs. All other filters retain their scope.
+          if ((key === 'audit_id' || key === 'snapshot_id') && expected == null) return true;
+          return (resolved[key as keyof AnalyticsSelection] ?? null) === (expected ?? null);
+        });
+        if (!matches) throw new Error('Result does not match requested selection');
+      }
+    } catch (error) {
+      failHostRead(error);
+      return;
     }
     hostGeneration = null;
     const epoch = ++generation;
     set({
-      result: parsed.data,
-      selection: parsed.data.selection,
+      result,
+      selection: result.selection,
       busy: false,
       error: null,
       answers: [],
     });
-    context(parsed.data.selection, epoch);
+    context(result.selection, epoch);
   };
   const select = async (input: unknown) => {
     const epoch = ++generation;
@@ -107,66 +181,25 @@ export function createController(host: Host) {
     set({ result: null, selection, answers: [], busy: true, error: null });
     context(null, epoch);
     try {
-      let data: Record<string, unknown>;
-      const base = {
-        project_id: selection.project_id,
-        engine: selection.engine,
-        cohort: selection.cohort,
-      };
-      if (selection.view === 'trends') {
-        data = evidence(
-          await host.call('read_visibility_trends', {
-            ...base,
-            from_at: selection.from_at,
-            to_at: selection.to_at,
-            transport_model: selection.transport_model,
-            retrieval_enabled: selection.retrieval_enabled,
-          }),
-        );
-      } else if (selection.view === 'site_health') {
-        data = evidence(
-          await host.call('read_site_health', {
-            project_id: selection.project_id,
-            snapshot_id: selection.snapshot_id,
-          }),
-        );
-        if (typeof data.snapshot_id === 'string') selection.snapshot_id = data.snapshot_id;
-      } else {
-        data = evidence(
-          await host.call('read_visibility_overview', { ...base, audit_id: selection.audit_id }),
-        );
-        if (typeof data.audit_id === 'string') selection.audit_id = data.audit_id;
-        if (selection.view === 'sources' && selection.audit_id) {
-          data = evidence(
-            await host.call('read_visibility_sources', {
-              ...base,
-              audit_id: selection.audit_id,
-              level: selection.level,
-              domain: selection.domain,
-              cursor: selection.cursor,
-              limit: selection.limit,
-            }),
-          );
-        }
-      }
+      const { selection: resolved, data } = await readSelection(host, selection);
       if (epoch !== generation) return;
       const application = new URL(
-        selection.view === 'site_health' ? '/website' : '/visibility',
+        resolved.view === 'site_health' ? '/website' : '/visibility',
         links.application,
       );
-      application.searchParams.set('project', selection.project_id);
-      if (selection.audit_id) application.searchParams.set('run', selection.audit_id);
+      application.searchParams.set('project', resolved.project_id);
+      if (resolved.audit_id) application.searchParams.set('run', resolved.audit_id);
       set({
         result: analyticsResultSchema.parse({
           surface: 'citeladder_analytics',
-          selection,
+          selection: resolved,
           evidence: data,
           links: { ...links, application: application.href },
         }),
-        selection,
+        selection: resolved,
         busy: false,
       });
-      context(selection, epoch);
+      context(resolved, epoch);
     } catch {
       if (epoch === generation)
         set({
@@ -177,18 +210,19 @@ export function createController(host: Host) {
   };
   const loadProjects = async (cursor: string | null = null) => {
     const epoch = generation;
+    const request = ++projectRequest;
     try {
       const page = projectsSchema.parse(
         bounded(await host.call('list_projects', { limit: appPolicy.pageSize, cursor })),
       );
-      if (epoch !== generation) return;
+      if (epoch !== generation || request !== projectRequest) return;
       set({
         projects: cursor ? [...state.projects, ...page.projects] : page.projects,
         projectCursor: page.pagination.next_cursor,
         error: null,
       });
     } catch {
-      if (epoch !== generation) return;
+      if (epoch !== generation || request !== projectRequest) return;
       ++generation;
       set({
         result: null,
@@ -239,6 +273,15 @@ export function createController(host: Host) {
       };
     },
     receive,
+    failHostRead,
+    selectCompetitor: (competitor: string | null) => {
+      if (!state.selection || !state.result) return;
+      if (state.selection.view !== 'overview' && state.selection.view !== 'trends') return;
+      const selection = analyticsSelectionSchema.parse({ ...state.selection, competitor });
+      const epoch = ++generation;
+      set({ selection, result: { ...state.result, selection } });
+      context(selection, epoch);
+    },
     select,
     loadProjects,
     drill,
@@ -310,7 +353,7 @@ export function createController(host: Host) {
             result: null,
             answers: [],
             busy: false,
-            error: 'Evidence is unavailable. Retry or reconnect.',
+            error: 'Prioritized findings are unavailable. Retry or reconnect.',
           });
           context(null, generation);
         }
@@ -339,7 +382,7 @@ export function createController(host: Host) {
             result: null,
             answers: [],
             busy: false,
-            error: 'Evidence is unavailable. Retry or reconnect.',
+            error: 'Page evidence is unavailable. Retry or reconnect.',
           });
           context(null, generation);
         }
@@ -371,6 +414,15 @@ export function deepLinkSelection(value: unknown): AnalyticsSelection | null {
     return null;
   const url = new URL(link.data.url, 'https://selection.invalid');
   if (url.hash || url.pathname !== '/analytics') return null;
-  const parsed = analyticsSelectionSchema.safeParse(Object.fromEntries(url.searchParams));
+  const input: Record<string, unknown> = Object.fromEntries(url.searchParams);
+  if (typeof input.limit === 'string') {
+    if (!/^\d+$/u.test(input.limit)) return null;
+    input.limit = Number(input.limit);
+  }
+  if (typeof input.retrieval_enabled === 'string') {
+    if (input.retrieval_enabled !== 'true' && input.retrieval_enabled !== 'false') return null;
+    input.retrieval_enabled = input.retrieval_enabled === 'true';
+  }
+  const parsed = analyticsSelectionSchema.safeParse(input);
   return parsed.success ? parsed.data : null;
 }

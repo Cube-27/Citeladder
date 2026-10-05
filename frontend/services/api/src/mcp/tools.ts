@@ -9,7 +9,7 @@ import { authorizeProject, listAccountProjects, searchBusinessContext } from './
 import { projectBusinessContext, readEvidence, type ReadArguments } from './evidence.ts';
 import { readSiteEvidence } from './evidence-site.ts';
 import { fetchRecord } from './retrieval.ts';
-import { McpInputError, type Evidence, type EvidencePrincipal } from './types.ts';
+import { McpInputError, type Evidence, type EvidencePrincipal, type ReadScope } from './types.ts';
 
 const nullable = <T extends z.ZodType>(schema: T) => schema.nullish();
 const uuid = z.uuid();
@@ -423,6 +423,30 @@ export const tools = Object.entries(definitions).map(([name, definition]) => ({
   annotations,
 }));
 
+async function readProjectTool(
+  db: Database,
+  scope: ReadScope,
+  name: string,
+  args: ReadArguments,
+  origin: string,
+) {
+  if (name === 'render_visibility' || name === 'render_site_health')
+    return renderAnalytics(
+      db,
+      scope,
+      analyticsSelectionSchema.parse({
+        ...args,
+        ...(name === 'render_site_health' ? { view: 'site_health' } : {}),
+      }),
+      origin,
+    );
+  if (name === 'read_visibility_overview' || name === 'read_visibility_trends')
+    return readAnalytics(db, scope, name, args);
+  if (name === 'read_site_pages' || name === 'read_site_links')
+    return readSiteEvidence(db, scope, name, args);
+  return readEvidence(db, scope, name, args);
+}
+
 export async function dispatchTool(
   db: Database,
   principal: EvidencePrincipal,
@@ -472,22 +496,7 @@ export async function dispatchTool(
   else {
     const project = await authorizeProject(db, principal, String(args.project_id));
     const authorized = { workspaceId: project.workspace_id, projectId: project.id };
-    const evidence =
-      name === 'render_visibility' || name === 'render_site_health'
-        ? await renderAnalytics(
-            db,
-            authorized,
-            analyticsSelectionSchema.parse({
-              ...args,
-              ...(name === 'render_site_health' ? { view: 'site_health' } : {}),
-            }),
-            origin,
-          )
-        : name === 'read_visibility_overview' || name === 'read_visibility_trends'
-          ? await readAnalytics(db, authorized, name, args)
-          : name === 'read_site_pages' || name === 'read_site_links'
-            ? await readSiteEvidence(db, authorized, name, args)
-            : await readEvidence(db, authorized, name, args);
+    const evidence = await readProjectTool(db, authorized, name, args, origin);
     // Every project read names its scope and applicability; a tool's own values win.
     result = {
       project_id: project.id,

@@ -49,18 +49,18 @@ const hostContext = (context: Record<string, unknown>) => {
   }
 };
 app.ontoolresult = (result) => {
-  if (result.isError) controller.disconnect();
+  if (result.isError) controller.failHostRead();
   else controller.receive(result.structuredContent);
 };
 app.ontoolinput = (input) =>
   controller.begin(input.arguments, app.getHostContext()?.toolInfo?.tool.name);
 app.onhostcontextchanged = (context) => hostContext(context);
-app.ontoolcancelled = () => controller.disconnect();
+app.ontoolcancelled = () => controller.failHostRead();
 createRoot(document.getElementById('root')!).render(<Analytics controller={controller} />);
-void app
-  .connect(undefined, { timeout: appPolicy.requestTimeoutMs })
-  .then(() => {
-    hostContext(app.getHostContext() ?? {});
-    return controller.loadProjects();
-  })
-  .catch(() => controller.disconnect());
+try {
+  await app.connect(undefined, { timeout: appPolicy.requestTimeoutMs });
+  hostContext(app.getHostContext() ?? {});
+  await controller.loadProjects();
+} catch {
+  controller.disconnect();
+}

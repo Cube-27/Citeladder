@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { SectionTitle, textRole } from '@/components/ui/typography';
 import type { AppState, Controller } from './controller';
-import { rate } from './format';
+import { rate, text } from './format';
 
 const sourceSchema = z.object({
   items: z.array(
@@ -114,7 +114,7 @@ export function SourcesView({ state, controller }: Props) {
         Names in cited answers are co-occurrence, not proof of presence on the publisher page.
       </p>
       {state.answers.map((answer, index) => (
-        <article key={String(answer.id ?? index)} className="space-y-2">
+        <article key={text(answer.id, `answer-${index}`)} className="space-y-2">
           <SectionTitle>
             {typeof answer.prompt_text === 'string' ? answer.prompt_text : 'Answer evidence'}
           </SectionTitle>
@@ -123,11 +123,11 @@ export function SourcesView({ state, controller }: Props) {
               ? answer.answer_text
               : 'Fetch the referenced answer for its retained text.'}
           </p>
-          <p className={textRole('caption')}>{String(answer.record_uri ?? '')}</p>
+          <p className={textRole('caption')}>{text(answer.record_uri)}</p>
           {typeof answer.record_uri === 'string' && (
             <Button
               variant="ghost"
-              onClick={() => void controller.fetchAnswer(String(answer.record_uri))}
+              onClick={() => void controller.fetchAnswer(text(answer.record_uri))}
             >
               Read retained answer
             </Button>
@@ -160,10 +160,16 @@ const siteSchema = z.object({
   classification_source_artifact_ids: z.array(z.string()).nullable(),
   classification_source_task_ids: z.array(z.string()).nullable(),
 });
+function sourceIds(ids: string[] | null) {
+  if (ids === null) return 'Unknown';
+  return ids.length ? ids.join(', ') : 'No recorded IDs';
+}
 export function SiteHealthView({ state, controller }: Props) {
   const [findings, setFindings] = useState<Awaited<ReturnType<Controller['siteFindings']>>>(null);
   const [loadingFindings, setLoadingFindings] = useState(false);
-  const [error, setError] = useState(false);
+  const [findingsError, setFindingsError] = useState(false);
+  const [pagesError, setPagesError] = useState(false);
+  const [loadingPages, setLoadingPages] = useState(false);
   const [pages, setPages] = useState<Record<string, unknown>[]>([]);
   const parsed = siteSchema.safeParse(state.result?.evidence);
   if (!parsed.success) {
@@ -221,9 +227,9 @@ export function SiteHealthView({ state, controller }: Props) {
               ['Classification tasks', site.classification_source_task_ids],
             ] as const
           ).map(([label, ids]) => (
-            <div key={String(label)}>
+            <div key={label}>
               <dt>{label}</dt>
-              <dd>{ids === null ? 'Unknown' : ids.length ? ids.join(', ') : 'No recorded IDs'}</dd>
+              <dd>{sourceIds(ids)}</dd>
             </div>
           ))}
         </dl>
@@ -234,11 +240,11 @@ export function SiteHealthView({ state, controller }: Props) {
         onClick={() => {
           setFindings(null);
           setLoadingFindings(true);
-          setError(false);
+          setFindingsError(false);
           void controller
             .siteFindings()
             .then(setFindings)
-            .catch(() => setError(true))
+            .catch(() => setFindingsError(true))
             .finally(() => setLoadingFindings(false));
         }}
       >
@@ -246,22 +252,31 @@ export function SiteHealthView({ state, controller }: Props) {
       </Button>
       <Button
         variant="secondary"
+        disabled={loadingPages}
         onClick={() => {
           setPages([]);
-          setError(false);
+          setPagesError(false);
+          setLoadingPages(true);
           void controller
             .sitePages()
             .then(setPages)
-            .catch(() => setError(true));
+            .catch(() => setPagesError(true))
+            .finally(() => setLoadingPages(false));
         }}
       >
         Read pages from this crawl
       </Button>
-      {error && (
+      {findingsError && (
         <p role="alert" className={textRole('body')}>
           Findings are unavailable. Retry or reconnect.
         </p>
       )}
+      {pagesError && (
+        <p role="alert" className={textRole('body')}>
+          Page evidence is unavailable. Retry or reconnect.
+        </p>
+      )}
+      {loadingPages && <output>Loading persisted pages…</output>}
       {loadingFindings && <output>Loading persisted findings…</output>}
       {findings?.state === 'unavailable' && (
         <output className={textRole('body', 'block')}>
@@ -274,15 +289,15 @@ export function SiteHealthView({ state, controller }: Props) {
         <output className={textRole('body', 'block')}>No findings in this selection.</output>
       )}
       {(findings?.state === 'available' ? findings.items : []).map((finding, index) => (
-        <article key={String(finding.id ?? index)}>
-          <SectionTitle>{String(finding.title ?? finding.kind ?? 'Existing finding')}</SectionTitle>
-          <p className={textRole('caption')}>{String(finding.record_uri ?? '')}</p>
+        <article key={text(finding.id, `finding-${index}`)}>
+          <SectionTitle>{text(finding.title, text(finding.kind, 'Existing finding'))}</SectionTitle>
+          <p className={textRole('caption')}>{text(finding.record_uri)}</p>
         </article>
       ))}
       {pages.map((page, index) => (
-        <article key={String(page.id ?? index)}>
-          <SectionTitle>{String(page.url ?? page.title ?? 'Page evidence')}</SectionTitle>
-          <p className={textRole('caption')}>{String(page.record_uri ?? '')}</p>
+        <article key={text(page.id, `page-${index}`)}>
+          <SectionTitle>{text(page.url, text(page.title, 'Page evidence'))}</SectionTitle>
+          <p className={textRole('caption')}>{text(page.record_uri)}</p>
         </article>
       ))}
     </div>
