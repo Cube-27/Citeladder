@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { agentHandoffHref, contextChips, parseAgentHandoff, withoutContext } from './handoff';
+import {
+  agentHandoff,
+  agentHandoffHref,
+  contextChips,
+  parseAgentHandoff,
+  withoutContext,
+} from './handoff';
 
 const ACTION = '11111111-1111-4111-8111-111111111111';
 const DATASET = '22222222-2222-4222-8222-222222222222';
@@ -12,6 +18,24 @@ function parse(href: string) {
 }
 
 describe('agent handoff', () => {
+  it('sends equivalent exact issue, crawl and revision references from both surfaces', () => {
+    const input = {
+      issueGroup: { crawlId: DATASET, groupId: ROW, siteUrlId: PAGE },
+      siteFacts: { crawlId: DATASET },
+      outputRevision: { outputId: ACTION, revisionId: ROW },
+    };
+    const full = parse(agentHandoffHref(input));
+    expect(full).toEqual(agentHandoff(input));
+    expect(full.context).toEqual({
+      issue_group_reference: { crawl_id: DATASET, group_id: ROW, site_url_id: PAGE },
+      site_facts_reference: { crawl_id: DATASET },
+      output_revision_reference: { output_id: ACTION, revision_id: ROW },
+    });
+    const chips = contextChips(full.context);
+    expect(chips).toHaveLength(3);
+    for (const chip of chips)
+      expect(withoutContext(full.context, chip.key)[chip.key]).toBeUndefined();
+  });
   it.each(['prompt_discovery', 'ai_visibility', 'earned_authority', 'content_create'])(
     'carries the selected %s skill without sending a chat',
     (skillId) => {

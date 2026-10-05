@@ -57,6 +57,9 @@ export type AgentContextRefs = {
     checkpoint_ids: string[];
   };
   search_intelligence_reference?: { dataset_id: string; row_ids: string[] };
+  issue_group_reference?: { crawl_id: string; group_id: string; site_url_id?: string };
+  site_facts_reference?: { crawl_id: string };
+  output_revision_reference?: { output_id: string; revision_id: string };
 };
 
 export type NewChatInput = {

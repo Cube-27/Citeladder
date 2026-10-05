@@ -82,8 +82,8 @@ export const definitions = {
   read_ai_crawlability: {
     title: 'Read AI crawlability',
     description:
-      'Read the latest crawl’s persisted per-bot robots policy, root access, fetch status, snapshot ID and catalog version. Robots policy describes permission, not observed retrieval.',
-    schema: z.strictObject(scope),
+      'Read persisted per-bot robots policy, root access, fetch status, snapshot ID and catalog version. Pass crawl_id for exact historical scope; omitted selects latest. Unobserved robots evidence is unavailable, never allowed or zero. Robots policy describes permission, not observed retrieval.',
+    schema: z.strictObject({ ...scope, crawl_id: nullable(uuid) }),
   },
   read_crawl_logs: {
     title: 'Read crawl log analytics',

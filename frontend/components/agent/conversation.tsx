@@ -74,6 +74,8 @@ export function Conversation({
           kind={output.kind}
           title={output.latest_revision.title}
           actionId={detail.chat.action_id}
+          outputId={output.id}
+          revisionId={output.latest_revision.id}
           onRefine={onRefine}
         />
       ) : null}
@@ -186,11 +188,15 @@ function FollowUps({
   kind,
   title,
   actionId,
+  outputId,
+  revisionId,
   onRefine,
 }: Readonly<{
   kind: string;
   title: string;
   actionId: string | null;
+  outputId: string;
+  revisionId: string;
   onRefine: (instruction: string) => void;
 }>) {
   const next = nextStepsFor(kind, title);
@@ -215,7 +221,12 @@ function FollowUps({
           {next.map((step) => (
             <Button key={step.label} asChild variant="ghost" size="sm">
               <ProjectLink
-                href={agentHandoffHref({ actionId, prompt: step.prompt, skillId: step.skillId })}
+                href={agentHandoffHref({
+                  actionId,
+                  prompt: step.prompt,
+                  skillId: step.skillId,
+                  outputRevision: { outputId, revisionId },
+                })}
               >
                 {step.label}
               </ProjectLink>

@@ -23,6 +23,7 @@ import { ToolRegistry } from '../src/agent/tools.ts';
 import { contextCitations, renderManifest } from '../src/agent/context.ts';
 import { bounded, stripUnverifiedRefs } from '../src/agent/runtime.ts';
 import { fingerprint } from '../src/agent/store.ts';
+import { readAgentContext } from '../src/agent/context-adapter.ts';
 import { runAgentOnce } from '../src/agent/worker.ts';
 
 describe('inactive Agent runtime foundation on PostgreSQL', () => {
@@ -438,6 +439,48 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     expect(detail.messages).toHaveLength(1);
     expect(detail.output).toBeNull();
     expect(detail.latest_run?.error_code).toBe('output_conflict');
+  });
+  it('freezes the exact upstream revision and refuses mismatched or sibling-project references', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope, { skillId: 'plan' });
+    await fixtures
+      .runtime(scope, scripted([deliverable('final', 'Accepted upstream brief')]))
+      .execute(first.lease);
+    const detail = await readChat(db, scope, first.run.chat_id);
+    const refs = {
+      output_revision_reference: {
+        output_id: detail.output!.id,
+        revision_id: detail.output!.latest_revision!.id,
+      },
+    };
+    const accepted = await fixtures
+      .store({ context: readAgentContext })
+      .enqueue(scope, { key: randomUUID(), message: 'Measure this accepted brief', refs });
+    await new AgentOutputs(db).edit(
+      scope,
+      first.run.chat_id,
+      detail.output!.latest_revision!.id,
+      'Edited brief',
+      'Later changed content',
+    );
+    const manifest = accepted.context_manifest as {
+      package: { sections: { upstream_revision: { body: string } } };
+    };
+    expect(manifest.package.sections.upstream_revision.body).toBe('Accepted upstream brief');
+    const sibling = await fixtures.project(scope.workspaceId);
+    await expect(
+      readAgentContext(db, { ...scope, projectId: sibling }, refs, 'Measure'),
+    ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
+    await expect(
+      readAgentContext(
+        db,
+        scope,
+        {
+          output_revision_reference: { ...refs.output_revision_reference, output_id: randomUUID() },
+        },
+        'Measure',
+      ),
+    ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
   });
   it('refuses project selection, unknown tools and a read on the final step, without a partial deliverable', async () => {
     const scope = await fixtures.scope();

@@ -18,6 +18,7 @@ import { SectionTitle, textRole } from '@/components/ui/typography';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { agentHandoffHref } from '@/lib/agent/handoff';
+import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import {
   crawlerMatchedLabels,
   crawlerPolicyLabels,
@@ -37,6 +38,14 @@ export function SiteFactsPanel({
   dashboard: SiteHealthDashboard | undefined;
 }>) {
   const current = dashboard?.crawl ?? crawl;
+  useAgentPanelSeed(
+    current
+      ? {
+          siteFacts: { crawlId: current.id },
+          prompt: 'Explain the selected crawl’s persisted AI crawlability and robots policy.',
+        }
+      : null,
+  );
   const view = readSiteFacts(current?.site_facts);
   if (!current || !view) return null;
   return <SiteFactsViewPanel key={current.id} crawl={current} view={view} />;
@@ -57,6 +66,7 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
             <ProjectLink
               projectId={crawl.project_id}
               href={agentHandoffHref({
+                siteFacts: { crawlId: crawl.id },
                 prompt: `Explain the persisted AI crawlability and robots policy for crawl ${crawl.id}. Use read_ai_crawlability and distinguish robots permission from observed retrieval.`,
               })}
             >

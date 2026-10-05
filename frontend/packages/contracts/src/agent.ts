@@ -183,6 +183,15 @@ export const agentContextRefsSchema = z
     opportunity_id: uuid().nullish(),
     demand_signal_id: uuid().nullish(),
     site_health_reference: agentSiteHealthReferenceSchema.nullish(),
+    issue_group_reference: z
+      .object({ crawl_id: uuid(), group_id: uuid(), site_url_id: uuid().optional() })
+      .strict()
+      .nullish(),
+    site_facts_reference: z.object({ crawl_id: uuid() }).strict().nullish(),
+    output_revision_reference: z
+      .object({ output_id: uuid(), revision_id: uuid() })
+      .strict()
+      .nullish(),
     search_intelligence_reference: agentSearchReferenceSchema.nullish(),
   })
   .strict();

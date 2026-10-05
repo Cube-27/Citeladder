@@ -35,7 +35,10 @@ const STARTERS = [
   { text: 'What should I focus on this week?', skillId: 'growth_plan' },
   { text: 'Why are we missing from AI answers?', skillId: 'ai_visibility' },
   { text: 'Create content for our highest-demand topic.', skillId: 'content_create' },
-  { text: 'Fix our most important technical issue.', skillId: 'technical_health' },
+  {
+    text: 'Analyze our most important technical issue and plan the work.',
+    skillId: 'technical_health',
+  },
 ] as const;
 
 /**
