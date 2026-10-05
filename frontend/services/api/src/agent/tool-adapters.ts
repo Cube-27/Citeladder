@@ -62,11 +62,7 @@ function sharedTools(db: Database): ReadTool[] {
           );
           const result = outcome(
             data,
-            // Successful search, exact fetch and aggregate context have no
-            // top-level availability field in their MCP contracts.
-            ['search', 'fetch', 'get_project_business_context'].includes(name)
-              ? 'available'
-              : undefined,
+            definition.availability === 'successful_read' ? 'available' : undefined,
           );
           if (name === 'fetch' && typeof data.id === 'string') {
             result.artifactRefs.push({ id: parseRecordId(data.id).id, record_uri: data.id });

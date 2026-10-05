@@ -5,16 +5,16 @@ group: strategy
 order: 1
 version: 1
 output_kind: plan
-description: Prioritize SEO and AI visibility opportunities using CiteLadder business evidence. Use for broad growth goals, revenue-linked content plans or multi-skill orchestration; not for a single keyword lookup.
+description: Prioritize SEO and AI visibility opportunities using persisted CiteLadder evidence. Produce bounded growth plans and explicit next-step advice for specialist work.
 ---
 
 # Growth priorities and action plan
 
-Follow the operating contract. Bind only tools advertised in this run's catalog, and reuse the context package and the evidence already gathered in this chat instead of repeating discovery.
+Follow the operating contract. Bind only advertised read tools and use evidence actually supplied in this call. Earlier reads and upstream source references may need exact re-fetching. Another skill is explicit next-step advice, not an automatic invocation.
 
 ## Outcome and scope
 
-Turn a business objective into a small, evidence-backed sequence of work. Default to a prioritized plan, not unsolicited content production or site changes. When the request includes “create,” “rewrite” or another concrete deliverable, run the relevant specialist and deliver that work in this task. When the user asks only for a reusable task prompt, use the prompt-writing mode below instead of executing it.
+Turn a business objective into a small, evidence-backed sequence of work. Default to a prioritized plan. For another deliverable kind, advise the user to start a next-step chat with the appropriate skill and selected revision; no specialist is automatically invoked. When the user asks for a reusable task prompt, deliver that prompt without claiming execution.
 
 ## Inputs
 

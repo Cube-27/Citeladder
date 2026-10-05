@@ -10,7 +10,7 @@ description: Find legitimate third-party citation, mention and backlink opportun
 
 # Earned mentions, backlinks and source opportunities
 
-Follow the operating contract. Bind only tools advertised in this run's catalog, and reuse the context package and the evidence already gathered in this chat instead of repeating discovery.
+Follow the operating contract. Bind only advertised read tools and use evidence actually supplied in this call. Earlier reads and upstream source references may need exact re-fetching. Another skill is explicit next-step advice, not an automatic invocation.
 
 ## Outcome and inputs
 
@@ -26,7 +26,7 @@ Begin with the exact asset and a defensible reason for an editor to cite it. Sep
 
 1. **Start from observed relevance.** Read project source/visibility and opportunity evidence. For backlink analysis, require actual source→target records with provider coverage/time. Search Intelligence backlink datasets are referring-domain and destination-page aggregates, not individual edges; state missing raw link data rather than inventing a profile.
 2. **Build a typed prospect pool.** Separate recurring AI-cited sources, competitor referring domains, relevant unlinked mentions, lost/broken referring links, reputable directories/associations, reviewers/editors, communities and potential research partners. Deduplicate syndicated copies and multiple links from the same source. Do not infer public contact names/emails from naming patterns.
-3. **Inspect the actual page and inclusion rules.** For priority prospects, verify relevance to the target audience, recency, editorial quality, factual criteria, competitor presence, current brand presence, existing outbound links and accessible contribution/contact route. A domain appearing in a provider database is not proof the backlink is still live or that it accepts submissions.
+3. **Inspect persisted page observations and inclusion rules.** For priority prospects, use supplied evidence for relevance, dates, editorial criteria, competitor/brand presence, outbound links and contribution routes. Missing current page or inclusion evidence becomes a user verification request; you cannot browse. Provider-domain presence does not prove a live backlink or acceptance of submissions.
 4. **Separate host authority from useful evidence.** Provider authority/rank metrics are contextual estimates. Assess topic fit, audience, editorial independence, real readership/utility, attainable inclusion and evidence contribution. Do not prioritize solely by a high domain metric or a platform's global citation share.
 5. **Choose the right intervention.**
    - **Correction:** a source states a materially false/outdated fact; prepare a short factual correction with primary proof.
