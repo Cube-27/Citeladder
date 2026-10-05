@@ -197,11 +197,8 @@ function MessageBubble({
 }
 function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context'] }>) {
   const prompt = context.prompt ?? {};
-  const included = Array.isArray(prompt.included_sections) ? prompt.included_sections : [];
-  const omissions = [
-    ...(context.limitations ?? []),
-    ...(Array.isArray(prompt.omissions) ? prompt.omissions : []),
-  ];
+  const included = promptItems(prompt, 'included_sections');
+  const omissions = [...(context.limitations ?? []), ...promptItems(prompt, 'omissions')];
   const labels: Record<string, string> = {
     brand: 'Reviewed business context',
     target_page: 'Target page',
@@ -255,6 +252,10 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
       </div>
     </Disclosure>
   );
+}
+function promptItems(prompt: NonNullable<AgentChatDetail['context']['prompt']>, key: string) {
+  const value = prompt[key];
+  return Array.isArray(value) ? value : [];
 }
 function ContextSources({ context }: Readonly<{ context: AgentChatDetail['context'] }>) {
   const references = Object.entries(context.refs ?? {});

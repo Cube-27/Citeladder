@@ -61,13 +61,14 @@ describe('served Agent cutover on PostgreSQL', () => {
       .object({ skills: z.array(z.record(z.string(), z.unknown())) })
       .parse(await response.json());
     expect(raw.skills.length).toBeGreaterThan(0);
-    expect(Object.keys(raw.skills[0]).sort()).toEqual([
-      'description',
-      'group',
-      'id',
-      'label',
-      'output_kind',
-    ]);
+    for (const skill of raw.skills)
+      expect(Object.keys(skill).sort()).toEqual([
+        'description',
+        'group',
+        'id',
+        'label',
+        'output_kind',
+      ]);
     expect(raw.skills.find((skill) => skill.id === 'content_create')).toMatchObject({
       output_kind: 'content',
     });
