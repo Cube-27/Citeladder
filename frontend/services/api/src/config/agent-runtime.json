@@ -1,5 +1,5 @@
 {
-  "runtime_version": "agent-runtime-ts-3",
+  "runtime_version": "agent-runtime-ts-4",
   "protocol_version": "agent-protocol-1",
   "context_manifest_version": "agent-context-1",
   "max_steps": 8,

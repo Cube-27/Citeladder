@@ -177,6 +177,10 @@ The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a bounded loop
 structured model steps. Each step either reads a tool or responds. Ordinary
 questions need no skill selection. A requested deliverable can name `skill_id`
 on the same read or response; its methodology is supplied before saving work.
+The selected methodology is supplied with its exact skill ID and output kind;
+the response schema limits `skill_id` to the selected skill, or to catalog IDs
+when none is selected. Invalid steps receive a bounded repair hint containing
+only server-owned instructions, never the rejected provider response.
 The final call advertises only a response; without a selected methodology it
 allows only a reply, reserving selection for an earlier step. Calls with no read
 budget omit the tool catalog. The runtime enforces the step, tool-call, transcript

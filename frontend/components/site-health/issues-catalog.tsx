@@ -192,18 +192,16 @@ export function IssuesCatalog({
                   keys.includes(item.key),
                 );
                 return options.length > 0 ? (
-                  <div key={group} className="grid gap-1">
-                    <span className="type-caption">{group}</span>
-                    <SegmentedControl
-                      value={issueFilterClass(filters)}
-                      onChange={(value) => updateFilters(issueFilterClassChange(value))}
-                      ariaLabel={group}
-                      options={options.map((item) => ({
-                        value: item.key,
-                        label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
-                      }))}
-                    />
-                  </div>
+                  <SegmentedControl
+                    key={group}
+                    value={issueFilterClass(filters)}
+                    onChange={(value) => updateFilters(issueFilterClassChange(value))}
+                    ariaLabel={group}
+                    options={options.map((item) => ({
+                      value: item.key,
+                      label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
+                    }))}
+                  />
                 ) : null;
               })}
             </div>

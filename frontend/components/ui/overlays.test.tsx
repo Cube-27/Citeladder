@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { Dialog } from './dialog';
+import { CopyButton } from './copy-button';
 import { Drawer } from './drawer';
 import {
   Dropdown,
@@ -228,11 +229,65 @@ describe('ToastProvider', () => {
     expect(screen.getByText('First notification')).toBeInTheDocument();
     expect(screen.getByText('Second notification')).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'Notify twice' }));
+    expect(screen.getAllByRole('button', { name: 'Dismiss notification' })).toHaveLength(2);
+
     await user.click(screen.getAllByRole('button', { name: 'Dismiss notification' })[0]);
     await waitFor(() =>
       expect(screen.getAllByRole('button', { name: 'Dismiss notification' })).toHaveLength(1),
     );
     expect(screen.getByText('Second notification')).toBeInTheDocument();
     clock.mockRestore();
+  });
+});
+
+describe('CopyButton', () => {
+  it('serializes clipboard writes and keeps one success notification on repeated clicks', async () => {
+    const user = userEvent.setup();
+    let finishCopy!: () => void;
+    const firstCopy = new Promise<void>((resolve) => {
+      finishCopy = resolve;
+    });
+    const writeText = vi
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockResolvedValue(undefined)
+      .mockReturnValueOnce(firstCopy);
+    render(
+      <ToastProvider>
+        <CopyButton value="Fix the heading hierarchy">Copy fix prompt</CopyButton>
+      </ToastProvider>,
+    );
+    const button = screen.getByRole('button', { name: 'Copy fix prompt' });
+    await user.click(button);
+    await user.click(button);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith('Fix the heading hierarchy');
+
+    await act(async () => finishCopy());
+    await user.click(button);
+    expect(writeText).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: 'Copy fix prompt' })).toBe(button);
+    expect(screen.getAllByRole('button', { name: 'Dismiss notification' })).toHaveLength(1);
+  });
+
+  it('restarts the copied feedback timer without an earlier click clearing it', async () => {
+    userEvent.setup();
+    vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+    vi.useFakeTimers();
+    try {
+      render(<CopyButton value="Fix the heading hierarchy" iconOnly />);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+      });
+      act(() => vi.advanceTimersByTime(1500));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Copied' }));
+      });
+      act(() => vi.advanceTimersByTime(400));
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(1400));
+      expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

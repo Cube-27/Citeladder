@@ -6,6 +6,8 @@ import { auditRuntime } from './config.ts';
 import { auditProjections } from './projections.ts';
 import { AuditWorker } from '../workers/audit-worker.ts';
 import type { Answer } from '../answer-engines/contracts.ts';
+import { devSeed } from '../config/dev-seed.ts';
+import { waitForPoll } from '../workers/poll.ts';
 
 const citation = z.object({
   ordinal: z.int().nonnegative(),
@@ -89,8 +91,9 @@ export async function seedAudit(
       return answer;
     },
   });
-  for (let batch = 0; batch < 1000; batch++) {
-    await worker.runOnce();
+  const signal = AbortSignal.timeout(devSeed.budgetSeconds * 1000);
+  for (let batch = 0; batch < 1000 && !signal.aborted; batch++) {
+    const advanced = await worker.runOnce(signal);
     const audit = await db
       .selectFrom('audits')
       .select('status')
@@ -100,6 +103,7 @@ export async function seedAudit(
     if (['completed', 'partially_completed'].includes(audit.status)) return auditId;
     if (['failed', 'cancelled'].includes(audit.status))
       throw new Error(`Seed audit ended ${audit.status}`);
+    if (advanced === 0) await waitForPoll(runtime.audits.poll_interval_seconds * 1000, signal);
   }
   throw new Error('Development audit did not finish within its bounded drain');
 }
