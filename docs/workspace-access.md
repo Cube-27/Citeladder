@@ -35,8 +35,8 @@ default membership. A project-detail or image request can resolve membership
 through its project ID, but never trusts that ID alone. Foreign/missing objects
 do not reveal product data.
 
-The [role policy](../backend/app/domain/workspaces/policy.py) is the sole matrix,
-exported for TypeScript authorization:
+The [native role policy](../frontend/services/api/src/config/workspaces.json)
+owns the authorization matrix:
 
 | Role          | Product read | Product write/run | Billing, members, credentials |
 | ------------- | ------------ | ----------------- | ----------------------------- |
@@ -139,7 +139,7 @@ sign-in redirect; the server still authorizes every billing mutation.
 [Onboarding](onboarding.md) creates projects subject to role and occupancy.
 The [workspace tests](../frontend/services/api/test/workspaces.test.ts),
 [auth tests](../frontend/services/api/test/auth-routes.test.ts) and
-[workspace authorization tests](../backend/tests/unit/test_workspace_auth.py)
+[workspace authorization tests](../frontend/services/api/test/workspace-scope.test.ts)
 cover the central boundaries. Accepted rationale is in
 [decisions](decisions.md); the retained shell plan tracks only remaining work.
 

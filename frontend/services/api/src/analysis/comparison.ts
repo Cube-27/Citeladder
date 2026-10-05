@@ -2,9 +2,7 @@ import { createHash } from 'node:crypto';
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 
-/** Code-point order for hashes compared with active Python writers only.
- * Delete this contract when the last Python identity producer moves.
- */
+/** Code-point order preserves frozen measurement hashes, including historical Python identities. */
 export function compareIdentityText(left: string, right: string): number {
   const a = Array.from(left, (char) => char.codePointAt(0)!);
   const b = Array.from(right, (char) => char.codePointAt(0)!);

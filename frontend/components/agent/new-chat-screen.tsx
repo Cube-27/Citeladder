@@ -72,7 +72,7 @@ function NewChat({
   const handoff = useMemo(() => parseAgentHandoff(searchParams), [searchParams]);
   const [message, setMessage] = useState(handoff.prompt ?? '');
   const [context, setContext] = useState(handoff.context);
-  const [skillId, setSkillId] = useState<string | null | undefined>(handoff.skillId ?? null);
+  const [skillId, setSkillId] = useState<string | null | undefined>(handoff.skillId ?? undefined);
   const access = useAgentAccess();
   const navigate = useNavigate();
   const projectHref = useProjectHref();
@@ -146,7 +146,7 @@ function NewChat({
           />
         </div>
         <fieldset
-          className="flex flex-wrap justify-center gap-2 transition-opacity"
+          className="flex min-w-0 flex-wrap justify-center gap-2 transition-opacity"
           style={launch.fade}
           aria-label="Starter prompts"
         >
@@ -155,6 +155,7 @@ function NewChat({
               key={starter.text}
               variant="secondary"
               size="sm"
+              className="h-auto max-w-full py-2 whitespace-normal"
               disabled={!access.canSend}
               onClick={() => {
                 setMessage(starter.text);

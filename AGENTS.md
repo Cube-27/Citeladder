@@ -34,7 +34,7 @@ not redundant engineering skills; their owner is the [Agent](docs/agents.md).
 - PostgreSQL owns durable state and queues. Preserve leases, idempotency and
   commit-before-network-I/O; do not add Redis without measured need.
 - Browser APIs use same-origin `/api/v1`. Tunable policy belongs in
-  `backend/app/core/config/*` or the owning frontend config, not service code.
+  `frontend/services/api/src/config/` or the owning frontend config, not service code.
 - Models may explain, generate, plan or classify bounded ambiguity; they do not
   become raw truth or redefine deterministic metrics. Keep unknown, unavailable,
   zero, historical, conflicting, excluded and not-applicable states distinct.

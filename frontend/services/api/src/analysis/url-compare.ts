@@ -1,4 +1,4 @@
-/** Page grouping identity shared with the Python Action reader until PR 7b. */
+/** Page grouping identity used by native Action and evidence readers. */
 import { policy } from '../config.ts';
 import { stripTrailing } from '../text-order.ts';
 
@@ -7,7 +7,7 @@ export function normalizedUrlForCompare(url: string): string {
   try {
     const parsed = new URL(text);
     if (!parsed.hostname) return text.toLowerCase();
-    // Python still groups the persisted Action by this exact form. Validate
+    // Preserve persisted Action grouping, including historical identities. Validate
     // with URL, but retain the observed host/path rather than URL's IDNA and
     // dot-segment normalization. This is not crawler identity.
     const raw = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]*)([^?#]*)(?:\?([^#]*))?/iu.exec(text);

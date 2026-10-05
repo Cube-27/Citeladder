@@ -104,7 +104,7 @@ export async function reserveUsage(
       ?.type !== 'counter.consumable'
   )
     throw new LedgerError('capability_not_consumable');
-  // Lock UUID order (as Python's ledger bridge does), allocate expiry order.
+  // Lock UUID order, allocate expiry order.
   const ids = candidates.map((grant) => grant.id).sort((a, b) => a.localeCompare(b));
   if (ids.length)
     await db

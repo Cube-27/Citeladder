@@ -92,7 +92,7 @@ async function enqueueArchitecture(db: Database, crawl: Crawl) {
     .onConflict((conflict) => conflict.column('idempotency_key').doNothing())
     .execute();
 }
-// The queue default stays under the same exported Site Health setting as Python admission.
+// The queue default uses the native Site Health admission policy.
 function resolveMaxAttempts() {
   return resolveSettingSpec(policy.site_health.settings.max_attempts, process.env);
 }

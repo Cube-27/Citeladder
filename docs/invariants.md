@@ -29,8 +29,8 @@ a focused test and a concrete deletion condition recorded in the change review.
 Split complex internals under the existing owner rather than creating parallel
 stores or policy authorities; do not relax repository gates to accommodate them.
 
-A route family, task kind or table has exactly one writing stack, Python or
-TypeScript. The change that gives it a TypeScript owner deletes the Python owner.
+A route family, task kind or table has exactly one TypeScript application writer.
+Python owns schema metadata and Alembic maintenance, never application writes.
 For route families the route-ownership manifest is the single record, and
 ingress must route each family's paths only to the stack it names. For
 analytics task kinds the native catalog in
@@ -42,7 +42,7 @@ Product operators and Opportunity enqueue/execution are native.
 Thresholds, transports, limits, schemas, page kinds, classifier signals,
 public checklist membership, AEO pillar weights, rule applicability, context
 budgets, models, and templates live under
-`backend/app/core/config/*` or the owning frontend config. Services and workers
+`frontend/services/api/src/config/` or the owning frontend config. Services and workers
 do not embed alternate policy. A public check has at most one AEO pillar and
 equal weight within that pillar. Rule count and page-kind cohort size cannot
 manufacture score influence. Policy used only by TypeScript belongs to its

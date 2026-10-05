@@ -103,7 +103,7 @@ export const DATA_PROCESSING_AGREEMENT: LegalDocument = {
       id: 'transfers',
       title: 'International transfers',
       paragraphs: [
-        'CiteLadder is hosted in India. Some subprocessors process data in other countries, as the subprocessor list shows. Where the law requires a transfer mechanism for that processing, Cube27 will put it in place.',
+        'CiteLadder is hosted on Google Cloud in the United States (us-central1). Some subprocessors process data in other countries, as the subprocessor list shows. Where the law requires a transfer mechanism for that processing, Cube27 will put it in place.',
       ],
     },
     {
@@ -136,7 +136,7 @@ export const SUBPROCESSORS: LegalDocument = {
   slug: 'subprocessors',
   title: 'Subprocessors',
   description: 'The service providers that process data for CiteLadder, and why.',
-  lastUpdated: '2026-09-28',
+  lastUpdated: '2026-10-05',
   sections: [
     {
       id: 'subprocessors',
@@ -150,9 +150,9 @@ export const SUBPROCESSORS: LegalDocument = {
         rows: [
           [
             'Google Cloud',
-            'Hosting the application, database, file storage and backups',
+            'Hosting the application and database',
             'All workspace data held by the Service',
-            'India (Mumbai region)',
+            'United States (us-central1)',
           ],
           [
             'Cloudflare',

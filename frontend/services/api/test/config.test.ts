@@ -92,7 +92,7 @@ describe('loadConfig', () => {
     }
   });
 
-  it('uses the exported Python defaults when the environment is silent', () => {
+  it('uses native config defaults when the environment is silent', () => {
     const config = loadConfig({});
     expect(config.database.poolSize).toBe(policy.settings.db_pool_size.default);
     expect(config.session.cookieName).toBe(policy.settings.session_cookie_name.default);

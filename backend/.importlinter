@@ -28,19 +28,6 @@ forbidden_modules =
     app.core.migration_config
     app.core.config.dotenv
 
-[importlinter:contract:connectors-are-transport-only]
-; Connectors own outbound I/O (answer engines, web evidence) and must stay
-; usable from any layer above.
-name = Connectors depend on no upper layer
-type = forbidden
-source_modules =
-    app.connectors
-forbidden_modules =
-    app.domain
-    app.models
-; Direct imports only: connectors -> core -> models is deliberately allowed.
-allow_indirect_imports = True
-
 [importlinter:contract:schema-dependencies-only]
 name = Schema tooling imports no retired application dependencies
 type = forbidden

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useParams } from 'react-router-dom';
@@ -104,6 +104,18 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
   ];
 }
 
+function captureChats(actions: ReturnType<typeof actionItem>[] = []) {
+  const bodies: unknown[] = [];
+  mswServer.use(
+    ...baseHandlers(actions),
+    http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
+      bodies.push(await request.json());
+      return HttpResponse.json(ACCEPTED, { status: 202 });
+    }),
+  );
+  return bodies;
+}
+
 describe('NewChatScreen', () => {
   it('opens skills only for a typed slash and marks the automatic default selected', async () => {
     mswServer.use(...baseHandlers());
@@ -123,14 +135,7 @@ describe('NewChatScreen', () => {
   });
 
   it('submits the earned-source skill selected by a next-step link', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      ...baseHandlers(),
-      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(ACCEPTED, { status: 202 });
-      }),
-    );
+    const bodies = captureChats();
     const user = userEvent.setup();
     renderNewChat('?skill=earned_authority&prompt=Find+source+opportunities');
     await screen.findByLabelText('Message the agent');
@@ -204,14 +209,10 @@ describe('NewChatScreen', () => {
   });
 
   it('picks a skill with / and mentions an Action with @', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      ...baseHandlers([actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog hub')]),
-      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(ACCEPTED, { status: 202 });
-      }),
-    );
+    const bodies = captureChats([
+      actionItem(PRICING, 'Pricing page'),
+      actionItem(BLOG, 'Blog hub'),
+    ]);
     const user = userEvent.setup();
     renderNewChat('');
 
@@ -236,15 +237,35 @@ describe('NewChatScreen', () => {
     ]);
   });
 
+  it('restores the insertion point after a slash skill pick', async () => {
+    mswServer.use(...baseHandlers());
+    const user = userEvent.setup();
+    renderNewChat('');
+    const message = await screen.findByLabelText('Message the agent');
+    await user.type(message, 'existing text');
+    await user.keyboard('{Home}/');
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Growth plan' }));
+    await waitFor(() => expect(message).toHaveFocus());
+    await user.keyboard('prefix ');
+    expect(message).toHaveValue('prefix existing text');
+  });
+
+  it('preserves an explicit Automatic selection in the create request', async () => {
+    const bodies = captureChats();
+    const user = userEvent.setup();
+    renderNewChat('');
+    const message = await screen.findByLabelText('Message the agent');
+    await user.type(message, '/');
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Growth plan' }));
+    await user.click(screen.getByRole('button', { name: 'Skill: Growth plan' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Automatic' }));
+    await user.type(message, 'Explain this{Enter}');
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeVisible();
+    expect(bodies).toEqual([{ message: 'Explain this', skill_id: null, context: {} }]);
+  });
+
   it('closes the command menu on Escape so Enter sends the message', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      ...baseHandlers(),
-      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(ACCEPTED, { status: 202 });
-      }),
-    );
+    const bodies = captureChats();
     const user = userEvent.setup();
     renderNewChat('');
 
@@ -252,7 +273,7 @@ describe('NewChatScreen', () => {
     await user.type(message, 'Use /');
     expect(await screen.findByRole('menuitemradio', { name: 'Growth plan' })).toBeVisible();
     await user.keyboard('{Escape}');
-    expect(message).toHaveFocus();
+    await waitFor(() => expect(message).toHaveFocus());
     await user.type(message, 'grow{Enter}');
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
@@ -260,14 +281,10 @@ describe('NewChatScreen', () => {
   });
 
   it('briefs on the top open Actions with the growth plan skill', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      ...baseHandlers([actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog hub')]),
-      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(ACCEPTED, { status: 202 });
-      }),
-    );
+    const bodies = captureChats([
+      actionItem(PRICING, 'Pricing page'),
+      actionItem(BLOG, 'Blog hub'),
+    ]);
     const user = userEvent.setup();
     renderNewChat('');
 

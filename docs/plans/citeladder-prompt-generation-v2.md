@@ -1,13 +1,13 @@
 # Prompt generation v2: empty onboarding, direct prompt workflow, rebuilt generation
 
-Status: active, owner-approved direction (26 September 2026; revised the same day
+Status: implementation complete; retained for live calibration. Owner-approved direction (26 September 2026; revised the same day
 after the prompt-universe and JEV feasibility research). PR 1 merged as `54e6f4b8`
 (#161); PR 2 merged as `42c73cfe` (#162); PR 3a merged as `adadf505`
-(#163); PR 3b merged as `22bac8f1` (#172). PR 3c's code is implemented on
-`prompt-gen-v2-pr3c`: the hard gate (on by default, provisional thresholds),
-text-free rejection outcomes and the calibration report. Still open: owner/legal
-approval and publication of the policy revision drafted in section 7.1, then
-the production key, then calibration from live outcomes.
+(#163); PR 3b merged as `22bac8f1` (#172), and PR 3c merged in #173:
+the hard gate (on by default, provisional thresholds), text-free rejection
+outcomes and the calibration report. The TypeSafe policy revision was published
+and the production key configured on 28 September 2026. Still open: calibration
+from live outcomes. The original implementation sequence below is historical.
 Scope: onboarding completion, the Prompts page workflow, and the quick **Generate
 prompts** path. The agent-driven "Build with Agent" generation is phase 2 and is
 out of scope (section 9).

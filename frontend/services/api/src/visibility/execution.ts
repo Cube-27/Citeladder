@@ -1,8 +1,7 @@
 /**
  * One execution's persisted analysis and citation evidence.
  *
- * Ports `get_execution_evidence` from `app/domain/analysis/evidence.py`
- * (Python keeps it for MCP). Keyed on the execution (`AuditTask`) id clients
+ * Shared native API/MCP reader. Keyed on the execution (`AuditTask`) id clients
  * receive from the executions list; provenance comes from the frozen task
  * and audit snapshots, never from live configuration.
  */

@@ -1,11 +1,10 @@
 /**
  * The observed Google AI Overview surface: one execution, or one selection.
  *
- * `executionSurfaceEvidence` ports `execution_surface_evidence` (Python keeps
- * it for MCP): mentioned, linked and cited come from three independent tables
- * and are never derived from one another. `surfaceRates` moves
- * `surface_rates`: failed and pending observations are excluded from every
- * denominator and counted separately, and an LLM engine gets no rates at all.
+ * `executionSurfaceEvidence` reads mentioned, linked and cited from three
+ * independent tables and never derives them from one another. `surfaceRates`
+ * excludes failed and pending observations from every denominator and counts
+ * them separately; an LLM engine gets no rates at all.
  */
 import { sql } from 'kysely';
 

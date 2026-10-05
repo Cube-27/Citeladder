@@ -52,7 +52,7 @@ jobs:
         run: node scripts/ci-changes.mjs
 
   backend:
-    name: Backend (quality, pytest)
+    name: Schema / Alembic (quality, pytest)
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     permissions:
@@ -94,7 +94,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-      - name: Backend quality
+      - name: Schema quality
         env:
           COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node ../scripts/quality.mjs --mode check --scope backend
@@ -342,7 +342,7 @@ jobs:
           else
             status=$?
             echo "Playwright failed (exit $status); first server errors:"
-            rg -m 5 '\[WebServer\].*\[ERROR\]' "$log" || true
+            grep -m 5 -E '\[WebServer\].*\[ERROR\]' "$log" || true
             echo 'Last 120 log lines:'
             tail -n 120 "$log"
             exit "$status"

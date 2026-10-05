@@ -1,6 +1,6 @@
 # CiteLadder audit remediation and enterprise readiness
 
-**Status: PR 1 merged into main as `6c5209eb` (#156). A partial PR 2 slice is published as #158 from `codex/audit-remediation-pr2`; PR 2 as a whole remains incomplete (Section 4). Public policy revisions and proposed management decisions remain unpublished pending approval.**
+**Status: PR 1 merged into main as `6c5209eb` (#156). A partial PR 2 slice merged as #158; PR 2 as a whole remains incomplete (Section 4). Public policy revisions and proposed management decisions remain unpublished pending approval.**
 
 ## 1. Summary and boundaries
 
@@ -11,7 +11,7 @@ Prepare for India, US, UK, Ireland/EU, Canada, Australia, New Zealand, Singapore
 This plan:
 
 - Builds on existing legal pages, workspace authorization, encrypted credentials and read-only MCP.
-- Targets the unified Agent described in the owner-selected [Agent workspace plan](citeladder-action-center.md). It does not rebuild retired Content or Growth Agent systems.
+- Targets the unified Agent described in the owner-selected [Agent workspace plan](../archive/citeladder-action-center.md). It does not rebuild retired Content or Growth Agent systems.
 - **Excludes payment, checkout, refund-processing, invoice, e-invoice and billing-configuration code changes.** Payment policies and requirements for the later payment task remain included.
 - Adds no publishing, website modification, outreach or other external-action capability.
 - Does not authorize deployment, live provider calls, production deletion or insurance purchases.

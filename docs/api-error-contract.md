@@ -34,7 +34,7 @@ Every 4xx or 5xx response — from a router raise, a validation failure, a routi
 
 **`error` is additive; `detail` is never removed.** The change is deliberately
 non-breaking: the `detail` **value and type** are unchanged, so every pre-existing
-client and test that reads FastAPI's `detail` keeps working — including the
+client and test that reads the legacy `detail` field keeps working — including the
 coded-dict dialect (`{"code", "message", …}`) that the
 selection/opportunity/crawl endpoints already returned. New code reads `error`.
 

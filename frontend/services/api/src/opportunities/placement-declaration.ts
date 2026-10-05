@@ -1,4 +1,4 @@
-/** Declaration-time placement intent; Python inspection owns later observations. */
+/** Declaration-time placement intent; native source inspection owns later observations. */
 import { randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';

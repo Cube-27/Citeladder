@@ -30,18 +30,17 @@ endpoint validation and verified-route checks remain with the provider owner.
 
 ## Chats, runs and outputs
 
-### TypeScript runtime (PR 19a foundation, PR 19b cutover)
+### TypeScript runtime
 
 [`frontend/services/api/src/agent`](../frontend/services/api/src/agent/) contains
 the TypeScript runtime for the existing Agent tables: transactional chat
 admission, append-only messages, leased runs, committed model/tool attempts,
 bounded structured turns, persisted reads and output revisions. It uses the
 existing workspace policy, generated database types, shared Agent response
-contracts and native Agent runtime/gateway policy. Python exports only the
-run-attempt default used by its model. The API ownership manifest,
+contracts and native Agent runtime/gateway policy. Python retains fixed schema
+defaults. The API ownership manifest,
 all ingress matchers, compose and cloud worker commands select this owner.
-The Python Agent API, worker and sweeper registration are retired; deployment
-and external cutover smoke checks remain separate release work.
+The bounded runner executes the Agent lane; Python retains only schema metadata.
 
 The core requires explicit adapters for funding/capacity admission, persisted
 content context, a versioned skill catalog, registered read tools, model
@@ -328,7 +327,7 @@ keyed `agent`.
 The TypeScript adapters in
 [`src/agent`](../frontend/services/api/src/agent/) bind the existing billing
 ledger and provider owners. Its skill loader reads these same packaged files,
-expands the exported vocabularies and fingerprints the actual model inputs.
+expands native config vocabularies and fingerprints the actual model inputs.
 The TypeScript image includes them as read-only assets.
 
 The [runtime component suite](../frontend/services/api/test/agent-runtime.test.ts)

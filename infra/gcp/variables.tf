@@ -79,7 +79,7 @@ variable "api_image" {
 
 variable "migrate_image" {
   type        = string
-  description = "Python schema/operator image by immutable digest."
+  description = "Alembic/schema image with native bootstrap by immutable digest."
   validation {
     condition     = can(regex("^us-central1-docker\\.pkg\\.dev/[a-z0-9-]+/citeladder/backend@sha256:[0-9a-f]{64}$", var.migrate_image))
     error_message = "migrate_image must be an immutable citeladder/backend digest."

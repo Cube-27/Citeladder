@@ -53,7 +53,7 @@ const setPath = { prompt_set_id: uuid } as const;
 const setRoot = `${api}/prompt-sets/{prompt_set_id}`;
 const noQuery = {} as const;
 
-/** CSV import's own budget, shared with the Python limiter's `bulk_import` window. */
+/** CSV import's own budget under the native `bulk_import` request window. */
 function bulkImportLimit() {
   return {
     operation: 'bulk_import',

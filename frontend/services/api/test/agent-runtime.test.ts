@@ -21,7 +21,7 @@ import { ModelCalls, type Funding } from '../src/agent/model-calls.ts';
 import { readChat, listChats, listRevisions, progress } from '../src/agent/reads.ts';
 import { appendMessage, getChat } from '../src/agent/store.ts';
 import { ToolRegistry } from '../src/agent/tools.ts';
-import { contextCitations, renderManifest } from '../src/agent/context.ts';
+import { contextCitations, manifestSchema, renderManifest } from '../src/agent/context.ts';
 import { bounded, stripUnverifiedRefs } from '../src/agent/runtime.ts';
 import { fingerprint } from '../src/agent/store.ts';
 import { readAgentContext } from '../src/agent/context-adapter.ts';
@@ -141,6 +141,66 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     ).rejects.toMatchObject({ code: 'agent_skill_kind_conflict' });
     expect((await readChat(db, scope, inherited.chat_id)).output?.kind).toBe('plan');
   });
+  it('supplies the full prior-history budget without counting the current request', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope, { message: 'Prior question' });
+    await fixtures.runtime(scope, scripted([reply('Prior answer')])).execute(first.lease);
+    const second = await fixtures.claimed(scope, {
+      chatId: first.run.chat_id,
+      message: 'Follow up',
+    });
+    await db
+      .updateTable('agent_runs')
+      .set({
+        budget: { ...(second.run.budget as Record<string, number>), history_max_messages: 2 },
+      })
+      .where('id', '=', second.run.id)
+      .execute();
+    await fixtures
+      .runtime(
+        scope,
+        scripted([reply()], async (request) => {
+          const supplied = JSON.parse(request.user);
+          expect(supplied.history.map((message: { content: string }) => message.content)).toEqual([
+            'Prior question',
+            'Prior answer',
+          ]);
+          expect(supplied.omissions).not.toContain('history_query_limit');
+        }),
+      )
+      .execute(second.lease);
+    expect((await fixtures.run(second.run.id)).status).toBe('succeeded');
+  });
+
+  it('discloses processing versions and distinguishes an unavailable saved manifest', async () => {
+    const scope = await fixtures.scope();
+    const { run } = await fixtures.claimed(scope);
+    const manifest = manifestSchema.parse(run.context_manifest);
+    await db
+      .updateTable('agent_runs')
+      .set({
+        context_manifest: {
+          ...manifest,
+          package: { ...manifest.package, summary: { selection_policy_version: 'selection-1' } },
+        },
+      })
+      .where('id', '=', run.id)
+      .execute();
+    expect((await readChat(db, scope, run.chat_id)).context.prompt).toMatchObject({
+      context_version: manifest.version,
+      package_version: manifest.package.version,
+      selection_policy_version: 'selection-1',
+    });
+    await db
+      .updateTable('agent_runs')
+      .set({ context_manifest: {} })
+      .where('id', '=', run.id)
+      .execute();
+    expect((await readChat(db, scope, run.chat_id)).context.limitations).toContainEqual({
+      reason: 'context_manifest_unavailable',
+    });
+  });
+
   it('repairs outputs without a selected skill and fails exhausted repairs without artifacts', async () => {
     const scope = await fixtures.scope();
     const first = await fixtures.claimed(scope);
@@ -573,6 +633,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
   });
   it('bounds unavailable tool results with explicit omissions and filters fabricated citations', async () => {
     const scope = await fixtures.scope();
+    const sourceId = randomUUID();
     const tools = new ToolRegistry('test-tools-1', [
       {
         name: 'missing',
@@ -581,13 +642,15 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
         read: async () => ({
           state: 'unavailable',
           data: 'x'.repeat(agentPolicy.tool_result_max_chars + 1),
-          artifactRefs: [],
+          artifactRefs: [{ id: sourceId }],
           omissions: [{ reason: 'missing_snapshot', count: 1 }],
         }),
       },
     ]);
     const outcome = await tools.execute(db, scope, 'missing', {}, AbortSignal.timeout(1000));
     expect(outcome.status).toBe('unavailable');
+    expect(outcome.refs).toEqual([{ id: sourceId }]);
+    expect(outcome.citationRefs).toEqual([]);
     expect(outcome.omissions).toContainEqual({
       reason: 'tool_result_truncated',
       count: 1,
@@ -596,6 +659,28 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     expect(JSON.parse(outcome.text)).toMatchObject({
       complete: false,
       omitted_sections: ['value'],
+    });
+    const { run, lease } = await fixtures.claimed(scope);
+    await fixtures
+      .runtime(
+        scope,
+        scripted([
+          { action: 'call_tool', tool: 'missing', arguments: {} },
+          { ...reply(`Source citeladder://evidence/${sourceId}`), evidence: [sourceId] },
+        ]),
+        { tools },
+      )
+      .execute(lease);
+    const attempt = await db
+      .selectFrom('agent_tool_attempts')
+      .select('artifact_refs')
+      .where('run_id', '=', run.id)
+      .executeTakeFirstOrThrow();
+    expect(attempt.artifact_refs).toEqual([{ id: sourceId }]);
+    const completed = await readChat(db, scope, run.chat_id);
+    expect(completed.messages.at(-1)).toMatchObject({
+      content: 'Source [unverified reference]',
+      evidence_refs: [],
     });
     expect(stripUnverifiedRefs('See citeladder://project/foreign.', new Set())).toBe(
       'See [unverified reference].',

@@ -4,8 +4,7 @@
  * (table, series and one URL), per-answer evidence and the observed AI
  * Overview rates.
  *
- * Moved from `backend/app/api/projects.py`, `visibility_sources.py` and
- * `visibility_surfaces.py`. Reads of persisted projections; nothing is
+ * Reads of persisted projections; nothing is
  * fetched. An unknown or out-of-scope run is `Audit not found`, and a
  * malformed selection is a 422 carrying the reader's message.
  */

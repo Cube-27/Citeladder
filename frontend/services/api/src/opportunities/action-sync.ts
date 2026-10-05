@@ -4,8 +4,7 @@
  * project lock, so members, priority and diagnosis always describe the
  * snapshot that superseded the old rows.
  *
- * `actions` has two writers across the stack boundary. This refresh derives
- * evidence Actions and restamps every row's members; the Python Agent only
+ * Native refresh derives evidence Actions and restamps every row's members; the Agent only
  * inserts its own `agent`-origin rows (`attach_or_create_action`, insert on
  * conflict do nothing on `(project_id, group_key)`), and this insert adopts
  * such a row on the same key. Identity and origin never change here, and an Action no member targets any more keeps its row with

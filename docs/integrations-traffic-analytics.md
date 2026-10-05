@@ -16,8 +16,8 @@ Native [connected-data config](../frontend/services/api/src/config/connected-dat
 owns sync settings, transports, dataset grains, traffic and referral catalogs,
 analytics task kinds and OAuth policy. [Demand config](../frontend/services/api/src/config/demand.json)
 owns query/lexical policy and [Search Intelligence config](../frontend/services/api/src/config/search-intelligence.json)
-owns acquisition and pricing. Python retains model defaults, provenance versions
-and entitlement identities through the drift-checked export. Dataset arity and
+owns acquisition and pricing. Python retains fixed schema defaults and structural
+provenance vocabulary. Dataset arity and
 dimension separators derive from the native integration catalog.
 
 ## Consent and mapping
@@ -119,7 +119,7 @@ projections, Demand, Opportunity refresh and verification, source-page inspectio
 Search Intelligence acquisition, internal links, catalog projection and Commerce
 competitor discovery. Its bounded lease recovery runs before each claim,
 including an empty drain. Splitting ownership requires restoring an executor
-and recovery path; changing a kind list alone cannot restore the Python worker.
+and recovery path; changing a kind list alone cannot establish another executor.
 Each domain owns its derived projection.
 
 [Performance](../frontend/services/api/src/traffic/performance.ts) reads persisted

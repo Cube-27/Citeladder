@@ -1,7 +1,7 @@
 /**
  * Generated-prompt candidates: the review list and accept/reject.
  *
- * Python generation stages candidates (and purges expired ones) under the
+ * Native generation stages candidates (and purges expired ones) under the
  * project and prompt-set locks; review takes the same locks in the same
  * order, then the candidate rows (`FOR UPDATE`), then the account capacity
  * lock when it accepts. Only an accept creates a Prompt, carrying the run's

@@ -1,8 +1,7 @@
 /**
  * The TypeScript service's OpenAPI document, generated from its route
  * contracts with zod's JSON Schema output. Request schemas use zod's input
- * view and responses its output view, matching the request and response
- * schemas FastAPI publishes.
+ * view and responses its output view.
  */
 import { z } from 'zod';
 

@@ -1,7 +1,7 @@
 /**
  * Transactional enqueues of the two Opportunity consumers. A trigger's key is
  * versioned, so re-enqueueing the same evidence never adds a second row; the
- * keys match Python's `domain/opportunities` writers that remain.
+ * keys preserve idempotent replay of existing Opportunity triggers.
  */
 import type { Transaction } from 'kysely';
 import { policy } from '../config.ts';

@@ -18,7 +18,7 @@ import { ensureWorkspaceBilling } from '../entitlements/bootstrap.ts';
 export type User = Selectable<Users>;
 export type Member = Selectable<WorkspaceMembers>;
 type Role = keyof typeof policy.workspaces.roles;
-// The exported Python matrix names the roles, so the wire enum cannot drift from it.
+// Native workspace policy names the roles used by the wire enum.
 const roleSchema = z.enum(Object.keys(policy.workspaces.roles) as [Role, ...Role[]]);
 export const assignableRoleSchema = roleSchema.exclude(['owner']);
 export type AssignableRole = z.infer<typeof assignableRoleSchema>;

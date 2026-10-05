@@ -1,5 +1,8 @@
 # DataForSEO LLM Scraper integration for AI Visibility
 
+> Historical implementation plan. Implementation is shipped in the native audit/provider owners. Live-provider acceptance remains in docs/release-checklist.md.
+> The original sequence and observations below are retained as dated evidence, not current work.
+
 ## Summary and confirmed decisions
 
 Status: implemented on 26 September 2026 in
@@ -29,7 +32,7 @@ three DataForSEO options; platform-funded scraping is excluded.
 
 The existing [Prompts and AI Visibility owner](../visibility-prompt.md),
 [repository workflow](../../AGENTS.md), and [invariants](../invariants.md) govern
-implementation. This plan is indexed as queued in [plan status](ACTIVE.md).
+implementation. This plan is indexed as queued in [plan status](../plans/ACTIVE.md).
 
 ## Implementation changes
 

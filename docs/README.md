@@ -72,13 +72,13 @@ retain superseded history; deleting a document does not resolve an open finding.
 [Release acceptance](release-checklist.md) retains manual and external gates.
 [Billing provider readiness](billing-provider-readiness.md) separates implemented
 adapters from accepted payment operation.
-[Workers migration operations](operations/WORKERS_RUNBOOK.md) owns protected
+[Workers operations](operations/WORKERS_RUNBOOK.md) owns protected
 origin provisioning, configuration and cutover release records.
 [Operations](operations/) contains live deployment, billing and recovery
 procedures; use the procedure relevant to the requested operation.
 
-Fixtures consumed by current tests remain with those tests. Git and PRs retain
-retired plans, audits and dated evidence. Historical observations do not
+Fixtures consumed by current tests remain with those tests. [The archive](archive/),
+Git and PRs retain completed plans, audits and dated evidence. Historical observations do not
 establish current acceptance.
 
 Published blog content belongs to

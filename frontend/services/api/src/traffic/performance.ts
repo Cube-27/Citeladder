@@ -1,4 +1,4 @@
-/** Persisted Performance reads, shared with the retained Python Agent reader. */
+/** Persisted Performance reads shared by the native API and Agent. */
 import {
   performanceDimensionSchema,
   performanceDashboardSchema,

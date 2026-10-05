@@ -99,6 +99,7 @@ export class AgentRuntime {
         .select(['id', 'role', 'content'])
         .where('workspace_id', '=', scope.workspaceId)
         .where('chat_id', '=', chat.id)
+        .where('id', '!=', run.user_message_id)
         .orderBy('sequence', 'desc')
         .limit(budget.history_max_messages + 1)
         .execute();
@@ -157,10 +158,7 @@ export class AgentRuntime {
         hints,
         budget,
         historyLimited: messages.length > budget.history_max_messages,
-        history: messages
-          .slice(0, budget.history_max_messages)
-          .reverse()
-          .filter((message) => message.id !== run.user_message_id),
+        history: messages.slice(0, budget.history_max_messages).reverse(),
       };
     });
   }
@@ -315,7 +313,10 @@ export class AgentRuntime {
     state.steps.push({ kind: 'tool', tool: step.tool, status: outcome.status });
     state.transcript.push({
       text: `Tool ${step.tool}: ${outcome.status}\n${outcome.text}`,
-      refs: outcome.refs.flatMap((ref) => [ref.id, ...(ref.record_uri ? [ref.record_uri] : [])]),
+      refs: (outcome.citationRefs ?? outcome.refs).flatMap((ref) => [
+        ref.id,
+        ...(ref.record_uri ? [ref.record_uri] : []),
+      ]),
     });
   }
   private prompt(

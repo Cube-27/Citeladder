@@ -129,10 +129,18 @@ export function CommandField({
           ) {
             const text = event.target.value,
               end = event.target.selectionStart;
+            let restoredCaret = end;
             onChange(text);
             commands.openSkillPicker(
-              () => onChange(text.slice(0, token.start) + text.slice(end)),
-              () => field.current?.focus(),
+              () => {
+                restoredCaret = token.start;
+                onChange(text.slice(0, token.start) + text.slice(end));
+              },
+              () =>
+                requestAnimationFrame(() => {
+                  field.current?.focus();
+                  field.current?.setSelectionRange(restoredCaret, restoredCaret);
+                }),
             );
             return;
           }

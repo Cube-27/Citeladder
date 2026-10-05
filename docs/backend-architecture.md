@@ -41,9 +41,9 @@ integrations charge at claim and recovery does not charge a second time.
 | Native routes/  | HTTP translation, request validation and coded errors                  |
 | Python core/    | Schema metadata base, structural constants and migration configuration |
 | models/         | SQLAlchemy persistence and relational integrity                        |
-| domain/         | Business policy, authorized mutations and persisted projections        |
-| connectors/     | External acquisition and provider transports                           |
-| analysis/       | Bounded deterministic derivation                                       |
+| Native services/ | Business policy, authorized mutations and persisted projections       |
+| Native acquisition/ | External acquisition and provider transports                       |
+| Native analysis/ | Bounded deterministic derivation                                      |
 | Native workers/ | Lease, I/O/analysis and atomic terminal persistence                    |
 
 Search the owning domain, callers, types, configuration and tests before adding

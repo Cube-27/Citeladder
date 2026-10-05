@@ -111,7 +111,7 @@ function PanelStart({
 }>) {
   const [message, setMessage] = useState(seed.prompt ?? '');
   const [context, setContext] = useState(seed.context);
-  const [skillId, setSkillId] = useState<string | null | undefined>(seed.skillId ?? null);
+  const [skillId, setSkillId] = useState<string | null | undefined>(seed.skillId ?? undefined);
   const commands = useComposerCommands({ workspaceId, projectId });
   const access = useAgentAccess();
   const create = useCreateChat(workspaceId, projectId, onStarted);

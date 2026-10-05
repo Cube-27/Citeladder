@@ -37,10 +37,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-# Pure vocabulary module: ``contracts`` imports nothing from ``app``, so the
-# canonical finish-reason enum can be reused here without a layering cycle
-# (invariant 2 — one owner for the closed vocabulary, never re-literalled).
-from app.connectors.answer_engines.contracts import FinishReason
 from app.core.config.audits import AUDIT_SCOPE_BRAND, AUDIT_STATUS_DRAFT
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.core.database import Base
@@ -49,6 +45,7 @@ from app.models.constants import (
     FK_AUDITS_ID,
     FK_PROVIDER_CONNECTIONS_ID,
     ON_DELETE_SET_NULL,
+    FinishReason,
 )
 
 
@@ -444,7 +441,7 @@ class AuditTask(Base):
     provider_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Canonical finish reason (closed vocabulary — see
-    # ``connectors.answer_engines.contracts.FinishReason``). Non-null and
+    # ``models.constants.FinishReason``). Non-null and
     # defaulted to ``unknown``: gates read ONLY this column. ``raw_finish_reason``
     # keeps the provider's own spelling for forensics and is never gated on.
     finish_reason: Mapped[str] = mapped_column(

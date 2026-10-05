@@ -32,13 +32,11 @@ Native policy lives in `frontend/services/api/src/config/site-health.ts` and
 its `config/site-health/` catalogs: acquisition, classification, checks,
 readiness, architecture, link metrics, change intelligence and worker settings.
 Startup validates environment bounds, cross-field relationships and catalog
-references. Python retains model defaults, terminal status vocabulary and the
-supported entitlement/operator allowance projection. Its shared settings are
-`automatic_page_limit`, `max_requested_page_limit`, `sample_url_limit`,
-`sample_discovery_url_cap` and `max_attempts`; the generated bridge exports only
-those settings and the shared model/read defaults.
+references. Python retains fixed schema defaults and persisted status vocabulary.
+Native entitlement owners resolve allowances; native writers freeze configured
+limits on durable task and crawl rows.
 
-During the TypeScript cutover, `site-health-worker-ts` claims every
+The Site Health lane of the bounded runner claims every
 `site_crawl_tasks` kind: `discover`, `site_setup`, `analyze`, `change_intel`,
 `link_metrics` and `architecture`. The TypeScript owner locks crawl then task,
 publishes immutable derived evidence and admits successors with acknowledgement
@@ -72,7 +70,7 @@ cancel with no measurement evidence keeps a null summary.
 TypeScript alone recovers expired `site_crawl_tasks` leases in bounded,
 oldest-first `SKIP LOCKED` batches before claiming work. Recovery spends one
 attempt, releases the lease, and either makes the task due immediately or
-fails it at its attempt ceiling. The Python global sweeper excludes this queue.
+fails it at its attempt ceiling.
 The runner's Site Health lane processes due work and successors until idle or
 the runner admission budget stops new claims. Already claimed work finishes
 under its existing task/acquisition bounds before the execution exits.
@@ -83,7 +81,7 @@ Analyze tasks extract facts and evaluate rules in Node worker threads before
 taking commit locks. The commit rechecks the page's site/sitemap context;
 changed context is interpreted once under the crawl lock without spending another attempt.
 Source inspection and internal-link judgments run in the TypeScript analytics
-worker; their failed-task recovery also covers Python-sweeper terminalization.
+worker; their failed-task recovery also covers native sweeper terminalization.
 
 The TypeScript service serves every Site Health read route (`site-health`
 family): the entitlement view, crawl detail, inventory, pages, page detail,
@@ -103,8 +101,8 @@ budget on the entitlement ledger in the same transaction as its initial tasks.
 URL preview, crawl listing and monitored-set reads render persisted evidence
 and resolve grants without refreshing runtime. A rerun from a terminal crawl
 creates one fresh analyze task under the saved profile scope; an active crawl
-allocates the next task generation. Python retains only the persisted reads
-and content hand-off used by Agent/MCP until their cutover.
+allocates the next task generation. Agent/MCP reuse the native persisted readers
+and content hand-off.
 
 ## Acquisition and evidence guarantees
 
@@ -297,8 +295,8 @@ crawl. Suggestions do not contribute to a health score.
 
 The analysis proposes inline editorial links at exact captured source phrases.
 It does not infer missing navigation or a parent/child site graph. TypeScript owns
-scoped admission, retrieval, saved reads and publication; the existing Python
-JEV connector (`JEV_API_KEY`) executes judgments through the existing
+scoped admission, retrieval, saved reads and publication; the native
+JEV client (`JEV_API_KEY`) executes judgments through the existing
 analytics queue. No provider runs on a read.
 
 Admission freezes each usable page's title, H1, meta description, a short
@@ -356,7 +354,7 @@ distinguish running, completed-empty, partial and unavailable, with reasons and
 elapsed time.
 
 `site_internal_link_runs` retains the frozen crawl, page identities, candidates
-and policy; TypeScript is its writer. Python appends dispatch and outcome events
+and policy; TypeScript is its writer. The native executor appends dispatch and outcome events
 to `site_internal_link_events`, one of each per page pair. Judgments are not
 metered against AI credits. A missing permission or provider configuration
 yields unavailable judgments, never an observed zero.
