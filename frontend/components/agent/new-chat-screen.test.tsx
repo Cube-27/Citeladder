@@ -232,9 +232,11 @@ describe('NewChatScreen', () => {
     renderNewChat('');
 
     const message = await screen.findByLabelText('Message the agent');
-    await user.type(message, 'Use /grow');
+    await user.type(message, 'Use /');
     expect(await screen.findByRole('menuitemradio', { name: 'Growth plan' })).toBeVisible();
-    await user.keyboard('{Escape}{Enter}');
+    await user.keyboard('{Escape}');
+    expect(message).toHaveFocus();
+    await user.type(message, 'grow{Enter}');
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
     expect(bodies).toEqual([{ message: 'Use /grow', context: {} }]);

@@ -537,8 +537,8 @@ describe('ChatScreen', () => {
     await user.click(await screen.findByText('View activity'));
     const steps = within(screen.getByRole('list', { name: 'Agent progress' }));
     expect(steps.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Read site health · no data yet',
-      'Deciding the next step…',
+      'Attempt 1 · Step 1 · Read site health · no data yet',
+      'Attempt 1 · Step 2 · Deciding the next step…',
     ]);
   });
 

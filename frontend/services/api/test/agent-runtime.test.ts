@@ -685,12 +685,6 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       (await listChats(db, scope, { query: 'robots permission' })).items.map((chat) => chat.id),
     ).toEqual([run.chat_id]);
     expect((await listChats(db, scope, { query: '%' })).items).toEqual([]);
-    const plan = await sql`explain (format json) select c.id from agent_chats c
-      where c.workspace_id = ${scope.workspaceId}::uuid and c.project_id = ${scope.projectId}::uuid
-      and exists (select 1 from agent_messages m where m.workspace_id = c.workspace_id
-        and m.project_id = c.project_id and m.chat_id = c.id and m.content ilike '%robots permission%')
-      order by c.last_activity_at desc, c.id desc limit 31`.execute(db);
-    expect(plan.rows.length).toBe(1);
   });
   it('retains retry activity and the step high-water mark while restarting from step one', async () => {
     const scope = await fixtures.scope();

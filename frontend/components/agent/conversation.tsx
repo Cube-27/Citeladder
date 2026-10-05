@@ -62,6 +62,7 @@ export function Conversation({
       <RunState
         outcome={outcome}
         progress={detail.latest_run?.progress ?? []}
+        attemptCount={detail.latest_run?.attempt_count}
         onStop={onStop}
         stopping={stopping}
       />
@@ -235,6 +236,7 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
             {context.sources!.length} persisted page source references
           </p>
         ) : null}
+        <ContextSources context={context} />
         {typeof prompt.serialized_chars === 'number' ? (
           <p className={textRole('caption')}>
             Working context: {prompt.serialized_chars.toLocaleString()} of{' '}
@@ -252,6 +254,27 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
         ) : null}
       </div>
     </Disclosure>
+  );
+}
+function ContextSources({ context }: Readonly<{ context: AgentChatDetail['context'] }>) {
+  const references = Object.entries(context.refs ?? {});
+  if (!references.length && !context.sources?.length) return null;
+  return (
+    <details>
+      <summary className={textRole('caption', 'cursor-pointer')}>Source identities</summary>
+      <ul aria-label="Context source identities" className="grid gap-2 pt-2">
+        {references.map(([key, value]) => (
+          <li key={key} className={textRole('caption', 'break-all')}>
+            {key.replaceAll('_', ' ')}: {JSON.stringify(value)}
+          </li>
+        ))}
+        {(context.sources ?? []).map((source, index) => (
+          <li key={index} className={textRole('caption', 'break-all')}>
+            Persisted page source: {JSON.stringify(source)}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 function omissionLabel(omission: unknown) {
@@ -326,11 +349,13 @@ function stepLabel(step: AgentMessage['steps'][number]): string {
 function RunState({
   outcome,
   progress,
+  attemptCount,
   onStop,
   stopping,
 }: Readonly<{
   outcome: ReturnType<typeof runOutcome>;
   progress: AgentRun['progress'];
+  attemptCount: number | undefined;
   onStop: () => void;
   stopping: boolean;
 }>) {
@@ -341,11 +366,7 @@ function RunState({
           <span className="flex items-center gap-3">
             <Spinner className="text-muted" />
             <output aria-live="polite" className="flex-1">
-              {outcome.queued
-                ? 'Waiting to start…'
-                : progress.at(-1)
-                  ? runStepLabel(progress.at(-1)!)
-                  : 'The agent is working…'}
+              {outcome.queued ? 'Waiting to start…' : activeStepLabel(progress, attemptCount)}
             </output>
             <Button variant="ghost" size="sm" disabled={stopping} onClick={onStop}>
               Stop
@@ -362,6 +383,11 @@ function RunState({
     default:
       return null;
   }
+}
+function activeStepLabel(progress: AgentRun['progress'], attemptCount: number | undefined) {
+  const currentAttempt = attemptCount ?? progress.at(-1)?.run_attempt;
+  const current = progress.filter((step) => step.run_attempt === currentAttempt).at(-1);
+  return current ? runStepLabel(current) : 'The agent is working…';
 }
 function RunActivity({ progress }: Readonly<{ progress: AgentRun['progress'] }>) {
   return (

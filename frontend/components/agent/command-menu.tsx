@@ -20,7 +20,8 @@ export type ComposerCommands = {
   /** Actions this message mentions, shown as removable chips. */
   mentions: readonly Mention[];
   onRemoveMention: (id: string) => void;
-  openSkillPicker?: (removeCommand: () => void) => void;
+  openSkillPicker?: (removeCommand: () => void, restoreFocus: () => void) => void;
+  closeSkillPicker?: () => boolean;
 };
 
 export type Mention = { id: string; label: string };
@@ -122,7 +123,10 @@ export function CommandField({
             const text = event.target.value,
               end = event.target.selectionStart;
             onChange(text);
-            commands.openSkillPicker(() => onChange(text.slice(0, token.start) + text.slice(end)));
+            commands.openSkillPicker(
+              () => onChange(text.slice(0, token.start) + text.slice(end)),
+              () => field.current?.focus(),
+            );
             return;
           }
           onChange(event.target.value);
@@ -132,6 +136,10 @@ export function CommandField({
         }}
         onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
         onKeyDown={(event) => {
+          if (event.key === 'Escape' && commands?.closeSkillPicker?.()) {
+            event.preventDefault();
+            return;
+          }
           if (event.nativeEvent.isComposing || menuKey(event)) return;
           if (event.key !== 'Enter' || event.shiftKey) return;
           event.preventDefault();

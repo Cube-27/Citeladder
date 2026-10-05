@@ -10,8 +10,6 @@
   "tool_result_max_chars": 12000,
   "context_package_max_chars": 24000,
   "transcript_max_chars": 90000,
-  "transcript_truncation_marker": "\n\n[earlier steps truncated]\n\n",
-  "context_truncation_marker": "\n\n[context and output truncated]\n\n",
   "progress_version": "agent-progress-1",
   "history_max_messages": 12,
   "history_message_max_chars": 4000,

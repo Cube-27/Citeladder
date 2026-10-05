@@ -25,11 +25,17 @@ export function useComposerCommands({
 }>): ComposerCommands & {
   clear: () => void;
   restore: (mentions: readonly Mention[]) => void;
-  skillPicker: { open: boolean; onOpenChange: (open: boolean) => void; onSelect: () => void };
+  skillPicker: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSelect: () => void;
+    onCloseAutoFocus: (event: Event) => void;
+  };
 } {
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const removeCommand = useRef<(() => void) | null>(null);
+  const restoreFocus = useRef<(() => void) | null>(null);
   const actions = useQuery({
     ...actionsQueries.list(workspaceId, projectId),
     enabled: Boolean(workspaceId && projectId),
@@ -58,9 +64,16 @@ export function useComposerCommands({
       ]);
     },
     mentions,
-    openSkillPicker: (remove) => {
+    openSkillPicker: (remove, focus) => {
       removeCommand.current = remove;
+      restoreFocus.current = focus;
       setSkillPickerOpen(true);
+    },
+    closeSkillPicker: () => {
+      if (!skillPickerOpen) return false;
+      setSkillPickerOpen(false);
+      removeCommand.current = null;
+      return true;
     },
     skillPicker: {
       open: skillPickerOpen,
@@ -71,6 +84,12 @@ export function useComposerCommands({
       onSelect: () => {
         removeCommand.current?.();
         removeCommand.current = null;
+      },
+      onCloseAutoFocus: (event) => {
+        if (!restoreFocus.current) return;
+        event.preventDefault();
+        restoreFocus.current();
+        restoreFocus.current = null;
       },
     },
     onRemoveMention: (id) => setMentions((current) => current.filter((item) => item.id !== id)),

@@ -48,6 +48,7 @@ export function SkillPicker({
   open,
   onOpenChange,
   onSelect,
+  onCloseAutoFocus,
 }: Readonly<{
   value: string | null | undefined;
   onChange: (skillId: string | null | undefined) => void;
@@ -58,6 +59,7 @@ export function SkillPicker({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onSelect?: () => void;
+  onCloseAutoFocus?: (event: Event) => void;
 }>) {
   const skills = useSkillCatalog().filter(
     (skill) => !outputKind || skill.output_kind === outputKind,
@@ -79,7 +81,7 @@ export function SkillPicker({
           <ChevronDown className="size-3.5" aria-hidden />
         </Button>
       </DropdownTrigger>
-      <DropdownContent align="start" className="w-64">
+      <DropdownContent align="start" className="w-64" onCloseAutoFocus={onCloseAutoFocus}>
         <DropdownRadioGroup
           value={value === undefined ? INHERIT : (value ?? AUTOMATIC)}
           onValueChange={(next) => {

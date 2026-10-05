@@ -436,6 +436,7 @@ export class AgentRuntime {
       const completion = response.output
         ? `\n\nSaved ${phase}${formatId ? ` in ${this.deps.catalog.formats?.get(formatId)?.label ?? formatId} format` : ''}.${phase === 'outline' ? ' Approve this outline before requesting a draft.' : ''}`
         : '';
+      if (completion.length > budget.reply_max_chars) throw new AgentError('protocol_violation');
       const message = await appendMessage(trx, chat, {
         role: 'agent',
         replyTo: run.user_message_id,
