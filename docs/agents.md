@@ -60,7 +60,7 @@ into the [service](../frontend/services/api/src/agent/store.ts). Every chat is p
 to one project and is the saved unit of work; there is no separate saved-work
 store. A user message is appended and queues exactly one
 [AgentRun](../backend/app/models/agent.py). Messages are append-only, a chat has
-at most one active run, and an idempotency key replays the same run. Reads
+at most one active run, and an idempotency key replays the same actor's run. Reads
 return persisted state and never execute a turn.
 
 Admission checks workspace role, the Agent capability and a funding route, then
@@ -68,7 +68,9 @@ freezes on the run the runtime/protocol versions, the skill catalog and tool
 registry versions, step/tool/size budgets, the per-call time bound and funding
 identity. A configuration change never alters a queued turn, and a turn whose
 skill catalog changed before it ran (a deploy in between) ends with
-`skills_changed` before any model call. Budgets live in
+`skills_changed` before any model call. The versioned budget includes prompt,
+context, history, tool result, output, reply and protocol-repair limits; an
+incompatible historical budget fails before dispatch. Budgets live in
 [Agent runtime configuration](../frontend/services/api/src/config/agent-runtime.json)
 and [gateway settings](../frontend/services/api/src/config/model-gateway.json).
 `AGENT_SKILLS_DIRECTORY` can override the read-only packaged skills directory;
@@ -85,20 +87,27 @@ picking a skill that produces a different kind of output is refused; start a
 new chat for it. Long-form content is outline-first: a draft is written only
 after the user explicitly approves an outline revision of that output, whatever
 phase the output is in. Ordinary tool and reasoning steps need no approval.
+Approval is displayed as an action tied to the approved revision; historical
+synthetic approval messages remain readable. Completion states the effective
+saved phase and content format, including any outline-first coercion. An output
+without a selected skill or with an invalid format requires a bounded protocol
+repair; it cannot silently succeed without saving the requested deliverable.
 Approving or generating an output is not an implementation declaration: the
 output pane's **Mark implemented** declares the attached Action implemented
 with the revision on screen and then shows what each loop leg is waiting
 for; see [declaration](opportunities.md#explicit-implementation-declaration).
 
 While a run is active, the chat read also returns the
-[committed steps](../frontend/services/api/src/agent/reads.ts) of its current
+[committed steps](../frontend/services/api/src/agent/reads.ts) of every numbered
 attempt, projected from its model and tool attempt rows: a call in flight, a
 step still being processed, a previous step that returned without a read, or a
 read's outcome. Each step retains its model/tool attempt IDs, run attempt and
 runtime, protocol, catalog, registry and projection versions. One joined query
 reads these committed attempts. The conversation shows
-the latest factual activity under the running indicator, with committed steps
-in an expandable disclosure; the runtime writes nothing extra for it.
+the current attempt's factual activity under the running indicator, with all
+committed steps in an expandable disclosure. Earlier attempts never appear as
+currently running. Retries restart the bounded loop; `steps_used` is a monotonic
+high-water mark, while attempt rows retain actual calls and accounting evidence.
 
 The output reads as a document of sections. Each section can be edited in
 place, saved as a user revision with every other section unchanged, or sent to
@@ -108,16 +117,19 @@ evidence on replies and in Sources links to the screen (or record) that shows
 it. After a freshly produced deliverable, optional refinements prefill a message
 for review before the user sends it. Later discussion suppresses those suggestions.
 Requested refinements revise it in the same chat, and next steps
-open a new chat with the skill that takes the work forward, carrying only the
-attached Action and the output's title.
+open a new chat with the skill that takes the work forward, carrying the attached
+Action and the exact selected output/revision reference. The next chat freezes
+that immutable revision; its source references require re-fetching.
 
 The chat list pages by keyset cursor, can be narrowed to the chats linked to one
-Action, and names each chat's target. An Action's workflow status is derived
+Action, searches titles and persisted message content within the project, and
+names each chat's target. An Action's workflow status is derived
 from, never written by, the Agent; see [Actions](opportunities.md#actions).
 
-Idempotency keys are workspace-scoped and bound to the full request: project,
-message, skill, Action and context for a new chat. A reused key with a changed
-request conflicts, including when two identical requests race.
+Idempotency keys are workspace-scoped and bound to the requester and full request:
+project, message, skill, Action and context for a new chat. A reused key with a changed
+request or requester conflicts; concurrent identical submissions by one actor
+replay once. Actor binding does not change workspace authorization.
 Pre-cutover Python keys return an explicit `agent_idempotency_conflict` with
 `legacy_runtime` details, including non-ASCII requests. Historical chats remain
 readable; new work requires a new key rather than reinterpreting an old hash.
@@ -142,17 +154,33 @@ the request named, and the project's versioned Agent instructions (audience,
 voice, standing requirements and exclusions). The
 [context builder](../frontend/services/api/src/agent/context-adapter.ts) authorizes
 each identifier; missing optional evidence is recorded as an omission, not
-filled in. Crawl text remains untrusted observation.
+filled in. Crawl text remains untrusted observation. Typed issue-group and Site
+Facts references preserve the selected crawl; issue groups retain complete
+owner counts alongside a labeled bounded occurrence sample.
+
+The prompt is one structured JSON envelope. The current saved revision remains
+exact, including user edits. Old history and whole optional observations or
+context sections may be omitted with disclosed markers; serialized JSON is
+never sliced. If the exact current revision cannot fit the admitted working
+budget, the turn returns `output_context_size_limit` before model dispatch and
+saves nothing. An oversized upstream document likewise cannot be silently
+substituted with a fragment. Detail reads return a compact Context used
+disclosure with selected identities, source provenance, instruction revision,
+included sections and limitations; full frozen context remains on the run.
 
 The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a bounded loop of
 structured model steps. Each step does exactly one of `select_skill`,
 `call_tool` or `respond`. The runtime enforces the step, tool-call, transcript
 and output limits; the final step cannot spend a tool call, and a turn that
 exhausts its budget stops without saving a partial deliverable. Only evidence
-references an executed tool returned, or the attached or mentioned Actions'
-frozen diagnoses named, survive; the rest of the context package carries no
-record references. Any other `citeladder://` reference is dropped from the evidence list and
-replaced in the visible reply and output text.
+references an executed tool returned in an observation actually supplied to
+the current model call, or supplied attached/mentioned Action diagnoses named,
+survive; the rest of the context package carries no record references. Any other
+`citeladder://` reference is dropped from the evidence list and replaced in the
+visible reply and output text.
+Bounded prior attempt/revision references are navigation hints only. Exact
+owner reads reauthorize them and consume the same turn's read budget before
+they can support facts or citations; prior model prose is not evidence.
 
 ## Workspace and handoffs
 
@@ -176,8 +204,9 @@ chat history under `/agent`; the Skills catalog shows what each skill produces,
 never its methodology, and Context edits the Agent instructions and the
 reviewed brand profile.
 
-The picker distinguishes an explicit skill from the inherited chat workflow or
-attached Action. Its default option does not clear the chat's server-side pin.
+The picker distinguishes an explicit skill, the inherited chat workflow or
+attached Action, and Automatic. Continue inherits the server-side pin; Automatic
+clears it while preserving the deliverable kind and Action context.
 The full chat and Dashboard panel follow new messages, revisions and committed
 progress only while the reader is near the end; **Jump to latest** resumes
 following. The composer permits drafting while a run is active, but cannot send
@@ -191,12 +220,13 @@ normal admission.
 
 Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts). **Work on this** attaches an
-Action. **Ask agent** carries typed references only (an Opportunity, a Demand
-signal, a site page or URL, or up to 100 Search Intelligence rows of one
-dataset) plus an optional prefilled question; Site Health, Demand and Search
-Intelligence offer it. The browser never embeds evidence content, and parsing
+Action. **Ask agent** carries typed references only: an Opportunity, a Demand
+signal, a site page or URL, up to 100 Search Intelligence rows of one
+dataset, an issue group with crawl and optional page, a Site Facts crawl, or an
+exact output revision plus an optional prefilled question; Site Health, Demand
+and Search Intelligence offer it. The browser never embeds evidence content, and parsing
 drops a malformed id or URL rather than guessing. The context builder resolves
-and authorizes every reference when the run starts, so a stale or foreign id
+and authorizes every reference at admission, so a stale or foreign id
 fails there. Composer chips let the user remove a reference before sending.
 
 On every Dashboard screen the top bar also opens the
@@ -204,9 +234,9 @@ On every Dashboard screen the top bar also opens the
 over the current screen. Screens seed it through the
 [panel context](../frontend/lib/agent/panel-context.tsx) from rows they already
 hold: the open or visible Search Intelligence rows as typed references, and
-the open Site Health issue as a prefilled question (issues have no reference
-type). Nothing is read from the DOM. The panel uses the same chats, runs and
-outputs; **Open in Agent** (or opening the output) continues the chat at
+the open Site Health issue or Site Facts as the same typed references used by
+the full-screen link. Nothing is read from the DOM. The panel uses the same chats,
+runs and outputs; **Open in Agent** (or opening the output) continues the chat at
 `/agent/chats/:chatId`.
 
 ## Read tools
@@ -221,8 +251,11 @@ reads are not exposed through MCP. No tool writes.
 
 Each [tool attempt](../backend/app/models/agent.py) records tool, arguments,
 status, evidence references, omissions, output hash and latency. `unavailable`
-is distinct from a successful read and from a failure. Oversized results are
-truncated with an explicit marker, never presented as complete.
+is distinct from a successful empty/zero read and from failure or refusal.
+Availability semantics belong to each shared tool definition; unexpected or
+missing required state is a contract failure. Oversized generic results retain
+whole JSON fields in an incomplete envelope with omissions and no citation
+grants, never a mid-JSON slice presented as complete.
 Exact record fetches use continuation documents sized to the Agent's read
 budget and retain the fetched record reference for citations. Page diagnoses
 follow the analysis's persisted evaluation IDs, including final revisions.
@@ -252,11 +285,17 @@ an application-owned vocabulary as `{{name}}`, which the loader expands from its
 bounds descriptions and bodies and rejects unknown vocabularies and duplicate
 metadata. The read-tool registry authorizes every executed tool.
 
-Users may select a skill by name. The catalog endpoint returns only its label,
+Users may select a skill by name through the shared composer picker; `/` opens
+that same control and returns focus to the message on dismissal or selection.
+The catalog endpoint explicitly projects only its ID, label,
 description, group and output kind; skill bodies are never returned to users or
 exposed through MCP. A turn's skill is taken, in order, from the user's pick,
 the chat's previous skill, the attached Action's diagnosis, and otherwise the
-model's `select_skill` step. Skills are methodologies used by the same runtime,
+model's `select_skill` step. Follow-up selection is tri-state: omitted inherits,
+null clears the explicit pin, and an ID pins it. Automatic still respects the
+existing deliverable kind and attached Action. Model selection receives public
+description/output metadata; capabilities never imply automatic specialist
+invocation or browsing. Skills are methodologies used by the same runtime,
 not separate agents. Changing a skill body changes model input: validate it with
 the [skill loader tests](../frontend/services/api/test/agent-skills.test.ts).
 

@@ -172,8 +172,9 @@ time and crawl ID. It returns distinct referenced bodies alongside observations;
 read configuration owns its default and maximum page sizes. The Site Health
 panel groups bots by purpose, exposes history in a disclosure and computes a
 browser-side text diff between two observations on the loaded page. Ask agent
-uses the existing handoff codec. MCP `read_ai_crawlability` and the business
-context `crawlability` section read the same projection without acquisition.
+pins the crawl shown on screen through the shared full-screen/panel handoff
+codec. MCP `read_ai_crawlability` accepts an optional exact crawl reference.
+Business context's `crawlability` section reads the latest projection without acquisition.
 There is no legacy `ai_crawlers` or `crawler_roles` reader.
 
 - Crawls begin only from an explicit user request.
@@ -491,6 +492,13 @@ meta description. Accessible
 names, indexing, canonicals, price/stock, legal text, broken links and uncertain
 template changes remain manual or investigation actions. Generating, reviewing
 or exporting a deliverable never resolves the live finding or changes a score.
+
+Issue-group Ask agent carries the crawl and deterministic group identifier,
+with an optional selected occurrence page. The server verifies every reference
+within the workspace/project. Aggregate handoffs request analysis and a bounded
+implementation plan; complete persisted counts remain separate from the labeled
+occurrence sample. A sample does not establish template grouping or complete
+coverage. A newer crawl cannot silently replace the selected source.
 
 The rule catalog derives handoff eligibility and remediation routing from one
 config policy. Handoff requests identify crawl and URL; an optional analysis ID

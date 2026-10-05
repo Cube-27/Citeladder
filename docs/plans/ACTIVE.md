@@ -2,6 +2,12 @@
 
 ## Active
 
+- [Agent end-to-end reliability and workflows](citeladder-agent-end-to-end.md)
+  — assigned on 5 October 2026 and implemented locally in slices A–G on
+  `plan/agent-end-to-end`, preserving the pending Agent/MCP/runner baseline.
+  Committed native and mocked acceptance coverage accompanies the cutover;
+  publication, CI, deployment and live-provider quality evaluation remain separate.
+
 - [Backend debt remediation](citeladder-backend-debt-remediation.md)
   — all six slices implemented on `codex/backend-debt-remediation` in one PR,
   one commit per slice in order 6, 5, 1, 2, 3, 4.
