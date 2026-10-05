@@ -15,8 +15,26 @@ const result = (project_id = project) => ({
   surface: 'citeladder_analytics',
   selection: { project_id, audit_id: audit, view: 'overview' },
   links,
-  evidence: { state: 'unavailable' },
+  evidence: { state: 'unavailable', reason: 'no_completed_measurement' },
 });
+const siteEvidence = {
+  state: 'available',
+  snapshot_id: audit,
+  crawl_id: foreign,
+  observed_at: '2026-10-01T00:00:00Z',
+  scores: { web_fundamentals: 50, aeo_readiness: null, aeo_measurement_coverage: 0.5 },
+  coverage: { selected_urls: 2, analyzed_urls: 1 },
+  measurement_states: { coverage: 'partial', aeo: 'unknown' },
+  versions: { analyzer: 'retained-analyzer', coverage_formula: 'retained-coverage' },
+  source_analysis_ids: [project],
+  source_artifact_ids: [foreign],
+  source_attempt_ids: null,
+  source_evaluation_ids: [],
+  source_task_ids: [audit],
+  classification_source_analysis_ids: null,
+  classification_source_artifact_ids: null,
+  classification_source_task_ids: null,
+};
 
 describe('CiteLadder MCP App', () => {
   it.each(['render_site_health', undefined])(
@@ -30,15 +48,7 @@ describe('CiteLadder MCP App', () => {
       controller.receive({
         ...result(),
         selection: { project_id: project, view: 'site_health', snapshot_id: audit },
-        evidence: {
-          state: 'available',
-          snapshot_id: audit,
-          crawl_id: foreign,
-          observed_at: '2026-10-01T00:00:00Z',
-          scores: { web_fundamentals: 50, aeo_readiness: null, aeo_measurement_coverage: 0.5 },
-          coverage: { selected_urls: 2, analyzed_urls: 1 },
-          measurement_states: { coverage: 'partial', aeo: 'unknown' },
-        },
+        evidence: siteEvidence,
       });
       render(<Analytics controller={controller} />);
       expect(screen.getByRole('tab', { name: 'Site Health' })).toHaveAttribute(
@@ -49,6 +59,55 @@ describe('CiteLadder MCP App', () => {
       expect(screen.queryByText('Loading persisted evidence…')).not.toBeInTheDocument();
     },
   );
+  it.each(['overview', 'trends', 'sources', 'site_health'])(
+    'treats malformed %s evidence as unavailable rather than a verified empty measurement',
+    (view) => {
+      const controller = createController({
+        call: vi.fn(async () => undefined),
+        context: vi.fn(async () => undefined),
+      });
+      controller.receive({
+        ...result(),
+        selection: {
+          project_id: project,
+          view,
+          from_at: view === 'trends' ? '2026-10-01T00:00:00Z' : null,
+          to_at: view === 'trends' ? '2026-10-02T00:00:00Z' : null,
+        },
+        evidence: { state: 'available', points: [{ corrupted: true }] },
+      });
+      render(<Analytics controller={controller} />);
+      expect(screen.getByRole('alert').textContent).toMatch(/unavailable/);
+      expect(
+        screen.queryByText(/No (completed measurement|measured runs|persisted Site Health)/),
+      ).not.toBeInTheDocument();
+    },
+  );
+  it('retains snapshot provenance and distinguishes missing findings from an available empty selection', async () => {
+    const user = userEvent.setup();
+    const call = vi.fn(
+      async () => ({ state: 'unavailable', reason: 'no_opportunities' }) as unknown,
+    );
+    const controller = createController({ call, context: vi.fn(async () => undefined) });
+    controller.receive({
+      ...result(),
+      selection: { project_id: project, view: 'site_health', snapshot_id: audit },
+      evidence: siteEvidence,
+    });
+    render(<Analytics controller={controller} />);
+    await user.click(screen.getByText('Snapshot evidence and processing versions'));
+    expect(screen.getByText(siteEvidence.versions.coverage_formula)).toBeVisible();
+    expect(screen.getByText(siteEvidence.source_artifact_ids[0])).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Read existing prioritized findings' }));
+    expect(screen.getByRole('status').textContent).toMatch(/No persisted prioritized findings/);
+    call.mockResolvedValueOnce({ state: 'available', items: [] });
+    await user.click(screen.getByRole('button', { name: 'Read existing prioritized findings' }));
+    expect(screen.getByRole('status').textContent).toMatch(/No findings in this selection/);
+    call.mockResolvedValueOnce({ state: 'unavailable', reason: 'projection_unavailable' });
+    await user.click(screen.getByRole('button', { name: 'Read existing prioritized findings' }));
+    expect(screen.getByRole('status').textContent).toMatch(/unavailable/);
+    expect(screen.queryByText(/No findings in this selection/)).not.toBeInTheDocument();
+  });
   it('rejects mismatched host filters and invalidates old host replies on local reads and disconnect', async () => {
     let finish!: (value: unknown) => void;
     const controller = createController({
@@ -118,7 +177,7 @@ describe('CiteLadder MCP App', () => {
   it('renders observed zero separately from missing metrics and exposes keyboard view navigation', async () => {
     const user = userEvent.setup();
     const controller = createController({
-      call: vi.fn(async () => ({ state: 'unavailable' })),
+      call: vi.fn(async () => ({ state: 'unavailable', reason: 'no_measured_runs', points: [] })),
       context: vi.fn(async () => undefined),
     });
     controller.receive({

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { Disclosure } from '@/components/ui/disclosure';
 import {
   Table,
   TableHeader,
@@ -33,7 +34,11 @@ export function SourcesView({ state, controller }: Props) {
   const selection = state.selection!;
   const parsed = sourceSchema.safeParse(state.result?.evidence);
   if (!parsed.success)
-    return <p className={textRole('body')}>No source evidence for the selected audit.</p>;
+    return (
+      <p role="alert" className={textRole('body')}>
+        Source evidence is unavailable for the selected audit. Retry or reconnect.
+      </p>
+    );
   const data = parsed.data;
   return (
     <div className="space-y-4">
@@ -134,7 +139,7 @@ export function SourcesView({ state, controller }: Props) {
 }
 
 const siteSchema = z.object({
-  state: z.string(),
+  state: z.literal('available'),
   snapshot_id: z.string(),
   crawl_id: z.string(),
   observed_at: z.string(),
@@ -145,18 +150,34 @@ const siteSchema = z.object({
   }),
   coverage: z.object({ selected_urls: z.number(), analyzed_urls: z.number() }),
   measurement_states: z.record(z.string(), z.string()),
+  versions: z.record(z.string(), z.string()),
+  source_analysis_ids: z.array(z.string()).nullable(),
+  source_artifact_ids: z.array(z.string()).nullable(),
+  source_attempt_ids: z.array(z.string()).nullable(),
+  source_evaluation_ids: z.array(z.string()).nullable(),
+  source_task_ids: z.array(z.string()).nullable(),
+  classification_source_analysis_ids: z.array(z.string()).nullable(),
+  classification_source_artifact_ids: z.array(z.string()).nullable(),
+  classification_source_task_ids: z.array(z.string()).nullable(),
 });
 export function SiteHealthView({ state, controller }: Props) {
-  const [findings, setFindings] = useState<Record<string, unknown>[]>([]);
+  const [findings, setFindings] = useState<Awaited<ReturnType<Controller['siteFindings']>>>(null);
+  const [loadingFindings, setLoadingFindings] = useState(false);
   const [error, setError] = useState(false);
   const [pages, setPages] = useState<Record<string, unknown>[]>([]);
   const parsed = siteSchema.safeParse(state.result?.evidence);
-  if (!parsed.success)
+  if (!parsed.success) {
+    const missing = z
+      .object({ state: z.literal('unavailable'), reason: z.literal('no_site_snapshot') })
+      .safeParse(state.result?.evidence);
     return (
-      <p className={textRole('body')}>
-        No persisted Site Health snapshot. Start a crawl in CiteLadder, then return.
+      <p role={missing.success ? undefined : 'alert'} className={textRole('body')}>
+        {missing.success
+          ? 'No persisted Site Health snapshot. Start a crawl in CiteLadder, then return.'
+          : 'Site Health evidence is unavailable. Retry or reconnect.'}
       </p>
     );
+  }
   const site = parsed.data;
   return (
     <div className="space-y-4">
@@ -179,15 +200,46 @@ export function SiteHealthView({ state, controller }: Props) {
         Incomplete coverage is partial evidence. This snapshot has no historical period filter.
         Existing prioritized findings are current actions and may refer to different evidence.
       </p>
+      <Disclosure title="Snapshot evidence and processing versions">
+        <p className={textRole('caption')}>Snapshot {site.snapshot_id}</p>
+        <dl className={textRole('caption', 'space-y-2 break-all')}>
+          {Object.entries(site.versions).map(([kind, version]) => (
+            <div key={kind}>
+              <dt>{kind.replaceAll('_', ' ')} version</dt>
+              <dd>{version}</dd>
+            </div>
+          ))}
+          {(
+            [
+              ['Analyses', site.source_analysis_ids],
+              ['Artifacts', site.source_artifact_ids],
+              ['Attempts', site.source_attempt_ids],
+              ['Evaluations', site.source_evaluation_ids],
+              ['Tasks', site.source_task_ids],
+              ['Classification analyses', site.classification_source_analysis_ids],
+              ['Classification artifacts', site.classification_source_artifact_ids],
+              ['Classification tasks', site.classification_source_task_ids],
+            ] as const
+          ).map(([label, ids]) => (
+            <div key={String(label)}>
+              <dt>{label}</dt>
+              <dd>{ids === null ? 'Unknown' : ids.length ? ids.join(', ') : 'No recorded IDs'}</dd>
+            </div>
+          ))}
+        </dl>
+      </Disclosure>
       <Button
         variant="secondary"
+        disabled={loadingFindings}
         onClick={() => {
-          setFindings([]);
+          setFindings(null);
+          setLoadingFindings(true);
           setError(false);
           void controller
             .siteFindings()
             .then(setFindings)
-            .catch(() => setError(true));
+            .catch(() => setError(true))
+            .finally(() => setLoadingFindings(false));
         }}
       >
         Read existing prioritized findings
@@ -210,7 +262,18 @@ export function SiteHealthView({ state, controller }: Props) {
           Findings are unavailable. Retry or reconnect.
         </p>
       )}
-      {findings.map((finding, index) => (
+      {loadingFindings && <output>Loading persisted findings…</output>}
+      {findings?.state === 'unavailable' && (
+        <output className={textRole('body', 'block')}>
+          {findings.reason === 'no_opportunities'
+            ? 'No persisted prioritized findings are available.'
+            : 'Prioritized findings are unavailable. Retry or reconnect.'}
+        </output>
+      )}
+      {findings?.state === 'available' && !findings.items.length && (
+        <output className={textRole('body', 'block')}>No findings in this selection.</output>
+      )}
+      {(findings?.state === 'available' ? findings.items : []).map((finding, index) => (
         <article key={String(finding.id ?? index)}>
           <SectionTitle>{String(finding.title ?? finding.kind ?? 'Existing finding')}</SectionTitle>
           <p className={textRole('caption')}>{String(finding.record_uri ?? '')}</p>

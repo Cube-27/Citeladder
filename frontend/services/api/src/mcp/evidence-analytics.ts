@@ -27,6 +27,9 @@ export async function readAnalytics(
     if (name === 'read_visibility_trends') {
       if (typeof args.from_at !== 'string' || typeof args.to_at !== 'string')
         throw new McpInputError('Trends requires an explicit window');
+      const fromAt = parseDatetime(args.from_at);
+      const toAt = parseDatetime(args.to_at);
+      if (!fromAt || !toAt) throw new McpInputError('Trends window must contain valid datetimes');
       if (
         Date.parse(args.to_at) - Date.parse(args.from_at) >
         mcpPolicy.trend_max_window_days * 86400000
@@ -37,8 +40,8 @@ export async function readAnalytics(
       const points = visibilityTrendListSchema.parse(
         await getVisibilityTrends(db, scope, {
           logicalEngine: typeof args.engine === 'string' ? args.engine : null,
-          fromAt: typeof args.from_at === 'string' ? parseDatetime(args.from_at) : null,
-          toAt: typeof args.to_at === 'string' ? parseDatetime(args.to_at) : null,
+          fromAt,
+          toAt,
           granularity: typeof args.granularity === 'string' ? args.granularity : 'run',
           transportModel: typeof args.transport_model === 'string' ? args.transport_model : null,
           retrievalEnabled:

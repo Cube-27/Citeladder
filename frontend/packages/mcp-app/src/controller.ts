@@ -18,6 +18,10 @@ const projectsSchema = z.object({
   projects: z.array(z.object({ id: z.uuid(), name: z.string(), workspace_name: z.string() })),
   pagination: z.object({ next_cursor: z.string().nullable() }),
 });
+const findingsSchema = z.discriminatedUnion('state', [
+  z.object({ state: z.literal('available'), items: z.array(z.record(z.string(), z.json())) }),
+  z.object({ state: z.literal('unavailable'), reason: z.string() }),
+]);
 export type AppState = {
   result: AnalyticsResult | null;
   selection: AnalyticsSelection | null;
@@ -288,14 +292,16 @@ export function createController(host: Host) {
     siteFindings: async () => {
       const epoch = generation;
       const selected = state.selection;
-      if (!selected) return [];
-      let result: Record<string, unknown>;
+      if (!selected) return null;
+      let result: z.infer<typeof findingsSchema>;
       try {
-        result = evidence(
-          await host.call('read_opportunities', {
-            project_id: selected.project_id,
-            limit: appPolicy.pageSize,
-          }),
+        result = findingsSchema.parse(
+          bounded(
+            await host.call('read_opportunities', {
+              project_id: selected.project_id,
+              limit: appPolicy.pageSize,
+            }),
+          ),
         );
       } catch (error) {
         if (epoch === generation) {
@@ -310,8 +316,7 @@ export function createController(host: Host) {
         }
         throw error;
       }
-      if (epoch !== generation) return [];
-      return Array.isArray(result.items) ? result.items.map(evidence) : [];
+      return epoch === generation ? result : null;
     },
     sitePages: async () => {
       const epoch = generation;

@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
+import { z } from 'zod';
 import { visibilitySchema } from '@citeladder/contracts/visibility';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
 import type { AnalyticsSelection } from '@citeladder/contracts/mcp-app';
@@ -35,12 +36,18 @@ function Overview({
   select,
 }: Readonly<{ data: unknown; selection: AnalyticsSelection; select: Controller['select'] }>) {
   const parsed = visibilitySchema.safeParse(data);
-  if (!parsed.success)
+  if (!parsed.success) {
+    const unavailable = z
+      .object({ state: z.literal('unavailable'), reason: z.literal('no_completed_measurement') })
+      .safeParse(data);
     return (
-      <p className={textRole('body')}>
-        No completed measurement. Run a measurement in CiteLadder, then return.
+      <p role={unavailable.success ? undefined : 'alert'} className={textRole('body')}>
+        {unavailable.success
+          ? 'No completed measurement. Run a measurement in CiteLadder, then return.'
+          : 'Visibility evidence is unavailable. Retry or reconnect.'}
       </p>
     );
+  }
   const projection = parsed.data;
   return (
     <div className="space-y-4">
@@ -128,7 +135,13 @@ function Trends({
 }>) {
   const [metric, setMetric] = useState<string>('brand_mention_rate');
   const parsed = visibilityTrendListSchema.safeParse(data.points);
-  const points = parsed.success ? parsed.data : [];
+  if (!parsed.success)
+    return (
+      <p role="alert" className={textRole('body')}>
+        Visibility history is unavailable. Retry or reconnect.
+      </p>
+    );
+  const points = parsed.data;
   const competitors = [
     ...new Set(
       points.flatMap((point) =>

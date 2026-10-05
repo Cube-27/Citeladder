@@ -77,6 +77,21 @@ it('retains the selected Site Health snapshot and partial/unknown coverage when 
     projectId: seed.projectId,
   };
   const first = await siteFixtures.snapshot(seed);
+  const source = await siteFixtures.page(seed, '/', {});
+  await db
+    .updateTable('site_health_snapshots')
+    .set({
+      source_analysis_ids: [source.analysisId],
+      source_artifact_ids: [source.artifactId],
+      source_task_ids: [source.taskId],
+      classification_source_analysis_ids: [source.analysisId],
+      classification_source_artifact_ids: [source.artifactId],
+      classification_source_task_ids: [source.taskId],
+      coverage_formula_version: 'retained-coverage',
+      profile_version: 'retained-profile',
+    })
+    .where('id', '=', first)
+    .execute();
   const render = (snapshot_id?: string) =>
     dispatchTool(
       db,
@@ -96,7 +111,13 @@ it('retains the selected Site Health snapshot and partial/unknown coverage when 
   await siteFixtures.snapshot({ ...seed, crawlId: await siteFixtures.sibling(seed) }, 'complete');
   expect(await render(first)).toMatchObject({
     selection: { snapshot_id: first },
-    evidence: { measurement_states: { coverage: 'partial' } },
+    evidence: {
+      measurement_states: { coverage: 'partial' },
+      source_artifact_ids: [source.artifactId],
+      source_task_ids: [source.taskId],
+      classification_source_analysis_ids: [source.analysisId],
+      versions: { coverage_formula: 'retained-coverage', profile: 'retained-profile' },
+    },
   });
   await expect(render(randomUUID())).rejects.toThrow('unavailable');
 });
@@ -220,6 +241,14 @@ it('refuses foreign render objects, unsupported filters, forged totals and revok
       to_at: '2026-10-01T00:00:00Z',
     }),
   ).rejects.toThrow('limited');
+  for (const name of ['read_visibility_trends', 'render_visibility'])
+    await expect(
+      read(name, {
+        ...(name === 'render_visibility' ? { view: 'trends' } : {}),
+        from_at: '0000-01-01T00:00:00Z',
+        to_at: '0000-01-02T00:00:00Z',
+      }),
+    ).rejects.toThrow('valid datetimes');
   await db
     .updateTable('mcp_oauth_grants')
     .set({ revoked_at: new Date() })
