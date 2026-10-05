@@ -81,7 +81,12 @@
   --color-border-strong: #c3ccd9;
   --color-border-bold: #8a95a5;
 
-  /* The three reading inks: primary, secondary and muted. */
+  /* Reading inks plus the graduated chrome ladder. Faint is decorative only. */
+  --color-ink-faint: #8a95a5;
+  --color-ink-subtle: #5b6678;
+  --color-ink-soft: #526074;
+  --color-ink-chip: #3f4e63;
+  --color-ink-icon: #334155;
   --color-foreground: #0f172a;
   --color-secondary: #334155;
   --color-muted: #5b6678;
@@ -256,6 +261,37 @@
 
 :root {
   color-scheme: light;
+  /* Category tags are labels, never evidence status or action colours. */
+  --tag-blue-bg: #edf4ff;
+  --tag-blue-border: #c6d8f4;
+  --tag-blue-text: #244b83;
+  --tag-purple-bg: #f3efff;
+  --tag-purple-border: #d8ccf4;
+  --tag-purple-text: #60428b;
+  --tag-green-bg: #ecf7ef;
+  --tag-green-border: #c3dfcd;
+  --tag-green-text: #285b3a;
+  --tag-moss-bg: #f0f5e8;
+  --tag-moss-border: #d0dec0;
+  --tag-moss-text: #435c2c;
+  --tag-red-bg: #fff0f1;
+  --tag-red-border: #f0cbd0;
+  --tag-red-text: #8b3541;
+  --tag-orange-bg: #fff2e9;
+  --tag-orange-border: #edcfb9;
+  --tag-orange-text: #83461f;
+  --tag-amber-bg: #fff5e5;
+  --tag-amber-border: #e8d3ad;
+  --tag-amber-text: #755119;
+  --tag-teal-bg: #e9f6f4;
+  --tag-teal-border: #bfddd7;
+  --tag-teal-text: #275f57;
+  --tag-yellow-bg: #faf6dd;
+  --tag-yellow-border: #e3daa4;
+  --tag-yellow-text: #685914;
+  --tag-neutral-bg: #edf0f4;
+  --tag-neutral-border: #d3dae4;
+  --tag-neutral-text: #3f4e63;
   --state-surface: var(--color-panel);
   --sidebar-width: 240px;
   --compact-topbar-height: 56px;
@@ -264,10 +300,10 @@
   /* Sidebar rhythm. The rail's four bands share one inset so no band invents
      its own; the group gap is small because the section label carries the
      separation between groups. */
-  --sidebar-pad-x: 8px;
+  --sidebar-pad-x: 12px;
   --sidebar-pad-y: 8px;
   --sidebar-group-gap: 4px;
-  --sidebar-item-gap: 2px;
+  --sidebar-item-gap: 4px;
   --content-gutter: 32px;
   --content-max-width: 1392px;
   --workflow-max-width: 1040px;
@@ -292,17 +328,20 @@
   /* Clerk-inspired material, using CiteLadder's existing palette. The fine
      inset edge preserves layout geometry; ambient layers establish depth. */
   --surface-highlight: rgb(255 255 255 / 70%);
+  --surface-ring: rgb(15 23 42 / 14%);
+  --surface-inset-ring: rgb(255 255 255 / 60%);
+  --surface-drop: rgb(15 23 42 / 8%);
   --surface-sheen: rgb(255 255 255 / 10%);
   --elevation-control:
-    inset 0 1px 0 var(--surface-highlight),
-    0 1px 2px rgb(15 23 42 / 6%), 0 2px 3px -1px rgb(15 23 42 / 8%);
+    0 2px 3px var(--surface-drop), 0 0 0 1px var(--surface-ring),
+    inset 0 1px 0 var(--surface-highlight), inset 0 0 0 1px var(--surface-inset-ring);
   --elevation-primary:
-    inset 0 1px 0 rgb(255 255 255 / 18%),
-    inset 0 0 0 1px rgb(0 0 0 / 10%), 0 1px 3px rgb(15 23 42 / 20%);
+    0 3px 5px var(--surface-drop), 0 0 0 1px var(--surface-ring),
+    inset 0 2px 4px rgb(255 255 255 / 20%), inset 0 0 0 1px rgb(255 255 255 / 15%),
+    inset 0 -4px 8px rgb(0 0 0 / 10%);
   --elevation-card:
-    inset 0 0 0 1px var(--color-border-subtle),
-    0 1px 1px rgb(15 23 42 / 4%), 0 4px 6px rgb(15 23 42 / 3%),
-    0 24px 68px rgb(15 23 42 / 4%);
+    0 2px 6px var(--surface-drop), 0 0 0 1px var(--surface-ring),
+    inset 0 1px 0 var(--surface-highlight), inset 0 0 0 1px var(--surface-inset-ring);
   --elevation-flow:
     inset 0 0 0 1px var(--color-border-subtle),
     0 5px 15px rgb(15 23 42 / 6%), 0 15px 35px -5px rgb(15 23 42 / 12%);
@@ -618,8 +657,8 @@ body {
   .type-control,
   .type-control-file::file-selector-button {
     font-family: var(--font-sans);
-    font-size: 0.875rem;
-    line-height: 1.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
     font-weight: 500;
     letter-spacing: 0;
   }
@@ -632,7 +671,7 @@ body {
     line-height: 1.125rem;
     font-weight: 500;
     letter-spacing: 0;
-    color: var(--color-muted);
+    color: var(--color-ink-soft);
   }
   .type-caption {
     font-family: var(--font-sans);
@@ -640,7 +679,7 @@ body {
     line-height: 1rem;
     font-weight: 400;
     letter-spacing: 0;
-    color: var(--color-muted);
+    color: var(--color-ink-subtle);
   }
   /* Text face, not display: the serif heading face has proportional digits,
      so stacked metrics would not align. */
@@ -955,12 +994,16 @@ a.focus-ring:active .type-caption {
   box-shadow: var(--elevation-primary);
 }
 
+.control-raised {
+  box-shadow: 0 0 0 1px var(--surface-ring);
+}
+
 .control-raised:not(:disabled, [aria-disabled='true']) {
   background-image: linear-gradient(var(--surface-sheen), transparent);
   box-shadow: var(--elevation-control);
 }
 
-.control-raised[data-button-variant='primary']:not(:disabled, [aria-disabled='true']) {
+.control-raised:is([data-button-variant='primary'], [data-button-variant='destructive']):not(:disabled, [aria-disabled='true']) {
   box-shadow: var(--elevation-primary);
 }
 
@@ -1002,7 +1045,7 @@ a.focus-ring:active .type-caption {
 
 .shell-link[aria-current='page'] {
   background-color: var(--color-panel);
-  box-shadow: var(--elevation-control), inset 0 0 0 1px var(--color-border-subtle);
+  box-shadow: var(--elevation-control);
 }
 
 .shell-link[aria-current='page']:active {
@@ -1165,6 +1208,36 @@ input:-webkit-autofill:focus {
 
 :root[data-theme='dark'] {
   color-scheme: dark;
+  --tag-blue-bg: #1d2b3e;
+  --tag-blue-border: #23354c;
+  --tag-blue-text: #bfdbfe;
+  --tag-purple-bg: #231f3a;
+  --tag-purple-border: #4b437b;
+  --tag-purple-text: #c9bff3;
+  --tag-green-bg: #1f3a2d;
+  --tag-green-border: #275137;
+  --tag-green-text: #b1ebc5;
+  --tag-moss-bg: #23451d;
+  --tag-moss-border: #2e5029;
+  --tag-moss-text: #b1ebc5;
+  --tag-red-bg: #3e1d1e;
+  --tag-red-border: #4c2324;
+  --tag-red-text: #febfc6;
+  --tag-orange-bg: #3e291d;
+  --tag-orange-border: #764d35;
+  --tag-orange-text: #eeb390;
+  --tag-amber-bg: #31221b;
+  --tag-amber-border: #6c4830;
+  --tag-amber-text: #fed7aa;
+  --tag-teal-bg: #102a27;
+  --tag-teal-border: #3b6149;
+  --tag-teal-text: #a2ded2;
+  --tag-yellow-bg: #33301a;
+  --tag-yellow-border: #5a5228;
+  --tag-yellow-text: #fde68a;
+  --tag-neutral-bg: #2a2a2a;
+  --tag-neutral-border: #363636;
+  --tag-neutral-text: #cfcfcf;
   /* The dark ramp mirrors the light ladder one ramp down: rail #0a0a0a →
      ground #111111 → paper #1a1a1a. Wells sink below the ground, hover and
      overlay rungs rise above the paper, and the border rungs keep their old
@@ -1185,6 +1258,11 @@ input:-webkit-autofill:focus {
   --color-foreground: #d2d2d0;
   --color-secondary: #c0c0be;
   --color-muted: #999996;
+  --color-ink-faint: #737379;
+  --color-ink-subtle: #99999c;
+  --color-ink-soft: #a9a9b0;
+  --color-ink-chip: #ceced3;
+  --color-ink-icon: #dddde3;
   --color-track: #141414;
   --color-border-subtle: #272727;
   --color-border: #343434;
@@ -1267,11 +1345,15 @@ input:-webkit-autofill:focus {
   --skeleton-highlight: #292929;
   --shadow-overlay: 0 12px 32px rgb(0 0 0 / 40%);
   --shadow-modal: 0 24px 64px rgb(0 0 0 / 60%);
-  --surface-highlight: rgb(255 255 255 / 8%);
+  --surface-highlight: rgb(255 255 255 / 10%);
+  --surface-ring: rgb(0 0 0 / 55%);
+  --surface-inset-ring: rgb(255 255 255 / 6%);
+  --surface-drop: rgb(0 0 0 / 24%);
   --surface-sheen: rgb(255 255 255 / 4%);
-  --elevation-control: inset 0 1px 0 var(--surface-highlight), inset 0 0 0 1px rgb(255 255 255 / 3%);
-  --elevation-primary: inset 0 1px 0 rgb(255 255 255 / 18%), inset 0 0 0 1px rgb(0 0 0 / 12%);
-  --elevation-card: inset 0 0 0 1px var(--color-border-subtle), inset 0 1px 0 var(--surface-highlight);
+  --elevation-primary:
+    0 3px 5px var(--surface-drop), 0 0 0 1px var(--surface-ring),
+    inset 0 2px 4px rgb(255 255 255 / 20%), inset 0 0 0 1px rgb(255 255 255 / 15%),
+    inset 0 -4px 8px rgb(0 0 0 / 10%);
   --elevation-flow: inset 0 0 0 1px var(--color-border), inset 0 1px 0 var(--surface-highlight);
   --elevation-track: inset 0 0 0 1px var(--color-border-subtle), inset 0 1px 2px rgb(0 0 0 / 24%);
   --elevation-field: inset 0 1px 0 var(--surface-highlight);
@@ -1379,6 +1461,21 @@ input:-webkit-autofill:focus {
 /* Dense page toolbars keep every trigger at the same role in all viewports. */
 [data-page-band='control'] {
   --control-height-md: var(--control-height-sm);
+}
+
+/* Keep wrapping filter rows off their rules, including narrow viewports. */
+[data-page-band='control'] > div {
+  padding-block: 8px;
+}
+
+/* Box shadows disappear in forced colours; retain a system-colour boundary. */
+@media (forced-colors: active) {
+  .control-raised,
+  .surface-card,
+  .shell-link[aria-current='page'] {
+    outline: 1px solid ButtonText;
+    outline-offset: -1px;
+  }
 }
 
 .table-dense {

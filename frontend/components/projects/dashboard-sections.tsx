@@ -8,6 +8,7 @@ import {
 import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Badge } from '@/components/ui/badge';
+import { TagGroup } from '@/components/ui/tag';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -87,6 +88,7 @@ export function DashboardHeader({
 
 export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
   const facts = data.facts;
+  const offerings = facts.products_services.filter((label) => label.trim());
   return (
     <section className="grid gap-3">
       <div className="flex items-center justify-between gap-3">
@@ -110,12 +112,17 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
           emptyState="not_set"
         />
         <FactSummary label="Target audience" value={facts.target_audience} emptyState="not_set" />
-        <FactSummary
-          label="Offerings & competitors"
-          value={facts.products_services.join(', ')}
-          emptyState="not_set"
-          supporting={`${facts.competitors.length} tracked competitor${facts.competitors.length === 1 ? '' : 's'}`}
-        />
+        <div className={cn(hairlineBandItemClasses, 'grid content-start gap-2')}>
+          <p className={eyebrowClasses}>Offerings & competitors</p>
+          {offerings.length ? (
+            <TagGroup labels={offerings} tone="purple" />
+          ) : (
+            <UnavailableValue state="not_set" />
+          )}
+          <p className={textRole('caption')}>
+            {facts.competitors.length} tracked competitor{facts.competitors.length === 1 ? '' : 's'}
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -148,12 +155,10 @@ function FactSummary({
   label,
   value,
   emptyState,
-  supporting,
 }: Readonly<{
   label: string;
   value: string;
   emptyState: 'not_set';
-  supporting?: string;
 }>) {
   return (
     <div className={cn(hairlineBandItemClasses, 'grid gap-2')}>
@@ -167,7 +172,6 @@ function FactSummary({
       ) : (
         <UnavailableValue state={emptyState} className="inline-flex justify-self-start" />
       )}
-      {supporting ? <p className={textRole('caption')}>{supporting}</p> : null}
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
@@ -88,7 +87,7 @@ function DashboardNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) {
         return (
           <div key={group.title} className="flex flex-col gap-0">
             {showHeading ? (
-              <p className={cn(eyebrowClasses, 'text-secondary px-3 pt-4 pb-1')}>{group.title}</p>
+              <p className="type-caption text-ink-subtle px-3 pt-4 pb-2">{group.title}</p>
             ) : null}
             <StationLinks group={group} onNavigate={onNavigate} />
           </div>

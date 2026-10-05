@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { Archive, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Pressable } from '@/components/ui/pressable';
 import {
@@ -192,9 +192,9 @@ function TopicBadge({ name }: Readonly<{ name?: string }>) {
   if (!name) return <UnavailableValue state="not_set" />;
   return (
     <Tooltip content={name}>
-      <Badge variant="neutral" className="max-w-full">
+      <Tag tone="blue" className="max-w-full">
         <span className="min-w-0 truncate">{name}</span>
-      </Badge>
+      </Tag>
     </Tooltip>
   );
 }

@@ -117,7 +117,10 @@ function PageBand({
   return (
     <div
       data-page-band={kind}
-      className={cn('border-border border-b', kind === 'control' && 'bg-panel-tonal')}
+      className={cn(
+        'border-border-subtle border-b',
+        kind === 'control' ? 'bg-panel-tonal' : 'bg-panel',
+      )}
     >
       <div className={cn(pageGutterClasses, 'flex', className)}>{children}</div>
     </div>
@@ -141,7 +144,7 @@ function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: R
     <div
       data-page-band="identity"
       className={cn(
-        'border-border border-b',
+        'bg-panel border-border-subtle border-b',
         // Below 701px the compact topbar already names the page, so a band
         // holding only a screen-reader title would be an empty ruled row.
         !actions && 'max-[700px]:hidden',
@@ -170,7 +173,7 @@ function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: R
           // Desktop-only, because that is the only width the glyphs appear at.
           <div
             className={cn(
-              'flex min-h-[var(--control-height-md)] shrink-0 items-center gap-2',
+              'flex min-w-0 min-h-[var(--control-height-md)] flex-wrap items-center gap-2',
               navigationMode(pathname) === 'dashboard'
                 ? 'min-[981px]:pe-[calc(3*var(--control-height-md)+1.25rem)]'
                 : 'min-[981px]:pe-[calc(2*var(--control-height-md)+1rem)]',
