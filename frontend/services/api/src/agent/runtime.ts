@@ -14,7 +14,8 @@ import {
   type SkillCatalog,
   type Step,
 } from './contracts.ts';
-import { manifestSchema, renderManifest, contextCitations } from './context.ts';
+import { manifestSchema, suppliedManifest } from './context.ts';
+import { assemblePrompt, type Observation } from './prompt.ts';
 import { ModelCalls, type AgentModel } from './model-calls.ts';
 import { currentOutput, saveAgentOutput, type AttachTarget } from './outputs.ts';
 import { lockRun, terminalize } from './queue.ts';
@@ -42,7 +43,8 @@ type TurnState = {
   skillSource: string | null;
   allowed: Set<string>;
   steps: StepRecord[];
-  transcript: string[];
+  transcript: Observation[];
+  budget: Budget;
   toolsUsed: number;
   errors: number;
 };
@@ -70,6 +72,9 @@ export class AgentRuntime {
   private load(lease: Lease) {
     return this.db.transaction().execute(async (trx) => {
       const run = await lockRun(trx, lease);
+      const parsedBudget = budgetSchema.safeParse(run.budget);
+      if (!parsedBudget.success) throw new AgentError('incompatible_budget');
+      const budget = parsedBudget.data;
       if (!run.user_id) throw new AgentError('access_revoked');
       const scope = {
         workspaceId: run.workspace_id,
@@ -93,7 +98,7 @@ export class AgentRuntime {
         .where('workspace_id', '=', scope.workspaceId)
         .where('chat_id', '=', chat.id)
         .orderBy('sequence', 'desc')
-        .limit(agentPolicy.history_max_messages)
+        .limit(budget.history_max_messages + 1)
         .execute();
       const request = await trx
         .selectFrom('agent_messages')
@@ -110,7 +115,12 @@ export class AgentRuntime {
         current,
         request: request.content,
         manifest,
-        history: messages.reverse().filter((message) => message.id !== run.user_message_id),
+        budget,
+        historyLimited: messages.length > budget.history_max_messages,
+        history: messages
+          .slice(0, budget.history_max_messages)
+          .reverse()
+          .filter((message) => message.id !== run.user_message_id),
       };
     });
   }
@@ -127,19 +137,34 @@ export class AgentRuntime {
   private async turn(lease: Lease, signal?: AbortSignal) {
     signal?.throwIfAborted();
     const turn = await this.load(lease);
-    const budget = budgetSchema.parse(turn.run.budget);
+    const budget = turn.budget;
     const model = await this.deps.modelFor(turn.run);
     const state = this.initialState(turn);
     for (let ordinal = 1; ordinal <= budget.max_steps; ordinal++) {
       signal?.throwIfAborted();
-      const request = this.prompt(
+      const assembled = this.prompt(
         turn,
         state.skill,
         state.transcript,
         budget.max_steps - ordinal + 1,
         budget.max_tool_calls - state.toolsUsed,
       );
-      const result = await this.deps.models.call(lease, ordinal, model, request);
+      state.allowed = new Set(assembled.citations);
+      await this.db.transaction().execute(async (trx) => {
+        await lockRun(trx, lease);
+        await trx
+          .updateTable('agent_runs')
+          .set({
+            context_manifest: {
+              ...turn.manifest,
+              prompt_summary: assembled.summary,
+            },
+          })
+          .where('id', '=', lease.runId)
+          .where('workspace_id', '=', lease.workspaceId)
+          .execute();
+      });
+      const result = await this.deps.models.call(lease, ordinal, model, assembled.request);
       signal?.throwIfAborted();
       const step = this.parse(result.content, state);
       if (step?.action === 'respond') {
@@ -177,7 +202,8 @@ export class AgentRuntime {
     return {
       skill,
       skillSource: turn.run.requested_skill_source ?? (skill ? 'chat' : null),
-      allowed: contextCitations(turn.manifest),
+      allowed: new Set(),
+      budget: turn.budget,
       steps: [],
       transcript: [],
       toolsUsed: 0,
@@ -195,8 +221,9 @@ export class AgentRuntime {
   }
   private repair(state: TurnState, instruction: string) {
     state.errors++;
-    if (state.errors >= agentPolicy.max_protocol_errors) throw new AgentError('protocol_violation');
-    state.transcript.push(`Protocol error: ${instruction}`);
+    if (state.errors >= state.budget.max_protocol_errors)
+      throw new AgentError('protocol_violation');
+    state.transcript.push({ text: `Protocol error: ${instruction}`, refs: [] });
   }
   private selectSkill(skillId: string, state: TurnState) {
     const selected = this.deps.catalog.skills.get(skillId);
@@ -206,7 +233,7 @@ export class AgentRuntime {
       state.skillSource = 'model';
       state.steps.push({ kind: 'skill', skill_id: selected.id });
     }
-    state.transcript.push(`Selected skill: ${state.skill.id}`);
+    state.transcript.push({ text: `Selected skill: ${state.skill.id}`, refs: [] });
   }
   private refusal(tool: string, ordinal: number, budget: Budget, toolsUsed: number) {
     if (!this.deps.tools.has(tool)) return 'unknown_tool';
@@ -234,6 +261,7 @@ export class AgentRuntime {
           step.tool,
           step.arguments,
           AbortSignal.timeout(budget.execution_timeout_seconds * 1000),
+          budget.tool_result_max_chars,
         );
     if (!refusal) state.toolsUsed++;
     await this.recordTool(
@@ -244,23 +272,32 @@ export class AgentRuntime {
       outcome,
       Math.round(performance.now() - started),
     );
-    outcome.refs.forEach((ref) => {
-      state.allowed.add(ref.id);
-      if (ref.record_uri) state.allowed.add(ref.record_uri);
-    });
     state.steps.push({ kind: 'tool', tool: step.tool, status: outcome.status });
-    state.transcript.push(`Tool ${step.tool}: ${outcome.status}\n${outcome.text}`);
+    state.transcript.push({
+      text: `Tool ${step.tool}: ${outcome.status}\n${outcome.text}`,
+      refs: outcome.refs.flatMap((ref) => [ref.id, ...(ref.record_uri ? [ref.record_uri] : [])]),
+    });
   }
   private prompt(
     turn: Awaited<ReturnType<AgentRuntime['load']>>,
     skill: Skill | undefined,
-    transcript: string[],
+    transcript: Observation[],
     remaining: number,
     tools: number,
   ) {
     const system = [
       this.deps.catalog.operatingContract,
-      skill?.body ?? JSON.stringify([...this.deps.catalog.skills.keys()]),
+      skill?.body ??
+        JSON.stringify(
+          [...this.deps.catalog.skills.values()].map(
+            ({ id, description, outputKind, outlineFirst }) => ({
+              id,
+              description,
+              output_kind: outputKind,
+              outline_first: outlineFirst,
+            }),
+          ),
+        ),
       skill?.outputKind === 'content'
         ? this.formatInstructions(turn.current.output?.format_id)
         : '',
@@ -271,32 +308,28 @@ export class AgentRuntime {
         : 'Return an output only when requested.',
       JSON.stringify(this.deps.tools.catalog()),
     ].join('\n\n');
-    const context = [
-      renderManifest(turn.manifest),
-      ...turn.history.map(
-        (message) =>
-          `${message.role}: ${message.content.slice(0, agentPolicy.history_message_max_chars)}`,
-      ),
-      turn.current.revision
-        ? `Current output: ${JSON.stringify(turn.current.revision)}`
-        : 'No current output.',
-    ];
-    // Preserve the latest instruction and freshest steps when working context is capped.
-    const request = `\nUSER REQUEST\n${turn.request}`;
-    const rawSteps = transcript.join('\n\n');
-    const marker = agentPolicy.transcript_truncation_marker;
-    const stepSpace = Math.max(0, agentPolicy.transcript_max_chars - request.length);
-    const keep = Math.max(0, stepSpace - marker.length);
-    const recent =
-      rawSteps.length <= stepSpace
-        ? rawSteps
-        : marker.slice(0, stepSpace) + rawSteps.slice(rawSteps.length - keep);
-    const space = Math.max(0, agentPolicy.transcript_max_chars - request.length - recent.length);
-    const user =
-      bounded(context.join('\n\n'), space, agentPolicy.context_truncation_marker) +
-      recent +
-      request;
-    return { system, user, schema: stepJsonSchema };
+    const context = suppliedManifest(turn.manifest, turn.budget.context_package_max_chars);
+    const assembled = assemblePrompt({
+      system,
+      schema: stepJsonSchema,
+      request: turn.request,
+      context: context.text,
+      revision: turn.current.revision,
+      history: turn.history,
+      historyLimited: turn.historyLimited,
+      observations: transcript,
+      budget: turn.budget,
+    });
+    return {
+      ...assembled,
+      citations: [...context.citations, ...assembled.citations],
+      summary: {
+        included_sections: context.included,
+        omissions: [...context.omissions, ...assembled.omissions],
+        serialized_chars: assembled.serializedChars,
+        max_chars: turn.budget.transcript_max_chars,
+      },
+    };
   }
   private formatInstructions(id: string | null | undefined) {
     const catalog = this.deps.catalog;
@@ -347,7 +380,7 @@ export class AgentRuntime {
     lease: Lease,
     turn: Awaited<ReturnType<AgentRuntime['load']>>,
     response: Extract<Step, { action: 'respond' }>,
-    { skill, skillSource: source, allowed, steps }: TurnState,
+    { skill, skillSource: source, allowed, steps, budget }: TurnState,
   ) {
     return this.db.transaction().execute(async (trx) => {
       const run = await lockRun(trx, lease);
@@ -366,7 +399,7 @@ export class AgentRuntime {
         content:
           bounded(
             stripUnverifiedRefs(response.reply, allowed),
-            agentPolicy.reply_max_chars,
+            budget.reply_max_chars - completion.length,
             '\n[reply truncated at its size bound]',
           ) + completion,
         evidence: refs,

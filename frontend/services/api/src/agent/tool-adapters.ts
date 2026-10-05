@@ -46,7 +46,7 @@ function sharedTools(db: Database): ReadTool[] {
         name,
         description: definition.description,
         arguments: z.strictObject(fields) as z.ZodType<Record<string, Json>>,
-        read: async (scope: Scope, args: Record<string, Json>) => {
+        read: async (scope: Scope, args: Record<string, Json>, _signal, maxChars) => {
           const data = await dispatchTool(
             db,
             {
@@ -58,7 +58,7 @@ function sharedTools(db: Database): ReadTool[] {
             name,
             { ...args, ...(_project ? { project_id: scope.projectId } : {}) },
             '',
-            policy.agent.tool_result_max_chars,
+            maxChars,
           );
           const result = outcome(
             data,

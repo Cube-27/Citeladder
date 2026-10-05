@@ -20,10 +20,27 @@ export class AgentError extends Error {
   }
 }
 export const budgetSchema = z.object({
+  version: z.literal(1),
   max_steps: z.number().int().positive(),
   max_tool_calls: z.number().int().nonnegative(),
   execution_timeout_seconds: z.number().positive(),
+  max_protocol_errors: z.number().int().positive(),
+  tool_result_max_chars: z.number().int().positive(),
+  context_package_max_chars: z.number().int().positive(),
+  transcript_max_chars: z.number().int().positive(),
+  history_max_messages: z.number().int().positive(),
+  history_message_max_chars: z.number().int().positive(),
+  reply_max_chars: z.number().int().positive(),
+  output_body_max_chars: z.number().int().positive(),
+  output_title_max_chars: z.number().int().positive(),
 });
+export function admittedBudget(executionTimeoutSeconds: number) {
+  return budgetSchema.parse({
+    ...agentPolicy,
+    version: 1,
+    execution_timeout_seconds: executionTimeoutSeconds,
+  });
+}
 export const outputPayloadSchema = z
   .object({
     title: z.string().trim().min(1).max(agentPolicy.output_title_max_chars),
@@ -74,6 +91,7 @@ export function parseStep(content: string, skills?: ReadonlyMap<string, Skill>):
 }
 export type Skill = {
   id: string;
+  description: string;
   version: number;
   outputKind: string;
   body: string;

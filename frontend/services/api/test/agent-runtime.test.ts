@@ -444,7 +444,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const { run, lease } = await fixtures.claimed(scope);
     await db
       .updateTable('agent_runs')
-      .set({ budget: { max_steps: 3, max_tool_calls: 2, execution_timeout_seconds: 10 } })
+      .set({ budget: { ...(run.budget as object), max_steps: 3, max_tool_calls: 2 } })
       .where('id', '=', run.id)
       .execute();
     await fixtures
@@ -486,8 +486,15 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     ]);
     const outcome = await tools.execute(db, scope, 'missing', {}, AbortSignal.timeout(1000));
     expect(outcome.status).toBe('unavailable');
-    expect(outcome.omissions).toContainEqual({ reason: 'tool_result_truncated', count: 1 });
-    expect(outcome.text).toContain('[tool result truncated]');
+    expect(outcome.omissions).toContainEqual({
+      reason: 'tool_result_truncated',
+      count: 1,
+      sections: ['value'],
+    });
+    expect(JSON.parse(outcome.text)).toMatchObject({
+      complete: false,
+      omitted_sections: ['value'],
+    });
     expect(stripUnverifiedRefs('See citeladder://project/foreign.', new Set())).toBe(
       'See [unverified reference].',
     );

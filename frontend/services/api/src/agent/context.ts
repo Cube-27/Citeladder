@@ -14,10 +14,11 @@ const actionSchema = z
   .catchall(z.json());
 const packageSchema = z.object({
   version: z.string(),
-  brand_block: z.string(),
-  target_page_block: z.string(),
-  issue_block: z.string(),
-  related_site_block: z.string(),
+  brand_block: z.string().default(''),
+  target_page_block: z.string().default(''),
+  issue_block: z.string().default(''),
+  related_site_block: z.string().default(''),
+  sections: z.record(z.string(), z.json()).default({}),
   summary: z.record(z.string(), z.json()),
 });
 export const manifestSchema = z.object({
@@ -27,6 +28,7 @@ export const manifestSchema = z.object({
   action: actionSchema.nullable(),
   mentions: z.array(actionSchema),
   instructions: z.object({ revision: z.number().int(), text: z.string() }).nullable(),
+  prompt_summary: z.record(z.string(), z.json()).optional(),
 });
 export type Manifest = z.infer<typeof manifestSchema>;
 /** Evidence owners authorize all origin IDs and return bounded persisted blocks.
@@ -96,21 +98,63 @@ export async function buildManifest(
     instructions: instructions ?? null,
   });
 }
-export function renderManifest(manifest: Manifest) {
-  const value = JSON.stringify({
+export function suppliedManifest(
+  manifest: Manifest,
+  limit = agentPolicy.context_package_max_chars,
+) {
+  const omissions: string[] = [];
+  const supplied = {
     instructions: manifest.instructions,
-    package: manifest.package,
+    package: { ...manifest.package, sections: { ...manifest.package.sections } },
     action: manifest.action,
-    mentions: manifest.mentions,
-  });
-  return value.length <= agentPolicy.context_package_max_chars
-    ? value
-    : value.slice(
-        0,
-        agentPolicy.context_package_max_chars - agentPolicy.context_truncation_marker.length,
-      ) + agentPolicy.context_truncation_marker;
+    mentions: [...manifest.mentions],
+    omissions,
+  };
+  const size = () => JSON.stringify(supplied).length;
+  for (const key of Object.keys(supplied.package.sections).reverse()) {
+    if (size() <= limit) break;
+    // Selected upstream documents must remain exact, even when they cannot fit.
+    if (key === 'upstream_revision') continue;
+    delete supplied.package.sections[key];
+    omissions.push(`package.sections.${key}`);
+  }
+  for (const key of [
+    'related_site_block',
+    'issue_block',
+    'target_page_block',
+    'brand_block',
+  ] as const) {
+    if (size() <= limit) break;
+    if (supplied.package[key]) {
+      supplied.package[key] = '';
+      omissions.push(`package.${key}`);
+    }
+  }
+  while (size() > limit && supplied.mentions.length) {
+    const removed = supplied.mentions.pop()!;
+    omissions.push(`mentioned_action:${removed.id}`);
+  }
+  if (size() > limit && supplied.action) {
+    omissions.push(`action.diagnosis:${supplied.action.id}`);
+    supplied.action = { ...supplied.action, diagnosis: {} };
+  }
+  // Keep metadata bounded while retaining named evidence and exact upstream revision.
+  if (size() > limit) {
+    supplied.package.summary = { omissions: ['context_summary_size_limit'] };
+    omissions.push('package.summary');
+  }
+  if (size() > limit) throw new AgentError('context_size_limit');
+  return {
+    text: JSON.stringify(supplied),
+    citations: contextCitations(supplied),
+    omissions,
+    included: Object.keys(supplied.package.sections),
+  };
 }
-export function contextCitations(manifest: Manifest): Set<string> {
+export function renderManifest(manifest: Manifest) {
+  return suppliedManifest(manifest).text;
+}
+export function contextCitations(manifest: Pick<Manifest, 'action' | 'mentions'>): Set<string> {
   // Other context blocks are working context, not a record citation grant.
   return new Set(
     [manifest.action, ...manifest.mentions].flatMap((action) => {

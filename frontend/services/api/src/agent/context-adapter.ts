@@ -14,8 +14,6 @@ import type { ContextReader } from './context.ts';
 import { AgentError } from './contracts.ts';
 import { z } from 'zod';
 
-const block = (label: string, value: unknown) =>
-  value ? `${label}\n${JSON.stringify(value)}` : '';
 function owned(candidate: unknown, website: string) {
   if (typeof candidate !== 'string' || !candidate) return '';
   try {
@@ -125,21 +123,31 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
       competitors: competitors.map((row) => row.name),
       memory,
     };
-    const evidence = [
-      block('OPPORTUNITY EVIDENCE', opportunity),
-      block('DEMAND EVIDENCE', demand),
-      block('SITE HEALTH EVIDENCE', site),
-      block('SEARCH INTELLIGENCE EVIDENCE', search),
-    ].filter(Boolean);
+    const evidence = Object.fromEntries(
+      Object.entries({
+        opportunity,
+        demand,
+        site_health: site,
+        search_intelligence: search,
+      }).filter(([, value]) => value != null),
+    );
     return {
       version: policy.agent_context.content_context_version,
-      brand_block: block('BRAND', brand),
-      target_page_block: block(
-        'TARGET PAGE',
-        targetPage ?? (targetUrl ? { url: targetUrl, state: 'unavailable' } : null),
+      brand_block: '',
+      target_page_block: '',
+      related_site_block: '',
+      issue_block: '',
+      sections: z.record(z.string(), z.json()).parse(
+        JSON.parse(
+          JSON.stringify({
+            brand,
+            target_page:
+              targetPage ?? (targetUrl ? { url: targetUrl, state: 'unavailable' } : null),
+            ...evidence,
+            related_site: related,
+          }),
+        ),
       ),
-      related_site_block: related.length ? block('RELATED SITE CONTEXT', related) : '',
-      issue_block: evidence.join('\n\n'),
       summary: z.record(z.string(), z.json()).parse(
         JSON.parse(
           JSON.stringify({
@@ -151,12 +159,12 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
             related_page_count: related.length,
             crawl_page_count: selection.pages.length,
             crawl_urls: selection.pages.map((page) => page.final_url),
-            issue_count: evidence.length,
+            evidence_block_count: Object.keys(evidence).length,
             opportunity_id: opportunity?.id ?? null,
             demand_signal_id: demand?.signal.id ?? null,
             demand_snapshot_id: demand?.snapshot.id ?? null,
-            site_health_reference: site ?? null,
-            search_intelligence_reference: search ?? null,
+            site_health_reference: refs.site_health_reference ?? null,
+            search_intelligence_reference: refs.search_intelligence_reference ?? null,
           }),
         ),
       ),

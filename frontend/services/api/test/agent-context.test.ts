@@ -71,7 +71,7 @@ describe('Agent persisted context binding', () => {
       { target_site_url_id: target.id },
       'pricing guide',
     );
-    expect(context.target_page_block).toContain('Current product content');
+    expect(context.sections?.target_page).toMatchObject({ body_text: 'Current product content' });
     expect(context.summary).toMatchObject({
       target_url: 'https://example.test/product',
       crawl_page_count: 3,
@@ -163,7 +163,7 @@ describe('Agent persisted context binding', () => {
       checkpoint_ids: ['technical.title_present'],
     };
     const context = await readAgentContext(db, seed, { site_health_reference: ref }, 'Fix title');
-    expect(context.summary.site_health_reference).toMatchObject({
+    expect(context.sections?.site_health).toMatchObject({
       source_analysis_id: page.analysisId,
       source_evaluation_ids: [evaluationId],
       source_artifact_ids: [page.artifactId],

@@ -8,7 +8,7 @@ import { authorize } from './access.ts';
 import {
   agentPolicy,
   AgentError,
-  budgetSchema,
+  admittedBudget,
   type Chat,
   type Run,
   type Scope,
@@ -258,11 +258,7 @@ export class AgentStore {
           requested_skill_id: skill.id,
           requested_skill_source: skill.source,
           context_manifest: manifest,
-          budget: budgetSchema.parse({
-            max_steps: agentPolicy.max_steps,
-            max_tool_calls: agentPolicy.max_tool_calls,
-            execution_timeout_seconds: this.dependencies.timeoutSeconds,
-          }),
+          budget: admittedBudget(this.dependencies.timeoutSeconds),
           runtime_version: agentPolicy.runtime_version,
           protocol_version: agentPolicy.protocol_version,
           registry_version: this.dependencies.registryVersion,
