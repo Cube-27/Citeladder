@@ -51,23 +51,39 @@ const text = (args: ReadArguments, key: string) =>
 const limit = (args: ReadArguments) => Number(args.limit ?? mcpPolicy.default_list_limit);
 const workspace = (scope: ReadScope) => new WorkspaceScope(scope.workspaceId);
 
-async function siteSnapshot(db: Database, scope: ReadScope): Promise<Evidence> {
-  const row = await workspace(scope)
+async function siteSnapshot(
+  db: Database,
+  scope: ReadScope,
+  snapshotId: string | null,
+): Promise<Evidence> {
+  let query = workspace(scope)
     .selectFrom(db, 'site_health_snapshots')
     .selectAll()
-    .where('project_id', '=', scope.projectId)
-    .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
-    .executeTakeFirst();
+    .where('project_id', '=', scope.projectId);
+  if (snapshotId) query = query.where('id', '=', snapshotId);
+  const row = await query.orderBy('created_at', 'desc').orderBy('id', 'desc').executeTakeFirst();
+  if (snapshotId && !row) throw new McpInputError('Selected snapshot is unavailable');
   return row
     ? {
         state: 'available',
+        snapshot_id: row.id,
+        crawl_id: row.crawl_id,
+        observed_at: row.created_at,
         scores: {
           web_fundamentals: row.web_fundamentals_score,
           aeo_readiness: row.aeo_readiness_score,
           aeo_measurement_coverage: row.aeo_measurement_coverage,
         },
         coverage: { selected_urls: row.selected_url_count, analyzed_urls: row.analyzed_url_count },
+        measurement_states: {
+          coverage: row.coverage_state,
+          web_fundamentals: row.web_fundamentals_state,
+          aeo: row.aeo_measurement_state,
+          classification: row.classification_state,
+        },
+        top_issues: row.top_issues,
+        source_analysis_ids: row.source_analysis_ids,
+        source_artifact_ids: row.source_artifact_ids,
         versions: { analyzer: row.analyzer_version, scoring: row.scoring_version },
         artifact_refs: [reference('site_snapshot', row.id), reference('site_crawl', row.crawl_id)],
         omissions: [],
@@ -405,7 +421,7 @@ export async function readEvidence(
     };
   }
   if (name === 'read_integration_status') return readIntegrationStatus(db, scope);
-  if (name === 'read_site_health') return siteSnapshot(db, scope);
+  if (name === 'read_site_health') return siteSnapshot(db, scope, text(args, 'snapshot_id'));
   if (name === 'read_ai_crawlability')
     return crawlability(db, scope, text(args, 'crawl_id') ?? undefined);
   if (name === 'read_demand') return demandSnapshot(db, scope);
@@ -566,8 +582,8 @@ export async function readEvidence(
         promptId: text(args, 'prompt_id'),
         outcome: null,
         competitor: null,
-        domain: null,
-        url: null,
+        domain: text(args, 'domain'),
+        url: text(args, 'url'),
         cursor: text(args, 'cursor'),
         asOf: null,
         limit: limit(args),
@@ -609,7 +625,7 @@ export async function readEvidence(
     }
     const dimension = text(args, 'level') === 'url' ? 'url' : 'domain';
     const page = await getVisibilitySources(db, selection, {
-      domain: null,
+      domain: text(args, 'domain'),
       sourceClass: null,
       dimension,
       asOf: null,

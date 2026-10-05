@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { analyticsSelectionSchema } from '@citeladder/contracts/mcp-app';
+import { readAnalytics, renderAnalytics } from './evidence-analytics.ts';
 import { policy } from '../config.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import type { Database } from '../db/database.ts';
@@ -41,6 +43,58 @@ const sections = z.enum([
   'search_intelligence',
 ]);
 export const definitions = {
+  render_visibility: {
+    title: 'Show AI Visibility',
+    availability: 'state' as const,
+    description:
+      'Render Overview, Trends or Sources from canonical persisted evidence. Latest resolves once to a concrete audit. Trends requires from_at and to_at; Sources is one audit, never a period aggregate.',
+    schema: analyticsSelectionSchema.extend({
+      view: z.enum(['overview', 'trends', 'sources']).default('overview'),
+    }),
+  },
+  render_site_health: {
+    title: 'Show Site Health',
+    availability: 'state' as const,
+    description:
+      'Render the latest persisted Site Health snapshot or pin snapshot_id. No crawl starts. Visibility and period filters are unsupported.',
+    schema: z.strictObject({ ...scope, snapshot_id: nullable(uuid) }),
+  },
+  open_analytics: {
+    title: 'Open CiteLadder analytics',
+    availability: 'successful_read' as const,
+    description:
+      'Open the analytics project picker. Select an authorized project before reading evidence.',
+    schema: z.strictObject({}),
+  },
+  read_visibility_overview: {
+    title: 'Read visibility measures',
+    availability: 'state' as const,
+    description:
+      'Read canonical persisted visibility rates, counts, rankings, model provenance and comparison status. Latest resolves to a concrete audit_id. Missing measurements remain unavailable.',
+    schema: z.strictObject({
+      ...scope,
+      audit_id: nullable(uuid),
+      baseline_id: nullable(uuid),
+      engine: nullable(z.string().trim().min(1)),
+      cohort: z.enum(['core', 'comparison']).default('core'),
+    }),
+  },
+  read_visibility_trends: {
+    title: 'Read visibility trends',
+    availability: 'state' as const,
+    description:
+      'Read bounded persisted trend points for an explicit window. Preserve comparison keys, model/retrieval identity, cohort, versions, source snapshot IDs and gaps. Never compare incompatible points as measured change.',
+    schema: z.strictObject({
+      ...scope,
+      from_at: z.iso.datetime({ offset: true }),
+      to_at: z.iso.datetime({ offset: true }),
+      engine: nullable(z.string().trim().min(1)),
+      cohort: z.enum(['core', 'comparison']).default('core'),
+      granularity: z.enum(['run', 'day', 'week', 'month']).default('run'),
+      transport_model: nullable(z.string().trim().min(1)),
+      retrieval_enabled: nullable(z.boolean()),
+    }),
+  },
   list_projects: {
     title: 'List CiteLadder projects',
     availability: 'successful_read' as const,
@@ -82,7 +136,7 @@ export const definitions = {
     title: 'Read latest Site Health',
     availability: 'state' as const,
     description: 'Read the latest persisted Site Health score and coverage projection.',
-    schema: z.strictObject(scope),
+    schema: z.strictObject({ ...scope, snapshot_id: nullable(uuid) }),
   },
   read_ai_crawlability: {
     title: 'Read AI crawlability',
@@ -297,14 +351,23 @@ export const definitions = {
     availability: 'state' as const,
     description:
       'Read persisted answers and observations for one audit. Core is the canonical scoring panel; comparison is separately reported. Empty results differ from unavailable audit evidence. No provider rerun occurs.',
-    schema: z.strictObject({ ...visibility, prompt_id: nullable(uuid) }),
+    schema: z.strictObject({
+      ...visibility,
+      prompt_id: nullable(uuid),
+      domain: nullable(z.string().trim().min(1).max(253)),
+      url: nullable(z.url()),
+    }),
   },
   read_visibility_sources: {
     title: 'Read visibility sources',
     availability: 'state' as const,
     description:
       'Read source usage and denominators for one audit. Answer citation co-occurrence remains distinct from inspected publisher-page presence.',
-    schema: z.strictObject({ ...visibility, level: z.enum(['domain', 'url']).default('domain') }),
+    schema: z.strictObject({
+      ...visibility,
+      level: z.enum(['domain', 'url']).default('domain'),
+      domain: nullable(z.string().trim().min(1).max(253)),
+    }),
   },
   read_search_intelligence: {
     title: 'Read Search Intelligence',
@@ -381,6 +444,13 @@ export async function dispatchTool(
       Number(args.limit ?? mcpPolicy.default_list_limit),
       typeof args.cursor === 'string' ? args.cursor : null,
     );
+  else if (name === 'open_analytics')
+    result = {
+      surface: 'citeladder_analytics',
+      selection: null,
+      evidence: {},
+      links: { application: origin, onboarding: `${origin}/onboarding` },
+    };
   else if (name === 'search')
     result = await searchBusinessContext(
       db,
@@ -403,9 +473,21 @@ export async function dispatchTool(
     const project = await authorizeProject(db, principal, String(args.project_id));
     const authorized = { workspaceId: project.workspace_id, projectId: project.id };
     const evidence =
-      name === 'read_site_pages' || name === 'read_site_links'
-        ? await readSiteEvidence(db, authorized, name, args)
-        : await readEvidence(db, authorized, name, args);
+      name === 'render_visibility' || name === 'render_site_health'
+        ? await renderAnalytics(
+            db,
+            authorized,
+            analyticsSelectionSchema.parse({
+              ...args,
+              ...(name === 'render_site_health' ? { view: 'site_health' } : {}),
+            }),
+            origin,
+          )
+        : name === 'read_visibility_overview' || name === 'read_visibility_trends'
+          ? await readAnalytics(db, authorized, name, args)
+          : name === 'read_site_pages' || name === 'read_site_links'
+            ? await readSiteEvidence(db, authorized, name, args)
+            : await readEvidence(db, authorized, name, args);
     // Every project read names its scope and applicability; a tool's own values win.
     result = {
       project_id: project.id,

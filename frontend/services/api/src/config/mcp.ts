@@ -1,6 +1,8 @@
 /** MCP protocol bounds and environment specifications. */
 export const mcp = {
   settings: {
+    ui_enabled: { env: ['MCP_UI_ENABLED'], type: 'bool', default: false },
+    extensions_enabled: { env: ['MCP_EXTENSIONS_ENABLED'], type: 'bool', default: false },
     enabled: {
       env: ['MCP_ENABLED'],
       type: 'bool',
@@ -53,6 +55,9 @@ export const mcp = {
     },
   },
   constants: {
+    ui_resource_uri: 'ui://citeladder/analytics/v1',
+    ui_mime_type: 'text/html;profile=mcp-app',
+    trend_max_window_days: 366,
     consent_csp:
       "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
     read_scope: 'citeladder:read',

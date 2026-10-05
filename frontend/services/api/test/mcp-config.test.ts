@@ -14,17 +14,22 @@ it('binds MCP enablement and origin to explicit startup inputs instead of inheri
   vi.stubEnv('MCP_PUBLIC_BASE_URL', 'https://inherited.example.test');
   const disabled = loadConfig(base);
   expect(loadMcpConfig(disabled).enabled).toBe(false);
+  expect(loadMcpConfig(disabled).uiEnabled).toBe(false);
   const enabled = loadConfig({
     ...base,
     MCP_ENABLED: 'true',
     MCP_PUBLIC_BASE_URL: 'https://protocol.example.test:443',
     FRONTEND_URL: 'https://app.example.test:443',
+    MCP_UI_ENABLED: 'true',
+    MCP_EXTENSIONS_ENABLED: 'true',
   });
   vi.stubEnv('MCP_ENABLED', 'false');
   expect(loadMcpConfig(enabled)).toMatchObject({
     enabled: true,
     origin: 'https://protocol.example.test',
     browserOrigin: 'https://app.example.test',
+    uiEnabled: true,
+    extensionsEnabled: true,
   });
 });
 it('refuses unsafe enabled origins and enforces production and demo admission', () => {

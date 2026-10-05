@@ -7,6 +7,21 @@ import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { authenticateMcp } from '../src/mcp/oauth.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 import { McpInputError } from '../src/mcp/types.ts';
+import { appResource } from '../src/mcp/app-resource.ts';
+
+vi.mock('../src/mcp/app-resource.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/mcp/app-resource.ts')>()),
+  readAppResource: vi.fn(async () => ({
+    contents: [
+      {
+        uri: 'ui://citeladder/analytics/v1',
+        mimeType: 'text/html;profile=mcp-app',
+        text: '<!doctype html><div id="root"></div>',
+        _meta: { ui: { csp: { connectDomains: [], resourceDomains: [] } } },
+      },
+    ],
+  })),
+}));
 
 vi.mock('../src/mcp/oauth.ts', () => ({ authenticateMcp: vi.fn() }));
 vi.mock('../src/mcp/oauth-routes.ts', () => ({
@@ -19,7 +34,9 @@ vi.mock('../src/mcp/oauth-routes.ts', () => ({
   },
 }));
 vi.mock('../src/mcp/tools.ts', () => ({
-  tools: [{ name: 'list_projects', inputSchema: { type: 'object' } }],
+  tools: ['list_projects', 'render_visibility', 'render_site_health', 'open_analytics'].map(
+    (name) => ({ name, inputSchema: { type: 'object' } }),
+  ),
   dispatchTool: vi.fn(),
 }));
 const db = {} as Database;
@@ -31,6 +48,8 @@ function app() {
     MCP_ENABLED: process.env.MCP_ENABLED,
     MCP_PUBLIC_BASE_URL: process.env.MCP_PUBLIC_BASE_URL,
     FRONTEND_URL: process.env.FRONTEND_URL,
+    MCP_UI_ENABLED: process.env.MCP_UI_ENABLED,
+    MCP_EXTENSIONS_ENABLED: process.env.MCP_EXTENSIONS_ENABLED,
   });
   const result = new Hono<AppEnv>();
   registerMcpRoutes(result, config, db);
@@ -95,6 +114,57 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 describe('hosted MCP transport', () => {
+  it('exposes only presentation metadata and static resources behind the UI toggle on both protocol lifecycles', async () => {
+    expect(
+      (
+        await rpc(
+          await app().request('https://protocol.example.test/mcp', request('resources/list')),
+        )
+      ).result.resources,
+    ).toEqual([]);
+    vi.stubEnv('MCP_UI_ENABLED', 'true');
+    vi.stubEnv('MCP_EXTENSIONS_ENABLED', 'true');
+    for (const modern of [false, true]) {
+      const service = app();
+      const listed = (
+        await rpc(
+          await service.request(
+            'https://protocol.example.test/mcp',
+            request('tools/list', {}, modern),
+          ),
+        )
+      ).result.tools as Record<string, unknown>[];
+      expect(listed.find((tool) => tool.name === 'list_projects')).not.toHaveProperty('_meta');
+      expect(listed.find((tool) => tool.name === 'open_analytics')).toMatchObject({
+        _meta: {
+          ui: { resourceUri: appResource.uri },
+          'openai/ui': { entrypoints: [{ type: 'global' }, { type: 'thread' }] },
+        },
+      });
+      const loaded = await rpc(
+        await service.request(
+          'https://protocol.example.test/mcp',
+          request('resources/read', { uri: appResource.uri }, modern),
+        ),
+      );
+      expect(loaded.result.contents).toEqual([
+        expect.objectContaining({
+          uri: appResource.uri,
+          _meta: { ui: { csp: { connectDomains: [], resourceDomains: [] } } },
+        }),
+      ]);
+    }
+    expect(dispatchTool).not.toHaveBeenCalled();
+    vi.mocked(authenticateMcp).mockResolvedValueOnce(null);
+    expect(
+      (
+        await app().request(
+          'https://protocol.example.test/mcp',
+          request('resources/read', { uri: appResource.uri }),
+        )
+      ).status,
+    ).toBe(401);
+  });
   it('serves legacy initialize and independently accepts modern per-request discovery and tools', async () => {
     const service = app();
     const initialized = await service.request(

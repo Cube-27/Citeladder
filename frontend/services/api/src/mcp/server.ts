@@ -10,6 +10,12 @@ import { dispatchTool, tools } from './tools.ts';
 import { McpInputError } from './types.ts';
 import { getLogger } from '../logging.ts';
 import { parseUuid } from '../http/uuid.ts';
+import {
+  appResource,
+  appToolMetadata,
+  presentationTools,
+  readAppResource,
+} from './app-resource.ts';
 const logger = getLogger('mcp');
 
 const MCP_PROTOCOL_PATHS = [
@@ -215,7 +221,16 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           result = {};
           break;
         case 'tools/list':
-          result = { tools };
+          result = {
+            tools: tools
+              .filter((tool) => settings.uiEnabled || !presentationTools.has(tool.name))
+              .map((tool) => ({
+                ...tool,
+                ...(settings.uiEnabled && presentationTools.has(tool.name)
+                  ? { _meta: appToolMetadata(tool.name, settings.extensionsEnabled) }
+                  : {}),
+              })),
+          };
           break;
         case 'tools/call': {
           if (
@@ -224,6 +239,8 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           )
             return c.json(rpcError(message.id, -32602, 'Invalid tool arguments'), 400);
           try {
+            if (!settings.uiEnabled && presentationTools.has(params.name))
+              throw new McpInputError('Analytics UI is disabled');
             const value = await dispatchTool(
               db,
               principal,
@@ -235,6 +252,9 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
               content: [{ type: 'text', text: JSON.stringify(value) }],
               structuredContent: value,
               isError: false,
+              ...(settings.uiEnabled && presentationTools.has(params.name)
+                ? { _meta: appToolMetadata(params.name) }
+                : {}),
             };
           } catch (error) {
             if (error instanceof McpInputError)
@@ -251,7 +271,7 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           break;
         }
         case 'resources/list':
-          result = { resources: [] };
+          result = { resources: settings.uiEnabled ? [appResource] : [] };
           break;
         case 'resources/templates/list':
           result = {
@@ -266,6 +286,10 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           };
           break;
         case 'resources/read': {
+          if (settings.uiEnabled && params.uri === appResource.uri) {
+            result = await readAppResource();
+            break;
+          }
           const match =
             typeof params.uri === 'string'
               ? /^citeladder:\/\/projects\/([^/]+)\/context$/u.exec(params.uri)
