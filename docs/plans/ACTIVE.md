@@ -33,6 +33,10 @@ Completed implementation plans are retained in [the archive](../archive/).
 
 ## Queued and retained planning
 
+- [Self-serve authentication and verified email](citeladder-self-serve-authentication.md):
+  proposed Google/email signup, email verification, seven-day trial access,
+  transactional mail and account security. Saved for review; implementation and
+  production rollout are not yet authorized.
 - [MCP Events](citeladder-mcp-events.md): separate proposed follow-up for measured
   changes, subscription filters and durable delivery; not part of plugin release
   or authorized for implementation.
