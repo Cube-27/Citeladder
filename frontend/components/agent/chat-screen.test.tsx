@@ -69,6 +69,22 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('ChatScreen', () => {
+  it('selects Automatic when a follow-up has no inherited workflow', async () => {
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json({
+          ...detail(revision(REV1, 1, 'agent', 'Body.')),
+          output: null,
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderChat();
+    await user.click(await screen.findByRole('button', { name: 'Skill: Automatic' }));
+    expect(screen.getByRole('menuitemradio', { name: 'Automatic' })).toBeChecked();
+  });
+
   it('shows supplied context omissions and approval as an action tied to its revision', async () => {
     const current = {
       ...detail(revision(REV1, 1, 'agent', 'Body.')),
@@ -639,6 +655,9 @@ describe('ChatScreen', () => {
       }),
     );
     expect(screen.getByRole('menuitemradio', { name: 'Automatic' })).toBeVisible();
+    expect(
+      screen.getByRole('menuitemradio', { name: 'Continue with Search Console optimization' }),
+    ).toBeChecked();
     await user.click(screen.getByRole('menuitemradio', { name: 'Search Console optimization' }));
     await user.click(screen.getByRole('button', { name: 'Skill: Search Console optimization' }));
     await user.click(

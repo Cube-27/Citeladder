@@ -194,7 +194,8 @@ for (const width of [1280, 390]) {
       await stop.press('Enter');
       await expect(page.getByText('Stopped. Nothing from this turn was saved.')).toBeVisible();
 
-      await reply.fill('/');
+      await reply.fill('');
+      await reply.press('/');
       await expect(
         page.getByRole('menuitemradio', { name: 'Growth plan', exact: true }),
       ).toBeVisible();

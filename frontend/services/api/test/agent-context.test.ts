@@ -78,6 +78,28 @@ describe('Agent persisted context binding', () => {
       selected_site_url_id: firstPage,
       occurrences: [{ site_url_id: firstPage }],
     });
+    const newerCrawl = await fixtures.sibling(seed);
+    await expect(
+      readAgentContext(
+        db,
+        seed,
+        {
+          issue_group_reference: ref,
+          site_facts_reference: { crawl_id: newerCrawl },
+        },
+        'Analyze',
+      ),
+    ).rejects.toMatchObject({ code: 'agent_context_conflict' });
+    const matching = await readAgentContext(
+      db,
+      seed,
+      {
+        issue_group_reference: ref,
+        site_facts_reference: { crawl_id: seed.crawlId },
+      },
+      'Analyze',
+    );
+    expect(matching.summary.crawl_id).toBe(seed.crawlId);
     const siblingProject = await fixtures.project(seed.workspaceId);
     await expect(
       readAgentContext(
@@ -271,6 +293,18 @@ describe('Agent persisted context binding', () => {
       checkpoint_ids: ['technical.title_present'],
     };
     const context = await readAgentContext(db, seed, { site_health_reference: ref }, 'Fix title');
+    const otherCrawl = await fixtures.sibling(seed);
+    await expect(
+      readAgentContext(
+        db,
+        seed,
+        {
+          site_health_reference: ref,
+          site_facts_reference: { crawl_id: otherCrawl },
+        },
+        'Fix title',
+      ),
+    ).rejects.toMatchObject({ code: 'agent_context_conflict' });
     expect(context.sections?.site_health).toMatchObject({
       source_analysis_id: page.analysisId,
       source_evaluation_ids: [evaluationId],

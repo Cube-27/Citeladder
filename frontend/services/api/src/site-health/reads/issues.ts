@@ -278,7 +278,7 @@ export async function issueDetail(
   if (group === undefined) throw notFound('Issue');
   const inGroup = sql`${currentIssues(crawl)} and i.rule_id = ${group.rule_id}
     and i.finding_class = ${group.finding_class}`;
-  const fingerprint = { crawl_id: crawl.id, group_id: groupId };
+  const fingerprint = { crawl_id: crawl.id, group_id: groupId, site_url_id: siteUrlId ?? null };
   let after = sql``;
   if (paging.cursor) {
     const [url, raw, ...rest] = decodeKeysetCursor(paging.cursor, 'issue_detail', fingerprint);
@@ -315,7 +315,6 @@ export async function issueDetail(
   const representative = canonical.rows[0];
   if (representative === undefined) throw notFound('Issue');
   const page = occurrences.rows.slice(0, paging.limit);
-  if (siteUrlId && !page.length) throw notFound('Issue page');
   const last = page.at(-1);
   return siteIssueDetailSchema.parse({
     group_id: groupId,

@@ -83,7 +83,9 @@ export function SkillPicker({
       </DropdownTrigger>
       <DropdownContent align="start" className="w-64" onCloseAutoFocus={onCloseAutoFocus}>
         <DropdownRadioGroup
-          value={value === undefined ? INHERIT : (value ?? AUTOMATIC)}
+          value={
+            value === undefined && defaultLabel !== 'Automatic' ? INHERIT : (value ?? AUTOMATIC)
+          }
           onValueChange={(next) => {
             onSelect?.();
             onChange(selectedValue(next));

@@ -125,14 +125,13 @@ function originContext(input: HandoffInput): AgentContextRefs {
 function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
   const context: AgentContextRefs = {};
   const issueCrawl = uuidParam(params, PARAM.issueCrawl),
-    issueGroup = uuidParam(params, PARAM.issueGroup);
+    issueGroup = uuidParam(params, PARAM.issueGroup),
+    issuePage = uuidParam(params, PARAM.issuePage);
   if (issueCrawl && issueGroup)
     context.issue_group_reference = {
       crawl_id: issueCrawl,
       group_id: issueGroup,
-      ...(uuidParam(params, PARAM.issuePage)
-        ? { site_url_id: uuidParam(params, PARAM.issuePage) }
-        : {}),
+      ...(issuePage ? { site_url_id: issuePage } : {}),
     };
   const factsCrawl = uuidParam(params, PARAM.factsCrawl);
   if (factsCrawl) context.site_facts_reference = { crawl_id: factsCrawl };

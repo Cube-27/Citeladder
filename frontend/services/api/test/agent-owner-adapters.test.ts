@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import * as sharedTools from '../src/mcp/tools.ts';
-import { AgentFixtures, catalog, deliverable, scripted } from './agent-support.ts';
+import { AgentFixtures, agentPolicy, catalog, deliverable, scripted } from './agent-support.ts';
 import { testDatabase } from './support.ts';
 import { agentTools } from '../src/agent/tool-adapters.ts';
 import { attachAgentTarget } from '../src/agent/target-adapter.ts';
@@ -147,9 +147,31 @@ describe('Agent bindings to the evidence and Action owners', () => {
       return readChat(db, scope, first.chat_id);
     };
     expect((await execute([fetch, answer])).messages.at(-1)?.evidence_refs).toEqual([uri]);
+    const attempt = await db
+      .selectFrom('agent_tool_attempts')
+      .selectAll()
+      .where('run_id', '=', first.id)
+      .executeTakeFirstOrThrow();
+    const failedUri = `citeladder://project/${randomUUID()}`;
+    await db
+      .insertInto('agent_tool_attempts')
+      .values(
+        Array.from({ length: agentPolicy.prior_evidence_max_refs + 1 }, (_, index) => ({
+          ...attempt,
+          id: randomUUID(),
+          ordinal: index + 2,
+          input: {},
+          omissions: '[]',
+          status: index === 0 ? 'failed' : 'completed',
+          artifact_refs: JSON.stringify(index === 0 ? [{ record_uri: failedUri }] : []),
+          created_at: new Date(attempt.created_at.getTime() + index + 1),
+        })),
+      )
+      .execute();
     await store.enqueue(scope, { key: randomUUID(), chatId: first.chat_id, message: 'Follow up' });
     const withoutRead = await execute([answer], async (request) => {
       expect(request.system).toContain(uri);
+      expect(request.system).not.toContain(failedUri);
       expect(JSON.parse(request.user).observations).toEqual([]);
     });
     expect(withoutRead.messages.at(-1)?.evidence_refs).toEqual([]);

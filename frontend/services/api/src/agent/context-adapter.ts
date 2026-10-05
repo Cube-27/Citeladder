@@ -89,6 +89,8 @@ async function resolveOrigins(
       { limit: policy.agent_context.content_context_max_pages, cursor: null },
       groupRef.site_url_id,
     );
+    if (groupRef.site_url_id && !detail.occurrences.length)
+      throw new AgentError('agent_context_unavailable');
     issueGroup = {
       ...detail,
       selected_site_url_id: groupRef.site_url_id ?? null,
@@ -167,10 +169,15 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
     const query = [request, opportunity?.target_theme, demand?.signal.topic_cluster]
       .filter(Boolean)
       .join(' ');
-    const selectedCrawl =
-      refs.issue_group_reference?.crawl_id ??
-      refs.site_facts_reference?.crawl_id ??
-      refs.site_health_reference?.crawl_id;
+    const crawlIds = new Set(
+      [
+        refs.issue_group_reference?.crawl_id,
+        refs.site_facts_reference?.crawl_id,
+        refs.site_health_reference?.crawl_id,
+      ].filter((id) => id !== undefined),
+    );
+    if (crawlIds.size > 1) throw new AgentError('agent_context_conflict');
+    const [selectedCrawl] = crawlIds;
     const selection = await selectContentFragments(db, scope, query, targetUrl, selectedCrawl);
     const targetPage = selection.pages.find(
       (page) =>

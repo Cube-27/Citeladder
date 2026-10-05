@@ -17,8 +17,7 @@ import {
 import { manifestSchema, suppliedManifest } from './context.ts';
 import { assemblePrompt, type Observation } from './prompt.ts';
 import { ModelCalls, type AgentModel } from './model-calls.ts';
-import { currentOutput, saveAgentOutput, type AttachTarget } from './outputs.ts';
-import { revisionRefs } from './outputs.ts';
+import { currentOutput, revisionRefs, saveAgentOutput, type AttachTarget } from './outputs.ts';
 import { parseRecordId } from '../mcp/retrieval.ts';
 import { record } from '../db/json.ts';
 import { lockRun, terminalize } from './queue.ts';
@@ -123,19 +122,18 @@ export class AgentRuntime {
         .where('prior.workspace_id', '=', scope.workspaceId)
         .where('prior.project_id', '=', scope.projectId)
         .where('prior.chat_id', '=', chat.id)
+        .where('tool.status', '=', 'completed')
         .orderBy('tool.created_at', 'desc')
-        .limit(budget.prior_evidence_max_refs)
         .execute();
       const hints = [
         ...new Set([
           ...revisionRefs(current.revision?.source_refs ?? []),
           ...prior.flatMap((row) =>
             Array.isArray(row.artifact_refs)
-              ? row.artifact_refs.flatMap((ref) =>
-                  typeof record(ref).record_uri === 'string'
-                    ? [String(record(ref).record_uri)]
-                    : [],
-                )
+              ? row.artifact_refs.flatMap((ref) => {
+                  const uri = record(ref).record_uri;
+                  return typeof uri === 'string' ? [uri] : [];
+                })
               : [],
           ),
         ]),

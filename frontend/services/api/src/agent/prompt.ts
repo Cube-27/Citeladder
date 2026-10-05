@@ -25,9 +25,10 @@ export function assemblePrompt(input: {
     };
   });
   const observations = [...input.observations];
+  const context = JSON.parse(input.context);
   const envelope = () => ({
     request: input.request,
-    context: JSON.parse(input.context),
+    context,
     current_revision: input.revision,
     history,
     observations: observations.map(({ text }) => text),

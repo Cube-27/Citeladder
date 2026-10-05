@@ -119,7 +119,14 @@ export function CommandField({
         {...comboboxProps}
         onChange={(event) => {
           const token = tokenAt(event.target.value, event.target.selectionStart);
-          if (token?.trigger === '/' && token.query === '' && commands?.openSkillPicker) {
+          const input = event.nativeEvent as InputEvent;
+          if (
+            input.inputType === 'insertText' &&
+            input.data === '/' &&
+            token?.trigger === '/' &&
+            token.query === '' &&
+            commands?.openSkillPicker
+          ) {
             const text = event.target.value,
               end = event.target.selectionStart;
             onChange(text);

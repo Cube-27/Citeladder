@@ -105,6 +105,23 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
 }
 
 describe('NewChatScreen', () => {
+  it('opens skills only for a typed slash and marks the automatic default selected', async () => {
+    mswServer.use(...baseHandlers());
+    const user = userEvent.setup();
+    renderNewChat('');
+    const message = await screen.findByLabelText('Message the agent');
+    await user.type(message, '/');
+    expect(await screen.findByRole('menuitemradio', { name: 'Automatic' })).toBeChecked();
+    await user.keyboard('{Escape}');
+    await user.type(message, 'g{Backspace}');
+    expect(message).toHaveValue('/');
+    expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument();
+    await user.clear(message);
+    await user.paste('Use /');
+    expect(message).toHaveValue('Use /');
+    expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument();
+  });
+
   it('submits the earned-source skill selected by a next-step link', async () => {
     const bodies: unknown[] = [];
     mswServer.use(
