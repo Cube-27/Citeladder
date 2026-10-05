@@ -1,0 +1,65 @@
+import { createRoot } from 'react-dom/client';
+import { App } from '@modelcontextprotocol/ext-apps';
+import { Analytics } from './analytics';
+import { createController, deepLinkSelection } from './controller';
+import { appPolicy } from './config';
+import './analytics.css';
+
+const app = new App(
+  { name: 'CiteLadder analytics', version: appPolicy.version },
+  {},
+  { autoResize: true },
+);
+const controller = createController({
+  async call(name, args) {
+    const result = await app.callServerTool(
+      { name, arguments: args },
+      { timeout: appPolicy.requestTimeoutMs },
+    );
+    if (result.isError || !result.structuredContent) throw new Error('Evidence unavailable');
+    return result.structuredContent;
+  },
+  async context(selection, evidence) {
+    await app.updateModelContext({
+      structuredContent: {
+        selection,
+        evidence_state: evidence?.state ?? null,
+        artifact_refs: Array.isArray(evidence?.artifact_refs) ? evidence.artifact_refs : [],
+        limitations: Array.isArray(evidence?.limitations) ? evidence.limitations : [],
+      },
+      content: [
+        {
+          type: 'text',
+          text: selection
+            ? 'CiteLadder selected persisted scope. Use its concrete IDs for follow-up reads; recommendations are not measured impact.'
+            : 'No CiteLadder evidence selected.',
+        },
+      ],
+    });
+  },
+});
+let deepLinkUrl: string | undefined;
+const hostContext = (context: Record<string, unknown>) => {
+  document.documentElement.dataset.theme = context.theme === 'dark' ? 'dark' : 'light';
+  const selection = deepLinkSelection(context['openai/deepLink']);
+  const key = JSON.stringify(selection);
+  if (selection && key !== deepLinkUrl) {
+    deepLinkUrl = key;
+    void controller.select(selection);
+  }
+};
+app.ontoolresult = (result) => {
+  if (result.isError) controller.disconnect();
+  else controller.receive(result.structuredContent);
+};
+app.ontoolinput = (input) => controller.begin(input.arguments);
+app.onhostcontextchanged = (context) => hostContext(context);
+app.ontoolcancelled = () => controller.disconnect();
+createRoot(document.getElementById('root')!).render(<Analytics controller={controller} />);
+void app
+  .connect(undefined, { timeout: appPolicy.requestTimeoutMs })
+  .then(() => {
+    hostContext(app.getHostContext() ?? {});
+    return controller.loadProjects();
+  })
+  .catch(() => controller.disconnect());

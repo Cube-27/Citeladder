@@ -79,3 +79,6 @@ auth.json
 # Fonts: pulled from the private Cube-27/cube27-fonts repo by
 # `pnpm fonts:pull`, never committed (some licences forbid redistribution).
 frontend/public/fonts/
+# Bundled MCP App HTML is generated from source, including in the API image.
+frontend/services/api/assets/mcp-app/
+frontend/packages/mcp-app/dist/

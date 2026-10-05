@@ -31,6 +31,8 @@
     "lib/**/*.ts",
     "lib/**/*.tsx",
     "packages/*/src/**/*.ts",
+    "packages/mcp-app/**/*.tsx",
+    "packages/mcp-app/vite.config.ts",
     "scripts/**/*.ts",
     "test/**/*.ts",
     "test/**/*.tsx",

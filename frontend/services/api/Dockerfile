@@ -13,10 +13,21 @@ RUN npm install --global --ignore-scripts pnpm@12.8.1
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
-RUN pnpm install --frozen-lockfile --ignore-scripts --prod --filter "@citeladder/api..."
+COPY frontend/packages/mcp-app/package.json ./packages/mcp-app/
+RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY frontend/packages/contracts/src ./packages/contracts/src
 COPY frontend/services/api/src ./services/api/src
 COPY frontend/services/api/assets ./services/api/assets
+COPY frontend/packages/mcp-app ./packages/mcp-app
+COPY frontend/components ./components
+COPY frontend/lib ./lib
+COPY frontend/vp-shared-config.ts ./vp-shared-config.ts
+COPY frontend/vite.config.ts ./vite.config.ts
+COPY frontend/apps/app/src/globals.css ./apps/app/src/globals.css
+COPY frontend/apps/app/src/ui-motion.css ./apps/app/src/ui-motion.css
+RUN pnpm --filter @citeladder/mcp-app build \
+    && mkdir -p services/api/assets/mcp-app/v1 \
+    && cp packages/mcp-app/dist/analytics.html services/api/assets/mcp-app/v1/analytics.html
 # Export only this service's production graph, not the workspace-wide store.
 RUN pnpm --filter @citeladder/api deploy --prod --ignore-scripts /runtime
 # Node strips our workspace TypeScript only outside node_modules. Keep the
