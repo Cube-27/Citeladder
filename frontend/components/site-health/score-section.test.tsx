@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders as render } from '@/test/render';
 import { describe, expect, it } from 'vite-plus/test';
 
 import type { SiteHealthDashboard } from '@/lib/api/types';
@@ -55,12 +56,12 @@ describe('ScoreSection', () => {
 
     render(<ScoreSection crawl={null} dashboard={dashboard} />);
 
-    expect(screen.getByText('73 / 100')).toBeInTheDocument();
-    expect(screen.getByText('61 / 100')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Web Fundamentals score: 73' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'AEO Readiness score: 61' })).toBeInTheDocument();
     expect(screen.getByText('Partial audit · 60% coverage')).toBeInTheDocument();
     expect(screen.getByText('Partial audit · 70% coverage')).toBeInTheDocument();
     // The coverage card's value IS the coverage, so its caveat never repeats it.
     expect(screen.getByText('Partial audit')).toBeInTheDocument();
-    expect(screen.getByText('70 / 100')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'AEO Checklist Completion: 70%' })).toBeInTheDocument();
   });
 });

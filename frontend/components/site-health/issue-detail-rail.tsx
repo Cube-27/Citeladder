@@ -2,6 +2,7 @@
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 
+import { Badge } from '@/components/ui/badge';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { ReadError } from '@/components/ui/read-error';
@@ -88,16 +89,15 @@ export function IssueDetailRail({
             <p className="type-body whitespace-pre-line">{issue.description}</p>
           ) : null}
           {issue.remediation ? (
-            // Guidance, not a field. The `well` tone is the recessed INPUT
-            // surface, so remediation copy inside it read as a disabled
-            // textarea the reader could not edit. On the accent fill it reads
-            // as advice.
-            <div className={panelClasses({ tone: 'accent', pad: 'compact' }, 'grid gap-1')}>
+            <div className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'grid gap-1')}>
               <span className={textRole('label')}>How to fix</span>
               <p className="type-body whitespace-pre-line">{issue.remediation}</p>
             </div>
           ) : null}
-          <OccurrenceList issue={issue} detail={detail} crawlId={crawlId} query={detailQuery} />
+          <section className="grid gap-3">
+            <h3 className={textRole('itemTitle')}>Affected pages</h3>
+            <OccurrenceList issue={issue} detail={detail} crawlId={crawlId} query={detailQuery} />
+          </section>
         </div>
         {detail && (canPrevious || detail.next_cursor) ? (
           <footer className="border-border-subtle bg-panel flex shrink-0 items-center justify-end gap-2 border-t p-3">
@@ -129,10 +129,7 @@ export function IssueDetailRail({
 function IssueActions({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: string }>) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <CopyButton value={buildFixPrompt(issue)} size="sm" variant="secondary" className="w-fit">
-        Copy fix prompt
-      </CopyButton>
-      <Button variant="secondary" size="sm" asChild>
+      <Button size="sm" asChild>
         <ProjectLink
           href={agentHandoffHref({
             issueGroup: { crawlId, groupId: issue.group_id },
@@ -142,6 +139,9 @@ function IssueActions({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: 
           Ask agent
         </ProjectLink>
       </Button>
+      <CopyButton value={buildFixPrompt(issue)} size="sm" variant="secondary" className="w-fit">
+        Copy fix prompt
+      </CopyButton>
     </div>
   );
 }
@@ -203,15 +203,16 @@ function OccurrenceList({
             href={`/site/crawls/${crawlId}/pages/${occurrence.site_url_id}`}
             className="hover:text-accent flex min-w-0 flex-col gap-0.5"
           >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className={textRole('itemTitle', 'truncate')}>
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
                 {pageDisplayTitle(occurrence.title, occurrence.display_url)}
               </span>
-              {occurrence.page_kind ? (
-                <span className="type-caption shrink-0">{pageKindLabel(occurrence.page_kind)}</span>
-              ) : null}
+              {occurrence.page_kind ? <Badge>{pageKindLabel(occurrence.page_kind)}</Badge> : null}
             </span>
-            <span className="type-caption truncate tabular-nums" title={occurrence.display_url}>
+            <span
+              className="type-caption [overflow-wrap:anywhere] tabular-nums"
+              title={occurrence.display_url}
+            >
               {occurrence.display_url}
             </span>
           </ProjectLink>

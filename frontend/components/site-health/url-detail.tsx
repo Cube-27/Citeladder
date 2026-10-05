@@ -107,16 +107,15 @@ export function UrlDetail({
   }
 
   return (
-    <div className="grid min-w-0 gap-[var(--workspace-gap)]">
-      <UrlDetailView
-        detail={detailQuery.data}
-        rerunPending={rerun.isPending}
-        rerunQueued={rerunQueued}
-        onRerun={() => {
-          setRerunError(null);
-          rerun.mutate({ crawlId, siteUrlId });
-        }}
-      />
+    <UrlDetailView
+      detail={detailQuery.data}
+      rerunPending={rerun.isPending}
+      rerunQueued={rerunQueued}
+      onRerun={() => {
+        setRerunError(null);
+        rerun.mutate({ crawlId, siteUrlId });
+      }}
+    >
       {rerunError ? <Alert tone="danger">{rerunError}</Alert> : null}
       <IssueHistory
         key={`history:${crawlId}:${siteUrlId}`}
@@ -124,7 +123,7 @@ export function UrlDetail({
         crawlId={crawlId}
         siteUrlId={siteUrlId}
       />
-    </div>
+    </UrlDetailView>
   );
 }
 
@@ -224,9 +223,11 @@ function HistoryRows({ rows }: Readonly<{ rows: IssueHistoryPage['items'] }>) {
   return (
     <ul className={ledgerClasses()}>
       {rows.map((row) => (
-        <li key={row.id} className="flex items-center justify-between gap-3 py-2">
+        <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
           <span className="flex min-w-0 flex-col">
-            <span className="type-body text-foreground truncate">{issueTitle(row)}</span>
+            <span className="type-body text-foreground [overflow-wrap:anywhere]">
+              {issueTitle(row)}
+            </span>
             <span className="type-caption tabular-nums">
               {formatAudited(row.created_at, timeZone)}
             </span>

@@ -181,9 +181,9 @@ function ActionsTable({ actions }: Readonly<{ actions: Action[] }>) {
       </TableHeader>
       <TableBody>
         {actions.map((action) => (
-          <TableRow key={action.id}>
+          <TableRow key={action.id} density="multiline">
             <TableCell>
-              <div className="grid min-w-0 gap-0.5">
+              <div className="grid max-w-96 min-w-0 gap-1">
                 <ProjectLink
                   href={`/agent/actions/${action.id}`}
                   className={textRole('itemTitle', 'hover:text-accent-text truncate')}
