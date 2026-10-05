@@ -77,13 +77,17 @@ export function TableRow({
   children,
   className,
   highlight,
+  density = 'compact',
   ...props
-}: Readonly<HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean }>) {
+}: Readonly<
+  HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean; density?: 'compact' | 'multiline' }
+>) {
   return (
     <tr
       {...props}
       className={cn(
         'hover:bg-hover active:bg-active aria-selected:bg-selected aria-selected:hover:bg-selected h-[var(--table-row-height)] transition-colors',
+        density === 'multiline' && '[&>td]:py-3',
         highlight && 'bg-selected hover:bg-selected',
         className,
       )}
@@ -98,7 +102,7 @@ export function TableHead({
   className,
   numeric,
   ...props
-}: Readonly<ThHTMLAttributes<HTMLTableCellElement> & { numeric?: boolean }>) {
+}: Readonly<ThHTMLAttributes<HTMLTableCellElement> & { numeric?: boolean | 'end' }>) {
   return (
     <th
       {...props}
@@ -106,7 +110,8 @@ export function TableHead({
         tableHeadClasses,
         'aria-[sort=ascending]:text-foreground aria-[sort=descending]:text-foreground',
         'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
-        numeric && 'text-center tabular-nums',
+        numeric && 'tabular-nums',
+        numeric === 'end' ? 'text-right' : numeric && 'text-center',
         className,
       )}
     >
@@ -120,7 +125,7 @@ export function TableCell({
   className,
   numeric,
   ...props
-}: Readonly<TdHTMLAttributes<HTMLTableCellElement> & { numeric?: boolean }>) {
+}: Readonly<TdHTMLAttributes<HTMLTableCellElement> & { numeric?: boolean | 'end' }>) {
   return (
     <td
       {...props}
@@ -128,7 +133,8 @@ export function TableCell({
         'type-body text-foreground border-border-subtle px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
         // Row rule, dropped on the last row.
         'border-b [tr:last-child>&]:border-b-0',
-        numeric && 'text-center tabular-nums',
+        numeric && 'tabular-nums',
+        numeric === 'end' ? 'text-right' : numeric && 'text-center',
         className,
       )}
     >

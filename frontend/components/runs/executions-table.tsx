@@ -40,7 +40,7 @@ export function ExecutionsTable({
       </TableHeader>
       <TableBody>
         {executions.map((execution) => (
-          <TableRow key={execution.id}>
+          <TableRow key={execution.id} density="multiline">
             <TableCell className="max-w-2xl">
               <div className="flex flex-col gap-1">
                 <span className="break-words" title={execution.prompt_text}>

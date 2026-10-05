@@ -31,7 +31,17 @@ function chatDetail(): AgentChatDetail {
       created_at: NOW,
     },
     pinned_skill_id: 'growth_plan',
-    context: {},
+    context: {
+      refs: { site_facts_reference: { crawl_id: RUN } },
+      instructions: { revision: 2 },
+      limitations: [],
+      prompt: {
+        included_sections: ['site_facts'],
+        omissions: ['oldest_history_messages'],
+        serialized_chars: 5000,
+        max_chars: 90000,
+      },
+    },
     output: null,
     messages: Array.from({ length: 24 }, (_, index) => ({
       id: `77777777-7777-4777-8777-${String(index + 1).padStart(12, '0')}`,
@@ -116,6 +126,13 @@ for (const width of [1280, 390]) {
       }
       const reply = page.getByLabel('Reply to the agent');
       await expect(reply).toBeVisible();
+      await page.getByText('Context used', { exact: true }).click();
+      await expect(page.getByText('Selected crawl robots policy', { exact: true })).toBeVisible();
+      await page.getByText('Source identities', { exact: true }).click();
+      await expect(page.getByRole('list', { name: 'Context source identities' })).toContainText(
+        RUN,
+      );
+      await page.screenshot({ path: test.info().outputPath(`context-${surface}-${width}.png`) });
       await expect(
         page.getByRole('button', { name: 'Skill: Continue with Growth plan' }),
       ).toBeVisible();
@@ -177,11 +194,17 @@ for (const width of [1280, 390]) {
       await stop.press('Enter');
       await expect(page.getByText('Stopped. Nothing from this turn was saved.')).toBeVisible();
 
-      await reply.fill('/grow');
-      await expect(page.getByRole('option', { name: /Growth plan/ })).toBeVisible();
+      await reply.fill('');
+      await reply.press('/');
+      await expect(
+        page.getByRole('menuitemradio', { name: 'Growth plan', exact: true }),
+      ).toBeVisible();
       await reply.dispatchEvent('keydown', { key: 'Enter', isComposing: true });
-      await expect(reply).toHaveValue('/grow');
-      await reply.press('Enter');
+      await expect(reply).toHaveValue('/');
+      await page.getByRole('menuitemradio', { name: 'Growth plan', exact: true }).click();
+      await expect(reply).toBeFocused();
+      await page.getByRole('button', { name: 'Skill: Growth plan', exact: true }).click();
+      await page.getByRole('menuitemradio', { name: 'Automatic', exact: true }).click();
       await reply.fill('Explain this');
       await reply.press('Shift+Enter');
       await reply.press('Enter');
@@ -191,9 +214,11 @@ for (const width of [1280, 390]) {
       await expect.poll(() => sends.length).toBe(2);
       expect(sends[0]!.key).toBeTruthy();
       expect(sends[1]).toEqual(sends[0]);
+      expect(sends[0]!.body).toMatchObject({ skill_id: null });
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
+      await page.screenshot({ path: test.info().outputPath(`${surface}-${width}.png`) });
     });
   }
 }

@@ -274,7 +274,9 @@ describe('AI Traffic state and navigation', () => {
     await waitFor(() => expect(exportedPages.value?.get('folder')).toBe('/page'));
     expect(exportedPages.value?.get('resource_class')).toBe('page');
     expect(exportedPages.value?.get('sort')).toBe('sessions_desc');
-    await user.click(screen.getByRole('button', { name: '/page' }));
+    await user.click(
+      screen.getByRole('button', { name: 'View AI Traffic for https://example.test/page' }),
+    );
     const panel = await screen.findByRole('dialog', { name: '/page' });
     expect(
       new URL(

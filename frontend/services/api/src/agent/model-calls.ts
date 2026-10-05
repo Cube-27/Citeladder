@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { ModelGateway } from '../models/gateway.ts';
 import { authorize } from './access.ts';
@@ -113,7 +114,7 @@ export class ModelCalls {
         .executeTakeFirstOrThrow();
       await trx
         .updateTable('agent_runs')
-        .set({ steps_used: ordinal })
+        .set({ steps_used: sql<number>`greatest(steps_used, ${ordinal})` })
         .where('id', '=', run.id)
         .where('workspace_id', '=', run.workspace_id)
         .execute();

@@ -15,6 +15,8 @@ import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
 import { Alert } from '@/components/ui/alert';
+import { cardClasses } from '@/components/ui/card-variants';
+import { Disclosure } from '@/components/ui/disclosure';
 import { Button } from '@/components/ui/button';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
@@ -92,7 +94,10 @@ function ActionDetailView({
   // and the one-row header never has to hold it.
   const update = useStatusUpdate(workspaceId);
   return (
-    <PageShell actions={<ActionControls action={action} update={update} />}>
+    <PageShell
+      title={action.target_label}
+      actions={<ActionControls action={action} update={update} />}
+    >
       <Stack gap="section">
         {update.isError ? (
           <MutationNotice
@@ -101,8 +106,20 @@ function ActionDetailView({
           />
         ) : null}
         <ActionFacts action={action} />
-        <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
-        <Implementation action={action} workspaceId={workspaceId} />
+        <div className="grid min-w-0 items-start gap-[var(--workspace-gap)] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="grid min-w-0 gap-[var(--workspace-gap)]">
+            <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
+            <Implementation action={action} workspaceId={workspaceId} />
+          </div>
+          <aside className="grid min-w-0 gap-[var(--workspace-gap)]">
+            <ActionEvidence action={action} />
+            <TextList title="Avoid" items={action.diagnosis.donts ?? []} />
+            <TextList
+              title="Measure with"
+              items={(action.diagnosis.measure_with ?? []).map(measurementLegLabel).filter(isText)}
+            />
+          </aside>
+        </div>
         <LinkedChats action={action} workspaceId={workspaceId} />
       </Stack>
       <EvidenceDrawer
@@ -168,14 +185,6 @@ function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
   ];
   return (
     <section aria-label="Summary" className="grid gap-3">
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {facts.map((fact) => (
-          <div key={fact.label} className="grid gap-1">
-            <dt className={textRole('label')}>{fact.label}</dt>
-            <dd className={textRole('body')}>{fact.value}</dd>
-          </div>
-        ))}
-      </dl>
       {action.target_url ? (
         <ExternalHttpLink
           href={action.target_url}
@@ -186,6 +195,15 @@ function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
       ) : (
         <p className={textRole('itemTitle', 'break-all')}>{action.target_label}</p>
       )}
+
+      <dl className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        {facts.map((fact) => (
+          <div key={fact.label} className="flex items-center gap-2">
+            <dt className={textRole('label')}>{fact.label}</dt>
+            <dd className={textRole('body')}>{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
       {action.evidence_cleared_at ? (
         <Alert tone="info">No current evidence targets this Action. Its chats are kept.</Alert>
       ) : null}
@@ -197,17 +215,13 @@ function Diagnosis({
   action,
   onOpenEvidence,
 }: Readonly<{ action: ActionDetail; onOpenEvidence: (id: string) => void }>) {
-  const diagnosis = action.diagnosis;
-  const approach = approachLabel(diagnosis.approach ?? action.approach);
-  const families = Object.entries(diagnosis.families ?? {}).filter(([family]) =>
-    familyLabel(family),
-  );
   return (
-    <section aria-labelledby="action-diagnosis" className="grid gap-4">
+    <section
+      aria-labelledby="action-diagnosis"
+      className={`${cardClasses()} grid gap-4 p-[var(--card-padding)]`}
+    >
       <SectionTitle id="action-diagnosis">Diagnosis</SectionTitle>
-      {approach ? <p className={textRole('itemTitle')}>{approach}</p> : null}
       <div className="grid gap-2">
-        <h3 className={textRole('label')}>What happened</h3>
         {action.members.length === 0 ? (
           <p className={textRole('body')}>No current finding targets this Action.</p>
         ) : (
@@ -215,9 +229,9 @@ function Diagnosis({
             {action.members.map((member) => (
               <li
                 key={member.id}
-                className={panelClasses({ pad: 'compact' }, 'flex items-center gap-3')}
+                className="border-border-subtle flex flex-wrap items-start gap-3 border-b py-3 last:border-b-0"
               >
-                <span className={textRole('body', 'min-w-0 flex-1')}>{member.title}</span>
+                <span className={textRole('itemTitle', 'min-w-0 flex-1')}>{member.title}</span>
                 <Button variant="ghost" size="sm" onClick={() => onOpenEvidence(member.id)}>
                   View evidence
                 </Button>
@@ -226,24 +240,6 @@ function Diagnosis({
           </ul>
         )}
       </div>
-      {families.length > 0 ? (
-        <div className="grid gap-2">
-          <h3 className={textRole('label')}>Evidence by system</h3>
-          <dl className="grid gap-2 sm:grid-cols-2">
-            {families.map(([family, state]) => (
-              <div key={family} className="flex justify-between gap-3">
-                <dt className={textRole('body')}>{familyLabel(family)}</dt>
-                <dd className={textRole('caption')}>{FAMILY_STATE_LABEL[state] ?? ''}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      ) : null}
-      <TextList title="Avoid" items={diagnosis.donts ?? []} />
-      <TextList
-        title="Measure with"
-        items={(diagnosis.measure_with ?? []).map(measurementLegLabel).filter(isText)}
-      />
     </section>
   );
 }
@@ -260,13 +256,19 @@ function Implementation({
   workspaceId,
 }: Readonly<{ action: ActionDetail; workspaceId: string }>) {
   const mayWrite = useWorkspaceCapability('write');
-  if (!action.declaration && !(isDeclarable(action) && mayWrite)) return null;
+  const approach = approachLabel(action.diagnosis.approach ?? action.approach);
+  const canDeclare = isDeclarable(action) && mayWrite;
+  if (!action.declaration && !canDeclare && !approach) return null;
   return (
-    <section aria-labelledby="action-implementation" className="grid gap-3">
+    <section
+      aria-labelledby="action-implementation"
+      className={`${cardClasses()} grid gap-3 p-[var(--card-padding)]`}
+    >
       <SectionTitle id="action-implementation">Implementation</SectionTitle>
+      {approach ? <p className={textRole('itemTitle')}>{approach}</p> : null}
       {action.declaration ? (
         <DeclarationStatus declaration={action.declaration} />
-      ) : (
+      ) : canDeclare ? (
         <div className="grid gap-3">
           <p className={textRole('body')}>
             When this work is live, declare it so CiteLadder can measure it. To declare an Agent
@@ -284,7 +286,7 @@ function Implementation({
             )}
           </div>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -292,8 +294,8 @@ function Implementation({
 function TextList({ title, items }: Readonly<{ title: string; items: string[] }>) {
   if (items.length === 0) return null;
   return (
-    <div className="grid gap-2">
-      <h3 className={textRole('label')}>{title}</h3>
+    <div className={`${cardClasses()} grid gap-3 p-[var(--card-padding)]`}>
+      <h3 className={textRole('sectionTitle')}>{title}</h3>
       <ul className="grid list-disc gap-1 ps-5">
         {items.map((item) => (
           <li key={item} className={textRole('body')}>
@@ -356,6 +358,35 @@ function LinkedChats({
         >
           Show more chats
         </Button>
+      ) : null}
+    </section>
+  );
+}
+
+function ActionEvidence({ action }: Readonly<{ action: ActionDetail }>) {
+  const families = Object.entries(action.diagnosis.families ?? {}).filter(([family]) =>
+    familyLabel(family),
+  );
+  const supporting = families.filter(([, state]) => state === 'observed');
+  const other = families.filter(([, state]) => state !== 'observed');
+  const sources = (rows: typeof families) => (
+    <dl className="grid gap-3">
+      {rows.map(([family, state]) => (
+        <div key={family} className="flex flex-wrap items-center justify-between gap-2">
+          <dt className={textRole(state === 'observed' ? 'itemTitle' : 'body')}>
+            {familyLabel(family)}
+          </dt>
+          <dd className={textRole('caption')}>{FAMILY_STATE_LABEL[state]}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+  return (
+    <section className={`${cardClasses()} grid gap-4 p-[var(--card-padding)]`}>
+      <SectionTitle>Evidence</SectionTitle>
+      {sources(supporting)}
+      {other.length > 0 ? (
+        <Disclosure title={`Other sources (${other.length})`}>{sources(other)}</Disclosure>
       ) : null}
     </section>
   );

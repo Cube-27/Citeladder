@@ -2,6 +2,7 @@
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 
+import { Badge } from '@/components/ui/badge';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { ReadError } from '@/components/ui/read-error';
@@ -41,7 +42,10 @@ export function IssueDetailRail({
   onNext: () => void;
 }>) {
   const detail = detailQuery.isError ? undefined : detailQuery.data;
-  useAgentPanelSeed({ prompt: askAgentPrompt(issue) });
+  useAgentPanelSeed({
+    issueGroup: { crawlId, groupId: issue.group_id },
+    prompt: askAgentPrompt(issue),
+  });
   return (
     <section
       className="min-w-0 min-[701px]:sticky min-[701px]:top-[var(--workspace-gap)] min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))] min-[701px]:overflow-hidden"
@@ -78,23 +82,22 @@ export function IssueDetailRail({
               ) : null}
             </div>
           </div>
-          <IssueActions issue={issue} />
+          <IssueActions issue={issue} crawlId={crawlId} />
         </header>
         <div className="content-scroll grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)] min-[701px]:flex-1 min-[701px]:overflow-y-auto">
           {issue.description ? (
             <p className="type-body whitespace-pre-line">{issue.description}</p>
           ) : null}
           {issue.remediation ? (
-            // Guidance, not a field. The `well` tone is the recessed INPUT
-            // surface, so remediation copy inside it read as a disabled
-            // textarea the reader could not edit. On the accent fill it reads
-            // as advice.
-            <div className={panelClasses({ tone: 'accent', pad: 'compact' }, 'grid gap-1')}>
+            <div className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'grid gap-1')}>
               <span className={textRole('label')}>How to fix</span>
               <p className="type-body whitespace-pre-line">{issue.remediation}</p>
             </div>
           ) : null}
-          <OccurrenceList issue={issue} detail={detail} crawlId={crawlId} query={detailQuery} />
+          <section className="grid gap-3">
+            <h3 className={textRole('itemTitle')}>Affected pages</h3>
+            <OccurrenceList issue={issue} detail={detail} crawlId={crawlId} query={detailQuery} />
+          </section>
         </div>
         {detail && (canPrevious || detail.next_cursor) ? (
           <footer className="border-border-subtle bg-panel flex shrink-0 items-center justify-end gap-2 border-t p-3">
@@ -123,17 +126,22 @@ export function IssueDetailRail({
  * Every issue gets an action: the fix prompt a developer or assistant can use,
  * and Ask agent, which starts a chat about it in the Agent workspace.
  */
-function IssueActions({ issue }: Readonly<{ issue: SiteIssue }>) {
+function IssueActions({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: string }>) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <CopyButton value={buildFixPrompt(issue)} size="sm" variant="secondary" className="w-fit">
-        Copy fix prompt
-      </CopyButton>
-      <Button variant="secondary" size="sm" asChild>
-        <ProjectLink href={agentHandoffHref({ prompt: askAgentPrompt(issue) })}>
+      <Button size="sm" asChild>
+        <ProjectLink
+          href={agentHandoffHref({
+            issueGroup: { crawlId, groupId: issue.group_id },
+            prompt: askAgentPrompt(issue),
+          })}
+        >
           Ask agent
         </ProjectLink>
       </Button>
+      <CopyButton value={buildFixPrompt(issue)} size="sm" variant="secondary" className="w-fit">
+        Copy fix prompt
+      </CopyButton>
     </div>
   );
 }
@@ -142,7 +150,9 @@ function askAgentPrompt(issue: SiteIssue, page?: string): string {
   const count = issue.affected_url_count;
   const pages = count === 1 ? 'page' : 'pages';
   const scope = page ? ` on ${page}` : ` (${count} affected ${pages})`;
-  return `Help me fix the Site Health issue "${issueTitle(issue)}"${scope}.`;
+  return page
+    ? `Analyze the Site Health issue "${issueTitle(issue)}"${scope} and propose exact page edits from the selected evidence.`
+    : `Analyze the Site Health issue "${issueTitle(issue)}"${scope}, prioritize the work and propose a bounded implementation plan. Label sampled occurrences and distinguish them from the total affected pages.`;
 }
 
 const OCCURRENCE_PLACEHOLDERS = ['first', 'second', 'third'] as const;
@@ -193,15 +203,16 @@ function OccurrenceList({
             href={`/site/crawls/${crawlId}/pages/${occurrence.site_url_id}`}
             className="hover:text-accent flex min-w-0 flex-col gap-0.5"
           >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className={textRole('itemTitle', 'truncate')}>
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
                 {pageDisplayTitle(occurrence.title, occurrence.display_url)}
               </span>
-              {occurrence.page_kind ? (
-                <span className="type-caption shrink-0">{pageKindLabel(occurrence.page_kind)}</span>
-              ) : null}
+              {occurrence.page_kind ? <Badge>{pageKindLabel(occurrence.page_kind)}</Badge> : null}
             </span>
-            <span className="type-caption truncate tabular-nums" title={occurrence.display_url}>
+            <span
+              className="type-caption [overflow-wrap:anywhere] tabular-nums"
+              title={occurrence.display_url}
+            >
               {occurrence.display_url}
             </span>
           </ProjectLink>
@@ -209,7 +220,7 @@ function OccurrenceList({
           <Button variant="ghost" size="sm" asChild className="w-fit">
             <ProjectLink
               href={agentHandoffHref({
-                siteUrlId: occurrence.site_url_id,
+                issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: occurrence.site_url_id },
                 prompt: askAgentPrompt(issue, occurrence.display_url),
               })}
             >

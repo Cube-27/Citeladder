@@ -5,9 +5,12 @@ import { Link } from 'react-router-dom';
 import type { z } from 'zod';
 import type { trafficLegSchema, aiTrafficUrlSchema } from '@citeladder/contracts/ai-traffic';
 import { Drawer } from '@/components/ui/drawer';
+import { Pressable } from '@/components/ui/pressable';
+import { MISSING_MARK } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
+import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
 import { DisplayTime } from '@/components/ui/display-time';
 import { PageLoading } from '@/components/layout/page-loading';
 import { aiTrafficApi, type TrafficFilters } from '@/lib/api/ai-traffic';
@@ -18,13 +21,49 @@ import { projectDestination } from '@/lib/navigation/project-destination';
 export function TrafficLeg({
   leg,
   unit,
-}: Readonly<{ leg: z.infer<typeof trafficLegSchema>; unit: string }>) {
+  compact = false,
+}: Readonly<{ leg: z.infer<typeof trafficLegSchema>; unit: string; compact?: boolean }>) {
+  if (compact) return <CompactTrafficLeg leg={leg} unit={unit} />;
   return (
     <span>
       {leg.value === null ? 'Unavailable' : leg.value} {unit} · {leg.state.replaceAll('_', ' ')}
       {leg.coverage ? ' · ' + leg.coverage : ''}
       {leg.reason ? ' · ' + leg.reason.replaceAll('_', ' ') : ''}
     </span>
+  );
+}
+function CompactTrafficLeg({
+  leg,
+  unit,
+}: Readonly<{ leg: z.infer<typeof trafficLegSchema>; unit: string }>) {
+  const detail = trafficLegExplanation(leg, unit);
+  const qualified =
+    leg.value === null ||
+    !['value', 'zero'].includes(leg.state) ||
+    Boolean(leg.reason) ||
+    Boolean(leg.coverage && leg.coverage !== 'complete');
+  const value = (
+    <>
+      {leg.value ?? MISSING_MARK}
+      {leg.value !== null && leg.coverage === 'partial' ? (
+        <span className="type-caption block">Partial</span>
+      ) : null}
+    </>
+  );
+  return qualified ? (
+    <TooltipProvider>
+      <Tooltip content={detail}>
+        <Pressable
+          type="button"
+          className="w-auto text-center tabular-nums"
+          aria-label={`${leg.value ?? 'Unavailable'} ${detail}`}
+        >
+          {value}
+        </Pressable>
+      </Tooltip>
+    </TooltipProvider>
+  ) : (
+    <span className="tabular-nums">{value}</span>
   );
 }
 export function UrlPanel({
@@ -144,4 +183,13 @@ export function TrafficUrlButton({
       <UrlPanel urlHash={open ? urlHash : null} onClose={() => setOpen(false)} filters={filters} />
     </>
   );
+}
+function trafficLegExplanation(leg: z.infer<typeof trafficLegSchema>, unit: string) {
+  return [
+    `${unit}: ${leg.state.replaceAll('_', ' ')}`,
+    leg.coverage && `Coverage: ${leg.coverage}`,
+    leg.reason?.replaceAll('_', ' '),
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }

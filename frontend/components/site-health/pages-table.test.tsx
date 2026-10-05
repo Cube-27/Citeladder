@@ -44,7 +44,7 @@ describe('PagesTable', () => {
     renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     const row = screen.getByRole('row', { name: /Homepage/ });
     expect(within(row).getByRole('cell', { name: '46' })).toBeInTheDocument();
-    expect(within(row).getByRole('link', { name: 'View' })).toBeInTheDocument();
+    expect(within(row).getByRole('link', { name: /^View / })).toBeInTheDocument();
     fireEvent.keyDown(row, { key: 'Enter' });
     expect(screen.getByTestId('location')).toHaveTextContent(`/site/crawls/${CRAWL}/pages/${UUID}`);
   });

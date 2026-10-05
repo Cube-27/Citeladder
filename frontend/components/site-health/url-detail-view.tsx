@@ -9,6 +9,7 @@ import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cardClasses } from '@/components/ui/card-variants';
 import { Card, CardContent } from '@/components/ui/card';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Label, textRole } from '@/components/ui/typography';
@@ -44,14 +45,17 @@ export function UrlDetailView({
   rerunPending,
   rerunQueued,
   onRerun,
+  children,
 }: Readonly<{
   detail: PageDetail;
   rerunPending: boolean;
   rerunQueued: boolean;
   onRerun: () => void;
+  children?: React.ReactNode;
 }>) {
   return (
     <PageShell
+      className="pt-4"
       title={pageDisplayTitle(detail.title, detail.display_url)}
       actions={
         <>
@@ -67,6 +71,7 @@ export function UrlDetailView({
         <UrlScoreSummary detail={detail} />
         <PageMeasurements detail={detail} />
         <IssuesList issues={detail.issues} />
+        {children}
       </Stack>
     </PageShell>
   );
@@ -98,14 +103,14 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
   if (isMobile) {
     return (
       <div className="grid min-w-0 gap-[var(--workspace-gap)]">
-        <section className="grid gap-4">
+        <section className={`${cardClasses()} grid gap-4 p-[var(--card-padding)]`}>
           <EditorialSectionHeader
             title="Delivery Metrics"
             description="Static HTTP-level measurements"
           />
           <DeliveryMetrics delivery={detail.delivery} />
         </section>
-        <section className="grid gap-4">
+        <section className={`${cardClasses()} grid gap-4 p-[var(--card-padding)]`}>
           {detail.internal_links ? (
             <EditorialSectionHeader
               title="Internal Links"
@@ -124,7 +129,7 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
     );
   }
   return (
-    <section className="min-w-0">
+    <section className={`${cardClasses()} min-w-0 p-[var(--card-padding)]`}>
       <Tabs
         value={selected}
         onValueChange={setSelected}
@@ -152,7 +157,7 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
 function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
   const timeZone = useDisplayTimeZone();
   return (
-    <section className="border-border-subtle min-w-0 border-b pb-4">
+    <section className={`${cardClasses()} min-w-0 p-[var(--card-padding)]`}>
       <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
         <DetailFact label="URL" className="min-[701px]:col-span-2 xl:col-span-1">
           <ExternalHttpLink
@@ -222,11 +227,11 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
   return (
     <div className="grid gap-3">
       <p className={textRole('caption', 'max-[980px]:hidden')}>Static HTTP-level measurements</p>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
+      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {items.map((item) => (
           <div key={item.label} className="grid gap-0.5">
             <Label>{item.label}</Label>
-            <dd className={textRole('figureSm', 'tabular-nums')}>
+            <dd className={textRole('itemTitle', 'tabular-nums [overflow-wrap:anywhere]')}>
               {item.value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : item.value}
             </dd>
           </div>
@@ -241,7 +246,7 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
   return (
     <Card>
       <CardContent className="grid gap-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className={textRole('sectionTitle')}>All Issues ({issues.length})</h2>
           <span className="type-caption">Sorted by severity</span>
         </div>
@@ -249,22 +254,20 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
           <p className={textRole('body')}>No issues detected on this page.</p>
         ) : (
           <ol className={ledgerClasses()}>
-            {ordered.map((issue, index) => (
-              <li key={issue.occurrence_id} className="grid gap-2 py-3">
-                <span className="flex items-center justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span className="type-caption w-6 shrink-0 tabular-nums">{index + 1}</span>
-                    <span className={textRole('itemTitle')}>{issue.issue_title}</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <Badge>{dimensionLabel(issue.dimension)}</Badge>
-                    <Badge variant="status" value={severityBadgeValue(issue.severity)}>
-                      {severityLabel(issue.severity)}
-                    </Badge>
-                  </span>
-                </span>
-                <div className="pl-10">
+            {ordered.map((issue) => (
+              <li
+                key={issue.occurrence_id}
+                className="flex flex-col gap-3 py-3 sm:flex-row sm:items-start sm:justify-between"
+              >
+                <div className="grid min-w-0 gap-2">
+                  <span className={textRole('itemTitle')}>{issue.issue_title}</span>
                   <IssueEvidence occurrence={issue} />
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Badge>{dimensionLabel(issue.dimension)}</Badge>
+                  <Badge variant="status" value={severityBadgeValue(issue.severity)}>
+                    {severityLabel(issue.severity)}
+                  </Badge>
                 </div>
               </li>
             ))}

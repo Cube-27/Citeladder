@@ -39,11 +39,15 @@ Completed implementation plans are retained in [the archive](../archive/).
 
 ## Completed implementation and operational follow-up
 
+- [Agent end-to-end reliability and workflows](citeladder-agent-end-to-end.md):
+  slices A–G merged in #271. Native and mocked acceptance coverage accompanies
+  the cutover; deployment and live-provider quality evaluation remain separate.
+
 The [TypeScript migration](../archive/citeladder-typescript-migration.md) and
 [Python retirement](../archive/citeladder-python-retirement.md) are complete:
-PR #268 merged the final schema-only boundary. Current main has successful CI,
-Compose smoke, GCP Deploy and Product, Marketing and Documentation Worker delivery
-runs. Manual feature acceptance remains in [release acceptance](../release-checklist.md)
+PR #268 merged the final schema-only boundary with successful CI, Compose smoke,
+GCP Deploy and Product, Marketing and Documentation Worker delivery runs.
+Manual feature acceptance remains in [release acceptance](../release-checklist.md)
 and [Google Cloud acceptance](../operations/GOOGLE_CLOUD.md).
 
 [Backend debt](../archive/citeladder-backend-debt-remediation.md),

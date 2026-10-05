@@ -87,6 +87,6 @@ export function nextStepsFor(
 ): { label: string; skillId: string; prompt: string }[] {
   return (kind ? (NEXT_STEPS[kind] ?? []) : []).map((step) => ({
     ...step,
-    prompt: `${step.prompt} "${title}".`,
+    prompt: `${step.prompt} "${title}". Use the selected document revision as the upstream brief; re-fetch its source references when needed.`,
   }));
 }

@@ -1,16 +1,14 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { ComposerCommands, Mention } from '@/components/agent/command-menu';
-import { useSkillCatalog } from '@/components/agent/skill-picker';
 import { matchOptions, type CommandOption } from '@/lib/agent/composer-commands';
-import { approachLabel, skillGroupLabel } from '@/lib/agent/vocabulary';
+import { approachLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_MENTIONS_MAX } from '@/lib/config/agent';
 
-const SKILL = 'skill:';
 const ACTION = 'action:';
 
 /**
@@ -21,29 +19,28 @@ const ACTION = 'action:';
 export function useComposerCommands({
   workspaceId,
   projectId,
-  outputKind,
-  onSkill,
 }: Readonly<{
   workspaceId: string;
   projectId: string;
-  outputKind?: string | null;
-  onSkill: (skillId: string) => void;
-}>): ComposerCommands & { clear: () => void; restore: (mentions: readonly Mention[]) => void } {
+}>): ComposerCommands & {
+  clear: () => void;
+  restore: (mentions: readonly Mention[]) => void;
+  skillPicker: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSelect: () => void;
+    onCloseAutoFocus: (event: Event) => void;
+  };
+} {
   const [mentions, setMentions] = useState<Mention[]>([]);
-  const skills = useSkillCatalog().filter(
-    (skill) => !outputKind || skill.output_kind === outputKind,
-  );
+  const [skillPickerOpen, setSkillPickerOpen] = useState(false);
+  const removeCommand = useRef<(() => void) | null>(null);
+  const restoreFocus = useRef<(() => void) | null>(null);
   const actions = useQuery({
     ...actionsQueries.list(workspaceId, projectId),
     enabled: Boolean(workspaceId && projectId),
   });
 
-  const skillOptions: CommandOption[] = skills.map((skill) => ({
-    key: `${SKILL}${skill.id}`,
-    label: skill.label,
-    detail: skillGroupLabel(skill.group),
-    replacement: '',
-  }));
   const mentioned = new Set(mentions.map((mention) => mention.id));
   const actionOptions: CommandOption[] = (actions.data?.items ?? [])
     .filter((action) => !mentioned.has(action.id))
@@ -56,19 +53,45 @@ export function useComposerCommands({
 
   return {
     options: (token) => {
-      if (token.trigger === '/') return matchOptions(skillOptions, token.query);
+      if (token.trigger === '/') return [];
       if (mentions.length >= AGENT_MENTIONS_MAX) return [];
       return matchOptions(actionOptions, token.query);
     },
     onPick: (option) => {
-      if (option.key.startsWith(SKILL)) onSkill(option.key.slice(SKILL.length));
-      else
-        setMentions((current) => [
-          ...current,
-          { id: option.key.slice(ACTION.length), label: option.label },
-        ]);
+      setMentions((current) => [
+        ...current,
+        { id: option.key.slice(ACTION.length), label: option.label },
+      ]);
     },
     mentions,
+    openSkillPicker: (remove, focus) => {
+      removeCommand.current = remove;
+      restoreFocus.current = focus;
+      setSkillPickerOpen(true);
+    },
+    closeSkillPicker: () => {
+      if (!skillPickerOpen) return false;
+      setSkillPickerOpen(false);
+      removeCommand.current = null;
+      return true;
+    },
+    skillPicker: {
+      open: skillPickerOpen,
+      onOpenChange: (open) => {
+        setSkillPickerOpen(open);
+        if (!open) removeCommand.current = null;
+      },
+      onSelect: () => {
+        removeCommand.current?.();
+        removeCommand.current = null;
+      },
+      onCloseAutoFocus: (event) => {
+        if (!restoreFocus.current) return;
+        event.preventDefault();
+        restoreFocus.current();
+        restoreFocus.current = null;
+      },
+    },
     onRemoveMention: (id) => setMentions((current) => current.filter((item) => item.id !== id)),
     clear: () => setMentions([]),
     restore: (saved) => setMentions([...saved]),

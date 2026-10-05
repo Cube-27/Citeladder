@@ -19,6 +19,7 @@ import { agentPolicy, type Chat, type Run, type Scope } from './contracts.ts';
 import { currentOutput, revisionRefs } from './outputs.ts';
 import { active } from './queue.ts';
 import { getChat } from './store.ts';
+import { manifestSchema } from './context.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
 function summary(chat: Chat, output: { kind: string; phase: string } | null, label: string | null) {
@@ -62,7 +63,7 @@ function modelStepStatus(outcome: string, latest: boolean) {
   return latest ? 'processing' : 'reasoned';
 }
 export async function progress(db: Database, run: Run) {
-  if (!active.includes(run.status) || run.attempt_count < 1) return [];
+  if (run.attempt_count < 1) return [];
   const attempts = await db
     .selectFrom('agent_model_attempts as model')
     .leftJoin('agent_tool_attempts as tool', (join) =>
@@ -75,6 +76,7 @@ export async function progress(db: Database, run: Run) {
     .select([
       'model.id as model_id',
       'model.ordinal',
+      'model.run_attempt',
       'model.outcome',
       'tool.id as tool_id',
       'tool.tool_name',
@@ -83,17 +85,23 @@ export async function progress(db: Database, run: Run) {
     ])
     .where('model.workspace_id', '=', run.workspace_id)
     .where('model.run_id', '=', run.id)
-    .where('model.run_attempt', '=', run.attempt_count)
+    .orderBy('model.run_attempt')
     .orderBy('model.ordinal')
     .execute();
   return attempts.map((row, index) =>
     agentRunStepSchema.parse({
       ordinal: row.ordinal,
-      status: row.tool_status ?? modelStepStatus(row.outcome, index === attempts.length - 1),
+      status:
+        row.tool_status ??
+        (row.run_attempt === run.attempt_count && active.includes(run.status)
+          ? modelStepStatus(row.outcome, index === attempts.length - 1)
+          : row.outcome === 'dispatched'
+            ? 'interrupted'
+            : modelStepStatus(row.outcome, false)),
       tool: row.tool_name,
       model_attempt_id: row.model_id,
       tool_attempt_id: row.tool_id,
-      run_attempt: run.attempt_count,
+      run_attempt: row.run_attempt,
       runtime_version: run.runtime_version,
       protocol_version: run.protocol_version,
       registry_version: row.registry_version ?? run.registry_version,
@@ -122,6 +130,33 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
     .limit(1)
     .executeTakeFirst();
   const current = await currentOutput(db, chat);
+  const parsedManifest = run ? manifestSchema.safeParse(run.context_manifest) : null;
+  const manifest = parsedManifest?.success ? parsedManifest.data : null;
+  const approvals = await db
+    .selectFrom('agent_runs')
+    .select(['id', 'user_message_id', 'context_manifest'])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('chat_id', '=', chat.id)
+    .where('mode', '=', 'draft_from_outline')
+    .execute();
+  const events = new Map(
+    approvals.flatMap((approval) => {
+      const parsed = manifestSchema.safeParse(approval.context_manifest);
+      return parsed.success && parsed.data.approval
+        ? [
+            [
+              approval.user_message_id,
+              {
+                kind: 'outline_approved' as const,
+                revision_id: parsed.data.approval.revision_id,
+                run_id: approval.id,
+              },
+            ] as const,
+          ]
+        : [];
+    }),
+  );
   const action = chat.action_id
     ? await db
         .selectFrom('actions')
@@ -135,12 +170,21 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
     chat: summary(chat, current.output, action?.target_label ?? null),
     pinned_skill_id: chat.pinned_skill_id,
     context: {
-      ...jsonObject(chat.context_refs, 'agent_chats.context_refs'),
-      ...(run ? jsonObject(run.context_manifest, 'agent_runs.context_manifest') : {}),
+      refs: jsonObject(chat.context_refs, 'agent_chats.context_refs'),
+      instructions: manifest?.instructions ? { revision: manifest.instructions.revision } : null,
+      action: manifest?.action
+        ? { id: manifest.action.id, label: manifest.action.target_label }
+        : null,
+      mentions:
+        manifest?.mentions.map((action) => ({ id: action.id, label: action.target_label })) ?? [],
+      sources: manifest?.package.summary.provenance ?? [],
+      limitations: manifest?.package.summary.omissions ?? [],
+      prompt: manifest?.prompt_summary ?? {},
     },
     messages: messages.map((message) =>
       agentMessageSchema.parse({
         ...message,
+        event: events.get(message.id) ?? null,
         created_at: iso(message.created_at),
         evidence_refs: revisionRefs(message.evidence_refs),
       }),
@@ -224,7 +268,24 @@ export async function listChats(
     .where('chat.project_id', '=', scope.projectId)
     .where('chat.archived_at', 'is', null);
   if (options.actionId) query = query.where('chat.action_id', '=', options.actionId);
-  if (options.query) query = query.where('chat.title', 'ilike', containsPattern(options.query));
+  if (options.query) {
+    const search = z.string().trim().max(agentPolicy.history_search_max_chars).parse(options.query);
+    const pattern = containsPattern(search);
+    query = query.where((eb) =>
+      eb.or([
+        eb('chat.title', 'ilike', pattern),
+        eb.exists(
+          eb
+            .selectFrom('agent_messages as message')
+            .select('message.id')
+            .whereRef('message.workspace_id', '=', 'chat.workspace_id')
+            .whereRef('message.project_id', '=', 'chat.project_id')
+            .whereRef('message.chat_id', '=', 'chat.id')
+            .where('message.content', 'ilike', pattern),
+        ),
+      ]),
+    );
+  }
   if (options.cursor) {
     const cursor = cursorSchema.parse(
       JSON.parse(Buffer.from(options.cursor, 'base64url').toString('utf8')),

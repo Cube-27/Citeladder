@@ -14,13 +14,13 @@ it('renders all policies and Not specified with accessible purpose tables and an
       <SiteFactsPanel crawl={crawl} dashboard={undefined} />
     </MemoryRouter>,
   );
-  const training = screen.getByRole('table', { name: 'AI training robots policy' });
+  const training = screen.getByRole('table', { name: 'Crawler robots policy by purpose' });
   expect(within(training).getByRole('row', { name: /GPTBot/ })).toHaveTextContent('All disallowed');
   expect(within(training).getByRole('row', { name: /ClaudeBot/ })).toHaveTextContent('All allowed');
   expect(within(training).getByRole('row', { name: /Google-Extended/ })).toHaveTextContent(
     'Unknown',
   );
-  const search = screen.getByRole('table', { name: 'AI search robots policy' });
+  const search = screen.getByRole('table', { name: 'Crawler robots policy by purpose' });
   const row = within(search).getByRole('row', { name: /PerplexityBot/ });
   expect(row).toHaveTextContent('Not specified');
   expect(row).toHaveTextContent('Restricted');
@@ -29,12 +29,15 @@ it('renders all policies and Not specified with accessible purpose tables and an
   const url = new URL(href, 'https://example.test');
   expect(url.searchParams.get('project')).toBe(crawl.project_id);
   expect(parseAgentHandoff(url.searchParams).prompt).toContain(crawl.id);
+  expect(parseAgentHandoff(url.searchParams).context.site_facts_reference).toEqual({
+    crawl_id: crawl.id,
+  });
   await user.click(screen.getByRole('combobox', { name: 'Filter crawlers by purpose' }));
   await user.click(screen.getByRole('option', { name: 'AI search' }));
+  expect(screen.queryByRole('row', { name: /GPTBot/ })).not.toBeInTheDocument();
   expect(
-    screen.queryByRole('table', { name: 'AI training robots policy' }),
-  ).not.toBeInTheDocument();
-  expect(screen.getByRole('table', { name: 'AI search robots policy' })).toBeInTheDocument();
+    screen.getByRole('table', { name: 'Crawler robots policy by purpose' }),
+  ).toBeInTheDocument();
 });
 it('keeps an unreadable robots file distinct from an absent panel', () => {
   const facts = makeSiteFacts();

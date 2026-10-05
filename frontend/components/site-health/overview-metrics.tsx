@@ -1,15 +1,7 @@
-import { ProjectLink } from '@/components/layout/scoped-link';
-import { cn } from '@/lib/utils';
-import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/workspace';
-
-import { Button } from '@/components/ui/button';
-import { cardClasses } from '@/components/ui/card-variants';
-import { ScoreRing } from '@/components/ui/score-ring';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@/lib/api/types';
 import { measurementCaveat, shouldPollCrawl } from '@/lib/site-health/status';
-import { textRole } from '@/components/ui/typography';
+import { AuditMetricStrip, type AuditMetric } from './audit-metric-strip';
 
 type Summary = SiteHealthDashboard['score_summary'];
 type MetricContext = {
@@ -19,15 +11,7 @@ type MetricContext = {
   selected: number;
   active: boolean;
 };
-type MetricModel = {
-  title: string;
-  value: number | null;
-  valueUnit?: 'score' | 'percent';
-  /** Only when the measurement is qualified; null on the ordinary case. */
-  caveat: string | null;
-  href: string;
-  icon: typeof ICONS.site;
-};
+type MetricModel = AuditMetric;
 
 function percentRatio(value: number | null | undefined): number | null {
   return value === null || value === undefined ? null : value * 100;
@@ -49,16 +33,7 @@ export function OverviewMetricCards({
     measurementMetric(context),
     crawlMetric(context),
   ];
-  return (
-    <div
-      className={cn(cardClasses(), hairlineBandClasses, 'overflow-hidden sm:grid-cols-4')}
-      data-testid="overview-metrics"
-    >
-      {metrics.map((metric) => (
-        <OverviewMetricCard key={metric.title} {...metric} />
-      ))}
-    </div>
-  );
+  return <AuditMetricStrip metrics={metrics} testId="overview-metrics" />;
 }
 
 function metricContext(
@@ -143,44 +118,4 @@ function coverageCaveat(
     ? reasons.find((value): value is string => typeof value === 'string')
     : undefined;
   return reason ? `${label} · ${reason.replaceAll('_', ' ')}` : label;
-}
-
-function OverviewMetricCard({
-  title,
-  value,
-  valueUnit = 'score',
-  caveat,
-  href,
-  icon: Icon,
-}: Readonly<MetricModel>) {
-  return (
-    <div
-      className={cn(hairlineBandItemClasses, 'grid h-full gap-2 p-3 sm:first:ps-3 sm:last:pe-3')}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Icon aria-hidden className="text-muted size-4 shrink-0" />
-          <p className={textRole('itemTitle')}>{title}</p>
-        </div>
-        {value === null ? (
-          <UnavailableValue state="not_measured" />
-        ) : (
-          <ScoreRing
-            value={value}
-            size={40}
-            strokeWidth={4}
-            label={
-              valueUnit === 'percent'
-                ? `${title}: ${Math.round(value)}%`
-                : `${title} score: ${Math.round(value)}`
-            }
-          />
-        )}
-      </div>
-      {caveat ? <span className="sr-only">{caveat}</span> : null}
-      <Button asChild variant="ghost" size="sm" className="-ms-3 mt-auto justify-self-start">
-        <ProjectLink href={href}>View details</ProjectLink>
-      </Button>
-    </div>
-  );
 }

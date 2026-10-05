@@ -19,10 +19,12 @@ import { AgentQueue, lockRun } from '../src/agent/queue.ts';
 import { AgentOutputs } from '../src/agent/outputs.ts';
 import { ModelCalls, type Funding } from '../src/agent/model-calls.ts';
 import { readChat, listChats, listRevisions, progress } from '../src/agent/reads.ts';
+import { appendMessage, getChat } from '../src/agent/store.ts';
 import { ToolRegistry } from '../src/agent/tools.ts';
 import { contextCitations, renderManifest } from '../src/agent/context.ts';
 import { bounded, stripUnverifiedRefs } from '../src/agent/runtime.ts';
 import { fingerprint } from '../src/agent/store.ts';
+import { readAgentContext } from '../src/agent/context-adapter.ts';
 import { runAgentOnce } from '../src/agent/worker.ts';
 
 describe('inactive Agent runtime foundation on PostgreSQL', () => {
@@ -95,6 +97,89 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       status: 404,
     });
     expect((await store.enqueue(scope, request)).id).toBe(run.id);
+  });
+  it('refuses another active member replaying a workspace key', async () => {
+    const scope = await fixtures.scope();
+    const userId = await fixtures.user();
+    await fixtures.member(scope.workspaceId, userId, 'member');
+    const request = { key: randomUUID(), message: 'Private submission' };
+    const run = await fixtures.store().enqueue(scope, request);
+    await expect(fixtures.store().enqueue({ ...scope, userId }, request)).rejects.toMatchObject({
+      code: 'agent_idempotency_conflict',
+    });
+    expect((await readChat(db, scope, run.chat_id)).messages).toHaveLength(1);
+  });
+  it('distinguishes inherited selection, clearing a pin and changing output kind', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope, { skillId: 'plan' });
+    await fixtures.runtime(scope, scripted([deliverable('final')])).execute(first.lease);
+    const cleared = await fixtures.store().enqueue(scope, {
+      chatId: first.run.chat_id,
+      key: randomUUID(),
+      message: 'Explain the plan',
+      skillId: null,
+    });
+    expect((await readChat(db, scope, first.run.chat_id)).pinned_skill_id).toBeNull();
+    const key = randomUUID();
+    await fixtures.store().cancel(scope, cleared.chat_id, cleared.id);
+    const inherited = await fixtures
+      .store()
+      .enqueue(scope, { chatId: cleared.chat_id, key, message: 'Question' });
+    await expect(
+      fixtures
+        .store()
+        .enqueue(scope, { chatId: cleared.chat_id, key, message: 'Question', skillId: null }),
+    ).rejects.toMatchObject({ code: 'agent_idempotency_conflict' });
+    await fixtures.store().cancel(scope, inherited.chat_id, inherited.id);
+    await expect(
+      fixtures.store().enqueue(scope, {
+        chatId: inherited.chat_id,
+        key: randomUUID(),
+        message: 'Change kind',
+        skillId: 'content',
+      }),
+    ).rejects.toMatchObject({ code: 'agent_skill_kind_conflict' });
+    expect((await readChat(db, scope, inherited.chat_id)).output?.kind).toBe('plan');
+  });
+  it('repairs outputs without a selected skill and fails exhausted repairs without artifacts', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope);
+    await fixtures
+      .runtime(
+        scope,
+        scripted([deliverable(), { action: 'select_skill', skill_id: 'plan' }, deliverable()]),
+      )
+      .execute(first.lease);
+    expect((await readChat(db, scope, first.run.chat_id)).output?.latest_revision?.body).toBe(
+      'Requested document',
+    );
+    const second = await fixtures.claimed(scope);
+    await fixtures.runtime(scope, scripted([deliverable(), deliverable()])).execute(second.lease);
+    const failed = await readChat(db, scope, second.run.chat_id);
+    expect(failed.latest_run).toMatchObject({ status: 'failed', error_code: 'protocol_violation' });
+    expect(failed.output).toBeNull();
+    expect(failed.messages).toHaveLength(1);
+  });
+  it('repairs invalid content formats and reports the effective outline and format', async () => {
+    const scope = await fixtures.scope();
+    const { run, lease } = await fixtures.claimed(scope, { skillId: 'content' });
+    const formats = new Map([
+      ['page', { id: 'page', label: 'Website page', body: 'Write a page.' }],
+    ]);
+    await fixtures
+      .runtime(
+        scope,
+        scripted([
+          { ...deliverable(), output: { ...deliverable().output, format_id: 'unknown' } },
+          { ...deliverable(), output: { ...deliverable().output, format_id: 'page' } },
+        ]),
+        { catalog: { ...catalog, formats } },
+      )
+      .execute(lease);
+    const detail = await readChat(db, scope, run.chat_id);
+    expect(detail.output).toMatchObject({ phase: 'outline', format_id: 'page' });
+    expect(detail.messages.at(-1)?.content).toContain('Saved outline in Website page format');
+    expect(detail.messages.filter((message) => message.role === 'agent')).toHaveLength(1);
   });
   it('claims once under contention, never revives expiry, and fences previous attempts after recovery', async () => {
     const scope = await fixtures.scope();
@@ -211,7 +296,6 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       status: 'succeeded',
       steps_used: 3,
       skill_id: 'plan',
-      progress: [],
     });
     expect(detail.messages.at(-1)).toMatchObject({ role: 'agent', evidence_refs: [uri] });
     expect(detail.messages.at(-1)?.content).toContain('[unverified reference]');
@@ -312,6 +396,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     let detail = await readChat(db, scope, run.chat_id);
     const original = detail.output!.latest_revision!;
     expect(original.phase).toBe('outline');
+    expect(detail.messages.at(-1)?.content).toContain('Saved outline');
     await expect(
       fixtures.store().enqueue(scope, {
         chatId: run.chat_id,
@@ -344,6 +429,11 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       parent_revision_id: original.id,
     });
     expect((await fixtures.run(draft.id)).status).toBe('succeeded');
+    expect(detail.messages.find((message) => message.event)?.event).toMatchObject({
+      kind: 'outline_approved',
+      revision_id: original.id,
+      run_id: draft.id,
+    });
   });
   it('appends user edits and restores while refusing stale bases', async () => {
     const scope = await fixtures.scope();
@@ -409,12 +499,54 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     expect(detail.output).toBeNull();
     expect(detail.latest_run?.error_code).toBe('output_conflict');
   });
+  it('freezes the exact upstream revision and refuses mismatched or sibling-project references', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope, { skillId: 'plan' });
+    await fixtures
+      .runtime(scope, scripted([deliverable('final', 'Accepted upstream brief')]))
+      .execute(first.lease);
+    const detail = await readChat(db, scope, first.run.chat_id);
+    const refs = {
+      output_revision_reference: {
+        output_id: detail.output!.id,
+        revision_id: detail.output!.latest_revision!.id,
+      },
+    };
+    const accepted = await fixtures
+      .store({ context: readAgentContext })
+      .enqueue(scope, { key: randomUUID(), message: 'Measure this accepted brief', refs });
+    await new AgentOutputs(db).edit(
+      scope,
+      first.run.chat_id,
+      detail.output!.latest_revision!.id,
+      'Edited brief',
+      'Later changed content',
+    );
+    const manifest = accepted.context_manifest as {
+      package: { sections: { upstream_revision: { body: string } } };
+    };
+    expect(manifest.package.sections.upstream_revision.body).toBe('Accepted upstream brief');
+    const sibling = await fixtures.project(scope.workspaceId);
+    await expect(
+      readAgentContext(db, { ...scope, projectId: sibling }, refs, 'Measure'),
+    ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
+    await expect(
+      readAgentContext(
+        db,
+        scope,
+        {
+          output_revision_reference: { ...refs.output_revision_reference, output_id: randomUUID() },
+        },
+        'Measure',
+      ),
+    ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
+  });
   it('refuses project selection, unknown tools and a read on the final step, without a partial deliverable', async () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope);
     await db
       .updateTable('agent_runs')
-      .set({ budget: { max_steps: 3, max_tool_calls: 2, execution_timeout_seconds: 10 } })
+      .set({ budget: { ...(run.budget as object), max_steps: 3, max_tool_calls: 2 } })
       .where('id', '=', run.id)
       .execute();
     await fixtures
@@ -456,8 +588,15 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     ]);
     const outcome = await tools.execute(db, scope, 'missing', {}, AbortSignal.timeout(1000));
     expect(outcome.status).toBe('unavailable');
-    expect(outcome.omissions).toContainEqual({ reason: 'tool_result_truncated', count: 1 });
-    expect(outcome.text).toContain('[tool result truncated]');
+    expect(outcome.omissions).toContainEqual({
+      reason: 'tool_result_truncated',
+      count: 1,
+      sections: ['value'],
+    });
+    expect(JSON.parse(outcome.text)).toMatchObject({
+      complete: false,
+      omitted_sections: ['value'],
+    });
     expect(stripUnverifiedRefs('See citeladder://project/foreign.', new Set())).toBe(
       'See [unverified reference].',
     );
@@ -509,7 +648,6 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .execute();
     expect((await readChat(db, scope, a.chat_id)).context.instructions).toMatchObject({
       revision: 1,
-      text: 'Use a concise voice.',
     });
     expect((await readChat(db, scope, b.chat_id)).context.instructions).toMatchObject({
       revision: 2,
@@ -523,6 +661,122 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     await fixtures.store().cancel(scope, a.chat_id, a.id);
     await fixtures.store().archive(scope, a.chat_id);
     expect((await listChats(db, scope)).items.map((chat) => chat.id)).toEqual([b.chat_id]);
+  });
+  it('searches later message content without duplicate chats or sibling/workspace leakage', async () => {
+    const scope = await fixtures.scope();
+    const run = await fixtures
+      .store()
+      .enqueue(scope, { key: randomUUID(), message: 'Unrelated title' });
+    await db.transaction().execute(async (trx) => {
+      const chat = await getChat(trx, scope, run.chat_id, true);
+      await appendMessage(trx, chat, { role: 'user', content: 'Later topic: robots permission' });
+      await appendMessage(trx, chat, { role: 'agent', content: 'Explain robots permission' });
+    });
+    const foreign = await fixtures.scope();
+    await fixtures.store().enqueue(foreign, { key: randomUUID(), message: 'robots permission' });
+    const sibling = await fixtures.project(scope.workspaceId);
+    await fixtures
+      .store()
+      .enqueue(
+        { ...scope, projectId: sibling },
+        { key: randomUUID(), message: 'robots permission' },
+      );
+    expect(
+      (await listChats(db, scope, { query: 'robots permission' })).items.map((chat) => chat.id),
+    ).toEqual([run.chat_id]);
+    expect((await listChats(db, scope, { query: '%' })).items).toEqual([]);
+  });
+  it('retains retry activity and the step high-water mark while restarting from step one', async () => {
+    const scope = await fixtures.scope();
+    const run = await fixtures
+      .store()
+      .enqueue(scope, { key: randomUUID(), message: 'Read and explain' });
+    const queue = new AgentQueue(db, 30);
+    const model = {
+      ...scripted(
+        [
+          { action: 'select_skill', skill_id: 'plan' },
+          { action: 'call_tool', tool: 'read_evidence', arguments: {} },
+        ],
+        async (_request, ordinal) => {
+          if (ordinal === 3) throw new Error('Transient failure');
+        },
+      ),
+      retryableError: () => true,
+    };
+    await runAgentOnce(
+      queue,
+      fixtures.runtime(scope, model),
+      'retry-activity',
+      [scope.workspaceId],
+      () => 0,
+    );
+    expect(await fixtures.run(run.id)).toMatchObject({ status: 'retry_wait', steps_used: 3 });
+    const next = scripted([reply()], async () => {
+      const saved = await fixtures.run(run.id);
+      expect(saved.steps_used).toBe(3);
+      const activity = await progress(db, saved);
+      expect(
+        activity
+          .filter((step) => step.run_attempt === 1)
+          .some((step) => ['working', 'processing'].includes(step.status)),
+      ).toBe(false);
+      expect(activity.at(-1)).toMatchObject({ run_attempt: 2, ordinal: 1, status: 'working' });
+    });
+    await runAgentOnce(
+      queue,
+      fixtures.runtime(scope, next),
+      'retry-activity',
+      [scope.workspaceId],
+      () => 0,
+    );
+    const detail = await readChat(db, scope, run.chat_id);
+    expect(detail.latest_run).toMatchObject({
+      status: 'succeeded',
+      steps_used: 3,
+      attempt_count: 2,
+    });
+    expect(detail.latest_run?.progress.map((step) => step.run_attempt)).toEqual([1, 1, 1, 2]);
+  });
+  it('uses admitted size policy and refuses an oversized latest user edit before model dispatch', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope, { skillId: 'plan' });
+    await fixtures.runtime(scope, scripted([deliverable('final')])).execute(first.lease);
+    const output = (await readChat(db, scope, first.run.chat_id)).output!;
+    const edited = await new AgentOutputs(db).edit(
+      scope,
+      first.run.chat_id,
+      output.latest_revision!.id,
+      'Large edited document',
+      'x'.repeat(100000),
+    );
+    const next = await fixtures.claimed(scope, { chatId: first.run.chat_id });
+    const complete = vi.fn(scripted([deliverable()]).complete);
+    await fixtures.runtime(scope, { ...scripted([]), complete }).execute(next.lease);
+    expect(complete).not.toHaveBeenCalled();
+    const detail = await readChat(db, scope, first.run.chat_id);
+    expect(detail.latest_run).toMatchObject({
+      status: 'failed',
+      error_code: 'output_context_size_limit',
+    });
+    expect(detail.output?.latest_revision?.id).toBe(edited.id);
+    const small = await fixtures.claimed(scope);
+    await db
+      .updateTable('agent_runs')
+      .set({
+        budget: {
+          ...(small.run.budget as object),
+          tool_result_max_chars: 100,
+          reply_max_chars: 100,
+          max_protocol_errors: 1,
+        },
+      })
+      .where('id', '=', small.run.id)
+      .execute();
+    await fixtures.runtime(scope, scripted([reply('a'.repeat(200))])).execute(small.lease);
+    expect(
+      (await readChat(db, scope, small.run.chat_id)).messages.at(-1)?.content.length,
+    ).toBeLessThanOrEqual(100);
   });
   it('runs the bounded worker unit with an explicit tenant set', async () => {
     const scope = await fixtures.scope();

@@ -18,6 +18,8 @@ import { z } from 'zod';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { issueGroupId } from '../src/site-health/reads/rules.ts';
+import { issueDetail } from '../src/site-health/reads/issues.ts';
+import { encodeKeysetCursor } from '../src/http/keyset-cursor.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
@@ -315,6 +317,44 @@ describe('page projections', () => {
 });
 
 describe('issue catalog', () => {
+  it('binds occurrence cursors to the page filter and permits exhausted pages', async () => {
+    const seed = await fixtures.crawl();
+    const home = await page(seed, '/');
+    const product = await page(seed, '/product');
+    for (const target of [home, product]) await issue(seed, target, 'technical.indexable');
+    const groupId = issueGroupId(seed.crawlId, 'technical.indexable', 'defect');
+    const first = await issueDetail(db, seed.workspaceId, seed.crawlId, groupId, {
+      limit: 1,
+      cursor: null,
+    });
+    expect(first.next_cursor).not.toBeNull();
+    await expect(
+      issueDetail(
+        db,
+        seed.workspaceId,
+        seed.crawlId,
+        groupId,
+        { limit: 1, cursor: first.next_cursor! },
+        home.id,
+      ),
+    ).rejects.toThrow('cursor');
+    const cursor = encodeKeysetCursor(
+      'issue_detail',
+      {
+        crawl_id: seed.crawlId,
+        group_id: groupId,
+        site_url_id: home.id,
+      },
+      ['https://example.test/zzz', randomUUID()],
+    );
+    expect(
+      await issueDetail(db, seed.workspaceId, seed.crawlId, groupId, { limit: 1, cursor }, home.id),
+    ).toMatchObject({ occurrences: [], next_cursor: null });
+    await expect(
+      issueDetail(db, seed.workspaceId, seed.crawlId, groupId, { limit: 1, cursor }, product.id),
+    ).rejects.toThrow('cursor');
+  });
+
   it('groups current issues by rule and counts groups, folding critical into high', async () => {
     const seed = await fixtures.crawl();
     const home = await page(seed, '/');

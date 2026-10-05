@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { definitions, dispatchTool } from '../mcp/tools.ts';
+import { parseRecordId } from '../mcp/retrieval.ts';
 import { getAction, listActions, requireAction } from '../opportunities/actions.ts';
 import { listDifferentiationReports } from '../source-pages/differentiation-reads.ts';
 import { ToolRegistry, type ReadTool } from './tools.ts';
@@ -17,20 +18,18 @@ const availability = z.enum([
 ]);
 function outcome(value: unknown, defaultState?: 'available') {
   const data = z.record(z.string(), z.json()).parse(JSON.parse(JSON.stringify(value)));
-  const refs = Array.isArray(data.artifact_refs) ? data.artifact_refs : [];
+  const refs = z.array(reference).parse(data.artifact_refs ?? []);
   return {
     state:
       availability.parse(data.state ?? defaultState) === 'unavailable'
         ? ('unavailable' as const)
         : ('available' as const),
     data,
-    artifactRefs: refs.flatMap((ref) => {
-      const parsed = reference.safeParse(ref);
-      if (!parsed.success) return [];
-      const { record_uri, ...rest } = parsed.data;
-      return [{ ...rest, ...(record_uri ? { record_uri } : {}) }];
+    artifactRefs: refs.map((ref) => {
+      const { record_uri, ...rest } = ref;
+      return { ...rest, ...(record_uri ? { record_uri } : {}) };
     }),
-    omissions: Array.isArray(data.omissions) ? data.omissions : [],
+    omissions: z.array(z.json()).parse(data.omissions ?? []),
   };
 }
 function sharedTools(db: Database): ReadTool[] {
@@ -45,26 +44,29 @@ function sharedTools(db: Database): ReadTool[] {
         name,
         description: definition.description,
         arguments: z.strictObject(fields) as z.ZodType<Record<string, Json>>,
-        read: async (scope: Scope, args: Record<string, Json>) =>
-          outcome(
-            await dispatchTool(
-              db,
-              {
-                kind: 'member',
-                userId: scope.userId,
-                workspaceId: scope.workspaceId,
-                projectId: scope.projectId,
-              },
-              name,
-              { ...args, ...(_project ? { project_id: scope.projectId } : {}) },
-              '',
-            ),
-            // Successful search, exact fetch and aggregate context have no
-            // top-level availability field in their MCP contracts.
-            ['search', 'fetch', 'get_project_business_context'].includes(name)
-              ? 'available'
-              : undefined,
-          ),
+        read: async (scope: Scope, args: Record<string, Json>, _signal, maxChars) => {
+          const data = await dispatchTool(
+            db,
+            {
+              kind: 'member',
+              userId: scope.userId,
+              workspaceId: scope.workspaceId,
+              projectId: scope.projectId,
+            },
+            name,
+            { ...args, ...(_project ? { project_id: scope.projectId } : {}) },
+            '',
+            maxChars,
+          );
+          const result = outcome(
+            data,
+            definition.availability === 'successful_read' ? 'available' : undefined,
+          );
+          if (name === 'fetch' && typeof data.id === 'string') {
+            result.artifactRefs.push({ id: parseRecordId(data.id).id, record_uri: data.id });
+          }
+          return result;
+        },
       };
     });
 }

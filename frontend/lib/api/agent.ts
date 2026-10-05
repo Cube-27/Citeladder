@@ -57,11 +57,14 @@ export type AgentContextRefs = {
     checkpoint_ids: string[];
   };
   search_intelligence_reference?: { dataset_id: string; row_ids: string[] };
+  issue_group_reference?: { crawl_id: string; group_id: string; site_url_id?: string };
+  site_facts_reference?: { crawl_id: string };
+  output_revision_reference?: { output_id: string; revision_id: string };
 };
 
 export type NewChatInput = {
   message: string;
-  skill_id?: string;
+  skill_id?: string | null;
   action_id?: string;
   context?: AgentContextRefs;
   /** Actions the message @-mentions; authorized server-side. */
@@ -117,7 +120,7 @@ const agentApi = {
     ),
   sendMessage: async (
     chatId: string,
-    input: { message: string; skill_id?: string; mentions?: string[] },
+    input: { message: string; skill_id?: string | null; mentions?: string[] },
     idempotencyKey: string,
     options?: ApiRequestOptions,
   ) =>
@@ -246,7 +249,7 @@ export const agentMutations = {
       mutationFn: (vars: {
         chatId: string;
         message: string;
-        skillId?: string;
+        skillId?: string | null;
         mentions?: string[];
         idempotencyKey: string;
       }) =>

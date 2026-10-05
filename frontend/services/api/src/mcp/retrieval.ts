@@ -2,7 +2,8 @@ import { sql, type Selectable } from 'kysely';
 import { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
-import { jsonObject } from '../db/json.ts';
+import { jsonObject, strings } from '../db/json.ts';
+import { currentIssueFilter } from '../site-health/reads/page-rows.ts';
 import type { DB } from '../generated/db-schema.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { effectiveStatus } from '../opportunities/action-status.ts';
@@ -556,7 +557,7 @@ async function resolveRecord(
         'extractor_version',
         'rule_version',
       ])
-      .where('analysis_id', '=', id)
+      .where((eb) => eb('id', '=', eb.fn.any(eb.val(strings(row.source_evaluation_ids)))))
       .where('workspace_id', '=', project.workspace_id)
       .orderBy('rule_id')
       .orderBy('id')
@@ -573,9 +574,14 @@ async function resolveRecord(
         'evaluation_id',
         'source_artifact_id',
       ])
-      .where('analysis_id', '=', id)
+      .where(sql<boolean>`exists (
+        select 1 from site_page_analyses a where a.id = ${id}::uuid
+          and ${currentIssueFilter('site_issues', 'a')}
+      )`)
       .where('workspace_id', '=', project.workspace_id)
       .where('project_id', '=', projectId)
+      .where('crawl_id', '=', text(row.crawl_id))
+      .where('site_url_id', '=', text(row.site_url_id))
       .orderBy('id')
       .execute();
     row.issues = (row.issues as Evidence[]).map((issue) => ({
@@ -630,7 +636,10 @@ async function resolveRecord(
       if (!Object.hasOwn(row, key)) row[key] = value;
     }
   }
-  return { record: row, title, projectId, observedAt };
+  // Put the diagnosis ahead of bulky crawl facts in continuation documents.
+  const record =
+    kind === 'site_page' ? { issues: row.issues, evaluations: row.evaluations, ...row } : row;
+  return { record, title, projectId, observedAt };
 }
 
 function recordUrl(
@@ -653,12 +662,13 @@ function recordUrl(
             : ['traffic_snapshot', 'demand_snapshot', 'query_snapshot', 'query_row'].includes(kind)
               ? '/performance'
               : '/dashboard';
-  const url = new URL(path, origin);
-  url.searchParams.set('project', projectId);
-  if (kind !== 'opportunity') url.searchParams.set(kind === 'prompt' ? 'prompt' : 'evidence', id);
+  const params = new URLSearchParams({ project: projectId });
+  if (kind !== 'opportunity') params.set(kind === 'prompt' ? 'prompt' : 'evidence', id);
   if (['audit', 'visibility_result', 'citation'].includes(kind) && text(record.url))
-    url.searchParams.set('source', text(record.url));
-  return url.href;
+    params.set('source', text(record.url));
+  const relative = `${path}?${params}`;
+  // Internal Agent reads have no HTTP origin; their links remain same-origin.
+  return origin ? new URL(relative, origin).href : relative;
 }
 
 /** Split by Unicode code points, measuring the entire encoded document in UTF-8. */
@@ -671,12 +681,13 @@ export function retrievalDocument(
   projectId: string,
   observedAt: unknown,
   origin: string,
+  maxBytes = mcpPolicy.max_document_bytes,
 ): Evidence {
   const normalized = z.record(z.string(), z.json()).parse(jsonValue(record));
   const serialized = JSON.stringify(normalized);
   const uri = `citeladder://${kind}/${id}`;
   const url = recordUrl(kind, projectId, id, normalized, origin);
-  const limit = mcpPolicy.max_document_bytes;
+  const limit = Math.min(maxBytes, mcpPolicy.max_document_bytes);
   const document = (textPart: string, partUris: string[] = []) => ({
     ...(partUris.length ? {} : normalized),
     id: partUris.length ? `${uri}?part=${part}` : uri,
@@ -728,6 +739,7 @@ export async function fetchRecord(
   principal: EvidencePrincipal,
   value: string,
   origin: string,
+  maxBytes = mcpPolicy.max_document_bytes,
 ): Promise<Evidence> {
   const { kind, id, part } = parseRecordId(value);
   const resolved = await resolveRecord(db, principal, kind, id);
@@ -740,5 +752,6 @@ export async function fetchRecord(
     resolved.projectId,
     resolved.observedAt,
     origin,
+    maxBytes,
   );
 }
