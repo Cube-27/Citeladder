@@ -19,6 +19,13 @@ export class AgentError extends Error {
     this.retryable = retryable;
   }
 }
+export class AgentProtocolError extends AgentError {
+  readonly instruction: string;
+  constructor(instruction: string) {
+    super('protocol_violation');
+    this.instruction = instruction;
+  }
+}
 export const budgetSchema = z.object({
   version: z.literal(1),
   max_steps: z.number().int().positive(),
@@ -86,25 +93,39 @@ export function parseStep(
   skills?: ReadonlyMap<string, Skill>,
   bounds: OutputBounds = agentPolicy,
 ): Step {
+  let decoded: unknown;
   try {
-    const value = wireSchema(bounds).parse(JSON.parse(content));
-    if (value.skill_id && skills && !skills.has(value.skill_id))
-      throw new AgentError('protocol_violation');
-    const skill = value.skill_id ? { skillId: value.skill_id } : {};
-    if (value.action === 'call_tool' && value.tool)
-      return { action: value.action, ...skill, tool: value.tool, arguments: value.arguments ?? {} };
-    if (value.action === 'respond' && value.reply?.trim())
-      return {
-        action: value.action,
-        ...skill,
-        reply: value.reply,
-        evidence: value.evidence ?? [],
-        output: value.output ?? null,
-      };
+    decoded = JSON.parse(content);
   } catch {
-    /* A provider response never leaks into an error. */
+    throw new AgentProtocolError(
+      'Return one JSON object without surrounding prose or Markdown fences.',
+    );
   }
-  throw new AgentError('protocol_violation');
+  const parsed = wireSchema(bounds).safeParse(decoded);
+  // Repair hints contain only server-owned instructions, never provider values.
+  if (!parsed.success)
+    throw new AgentProtocolError(
+      'Match the supplied schema exactly. Use only action, skill_id, tool, arguments, reply, evidence and output. Put deliverable fields inside output.',
+    );
+  const value = parsed.data;
+  if (value.skill_id && skills && !skills.has(value.skill_id))
+    throw new AgentProtocolError(
+      'Use an exact skill_id from the supplied catalog, or null for no new selection. Do not use a label or output kind as skill_id.',
+    );
+  const skill = value.skill_id ? { skillId: value.skill_id } : {};
+  if (value.action === 'call_tool' && value.tool)
+    return { action: value.action, ...skill, tool: value.tool, arguments: value.arguments ?? {} };
+  if (value.action === 'respond' && value.reply?.trim())
+    return {
+      action: value.action,
+      ...skill,
+      reply: value.reply,
+      evidence: value.evidence ?? [],
+      output: value.output ?? null,
+    };
+  throw new AgentProtocolError(
+    'For call_tool, provide a nonblank tool name and arguments. For respond, provide a nonblank reply.',
+  );
 }
 export type Skill = {
   id: string;
@@ -128,9 +149,11 @@ export function stepJsonSchemaFor(
   bounds: OutputBounds,
   actions?: Step['action'][],
   replyOnly = false,
+  skillIds?: readonly string[],
 ) {
   const schema = wireSchema(bounds).extend({
     ...(actions ? { action: z.enum(actions) } : {}),
+    ...(skillIds ? { skill_id: z.enum(skillIds).nullish() } : {}),
     ...(replyOnly ? { skill_id: z.null().optional(), output: z.null().optional() } : {}),
   });
   return z.toJSONSchema(schema);

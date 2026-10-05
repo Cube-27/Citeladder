@@ -26,6 +26,8 @@ import { bounded, stripUnverifiedRefs } from '../src/agent/runtime.ts';
 import { fingerprint } from '../src/agent/store.ts';
 import { readAgentContext } from '../src/agent/context-adapter.ts';
 import { runAgentOnce } from '../src/agent/worker.ts';
+import { loadSkillCatalog } from '../src/agent/skills.ts';
+import { agentSettings } from '../src/agent/config.ts';
 
 describe('inactive Agent runtime foundation on PostgreSQL', () => {
   const db = testDatabase();
@@ -198,6 +200,59 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .execute();
     expect((await readChat(db, scope, run.chat_id)).context.limitations).toContainEqual({
       reason: 'context_manifest_unavailable',
+    });
+  });
+
+  it('advertises the selected prompt skill and repairs an output-kind ID before reading and saving an outline', async () => {
+    const scope = await fixtures.scope();
+    const packaged = await loadSkillCatalog(agentSettings({}).skillsDirectory);
+    const run = await fixtures.store({ catalog: packaged }).enqueue(scope, {
+      key: randomUUID(),
+      message: 'Build a portfolio of distinct buyer questions. Keep the existing topics.',
+      skillId: 'prompt_discovery',
+    });
+    const queue = new AgentQueue(db, 30);
+    const claimed = await queue.claim('prompt-worker', [scope.workspaceId]);
+    const lease = await queue.start(claimed!, 'prompt-worker');
+    const steps = [
+      { action: 'call_tool', skill_id: 'prompt_portfolio', tool: 'read_evidence', arguments: {} },
+      { action: 'call_tool', skill_id: '', tool: 'read_evidence', arguments: {} },
+      {
+        ...deliverable('outline', 'Coverage plan grounded in the current portfolio.'),
+        evidence: [`citeladder://project/${scope.projectId}`],
+      },
+    ];
+    await fixtures
+      .runtime(
+        scope,
+        scripted(steps, async (request, ordinal) => {
+          const choices = z
+            .object({
+              properties: z.object({
+                skill_id: z.object({
+                  anyOf: z.array(z.object({ enum: z.array(z.string()).optional() })),
+                }),
+              }),
+            })
+            .parse(request.schema)
+            .properties.skill_id.anyOf.flatMap((option) => option.enum ?? []);
+          // The simulated provider chooses an advertised ID rather than guessing from prose.
+          steps[1]!.skill_id = choices[0]!;
+          if (ordinal === 2) {
+            const observations = JSON.parse(request.user).observations as string[];
+            expect(observations.some((text) => text.includes('output kind'))).toBe(true);
+          }
+        }),
+        { catalog: packaged },
+      )
+      .execute(lease);
+    const detail = await readChat(db, scope, run.chat_id);
+    expect(detail.latest_run?.status).toBe('succeeded');
+    expect(detail.output).toMatchObject({
+      skill_id: 'prompt_discovery',
+      kind: 'prompt_portfolio',
+      phase: 'outline',
+      latest_revision: { source_refs: [`citeladder://project/${scope.projectId}`] },
     });
   });
 

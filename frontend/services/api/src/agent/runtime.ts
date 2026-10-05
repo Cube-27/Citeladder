@@ -5,6 +5,7 @@ import { authorize } from './access.ts';
 import {
   agentPolicy,
   AgentError,
+  AgentProtocolError,
   budgetSchema,
   parseStep,
   stepJsonSchemaFor,
@@ -281,8 +282,9 @@ export class AgentRuntime {
   private parse(content: string, state: TurnState): Step | null {
     try {
       return parseStep(content, this.deps.catalog.skills, state.budget);
-    } catch {
-      this.repair(state, 'Return a valid structured step.');
+    } catch (error) {
+      if (!(error instanceof AgentProtocolError)) throw error;
+      this.repair(state, error.instruction);
       return null;
     }
   }
@@ -349,17 +351,18 @@ export class AgentRuntime {
     if (remaining > 1 && tools > 0) actions.push('call_tool');
     const system = [
       this.deps.catalog.operatingContract,
-      skill?.body ??
-        JSON.stringify(
-          [...this.deps.catalog.skills.values()].map(
-            ({ id, description, outputKind, outlineFirst }) => ({
-              id,
-              description,
-              output_kind: outputKind,
-              outline_first: outlineFirst,
-            }),
+      skill
+        ? `${JSON.stringify({ selected_skill: { id: skill.id, output_kind: skill.outputKind } })}\n\n${skill.body}`
+        : JSON.stringify(
+            [...this.deps.catalog.skills.values()].map(
+              ({ id, description, outputKind, outlineFirst }) => ({
+                id,
+                description,
+                output_kind: outputKind,
+                outline_first: outlineFirst,
+              }),
+            ),
           ),
-        ),
       skill?.outputKind === 'content'
         ? this.formatInstructions(turn.current.output?.format_id)
         : '',
@@ -382,7 +385,12 @@ export class AgentRuntime {
     const context = suppliedManifest(turn.manifest, turn.budget.context_package_max_chars);
     const assembled = assemblePrompt({
       system,
-      schema: stepJsonSchemaFor(turn.budget, actions, !skill && remaining === 1),
+      schema: stepJsonSchemaFor(
+        turn.budget,
+        actions,
+        !skill && remaining === 1,
+        skill ? [skill.id] : [...this.deps.catalog.skills.keys()],
+      ),
       request: turn.request,
       context: context.text,
       revision: turn.current.revision,

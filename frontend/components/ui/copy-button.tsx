@@ -25,6 +25,7 @@ export function CopyButton({
   const { notify } = useToast();
   const [status, setStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyInFlight = useRef(false);
 
   useEffect(
     () => () => {
@@ -34,7 +35,10 @@ export function CopyButton({
   );
 
   async function copy() {
-    setStatus('copying');
+    if (copyInFlight.current) return;
+    copyInFlight.current = true;
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    setStatus((current) => (current === 'copied' ? current : 'copying'));
     try {
       await navigator.clipboard.writeText(value);
       setStatus('copied');
@@ -42,22 +46,23 @@ export function CopyButton({
       resetTimer.current = setTimeout(() => setStatus('idle'), 1800);
     } catch {
       setStatus('error');
+    } finally {
+      copyInFlight.current = false;
     }
   }
 
   // An icon-only button says what it does through its label alone, so the
-  // copied confirmation has to live there too; a labelled one carries its own
-  // text and reports a failed copy in it.
+  // copied confirmation has to live there too. A labelled one keeps its action
+  // text steady; the check icon and toast confirm success without resizing it.
   const iconLabel = status === 'copied' ? copiedLabel : 'Copy';
   let label: ReactNode = children;
-  if (status === 'copied') label = copiedLabel;
-  else if (status === 'error') label = 'Copy failed — retry';
+  if (status === 'error') label = 'Copy failed — retry';
 
   return (
     <Button
       variant="secondary"
       {...props}
-      pending={status === 'copying'}
+      aria-busy={status === 'copying' || undefined}
       onClick={() => void copy()}
       aria-live="polite"
       aria-label={iconOnly ? iconLabel : props['aria-label']}
