@@ -123,7 +123,7 @@ export function exclusiveDrain(
 export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = configEnvironment(config);
   const runtime = auditRuntime(env);
-  // Each lane admits one task at a time; the shared pool retains room for heartbeat/settlement.
+  // Audit admission stays serial; Site Health below uses a pool-bounded batch.
   runtime.audits.worker_concurrency = config.execution.laneConcurrency;
   const projections = auditProjections(db);
   const analytics = new AnalyticsWorker(db, loadWorkerSettings(env));
@@ -149,7 +149,10 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       { name: 'integrations', run: () => integration.runOnce() },
       { name: 'agent', run: () => agent.runOnce() },
       { name: 'audits', run: () => audit.runOnce() },
-      { name: 'site-health', run: () => site.runOnce(config.execution.laneConcurrency) },
+      {
+        name: 'site-health',
+        run: () => site.runOnce(Math.min(site.settings.concurrency, config.execution.poolSize)),
+      },
       {
         name: 'billing',
         run: async (canAdmit) =>

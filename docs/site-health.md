@@ -76,6 +76,9 @@ fails it at its attempt ceiling. The Python global sweeper excludes this queue.
 The runner's Site Health lane processes due work and successors until idle or
 the runner admission budget stops new claims. Already claimed work finishes
 under its existing task/acquisition bounds before the execution exits.
+Each pass admits a parallel batch bounded by Site Health worker/global
+concurrency and the runner's database pool size; host pacing and acquisition
+limits still apply.
 Analyze tasks extract facts and evaluate rules in Node worker threads before
 taking commit locks. The commit rechecks the page's site/sitemap context;
 changed context is interpreted once under the crawl lock without spending another attempt.

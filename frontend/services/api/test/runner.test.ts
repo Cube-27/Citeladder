@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import { drainLanes, exclusiveDrain, tickAndDrain } from '../src/workers/runner.ts';
+import { drainLanes, exclusiveDrain, tickAndDrain, runnerOwners } from '../src/workers/runner.ts';
+import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { sql } from 'kysely';
 import { createDatabase } from '../src/db/database.ts';
 import { testConfig } from './support.ts';
@@ -16,6 +17,22 @@ const options = () => ({
 });
 
 describe('bounded runner', () => {
+  it.each([1, 8])(
+    'bounds Site Health batches by its policy and the pool (worker limit %i)',
+    async (concurrency) => {
+      const config = testConfig({ SITE_HEALTH_WORKER_CONCURRENCY: String(concurrency) });
+      const db = createDatabase(config, { execution: true });
+      const run = vi.spyOn(SiteHealthWorker.prototype, 'runOnce').mockResolvedValue(0);
+      try {
+        const owners = await runnerOwners(db, config);
+        await owners.lanes.find((lane) => lane.name === 'site-health')!.run(() => true);
+        expect(run).toHaveBeenCalledWith(Math.min(concurrency, config.execution.poolSize));
+      } finally {
+        run.mockRestore();
+        await db.destroy();
+      }
+    },
+  );
   it('passes the same live budget to periodic work and stops within a phase', async () => {
     let clock = 0;
     let processed = 0;
