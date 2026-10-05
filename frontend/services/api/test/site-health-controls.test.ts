@@ -240,45 +240,58 @@ describe('crawl control admission', () => {
     ).toBe(3);
   });
 
-  it('rejects advanced controls in production and freezes admitted exact seeds when enabled', async () => {
-    vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'false');
-    expect(() =>
-      controls({
-        project_id: randomUUID(),
+  it.each(['global', 'development'])(
+    'freezes exact seeds when advanced controls are enabled by %s access',
+    async (access) => {
+      vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'false');
+      expect(() =>
+        controls({
+          project_id: randomUUID(),
+          input_mode: 'exact_urls',
+          seed_urls: ['https://example.test/a'],
+        }),
+      ).toThrow('advanced crawl controls');
+      expect(() => normalizedSeed('not-an-int')).toThrow('integer');
+      const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+      if (access === 'global') vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'true');
+      else {
+        const email = `dev-${tenant.userId}@example.test`;
+        vi.stubEnv('DEV_LOGIN_EMAIL', email);
+        vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
+        await db
+          .updateTable('users')
+          .set({ email, role: 'admin' })
+          .where('id', '=', tenant.userId)
+          .execute();
+      }
+      const crawl = await create(tenant, {
         input_mode: 'exact_urls',
-        seed_urls: ['https://example.test/a'],
-      }),
-    ).toThrow('advanced crawl controls');
-    expect(() => normalizedSeed('not-an-int')).toThrow('integer');
-    vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'true');
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
-    const crawl = await create(tenant, {
-      input_mode: 'exact_urls',
-      requested_page_limit: 3,
-      seed_urls: [
-        'https://example.test/a#fragment',
+        requested_page_limit: 3,
+        seed_urls: [
+          'https://example.test/a#fragment',
+          'https://example.test/a',
+          'https://example.test/b',
+        ],
+        page_kinds: ['article'],
+      });
+      expect(record(crawl.configuration).seed_urls).toEqual([
         'https://example.test/a',
         'https://example.test/b',
-      ],
-      page_kinds: ['article'],
-    });
-    expect(record(crawl.configuration).seed_urls).toEqual([
-      'https://example.test/a',
-      'https://example.test/b',
-    ]);
-    const tasks = await db
-      .selectFrom('site_crawl_tasks')
-      .selectAll()
-      .where('crawl_id', '=', crawl.id)
-      .execute();
-    expect(
-      tasks
-        .filter((task) => task.task_kind === 'discover')
-        .map((task) => task.requested_url)
-        .sort(),
-    ).toEqual(['https://example.test/a', 'https://example.test/b']);
-    expect(tasks.some((task) => task.task_kind === 'analyze')).toBe(false);
-  });
+      ]);
+      const tasks = await db
+        .selectFrom('site_crawl_tasks')
+        .selectAll()
+        .where('crawl_id', '=', crawl.id)
+        .execute();
+      expect(
+        tasks
+          .filter((task) => task.task_kind === 'discover')
+          .map((task) => task.requested_url)
+          .sort(),
+      ).toEqual(['https://example.test/a', 'https://example.test/b']);
+      expect(tasks.some((task) => task.task_kind === 'analyze')).toBe(false);
+    },
+  );
 
   it('re-seeds only active in-scope monitored URLs and freezes full inventory lineage across a sample crawl', async () => {
     const seed = await fixtures.crawl();

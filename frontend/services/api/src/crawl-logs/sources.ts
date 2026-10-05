@@ -8,6 +8,7 @@ import { recordSecurityEvent } from '../auth/security-events.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { lockCrawlState, enqueueRollup, type CrawlScope } from './state.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
+import { hasDevelopmentWorkspace } from '../auth/development-access.ts';
 
 const samplingSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('none') }),
@@ -22,8 +23,12 @@ export const createSourceSchema = z.strictObject({
   sampling: samplingSchema.optional(),
 });
 const token = () => 'clw_' + randomBytes(32).toString('base64url');
-export function ingestionEnabled() {
-  if (!crawlLogs.ingestion_enabled) throw new ApiError(409, 'Crawl log ingestion is not enabled');
+export async function ingestionAvailable(db: Database, workspaceId?: string) {
+  return crawlLogs.ingestion_enabled || (await hasDevelopmentWorkspace(db, workspaceId));
+}
+export async function ingestionEnabled(db: Database, workspaceId: string) {
+  if (!(await ingestionAvailable(db, workspaceId)))
+    throw new ApiError(409, 'Crawl log ingestion is not enabled');
 }
 export async function createSource(
   db: Database,
@@ -31,7 +36,6 @@ export async function createSource(
   actorId: string,
   input: z.output<typeof createSourceSchema>,
 ) {
-  ingestionEnabled();
   let origin: URL;
   try {
     origin = new URL(input.origin);
@@ -55,6 +59,7 @@ export async function createSource(
   const defaults = crawlLogs.presets[preset]!;
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
+    await ingestionEnabled(trx, scope.workspaceId);
     const project = await trx
       .selectFrom('projects')
       .select('website_url')
@@ -189,6 +194,6 @@ export async function authorizeToken(db: Database, id: string, authorization: st
   if (!source || !supplied || !timingSafeEqual(actual, expected))
     throw new ApiError(401, 'Invalid crawl log token');
   if (source.status !== 'active') throw new ApiError(409, 'Crawl log source revoked');
-  ingestionEnabled();
+  await ingestionEnabled(db, source.workspace_id);
   return source;
 }

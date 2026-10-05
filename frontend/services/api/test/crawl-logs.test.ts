@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { sql } from 'kysely';
@@ -20,6 +20,10 @@ import { crawlers } from '../src/config/crawlers.ts';
 import { crawlSummary, activityPage, crawlerPage } from '../src/crawl-logs/reads.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 import { verifyBot } from '../src/crawl-logs/identity.ts';
+import { sourceList } from '../src/crawl-logs/source-reads.ts';
+import { hasDevelopmentWorkspace } from '../src/auth/development-access.ts';
+import { entitlementView } from '../src/site-health/reads/runtime.ts';
+import { createCrawl } from '../src/site-health/planner.ts';
 import {
   logLines,
   parseLogLine,
@@ -84,6 +88,211 @@ afterAll(async () => {
 });
 
 describe('bounded formats', () => {
+  it.each(['source', 'upload', 'complete', 'ingest', 'crawl'] as const)(
+    'rechecks development access after a concurrent ownership transfer during %s admission',
+    async (operation) => {
+      const { tenant, source, token } = await setup(operation === 'ingest' ? 'custom' : 'upload');
+      const incoming = await fixtures.user();
+      await fixtures.member(tenant.workspaceId, incoming, 'admin');
+      const email = `dev-${tenant.userId}@example.test`;
+      vi.stubEnv('DEV_LOGIN_EMAIL', email);
+      vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
+      vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'false');
+      crawlLogs.ingestion_enabled = false;
+      let admission: Promise<unknown> | undefined;
+      const transfer = await db.startTransaction().execute();
+      try {
+        await db
+          .updateTable('users')
+          .set({ email, role: 'admin' })
+          .where('id', '=', tenant.userId)
+          .execute();
+        const upload =
+          operation === 'complete'
+            ? await createUpload(
+                db,
+                scope(tenant),
+                source.id,
+                { filename: 'requests.ndjson', size_bytes: 0 },
+                tenant.userId,
+              )
+            : null;
+        await transfer
+          .selectFrom('workspaces')
+          .select('id')
+          .where('id', '=', tenant.workspaceId)
+          .forUpdate()
+          .execute();
+        const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(
+          transfer,
+        );
+        switch (operation) {
+          case 'source':
+            admission = createSource(db, scope(tenant), tenant.userId, {
+              setup: 'upload',
+              origin: source.origin,
+              format: 'ndjson',
+            });
+            break;
+          case 'upload':
+            admission = createUpload(
+              db,
+              scope(tenant),
+              source.id,
+              { filename: 'requests.ndjson', size_bytes: 0 },
+              tenant.userId,
+            );
+            break;
+          case 'complete':
+            admission = completeUpload(
+              db,
+              scope(tenant),
+              source.id,
+              upload!.id,
+              { scanned_lines: 0, first_line_at: null, last_line_at: null, scanned_dates: [] },
+              tenant.userId,
+            );
+            break;
+          case 'ingest':
+            admission = Promise.resolve(send(source.id, token, body(event())));
+            break;
+          case 'crawl':
+            admission = db.transaction().execute((trx) =>
+              createCrawl(trx, tenant.workspaceId, {
+                project_id: tenant.projectId,
+                input_mode: 'exact_urls',
+                seed_urls: [source.origin + '/page'],
+              }),
+            );
+            break;
+        }
+        admission = admission.catch((error: unknown) => error);
+        await vi.waitFor(
+          async () => {
+            const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+            expect(blocked.rows[0]!.waiting).toBe(true);
+          },
+          { timeout: 2000, interval: 20 },
+        );
+        await transfer
+          .updateTable('workspace_members')
+          .set({ role: 'admin' })
+          .where('workspace_id', '=', tenant.workspaceId)
+          .where('user_id', '=', tenant.userId)
+          .execute();
+        await transfer
+          .updateTable('workspace_members')
+          .set({ role: 'owner' })
+          .where('workspace_id', '=', tenant.workspaceId)
+          .where('user_id', '=', incoming)
+          .execute();
+        await transfer.commit().execute();
+        expect(await admission).toMatchObject({ status: operation === 'crawl' ? 422 : 409 });
+      } finally {
+        if (!transfer.isCommitted) await transfer.rollback().execute();
+        await admission;
+        crawlLogs.ingestion_enabled = true;
+        vi.unstubAllEnvs();
+      }
+    },
+  );
+  it('enables development workspace ingestion end to end while other workspaces stay disabled', async () => {
+    const tenant = await fixtures.tenant();
+    const other = await fixtures.tenant();
+    const email = `dev-${tenant.userId}@example.test`;
+    vi.stubEnv('DEV_LOGIN_EMAIL', email);
+    vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
+    crawlLogs.ingestion_enabled = false;
+    try {
+      await db
+        .updateTable('users')
+        .set({ email, role: 'admin' })
+        .where('id', '=', tenant.userId)
+        .execute();
+      expect((await sourceList(db, scope(tenant))).ingestion_enabled).toBe(true);
+      expect((await entitlementView(db, tenant.workspaceId, now)).advanced_controls_enabled).toBe(
+        true,
+      );
+      expect((await sourceList(db, scope(other))).ingestion_enabled).toBe(false);
+      await fixtures.member(other.workspaceId, tenant.userId, 'admin');
+      expect(await hasDevelopmentWorkspace(db, other.workspaceId)).toBe(false);
+      await expect(
+        createSource(db, scope(other), other.userId, {
+          setup: 'custom',
+          origin: 'https://acme.example',
+          format: 'ndjson',
+        }),
+      ).rejects.toMatchObject({ status: 409 });
+      const webhook = await createSource(db, scope(tenant), tenant.userId, {
+        setup: 'custom',
+        origin: 'https://acme.example',
+        format: 'ndjson',
+      });
+      expect((await send(webhook.id, webhook.token!, body(event()))).status).toBe(202);
+      const uploadSource = await createSource(db, scope(tenant), tenant.userId, {
+        setup: 'upload',
+        origin: 'https://acme.example',
+        format: 'ndjson',
+      });
+      const upload = await createUpload(
+        db,
+        scope(tenant),
+        uploadSource.id,
+        { filename: 'requests.ndjson', size_bytes: 0 },
+        tenant.userId,
+      );
+      const cookie =
+        config.session.cookieName + '=' + (await sessionToken({ sub: tenant.userId, ver: 0 }));
+      const response = await app.request(
+        `/api/v1/projects/${tenant.projectId}/crawl-logs/sources/${uploadSource.id}/uploads/${upload.id}/batches`,
+        {
+          method: 'POST',
+          headers: { cookie, 'content-type': 'application/json' },
+          body: JSON.stringify({ seq: 0, lines: [] }),
+        },
+      );
+      expect(response.status).toBe(200);
+      expect(
+        (
+          await completeUpload(
+            db,
+            scope(tenant),
+            uploadSource.id,
+            upload.id,
+            {
+              scanned_lines: 0,
+              first_line_at: null,
+              last_line_at: null,
+              scanned_dates: [],
+            },
+            tenant.userId,
+          )
+        ).status,
+      ).toBe('completed');
+      const systemId = await fixtures.systemWorkspace();
+      await crawlLogTick(db, now);
+      expect(
+        await db
+          .selectFrom('analytics_tasks')
+          .select('id')
+          .where('workspace_id', '=', systemId)
+          .where('task_kind', '=', 'bot_ip_range_refresh')
+          .execute(),
+      ).not.toHaveLength(0);
+      await db
+        .updateTable('users')
+        .set({ is_active: false })
+        .where('id', '=', tenant.userId)
+        .execute();
+      expect((await sourceList(db, scope(tenant))).ingestion_enabled).toBe(false);
+      expect((await send(webhook.id, webhook.token!, body(event()))).status).toBe(409);
+    } finally {
+      crawlLogs.ingestion_enabled = true;
+      vi.unstubAllEnvs();
+    }
+  });
   it('parses NDJSON, array and Combined while refusing CLF and missing identification fields', () => {
     const mapping = crawlLogs.presets.custom_ndjson!;
     expect(parseLogLine(JSON.stringify(event()), 'ndjson', mapping)?.path).toContain('/products/');

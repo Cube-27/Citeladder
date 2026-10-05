@@ -36,6 +36,11 @@ references. Python retains fixed schema defaults and persisted status vocabulary
 Native entitlement owners resolve allowances; native writers freeze configured
 limits on durable task and crawl rows.
 
+Advanced crawl controls are available to the configured development operator's
+owned workspace even when the general rollout switch is off. Entitlement reads
+and crawl admission use the same development access check; URL admission and
+execution bounds still apply.
+
 The Site Health lane of the bounded runner claims every
 `site_crawl_tasks` kind: `discover`, `site_setup`, `analyze`, `change_intel`,
 `link_metrics` and `architecture`. The TypeScript owner locks crawl then task,

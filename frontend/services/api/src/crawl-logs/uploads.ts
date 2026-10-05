@@ -44,9 +44,9 @@ export async function createUpload(
   input: z.output<typeof uploadCreateSchema>,
   actorId: string,
 ) {
-  ingestionEnabled();
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
+    await ingestionEnabled(trx, scope.workspaceId);
     await lockCrawlState(trx, scope);
     await sourceForUpload(trx, scope, sourceId);
     const now = new Date();
@@ -83,7 +83,6 @@ export async function completeUpload(
   actorId: string,
   now = new Date(),
 ) {
-  ingestionEnabled();
   const scanFirst = input.first_line_at ? new Date(input.first_line_at) : null,
     scanLast = input.last_line_at ? new Date(input.last_line_at) : null;
   if (
@@ -103,6 +102,7 @@ export async function completeUpload(
     throw new ApiError(422, 'Duplicate scanned day');
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
+    await ingestionEnabled(trx, scope.workspaceId);
     const state = await lockCrawlState(trx, scope);
     const source = await sourceForUpload(trx, scope, sourceId);
     const upload = await trx

@@ -129,6 +129,7 @@ export function TrafficCrawlers({
       ) : (
         <TrafficNoResults
           heading="No matching requests were observed"
+          connectLogs
           description="Check coverage on Overview before interpreting absence in the available logs."
         />
       )}
@@ -198,6 +199,7 @@ export function TrafficActivity({
       ) : (
         <TrafficNoResults
           heading="No matching requests"
+          connectLogs
           description="Nothing in the available retained logs matches these filters."
         />
       )}

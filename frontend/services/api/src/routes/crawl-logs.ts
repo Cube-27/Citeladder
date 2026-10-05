@@ -195,8 +195,8 @@ export const crawlLogRoutes = [
     body: uploadBatchSchema,
     response: crawlReceiptSchema,
     async handle({ c, db }, { path }) {
-      ingestionEnabled();
       const target = scope(c.get('workspace').workspaceId, path.project_id);
+      await ingestionEnabled(db, target.workspaceId);
       // Recheck current credential authority before accepting client evidence.
       await db
         .transaction()

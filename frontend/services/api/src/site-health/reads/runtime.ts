@@ -9,6 +9,7 @@ import type { siteHealthEntitlementSchema } from '@citeladder/contracts/site-hea
 import type { z } from 'zod';
 
 import { policy } from '../../config.ts';
+import { hasDevelopmentWorkspace } from '../../auth/development-access.ts';
 import type { Database } from '../../db/database.ts';
 import { accountState } from '../../entitlements/state.ts';
 import { runtimeProjection } from '../../entitlements/grants.ts';
@@ -48,7 +49,8 @@ export async function entitlementView(
     contributing_grant_ids: resolved
       ? state.selected.filter((grant) => grant.key === MONITORED).map((grant) => grant.id)
       : [],
-    advanced_controls_enabled: siteReadSettings().advancedControls,
+    advanced_controls_enabled:
+      siteReadSettings().advancedControls || (await hasDevelopmentWorkspace(db, workspaceId)),
   };
 }
 

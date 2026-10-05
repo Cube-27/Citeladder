@@ -3,7 +3,7 @@ import { crawlSourceListSchema } from '@citeladder/contracts/ai-traffic';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { CrawlScope } from './state.ts';
-import { crawlLogs } from '../config/crawl-logs.ts';
+import { ingestionAvailable } from './sources.ts';
 
 function connection(status: string, accepted: Date | null | undefined, completed: number) {
   if (status === 'revoked') return 'not_connected';
@@ -73,5 +73,8 @@ export async function sourceList(
       unsupported_batches: batch?.unsupported ?? 0,
     };
   });
-  return crawlSourceListSchema.parse({ ingestion_enabled: crawlLogs.ingestion_enabled, items });
+  return crawlSourceListSchema.parse({
+    ingestion_enabled: await ingestionAvailable(db, scope.workspaceId),
+    items,
+  });
 }
