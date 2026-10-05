@@ -60,11 +60,11 @@ export function normalizedSeed(seed: string | null | undefined) {
   if (!/^[+-]?\d+$/u.test(seed.trim())) crawlError('random_seed must be an integer');
   return BigInt.asUintN(64, BigInt(seed.trim())).toString();
 }
-export function controls(request: CreateCrawlRequest) {
+export function controls(request: CreateCrawlRequest, developmentAccess = false) {
   const mode = request.input_mode ?? 'auto';
   const seeds = request.seed_urls ?? [];
   const kinds = request.page_kinds ?? [];
-  const advanced = crawlSetting('advanced_controls_enabled') === true;
+  const advanced = developmentAccess || crawlSetting('advanced_controls_enabled') === true;
   if (seeds.length > Number(crawlSetting('max_seed_urls'))) crawlError('too many seed_urls');
   if (
     kinds.some((kind) => !policy.site_health.page_analysis.classification.page_kinds.includes(kind))

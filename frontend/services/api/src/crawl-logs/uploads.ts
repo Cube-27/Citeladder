@@ -44,7 +44,7 @@ export async function createUpload(
   input: z.output<typeof uploadCreateSchema>,
   actorId: string,
 ) {
-  ingestionEnabled();
+  await ingestionEnabled(db, scope.workspaceId);
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
     await lockCrawlState(trx, scope);
@@ -83,7 +83,7 @@ export async function completeUpload(
   actorId: string,
   now = new Date(),
 ) {
-  ingestionEnabled();
+  await ingestionEnabled(db, scope.workspaceId);
   const scanFirst = input.first_line_at ? new Date(input.first_line_at) : null,
     scanLast = input.last_line_at ? new Date(input.last_line_at) : null;
   if (

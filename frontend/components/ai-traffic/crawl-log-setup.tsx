@@ -38,7 +38,6 @@ export function CrawlLogSetup({
     setFilter,
     point,
     setPoint,
-    issued,
     mutation,
   } = model;
   const chosen = CRAWL_LOG_SETUPS.find((s) => s.value === setup)!;
@@ -143,28 +142,34 @@ export function CrawlLogSetup({
         ) : null}
       </div>
       {mutation.isError ? <Alert tone="danger">{mutation.error.message}</Alert> : null}
-      {issued ? (
-        <Alert tone="info">
-          <div className="grid gap-3">
-            <p>Source: {issued.id}</p>
-            {issued.token ? (
-              <>
-                <p>Copy this token now. It is shown once.</p>
-                <CopyButton value={issued.token}>Copy token</CopyButton>
-                <p className="type-caption break-all">
-                  {CRAWL_INGEST_ORIGIN + '/api/v1/crawl-logs/ingest/' + issued.id}
-                </p>
-                <CopyButton value={CRAWL_INGEST_ORIGIN + '/api/v1/crawl-logs/ingest/' + issued.id}>
-                  Copy endpoint
-                </CopyButton>
-              </>
-            ) : null}
-          </div>
-        </Alert>
-      ) : null}
       {setup === 'upload' ? <UploadForm model={model} /> : null}
     </Stack>
   );
+}
+export function CrawlLogCredential({
+  issued,
+}: Readonly<{
+  issued: ReturnType<typeof useCrawlConnections>['issued'];
+}>) {
+  return issued ? (
+    <Alert tone="info">
+      <div className="grid gap-3">
+        <p>Source: {issued.id}</p>
+        {issued.token ? (
+          <>
+            <p>Copy this token now. It is shown once.</p>
+            <CopyButton value={issued.token}>Copy token</CopyButton>
+            <p className="type-caption break-all">
+              {CRAWL_INGEST_ORIGIN + '/api/v1/crawl-logs/ingest/' + issued.id}
+            </p>
+            <CopyButton value={CRAWL_INGEST_ORIGIN + '/api/v1/crawl-logs/ingest/' + issued.id}>
+              Copy endpoint
+            </CopyButton>
+          </>
+        ) : null}
+      </div>
+    </Alert>
+  ) : null;
 }
 /** The dialog's one committing action, held in its footer. */
 export function CrawlLogSetupSubmit({
@@ -186,6 +191,17 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
   const formId = useId();
   const { sources, sourceId, setSourceId, file, setFile, resume, setResume, upload, progress } =
     model;
+  const uploadSources = (sources.data?.items ?? []).filter(
+    (s) => s.kind === 'upload' && s.status === 'active',
+  );
+  if (!uploadSources.length) {
+    return (
+      <Alert tone="info">
+        First, create an upload source using the settings above and Create source below. Then choose
+        your log file here to upload recognized requests.
+      </Alert>
+    );
+  }
   return (
     <div className="grid gap-4">
       <Field label="Upload source">
@@ -195,9 +211,7 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
             ariaLabel="Upload source"
             value={sourceId}
             onValueChange={setSourceId}
-            options={(sources.data?.items ?? [])
-              .filter((s) => s.kind === 'upload' && s.status === 'active')
-              .map((s) => ({ value: s.id, label: s.host + ' · ' + s.id }))}
+            options={uploadSources.map((s) => ({ value: s.id, label: s.host + ' · ' + s.id }))}
           />
         )}
       </Field>

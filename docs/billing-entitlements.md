@@ -160,6 +160,13 @@ The shared transaction lock order remains in [architecture](architecture.md).
 Never acquire project/domain locks after billing locks or hold a transaction
 across network I/O.
 
+The configured development operator (default `dev@citeladder.com`) receives all
+issuable capabilities and highest feature levels through development bootstrap.
+Its owned workspace also bypasses the Crawl Logs and advanced Site Health rollout
+switches through `auth/development-access.ts`. This requires the configured
+development password and active admin identity. It does not confer access to other
+workspaces or replace provider credentials, payment consent or execution bounds.
+
 ## Read and UI surfaces
 
 Public pricing reads the published catalog without a hardcoded fallback.

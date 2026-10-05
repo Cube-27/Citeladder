@@ -19,6 +19,7 @@ export function InsightStrip({
     enabled: !!projectId && !!workspaceId,
   });
   const data = query.isError ? undefined : query.data;
+  if (data && !data.patterns.length && !data.coverage.notice) return null;
   return (
     <Card>
       <CardHeader>

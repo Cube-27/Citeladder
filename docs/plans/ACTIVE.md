@@ -28,6 +28,11 @@ Completed implementation plans are retained in [the archive](../archive/).
 
 ## Queued and retained planning
 
+- [ChatGPT plugin](citeladder-chatgpt-plugin.md): proposed pre-launch prototype over
+  the existing MCP, interactive analytics and public skills; sidebar/context,
+  public release and optional events are sequenced separately. Product defaults
+  remain proposed; founder/sample-data testing precedes new-user release.
+  Implementation is not assigned.
 - [AI Traffic and authorized crawl](citeladder-authorized-crawl.md): A1–A3 merged
   in #257/#258/#260. Part B remains a separate assignment; Terms review and
   Crawl Logs plan/quota, retention and privacy decisions remain open.

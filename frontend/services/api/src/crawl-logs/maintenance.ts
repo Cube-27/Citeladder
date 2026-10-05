@@ -9,6 +9,7 @@ import { enqueueTask } from '../referrals/enqueue.ts';
 import type { Database } from '../db/database.ts';
 import type { Executor } from '../workers/executor.ts';
 import { enqueueRollup, lockCrawlState } from './state.ts';
+import { ingestionAvailable } from './sources.ts';
 
 export function botIpRangeRefresh(fetcher: WebsiteFetcher = fetchWebsite): Executor {
   return async (task, { checkCancelled }) => {
@@ -139,7 +140,7 @@ export async function crawlLogTick(
     .select('id')
     .where('is_system', '=', true)
     .executeTakeFirst();
-  if (system && crawlLogs.ingestion_enabled)
+  if (system && (await ingestionAvailable(db)))
     for (const bot of crawlers.bots.filter((b) => b.verification.method === 'ip_ranges')) {
       if (!canAdmit()) return;
       await enqueueTask(db, {

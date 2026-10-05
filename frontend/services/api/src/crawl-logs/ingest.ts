@@ -93,7 +93,7 @@ export async function ingest(
     quotaChecked?: boolean;
   },
 ) {
-  ingestionEnabled();
+  await ingestionEnabled(db, source.workspace_id);
   const now = options.now ?? new Date();
   const key = options.key ?? createHash('sha256').update(body).digest('hex');
   if (!key.trim() || key.length > 255) throw new ApiError(422, 'Invalid idempotency key');

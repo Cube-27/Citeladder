@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
+import { CrawlLogConnections } from './crawl-log-connections';
 
 /**
  * A filtered AI Traffic table with no matching rows. It replaces the table
@@ -14,8 +15,14 @@ import { useProjectContext } from '@/lib/project/project-context';
 export function TrafficNoResults({
   heading,
   description,
-}: Readonly<{ heading: string; description: string }>) {
-  return <EmptyState icon={SearchX} heading={heading} description={description} />;
+  connectLogs = false,
+}: Readonly<{ heading: string; description: string; connectLogs?: boolean }>) {
+  return (
+    <div className="grid gap-4">
+      <EmptyState icon={SearchX} heading={heading} description={description} />
+      {connectLogs ? <CrawlLogConnections /> : null}
+    </div>
+  );
 }
 
 /**

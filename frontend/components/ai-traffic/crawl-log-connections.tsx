@@ -19,7 +19,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { CrawlLogSetup, CrawlLogSetupSubmit } from './crawl-log-setup';
+import { CrawlLogSetup, CrawlLogSetupSubmit, CrawlLogCredential } from './crawl-log-setup';
 import { collectionPointLabel, words } from '@/lib/ai-traffic/vocabulary';
 export function CrawlLogConnections({
   open,
@@ -54,6 +54,7 @@ function Connections({
   const model = useCrawlConnections(input);
   const { sources, canManage, open, setOpen, setIssued, mutation } = model;
   const showHeader = headerWhenEmpty || Boolean(sources.data?.items.length);
+  const setupAvailable = !sources.isError && sources.data?.ingestion_enabled === true;
   return (
     <section id="crawl-log-connections" className="grid gap-3" aria-label="Crawl log connections">
       {showHeader ? (
@@ -99,13 +100,40 @@ function Connections({
           if (!next) setIssued(null);
         }}
         title="Connect crawl logs"
-        description="Choose the collection method you operate. One live source per host; uploads are backfill."
+        description={
+          setupAvailable
+            ? 'Choose the collection method you operate. One live source per host; uploads are backfill.'
+            : 'Crawl log collection availability'
+        }
         className="w-[36rem]"
-        footer={<CrawlLogSetupSubmit model={model} />}
+        footer={setupAvailable ? <CrawlLogSetupSubmit model={model} /> : undefined}
       >
-        <CrawlLogSetup model={model} />
+        <CrawlLogCredential issued={model.issued} />
+        <SetupAvailability model={model} />
       </Dialog>
     </section>
+  );
+}
+function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
+  const { sources, mutation } = model;
+  if (sources.isError)
+    return (
+      <ReadError
+        error={sources.error}
+        fallback="Could not read crawl log availability"
+        onRetry={() => sources.refetch()}
+      />
+    );
+  if (!sources.data) return <output>Checking crawl log availability…</output>;
+  if (sources.data.ingestion_enabled) return <CrawlLogSetup model={model} />;
+  return (
+    <>
+      {mutation.isError ? <Alert tone="danger">{mutation.error.message}</Alert> : null}
+      <Alert tone="info">
+        Crawl log ingestion is not enabled for this environment. Source creation and file uploads
+        are unavailable until CiteLadder enables ingestion for this environment.
+      </Alert>
+    </>
   );
 }
 function SourceDiagnostics({

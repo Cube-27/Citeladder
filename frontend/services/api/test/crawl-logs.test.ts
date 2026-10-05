@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { sql } from 'kysely';
@@ -20,6 +20,9 @@ import { crawlers } from '../src/config/crawlers.ts';
 import { crawlSummary, activityPage, crawlerPage } from '../src/crawl-logs/reads.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 import { verifyBot } from '../src/crawl-logs/identity.ts';
+import { sourceList } from '../src/crawl-logs/source-reads.ts';
+import { hasDevelopmentWorkspace } from '../src/auth/development-access.ts';
+import { entitlementView } from '../src/site-health/reads/runtime.ts';
 import {
   logLines,
   parseLogLine,
@@ -84,6 +87,101 @@ afterAll(async () => {
 });
 
 describe('bounded formats', () => {
+  it('enables development workspace ingestion end to end while other workspaces stay disabled', async () => {
+    const tenant = await fixtures.tenant();
+    const other = await fixtures.tenant();
+    const email = `dev-${tenant.userId}@example.test`;
+    vi.stubEnv('DEV_LOGIN_EMAIL', email);
+    vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
+    crawlLogs.ingestion_enabled = false;
+    try {
+      await db
+        .updateTable('users')
+        .set({ email, role: 'admin' })
+        .where('id', '=', tenant.userId)
+        .execute();
+      expect((await sourceList(db, scope(tenant))).ingestion_enabled).toBe(true);
+      expect((await entitlementView(db, tenant.workspaceId, now)).advanced_controls_enabled).toBe(
+        true,
+      );
+      expect((await sourceList(db, scope(other))).ingestion_enabled).toBe(false);
+      await fixtures.member(other.workspaceId, tenant.userId, 'admin');
+      expect(await hasDevelopmentWorkspace(db, other.workspaceId)).toBe(false);
+      await expect(
+        createSource(db, scope(other), other.userId, {
+          setup: 'custom',
+          origin: 'https://acme.example',
+          format: 'ndjson',
+        }),
+      ).rejects.toMatchObject({ status: 409 });
+      const webhook = await createSource(db, scope(tenant), tenant.userId, {
+        setup: 'custom',
+        origin: 'https://acme.example',
+        format: 'ndjson',
+      });
+      expect((await send(webhook.id, webhook.token!, body(event()))).status).toBe(202);
+      const uploadSource = await createSource(db, scope(tenant), tenant.userId, {
+        setup: 'upload',
+        origin: 'https://acme.example',
+        format: 'ndjson',
+      });
+      const upload = await createUpload(
+        db,
+        scope(tenant),
+        uploadSource.id,
+        { filename: 'requests.ndjson', size_bytes: 0 },
+        tenant.userId,
+      );
+      const cookie =
+        config.session.cookieName + '=' + (await sessionToken({ sub: tenant.userId, ver: 0 }));
+      const response = await app.request(
+        `/api/v1/projects/${tenant.projectId}/crawl-logs/sources/${uploadSource.id}/uploads/${upload.id}/batches`,
+        {
+          method: 'POST',
+          headers: { cookie, 'content-type': 'application/json' },
+          body: JSON.stringify({ seq: 0, lines: [] }),
+        },
+      );
+      expect(response.status).toBe(200);
+      expect(
+        (
+          await completeUpload(
+            db,
+            scope(tenant),
+            uploadSource.id,
+            upload.id,
+            {
+              scanned_lines: 0,
+              first_line_at: null,
+              last_line_at: null,
+              scanned_dates: [],
+            },
+            tenant.userId,
+          )
+        ).status,
+      ).toBe('completed');
+      const systemId = await fixtures.systemWorkspace();
+      await crawlLogTick(db, now);
+      expect(
+        await db
+          .selectFrom('analytics_tasks')
+          .select('id')
+          .where('workspace_id', '=', systemId)
+          .where('task_kind', '=', 'bot_ip_range_refresh')
+          .execute(),
+      ).not.toHaveLength(0);
+      await db
+        .updateTable('users')
+        .set({ is_active: false })
+        .where('id', '=', tenant.userId)
+        .execute();
+      expect((await sourceList(db, scope(tenant))).ingestion_enabled).toBe(false);
+      expect((await send(webhook.id, webhook.token!, body(event()))).status).toBe(409);
+    } finally {
+      crawlLogs.ingestion_enabled = true;
+      vi.unstubAllEnvs();
+    }
+  });
   it('parses NDJSON, array and Combined while refusing CLF and missing identification fields', () => {
     const mapping = crawlLogs.presets.custom_ndjson!;
     expect(parseLogLine(JSON.stringify(event()), 'ndjson', mapping)?.path).toContain('/products/');

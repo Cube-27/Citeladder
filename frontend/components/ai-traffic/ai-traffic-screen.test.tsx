@@ -8,6 +8,8 @@ import { makeProject } from '@/test/fixtures/project';
 import { AiTrafficScreen, CrawlSignalPanel } from './ai-traffic-screen';
 import { InsightStrip } from './insight-strip';
 import { CrawlLogConnections } from './crawl-log-connections';
+import { TrafficCrawlers, TrafficActivity } from './traffic-views';
+import { TabsRoot } from '@/components/ui/tabs';
 const project = makeProject({
   id: '88888888-8888-4888-8888-888888888888',
   workspace_id: '11111111-1111-4111-8111-111111111111',
@@ -50,6 +52,143 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 describe('AI Traffic state and navigation', () => {
+  it('explains disabled ingestion inside the dialog without offering setup', async () => {
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const dialog = screen.getByRole('dialog');
+    expect(
+      await within(dialog).findByText(/Source creation and file uploads are unavailable/),
+    ).toBeVisible();
+    expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Create source' })).not.toBeInTheDocument();
+  });
+  it('keeps setup unavailable on a failed availability read and recovers on retry', async () => {
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () => new HttpResponse(null, { status: 500 })),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const dialog = screen.getByRole('dialog');
+    // The production query policy exhausts its automatic 5xx retries first.
+    const retry = await within(dialog).findByRole('button', { name: /retry/i }, { timeout: 5000 });
+    expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({ ingestion_enabled: true, items: [] }),
+      ),
+    );
+    await user.click(retry);
+    expect(
+      await within(dialog).findByRole('radiogroup', { name: 'Collection method' }),
+    ).toBeVisible();
+  });
+  it('guides first upload through source creation and selects the created source', async () => {
+    let created = false;
+    const id = '99999999-9999-4999-8999-999999999999';
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({
+          ingestion_enabled: true,
+          items: created
+            ? [
+                {
+                  id,
+                  kind: 'upload',
+                  setup: 'upload',
+                  preset: 'custom_ndjson',
+                  format: 'ndjson',
+                  collection_point: 'uploaded_file',
+                  sampling: { kind: 'none' },
+                  origin: 'https://example.test',
+                  host: 'example.test',
+                  status: 'active',
+                  token_prefix: null,
+                  connection: 'awaiting_data',
+                  last_accepted_batch: null,
+                  last_processed_at: null,
+                  rejected_lines: 0,
+                  overlapping_lines: 0,
+                  unsupported_uploads: 0,
+                  unsupported_batches: 0,
+                },
+              ]
+            : [],
+        }),
+      ),
+      http.post(root + '/crawl-logs/sources', async ({ request }) => {
+        expect(await request.json()).toMatchObject({
+          setup: 'upload',
+          collection_point: 'uploaded_file',
+        });
+        created = true;
+        return HttpResponse.json({ id, token: null });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    await user.click(await screen.findByRole('radio', { name: /Upload file/ }));
+    expect(screen.getByText(/First, create an upload source/)).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: 'Upload source' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create source' }));
+    expect(await screen.findByRole('combobox', { name: 'Upload source' })).toHaveTextContent(
+      'example.test',
+    );
+    await user.upload(screen.getByLabelText('Log file'), new File(['{}'], 'requests.ndjson'));
+    expect(screen.getByRole('button', { name: 'Upload recognized requests' })).toBeEnabled();
+  });
+  it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', async (tab) => {
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+      ),
+    );
+    const user = userEvent.setup();
+    const data = { items: [], next_cursor: null };
+    renderWithProviders(
+      <TabsRoot value={tab} onValueChange={() => {}}>
+        {tab === 'crawlers' ? <TrafficCrawlers data={data} /> : <TrafficActivity data={data} />}
+      </TabsRoot>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    expect(
+      await within(screen.getByRole('dialog')).findByText(
+        /Source creation and file uploads are unavailable/,
+      ),
+    ).toBeVisible();
+  });
+  it.each([null, 'Coverage is incomplete.'])(
+    'retains only meaningful empty insights (%s)',
+    async (notice) => {
+      mswServer.use(
+        http.get(root + '/ai-traffic/insights', () =>
+          HttpResponse.json({
+            snapshot_id: null,
+            window_start: '2026-10-01',
+            window_end: '2026-10-04',
+            formula_version: '1',
+            patterns: [],
+            coverage: { crawl: 'partial', ga4_complete: false, notice },
+          }),
+        ),
+      );
+      renderWithProviders(
+        <InsightStrip projectId={project.id} workspaceId={project.workspace_id} range="30d" />,
+      );
+      await waitFor(() =>
+        expect(screen.queryByText('Loading persisted insights…')).not.toBeInTheDocument(),
+      );
+      if (notice) expect(screen.getByText(notice)).toBeVisible();
+      else expect(screen.queryByText('Observed patterns')).not.toBeInTheDocument();
+    },
+  );
   it('preserves the issued token until the source dialog is closed', async () => {
     let creates = 0;
     mswServer.use(

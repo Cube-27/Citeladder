@@ -19,6 +19,13 @@ including property-wide session/engagement/key-event comparisons and purchase
 revenue in the captured property currency. Key events use the customer's GA4
 definition; no key-events/session rate is calculated.
 
+Crawl setup checks ingestion availability inside the dialog before showing
+collection controls. Disabled ingestion explains why source creation and uploads
+are unavailable. Empty Crawlers and Activity views also expose crawl connections.
+File backfill keeps its upload-source workflow: create a source first, then select
+the file in the same dialog. Overview omits an empty Observed patterns card when
+there is no coverage notice to disclose.
+
 Pages separately aggregates requests, AI-referral sessions/key events, tracked
 citations and current Site Health findings to `url_hash` before joining. Counts
 cannot multiply across bots, sources or citations. Each leg retains connection,
@@ -142,7 +149,8 @@ current committed requests under the project lock. Dates older than
 only observations, preserving receipts and projections. Rollups keep bounded
 source batch IDs and the canonical queryless URL for joinable identities.
 Retention and abandoned-upload cleanup continue when ingestion is disabled;
-IP-range provider refresh is gated by ingestion enablement.
+IP-range provider refresh is gated by ingestion enablement, including the
+configured development workspace exception.
 
 ## Read APIs, MCP and configuration
 
@@ -188,8 +196,13 @@ IP-range snapshot refresh, retention and abandonment; PostgreSQL owns their
 dispatch and leases. IP fetches begin only after durable dispatch, use the shared
 safe fetcher, and publish success/failure through fenced task settlement.
 
-`ingestion_enabled` remains **false**. Plans/quotas, retention acceptance and
-privacy/DPA wording remain enablement decisions. This implementation authorizes
-neither production enablement nor customer infrastructure deployment. The
+`ingestion_enabled` remains **false** for general availability. The configured
+development operator's owned workspace bypasses this rollout gate for source
+creation, uploads, webhook admission and IP-range refresh. Reads report that same
+effective availability. The exception requires a configured development password
+and an active admin identity matching `DEV_LOGIN_EMAIL`; joining another workspace
+does not enable it. Normal workspace authorization and bounded ingestion remain.
+Plans/quotas, retention acceptance and privacy/DPA wording remain general
+enablement decisions. This does not deploy customer infrastructure. The
 [public setup guide](../frontend/apps/docs/src/content/ai-traffic.md) and
 generated Worker template describe customer-operated collection and its limits.
