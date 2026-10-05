@@ -1,0 +1,12 @@
+{
+  "name": "citeladder-development",
+  "interface": { "displayName": "CiteLadder development" },
+  "plugins": [
+    {
+      "name": "citeladder",
+      "source": { "source": "local", "path": "./plugins/citeladder" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

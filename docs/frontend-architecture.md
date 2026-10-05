@@ -11,6 +11,13 @@ interactions and presentation; the backend owns authorization, measurement and
 lifecycle truth. [Design](design.md) is the sole visual contract. Feature
 behavior is routed through [the documentation index](README.md).
 
+The isolated `frontend/packages/mcp-app` entry reuses the product design primitives
+and shared contracts inside an MCP host sandbox. Its single static HTML bundle is
+packaged by the API image and served as an authenticated MCP resource; it does not
+load the SPA shell or call browser API routes. Evidence reads use the host bridge,
+with only ephemeral selection/context state. [MCP](mcp.md) owns its tools, switches
+and client acceptance requirements.
+
 The product Worker at `frontend/apps/app/worker.ts` serves Vite assets,
 app-host API, browser MCP consent and guarded navigation. The marketing
 Worker uses Astro SSR at `frontend/apps/marketing`, proxies only exact apex

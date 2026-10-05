@@ -5,6 +5,11 @@ Completed implementation plans are retained in [the archive](../archive/).
 
 ## Active
 
+- [ChatGPT plugin](citeladder-chatgpt-plugin.md): repository implementation complete
+  for Visibility, Site Health, public workflows and optional sidebar/context.
+  Founder-pilot gating was waived in favor of disposable fixtures/mock-host
+  checks. Installed-client acceptance and public release remain separate.
+
 - [Agent capabilities](citeladder-agent-capabilities.md): foundations and MVP
   merged in #203/#206; conversation slices A–C merged in #207 and D in the
   completed TypeScript migration. E, streaming,
@@ -28,10 +33,6 @@ Completed implementation plans are retained in [the archive](../archive/).
 
 ## Queued and retained planning
 
-- [ChatGPT plugin](citeladder-chatgpt-plugin.md): proposed pre-launch prototype over
-  the existing MCP: installed Visibility workflow first, then Site Health,
-  sidebar/context and public release. V1 has no public sample mode.
-  Implementation is not assigned.
 - [MCP Events](citeladder-mcp-events.md): separate proposed follow-up for measured
   changes, subscription filters and durable delivery; not part of plugin release
   or authorized for implementation.

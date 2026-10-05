@@ -43,6 +43,10 @@
       "project": ["src/**/*.ts"],
       "includeEntryExports": true,
     },
+    "packages/mcp-app": {
+      "entry": ["src/main.tsx", "vite.config.ts"],
+      "project": ["src/**/*.{ts,tsx}", "vite.config.ts"],
+    },
     // The TypeScript API service (docs/architecture.md). Its generated inputs
     // are consumed wholesale, so unused generated table types are expected.
     "services/api": {

@@ -10,9 +10,12 @@ import { prompt, promptSet } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
+import { getVisibility } from '../src/visibility/dashboard.ts';
+import { SiteFixtures } from './site-health-fixtures.ts';
 
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
+const siteFixtures = new SiteFixtures(db);
 const clients: string[] = [];
 let tenant: Tenant;
 let principal: McpPrincipal;
@@ -57,12 +60,202 @@ beforeEach(async () => {
     .execute();
 });
 afterAll(async () => {
+  await siteFixtures.cleanup();
   await fixtures.cleanup();
   await db.deleteFrom('mcp_oauth_clients').where('client_id', 'in', clients).execute();
   await db.destroy();
 });
 const read = (name: string, args: Record<string, unknown> = {}) =>
   dispatchTool(db, principal, name, { project_id: tenant.projectId, ...args }, origin);
+
+it('retains the selected Site Health snapshot and partial/unknown coverage when newer snapshots arrive', async () => {
+  const seed = await siteFixtures.crawl();
+  const member = {
+    kind: 'member' as const,
+    userId: seed.userId,
+    workspaceId: seed.workspaceId,
+    projectId: seed.projectId,
+  };
+  const first = await siteFixtures.snapshot(seed);
+  const source = await siteFixtures.page(seed, '/', {});
+  await db
+    .updateTable('site_health_snapshots')
+    .set({
+      source_analysis_ids: [source.analysisId],
+      source_artifact_ids: [source.artifactId],
+      source_task_ids: [source.taskId],
+      classification_source_analysis_ids: [source.analysisId],
+      classification_source_artifact_ids: [source.artifactId],
+      classification_source_task_ids: [source.taskId],
+      coverage_formula_version: 'retained-coverage',
+      profile_version: 'retained-profile',
+    })
+    .where('id', '=', first)
+    .execute();
+  const render = (snapshot_id?: string) =>
+    dispatchTool(
+      db,
+      member,
+      'render_site_health',
+      { project_id: seed.projectId, snapshot_id },
+      origin,
+    );
+  expect(await render()).toMatchObject({
+    selection: { snapshot_id: first },
+    evidence: {
+      crawl_id: seed.crawlId,
+      measurement_states: { coverage: 'partial', aeo: 'unknown' },
+      scores: { aeo_readiness: null },
+    },
+  });
+  await siteFixtures.snapshot({ ...seed, crawlId: await siteFixtures.sibling(seed) }, 'complete');
+  expect(await render(first)).toMatchObject({
+    selection: { snapshot_id: first },
+    evidence: {
+      measurement_states: { coverage: 'partial' },
+      source_artifact_ids: [source.artifactId],
+      source_task_ids: [source.taskId],
+      classification_source_analysis_ids: [source.analysisId],
+      versions: { coverage_formula: 'retained-coverage', profile: 'retained-profile' },
+    },
+  });
+  await expect(render(randomUUID())).rejects.toThrow('unavailable');
+});
+
+it('pins the Visibility review to canonical measures and source-to-answer evidence even after a newer audit exists', async () => {
+  expect((await read('render_visibility')).evidence).toMatchObject({ state: 'unavailable' });
+  const auditId = await fixtures.audit(tenant, { completedAt: new Date('2026-10-01T00:00:00Z') });
+  const snapshotId = await fixtures.metricSnapshot(tenant, auditId, {
+    metrics: {
+      total_completed: 2,
+      brand_mention_count: 1,
+      owned_citation_response_count: 0,
+      brand_mention_rate: 0.5,
+      owned_citation_rate: 0,
+      per_prompt: [],
+      coverage: { requested: 2, failed: 0, not_run: 0 },
+    },
+  });
+  const execution = await fixtures.execution(tenant, {
+    auditId,
+    answerText: 'Acme retained answer',
+    analysis: { citations: [{ url: 'https://publisher.example/a', domain: 'publisher.example' }] },
+  });
+  const rendered = await read('render_visibility', { view: 'overview' });
+  const handoff = new URL((rendered.links as { application: string }).application);
+  expect(handoff.searchParams.get('run')).toBe(auditId);
+  const canonical = await getVisibility(
+    db,
+    { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
+    {
+      auditId,
+      logicalEngine: null,
+      baselineId: null,
+      selectionMode: 'run',
+      fromAt: null,
+      toAt: null,
+      configurationKey: null,
+      cohort: 'core',
+    },
+  );
+  expect(rendered).toMatchObject({
+    selection: { audit_id: auditId },
+    evidence: {
+      visibility_rate: canonical.visibility_rate,
+      owned_citation_rate: 0,
+      counts: canonical.counts,
+    },
+  });
+  await fixtures.audit(tenant, { completedAt: new Date('2026-10-02T00:00:00Z') });
+  const sources = await read('render_visibility', { audit_id: auditId, view: 'sources' });
+  expect(sources).toMatchObject({
+    selection: { audit_id: auditId },
+    evidence: {
+      coverage: { responses: 1 },
+      items: [
+        expect.objectContaining({
+          key: 'publisher.example',
+          inspected_page_presence_is_separate: true,
+        }),
+      ],
+    },
+  });
+  const answers = await read('read_visibility_results', {
+    audit_id: auditId,
+    domain: 'publisher.example',
+  });
+  expect(answers.items).toEqual([expect.objectContaining({ id: execution.taskId })]);
+  expect(
+    (await fetchRecord(db, principal, `citeladder://visibility_result/${execution.taskId}`, origin))
+      .text,
+  ).toContain('Acme retained answer');
+  expect(
+    (await read('read_visibility_results', { audit_id: auditId, url: 'https://other.example/' }))
+      .items,
+  ).toEqual([]);
+  const trends = await read('read_visibility_trends', {
+    from_at: '2026-10-01T00:00:00Z',
+    to_at: '2026-10-01T23:59:59Z',
+  });
+  expect(trends.points).toEqual([
+    expect.objectContaining({
+      audit_id: auditId,
+      source_snapshot_ids: [snapshotId],
+      brand_mention_rate: 0.5,
+      owned_citation_rate: 0,
+    }),
+  ]);
+});
+
+it('refuses foreign render objects, unsupported filters, forged totals and revoked grants', async () => {
+  const foreign = await fixtures.tenant();
+  const foreignAudit = await fixtures.audit(foreign);
+  await expect(read('render_visibility', { project_id: foreign.projectId })).rejects.toThrow(
+    'not found',
+  );
+  await expect(read('render_visibility', { audit_id: foreignAudit })).rejects.toThrow(
+    'unavailable',
+  );
+  await expect(read('read_visibility_overview', { baseline_id: foreignAudit })).rejects.toThrow(
+    'unavailable',
+  );
+  await expect(read('render_site_health', { snapshot_id: randomUUID() })).rejects.toThrow(
+    'unavailable',
+  );
+  for (const args of [
+    { view: 'sources', from_at: '2026-10-01T00:00:00Z' },
+    { view: 'trends', audit_id: foreignAudit },
+    { visibility_rate: 100 },
+    { view: 'overview', level: 'url' },
+  ])
+    await expect(read('render_visibility', args)).rejects.toThrow();
+  await expect(
+    read('read_visibility_trends', {
+      from_at: '2026-10-02T00:00:00Z',
+      to_at: '2026-10-01T00:00:00Z',
+    }),
+  ).rejects.toThrow('after');
+  await expect(
+    read('read_visibility_trends', {
+      from_at: '2020-01-01T00:00:00Z',
+      to_at: '2026-10-01T00:00:00Z',
+    }),
+  ).rejects.toThrow('limited');
+  for (const name of ['read_visibility_trends', 'render_visibility'])
+    await expect(
+      read(name, {
+        ...(name === 'render_visibility' ? { view: 'trends' } : {}),
+        from_at: '0000-01-01T00:00:00Z',
+        to_at: '0000-01-02T00:00:00Z',
+      }),
+    ).rejects.toThrow('valid datetimes');
+  await db
+    .updateTable('mcp_oauth_grants')
+    .set({ revoked_at: new Date() })
+    .where('id', '=', principal.grantId)
+    .execute();
+  await expect(read('render_visibility')).rejects.toThrow('not found');
+});
 
 it('keeps crawlability unavailable without a crawl, including business context', async () => {
   expect(await read('read_ai_crawlability')).toMatchObject({

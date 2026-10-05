@@ -7,8 +7,11 @@ RUN npm install --global --ignore-scripts pnpm@12.8.1
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
+COPY frontend/packages/mcp-app/package.json ./packages/mcp-app/
 RUN pnpm install --frozen-lockfile --ignore-scripts --prod --filter "@citeladder/api..."
 COPY frontend/packages/contracts/src ./packages/contracts/src
+# This native graph supports schema/bootstrap execution, not an MCP server.
+# The serving API image builds and packages the UI (frontend/services/api/Dockerfile).
 COPY frontend/services/api/src ./services/api/src
 COPY frontend/services/api/assets ./services/api/assets
 RUN pnpm --filter @citeladder/api deploy --prod --ignore-scripts /runtime \

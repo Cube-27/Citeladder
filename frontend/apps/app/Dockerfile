@@ -1,4 +1,5 @@
-FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS dependencies
+# Node 26 bookworm-slim; preserve this image family when updating the digest.
+FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -9,9 +10,10 @@ RUN npm install --global --ignore-scripts pnpm@12.8.1
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
+COPY frontend/packages/mcp-app/package.json ./packages/mcp-app/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder
+FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder
 
 ARG NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS
 ARG NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS
@@ -40,7 +42,7 @@ RUN pnpm build:vite
 # Local Compose only: production serves this build through the product Worker
 # (wrangler.jsonc). Run that same Worker so routing, headers and the API proxy
 # match production; LOCAL_WORKER_ORIGIN admits HTTP and the API container.
-FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
+FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
 
 ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false
 WORKDIR /app
