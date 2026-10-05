@@ -207,9 +207,10 @@ submits the saved revision to the Prompts owner's admission and quality checks;
 users still accept candidates separately. The Agent gains no write tool.
 
 The composer takes inline commands: `/` picks a skill and `@` mentions up to
-five of the project's Actions. Mentions are typed Action IDs that admission
-authorizes to the chat's project (a foreign one refuses the turn), records on
-the user message and freezes into the manifest. New chat's **Work on an Action**
+five of the project's Actions. Mention selection restores the caret when the
+replacement text commits, before subsequent typing. Mentions are typed Action
+IDs that admission authorizes to the chat's project (a foreign one refuses the
+turn), records on the user message and freezes into the manifest. New chat's **Work on an Action**
 disclosure offers **Brief me**, which starts a `growth_plan` chat mentioning the
 top open Actions; it runs only when clicked.
 
