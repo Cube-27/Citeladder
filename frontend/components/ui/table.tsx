@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
  * Dense analytics table — the shared semantic ledger treatment:
  *  - the wrapper is the table's shell: the elevated panel fill at the card
  *    radius, borderless, so a bare table reads as a card the way a Card does
- *  - sticky header (--table-header-height) on the same panel fill with a
+ *  - sticky header (--table-header-height) on a tonal panel fill with a
  *    single object-rung under-rule, so the labels separate from the rows by
  *    the hairline alone; no vertical column-separator hairlines, which made
  *    the tables read as spreadsheets rather than designed surfaces
@@ -109,7 +109,7 @@ export function TableHead({
       className={cn(
         tableHeadClasses,
         'aria-[sort=ascending]:text-foreground aria-[sort=descending]:text-foreground',
-        'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
+        'border-border bg-panel-tonal sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'tabular-nums',
         numeric === 'end' ? 'text-right' : numeric && 'text-center',
         className,

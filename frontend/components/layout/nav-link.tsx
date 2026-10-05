@@ -38,14 +38,14 @@ export function NavLink({
           ? textRole('control', 'bg-selected text-foreground active:bg-active')
           : textRole(
               'control',
-              'text-secondary hover:bg-hover active:bg-active hover:text-foreground',
+              'text-ink-soft hover:bg-hover active:bg-active hover:text-foreground',
             ),
       )}
     >
       <Icon
         className={cn(
           'size-4 shrink-0 transition-colors duration-[var(--motion-fast)]',
-          active ? 'text-foreground' : 'text-muted group-hover:text-foreground',
+          active ? 'text-ink-icon' : 'text-ink-faint group-hover:text-ink-icon',
         )}
         aria-hidden
       />

@@ -8,9 +8,10 @@ Tests verify shared ownership, accessibility, and product correctness—not exac
 
 ## Direction and identity
 
-The shared material treatment follows Clerk's Mosaic/Seed references: fine inset
-edges, layered light-mode elevation, softly raised controls, recessed navigation
-tracks and dark-mode inset highlights. CiteLadder retains its Emerald palette,
+The shared material treatment follows the sales CRM reference: layered drop
+shadows, a fine outer shadow ring, inset top highlights and inset rings on cards,
+filled buttons and selected navigation. Recessed navigation tracks retain their
+own depth. CiteLadder retains its Emerald palette,
 self-hosted type, content, routes and workflows. This is a visual adaptation;
 it does not introduce Clerk authentication or a new component library.
 
@@ -46,13 +47,29 @@ Consume semantic roles, never page-local values.
 | Ground and rail | `background`, `shell` `#F3F5F7`; `sidebar` `#E9EDF1` | Neutral workspace ground and the lower sidebar rail in light mode |
 | Structure | `panel-tonal`, `background-alt` `#F7F9FB`; `well` `#E9EDF1` | Tonal panels and recessed wells |
 | Paper | `panel`, `input`, `elevated` `#FFFFFF` | Work surfaces, inputs, semantic objects, overlays |
-| Ink | `foreground` `#0F172A`; `secondary` `#334155`; `muted` `#5B6678` | Three clearly separated inks: titles and values; sentences; labels and metadata. The former fourth rung, `subtle`, is deleted; metadata consumes `muted`. |
+| Ink | `foreground` `#0F172A`; `secondary` `#334155`; `muted` `#5B6678`; `ink-*` chrome ladder below | Titles and values; sentences; fallback metadata. Shared labels, captions, category chips and navigation use the graduated chrome ladder. The legacy `text-subtle` utility stays retired. |
 | Boundaries | `border-subtle` `#E5E9EF`; `border` `#D3DAE4`; `border-strong` `#C3CCD9`; `border-bold` `#8A95A5` | `border-subtle` divides rows or peers *inside* one surface; `border` bounds controls, inset white panels and overlays, and divides a table header from its rows; `border-strong` is deliberate emphasis; `border-bold` bounds inputs. Default cards use a fine inset edge; table wrappers use fill contrast. |
 | Neutral states | `hover`, `selected`, `active`, `disabled` | Surface mixed with primary ink at 4%, 8%, 12%, and 3%; the selected state is distinct from hover. `track` is the recessed segmented-control surface. |
 | Interaction | Emerald: forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC`. | Primary actions, links, tab underlines, checked indicators and focus; navigation and filter selection use neutral tints |
 | Evidence | `success`, `warning`, `danger`, `info`; `chart-1..8`, `chart-grid` | Status families carry labelled status; data-viz roles carry measurements |
 
-Hierarchy combines the existing rail, ground and paper fills with restrained depth. Cards use a fine inset edge and layered ambient elevation; primary and secondary buttons have a raised face. Focused auth/onboarding sheets use a deeper compound shadow. Dark resting surfaces replace ambient shadows with inset highlights. Detached menus and dialogs retain their own elevation roles.
+Hierarchy combines the existing rail, ground and paper fills with restrained depth. Cards and filled buttons use an outer drop shadow, a one-pixel outer shadow ring, an inset top highlight and an inset ring in both themes. Dark highlights use 10% white and the inset ring uses 6% white. Primary and destructive buttons add shallow top/bottom shading. Focused auth/onboarding sheets use a deeper compound shadow. Detached menus and dialogs retain their own elevation roles.
+
+The chrome ink ladder separates decoration from reading text. `ink-faint` is only
+for decorative icons paired with a readable label; it must not carry small text.
+All other rungs meet 4.5:1 on their intended neutral surfaces. Names describe the
+role, not a fixed lightness order across themes.
+
+Category tags use ten independent `--tag-{tone}-{bg,border,text}` triples in
+`globals.css`: blue, purple, green, moss, red, orange, amber, teal, yellow and
+neutral. Light mode uses pale fills and dark ink; dark mode uses dark-tinted
+fills and light ink. `tagClasses` in `filter-chip-variants.ts` owns their pill
+recipe, and `Tag`/`TagGroup` consume it. Static tags retain a fine tone border;
+interactive filters and overflow disclosure use shadow rings. Topic tags use
+blue and company offerings use purple; colors label categories, never status.
+`TagGroup` shows two labels and a `+N` disclosure that expands in place with
+keyboard/touch support and `aria-expanded`; long labels wrap. Semantic `Badge`
+status dots and their meanings remain separate.
 
 **Borders.** Controls, inset panels, overlays and status objects retain semantic edges. Default cards use an inset hairline without changing their box geometry; table wrappers remain fill-separated. Selected sidebar destinations and segments use a raised neutral face. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space. The desktop rail has a subtle dividing edge. Lines use semantic tokens; transparent layers belong only to the centralized elevation recipes.
 
@@ -139,6 +156,11 @@ consumers without becoming another value authority.
 | `--color-info-bg` | semantic-status | info bg | Labelled status layer | `#eef5fa` | `rgb(138 212 225 / 13%)` |
 | `--color-info-border` | semantic-status | info border | Labelled status layer | `#c8d9e8` | `rgb(138 212 225 / 38%)` |
 | `--color-info-text` | semantic-status | info text | Labelled status layer | `#24476b` | `#a5e2eb` |
+| `--color-ink-chip` | ink | Neutral filter labels | On neutral control surfaces | `#3f4e63` | `#ceced3` |
+| `--color-ink-faint` | ink | Decorative inactive navigation icons only | Beside readable navigation labels | `#8a95a5` | `#737379` |
+| `--color-ink-icon` | ink | Active navigation icons | On selected neutral surfaces | `#334155` | `#dddde3` |
+| `--color-ink-soft` | ink | 13px labels and inactive destinations | On neutral reading surfaces | `#526074` | `#a9a9b0` |
+| `--color-ink-subtle` | ink | 12px captions and navigation group labels | On neutral reading surfaces | `#5b6678` | `#99999c` |
 | `--color-input` | surface | Field interior | Inside panel boundary | `#ffffff` | `#141414` |
 | `--color-muted` | ink | Helpers, metadata and disabled labels | On reading surfaces | `#5b6678` | `#999996` |
 | `--color-neutral-bg` | surface | Neutral badge or progress track | Inside panel | `#e9edf1` | `#222222` |
@@ -232,9 +254,9 @@ The roles are `.type-*` classes in `globals.css` (components layer, so a status 
 | `figureSm` | `type-figure-sm` | A value in a dense row or cell | 16/24, tabular | 600 | `foreground` |
 | `itemTitle` | `type-item-title` | Row, list-item and insight titles | 14/20 | 600 | `foreground` |
 | `body` | `type-body` | Sentences, descriptions, table cells | 14/20 | 400 | `secondary` |
-| `control` | `type-control` | Buttons, navigation, tabs, links | 14/20 | 500 | by state |
-| `label` | `type-label` | Names a value: metric, field and column labels | 13/18 | 500 | `muted` |
-| `caption` | `type-caption` | Timestamps, counts, help, footnotes | 12/16 | 400 | `muted` |
+| `control` | `type-control` | Buttons, navigation, tabs, links | 13/18 | 500 | by state |
+| `label` | `type-label` | Names a value: metric, field and column labels | 13/18 | 500 | `ink-soft` |
+| `caption` | `type-caption` | Timestamps, counts, help, footnotes | 12/16 | 400 | `ink-subtle` |
 | `badge` | `type-badge` | Badges, chips, counts, key hints | 12/16 | 500 | the tone |
 | `delta` | `type-delta` | Change indicator | 12/16, tabular | 500 | the caller's tone |
 | `emphasis` | `type-emphasis` | A value inside text that owns its size | inherited | 500 | `foreground` |
@@ -412,7 +434,7 @@ Structural sections remain open or tonal. `Card` is a white semantic object with
 
 For a filled, padded box inside a card/section, use `panelClasses({ tone, pad })` from `components/ui/panel.tsx`. Only its white `panel` tone draws an edge; `well`, `tonal` and `accent` are separated by their fill. Drawer field groups/lists use unboxed sections/rows. Multi-category editors use shared underline tabs and one linear field flow, not dashboard grids.
 
-Badges pair labels with state marks. Tags use the 20px small badge minimum, badges/filter chips the 24px default. Dense tables rebind badges to the small role. Menu rows use a 32px minimum and may grow for option detail; card/panel padding is 16px. Checkbox/radio marks and switch tracks retain intrinsic glyph geometry inside labelled or role-sized targets. Evidence rows identify source, measurement context, and an action opening the persisted record. Loading/empty states preserve layout and explain absence through the availability vocabulary.
+Badges pair labels with state marks. Tags use the 20px small badge minimum, badges/filter chips the 24px default. Dense tables rebind badges to the small role. Menu rows use a 32px minimum and may grow for option detail; card/panel padding is 16px. The sidebar uses 12px horizontal insets, 4px item gaps and 12px group labels. Filter bands have 8px vertical padding so wrapping controls clear their rules; page actions wrap at narrow widths. Table headers use the tonal panel fill. Checkbox/radio marks and switch tracks retain intrinsic glyph geometry inside labelled or role-sized targets. Evidence rows identify source, measurement context, and an action opening the persisted record. Loading/empty states preserve layout and explain absence through the availability vocabulary.
 
 Confirmed first-use analytical states omit filters, charts, and table reservations that cannot change or explain the result. Keep controls that can recover a filtered or uncovered state, and render persisted measured zero or partial-provider evidence through its normal measurement surface.
 
