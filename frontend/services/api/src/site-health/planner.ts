@@ -290,8 +290,15 @@ function refreshProfile(
     .executeTakeFirstOrThrow();
 }
 
-/** Caller owns the transaction: project -> capacity/account -> runtime -> profile. */
+/** Caller owns the transaction: workspace -> project -> capacity/account -> runtime -> profile. */
 export async function createCrawl(db: Database, workspaceId: string, request: CreateCrawlRequest) {
+  if (crawlSetting('advanced_controls_enabled') !== true)
+    await db
+      .selectFrom('workspaces')
+      .select('id')
+      .where('id', '=', workspaceId)
+      .forShare()
+      .executeTakeFirst();
   const project = await db
     .selectFrom('projects')
     .select('website_url')

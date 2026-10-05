@@ -36,7 +36,6 @@ export async function createSource(
   actorId: string,
   input: z.output<typeof createSourceSchema>,
 ) {
-  await ingestionEnabled(db, scope.workspaceId);
   let origin: URL;
   try {
     origin = new URL(input.origin);
@@ -60,6 +59,7 @@ export async function createSource(
   const defaults = crawlLogs.presets[preset]!;
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
+    await ingestionEnabled(trx, scope.workspaceId);
     const project = await trx
       .selectFrom('projects')
       .select('website_url')

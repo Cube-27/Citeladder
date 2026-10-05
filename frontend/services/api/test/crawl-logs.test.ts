@@ -23,6 +23,7 @@ import { verifyBot } from '../src/crawl-logs/identity.ts';
 import { sourceList } from '../src/crawl-logs/source-reads.ts';
 import { hasDevelopmentWorkspace } from '../src/auth/development-access.ts';
 import { entitlementView } from '../src/site-health/reads/runtime.ts';
+import { createCrawl } from '../src/site-health/planner.ts';
 import {
   logLines,
   parseLogLine,
@@ -87,6 +88,116 @@ afterAll(async () => {
 });
 
 describe('bounded formats', () => {
+  it.each(['source', 'upload', 'complete', 'ingest', 'crawl'] as const)(
+    'rechecks development access after a concurrent ownership transfer during %s admission',
+    async (operation) => {
+      const { tenant, source, token } = await setup(operation === 'ingest' ? 'custom' : 'upload');
+      const incoming = await fixtures.user();
+      await fixtures.member(tenant.workspaceId, incoming, 'admin');
+      const email = `dev-${tenant.userId}@example.test`;
+      vi.stubEnv('DEV_LOGIN_EMAIL', email);
+      vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
+      vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'false');
+      crawlLogs.ingestion_enabled = false;
+      let admission: Promise<unknown> | undefined;
+      const transfer = await db.startTransaction().execute();
+      try {
+        await db
+          .updateTable('users')
+          .set({ email, role: 'admin' })
+          .where('id', '=', tenant.userId)
+          .execute();
+        const upload =
+          operation === 'complete'
+            ? await createUpload(
+                db,
+                scope(tenant),
+                source.id,
+                { filename: 'requests.ndjson', size_bytes: 0 },
+                tenant.userId,
+              )
+            : null;
+        await transfer
+          .selectFrom('workspaces')
+          .select('id')
+          .where('id', '=', tenant.workspaceId)
+          .forUpdate()
+          .execute();
+        const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(
+          transfer,
+        );
+        switch (operation) {
+          case 'source':
+            admission = createSource(db, scope(tenant), tenant.userId, {
+              setup: 'upload',
+              origin: source.origin,
+              format: 'ndjson',
+            });
+            break;
+          case 'upload':
+            admission = createUpload(
+              db,
+              scope(tenant),
+              source.id,
+              { filename: 'requests.ndjson', size_bytes: 0 },
+              tenant.userId,
+            );
+            break;
+          case 'complete':
+            admission = completeUpload(
+              db,
+              scope(tenant),
+              source.id,
+              upload!.id,
+              { scanned_lines: 0, first_line_at: null, last_line_at: null, scanned_dates: [] },
+              tenant.userId,
+            );
+            break;
+          case 'ingest':
+            admission = Promise.resolve(send(source.id, token, body(event())));
+            break;
+          case 'crawl':
+            admission = db.transaction().execute((trx) =>
+              createCrawl(trx, tenant.workspaceId, {
+                project_id: tenant.projectId,
+                input_mode: 'exact_urls',
+                seed_urls: [source.origin + '/page'],
+              }),
+            );
+            break;
+        }
+        admission = admission.catch((error: unknown) => error);
+        await vi.waitFor(
+          async () => {
+            const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+            expect(blocked.rows[0]!.waiting).toBe(true);
+          },
+          { timeout: 2000, interval: 20 },
+        );
+        await transfer
+          .updateTable('workspace_members')
+          .set({ role: 'admin' })
+          .where('workspace_id', '=', tenant.workspaceId)
+          .where('user_id', '=', tenant.userId)
+          .execute();
+        await transfer
+          .updateTable('workspace_members')
+          .set({ role: 'owner' })
+          .where('workspace_id', '=', tenant.workspaceId)
+          .where('user_id', '=', incoming)
+          .execute();
+        await transfer.commit().execute();
+        expect(await admission).toMatchObject({ status: operation === 'crawl' ? 422 : 409 });
+      } finally {
+        if (!transfer.isCommitted) await transfer.rollback().execute();
+        await admission;
+        crawlLogs.ingestion_enabled = true;
+        vi.unstubAllEnvs();
+      }
+    },
+  );
   it('enables development workspace ingestion end to end while other workspaces stay disabled', async () => {
     const tenant = await fixtures.tenant();
     const other = await fixtures.tenant();

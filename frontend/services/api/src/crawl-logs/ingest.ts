@@ -134,6 +134,15 @@ export async function ingest(
   const receipt = await db.transaction().execute(async (trx) => {
     if (options.actorId)
       await lockAuthorizedWorkspace(trx, scope.workspaceId, options.actorId, 'manage_credentials');
+    else if (!crawlLogs.ingestion_enabled)
+      // Ownership transfers take the workspace root lock before changing membership.
+      await trx
+        .selectFrom('workspaces')
+        .select('id')
+        .where('id', '=', scope.workspaceId)
+        .forShare()
+        .executeTakeFirst();
+    await ingestionEnabled(trx, scope.workspaceId);
     const state = await lockCrawlState(trx, scope);
     const current = await trx
       .selectFrom('crawl_log_sources')
