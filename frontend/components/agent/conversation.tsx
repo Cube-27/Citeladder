@@ -63,6 +63,9 @@ export function Conversation({
         onStop={onStop}
         stopping={stopping}
       />
+      {(detail.latest_run?.progress.length ?? 0) > 0 ? (
+        <RunActivity progress={detail.latest_run!.progress} />
+      ) : null}
       {sending ? (
         <output aria-live="polite" className={textRole('caption')}>
           Sending message…
@@ -273,18 +276,6 @@ function RunState({
               Stop
             </Button>
           </span>
-          {progress.length > 0 ? (
-            <details>
-              <summary className={textRole('caption', 'cursor-pointer')}>View activity</summary>
-              <ol aria-label="Agent progress" className="grid gap-1 ps-4 pt-2">
-                {progress.map((step) => (
-                  <li key={step.ordinal} className={textRole('caption')}>
-                    {runStepLabel(step)}
-                  </li>
-                ))}
-              </ol>
-            </details>
-          ) : null}
         </div>
       );
     case 'stopped_at_limit':
@@ -296,4 +287,18 @@ function RunState({
     default:
       return null;
   }
+}
+function RunActivity({ progress }: Readonly<{ progress: AgentRun['progress'] }>) {
+  return (
+    <details>
+      <summary className={textRole('caption', 'cursor-pointer')}>View activity</summary>
+      <ol aria-label="Agent progress" className="grid gap-1 ps-4 pt-2">
+        {progress.map((step) => (
+          <li key={`${step.run_attempt}:${step.ordinal}`} className={textRole('caption')}>
+            Attempt {step.run_attempt} · Step {step.ordinal} · {runStepLabel(step)}
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
 }

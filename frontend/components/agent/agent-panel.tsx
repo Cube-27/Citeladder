@@ -111,8 +111,8 @@ function PanelStart({
 }>) {
   const [message, setMessage] = useState(seed.prompt ?? '');
   const [context, setContext] = useState(seed.context);
-  const [skillId, setSkillId] = useState<string | null>(seed.skillId ?? null);
-  const commands = useComposerCommands({ workspaceId, projectId, onSkill: setSkillId });
+  const [skillId, setSkillId] = useState<string | null | undefined>(seed.skillId ?? null);
+  const commands = useComposerCommands({ workspaceId, projectId });
   const access = useAgentAccess();
   const create = useCreateChat(workspaceId, projectId, onStarted);
   const hasContext = contextChips(context).length > 0;
@@ -142,6 +142,7 @@ function PanelStart({
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
           tools={
             <SkillPicker
+              {...commands.skillPicker}
               value={skillId}
               onChange={setSkillId}
               hasAction={Boolean(seed.actionId)}
@@ -264,6 +265,7 @@ function PanelConversation({
             commands={turn.commands}
             tools={
               <SkillPicker
+                {...turn.commands.skillPicker}
                 value={turn.skillId}
                 onChange={turn.setSkillId}
                 outputKind={detail.output?.kind}

@@ -199,9 +199,8 @@ describe('NewChatScreen', () => {
     renderNewChat('');
 
     const message = await screen.findByLabelText('Message the agent');
-    await user.type(message, '/grow');
-    expect(await screen.findByRole('option', { name: /Growth plan/ })).toBeVisible();
-    await user.keyboard('{Enter}');
+    await user.type(message, '/');
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Growth plan' }));
     expect(screen.getByRole('button', { name: 'Skill: Growth plan' })).toBeVisible();
     await user.type(message, 'Compare @pric');
     await user.click(await screen.findByRole('option', { name: /Pricing page/ }));
@@ -234,7 +233,7 @@ describe('NewChatScreen', () => {
 
     const message = await screen.findByLabelText('Message the agent');
     await user.type(message, 'Use /grow');
-    expect(await screen.findByRole('option', { name: /Growth plan/ })).toBeVisible();
+    expect(await screen.findByRole('menuitemradio', { name: 'Growth plan' })).toBeVisible();
     await user.keyboard('{Escape}{Enter}');
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();

@@ -35,7 +35,7 @@ export type TurnInput = {
   chatId?: string;
   message: string;
   key: string;
-  skillId?: string;
+  skillId?: string | null;
   actionId?: string;
   refs?: Record<string, Json>;
   mentionIds?: string[];
@@ -132,7 +132,7 @@ function requestIdentity(scope: Scope, input: TurnInput, mode: string, approvalR
       chat: input.chatId,
       content: input.message,
       mode,
-      skill: input.skillId ?? null,
+      skill: input.skillId === undefined ? { mode: 'inherit' } : input.skillId,
       mentions: input.mentionIds ?? [],
     };
   return {
@@ -140,15 +140,19 @@ function requestIdentity(scope: Scope, input: TurnInput, mode: string, approvalR
     project: scope.projectId,
     content: input.message,
     mode,
-    skill: input.skillId ?? null,
+    skill: input.skillId === undefined ? { mode: 'inherit' } : input.skillId,
     action: input.actionId ?? null,
     context: input.refs ?? {},
     mentions: input.mentionIds ?? [],
   };
 }
-function skillSource(explicit: string | undefined, pinned: string | null, id: string | null) {
+function skillSource(
+  explicit: string | null | undefined,
+  pinned: string | null,
+  id: string | null,
+) {
   if (explicit) return 'user';
-  if (pinned) return 'chat';
+  if (pinned && explicit !== null) return 'chat';
   return id ? 'action' : null;
 }
 
@@ -235,7 +239,7 @@ export class AgentStore {
         content: input.message,
         userId: scope.userId,
         skillId: input.skillId,
-        skillSource: input.skillId ? 'user' : null,
+        skillSource: input.skillId ? 'user' : input.skillId === null ? 'automatic' : null,
         mentions: manifest.mentions.map((action) => ({
           kind: 'action',
           id: action.id,
@@ -290,7 +294,7 @@ export class AgentStore {
         .updateTable('agent_chats')
         .set({
           turn_count: chat.turn_count + 1,
-          pinned_skill_id: input.skillId ?? chat.pinned_skill_id,
+          pinned_skill_id: input.skillId === undefined ? chat.pinned_skill_id : input.skillId,
           last_activity_at: now,
           updated_at: now,
         })
@@ -364,13 +368,13 @@ export class AgentStore {
   private async turnSkill(
     db: Database,
     chat: Chat,
-    explicit: string | undefined,
+    explicit: string | null | undefined,
     actionSkill: string | null,
   ) {
     const catalog = this.dependencies.catalog.skills;
     let id =
       explicit ??
-      chat.pinned_skill_id ??
+      (explicit === null ? null : chat.pinned_skill_id) ??
       (actionSkill && catalog.has(actionSkill) ? actionSkill : null);
     let source = skillSource(explicit, chat.pinned_skill_id, id);
     if (id && !catalog.has(id)) throw new AgentError('protocol_violation');

@@ -20,6 +20,7 @@ export type ComposerCommands = {
   /** Actions this message mentions, shown as removable chips. */
   mentions: readonly Mention[];
   onRemoveMention: (id: string) => void;
+  openSkillPicker?: (removeCommand: () => void) => void;
 };
 
 export type Mention = { id: string; label: string };
@@ -116,6 +117,14 @@ export function CommandField({
         placeholder={placeholder}
         {...comboboxProps}
         onChange={(event) => {
+          const token = tokenAt(event.target.value, event.target.selectionStart);
+          if (token?.trigger === '/' && token.query === '' && commands?.openSkillPicker) {
+            const text = event.target.value,
+              end = event.target.selectionStart;
+            onChange(text);
+            commands.openSkillPicker(() => onChange(text.slice(0, token.start) + text.slice(end)));
+            return;
+          }
           onChange(event.target.value);
           setCaret(event.target.selectionStart);
           setActive(0);

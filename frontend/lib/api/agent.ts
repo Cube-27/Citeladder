@@ -64,7 +64,7 @@ export type AgentContextRefs = {
 
 export type NewChatInput = {
   message: string;
-  skill_id?: string;
+  skill_id?: string | null;
   action_id?: string;
   context?: AgentContextRefs;
   /** Actions the message @-mentions; authorized server-side. */
@@ -120,7 +120,7 @@ const agentApi = {
     ),
   sendMessage: async (
     chatId: string,
-    input: { message: string; skill_id?: string; mentions?: string[] },
+    input: { message: string; skill_id?: string | null; mentions?: string[] },
     idempotencyKey: string,
     options?: ApiRequestOptions,
   ) =>
@@ -249,7 +249,7 @@ export const agentMutations = {
       mutationFn: (vars: {
         chatId: string;
         message: string;
-        skillId?: string;
+        skillId?: string | null;
         mentions?: string[];
         idempotencyKey: string;
       }) =>

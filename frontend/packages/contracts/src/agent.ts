@@ -39,6 +39,7 @@ export const agentRunSchema = responseObject({
   skill_id: z.string().nullable(),
   skill_source: z.string().nullable(),
   steps_used: z.number().int(),
+  attempt_count: z.number().int().default(0),
   error_code: z.string(),
   error_detail: z.string(),
   created_at: z.string(),

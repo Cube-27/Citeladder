@@ -41,8 +41,9 @@ export function SkillsScreen() {
     <PageShell measure="workflow">
       <Stack gap="section">
         <p className={textRole('body', 'max-w-2xl')}>
-          Skills are the methods the agent works with. It picks one for each request, or you can
-          choose one here, with the skill menu, or by typing / in a chat.
+          Skills are the agent’s available methods. It selects a method when a deliverable needs
+          one, or you can choose here or in the composer. Typing / opens that same skill menu.
+          Questions can stay simple replies.
         </p>
         {body}
       </Stack>

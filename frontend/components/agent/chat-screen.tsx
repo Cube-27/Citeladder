@@ -131,6 +131,7 @@ function ChatView({
           commands={turn.commands}
           tools={
             <SkillPicker
+              {...turn.commands.skillPicker}
               value={turn.skillId}
               onChange={turn.setSkillId}
               outputKind={detail.output?.kind}

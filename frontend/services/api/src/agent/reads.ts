@@ -62,7 +62,7 @@ function modelStepStatus(outcome: string, latest: boolean) {
   return latest ? 'processing' : 'reasoned';
 }
 export async function progress(db: Database, run: Run) {
-  if (!active.includes(run.status) || run.attempt_count < 1) return [];
+  if (run.attempt_count < 1) return [];
   const attempts = await db
     .selectFrom('agent_model_attempts as model')
     .leftJoin('agent_tool_attempts as tool', (join) =>
@@ -75,6 +75,7 @@ export async function progress(db: Database, run: Run) {
     .select([
       'model.id as model_id',
       'model.ordinal',
+      'model.run_attempt',
       'model.outcome',
       'tool.id as tool_id',
       'tool.tool_name',
@@ -83,17 +84,23 @@ export async function progress(db: Database, run: Run) {
     ])
     .where('model.workspace_id', '=', run.workspace_id)
     .where('model.run_id', '=', run.id)
-    .where('model.run_attempt', '=', run.attempt_count)
+    .orderBy('model.run_attempt')
     .orderBy('model.ordinal')
     .execute();
   return attempts.map((row, index) =>
     agentRunStepSchema.parse({
       ordinal: row.ordinal,
-      status: row.tool_status ?? modelStepStatus(row.outcome, index === attempts.length - 1),
+      status:
+        row.tool_status ??
+        (row.run_attempt === run.attempt_count && active.includes(run.status)
+          ? modelStepStatus(row.outcome, index === attempts.length - 1)
+          : row.outcome === 'dispatched'
+            ? 'interrupted'
+            : modelStepStatus(row.outcome, false)),
       tool: row.tool_name,
       model_attempt_id: row.model_id,
       tool_attempt_id: row.tool_id,
-      run_attempt: run.attempt_count,
+      run_attempt: row.run_attempt,
       runtime_version: run.runtime_version,
       protocol_version: run.protocol_version,
       registry_version: row.registry_version ?? run.registry_version,

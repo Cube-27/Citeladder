@@ -72,7 +72,7 @@ function NewChat({
   const handoff = useMemo(() => parseAgentHandoff(searchParams), [searchParams]);
   const [message, setMessage] = useState(handoff.prompt ?? '');
   const [context, setContext] = useState(handoff.context);
-  const [skillId, setSkillId] = useState<string | null>(handoff.skillId ?? null);
+  const [skillId, setSkillId] = useState<string | null | undefined>(handoff.skillId ?? null);
   const access = useAgentAccess();
   const navigate = useNavigate();
   const projectHref = useProjectHref();
@@ -80,7 +80,7 @@ function NewChat({
     navigate(projectHref(`/agent/chats/${chatId}`)),
   );
   const failure = create.failure;
-  const commands = useComposerCommands({ workspaceId, projectId, onSkill: setSkillId });
+  const commands = useComposerCommands({ workspaceId, projectId });
   // Shares AttachedAction's cache entry. An Action that failed to load is
   // dropped, as that notice promises, rather than failing the whole chat.
   const attached = useQuery({
@@ -136,6 +136,7 @@ function NewChat({
             onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
             tools={
               <SkillPicker
+                {...commands.skillPicker}
                 value={skillId}
                 onChange={setSkillId}
                 hasAction={Boolean(handoff.actionId && !attached.isError)}

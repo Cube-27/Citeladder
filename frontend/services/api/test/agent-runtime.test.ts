@@ -108,6 +108,38 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     });
     expect((await readChat(db, scope, run.chat_id)).messages).toHaveLength(1);
   });
+  it('distinguishes inherited selection, clearing a pin and changing output kind', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope, { skillId: 'plan' });
+    await fixtures.runtime(scope, scripted([deliverable('final')])).execute(first.lease);
+    const cleared = await fixtures.store().enqueue(scope, {
+      chatId: first.run.chat_id,
+      key: randomUUID(),
+      message: 'Explain the plan',
+      skillId: null,
+    });
+    expect((await readChat(db, scope, first.run.chat_id)).pinned_skill_id).toBeNull();
+    const key = randomUUID();
+    await fixtures.store().cancel(scope, cleared.chat_id, cleared.id);
+    const inherited = await fixtures
+      .store()
+      .enqueue(scope, { chatId: cleared.chat_id, key, message: 'Question' });
+    await expect(
+      fixtures
+        .store()
+        .enqueue(scope, { chatId: cleared.chat_id, key, message: 'Question', skillId: null }),
+    ).rejects.toMatchObject({ code: 'agent_idempotency_conflict' });
+    await fixtures.store().cancel(scope, inherited.chat_id, inherited.id);
+    await expect(
+      fixtures.store().enqueue(scope, {
+        chatId: inherited.chat_id,
+        key: randomUUID(),
+        message: 'Change kind',
+        skillId: 'content',
+      }),
+    ).rejects.toMatchObject({ code: 'agent_skill_kind_conflict' });
+    expect((await readChat(db, scope, inherited.chat_id)).output?.kind).toBe('plan');
+  });
   it('repairs outputs without a selected skill and fails exhausted repairs without artifacts', async () => {
     const scope = await fixtures.scope();
     const first = await fixtures.claimed(scope);
@@ -242,7 +274,6 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       status: 'succeeded',
       steps_used: 3,
       skill_id: 'plan',
-      progress: [],
     });
     expect(detail.messages.at(-1)).toMatchObject({ role: 'agent', evidence_refs: [uri] });
     expect(detail.messages.at(-1)?.content).toContain('[unverified reference]');

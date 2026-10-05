@@ -19,6 +19,7 @@ import { agentQueries, type AgentSkill } from '@/lib/api/agent';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const AUTOMATIC = '';
+const INHERIT = '__inherit';
 
 /** The catalog, shared by the picker and the message skill labels. */
 export function useSkillCatalog(): AgentSkill[] {
@@ -44,13 +45,19 @@ export function SkillPicker({
   inheritedSkillId,
   hasAction = false,
   disabled,
+  open,
+  onOpenChange,
+  onSelect,
 }: Readonly<{
-  value: string | null;
-  onChange: (skillId: string | null) => void;
+  value: string | null | undefined;
+  onChange: (skillId: string | null | undefined) => void;
   outputKind?: string | null;
   inheritedSkillId?: string | null;
   hasAction?: boolean;
   disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSelect?: () => void;
 }>) {
   const skills = useSkillCatalog().filter(
     (skill) => !outputKind || skill.output_kind === outputKind,
@@ -68,9 +75,10 @@ export function SkillPicker({
       : hasAction
         ? 'From attached Action'
         : 'Automatic';
-  const current = skillLabel(skills, value) ?? defaultLabel;
+  const current =
+    value === null ? 'Automatic' : (skillLabel(skills, value ?? null) ?? defaultLabel);
   return (
-    <Dropdown>
+    <Dropdown open={disabled ? false : open} onOpenChange={onOpenChange}>
       <DropdownTrigger asChild>
         <Button variant="ghost" size="sm" disabled={disabled} aria-label={`Skill: ${current}`}>
           Skill: {current}
@@ -79,10 +87,16 @@ export function SkillPicker({
       </DropdownTrigger>
       <DropdownContent align="start" className="w-64">
         <DropdownRadioGroup
-          value={value ?? AUTOMATIC}
-          onValueChange={(next) => onChange(next === AUTOMATIC ? null : next)}
+          value={value === undefined ? INHERIT : (value ?? AUTOMATIC)}
+          onValueChange={(next) => {
+            onSelect?.();
+            onChange(next === INHERIT ? undefined : next === AUTOMATIC ? null : next);
+          }}
         >
-          <DropdownRadioItem value={AUTOMATIC}>{defaultLabel}</DropdownRadioItem>
+          {defaultLabel !== 'Automatic' ? (
+            <DropdownRadioItem value={INHERIT}>{defaultLabel}</DropdownRadioItem>
+          ) : null}
+          <DropdownRadioItem value={AUTOMATIC}>Automatic</DropdownRadioItem>
           {[...groups].map(([group, rows]) => (
             <Fragment key={group}>
               <DropdownSeparator />

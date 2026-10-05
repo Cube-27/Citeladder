@@ -153,7 +153,7 @@ export const agentRoutes = [
       const run = await mapped(() =>
         store.enqueue(scope(c, path.project_id), {
           message: input.message,
-          skillId: input.skill_id ?? undefined,
+          skillId: input.skill_id,
           actionId: input.action_id ?? undefined,
           refs: z
             .record(z.string(), z.json())
@@ -195,7 +195,7 @@ export const agentRoutes = [
         store.enqueue(value, {
           chatId: path.chat_id,
           message: input.message,
-          skillId: input.skill_id ?? undefined,
+          skillId: input.skill_id,
           mentionIds: input.mentions,
           key: key(c),
         }),

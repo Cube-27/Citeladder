@@ -605,7 +605,7 @@ describe('ChatScreen', () => {
         name: 'Skill: Continue with Search Console optimization',
       }),
     );
-    expect(screen.queryByRole('menuitemradio', { name: 'Automatic' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitemradio', { name: 'Automatic' })).toBeVisible();
     await user.click(screen.getByRole('menuitemradio', { name: 'Search Console optimization' }));
     await user.click(screen.getByRole('button', { name: 'Skill: Search Console optimization' }));
     await user.click(
