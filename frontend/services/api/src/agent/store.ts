@@ -261,7 +261,10 @@ export class AgentStore {
           mode,
           requested_skill_id: skill.id,
           requested_skill_source: skill.source,
-          context_manifest: manifest,
+          context_manifest: {
+            ...manifest,
+            ...(approvalRevision ? { approval: { revision_id: approvalRevision } } : {}),
+          },
           budget: admittedBudget(this.dependencies.timeoutSeconds),
           runtime_version: agentPolicy.runtime_version,
           protocol_version: agentPolicy.protocol_version,

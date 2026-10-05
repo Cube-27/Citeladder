@@ -18,6 +18,9 @@ import { manifestSchema, suppliedManifest } from './context.ts';
 import { assemblePrompt, type Observation } from './prompt.ts';
 import { ModelCalls, type AgentModel } from './model-calls.ts';
 import { currentOutput, saveAgentOutput, type AttachTarget } from './outputs.ts';
+import { revisionRefs } from './outputs.ts';
+import { parseRecordId } from '../mcp/retrieval.ts';
+import { record } from '../db/json.ts';
 import { lockRun, terminalize } from './queue.ts';
 import { getChat, appendMessage } from './store.ts';
 import { refused, ToolRegistry, type ToolOutcome } from './tools.ts';
@@ -108,6 +111,44 @@ export class AgentRuntime {
         .where('id', '=', run.user_message_id)
         .executeTakeFirstOrThrow();
       const manifest = manifestSchema.parse(run.context_manifest);
+      const prior = await trx
+        .selectFrom('agent_tool_attempts as tool')
+        .innerJoin('agent_runs as prior', (join) =>
+          join
+            .onRef('prior.id', '=', 'tool.run_id')
+            .onRef('prior.workspace_id', '=', 'tool.workspace_id')
+            .onRef('prior.project_id', '=', 'tool.project_id'),
+        )
+        .select('tool.artifact_refs')
+        .where('prior.workspace_id', '=', scope.workspaceId)
+        .where('prior.project_id', '=', scope.projectId)
+        .where('prior.chat_id', '=', chat.id)
+        .orderBy('tool.created_at', 'desc')
+        .limit(budget.prior_evidence_max_refs)
+        .execute();
+      const hints = [
+        ...new Set([
+          ...revisionRefs(current.revision?.source_refs ?? []),
+          ...prior.flatMap((row) =>
+            Array.isArray(row.artifact_refs)
+              ? row.artifact_refs.flatMap((ref) =>
+                  typeof record(ref).record_uri === 'string'
+                    ? [String(record(ref).record_uri)]
+                    : [],
+                )
+              : [],
+          ),
+        ]),
+      ]
+        .filter((ref) => {
+          try {
+            parseRecordId(ref);
+            return true;
+          } catch {
+            return false;
+          }
+        })
+        .slice(0, budget.prior_evidence_max_refs);
       return {
         run,
         scope,
@@ -115,6 +156,7 @@ export class AgentRuntime {
         current,
         request: request.content,
         manifest,
+        hints,
         budget,
         historyLimited: messages.length > budget.history_max_messages,
         history: messages
@@ -307,6 +349,7 @@ export class AgentRuntime {
         ? 'Deliverables require an outline; questions require only a reply.'
         : 'Return an output only when requested.',
       JSON.stringify(this.deps.tools.catalog()),
+      `Prior evidence navigation hints (not source facts or citation grants; exact fetches must use this turn's read budget): ${JSON.stringify(turn.hints)}`,
     ].join('\n\n');
     const context = suppliedManifest(turn.manifest, turn.budget.context_package_max_chars);
     const assembled = assemblePrompt({

@@ -19,6 +19,7 @@ import { AgentQueue, lockRun } from '../src/agent/queue.ts';
 import { AgentOutputs } from '../src/agent/outputs.ts';
 import { ModelCalls, type Funding } from '../src/agent/model-calls.ts';
 import { readChat, listChats, listRevisions, progress } from '../src/agent/reads.ts';
+import { appendMessage, getChat } from '../src/agent/store.ts';
 import { ToolRegistry } from '../src/agent/tools.ts';
 import { contextCitations, renderManifest } from '../src/agent/context.ts';
 import { bounded, stripUnverifiedRefs } from '../src/agent/runtime.ts';
@@ -620,7 +621,6 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .execute();
     expect((await readChat(db, scope, a.chat_id)).context.instructions).toMatchObject({
       revision: 1,
-      text: 'Use a concise voice.',
     });
     expect((await readChat(db, scope, b.chat_id)).context.instructions).toMatchObject({
       revision: 2,
@@ -634,6 +634,128 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     await fixtures.store().cancel(scope, a.chat_id, a.id);
     await fixtures.store().archive(scope, a.chat_id);
     expect((await listChats(db, scope)).items.map((chat) => chat.id)).toEqual([b.chat_id]);
+  });
+  it('searches later message content without duplicate chats or sibling/workspace leakage', async () => {
+    const scope = await fixtures.scope();
+    const run = await fixtures
+      .store()
+      .enqueue(scope, { key: randomUUID(), message: 'Unrelated title' });
+    await db.transaction().execute(async (trx) => {
+      const chat = await getChat(trx, scope, run.chat_id, true);
+      await appendMessage(trx, chat, { role: 'user', content: 'Later topic: robots permission' });
+      await appendMessage(trx, chat, { role: 'agent', content: 'Explain robots permission' });
+    });
+    const foreign = await fixtures.scope();
+    await fixtures.store().enqueue(foreign, { key: randomUUID(), message: 'robots permission' });
+    const sibling = await fixtures.project(scope.workspaceId);
+    await fixtures
+      .store()
+      .enqueue(
+        { ...scope, projectId: sibling },
+        { key: randomUUID(), message: 'robots permission' },
+      );
+    expect(
+      (await listChats(db, scope, { query: 'robots permission' })).items.map((chat) => chat.id),
+    ).toEqual([run.chat_id]);
+    expect((await listChats(db, scope, { query: '%' })).items).toEqual([]);
+    const plan = await sql`explain (format json) select c.id from agent_chats c
+      where c.workspace_id = ${scope.workspaceId}::uuid and c.project_id = ${scope.projectId}::uuid
+      and exists (select 1 from agent_messages m where m.workspace_id = c.workspace_id
+        and m.project_id = c.project_id and m.chat_id = c.id and m.content ilike '%robots permission%')
+      order by c.last_activity_at desc, c.id desc limit 31`.execute(db);
+    expect(plan.rows.length).toBe(1);
+  });
+  it('retains retry activity and the step high-water mark while restarting from step one', async () => {
+    const scope = await fixtures.scope();
+    const run = await fixtures
+      .store()
+      .enqueue(scope, { key: randomUUID(), message: 'Read and explain' });
+    const queue = new AgentQueue(db, 30);
+    const model = {
+      ...scripted(
+        [
+          { action: 'select_skill', skill_id: 'plan' },
+          { action: 'call_tool', tool: 'read_evidence', arguments: {} },
+        ],
+        async (_request, ordinal) => {
+          if (ordinal === 3) throw new Error('Transient failure');
+        },
+      ),
+      retryableError: () => true,
+    };
+    await runAgentOnce(
+      queue,
+      fixtures.runtime(scope, model),
+      'retry-activity',
+      [scope.workspaceId],
+      () => 0,
+    );
+    expect(await fixtures.run(run.id)).toMatchObject({ status: 'retry_wait', steps_used: 3 });
+    const next = scripted([reply()], async () => {
+      const saved = await fixtures.run(run.id);
+      expect(saved.steps_used).toBe(3);
+      const activity = await progress(db, saved);
+      expect(
+        activity
+          .filter((step) => step.run_attempt === 1)
+          .some((step) => ['working', 'processing'].includes(step.status)),
+      ).toBe(false);
+      expect(activity.at(-1)).toMatchObject({ run_attempt: 2, ordinal: 1, status: 'working' });
+    });
+    await runAgentOnce(
+      queue,
+      fixtures.runtime(scope, next),
+      'retry-activity',
+      [scope.workspaceId],
+      () => 0,
+    );
+    const detail = await readChat(db, scope, run.chat_id);
+    expect(detail.latest_run).toMatchObject({
+      status: 'succeeded',
+      steps_used: 3,
+      attempt_count: 2,
+    });
+    expect(detail.latest_run?.progress.map((step) => step.run_attempt)).toEqual([1, 1, 1, 2]);
+  });
+  it('uses admitted size policy and refuses an oversized latest user edit before model dispatch', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope, { skillId: 'plan' });
+    await fixtures.runtime(scope, scripted([deliverable('final')])).execute(first.lease);
+    const output = (await readChat(db, scope, first.run.chat_id)).output!;
+    const edited = await new AgentOutputs(db).edit(
+      scope,
+      first.run.chat_id,
+      output.latest_revision!.id,
+      'Large edited document',
+      'x'.repeat(100000),
+    );
+    const next = await fixtures.claimed(scope, { chatId: first.run.chat_id });
+    const complete = vi.fn(scripted([deliverable()]).complete);
+    await fixtures.runtime(scope, { ...scripted([]), complete }).execute(next.lease);
+    expect(complete).not.toHaveBeenCalled();
+    const detail = await readChat(db, scope, first.run.chat_id);
+    expect(detail.latest_run).toMatchObject({
+      status: 'failed',
+      error_code: 'output_context_size_limit',
+    });
+    expect(detail.output?.latest_revision?.id).toBe(edited.id);
+    const small = await fixtures.claimed(scope);
+    await db
+      .updateTable('agent_runs')
+      .set({
+        budget: {
+          ...(small.run.budget as object),
+          tool_result_max_chars: 100,
+          reply_max_chars: 100,
+          max_protocol_errors: 1,
+        },
+      })
+      .where('id', '=', small.run.id)
+      .execute();
+    await fixtures.runtime(scope, scripted([reply('a'.repeat(200))])).execute(small.lease);
+    expect(
+      (await readChat(db, scope, small.run.chat_id)).messages.at(-1)?.content.length,
+    ).toBeLessThanOrEqual(100);
   });
   it('runs the bounded worker unit with an explicit tenant set', async () => {
     const scope = await fixtures.scope();

@@ -115,7 +115,7 @@ export const agentRoutes = [
           scalar: { kind: 'int', ge: 1, le: agentPolicy.list_max_limit },
           default: agentPolicy.list_default_limit,
         },
-        q: { scalar: { kind: 'str', maxLength: 120 } },
+        q: { scalar: { kind: 'str', maxLength: agentPolicy.history_search_max_chars } },
         action_id: { scalar: { kind: 'uuid' } },
         cursor: { scalar: { kind: 'str', maxLength: 512 } },
       },

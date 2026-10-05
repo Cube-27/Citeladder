@@ -29,6 +29,7 @@ export const manifestSchema = z.object({
   mentions: z.array(actionSchema),
   instructions: z.object({ revision: z.number().int(), text: z.string() }).nullable(),
   prompt_summary: z.record(z.string(), z.json()).optional(),
+  approval: z.object({ revision_id: z.uuid() }).optional(),
 });
 export type Manifest = z.infer<typeof manifestSchema>;
 /** Evidence owners authorize all origin IDs and return bounded persisted blocks.

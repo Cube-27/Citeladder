@@ -8,6 +8,7 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
+import { Disclosure } from '@/components/ui/disclosure';
 import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
@@ -49,6 +50,7 @@ export function Conversation({
   const output = detail.output;
   return (
     <div className="grid gap-4">
+      <ContextUsed context={detail.context} />
       <ol aria-label="Messages" className="grid gap-4">
         {detail.messages.map((message) => (
           <li key={message.id}>
@@ -127,6 +129,16 @@ function MessageBubble({
   message,
   skill,
 }: Readonly<{ message: AgentMessage; skill: string | null }>) {
+  if (message.event?.kind === 'outline_approved')
+    return (
+      <article
+        aria-label="Outline approval"
+        className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1')}
+      >
+        <span className={textRole('label')}>Outline approved</span>
+        <p className={textRole('caption')}>Draft requested from the approved revision.</p>
+      </article>
+    );
   if (message.role === 'user')
     return (
       <div className="flex justify-end">
@@ -180,6 +192,68 @@ function MessageBubble({
         </details>
       ) : null}
     </article>
+  );
+}
+function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context'] }>) {
+  const prompt = context.prompt ?? {};
+  const included = Array.isArray(prompt.included_sections) ? prompt.included_sections : [];
+  const omissions = [
+    ...(context.limitations ?? []),
+    ...(Array.isArray(prompt.omissions) ? prompt.omissions : []),
+  ];
+  const labels: Record<string, string> = {
+    brand: 'Reviewed business context',
+    target_page: 'Target page',
+    related_site: 'Related pages',
+    opportunity: 'Recommendation',
+    demand: 'Demand evidence',
+    site_health: 'Page diagnosis',
+    search_intelligence: 'Selected Search Intelligence rows',
+    issue_group: 'Selected issue group',
+    site_facts: 'Selected crawl robots policy',
+    upstream_revision: 'Selected document revision',
+  };
+  if (!Object.keys(context).length) return null;
+  return (
+    <Disclosure title="Context used">
+      <div className="grid gap-2">
+        <p className={textRole('caption')}>
+          {included.length
+            ? included.map((section) => labels[String(section)] ?? String(section)).join(' · ')
+            : 'No model context has been supplied yet.'}
+        </p>
+        {context.instructions ? (
+          <p className={textRole('caption')}>
+            Project instructions · revision {context.instructions.revision}
+          </p>
+        ) : null}
+        {context.action ? (
+          <p className={textRole('caption')}>Action: {context.action.label}</p>
+        ) : null}
+        {(context.sources?.length ?? 0) > 0 ? (
+          <p className={textRole('caption')}>
+            {context.sources!.length} persisted page source references
+          </p>
+        ) : null}
+        {typeof prompt.serialized_chars === 'number' ? (
+          <p className={textRole('caption')}>
+            Working context: {prompt.serialized_chars.toLocaleString()} of{' '}
+            {Number(prompt.max_chars).toLocaleString()} characters
+          </p>
+        ) : null}
+        {omissions.length > 0 ? (
+          <ul aria-label="Context limitations" className="grid gap-1">
+            {omissions.map((omission, index) => (
+              <li key={index} className={textRole('caption')}>
+                {typeof omission === 'string'
+                  ? omission.replaceAll('_', ' ')
+                  : JSON.stringify(omission)}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </Disclosure>
   );
 }
 

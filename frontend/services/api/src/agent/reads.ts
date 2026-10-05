@@ -19,6 +19,7 @@ import { agentPolicy, type Chat, type Run, type Scope } from './contracts.ts';
 import { currentOutput, revisionRefs } from './outputs.ts';
 import { active } from './queue.ts';
 import { getChat } from './store.ts';
+import { manifestSchema } from './context.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
 function summary(chat: Chat, output: { kind: string; phase: string } | null, label: string | null) {
@@ -129,6 +130,32 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
     .limit(1)
     .executeTakeFirst();
   const current = await currentOutput(db, chat);
+  const manifest = run ? manifestSchema.parse(run.context_manifest) : null;
+  const approvals = await db
+    .selectFrom('agent_runs')
+    .select(['id', 'user_message_id', 'context_manifest'])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('chat_id', '=', chat.id)
+    .where('mode', '=', 'draft_from_outline')
+    .execute();
+  const events = new Map(
+    approvals.flatMap((approval) => {
+      const parsed = manifestSchema.safeParse(approval.context_manifest);
+      return parsed.success && parsed.data.approval
+        ? [
+            [
+              approval.user_message_id,
+              {
+                kind: 'outline_approved' as const,
+                revision_id: parsed.data.approval.revision_id,
+                run_id: approval.id,
+              },
+            ] as const,
+          ]
+        : [];
+    }),
+  );
   const action = chat.action_id
     ? await db
         .selectFrom('actions')
@@ -142,12 +169,21 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
     chat: summary(chat, current.output, action?.target_label ?? null),
     pinned_skill_id: chat.pinned_skill_id,
     context: {
-      ...jsonObject(chat.context_refs, 'agent_chats.context_refs'),
-      ...(run ? jsonObject(run.context_manifest, 'agent_runs.context_manifest') : {}),
+      refs: jsonObject(chat.context_refs, 'agent_chats.context_refs'),
+      instructions: manifest?.instructions ? { revision: manifest.instructions.revision } : null,
+      action: manifest?.action
+        ? { id: manifest.action.id, label: manifest.action.target_label }
+        : null,
+      mentions:
+        manifest?.mentions.map((action) => ({ id: action.id, label: action.target_label })) ?? [],
+      sources: manifest?.package.summary.provenance ?? [],
+      limitations: manifest?.package.summary.omissions ?? [],
+      prompt: manifest?.prompt_summary ?? {},
     },
     messages: messages.map((message) =>
       agentMessageSchema.parse({
         ...message,
+        event: events.get(message.id) ?? null,
         created_at: iso(message.created_at),
         evidence_refs: revisionRefs(message.evidence_refs),
       }),
@@ -231,7 +267,24 @@ export async function listChats(
     .where('chat.project_id', '=', scope.projectId)
     .where('chat.archived_at', 'is', null);
   if (options.actionId) query = query.where('chat.action_id', '=', options.actionId);
-  if (options.query) query = query.where('chat.title', 'ilike', containsPattern(options.query));
+  if (options.query) {
+    const search = z.string().trim().max(agentPolicy.history_search_max_chars).parse(options.query);
+    const pattern = containsPattern(search);
+    query = query.where((eb) =>
+      eb.or([
+        eb('chat.title', 'ilike', pattern),
+        eb.exists(
+          eb
+            .selectFrom('agent_messages as message')
+            .select('message.id')
+            .whereRef('message.workspace_id', '=', 'chat.workspace_id')
+            .whereRef('message.project_id', '=', 'chat.project_id')
+            .whereRef('message.chat_id', '=', 'chat.id')
+            .where('message.content', 'ilike', pattern),
+        ),
+      ]),
+    );
+  }
   if (options.cursor) {
     const cursor = cursorSchema.parse(
       JSON.parse(Buffer.from(options.cursor, 'base64url').toString('utf8')),

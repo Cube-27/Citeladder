@@ -30,6 +30,7 @@ export const budgetSchema = z.object({
   transcript_max_chars: z.number().int().positive(),
   history_max_messages: z.number().int().positive(),
   history_message_max_chars: z.number().int().positive(),
+  prior_evidence_max_refs: z.number().int().positive(),
   reply_max_chars: z.number().int().positive(),
   output_body_max_chars: z.number().int().positive(),
   output_title_max_chars: z.number().int().positive(),

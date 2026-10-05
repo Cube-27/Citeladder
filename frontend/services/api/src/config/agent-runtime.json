@@ -15,6 +15,8 @@
   "progress_version": "agent-progress-1",
   "history_max_messages": 12,
   "history_message_max_chars": 4000,
+  "prior_evidence_max_refs": 12,
+  "history_search_max_chars": 120,
   "message_max_chars": 8000,
   "mentions_max": 5,
   "instructions_max_chars": 4000,

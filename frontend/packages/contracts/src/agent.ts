@@ -39,7 +39,7 @@ export const agentRunSchema = responseObject({
   skill_id: z.string().nullable(),
   skill_source: z.string().nullable(),
   steps_used: z.number().int(),
-  attempt_count: z.number().int().default(0),
+  attempt_count: z.number().int().optional(),
   error_code: z.string(),
   error_detail: z.string(),
   created_at: z.string(),
@@ -96,6 +96,13 @@ export const agentMessageSchema = responseObject({
     .array(responseObject({ kind: z.string(), id: uuid(), label: z.string() }))
     .default([]),
   created_at: z.string(),
+  event: responseObject({
+    kind: z.literal('outline_approved'),
+    revision_id: uuid(),
+    run_id: uuid(),
+  })
+    .nullable()
+    .optional(),
 });
 
 export const agentChatSummarySchema = responseObject({
@@ -116,10 +123,19 @@ export const agentChatsPageSchema = responseObject({
   next_cursor: z.string().nullable(),
 });
 
+export const agentContextDisclosureSchema = responseObject({
+  refs: z.record(z.string(), z.json()).default({}),
+  instructions: responseObject({ revision: z.number().int() }).nullable().default(null),
+  action: responseObject({ id: uuid(), label: z.string() }).nullable().default(null),
+  mentions: z.array(responseObject({ id: uuid(), label: z.string() })).default([]),
+  sources: z.array(z.json()).default([]),
+  limitations: z.array(z.json()).default([]),
+  prompt: z.record(z.string(), z.json()).default({}),
+});
 export const agentChatDetailSchema = responseObject({
   chat: agentChatSummarySchema,
   pinned_skill_id: z.string().nullable(),
-  context: z.record(z.string(), z.unknown()),
+  context: agentContextDisclosureSchema.partial(),
   messages: z.array(agentMessageSchema),
   latest_run: agentRunSchema.nullable(),
   output: agentOutputSchema.nullable(),
