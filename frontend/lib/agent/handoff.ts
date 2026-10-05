@@ -21,6 +21,12 @@ const PARAM = {
   rows: 'si_row_id',
   prompt: 'prompt',
   skill: 'skill',
+  issueCrawl: 'issue_crawl_id',
+  issueGroup: 'issue_group_id',
+  issuePage: 'issue_page_id',
+  factsCrawl: 'facts_crawl_id',
+  output: 'output_id',
+  revision: 'revision_id',
 } as const;
 
 export type AgentHandoff = {
@@ -37,6 +43,9 @@ export type HandoffInput = {
   siteUrlId?: string | null;
   targetUrl?: string | null;
   searchIntelligence?: { datasetId: string; rowIds: readonly string[] } | null;
+  issueGroup?: { crawlId: string; groupId: string; siteUrlId?: string };
+  siteFacts?: { crawlId: string };
+  outputRevision?: { outputId: string; revisionId: string };
   prompt?: string | null;
   skillId?: string | null;
 };
@@ -52,6 +61,12 @@ export function agentHandoffHref(input: HandoffInput): string {
   set(PARAM.demandSignal, input.demandSignalId);
   set(PARAM.siteUrl, input.siteUrlId);
   set(PARAM.targetUrl, input.targetUrl);
+  set(PARAM.issueCrawl, input.issueGroup?.crawlId);
+  set(PARAM.issueGroup, input.issueGroup?.groupId);
+  set(PARAM.issuePage, input.issueGroup?.siteUrlId);
+  set(PARAM.factsCrawl, input.siteFacts?.crawlId);
+  set(PARAM.output, input.outputRevision?.outputId);
+  set(PARAM.revision, input.outputRevision?.revisionId);
   if (input.searchIntelligence && input.searchIntelligence.rowIds.length > 0) {
     params.set(PARAM.dataset, input.searchIntelligence.datasetId);
     for (const row of input.searchIntelligence.rowIds) params.append(PARAM.rows, row);
@@ -68,7 +83,7 @@ export function agentHandoffHref(input: HandoffInput): string {
  * authorizes each one when the chat is created.
  */
 export function agentHandoff(input: HandoffInput): AgentHandoff {
-  const context: AgentContextRefs = {};
+  const context = originContext(input);
   if (input.opportunityId) context.opportunity_id = input.opportunityId;
   if (input.demandSignalId) context.demand_signal_id = input.demandSignalId;
   if (input.siteUrlId) context.target_site_url_id = input.siteUrlId;
@@ -91,6 +106,41 @@ function uuidParam(params: URLSearchParams, key: string): string | undefined {
   const value = params.get(key);
   return value && UUID.test(value) ? value : undefined;
 }
+function originContext(input: HandoffInput): AgentContextRefs {
+  const context: AgentContextRefs = {};
+  if (input.issueGroup)
+    context.issue_group_reference = {
+      crawl_id: input.issueGroup.crawlId,
+      group_id: input.issueGroup.groupId,
+      ...(input.issueGroup.siteUrlId ? { site_url_id: input.issueGroup.siteUrlId } : {}),
+    };
+  if (input.siteFacts) context.site_facts_reference = { crawl_id: input.siteFacts.crawlId };
+  if (input.outputRevision)
+    context.output_revision_reference = {
+      output_id: input.outputRevision.outputId,
+      revision_id: input.outputRevision.revisionId,
+    };
+  return context;
+}
+function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
+  const context: AgentContextRefs = {};
+  const issueCrawl = uuidParam(params, PARAM.issueCrawl),
+    issueGroup = uuidParam(params, PARAM.issueGroup),
+    issuePage = uuidParam(params, PARAM.issuePage);
+  if (issueCrawl && issueGroup)
+    context.issue_group_reference = {
+      crawl_id: issueCrawl,
+      group_id: issueGroup,
+      ...(issuePage ? { site_url_id: issuePage } : {}),
+    };
+  const factsCrawl = uuidParam(params, PARAM.factsCrawl);
+  if (factsCrawl) context.site_facts_reference = { crawl_id: factsCrawl };
+  const output = uuidParam(params, PARAM.output),
+    revision = uuidParam(params, PARAM.revision);
+  if (output && revision)
+    context.output_revision_reference = { output_id: output, revision_id: revision };
+  return context;
+}
 
 function httpUrlParam(params: URLSearchParams, key: string): string | undefined {
   const value = params.get(key);
@@ -105,7 +155,7 @@ function httpUrlParam(params: URLSearchParams, key: string): string | undefined 
 
 /** The handoff a New chat URL carries, with malformed values dropped. */
 export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
-  const context: AgentContextRefs = {};
+  const context = parsedOriginContext(params);
   const opportunity = uuidParam(params, PARAM.opportunity);
   if (opportunity) context.opportunity_id = opportunity;
   const signal = uuidParam(params, PARAM.demandSignal);
@@ -136,6 +186,17 @@ export type ContextChip = { key: keyof AgentContextRefs; label: string };
 
 export function contextChips(context: AgentContextRefs): ContextChip[] {
   const chips: ContextChip[] = [];
+  if (context.issue_group_reference)
+    chips.push({
+      key: 'issue_group_reference',
+      label: context.issue_group_reference.site_url_id
+        ? 'Selected page issue'
+        : 'Selected issue group',
+    });
+  if (context.site_facts_reference)
+    chips.push({ key: 'site_facts_reference', label: 'Selected crawl robots policy' });
+  if (context.output_revision_reference)
+    chips.push({ key: 'output_revision_reference', label: 'Selected document revision' });
   if (context.target_url) chips.push({ key: 'target_url', label: context.target_url });
   else if (context.target_site_url_id)
     chips.push({ key: 'target_site_url_id', label: 'Selected page' });

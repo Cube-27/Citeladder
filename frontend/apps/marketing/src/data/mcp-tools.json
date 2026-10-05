@@ -159,7 +159,7 @@
     {
       "name": "read_ai_crawlability",
       "title": "Read AI crawlability",
-      "description": "Read the latest crawl’s persisted per-bot robots policy, root access, fetch status, snapshot ID and catalog version. Robots policy describes permission, not observed retrieval.",
+      "description": "Read persisted per-bot robots policy, root access, fetch status, snapshot ID and catalog version. Pass crawl_id for exact historical scope; omitted selects latest. Unobserved robots evidence is unavailable, never allowed or zero. Robots policy describes permission, not observed retrieval.",
       "input_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -168,6 +168,18 @@
             "type": "string",
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "crawl_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": ["project_id"],
@@ -464,7 +476,7 @@
     {
       "name": "read_crawl_logs",
       "title": "Read crawl log analytics",
-      "description": "Read persisted recognized automated request summary, crawlers or coverage. Requests, referral sessions and tracked citations are separate units. Missing coverage never implies zero.",
+      "description": "Read persisted recognized automated requests with inclusive date windows. verification describes crawler identity evidence, not crawl success. Requests, sessions and citations are separate units. Missing coverage never implies zero.",
       "input_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -839,7 +851,7 @@
     {
       "name": "read_prompt_portfolio",
       "title": "Read the prompt portfolio",
-      "description": "Enumerate persisted prompts with cohort, activation status, generation provenance and stable pagination.",
+      "description": "Enumerate persisted prompts with activation status, provenance and pagination. Core is the canonical scoring cohort; comparison is a separate panel. Empty available results mean no matching prompts.",
       "input_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -888,7 +900,7 @@
     {
       "name": "read_query_evidence",
       "title": "Read page-linked query evidence",
-      "description": "Read an exact saved query/page/date window. A missing window never falls back to another range.",
+      "description": "Read an exact saved query/page/date window (inclusive dates). Missing windows never fall back. resolution_outcome filters persisted URL binding, not performance. Observed zero differs from unavailable.",
       "input_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -1173,7 +1185,7 @@
     {
       "name": "read_visibility_results",
       "title": "Read visibility results",
-      "description": "Read persisted answers, entity observations, citations and query fanout for one audit without rerunning providers.",
+      "description": "Read persisted answers and observations for one audit. Core is the canonical scoring panel; comparison is separately reported. Empty results differ from unavailable audit evidence. No provider rerun occurs.",
       "input_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",

@@ -142,6 +142,12 @@ const RUN_ERROR_COPY: Record<string, string> = {
   provider_error: 'The model provider returned an error. Try again.',
   tool_failed: 'A data read failed. Try again.',
   protocol_violation: 'The agent returned a response it could not use. Try again.',
+  incompatible_budget:
+    'The agent policy changed incompatibly after admission. Send this request again.',
+  output_context_size_limit:
+    'The current document is too large to refine within this turn’s context limit. It was preserved in full and no model call was made. Use a smaller document for refinement.',
+  context_size_limit:
+    'The selected context is too large for this turn. Remove a context reference or use a smaller upstream brief and send again.',
 };
 
 type RunStep = { status: string; tool: string | null };
@@ -164,6 +170,7 @@ export function runStepLabel(step: RunStep): string {
   if (step.status === 'processing') return 'Processing the next step…';
   if (step.status === 'reasoned') return 'Planned the next step';
   if (step.status === 'failed') return 'Step failed';
+  if (step.status === 'interrupted') return 'Earlier attempt interrupted';
   return 'Step status unknown';
 }
 

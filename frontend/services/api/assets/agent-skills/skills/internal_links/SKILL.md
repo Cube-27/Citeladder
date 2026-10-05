@@ -10,7 +10,7 @@ description: Improve contextual internal links to commercially important pages u
 
 # Internal links and page architecture
 
-Follow the operating contract. Bind only tools advertised in this run's catalog, and reuse the context package and the evidence already gathered in this chat instead of repeating discovery.
+Follow the operating contract. Bind only advertised read tools and use evidence actually supplied in this call. Earlier reads and upstream source references may need exact re-fetching. Another skill is explicit next-step advice, not an automatic invocation.
 
 ## Outcome and evidence
 

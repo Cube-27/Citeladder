@@ -21,6 +21,7 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { record, strings } from '../db/json.ts';
 import { isoDateText, utcText } from '../db/timestamps.ts';
 import { parseUuid } from '../http/uuid.ts';
+import { notFound } from '../errors.ts';
 import { queryEvidencePage } from '../demand/reads.ts';
 import { getPerformance, getPerformanceTable } from '../traffic/performance.ts';
 import { readAiReferrals } from '../analytics/ai-referrals.ts';
@@ -73,20 +74,29 @@ async function siteSnapshot(db: Database, scope: ReadScope): Promise<Evidence> {
       }
     : unavailable('no_site_snapshot');
 }
-async function crawlability(db: Database, scope: ReadScope): Promise<Evidence> {
-  const row = await workspace(scope)
+export async function crawlability(
+  db: Database,
+  scope: ReadScope,
+  crawlId?: string,
+): Promise<Evidence> {
+  let query = workspace(scope)
     .selectFrom(db, 'site_crawls')
-    .select(['id', 'site_facts', 'robots_snapshot_id'])
+    .select(['id', 'site_facts', 'robots_snapshot_id', 'status', 'created_at'])
     .where('project_id', '=', scope.projectId)
     .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
-    .executeTakeFirst();
+    .orderBy('id', 'desc');
+  if (crawlId) query = query.where('id', '=', crawlId);
+  const row = await query.executeTakeFirst();
+  if (crawlId && !row) throw notFound('Crawl');
   if (!row) return unavailable('no_site_crawl');
   const parsed = robotsFactsSchema.safeParse(record(row.site_facts).robots);
-  if (!parsed.success) return unavailable('robots_not_observed');
+  if (!parsed.success)
+    return { ...unavailable('robots_not_observed'), crawl_id: row.id, crawl_status: row.status };
   return {
     state: 'available',
     crawl_id: row.id,
+    crawl_status: row.status,
+    crawl_created_at: row.created_at.toISOString(),
     ...parsed.data,
     artifact_refs: [
       reference('site_crawl', row.id),
@@ -396,7 +406,8 @@ export async function readEvidence(
   }
   if (name === 'read_integration_status') return readIntegrationStatus(db, scope);
   if (name === 'read_site_health') return siteSnapshot(db, scope);
-  if (name === 'read_ai_crawlability') return crawlability(db, scope);
+  if (name === 'read_ai_crawlability')
+    return crawlability(db, scope, text(args, 'crawl_id') ?? undefined);
   if (name === 'read_demand') return demandSnapshot(db, scope);
   if (name === 'read_opportunities') return ranked(db, scope, args);
   if (name === 'read_visibility_audit') return audit(db, scope, args);

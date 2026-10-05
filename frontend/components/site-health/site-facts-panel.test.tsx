@@ -29,6 +29,9 @@ it('renders all policies and Not specified with accessible purpose tables and an
   const url = new URL(href, 'https://example.test');
   expect(url.searchParams.get('project')).toBe(crawl.project_id);
   expect(parseAgentHandoff(url.searchParams).prompt).toContain(crawl.id);
+  expect(parseAgentHandoff(url.searchParams).context.site_facts_reference).toEqual({
+    crawl_id: crawl.id,
+  });
   await user.click(screen.getByRole('combobox', { name: 'Filter crawlers by purpose' }));
   await user.click(screen.getByRole('option', { name: 'AI search' }));
   expect(

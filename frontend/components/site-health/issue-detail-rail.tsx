@@ -41,7 +41,10 @@ export function IssueDetailRail({
   onNext: () => void;
 }>) {
   const detail = detailQuery.isError ? undefined : detailQuery.data;
-  useAgentPanelSeed({ prompt: askAgentPrompt(issue) });
+  useAgentPanelSeed({
+    issueGroup: { crawlId, groupId: issue.group_id },
+    prompt: askAgentPrompt(issue),
+  });
   return (
     <section
       className="min-w-0 min-[701px]:sticky min-[701px]:top-[var(--workspace-gap)] min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))] min-[701px]:overflow-hidden"
@@ -78,7 +81,7 @@ export function IssueDetailRail({
               ) : null}
             </div>
           </div>
-          <IssueActions issue={issue} />
+          <IssueActions issue={issue} crawlId={crawlId} />
         </header>
         <div className="content-scroll grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)] min-[701px]:flex-1 min-[701px]:overflow-y-auto">
           {issue.description ? (
@@ -123,14 +126,19 @@ export function IssueDetailRail({
  * Every issue gets an action: the fix prompt a developer or assistant can use,
  * and Ask agent, which starts a chat about it in the Agent workspace.
  */
-function IssueActions({ issue }: Readonly<{ issue: SiteIssue }>) {
+function IssueActions({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: string }>) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <CopyButton value={buildFixPrompt(issue)} size="sm" variant="secondary" className="w-fit">
         Copy fix prompt
       </CopyButton>
       <Button variant="secondary" size="sm" asChild>
-        <ProjectLink href={agentHandoffHref({ prompt: askAgentPrompt(issue) })}>
+        <ProjectLink
+          href={agentHandoffHref({
+            issueGroup: { crawlId, groupId: issue.group_id },
+            prompt: askAgentPrompt(issue),
+          })}
+        >
           Ask agent
         </ProjectLink>
       </Button>
@@ -142,7 +150,9 @@ function askAgentPrompt(issue: SiteIssue, page?: string): string {
   const count = issue.affected_url_count;
   const pages = count === 1 ? 'page' : 'pages';
   const scope = page ? ` on ${page}` : ` (${count} affected ${pages})`;
-  return `Help me fix the Site Health issue "${issueTitle(issue)}"${scope}.`;
+  return page
+    ? `Analyze the Site Health issue "${issueTitle(issue)}"${scope} and propose exact page edits from the selected evidence.`
+    : `Analyze the Site Health issue "${issueTitle(issue)}"${scope}, prioritize the work and propose a bounded implementation plan. Label sampled occurrences and distinguish them from the total affected pages.`;
 }
 
 const OCCURRENCE_PLACEHOLDERS = ['first', 'second', 'third'] as const;
@@ -209,7 +219,7 @@ function OccurrenceList({
           <Button variant="ghost" size="sm" asChild className="w-fit">
             <ProjectLink
               href={agentHandoffHref({
-                siteUrlId: occurrence.site_url_id,
+                issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: occurrence.site_url_id },
                 prompt: askAgentPrompt(issue, occurrence.display_url),
               })}
             >

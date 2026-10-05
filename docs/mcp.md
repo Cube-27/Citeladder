@@ -112,8 +112,12 @@ as individual backlink edges.
 
 `read_ai_crawlability` reads the latest authorized project's persisted Site
 Health robots projection, including per-bot matched groups, root permissions,
-sample policies and snapshot provenance. `get_project_business_context`
-includes this projection in its selectable `crawlability` section. A missing
+sample policies and snapshot provenance. Its optional `crawl_id` pins an exact
+authorized crawl, including historical/unavailable observations; a foreign or
+missing explicit crawl is refused instead of falling back to latest. Crawl
+status/time remain separate from robots observation status/time.
+`get_project_business_context` includes this projection in its selectable
+`crawlability` section. A missing
 crawl or missing robots observation returns an explicit unavailable result;
 neither read starts a crawl. Snapshot references identify provenance but are
 not raw-body fetch resolvers. The browser's separately paged robots history

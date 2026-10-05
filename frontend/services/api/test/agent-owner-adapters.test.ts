@@ -1,7 +1,7 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import * as sharedTools from '../src/mcp/tools.ts';
-import { AgentFixtures, catalog, deliverable, scripted } from './agent-support.ts';
+import { AgentFixtures, agentPolicy, catalog, deliverable, scripted } from './agent-support.ts';
 import { testDatabase } from './support.ts';
 import { agentTools } from '../src/agent/tool-adapters.ts';
 import { attachAgentTarget } from '../src/agent/target-adapter.ts';
@@ -9,6 +9,9 @@ import { attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { readChat } from '../src/agent/reads.ts';
 import { loadSkillCatalog } from '../src/agent/skills.ts';
 import { agentSettings } from '../src/agent/config.ts';
+import { AgentQueue } from '../src/agent/queue.ts';
+import { AgentOutputs } from '../src/agent/outputs.ts';
+import { readAgentContext } from '../src/agent/context-adapter.ts';
 
 describe('Agent bindings to the evidence and Action owners', () => {
   const db = testDatabase(),
@@ -34,6 +37,18 @@ describe('Agent bindings to the evidence and Action owners', () => {
       foreign = await fixtures.scope();
     const sibling = await fixtures.project(scope.workspaceId);
     const tools = agentTools(db);
+    const fetched = await tools.execute(
+      db,
+      scope,
+      'fetch',
+      { id: `citeladder://project/${scope.projectId}` },
+      signal(),
+    );
+    expect(fetched.status).toBe('completed');
+    expect(fetched.refs).toEqual([
+      { id: scope.projectId, record_uri: `citeladder://project/${scope.projectId}` },
+    ]);
+    expect(JSON.parse(fetched.text).metadata.project_id).toBe(scope.projectId);
     expect(await tools.execute(db, scope, 'list_projects', {}, signal())).toMatchObject({
       status: 'refused',
     });
@@ -69,6 +84,10 @@ describe('Agent bindings to the evidence and Action owners', () => {
           status: 'failed',
         });
       }
+      read.mockResolvedValueOnce({ state: 'available', artifact_refs: [{ wrong: 'malformed' }] });
+      expect(await tools.execute(db, scope, 'read_demand', {}, signal())).toMatchObject({
+        status: 'failed',
+      });
       read.mockResolvedValueOnce({ state: 'observed_zero', items: [] });
       const zero = await tools.execute(
         db,
@@ -112,6 +131,129 @@ describe('Agent bindings to the evidence and Action owners', () => {
       JSON.parse((await tools.execute(db, scope, 'list_actions', {}, signal())).text).items,
     ).toHaveLength(1);
   });
+  it('re-fetches prior evidence through its owner before granting follow-up citations', async () => {
+    const scope = await fixtures.scope();
+    const tools = agentTools(db);
+    const store = fixtures.store({ registryVersion: tools.version });
+    const queue = new AgentQueue(db, 30);
+    const uri = `citeladder://project/${scope.projectId}`;
+    const fetch = { action: 'call_tool', tool: 'fetch', arguments: { id: uri } };
+    const answer = { action: 'respond', reply: `Project evidence ${uri}`, evidence: [uri] };
+    const first = await store.enqueue(scope, { key: randomUUID(), message: 'Explain project' });
+    const execute = async (steps: unknown[], inspect?: Parameters<typeof scripted>[1]) => {
+      const claimed = await queue.claim('evidence-continuity', [scope.workspaceId]);
+      const lease = await queue.start(claimed!, 'evidence-continuity');
+      await fixtures.runtime(scope, scripted(steps, inspect), { tools }).execute(lease);
+      return readChat(db, scope, first.chat_id);
+    };
+    expect((await execute([fetch, answer])).messages.at(-1)?.evidence_refs).toEqual([uri]);
+    const attempt = await db
+      .selectFrom('agent_tool_attempts')
+      .selectAll()
+      .where('run_id', '=', first.id)
+      .executeTakeFirstOrThrow();
+    const failedUri = `citeladder://project/${randomUUID()}`;
+    await db
+      .insertInto('agent_tool_attempts')
+      .values(
+        Array.from({ length: agentPolicy.prior_evidence_max_refs + 1 }, (_, index) => ({
+          ...attempt,
+          id: randomUUID(),
+          ordinal: index + 2,
+          input: {},
+          omissions: '[]',
+          status: index === 0 ? 'failed' : 'completed',
+          artifact_refs: JSON.stringify(index === 0 ? [{ record_uri: failedUri }] : []),
+          created_at: new Date(attempt.created_at.getTime() + index + 1),
+        })),
+      )
+      .execute();
+    await store.enqueue(scope, { key: randomUUID(), chatId: first.chat_id, message: 'Follow up' });
+    const withoutRead = await execute([answer], async (request) => {
+      expect(request.system).toContain(uri);
+      expect(request.system).not.toContain(failedUri);
+      expect(JSON.parse(request.user).observations).toEqual([]);
+    });
+    expect(withoutRead.messages.at(-1)?.evidence_refs).toEqual([]);
+    expect(withoutRead.messages.at(-1)?.content).toContain('[unverified reference]');
+    await store.enqueue(scope, {
+      key: randomUUID(),
+      chatId: first.chat_id,
+      message: 'Read it again',
+    });
+    const refreshed = await execute([fetch, answer]);
+    expect(refreshed.messages.at(-1)?.evidence_refs).toEqual([uri]);
+    expect(refreshed.latest_run?.progress.filter((step) => step.tool === 'fetch')).toHaveLength(1);
+  });
+  it('carries an Action through outline approval, user edit, refinement and an exact next-step revision', async () => {
+    const scope = await fixtures.scope();
+    const action = await db
+      .transaction()
+      .execute((trx) =>
+        attachOrCreateAction(trx, scope, 'planned_page', 'Buyer guide', scope.userId),
+      );
+    const tools = agentTools(db);
+    const store = fixtures.store({ registryVersion: tools.version, context: readAgentContext });
+    const queue = new AgentQueue(db, 30);
+    const execute = async (steps: unknown[], inspect?: Parameters<typeof scripted>[1]) => {
+      const claimed = await queue.claim('workflow-acceptance', [scope.workspaceId]);
+      const lease = await queue.start(claimed!, 'workflow-acceptance');
+      await fixtures.runtime(scope, scripted(steps, inspect), { tools }).execute(lease);
+      return readChat(db, scope, claimed!.chat_id);
+    };
+    const first = await store.enqueue(scope, {
+      key: randomUUID(),
+      actionId: action.id,
+      skillId: 'content',
+      message: 'Write a buyer guide',
+    });
+    const outlined = await execute([deliverable('draft', 'Proposed outline')], async (request) => {
+      expect(JSON.parse(request.user).context.action.id).toBe(action.id);
+    });
+    const outline = outlined.output!.latest_revision!;
+    expect(outline.phase).toBe('outline');
+    await store.approveOutline(scope, first.chat_id, outline.id, randomUUID());
+    const drafted = await execute([deliverable('draft', 'Approved draft')]);
+    const edited = await new AgentOutputs(db).edit(
+      scope,
+      first.chat_id,
+      drafted.output!.latest_revision!.id,
+      'Buyer guide',
+      'User edited draft',
+    );
+    await store.enqueue(scope, {
+      key: randomUUID(),
+      chatId: first.chat_id,
+      message: 'Refine my edit',
+    });
+    const refined = await execute(
+      [deliverable('draft', 'Refined accepted guide')],
+      async (request) => {
+        expect(JSON.parse(request.user).current_revision).toMatchObject({
+          id: edited.id,
+          body: 'User edited draft',
+        });
+      },
+    );
+    const accepted = refined.output!.latest_revision!;
+    expect(accepted.parent_revision_id).toBe(edited.id);
+    await store.enqueue(scope, {
+      key: randomUUID(),
+      message: 'Plan distribution',
+      skillId: 'plan',
+      refs: {
+        output_revision_reference: { output_id: refined.output!.id, revision_id: accepted.id },
+      },
+    });
+    const next = await execute([deliverable('final', 'Distribution plan')], async (request) => {
+      expect(JSON.parse(request.user).context.package.sections.upstream_revision).toMatchObject({
+        id: accepted.id,
+        body: 'Refined accepted guide',
+      });
+    });
+    expect(next.output?.kind).toBe('plan');
+    expect(next.chat.id).not.toBe(first.chat_id);
+  });
   it('attaches concurrent same-target outputs once and preserves invalid-target work', async () => {
     const scope = await fixtures.scope();
     const target = 'https://acme.example/pricing';
@@ -149,7 +291,6 @@ describe('Agent bindings to the evidence and Action owners', () => {
               phase: 'outline',
               target_kind: 'planned_page',
               target: 'Buyer guide',
-              format_id: randomUUID(),
             },
           },
         ]),

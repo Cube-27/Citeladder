@@ -9,6 +9,7 @@ import {
   agentPolicy,
   AgentError,
   outputPayloadSchema,
+  outputSchema,
   type Chat,
   type OutputPayload,
   type Scope,
@@ -69,10 +70,11 @@ export async function saveAgentOutput(
     messageId: string;
     userId: string;
     refs: string[];
+    bounds?: Parameters<typeof outputSchema>[0];
   },
   attach: AttachTarget,
 ) {
-  const payload = outputPayloadSchema.parse(input.payload);
+  const payload = outputSchema(input.bounds).parse(input.payload);
   const current = await currentOutput(db, chat);
   if ((current.revision?.id ?? null) !== input.baseRevisionId)
     throw new AgentError('output_conflict');

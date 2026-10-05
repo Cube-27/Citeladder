@@ -174,8 +174,9 @@ export async function selectContentFragments(
   scope: Scope,
   query = '',
   targetUrl = '',
+  crawlId?: string,
 ) {
-  const crawl = await db
+  let crawlQuery = db
     .selectFrom('site_crawls as c')
     .select(['c.id', 'c.completed_at'])
     .where('c.workspace_id', '=', scope.workspaceId)
@@ -189,12 +190,14 @@ export async function selectContentFragments(
       ),
     )
     .orderBy('c.created_at', 'desc')
-    .orderBy('c.id', 'desc')
-    .executeTakeFirst();
+    .orderBy('c.id', 'desc');
+  if (crawlId) crawlQuery = crawlQuery.where('c.id', '=', crawlId);
+  const crawl = await crawlQuery.executeTakeFirst();
   if (!crawl)
     return {
       pages: [],
       summary: {
+        ...(crawlId ? { crawl_id: crawlId } : {}),
         omissions: [{ reason: 'no_usable_crawl' }],
         selection_policy_version: p.content_crawl_fragment_selection_version,
       },

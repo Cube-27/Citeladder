@@ -23,6 +23,7 @@ export const catalog: SkillCatalog = {
       'content',
       {
         id: 'content',
+        description: 'Create requested long-form content.',
         version: 1,
         outputKind: 'content',
         body: 'Write requested content.',
@@ -33,6 +34,7 @@ export const catalog: SkillCatalog = {
       'plan',
       {
         id: 'plan',
+        description: 'Turn supplied evidence into a bounded plan.',
         version: 1,
         outputKind: 'plan',
         body: 'Plan requested work.',
@@ -48,6 +50,7 @@ export const emptyPackage = {
   issue_block: '',
   related_site_block: '',
   summary: { omissions: [{ reason: 'no_persisted_evidence', count: 1 }] },
+  sections: {},
 };
 export function result(content: unknown): ModelResult {
   return {

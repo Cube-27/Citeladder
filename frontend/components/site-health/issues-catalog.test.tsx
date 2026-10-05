@@ -519,7 +519,9 @@ describe('IssuesCatalog', () => {
     // Ask agent hands the Agent the page's id, never its evidence.
     const ask = screen.getByRole('link', { name: 'Ask agent about this page' });
     const handoff = parseAgentHandoff(new URL(ask.getAttribute('href')!, 'http://x').searchParams);
-    expect(handoff.context).toEqual({ target_site_url_id: URL_A });
+    expect(handoff.context).toEqual({
+      issue_group_reference: { crawl_id: CRAWL, group_id: issue().group_id, site_url_id: URL_A },
+    });
     expect(handoff.prompt).toContain('https://acme.com/');
   });
 

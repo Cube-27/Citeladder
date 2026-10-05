@@ -69,6 +69,55 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('ChatScreen', () => {
+  it('selects Automatic when a follow-up has no inherited workflow', async () => {
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json({
+          ...detail(revision(REV1, 1, 'agent', 'Body.')),
+          output: null,
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderChat();
+    await user.click(await screen.findByRole('button', { name: 'Skill: Automatic' }));
+    expect(screen.getByRole('menuitemradio', { name: 'Automatic' })).toBeChecked();
+  });
+
+  it('shows supplied context omissions and approval as an action tied to its revision', async () => {
+    const current = {
+      ...detail(revision(REV1, 1, 'agent', 'Body.')),
+      context: {
+        instructions: { revision: 2 },
+        prompt: {
+          included_sections: ['issue_group'],
+          omissions: ['oldest_history_messages'],
+          serialized_chars: 5000,
+          max_chars: 90000,
+        },
+      },
+    };
+    const approval = {
+      ...current.messages[0]!,
+      event: { kind: 'outline_approved', revision_id: REV1, run_id: RUN },
+    };
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json({ ...current, messages: [approval, current.messages[1]] }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderChat();
+    expect(await screen.findByRole('article', { name: 'Outline approval' })).toHaveTextContent(
+      'Outline approved',
+    );
+    await user.click(screen.getByText('Context used'));
+    expect(screen.getByText('Selected issue group')).toBeVisible();
+    expect(screen.getByText('oldest history messages')).toBeVisible();
+    expect(screen.queryByText(current.messages[0]!.content)).not.toBeInTheDocument();
+  });
   it('refreshes history for a new latest revision and retains prefix invalidation', async () => {
     let items = [revision(REV1, 1, 'agent', 'First draft')];
     mswServer.use(
@@ -504,9 +553,29 @@ describe('ChatScreen', () => {
     await user.click(await screen.findByText('View activity'));
     const steps = within(screen.getByRole('list', { name: 'Agent progress' }));
     expect(steps.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Read site health · no data yet',
-      'Deciding the next step…',
+      'Attempt 1 · Step 1 · Read site health · no data yet',
+      'Attempt 1 · Step 2 · Deciding the next step…',
     ]);
+  });
+
+  it('retains tool identity and distinguishes failed and unavailable reads after completion', async () => {
+    const completed = detail(revision(REV1, 1, 'agent', 'Body.'));
+    completed.messages[1]!.steps = [
+      { kind: 'tool', tool: 'read_site_health', status: 'completed' },
+      { kind: 'tool', tool: 'fetch', status: 'failed' },
+      { kind: 'tool', tool: 'read_site_pages', status: 'unavailable' },
+    ];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(completed)),
+    );
+    const user = userEvent.setup();
+    renderChat();
+    await user.click(await screen.findByText(/Run complete/));
+    const reply = within(screen.getByRole('article', { name: 'Agent reply' }));
+    expect(reply.getByText('Read site health')).toBeVisible();
+    expect(reply.getByText('Fetch · failed')).toBeVisible();
+    expect(reply.getByText('Read site pages · no data yet')).toBeVisible();
   });
 
   it('refuses edits while a turn is running and offers Stop', async () => {
@@ -585,7 +654,10 @@ describe('ChatScreen', () => {
         name: 'Skill: Continue with Search Console optimization',
       }),
     );
-    expect(screen.queryByRole('menuitemradio', { name: 'Automatic' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitemradio', { name: 'Automatic' })).toBeVisible();
+    expect(
+      screen.getByRole('menuitemradio', { name: 'Continue with Search Console optimization' }),
+    ).toBeChecked();
     await user.click(screen.getByRole('menuitemradio', { name: 'Search Console optimization' }));
     await user.click(screen.getByRole('button', { name: 'Skill: Search Console optimization' }));
     await user.click(

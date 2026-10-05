@@ -94,7 +94,15 @@ export const agentRoutes = [
     response: agentSkillCatalogSchema,
     async handle({ db }) {
       const { catalog } = await agentBindings(db);
-      return { skills: [...catalog.skills.values()] };
+      return {
+        skills: [...catalog.skills.values()].map((skill) => ({
+          id: skill.id,
+          label: skill.label,
+          group: skill.group,
+          output_kind: skill.outputKind,
+          description: skill.description,
+        })),
+      };
     },
   }),
   defineGetRoute({
@@ -107,7 +115,7 @@ export const agentRoutes = [
           scalar: { kind: 'int', ge: 1, le: agentPolicy.list_max_limit },
           default: agentPolicy.list_default_limit,
         },
-        q: { scalar: { kind: 'str', maxLength: 120 } },
+        q: { scalar: { kind: 'str', maxLength: agentPolicy.history_search_max_chars } },
         action_id: { scalar: { kind: 'uuid' } },
         cursor: { scalar: { kind: 'str', maxLength: 512 } },
       },
@@ -145,7 +153,7 @@ export const agentRoutes = [
       const run = await mapped(() =>
         store.enqueue(scope(c, path.project_id), {
           message: input.message,
-          skillId: input.skill_id ?? undefined,
+          skillId: input.skill_id,
           actionId: input.action_id ?? undefined,
           refs: z
             .record(z.string(), z.json())
@@ -187,7 +195,7 @@ export const agentRoutes = [
         store.enqueue(value, {
           chatId: path.chat_id,
           message: input.message,
-          skillId: input.skill_id ?? undefined,
+          skillId: input.skill_id,
           mentionIds: input.mentions,
           key: key(c),
         }),

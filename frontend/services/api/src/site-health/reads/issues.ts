@@ -266,6 +266,7 @@ export async function issueDetail(
   crawlId: string,
   groupId: string,
   paging: Paging,
+  siteUrlId?: string,
 ) {
   const crawl = await loadCrawl(db, workspaceId, crawlId);
   const candidates = await sql<{ rule_id: string; finding_class: string }>`
@@ -277,7 +278,7 @@ export async function issueDetail(
   if (group === undefined) throw notFound('Issue');
   const inGroup = sql`${currentIssues(crawl)} and i.rule_id = ${group.rule_id}
     and i.finding_class = ${group.finding_class}`;
-  const fingerprint = { crawl_id: crawl.id, group_id: groupId };
+  const fingerprint = { crawl_id: crawl.id, group_id: groupId, site_url_id: siteUrlId ?? null };
   let after = sql``;
   if (paging.cursor) {
     const [url, raw, ...rest] = decodeKeysetCursor(paging.cursor, 'issue_detail', fingerprint);
@@ -308,7 +309,7 @@ export async function issueDetail(
       join site_page_analyses a on a.workspace_id = i.workspace_id and a.crawl_id = i.crawl_id
         and a.site_url_id = i.site_url_id and a.is_current
       join site_rule_evaluations e on e.id = i.evaluation_id
-      where ${inGroup} ${after}
+      where ${inGroup} ${after} ${siteUrlId ? sql`and i.site_url_id = ${siteUrlId}::uuid` : sql``}
       order by u.normalized_url, i.id limit ${paging.limit + 1}`.execute(db),
   ]);
   const representative = canonical.rows[0];

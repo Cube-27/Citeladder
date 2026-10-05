@@ -23,7 +23,12 @@ export type ReadTool = {
   name: string;
   description: string;
   arguments: z.ZodType<Record<string, Json>>;
-  read: (scope: Scope, args: Record<string, Json>, signal: AbortSignal) => Promise<ToolResult>;
+  read: (
+    scope: Scope,
+    args: Record<string, Json>,
+    signal: AbortSignal,
+    maxChars: number,
+  ) => Promise<ToolResult>;
 };
 
 /** Server-pinned scope; registry entries are read adapters, never HTTP or SQL tools. */
@@ -51,6 +56,7 @@ export class ToolRegistry {
     name: string,
     args: Record<string, Json>,
     signal: AbortSignal,
+    maxChars = agentPolicy.tool_result_max_chars,
   ): Promise<ToolOutcome> {
     await authorize(db, scope);
     const tool = this.#tools.get(name);
@@ -63,19 +69,14 @@ export class ToolRegistry {
     )
       return refused('unknown_tool_or_arguments');
     try {
-      const result = await abortable(() => tool.read(scope, parsed.data, signal), signal);
+      const result = await abortable(() => tool.read(scope, parsed.data, signal, maxChars), signal);
       const serialized = JSON.stringify(result.data);
-      const truncated = serialized.length > agentPolicy.tool_result_max_chars;
+      const bounded = boundToolData(result.data, maxChars);
       return {
         status: result.state === 'unavailable' ? 'unavailable' : 'completed',
-        text: truncated
-          ? serialized.slice(0, agentPolicy.tool_result_max_chars) + '\n[tool result truncated]'
-          : serialized,
-        refs: result.artifactRefs,
-        omissions: [
-          ...result.omissions,
-          ...(truncated ? [{ reason: 'tool_result_truncated', count: 1 }] : []),
-        ],
+        text: bounded.text,
+        refs: serialized.length <= maxChars ? result.artifactRefs : [],
+        omissions: [...result.omissions, ...bounded.omissions],
         hash: createHash('sha256').update(serialized).digest('hex'),
         error: '',
       };
@@ -83,6 +84,33 @@ export class ToolRegistry {
       return { ...refused('tool_failed'), status: 'failed' };
     }
   }
+}
+export function boundToolData(data: Json, maxChars: number) {
+  const full = JSON.stringify(data);
+  if (full.length <= maxChars) return { text: full, supplied: true, omissions: [] };
+  const selected: Record<string, Json> = {};
+  const fields = data && typeof data === 'object' && !Array.isArray(data) ? data : { value: data };
+  const omitted = Object.keys(fields);
+  const envelope = () =>
+    JSON.stringify({ data: selected, complete: false, omitted_sections: omitted });
+  for (const [key, value] of Object.entries(fields)) {
+    selected[key] = value;
+    const index = omitted.indexOf(key);
+    omitted.splice(index, 1);
+    if (envelope().length > maxChars) {
+      delete selected[key];
+      omitted.splice(index, 0, key);
+    }
+  }
+  const text = envelope();
+  return {
+    text:
+      text.length <= maxChars
+        ? text
+        : JSON.stringify({ complete: false, reason: 'tool_result_size_limit' }),
+    supplied: Object.keys(selected).length > 0 && text.length <= maxChars,
+    omissions: [{ reason: 'tool_result_truncated', count: 1, sections: omitted }],
+  };
 }
 export function refused(error: string): ToolOutcome {
   return { status: 'refused', text: error, refs: [], omissions: [], hash: '', error };

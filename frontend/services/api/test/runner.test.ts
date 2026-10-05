@@ -1,5 +1,8 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import { drainLanes, exclusiveDrain, tickAndDrain } from '../src/workers/runner.ts';
+import { drainLanes, exclusiveDrain, tickAndDrain, runnerOwners } from '../src/workers/runner.ts';
+import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
+import { SiteFixtures } from './site-health-fixtures.ts';
+import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { sql } from 'kysely';
 import { createDatabase } from '../src/db/database.ts';
 import { testConfig } from './support.ts';
@@ -16,6 +19,60 @@ const options = () => ({
 });
 
 describe('bounded runner', () => {
+  it('settles a Site Health batch with queued heartbeats under the real runner pool bound', async () => {
+    const config = testConfig({ RUNNER_DB_POOL_SIZE: '4' });
+    const db = createDatabase(config, { execution: true });
+    const fixtures = new SiteFixtures(db);
+    try {
+      const ids = [];
+      for (let index = 0; index < config.execution.poolSize; index++) {
+        const seed = await fixtures.crawl('running');
+        ids.push(await fixtures.task(seed));
+      }
+      const worker = new SiteHealthWorker(db, {
+        settings: { ...siteWorkerSettings({}), concurrency: 4, heartbeat: 0.01 },
+        executors: {
+          link_metrics: async (trx) => {
+            await sql`select pg_sleep(0.2)`.execute(trx);
+          },
+        },
+      });
+      const heartbeat = vi.spyOn(worker.queue, 'heartbeat');
+      expect(await worker.runOnce(config.execution.poolSize)).toBe(4);
+      const rows = await db
+        .selectFrom('site_crawl_tasks')
+        .select(['id', 'status', 'attempt_count', 'lease_owner'])
+        .where('id', 'in', ids)
+        .execute();
+      expect(rows).toHaveLength(4);
+      expect(
+        rows.every(
+          (row) =>
+            row.status === 'succeeded' && row.attempt_count === 1 && row.lease_owner === null,
+        ),
+      ).toBe(true);
+      expect(heartbeat).toHaveBeenCalled();
+    } finally {
+      await fixtures.cleanup();
+      await db.destroy();
+    }
+  });
+  it.each([1, 8])(
+    'bounds Site Health batches by its policy and the pool (worker limit %i)',
+    async (concurrency) => {
+      const config = testConfig({ SITE_HEALTH_WORKER_CONCURRENCY: String(concurrency) });
+      const db = createDatabase(config, { execution: true });
+      const run = vi.spyOn(SiteHealthWorker.prototype, 'runOnce').mockResolvedValue(0);
+      try {
+        const owners = await runnerOwners(db, config);
+        await owners.lanes.find((lane) => lane.name === 'site-health')!.run(() => true);
+        expect(run).toHaveBeenCalledWith(Math.min(concurrency, config.execution.poolSize));
+      } finally {
+        run.mockRestore();
+        await db.destroy();
+      }
+    },
+  );
   it('passes the same live budget to periodic work and stops within a phase', async () => {
     let clock = 0;
     let processed = 0;

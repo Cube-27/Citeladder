@@ -32,7 +32,7 @@ export function useChatDetail(workspaceId: string, chatId: string) {
 
 export type NewChatInput = {
   message: string;
-  skillId: string | null;
+  skillId: string | null | undefined;
   actionId?: string;
   context: AgentContextRefs;
   mentions?: string[];
@@ -75,15 +75,13 @@ export function useCreateChat(
 export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   const chatId = detail.chat.id;
   const [draft, setDraft] = useState('');
-  const [skillId, setSkillId] = useState<string | null>(null);
+  const [skillId, setSkillId] = useState<string | null | undefined>(undefined);
   const [lastMessage, setLastMessage] = useState('');
   const requestKey = useRequestKey();
   const queryClient = useQueryClient();
   const commands = useComposerCommands({
     workspaceId,
     projectId: detail.chat.project_id,
-    outputKind: detail.output?.kind,
-    onSkill: setSkillId,
   });
   const mutation = useMutation({
     ...agentMutations.sendMessage(workspaceId),
@@ -116,7 +114,7 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     const request = {
       chatId,
       message: text,
-      skillId: skillId ?? undefined,
+      skillId,
       ...(mentions.length > 0 ? { mentions } : {}),
     };
     mutation.mutate({ ...request, idempotencyKey: requestKey.keyFor(request) });
@@ -128,6 +126,13 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
       setDraft((current) => (current.trim() ? `${current}\n\n${instruction}` : instruction)),
     recover: (message: AgentMessage) => {
       setDraft(message.content);
+      setSkillId(
+        message.skill_source === 'user'
+          ? message.skill_id
+          : message.skill_source === 'automatic'
+            ? null
+            : undefined,
+      );
       commands.restore(message.mentions);
     },
     skillId,

@@ -8,7 +8,7 @@ import { authorize } from './access.ts';
 import {
   agentPolicy,
   AgentError,
-  budgetSchema,
+  admittedBudget,
   type Chat,
   type Run,
   type Scope,
@@ -35,7 +35,7 @@ export type TurnInput = {
   chatId?: string;
   message: string;
   key: string;
-  skillId?: string;
+  skillId?: string | null;
   actionId?: string;
   refs?: Record<string, Json>;
   mentionIds?: string[];
@@ -132,7 +132,7 @@ function requestIdentity(scope: Scope, input: TurnInput, mode: string, approvalR
       chat: input.chatId,
       content: input.message,
       mode,
-      skill: input.skillId ?? null,
+      skill: input.skillId === undefined ? { mode: 'inherit' } : input.skillId,
       mentions: input.mentionIds ?? [],
     };
   return {
@@ -140,15 +140,19 @@ function requestIdentity(scope: Scope, input: TurnInput, mode: string, approvalR
     project: scope.projectId,
     content: input.message,
     mode,
-    skill: input.skillId ?? null,
+    skill: input.skillId === undefined ? { mode: 'inherit' } : input.skillId,
     action: input.actionId ?? null,
     context: input.refs ?? {},
     mentions: input.mentionIds ?? [],
   };
 }
-function skillSource(explicit: string | undefined, pinned: string | null, id: string | null) {
+function skillSource(
+  explicit: string | null | undefined,
+  pinned: string | null,
+  id: string | null,
+) {
   if (explicit) return 'user';
-  if (pinned) return 'chat';
+  if (pinned && explicit !== null) return 'chat';
   return id ? 'action' : null;
 }
 
@@ -193,6 +197,7 @@ export class AgentStore {
         .executeTakeFirst();
       if (replay) {
         if (replay.project_id !== scope.projectId) throw notFound('Run');
+        if (replay.user_id !== scope.userId) throw new AgentError('agent_idempotency_conflict');
         // Python hashes escaped JSON. Reusing that key requires its original runtime;
         // never interpret it as a TypeScript hash, even for an ASCII-only request.
         if (replay.runtime_version !== agentPolicy.runtime_version)
@@ -234,7 +239,7 @@ export class AgentStore {
         content: input.message,
         userId: scope.userId,
         skillId: input.skillId,
-        skillSource: input.skillId ? 'user' : null,
+        skillSource: input.skillId ? 'user' : input.skillId === null ? 'automatic' : null,
         mentions: manifest.mentions.map((action) => ({
           kind: 'action',
           id: action.id,
@@ -256,12 +261,11 @@ export class AgentStore {
           mode,
           requested_skill_id: skill.id,
           requested_skill_source: skill.source,
-          context_manifest: manifest,
-          budget: budgetSchema.parse({
-            max_steps: agentPolicy.max_steps,
-            max_tool_calls: agentPolicy.max_tool_calls,
-            execution_timeout_seconds: this.dependencies.timeoutSeconds,
-          }),
+          context_manifest: {
+            ...manifest,
+            ...(approvalRevision ? { approval: { revision_id: approvalRevision } } : {}),
+          },
+          budget: admittedBudget(this.dependencies.timeoutSeconds),
           runtime_version: agentPolicy.runtime_version,
           protocol_version: agentPolicy.protocol_version,
           registry_version: this.dependencies.registryVersion,
@@ -293,7 +297,7 @@ export class AgentStore {
         .updateTable('agent_chats')
         .set({
           turn_count: chat.turn_count + 1,
-          pinned_skill_id: input.skillId ?? chat.pinned_skill_id,
+          pinned_skill_id: input.skillId === undefined ? chat.pinned_skill_id : input.skillId,
           last_activity_at: now,
           updated_at: now,
         })
@@ -367,13 +371,13 @@ export class AgentStore {
   private async turnSkill(
     db: Database,
     chat: Chat,
-    explicit: string | undefined,
+    explicit: string | null | undefined,
     actionSkill: string | null,
   ) {
     const catalog = this.dependencies.catalog.skills;
     let id =
       explicit ??
-      chat.pinned_skill_id ??
+      (explicit === null ? null : chat.pinned_skill_id) ??
       (actionSkill && catalog.has(actionSkill) ? actionSkill : null);
     let source = skillSource(explicit, chat.pinned_skill_id, id);
     if (id && !catalog.has(id)) throw new AgentError('protocol_violation');

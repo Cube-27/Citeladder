@@ -10,11 +10,11 @@ description: Find and verify technical SEO or AI-access defects using CiteLadder
 
 # Technical access and site health
 
-Follow the operating contract. Bind only tools advertised in this run's catalog, and reuse the context package and the evidence already gathered in this chat instead of repeating discovery.
+Follow the operating contract. Bind only advertised read tools and use evidence actually supplied in this call. Earlier reads and upstream source references may need exact re-fetching. Another skill is explicit next-step advice, not an automatic invocation.
 
 ## Outcome and inputs
 
-Produce a verified defect list and implementation-ready fixes ordered by affected business journeys. Do not optimize an aggregate score for its own sake. Required: a selected canonical domain and persisted site-health findings or authorized live-page evidence. Optional: URL inspection/index status, GSC performance, crawl edges/inventory, raw and rendered HTML, robots/sitemaps, response headers, field-performance data and release history.
+Produce an evidence-backed defect list and implementation-ready fixes ordered by affected business journeys. Do not optimize an aggregate score for its own sake. Required: a selected canonical domain and persisted site-health findings or supplied dated page evidence. Optional supplied evidence: URL inspection/index status, GSC performance, crawl edges/inventory, raw and rendered HTML, robots/sitemaps, response headers, field-performance data and release history.
 
 ## Evidence depth and verification boundary
 
@@ -23,21 +23,21 @@ A score-only read can prioritize investigation but cannot support an exact issue
 ## Workflow
 
 1. **Establish the actual target.** Identify production versus preview, canonical host and priority page families. Preview indexing blocks may be intentional. Do not score a marketing website as defective for lacking an MCP server, commerce protocol or agent API.
-2. **Inspect coverage before severity.** Read latest site-health snapshot and its evidence references. Record crawl date, page limits, successful/failed fetches, page types and unavailable checks. A high aggregate score does not prove every priority URL is accessible; an unsupported check does not fail.
+2. **Inspect coverage before severity.** Use the selected crawl and issue group when supplied; otherwise read the latest persisted snapshot. Record crawl date, page limits, full occurrence counts, bounded samples, successful/failed fetches, page types and unavailable checks. A sample cannot establish complete coverage or template grouping; an unsupported check does not fail.
 3. **Reproduce priority findings.** For suspected blockers, inspect the recorded crawl evidence and state that a fresh scoped check on the live site is needed before a fix ships. Record final URL, response status, relevant headers, directives and the exact failing content/link. Source code, saved crawls and live production are different evidence states.
 4. **Follow the access path.** Check DNS/HTTP reachability and redirects; robots rules; CDN/WAF/login challenges; allowed fetching of required resources; visible meaningful content; canonical and robots metadata; internal discoverability; sitemap membership where appropriate. Keep crawling, indexing eligibility and actual indexed status separate. HTTP 200 alone is not proof of useful content; an allowed crawler is not proof of citation.
 5. **Diagnose rendering, not frameworks.** Compare raw response and rendered content when tools permit. Verify the specific search/crawler/user-agent behavior needed for the task. Do not report every JavaScript page as invisible or assume all AI agents have the same rendering limitations. Prefer resilient delivery of important content when a real access problem is demonstrated.
 6. **Respect intended indexing policy.** Distinguish an accidental noindex on a priority page from a deliberate exclusion on internal search or account pages. A robots-blocked URL may prevent a crawler reading a noindex directive; robots is not an indexing removal tool. Canonical tags are not substitutes for redirects in every situation and must not point distinct content to the homepage.
-7. **Evaluate page-type-specific details.** For product/service/organization/editorial/local/dataset pages, verify appropriate visible facts, metadata and structured data against the actual page purpose. Do not prescribe Product markup for every comparison article. Verify current rich-result support before recommending a type. Treat readable headings and link text as usability/content structure, not fixed H1/word-count ranking quotas.
+7. **Evaluate page-type-specific details.** For product/service/organization/editorial/local/dataset pages, inspect supplied visible facts, metadata and structured data against the actual page purpose. Do not prescribe Product markup for every comparison article. Ask the user to verify current rich-result support before publishing a recommendation; you cannot browse. Treat readable headings and link text as usability/content structure, not fixed H1/word-count ranking quotas.
 8. **Assess experience with the right evidence.** Separate real-user field measurements from lab tests; retain device, period and coverage. Report observed loading/interactivity/layout issues on relevant journeys. Do not equate a single lab score with a site's search performance or invent Core Web Vitals values.
-9. **Separate search policy from training policy.** For ChatGPT, OAI-SearchBot and GPTBot have different roles. For Google's AI Search surfaces, use the applicable Googlebot/index/snippet controls. Verify the current provider documentation before writing rules for another bot. Ask the owner about search-versus-training policy before changing it. Never treat “allow every AI bot” as a default technical fix.
-10. **Deduplicate root causes and prepare a fix.** Group related defects by template/configuration owner. State affected URLs and commercial impact, smallest safe patch, dependencies, acceptance test and rollback. Preserve unrelated canonical, security, privacy and publishing settings.
+9. **Separate search policy from training policy.** Preserve the supplied crawler identity and verified roles. Ask the user for current provider documentation when the intended crawler is not covered by persisted policy; label a proposed rule pending that verification. Ask the owner about search-versus-training policy before changing it. Never treat “allow every AI bot” as a default technical fix.
+10. **Deduplicate root causes and prepare a fix.** Group related defects only when persisted evidence establishes the shared template/configuration owner; otherwise label that grouping as a hypothesis. State affected URLs and commercial impact, smallest safe patch, dependencies, acceptance test and rollback. Preserve unrelated canonical, security, privacy and publishing settings.
 
 ## Priority rules
 
 Use **blocker** for an evidenced failure of an intended priority journey or indexability path; **material** for a verified issue with meaningful affected coverage; **improvement** for a defensible but nonblocking enhancement. Use **needs verification** for unresolved signals. Severity is conditional on the page's intended purpose and business impact, not the scanner's numeric label alone.
 
-Do not classify missing `llms.txt`, a vendor agent-readiness level, absent markdown negotiation or a fixed citation-block size as a proven SEO/AEO defect. Those may be separate product/agent-utility experiments only when relevant, with no promised ranking benefit. Current FAQ rich-result support must be checked; do not ship outdated guaranteed benefits.
+Do not classify missing `llms.txt`, a vendor agent-readiness level, absent markdown negotiation or a fixed citation-block size as a proven SEO/AEO defect. Those may be separate product/agent-utility experiments only when relevant, with no promised ranking benefit. Missing current FAQ rich-result evidence becomes a user verification request; do not promise benefits.
 
 ## Output
 
