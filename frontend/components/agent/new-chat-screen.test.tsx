@@ -125,7 +125,8 @@ describe('NewChatScreen', () => {
     await user.type(message, '/');
     expect(await screen.findByRole('menuitemradio', { name: 'Automatic' })).toBeChecked();
     await user.keyboard('{Escape}');
-    await user.type(message, 'g{Backspace}');
+    await waitFor(() => expect(message).toHaveFocus());
+    await user.keyboard('g{Backspace}');
     expect(message).toHaveValue('/');
     expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument();
     await user.clear(message);
