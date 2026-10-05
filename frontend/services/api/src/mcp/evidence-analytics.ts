@@ -165,7 +165,7 @@ export async function renderAnalytics(
     selection: resolved,
     evidence,
     links: {
-      application: `${origin}/${view === 'site_health' ? 'website' : 'visibility'}?${new URLSearchParams({ project: scope.projectId, ...(resolved.audit_id ? { audit: resolved.audit_id } : {}) })}`,
+      application: `${origin}/${view === 'site_health' ? 'website' : 'visibility'}?${new URLSearchParams({ project: scope.projectId, ...(resolved.audit_id ? { run: resolved.audit_id } : {}) })}`,
       onboarding: `${origin}/onboarding`,
     },
   };

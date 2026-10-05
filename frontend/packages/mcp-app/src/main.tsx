@@ -52,7 +52,8 @@ app.ontoolresult = (result) => {
   if (result.isError) controller.disconnect();
   else controller.receive(result.structuredContent);
 };
-app.ontoolinput = (input) => controller.begin(input.arguments);
+app.ontoolinput = (input) =>
+  controller.begin(input.arguments, app.getHostContext()?.toolInfo?.tool.name);
 app.onhostcontextchanged = (context) => hostContext(context);
 app.ontoolcancelled = () => controller.disconnect();
 createRoot(document.getElementById('root')!).render(<Analytics controller={controller} />);

@@ -19,6 +19,102 @@ const result = (project_id = project) => ({
 });
 
 describe('CiteLadder MCP App', () => {
+  it.each(['render_site_health', undefined])(
+    'accepts a Site Health host result with tool identity %s',
+    (toolName) => {
+      const controller = createController({
+        call: vi.fn(async () => undefined),
+        context: vi.fn(async () => undefined),
+      });
+      controller.begin({ project_id: project }, toolName);
+      controller.receive({
+        ...result(),
+        selection: { project_id: project, view: 'site_health', snapshot_id: audit },
+        evidence: {
+          state: 'available',
+          snapshot_id: audit,
+          crawl_id: foreign,
+          observed_at: '2026-10-01T00:00:00Z',
+          scores: { web_fundamentals: 50, aeo_readiness: null, aeo_measurement_coverage: 0.5 },
+          coverage: { selected_urls: 2, analyzed_urls: 1 },
+          measurement_states: { coverage: 'partial', aeo: 'unknown' },
+        },
+      });
+      render(<Analytics controller={controller} />);
+      expect(screen.getByRole('tab', { name: 'Site Health' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      expect(screen.getByText('Persisted Site Health')).toBeInTheDocument();
+      expect(screen.queryByText('Loading persisted evidence…')).not.toBeInTheDocument();
+    },
+  );
+  it('rejects mismatched host filters and invalidates old host replies on local reads and disconnect', async () => {
+    let finish!: (value: unknown) => void;
+    const controller = createController({
+      call: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      ),
+      context: vi.fn(async () => undefined),
+    });
+    const selection = {
+      project_id: project,
+      view: 'trends',
+      from_at: '2026-10-01T00:00:00Z',
+      to_at: '2026-10-02T00:00:00Z',
+    };
+    controller.begin(selection, 'render_visibility');
+    controller.receive({
+      ...result(),
+      selection: { ...selection, from_at: '2026-09-01T00:00:00Z' },
+    });
+    expect(controller.getSnapshot().result).toBeNull();
+    const pending = controller.select({ ...selection, engine: 'gemini' });
+    controller.receive({ ...result(), selection });
+    expect(controller.getSnapshot().busy).toBe(true);
+    finish({ state: 'available', points: [] });
+    await pending;
+    expect(controller.getSnapshot().selection?.engine).toBe('gemini');
+    controller.disconnect();
+    controller.receive({ ...result(), selection });
+    expect(controller.getSnapshot().result).toBeNull();
+    expect(controller.getSnapshot().error).toMatch(/Connect/);
+  });
+  it('ignores an old answer-fetch failure after a project switch and pins the application handoff', async () => {
+    let fail!: (reason: Error) => void;
+    const call = vi.fn(async () => ({ audit_id: audit, state: 'available' }) as unknown);
+    const context = vi.fn(async () => undefined);
+    const controller = createController({ call, context });
+    controller.receive(result());
+    call.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          fail = reject;
+        }),
+    );
+    const pending = controller.fetchAnswer(`citeladder://visibility_result/${audit}`);
+    await controller.select({ project_id: foreign });
+    const application = new URL(controller.getSnapshot().result!.links.application);
+    expect(application.searchParams.get('run')).toBe(audit);
+    fail(new Error('old fetch timed out'));
+    await pending;
+    expect(controller.getSnapshot().selection?.project_id).toBe(foreign);
+    expect(controller.getSnapshot().result?.evidence.state).toBe('available');
+    expect(controller.getSnapshot().error).toBeNull();
+    await vi.waitFor(() =>
+      expect(context).toHaveBeenLastCalledWith(
+        expect.objectContaining({ project_id: foreign }),
+        expect.objectContaining({ audit_id: audit }),
+      ),
+    );
+    call.mockRejectedValueOnce(new Error('current access denied'));
+    await controller.fetchAnswer(`citeladder://visibility_result/${audit}`);
+    expect(controller.getSnapshot().result).toBeNull();
+    expect(controller.getSnapshot().error).toMatch(/reconnect/);
+  });
   it('renders observed zero separately from missing metrics and exposes keyboard view navigation', async () => {
     const user = userEvent.setup();
     const controller = createController({

@@ -40,6 +40,10 @@ function evidence(value: unknown): Record<string, unknown> {
 /** One generation per selection. Late reads can never repopulate old scope. */
 export function createController(host: Host) {
   let generation = 0;
+  // Initial hosts may send only a result. Subsequent results must belong to
+  // a tool-input generation, never to a local selection or disconnected view.
+  let hostGeneration: number | null = 0;
+  let requestedSelection: Partial<AnalyticsSelection> | null = null;
   let state: AppState = {
     result: null,
     selection: null,
@@ -65,18 +69,20 @@ export function createController(host: Host) {
       .catch(() => undefined);
   };
   const receive = (value: unknown) => {
+    if (hostGeneration !== generation) return;
     const parsed = analyticsResultSchema.safeParse(bounded(value));
     if (!parsed.success) return;
-    if (
-      state.selection &&
-      parsed.data.selection &&
-      (parsed.data.selection.project_id !== state.selection.project_id ||
-        parsed.data.selection.view !== state.selection.view ||
-        (state.selection.audit_id && parsed.data.selection.audit_id !== state.selection.audit_id) ||
-        (state.selection.snapshot_id &&
-          parsed.data.selection.snapshot_id !== state.selection.snapshot_id))
-    )
-      return;
+    const resolved = parsed.data.selection;
+    if (requestedSelection) {
+      if (!resolved) return;
+      const matches = Object.entries(requestedSelection).every(([key, expected]) => {
+        // Latest resolves to concrete IDs. All other filters retain their scope.
+        if ((key === 'audit_id' || key === 'snapshot_id') && expected == null) return true;
+        return (resolved[key as keyof AnalyticsSelection] ?? null) === (expected ?? null);
+      });
+      if (!matches) return;
+    }
+    hostGeneration = null;
     const epoch = ++generation;
     set({
       result: parsed.data,
@@ -145,7 +151,7 @@ export function createController(host: Host) {
         links.application,
       );
       application.searchParams.set('project', selection.project_id);
-      if (selection.audit_id) application.searchParams.set('audit', selection.audit_id);
+      if (selection.audit_id) application.searchParams.set('run', selection.audit_id);
       set({
         result: analyticsResultSchema.parse({
           surface: 'citeladder_analytics',
@@ -232,9 +238,21 @@ export function createController(host: Host) {
     select,
     loadProjects,
     drill,
-    begin: (input: unknown) => {
-      const parsed = analyticsSelectionSchema.safeParse(input);
-      ++generation;
+    begin: (input: unknown, toolName?: string) => {
+      const args = z.record(z.string(), z.unknown()).safeParse(input);
+      const parsed = analyticsSelectionSchema.safeParse(
+        toolName === 'render_site_health' && args.success
+          ? { ...args.data, view: 'site_health' }
+          : input,
+      );
+      hostGeneration = ++generation;
+      requestedSelection = parsed.success ? parsed.data : null;
+      if (parsed.success && !toolName && args.success && args.data.view === undefined) {
+        // toolInfo is optional. Project-only arguments are shared by Overview
+        // and Site Health; the authenticated result determines the actual view.
+        const { view: _view, ...selection } = parsed.data;
+        requestedSelection = selection;
+      }
       set({
         result: null,
         answers: [],
@@ -247,13 +265,25 @@ export function createController(host: Host) {
     fetchAnswer: async (id: string) => {
       if (!/^citeladder:\/\/visibility_result\/[0-9a-f-]{36}$/u.test(id)) return;
       const epoch = generation;
-      const data = evidence(await host.call('fetch', { id }));
-      if (epoch !== generation) return;
-      set({
-        answers: state.answers.map((answer) =>
-          answer.record_uri === id ? { ...answer, answer_text: data.text } : answer,
-        ),
-      });
+      try {
+        const data = evidence(await host.call('fetch', { id }));
+        if (epoch !== generation) return;
+        set({
+          answers: state.answers.map((answer) =>
+            answer.record_uri === id ? { ...answer, answer_text: data.text } : answer,
+          ),
+        });
+      } catch {
+        if (epoch !== generation) return;
+        ++generation;
+        set({
+          result: null,
+          answers: [],
+          busy: false,
+          error: 'Answer evidence is unavailable. Retry or reconnect.',
+        });
+        context(null, generation);
+      }
     },
     siteFindings: async () => {
       const epoch = generation;

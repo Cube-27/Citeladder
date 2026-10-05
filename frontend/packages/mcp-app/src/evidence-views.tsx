@@ -122,11 +122,7 @@ export function SourcesView({ state, controller }: Props) {
           {typeof answer.record_uri === 'string' && (
             <Button
               variant="ghost"
-              onClick={() =>
-                void controller
-                  .fetchAnswer(String(answer.record_uri))
-                  .catch(() => controller.disconnect())
-              }
+              onClick={() => void controller.fetchAnswer(String(answer.record_uri))}
             >
               Read retained answer
             </Button>

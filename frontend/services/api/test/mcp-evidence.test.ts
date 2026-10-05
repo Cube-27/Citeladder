@@ -121,6 +121,8 @@ it('pins the Visibility review to canonical measures and source-to-answer eviden
     analysis: { citations: [{ url: 'https://publisher.example/a', domain: 'publisher.example' }] },
   });
   const rendered = await read('render_visibility', { view: 'overview' });
+  const handoff = new URL((rendered.links as { application: string }).application);
+  expect(handoff.searchParams.get('run')).toBe(auditId);
   const canonical = await getVisibility(
     db,
     { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
