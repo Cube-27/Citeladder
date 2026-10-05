@@ -12,14 +12,16 @@ description: Compare persisted CiteLadder AI search visibility across an explici
    point's audit IDs, snapshot IDs, counts, comparison key and processing
    versions. Missing points/rates are gaps, never zero. The history is bounded.
 3. Select concrete runs to discuss, then use `read_visibility_overview` with
-   the later `audit_id` and earlier `baseline_id` to obtain the domain-owned
-   comparison. Report its status, matched coverage and returned deltas.
+   the later `audit_id`, earlier `baseline_id` and the same selected `engine`
+   and `cohort` to obtain the domain-owned comparison. Report its status,
+   matched coverage and returned deltas.
    Do not invent a period aggregate or compare changed model, retrieval,
    prompt/cohort, scope or version identities as unqualified movement.
 4. For a supported UI call `render_visibility` with `view: trends` and the
    exact window and filters. Do not pass `audit_id` to a trend window.
    For Sources drill-down choose one concrete returned audit, state its actual
-   scope, and call `read_visibility_sources` with that ID. A Sources read is
+   scope, and call `read_visibility_sources` with that ID and the same selected
+   `engine` and `cohort`. A Sources read is
    never silently a period aggregate. Read at most two source pages and fetch
    at most three returned retrievable evidence references unless asked for more.
 5. Cite returned artifacts/URLs and give a useful headless answer: measured

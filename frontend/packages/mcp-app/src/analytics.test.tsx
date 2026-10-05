@@ -38,6 +38,29 @@ const siteEvidence = {
 };
 
 describe('CiteLadder MCP App', () => {
+  it('shows a persisted crawl page URL and retained analysis reference', async () => {
+    const user = userEvent.setup();
+    const page = {
+      id: project,
+      display_url: 'https://acme.example/product',
+      normalized_url: 'https://acme.example/product',
+      title: '',
+      record_uri: `citeladder://site_page/${project}`,
+    };
+    const controller = createController({
+      call: vi.fn(async () => ({ state: 'available', items: [page] })),
+      context: vi.fn(async () => undefined),
+    });
+    controller.receive({
+      ...result(),
+      selection: { project_id: project, view: 'site_health', snapshot_id: audit },
+      evidence: siteEvidence,
+    });
+    render(<Analytics controller={controller} />);
+    await user.click(screen.getByRole('button', { name: 'Read pages from this crawl' }));
+    expect(screen.getByText(page.display_url)).toBeVisible();
+    expect(screen.getByText(page.record_uri)).toBeVisible();
+  });
   it.each([
     {
       name: 'oversized',

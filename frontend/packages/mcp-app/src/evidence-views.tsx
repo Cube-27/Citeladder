@@ -296,7 +296,9 @@ export function SiteHealthView({ state, controller }: Props) {
       ))}
       {pages.map((page, index) => (
         <article key={text(page.id, `page-${index}`)}>
-          <SectionTitle>{text(page.url, text(page.title, 'Page evidence'))}</SectionTitle>
+          <SectionTitle>
+            {text(page.display_url, text(page.normalized_url, text(page.title, 'Page evidence')))}
+          </SectionTitle>
           <p className={textRole('caption')}>{text(page.record_uri)}</p>
         </article>
       ))}

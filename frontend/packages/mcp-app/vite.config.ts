@@ -25,7 +25,8 @@ export default defineConfig({
           // Tree shaking is complete. Drop purity annotations before embedding:
           // formatting them inside HTML is not idempotent in the current toolchain.
           const code = script.code.replaceAll(/\/\*\s*@__PURE__\s*\*\//gu, '');
-          const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CiteLadder analytics</title><style>${styles.join('\n')}</style></head><body><div id="root"></div><script type="module">${code.replaceAll('</script', String.raw`<\/script`)}</script></body></html>`;
+          const escapedCode = code.replaceAll('</script', String.raw`<\/script`);
+          const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CiteLadder analytics</title><style>${styles.join('\n')}</style></head><body><div id="root"></div><script type="module">${escapedCode}</script></body></html>`;
           for (const key of Object.keys(bundle)) delete bundle[key];
           this.emitFile({ type: 'asset', fileName: 'analytics.html', source: html });
         },
