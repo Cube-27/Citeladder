@@ -15,6 +15,8 @@ import {
 import { EngineLogo } from '../primitives/engine-logo';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
+import { appHref } from '@/lib/config/app-link';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import {
   CAPABILITIES,
   FAQS,
@@ -48,12 +50,13 @@ function Hero() {
           <div className="cl-hero-actions">
             <DemoLink />
             <ButtonLink
-              href="/ai-citation-tracking"
+              href={selfServeSignupOpen() ? appHref('/register') : '/ai-citation-tracking'}
               variant="soft"
               size="marketing"
               className="cl-cta"
             >
-              Explore citation tracking <ArrowRight size={18} aria-hidden />
+              {selfServeSignupOpen() ? 'Start free trial' : 'Explore citation tracking'}{' '}
+              <ArrowRight size={18} aria-hidden />
             </ButtonLink>
           </div>
           <p className="cl-hero-note">

@@ -159,7 +159,14 @@ export async function handleAppRequest(request: Request, env: WorkerEnv): Promis
     return decorate(response('Not found.', 404));
   }
   const routed = await dynamicRoute(request, env, path);
-  return routed ? decorate(routed) : staticOrNavigation(request, env, url, path);
+  const result = routed ? decorate(routed) : await staticOrNavigation(request, env, url, path);
+  if (['/verify-email', '/reset-password', '/invitations/accept'].includes(path)) {
+    const headers = new Headers(result.headers);
+    headers.set('Referrer-Policy', 'no-referrer');
+    headers.set('Cache-Control', 'no-store');
+    return new Response(result.body, { status: result.status, headers });
+  }
+  return result;
 }
 
 const appWorker = { fetch: handleAppRequest };

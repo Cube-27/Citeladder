@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
 import { authApi } from '@/lib/api/auth';
 import { authErrorMessage, registerFormSchema, type RegisterFormValues } from '@/lib/auth/forms';
-import { safeMcpReturnPath, withMcpReturnPath } from '@/lib/auth/mcp-return-path';
+import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 
 type SearchParams = Pick<URLSearchParams, 'get'>;
 
@@ -26,7 +26,7 @@ export function RegisterScreen({
   // An MCP handoff can land here when the visitor has no account yet. The
   // resume path has to survive registration AND the sign-in that follows it,
   // so it is carried back onto /login rather than consumed here.
-  const returnTo = safeMcpReturnPath(searchParams.get('return_to'));
+  const returnTo = safeAuthReturnPath(searchParams.get('return_to'));
   const {
     register,
     handleSubmit,
@@ -36,8 +36,9 @@ export function RegisterScreen({
     defaultValues: { email: '', password: '', confirmPassword: '' },
   });
   const mutation = useMutation({
-    mutationFn: (values: RegisterFormValues) => authApi.register(values.email, values.password),
-    onSuccess: () => replace(withMcpReturnPath('/login?registered=1', returnTo)),
+    mutationFn: (values: RegisterFormValues) =>
+      authApi.register(values.email, values.password, undefined, returnTo),
+    onSuccess: () => replace(withAuthReturnPath('/login?registered=1', returnTo)),
   });
   const submit = (values: RegisterFormValues) =>
     mutation.mutateAsync(values).catch(() => undefined);
@@ -56,7 +57,7 @@ export function RegisterScreen({
         submitLabel="Registration disabled"
         pendingLabel="Registration disabled"
         footerPrompt={demoMode ? 'Already have the demo account?' : 'Already have an account?'}
-        footerHref={withMcpReturnPath('/login', returnTo)}
+        footerHref={withAuthReturnPath('/login', returnTo)}
         footerLabel="Sign in"
         showOAuth={false}
         showForm={false}
@@ -69,14 +70,14 @@ export function RegisterScreen({
   return (
     <AuthFormShell
       title="Create your account"
-      description="Start measuring how AI answers describe your brand."
+      description="Your seven-day trial starts when you register. Verify your email to use it. No card required."
       error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
       onSubmit={handleSubmit(submit)}
       pending={isSubmitting || mutation.isPending}
       submitLabel="Create account"
       pendingLabel="Creating account…"
       footerPrompt="Already have an account?"
-      footerHref={withMcpReturnPath('/login', returnTo)}
+      footerHref={withAuthReturnPath('/login', returnTo)}
       footerLabel="Sign in"
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />

@@ -8,6 +8,7 @@ export const authKeys = {
 export const workspaceKeys = {
   all: ['workspaces'] as const,
   list: () => ['workspaces', 'list'] as const,
+  access: (workspaceId: string) => ['workspaces', 'access', workspaceId] as const,
   productTour: (workspaceId: string) => ['workspaces', 'product-tour', workspaceId] as const,
   // Administrative reads. The workspace is part of the key because the
   // response IS that workspace's roster: keyed without it, switching

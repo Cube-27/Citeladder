@@ -14,6 +14,7 @@ import {
 } from 'react';
 
 import { authApi } from '@/lib/api/auth';
+import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@/lib/api/types';
@@ -99,7 +100,12 @@ export function SessionGuard({
     redirectingRef.current = true;
     setIsRedirecting(true);
     await clearAccountScopedClientState(queryClient);
-    hardNavigate('/login');
+    hardNavigate(
+      withAuthReturnPath(
+        '/login',
+        safeAuthReturnPath(window.location.pathname + window.location.search),
+      ),
+    );
   }, [queryClient]);
 
   // Redirect only a genuinely unauthenticated visitor: a 401 from `me` means

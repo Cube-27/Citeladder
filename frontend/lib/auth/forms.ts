@@ -58,7 +58,7 @@ const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
   ],
   [
     'oauth_signin_email_unverified',
-    'Google has not verified that email address, so it cannot be linked to an account.',
+    'Confirm mailbox ownership using the email link, or sign in with your existing password and connect Google from Account security.',
   ],
   ['oauth_signin_disabled', 'Google sign-in is unavailable right now. Please use email below.'],
   ['oauth_signin_failed', OAUTH_SIGNIN_FALLBACK],

@@ -22,6 +22,7 @@ import { redirect } from 'react-router-dom';
 
 import { billingApi } from '@/lib/api/billing';
 import { authApi } from '@/lib/api/auth';
+import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { httpErrorStatus } from '@/lib/api/client';
 import { policiesApi } from '@/lib/api/policies';
 import { projectsApi } from '@/lib/api/projects';
@@ -73,7 +74,13 @@ async function requireSession(client: QueryClient): Promise<boolean> {
     });
     return true;
   } catch (error) {
-    if (httpErrorStatus(error) === 401) throw redirect('/login');
+    if (httpErrorStatus(error) === 401)
+      throw redirect(
+        withAuthReturnPath(
+          '/login',
+          safeAuthReturnPath(window.location.pathname + window.location.search),
+        ),
+      );
     return false;
   }
 }
