@@ -224,6 +224,76 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('OnboardingScreen', () => {
+  it('retries a failed progress read without starting another discovery', async () => {
+    useRealDiscovery = true;
+    searchParams = `discovery=${DISCOVERY_ID}&step=discovery`;
+    let failRead = false;
+    let creations = 0;
+    mswServer.use(
+      catalogHandler(),
+      http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/run`, () =>
+        HttpResponse.json(discovery('queued', 'opening_website')),
+      ),
+      http.get(`/api/v1/brand-discoveries/${DISCOVERY_ID}`, () => {
+        if (failRead) return HttpResponse.json({ detail: 'Unavailable' }, { status: 400 });
+        failRead = true;
+        return HttpResponse.json(discovery('queued', 'opening_website'));
+      }),
+      http.post('/api/v1/brand-discoveries', () => {
+        creations += 1;
+        return HttpResponse.json(discovery('queued', 'opening_website'));
+      }),
+    );
+    renderOnboarding();
+    expect(await screen.findByText('Waiting to start website research')).toBeInTheDocument();
+    const retry = await screen.findByRole('button', { name: 'Retry' }, { timeout: 3000 });
+    expect(retry).toBeEnabled();
+    mswServer.use(
+      http.get(`/api/v1/brand-discoveries/${DISCOVERY_ID}`, () =>
+        HttpResponse.json(discovery('ready', 'preparing_review')),
+      ),
+    );
+    await userEvent.setup().click(retry);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled());
+    expect(creations).toBe(0);
+  });
+
+  it('starts research once while polling persisted progress during the bounded request', async () => {
+    useRealDiscovery = true;
+    searchParams = `discovery=${DISCOVERY_ID}&step=discovery`;
+    discoveryState = discovery('queued', 'opening_website');
+    let starts = 0;
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mswServer.use(
+      catalogHandler(),
+      http.get(`/api/v1/brand-discoveries/${DISCOVERY_ID}`, () =>
+        HttpResponse.json(discoveryState),
+      ),
+      http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/run`, async ({ request }) => {
+        expect(request.headers.get('x-workspace-id')).toBe(WORKSPACE_ID);
+        starts += 1;
+        discoveryState = discovery('running', 'finding_competitors');
+        await pending;
+        discoveryState = discovery('ready', 'preparing_review');
+        return HttpResponse.json(discoveryState);
+      }),
+    );
+    renderOnboarding();
+    try {
+      await waitFor(() => expect(screen.getByText('Opened your website')).toBeInTheDocument(), {
+        timeout: 3000,
+      });
+      expect(screen.getByRole('button', { name: 'Searching…' })).toBeDisabled();
+    } finally {
+      release();
+    }
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled());
+    expect(starts).toBe(1);
+  });
+
   it('opens a committed project without waiting for a second project-detail read', async () => {
     discoveryState = discovery('ready', 'preparing_review');
     searchParams = `discovery=${DISCOVERY_ID}&step=review`;
@@ -314,6 +384,9 @@ describe('OnboardingScreen', () => {
     let creations = 0;
     mswServer.use(
       catalogHandler(),
+      http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/run`, () =>
+        HttpResponse.json(discoveryState),
+      ),
       http.post('/api/v1/brand-discoveries', async ({ request }) => {
         creations += 1;
         discoveryState = {

@@ -1,5 +1,12 @@
 {
   "settings": {
+    "interactive_timeout_seconds": {
+      "env": ["BRAND_DISCOVERY_INTERACTIVE_TIMEOUT_SECONDS"],
+      "type": "float",
+      "default": 180,
+      "exclusive_minimum": 0,
+      "maximum": 180
+    },
     "lease_seconds": {
       "env": ["BRAND_DISCOVERY_LEASE_SECONDS"],
       "type": "int",

@@ -8,6 +8,7 @@ import type { Database } from '../db/database.ts';
 import type { BrandDiscoveryTasks } from '../generated/db-schema.ts';
 
 export type DiscoveryTask = Selectable<BrandDiscoveryTasks>;
+export type DiscoveryTarget = { workspaceId: string; discoveryId: string };
 const table = 'brand_discovery_tasks';
 const { statuses, claimable } = policy.task_queue;
 export class DiscoveryQueue {
@@ -19,7 +20,7 @@ export class DiscoveryQueue {
     this.leaseSeconds = leaseSeconds;
     this.now = now;
   }
-  claim(owner: string): Promise<DiscoveryTask | null> {
+  claim(owner: string, target?: DiscoveryTarget): Promise<DiscoveryTask | null> {
     const now = this.now();
     return this.db.transaction().execute(async (trx) => {
       const selected = await trx
@@ -33,6 +34,11 @@ export class DiscoveryQueue {
         .where('brand_discovery_tasks.status', 'in', claimable)
         .where('brand_discovery_tasks.available_at', '<=', sql<Date>`clock_timestamp()`)
         .whereRef('brand_discovery_tasks.attempt_count', '<', 'brand_discovery_tasks.max_attempts')
+        .$if(Boolean(target), (query) =>
+          query
+            .where('brand_discovery_tasks.workspace_id', '=', target!.workspaceId)
+            .where('brand_discovery_tasks.discovery_id', '=', target!.discoveryId),
+        )
         .where('task_kind', 'in', [
           policy.discovery.constants.task_kind_brand_discovery,
           policy.discovery.constants.legacy_task_kind_brand_completion,

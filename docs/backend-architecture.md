@@ -11,7 +11,9 @@ state and queues. Domain behavior is documented in the feature owners listed in
 Projects, onboarding research/completion, logo refresh and command-center reads
 are TypeScript-owned under frontend/services/api/src/projects/. Discovery runs
 in its TypeScript worker; the native queue sweeper backs up lease-expiry and retry
-reconciliation. Executive PDFs use the TypeScript command-center
+reconciliation. Interactive onboarding invokes that same worker through an
+awaited, bounded API mutation scoped to one authorized discovery; background
+execution remains its recovery path. Executive PDFs use the TypeScript command-center
 projection and shared PDF renderer; receipt list/download reads are also
 TypeScript-owned. Ingress routing is
 checked against the shared route-ownership manifest.
@@ -92,7 +94,8 @@ Periodic owners recheck admission before each occurrence, revocation or recovery
 unit. The scheduler claims one occurrence at a time under a runner budget, so
 stopping never strands a preclaimed batch; admitted units finish settlement.
 Worker-owned lease and crawl backstops still run in each lane, including idle
-passes. Runner and tick are the only executors; no per-owner daemon remains.
+passes. Runner and tick own background execution; interactive discovery also
+uses the same worker inside its bounded API request. No per-owner daemon remains.
 One PostgreSQL advisory lock admits one drain at a time across executions.
 
 With `CLOUD_RUN_RUNNER_JOB` configured, the API observes successful queue/billing
@@ -101,7 +104,8 @@ successful COMMIT marks work; rollback, savepoint rollback, aborted transactions
 and no-op writes do not. After the request settles, it awaits a bounded Cloud Run
 job-start request using service-account metadata credentials. This also covers
 requests whose later operation fails after earlier work committed. Reads do not
-start jobs; worker writes never recursively start jobs. Duplicate starts are
+start jobs; worker writes never recursively start jobs, including request-bound
+discovery lease and settlement writes. Duplicate starts are
 allowed and existing leases arbitrate claims. A failed start is logged without
 tokens/provider bodies and leaves the committed response and work intact for tick.
 

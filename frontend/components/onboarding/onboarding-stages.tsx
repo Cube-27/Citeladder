@@ -165,12 +165,7 @@ export function DiscoveryStage({
           <Alert tone="warning">
             <div className="flex items-center justify-between gap-3">
               <span>{onboardingErrorMessage(discovery.error)}</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={discovery.retry}
-                disabled={discovery.isRunning}
-              >
+              <Button size="sm" variant="ghost" onClick={discovery.retry}>
                 Retry
               </Button>
             </div>

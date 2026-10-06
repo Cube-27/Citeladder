@@ -15,7 +15,11 @@ import { discoveryCreate, discoverySettings } from '../projects/discovery-inputs
 import { researchBrand, type ResearchDependencies } from '../projects/research.ts';
 import { resolveSite } from '../projects/site-resolution.ts';
 import { FetchError, fetchWebsite } from '../projects/safe-fetch.ts';
-import { DiscoveryQueue, type DiscoveryTask } from '../queue/discovery-queue.ts';
+import {
+  DiscoveryQueue,
+  type DiscoveryTask,
+  type DiscoveryTarget,
+} from '../queue/discovery-queue.ts';
 
 const cfg = policy.discovery.constants;
 const logger = getLogger('app.workers.brand_discovery_worker');
@@ -46,22 +50,26 @@ export class DiscoveryWorker {
       throw new Error('Discovery heartbeat must be shorter than the lease');
     this.queue = new DiscoveryQueue(db, this.settings.lease_seconds);
   }
-  async runOnce(owner: string): Promise<boolean> {
-    await recoverDiscoveryLeases(this.db);
-    const task = await this.queue.claim(owner);
+  async runOnce(owner: string, target?: DiscoveryTarget, signal?: AbortSignal): Promise<boolean> {
+    // Interactive admission touches only its authorized discovery. The runner
+    // and periodic recovery retain ownership of sweeping expired leases.
+    if (!target) await recoverDiscoveryLeases(this.db);
+    signal?.throwIfAborted();
+    const task = await this.queue.claim(owner, target);
     if (!task) return false;
     const heartbeat = maintainLease(
       () => this.queue.heartbeat(task, owner),
       this.settings.heartbeat_interval_seconds * 1000,
       (error) => logger.exception('discovery_heartbeat_failed', error, { task_id: task.id }),
     );
-    const checkCancelled = () => heartbeat.signal.throwIfAborted();
+    const executionSignal = leaseSignal(heartbeat.signal, signal);
+    const checkCancelled = () => executionSignal.throwIfAborted();
     const fetcher: typeof fetchWebsite = async (url, options) => {
       await requireWorkspaceAccess(this.db, task.workspace_id);
       checkCancelled();
       return (this.dependencies.fetcher ?? fetchWebsite)(url, {
         ...options,
-        signal: leaseSignal(heartbeat.signal, options?.signal),
+        signal: leaseSignal(executionSignal, options?.signal),
       });
     };
     try {
@@ -82,13 +90,14 @@ export class DiscoveryWorker {
       const result = await researchBrand(input, site, {
         ...this.dependencies,
         fetcher,
+        signal: executionSignal,
         checkCancelled,
         transport: async (url, options) => {
           await requireWorkspaceAccess(this.db, task.workspace_id);
           checkCancelled();
           return (this.dependencies.transport ?? fetch)(url, {
             ...options,
-            signal: leaseSignal(heartbeat.signal, options?.signal),
+            signal: leaseSignal(executionSignal, options?.signal),
           });
         },
         onCompetitors: async () => {

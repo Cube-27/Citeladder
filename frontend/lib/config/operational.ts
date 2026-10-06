@@ -74,6 +74,8 @@ export const PROMPT_GENERATION_REQUEST_TIMEOUT_MS = 240_000;
  * while the server went on to create the project.
  */
 export const ONBOARDING_COMPLETION_REQUEST_TIMEOUT_MS = 60_000;
+// Interactive research owns a 180-second server budget, plus response overhead.
+export const ONBOARDING_RESEARCH_REQUEST_TIMEOUT_MS = 195_000;
 
 /**
  * Bounded backoff between the API client's network-failure retries (A3). The

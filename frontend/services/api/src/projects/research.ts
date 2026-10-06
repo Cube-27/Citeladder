@@ -78,12 +78,14 @@ export type ResearchDependencies = {
   env?: Record<string, string | undefined>;
   onCompetitors?: () => Promise<void>;
   checkCancelled?: () => void;
+  signal?: AbortSignal;
 };
 async function generateIdentity(
   gateway: ModelGateway | null | undefined,
   input: DiscoveryInput,
   items: readonly ResearchEvidence[],
   modelCalls: Record<string, unknown>[],
+  signal?: AbortSignal,
 ) {
   if (!gateway) return null;
   try {
@@ -100,6 +102,7 @@ async function generateIdentity(
         evidence: items,
       }),
       identityEnvelope,
+      signal,
     );
     const identity = validateIdentity(generated.value, items);
     modelCalls.push({
@@ -111,6 +114,7 @@ async function generateIdentity(
     });
     return identity;
   } catch {
+    signal?.throwIfAborted();
     modelCalls.push({
       phase: 'identity',
       prompt_version: cfg.brand_identity_prompt_version,
@@ -136,6 +140,7 @@ async function suggestCompetitors({
   evidence,
   settings,
   modelCalls,
+  signal,
 }: {
   gateway: ModelGateway | null | undefined;
   identity: Identity | null;
@@ -145,6 +150,7 @@ async function suggestCompetitors({
   evidence: readonly ResearchEvidence[];
   settings: ReturnType<typeof discoverySettings>;
   modelCalls: Record<string, unknown>[];
+  signal?: AbortSignal;
 }) {
   if (!gateway || !identity) return { competitors: [], available: false };
   const schema = z.object({
@@ -163,6 +169,7 @@ async function suggestCompetitors({
           evidence: boundedEvidence(evidence, settings.competitor_suggestion_evidence_max_chars),
         }),
         schema,
+        signal,
       );
       const competitors = cleanSuggestions(
         generated.value.competitors,
@@ -179,6 +186,7 @@ async function suggestCompetitors({
       });
       return { competitors, available: true };
     } catch {
+      signal?.throwIfAborted();
       modelCalls.push({
         phase: 'competitor_suggestions',
         prompt_version: cfg.brand_competitor_suggestion_version,
@@ -252,7 +260,7 @@ export async function researchBrand(
   }
   const modelCalls: Record<string, unknown>[] = [];
   dependencies.checkCancelled?.();
-  const identity = await generateIdentity(gateway, input, items, modelCalls);
+  const identity = await generateIdentity(gateway, input, items, modelCalls, dependencies.signal);
   const profile =
     identity?.profile ??
     discoveryProfile.parse({
@@ -299,6 +307,7 @@ export async function researchBrand(
     evidence: competitorEvidence,
     settings,
     modelCalls,
+    signal: dependencies.signal,
   });
   const warnings = researchWarnings(
     site.warning,

@@ -10,6 +10,13 @@ import { executionTables } from '../config/execution.ts';
 type RequestWork = { committed: boolean };
 const requests = new AsyncLocalStorage<RequestWork>();
 
+/** A request-bound worker consumes existing work; its lease/settlement writes
+ * must not launch another runner. Creation already owns the recovery wake-up.
+ */
+export function withoutWorkObservation<T>(run: () => Promise<T>): Promise<T> {
+  return requests.exit(run);
+}
+
 /** A request owns observation; workers and offline operators never start more jobs. */
 export function observeCommittedWork(run: () => Promise<void>, wake: () => Promise<void>) {
   const state: RequestWork = { committed: false };

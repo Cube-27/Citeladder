@@ -44,7 +44,11 @@ export function discoveryActivity(discovery: BrandDiscovery | undefined): Activi
   const current = currentStep(discovery);
   const progress = discovery?.progress;
   const labels = [
-    current > 0 ? 'Opened your website' : 'Opening your website',
+    !discovery || discovery.status === 'queued'
+      ? 'Waiting to start website research'
+      : current > 0
+        ? 'Opened your website'
+        : 'Opening your website',
     'Reading what you offer',
     current > 2 ? 'Found comparable brands' : 'Finding comparable brands',
     current > 3 ? 'Prepared your questions' : 'Preparing your questions',
