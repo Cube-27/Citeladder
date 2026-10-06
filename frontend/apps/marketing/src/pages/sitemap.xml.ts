@@ -2,6 +2,7 @@ import { POSTS } from '@/lib/marketing-content/blog';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal';
 import { absoluteUrl } from '@/lib/seo/site';
+import { FREE_TOOLS } from '@/lib/marketing-content/tools';
 
 type RouteEntry = {
   path: string;
@@ -22,6 +23,12 @@ const staticRoutes: readonly RouteEntry[] = [
   { path: '/entity-map', changeFrequency: 'monthly', priority: 0.5 },
   { path: '/blog', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/compare', changeFrequency: 'monthly', priority: 0.6 },
+  { path: '/tools', changeFrequency: 'monthly', priority: 0.8 },
+  ...FREE_TOOLS.map((tool) => ({
+    path: `/tools/${tool.slug}`,
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  })),
 ];
 
 const escapeXml = (value: string) =>

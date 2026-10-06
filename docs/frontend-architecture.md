@@ -60,6 +60,19 @@ The documentation Worker serves assets only, with no Worker script, so Astro emi
 
 ## Routes and shared shell
 
+The marketing `/tools` hub links to six server-rendered `/tools/:slug` pages:
+crawler rules testing, robots.txt generation, meta/directive inspection,
+structured data generation, sitemap comparison and social previews. These are
+browser-only utilities over bounded pasted inputs and local files; they do not
+fetch sites, call providers, persist results or put submissions in URLs.
+The existing crawler catalog supplies public bot metadata and rules use the same
+`robots-parser` dependency as acquisition. Tool metadata lives in
+`lib/marketing-content/tools.ts`, browser admission in `lib/config/free-tools.ts`,
+and local transformations in `lib/free-tools/`. These reports are not persisted
+Site Health evidence or claims of live access, indexability or citation eligibility.
+Social previews read local raster images; published image URLs only enter exported
+markup. Sitemap indexes compare declared child sitemap addresses without recursion.
+
 | Surface | Browser location | Feature owner |
 |---|---|---|
 | Overview and company facts | /projects | [Onboarding](onboarding.md) |

@@ -92,6 +92,11 @@ export const NAV_DROPS: readonly NavDrop[] = [
             desc: 'Practical guides to AI visibility and site evidence',
             href: '/blog',
           },
+          {
+            title: 'Free tools',
+            desc: 'Crawler rules, markup and sitemap utilities',
+            href: '/tools',
+          },
           { title: 'FAQ', desc: 'Answers on AEO, evidence, security, and billing', href: '/faq' },
           {
             title: 'Compare',

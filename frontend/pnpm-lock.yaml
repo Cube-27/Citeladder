@@ -273,6 +273,9 @@ importers:
       resend:
         specifier: ^6.32.0
         version: 6.32.0
+      robots-parser:
+        specifier: 3.0.1
+        version: 3.0.1
       tailwind-merge:
         specifier: ^3.7.0
         version: 3.7.0
