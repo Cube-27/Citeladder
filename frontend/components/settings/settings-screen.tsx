@@ -2,7 +2,6 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -16,6 +15,7 @@ import { MemberSettings } from '@/components/settings/member-settings';
 import { McpConnections } from '@/components/settings/mcp-connections';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
+import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { PageShell } from '@/components/layout/page-shell';
 import { projectsApi } from '@/lib/api/projects';
@@ -195,9 +195,8 @@ function ProjectDeletionControls() {
  * workspace (roving tabindex, Arrow/Home/End navigation, `aria-selected`,
  * labelled panels).
  *
- * - **Account**: read-only session details from `GET /auth/me` via
- *   `useSessionUser` (no account-mutation endpoints exist) plus the
- *   appearance/theme control. `role` is the ACCOUNT-level role (free-form,
+ * - **Account**: session details from `GET /auth/me` via `useSessionUser`,
+ *   display timezone and account security controls. `role` is the ACCOUNT-level role (free-form,
  *   defaults to `"user"`) and `created_at` is when the account was created —
  *   neither is a workspace membership role.
  * - **Provider Settings**: the BYOK provider configuration (formerly the
@@ -295,13 +294,7 @@ export function SettingsScreen() {
           </div>
 
           <TimeZoneSetting />
-          <Button
-            onClick={() => {
-              hardNavigate('/account-security');
-            }}
-          >
-            Account security
-          </Button>
+          <AccountSecurity />
 
           <ProjectDeletionControls />
         </TabPanel>

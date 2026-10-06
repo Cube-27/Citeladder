@@ -207,6 +207,12 @@ export function useOnboardingFlow(transactionKey: string) {
         await queryClient.cancelQueries({ queryKey: listKey });
         if (!mounted.current) return;
         void queryClient.invalidateQueries({ queryKey: listKey });
+        // Creation consumed capacity. Drop the pre-creation allowance so the
+        // destination cannot offer another project while the fresh read runs.
+        void queryClient.resetQueries({
+          queryKey: queryKeys.billing.workspaceEntitlement(activeWorkspaceId),
+          exact: true,
+        });
       }
       setActiveProjectId(projectId);
       startOnboardingNavigationHandoff(projectId);

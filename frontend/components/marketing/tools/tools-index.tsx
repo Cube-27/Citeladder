@@ -70,7 +70,7 @@ export function ToolsIndex() {
           title="Small checks. Clear limits."
           lead="These tools inspect what you supply. They do not fetch websites or prove indexing, rankings or AI citations. Your pasted text and files are not uploaded or saved by these tools."
         />
-        <ButtonLink href="/solutions">
+        <ButtonLink href="/solutions" className="w-fit max-w-full whitespace-normal">
           Explore site-wide evidence in CiteLadder <ArrowRight aria-hidden />
         </ButtonLink>
       </Section>

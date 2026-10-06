@@ -8,23 +8,23 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
 import { AuthPasswordField } from '@/components/auth/auth-form';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 
 function SecurityIdentity({
   data,
 }: Readonly<{ data: Awaited<ReturnType<typeof authApi.security>> | undefined }>) {
   if (!data) return null;
   return (
-    <>
-      <p>{data.email}</p>
-      <p>
-        Sign-in methods: {data.methods.join(', ')}. Email:{' '}
-        {data.email_verified ? 'Verified' : 'Legacy or operator access; no verification recorded'}.
-      </p>
-    </>
+    <p className="type-body">
+      Sign-in methods: {data.methods.join(', ')}. Email:{' '}
+      {data.email_verified ? 'Verified' : 'Legacy or operator access; no verification recorded'}.
+    </p>
   );
 }
 
-export default function AccountSecurity() {
+export default function AccountSecurity({
+  showHeading = true,
+}: Readonly<{ showHeading?: boolean }>) {
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState(false);
@@ -52,13 +52,15 @@ export default function AccountSecurity() {
     onSuccess: (response) => hardNavigate(response.authorize_url),
   });
   return (
-    <section className="grid gap-4" aria-label="Account security">
-      <h1>Account security</h1>
+    <section className="grid max-w-xl gap-4" aria-label="Account security">
+      {showHeading && <EditorialSectionHeader title="Account security" />}
       {security.isPending && <p>Loading account security…</p>}
       {security.isError && (
         <Alert tone="danger">
           {authErrorMessage(security.error)}{' '}
-          <Button onClick={() => void security.refetch()}>Retry</Button>
+          <Button className="w-fit" onClick={() => void security.refetch()}>
+            Retry
+          </Button>
         </Alert>
       )}
       <SecurityIdentity data={security.data} />
@@ -92,22 +94,28 @@ export default function AccountSecurity() {
               maxLength: authFormPolicy.passwordMaxLength,
             }}
           />
-          <Button type="submit" disabled={mutation.isPending}>
-            Change password and sign out
-          </Button>
-          {!security.data.methods.includes('google') && (
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!current || link.isPending}
-              onClick={() => link.mutate()}
-            >
-              Connect Google using current password
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={mutation.isPending}>
+              Change password and sign out
             </Button>
-          )}
+            {!security.data.methods.includes('google') && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!current || link.isPending}
+                onClick={() => link.mutate()}
+              >
+                Connect Google
+              </Button>
+            )}
+          </div>
         </form>
       ) : (
-        <Button disabled={!security.data || setup.isPending} onClick={() => setup.mutate()}>
+        <Button
+          className="w-fit"
+          disabled={!security.data || setup.isPending}
+          onClick={() => setup.mutate()}
+        >
           Email password setup link
         </Button>
       )}
@@ -115,7 +123,7 @@ export default function AccountSecurity() {
       {setup.isError && <Alert tone="danger">{authErrorMessage(setup.error)}</Alert>}
       {mutation.isError && <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert>}
       {link.isError && <Alert tone="danger">{authErrorMessage(link.error)}</Alert>}
-      <Button variant="secondary" onClick={() => setConfirm(true)}>
+      <Button className="w-fit" variant="secondary" onClick={() => setConfirm(true)}>
         Sign out all sessions
       </Button>
       <Dialog

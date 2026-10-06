@@ -6,6 +6,7 @@ import { createMemoryRouter, Outlet, RouterProvider } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vite-plus/test';
 
 import { OnboardingGate } from '@/components/layout/onboarding-gate';
+import { ProjectSwitcher } from '@/components/layout/project-switcher';
 import { UserMenuController } from '@/components/layout/user-menu';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createAppQueryClient } from '@/lib/api/query-client';
@@ -133,7 +134,12 @@ function Layout() {
 
 function OpenedProject() {
   const { activeProject } = useProjectContext();
-  return <h1>Opened {activeProject?.id}</h1>;
+  return (
+    <>
+      <h1>Opened {activeProject?.id}</h1>
+      <ProjectSwitcher />
+    </>
+  );
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'bypass' }));
@@ -224,6 +230,14 @@ async function createProject(router: ReturnType<typeof renderSetup>) {
 
   expect(await screen.findByRole('heading', { name: `Opened ${PROJECT}` })).toBeInTheDocument();
   expect(router.state.location.pathname).toBe('/projects');
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Acme' }));
+  await waitFor(() =>
+    expect(screen.getByRole('menuitem', { name: /New project/u })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    ),
+  );
+  expect(await screen.findByText('Project limit reached')).toBeVisible();
   router.dispose();
 }
 

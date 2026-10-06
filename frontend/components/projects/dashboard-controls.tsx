@@ -39,9 +39,18 @@ export function ProjectControls({
             <Pencil className="size-4" aria-hidden /> Edit active project
           </DropdownItem>
         ) : null}
-        {canAddProject ? (
-          <DropdownItem onSelect={() => router(newProjectDestination(activeWorkspaceId))}>
-            <Plus className="size-4" aria-hidden /> Add project
+        {mayCreate ? (
+          <DropdownItem
+            disabled={!canAddProject}
+            onSelect={() => router(newProjectDestination(activeWorkspaceId))}
+          >
+            <Plus className="size-4" aria-hidden />
+            <span className="grid min-w-0 flex-1">
+              <span>Add project</span>
+              {remainingProjectSlots === 0 && (
+                <span className="type-caption">Project limit reached</span>
+              )}
+            </span>
           </DropdownItem>
         ) : null}
       </DropdownContent>

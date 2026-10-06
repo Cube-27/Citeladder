@@ -188,9 +188,7 @@ function readWorkspaceState(client: QueryClient, workspaceId: string, pathname: 
           }),
       }),
     ),
-    ['/account-security', '/invitations/accept'].includes(
-      pathname.replace(/\/+$/u, '').toLowerCase(),
-    )
+    pathname.replace(/\/+$/u, '').toLowerCase() === '/invitations/accept'
       ? null
       : settle(
           client.ensureQueryData({

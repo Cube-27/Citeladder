@@ -1,14 +1,16 @@
 'use client';
 
 import { FolderOpen, Plus } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageLoading } from '@/components/layout/page-loading';
 import type { Project } from '@/lib/api/types';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
+import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
+import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { finishOnboardingNavigationHandoff } from '@/lib/onboarding/timing';
 import { newProjectDestination } from '@/lib/navigation/project-destination';
 
@@ -34,6 +36,12 @@ export function ProjectsScreen() {
   const searchParams = useSearchParams()[0];
   const requestedProjectId = searchParams?.get('project') ?? null;
   const [editing, setEditing] = useState<Project | null>(null);
+  const navigate = useNavigate();
+  const { entitlement } = useEntitlement();
+  const mayCreate = useWorkspaceCapability('write');
+  const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
+  const canAddProject =
+    mayCreate && remainingProjectSlots !== undefined && remainingProjectSlots > 0;
 
   // The source mark carries the committed UUID. Close it after this route has
   // committed with that same authorized project, never for a fallback project.
@@ -60,11 +68,12 @@ export function ProjectsScreen() {
         heading="No projects yet"
         description="Add a brand to start tracking how AI answers describe it."
         action={
-          <Button asChild>
-            <Link to={newProjectDestination(activeWorkspaceId)}>
-              <Plus className="size-4" aria-hidden />
-              Add project
-            </Link>
+          <Button
+            disabled={!canAddProject}
+            onClick={() => navigate(newProjectDestination(activeWorkspaceId))}
+          >
+            <Plus className="size-4" aria-hidden />
+            Add project
           </Button>
         }
       />

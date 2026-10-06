@@ -11,6 +11,8 @@ import { makeProject } from '@/test/fixtures/project';
 const { entitlementState } = vi.hoisted(() => ({
   entitlementState: { canDeleteProject: false },
 }));
+const { security, mailbox } = vi.hoisted(() => ({ security: vi.fn(), mailbox: vi.fn() }));
+vi.mock('@/lib/api/auth', () => ({ authApi: { security, mailbox } }));
 
 // Session is mocked per test so the screen renders without a real SessionGuard.
 const user: SessionUser = {
@@ -105,12 +107,27 @@ function renderScreen() {
 
 describe('SettingsScreen', () => {
   beforeEach(() => {
+    security.mockResolvedValue({ email: user.email, email_verified: true, methods: ['google'] });
+    mailbox.mockReset();
+    mailbox.mockResolvedValue({ message: 'Check your email for the password setup link.' });
     deleteProject.mockClear();
     listProjects.mockReset();
     listProjects.mockResolvedValue([]);
     setActiveProjectId.mockClear();
     entitlementState.canDeleteProject = false;
     window.history.replaceState(null, '', '/settings');
+  });
+
+  it('offers password setup directly in Account without navigating away', async () => {
+    renderScreen();
+    const ue = userEvent.setup();
+    await ue.click(await screen.findByRole('button', { name: 'Email password setup link' }));
+    await waitFor(() =>
+      expect(mailbox).toHaveBeenCalledWith('forgot-password', { email: user.email }),
+    );
+    expect(await screen.findByText('Check your email for the password setup link.')).toBeVisible();
+    expect(window.location.pathname).toBe('/settings');
+    expect(screen.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('renders the available settings tabs with Account selected by default', () => {
