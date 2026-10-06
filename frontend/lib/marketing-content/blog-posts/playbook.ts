@@ -18,11 +18,7 @@ export const POST_PLAYBOOK: BlogPost = {
   authorRole: PRODUCT_HEAD.role,
   authorUrl: PRODUCT_HEAD.linkedin,
   tags: ['Citations'],
-  relatedSlugs: [
-    'track-optimize-ai-citations',
-    'auditing-content-for-llms-ai-search',
-    'verify-improve-ai-search-visibility',
-  ],
+  relatedSlugs: ['auditing-content-for-llms-ai-search'],
   sources: [BLOG_SOURCES.googleAiFeatures],
   editorialNote:
     'Updated to clarify measurement definitions, evidence limits and practical checks.',

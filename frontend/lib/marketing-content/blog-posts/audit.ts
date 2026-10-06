@@ -18,12 +18,7 @@ export const POST_AUDIT: BlogPost = {
   authorRole: PRODUCT_HEAD.role,
   authorUrl: PRODUCT_HEAD.linkedin,
   tags: ['Website readiness'],
-  relatedSlugs: [
-    'track-optimize-ai-citations',
-    'connecting-owned-evidence-ai-search',
-    'action-playbook-winning-ai-citations',
-    'verify-improve-ai-search-visibility',
-  ],
+  relatedSlugs: ['connecting-owned-evidence-ai-search', 'action-playbook-winning-ai-citations'],
   sources: [
     BLOG_SOURCES.googleRobots,
     BLOG_SOURCES.googleNoindex,

@@ -120,7 +120,9 @@ function BlogCta({
   );
 }
 
-export function BlogIndex() {
+export function BlogIndex({
+  researchGuides = [],
+}: Readonly<{ researchGuides?: readonly { title: string; href: string; description: string }[] }>) {
   const summaries = POSTS.map(toBlogPostSummary);
   return (
     <>
@@ -202,6 +204,30 @@ export function BlogIndex() {
               </ButtonLink>
             </div>
           </Reveal>
+        </Section>
+      )}
+
+      {researchGuides.length > 0 && (
+        <Section rhythm="tight" aria-label="Research guides">
+          <h2 className="website-section-heading text-foreground mb-6">Research guides</h2>
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {researchGuides.map((guide) => (
+              <article
+                key={guide.href}
+                className="border-border-subtle bg-panel space-y-4 rounded-[var(--radius-card)] border p-5"
+              >
+                <h3 className="website-feature-heading text-foreground">
+                  <a
+                    href={guide.href}
+                    className="hover:text-accent-text underline underline-offset-4"
+                  >
+                    {guide.title}
+                  </a>
+                </h3>
+                <p className="website-body text-muted">{guide.description}</p>
+              </article>
+            ))}
+          </div>
         </Section>
       )}
 

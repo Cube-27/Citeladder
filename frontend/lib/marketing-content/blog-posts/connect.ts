@@ -19,7 +19,7 @@ export const POST_CONNECT: BlogPost = {
   authorRole: FOUNDER.role,
   authorUrl: FOUNDER.linkedin,
   tags: ['AEO Foundations', 'Evidence Systems', 'Data Integration'],
-  relatedSlugs: ['auditing-content-for-llms-ai-search', 'tracking-brand-visibility-ai-search'],
+  relatedSlugs: ['auditing-content-for-llms-ai-search', 'action-playbook-winning-ai-citations'],
   sources: [BLOG_SOURCES.gaAiAssistant, BLOG_SOURCES.gscAiReport, BLOG_SOURCES.openaiCrawlers],
   body: [
     { type: 'heading', text: 'Start with evidence boundaries' },
@@ -111,7 +111,7 @@ export const POST_CONNECT: BlogPost = {
         {
           type: 'link',
           text: 'four-part measurement taxonomy',
-          href: '/blog/tracking-brand-visibility-ai-search',
+          href: '/blog/verify-improve-ai-search-visibility',
         },
         ' to keep those evidence streams distinct once they are reported, or explore ',
         { type: 'link', text: 'CiteLadder solutions', href: '/solutions' },

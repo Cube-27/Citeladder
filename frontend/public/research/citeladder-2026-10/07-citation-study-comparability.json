@@ -1,0 +1,53 @@
+{
+  "reviewed": "2026-10-06",
+  "method": "Purposive study-comparability audit, not systematic review or meta-analysis",
+  "records": [
+    {
+      "study": "Liu Zhang Liang 2023",
+      "source": "https://aclanthology.org/2023.findings-emnlp.467/",
+      "publication": "peer-reviewed conference findings",
+      "unit": "generated sentence",
+      "metric": "fully supported by citations",
+      "reported_percent": 51.5,
+      "scope": "four historical generative search engines",
+      "pool_with_other_rows": false
+    },
+    {
+      "study": "Liu Zhang Liang 2023",
+      "source": "https://aclanthology.org/2023.findings-emnlp.467/",
+      "unit": "supplied citation",
+      "metric": "supports associated sentence",
+      "reported_percent": 74.5,
+      "scope": "same study, different denominator",
+      "pool_with_other_rows": false
+    },
+    {
+      "study": "Tow Center 2025",
+      "source": "https://www.cjr.org/tow_center/we-compared-eight-ai-search-engines-theyre-all-bad-at-citing-news.php",
+      "publication": "research-centre audit",
+      "unit": "news excerpt identification query",
+      "metric": "incorrect answer",
+      "reported_bound": "greater than 60 percent",
+      "queries": 1600,
+      "tools": 8,
+      "publishers": 20,
+      "articles_per_publisher": 10,
+      "pool_with_other_rows": false
+    },
+    {
+      "study": "Liu et al 2026",
+      "source": "https://arxiv.org/abs/2608.13786",
+      "publication": "preprint",
+      "unit": "response-level recall of expert-included studies",
+      "metric": "mean recall",
+      "reported_percent": 39.2,
+      "responses": 720,
+      "review_questions": 20,
+      "models": 3,
+      "roles": 3,
+      "repetitions": 4,
+      "pool_with_other_rows": false
+    }
+  ],
+  "exclusions": "No fabricated 10,000-citation experiment; no overall accuracy ranking; no pooling across units, years or domains"
+}

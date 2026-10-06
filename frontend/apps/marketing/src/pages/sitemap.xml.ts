@@ -2,6 +2,7 @@ import { POSTS } from '@/lib/marketing-content/blog';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal';
 import { absoluteUrl } from '@/lib/seo/site';
+import { RESEARCH_ARTICLES } from '../research-articles';
 import { FREE_TOOLS } from '@/lib/marketing-content/tools';
 
 type RouteEntry = {
@@ -16,7 +17,6 @@ const staticRoutes: readonly RouteEntry[] = [
   { path: '/pricing', changeFrequency: 'monthly', priority: 0.9 },
   { path: '/enterprise', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/solutions', changeFrequency: 'monthly', priority: 0.8 },
-  { path: '/ai-citation-tracking', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/ai-search-share-of-voice', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/faq', changeFrequency: 'monthly', priority: 0.6 },
   { path: '/ai-instructions', changeFrequency: 'monthly', priority: 0.5 },
@@ -41,6 +41,11 @@ const escapeXml = (value: string) =>
 export function GET() {
   const routes: RouteEntry[] = [
     ...staticRoutes,
+    ...RESEARCH_ARTICLES.map(({ frontmatter }) => ({
+      path: frontmatter.slug,
+      changeFrequency: 'yearly' as const,
+      priority: 0.7,
+    })),
     ...POSTS.map((post) => ({
       path: `/blog/${post.slug}`,
       changeFrequency: 'yearly' as const,

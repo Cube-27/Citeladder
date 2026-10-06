@@ -4,6 +4,7 @@ import { POSTS } from '@/lib/marketing-content/blog';
 import { toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 import { blogIndexJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
+import { RESEARCH_ARTICLES } from '../../research-articles';
 
 const description =
   'Learn how to measure AI visibility, investigate citations and audit website readiness. Practical guides with clear definitions, examples and limitations.';
@@ -18,6 +19,6 @@ const jsonLd = blogIndexJsonLd(POSTS.map(toBlogPostSummary));
   jsonLd={jsonLd ? [jsonLd] : []}
 >
   <main id="main">
-    <BlogIndex client:visible />
+    <BlogIndex client:visible researchGuides={RESEARCH_ARTICLES.map(({ frontmatter }) => ({ title: frontmatter.title, href: frontmatter.slug, description: frontmatter.meta_description }))} />
   </main>
 </MarketingLayout>

@@ -60,6 +60,49 @@ The documentation Worker serves assets only, with no Worker script, so Astro emi
 
 ## Routes and shared shell
 
+### Public research guides
+
+Reviewed SEO articles live as Markdown under
+`frontend/lib/marketing-content/blog-posts/research/`. The marketing
+`research-articles.ts` catalog reads their frontmatter for titles, descriptions,
+intent, canonical destinations, the resource listing and sitemap. The existing
+React Markdown/GFM stack renders the complete bodies on the server without
+hydration. `research-markdown.tsx` owns source-number anchors and focusable
+table overflow; the public shell and type roles remain shared.
+
+Canonical article paths use the site's no-trailing-slash convention:
+
+| Reader need | Canonical destination |
+| --- | --- |
+| GEO introduction | `/generative-engine-optimization` |
+| Check AI visibility | `/blog/verify-improve-ai-search-visibility` |
+| Citation tracking | `/ai-citation-tracking` |
+| Improve visibility | `/blog/how-to-improve-ai-visibility` |
+| Platform shortlist | `/best-ai-visibility-platforms` |
+| GEO versus SEO | `/blog/geo-vs-seo` |
+| Citation reliability | `/blog/how-accurate-are-ai-citations` |
+| AI and SEO outlook | `/blog/will-ai-replace-seo` |
+| Reference discovery | `/blog/can-chatgpt-find-citations` |
+
+The citation destination retains its product workflow, teaching example, FAQs
+and demo links. The existing measurement destination retains the distinct
+share-of-appearances worked example. The older
+`/blog/tracking-brand-visibility-ai-search` and `/check-ai-visibility` redirect
+permanently to the measurement destination; `/blog/track-optimize-ai-citations`
+redirects to citation tracking. The middleware also redirects article slash
+variants, preserving query parameters after the existing host/protocol gate.
+Named competitor comparisons keep their separate product-versus-product intent.
+
+Only the four linked public JSON inputs/templates are served from
+`/research/citeladder-2026-10/` in `frontend/public`. Editorial handoff files and
+local research notes are not public assets. Source review dates are visible
+research metadata, never publication dates or sitemap `lastmod` values.
+Authorship and actual publication metadata must be approved before publication;
+new Article markup is deferred while those details are absent. Breadcrumbs
+describe the visible navigation using the existing JSON-LD owner.
+
+### Public browser tools
+
 The marketing `/tools` hub links to six server-rendered `/tools/:slug` pages:
 crawler rules testing, robots.txt generation, meta/directive inspection,
 structured data generation, sitemap comparison and social previews. These are

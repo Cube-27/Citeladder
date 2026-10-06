@@ -1,0 +1,43 @@
+{
+  "kind": "empty_template_not_observed_data",
+  "version": "2026-10-06",
+  "unit": "claim-citation pair within a retained answer",
+  "sampling_protocol_fields": [
+    "question_set",
+    "inclusion_rules",
+    "engine_product_mode",
+    "collection_dates",
+    "locale",
+    "personalisation_state",
+    "failed_runs",
+    "reviewer_instructions"
+  ],
+  "record_fields": [
+    "answer_id",
+    "prompt_id",
+    "run_timestamp",
+    "engine_product_mode",
+    "answer_text",
+    "claim_text",
+    "citation_url",
+    "retrieval_date",
+    "source_title",
+    "source_publication_date",
+    "supporting_passage_location",
+    "url_accessibility",
+    "source_identity_match",
+    "claim_support_verdict",
+    "scope_or_time_mismatch",
+    "reviewer_id",
+    "disagreement_resolution"
+  ],
+  "claim_support_verdicts": [
+    "supported",
+    "partially_supported",
+    "not_supported",
+    "contradicted",
+    "not_assessable"
+  ],
+  "coverage_note": "Separately inventory externally verifiable claims with no adequate citation; do not restrict coverage denominator to cited claims.",
+  "records": []
+}

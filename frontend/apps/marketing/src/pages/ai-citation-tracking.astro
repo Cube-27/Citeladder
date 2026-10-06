@@ -1,22 +1,11 @@
 ---
 import { CommercialEntryPage } from '@/components/marketing/pages/commercial';
 import { CITATION_PAGE } from '@/lib/marketing-content/commercial-pages';
-import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
-import MarketingLayout from '../layouts/MarketingLayout.astro';
-
-const breadcrumb = breadcrumbJsonLd([
-  { name: 'Home', path: '/' },
-  { name: 'Citation tracking', path: '/ai-citation-tracking' },
-]);
+import { researchArticle } from '../research-articles';
+import ResearchLayout from '../layouts/ResearchLayout.astro';
+const article = researchArticle('/ai-citation-tracking')!;
 ---
 
-<MarketingLayout
-  title="AI Citation Tracking and Source Analysis | CiteLadder"
-  description="See which domains and URLs appear as sources in tracked AI answers. Separate brand mentions from citations and investigate the evidence behind them."
-  canonical="/ai-citation-tracking"
-  jsonLd={breadcrumb ? [breadcrumb] : []}
->
-  <main id="main">
-    <CommercialEntryPage page={CITATION_PAGE} />
-  </main>
-</MarketingLayout>
+<ResearchLayout article={article}>
+  <CommercialEntryPage page={CITATION_PAGE} showHero={false} />
+</ResearchLayout>

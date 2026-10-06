@@ -1,0 +1,69 @@
+{
+  "study_id": "CL-PUBLIC-DOCS-20261006",
+  "method": "Manual structured comparison of official public documentation; no live answer experiment",
+  "observed_on": "2026-10-06",
+  "unit": "product surface",
+  "selection": "Purposive: four surfaces named or relevant to the requested GEO guide; not a market sample",
+  "fields": [
+    "access",
+    "training_separation",
+    "link_interpretation",
+    "measurement",
+    "inference_limit"
+  ],
+  "records": [
+    {
+      "surface": "Google Search AI Overviews and AI Mode",
+      "access": "Google Search eligibility plus Search generative AI inclusion control",
+      "training_separation": "Search inclusion control is distinct from training controls",
+      "link_interpretation": "Supporting links within generated search features",
+      "measurement": "Documented generative AI impressions report; property and URL aggregation differ",
+      "inference_limit": "Eligibility does not guarantee a supporting link; impressions are not conversions",
+      "source_urls": [
+        "https://developers.google.com/search/docs/fundamentals/ai-optimization-guide",
+        "https://support.google.com/webmasters/answer/16908024",
+        "https://support.google.com/webmasters/answer/16984139"
+      ]
+    },
+    {
+      "surface": "ChatGPT Search",
+      "access": "OAI-SearchBot and documented IP access; separate user-requested fetcher",
+      "training_separation": "GPTBot and OAI-SearchBot permissions are independent",
+      "link_interpretation": "Search-answer sources differ from navigational links",
+      "measurement": "Publisher FAQ documents referral UTM parameter; retain prompt-level answer observations separately",
+      "inference_limit": "Crawler access or a referral is not a census of answer appearances",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/bots",
+        "https://help.openai.com/en/articles/12627856-publishers-and-developers-faq"
+      ]
+    },
+    {
+      "surface": "Gemini Apps",
+      "access": "Google-Extended documentation covers certain grounding uses; do not substitute Google Search rules",
+      "training_separation": "Google-Extended covers training and specified grounding uses, not a universal independent search-only switch",
+      "link_interpretation": "Sources, related content and double-check links must be distinguished",
+      "measurement": "Manually classify visible link type and preserve answer context",
+      "inference_limit": "A double-check corroboration link need not be a source used to generate the answer",
+      "source_urls": [
+        "https://developers.google.com/crawling/docs/crawlers-fetchers/google-common-crawlers#google-extended",
+        "https://support.google.com/gemini/answer/14143489?hl=en"
+      ]
+    },
+    {
+      "surface": "Perplexity",
+      "access": "PerplexityBot search crawling and Perplexity-User user-requested fetching are documented separately",
+      "training_separation": "These documented agents are not described as foundation-model training crawlers",
+      "link_interpretation": "User-triggered retrieval may support a linked answer",
+      "measurement": "Separate crawler logs from observations of actual answer sources",
+      "inference_limit": "A bot request does not establish whether a human saw or clicked a citation",
+      "source_urls": ["https://docs.perplexity.ai/docs/resources/perplexity-crawlers"]
+    }
+  ],
+  "limitations": [
+    "Documentation can lag product behaviour",
+    "No ranking factors or causal uplift measured",
+    "No vendor account access or live UI test performed",
+    "Analyst-authored interpretation fields are labelled as such in the methodology",
+    "Google older and newer guidance differed; current dedicated feature documentation was prioritised"
+  ]
+}

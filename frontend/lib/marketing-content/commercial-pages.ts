@@ -61,6 +61,8 @@ export const CITATION_PAGE: CommercialPage = {
     'A citation is evidence of a source reference in an observed answer. It does not by itself measure a visit, a lead or a sale. Pair source analysis with your tracked brand observations and your website analytics to understand the different stages.',
   related: [
     { label: 'Explore AI share of voice', href: '/ai-search-share-of-voice' },
+    { label: 'Build a visibility baseline', href: '/blog/verify-improve-ai-search-visibility' },
+    { label: 'Plan your next improvement', href: '/blog/how-to-improve-ai-visibility' },
     {
       label: 'Learn how to investigate a citation',
       href: '/blog/action-playbook-winning-ai-citations',

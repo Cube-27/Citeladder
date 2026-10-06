@@ -3,9 +3,14 @@ import { BlogPostView } from '@/components/marketing/pages/blog';
 import { POSTS } from '@/lib/marketing-content/blog';
 import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
+import ResearchLayout from '../../layouts/ResearchLayout.astro';
+import { researchArticle } from '../../research-articles';
+
+const path = `/blog/${Astro.params.slug}`;
+const article = researchArticle(path);
 
 const post = POSTS.find((candidate) => candidate.slug === Astro.params.slug);
-if (!post) Astro.response.status = 404;
+if (!post && !article) Astro.response.status = 404;
 const breadcrumb = post
   ? breadcrumbJsonLd([
       { name: 'Home', path: '/' },
@@ -19,7 +24,7 @@ const title = post
 const description = post?.seoDescription ?? 'The requested CiteLadder resource does not exist.';
 ---
 
-<MarketingLayout
+{article ? <ResearchLayout article={article} /> : <MarketingLayout
   title={title}
   description={description}
   canonical={post ? `/blog/${post.slug}` : undefined}
@@ -41,4 +46,4 @@ const description = post?.seoDescription ?? 'The requested CiteLadder resource d
   ) : (
     <main id="main"><h1>Post not found</h1></main>
   )}
-</MarketingLayout>
+</MarketingLayout>}

@@ -93,6 +93,11 @@ export const NAV_DROPS: readonly NavDrop[] = [
             href: '/blog',
           },
           {
+            title: 'GEO guide',
+            desc: 'Understand generated answers and where to start',
+            href: '/generative-engine-optimization',
+          },
+          {
             title: 'Free tools',
             desc: 'Crawler rules, markup and sitemap utilities',
             href: '/tools',
