@@ -1,9 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vite-plus/test';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { BillingCatalog } from '@/lib/api/billing';
 
 import { PublicPricingCatalog } from './public-pricing-catalog';
+
+afterEach(() => vi.unstubAllEnvs());
 
 const catalog = {
   catalog_revision: 'revision',
@@ -52,56 +54,68 @@ describe('public pricing handoff', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('keeps published terms readable while checkout and extras are unavailable', () => {
-    const unavailable: BillingCatalog = {
-      ...catalog,
-      plans: [
-        {
-          ...catalog.plans[0]!,
-          checkout_available: false,
-          capabilities: [
-            { key: 'ai_credits', value: 50, capability_type: 'counter.consumable', issuable: true },
-            { key: 'fanout', value: true, capability_type: 'flag', issuable: true },
-            { key: 'provider.grok', value: null, capability_type: 'flag', issuable: false },
-            { key: 'provider.perplexity', value: null, capability_type: 'flag', issuable: false },
-            { key: 'provider.copilot', value: null, capability_type: 'flag', issuable: false },
-          ],
-        },
-      ],
-      addons: [
-        {
-          key: 'extra_prompts',
-          name: 'Extra prompts',
-          description: 'More prompts',
-          unit_price: { currency: 'USD', amount_minor: 500 },
-          availability: 'unavailable',
-          quantity_min: 1,
-          quantity_max: 5,
-          eligible_plan_keys: ['tier_1'],
-          expiry_days: 30,
-          grants_per_unit: [],
-          unavailable_reason: 'checkout_unavailable',
-        },
-      ],
-    };
-    render(
-      <PublicPricingCatalog
-        catalog={unavailable}
-        appOrigin="https://app.citeladder.com"
-        initialByok
-      />,
-    );
-    expect(screen.getByRole('link', { name: 'Request early access' })).toHaveAttribute(
-      'href',
-      '/contact',
-    );
-    expect(screen.queryByRole('link', { name: /^Choose / })).not.toBeInTheDocument();
-    expect(screen.getByText('$12')).toBeInTheDocument();
-    expect(screen.getByRole('row', { name: 'AI credits 50' })).toBeInTheDocument();
-    for (const label of ['Query fanouts', 'Grok', 'Perplexity', 'Microsoft Copilot']) {
-      expect(screen.getByRole('rowheader', { name: label })).toBeInTheDocument();
-    }
-  });
+  it.each(['true', 'false'])(
+    'hides paid details while checkout is closed and signup is %s',
+    (enabled) => {
+      vi.stubEnv('NEXT_PUBLIC_SELF_SERVE_SIGNUP', enabled);
+      const unavailable: BillingCatalog = {
+        ...catalog,
+        plans: [
+          {
+            ...catalog.plans[0]!,
+            checkout_available: false,
+            capabilities: [
+              {
+                key: 'ai_credits',
+                value: 50,
+                capability_type: 'counter.consumable',
+                issuable: true,
+              },
+              { key: 'fanout', value: true, capability_type: 'flag', issuable: true },
+              { key: 'provider.grok', value: null, capability_type: 'flag', issuable: false },
+              { key: 'provider.perplexity', value: null, capability_type: 'flag', issuable: false },
+              { key: 'provider.copilot', value: null, capability_type: 'flag', issuable: false },
+            ],
+          },
+        ],
+        addons: [
+          {
+            key: 'extra_prompts',
+            name: 'Extra prompts',
+            description: 'More prompts',
+            unit_price: { currency: 'USD', amount_minor: 500 },
+            availability: 'unavailable',
+            quantity_min: 1,
+            quantity_max: 5,
+            eligible_plan_keys: ['tier_1'],
+            expiry_days: 30,
+            grants_per_unit: [],
+            unavailable_reason: 'checkout_unavailable',
+          },
+        ],
+      };
+      render(
+        <PublicPricingCatalog
+          catalog={unavailable}
+          appOrigin="https://app.citeladder.com"
+          initialByok
+        />,
+      );
+      expect(
+        screen.getByRole('link', {
+          name: enabled === 'true' ? 'Start free trial' : 'Request early access',
+        }),
+      ).toHaveAttribute(
+        'href',
+        enabled === 'true' ? 'https://app.citeladder.com/register' : '/contact',
+      );
+      expect(screen.queryByRole('link', { name: /^Choose / })).not.toBeInTheDocument();
+      expect(screen.queryByText('$12')).not.toBeInTheDocument();
+      for (const name of ['Plans', 'Plan comparison', 'Add-ons and top-ups']) {
+        expect(screen.queryByRole('region', { name })).not.toBeInTheDocument();
+      }
+    },
+  );
 });
 
 describe('public pricing display region', () => {

@@ -153,9 +153,11 @@ export function PublicPricingCatalog({
 }: Readonly<{ catalog: BillingCatalog; appOrigin: string; initialByok: boolean }>) {
   const [byok, setByok] = useState(initialByok);
   const mode = byok ? 'byok' : 'funded';
+  if (selfServeCheckoutComingSoon(catalog)) {
+    return <PricingComingSoonStrip appOrigin={appOrigin} />;
+  }
   return (
     <>
-      {selfServeCheckoutComingSoon(catalog) && <PricingComingSoonStrip />}
       <Section tone="paper" rhythm="tight" aria-label="Plans">
         <label className="border-border-subtle bg-background-alt mb-8 flex items-center gap-3 rounded-[var(--radius-card)] border p-4">
           <input

@@ -190,6 +190,11 @@ workspaces or replace provider credentials, payment consent or execution bounds.
 ## Read and UI surfaces
 
 Public pricing reads the published catalog without a hardcoded fallback.
+While all self-serve checkout is unavailable, the marketing pricing page shows
+only its hero and coming-soon notice; paid plans, prices, comparisons, extras
+and the closing pricing CTA are hidden. The notice links to registration when
+public signup is open, otherwise to early-access contact. The catalog remains
+the authority for pricing and availability when checkout opens.
 The app's `/billing` section
 ([billing screen](../frontend/components/billing/billing-screen.tsx) and the
 other [billing components](../frontend/components/billing/)) shows account,

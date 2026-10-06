@@ -1,10 +1,12 @@
 import { ArrowRight } from 'lucide-react';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 
-import { DemoButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Container } from '../primitives/section';
 
 /** Rendered only for a published catalog with self-serve checkout unavailable. */
-export function PricingComingSoonStrip() {
+export function PricingComingSoonStrip({ appOrigin }: Readonly<{ appOrigin: string }>) {
+  const signupOpen = selfServeSignupOpen();
   return (
     <aside
       aria-label="Early access announcement"
@@ -17,14 +19,26 @@ export function PricingComingSoonStrip() {
               Self-serve checkout is coming soon.
             </h2>
             <p className="website-body text-muted">
-              You can review the published plans below. Contact us to discuss early access and
-              confirm the options available to your team.
+              {signupOpen
+                ? 'Start your free trial today. Paid plans will be available later.'
+                : 'Paid plans will be available later. Contact us to discuss early access.'}
             </p>
           </div>
-          <DemoButtonLink variant="primary" className="w-full shrink-0 sm:w-auto">
-            <span>Request early access</span>
-            <ArrowRight aria-hidden />
-          </DemoButtonLink>
+          {signupOpen ? (
+            <ButtonLink
+              href={new URL('/register', appOrigin).toString()}
+              variant="primary"
+              className="w-full shrink-0 sm:w-auto"
+            >
+              <span>Start free trial</span>
+              <ArrowRight aria-hidden />
+            </ButtonLink>
+          ) : (
+            <DemoButtonLink variant="primary" className="w-full shrink-0 sm:w-auto">
+              <span>Request early access</span>
+              <ArrowRight aria-hidden />
+            </DemoButtonLink>
+          )}
         </div>
       </Container>
     </aside>

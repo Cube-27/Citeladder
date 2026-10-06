@@ -3,14 +3,17 @@ import { PricingCta } from '@/components/marketing/pages/pricing';
 import { PublicPricingCatalog } from '@/components/marketing/pricing/public-pricing-catalog';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
+import { selfServeCheckoutComingSoon } from '@/lib/billing/catalog';
 import { displayCountry, publicCatalog } from '../public-catalog';
 import { workerApexEnv } from '../worker-env';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 
-const description =
-  'Explore CiteLadder plans, provider-key usage and early-access options. Review published limits and confirm availability before choosing a plan.';
 const env = workerApexEnv();
 const catalog = await publicCatalog(env, displayCountry(Astro.request.headers));
+const checkoutComingSoon = catalog !== null && selfServeCheckoutComingSoon(catalog);
+const description = checkoutComingSoon
+  ? 'CiteLadder paid plans are coming soon. Explore AI visibility with a free trial.'
+  : 'Explore CiteLadder plans, provider-key usage and early-access options. Review published limits and confirm availability before choosing a plan.';
 const initialByok = Astro.url.searchParams.get('byok') !== '0';
 Astro.response.headers.set('Cache-Control', 'no-store');
 ---
@@ -38,6 +41,6 @@ Astro.response.headers.set('Cache-Control', 'no-store');
         <p class="website-body text-muted">Please try again shortly. No price is shown while the public catalog is unavailable.</p>
       </section>
     )}
-    <PricingCta />
+    {catalog && !checkoutComingSoon && <PricingCta />}
   </main>
 </MarketingLayout>
