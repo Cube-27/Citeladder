@@ -74,10 +74,12 @@ export function LoginScreen({
         autoComplete="current-password"
         placeholder="••••••••"
       />
-      <Link to={withAuthReturnPath('/forgot-password', returnTo)}>Forgot password?</Link>
-      <Link to={withAuthReturnPath('/resend-verification', returnTo)}>
-        Resend verification email
-      </Link>
+      <div className="auth-recovery-links flex flex-wrap justify-between gap-x-4 gap-y-2">
+        <Link to={withAuthReturnPath('/forgot-password', returnTo)}>Forgot password?</Link>
+        <Link to={withAuthReturnPath('/resend-verification', returnTo)}>
+          Resend verification email
+        </Link>
+      </div>
     </AuthFormShell>
   );
 }

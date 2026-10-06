@@ -319,6 +319,71 @@
   text-underline-offset: 0.25rem;
 }
 
+/* Auth is a compact task: title, field labels, actions, then supporting copy.
+   Keep recovery and legal links below the controls in the type hierarchy. */
+.auth-form-heading .flow-title {
+  font-size: 1.75rem;
+  line-height: 2.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.auth-form-heading .flow-help {
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+
+.auth-form-shell .type-label {
+  color: var(--color-foreground);
+  font-weight: 500;
+}
+
+.auth-form-shell [data-button-size='lg'] {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.auth-recovery-links {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: var(--color-secondary);
+}
+
+.auth-recovery-links a {
+  padding-block: 0.25rem;
+}
+
+.auth-recovery-links a:hover,
+.auth-legal-link {
+  text-decoration: underline;
+  text-underline-offset: 0.1875rem;
+}
+
+.auth-terms-consent {
+  margin-top: 0.5rem;
+}
+
+.auth-terms-consent .type-body {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--color-secondary);
+}
+
+.auth-legal-link {
+  color: inherit;
+  font: inherit;
+}
+
+.auth-legal-link:hover {
+  color: var(--color-foreground);
+}
+
+.auth-form-footer {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
 .flow-progress ol {
   display: flex;
   align-items: center;

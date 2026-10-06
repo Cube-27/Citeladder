@@ -139,7 +139,12 @@ function TermsConsent({
         label={
           <>
             I agree to the{' '}
-            <a href={websiteHref('/terms')} target="_blank" rel="noreferrer" className="flow-exit">
+            <a
+              href={websiteHref('/terms')}
+              target="_blank"
+              rel="noreferrer"
+              className="auth-legal-link"
+            >
               Terms of Service
             </a>
           </>
@@ -147,7 +152,12 @@ function TermsConsent({
       />
       <p id={noticeId} className="type-caption ps-[calc(var(--control-height-md)+0.5rem)]">
         Our{' '}
-        <a href={websiteHref('/privacy')} target="_blank" rel="noreferrer" className="flow-exit">
+        <a
+          href={websiteHref('/privacy')}
+          target="_blank"
+          rel="noreferrer"
+          className="auth-legal-link"
+        >
           Privacy Policy
         </a>{' '}
         explains how we process your data.
@@ -259,7 +269,7 @@ export function AuthFormShell({
 
   return (
     <div className="auth-form-shell grid w-full gap-6">
-      <div className="auth-form-heading grid gap-1 text-center">
+      <div className="auth-form-heading grid gap-2">
         <h1 className="flow-title">{title}</h1>
         <p className="flow-help">{description}</p>
       </div>
@@ -291,7 +301,7 @@ export function AuthFormShell({
         {error ? <MktAlert>{error}</MktAlert> : null}
 
         {showForm ? (
-          <form noValidate onSubmit={handleSubmit} className="auth-email-form grid gap-3">
+          <form noValidate onSubmit={handleSubmit} className="auth-email-form grid gap-4">
             {children}
 
             {requiresConsent && (
@@ -318,7 +328,7 @@ export function AuthFormShell({
         ) : null}
 
         {showFooter ? (
-          <p className="flow-help pt-1 text-center">
+          <p className="auth-form-footer flow-help pt-2 text-center">
             {footerPrompt}{' '}
             <Link
               to={footerHref}
