@@ -26,7 +26,6 @@ import type { SelectionStatus } from '@/lib/project/selection';
  * workspace unmanageable.
  */
 const WORKSPACE_ONLY_PREFIXES = [
-  '/account-security',
   '/onboarding',
   '/settings',
   '/billing',

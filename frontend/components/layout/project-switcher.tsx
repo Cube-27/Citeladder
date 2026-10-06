@@ -138,17 +138,25 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             </DropdownItem>
           );
         })}
-        {canAddProject ? (
+        {mayCreate ? (
           <>
             <DropdownSeparator />
-            <DropdownItem onSelect={() => router(newProjectDestination(activeWorkspaceId))}>
+            <DropdownItem
+              disabled={!canAddProject}
+              onSelect={() => router(newProjectDestination(activeWorkspaceId))}
+            >
               <span
                 aria-hidden
                 className="bg-well text-secondary flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
               >
                 <Plus className="size-4" />
               </span>
-              <span className="min-w-0 flex-1 truncate">New project</span>
+              <span className="grid min-w-0 flex-1">
+                <span className="truncate">New project</span>
+                {remainingProjectSlots === 0 && (
+                  <span className="type-caption">Project limit reached</span>
+                )}
+              </span>
             </DropdownItem>
           </>
         ) : null}

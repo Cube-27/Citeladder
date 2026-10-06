@@ -4,13 +4,23 @@ import { beforeEach, expect, it, vi } from 'vite-plus/test';
 import { renderWithProviders } from '@/test/render';
 import { WorkspaceAccessGate } from './workspace-access-gate';
 
-const { access, project } = vi.hoisted(() => ({ access: vi.fn(), project: vi.fn() }));
+const { access, project, security } = vi.hoisted(() => ({
+  access: vi.fn(),
+  project: vi.fn(),
+  security: vi.fn(),
+}));
+vi.mock('@/lib/api/auth', () => ({ authApi: { security } }));
 vi.mock('@/lib/api/workspaces', () => ({ workspacesApi: { access } }));
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: project,
 }));
 beforeEach(() => {
   access.mockReset();
+  security.mockResolvedValue({
+    email: 'owner@example.test',
+    email_verified: true,
+    methods: ['google'],
+  });
   project.mockReturnValue({
     activeWorkspaceId: 'workspace-a',
     isLoading: false,
@@ -40,7 +50,7 @@ it.each([false, true])(
     );
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Account security' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Account security' })).not.toBeInTheDocument();
     expect(screen.queryByText('Private report')).not.toBeInTheDocument();
 
     if (discovering) {
@@ -52,11 +62,11 @@ it.each([false, true])(
   },
 );
 
-it('leaves account recovery available without waiting for workspace access', () => {
-  renderWithProviders(<WorkspaceAccessGate>Account recovery</WorkspaceAccessGate>, {
-    initialEntries: ['/account-security'],
+it('leaves invitation acceptance available without waiting for workspace access', () => {
+  renderWithProviders(<WorkspaceAccessGate>Invitation acceptance</WorkspaceAccessGate>, {
+    initialEntries: ['/invitations/accept'],
   });
-  expect(screen.getByText('Account recovery')).toBeInTheDocument();
+  expect(screen.getByText('Invitation acceptance')).toBeInTheDocument();
   expect(access).not.toHaveBeenCalled();
 });
 
@@ -152,10 +162,14 @@ it('blocks expired product content and leaves support, switching and account rec
     'href',
     '/projects?workspace=workspace-b',
   );
-  expect(screen.getByRole('link', { name: 'Account security' })).toHaveAttribute(
-    'href',
-    '/account-security',
-  );
+  const account = screen.getByRole('button', { name: 'Account security' });
+  account.focus();
+  await act(async () => account.click());
+  expect(await screen.findByRole('button', { name: 'Email password setup link' })).toBeEnabled();
+  expect(screen.getByRole('dialog', { name: 'Account security' })).toBeInTheDocument();
+  expect(screen.queryByText('Private report')).not.toBeInTheDocument();
+  await act(async () => screen.getByRole('button', { name: 'Close dialog' }).click());
+  await waitFor(() => expect(account).toHaveFocus());
   expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
 });
 

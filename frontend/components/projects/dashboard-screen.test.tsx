@@ -203,7 +203,7 @@ describe('DashboardScreen', () => {
 
     expect(screen.getByTestId('top-insights')).toBe(topInsights);
   });
-  it('does not expose additional project creation before billing is live', async () => {
+  it('disables additional project creation when no slots remain', async () => {
     const user = userEvent.setup();
     renderDashboard(
       <TooltipProvider>
@@ -212,7 +212,10 @@ describe('DashboardScreen', () => {
     );
     await user.click(screen.getByRole('button', { name: /manage project/i }));
     expect(screen.getByRole('menuitem', { name: 'Edit active project' })).toBeVisible();
-    expect(screen.queryByText('Add project')).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /Add project/u })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
   it('downloads the authenticated executive PDF', async () => {
     const user = userEvent.setup();

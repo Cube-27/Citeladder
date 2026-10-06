@@ -152,15 +152,17 @@ function TermsConsent({
         </a>{' '}
         explains how we process your data.
       </p>
-      {missing ? (
-        <p
-          id={errorId}
-          role="alert"
-          className="type-caption text-danger-text ps-[calc(var(--control-height-md)+0.5rem)]"
-        >
-          Agree to the Terms of Service to continue.
-        </p>
-      ) : null}
+      <p
+        id={errorId}
+        role={missing ? 'alert' : undefined}
+        aria-hidden={!missing}
+        className={cn(
+          'type-caption text-danger-text ps-[calc(var(--control-height-md)+0.5rem)]',
+          !missing && 'invisible',
+        )}
+      >
+        Agree to the Terms of Service to continue.
+      </p>
     </div>
   );
 }

@@ -19,13 +19,13 @@
     "sources": ["frontend/playwright.config.ts"],
     "frontendE2E": [
       "e2e/action-loop.spec.ts",
-      "e2e/billing.spec.ts",
       "e2e/design-repair.spec.ts",
       "e2e/landing-nav.spec.ts",
       "e2e/marketing-pages.spec.ts",
       "e2e/providers.spec.ts",
       "e2e/runs.spec.ts",
       "e2e/shell.spec.ts",
+      "e2e/self-serve-auth.spec.ts",
       "e2e/smoke.spec.ts",
       "e2e/visibility.spec.ts"
     ]
@@ -131,6 +131,6 @@
       "frontend/lib/api/billing.ts",
       "frontend/components/marketing/pricing/**"
     ],
-    "frontendE2E": ["e2e/billing.spec.ts"]
+    "frontendE2E": ["e2e/design-repair.spec.ts", "e2e/self-serve-auth.spec.ts", "e2e/shell.spec.ts"]
   }
 ]

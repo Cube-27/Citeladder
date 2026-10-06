@@ -112,7 +112,10 @@ fragment; GET never consumes them. Verification requires the signup password.
 Reset replaces the password, may verify a pending mailbox, invalidates outstanding
 challenges and revokes sessions. Password change requires the current password;
 logout and explicit sign-out-all revoke every session. Account security reports
-actual methods and verification state. Mail is request-bounded, not a durable queue:
+actual methods and verification state inline in Settings → Account, with compact
+password, Google-linking and session controls. The blocked-access screen opens
+the same controls in a recovery dialog. Bookmarked `/account-security` URLs
+redirect to the Account settings section. Mail is request-bounded, not a durable queue:
 a crash after commit is recovered by requesting a new link after cooldown.
 Eligible and ineligible recipients share the configured `AUTH_MAIL_TIMEOUT_MS`
 response wait budget (default 5000 ms), so provider latency does not reveal
@@ -153,6 +156,10 @@ Every project-owned link carries `?project=` when the selection is known; Settin
 remains workspace-owned. A bare post-login URL is only a bootstrap state and is
 replaced with the resolved project URL. Every additional-project entry point carries
 its workspace.
+Project creation refreshes the workspace allowance before another creation
+action can become available. Additional-project entry points stay disabled
+while allowance is unresolved or no project slots remain, including after a
+trial account creates its first project.
 
 Login enters Overview; the application gate decides whether onboarding is
 appropriate. An empty workspace retains access to billing/members/settings.

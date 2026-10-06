@@ -15,6 +15,8 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ShellFallback } from '@/components/layout/shell-fallback';
+import { Dialog } from '@/components/ui/dialog';
+import AccountSecurity from '@/components/settings/account-security';
 
 function accessAllowed(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
   return Boolean(
@@ -74,10 +76,9 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   const location = useLocation();
   const client = useQueryClient();
   const [, tick] = useState(0);
+  const [securityOpen, setSecurityOpen] = useState(false);
   useAccessLoss(activeWorkspaceId);
-  const recovery = ['/invitations/accept', '/account-security'].includes(
-    location.pathname.replace(/\/+$/u, '').toLowerCase(),
-  );
+  const recovery = location.pathname.replace(/\/+$/u, '').toLowerCase() === '/invitations/accept';
   const access = useQuery({
     queryKey: queryKeys.workspaces.access(activeWorkspaceId ?? ''),
     enabled: Boolean(activeWorkspaceId) && !recovery,
@@ -125,13 +126,16 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   if (checking) return <ShellFallback />;
   return (
     <ShellFallback>
-      <div className="grid gap-4">
+      <main className="mx-auto grid w-full max-w-xl content-center gap-4 p-8">
         <h1>{accessTitle(access.data, deadline)}</h1>
         <Alert tone="info">
           Your data is retained. Contact support to restore access, or switch to another workspace.
         </Alert>
         <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
-        <Button onClick={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}>
+        <Button
+          className="w-fit"
+          onClick={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}
+        >
           Retry
         </Button>
         {workspaces
@@ -141,8 +145,14 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
               {workspace.name}
             </Link>
           ))}
-        <Link to="/account-security">Account security</Link>
+        <Button className="w-fit" variant="secondary" onClick={() => setSecurityOpen(true)}>
+          Account security
+        </Button>
+        <Dialog open={securityOpen} onOpenChange={setSecurityOpen} title="Account security">
+          <AccountSecurity showHeading={false} />
+        </Dialog>
         <Button
+          className="w-fit"
           variant="secondary"
           onClick={async () => {
             await authApi.logout();
@@ -152,7 +162,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
         >
           Sign out
         </Button>
-      </div>
+      </main>
     </ShellFallback>
   );
 }

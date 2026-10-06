@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, FIXTURE_WORKSPACE_ID, stubAuthedShell } from './helpers/app-fixture';
 
 const DISCOVERY_ID = '33333333-3333-4333-8333-333333333333';
 
@@ -126,54 +126,83 @@ test('onboarding advances through a prompt-free review with sequential progress'
   await expect(page.getByText(/Starting Prompts/i)).toHaveCount(0);
 });
 
-test('first creation opens its project and repeated New project visits start fresh without refresh', async ({
-  page,
-}) => {
-  let created = false;
-  await stubAuthedShell(
+for (const additionalAllowed of [false, true]) {
+  test(`first creation refreshes capacity and ${additionalAllowed ? 'allows additional projects' : 'disables additional projects for a trial'}`, async ({
     page,
-    [
-      ['**/api/v1/brand-discovery-catalog', catalog],
-      ['**/api/v1/brand-discoveries', readyDiscovery],
-      [`**/api/v1/brand-discoveries/${DISCOVERY_ID}`, readyDiscovery],
-      [`**/api/v1/projects/${FIXTURE_PROJECT.id}`, FIXTURE_PROJECT],
-    ],
-    [],
-  );
-  await page.route('**/api/v1/projects', (route) =>
-    route.fulfill({ json: created ? [FIXTURE_PROJECT] : [] }),
-  );
-  await page.route(`**/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, (route) => {
-    created = true;
-    return route.fulfill({
-      json: {
-        discovery_id: DISCOVERY_ID,
-        status: 'project_created',
-        project_id: FIXTURE_PROJECT.id,
-        crawl_id: null,
-        activation_state: 'queued',
-        page_limit: null,
-        warnings: [],
-      },
+  }) => {
+    let created = false;
+    await stubAuthedShell(
+      page,
+      [
+        ['**/api/v1/brand-discovery-catalog', catalog],
+        ['**/api/v1/brand-discoveries', readyDiscovery],
+        [`**/api/v1/brand-discoveries/${DISCOVERY_ID}`, readyDiscovery],
+        [`**/api/v1/projects/${FIXTURE_PROJECT.id}`, FIXTURE_PROJECT],
+      ],
+      [],
+    );
+    await page.route('**/api/v1/projects', (route) =>
+      route.fulfill({ json: created ? [FIXTURE_PROJECT] : [] }),
+    );
+    await page.route(`**/api/v1/workspaces/${FIXTURE_WORKSPACE_ID}/entitlements`, (route) => {
+      const allowance = additionalAllowed ? 3 : 1;
+      const consumed = created ? 1 : 0;
+      return route.fulfill({
+        json: {
+          workspace_id: FIXTURE_WORKSPACE_ID,
+          status: 'resolved',
+          registry_revision: 'entitlements-v1',
+          entitlement_lifecycle_version: 1,
+          valid_until: null,
+          capabilities: [],
+          occupancy: [
+            { key: 'project_slots', allowance, consumed, remaining: allowance - consumed },
+          ],
+        },
+      });
     });
-  });
-  await page.goto('/projects');
-  await page.getByLabel(/^Brand name/).fill('The Asian School');
-  await page.getByLabel(/^Website/).fill('theasianschool.net');
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('button', { name: 'Review', exact: true }).click();
-  await page.getByRole('radio', { name: 'Other', exact: true }).click();
-  await page.getByLabel(/describe what you sell/i).fill('boarding school');
-  await page.getByRole('button', { name: 'Create project' }).click();
-  await expect(page).toHaveURL(`/projects?project=${FIXTURE_PROJECT.id}`);
-  await expect(page.getByRole('heading', { name: 'No projects yet' })).toHaveCount(0);
-
-  for (let visit = 0; visit < 2; visit += 1) {
-    await page.getByRole('button', { name: FIXTURE_PROJECT.brand_name, exact: true }).click();
-    await page.getByRole('menuitem', { name: 'New project' }).click();
-    await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeVisible();
-    await expect(page.getByLabel(/^Brand name/)).toHaveValue('');
-    await page.getByRole('link', { name: 'Cancel', exact: true }).click();
+    await page.route(`**/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, (route) => {
+      created = true;
+      return route.fulfill({
+        json: {
+          discovery_id: DISCOVERY_ID,
+          status: 'project_created',
+          project_id: FIXTURE_PROJECT.id,
+          crawl_id: null,
+          activation_state: 'queued',
+          page_limit: null,
+          warnings: [],
+        },
+      });
+    });
+    await page.goto('/projects');
+    await page.getByLabel(/^Brand name/).fill('The Asian School');
+    await page.getByLabel(/^Website/).fill('theasianschool.net');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Review', exact: true }).click();
+    await page.getByRole('radio', { name: 'Other', exact: true }).click();
+    await page.getByLabel(/describe what you sell/i).fill('boarding school');
+    await page.getByRole('button', { name: 'Create project' }).click();
     await expect(page).toHaveURL(`/projects?project=${FIXTURE_PROJECT.id}`);
-  }
-});
+    await expect(page.getByRole('heading', { name: 'No projects yet' })).toHaveCount(0);
+
+    if (!additionalAllowed) {
+      await page.getByRole('button', { name: FIXTURE_PROJECT.brand_name, exact: true }).click();
+      await expect(page.getByRole('menuitem', { name: /New project/u })).toBeDisabled();
+      await page.keyboard.press('Escape');
+      await page.goto(`/onboarding?new=1&workspace=${FIXTURE_WORKSPACE_ID}`);
+      await expect(page.getByRole('heading', { name: 'Project limit reached' })).toBeVisible();
+      await expect(page.getByLabel(/^Brand name/u)).toHaveCount(0);
+      return;
+    }
+
+    for (let visit = 0; visit < 2; visit += 1) {
+      await page.getByRole('button', { name: FIXTURE_PROJECT.brand_name, exact: true }).click();
+      await page.getByRole('menuitem', { name: 'New project' }).click();
+      await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeVisible();
+      await expect(page.getByLabel(/^Brand name/)).toHaveValue('');
+      await page.getByRole('link', { name: 'Cancel', exact: true }).click();
+      await expect(page).toHaveURL(`/projects?project=${FIXTURE_PROJECT.id}`);
+    }
+  });
+}

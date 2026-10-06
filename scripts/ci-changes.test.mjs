@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readdirSync } from 'node:fs';
 
 import {
   classifyPaths,
@@ -55,9 +56,25 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   assert.deepEqual(selectE2EFiles(['frontend/components/ui/command-palette.tsx']), [
     'e2e/shell.spec.ts',
   ]);
-  assert.deepEqual(selectE2EFiles(['frontend/e2e/billing.spec.ts']), ['e2e/billing.spec.ts']);
-  assert.deepEqual(selectE2EFiles(['frontend/e2e/billing.spec.mjs']), []);
+  assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.ts']), ['e2e/shell.spec.ts']);
+  assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.mjs']), []);
   assert.equal(classifyPaths(['scripts/check.ps1', '.github/workflows/ci.yml']).e2e, false);
+});
+
+test('billing and browser configuration select existing browser suites', () => {
+  const available = new Set(
+    readdirSync(new URL('../frontend/e2e/', import.meta.url))
+      .filter((name) => name.endsWith('.spec.ts'))
+      .map((name) => `e2e/${name}`),
+  );
+  for (const path of [
+    'frontend/lib/billing/entitlement-context.tsx',
+    'frontend/playwright.config.ts',
+  ]) {
+    const selected = selectE2EFiles([path]);
+    assert.ok(selected.length > 0, `${path} must retain browser coverage`);
+    for (const spec of selected) assert.ok(available.has(spec), `${path} selected missing ${spec}`);
+  }
 });
 
 test('native contracts select API and browser checks without schema checks', () => {
@@ -185,7 +202,11 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
   // owners already cover it. `{ initial: true }` is asserted alongside the plain
   // call because a PR's first push used to escalate to Compose on any changed
   // application file -- re-adding that option must not bring the escalation back.
-  for (const path of ['backend/app/models/audit.py', 'frontend/components/card.tsx', 'reset-db.py']) {
+  for (const path of [
+    'backend/app/models/audit.py',
+    'frontend/components/card.tsx',
+    'reset-db.py',
+  ]) {
     assert.equal(classifyPaths([path], { initial: true }).compose, false, path);
     assert.equal(classifyPaths([path]).compose, false, path);
   }

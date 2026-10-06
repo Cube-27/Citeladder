@@ -163,7 +163,7 @@ describe('bootstrapPrivateRoutes', () => {
     expect(await run('/settings')).toBeNull();
   });
 
-  it.each(['/account-security', '/invitations/accept'])(
+  it.each(['/invitations/accept'])(
     'does not wait for access on the recovery route %s',
     async (pathname) => {
       stub({ projects: [] });

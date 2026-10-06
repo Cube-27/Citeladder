@@ -39,6 +39,17 @@ export const appRoutes: RouteObject[] = [
   ),
   { path: '/', loader: () => redirect('/projects') },
   {
+    // Bookmarked security URLs now open the Account section in Settings.
+    path: '/account-security',
+    element: <ShellFallback />,
+    hydrateFallbackElement: <ShellFallback />,
+    loader: ({ request }) => {
+      const search = new URL(request.url).searchParams;
+      search.set('tab', 'account');
+      return redirect(`/settings?${search.toString()}`);
+    },
+  },
+  {
     ...productRoute('/login', () =>
       import('./auth-routes').then(({ LoginRoute }) => ({ default: LoginRoute })),
     ),
@@ -64,7 +75,6 @@ export const appRoutes: RouteObject[] = [
     hydrateFallbackElement: <ShellFallback />,
     ErrorBoundary: RouteError,
     children: [
-      productRoute('/account-security', () => import('@/components/settings/account-security')),
       productRoute('/onboarding', () =>
         import('@/components/onboarding/onboarding-page-client').then(
           ({ OnboardingPageClient }) => ({

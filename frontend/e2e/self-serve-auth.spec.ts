@@ -44,8 +44,56 @@ test('expired direct navigation and refresh remain blocked with account recovery
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Your trial has ended' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Contact support' })).toBeVisible();
-  await page.getByRole('link', { name: 'Account security' }).click();
-  await expect(page.getByRole('heading', { name: 'Account security' })).toBeVisible();
+  await page.getByRole('button', { name: 'Account security' }).click();
+  await expect(page.getByRole('dialog', { name: 'Account security', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out all sessions' }).click();
   await expect(page.getByRole('dialog', { name: 'Sign out all sessions?' })).toBeVisible();
 });
+
+test('old account security URLs open the Account section with inline security controls', async ({
+  page,
+}) => {
+  await stubAuthedShell(page, [
+    [
+      '**/api/v1/auth/security',
+      { email: 'shell@example.com', email_verified: true, methods: ['google'] },
+    ],
+  ]);
+  await page.goto(`/account-security?workspace=${FIXTURE_WORKSPACE_ID}`);
+  await expect(page).toHaveURL(
+    new RegExp(`/settings\\?workspace=${FIXTURE_WORKSPACE_ID}&tab=account$`, 'u'),
+  );
+  await expect(page.getByRole('tab', { name: 'Account', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.getByRole('heading', { name: 'Account security' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Email password setup link' })).toBeVisible();
+  await page.getByRole('button', { name: 'Sign out all sessions' }).click();
+  await expect(page.getByRole('dialog', { name: 'Sign out all sessions?' })).toBeVisible();
+});
+
+for (const width of [1280, 390]) {
+  test(`Terms validation keeps the sign-in card and submit button in place at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.route('**/api/v1/**', (route) =>
+      route.fulfill({ status: 401, json: { detail: 'Sign in' } }),
+    );
+    await page.goto('/login');
+    await page.getByRole('heading', { name: 'Sign in' }).waitFor();
+    await page.evaluate(() => document.fonts.ready);
+    const card = page.locator('.flow-content');
+    const submit = page.getByRole('button', { name: 'Continue', exact: true });
+    const before = { card: await card.boundingBox(), submit: await submit.boundingBox() };
+    await page.getByRole('button', { name: 'Continue with Google' }).click();
+    await expect(page.getByRole('alert')).toBeVisible();
+    expect(await card.boundingBox()).toEqual(before.card);
+    expect(await submit.boundingBox()).toEqual(before.submit);
+    await page.getByRole('checkbox').check();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    expect(await card.boundingBox()).toEqual(before.card);
+    expect(await submit.boundingBox()).toEqual(before.submit);
+  });
+}
