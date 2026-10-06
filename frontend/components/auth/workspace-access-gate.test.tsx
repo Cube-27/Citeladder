@@ -22,6 +22,44 @@ beforeEach(() => {
   });
 });
 
+it.each([false, true])(
+  'keeps recovery controls and product content hidden while bootstrap is pending (workspace discovery: %s)',
+  async (discovering) => {
+    const resolvedProject = project();
+    if (discovering) {
+      project.mockReturnValue({ ...resolvedProject, activeWorkspaceId: null, isLoading: true });
+    }
+    let answer!: (value: { status: string; expires_at: null }) => void;
+    access.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    const { rerender } = renderWithProviders(
+      <WorkspaceAccessGate>Private report</WorkspaceAccessGate>,
+    );
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Account security' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Private report')).not.toBeInTheDocument();
+
+    if (discovering) {
+      project.mockReturnValue(resolvedProject);
+      rerender(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+    }
+    await act(async () => answer({ status: 'active', expires_at: null }));
+    expect(await screen.findByText('Private report')).toBeInTheDocument();
+  },
+);
+
+it('leaves account recovery available without waiting for workspace access', () => {
+  renderWithProviders(<WorkspaceAccessGate>Account recovery</WorkspaceAccessGate>, {
+    initialEntries: ['/account-security'],
+  });
+  expect(screen.getByText('Account recovery')).toBeInTheDocument();
+  expect(access).not.toHaveBeenCalled();
+});
+
 it('keeps distant paid deadlines active until expiry without overflowing the browser timer', async () => {
   vi.useFakeTimers();
   try {

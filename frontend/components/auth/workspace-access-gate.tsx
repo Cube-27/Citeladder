@@ -10,6 +10,7 @@ import { authApi } from '@/lib/api/auth';
 import { useProjectContext } from '@/lib/project/project-context';
 import { contactSalesHref } from '@/lib/config/contact';
 import { websiteHref } from '@/lib/config/app-link';
+import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
@@ -80,7 +81,11 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   const access = useQuery({
     queryKey: queryKeys.workspaces.access(activeWorkspaceId ?? ''),
     enabled: Boolean(activeWorkspaceId) && !recovery,
-    queryFn: ({ signal }) => workspacesApi.access(String(activeWorkspaceId), { signal }),
+    queryFn: ({ signal }) =>
+      workspacesApi.access(String(activeWorkspaceId), {
+        signal,
+        timeoutMs: getBootstrapReadTimeoutMs(),
+      }),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -117,23 +122,18 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
     });
   }, [allowed, access.data, client, recovery]);
   if (recovery || allowed) return children;
+  if (checking) return <ShellFallback />;
   return (
     <ShellFallback>
       <div className="grid gap-4">
         <h1>{accessTitle(access.data, deadline)}</h1>
         <Alert tone="info">
-          {checking
-            ? 'Checking your access…'
-            : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
+          Your data is retained. Contact support to restore access, or switch to another workspace.
         </Alert>
-        {!checking && (
-          <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
-        )}
-        {!checking && (
-          <Button onClick={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}>
-            Retry
-          </Button>
-        )}
+        <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
+        <Button onClick={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}>
+          Retry
+        </Button>
         {workspaces
           .filter((workspace) => workspace.id !== activeWorkspaceId)
           .map((workspace) => (

@@ -26,6 +26,7 @@ import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-p
 import { httpErrorStatus } from '@/lib/api/client';
 import { policiesApi } from '@/lib/api/policies';
 import { projectsApi } from '@/lib/api/projects';
+import { workspacesApi } from '@/lib/api/workspaces';
 import { getAppQueryClient } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Project, Workspace } from '@/lib/api/types';
@@ -153,13 +154,13 @@ async function resolveScope(client: QueryClient, url: URL): Promise<Scope | null
 }
 
 /**
- * The workspace's projects and its remaining allowance, asked together.
+ * The workspace's projects, remaining allowance and access, asked together.
  *
  * The Terms status rides along only to warm the policy gate's cache: without
  * it the gate had nothing to answer from on a reload and held the page on a
  * loader for one more round trip. Its outcome decides nothing here.
  */
-function readWorkspaceState(client: QueryClient, workspaceId: string) {
+function readWorkspaceState(client: QueryClient, workspaceId: string, pathname: string) {
   void client.prefetchQuery({
     queryKey: queryKeys.policies.workspace(workspaceId),
     queryFn: ({ signal }) => policiesApi.status(workspaceId, signal),
@@ -187,6 +188,20 @@ function readWorkspaceState(client: QueryClient, workspaceId: string) {
           }),
       }),
     ),
+    ['/account-security', '/invitations/accept'].includes(
+      pathname.replace(/\/+$/u, '').toLowerCase(),
+    )
+      ? null
+      : settle(
+          client.ensureQueryData({
+            queryKey: queryKeys.workspaces.access(workspaceId),
+            queryFn: ({ signal }) =>
+              workspacesApi.access(workspaceId, {
+                signal,
+                timeoutMs: getBootstrapReadTimeoutMs(),
+              }),
+          }),
+        ),
   ]);
 }
 
@@ -243,7 +258,7 @@ export async function bootstrapPrivateRoutes({ request }: { request: Request }) 
   if (!sessionResolved || !scope) return null;
 
   const { workspaceId, workspaces, requestedProjectId } = scope;
-  const [listed, entitlement] = await readWorkspaceState(client, workspaceId);
+  const [listed, entitlement] = await readWorkspaceState(client, workspaceId, url.pathname);
   if (!listed) return null;
 
   const { activeProjectId, status } = resolveSelection(scope, listed);

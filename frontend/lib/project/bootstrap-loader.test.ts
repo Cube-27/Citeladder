@@ -3,6 +3,7 @@ import { waitFor } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 
 import { createAppQueryClient, setAppQueryClient } from '@/lib/api/query-client';
+import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
 import {
   ACTIVE_PROJECT_STORAGE_KEY,
@@ -101,6 +102,11 @@ afterAll(() => mswServer.close());
 beforeEach(() => {
   setAppQueryClient(createAppQueryClient());
   window.localStorage.clear();
+  mswServer.use(
+    http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () =>
+      HttpResponse.json({ status: 'active', expires_at: null }),
+    ),
+  );
 });
 afterEach(() => {
   mswServer.resetHandlers();
@@ -117,6 +123,62 @@ afterEach(() => {
  * of them would replace that with a bare route error.
  */
 describe('bootstrapPrivateRoutes', () => {
+  it.each(['/projects', '/onboarding'])(
+    'settles access alongside workspace reads before mounting %s',
+    async (pathname) => {
+      stub({ projects: [] });
+      const client = createAppQueryClient();
+      setAppQueryClient(client);
+      let answer!: (response: HttpResponse<DefaultBodyType>) => void;
+      const response = new Promise<HttpResponse<DefaultBodyType>>((resolve) => {
+        answer = resolve;
+      });
+      mswServer.use(http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () => response));
+      let settled = false;
+      const pending = run(pathname).then(() => {
+        settled = true;
+      });
+      await waitFor(() =>
+        expect(client.getQueryData(queryKeys.billing.workspaceEntitlement(WORKSPACE))).toEqual(
+          entitlement(1),
+        ),
+      );
+      expect(settled).toBe(false);
+      answer(HttpResponse.json({ status: 'active', expires_at: null }));
+      await pending;
+      expect(client.getQueryData(queryKeys.workspaces.access(WORKSPACE))).toEqual({
+        status: 'active',
+        expires_at: null,
+      });
+    },
+  );
+
+  it('leaves a failed access read to the gate rather than failing the route', async () => {
+    stub({ projects: [PROJECT_ROW] });
+    mswServer.use(
+      http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () =>
+        HttpResponse.json({ detail: 'Access unavailable' }, { status: 403 }),
+      ),
+    );
+    expect(await run('/settings')).toBeNull();
+  });
+
+  it.each(['/account-security', '/invitations/accept'])(
+    'does not wait for access on the recovery route %s',
+    async (pathname) => {
+      stub({ projects: [] });
+      let requests = 0;
+      mswServer.use(
+        http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () => {
+          requests += 1;
+          return HttpResponse.json({ detail: 'Access unavailable' }, { status: 403 });
+        }),
+      );
+      expect(await run(pathname)).toBeNull();
+      expect(requests).toBe(0);
+    },
+  );
+
   it('sends an empty workspace to project setup, carrying the workspace', async () => {
     stub({ projects: [] });
     expect(await run('/projects')).toBe(`/onboarding?workspace=${WORKSPACE}`);

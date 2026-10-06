@@ -130,6 +130,9 @@ when access ends. Missing access authority is distinct from an expired trial.
 One authenticated layout owns session, project/workspace context and entitlement
 provider lifetime across app and onboarding routes.
 Before session identity resolves, the layout shows only neutral shell geometry.
+Cold-load bootstrap settles workspace access alongside projects and entitlements.
+A pending access check retains the neutral loading frame; workspace recovery
+controls appear only once the check settles without access.
 After authentication, the real shell mounts once and project/entitlement gates
 resolve inside its content pane, leaving account and workspace recovery
 available. A non-401 session read failure keeps protected content unmounted and
