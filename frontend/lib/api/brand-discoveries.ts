@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
+import { ONBOARDING_RESEARCH_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
 import { strictValidate } from '@citeladder/contracts/validation';
 import {
   brandDiscoveryCatalogSchema,
@@ -81,6 +82,13 @@ export const brandDiscoveriesApi = {
   get: async (id: string, options?: ApiRequestOptions) => {
     const value = await apiClient.get(`/brand-discoveries/${id}`, options);
     return strictValidate(brandDiscoverySchema, value, 'brandDiscovery.get');
+  },
+  run: async (id: string, options?: ApiRequestOptions) => {
+    const value = await apiClient.post(`/brand-discoveries/${id}/run`, undefined, {
+      ...options,
+      timeoutMs: ONBOARDING_RESEARCH_REQUEST_TIMEOUT_MS,
+    });
+    return strictValidate(brandDiscoverySchema, value, 'brandDiscovery.run');
   },
   complete: async (
     id: string,

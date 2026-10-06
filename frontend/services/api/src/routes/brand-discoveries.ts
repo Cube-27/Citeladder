@@ -5,6 +5,10 @@ import {
 } from '@citeladder/contracts/visibility';
 
 import { readBody } from '../http/body.ts';
+import { randomUUID } from 'node:crypto';
+import { configEnvironment } from '../config.ts';
+import { DiscoveryWorker } from '../workers/discovery-worker.ts';
+import { withoutWorkObservation } from '../db/committed-work.ts';
 import { ApiError } from '../errors.ts';
 import {
   completeDiscovery,
@@ -64,6 +68,26 @@ export const brandDiscoveryRoutes = [
       return discoveryView(
         await discoveryRow(db, c.get('workspace').workspaceId, path.discovery_id),
       );
+    },
+  }),
+  definePostRoute({
+    family,
+    path: '/api/v1/brand-discoveries/{discovery_id}/run',
+    capability: 'run',
+    params: { path: discoveryPath, query: {} },
+    response: brandDiscoverySchema,
+    async handle({ c, db, config }, { path }) {
+      const workspaceId = c.get('workspace').workspaceId;
+      await discoveryRow(db, workspaceId, path.discovery_id);
+      const worker = new DiscoveryWorker(db, { env: configEnvironment(config) });
+      await withoutWorkObservation(() =>
+        worker.runOnce(
+          `interactive-discovery:${randomUUID()}`,
+          { workspaceId, discoveryId: path.discovery_id },
+          AbortSignal.timeout(worker.settings.interactive_timeout_seconds * 1000),
+        ),
+      );
+      return discoveryView(await discoveryRow(db, workspaceId, path.discovery_id));
     },
   }),
   definePostRoute({

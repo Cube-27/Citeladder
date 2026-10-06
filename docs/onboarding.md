@@ -21,7 +21,15 @@ progress. The [onboarding owner](../frontend/services/api/src/projects/discovery
 bounded first-party acquisition, identity research and provisional competitor
 suggestions.
 The [worker](../frontend/services/api/src/workers/discovery-worker.ts) claims PostgreSQL
-tasks with leases and commits before provider I/O.
+tasks with leases and commits before provider I/O. After creation returns the
+discovery ID, the browser posts to `/brand-discoveries/{id}/run` while polling
+persisted progress independently. This workspace-authorized request runs one
+targeted task through the same worker on the API, with a maximum 180-second
+research deadline, so interactive onboarding does not wait for a Cloud Run Job
+to start. Duplicate requests and the background runner compete for the same
+lease; none bypasses retry backoff or attempt limits. The background wake-up and
+periodic lease recovery remain the fallback for interrupted or abandoned requests.
+The HTTP handler awaits execution; it never detaches work after its response.
 Identity makes one model request with a 20-second timeout. Competitor suggestions
 make at most three independent requests, each capped at 20 seconds. Failures
 degrade to reviewable evidence. Onboarding makes no prompt-generation request.
@@ -52,6 +60,8 @@ origin, review state, reviewer and review time. The Projects-owned
 `BusinessContext` serializes confirmed and inferred facets into that profile;
 unknown facets remain absent, and its field sources distinguish visible choices
 from inferred values. Reads never repeat discovery.
+The research screen distinguishes queued work from opening the website. Retrying
+a failed progress read reloads that discovery, without starting duplicate research.
 
 ## Confirmation and completion
 

@@ -28,6 +28,22 @@ function transport(responses: Response[]) {
 }
 
 describe('configured model gateway', () => {
+  it('cancels structured generation in flight without retrying the provider', async () => {
+    const controller = new AbortController();
+    const io = {
+      fetch: vi.fn<typeof fetch>(async (_url, init) => {
+        controller.abort();
+        init!.signal!.throwIfAborted();
+        return reply();
+      }),
+      sleep: vi.fn(async () => {}),
+    };
+    await expect(
+      createModelGateway(settings, io).structured('s', 'u', z.object({}), controller.signal),
+    ).rejects.toMatchObject({ code: 'connection' });
+    expect(io.fetch).toHaveBeenCalledTimes(1);
+    expect(io.sleep).not.toHaveBeenCalled();
+  });
   it('preserves invalid usage as unknown and honors the caller cancellation signal', async () => {
     const io = transport([
       Response.json({

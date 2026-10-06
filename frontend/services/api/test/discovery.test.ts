@@ -11,7 +11,7 @@ import { DiscoveryQueue } from '../src/queue/discovery-queue.ts';
 import { recoverDiscoveryLeases } from '../src/queue/recovery.ts';
 import { DiscoveryWorker } from '../src/workers/discovery-worker.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
-import { Fixtures, testConfig, testDatabase } from './support.ts';
+import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 
 const input = discoveryCreate.parse({
   brand_name: 'Acme',
@@ -88,6 +88,106 @@ describe('durable onboarding', () => {
       .execute();
     return row;
   }
+
+  it('admits only the requested workspace discovery once across interactive and background claims', async () => {
+    const a = await tenant(),
+      b = await tenant();
+    const older = await createDiscovery(db, b.workspaceId, input, randomUUID());
+    const selected = await createDiscovery(db, a.workspaceId, input, randomUUID());
+    const worker = new DiscoveryWorker(db, { fetcher, gateway: null, env: {} });
+    const target = { workspaceId: a.workspaceId, discoveryId: selected.id };
+    expect(
+      await worker.queue.claim('foreign', { ...target, workspaceId: b.workspaceId }),
+    ).toBeNull();
+    // Keep the other row leased so the background claimant competes for the
+    // exact interactive task rather than legitimately taking unrelated work.
+    const held = await worker.queue.claim('other-workspace', {
+      workspaceId: b.workspaceId,
+      discoveryId: older.id,
+    });
+    expect(held?.discovery_id).toBe(older.id);
+    const claims = await Promise.all([
+      worker.queue.claim('interactive', target),
+      worker.queue.claim('second-tab', target),
+      worker.queue.claim('background'),
+    ]);
+    expect(claims.filter(Boolean)).toHaveLength(1);
+    const claimed = claims.find((task) => task !== null)!;
+    expect(claimed.discovery_id).toBe(selected.id);
+    // Finish the contender's lease, then a terminal replay must acquire nothing.
+    await worker.finish(claimed, claimed.lease_owner!, null, null);
+    expect(await worker.runOnce('replay', target)).toBe(false);
+  });
+
+  it('runs a targeted discovery without claiming an older discovery in another workspace', async () => {
+    const a = await tenant(),
+      b = await tenant();
+    const older = await createDiscovery(db, b.workspaceId, input, randomUUID());
+    const selected = await createDiscovery(db, a.workspaceId, input, randomUUID());
+    const worker = new DiscoveryWorker(db, { fetcher, gateway: null, env: {} });
+    const target = { workspaceId: a.workspaceId, discoveryId: selected.id };
+    expect(await worker.runOnce('interactive', target)).toBe(true);
+    expect((await discoveryRow(db, a.workspaceId, selected.id)).status).toBe('ready');
+    expect((await discoveryRow(db, b.workspaceId, older.id)).status).toBe('queued');
+    expect(await worker.runOnce('replay', target)).toBe(false);
+    expect(
+      await db
+        .selectFrom('brand_research_snapshots')
+        .select('id')
+        .where('discovery_id', '=', selected.id)
+        .execute(),
+    ).toHaveLength(1);
+  });
+
+  it('aborts interactive network work and leaves its task available for bounded background retry', async () => {
+    const t = await tenant();
+    const selected = await createDiscovery(db, t.workspaceId, input, randomUUID());
+    const controller = new AbortController();
+    const network: WebsiteFetcher = async (_url, options) => {
+      controller.abort(new Error('interactive deadline'));
+      options.signal!.throwIfAborted();
+      throw new Error('unreachable');
+    };
+    const worker = new DiscoveryWorker(db, { fetcher: network, gateway: null, env: {} });
+    const target = { workspaceId: t.workspaceId, discoveryId: selected.id };
+    await worker.runOnce('interactive-timeout', target, controller.signal);
+    const task = await db
+      .selectFrom('brand_discovery_tasks')
+      .selectAll()
+      .where('discovery_id', '=', selected.id)
+      .executeTakeFirstOrThrow();
+    expect(task).toMatchObject({ status: 'retry_wait', attempt_count: 1, lease_owner: null });
+    expect(await worker.queue.claim('too-early', target)).toBeNull();
+    await db
+      .updateTable('brand_discovery_tasks')
+      .set({ available_at: new Date(0) })
+      .where('id', '=', task.id)
+      .execute();
+    await new DiscoveryWorker(db, { fetcher, gateway: null, env: {} }).runOnce('background-retry');
+    expect((await discoveryRow(db, t.workspaceId, selected.id)).status).toBe('ready');
+  });
+
+  it('authorizes interactive execution before admission and returns a persisted terminal replay', async () => {
+    const a = await tenant(),
+      b = await tenant();
+    const selected = await ready(a.workspaceId);
+    const startRunner = vi.fn(async () => {});
+    const app = createApp(testConfig(), db, { startRunner });
+    const headers = {
+      cookie: `${testConfig().session.cookieName}=${await sessionToken({ sub: b.userId, ver: 0 })}`,
+    };
+    const url = `/api/v1/brand-discoveries/${selected.id}/run`;
+    expect((await app.request(url, { method: 'POST', headers })).status).toBe(404);
+    const viewer = await fixtures.user();
+    await fixtures.member(a.workspaceId, viewer, 'viewer');
+    headers.cookie = `${testConfig().session.cookieName}=${await sessionToken({ sub: viewer, ver: 0 })}`;
+    expect((await app.request(url, { method: 'POST', headers })).status).toBe(403);
+    headers.cookie = `${testConfig().session.cookieName}=${await sessionToken({ sub: a.userId, ver: 0 })}`;
+    const response = await app.request(url, { method: 'POST', headers });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ id: selected.id, status: 'ready' });
+    expect(startRunner).not.toHaveBeenCalled();
+  });
 
   it('does not dispatch queued research after workspace access ends', async () => {
     const t = await tenant();

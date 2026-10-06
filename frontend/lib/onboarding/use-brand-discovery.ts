@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { brandDiscoveriesApi, type BrandDiscoveryInput } from '@/lib/api/brand-discoveries';
@@ -12,6 +12,39 @@ function operationKey() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   fallbackOperationSequence += 1;
   return `discovery-${Date.now()}-${fallbackOperationSequence}`;
+}
+
+function useDiscoveryExecution(
+  discoveryId: string | null,
+  active: boolean,
+  workspaceId: string | null,
+) {
+  const queryClient = useQueryClient();
+  const startedFor = useRef<string | null>(null);
+  const run = useMutation({
+    mutationFn: ({ id, workspace }: { id: string; workspace: string | null }) =>
+      brandDiscoveriesApi.run(id, { workspaceId: workspace }),
+    onSettled: (_data, _error, { id, workspace }) => {
+      void queryClient.invalidateQueries({ queryKey: brandDiscoveryKeys.detail(workspace, id) });
+    },
+  });
+  const executionKey = discoveryId ? JSON.stringify([workspaceId, discoveryId]) : null;
+  useEffect(() => {
+    if (!discoveryId || !active || startedFor.current === executionKey) return;
+    startedFor.current = executionKey;
+    run.mutate({ id: discoveryId, workspace: workspaceId });
+  }, [active, discoveryId, executionKey, run, workspaceId]);
+  const error =
+    active && run.variables?.id === discoveryId && run.variables.workspace === workspaceId
+      ? run.error
+      : null;
+  return {
+    error,
+    retry: () => {
+      if (discoveryId && error && !run.isPending)
+        run.mutate({ id: discoveryId, workspace: workspaceId });
+    },
+  };
 }
 
 export function useBrandDiscovery(
@@ -70,7 +103,16 @@ export function useBrandDiscovery(
         : false,
   });
   const discovery = query.data ?? (createdDiscoveryId ? create.data : undefined);
+  const active = discovery?.status === 'queued' || discovery?.status === 'running';
+  const execution = useDiscoveryExecution(discoveryId, active, workspaceId);
   const retry = () => {
+    // A failed progress read resumes the existing operation, even before its
+    // saved input has loaded. Creating another discovery would duplicate work.
+    if (discoveryId && !create.error) {
+      execution.retry();
+      void query.refetch();
+      return;
+    }
     if (!input || create.isPending) return;
     createdFor.current = fingerprint;
     create.mutate({
@@ -82,9 +124,8 @@ export function useBrandDiscovery(
   };
   return {
     discovery,
-    isRunning:
-      create.isPending || discovery?.status === 'queued' || discovery?.status === 'running',
-    error: create.error ?? query.error,
+    isRunning: create.isPending || active,
+    error: create.error ?? query.error ?? execution.error,
     retry,
   };
 }

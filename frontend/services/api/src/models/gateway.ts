@@ -186,10 +186,11 @@ export function createModelGateway(
       );
       return { ...result, content: unfenced(result.content) };
     },
-    async structured<T>(system: string, user: string, schema: z.ZodType<T>) {
+    async structured<T>(system: string, user: string, schema: z.ZodType<T>, signal?: AbortSignal) {
       const result = await complete(
         system,
         `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(z.toJSONSchema(schema))}`,
+        signal,
       );
       try {
         return { value: schema.parse(JSON.parse(unfenced(result.content))), result };
