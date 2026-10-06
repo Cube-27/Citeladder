@@ -357,6 +357,9 @@ it('ranks organic results while skipping unusable ranks and raw duplicate URLs',
 });
 it.each([
   ['/', 'homepage'],
+  ['/blog', 'category'],
+  ['/en/news', 'category'],
+  ['/blog/website-notes', 'article'],
   ['/us/blog/revolut-vs-wise', 'comparison'],
   ['/vs/wise', 'comparison'],
   ['/wise/vs', 'comparison'],

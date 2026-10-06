@@ -75,6 +75,19 @@ describe('evidenceFacts', () => {
     ]);
   });
 
+  it('shows the observed AEO heading skips while preserving historical section evidence', () => {
+    expect(
+      evidenceFacts('aeo.heading_hierarchy', {
+        skips: [
+          { from: 1, to: 3 },
+          { from: 3, to: 5 },
+          { from: 1, to: 3 },
+        ],
+      }),
+    ).toEqual(['h1 → h3 ×2', 'h3 → h5']);
+    expect(evidenceFacts('aeo.heading_hierarchy', { skips: [] })).toEqual([]);
+  });
+
   it('identifies each offending control by selector, never by ordinal', () => {
     expect(
       evidenceFacts('web.accessibility_form_names', {

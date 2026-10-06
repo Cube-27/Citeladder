@@ -87,6 +87,7 @@ export const pageAnalysisStatusSchema = z.enum([
 export const pageKindSchema = z.enum([
   'homepage',
   'article',
+  'editorial_index',
   'product',
   'category',
   'pricing',

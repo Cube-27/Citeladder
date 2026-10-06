@@ -59,6 +59,7 @@ export const sourcePages = {
     how_to: 'how_to',
     guide: 'how_to',
     article: 'article',
+    editorial_index: 'category',
     case_study_review: 'review',
     category: 'category',
     product: 'product',

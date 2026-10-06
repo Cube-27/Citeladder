@@ -43,7 +43,6 @@ const AUDIENCE_OR_OUTCOME = [
   /\bso\s+(?<value>[^.,;]{3,160})/iu,
 ];
 const PROVIDER_EXCLUSIONS = new Set(facts.provider_identity_exclusions);
-const RECOMMENDATION_TOKENS = analysisPolicy.regions.content_recommendation_tokens;
 
 export function emptyContentFacts() {
   return {
@@ -52,6 +51,7 @@ export function emptyContentFacts() {
     primary_content_text: '',
     primary_content_pre_truncation_length: 0,
     primary_content_truncated: false,
+    authored_content: false,
     entity_proposition: {
       identity: '',
       proposition: '',
@@ -65,18 +65,6 @@ export function emptyContentFacts() {
     question_answer_relationships: [] as ReturnType<typeof questionAnswerRelationships>,
   };
 }
-
-const isRecommendation = (node: HtmlElement) => {
-  const identity = squash(
-    ['id', 'class', 'aria-label', 'data-testid']
-      .map((name) => attribute(node, name))
-      .join(' ')
-      .toLowerCase(),
-  ).replaceAll(' ', '-');
-  return RECOMMENDATION_TOKENS.some((token) => identity.includes(token));
-};
-const containsRichText = (node: HtmlElement) =>
-  [...elements(node)].slice(0, regionPolicy.max_containers_scanned).some(hasRichTextToken);
 
 type Owned = { region: HtmlNode; containers: ReadonlySet<HtmlElement> };
 const owned = (node: HtmlElement, scope: Owned) => pageOwned(node, scope.region, scope.containers);
@@ -214,13 +202,21 @@ function entityProposition(scope: Owned, proposition: string) {
   };
 }
 
+/** A prose article/rich-text body outside repeated items, independent of its URL or schema. */
+function authoredContent(scope: Owned) {
+  for (const node of scannedElements(scope.region)) {
+    if ((node.tagName !== 'article' && !hasRichTextToken(node)) || !owned(node, scope)) continue;
+    if (words(regionText(node, scope.containers)).length >= facts.server_rendered_min_words)
+      return true;
+  }
+  return false;
+}
+
 /** Facts read from the primary region outside recommendation and non-prose card lists. */
 export function contentFacts(page: PageScope) {
   const scope: Owned = {
     region: page.region,
-    containers: new Set(
-      [...page.cards].filter((node) => isRecommendation(node) || !containsRichText(node)),
-    ),
+    containers: page.cards,
   };
   const text = regionText(page.region, scope.containers);
   const lead = editorialLead(scope);
@@ -232,6 +228,7 @@ export function contentFacts(page: PageScope) {
     primary_content_text: text.slice(0, regionPolicy.page_owned_text_max_chars),
     primary_content_pre_truncation_length: text.length,
     primary_content_truncated: text.length > regionPolicy.page_owned_text_max_chars,
+    authored_content: authoredContent(scope),
     entity_proposition: entityProposition(scope, proposition),
     primary_heading_outline: headingOutline(scope),
     primary_table_headers: tableHeaders(scope),

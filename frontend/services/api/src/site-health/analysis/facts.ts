@@ -428,7 +428,7 @@ function extractDocument(
   finalUrl: string,
   settings: ReturnType<typeof factSettings>,
 ): DocumentFacts {
-  const page = pageScope(root);
+  const page = pageScope(root, finalUrl);
   let baseHost = '';
   try {
     baseHost = new URL(finalUrl).hostname;

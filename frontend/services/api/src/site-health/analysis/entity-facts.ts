@@ -22,6 +22,7 @@ import {
   outsideContainers,
   regionNodeIsVisible,
   role,
+  regionText,
   structuralRelation,
   visibleTextNodes,
   type PageScope,
@@ -32,6 +33,7 @@ const PRICE = new RegExp(e.price_pattern, 'i');
 const RESULT_COUNT = new RegExp(e.result_count_pattern, 'i');
 const SORT = new Set(e.sort_control_tokens);
 const FILTER = new Set(e.filter_control_tokens);
+const VARIANT = new Set(analysisPolicy.traits.variant_form_fields);
 const SKU_ATTRIBUTES = new Set(e.sku_attribute_tokens);
 const DETAIL_PHRASES = new Set(e.product_detail_heading_phrases);
 const RESULT_TOKENS = new Set(['count', 'matches', 'result', 'results']);
@@ -90,6 +92,7 @@ type Affordance = { class: string; relation: string; text: string };
 const emptyCollection = () => ({
   container: { tag: '', label: '', item_count: 0, distinct_targets: 0 },
   affordances: [] as Affordance[],
+  items: [] as { title: string; url: string }[],
 });
 
 const wordTokens = (value: string) => value.toLowerCase().match(/[a-z0-9]+/gu) ?? [];
@@ -196,11 +199,32 @@ function hasPurchaseControl(page: PageScope) {
   });
 }
 
-/** One multi-option select that is not a sort or filter, or grouped radios. */
+/** A variant identity on the control or its explicitly associated label. */
+function variantIdentity(control: HtmlElement, page: PageScope) {
+  if (matchesTokens(control, VARIANT)) return true;
+  const id = attribute(control, 'id').trim();
+  const labelledBy = attribute(control, 'aria-labelledby').split(/\s+/u).filter(Boolean);
+  for (const node of find(
+    page.region,
+    (item) =>
+      (item.tagName === 'label' && id !== '' && attribute(item, 'for') === id) ||
+      labelledBy.includes(attribute(item, 'id')),
+  ))
+    if (
+      outsideContainers(node, page.cards) &&
+      intersects(normalizedTokens(textContent(node)), VARIANT)
+    )
+      return true;
+  const parent = parentElement(control);
+  return parent?.tagName === 'label' && intersects(normalizedTokens(textContent(parent)), VARIANT);
+}
+
+/** A multi-option variant selector or explicitly named variant radio group. */
 function hasVariantControl(page: PageScope) {
   for (const select of find(page.region, (item) => item.tagName === 'select')) {
     if (!outsideContainers(select, page.cards)) continue;
     if (matchesTokens(select, SORT) || matchesTokens(select, FILTER)) continue;
+    if (!variantIdentity(select, page)) continue;
     if (find(select, (item) => item.tagName === 'option').length >= e.variant_min_options)
       return true;
   }
@@ -210,7 +234,8 @@ function hasVariantControl(page: PageScope) {
     (item) => item.tagName === 'input' && attribute(item, 'type') === 'radio',
   )) {
     const name = attribute(radio, 'name').trim().toLowerCase();
-    if (outsideContainers(radio, page.cards) && name) names.set(name, (names.get(name) ?? 0) + 1);
+    if (outsideContainers(radio, page.cards) && name && variantIdentity(radio, page))
+      names.set(name, (names.get(name) ?? 0) + 1);
   }
   return [...names.values()].some((count) => count >= e.variant_min_options);
 }
@@ -331,18 +356,53 @@ function listingContainers(page: PageScope) {
   return containers;
 }
 
-function cardObservation(container: HtmlElement) {
+function cardObservation(container: HtmlElement, finalUrl: string) {
   let items = 0;
   const targets = new Set<string>();
+  const details: { title: string; url: string }[] = [];
   for (const child of childElements(container)) {
-    const hrefs = [...elements(child, 'a')]
-      .map((anchor) => attribute(anchor, 'href').trim())
-      .filter(Boolean);
-    if (!hrefs.length) continue;
+    let hasTarget = false;
+    for (const anchor of elements(child, 'a')) {
+      if (!regionNodeIsVisible(anchor)) continue;
+      const href = attribute(anchor, 'href').trim();
+      if (
+        !href ||
+        analysisPolicy.facts.non_navigable_href_prefixes.some((prefix) =>
+          href.toLowerCase().startsWith(prefix),
+        )
+      )
+        continue;
+      let target: URL;
+      try {
+        target = new URL(href, finalUrl);
+      } catch {
+        continue;
+      }
+      if (!['http:', 'https:'].includes(target.protocol)) continue;
+      hasTarget = true;
+      targets.add(target.href);
+      const title =
+        squash(regionText(anchor)) ||
+        squash(
+          [...elements(anchor, 'img')]
+            .filter(regionNodeIsVisible)
+            .map((image) => attribute(image, 'alt'))
+            .join(' '),
+        );
+      if (
+        title &&
+        details.length < limits.evidence_urls &&
+        !details.some((row) => row.url === target.href)
+      )
+        details.push({
+          title: title.slice(0, limits.heading_chars),
+          url: target.href.slice(0, limits.url_chars),
+        });
+    }
+    if (!hasTarget) continue;
     items++;
-    for (const href of hrefs) targets.add(href);
   }
-  return { items, targets: targets.size };
+  return { items, targets: targets.size, details };
 }
 
 function emptyStateBelongs(
@@ -370,8 +430,9 @@ function observeCollection(
   container: HtmlElement,
   affordances: { node: HtmlElement; kind: string }[],
   containers: Set<HtmlElement>,
+  finalUrl: string,
 ) {
-  const { items, targets } = cardObservation(container);
+  const { items, targets, details } = cardObservation(container, finalUrl);
   const name = containerName(container);
   const found: Affordance[] = [];
   const seen = new Set<string>();
@@ -389,6 +450,7 @@ function observeCollection(
     evidence: {
       container: { ...name, item_count: items, distinct_targets: targets },
       affordances: found,
+      items: details,
     },
     recommendation: analysisPolicy.regions.content_recommendation_tokens.some((token) =>
       identity.includes(token),
@@ -415,7 +477,9 @@ function listingFacts(page: PageScope) {
   const affordances = collectionAffordances(page.region);
   const containers = listingContainers(page);
   const containerSet = new Set(containers);
-  const observations = containers.map((item) => observeCollection(item, affordances, containerSet));
+  const observations = containers.map((item) =>
+    observeCollection(item, affordances, containerSet, page.finalUrl),
+  );
   const size = (item: (typeof observations)[number]) => item.evidence.container;
   const largest = maxBy(observations, (item) => [
     size(item).item_count,

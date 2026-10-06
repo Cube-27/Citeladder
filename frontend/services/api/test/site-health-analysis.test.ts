@@ -35,6 +35,112 @@ const fixtureFacts = (name: string, url: string) =>
   extractPageFacts(fixture(name), { finalUrl: url, contentType: 'text/html' });
 
 describe('page checklist', () => {
+  it('keeps blog archives separate from authored articles and product categories', () => {
+    const cards = Array.from(
+      { length: 9 },
+      (_, index) =>
+        `<article><h3><a href='/blog/post-${index}'>Post ${index}</a></h3><p>Card summary.</p></article>`,
+    ).join('');
+    const page = facts(
+      `<main><h1>Practical guides</h1><div>
+      <section><div><h2>Topics</h2><p>Choose a topic to explore.</p><a href='/contact'>Contact</a></div></section>
+      <section><div><h2>Latest articles</h2><div>${cards}</div></div></section>
+      <section><div><h2>Start here</h2><p>Read our introduction.</p><a href='/intro'>Introduction</a></div></section>
+    </div></main>`,
+      'https://example.test/blog',
+    );
+    const result = analyzePage(page, context);
+    expect(result.assessment.page_kind).toBe('editorial_index');
+    expect(page.primary_heading_outline.map((heading) => heading.text)).toEqual([
+      'Practical guides',
+      'Topics',
+      'Latest articles',
+      'Start here',
+    ]);
+    expect(page.primary_content_text).toContain('Choose a topic');
+    expect(page.primary_content_text).not.toContain('Card summary');
+    const rows = byRule(result.evaluations);
+    for (const id of [
+      'aeo.visible_attribution',
+      'aeo.source_support_present',
+      'aeo.listing_item_facts',
+    ])
+      expect(rows.get(id)!.outcome, id).toBe('not_applicable');
+    expect(rows.get('aeo.heading_hierarchy')!.outcome).toBe('satisfied');
+    expect(rows.get('aeo.listing_answer_set')!.outcome).toBe('satisfied');
+  });
+
+  it('preserves a page-identity wrapper instead of treating linked sections as cards', () => {
+    const page = facts(`<main><div>
+      <section><div><h1>Guide library</h1><a href='/start'>Start</a></div></section>
+      <section><div><h2>Topics</h2><a href='/topics'>Topics</a></div></section>
+      <section><div><h2>Contact</h2><a href='/contact'>Contact</a></div></section>
+    </div></main>`);
+    expect(page.primary_heading_outline.map((heading) => heading.text)).toEqual([
+      'Guide library',
+      'Topics',
+      'Contact',
+    ]);
+  });
+
+  it('keeps a filtered editorial archive out of commerce checks and does not trust Blog markup alone', () => {
+    const page = facts(
+      `<main><h1>Latest articles</h1><section><p role='status'>9 results</p>
+      <div class='collection-grid'>${Array.from({ length: 9 }, (_, index) => `<article><a href='/blog/post-${index}'>Post ${index}</a></article>`).join('')}</div>
+    </section></main>`,
+      'https://example.test/en/blog/',
+    );
+    const result = analyzePage(page, context);
+    expect(result.assessment.page_kind).toBe('editorial_index');
+    expect(result.assessment.evidence.classified_by).toBe('primary_listing_structure');
+    expect(byRule(result.evaluations).get('aeo.listing_item_facts')!.outcome).toBe(
+      'not_applicable',
+    );
+    expect(
+      classify('https://example.test/unknown', { structured_data: { types: ['Blog'] } }).page_kind,
+    ).toBe('other');
+  });
+
+  it('does not infer authorship from an editorial URL alone but checks an observed article body', () => {
+    const prose =
+      'This article explains how teams can review their website evidence and choose practical improvements with a clear record of their observations.';
+    const inspect = (body: string) =>
+      evaluations(
+        `<main><h1>Website notes</h1>${body}</main>`,
+        'https://example.test/blog/website-notes',
+      );
+    const unconfirmed = inspect(`<p>${prose}</p>`);
+    const authored = inspect(`<article><h2>Review evidence</h2><p>${prose}</p></article>`);
+    for (const id of ['aeo.visible_attribution', 'aeo.source_support_present']) {
+      expect(unconfirmed.get(id)!.outcome).toBe('unknown');
+      expect(createsIssue(unconfirmed.get(id)!)).toBe(false);
+      expect(authored.get(id)!.outcome).toBe('missing');
+      expect(createsIssue(authored.get(id)!)).toBe(true);
+    }
+  });
+
+  it('reports actual primary heading skips and abstains when the outline is unavailable', () => {
+    const headings = (body: string) =>
+      evaluations(`<main><h1>Notes</h1>${body}</main>`, 'https://example.test/blog/notes').get(
+        'aeo.heading_hierarchy',
+      )!;
+    expect(headings('<h2>First</h2><h3>Detail</h3><h2>Second</h2>').outcome).toBe('satisfied');
+    const skipped = headings('<h3>First</h3><h5>Detail</h5>');
+    expect(skipped.outcome).toBe('missing');
+    expect(skipped.evidence.skips).toEqual([
+      { from: 1, to: 3, text: 'First' },
+      { from: 3, to: 5, text: 'Detail' },
+    ]);
+    const page = facts('<main><h1>Notes</h1></main>', 'https://example.test/blog/notes');
+    for (const outline of [undefined, []]) {
+      const row = byRule(
+        analyzePage({ ...page, primary_heading_outline: outline }, context).evaluations,
+      ).get('aeo.heading_hierarchy')!;
+      expect(row.outcome).toBe('unknown');
+      expect(createsIssue(row)).toBe(false);
+    }
+  });
+
   it('keeps interpretation off the calling loop while preserving page outcomes', async () => {
     const body = Buffer.from(
       '<main><h1>Widgets</h1><p>Widgets make workshop repairs easier.</p></main>',
@@ -487,6 +593,7 @@ type CalibrationCase = (typeof calibration.cases)[number];
 const EMPTY_COLLECTION = {
   container: { tag: '', label: '', item_count: 0, distinct_targets: 0 },
   affordances: [],
+  items: [],
 };
 function calibrationFacts(item: CalibrationCase) {
   const fixtureCase = item.fixture as {

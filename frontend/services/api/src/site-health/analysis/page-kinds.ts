@@ -115,7 +115,14 @@ function structuralSignals(facts: Facts, route: Signal[]) {
   const product = productEvidence(facts);
   if (product) found.push(signal('primary_product_entity', 'product', product));
   const listing = listingEvidence(facts);
-  if (listing) found.push(signal('primary_listing_structure', 'category', listing));
+  if (listing)
+    found.push(
+      signal(
+        'primary_listing_structure',
+        route.some((item) => item.page_kind === 'editorial_index') ? 'editorial_index' : 'category',
+        listing,
+      ),
+    );
   const location = locationEvidence(
     facts,
     route.some((item) => item.page_kind === 'local'),

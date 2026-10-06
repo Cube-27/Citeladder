@@ -220,7 +220,10 @@ const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> 
   'aeo.product_answer_facts': unmetAtoms,
   'aeo.listing_answer_set': unmetAtoms,
   'aeo.listing_item_facts': () => ['No listing item with both title and URL'],
-  'aeo.heading_hierarchy': () => ['No primary-content heading sections'],
+  'aeo.heading_hierarchy': (evidence) =>
+    Array.isArray(evidence.skips)
+      ? headingSkips(evidence)
+      : ['No primary-content heading sections'],
   'aeo.server_rendered_content': () => ['server-rendered body'],
   'web.accessibility_heading_order': headingSkips,
   'web.accessibility_form_names': formControls,

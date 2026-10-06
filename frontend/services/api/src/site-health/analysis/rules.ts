@@ -19,11 +19,11 @@ const r = analysisPolicy.rules;
 const prefixes = r.applicability_prefixes;
 const WEB_CHECKS = new Set(r.web_check_ids);
 const PILLARS: Record<string, string> = policy.site_health.reads.aeo_check_pillar;
-const WEIGHT_OVERRIDES: Record<string, Record<string, number>> = r.weight_overrides;
 const PAGE_KINDS = new Set(analysisPolicy.classification.page_kinds);
 const STRUCTURAL_NA = new Set(r.structural_na_reasons);
 const UNKNOWN_REASONS = new Set([...r.unavailable_reasons, ...r.unknown_reasons]);
 const FAILING = new Set(policy.site_health.reads.failing_outcomes);
+const AUTHORED_CHECKS = new Set(r.authored_content_check_ids);
 
 export type RuleEvaluation = {
   rule_id: string;
@@ -120,7 +120,17 @@ function applicability(rule: Rule, facts: Facts): [boolean, string] {
   if (key === 'has_html') return [Boolean(facts.has_html), 'no_html'];
   if (key === 'observed_content') return observedContent(facts);
   const scoped = prefixedScope(key, facts);
-  if (scoped) return scoped;
+  if (scoped) {
+    if (
+      scoped[0] &&
+      AUTHORED_CHECKS.has(rule.rule_id) &&
+      facts.authored_content !== true &&
+      !text(record(facts.authorship).visible_byline).trim() &&
+      record(facts.source_support).research_sensitive !== true
+    )
+      return [false, 'authored_content_unconfirmed'];
+    return scoped;
+  }
   if (key === 'site_root')
     return [facts.site !== undefined && facts.site !== null, 'not_site_root'];
   if (key === 'crawl_finalize') return [false, 'crawl_finalize_scope'];
@@ -205,7 +215,6 @@ function runCheck(
 }
 
 function evaluateRule(rule: Rule, facts: Facts): RuleEvaluation {
-  const override = WEIGHT_OVERRIDES[pageKind(facts)]?.[rule.rule_id];
   const base = {
     rule_id: rule.rule_id,
     rule_version: rule.rule_version,
@@ -214,7 +223,7 @@ function evaluateRule(rule: Rule, facts: Facts): RuleEvaluation {
     severity: rule.severity,
     finding_class: rule.finding_class,
     scope: rule.scope,
-    weight: override ?? rule.weight,
+    weight: rule.weight,
     description: rule.description,
     remediation: rule.remediation,
   };

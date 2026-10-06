@@ -87,6 +87,10 @@
     "sitemap_path_suffixes": [".xml", ".xml.gz"]
   },
   "route_patterns": [
+    [
+      "editorial_index",
+      "^/(?:[^/]+/)*?(blogs?|news|articles?|insights|resources|press)(?:/(?:page/\\d+|(?:category|categories|tag|tags)/[^/]+)(?:/page/\\d+)?)?$"
+    ],
     ["article", "^/(?:[^/]+/)*?(blogs?|news|articles?)(/|$)"],
     ["product", "^/(?:[^/]+/)*?(products?|p)(/|$)"],
     [

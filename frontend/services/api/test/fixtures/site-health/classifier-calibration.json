@@ -648,16 +648,16 @@
         }
       },
       "expected": {
-        "page_kind": "article",
+        "page_kind": "editorial_index",
         "traits": ["listing"],
         "deciding_signal": "path_pattern",
         "allowed_deciding_tiers": ["route"],
         "allowed_confidence": ["medium"],
-        "rejected_kinds": ["category"],
+        "rejected_kinds": ["article", "category"],
         "other_reason": null
       },
       "deliberate_abstention": false,
-      "structural_reason": "A blog archive is an editorial index. A card list is what every index has; the route names the purpose, and the commerce category checklist does not apply to it."
+      "structural_reason": "The exact archive route identifies an editorial index; linked posts do not make it an authored article or a product category."
     },
     {
       "id": "searchable_blog_root_without_collection",
@@ -671,16 +671,16 @@
         "html": "<html><body><main><h1>Blog</h1><p>The archive introduction is present, but no page-owned article collection was rendered.</p></main></body></html>"
       },
       "expected": {
-        "page_kind": "article",
+        "page_kind": "editorial_index",
         "traits": [],
         "deciding_signal": "path_pattern",
         "allowed_deciding_tiers": ["route"],
         "allowed_confidence": ["medium"],
-        "rejected_kinds": ["category"],
+        "rejected_kinds": ["article", "category"],
         "other_reason": null
       },
       "deliberate_abstention": false,
-      "structural_reason": "The exact blog root cannot become a category without an observed bound repeated collection; its ordinary blog route remains article."
+      "structural_reason": "The exact archive route remains an editorial index even when its article collection was not rendered."
     },
     {
       "id": "searchable_docs_host_root",

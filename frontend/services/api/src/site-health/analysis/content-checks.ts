@@ -128,16 +128,35 @@ function sourceSupportPresent(facts: Facts): CheckResult {
 }
 
 function headingHierarchy(facts: Facts): CheckResult {
+  if (!Array.isArray(facts.primary_heading_outline))
+    return ['unknown', { scope: 'primary_content', reason: 'heading_outline_unavailable' }];
   const sections = records(facts.primary_heading_outline)
     .filter((item) => text(item.text).trim())
     .map((item) => ({ level: count(item.level), text: text(item.text).slice(0, 256) }));
+  if (!sections.length)
+    return [
+      'unknown',
+      {
+        scope: 'primary_content',
+        section_count: 0,
+        sections: [],
+        reason: 'section_context_missing',
+      },
+    ];
+  const skips = sections.flatMap((section, index) => {
+    const previous = sections[index - 1];
+    return previous && section.level > previous.level + 1
+      ? [{ from: previous.level, to: section.level, text: section.text }]
+      : [];
+  });
   return [
-    passFail(sections.length > 0),
+    passFail(skips.length === 0),
     {
       scope: 'primary_content',
       section_count: sections.length,
       sections: sections.slice(0, 24),
-      reason: sections.length ? '' : 'section_context_missing',
+      skips: skips.slice(0, 24),
+      reason: skips.length ? 'heading_levels_skipped' : '',
     },
   ];
 }
@@ -190,7 +209,7 @@ function answerFirst(facts: Facts): CheckResult {
   if (!Array.isArray(facts.question_answer_relationships))
     return ['unknown', { reason: 'question_relationships_unavailable' }];
   const relationships = questionRelationships(facts);
-  if (!relationships.length) return ['missing', { reason: 'no_question_answer_relationships' }];
+  if (!relationships.length) return ['unknown', { reason: 'no_question_answer_relationships' }];
   const answered = relationships.filter(
     (item) => item.answer_state === 'available' && text(item.answer).trim(),
   );
@@ -214,7 +233,7 @@ function questionHeadings(facts: Facts): CheckResult {
   if (!Array.isArray(facts.question_answer_relationships))
     return ['unknown', { reason: 'question_relationships_unavailable' }];
   const relationships = questionRelationships(facts);
-  if (!relationships.length) return ['missing', { reason: 'no_question_answer_relationships' }];
+  if (!relationships.length) return ['unknown', { reason: 'no_question_answer_relationships' }];
   const unavailable = relationships.filter((item) => item.answer_state === 'unavailable').length;
   const evidence = {
     question_count: relationships.length,
@@ -376,18 +395,25 @@ function listingAnswerSet(facts: Facts, contract: CompositeContract): CheckResul
 
 function listingItemFacts(facts: Facts): CheckResult {
   const cards = records(record(facts.commerce).product_cards);
-  const complete = cards.flatMap((card) => {
+  const collection = record(record(record(facts.entity).listing).collection_evidence);
+  const complete = [...cards, ...records(collection.items)].flatMap((card) => {
     const title = text(card.title);
     const url = text(card.url);
     return title.trim() && url.trim()
       ? [{ title: title.slice(0, 256), url: url.slice(0, 512) }]
       : [];
   });
-  if (record(record(facts.entity).listing).has_empty_state && !cards.length)
+  if (record(record(facts.entity).listing).has_empty_state && !complete.length)
     return [
       'not_applicable',
       { reason: 'explicit_empty_collection', item_fact_count: 0, items: [] },
     ];
+  if (
+    !complete.length &&
+    count(record(collection.container).item_count) > 0 &&
+    !Array.isArray(collection.items)
+  )
+    return ['unknown', { reason: 'collection_item_details_unavailable', items: [] }];
   return [
     passFail(complete.length > 0),
     { item_fact_count: complete.length, items: complete.slice(0, 12) },
