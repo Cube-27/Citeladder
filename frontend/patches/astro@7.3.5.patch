@@ -1,0 +1,13 @@
+diff --git a/dist/core/fs/index.js b/dist/core/fs/index.js
+index 061e4eabae149824d69ddefb08d07c3dc2b191be..fbbbefb1b8303a4eb5295ac2e9508805eb7bd4ce 100644
+--- a/dist/core/fs/index.js
++++ b/dist/core/fs/index.js
+@@ -76,7 +76,7 @@ const fixWinEPERMSync = (p, options, er) => {
+     }
+   }
+   if (stats.isDirectory()) {
+-    fs.rmdirSync(p, options);
++    fs.rmSync(p, options);
+   } else {
+     fs.unlinkSync(p);
+   }

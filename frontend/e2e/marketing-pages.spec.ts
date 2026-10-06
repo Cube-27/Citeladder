@@ -6,6 +6,23 @@ import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { filterAndSortPosts, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 
 test.describe('marketing routes', () => {
+  test('free tools hub opens a usable crawler checker and rejects unknown tools', async ({
+    page,
+  }) => {
+    await page.goto('/tools');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await page.getByRole('link', { name: 'Test your rules' }).click();
+    await expect(page).toHaveURL(/\/tools\/ai-crawler-checker$/);
+    await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
+    await page.getByRole('button', { name: 'Load example' }).click();
+    await page.getByRole('button', { name: 'Test crawler rules' }).click();
+    await expect(page.getByRole('textbox', { name: 'Generated output' })).toHaveValue(
+      /Blocked by supplied rules/,
+    );
+    const missing = await page.goto('/tools/not-a-tool');
+    expect(missing?.status()).toBe(404);
+  });
+
   test('homepage FAQ schema describes the rendered questions and answers', async ({ page }) => {
     await page.goto('/');
     const { schemas, visible } = await page.evaluate(() => ({

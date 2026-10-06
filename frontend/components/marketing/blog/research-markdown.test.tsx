@@ -12,6 +12,12 @@ An observed result [\\[1\\]](#source-1) is not a guarantee.
 |---|---|
 | Mention | Not a visit |
 
+### Citation evidence
+
+| Observation | Limit |
+|---|---|
+| Source link | Not a recommendation |
+
 ## Sources
 
 1. <span id="source-1"></span> [Original report](https://example.com/report), historical evidence.
@@ -25,6 +31,11 @@ An observed result [\\[1\\]](#source-1) is not a guarantee.
   expect(
     within(source as HTMLElement).getByRole('link', { name: 'Original report' }),
   ).toHaveAttribute('href', 'https://example.com/report');
-  const region = screen.getByRole('region', { name: 'Research comparison table' });
+  const region = screen.getByRole('region', { name: 'Evidence comparison' });
   expect(within(region).getByRole('cell', { name: 'Not a visit' })).toBeVisible();
+  expect(
+    within(screen.getByRole('region', { name: 'Citation evidence' })).getByRole('cell', {
+      name: 'Not a recommendation',
+    }),
+  ).toBeVisible();
 });

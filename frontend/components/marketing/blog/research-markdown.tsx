@@ -54,16 +54,6 @@ const components: Components = {
       {children}
     </blockquote>
   ),
-  table: ({ children }) => (
-    <section
-      aria-label="Research comparison table"
-      className="border-border-subtle bg-panel focus-ring my-6 overflow-x-auto rounded-[var(--radius-card)] border"
-    >
-      <table className="website-body w-full min-w-[40rem] border-collapse text-left">
-        {children}
-      </table>
-    </section>
-  ),
   th: ({ children }) => (
     <th
       scope="col"
@@ -77,6 +67,32 @@ const components: Components = {
   ),
   pre: ({ children }) => <pre className="bg-well my-6 overflow-x-auto p-5">{children}</pre>,
 };
+
+function markdownComponents(markdown: string): Components {
+  return {
+    ...components,
+    table: ({ children, node }) => {
+      const precedingCopy = markdown
+        .split('\n')
+        .slice(0, (node?.position?.start.line ?? 1) - 1)
+        .join('\n');
+      const heading = Array.from(precedingCopy.matchAll(/^#{2,3} (.+)$/gm), ([, text]) => text).at(
+        -1,
+      );
+      return (
+        <section
+          aria-labelledby={heading ? headingId(heading) : undefined}
+          aria-label={heading ? undefined : 'Research table'}
+          className="border-border-subtle bg-panel focus-ring my-6 overflow-x-auto rounded-[var(--radius-card)] border"
+        >
+          <table className="website-body w-full min-w-[40rem] border-collapse text-left">
+            {children}
+          </table>
+        </section>
+      );
+    },
+  };
+}
 
 const sourceComponents: Components = {
   ...components,
@@ -105,7 +121,7 @@ export function ResearchMarkdown({ markdown }: Readonly<{ markdown: string }>) {
       : '';
   return (
     <>
-      <Markdown remarkPlugins={[remarkGfm]} components={components} skipHtml>
+      <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents(body)} skipHtml>
         {body}
       </Markdown>
       <Markdown remarkPlugins={[remarkGfm]} components={sourceComponents} skipHtml>

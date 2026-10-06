@@ -97,6 +97,11 @@ export const NAV_DROPS: readonly NavDrop[] = [
             desc: 'Understand generated answers and where to start',
             href: '/generative-engine-optimization',
           },
+          {
+            title: 'Free tools',
+            desc: 'Crawler rules, markup and sitemap utilities',
+            href: '/tools',
+          },
           { title: 'FAQ', desc: 'Answers on AEO, evidence, security, and billing', href: '/faq' },
           {
             title: 'Compare',
