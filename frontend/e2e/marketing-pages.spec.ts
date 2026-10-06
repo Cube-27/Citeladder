@@ -75,12 +75,9 @@ test.describe('marketing routes', () => {
         // Builds without the private font files settle on the fallback faces.
         await page.evaluate(() =>
           Promise.allSettled(
-            [
-              '400 16px "General Sans"',
-              '600 16px "General Sans"',
-              '400 16px Switzer',
-              '600 16px Switzer',
-            ].map((font) => document.fonts.load(font)),
+            ['400 16px "Inter Variable"', '600 16px "Inter Variable"'].map((font) =>
+              document.fonts.load(font),
+            ),
           ),
         );
         const boxes = () =>
