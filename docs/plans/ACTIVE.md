@@ -6,7 +6,7 @@ Completed implementation plans are retained in [the archive](../archive/).
 ## Active
 
 - [Self-serve authentication and verified email](citeladder-self-serve-authentication.md):
-  repository implementation complete on 6 October 2026; PR/CI review pending.
+  repository implementation complete in [#280](https://github.com/Cube-27/Citeladder/pull/280).
   Public rollout and live-provider acceptance remain separate.
 
 - [ChatGPT plugin](citeladder-chatgpt-plugin.md): repository implementation complete

@@ -3,5 +3,6 @@ export function requiresEmailVerification(user: {
   registration_origin: string;
   email_verified_at: Date | null;
 }): boolean {
-  return user.registration_origin === 'public' && user.email_verified_at === null;
+  if (user.registration_origin === 'public') return user.email_verified_at === null;
+  return !['legacy', 'operator'].includes(user.registration_origin);
 }

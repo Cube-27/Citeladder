@@ -24,7 +24,7 @@ export async function sendAuthMail(
     const response = await (config.auth.fetch ?? fetch)(cfg.endpoint, {
       method: 'POST',
       redirect: 'error',
-      signal: AbortSignal.timeout(cfg.timeout_ms),
+      signal: AbortSignal.timeout(config.auth.mailTimeoutMs),
       headers: {
         Authorization: `Bearer ${config.auth.mailKey}`,
         'Content-Type': 'application/json',

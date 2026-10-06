@@ -12,13 +12,13 @@ import { RegisterScreen } from './register-screen';
 const noParams = new URLSearchParams();
 
 describe('account entry while self-serve sign-up is closed', () => {
-  it('keeps email sign-in but offers neither Google nor sign-up', () => {
+  it('keeps email and existing Google sign-in while hiding sign-up', () => {
     renderWithProviders(
       <LoginScreen demoMode={false} signupOpen={false} searchParams={noParams} />,
     );
 
     expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Google/ })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 

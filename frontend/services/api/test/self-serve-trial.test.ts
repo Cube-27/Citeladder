@@ -5,12 +5,47 @@ import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
 import { reserveTrialAnswer, settleTrialAnswer } from '../src/audits/trial-answers.ts';
 import { workspaceAccess } from '../src/entitlements/access.ts';
-import { issueBundle } from '../src/entitlements/grants.ts';
+import { issueBundle, revokeBundle } from '../src/entitlements/grants.ts';
 import type { AuditTask } from '../src/queue/audit-queue.ts';
 
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
 const accounts: string[] = [];
+it('distinguishes revoked authority from natural trial expiry', async () => {
+  const t = await fixtures.tenant({ access: false });
+  const user = await db
+    .updateTable('users')
+    .set({ registration_origin: 'public', created_at: new Date(Date.now() - 8 * 86400000) })
+    .where('id', '=', t.userId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  await db.transaction().execute((trx) => ensureWorkspaceBilling(trx, t.workspaceId, user));
+  const account = await db
+    .selectFrom('billing_accounts')
+    .selectAll()
+    .where('workspace_id', '=', t.workspaceId)
+    .executeTakeFirstOrThrow();
+  accounts.push(account.id);
+  const grant = await db
+    .selectFrom('account_grants')
+    .selectAll()
+    .where('billing_account_id', '=', account.id)
+    .where('key', '=', 'workspace_access')
+    .executeTakeFirstOrThrow();
+  await db.transaction().execute((trx) =>
+    revokeBundle(trx, {
+      workspaceId: t.workspaceId,
+      accountId: account.id,
+      grantIds: [grant.id],
+      key: randomUUID(),
+      reason: 'Revoke fixture access before expiry',
+      actorKind: 'operator',
+      actorId: t.userId,
+      at: new Date(user.created_at.getTime() + 86400000),
+    }),
+  );
+  expect((await workspaceAccess(db, t.workspaceId)).status).toBe('access_unresolved');
+});
 afterAll(async () => {
   if (accounts.length)
     await db.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute();

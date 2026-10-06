@@ -8,10 +8,17 @@
  */
 import { z } from 'zod';
 import { humanizeApiError } from '@/lib/api/errors';
+import { authFormPolicy } from '@/lib/config/auth';
 
 /** Shared email + password rules reused by both forms. */
 const email = z.string().trim().min(1, 'Email is required.').email('Enter a valid email address.');
-const password = z.string().min(8, 'Password must be at least 8 characters.');
+const password = z
+  .string()
+  .min(
+    authFormPolicy.passwordMinLength,
+    `Password must be at least ${authFormPolicy.passwordMinLength} characters.`,
+  )
+  .max(authFormPolicy.passwordMaxLength);
 
 export const loginFormSchema = z.object({
   email,

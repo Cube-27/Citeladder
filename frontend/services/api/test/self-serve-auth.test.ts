@@ -12,6 +12,7 @@ import { authorizedWorkspaceIds } from '../src/mcp/data.ts';
 const config = testConfig({
   PUBLIC_SIGNUP_ENABLED: 'true',
   RESEND_API_KEY: 'test-only-resend',
+  AUTH_MAIL_TIMEOUT_MS: '10',
   OAUTH_GOOGLE_ENABLED: 'true',
   OAUTH_GOOGLE_CLIENT_ID: 'test-google',
   OAUTH_GOOGLE_CLIENT_SECRET: 'test-secret',
@@ -62,6 +63,25 @@ afterAll(async () => {
 });
 
 describe('verified self-serve lifecycle', () => {
+  it('fails closed on unknown registration provenance without repairing it into legacy access', async () => {
+    const { user } = await pending();
+    const unknown = await db
+      .updateTable('users')
+      .set({ registration_origin: 'unknown', email_verified_at: new Date() })
+      .where('id', '=', user.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    const app = createApp(config, db);
+    expect(
+      (
+        await app.request('/api/v1/auth/me', {
+          headers: {
+            Cookie: `${config.session.cookieName}=${await issueSession(config, unknown)}`,
+          },
+        })
+      ).status,
+    ).toBe(401);
+  });
   it('denies expired REST and evidence access while preserving account recovery', async () => {
     const { user, workspaceId } = await pending();
     const verified = await db

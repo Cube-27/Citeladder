@@ -114,6 +114,10 @@ challenges and revokes sessions. Password change requires the current password;
 logout and explicit sign-out-all revoke every session. Account security reports
 actual methods and verification state. Mail is request-bounded, not a durable queue:
 a crash after commit is recovered by requesting a new link after cooldown.
+Eligible and ineligible recipients share the configured `AUTH_MAIL_TIMEOUT_MS`
+response wait budget (default 5000 ms), so provider latency does not reveal
+mailbox eligibility. Delivery completes within the request; it is not detached
+onto CPU that might be suspended after the response.
 
 Product REST, MCP and execution boundaries resolve persisted workspace access
 at the current time. Expiry preserves data while allowing account security,

@@ -102,7 +102,7 @@ describe('crawl control admission', () => {
       const response = await request(seed, path, 'POST', body);
       expect(response.status).toBe(403);
       expect(await response.json()).toMatchObject({
-        error: { code: 'entitlement_unresolved', retryable: false },
+        error: { code: 'access_unresolved', retryable: false },
       });
     }
   });

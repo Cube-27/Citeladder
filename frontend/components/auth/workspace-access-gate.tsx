@@ -24,7 +24,8 @@ function accessAllowed(access: z.infer<typeof accessSchema> | undefined, deadlin
 }
 
 function accessTitle(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
-  return access?.status === 'trial_expired' || (deadline !== null && Date.now() >= deadline)
+  return access?.status === 'trial_expired' ||
+    (access?.status === 'trial_active' && deadline !== null && Date.now() >= deadline)
     ? 'Your trial has ended'
     : 'Workspace access';
 }
@@ -45,12 +46,13 @@ function useAccessLoss(workspaceId: string | null) {
         !['trial_expired', 'access_unresolved'].includes(error.code ?? '')
       )
         return;
-      client.setQueryData(queryKeys.workspaces.access(workspaceId), {
-        status: error.code,
-        expires_at: null,
-      });
+      // The response may belong to a workspace the user just left. Re-resolve
+      // the current authority rather than copying that denial to another scope.
+      void client.resetQueries({ queryKey: queryKeys.workspaces.access(workspaceId), exact: true });
     };
-    const queries = client.getQueryCache().subscribe((event) => denied(event.query.state.error));
+    const queries = client.getQueryCache().subscribe((event) => {
+      if (!recoveryQuery(event.query.queryKey)) denied(event.query.state.error);
+    });
     const mutations = client
       .getMutationCache()
       .subscribe((event) => denied(event.mutation?.state.error));
@@ -62,13 +64,19 @@ function useAccessLoss(workspaceId: string | null) {
 }
 
 export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode }>) {
-  const { activeWorkspaceId, workspaces } = useProjectContext();
+  const {
+    activeWorkspaceId,
+    workspaces,
+    isLoading: workspaceLoading,
+    retry: retryWorkspaces,
+  } = useProjectContext();
   const location = useLocation();
   const client = useQueryClient();
   const [, tick] = useState(0);
   useAccessLoss(activeWorkspaceId);
-  const recovery =
-    location.pathname === '/invitations/accept' || location.pathname === '/account-security';
+  const recovery = ['/invitations/accept', '/account-security'].includes(
+    location.pathname.replace(/\/+$/u, '').toLowerCase(),
+  );
   const access = useQuery({
     queryKey: queryKeys.workspaces.access(activeWorkspaceId ?? ''),
     enabled: Boolean(activeWorkspaceId) && !recovery,
@@ -80,16 +88,25 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   const { refetch } = access;
   useEffect(() => {
     if (deadline === null) return;
-    const timer = window.setTimeout(
-      () => {
-        tick((value) => value + 1);
-        void refetch();
-      },
-      Math.max(0, deadline - Date.now()),
-    );
+    let timer: number;
+    const schedule = () => {
+      timer = window.setTimeout(
+        () => {
+          if (Date.now() < deadline) {
+            schedule();
+            return;
+          }
+          tick((value) => value + 1);
+          void refetch();
+        },
+        Math.max(0, Math.min(2_147_483_647, deadline - Date.now())),
+      );
+    };
+    schedule();
     return () => window.clearTimeout(timer);
   }, [deadline, refetch]);
   const allowed = accessAllowed(access.data, deadline);
+  const checking = activeWorkspaceId ? access.isPending : workspaceLoading;
   useEffect(() => {
     if (!access.data || allowed || recovery) return;
     void client.cancelQueries({
@@ -105,14 +122,18 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
       <div className="grid gap-4">
         <h1>{accessTitle(access.data, deadline)}</h1>
         <Alert tone="info">
-          {access.isPending
+          {checking
             ? 'Checking your access…'
             : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
         </Alert>
-        {!access.isPending && (
+        {!checking && (
           <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
         )}
-        {access.isError && <Button onClick={() => void access.refetch()}>Retry</Button>}
+        {!checking && (
+          <Button onClick={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}>
+            Retry
+          </Button>
+        )}
         {workspaces
           .filter((workspace) => workspace.id !== activeWorkspaceId)
           .map((workspace) => (

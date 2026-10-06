@@ -297,7 +297,7 @@ async function accountForEmail(
   await enforceSubjectRequest(db, 'client', 'global-trial', {
     operation: 'auth.trial.global',
     limit: policy.auth.mailbox.trial_daily_limit,
-    windowSeconds: 86400,
+    windowSeconds: policy.auth.mailbox.daily_window_seconds,
   });
   const now = new Date();
   const inserted = await db

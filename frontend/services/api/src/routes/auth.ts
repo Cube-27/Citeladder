@@ -251,7 +251,7 @@ export const authRoutes = [
       await enforceSubjectRequest(db, 'client', 'global-trial', {
         operation: 'auth.trial.global',
         limit: policy.auth.mailbox.trial_daily_limit,
-        windowSeconds: 86400,
+        windowSeconds: policy.auth.mailbox.daily_window_seconds,
       });
       await registerUser(db, payload.email, payload.password);
       await requestChallenge(db, config, payload.email, 'verification', payload.return_to);

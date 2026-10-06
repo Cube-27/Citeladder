@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { reserveTrialAnswer } from './trial-answers.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import { reserveUsage, releaseUsage } from '../entitlements/ledger.ts';
@@ -94,9 +95,15 @@ export async function createAuditInTransaction(
   );
   if (
     access.status === 'trial_active' &&
-    (plan.repetitions !== 1 || plan.routes.some((route) => route.logical_engine !== 'chatgpt'))
+    (plan.repetitions !== policy.entitlements.public_trial.repetitions ||
+      plan.routes.some(
+        (route) => !policy.entitlements.public_trial.engines.includes(route.logical_engine),
+      ))
   )
-    throw new ApiError(403, 'The trial allows one ChatGPT answer per prompt');
+    throw new ApiError(
+      403,
+      'The requested engine or repetition count is outside the trial allowance',
+    );
   await reserveAuditCapacity(trx, workspaceId, slots.length, runtime, at);
   const funded = await admitAudit(
     trx,

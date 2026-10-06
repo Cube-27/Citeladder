@@ -113,6 +113,8 @@ export async function ensureWorkspaceBilling(
     });
     return;
   }
+  if (!['legacy', 'operator'].includes(locked.registration_origin))
+    throw new Error('registration_origin_unresolved');
   const cfg = policy.entitlements.baseline;
   const idempotencyKey = `${cfg.revision}:system:public-signup`;
   const existing = await db

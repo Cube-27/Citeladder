@@ -160,7 +160,11 @@ export async function handleAppRequest(request: Request, env: WorkerEnv): Promis
   }
   const routed = await dynamicRoute(request, env, path);
   const result = routed ? decorate(routed) : await staticOrNavigation(request, env, url, path);
-  if (['/verify-email', '/reset-password', '/invitations/accept'].includes(path)) {
+  if (
+    ['/verify-email', '/reset-password', '/invitations/accept'].includes(
+      path.replace(/\/+$/u, '').toLowerCase(),
+    )
+  ) {
     const headers = new Headers(result.headers);
     headers.set('Referrer-Policy', 'no-referrer');
     headers.set('Cache-Control', 'no-store');

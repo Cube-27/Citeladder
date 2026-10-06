@@ -110,7 +110,9 @@ export function InviteDialog({
               <span>
                 {delivery === 'accepted'
                   ? 'The email provider accepted the invitation. Inbox delivery is not confirmed. '
-                  : 'Email delivery was not confirmed. '}
+                  : delivery === 'failed'
+                    ? 'The email provider did not accept the invitation. '
+                    : 'Email delivery status is unavailable. '}
                 Share this one-time acceptance link. It is shown once and cannot be retrieved again
                 — resending issues a new link and invalidates this one.
               </span>

@@ -1,6 +1,13 @@
 {
   "settings": {
     "resend_api_key": { "env": ["RESEND_API_KEY"], "type": "str", "default": "" },
+    "auth_mail_timeout_ms": {
+      "env": ["AUTH_MAIL_TIMEOUT_MS"],
+      "type": "int",
+      "default": 5000,
+      "minimum": 1,
+      "maximum": 10000
+    },
     "request_id_header": {
       "env": ["REQUEST_ID_HEADER"],
       "type": "str",
@@ -90,6 +97,7 @@
   },
   "terms_revision": "2026-09-24",
   "mailbox": {
+    "daily_window_seconds": 86400,
     "verification_ttl_seconds": 86400,
     "reset_ttl_seconds": 1800,
     "cooldown_seconds": 60,
@@ -100,8 +108,7 @@
     "request_window_seconds": 3600,
     "sender": "notifications@citeladder.com",
     "reply_to": "contact@citeladder.com",
-    "endpoint": "https://api.resend.com/emails",
-    "timeout_ms": 5000
+    "endpoint": "https://api.resend.com/emails"
   },
   "privacy_revision": "2026-09-28",
   "password": {

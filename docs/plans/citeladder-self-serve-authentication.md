@@ -1,6 +1,6 @@
 # Self-serve authentication, verified email and trial access
 
-Status: repository implementation complete on 6 October 2026; PR/CI review pending.
+Status: repository implementation complete on 6 October 2026 in [PR #280](https://github.com/Cube-27/Citeladder/pull/280).
 Public rollout, deployed-schema compatibility and live-provider acceptance remain
 separately authorized operations.
 Date: 5 October 2026. Repository inspection baseline: `04c5c0a32`.

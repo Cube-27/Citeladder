@@ -30,7 +30,7 @@ export function LoginScreen({
   const returnTo = safeAuthReturnPath(searchParams.get('return_to'));
   const description =
     searchParams.get('registered') === '1'
-      ? 'Check your email to verify your account. Your seven-day trial starts at registration.'
+      ? 'Check your email to verify your account. Your trial starts at registration.'
       : 'Welcome back! Please sign in to continue.';
   // The Google callback is a full-page navigation, so it reports failure as a
   // coded query parameter rather than a response body.

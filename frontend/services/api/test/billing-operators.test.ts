@@ -221,7 +221,7 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   ).rejects.toThrow();
 });
 it('concurrent baseline repair freezes cohort and development top-ups stay in one workspace', async () => {
-  const owned = await fixtures.ownedWorkspace(actorId);
+  const owned = await fixtures.ownedWorkspace(actorId, { access: false });
   const actor = await db
     .selectFrom('users')
     .selectAll()

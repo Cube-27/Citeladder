@@ -183,6 +183,9 @@
     }
   },
   "public_trial": {
+    "engines": ["chatgpt"],
+    "repetitions": 1,
+    "successful_answers_per_prompt": 1,
     "revision": "public-trial-v1",
     "profile": "public_trial",
     "grants": {

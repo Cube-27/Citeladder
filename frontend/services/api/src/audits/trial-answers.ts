@@ -5,6 +5,7 @@ import { reserveUsage, debitUsage, releaseUsage, LedgerError } from '../entitlem
 import { lockAccount } from '../entitlements/grants.ts';
 import { ApiError } from '../errors.ts';
 import { workspaceAccess } from '../entitlements/access.ts';
+import { policy } from '../config.ts';
 
 /** The immutable task snapshot retains prompt identity after prompt deletion. */
 export async function reserveTrialAnswer(
@@ -35,7 +36,8 @@ export async function reserveTrialAnswer(
     .where('l.capability_key', '=', 'successful_answers')
     .where(sql<string>`t.request_snapshot ->> 'original_prompt_id'`, '=', promptId)
     .executeTakeFirstOrThrow();
-  if (used.units > 0) throw new ApiError(403, 'This prompt has used its trial answer');
+  if (used.units >= policy.entitlements.public_trial.successful_answers_per_prompt)
+    throw new ApiError(403, 'This prompt has used its trial answer');
   try {
     await reserveUsage(db, {
       accountId: account.id,

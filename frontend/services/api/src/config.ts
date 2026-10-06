@@ -320,6 +320,7 @@ export type ServiceConfig = {
   auth: {
     publicSignup: boolean;
     mailKey: string;
+    mailTimeoutMs: number;
     frontendUrl: string;
     trustedProxies: TrustedProxies;
     oauthSettings: Record<string, string | number | boolean>;
@@ -519,6 +520,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     auth: {
       publicSignup: setting('public_signup_enabled') as boolean,
       mailKey: setting('resend_api_key') as string,
+      mailTimeoutMs: setting('auth_mail_timeout_ms') as number,
       frontendUrl: setting('frontend_url') as string,
       trustedProxies: parseTrustedProxies(setting('trusted_proxy_cidrs') as string),
       oauthSettings: {

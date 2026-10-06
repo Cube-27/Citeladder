@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import { sql } from 'kysely';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -37,12 +38,12 @@ export async function requestChallenge(
     await enforceSubjectRequest(db, 'email', normalized, {
       operation: 'auth.mail.daily',
       limit: cfg.recipient_daily_limit,
-      windowSeconds: 86400,
+      windowSeconds: cfg.daily_window_seconds,
     });
     await enforceSubjectRequest(db, 'client', 'global-mail', {
       operation: 'auth.mail.global',
       limit: cfg.global_daily_limit,
-      windowSeconds: 86400,
+      windowSeconds: cfg.daily_window_seconds,
     });
   } catch (error) {
     if (error instanceof ApiError && error.status === 429) return;
@@ -90,6 +91,20 @@ export async function requestChallenge(
     await recordSecurityEvent(trx, 'auth.challenge_issued', user.id);
     return { ...row, token };
   });
+  // Equalize the bounded provider budget for eligible and ineligible recipients.
+  // Keep delivery in the request: no plaintext queue or post-response CPU assumption.
+  await Promise.all([
+    deliverChallenge(config, issued, purpose, returnTo),
+    delay(config.auth.mailKey ? config.auth.mailTimeoutMs : 0),
+  ]);
+}
+
+async function deliverChallenge(
+  config: ServiceConfig,
+  issued: { id: string; email: string; token: string } | null,
+  purpose: Purpose,
+  returnTo?: string,
+) {
   if (!issued) return;
   const url = new URL(
     purpose === 'verification' ? '/verify-email' : '/reset-password',
@@ -106,7 +121,7 @@ export async function requestChallenge(
       purpose === 'verification'
         ? 'Verify your CiteLadder email'
         : 'Reset your CiteLadder password',
-    text: `${purpose === 'verification' ? 'Confirm your email using your signup password. Your seven-day trial starts at registration.' : 'Choose a new password to secure your account.'}\n${url.toString()}\nIf you did not request this, you can ignore this message.`,
+    text: `${purpose === 'verification' ? 'Confirm your email using your signup password. Your trial starts at registration.' : 'Choose a new password to secure your account.'}\n${url.toString()}\nIf you did not request this, you can ignore this message.`,
   });
 }
 
@@ -131,8 +146,15 @@ export async function consumeChallenge(
     : undefined;
   const passwordOk =
     purpose === 'password_reset' || (await verifyAccountPassword(password, user?.hashed_password));
+  if (
+    !challenge ||
+    !user ||
+    challenge.consumed_at ||
+    challenge.expires_at <= new Date() ||
+    !passwordOk
+  )
+    throw invalid();
   const replacement = purpose === 'password_reset' ? await hashPassword(password) : undefined;
-  if (!challenge || !user || !passwordOk) throw invalid();
   await db.transaction().execute(async (trx) => {
     const current = await trx
       .selectFrom('users')

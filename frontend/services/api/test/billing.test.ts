@@ -178,7 +178,7 @@ describe('billing money and access owner', () => {
     expect((await buy(t.workspaceId)).status).toBe('pending');
   });
   it('settles concurrent evidence once and refuses an active subscription without a captured invoice', async () => {
-    const t = await fixtures.tenant();
+    const t = await fixtures.tenant({ access: false });
     const response = await buy(t.workspaceId);
     const row = await pending(response.activation_id);
     const absent = paidSubscription(row, { payment: null });
@@ -967,6 +967,12 @@ describe('billing money and access owner', () => {
   });
   it('reads checkout and verifies a browser callback without provider I/O or paid access', async () => {
     const t = await fixtures.tenant();
+    const before = await db
+      .selectFrom('account_grants')
+      .select('id')
+      .where('billing_account_id', '=', t.accountId)
+      .orderBy('id')
+      .execute();
     const response = await buy(t.workspaceId);
     const row = await pending(response.activation_id);
     const app = createApp(config, db);
@@ -1014,8 +1020,9 @@ describe('billing money and access owner', () => {
           .selectFrom('account_grants')
           .select('id')
           .where('billing_account_id', '=', t.accountId)
+          .orderBy('id')
           .execute(),
-      ).toHaveLength(0);
+      ).toEqual(before);
       expect((await pending(row.id)).reconciliation_next_at).not.toBeNull();
     } finally {
       transport.mockRestore();

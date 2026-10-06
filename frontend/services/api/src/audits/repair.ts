@@ -8,6 +8,7 @@ import { auditEvent, transitionAudit } from './state.ts';
 import { compareText } from '../text-order.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { reserveTrialAnswer } from './trial-answers.ts';
+import { policy } from '../config.ts';
 
 export const repairInput = z.object({
   provider: z.string().nullish(),
@@ -206,8 +207,11 @@ export async function createRepairAudit(
     if (access.status === 'trial_active') {
       for (const task of repaired) {
         const original = record(task.request_snapshot).original_prompt_id;
-        if (typeof original !== 'string' || task.logical_engine !== 'chatgpt')
-          throw denied('Trial repair requires original ChatGPT prompt evidence');
+        if (
+          typeof original !== 'string' ||
+          !policy.entitlements.public_trial.engines.includes(task.logical_engine)
+        )
+          throw denied('Trial repair requires original prompt evidence and an eligible engine');
         await reserveTrialAnswer(trx, workspaceId, id, task.id, original, at);
       }
     }

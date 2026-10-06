@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
 import { authApi } from '@/lib/api/auth';
+import { passwordHint } from '@/lib/config/auth';
 import { authErrorMessage, registerFormSchema, type RegisterFormValues } from '@/lib/auth/forms';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 
@@ -70,7 +71,7 @@ export function RegisterScreen({
   return (
     <AuthFormShell
       title="Create your account"
-      description="Your seven-day trial starts when you register. Verify your email to use it. No card required."
+      description="Your trial starts when you register. Verify your email to use it. No card required."
       error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
       onSubmit={handleSubmit(submit)}
       pending={isSubmitting || mutation.isPending}
@@ -86,7 +87,7 @@ export function RegisterScreen({
         error={errors.password?.message}
         inputProps={register('password')}
         autoComplete="new-password"
-        placeholder="At least 8 characters"
+        placeholder={passwordHint}
       />
       <AuthPasswordField
         label="Confirm password"

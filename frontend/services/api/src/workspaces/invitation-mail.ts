@@ -6,11 +6,9 @@ import { ApiError } from '../errors.ts';
 import { sendAuthMail } from '../auth/mail.ts';
 
 /** Issuance has already committed; a failed send retains the copy-link fallback. */
-export async function deliverInvitation<T extends { invitation: { email: string }; token: string }>(
-  db: Database,
-  config: ServiceConfig,
-  issued: T,
-) {
+export async function deliverInvitation<
+  T extends { invitation: { email: string; expires_at: string }; token: string },
+>(db: Database, config: ServiceConfig, issued: T) {
   const cfg = policy.auth.mailbox;
   try {
     await enforceSubjectRequest(db, 'email', issued.invitation.email, {
@@ -21,12 +19,12 @@ export async function deliverInvitation<T extends { invitation: { email: string 
     await enforceSubjectRequest(db, 'email', issued.invitation.email, {
       operation: 'auth.mail.daily',
       limit: cfg.recipient_daily_limit,
-      windowSeconds: 86400,
+      windowSeconds: cfg.daily_window_seconds,
     });
     await enforceSubjectRequest(db, 'client', 'global-mail', {
       operation: 'auth.mail.global',
       limit: cfg.global_daily_limit,
-      windowSeconds: 86400,
+      windowSeconds: cfg.daily_window_seconds,
     });
   } catch (error) {
     if (error instanceof ApiError && error.status === 429)
@@ -39,7 +37,7 @@ export async function deliverInvitation<T extends { invitation: { email: string 
     id: randomUUID(),
     email: issued.invitation.email,
     subject: 'Your CiteLadder workspace invitation',
-    text: `Sign in with this email address to accept your invitation. This link expires in seven days.\n${url.toString()}`,
+    text: `Sign in with this email address to accept your invitation. This link expires at ${issued.invitation.expires_at}.\n${url.toString()}`,
   });
   return { ...issued, delivery: accepted ? ('accepted' as const) : ('failed' as const) };
 }

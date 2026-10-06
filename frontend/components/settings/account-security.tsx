@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
+import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { Button } from '@/components/ui/button';
@@ -79,13 +80,13 @@ export default function AccountSecurity() {
           <AuthPasswordField
             label="New password"
             autoComplete="new-password"
-            placeholder="At least 8 characters"
+            placeholder={passwordHint}
             inputProps={{
               value: password,
               onChange: (event) => setPassword(event.target.value),
               required: true,
-              minLength: 8,
-              maxLength: 128,
+              minLength: authFormPolicy.passwordMinLength,
+              maxLength: authFormPolicy.passwordMaxLength,
             }}
           />
           <Button type="submit" disabled={mutation.isPending}>

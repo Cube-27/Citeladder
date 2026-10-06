@@ -42,14 +42,15 @@ export async function workspaceAccess(
       expires_at: authority.valid_until?.toISOString() ?? null,
     };
   if (
-    account.registration_origin !== 'public' &&
+    ['legacy', 'operator'].includes(account.registration_origin) &&
     selected.some((grant) => grant.bundle_role === 'primary')
   )
     return { status: 'active', expires_at: state.validUntil?.toISOString() ?? null };
   const trial = state.grants.find(
     (grant) =>
       grant.profile_key === policy.entitlements.public_trial.profile &&
-      grant.key === 'workspace_access',
+      grant.key === 'workspace_access' &&
+      (!state.revokedAt.has(grant.id) || state.revokedAt.get(grant.id)! >= grant.valid_until!),
   );
   if (trial?.valid_until && at >= trial.valid_until)
     return { status: 'trial_expired', expires_at: trial.valid_until.toISOString() };

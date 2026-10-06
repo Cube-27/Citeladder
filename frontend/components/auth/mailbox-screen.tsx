@@ -4,13 +4,14 @@ import { useMutation } from '@tanstack/react-query';
 import { AuthRouteShell } from './auth-route-shell';
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from './auth-form';
 import { authApi } from '@/lib/api/auth';
+import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 
 export default function MailboxScreen() {
   const location = useLocation();
   const [search] = useSearchParams();
-  const operation = location.pathname.slice(1) as
+  const operation = location.pathname.replace(/\/+$/u, '').slice(1).toLowerCase() as
     | 'verify-email'
     | 'reset-password'
     | 'forgot-password'
@@ -76,12 +77,12 @@ export default function MailboxScreen() {
           <AuthPasswordField
             label={operation === 'verify-email' ? 'Signup password' : 'New password'}
             autoComplete={operation === 'verify-email' ? 'current-password' : 'new-password'}
-            placeholder="At least 8 characters"
+            placeholder={passwordHint}
             inputProps={{
               value: password,
               onChange: (event) => setPassword(event.target.value),
-              minLength: 8,
-              maxLength: 128,
+              minLength: authFormPolicy.passwordMinLength,
+              maxLength: authFormPolicy.passwordMaxLength,
               required: true,
             }}
           />
