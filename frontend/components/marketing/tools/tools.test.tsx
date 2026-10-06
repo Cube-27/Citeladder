@@ -62,8 +62,8 @@ describe('free tools user workflows', () => {
     });
     expect(screen.getByLabelText('Previous sitemap XML')).toHaveValue(example);
     fireEvent.click(screen.getByRole('button', { name: 'Compare sitemaps' }));
-    expect(screen.getByLabelText('Generated output')).toHaveValue(
-      expect.stringContaining('Removed (1)'),
+    expect(screen.getByLabelText<HTMLTextAreaElement>('Generated output').value).toContain(
+      'Removed (1)',
     );
   });
 });

@@ -92,6 +92,12 @@ pnpm dev:vite               # Vite authenticated SPA: http://127.0.0.1:3001/logi
 Vite proxies these paths to the API service. Marketing Worker requests use
 its protected upstream configuration.
 
+The workspace pins a pnpm patch for Astro 7.3.5's Windows directory-cleanup
+fallback, which uses `fs.rmSync` for Node 26 compatibility. Frozen installs
+apply `frontend/patches/astro@7.3.5.patch`; Docker dependency stages copy the
+patches alongside the workspace manifest. Remove the patch when upgrading to
+an Astro release containing [the upstream fix](https://github.com/withastro/astro/pull/18193).
+
 Fonts come only from the private `Cube-27/cube27-fonts` repo (some faces there
 are licensed for self-hosting, not redistribution). `pnpm fonts:pull` uses your
 `gh` login to copy the ones in use into the gitignored `public/fonts/`, and
