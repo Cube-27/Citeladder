@@ -70,9 +70,22 @@ describe('evidenceFacts', () => {
     expect(evidenceFacts('aeo.listing_item_facts', { item_fact_count: 0, items: [] })).toEqual([
       'No listing item with both title and URL',
     ]);
-    expect(evidenceFacts('aeo.heading_hierarchy', { section_count: 0, sections: [] })).toEqual([
-      'No primary-content heading sections',
-    ]);
+    expect(
+      evidenceFacts('aeo.heading_hierarchy', { reason: 'heading_outline_unavailable' }),
+    ).toEqual(['heading outline unavailable']);
+  });
+
+  it('shows observed AEO heading skips and preserves unknown historical evidence', () => {
+    expect(
+      evidenceFacts('aeo.heading_hierarchy', {
+        skips: [
+          { from: 1, to: 3 },
+          { from: 3, to: 5 },
+          { from: 1, to: 3 },
+        ],
+      }),
+    ).toEqual(['h1 → h3 ×2', 'h3 → h5']);
+    expect(evidenceFacts('aeo.heading_hierarchy', { skips: [] })).toEqual([]);
   });
 
   it('identifies each offending control by selector, never by ordinal', () => {

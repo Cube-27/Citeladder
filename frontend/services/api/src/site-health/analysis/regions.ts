@@ -18,6 +18,7 @@ import {
   type HtmlText,
 } from '../../web-evidence/html.ts';
 import { regionPolicy as r, limits, squash } from './policy.ts';
+import { comparableUrl } from './indexing.ts';
 
 const EXCLUDED_TAGS = new Set(r.excluded_tags);
 const NON_RENDERED_TAGS = new Set(r.non_rendered_tags);
@@ -25,6 +26,7 @@ const EXCLUDED_ROLES = new Set(r.excluded_roles);
 const HIDDEN_ARIA = new Set(r.hidden_aria_values);
 const RICH_TEXT_TAGS = new Set(r.rich_text_container_tags);
 const RICH_TEXT_TOKENS = new Set(r.rich_text_container_tokens);
+const CARD_ITEM_EXCLUDED_TAGS = new Set(r.card_item_excluded_tags);
 const HEADINGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
 const REGION_BY_TAG: Record<string, string> = {
   nav: 'nav',
@@ -209,12 +211,6 @@ const identityTokens = (node: HtmlElement, names: readonly string[]) =>
       .split(/\s+/u)
       .filter(Boolean),
   );
-function isRichTextContainer(node: HtmlElement) {
-  if (RICH_TEXT_TAGS.has(node.tagName)) return true;
-  return [...identityTokens(node, ['id', 'class', 'data-testid'])].some((token) =>
-    RICH_TEXT_TOKENS.has(token),
-  );
-}
 export const hasRichTextToken = (node: HtmlElement) =>
   [...identityTokens(node, ['id', 'class', 'data-testid'])].some((token) =>
     RICH_TEXT_TOKENS.has(token),
@@ -228,10 +224,12 @@ const compatible = (left: CardShape, right: CardShape) =>
     [...right.children].every((tag) => left.children.has(tag)));
 
 function isCardList(candidate: HtmlElement) {
-  if (isRichTextContainer(candidate)) return false;
+  if (RICH_TEXT_TAGS.has(candidate.tagName)) return false;
+  // A wrapper around the page identity is not a repeated item collection.
+  if ([...elements(candidate, 'h1')].some(regionNodeIsVisible)) return false;
   const counts = new Map<string, { shape: CardShape; count: number }>();
   for (const child of childElements(candidate)) {
-    if (!containsLink(child)) continue;
+    if (CARD_ITEM_EXCLUDED_TAGS.has(child.tagName) || !containsLink(child)) continue;
     const tags = childElements(child)
       .slice(0, r.shape_max_children)
       .map((item) => item.tagName);
@@ -252,20 +250,72 @@ function isCardList(candidate: HtmlElement) {
   );
 }
 
-/**
- * Containers holding several structurally similar linked children: product
- * grids, recommendation carousels and related-post strips alike. The primary
- * region itself is never one of them.
- */
-function cardListContainers(region: HtmlNode): HtmlElement[] {
+function headingNamesAnotherDocument(heading: HtmlElement, finalUrl: string) {
+  const headingText = squash(textContent(heading));
+  if (!headingText) return false;
+  for (const anchor of elements(heading, 'a')) {
+    if (squash(textContent(anchor)) !== headingText) continue;
+    try {
+      const target = new URL(attribute(anchor, 'href'), finalUrl);
+      if (
+        ['http:', 'https:'].includes(target.protocol) &&
+        comparableUrl(target.href) !== comparableUrl(finalUrl)
+      )
+        return true;
+    } catch {
+      // An unusable link cannot establish an excerpt's target document.
+    }
+  }
+  return false;
+}
+
+/** A featured article whose heading names another document is an excerpt, even on its own. */
+function linkedArticleExcerpt(node: HtmlElement, finalUrl: string) {
+  if (node.tagName !== 'article') return false;
+  let scanned = 0;
+  for (const heading of elements(node)) {
+    if (++scanned > r.max_containers_scanned) break;
+    if (!HEADINGS.has(heading.tagName) || !regionNodeIsVisible(heading)) continue;
+    return heading.tagName !== 'h1' && headingNamesAnotherDocument(heading, finalUrl);
+  }
+  return false;
+}
+
+const isRecommendation = (node: HtmlElement) => {
+  const identity = squash(
+    ['id', 'class', 'aria-label', 'data-testid']
+      .map((name) => attribute(node, name))
+      .join(' ')
+      .toLowerCase(),
+  ).replaceAll(' ', '-');
+  return r.content_recommendation_tokens.some((token) => identity.includes(token));
+};
+
+/** Repeated item collections, recommendation modules and isolated linked article excerpts. */
+function cardListContainers(region: HtmlNode, finalUrl: string): HtmlElement[] {
   const containers: HtmlElement[] = [];
+  const excerpts: HtmlElement[] = [];
   let scanned = 0;
   for (const candidate of elements(region)) {
-    if (candidate === region) continue;
     if (++scanned > r.max_containers_scanned) break;
-    if (isCardList(candidate)) containers.push(candidate);
+    if (candidate === region) continue;
+    if (linkedArticleExcerpt(candidate, finalUrl)) excerpts.push(candidate);
+    if (isCardList(candidate) || isRecommendation(candidate)) containers.push(candidate);
   }
-  return containers;
+  // Repeated sections can resemble cards when each contains links. Keep the
+  // actual nested collections without excluding their section/page wrappers.
+  const wrappers = new Set<HtmlElement>();
+  for (const container of containers) {
+    let depth = 0;
+    for (const ancestor of ancestors(container)) {
+      if (++depth > r.max_ancestor_depth || ancestor === region) break;
+      wrappers.add(ancestor);
+    }
+  }
+  return [
+    ...containers.filter((container) => !wrappers.has(container) || isRecommendation(container)),
+    ...excerpts,
+  ];
 }
 
 /** The primary region and its repeated card lists, resolved once per page. */
@@ -273,11 +323,18 @@ export type PageScope = {
   root: HtmlNode;
   region: HtmlNode;
   source: string;
+  finalUrl: string;
   cards: ReadonlySet<HtmlElement>;
 };
-export function pageScope(root: HtmlNode): PageScope {
+export function pageScope(root: HtmlNode, finalUrl: string): PageScope {
   const { node, source } = primaryRegion(root);
-  return { root, region: node, source, cards: new Set(cardListContainers(node)) };
+  return {
+    root,
+    region: node,
+    source,
+    finalUrl,
+    cards: new Set(cardListContainers(node, finalUrl)),
+  };
 }
 
 function containerLabel(container: HtmlElement) {

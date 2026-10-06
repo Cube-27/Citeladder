@@ -36,6 +36,18 @@
         "same_as_chars": 256
       },
       "cta_button_role_tokens": ["apply", "btn", "button", "cta", "enquire", "enquiry", "submit"],
+      "generic_item_link_labels": [
+        "view product",
+        "view item",
+        "view details",
+        "shop now",
+        "buy now",
+        "add to cart",
+        "learn more",
+        "read more",
+        "see details",
+        "details"
+      ],
       "inline_script_javascript_types": [
         "application/ecmascript",
         "application/javascript",
@@ -83,6 +95,19 @@
       "primary_rank_text_chars": 4096,
       "list_min_items": 3,
       "shape_max_children": 8,
+      "card_item_excluded_tags": [
+        "p",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "nav",
+        "aside",
+        "footer",
+        "header"
+      ],
       "content_recommendation_tokens": [
         "more-like",
         "recommend",
@@ -206,6 +231,7 @@
       "page_kinds": [
         "homepage",
         "article",
+        "editorial_index",
         "product",
         "category",
         "pricing",
@@ -348,6 +374,11 @@
       "procedural_min_steps": 3
     },
     "rules": {
+      "authored_content_check_ids": [
+        "aeo.visible_attribution",
+        "aeo.source_support_present",
+        "aeo.content_date_present"
+      ],
       "applicability_prefixes": {
         "page_kind": "page_kind:",
         "page_kind_html": "page_kind_html:",
@@ -355,11 +386,6 @@
         "page_trait": "page_trait:",
         "page_trait_content": "page_trait_content:",
         "page_kind_or_trait_content": "page_kind_or_trait_content:"
-      },
-      "weight_overrides": {
-        "homepage": {
-          "technical.thin_content": 1.0
-        }
       },
       "expected_schema": {
         "homepage": {
@@ -377,6 +403,14 @@
           "expected_types": ["Article", "BlogPosting", "NewsArticle"],
           "required": ["headline"],
           "recommended": ["author", "datePublished", "image", "dateModified"],
+          "required_by_type": {},
+          "recommended_by_type": {}
+        },
+        "editorial_index": {
+          "page_kind": "editorial_index",
+          "expected_types": ["Blog", "CollectionPage", "ItemList"],
+          "required": [],
+          "recommended": [],
           "required_by_type": {},
           "recommended_by_type": {}
         },

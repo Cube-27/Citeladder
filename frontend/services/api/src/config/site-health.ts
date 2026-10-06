@@ -74,6 +74,7 @@ export const siteHealth = {
       ...analysis.page_analysis.facts,
       authorship: siteAuthorship,
       provider_identity_exclusions: companyIdentity.provider_identity_exclusions,
+      company_legal_name_suffixes: companyIdentity.legal_name_suffixes,
     },
     traits: {
       ...analysis.page_analysis.traits,

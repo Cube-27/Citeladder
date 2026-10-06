@@ -1,5 +1,18 @@
 /** Site Health company identity policy. */
 export const companyIdentity = {
+  legal_name_suffixes: [
+    'private limited',
+    'pvt ltd',
+    'incorporated',
+    'corporation',
+    'limited',
+    'inc',
+    'ltd',
+    'llc',
+    'gmbh',
+    'plc',
+    'corp',
+  ],
   provider_identity_exclusions: [
     'our company',
     'our platform',

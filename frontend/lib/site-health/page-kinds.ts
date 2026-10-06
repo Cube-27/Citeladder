@@ -22,6 +22,7 @@ export const PAGE_KINDS: readonly PageKind[] = pageKindSchema.options;
 const PAGE_KIND_LABELS: Record<PageKind, string> = {
   homepage: 'Homepage',
   article: 'Article',
+  editorial_index: 'Editorial index',
   product: 'Product',
   category: 'Category',
   pricing: 'Pricing',

@@ -95,7 +95,7 @@
     "composite_contract": null
   },
   {
-    "applicability_key": "page_kind_html:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+    "applicability_key": "page_kind_html:homepage|article|editorial_index|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
     "category": "structured_data",
     "description": "Page includes JSON-LD or microdata structured data.",
     "dimension": "aeo",
@@ -418,7 +418,7 @@
     "composite_contract": null
   },
   {
-    "applicability_key": "page_kind_content:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+    "applicability_key": "page_kind_content:homepage|article|editorial_index|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
     "category": "content",
     "description": "The primary-content heading hierarchy skips one or more levels.",
     "dimension": "aeo",
@@ -594,9 +594,9 @@
     "composite_contract": null
   },
   {
-    "applicability_key": "page_kind_content:category",
+    "applicability_key": "page_kind_content:category|editorial_index",
     "category": "content",
-    "description": "Category pages expose a collection purpose and crawlable item set.",
+    "description": "Collection pages expose a collection purpose and crawlable item set.",
     "dimension": "aeo",
     "display_label": "Collection answer set incomplete",
     "display_label_variants": {},
@@ -665,7 +665,7 @@
     "composite_contract": null
   },
   {
-    "applicability_key": "page_kind_html:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+    "applicability_key": "page_kind_html:homepage|article|editorial_index|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
     "category": "structured_data",
     "description": "Expected-type structured data carries every required property for the page type.",
     "dimension": "aeo",
@@ -684,7 +684,7 @@
     "composite_contract": null
   },
   {
-    "applicability_key": "page_kind_html:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+    "applicability_key": "page_kind_html:homepage|article|editorial_index|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
     "category": "structured_data",
     "description": "Expected-type structured data carries the recommended properties for the page type.",
     "dimension": "aeo",
@@ -703,7 +703,7 @@
     "composite_contract": null
   },
   {
-    "applicability_key": "page_kind_content:homepage|article|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
+    "applicability_key": "page_kind_content:homepage|article|editorial_index|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
     "category": "structured_data",
     "description": "Structured-data names match the visible <title>/h1 content (bounded cross-check).",
     "dimension": "aeo",

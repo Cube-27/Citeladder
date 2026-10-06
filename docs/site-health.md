@@ -221,7 +221,7 @@ complete persisted measurement regardless of the provisional cadence.
 
 The stable taxonomy is:
 
-`homepage`, `article`, `product`, `category`, `pricing`, `docs`, `faq`,
+`homepage`, `article`, `editorial_index`, `product`, `category`, `pricing`, `docs`, `faq`,
 `about_contact`, `service`, `local`, `guide`, `comparison`,
 `case_study_review`, `trust_policy`, `other`.
 
@@ -242,7 +242,39 @@ Any page kind can receive a score from independently applicable checks.
 Rule applicability still requires the relevant structural evidence; route-only
 classification cannot activate a mandatory purpose penalty. Repeated cards
 and pagination alone do not promote editorial or comparison indexes to a
-category; decisive collection affordances remain structural evidence.
+category; decisive collection affordances remain structural evidence. Exact
+blog, news, article, insights, resources and press archive routes, including
+their bounded page/category/tag archive paths, use `editorial_index` even when
+the collection is absent. They receive collection-purpose checks, not individual
+article author/source checks or product-card checks. A bound collection on an
+archive stays an editorial index even when it exposes sorting or filtering.
+
+Creator, source and editorial-date expectations require an observed prose article/rich-text
+body, visible byline or research context in addition to an eligible kind.
+Unconfirmed authorship remains unknown and cannot create a missing-author or
+missing-source finding. Repeated cards and single excerpts whose headings link
+to another document do not establish authored content. Rich-text classes on a
+card or grid do not turn its excerpts into page-owned prose.
+Primary-content extraction retains the selected region and page/section wrappers
+around nested card lists while excluding the cards themselves. Heading hierarchy
+checks report observed upward level skips; an absent primary outline is unknown,
+not proof of skipped levels. Missing or invalid heading levels also remain unknown.
+Article self-links use the same trailing-slash and tracking-parameter comparison
+as indexing intent, so they do not turn authored prose into excerpts.
+Generic card actions such as “View product” do not establish an item name.
+An empty-collection exemption requires a captured zero-item container;
+contradictory item observations and unavailable counts remain unknown.
+
+Variant controls require a configured variant identity on the control, its
+associated label, or its nearest named radio group/fieldset legend; unrelated
+currency, country, quantity and payment controls cannot supply product-purpose
+evidence. Collection facts retain bounded labels, including observed ARIA labels
+on icon links, and resolved targets from the exact selected collection, so item checks do not
+depend on product URL naming conventions. Missing retained item details remain
+unknown. Organization name matching tolerates configured legal suffixes while
+requiring the remaining name to match visible identity. A FAQ route with no
+observed question/answer relationships is unknown, while an observed question
+without an answer remains missing.
 
 Without applicable AEO checks, unresolved purpose uses
 `page_purpose_unresolved` and other kinds use `no_applicable_checks`.

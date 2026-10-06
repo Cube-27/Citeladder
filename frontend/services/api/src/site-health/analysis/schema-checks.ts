@@ -10,6 +10,20 @@ type Expectation = (typeof r.expected_schema)[keyof typeof r.expected_schema];
 type Block = Record<string, unknown>;
 const TOKEN = /[\p{L}\p{N}]+/gu;
 
+/** Normalize only legal suffixes; the rest of the declared company identity must still match. */
+function companyName(value: string) {
+  const tokens = value.toLowerCase().match(TOKEN) ?? [];
+  for (const suffix of analysisPolicy.facts.company_legal_name_suffixes) {
+    const ending = suffix.match(TOKEN) ?? [];
+    if (
+      tokens.length > ending.length &&
+      ending.every((token, index) => tokens[tokens.length - ending.length + index] === token)
+    )
+      return tokens.slice(0, -ending.length).join(' ');
+  }
+  return value;
+}
+
 function expectationFor(facts: Facts): Expectation {
   const kind = text(facts.page_kind).trim().toLowerCase();
   if (kind === r.product_schema_expectation.page_kind) return r.product_schema_expectation;
@@ -210,20 +224,24 @@ function schemaMatchesContent(facts: Facts): CheckResult {
   if (selection.outcome === 'unknown') return ['unknown', selection.evidence];
   if (selection.outcome !== 'satisfied')
     return ['not_applicable', { ...selection.evidence, reason: 'no_expected_type_block' }];
-  const names = selection.blocks
-    .map((block) => text(block.name).trim())
-    .filter(Boolean)
+  const named = selection.blocks
+    .map((block) => ({ name: text(block.name).trim(), type: text(block.type) }))
+    .filter((block) => block.name)
     .slice(0, r.schema_content_match_max_candidates);
-  if (!names.length) return ['not_applicable', { reason: 'no_schema_names' }];
+  if (!named.length) return ['not_applicable', { reason: 'no_schema_names' }];
   const visible = [text(facts.title), ...textList(record(facts.headings).h1_texts)]
     .filter(Boolean)
     .map((value) => value.toLowerCase());
-  const matched = names.some((name) => visible.some((value) => matchesByTokens(name, value)));
+  const matched = named.some(({ name, type }) =>
+    visible.some((value) =>
+      matchesByTokens(type === 'Organization' ? companyName(name) : name, value),
+    ),
+  );
   return [
     passFail(matched),
     {
       page_kind: expectation.page_kind,
-      candidates: names.map((name) => name.slice(0, 256)),
+      candidates: named.map(({ name }) => name.slice(0, 256)),
       matched_visible_content: matched,
     },
   ];
