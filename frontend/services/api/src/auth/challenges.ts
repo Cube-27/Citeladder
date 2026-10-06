@@ -110,9 +110,10 @@ async function deliverChallenge(
     purpose === 'verification' ? '/verify-email' : '/reset-password',
     config.auth.frontendUrl,
   );
+  const continuation = safeAuthReturnPath(returnTo);
   url.hash = new URLSearchParams({
     token: issued.token,
-    ...(safeAuthReturnPath(returnTo) ? { return_to: safeAuthReturnPath(returnTo)! } : {}),
+    ...(continuation ? { return_to: continuation } : {}),
   }).toString();
   await sendAuthMail(config, {
     id: issued.id,

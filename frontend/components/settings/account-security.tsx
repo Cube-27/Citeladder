@@ -35,7 +35,10 @@ export default function AccountSecurity() {
   });
   const mutation = useMutation({
     mutationFn: (operation: 'change-password' | 'logout-all') =>
-      authApi.mailbox(operation, { current_password: current, password }),
+      authApi.mailbox(
+        operation,
+        operation === 'change-password' ? { current_password: current, password } : {},
+      ),
     onSuccess: () => {
       client.clear();
       hardNavigate('/login');

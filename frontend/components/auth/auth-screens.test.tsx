@@ -12,6 +12,21 @@ import { RegisterScreen } from './register-screen';
 const noParams = new URLSearchParams();
 
 describe('account entry while self-serve sign-up is closed', () => {
+  it('guides an existing account to credential-authorized Google linking', () => {
+    renderWithProviders(
+      <LoginScreen
+        demoMode={false}
+        signupOpen
+        searchParams={new URLSearchParams({ error: 'oauth_signin_link_required' })}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('connect Google from Account security');
+    expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    );
+  });
+
   it('keeps email and existing Google sign-in while hiding sign-up', () => {
     renderWithProviders(
       <LoginScreen demoMode={false} signupOpen={false} searchParams={noParams} />,

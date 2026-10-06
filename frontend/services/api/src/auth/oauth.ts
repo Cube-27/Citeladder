@@ -23,6 +23,7 @@ export class SignInError extends Error {
     | 'oauth_signin_state_invalid'
     | 'oauth_signin_failed'
     | 'oauth_signin_email_unverified'
+    | 'oauth_signin_link_required'
     | 'oauth_signin_disabled';
   constructor(code: SignInError['code']) {
     super(code);
@@ -264,8 +265,10 @@ async function accountForEmail(
       !requiresEmailVerification(existing)
     )
       return { user: existing, event: 'auth.oauth_linked' };
-    if (!existing.is_active || !requiresEmailVerification(existing) || !authoritative)
-      throw new SignInError('oauth_signin_email_unverified');
+    if (!existing.is_active) throw new SignInError('oauth_signin_failed');
+    if (!identity.email_verified) throw new SignInError('oauth_signin_email_unverified');
+    if (!requiresEmailVerification(existing)) throw new SignInError('oauth_signin_link_required');
+    if (!authoritative) throw new SignInError('oauth_signin_email_unverified');
     // Preserve the workspace/account -> user lock order used by operator repair.
     await provisionAccount(db, existing);
     const claimed = await db

@@ -463,7 +463,7 @@ describe('Google sign-in', () => {
     verified = true;
     const other = await start();
     expect((await callback(other.data.state, other.nonceCookie)).headers.get('location')).toContain(
-      'oauth_signin_email_unverified',
+      'oauth_signin_link_required',
     );
   });
 
@@ -472,7 +472,7 @@ describe('Google sign-in', () => {
     identityEmail = email;
     const first = await start();
     expect((await callback(first.data.state, first.nonceCookie)).headers.get('location')).toContain(
-      'oauth_signin_email_unverified',
+      'oauth_signin_link_required',
     );
     const login = await call('/auth/login', { email, password });
     const loginCookie = login.headers
