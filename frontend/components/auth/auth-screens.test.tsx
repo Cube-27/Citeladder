@@ -11,7 +11,7 @@ import { RegisterScreen } from './register-screen';
 
 const noParams = new URLSearchParams();
 
-describe('account entry while self-serve sign-up is closed', () => {
+describe('account entry', () => {
   it('guides an existing account to credential-authorized Google linking', () => {
     renderWithProviders(
       <LoginScreen
@@ -37,11 +37,29 @@ describe('account entry while self-serve sign-up is closed', () => {
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
-  it('offers Google and sign-up once sign-up opens', () => {
-    renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
+  it('offers sign-up while preserving the authentication continuation', () => {
+    const returnTo = '/invitations/accept?token=invite-token';
+    renderWithProviders(
+      <LoginScreen
+        demoMode={false}
+        signupOpen
+        searchParams={new URLSearchParams({ return_to: returnTo })}
+      />,
+    );
 
-    expect(screen.getByRole('button', { name: /Continue with Google/ })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Sign up' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Google/ })).toBeInTheDocument();
+    const destination = new URL(
+      screen.getByRole('link', { name: 'Sign up' }).getAttribute('href')!,
+      'https://app.example.com',
+    );
+    expect(destination.pathname).toBe('/register');
+    expect(destination.searchParams.get('return_to')).toBe(returnTo);
+  });
+
+  it('keeps registration unavailable in the temporary demo', () => {
+    renderWithProviders(<LoginScreen demoMode signupOpen searchParams={noParams} />);
+    expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
   it('takes the Terms decision on the sign-in form before any way in', async () => {

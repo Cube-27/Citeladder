@@ -1,10 +1,24 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vite-plus/test';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { LandingPage } from './landing-page';
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('LandingPage', () => {
+  it.each([
+    ['true', 'Start free trial', 'https://app.citeladder.com/register'],
+    ['false', 'Explore citation tracking', '/ai-citation-tracking'],
+  ])('routes the hero action with self-serve signup %s', (enabled, label, href) => {
+    vi.stubEnv('NEXT_PUBLIC_SELF_SERVE_SIGNUP', enabled);
+    vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
+    render(<LandingPage />);
+
+    const hero = screen.getByRole('banner');
+    expect(within(hero).getByRole('link', { name: label })).toHaveAttribute('href', href);
+  });
+
   it('distinguishes API collection from consumer answer surfaces', () => {
     render(<LandingPage />);
 

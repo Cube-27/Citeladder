@@ -84,11 +84,6 @@ export function MobileNavigation({
             {label}
           </a>
         ))}
-        {selfServeSignupOpen() ? (
-          <ButtonLink href={appHref('/register')} className="w-full" onClick={closeMenu}>
-            Sign up
-          </ButtonLink>
-        ) : null}
         <a
           href={appHref('/login')}
           className="text-muted py-3.5 text-lg font-medium"
@@ -96,6 +91,11 @@ export function MobileNavigation({
         >
           Log in
         </a>
+        {selfServeSignupOpen() ? (
+          <ButtonLink href={appHref('/register')} className="w-full" onClick={closeMenu}>
+            Sign up
+          </ButtonLink>
+        ) : null}
       </div>
     </div>
   );
