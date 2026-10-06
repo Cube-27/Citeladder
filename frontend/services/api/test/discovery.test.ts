@@ -88,6 +88,21 @@ describe('durable onboarding', () => {
       .execute();
     return row;
   }
+
+  it('does not dispatch queued research after workspace access ends', async () => {
+    const t = await tenant();
+    await createDiscovery(db, t.workspaceId, input, randomUUID());
+    await db
+      .updateTable('billing_accounts')
+      .set({ status: 'inactive' })
+      .where('id', '=', t.accountId)
+      .execute();
+    const network = vi.fn<WebsiteFetcher>();
+    await new DiscoveryWorker(db, { fetcher: network, gateway: null, env: {} }).runOnce(
+      'expired-access',
+    );
+    expect(network).not.toHaveBeenCalled();
+  });
   it('freezes configured attempts on creation and preserves them on idempotent replay', async () => {
     const t = await tenant();
     const key = randomUUID();

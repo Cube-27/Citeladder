@@ -1,6 +1,22 @@
 {
-  "registry_revision": "entitlements-v3",
+  "registry_revision": "entitlements-v4",
   "capabilities": {
+    "workspace_access": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": false,
+      "rolling_window_seconds": null
+    },
+    "successful_answers": {
+      "type": "counter.consumable",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": false,
+      "rolling_window_seconds": null
+    },
     "audit_cadence": {
       "type": "level",
       "levels": 3,
@@ -164,6 +180,19 @@
       "project_slots": 1,
       "prompt_slots": 10,
       "monitored_urls": 20
+    }
+  },
+  "public_trial": {
+    "revision": "public-trial-v1",
+    "profile": "public_trial",
+    "grants": {
+      "workspace_access": 1,
+      "project_slots": 1,
+      "prompt_slots": 20,
+      "monitored_urls": 20,
+      "successful_answers": 20,
+      "audit_credits": 100,
+      "manual_runs_per_day": 100
     }
   },
   "codes": {

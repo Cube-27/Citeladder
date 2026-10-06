@@ -140,6 +140,7 @@ export const siteHealthRoutes = [
   defineGetRoute({
     family,
     path: '/api/v1/entitlements',
+    recovery: true,
     params: { path: {}, query: {} },
     response: siteHealthEntitlementSchema,
     handle: ({ c, db }) => entitlementView(db, c.get('workspace').workspaceId, new Date()),

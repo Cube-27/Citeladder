@@ -32,6 +32,10 @@ export function clearOAuthCookies(c: Context, config: ServiceConfig): void {
 }
 
 export function clearAuthOAuthCookie(c: Context, config: ServiceConfig): void {
+  deleteCookie(c, `${policy.auth.oauth.cookie_name}_continuation`, {
+    ...cookieOptions(config),
+    path: policy.auth.oauth.cookie_path,
+  });
   deleteCookie(c, policy.auth.oauth.cookie_name, {
     ...cookieOptions(config),
     path: policy.auth.oauth.cookie_path,

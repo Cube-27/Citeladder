@@ -203,10 +203,12 @@ export class AnalyticsWorker {
           `analytics task kind '${claimed.task_kind}' has no registered executor`,
         );
       }
+      await requireWorkspaceAccess(this.#db, claimed.workspace_id);
       const settlement = await executor(claimed, {
         db: this.#db,
         maxAttempts: this.#settings.taskMaxAttempts,
         checkCancelled: async (boundary) => {
+          await requireWorkspaceAccess(this.#db, claimed.workspace_id);
           if (heartbeat.signal.aborted || (await this.#queue.isTerminal(claimed.id))) {
             throw new TaskCancelledError(
               `analytics task ${claimed.id} reached a terminal status; stopping at the ${boundary} boundary`,
@@ -265,3 +267,4 @@ export class AnalyticsWorker {
     });
   }
 }
+import { requireWorkspaceAccess } from '../entitlements/access.ts';

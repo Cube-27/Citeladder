@@ -126,7 +126,7 @@ describe('admitPrompts', () => {
   });
 
   async function tenant() {
-    const t = await fixtures.tenant();
+    const t = await fixtures.tenant({ access: false });
     return { ...t, setId: await promptSet(db, t.projectId) };
   }
 

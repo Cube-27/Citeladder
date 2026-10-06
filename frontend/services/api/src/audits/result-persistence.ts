@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { settleTrialAnswer } from './trial-answers.ts';
 import { sql, type Selectable } from 'kysely';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
@@ -26,6 +27,7 @@ export type DeriveExecution = (
 
 /** Release from durable, scoped ledger proof even if a legacy task's funding snapshot is damaged. */
 export async function releaseTerminalTaskCredits(db: Database, task: AuditTask, at: Date) {
+  await settleTrialAnswer(db, task, false, at);
   const holds = await db
     .selectFrom('consumable_ledger')
     .select(['reservation_id', 'billing_account_id'])
@@ -224,6 +226,7 @@ export function persistExecutionSuccess(
     await derive(trx, task, locked.audit, artifactId);
     await appendCostProjection(trx, task.workspace_id, artifactId);
     await settleTaskCredits(trx, task, !options.surface, true, at);
+    await settleTrialAnswer(trx, task, true, at);
     await auditEvent(
       trx,
       task.audit_id,
@@ -321,6 +324,7 @@ export function persistExecutionFailure(
         ...(failureArtifactId ? { artifactId: failureArtifactId } : {}),
       });
     if (failureArtifactId) await appendCostProjection(trx, task.workspace_id, failureArtifactId);
+    if (!retry) await settleTrialAnswer(trx, task, false, at);
     await options.evidence?.(trx, task, locked.audit);
     await settleTaskCredits(
       trx,

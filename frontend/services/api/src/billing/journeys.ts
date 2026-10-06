@@ -32,11 +32,12 @@ export async function offerRead(db: Database, workspaceId: string, now: Date) {
   let status: 'available' | 'unavailable' | 'already_claimed' | 'ineligible' = 'available';
   let reason: string | null = null;
   if (
-    await db
+    account.registration_origin === 'public' ||
+    (await db
       .selectFrom('introductory_claims')
       .select('id')
       .where('billing_account_id', '=', account.id)
-      .executeTakeFirst()
+      .executeTakeFirst())
   ) {
     status = 'already_claimed';
     reason = 'lifetime_introduction_consumed';
@@ -107,6 +108,7 @@ export function claimOffer(
     if (!request.terms_consent || !request.data_sharing_consent)
       conflict('explicit_consent_required');
     const account = await workspaceAccount(trx, workspaceId);
+    if (account.registration_origin === 'public') conflict('lifetime_introduction_consumed');
     await lockAccount(trx, workspaceId, account.id);
     const fingerprint = digest({
       campaignId: request.campaign_id,

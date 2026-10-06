@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { sql } from 'kysely';
 import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
 import { z } from 'zod';
 import { policy, type ServiceConfig } from '../config.ts';
@@ -9,6 +10,10 @@ import { getLogger } from '../logging.ts';
 import { provisionAccount, type User } from '../workspaces/service.ts';
 import { issueSession } from './service.ts';
 import { recordSecurityEvent } from './security-events.ts';
+import { requiresEmailVerification } from './eligibility.ts';
+import { requestChallenge } from './challenges.ts';
+import type { LinkProof } from './continuation.ts';
+import { enforceSubjectRequest } from '../abuse/usage.ts';
 
 const cfg = policy.auth.oauth;
 const logger = getLogger('app.auth');
@@ -141,6 +146,13 @@ async function verifyState(
 }
 
 const identitySchema = z.object({
+  hd: z
+    .string()
+    .trim()
+    .min(1)
+    .max(253)
+    .regex(/^[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?$/)
+    .optional(),
   sub: z.string().trim().min(1).max(255),
   email: z
     .email()
@@ -238,12 +250,55 @@ async function accountForEmail(
   db: Database,
   config: ServiceConfig,
   identity: SignInIdentity,
+  proof?: LinkProof,
 ): Promise<{ user: User; event: SignInEvent }> {
-  if (!identity.email_verified) throw new SignInError('oauth_signin_email_unverified');
   const byEmail = db.selectFrom('users').selectAll().where('email', '=', identity.email);
   const existing = await byEmail.executeTakeFirst();
-  if (existing) return { user: existing, event: 'auth.oauth_linked' };
-  if (config.demo.enabled) throw new SignInError('oauth_signin_disabled');
+  const authoritative =
+    identity.email_verified && (identity.email.endsWith('@gmail.com') || Boolean(identity.hd));
+  if (existing) {
+    if (
+      existing.is_active &&
+      proof?.userId === existing.id &&
+      proof.version === existing.session_version &&
+      !requiresEmailVerification(existing)
+    )
+      return { user: existing, event: 'auth.oauth_linked' };
+    if (!existing.is_active || !requiresEmailVerification(existing) || !authoritative)
+      throw new SignInError('oauth_signin_email_unverified');
+    // Preserve the workspace/account -> user lock order used by operator repair.
+    await provisionAccount(db, existing);
+    const claimed = await db
+      .updateTable('users')
+      .set({
+        hashed_password: null,
+        email_verified_at: new Date(),
+        email_verification_method: 'google',
+        session_version: sql`session_version + 1`,
+        updated_at: new Date(),
+      })
+      .where('id', '=', existing.id)
+      .where('session_version', '=', existing.session_version)
+      .where('email_verified_at', 'is', null)
+      .where('is_active', '=', true)
+      .returningAll()
+      .executeTakeFirst();
+    if (!claimed) throw new SignInError('oauth_signin_state_invalid');
+    await db
+      .updateTable('auth_challenges')
+      .set({ consumed_at: new Date() })
+      .where('user_id', '=', existing.id)
+      .where('consumed_at', 'is', null)
+      .execute();
+    return { user: claimed, event: 'auth.oauth_linked' };
+  }
+  if (config.demo.enabled || !config.auth.publicSignup)
+    throw new SignInError('oauth_signin_disabled');
+  await enforceSubjectRequest(db, 'client', 'global-trial', {
+    operation: 'auth.trial.global',
+    limit: policy.auth.mailbox.trial_daily_limit,
+    windowSeconds: 86400,
+  });
   const now = new Date();
   const inserted = await db
     .insertInto('users')
@@ -253,6 +308,9 @@ async function accountForEmail(
       hashed_password: null,
       role: 'user',
       is_active: true,
+      registration_origin: 'public',
+      email_verified_at: authoritative ? now : null,
+      email_verification_method: authoritative ? 'google' : null,
       session_version: 0,
       created_at: now,
       updated_at: now,
@@ -261,7 +319,7 @@ async function accountForEmail(
     .returningAll()
     .executeTakeFirst();
   if (inserted) return { user: inserted, event: 'auth.oauth_registered' };
-  return { user: await byEmail.executeTakeFirstOrThrow(), event: 'auth.oauth_linked' };
+  throw new SignInError('oauth_signin_state_invalid');
 }
 
 /** Link the provider subject, refusing a second subject for the same user. */
@@ -302,6 +360,7 @@ async function resolveAccount(
   config: ServiceConfig,
   provider: OAuthProvider,
   identity: SignInIdentity,
+  proof?: LinkProof,
 ) {
   // Stable subject and normalized address serialize linking, locked in
   // Python's sorted() order: "auth.email:" always precedes "oauth:".
@@ -324,7 +383,7 @@ async function resolveAccount(
     if (!owner) throw new SignInError('oauth_signin_state_invalid');
     user = owner;
   } else {
-    ({ user, event } = await accountForEmail(db, config, identity));
+    ({ user, event } = await accountForEmail(db, config, identity, proof));
     await linkIdentity(db, provider, identity, user.id);
   }
   if (!user.is_active) throw new SignInError('oauth_signin_state_invalid');
@@ -343,6 +402,8 @@ async function resolveAccount(
     .forNoKeyUpdate()
     .executeTakeFirstOrThrow();
   if (!current.is_active) throw new SignInError('oauth_signin_state_invalid');
+  if (proof && (current.id !== proof.userId || current.session_version !== proof.version))
+    throw new SignInError('oauth_signin_state_invalid');
   return { user: current, event };
 }
 
@@ -353,15 +414,26 @@ export async function completeSignIn(
   code: string,
   state: string,
   nonce: string,
+  continuation?: { returnTo?: string; proof?: LinkProof },
 ) {
   await verifyState(config, provider, state, nonce);
   const identity = await identify(config, provider, code);
   const resolved = await db.transaction().execute(async (trx) => {
-    const account = await resolveAccount(trx, config, provider, identity);
+    const account = await resolveAccount(trx, config, provider, identity, continuation?.proof);
     await recordSecurityEvent(trx, 'auth.google_login', account.user.id);
     return account;
   });
   const fields = { user_id: resolved.user.id, provider };
+  if (requiresEmailVerification(resolved.user)) {
+    await requestChallenge(
+      db,
+      config,
+      resolved.user.email,
+      'password_reset',
+      continuation?.returnTo,
+    );
+    throw new SignInError('oauth_signin_email_unverified');
+  }
   if (resolved.event) logger.info(resolved.event, fields);
   logger.info('auth.oauth_login_success', fields);
   return issueSession(config, resolved.user);

@@ -137,6 +137,7 @@ type Outcome = AttemptOutcome & {
 };
 
 async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Promise<Outcome> {
+  await ctx.checkAccess?.();
   const scope = crawlScope(crawl);
   const fetched = await ctx.fetcher.fetch(task.requested_url, {
     signal: ctx.signal,

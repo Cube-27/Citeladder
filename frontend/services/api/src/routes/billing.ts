@@ -71,6 +71,7 @@ export const billingRoutes = [
   defineRoute({
     family,
     path: '/api/v1/workspaces/{workspace_id}/entitlements',
+    recovery: true,
     authorize: 'workspace-path',
     params: { path: { workspace_id: { scalar: { kind: 'uuid' }, required: true } }, query: {} },
     response: workspaceEntitlementSchema,

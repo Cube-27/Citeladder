@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { requireWorkspaceAccess } from '../entitlements/access.ts';
 
 import { sql } from 'kysely';
 
@@ -55,7 +56,8 @@ export class DiscoveryWorker {
       (error) => logger.exception('discovery_heartbeat_failed', error, { task_id: task.id }),
     );
     const checkCancelled = () => heartbeat.signal.throwIfAborted();
-    const fetcher: typeof fetchWebsite = (url, options) => {
+    const fetcher: typeof fetchWebsite = async (url, options) => {
+      await requireWorkspaceAccess(this.db, task.workspace_id);
       checkCancelled();
       return (this.dependencies.fetcher ?? fetchWebsite)(url, {
         ...options,
@@ -81,7 +83,8 @@ export class DiscoveryWorker {
         ...this.dependencies,
         fetcher,
         checkCancelled,
-        transport: (url, options) => {
+        transport: async (url, options) => {
+          await requireWorkspaceAccess(this.db, task.workspace_id);
           checkCancelled();
           return (this.dependencies.transport ?? fetch)(url, {
             ...options,

@@ -203,6 +203,7 @@ export class AgentRuntime {
           .where('workspace_id', '=', lease.workspaceId)
           .execute();
       });
+      await requireWorkspaceAccess(this.db, lease.workspaceId);
       const result = await this.deps.models.call(lease, ordinal, model, assembled.request);
       signal?.throwIfAborted();
       const step = this.parse(result.content, state);
@@ -561,3 +562,4 @@ export class AgentRuntime {
     }
   }
 }
+import { requireWorkspaceAccess } from '../entitlements/access.ts';

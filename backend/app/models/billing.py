@@ -110,6 +110,9 @@ class BillingAccount(Base):
         index=True,
     )
     status: Mapped[str] = mapped_column(String(24), default="active")
+    registration_origin: Mapped[str] = mapped_column(
+        String(24), server_default="legacy"
+    )
     billing_country: Mapped[str] = mapped_column(String(2), default="")
     country_verification: Mapped[str] = mapped_column(String(16), default="provisional")
     # Current normalized customer billing facts. Historical receipts never read

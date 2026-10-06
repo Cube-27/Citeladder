@@ -164,6 +164,14 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("hashed_password", sa.String(length=255), nullable=True),
+        sa.Column(
+            "registration_origin",
+            sa.String(24),
+            server_default="legacy",
+            nullable=False,
+        ),
+        sa.Column("email_verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("email_verification_method", sa.String(24), nullable=True),
         sa.Column("role", sa.String(length=20), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.Column("session_version", sa.Integer(), nullable=False),
@@ -172,6 +180,21 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
+    op.create_table(
+        "auth_challenges",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("email", sa.String(255), nullable=False),
+        sa.Column("purpose", sa.String(24), nullable=False),
+        sa.Column("token_digest", sa.String(64), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("consumed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_digest"),
+        sa.UniqueConstraint("user_id", "purpose", name="uq_auth_challenge_purpose"),
+    )
     op.create_table(
         "user_identities",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -338,6 +361,12 @@ def upgrade() -> None:
     op.create_table(
         "billing_accounts",
         sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column(
+            "registration_origin",
+            sa.String(24),
+            server_default="legacy",
+            nullable=False,
+        ),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("owner_user_id", sa.UUID(), nullable=True),
         sa.Column("status", sa.String(length=24), nullable=False),
@@ -7840,6 +7869,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_table("auth_challenges")
     op.drop_table("ai_traffic_insights")
     op.drop_table("ai_referral_landing_daily")
     op.drop_table("site_internal_link_events")

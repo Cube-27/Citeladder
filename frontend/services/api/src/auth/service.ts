@@ -8,6 +8,8 @@ import { getLogger } from '../logging.ts';
 import { provisionAccount, type User } from '../workspaces/service.ts';
 import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
+import { requiresEmailVerification } from './eligibility.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 
 const logger = getLogger('app.auth');
 class CredentialsChanged extends Error {}
@@ -35,14 +37,23 @@ export async function registerUser(db: Database, email: string, password: string
   const encoded = await hashPassword(password);
   const registeredId = await db.transaction().execute(async (trx) => {
     const user = await createIdentity(trx, email, encoded);
-    if (user) await provisionAccount(trx, user);
+    if (user) {
+      const pending = await trx
+        .updateTable('users')
+        .set({ registration_origin: 'public' })
+        .where('id', '=', user.id)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      await provisionAccount(trx, pending);
+    }
     return user?.id;
   });
   if (registeredId) logger.info('auth.registered', { user_id: registeredId });
 }
 
 /** Identity insertion only; caller explicitly chooses workspace/access provisioning. */
-export function createIdentity(db: Database, email: string, passwordHash: string) {
+export async function createIdentity(db: Database, email: string, passwordHash: string) {
+  await subjectXactLock(db, `auth.email:${email.trim().toLowerCase()}`);
   const now = new Date();
   return db
     .insertInto('users')
@@ -52,6 +63,7 @@ export function createIdentity(db: Database, email: string, passwordHash: string
       hashed_password: passwordHash,
       role: 'user',
       is_active: true,
+      registration_origin: 'operator',
       session_version: 0,
       created_at: now,
       updated_at: now,
@@ -76,6 +88,10 @@ export async function authenticateUser(
     user?.is_active ? user.hashed_password : null,
   );
   if (!user || !verified) return null;
+  if (requiresEmailVerification(user))
+    throw new ApiError(403, 'Verify your email before signing in', {
+      code: 'email_verification_required',
+    });
   let authenticated;
   try {
     authenticated = await db.transaction().execute(async (trx) => {
@@ -91,6 +107,7 @@ export async function authenticateUser(
         .executeTakeFirstOrThrow();
       if (
         !current.is_active ||
+        requiresEmailVerification(current) ||
         current.hashed_password !== user.hashed_password ||
         current.session_version !== user.session_version
       )

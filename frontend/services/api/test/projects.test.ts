@@ -58,7 +58,7 @@ describe('project owner', () => {
   });
   it('fails closed for absent and corrupt account grants', async () => {
     const user = await fixtures.user();
-    const workspace = await fixtures.ownedWorkspace(user);
+    const workspace = await fixtures.ownedWorkspace(user, { access: false });
     await expect(
       createProject(db, workspace, user, projectCreate.parse({ name: 'Missing' })),
     ).rejects.toMatchObject({ code: 'occupancy_unresolved' });

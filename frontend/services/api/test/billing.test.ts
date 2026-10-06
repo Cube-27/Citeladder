@@ -947,7 +947,7 @@ describe('billing money and access owner', () => {
         .status,
     ).toBe(404);
     const user = await fixtures.user();
-    const workspace = await fixtures.ownedWorkspace(user);
+    const workspace = await fixtures.ownedWorkspace(user, { access: false });
     expect(await workspaceEntitlementRead(db, workspace, new Date())).toMatchObject({
       status: 'entitlement_unresolved',
     });

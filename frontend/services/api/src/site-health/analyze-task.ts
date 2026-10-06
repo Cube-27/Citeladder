@@ -164,6 +164,7 @@ const expectClassification = (db: Database, task: SiteTask, owner: string) =>
   owned(db, task, owner).set({ classification_expected: true, updated_at: new Date() }).execute();
 
 async function acquire(ctx: SiteTaskContext, task: SiteTask): Promise<Outcome> {
+  await ctx.checkAccess?.();
   const fetched = await ctx.fetcher.fetch(task.requested_url, { signal: ctx.signal });
   const base = { facts: null, page: null, reusedArtifactId: null };
   if (!fetched.ok)

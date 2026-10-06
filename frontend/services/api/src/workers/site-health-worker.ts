@@ -203,7 +203,11 @@ export class SiteHealthWorker {
       ? acquisition[claimed.task_kind]
       : undefined;
     if (acquire) {
-      await this.#leased(claimed, (signal) => acquire({ ...this.acquisition, signal }, claimed));
+      await this.#leased(claimed, async (signal) => {
+        const checkAccess = () => requireWorkspaceAccess(this.db, claimed.workspace_id);
+        await checkAccess();
+        await acquire({ ...this.acquisition, signal, checkAccess }, claimed);
+      });
       // After the settlement commits; the stalled backstop covers a crash in between.
       await this.#guard('site health crawl reconcile failed', () =>
         reconcileAfterTask(this.db, claimed, this.#cadence),
@@ -232,6 +236,7 @@ export class SiteHealthWorker {
     }
   }
   async #executeInTransaction(claimed: SiteTask, signal: AbortSignal) {
+    await requireWorkspaceAccess(this.db, claimed.workspace_id);
     await this.db.transaction().execute(async (trx) => {
       signal.throwIfAborted();
       const { crawl, task } = await lockSiteTask(trx, claimed, this.owner, 'fence');
@@ -302,3 +307,4 @@ export class SiteHealthWorker {
     });
   }
 }
+import { requireWorkspaceAccess } from '../entitlements/access.ts';

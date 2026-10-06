@@ -13,6 +13,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
+import { getLogger } from '../logging.ts';
 
 export type UsageLimit = {
   operation: string;
@@ -92,5 +93,6 @@ export async function enforceSubjectRequest(
     .returning('count')
     .executeTakeFirst();
   if (consumed !== undefined) return;
+  getLogger('api.abuse').info('request.throttled', { operation, subject_kind: subjectKind });
   throw exhausted();
 }

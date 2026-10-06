@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
@@ -70,6 +71,7 @@ export async function loadExecutionContext(
     const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return null;
     const { task, audit } = locked;
+    await requireWorkspaceAccess(trx, audit.workspace_id);
     const parsed = routeSchema.safeParse(task.provider_route_snapshot);
     if (!parsed.success) throw unavailable();
     const route = parsed.data;

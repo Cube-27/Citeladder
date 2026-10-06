@@ -6,6 +6,8 @@ import { parseUuid } from '../http/uuid.ts';
 import { utcText } from '../db/timestamps.ts';
 import { McpInputError, type EvidencePrincipal } from './types.ts';
 import { mcpPolicy } from './config.ts';
+import { workspaceAccess } from '../entitlements/access.ts';
+import { requiresEmailVerification } from '../auth/eligibility.ts';
 
 /** Roles whose capabilities include reading workspace evidence. */
 export const READ_ROLES = Object.entries(policy.workspaces.roles)
@@ -16,6 +18,16 @@ export async function authorizedWorkspaceIds(
   db: Database,
   principal: EvidencePrincipal,
 ): Promise<string[]> {
+  const identity = await db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', principal.userId)
+    .executeTakeFirst();
+  if (!identity?.is_active || requiresEmailVerification(identity)) return [];
+  const accessible = async (ids: string[]) => {
+    const statuses = await Promise.all(ids.map((id) => workspaceAccess(db, id)));
+    return ids.filter((_, index) => ['active', 'trial_active'].includes(statuses[index]!.status));
+  };
   if ('kind' in principal) {
     const member = await db
       .selectFrom('workspace_members as m')
@@ -28,7 +40,7 @@ export async function authorizedWorkspaceIds(
       .where('w.is_system', '=', false)
       .where('u.is_active', '=', true)
       .executeTakeFirst();
-    return member ? [member.workspace_id] : [];
+    return accessible(member ? [member.workspace_id] : []);
   }
   const rows = await db
     .selectFrom('workspace_members as member')
@@ -46,7 +58,7 @@ export async function authorizedWorkspaceIds(
     .where('g.access_expires_at', '>', sql<Date>`clock_timestamp()`)
     .where(sql<boolean>`g.workspace_ids @> jsonb_build_array(member.workspace_id::text)`)
     .execute();
-  return rows.map((row) => row.workspace_id);
+  return accessible(rows.map((row) => row.workspace_id));
 }
 export async function authorizeProject(
   db: Database,

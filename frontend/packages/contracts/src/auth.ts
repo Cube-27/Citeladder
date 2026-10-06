@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+export const workspaceAccessSchema = z.object({
+  status: z.enum(['active', 'trial_active', 'trial_expired', 'access_unresolved']),
+  expires_at: z.string().nullable(),
+});
+export const authSecuritySchema = z.object({
+  email: z.string(),
+  email_verified: z.boolean(),
+  methods: z.array(z.string()),
+});
+
 export const policyStatusSchema = z.object({
   terms_revision: z.string(),
   privacy_notice_revision: z.string(),
@@ -80,6 +90,7 @@ export const workspaceInvitationSchema = responseObject({
 });
 
 export const workspaceInvitationIssuedSchema = responseObject({
+  delivery: z.enum(['accepted', 'failed']).optional(),
   invitation: workspaceInvitationSchema,
   token: z.string(),
 });

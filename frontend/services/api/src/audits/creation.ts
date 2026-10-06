@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { reserveTrialAnswer } from './trial-answers.ts';
+import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import { reserveUsage, releaseUsage } from '../entitlements/ledger.ts';
@@ -49,6 +51,7 @@ export async function createAuditInTransaction(
   at: Date,
 ) {
   const input = auditInput.parse(request);
+  const access = await requireWorkspaceAccess(trx, workspaceId);
   const trigger = (launch.trigger ?? 'manual').trim().toLowerCase();
   await subjectXactLock(trx, `audit-enqueue:${workspaceId}`);
   if (launch.scheduleId) {
@@ -89,6 +92,11 @@ export async function createAuditInTransaction(
     plan.repetitions,
     plan.seed,
   );
+  if (
+    access.status === 'trial_active' &&
+    (plan.repetitions !== 1 || plan.routes.some((route) => route.logical_engine !== 'chatgpt'))
+  )
+    throw new ApiError(403, 'The trial allows one ChatGPT answer per prompt');
   await reserveAuditCapacity(trx, workspaceId, slots.length, runtime, at);
   const funded = await admitAudit(
     trx,
@@ -269,7 +277,10 @@ async function persistTasks(
         search_used: false,
         search_events: null,
         citations: null,
-        request_snapshot: JSON.stringify(frozenSearch(plan, slot.engine)),
+        request_snapshot: JSON.stringify({
+          ...frozenSearch(plan, slot.engine),
+          original_prompt_id: plan.prompts[slot.prompt]!.id,
+        }),
         provider_route_snapshot: null,
         provider_submission_ref: '',
         provider_task_id: '',
@@ -297,6 +308,14 @@ async function persistTasks(
       at,
       devTestLogin,
       plan,
+    );
+    await reserveTrialAnswer(
+      db,
+      scope.workspaceId,
+      auditId,
+      taskId,
+      plan.prompts[slot.prompt]!.id,
+      at,
     );
     await db
       .updateTable('audit_tasks')
