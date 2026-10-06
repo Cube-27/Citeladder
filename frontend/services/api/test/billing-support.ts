@@ -52,9 +52,9 @@ export class BillingFixtures extends Fixtures {
     super(db);
     this.database = db;
   }
-  async tenant() {
+  async tenant(options: { access?: boolean } = {}) {
     const userId = await this.user();
-    const workspaceId = await this.ownedWorkspace(userId);
+    const workspaceId = await this.ownedWorkspace(userId, options);
     const accountId = await billingAccount(this.database, workspaceId);
     await this.database
       .updateTable('billing_accounts')

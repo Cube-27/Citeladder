@@ -195,6 +195,7 @@ export class IntegrationWorker {
   }
 
   async #execute(run: Run, signal: AbortSignal): Promise<void> {
+    await requireWorkspaceAccess(this.#db, run.workspace_id);
     signal.throwIfAborted();
     await this.#db.transaction().execute(async (trx) => {
       await this.#ownedTarget(trx, run);
@@ -329,6 +330,7 @@ export class IntegrationWorker {
   ) {
     signal.throwIfAborted();
     let page;
+    await requireWorkspaceAccess(this.#db, run.workspace_id);
     try {
       page = await this.#client.page(
         provider,
@@ -349,6 +351,7 @@ export class IntegrationWorker {
         throw error;
       signal.throwIfAborted();
       template = await this.#itemFallback(run);
+      await requireWorkspaceAccess(this.#db, run.workspace_id);
       signal.throwIfAborted();
       page = await this.#client.page(
         provider,
@@ -693,3 +696,4 @@ export class IntegrationWorker {
     );
   }
 }
+import { requireWorkspaceAccess } from '../entitlements/access.ts';

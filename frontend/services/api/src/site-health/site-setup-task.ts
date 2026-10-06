@@ -64,6 +64,7 @@ function robotsStatus(robots: Robots | null) {
 }
 
 async function wellKnown(ctx: SiteTaskContext, url: string, settings: Settings) {
+  await ctx.checkAccess?.();
   const fetch = ctx.fetcher.settings.acquisition;
   try {
     return await ctx.fetcher.acquirer.fetch(url, {
@@ -86,6 +87,7 @@ async function siteEvidence(
   walks: boolean,
   settings: Settings,
 ) {
+  await ctx.checkAccess?.();
   const robots = origin ? await ctx.fetcher.acquirer.robots(origin) : null;
   const observedAt = new Date().toISOString();
   const llmsUrl = origin ? `${origin}${crawlPolicy.llms_path}` : '';
@@ -122,6 +124,7 @@ async function siteEvidence(
 type SiteFacts = Record<string, unknown>;
 
 async function sitemapDocument(ctx: SiteTaskContext, url: string, settings: Settings) {
+  await ctx.checkAccess?.();
   const fetch = ctx.fetcher.settings.acquisition;
   try {
     const page = await ctx.fetcher.acquirer.fetch(url, {

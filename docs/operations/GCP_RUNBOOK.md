@@ -1,5 +1,27 @@
 # CiteLadder GCP Runbook
 
+## Self-serve authentication release gate
+
+Keep `PUBLIC_SIGNUP_ENABLED=false` until verified-auth, trial, expiry and abuse
+acceptance are complete. The deploy workflow accepts protected `RESEND_API_KEY`
+and injects its optional Secret Manager value into server processes. Verify the
+Resend domain for `notifications@citeladder.com`; replies use
+`contact@citeladder.com`. Provider acceptance is not inbox delivery. Controlled
+inbox and live Google checks require explicit authorization.
+
+Google sign-in uses explicit server client credentials and
+`https://app.citeladder.com/api/v1/auth/oauth/google/callback`; register that exact
+URI in Google Console. Existing Google login can remain enabled while signup is
+closed. Coordinate API creation with both Workers' `SELF_SERVE_SIGNUP` builds.
+Keep checkout disabled and Razorpay mode disabled for this release.
+
+The schema baseline adds identity verification, auth challenges and billing
+registration provenance. It does **not** upgrade an already migrated database.
+Inventory deployed schema/data before rollout; retained production data requires
+an explicit migration-policy decision and additive procedure. Never reset shared
+data to apply the greenfield baseline. Rollback closes signup and hides CTAs;
+it must retain verification/access enforcement and compatible schema/data.
+
 This is the owner procedure for production hosting. The design target is under
 ₹500 a month in fixed hosting, excluding provider usage (models, JEV,
 DataForSEO) and the domain. Background and decisions are in the

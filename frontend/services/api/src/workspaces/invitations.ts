@@ -7,6 +7,7 @@ import type { Database } from '../db/database.ts';
 import type { WorkspaceInvitations } from '../generated/db-schema.ts';
 import { ApiError } from '../errors.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
+import { requiresEmailVerification } from '../auth/eligibility.ts';
 import {
   assignableRoleSchema,
   lockAuthorizedWorkspace,
@@ -207,7 +208,7 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
       .executeTakeFirst();
     const user = await trx
       .selectFrom('users')
-      .select(['email', 'is_active'])
+      .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
       .where('id', '=', actorId)
       .executeTakeFirstOrThrow();
     const now = new Date();
@@ -215,6 +216,7 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
       !workspace ||
       !invitation ||
       !user.is_active ||
+      requiresEmailVerification(user) ||
       invitation.revoked_at ||
       invitation.expires_at <= now ||
       user.email.trim().toLowerCase() !== invitation.email_normalized

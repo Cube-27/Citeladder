@@ -49,6 +49,11 @@ beforeAll(async () => {
     .executeTakeFirstOrThrow();
   userId = user.id;
   createdUsers.push(userId);
+  await db
+    .updateTable('users')
+    .set({ email_verified_at: new Date(), email_verification_method: 'verification' })
+    .where('id', '=', userId)
+    .execute();
   const login = await call('/auth/login', { email, password });
   expect(login.status).toBe(200);
   cookie = `${config.session.cookieName}=${(login.headers.get('set-cookie') ?? '').split(`${config.session.cookieName}=`)[1]?.split(';')[0]}`;
@@ -89,7 +94,7 @@ afterAll(async () => {
 describe('password auth routes', () => {
   it('lets operator password updates finish while login repair waits for the workspace, and rolls repair back', async () => {
     const user = await fixtures.user();
-    const space = await fixtures.ownedWorkspace(user);
+    const space = await fixtures.ownedWorkspace(user, { access: false });
     await db
       .updateTable('users')
       .set({ hashed_password: await hashPassword(password) })
@@ -168,7 +173,7 @@ describe('password auth routes', () => {
     expect(account.entitlement_lifecycle_version).toBe(1);
   });
 
-  it('keeps duplicate registration generic, session-free and free-access provisioning idempotent', async () => {
+  it('keeps duplicate registration generic, session-free and trial provisioning idempotent', async () => {
     const duplicate = await call('/auth/register', { email, password });
     expect(duplicate.status).toBe(202);
     expect(duplicate.headers.get('set-cookie')).toBeNull();
@@ -179,12 +184,16 @@ describe('password auth routes', () => {
       .executeTakeFirstOrThrow();
     const grants = await db
       .selectFrom('account_grants')
-      .select(['key', 'value'])
+      .select(['key', 'value', 'valid_until'])
       .where('billing_account_id', '=', account.id)
       .execute();
-    expect(Object.fromEntries(grants.map((row) => [row.key, row.value]))).toEqual(
-      policy.entitlements.baseline.grants,
-    );
+    expect(
+      grants.every(
+        (row) =>
+          row.valid_until?.getTime() === account.registration_cohort_at.getTime() + 7 * 86400000,
+      ),
+    ).toBe(true);
+    expect(grants.find((row) => row.key === 'successful_answers')?.value).toBe(20);
     expect(account.registration_cohort_at).toEqual(
       (
         await db
@@ -322,6 +331,7 @@ describe('password auth routes', () => {
 
 describe('Google sign-in', () => {
   const oauthConfig = testConfig({
+    PUBLIC_SIGNUP_ENABLED: 'true',
     OAUTH_GOOGLE_ENABLED: 'true',
     INTEGRATION_GOOGLE_CLIENT_ID: 'recorded-client',
     INTEGRATION_GOOGLE_CLIENT_SECRET: 'recorded-secret',
@@ -337,7 +347,7 @@ describe('Google sign-in', () => {
     return Response.json(
       url.includes('/token')
         ? { access_token: 'recorded-token' }
-        : { sub: subject, email: identityEmail, email_verified: verified },
+        : { sub: subject, email: identityEmail, email_verified: verified, hd: 'example.test' },
     );
   };
   const oauthApp = createApp(
@@ -453,15 +463,29 @@ describe('Google sign-in', () => {
     verified = true;
     const other = await start();
     expect((await callback(other.data.state, other.nonceCookie)).headers.get('location')).toContain(
-      'oauth_signin_state_invalid',
+      'oauth_signin_link_required',
     );
   });
 
-  it('links verified password identities and retains stable-subject identity after a provider email change', async () => {
+  it('requires existing credentials before linking, then retains stable subject after email changes', async () => {
     subject = 'password-linked-subject';
     identityEmail = email;
     const first = await start();
-    expect((await callback(first.data.state, first.nonceCookie)).headers.get('location')).toBe(
+    expect((await callback(first.data.state, first.nonceCookie)).headers.get('location')).toContain(
+      'oauth_signin_link_required',
+    );
+    const login = await call('/auth/login', { email, password });
+    const loginCookie = login.headers
+      .getSetCookie()
+      .find((value) => value.startsWith(config.session.cookieName))!
+      .split(';')[0]!;
+    const linking = await call('/auth/link-google', { password }, loginCookie, oauthApp);
+    const linkData = (await linking.json()) as { state: string };
+    const linkCookies = linking.headers
+      .getSetCookie()
+      .map((value) => value.split(';')[0])
+      .join('; ');
+    expect((await callback(linkData.state, linkCookies)).headers.get('location')).toBe(
       'https://app.example.test/projects',
     );
     identityEmail = `${prefix}-changed@example.test`;

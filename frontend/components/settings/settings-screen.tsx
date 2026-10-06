@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -294,6 +295,13 @@ export function SettingsScreen() {
           </div>
 
           <TimeZoneSetting />
+          <Button
+            onClick={() => {
+              hardNavigate('/account-security');
+            }}
+          >
+            Account security
+          </Button>
 
           <ProjectDeletionControls />
         </TabPanel>

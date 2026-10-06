@@ -23,7 +23,7 @@ beforeAll(async () => {
   owner = await fixtures.user();
   admin = await fixtures.user();
   target = await fixtures.user();
-  workspace = await fixtures.ownedWorkspace(owner);
+  workspace = await fixtures.ownedWorkspace(owner, { access: false });
   await fixtures.member(workspace, admin, 'admin');
   await fixtures.member(workspace, target, 'member');
   foreign = await fixtures.ownedWorkspace(await fixtures.user());

@@ -6,6 +6,9 @@ import { ApiError, notFound } from '../errors.ts';
 import { auditPolicy } from './config.ts';
 import { auditEvent, transitionAudit } from './state.ts';
 import { compareText } from '../text-order.ts';
+import { requireWorkspaceAccess } from '../entitlements/access.ts';
+import { reserveTrialAnswer } from './trial-answers.ts';
+import { policy } from '../config.ts';
 
 export const repairInput = z.object({
   provider: z.string().nullish(),
@@ -23,6 +26,7 @@ export async function createRepairAudit(
   at = new Date(),
 ) {
   return db.transaction().execute(async (trx) => {
+    const access = await requireWorkspaceAccess(trx, workspaceId);
     const parent = await trx
       .selectFrom('audits')
       .selectAll()
@@ -154,7 +158,7 @@ export async function createRepairAudit(
         return { ...engine, id: cloneId, audit_id: id, created_at: at };
       });
     await trx.insertInto('audit_engine_snapshots').values(clonedEngines).execute();
-    await trx
+    const repaired = await trx
       .insertInto('audit_tasks')
       .values(
         tasks.map((task, position) => ({
@@ -198,7 +202,19 @@ export async function createRepairAudit(
           raw_finish_reason: null,
         })),
       )
+      .returningAll()
       .execute();
+    if (access.status === 'trial_active') {
+      for (const task of repaired) {
+        const original = record(task.request_snapshot).original_prompt_id;
+        if (
+          typeof original !== 'string' ||
+          !policy.entitlements.public_trial.engines.includes(task.logical_engine)
+        )
+          throw denied('Trial repair requires original prompt evidence and an eligible engine');
+        await reserveTrialAnswer(trx, workspaceId, id, task.id, original, at);
+      }
+    }
     await transitionAudit(trx, workspaceId, id, 'validating', at, 'repair audit validating');
     await transitionAudit(trx, workspaceId, id, 'queued', at, 'repair audit queued');
     await auditEvent(

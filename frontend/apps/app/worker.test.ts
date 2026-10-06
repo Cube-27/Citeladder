@@ -22,6 +22,16 @@ function request(path: string, method = 'GET', accept = 'text/html'): Request {
 }
 
 describe('product Worker routing', () => {
+  it.each([
+    '/verify-email',
+    '/reset-password/',
+    '/invitations/accept/?token=secret',
+    '/INVITATIONS/accept/?token=secret',
+  ])('protects bearer-link document navigation at %s', async (path) => {
+    const document = await handleAppRequest(request(path), env);
+    expect(document.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(document.headers.get('cache-control')).toBe('no-store');
+  });
   it('enforces document policy on root, deep links and direct HTML', async () => {
     for (const path of ['/', '/agent/actions', '/index.html']) {
       const document = await handleAppRequest(request(path), env);

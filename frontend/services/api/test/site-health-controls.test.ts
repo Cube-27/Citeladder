@@ -102,7 +102,7 @@ describe('crawl control admission', () => {
       const response = await request(seed, path, 'POST', body);
       expect(response.status).toBe(403);
       expect(await response.json()).toMatchObject({
-        error: { code: 'entitlement_unresolved', retryable: false },
+        error: { code: 'access_unresolved', retryable: false },
       });
     }
   });
@@ -126,7 +126,10 @@ describe('crawl control admission', () => {
   it('serializes two concurrent creates and seeds one root, setup and independent analysis plan', async () => {
     const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     await allow(tenant, 2);
-    const outcomes = await Promise.allSettled([create(tenant, { seed: '-1' }), create(tenant)]);
+    const outcomes = await Promise.allSettled([
+      create(tenant, { seed: '-1' }),
+      create(tenant, { seed: '-1' }),
+    ]);
     expect(outcomes.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     const failure = outcomes.find((result) => result.status === 'rejected');
     expect(failure?.status === 'rejected' && failure.reason).toMatchObject({

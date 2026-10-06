@@ -1,7 +1,7 @@
-/** Public auth provisions only the configured free baseline. Billing owns other grants. */
+/** Registration provenance selects the lifetime public trial or retained legacy baseline. */
 import { randomUUID, createHash } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
-import { policy } from '../config.ts';
+import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { Users } from '../generated/db-schema.ts';
 import { runtimeProjection, issueBundle, lockAccount } from './grants.ts';
@@ -66,6 +66,7 @@ export async function ensureWorkspaceBilling(
       owner_user_id: user.id,
       registration_cohort_at: user.created_at,
       status: 'active',
+      registration_origin: user.registration_origin,
       billing_country: '',
       country_verification: 'provisional',
       billing_profile: null,
@@ -81,6 +82,39 @@ export async function ensureWorkspaceBilling(
     .executeTakeFirstOrThrow();
   if (options.provisionAccess === false) return;
   const locked = await lockAccount(db, workspaceId, account.id);
+  if (locked.registration_origin === 'public') {
+    const trial = policy.entitlements.public_trial;
+    const existing = await db
+      .selectFrom('account_grants')
+      .select('id')
+      .where('billing_account_id', '=', account.id)
+      .where('source_kind', '=', 'trial')
+      .where('source_ref', '=', 'system:public-signup')
+      .executeTakeFirst();
+    if (existing) return;
+    const days = resolveSettingSpec(policy.billing.settings.trial_days) as number;
+    await issueBundle(db, {
+      workspaceId,
+      accountId: account.id,
+      key: trial.revision,
+      sourceKind: 'trial',
+      sourceRef: 'system:public-signup',
+      revision: trial.revision,
+      specs: Object.entries(trial.grants).map(([key, value]) => ({ key, value })),
+      from: locked.registration_cohort_at,
+      until: new Date(locked.registration_cohort_at.getTime() + days * 86400000),
+      primary: true,
+      profile: trial.profile,
+      priority: 0,
+    });
+    getLogger('app.auth').info('auth.trial_issued', {
+      account_id: account.id,
+      workspace_id: workspaceId,
+    });
+    return;
+  }
+  if (!['legacy', 'operator'].includes(locked.registration_origin))
+    throw new Error('registration_origin_unresolved');
   const cfg = policy.entitlements.baseline;
   const idempotencyKey = `${cfg.revision}:system:public-signup`;
   const existing = await db

@@ -1,5 +1,6 @@
 import {
   workspaceSchema,
+  workspaceAccessSchema,
   workspaceMemberSchema,
   workspaceInvitationSchema,
   workspaceInvitationIssuedSchema,
@@ -7,6 +8,8 @@ import {
   productTourSchema,
 } from '@citeladder/contracts/auth';
 import { z } from 'zod';
+import { workspaceAccess } from '../entitlements/access.ts';
+import { deliverInvitation } from '../workspaces/invitation-mail.ts';
 import { defineGetRoute, definePostRoute, definePatchRoute, defineDeleteRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
 import { acceptPolicy, policyStatus } from '../workspaces/policies.ts';
@@ -50,6 +53,13 @@ const policyDecision = z.object({
 });
 
 export const workspaceRoutes = [
+  defineGetRoute({
+    ...base,
+    recovery: true,
+    path: `${pathRoot}/access`,
+    response: workspaceAccessSchema,
+    handle: ({ db }, { path }) => workspaceAccess(db, path.workspace_id),
+  }),
   defineGetRoute({
     family: 'workspaces',
     authorize: 'session',
@@ -161,9 +171,13 @@ export const workspaceRoutes = [
     response: workspaceInvitationIssuedSchema,
     status: 201,
     body: invite,
-    async handle({ c, db }, { path }) {
+    async handle({ c, db, config }, { path }) {
       const body = await readBody(c, invite);
-      return issueInvitation(db, path.workspace_id, c.get('user').id, body.email, body.role);
+      return deliverInvitation(
+        db,
+        config,
+        await issueInvitation(db, path.workspace_id, c.get('user').id, body.email, body.role),
+      );
     },
   }),
   definePostRoute({
@@ -171,8 +185,12 @@ export const workspaceRoutes = [
     path: `${pathRoot}/invitations/{invitation_id}/resend`,
     params: { path: invitationPath, query: {} },
     response: workspaceInvitationIssuedSchema,
-    handle: ({ c, db }, { path }) =>
-      updateInvitation(db, path.workspace_id, c.get('user').id, path.invitation_id, false),
+    handle: async ({ c, db, config }, { path }) =>
+      deliverInvitation(
+        db,
+        config,
+        await updateInvitation(db, path.workspace_id, c.get('user').id, path.invitation_id, false),
+      ),
   }),
   defineDeleteRoute({
     ...admin,
@@ -185,6 +203,7 @@ export const workspaceRoutes = [
   defineGetRoute({
     ...base,
     path: `${pathRoot}/policies`,
+    recovery: true,
     response: policyStatusSchema,
     handle: ({ c, db }, { path }) => policyStatus(db, path.workspace_id, c.get('user').id),
   }),
@@ -193,6 +212,7 @@ export const workspaceRoutes = [
     path: `${pathRoot}/policies`,
     response: policyStatusSchema,
     body: policyDecision,
+    recovery: true,
     async handle({ c, db }, { path }) {
       return acceptPolicy(
         db,

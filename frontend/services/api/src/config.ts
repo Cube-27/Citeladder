@@ -89,6 +89,7 @@ export const policy = {
   analytics,
   referrals,
   auth: {
+    mailbox: authRuntime.mailbox,
     password: authRuntime.password,
     terms_revision: authRuntime.terms_revision,
     privacy_revision: authRuntime.privacy_revision,
@@ -318,6 +319,8 @@ export type ServiceConfig = {
   };
   auth: {
     publicSignup: boolean;
+    mailKey: string;
+    mailTimeoutMs: number;
     frontendUrl: string;
     trustedProxies: TrustedProxies;
     oauthSettings: Record<string, string | number | boolean>;
@@ -428,6 +431,17 @@ export function assertDeployable(
 ): void {
   if (isDevelopmentEnv(config.appEnv) && !force) return;
   const issues = productionSecretProblems(config, env);
+  if (config.auth.publicSignup && !config.auth.mailKey)
+    issues.push('RESEND_API_KEY is required for public signup');
+  if (
+    config.auth.oauthSettings.google_enabled === true &&
+    (!config.auth.oauthSettings.google_client_id ||
+      !config.auth.oauthSettings.google_client_secret ||
+      !config.auth.oauthSettings.google_redirect_uri)
+  )
+    issues.push(
+      'Enabled Google sign-in requires explicit client ID, client secret and redirect URI',
+    );
   if (config.database.sslMode !== 'require') {
     issues.push('db_ssl_mode must be require in production');
   }
@@ -505,6 +519,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     },
     auth: {
       publicSignup: setting('public_signup_enabled') as boolean,
+      mailKey: setting('resend_api_key') as string,
+      mailTimeoutMs: setting('auth_mail_timeout_ms') as number,
       frontendUrl: setting('frontend_url') as string,
       trustedProxies: parseTrustedProxies(setting('trusted_proxy_cidrs') as string),
       oauthSettings: {

@@ -26,6 +26,7 @@ import {
   workspaceInvitationSchema,
   workspaceMemberSchema,
   workspaceSchema,
+  workspaceAccessSchema,
 } from '@citeladder/contracts/auth';
 import { strictValidate } from '@citeladder/contracts/validation';
 import type { ProductTour, ProductTourStatus, Workspace } from './types';
@@ -42,6 +43,12 @@ const memberListSchema = z.array(workspaceMemberSchema);
 const invitationListSchema = z.array(workspaceInvitationSchema);
 
 export const workspacesApi = {
+  access: async (workspaceId: string, options?: ApiRequestOptions) =>
+    strictValidate(
+      workspaceAccessSchema,
+      await apiClient.get(`/workspaces/${workspaceId}/access`, { ...options, workspaceId }),
+      'workspaces.access',
+    ),
   getProductTour: async (workspaceId: string, options?: ApiRequestOptions) => {
     const response = await apiClient.get<ProductTour>(`/workspaces/${workspaceId}/product-tour`, {
       ...options,

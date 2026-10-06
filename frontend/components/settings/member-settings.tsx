@@ -33,6 +33,7 @@ export function MemberSettings() {
   const mayManage = useWorkspaceCapability('manage_members');
   const queryClient = useQueryClient();
   const [issuedToken, setIssuedToken] = useState<string | null>(null);
+  const [delivery, setDelivery] = useState<'accepted' | 'failed' | undefined>();
 
   const workspaceId = activeWorkspaceId;
   const enabled = mayManage && workspaceId !== null;
@@ -69,9 +70,13 @@ export function MemberSettings() {
    * screen invites sharing it with the wrong people, so a late answer for a
    * workspace we have left is dropped rather than rendered.
    */
-  const keepToken = (issued: { token: string }, origin: string) => {
+  const keepToken = (
+    issued: { token: string; delivery?: 'accepted' | 'failed' },
+    origin: string,
+  ) => {
     if (origin !== workspaceId) return;
     setIssuedToken(issued.token);
+    setDelivery(issued.delivery);
     // The dialog is the only place the link is shown, and a resend from the
     // pending table happens with it closed.
     setInviteOpen(true);
@@ -183,6 +188,7 @@ export function MemberSettings() {
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         issuedToken={issuedToken}
+        delivery={delivery}
         pending={invite.isPending}
         onInvite={(email, role) => invite.mutate({ email, role })}
       />

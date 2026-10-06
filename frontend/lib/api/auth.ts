@@ -5,6 +5,7 @@
 import { apiClient, type ApiRequestOptions } from './client';
 import {
   authResponseSchema,
+  authSecuritySchema,
   oauthStartResponseSchema,
   registrationResponseSchema,
 } from '@citeladder/contracts/auth';
@@ -17,10 +18,36 @@ import type {
 } from './types';
 
 export const authApi = {
-  register: async (email: string, password: string, options?: ApiRequestOptions) => {
+  security: async () =>
+    strictValidate(authSecuritySchema, await apiClient.get('/auth/security'), 'auth.security'),
+  linkGoogle: async (password: string) =>
+    strictValidate(
+      oauthStartResponseSchema,
+      await apiClient.post('/auth/link-google', { password }),
+      'auth.linkGoogle',
+    ),
+  mailbox: async (
+    operation:
+      | 'resend-verification'
+      | 'forgot-password'
+      | 'verify-email'
+      | 'reset-password'
+      | 'change-password'
+      | 'logout-all',
+    body: Record<string, string> = {},
+  ) => {
+    const response = await apiClient.post<RegistrationResponse>(`/auth/${operation}`, body);
+    return strictValidate(registrationResponseSchema, response, `auth.${operation}`);
+  },
+  register: async (
+    email: string,
+    password: string,
+    options?: ApiRequestOptions,
+    returnTo?: string,
+  ) => {
     const res = await apiClient.post<RegistrationResponse>(
       '/auth/register',
-      { email, password },
+      { email, password, return_to: returnTo },
       options,
     );
     return strictValidate(registrationResponseSchema, res, 'auth.register');
@@ -34,8 +61,12 @@ export const authApi = {
   // to navigate to; an unconfigured one answers 503
   // (`detail.code = 'oauth_provider_not_configured'`), which callers surface
   // as a coming-soon notice rather than an error.
-  oauthStart: async (provider: OAuthProvider, options?: ApiRequestOptions) => {
-    const res = await apiClient.get<OAuthStartResponse>(`/auth/oauth/${provider}/start`, options);
+  oauthStart: async (provider: OAuthProvider, options?: ApiRequestOptions, returnTo?: string) => {
+    const suffix = returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : '';
+    const res = await apiClient.get<OAuthStartResponse>(
+      `/auth/oauth/${provider}/start${suffix}`,
+      options,
+    );
     return strictValidate(oauthStartResponseSchema, res, 'auth.oauthStart');
   },
   me: async (options?: ApiRequestOptions) => {

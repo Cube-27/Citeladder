@@ -512,6 +512,17 @@ export interface AuditTasks {
   workspace_id: string;
 }
 
+export interface AuthChallenges {
+  consumed_at: Timestamp | null;
+  created_at: Timestamp;
+  email: string;
+  expires_at: Timestamp;
+  id: string;
+  purpose: string;
+  token_digest: string;
+  user_id: string;
+}
+
 export interface BillingAccounts {
   billing_country: string;
   billing_profile: Json | null;
@@ -521,6 +532,7 @@ export interface BillingAccounts {
   id: string;
   owner_user_id: string | null;
   registration_cohort_at: Generated<Timestamp>;
+  registration_origin: Generated<string>;
   status: string;
   updated_at: Timestamp;
   workspace_id: string;
@@ -2960,9 +2972,12 @@ export interface UserIdentities {
 export interface Users {
   created_at: Timestamp;
   email: string;
+  email_verification_method: string | null;
+  email_verified_at: Timestamp | null;
   hashed_password: string | null;
   id: string;
   is_active: boolean;
+  registration_origin: Generated<string>;
   role: string;
   session_version: number;
   updated_at: Timestamp;
@@ -3052,6 +3067,7 @@ export interface DB {
   audit_schedules: AuditSchedules;
   audit_tasks: AuditTasks;
   audits: Audits;
+  auth_challenges: AuthChallenges;
   billing_accounts: BillingAccounts;
   billing_catalog_revisions: BillingCatalogRevisions;
   billing_customers: BillingCustomers;

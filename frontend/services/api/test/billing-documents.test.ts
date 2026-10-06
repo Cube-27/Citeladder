@@ -259,15 +259,15 @@ describe('persisted billing documents', () => {
       }
     },
   );
-  it('reads a workspace without a billing account as empty, without provisioning one', async () => {
+  it('denies a workspace without access authority without provisioning one', async () => {
     const userId = await fixtures.user();
-    const workspaceId = await fixtures.ownedWorkspace(userId);
+    const workspaceId = await fixtures.ownedWorkspace(userId, { access: false });
     const requestHeaders = await headers(userId, workspaceId);
     const listed = await app.request('/api/v1/billing/invoices', { headers: requestHeaders });
-    expect(listed.status).toBe(200);
-    expect(await listed.json()).toEqual({ invoices: [] });
+    expect(listed.status).toBe(403);
+    expect(await listed.json()).toMatchObject({ error: { code: 'access_unresolved' } });
     const download = `/api/v1/billing/invoices/${randomUUID()}/pdf`;
-    expect((await app.request(download, { headers: requestHeaders })).status).toBe(404);
+    expect((await app.request(download, { headers: requestHeaders })).status).toBe(403);
     expect(
       await db
         .selectFrom('billing_accounts')

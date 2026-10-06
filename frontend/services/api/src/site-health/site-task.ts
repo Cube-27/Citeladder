@@ -39,6 +39,7 @@ export type SiteTaskContext = {
   fetcher: SitePageFetcher;
   settings: SiteTaskSettings;
   signal?: AbortSignal;
+  checkAccess?: () => Promise<unknown>;
 };
 
 /** Exponential retry backoff with deterministic jitter (the attempt number, not a random draw). */

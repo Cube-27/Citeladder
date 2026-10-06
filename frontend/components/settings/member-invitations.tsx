@@ -40,12 +40,14 @@ export function InviteDialog({
   open,
   onOpenChange,
   issuedToken,
+  delivery,
   pending,
   onInvite,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issuedToken: string | null;
+  delivery?: 'accepted' | 'failed';
   pending: boolean;
   onInvite: (email: string, role: AssignableWorkspaceRole) => void;
 }>) {
@@ -106,6 +108,11 @@ export function InviteDialog({
           <Alert tone="info">
             <div className="grid gap-2">
               <span>
+                {delivery === 'accepted'
+                  ? 'The email provider accepted the invitation. Inbox delivery is not confirmed. '
+                  : delivery === 'failed'
+                    ? 'The email provider did not accept the invitation. '
+                    : 'Email delivery status is unavailable. '}
                 Share this one-time acceptance link. It is shown once and cannot be retrieved again
                 — resending issues a new link and invalidates this one.
               </span>

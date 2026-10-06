@@ -11,7 +11,8 @@ import {
   oauthSignInErrorMessage,
   type LoginFormValues,
 } from '@/lib/auth/forms';
-import { safeMcpReturnPath, withMcpReturnPath } from '@/lib/auth/mcp-return-path';
+import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
+import { Link } from 'react-router-dom';
 import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
 type SearchParams = Pick<URLSearchParams, 'get'>;
@@ -26,10 +27,10 @@ export function LoginScreen({
   signupOpen: boolean;
   searchParams: SearchParams;
 }>) {
-  const returnTo = safeMcpReturnPath(searchParams.get('return_to'));
+  const returnTo = safeAuthReturnPath(searchParams.get('return_to'));
   const description =
     searchParams.get('registered') === '1'
-      ? 'Your account is ready. Sign in to continue.'
+      ? 'Check your email to verify your account. Your trial starts at registration.'
       : 'Welcome back! Please sign in to continue.';
   // The Google callback is a full-page navigation, so it reports failure as a
   // coded query parameter rather than a response body.
@@ -59,10 +60,10 @@ export function LoginScreen({
       footerPrompt="Don't have an account?"
       // An MCP handoff that needs an account must survive the detour through
       // registration, so the validated resume path travels with the link.
-      footerHref={withMcpReturnPath('/register', returnTo)}
+      footerHref={withAuthReturnPath('/register', returnTo)}
       footerLabel="Sign up"
       footerLinkVariant="emphasis"
-      showOAuth={signupOpen}
+      showOAuth
       showFooter={!demoMode && signupOpen}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
@@ -73,6 +74,10 @@ export function LoginScreen({
         autoComplete="current-password"
         placeholder="••••••••"
       />
+      <Link to={withAuthReturnPath('/forgot-password', returnTo)}>Forgot password?</Link>
+      <Link to={withAuthReturnPath('/resend-verification', returnTo)}>
+        Resend verification email
+      </Link>
     </AuthFormShell>
   );
 }

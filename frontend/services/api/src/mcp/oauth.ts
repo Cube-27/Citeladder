@@ -1,5 +1,7 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { recordSecurityEvent } from '../auth/security-events.ts';
+import { requiresEmailVerification } from '../auth/eligibility.ts';
+import { workspaceAccess } from '../entitlements/access.ts';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
@@ -46,6 +48,8 @@ export async function authenticateMcp(
       'g.scopes',
       'u.email',
       'u.is_active',
+      'u.registration_origin',
+      'u.email_verified_at',
     ])
     .where('g.access_token_hash', '=', digest)
     .where('g.revoked_at', 'is', null)
@@ -53,6 +57,7 @@ export async function authenticateMcp(
     .executeTakeFirst();
   if (
     !row?.is_active ||
+    requiresEmailVerification(row) ||
     !accountAllowed(config, mcp, row.email) ||
     row.resource !== `${mcp.origin}/mcp` ||
     !strings(row.scopes).includes(policy.mcp.constants.read_scope)
@@ -63,8 +68,8 @@ export async function authenticateMcp(
     ? { userId: row.user_id, grantId: row.id, workspaceIds, tokenHash: digest }
     : null;
 }
-export function consentableWorkspaces(db: Database, userId: string) {
-  return db
+export async function consentableWorkspaces(db: Database, userId: string) {
+  const rows = await db
     .selectFrom('workspaces as w')
     .innerJoin('workspace_members as m', 'm.workspace_id', 'w.id')
     .select(['w.id', 'w.name'])
@@ -83,6 +88,8 @@ export function consentableWorkspaces(db: Database, userId: string) {
     .orderBy('w.name')
     .orderBy('w.id')
     .execute();
+  const access = await Promise.all(rows.map((row) => workspaceAccess(db, row.id)));
+  return rows.filter((_, index) => ['active', 'trial_active'].includes(access[index]!.status));
 }
 export function completeConsent(
   db: Database,
@@ -109,10 +116,14 @@ export function completeConsent(
     else {
       const user = await trx
         .selectFrom('users')
-        .select(['email', 'is_active'])
+        .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
         .where('id', '=', userId)
         .executeTakeFirst();
-      if (!user?.is_active || !accountAllowed(config, mcp, user.email))
+      if (
+        !user?.is_active ||
+        requiresEmailVerification(user) ||
+        !accountAllowed(config, mcp, user.email)
+      )
         throw new OAuthError('access_denied', 'This account is not enabled for MCP access');
       const unique = [...new Set(selected)].sort(compareText);
       const allowed = new Set((await consentableWorkspaces(trx, userId)).map((w) => w.id));
@@ -185,11 +196,12 @@ export function exchangeToken(
         throw new OAuthError('invalid_grant', 'Code is invalid');
       const user = await trx
         .selectFrom('users')
-        .select(['email', 'is_active'])
+        .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
         .where('id', '=', row.user_id)
         .executeTakeFirst();
       if (
         !user?.is_active ||
+        requiresEmailVerification(user) ||
         !accountAllowed(config, mcp, user.email) ||
         row.resource !== `${mcp.origin}/mcp` ||
         !strings(row.scopes).includes(policy.mcp.constants.read_scope)
@@ -233,11 +245,12 @@ export function exchangeToken(
         throw new OAuthError('invalid_grant', 'Refresh token is invalid');
       const user = await trx
         .selectFrom('users')
-        .select(['email', 'is_active'])
+        .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
         .where('id', '=', row.user_id)
         .executeTakeFirst();
       if (
         !user?.is_active ||
+        requiresEmailVerification(user) ||
         !accountAllowed(config, mcp, user.email) ||
         row.resource !== `${mcp.origin}/mcp`
       )

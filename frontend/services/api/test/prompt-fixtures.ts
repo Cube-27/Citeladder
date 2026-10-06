@@ -7,6 +7,12 @@ import { promptTextHash } from '../src/prompts/normalization.ts';
 const now = () => new Date();
 
 export async function billingAccount(db: Database, workspaceId: string): Promise<string> {
+  const existing = await db
+    .selectFrom('billing_accounts')
+    .select('id')
+    .where('workspace_id', '=', workspaceId)
+    .executeTakeFirst();
+  if (existing) return existing.id;
   const id = randomUUID();
   await db
     .insertInto('billing_accounts')

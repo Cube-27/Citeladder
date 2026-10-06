@@ -89,9 +89,9 @@ export class VisibilityFixtures extends Fixtures {
   }
 
   /** A user owning a workspace with one project. */
-  async tenant(options: { websiteUrl?: string } = {}): Promise<Tenant> {
+  async tenant(options: { websiteUrl?: string; access?: boolean } = {}): Promise<Tenant> {
     const userId = await this.user();
-    const workspaceId = await this.ownedWorkspace(userId);
+    const workspaceId = await this.ownedWorkspace(userId, options);
     const projectId = await this.project(workspaceId, options.websiteUrl);
     const tenant = { userId, workspaceId, projectId };
     this.tenants.push(tenant);

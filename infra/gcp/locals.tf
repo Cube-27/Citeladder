@@ -12,6 +12,8 @@ locals {
 
   # Generated once by the deploy workflow, or copied from protected GitHub secrets.
   required_secret_env = {
+    OAUTH_GOOGLE_CLIENT_ID           = "citeladder-google-oauth-client-id"
+    OAUTH_GOOGLE_CLIENT_SECRET       = "citeladder-google-oauth-client-secret"
     DATABASE_URL                     = "citeladder-database-url"
     JWT_SECRET_KEY                   = "citeladder-jwt-secret"
     ENCRYPTION_KEY                   = "citeladder-encryption-key"
@@ -23,6 +25,7 @@ locals {
   # Present only while the protected environment supplies a value; Cloud Run
   # cannot reference a secret without an enabled version.
   optional_secret_env = {
+    RESEND_API_KEY                      = "citeladder-resend-api-key"
     DEFAULT_AGENT_API_KEY               = "citeladder-default-agent-api-key"
     KEENABLE_API_KEY                    = "citeladder-keenable-api-key"
     JEV_API_KEY                         = "citeladder-jev-api-key"
@@ -73,6 +76,7 @@ locals {
       DEV_LOGIN_EMAIL             = var.dev_login_email
       DEV_LOGIN_COUNTER_ALLOWANCE = tostring(var.dev_login_counter_allowance)
       OAUTH_GOOGLE_ENABLED        = tostring(var.oauth_google_enabled)
+      OAUTH_GOOGLE_REDIRECT_URI   = "https://${var.app_domain_name}/api/v1/auth/oauth/google/callback"
       PUBLIC_SIGNUP_ENABLED       = tostring(var.public_signup_enabled)
       # Cloud Run's front end; admitted Worker requests name the visitor instead.
       TRUSTED_PROXY_CIDRS              = "169.254.0.0/16"

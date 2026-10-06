@@ -8,10 +8,17 @@
  */
 import { z } from 'zod';
 import { humanizeApiError } from '@/lib/api/errors';
+import { authFormPolicy } from '@/lib/config/auth';
 
 /** Shared email + password rules reused by both forms. */
 const email = z.string().trim().min(1, 'Email is required.').email('Enter a valid email address.');
-const password = z.string().min(8, 'Password must be at least 8 characters.');
+const password = z
+  .string()
+  .min(
+    authFormPolicy.passwordMinLength,
+    `Password must be at least ${authFormPolicy.passwordMinLength} characters.`,
+  )
+  .max(authFormPolicy.passwordMaxLength);
 
 export const loginFormSchema = z.object({
   email,
@@ -41,7 +48,7 @@ export function authErrorMessage(error: unknown): string {
  *
  * The callback is a full-page navigation, so it cannot return a JSON error
  * body — it carries a machine-readable code on the login URL instead. Codes
- * are owned by `backend/app/core/config/oauth.py`. An unrecognized code still
+ * are owned by the native auth OAuth service. An unrecognized code still
  * gets a message rather than a silent, unexplained bounce back to /login.
  */
 const OAUTH_SIGNIN_FALLBACK = 'Google sign-in did not complete. Please try again.';
@@ -58,7 +65,11 @@ const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
   ],
   [
     'oauth_signin_email_unverified',
-    'Google has not verified that email address, so it cannot be linked to an account.',
+    'Confirm mailbox ownership using the email link before signing in with Google.',
+  ],
+  [
+    'oauth_signin_link_required',
+    'Sign in with your existing password and connect Google from Account security. If you need a password, use the password reset link.',
   ],
   ['oauth_signin_disabled', 'Google sign-in is unavailable right now. Please use email below.'],
   ['oauth_signin_failed', OAUTH_SIGNIN_FALLBACK],

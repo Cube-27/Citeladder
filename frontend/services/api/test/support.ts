@@ -4,6 +4,7 @@ import { SignJWT } from 'jose';
 
 import { loadConfig, type ServiceConfig } from '../src/config.ts';
 import { createDatabase, type Database } from '../src/db/database.ts';
+import { billingAccount, grant } from './prompt-fixtures.ts';
 
 const TEST_SESSION_KEY = 'api-service-test-session-key-0123456789abcdef';
 
@@ -63,10 +64,16 @@ export class Fixtures {
   }
 
   /** A tenant workspace created with its Owner, as workspace creation does. */
-  async ownedWorkspace(ownerId: string): Promise<string> {
+  async ownedWorkspace(ownerId: string, options: { access?: boolean } = {}): Promise<string> {
     const insert = async (trx: Database) => {
       const workspaceId = await this.insertWorkspace(trx, false);
       await this.insertMember(trx, workspaceId, ownerId, 'owner');
+      if (options.access !== false)
+        await grant(trx, await billingAccount(trx, workspaceId), {
+          key: 'workspace_access',
+          value: 1,
+          sourceKind: 'override',
+        });
       return workspaceId;
     };
     const id = this.db.isTransaction

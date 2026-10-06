@@ -11,6 +11,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Pressable } from '@/components/ui/pressable';
 import { authApi } from '@/lib/api/auth';
+import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { ApiError } from '@/lib/api/errors';
 import { recordSignInTermsConsent } from '@/lib/auth/terms-consent';
 import { websiteHref } from '@/lib/config/app-link';
@@ -179,6 +180,7 @@ export function AuthFormShell({
   showOAuth = true,
   showForm = true,
   showFooter = true,
+  requireTerms = true,
   children,
 }: Readonly<{
   title: string;
@@ -195,6 +197,7 @@ export function AuthFormShell({
   showOAuth?: boolean;
   showForm?: boolean;
   showFooter?: boolean;
+  requireTerms?: boolean;
   children: ReactNode;
 }>) {
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
@@ -203,7 +206,7 @@ export function AuthFormShell({
   const [consentMissing, setConsentMissing] = useState(false);
   const consentRef = useRef<HTMLDivElement>(null);
   // Both ways in lead into the app, so both carry the same Terms decision.
-  const requiresConsent = showForm || showOAuth;
+  const requiresConsent = requireTerms && (showForm || showOAuth);
 
   /** Hold any way in until the Terms box is ticked; remember the decision once it is. */
   function consentGiven(): boolean {
@@ -233,7 +236,11 @@ export function AuthFormShell({
     setOauthPending(true);
     setOauthNotice(null);
     try {
-      const { authorize_url } = await authApi.oauthStart('google');
+      const { authorize_url } = await authApi.oauthStart(
+        'google',
+        undefined,
+        safeAuthReturnPath(new URLSearchParams(window.location.search).get('return_to')),
+      );
       hardNavigate(authorize_url);
     } catch (err) {
       if (err instanceof ApiError && err.status === 503) {
@@ -285,15 +292,17 @@ export function AuthFormShell({
           <form noValidate onSubmit={handleSubmit} className="auth-email-form grid gap-3">
             {children}
 
-            <TermsConsent
-              ref={consentRef}
-              agreed={agreed}
-              missing={consentMissing}
-              onChange={(value) => {
-                setAgreed(value);
-                if (value) setConsentMissing(false);
-              }}
-            />
+            {requiresConsent && (
+              <TermsConsent
+                ref={consentRef}
+                agreed={agreed}
+                missing={consentMissing}
+                onChange={(value) => {
+                  setAgreed(value);
+                  if (value) setConsentMissing(false);
+                }}
+              />
+            )}
 
             <Button
               type="submit"

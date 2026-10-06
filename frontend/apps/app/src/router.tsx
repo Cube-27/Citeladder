@@ -34,6 +34,9 @@ function productRoute(
 }
 
 export const appRoutes: RouteObject[] = [
+  ...['/verify-email', '/reset-password', '/forgot-password', '/resend-verification'].map((path) =>
+    productRoute(path, () => import('@/components/auth/mailbox-screen')),
+  ),
   { path: '/', loader: () => redirect('/projects') },
   {
     ...productRoute('/login', () =>
@@ -61,6 +64,7 @@ export const appRoutes: RouteObject[] = [
     hydrateFallbackElement: <ShellFallback />,
     ErrorBoundary: RouteError,
     children: [
+      productRoute('/account-security', () => import('@/components/settings/account-security')),
       productRoute('/onboarding', () =>
         import('@/components/onboarding/onboarding-page-client').then(
           ({ OnboardingPageClient }) => ({

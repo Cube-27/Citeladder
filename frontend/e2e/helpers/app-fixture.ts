@@ -242,6 +242,9 @@ export async function stubAuthedShell(
     route.fulfill({ json: PERMITTED_ENTITLEMENT }),
   );
   for (const workspaceId of new Set(workspacesFor(projects).map((workspace) => workspace.id))) {
+    await page.route(`**/api/v1/workspaces/${workspaceId}/access`, (route) =>
+      route.fulfill({ json: { status: 'active', expires_at: null } }),
+    );
     await page.route(`**/api/v1/workspaces/${workspaceId}/entitlements`, (route) =>
       route.fulfill({
         json: permittedWorkspaceEntitlement(workspaceId, projects.length),

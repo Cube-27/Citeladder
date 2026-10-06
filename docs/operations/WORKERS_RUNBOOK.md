@@ -1,5 +1,14 @@
 # Workers migration operations
 
+Self-serve authentication requires the coordinated release gate in the
+[GCP runbook](GCP_RUNBOOK.md#self-serve-authentication-release-gate). Keep
+`SELF_SERVE_SIGNUP` off until backend verification/trial acceptance; enable both
+product and marketing builds together with API creation. Google sign-in for
+existing accounts is independent of that signup switch. Verification/reset
+navigation uses no-store and no-referrer protections and carries mailbox tokens
+in fragments. Resend credentials are API secrets and must never enter either
+public bundle. Closing signup on rollback retains existing login/recovery.
+
 This is the operator procedure for the four-PR Workers migration.
 PRs 1–3 prepared protected ingress and two Workers. PR 4 removes the superseded
 production frontend serving layer before the owner authorizes a fresh release.

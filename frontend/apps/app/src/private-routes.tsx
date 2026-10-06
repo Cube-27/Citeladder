@@ -12,6 +12,7 @@ import { SessionGuard } from '@/lib/auth/session-guard';
 import { PolicyAcceptanceGate } from '@/components/auth/policy-acceptance';
 import { EntitlementProvider } from '@/lib/billing/entitlement-context';
 import { ProjectProvider } from '@/lib/project/project-context';
+import { WorkspaceAccessGate } from '@/components/auth/workspace-access-gate';
 
 /**
  * Authenticated route root.
@@ -32,13 +33,15 @@ export function PrivateRouteLayout() {
     <Suspense fallback={<ShellFallback />}>
       <ProjectProvider>
         <SessionGuard fallback={sessionFallback}>
-          <PolicyAcceptanceGate>
-            <EntitlementProvider>
-              <UserMenuController>
-                <Outlet />
-              </UserMenuController>
-            </EntitlementProvider>
-          </PolicyAcceptanceGate>
+          <WorkspaceAccessGate>
+            <PolicyAcceptanceGate>
+              <EntitlementProvider>
+                <UserMenuController>
+                  <Outlet />
+                </UserMenuController>
+              </EntitlementProvider>
+            </PolicyAcceptanceGate>
+          </WorkspaceAccessGate>
         </SessionGuard>
       </ProjectProvider>
     </Suspense>

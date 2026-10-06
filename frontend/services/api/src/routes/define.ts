@@ -13,6 +13,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
 import { sessionUser } from '../auth/session.ts';
+import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { activeWorkspace, projectMember, workspaceMember } from '../auth/workspace.ts';
 import type { WorkspaceCapability } from '../auth/workspace.ts';
 import { policy, resolveSettingSpec, type ServiceConfig } from '../config.ts';
@@ -62,6 +63,8 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   body?: z.ZodType;
   headers?: z.ZodObject;
   capability?: WorkspaceCapability;
+  /** Explicit account recovery surface with no product evidence. */
+  recovery?: boolean;
   /** Resolve the workspace from the path's `project_id` instead of `X-Workspace-Id`. */
   authorize?: 'workspace' | 'project' | 'workspace-path' | 'session' | 'public';
 } & RouteBody<Path, Query, Response>;
@@ -175,6 +178,8 @@ export function defineRoute<
       ...(publicRoute ? [] : [sessionUser(config, db)]),
       ...authorize,
       async (c) => {
+        if (scoped && !route.recovery)
+          await requireWorkspaceAccess(db, c.get('workspace').workspaceId);
         if (byProject && capability !== undefined) c.get('workspace').require(capability);
         const params = validateParams(route.params, {
           path: c.req.param() as Record<string, string>,

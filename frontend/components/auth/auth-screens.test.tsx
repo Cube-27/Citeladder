@@ -12,13 +12,28 @@ import { RegisterScreen } from './register-screen';
 const noParams = new URLSearchParams();
 
 describe('account entry while self-serve sign-up is closed', () => {
-  it('keeps email sign-in but offers neither Google nor sign-up', () => {
+  it('guides an existing account to credential-authorized Google linking', () => {
+    renderWithProviders(
+      <LoginScreen
+        demoMode={false}
+        signupOpen
+        searchParams={new URLSearchParams({ error: 'oauth_signin_link_required' })}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('connect Google from Account security');
+    expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    );
+  });
+
+  it('keeps email and existing Google sign-in while hiding sign-up', () => {
     renderWithProviders(
       <LoginScreen demoMode={false} signupOpen={false} searchParams={noParams} />,
     );
 
     expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Google/ })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
