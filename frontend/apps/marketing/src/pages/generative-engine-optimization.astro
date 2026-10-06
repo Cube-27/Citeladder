@@ -1,0 +1,6 @@
+---
+import { researchArticle } from '../research-articles';
+import ResearchLayout from '../layouts/ResearchLayout.astro';
+const article = researchArticle('/generative-engine-optimization')!;
+---
+<ResearchLayout article={article} />

@@ -1,0 +1,38 @@
+{
+  "type": "observation_schema_not_dataset",
+  "required_fields": [
+    "observation_id",
+    "prompt_id",
+    "prompt_version",
+    "prompt_text",
+    "intent",
+    "branded_or_unbranded",
+    "surface",
+    "model_if_known",
+    "search_mode",
+    "locale",
+    "country",
+    "observed_at_utc",
+    "session_context",
+    "personalization_notes",
+    "run_status",
+    "raw_answer_reference",
+    "brand_mentioned",
+    "brand_recommended",
+    "owned_domain_cited",
+    "citation_urls",
+    "citation_link_type",
+    "accuracy_review",
+    "reviewer_notes"
+  ],
+  "synthetic_example": {
+    "scheduled_checks": 12,
+    "failed_checks": 2,
+    "valid_answers": 10,
+    "answers_mentioning_brand": 4,
+    "answers_citing_owned_domain": 2,
+    "owned_citation_occurrences": 3,
+    "all_citation_occurrences": 15
+  },
+  "warning": "Synthetic arithmetic example only. Do not label as observed CiteLadder results."
+}

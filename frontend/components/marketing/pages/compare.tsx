@@ -31,6 +31,9 @@ export function CompareIndex() {
           evaluating a purchase.
         </p>
         <div className="website-body text-accent-text flex flex-wrap gap-5">
+          <a href="/best-ai-visibility-platforms" className="underline underline-offset-2">
+            Read the seven-platform research comparison
+          </a>
           <a href="/ai-citation-tracking" className="underline underline-offset-2">
             Understand citation tracking
           </a>

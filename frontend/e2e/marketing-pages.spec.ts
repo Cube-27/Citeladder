@@ -322,12 +322,13 @@ test.describe('marketing routes', () => {
         },
         await response.text(),
       );
-      expect(initial.headings).toEqual([copy.heading]);
+      expect(initial.headings).toHaveLength(1);
+      if (path === '/ai-search-share-of-voice') expect(initial.headings).toEqual([copy.heading]);
       expect(initial.text).toContain(copy.introduction);
       expect(initial.canonical).toBe(
         new URL(path, process.env.PUBLIC_WEBSITE_ORIGIN ?? baseURL).href,
       );
-      expect(initial.socialTitle).toBe(initial.title);
+      expect(initial.socialTitle).toBe(initial.title.replace(/ · CiteLadder$/, ''));
       expect(initial.socialDescription).toBe(initial.description);
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });

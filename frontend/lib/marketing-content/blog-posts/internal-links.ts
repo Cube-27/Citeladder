@@ -18,11 +18,7 @@ export const POST_INTERNAL_LINKS: BlogPost = {
   authorRole: PRODUCT_HEAD.role,
   authorUrl: PRODUCT_HEAD.linkedin,
   tags: ['Internal Linking', 'Site Health', 'Information Architecture'],
-  relatedSlugs: [
-    'auditing-content-for-llms-ai-search',
-    'action-playbook-winning-ai-citations',
-    'verify-improve-ai-search-visibility',
-  ],
+  relatedSlugs: ['auditing-content-for-llms-ai-search', 'action-playbook-winning-ai-citations'],
   sources: [BLOG_SOURCES.googleLinkBestPractices, BLOG_SOURCES.typesafeSystemOne],
   body: [
     {

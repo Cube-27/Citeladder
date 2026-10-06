@@ -18,11 +18,7 @@ export const POST_BUYER_PROMPTS: BlogPost = {
   authorRole: PRODUCT_HEAD.role,
   authorUrl: PRODUCT_HEAD.linkedin,
   tags: ['AI Search Prompts', 'Buyer Intent', 'AI Visibility'],
-  relatedSlugs: [
-    'tracking-brand-visibility-ai-search',
-    'track-optimize-ai-citations',
-    'jev-internal-linking-citeladder',
-  ],
+  relatedSlugs: ['jev-internal-linking-citeladder'],
   sources: [BLOG_SOURCES.typesafeSystemOne],
   body: [
     {
@@ -200,13 +196,13 @@ export const POST_BUYER_PROMPTS: BlogPost = {
         {
           type: 'link',
           text: 'AI visibility measurement',
-          href: '/blog/tracking-brand-visibility-ai-search',
+          href: '/blog/verify-improve-ai-search-visibility',
         },
         ' to set a repeatable baseline, then inspect ',
         {
           type: 'link',
           text: 'the sources winning each prompt',
-          href: '/blog/track-optimize-ai-citations',
+          href: '/ai-citation-tracking',
         },
         ' before deciding what to change. See how teams put this together in ',
         { type: 'link', text: 'CiteLadder solutions', href: '/solutions' },

@@ -1,0 +1,28 @@
+---
+import type { ResearchArticle as ResearchArticleData } from '../research-articles';
+import ResearchArticle from '../components/ResearchArticle.astro';
+import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
+import MarketingLayout from './MarketingLayout.astro';
+
+interface Props { article: ResearchArticleData }
+const { article } = Astro.props;
+const meta = article.frontmatter;
+const breadcrumb = breadcrumbJsonLd([
+  { name: 'Home', path: '/' },
+  { name: 'Guides', path: '/blog' },
+  { name: meta.title, path: meta.slug },
+]);
+// Authorship and publication dates are not supplied. Keep research review
+// dates visible, and defer Article markup until publication metadata is approved.
+---
+
+<MarketingLayout title={`${meta.meta_title} · CiteLadder`} description={meta.meta_description} canonical={meta.slug}
+  keywords={[meta.primary_keyword, ...meta.secondary_keywords]} jsonLd={breadcrumb ? [breadcrumb] : []}>
+  <main id="main">
+    <ResearchArticle article={article}>
+      <slot name="contents" slot="contents" />
+      <slot name="supplement" />
+    </ResearchArticle>
+    <slot />
+  </main>
+</MarketingLayout>

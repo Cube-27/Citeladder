@@ -1,11 +1,8 @@
 import { POST_AUDIT } from './blog-posts/audit';
 import { POST_BUYER_PROMPTS } from './blog-posts/buyer-prompts';
-import { POST_CITATIONS } from './blog-posts/citations';
 import { POST_CONNECT } from './blog-posts/connect';
 import { POST_INTERNAL_LINKS } from './blog-posts/internal-links';
 import { POST_PLAYBOOK } from './blog-posts/playbook';
-import { POST_TRACK } from './blog-posts/track';
-import { POST_VERIFY } from './blog-posts/verify';
 
 /**
  * Editorial content for `/blog` and `/blog/[slug]`.
@@ -116,20 +113,16 @@ export type BlogPost = {
 /**
  * Publication order, and the order the previous/next rail walks.
  *
- * The cluster is one editorial journey — connect the evidence, measure what is
- * observed, diagnose which sources win, audit the owned pages, act on the gap,
- * verify the movement — so each post owns one question and hands the reader to
- * the next rather than restating the whole thesis. Feature posts follow it:
- * how the portfolio is built, then how owned pages are connected. The index sorts by date, so
+ * Block posts cover owned evidence, website readiness, citation actions and
+ * product workflows. The consolidated Markdown research guides own the general
+ * measurement and citation-tracking intents and are listed alongside these posts.
+ * The index sorts by date, so
  * this array only decides the walk and the tie-break between same-day posts.
  */
 export const POSTS: readonly BlogPost[] = [
   POST_CONNECT,
-  POST_TRACK,
-  POST_CITATIONS,
   POST_AUDIT,
   POST_PLAYBOOK,
-  POST_VERIFY,
   POST_BUYER_PROMPTS,
   POST_INTERNAL_LINKS,
 ] as const;
@@ -144,7 +137,7 @@ export const BLOG_START_PATHS = [
     heading: 'Measure visibility',
     body: 'Learn what to count, how to keep observations comparable, and why a visibility percentage needs a clear denominator.',
     label: 'Read the measurement guide',
-    slug: POST_VERIFY.slug,
+    slug: 'verify-improve-ai-search-visibility',
   },
   {
     heading: 'Investigate citations',

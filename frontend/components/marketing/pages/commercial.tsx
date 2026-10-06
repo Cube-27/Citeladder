@@ -5,18 +5,29 @@ import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
 
-export function CommercialEntryPage({ page }: Readonly<{ page: CommercialPage }>) {
+export function CommercialEntryPage({
+  page,
+  showHero = true,
+}: Readonly<{ page: CommercialPage; showHero?: boolean }>) {
   return (
     <>
-      <PageHero eyebrow={page.eyebrow} title={page.heading} lead={page.introduction} centered>
-        <div className="mt-8 flex flex-wrap justify-center gap-4" data-cta-placement="hero">
-          <DemoButtonLink />
-          <ButtonLink href={page.secondary.href} variant="soft">
-            {page.secondary.label}
-          </ButtonLink>
-        </div>
-        <CommercialEvidence kind={page.kind} />
-      </PageHero>
+      {showHero && (
+        <PageHero eyebrow={page.eyebrow} title={page.heading} lead={page.introduction} centered>
+          <div className="mt-8 flex flex-wrap justify-center gap-4" data-cta-placement="hero">
+            <DemoButtonLink />
+            <ButtonLink href={page.secondary.href} variant="soft">
+              {page.secondary.label}
+            </ButtonLink>
+          </div>
+          <CommercialEvidence kind={page.kind} />
+        </PageHero>
+      )}
+      {!showHero && (
+        <Section aria-label="CiteLadder citation workflow">
+          <SectionHeader title={page.heading} lead={page.introduction} />
+          <CommercialEvidence kind={page.kind} />
+        </Section>
+      )}
       <Section>
         <SectionHeader title={page.overview.heading} lead={page.overview.lead} />
         <div className="grid gap-8 md:grid-cols-2 md:gap-16">

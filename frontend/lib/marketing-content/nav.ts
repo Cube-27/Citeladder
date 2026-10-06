@@ -92,6 +92,11 @@ export const NAV_DROPS: readonly NavDrop[] = [
             desc: 'Practical guides to AI visibility and site evidence',
             href: '/blog',
           },
+          {
+            title: 'GEO guide',
+            desc: 'Understand generated answers and where to start',
+            href: '/generative-engine-optimization',
+          },
           { title: 'FAQ', desc: 'Answers on AEO, evidence, security, and billing', href: '/faq' },
           {
             title: 'Compare',

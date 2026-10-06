@@ -1,0 +1,6 @@
+---
+import { researchArticle } from '../research-articles';
+import ResearchLayout from '../layouts/ResearchLayout.astro';
+const article = researchArticle('/best-ai-visibility-platforms')!;
+---
+<ResearchLayout article={article} />
