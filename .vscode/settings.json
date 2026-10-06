@@ -21,5 +21,9 @@
   "editor.formatOnSaveMode": "file",
   "editor.codeActionsOnSave": {
     "source.fixAll.oxc": "explicit"
+  },
+  "sonarlint.connectedMode.project": {
+    "connectionId": "cube-27",
+    "projectKey": "Cube-27_Citeladder"
   }
 }

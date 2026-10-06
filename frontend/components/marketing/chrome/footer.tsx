@@ -42,6 +42,7 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
     links: [
       { label: 'Docs', href: docsHref(), external: true },
       { label: 'Blog', href: '/blog' },
+      { label: 'Free tools', href: '/tools' },
       { label: 'Changelog', href: docsHref('/changelog/'), external: true },
       { label: 'FAQ', href: '/faq' },
     ],

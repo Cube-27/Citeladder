@@ -56,9 +56,13 @@ export function disposableDatabase() {
       });
   }, 120000);
   afterAll(async () => {
-    await db.destroy();
-    if (created) await connection.query(`DROP DATABASE "${name}" WITH (FORCE)`);
-    await connection.end();
+    try {
+      await db.destroy();
+      // Let closing pool connections finish; FORCE can race their socket shutdown.
+      if (created) await connection.query(`DROP DATABASE "${name}"`);
+    } finally {
+      await connection.end();
+    }
   });
   return { db, env, root, execute };
 }
