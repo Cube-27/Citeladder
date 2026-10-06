@@ -45,6 +45,9 @@ export function StructuredDataBuilder() {
   const [detail, setDetail] = useState('');
   const [date, setDate] = useState('');
   const breadcrumb = kind === 'BreadcrumbList';
+  let detailLabel = 'Logo URL (optional)';
+  if (breadcrumb) detailLabel = 'Breadcrumbs';
+  else if (kind === 'Article') detailLabel = 'Author name (person)';
   return (
     <ToolForm
       action="Build JSON-LD"
@@ -87,13 +90,7 @@ export function StructuredDataBuilder() {
         </>
       )}
       <ToolInput
-        label={
-          breadcrumb
-            ? 'Breadcrumbs'
-            : kind === 'Article'
-              ? 'Author name (person)'
-              : 'Logo URL (optional)'
-        }
+        label={detailLabel}
         hint={
           breadcrumb
             ? 'One Name | https://example.com/path per line, in navigation order.'

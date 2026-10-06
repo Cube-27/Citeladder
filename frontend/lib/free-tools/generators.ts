@@ -55,7 +55,8 @@ export function buildSchema(
       url: webUrl(url),
       ...(detail.trim() ? { logo: webUrl(detail) } : {}),
     };
-  return `<script type="application/ld+json">\n${JSON.stringify(result, null, 2).replaceAll('<', '\\u003c')}\n</script>`;
+  const json = JSON.stringify(result, null, 2).replaceAll('<', String.raw`\u003c`);
+  return `<script type="application/ld+json">\n${json}\n</script>`;
 }
 
 const escapeAttribute = (value: string) =>

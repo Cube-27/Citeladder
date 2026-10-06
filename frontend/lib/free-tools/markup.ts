@@ -24,7 +24,9 @@ export function inspectMarkup(html: string, headers: string) {
   template.innerHTML = html;
   const root = template.content;
   const directives = Array.from(root.querySelectorAll('meta[name]'))
-    .filter((node) => /^(robots|googlebot|bingbot)$/i.test(node.getAttribute('name') ?? ''))
+    .filter((node) =>
+      /^(robots|googlebot(?:-[a-z]+)?|bingbot)$/i.test(node.getAttribute('name') ?? ''),
+    )
     .map((node) => `${node.getAttribute('name')}: ${node.getAttribute('content') ?? '(empty)'}`);
   const headerRules = headers
     .split(/\r?\n/)

@@ -13,14 +13,14 @@ export function ToolInput({
   multiline = false,
   hint,
   type = 'text',
-}: {
+}: Readonly<{
   label: string;
   value: string;
   onChange: (value: string) => void;
   multiline?: boolean;
   hint?: string;
   type?: string;
-}) {
+}>) {
   return (
     <Field label={label} hint={hint}>
       {(props) =>
@@ -64,7 +64,7 @@ export function ToolForm({
   sample,
   signature,
   preview,
-}: {
+}: Readonly<{
   children: ReactNode;
   run: () => string;
   action: string;
@@ -72,10 +72,13 @@ export function ToolForm({
   sample: () => void;
   signature: string;
   preview?: ReactNode;
-}) {
+}>) {
   const [result, setResult] = useState<{ text: string; signature: string } | null>(null);
   const [error, setError] = useState('');
   const current = result?.signature === signature ? result.text : '';
+  let status = 'Enter your details or load an example, then run the tool.';
+  if (current) status = 'Ready. Based only on the input you supplied.';
+  else if (result) status = 'Input changed. Run the tool again to update your result.';
   function submit(event: FormEvent) {
     event.preventDefault();
     try {
@@ -115,13 +118,7 @@ export function ToolForm({
         className="bg-canvas-soft border-border-subtle flex min-w-0 flex-col gap-5 rounded-[var(--radius-card)] border p-5 md:p-7"
       >
         <h2 className="website-feature-heading">Your result</h2>
-        <output className="website-body text-muted">
-          {current
-            ? 'Ready. Based only on the input you supplied.'
-            : result
-              ? 'Input changed. Run the tool again to update your result.'
-              : 'Enter your details or load an example, then run the tool.'}
-        </output>
+        <output className="website-body text-muted">{status}</output>
         {preview}
         {current && (
           <>

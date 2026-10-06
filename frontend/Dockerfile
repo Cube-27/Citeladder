@@ -42,6 +42,7 @@ COPY frontend/packages ./packages
 COPY frontend/public ./public
 COPY frontend/scripts ./scripts
 COPY frontend/postcss.config.mjs frontend/tsconfig.json ./
+COPY frontend/services/api/src/config/crawlers.json ./services/api/src/config/crawlers.json
 RUN pnpm build:marketing
 
 FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime

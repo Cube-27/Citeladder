@@ -8,26 +8,25 @@ export function testRobots(body: string, target: string, bots: ToolBot[]) {
   const url = new URL(webUrl(target));
   if (/<\s*(?:!doctype|html|body)\b/i.test(body))
     throw new Error('This looks like HTML. Paste the plain-text robots.txt file.');
-  if (body.trim() && !/^\s*user-agent\s*:/im.test(body))
+  const lines = body.split(/\r?\n/);
+  const hasRules = lines.some((line) => line.trim() && !line.trim().startsWith('#'));
+  if (hasRules && !lines.some((line) => /^user-agent\s*:/i.test(line.trim())))
     throw new Error(
       'No User-agent group found. Paste a robots.txt file, or leave it empty to test an empty file.',
     );
   const parser = robotsParser(`${url.origin}/robots.txt`, body);
-  const lines = body.split(/\r?\n/);
   return bots.flatMap((bot) =>
     bot.tokens.map((token) => {
       const allowed = parser.isAllowed(url.href, token);
       const line = parser.getMatchingLineNumber(url.href, token);
+      let status = 'Unable to determine';
+      if (allowed === true) status = 'Allowed by supplied rules';
+      else if (allowed === false) status = 'Blocked by supplied rules';
       return {
         bot: bot.label,
         token,
         purpose: bot.purpose.replaceAll('_', ' '),
-        status:
-          allowed === undefined
-            ? 'Unable to determine'
-            : allowed
-              ? 'Allowed by supplied rules'
-              : 'Blocked by supplied rules',
+        status,
         evidence:
           line > 0
             ? `Line ${line}: ${lines[line - 1]}`

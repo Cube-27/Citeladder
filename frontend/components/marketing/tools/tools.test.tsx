@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 import { CrawlerChecker, RobotsGenerator } from './robots-tools';
 import { MetaChecker, StructuredDataBuilder } from './markup-tools';
@@ -42,5 +42,28 @@ describe('free tools user workflows', () => {
     expect(screen.queryByLabelText('Generated output')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Test crawler rules' }));
     expect(screen.getByRole('alert')).toHaveTextContent('complete http:// or https:// URL');
+  });
+  it('keeps the example when an earlier sitemap upload finishes afterward', async () => {
+    render(<SitemapComparison />);
+    let finishRead!: (bytes: ArrayBuffer) => void;
+    const pendingRead = new Promise<ArrayBuffer>((resolve) => {
+      finishRead = resolve;
+    });
+    const file = new File(['pending XML'], 'previous.xml', { type: 'application/xml' });
+    Object.defineProperty(file, 'arrayBuffer', { value: () => pendingRead });
+    fireEvent.change(screen.getByLabelText('Upload previous sitemap xml'), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load example' }));
+    const example = screen.getByLabelText<HTMLTextAreaElement>('Previous sitemap XML').value;
+    await act(async () => {
+      finishRead(new TextEncoder().encode('<urlset/>').buffer);
+      await pendingRead;
+    });
+    expect(screen.getByLabelText('Previous sitemap XML')).toHaveValue(example);
+    fireEvent.click(screen.getByRole('button', { name: 'Compare sitemaps' }));
+    expect(screen.getByLabelText('Generated output')).toHaveValue(
+      expect.stringContaining('Removed (1)'),
+    );
   });
 });

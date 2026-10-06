@@ -37,6 +37,9 @@ describe('browser tool transformations', () => {
     );
     expect(() => generateRobots(bots, [], 'User-agent: *', '')).toThrow();
     expect(() => testRobots('<html>Access denied</html>', 'https://example.com', bots)).toThrow();
+    expect(
+      testRobots('# Crawl policy\n  # No restrictions', 'https://example.com', bots)[0].status,
+    ).toBe('Allowed by supplied rules');
   });
   it('preserves directive scope and reports absent headers as unknown', () => {
     const result = inspectMarkup(
@@ -53,6 +56,9 @@ describe('browser tool transformations', () => {
     expect(withHeaders).toContain('An indexing restriction is declared');
     expect(withHeaders).toContain('Link: <https://example.com>');
     expect(document.querySelector('link[rel="canonical"]')).toBeNull();
+    expect(inspectMarkup('<meta name="googlebot-news" content="noindex">', '')).toContain(
+      'googlebot-news: noindex',
+    );
   });
   it('compares exact sitemap URLs and deduplicates without crawling indexes', () => {
     const result = compareSitemaps(
@@ -71,6 +77,15 @@ describe('browser tool transformations', () => {
     expect(() => compareSitemaps('<urlset>', sitemap([]))).toThrow(/Invalid XML/);
     expect(() => compareSitemaps(sitemap(['javascript:alert(1)']), sitemap([]))).toThrow();
     expect(() => compareSitemaps('<!DOCTYPE x><urlset/>', sitemap([]))).toThrow(/entity/);
+    expect(
+      compareSitemaps(`<!-- <!DOCTYPE is just a comment -->${sitemap([])}`, sitemap([])),
+    ).toMatchObject({
+      added: [],
+      removed: [],
+    });
+    const wrongNamespace =
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url xmlns=""><loc>https://example.com/lost</loc></url></urlset>';
+    expect(() => compareSitemaps(wrongNamespace, sitemap([]))).toThrow(/namespace/);
   });
   it('exports safely embedded JSON-LD, real dates and ordered breadcrumb entities', () => {
     const html = buildSchema(

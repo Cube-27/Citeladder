@@ -17,7 +17,9 @@ export function SocialPreview() {
   useEffect(() => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setLocalImage(String(reader.result));
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setLocalImage(reader.result);
+    };
     reader.onerror = () => {
       setLocalImage('');
       setError('Could not read that image.');

@@ -1,26 +1,33 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { readToolFile } from '@/lib/free-tools/input';
 import { compareSitemaps } from '@/lib/free-tools/sitemap';
+import { FREE_TOOL_LIMITS } from '@/lib/config/free-tools';
 import { ToolForm, ToolInput } from './tool-form';
 
 function SitemapInput({
   label,
   value,
   onChange,
-}: {
+}: Readonly<{
   label: string;
   value: string;
   onChange: (value: string) => void;
-}) {
+}>) {
   const [error, setError] = useState('');
   const generation = useRef(0);
+  useEffect(
+    () => () => {
+      generation.current++;
+    },
+    [],
+  );
   return (
     <div className="flex flex-col gap-3">
       <Field
         label={`Upload ${label.toLowerCase()}`}
-        hint="Uncompressed UTF-8 XML, up to 1 MB and 200,000 characters."
+        hint={`Uncompressed UTF-8 XML, up to ${FREE_TOOL_LIMITS.fileBytes / 1_000_000} MB and ${FREE_TOOL_LIMITS.text.toLocaleString()} characters.`}
         error={error}
       >
         {(props) => (
@@ -60,16 +67,22 @@ function SitemapInput({
     </div>
   );
 }
-const xml = (paths: string[]) =>
-  `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${paths.map((path) => `  <url><loc>https://example.com/${path}</loc></url>`).join('\n')}\n</urlset>`;
+const xml = (paths: string[]) => {
+  const entries = paths
+    .map((path) => `  <url><loc>https://example.com/${path}</loc></url>`)
+    .join('\n');
+  return `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`;
+};
 export function SitemapComparison() {
   const [before, setBefore] = useState('');
   const [after, setAfter] = useState('');
+  const [inputRevision, setInputRevision] = useState(0);
   return (
     <ToolForm
       action="Compare sitemaps"
       signature={JSON.stringify([before, after])}
       sample={() => {
+        setInputRevision((revision) => revision + 1);
         setBefore(xml(['', 'old-guide']));
         setAfter(xml(['', 'new-guide']));
       }}
@@ -90,8 +103,18 @@ export function SitemapComparison() {
         ].join('\n');
       }}
     >
-      <SitemapInput label="Previous sitemap XML" value={before} onChange={setBefore} />
-      <SitemapInput label="Current sitemap XML" value={after} onChange={setAfter} />
+      <SitemapInput
+        key={`previous-${inputRevision}`}
+        label="Previous sitemap XML"
+        value={before}
+        onChange={setBefore}
+      />
+      <SitemapInput
+        key={`current-${inputRevision}`}
+        label="Current sitemap XML"
+        value={after}
+        onChange={setAfter}
+      />
     </ToolForm>
   );
 }

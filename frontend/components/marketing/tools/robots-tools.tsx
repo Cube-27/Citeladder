@@ -16,7 +16,7 @@ function report(body: string, url: string, bots: ToolBot[]) {
   ].join('\n');
 }
 
-export function CrawlerChecker({ bots }: { bots: ToolBot[] }) {
+export function CrawlerChecker({ bots }: Readonly<{ bots: ToolBot[] }>) {
   const [body, setBody] = useState('');
   const [url, setUrl] = useState('');
   return (
@@ -46,7 +46,7 @@ export function CrawlerChecker({ bots }: { bots: ToolBot[] }) {
   );
 }
 
-export function RobotsGenerator({ bots }: { bots: ToolBot[] }) {
+export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
   const [blocked, setBlocked] = useState<string[]>([]);
   const [paths, setPaths] = useState('');
   const [sitemap, setSitemap] = useState('');
