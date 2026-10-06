@@ -32,7 +32,7 @@ function canonicalOrigin(value: string) {
 }
 
 /** The comparison form: lower-cased origin, trailing slashes trimmed, tracking parameters dropped. */
-function comparableUrl(value: string) {
+export function comparableUrl(value: string) {
   const raw = value.trim();
   let url: URL;
   try {

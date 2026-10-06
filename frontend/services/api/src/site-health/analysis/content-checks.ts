@@ -2,6 +2,7 @@
 import { compareText } from '../../text-order.ts';
 import { analysisPolicy } from './policy.ts';
 import { passFail } from './delivery-checks.ts';
+import { isGenericItemLabel } from './copy.ts';
 import type { CheckResult } from './indexing.ts';
 import { isAnswerHeading } from './questions.ts';
 import { count, list, record, records, text, textList, type Facts } from './read-facts.ts';
@@ -130,6 +131,13 @@ function sourceSupportPresent(facts: Facts): CheckResult {
 function headingHierarchy(facts: Facts): CheckResult {
   if (!Array.isArray(facts.primary_heading_outline))
     return ['unknown', { scope: 'primary_content', reason: 'heading_outline_unavailable' }];
+  if (
+    facts.primary_heading_outline.some((item) => {
+      const level = record(item).level;
+      return typeof level !== 'number' || !Number.isInteger(level) || level < 1 || level > 6;
+    })
+  )
+    return ['unknown', { scope: 'primary_content', reason: 'heading_level_invalid' }];
   const sections = records(facts.primary_heading_outline)
     .filter((item) => text(item.text).trim())
     .map((item) => ({ level: count(item.level), text: text(item.text).slice(0, 256) }));
@@ -393,21 +401,28 @@ function listingAnswerSet(facts: Facts, contract: CompositeContract): CheckResul
   return [compositeOutcome(contract, atoms), { atoms, threshold: contract.threshold }];
 }
 
+function emptyListingItems(facts: Facts, cards: Facts[], collection: Facts): CheckResult | null {
+  if (record(record(facts.entity).listing).has_empty_state !== true) return null;
+  const container = record(collection.container);
+  if (cards.length || count(container.item_count) > 0 || records(collection.items).length)
+    return ['unknown', { reason: 'conflicting_empty_collection', items: [] }];
+  if (!text(container.tag) || container.item_count !== 0)
+    return ['unknown', { reason: 'empty_collection_unconfirmed', items: [] }];
+  return ['not_applicable', { reason: 'explicit_empty_collection', item_fact_count: 0, items: [] }];
+}
+
 function listingItemFacts(facts: Facts): CheckResult {
   const cards = records(record(facts.commerce).product_cards);
   const collection = record(record(record(facts.entity).listing).collection_evidence);
+  const empty = emptyListingItems(facts, cards, collection);
+  if (empty) return empty;
   const complete = [...cards, ...records(collection.items)].flatMap((card) => {
     const title = text(card.title);
     const url = text(card.url);
-    return title.trim() && url.trim()
+    return title.trim() && !isGenericItemLabel(title) && url.trim()
       ? [{ title: title.slice(0, 256), url: url.slice(0, 512) }]
       : [];
   });
-  if (record(record(facts.entity).listing).has_empty_state && !complete.length)
-    return [
-      'not_applicable',
-      { reason: 'explicit_empty_collection', item_fact_count: 0, items: [] },
-    ];
   if (
     !complete.length &&
     count(record(collection.container).item_count) > 0 &&

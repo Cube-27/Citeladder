@@ -36,6 +36,18 @@
         "same_as_chars": 256
       },
       "cta_button_role_tokens": ["apply", "btn", "button", "cta", "enquire", "enquiry", "submit"],
+      "generic_item_link_labels": [
+        "view product",
+        "view item",
+        "view details",
+        "shop now",
+        "buy now",
+        "add to cart",
+        "learn more",
+        "read more",
+        "see details",
+        "details"
+      ],
       "inline_script_javascript_types": [
         "application/ecmascript",
         "application/javascript",

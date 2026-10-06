@@ -258,7 +258,12 @@ card or grid do not turn its excerpts into page-owned prose.
 Primary-content extraction retains page and section wrappers around nested
 card lists while excluding the cards themselves. Heading hierarchy checks
 report observed upward level skips; an absent primary outline is unknown,
-not proof of skipped levels.
+not proof of skipped levels. Missing or invalid heading levels also remain unknown.
+Article self-links use the same trailing-slash and tracking-parameter comparison
+as indexing intent, so they do not turn authored prose into excerpts.
+Generic card actions such as “View product” do not establish an item name.
+An empty-collection exemption requires a captured zero-item container;
+contradictory item observations and unavailable counts remain unknown.
 
 Variant controls require a configured variant identity on the control or its
 associated label; unrelated currency, country, quantity and payment controls

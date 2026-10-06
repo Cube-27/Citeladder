@@ -70,12 +70,12 @@ describe('evidenceFacts', () => {
     expect(evidenceFacts('aeo.listing_item_facts', { item_fact_count: 0, items: [] })).toEqual([
       'No listing item with both title and URL',
     ]);
-    expect(evidenceFacts('aeo.heading_hierarchy', { section_count: 0, sections: [] })).toEqual([
-      'No primary-content heading sections',
-    ]);
+    expect(
+      evidenceFacts('aeo.heading_hierarchy', { reason: 'heading_outline_unavailable' }),
+    ).toEqual(['heading outline unavailable']);
   });
 
-  it('shows the observed AEO heading skips while preserving historical section evidence', () => {
+  it('shows observed AEO heading skips and preserves unknown historical evidence', () => {
     expect(
       evidenceFacts('aeo.heading_hierarchy', {
         skips: [

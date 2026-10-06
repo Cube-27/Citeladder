@@ -4,6 +4,7 @@
  * These are observations; the classifier decides what they mean.
  */
 import {
+  ancestors,
   attribute,
   childElements,
   elements,
@@ -15,6 +16,7 @@ import {
 } from '../../web-evidence/html.ts';
 import { stripTrailing } from '../../text-order.ts';
 import { analysisPolicy, limits, regionPolicy, squash } from './policy.ts';
+import { isGenericItemLabel } from './copy.ts';
 import {
   CHROME_REGIONS,
   containerName,
@@ -199,24 +201,40 @@ function hasPurchaseControl(page: PageScope) {
   });
 }
 
-/** A variant identity on the control or its explicitly associated label. */
+function implicitVariantLabel(control: HtmlElement, page: PageScope) {
+  const id = attribute(control, 'id').trim();
+  let depth = 0;
+  for (const ancestor of ancestors(control)) {
+    if (++depth > regionPolicy.max_ancestor_depth || ancestor === page.region) break;
+    if (ancestor.tagName !== 'label') continue;
+    const target = attribute(ancestor, 'for').trim();
+    return (
+      (!target || target === id) &&
+      outsideContainers(ancestor, page.cards) &&
+      regionNodeIsVisible(ancestor) &&
+      intersects(normalizedTokens(regionText(ancestor)), VARIANT)
+    );
+  }
+  return false;
+}
+
+/** A variant identity on the control or its associated visible label. */
 function variantIdentity(control: HtmlElement, page: PageScope) {
   if (matchesTokens(control, VARIANT)) return true;
   const id = attribute(control, 'id').trim();
-  const labelledBy = attribute(control, 'aria-labelledby').split(/\s+/u).filter(Boolean);
+  const labelledBy = new Set(attribute(control, 'aria-labelledby').split(/\s+/u).filter(Boolean));
   for (const node of find(
     page.region,
     (item) =>
       (item.tagName === 'label' && id !== '' && attribute(item, 'for') === id) ||
-      labelledBy.includes(attribute(item, 'id')),
+      labelledBy.has(attribute(item, 'id')),
   ))
     if (
       outsideContainers(node, page.cards) &&
-      intersects(normalizedTokens(textContent(node)), VARIANT)
+      intersects(normalizedTokens(regionText(node)), VARIANT)
     )
       return true;
-  const parent = parentElement(control);
-  return parent?.tagName === 'label' && intersects(normalizedTokens(textContent(parent)), VARIANT);
+  return implicitVariantLabel(control, page);
 }
 
 /** A multi-option variant selector or explicitly named variant radio group. */
@@ -356,6 +374,37 @@ function listingContainers(page: PageScope) {
   return containers;
 }
 
+/** A visible navigable target; item naming is assessed separately. */
+function cardTarget(anchor: HtmlElement, finalUrl: string) {
+  if (!regionNodeIsVisible(anchor)) return null;
+  const href = attribute(anchor, 'href').trim();
+  if (
+    !href ||
+    analysisPolicy.facts.non_navigable_href_prefixes.some((prefix) =>
+      href.toLowerCase().startsWith(prefix),
+    )
+  )
+    return null;
+  try {
+    const target = new URL(href, finalUrl);
+    return ['http:', 'https:'].includes(target.protocol) ? target : null;
+  } catch {
+    return null;
+  }
+}
+
+function cardTitle(anchor: HtmlElement) {
+  const label = squash(regionText(anchor));
+  if (label && !isGenericItemLabel(label)) return label;
+  const alternative = squash(
+    [...elements(anchor, 'img')]
+      .filter(regionNodeIsVisible)
+      .map((image) => attribute(image, 'alt'))
+      .join(' '),
+  );
+  return isGenericItemLabel(alternative) ? '' : alternative;
+}
+
 function cardObservation(container: HtmlElement, finalUrl: string) {
   let items = 0;
   const targets = new Set<string>();
@@ -363,32 +412,11 @@ function cardObservation(container: HtmlElement, finalUrl: string) {
   for (const child of childElements(container)) {
     let hasTarget = false;
     for (const anchor of elements(child, 'a')) {
-      if (!regionNodeIsVisible(anchor)) continue;
-      const href = attribute(anchor, 'href').trim();
-      if (
-        !href ||
-        analysisPolicy.facts.non_navigable_href_prefixes.some((prefix) =>
-          href.toLowerCase().startsWith(prefix),
-        )
-      )
-        continue;
-      let target: URL;
-      try {
-        target = new URL(href, finalUrl);
-      } catch {
-        continue;
-      }
-      if (!['http:', 'https:'].includes(target.protocol)) continue;
+      const target = cardTarget(anchor, finalUrl);
+      if (!target) continue;
       hasTarget = true;
       targets.add(target.href);
-      const title =
-        squash(regionText(anchor)) ||
-        squash(
-          [...elements(anchor, 'img')]
-            .filter(regionNodeIsVisible)
-            .map((image) => attribute(image, 'alt'))
-            .join(' '),
-        );
+      const title = cardTitle(anchor);
       if (
         title &&
         details.length < limits.evidence_urls &&

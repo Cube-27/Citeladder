@@ -132,7 +132,18 @@ describe('page checklist', () => {
       { from: 3, to: 5, text: 'Detail' },
     ]);
     const page = facts('<main><h1>Notes</h1></main>', 'https://example.test/blog/notes');
-    for (const outline of [undefined, []]) {
+    for (const outline of [
+      undefined,
+      [],
+      [{ text: 'Unknown level' }],
+      [{ level: 0, text: 'Invalid level' }],
+      [{ level: 7, text: 'Invalid level' }],
+      [{ level: 2.5, text: 'Fractional level' }],
+      [
+        { level: 1, text: 'Known' },
+        { level: 'bad', text: 'Unknown' },
+      ],
+    ]) {
       const row = byRule(
         analyzePage({ ...page, primary_heading_outline: outline }, context).evaluations,
       ).get('aeo.heading_hierarchy')!;

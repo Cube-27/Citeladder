@@ -18,6 +18,7 @@ import {
   type HtmlText,
 } from '../../web-evidence/html.ts';
 import { regionPolicy as r, limits, squash } from './policy.ts';
+import { comparableUrl } from './indexing.ts';
 
 const EXCLUDED_TAGS = new Set(r.excluded_tags);
 const NON_RENDERED_TAGS = new Set(r.non_rendered_tags);
@@ -249,6 +250,25 @@ function isCardList(candidate: HtmlElement) {
   );
 }
 
+function headingNamesAnotherDocument(heading: HtmlElement, finalUrl: string) {
+  const headingText = squash(textContent(heading));
+  if (!headingText) return false;
+  for (const anchor of elements(heading, 'a')) {
+    if (squash(textContent(anchor)) !== headingText) continue;
+    try {
+      const target = new URL(attribute(anchor, 'href'), finalUrl);
+      if (
+        ['http:', 'https:'].includes(target.protocol) &&
+        comparableUrl(target.href) !== comparableUrl(finalUrl)
+      )
+        return true;
+    } catch {
+      // An unusable link cannot establish an excerpt's target document.
+    }
+  }
+  return false;
+}
+
 /** A featured article whose heading names another document is an excerpt, even on its own. */
 function linkedArticleExcerpt(node: HtmlElement, finalUrl: string) {
   if (node.tagName !== 'article') return false;
@@ -256,22 +276,7 @@ function linkedArticleExcerpt(node: HtmlElement, finalUrl: string) {
   for (const heading of elements(node)) {
     if (++scanned > r.max_containers_scanned) break;
     if (!HEADINGS.has(heading.tagName) || !regionNodeIsVisible(heading)) continue;
-    if (heading.tagName === 'h1') return false;
-    const headingText = squash(textContent(heading));
-    for (const anchor of elements(heading, 'a')) {
-      if (!headingText || squash(textContent(anchor)) !== headingText) continue;
-      try {
-        const target = new URL(attribute(anchor, 'href'), finalUrl);
-        const current = new URL(finalUrl);
-        target.hash = '';
-        current.hash = '';
-        if (['http:', 'https:'].includes(target.protocol) && target.href !== current.href)
-          return true;
-      } catch {
-        // An unusable link cannot establish an excerpt's target document.
-      }
-    }
-    return false;
+    return heading.tagName !== 'h1' && headingNamesAnotherDocument(heading, finalUrl);
   }
   return false;
 }

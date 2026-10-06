@@ -57,6 +57,43 @@ describe('page-purpose regression boundaries', () => {
   });
 
   it.each([
+    [
+      '<label>Size<span><select><option>Small</option><option>Large</option></select></span></label>',
+      'product',
+    ],
+    [
+      "<label for='different'>Size<span><select id='choice'><option>Small</option><option>Large</option></select></span></label>",
+      'other',
+    ],
+  ])("uses only the control's own implicit label through wrappers", (control, expected) => {
+    const { result } = inspect(
+      `<main><h1>Shirt</h1>${control}<button>Add to cart</button></main>`,
+      '/shirt',
+    );
+    expect(result.assessment.page_kind).toBe(expected);
+  });
+
+  it.each(['/blog/notes/', '/blog/notes?utm_source=newsletter', '/blog/notes#section'])(
+    'preserves article prose when its heading links to itself as %s',
+    (href) => {
+      const { facts } = inspect(
+        `<main><h1>Research notes</h1><article><h2><a href='${href}'>Research notes</a></h2><p>${prose}</p></article></main>`,
+        '/blog/notes',
+      );
+      expect(facts.authored_content).toBe(true);
+      expect(facts.primary_content_text).toContain(prose);
+    },
+  );
+
+  it('keeps meaningful query parameters when deciding whether a heading links to an excerpt', () => {
+    const { facts } = inspect(
+      `<main><h1>Research notes</h1><article><h2><a href='/blog/notes?article=another'>Other notes</a></h2><p>${prose}</p></article></main>`,
+      '/blog/notes',
+    );
+    expect(facts.authored_content).toBe(false);
+  });
+
+  it.each([
     '/blog/page/2',
     '/en/blog/category/marketing',
     '/blog/tag/aeo/page/2',
@@ -152,6 +189,61 @@ describe('page-purpose regression boundaries', () => {
     expect(
       legacy.evaluations.find((row) => row.rule_id === 'aeo.listing_item_facts')!.outcome,
     ).toBe('unknown');
+  });
+
+  it.each(['/item-', '/products/item-'])(
+    'does not accept generic card CTAs as item names on %s URLs',
+    (prefix) => {
+      const body = (name: string) =>
+        `<main><h1>Teapots</h1><section><p role='status'>9 results</p><div class='collection-grid'>${Array.from(
+          { length: 9 },
+          (_, index) => `<div><a href='${prefix}${index}'>${name}</a></div>`,
+        ).join('')}</div></section></main>`;
+      expect(
+        inspect(body('View product'), '/shop').rules.get('aeo.listing_item_facts')!.outcome,
+      ).toBe('missing');
+      expect(
+        inspect(body('Minimalist teapot'), '/shop').rules.get('aeo.listing_item_facts')!.outcome,
+      ).toBe('satisfied');
+    },
+  );
+
+  it('requires confirmed empty collection evidence and preserves contradictory or unavailable items', () => {
+    const { facts } = inspect(
+      `<main><h1>Teapots</h1><section><p role='status'>9 results</p>${grid('teapot')}</section></main>`,
+      '/shop',
+    );
+    const listing = facts.entity.listing;
+    const collection = listing.collection_evidence;
+    for (const [container, items, outcome, reason] of [
+      [{ tag: 'div', item_count: 0 }, [], 'not_applicable', 'explicit_empty_collection'],
+      [{ tag: 'div', item_count: 9 }, [], 'unknown', 'conflicting_empty_collection'],
+      [{ tag: 'div', item_count: 9 }, undefined, 'unknown', 'conflicting_empty_collection'],
+      [{ tag: 'div', item_count: 0 }, collection.items, 'unknown', 'conflicting_empty_collection'],
+      [{}, undefined, 'unknown', 'empty_collection_unconfirmed'],
+    ] as const) {
+      const result = analyzePage(
+        {
+          ...facts,
+          commerce: { product_cards: [] },
+          entity: {
+            ...facts.entity,
+            listing: {
+              ...listing,
+              has_empty_state: true,
+              collection_evidence: { ...collection, container, items },
+            },
+          },
+        },
+        { sitemapMember: false, siteFacts: null, auditTime: null },
+      );
+      const row: RuleEvaluation = result.evaluations.find(
+        (item) => item.rule_id === 'aeo.listing_item_facts',
+      )!;
+      expect(row.outcome).toBe(outcome);
+      expect(row.evidence.reason).toBe(reason);
+      expect(createsIssue(row)).toBe(false);
+    }
   });
 
   it.each(['Acme Inc.', 'Acme GmbH', 'Acme Private Limited'])(

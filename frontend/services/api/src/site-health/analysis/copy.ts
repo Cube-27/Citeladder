@@ -31,6 +31,11 @@ const METADATA_TOKENS = new Set([
   'timestamp',
 ]);
 export const CTA_TOKENS = new Set(analysisPolicy.facts.cta_button_role_tokens);
+const GENERIC_ITEM_LABELS = new Set(analysisPolicy.facts.generic_item_link_labels);
+
+/** A navigation action does not establish the linked item's identity. */
+export const isGenericItemLabel = (value: string) =>
+  GENERIC_ITEM_LABELS.has(squash(value).toLowerCase());
 
 const attributeTokens = (node: HtmlElement) =>
   ['class', 'id', 'itemprop', 'rel', 'role']
