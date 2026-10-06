@@ -197,6 +197,7 @@ jobs:
           CITELADDER_ORIGIN_TOKEN_PREVIOUS: ${{ secrets.CITELADDER_ORIGIN_TOKEN_PREVIOUS }}
           GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
           GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           DEFAULT_AGENT_API_KEY: ${{ secrets.DEFAULT_AGENT_API_KEY }}
           KEENABLE_API_KEY: ${{ secrets.KEENABLE_API_KEY }}
           JEV_API_KEY: ${{ secrets.JEV_API_KEY }}
@@ -273,6 +274,7 @@ jobs:
           sync_optional_value citeladder-keenable-api-key "$KEENABLE_API_KEY"
           sync_optional_value citeladder-jev-api-key "$JEV_API_KEY"
           sync_optional_value citeladder-tavily-api-key "$TAVILY_API_KEY"
+          sync_optional_value citeladder-resend-api-key "$RESEND_API_KEY"
           sync_optional_value citeladder-bing-oauth-client-id "$BING_OAUTH_CLIENT_ID"
           sync_optional_value citeladder-bing-oauth-client-secret "$BING_OAUTH_CLIENT_SECRET"
           sync_optional_value citeladder-dataforseo-login "$DATAFORSEO_API_LOGIN"

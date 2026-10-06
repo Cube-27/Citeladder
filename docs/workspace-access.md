@@ -13,8 +13,10 @@ The designation is distinct from platform/operator administration.
 [auth service](../frontend/services/api/src/auth/service.ts) own session establishment.
 Registration returns a generic acknowledgement rather than a session, and is
 refused unless `PUBLIC_SIGNUP_ENABLED` is set; operators otherwise create
-accounts with the native `account:manage` CLI. Google sign-in, which
-creates an account on first use, is separately gated by `OAUTH_GOOGLE_ENABLED`.
+accounts with the native `account:manage` CLI. New public identities are pending
+until mailbox verification; legacy/operator identities retain their explicit
+access policy without invented verification timestamps. Google sign-in is gated
+by `OAUTH_GOOGLE_ENABLED`; new Google identities also require `PUBLIC_SIGNUP_ENABLED`.
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. The frontend crosses the
 identity boundary with full-document navigation so a prefetched anonymous
@@ -24,7 +26,11 @@ TypeScript issues sessions and owns OAuth, abuse policy and Argon2 parameters.
 Native account administration, local login and deployment bootstrap share the
 password owner. Google sign-in
 uses a signed state bound to an HttpOnly transaction cookie and verified email
-before linking a new provider subject. Provider requests have host, redirect,
+before accepting authoritative Gmail/Workspace mailbox proof. Linking an existing
+verified account requires its current password through Account security. Claiming
+a pending public identity with authoritative Google proof clears its password
+and invalidates old sessions/challenges. Third-party Google addresses use mailbox
+recovery before access. Provider requests have host, redirect,
 deadline and response-size bounds. PostgreSQL abuse counters commit before
 password verification or provider I/O; successful credentials bypass email
 failure budgets.
@@ -94,9 +100,26 @@ recheck live authority after taking the lock. Creation and incoming ownership
 share the per-user creation advisory lock. Terms and product-tour reads never
 repair state.
 
-Invitation records exist, but there is no mail transport owner. Multi-workspace
-selection at sign-in remains deferred; neither limitation is a claim that the
-membership model itself is absent.
+Invitation issuance commits before bounded Resend delivery. Provider acceptance
+is distinct from inbox delivery; the one-time copy-link fallback remains usable
+after mail failure. Resend rotates the token. Auth continuation permits only
+reconstructed invitation and MCP paths; Google keeps invitation secrets in an
+encrypted transaction-bound browser cookie, outside provider-visible state.
+
+Verification and password reset use purpose-bound SHA-256 token digests, atomic
+single consumption and bounded request/send budgets. Links carry tokens in the
+fragment; GET never consumes them. Verification requires the signup password.
+Reset replaces the password, may verify a pending mailbox, invalidates outstanding
+challenges and revokes sessions. Password change requires the current password;
+logout and explicit sign-out-all revoke every session. Account security reports
+actual methods and verification state. Mail is request-bounded, not a durable queue:
+a crash after commit is recovered by requesting a new link after cooldown.
+
+Product REST, MCP and execution boundaries resolve persisted workspace access
+at the current time. Expiry preserves data while allowing account security,
+minimal membership/access discovery, Terms, invitation acceptance and switching
+to another workspace. The shell blocks product content and clears product caches
+when access ends. Missing access authority is distinct from an expired trial.
 
 ## Browser selection and reads
 

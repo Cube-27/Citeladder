@@ -5,6 +5,10 @@ Completed implementation plans are retained in [the archive](../archive/).
 
 ## Active
 
+- [Self-serve authentication and verified email](citeladder-self-serve-authentication.md):
+  repository implementation complete on 6 October 2026; PR/CI review pending.
+  Public rollout and live-provider acceptance remain separate.
+
 - [ChatGPT plugin](citeladder-chatgpt-plugin.md): repository implementation complete
   for Visibility, Site Health, public workflows and optional sidebar/context.
   Founder-pilot gating was waived in favor of disposable fixtures/mock-host
@@ -33,10 +37,6 @@ Completed implementation plans are retained in [the archive](../archive/).
 
 ## Queued and retained planning
 
-- [Self-serve authentication and verified email](citeladder-self-serve-authentication.md):
-  proposed Google/email signup, email verification, seven-day trial access,
-  transactional mail and account security. Saved for review; implementation and
-  production rollout are not yet authorized.
 - [MCP Events](citeladder-mcp-events.md): separate proposed follow-up for measured
   changes, subscription filters and durable delivery; not part of plugin release
   or authorized for implementation.
@@ -47,8 +47,8 @@ Completed implementation plans are retained in [the archive](../archive/).
   remaining evidence/action and selected-query generation work. Subsequent prompt
   grounding in relevance-ranked persisted GSC evidence remains deferred.
 - [Shell/commercial follow-up](citeladder-authed-shell-and-commercial-architecture.md):
-  retained for sign-in workspace selection and invitation delivery, not an active
-  implementation assignment.
+  retained for sign-in workspace selection, not an active implementation assignment.
+  Invitation delivery is implemented by the self-serve authentication plan.
 
 ## Completed implementation and operational follow-up
 

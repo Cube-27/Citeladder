@@ -36,7 +36,7 @@ identity, credential mode, price, quantity and terms. Corrections use reviewed
 forward-publication, never rewriting historical terms.
 
 The [TypeScript resolver](../frontend/services/api/src/entitlements/resolve.ts) chooses the active
-primary profile, falling back to the free baseline, then applies deliberate
+primary profile, retaining eligible non-public free baselines, then applies deliberate
 supplements. Grants/revocations remain append-only. Occupancy admission uses
 locked current counts; reads expose persisted/current projections without
 repairing provisioning or acquiring admission locks. Missing authority is not
@@ -45,6 +45,26 @@ admit prompt slots in [`src/entitlements/`](../frontend/services/api/src/entitle
 under the [account capacity lock](../frontend/services/api/src/entitlements/occupancy.ts)
 (a personalized BLAKE2b of `OCCUPANCY_LOCK_NAMESPACE` and the account id).
 Commerce, project and prompt writers serialize on that same TypeScript boundary.
+
+Public registration persists its origin on the identity and billing account and
+issues `public-trial-v1` once, starting at the original registration cohort and
+ending after `BILLING_TRIAL_DAYS` (release value 7). Login and operator repair
+cannot add a permanent baseline to that account. Public provenance also consumes
+eligibility for the separate no-card campaign. Existing non-public grants remain.
+The trial allows one project, 20 prompts, 20 monitored URLs and ChatGPT only;
+Agent and AI credits remain unavailable. Its separate `successful_answers` ledger
+reserves 20 lifetime answers, debits successful tasks once and releases terminal
+failures. Immutable task snapshots retain the original prompt ID for the one-success
+per-prompt limit, including audit repair. Attempt funding remains separately bounded.
+
+`entitlements/access.ts` resolves `active`, `trial_active`, `trial_expired` and
+`access_unresolved` without writes. Expiry is checked at dispatch and subsequent
+network boundaries; already-dispatched evidence may settle. Capacity supplements
+and credit top-ups do not reopen expired access. An explicit operator
+`workspace_access=1` override can restore it through the existing
+`billing:admin grant` command, with explicit workspace/account, active platform admin, reason,
+idempotency key and dry-run before `--apply`. Additional capacity is a separate
+deliberate grant; this operation never reissues a trial.
 
 ## Explicit purchase to settlement
 

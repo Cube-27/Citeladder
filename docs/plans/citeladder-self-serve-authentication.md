@@ -1,6 +1,8 @@
 # Self-serve authentication, verified email and trial access
 
-Status: proposed; saved for review, not authorized for implementation or rollout.
+Status: repository implementation complete on 6 October 2026; PR/CI review pending.
+Public rollout, deployed-schema compatibility and live-provider acceptance remain
+separately authorized operations.
 Date: 5 October 2026. Repository inspection baseline: `04c5c0a32`.
 
 ## Outcome and scope
