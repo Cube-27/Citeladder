@@ -16,7 +16,11 @@ const privateSegments = [
   'site',
   'visibility',
 ];
-const privatePaths = ['/api/', ...privateSegments.map((segment) => `/${segment}`)];
+// Match route boundaries so /site stays private without blocking /sitemap.xml.
+const privatePaths = [
+  '/api/',
+  ...privateSegments.flatMap((segment) => [`/${segment}$`, `/${segment}/`, `/${segment}?`]),
+];
 const aiCrawlers = [
   'GPTBot',
   'OAI-SearchBot',
