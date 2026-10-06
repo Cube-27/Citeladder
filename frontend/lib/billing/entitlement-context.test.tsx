@@ -1,11 +1,12 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { queryKeys } from '@/lib/api/query-keys';
 
-import { EntitlementProvider, useEntitlement } from './entitlement-context';
+import { EntitlementProvider, useEntitlement, capabilityRemaining } from './entitlement-context';
 
 const WORKSPACE = '22222222-2222-4222-8222-222222222222';
 
@@ -32,9 +33,14 @@ function entitlement(capabilities: readonly unknown[]) {
 }
 
 function Probe() {
-  const { isLoading, hasCapability } = useEntitlement();
+  const { isLoading, hasCapability, entitlement: data } = useEntitlement();
   return (
-    <span data-testid="probe">{`${isLoading ? 'unresolved' : 'resolved'}:${hasCapability('agent')}`}</span>
+    <>
+      <span data-testid="probe">{`${isLoading ? 'unresolved' : 'resolved'}:${hasCapability('agent')}`}</span>
+      <span data-testid="project-slots">
+        {capabilityRemaining(data, 'project_slots') ?? 'unknown'}
+      </span>
+    </>
   );
 }
 
@@ -54,6 +60,46 @@ afterAll(() => mswServer.close());
  * workspace being asked whether it may create its first one.
  */
 describe('EntitlementProvider', () => {
+  it('drops cached positive authority when a later workspace entitlement read fails', async () => {
+    selection = { activeWorkspaceId: WORKSPACE, status: 'ready' };
+    mswServer.use(
+      http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
+        HttpResponse.json({
+          ...entitlement([
+            {
+              key: 'agent',
+              type: 'flag',
+              value: true,
+              valid_until: null,
+              provenance: 'effective_grant',
+            },
+          ]),
+          occupancy: [{ key: 'project_slots', allowance: 1, consumed: 0, remaining: 1 }],
+        }),
+      ),
+    );
+    const { queryClient } = renderWithProviders(
+      <EntitlementProvider>
+        <Probe />
+      </EntitlementProvider>,
+    );
+    expect(await screen.findByText('resolved:true')).toBeInTheDocument();
+    expect(screen.getByTestId('project-slots')).toHaveTextContent('1');
+    mswServer.use(
+      http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
+        HttpResponse.json({ detail: 'Unavailable' }, { status: 403 }),
+      ),
+    );
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.billing.workspaceEntitlement(WORKSPACE),
+        exact: true,
+      });
+    });
+    await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('resolved:false'));
+    expect(screen.getByTestId('project-slots')).toHaveTextContent('unknown');
+  });
+
   it('reports unresolved while the workspace is still resolving', async () => {
     selection = { activeWorkspaceId: null, status: 'resolving' };
     mswServer.use(
