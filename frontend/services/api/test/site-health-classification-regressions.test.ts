@@ -93,6 +93,36 @@ describe('page-purpose regression boundaries', () => {
     expect(facts.authored_content).toBe(false);
   });
 
+  it.each(['', " role='main'"])(
+    'retains the selected article region without a main wrapper%s',
+    (attributes) => {
+      const { facts } = inspect(
+        `<body><h1>Latest posts</h1><article${attributes}><h2><a href='/blog/one'>Entry one</a></h2><div class='prose'><p>${prose}</p></div></article><article><h2><a href='/blog/two'>Entry two</a></h2><p>Another excerpt.</p></article></body>`,
+        '/blog',
+      );
+      expect(facts.primary_content_text).toContain(prose);
+      expect(facts.primary_heading_outline).toContainEqual({ level: 2, text: 'Entry one' });
+    },
+  );
+
+  it.each([
+    '<fieldset><legend>Size</legend>',
+    "<div role='radiogroup' aria-label='Size'>",
+    "<div role='radiogroup' aria-labelledby='variant-label'><span id='variant-label'>Size</span>",
+  ])('recognizes a named radio group through %s', (opening) => {
+    const closing = opening.startsWith('<fieldset') ? '</fieldset>' : '</div>';
+    const { result } = inspect(
+      `<main><h1>Shirt</h1>${opening}<input type='radio' name='choice' value='small'><input type='radio' name='choice' value='large'>${closing}<button>Add to cart</button></main>`,
+      '/shirt',
+    );
+    expect(result.assessment.page_kind).toBe('product');
+    const unrelated = inspect(
+      `<main><h1>Shirt</h1><fieldset><legend>Size</legend></fieldset><input type='radio' name='choice' value='small'><input type='radio' name='choice' value='large'><button>Add to cart</button></main>`,
+      '/shirt',
+    );
+    expect(unrelated.facts.entity.product.has_variant_control).toBe(false);
+  });
+
   it.each([
     '/blog/page/2',
     '/en/blog/category/marketing',
@@ -207,6 +237,25 @@ describe('page-purpose regression boundaries', () => {
       ).toBe('satisfied');
     },
   );
+
+  it.each([
+    "aria-label='Minimalist teapot'><svg aria-hidden='true'></svg>",
+    '><svg><title>Minimalist teapot</title></svg>',
+  ])('reads an icon link item name from %s', (link) => {
+    const { rules } = inspect(
+      `<main><h1>Teapots</h1><section><p role='status'>9 results</p><div class='collection-grid'>${Array.from(
+        { length: 9 },
+        (_, index) => `<div><a href='/teapot-${index}' ${link}</a></div>`,
+      ).join('')}</div></section></main>`,
+      '/shop',
+    );
+    const row = rules.get('aeo.listing_item_facts')!;
+    expect(row.outcome).toBe('satisfied');
+    expect(row.evidence.items).toContainEqual({
+      title: 'Minimalist teapot',
+      url: 'https://example.test/teapot-0',
+    });
+  });
 
   it('requires confirmed empty collection evidence and preserves contradictory or unavailable items', () => {
     const { facts } = inspect(

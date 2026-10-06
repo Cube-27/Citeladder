@@ -255,9 +255,9 @@ Unconfirmed authorship remains unknown and cannot create a missing-author or
 missing-source finding. Repeated cards and single excerpts whose headings link
 to another document do not establish authored content. Rich-text classes on a
 card or grid do not turn its excerpts into page-owned prose.
-Primary-content extraction retains page and section wrappers around nested
-card lists while excluding the cards themselves. Heading hierarchy checks
-report observed upward level skips; an absent primary outline is unknown,
+Primary-content extraction retains the selected region and page/section wrappers
+around nested card lists while excluding the cards themselves. Heading hierarchy
+checks report observed upward level skips; an absent primary outline is unknown,
 not proof of skipped levels. Missing or invalid heading levels also remain unknown.
 Article self-links use the same trailing-slash and tracking-parameter comparison
 as indexing intent, so they do not turn authored prose into excerpts.
@@ -265,10 +265,11 @@ Generic card actions such as “View product” do not establish an item name.
 An empty-collection exemption requires a captured zero-item container;
 contradictory item observations and unavailable counts remain unknown.
 
-Variant controls require a configured variant identity on the control or its
-associated label; unrelated currency, country, quantity and payment controls
-cannot supply product-purpose evidence. Collection facts retain bounded labels
-and resolved targets from the exact selected collection, so item checks do not
+Variant controls require a configured variant identity on the control, its
+associated label, or its nearest named radio group/fieldset legend; unrelated
+currency, country, quantity and payment controls cannot supply product-purpose
+evidence. Collection facts retain bounded labels, including observed ARIA labels
+on icon links, and resolved targets from the exact selected collection, so item checks do not
 depend on product URL naming conventions. Missing retained item details remain
 unknown. Organization name matching tolerates configured legal suffixes while
 requiring the remaining name to match visible identity. A FAQ route with no

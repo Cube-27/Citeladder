@@ -298,9 +298,9 @@ function cardListContainers(region: HtmlNode, finalUrl: string): HtmlElement[] {
   let scanned = 0;
   for (const candidate of elements(region)) {
     if (++scanned > r.max_containers_scanned) break;
+    if (candidate === region) continue;
     if (linkedArticleExcerpt(candidate, finalUrl)) excerpts.push(candidate);
-    if (candidate !== region && (isCardList(candidate) || isRecommendation(candidate)))
-      containers.push(candidate);
+    if (isCardList(candidate) || isRecommendation(candidate)) containers.push(candidate);
   }
   // Repeated sections can resemble cards when each contains links. Keep the
   // actual nested collections without excluding their section/page wrappers.

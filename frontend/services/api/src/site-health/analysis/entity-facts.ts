@@ -218,9 +218,7 @@ function implicitVariantLabel(control: HtmlElement, page: PageScope) {
   return false;
 }
 
-/** A variant identity on the control or its associated visible label. */
-function variantIdentity(control: HtmlElement, page: PageScope) {
-  if (matchesTokens(control, VARIANT)) return true;
+function associatedVariantLabel(control: HtmlElement, page: PageScope) {
   const id = attribute(control, 'id').trim();
   const labelledBy = new Set(attribute(control, 'aria-labelledby').split(/\s+/u).filter(Boolean));
   for (const node of find(
@@ -234,7 +232,38 @@ function variantIdentity(control: HtmlElement, page: PageScope) {
       intersects(normalizedTokens(regionText(node)), VARIANT)
     )
       return true;
-  return implicitVariantLabel(control, page);
+  return false;
+}
+
+/** Only the nearest semantic radio group may provide a shared variant name. */
+function variantRadioGroup(control: HtmlElement, page: PageScope) {
+  if (control.tagName !== 'input' || attribute(control, 'type') !== 'radio') return false;
+  let depth = 0;
+  for (const ancestor of ancestors(control)) {
+    if (++depth > regionPolicy.max_ancestor_depth || ancestor === page.region) break;
+    if (ancestor.tagName !== 'fieldset' && !['group', 'radiogroup'].includes(role(ancestor)))
+      continue;
+    if (intersects(normalizedTokens(attribute(ancestor, 'aria-label')), VARIANT)) return true;
+    if (associatedVariantLabel(ancestor, page)) return true;
+    const legend = childElements(ancestor).find((node) => node.tagName === 'legend');
+    return Boolean(
+      ancestor.tagName === 'fieldset' &&
+      legend &&
+      regionNodeIsVisible(legend) &&
+      intersects(normalizedTokens(regionText(legend)), VARIANT),
+    );
+  }
+  return false;
+}
+
+/** A variant identity on the control, its associated label, or its semantic radio group. */
+function variantIdentity(control: HtmlElement, page: PageScope) {
+  return (
+    matchesTokens(control, VARIANT) ||
+    associatedVariantLabel(control, page) ||
+    implicitVariantLabel(control, page) ||
+    variantRadioGroup(control, page)
+  );
 }
 
 /** A multi-option variant selector or explicitly named variant radio group. */
@@ -394,6 +423,8 @@ function cardTarget(anchor: HtmlElement, finalUrl: string) {
 }
 
 function cardTitle(anchor: HtmlElement) {
+  const ariaLabel = squash(attribute(anchor, 'aria-label'));
+  if (ariaLabel && !isGenericItemLabel(ariaLabel)) return ariaLabel;
   const label = squash(regionText(anchor));
   if (label && !isGenericItemLabel(label)) return label;
   const alternative = squash(
