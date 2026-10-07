@@ -51,7 +51,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     title: 'Founders: see whether AI engines recommend you.',
     lead: 'Start with a limited AI visibility trial and inspect the collected answers and competitor observations. Discuss broader diagnostics and content workflows in a demo.',
     guide: { label: 'Explore the platform', href: '/platform' },
-    cta: 'See a first audit sample',
+    cta: 'Request a first audit sample',
     scene: 'sample',
   },
   {

@@ -204,7 +204,7 @@ test.describe('marketing routes', () => {
         ),
       );
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        "Let's talk about CiteLadder",
+        'Talk to the CiteLadder team.',
       );
       await expect(page).toHaveTitle('Contact CiteLadder');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -540,10 +540,9 @@ test.describe('marketing routes', () => {
 
   test('shared navigation and footer work from a subpage', async ({ page }) => {
     await page.goto('/faq');
-    const resources = page
-      .getByRole('navigation', { name: 'Main navigation' })
-      .getByRole('link', { name: 'Resources', exact: true });
-    await expect(resources).toHaveAttribute('href', '/blog');
+    const nav = page.getByRole('navigation', { name: 'Main navigation' });
+    await nav.getByRole('button', { name: 'Resources', exact: true }).click();
+    await expect(nav.getByRole('link', { name: /Blog & guides/ })).toHaveAttribute('href', '/blog');
 
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toBeVisible();

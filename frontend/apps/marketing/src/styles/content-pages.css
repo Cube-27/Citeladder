@@ -473,7 +473,11 @@
   font-size: 0.875em;
 }
 
-.cp-prose :where(p, li, td) a {
+/* Running-text links only: the related-guide cards are list items too, but
+   they sit outside the article's direct paragraphs and lists. */
+.cp-prose > p a,
+.cp-prose > :is(ul, ol) li a,
+.cp-prose td a {
   color: var(--color-accent-text);
   text-decoration-line: underline;
   text-decoration-color: var(--color-accent-border);
@@ -483,7 +487,9 @@
   transition: text-decoration-color var(--motion-fast) var(--ease-standard);
 }
 
-.cp-prose :where(p, li, td) a:hover {
+.cp-prose > p a:hover,
+.cp-prose > :is(ul, ol) li a:hover,
+.cp-prose td a:hover {
   text-decoration-color: currentColor;
 }
 

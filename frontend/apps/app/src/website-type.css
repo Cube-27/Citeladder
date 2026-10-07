@@ -311,7 +311,7 @@
 }
 
 .flow-bar {
-  background: transparent;
+  background: var(--color-panel);
   position: sticky;
   top: 0;
   z-index: var(--z-index-sticky);

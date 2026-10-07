@@ -964,7 +964,9 @@ a.focus-ring:active .type-caption {
   box-shadow: var(--public-frame-shadow);
 }
 
-[data-flow-surface] [data-button-variant='primary']:not(:disabled, [aria-disabled='true']) {
+:root:not([data-theme='dark'])
+  [data-flow-surface]
+  [data-button-variant='primary']:not(:disabled, [aria-disabled='true']) {
   background-image: linear-gradient(rgb(255 255 255 / 10%), transparent);
   box-shadow:
     0 0 0 1px var(--color-accent-active), inset 0 1px 0 rgb(255 255 255 / 16%),

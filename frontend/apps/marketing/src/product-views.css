@@ -310,10 +310,12 @@
   vector-effect: non-scaling-stroke;
 }
 
-.pv-chart circle {
-  fill: var(--color-panel);
+/* A zero-length round-capped line stays circular under the chart's
+   non-uniform scaling, where an SVG circle would stretch into an ellipse. */
+.pv-chart line.pv-chart-end {
   stroke: var(--pv-series);
-  stroke-width: 2;
+  stroke-width: 7;
+  stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
 

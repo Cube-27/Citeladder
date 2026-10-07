@@ -60,11 +60,13 @@ function NotIncluded() {
 
 /**
  * A capability a plan does not publish renders as a dash — the honest "not
- * included", distinct from a published zero. Booleans use a check so colour
+ * included", distinct from a published zero. A null value is a capability the
+ * catalog marks as coming soon for that plan, so it says so. Booleans use a check so colour
  * is never the only signal.
  */
 function renderCell(value: boolean | number | string | null | undefined) {
-  if (value === undefined || value === null || value === false) return <NotIncluded />;
+  if (value === null) return <span className="cm-cell-none">Coming soon</span>;
+  if (value === undefined || value === false) return <NotIncluded />;
   if (value === true) {
     return (
       <span className="cm-cell-check">

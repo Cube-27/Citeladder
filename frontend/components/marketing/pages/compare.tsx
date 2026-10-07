@@ -98,7 +98,7 @@ export function CompareIndex() {
               <a href="/blog/action-playbook-winning-ai-citations" className="ed-link">
                 how to investigate citations
               </a>
-              .
+              {'.'}
             </p>
           </div>
         </div>

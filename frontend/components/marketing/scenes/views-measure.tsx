@@ -54,7 +54,13 @@ export function VisibilityView() {
           {TREND.map((row) => (
             <g key={row.name} data-series={row.series}>
               <polyline points={chartPoints(row.points)} />
-              <circle cx="520" cy={chartY(row.points[6])} r="3.5" />
+              <line
+                className="pv-chart-end"
+                x1="520"
+                x2="520"
+                y1={chartY(row.points[6])}
+                y2={chartY(row.points[6])}
+              />
             </g>
           ))}
         </svg>

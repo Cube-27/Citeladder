@@ -80,8 +80,8 @@ export function DemandView() {
     <div className="pv-view">
       <div className="pv-toolbar">
         <span className="pv-segment">
-          <span data-active>By page</span>
-          <span>By query</span>
+          <span>By page</span>
+          <span data-active>By query</span>
         </span>
         <span className="pv-meta">Search Console · 28 days vs previous</span>
       </div>

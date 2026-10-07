@@ -35,6 +35,18 @@ describe('marketing navigation', () => {
     expect(screen.queryByText('Sign up')).not.toBeInTheDocument();
   });
 
+  it('keeps a hover-opened menu open when its trigger is clicked', async () => {
+    const user = userEvent.setup();
+    render(<MarketingNav />);
+    const trigger = screen.getByRole('button', { name: 'Platform' });
+    await user.hover(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('opens a menu from its trigger and returns focus there on Escape', async () => {
     const user = userEvent.setup();
     render(<MarketingNav />);

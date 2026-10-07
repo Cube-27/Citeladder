@@ -50,7 +50,7 @@ export function PricingFaq() {
               <a href="/faq" className="text-accent-text underline underline-offset-2">
                 full FAQ
               </a>
-              .
+              {'.'}
             </>
           }
         />

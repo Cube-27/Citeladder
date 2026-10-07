@@ -81,9 +81,11 @@ export function DesktopNavigation({
               data-current={path === href || path.startsWith(`${href}/`) || undefined}
               aria-expanded={open}
               aria-controls={`desktop-nav-panel-${key}`}
-              onClick={(event) =>
-                open ? closeDrop() : openDropAt(key, event.currentTarget, 'focus')
-              }
+              onClick={(event) => {
+                // A click on a hover-opened panel pins it open instead of closing it.
+                if (open && openSource !== 'hover') closeDrop();
+                else openDropAt(key, event.currentTarget, 'focus');
+              }}
             >
               {label}
               <ChevronDown aria-hidden className="nav-chevron size-3.5" />
