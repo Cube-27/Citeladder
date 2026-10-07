@@ -5,7 +5,10 @@ import {
   hreflangConflict,
   sitemapOrphan,
 } from '../src/site-health/analysis/finalize.ts';
-import { aggregateMeasurements } from '../src/site-health/analysis/measurement-aggregation.ts';
+import {
+  aggregateByPageKind,
+  aggregateMeasurements,
+} from '../src/site-health/analysis/measurement-aggregation.ts';
 import {
   canonicalResolution,
   resolutionSet,
@@ -115,7 +118,7 @@ describe('terminal checks from persisted evidence', () => {
       outcome: 'missing',
     };
     const indexable = { ...crawlability, rule_id: 'technical.indexable', outcome: 'satisfied' };
-    const result = aggregateMeasurements([
+    const rows = [
       { id: 'root', page_kind: 'homepage', evaluations: [blocked] },
       // Another page records the site rule as not applicable; the root's verdict still applies.
       {
@@ -123,9 +126,11 @@ describe('terminal checks from persisted evidence', () => {
         page_kind: 'article',
         evaluations: [indexable, { ...blocked, outcome: 'not_applicable' }],
       },
-    ]);
+    ];
     // Root 0 (blocked), page 50 (indexable, blocked); without the site check the page would be 100.
-    expect(result.aeo_readiness_score).toBe(25);
+    expect(aggregateMeasurements(rows).aeo_readiness_score).toBe(25);
+    // The article subset excludes the root but still carries its site verdict.
+    expect(aggregateByPageKind(rows).article!.aeo_readiness_score).toBe(50);
   });
 });
 

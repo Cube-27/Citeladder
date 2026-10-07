@@ -190,7 +190,7 @@
     "composite_contract": null
   },
   {
-    "applicability_key": "always",
+    "applicability_key": "has_html",
     "category": "performance",
     "description": "HTML response is served compressed (gzip/deflate/br).",
     "dimension": "technical",
@@ -353,7 +353,7 @@
     "remediation": "Review search/citation, training, and user-triggered agent policy separately; do not infer citation access from a training bot.",
     "rule_id": "technical.ai_crawler_access",
     "scope": "site",
-    "score_roles": ["aeo_readiness"],
+    "score_roles": [],
     "severity": "high",
     "triggered_by": "",
     "web_fundamentals_area": "",

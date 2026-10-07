@@ -90,7 +90,6 @@
       "aeo.visible_attribution": "provenance",
       "search.crawler_access": "crawlability",
       "search.snippet_access": "crawlability",
-      "technical.ai_crawler_access": "crawlability",
       "technical.indexable": "crawlability"
     },
     "unknown_rule_remediation_route": "code",
