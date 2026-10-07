@@ -85,7 +85,12 @@ describe('URL admission', () => {
     expect(priority('https://example.test/products/widget')).toBeGreaterThan(
       priority('https://example.test/blog/widget'),
     );
-    expect(classifyUrlAdmission('https://example.test/about-us').valueKind).toBe('other');
+    const kind = (path: string) => classifyUrlAdmission(`https://example.test${path}`).valueKind;
+    // Whole tokens and the section first, not any substring anywhere.
+    expect(kind('/blog/product-review')).toBe('article');
+    expect(kind('/about-us')).toBe('about');
+    expect(kind('/help/getting-started')).toBe('guide');
+    expect(kind('/productivity-tips')).toBe('other');
   });
 });
 

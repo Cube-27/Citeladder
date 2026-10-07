@@ -175,6 +175,11 @@ The analyzed count is the monitored-URL entitlement (20 for baseline and trial,
 | 4.5 | Add a per-kind funnel (discovered, selected, analyzed, with a skip reason) and show "kind not found" separately from "found but not analyzed" in the UI. | `site-health/coverage.ts`, `packages/contracts/src/site-health/crawl.ts`, `frontend/…/site-health/*` |
 | 4.6 | Bulk `first_n` selection orders by priority and kind, not alphabetically. | `site-health/selection.ts:298-304` |
 
+Progress: 4.2, 4.3 (seeded within value tiers), 4.4 (twin dedupe at admission;
+stored identities unchanged), 4.5 (Overview coverage sentence and found-page
+denominator: the feature's UX addition) and 4.6 are implemented on
+`feat/site-health-coverage`. A per-kind skipped-URL funnel remains a follow-up.
+
 Acceptance: the analyzed sample is reproducible from its recorded seed, and
 apex/www duplicates never take two slots.
 

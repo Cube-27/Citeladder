@@ -1,5 +1,6 @@
 /** Conservative crawl coverage from saved discovery state; never acquisition on a read. */
 import { sql } from 'kysely';
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { Crawl } from './task-fence.ts';
@@ -16,6 +17,10 @@ export type CoverageSignals = {
   pendingFrontierCount: number;
   discoveryTaskCount: number;
   failedDiscoveryTaskCount: number;
+  analyzedUrlCount: number;
+  failedUrlCount: number;
+  /** This crawl's automatic analysis allowance (the plan's monitored pages); null when none was recorded. */
+  automaticLimit: number | null;
 };
 
 const BOUNDED_DISCOVERY = new Set(['cancelled', 'sample_completed', 'stopped']);
@@ -70,8 +75,18 @@ export function assessCoverage(signals: CoverageSignals) {
       pending_frontier_count: signals.pendingFrontierCount,
       discovery_task_count: signals.discoveryTaskCount,
       failed_discovery_task_count: signals.failedDiscoveryTaskCount,
+      analyzed_url_count: signals.analyzedUrlCount,
+      failed_url_count: signals.failedUrlCount,
+      automatic_limit: signals.automaticLimit,
     },
   };
+}
+
+/** The crawl's frozen allowance, or null when none was recorded (never a silent zero). */
+function allowance(value: unknown) {
+  if (value === undefined || value === null || value === '') return null;
+  const limit = Number(value);
+  return Number.isFinite(limit) && limit >= 0 ? limit : null;
 }
 
 export async function crawlCoverage(db: Database, crawl: Crawl) {
@@ -113,5 +128,8 @@ export async function crawlCoverage(db: Database, crawl: Crawl) {
     pendingFrontierCount: frontier.count,
     discoveryTaskCount: discovery.total,
     failedDiscoveryTaskCount: discovery.failed,
+    analyzedUrlCount: crawl.analyzed_url_count,
+    failedUrlCount: crawl.failed_url_count,
+    automaticLimit: allowance(config[policy.site_health.crawl.automatic_monitor_limit_key]),
   });
 }

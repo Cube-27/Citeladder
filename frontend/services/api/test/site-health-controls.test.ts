@@ -653,6 +653,28 @@ describe('crawl-control HTTP contracts', () => {
     expect(none.monitored_urls).toHaveLength(2);
   });
 
+  it('bulk selects the most valuable pages first, not the alphabetically first', async () => {
+    const seed = await fixtures.crawl();
+    await allow(seed, 1);
+    await fixtures.page(seed, '/about', {}, { observed: true });
+    const product = await fixtures.page(seed, '/zebra-product', {}, { observed: true });
+    await db
+      .updateTable('site_url_observations')
+      .set({ value_priority: 90 })
+      .where('site_url_id', '=', product.id)
+      .execute();
+    const response = await request(
+      seed,
+      `/projects/${seed.projectId}/monitored-urls/bulk-select`,
+      'POST',
+      { crawl_id: seed.crawlId, mode: 'first_n', count: 1, expected_selection_version: 1 },
+    );
+    const selected = monitoredUrlsResponseSchema.parse(await response.json());
+    expect(
+      selected.monitored_urls.filter((url) => url.active).map((url) => url.site_url_id),
+    ).toEqual([product.id]);
+  });
+
   it('reruns a terminal monitored page as one fresh analysis, then reuses the active crawl at the next generation', async () => {
     const seed = await fixtures.crawl();
     await allow(seed, 1, 2);

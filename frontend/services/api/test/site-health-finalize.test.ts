@@ -206,6 +206,9 @@ const signals = (changes: Partial<CoverageSignals> = {}): CoverageSignals => ({
   pendingFrontierCount: 0,
   discoveryTaskCount: 3,
   failedDiscoveryTaskCount: 0,
+  analyzedUrlCount: 10,
+  failedUrlCount: 0,
+  automaticLimit: 0,
   ...changes,
 });
 

@@ -7,7 +7,7 @@
  * hold the workspace runtime lock (the first rung of the Site Health lock
  * order) and own the transaction.
  */
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 
 import { policy, resolveSettingSpec } from '../config.ts';
@@ -16,6 +16,7 @@ import { record } from '../db/json.ts';
 import type { WorkspaceSiteHealthRuntime } from '../generated/db-schema.ts';
 import { compareText } from '../text-order.ts';
 import { classifyUrlAdmission, type Admission, type Scope } from './url-admission.ts';
+import { hostTwinHash } from './url-identity.ts';
 import { ACTIVE_CRAWL } from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
 import {
@@ -94,24 +95,36 @@ export function crawlScope(crawl: Crawl): Scope {
   };
 }
 
-/** Value first, then the parent's position and the link's document order. */
-const byOrder = (a: Candidate, b: Candidate) =>
-  b.priority - a.priority ||
-  a.parentPosition - b.parentPosition ||
-  a.linkOrdinal - b.linkOrdinal ||
-  compareText(a.hash, b.hash);
-function orderedUnique(candidates: Candidate[]) {
+/**
+ * Value tier first, then a per-crawl seeded shuffle: the sample within a tier is
+ * random but reproducible from the crawl, never biased to header and footer links.
+ */
+const seededRank = (seed: string, hash: string) =>
+  createHash('sha256').update(`${seed}${hash}`).digest('hex');
+/** One candidate per URL, and one of each www/apex twin pair. */
+export function orderedUnique(candidates: Candidate[], seed: string) {
+  // One hash per candidate, not two per comparison.
+  const rank = new Map(candidates.map((item) => [item.hash, seededRank(seed, item.hash)]));
+  const byOrder = (a: Candidate, b: Candidate) =>
+    b.priority - a.priority ||
+    compareText(rank.get(a.hash) ?? '', rank.get(b.hash) ?? '') ||
+    compareText(a.hash, b.hash);
   const unique = new Map<string, Candidate>();
-  for (const item of candidates.toSorted(byOrder))
-    if (!unique.has(item.hash)) unique.set(item.hash, item);
+  for (const item of candidates.toSorted(byOrder)) {
+    const twin = hostTwinHash(item.url);
+    if (!unique.has(item.hash) && !(twin && unique.has(twin))) unique.set(item.hash, item);
+  }
   return [...unique.values()];
 }
+const PAGE_KIND_OF_VALUE: Record<string, string> = crawlPolicy.value_kind_page_kinds;
 function allowed(item: Candidate, crawl: Crawl, settings: Settings) {
   if (!classifyUrlAdmission(item.url, crawlScope(crawl)).accepted || item.depth > settings.maxDepth)
     return false;
   const kinds = record(crawl.configuration).page_kinds;
   const selected = Array.isArray(kinds) ? kinds : [];
-  return !selected.length || ['root', 'other', ...selected].includes(item.valueKind);
+  // Value tiers are finer than page kinds (about and contact are both `about_contact`).
+  const pageKind = PAGE_KIND_OF_VALUE[item.valueKind] ?? item.valueKind;
+  return !selected.length || ['root', 'other', ...selected].includes(pageKind);
 }
 
 const requestedTarget = (crawl: Crawl, settings: Settings) =>
@@ -397,7 +410,11 @@ async function storeFrontier(
   candidates: Candidate[],
   settings: Settings,
 ) {
-  const eligible = orderedUnique(candidates).filter((item) => allowed(item, crawl, settings));
+  // Filter before choosing a twin, so a too-deep twin never displaces an admissible one.
+  const eligible = orderedUnique(
+    candidates.filter((item) => allowed(item, crawl, settings)),
+    crawl.id,
+  );
   if (!eligible.length) return;
   const existing = await trx
     .selectFrom('site_discovery_frontier')
@@ -415,11 +432,16 @@ async function storeFrontier(
         .select('url_hash')
         .where('workspace_id', '=', crawl.workspace_id)
         .where('crawl_id', '=', crawl.id)
-        .where('url_hash', '=', (eb) => eb.fn.any(eb.val(eligible.map((item) => item.hash))))
+        .where('url_hash', '=', (eb) =>
+          eb.fn.any(eb.val(eligible.flatMap((item) => [item.hash, hostTwinHash(item.url) ?? '']))),
+        )
         .execute()
     ).map((row) => row.url_hash),
   );
-  const fresh = eligible.filter((item) => !known.has(item.hash)).slice(0, capacity);
+  const twinKnown = (item: Candidate) => known.has(hostTwinHash(item.url) ?? '');
+  const fresh = eligible
+    .filter((item) => !known.has(item.hash) && !twinKnown(item))
+    .slice(0, capacity);
   const now = new Date();
   for (let offset = 0; offset < fresh.length; offset += settings.batch)
     await trx // NOSONAR: batches bound each insert's bind parameters, in order in one transaction.
@@ -458,8 +480,7 @@ async function pendingFrontier(trx: Database, crawl: Crawl, settings: Settings) 
     .where('crawl_id', '=', crawl.id)
     .where('status', '=', crawlPolicy.frontier_statuses.pending)
     .orderBy('value_priority', 'desc')
-    .orderBy('parent_position')
-    .orderBy('link_ordinal')
+    .orderBy(sql`sha256(convert_to(${crawl.id} || url_hash, 'UTF8'))`)
     .orderBy('url_hash')
     .limit(Math.min(remaining, settings.batch))
     .forUpdate()
@@ -509,8 +530,10 @@ async function admissionBatch(
   settings: Settings,
 ): Promise<Entry[]> {
   if (crawl.sample_mode)
-    return orderedUnique(candidates)
-      .filter((item) => allowed(item, crawl, settings))
+    return orderedUnique(
+      candidates.filter((item) => allowed(item, crawl, settings)),
+      crawl.id,
+    )
       .slice(0, settings.batch)
       .map((item) => ({ frontierId: null, item }));
   await storeFrontier(trx, crawl, candidates, settings);
@@ -575,6 +598,9 @@ function planAdmission(
   for (const [position, entry] of batch.entries()) {
     if (crawl.admitted_url_count + ledger.admitted >= options.ceiling) break;
     const { hash } = entry.item;
+    // A sample has no stored frontier to dedupe against: an observed twin is the same page.
+    const twin = hostTwinHash(entry.item.url);
+    if (sample && twin && ledger.observed.has(twin)) continue;
     const selected = ledger.select(entry.item);
     const observe = sample || selected;
     ledger.count(hash, sample, discover);
@@ -687,7 +713,7 @@ export async function admitCandidates(
   const known = await readAdmissionState(
     trx,
     current,
-    batch.map((entry) => entry.item.hash),
+    batch.flatMap((entry) => [entry.item.hash, hostTwinHash(entry.item.url) ?? '']).filter(Boolean),
   );
   const plan = planAdmission(current, batch, known, { ceiling, remaining, enqueueChildren });
   const automatic =

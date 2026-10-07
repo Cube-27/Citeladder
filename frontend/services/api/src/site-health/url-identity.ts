@@ -41,6 +41,20 @@ export function canonicalIdentity(value: string, base?: string) {
   };
 }
 /** The canonical URL, or null when the value is not a public URL. */
+/**
+ * The identity hash of the same URL on the www/apex twin host, or null. Many
+ * sites answer on both without redirecting; admission keeps one of the pair.
+ */
+export function hostTwinHash(value: string): string | null {
+  try {
+    const url = new URL(value);
+    url.hostname = url.hostname.startsWith('www.') ? url.hostname.slice(4) : `www.${url.hostname}`;
+    return canonicalIdentity(url.href).hash;
+  } catch {
+    return null;
+  }
+}
+
 export function canonicalUrl(value: unknown, base?: string): string | null {
   if (typeof value !== 'string' || !value) return null;
   try {

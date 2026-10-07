@@ -111,16 +111,32 @@ export function inScope(url: string, domain: string) {
   return host === root || host.endsWith(`.${root}`);
 }
 
-/** Admission ordering only: the most valuable kind a path names. */
+const pathTokens = (segment: string) => new Set(segment.split(/[-_.]+/u).filter(Boolean));
+
+/** The most valuable kind named by whole tokens of one path segment (or a whole fallback segment). */
+function namedKind(segment: string) {
+  const tokens = pathTokens(segment);
+  const named = VALUE_KINDS.find((kind) => tokens.has(kind));
+  if (named) return named;
+  const fallback = (crawl.value_fallback_tokens as [string, string[]][]).find(([, words]) =>
+    words.some((word) => segment === word || tokens.has(word)),
+  );
+  return fallback?.[0] ?? null;
+}
+
+/**
+ * Admission ordering only. Whole tokens, not substrings, and the section the
+ * URL sits in first: `/blog/product-review` is an article, not a product.
+ */
 function valueKind(url: string) {
   const path = stripTrailing(new URL(url).pathname.toLowerCase(), '/') || '/';
   if (path === '/') return 'root';
-  const named = VALUE_KINDS.find((kind) => path.includes(kind.replaceAll('_', '-')));
-  if (named) return named;
-  const fallback = (crawl.value_fallback_tokens as [string, string[]][]).find(([, tokens]) =>
-    tokens.some((token) => path.includes(token)),
-  );
-  return fallback ? fallback[0] : 'other';
+  const segments = path.split('/').filter(Boolean);
+  for (const segment of segments) {
+    const kind = namedKind(segment);
+    if (kind) return kind;
+  }
+  return 'other';
 }
 
 /**
