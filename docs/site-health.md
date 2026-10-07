@@ -245,12 +245,20 @@ complete persisted measurement regardless of the provisional cadence.
 The stable taxonomy is:
 
 `homepage`, `article`, `editorial_index`, `product`, `category`, `pricing`, `docs`, `faq`,
-`about_contact`, `service`, `local`, `guide`, `comparison`,
-`case_study_review`, `trust_policy`, `other`.
+`about_contact`, `service`, `local`, `guide`, `how_to`, `listicle`, `comparison`,
+`alternative`, `case_study_review`, `trust_policy`, `other`.
 
 The classifier reads page-owned structure before route/title suggestions.
 Structured data can suggest a type but cannot certify the type whose markup is
-being checked. The root-path homepage exception is exact. Recommendation cards
+being checked. The root-path homepage exception is exact: the bare root, known
+index files, listed two-letter language roots and any region-qualified locale
+root (`/en-in`, `/es-419`). A lone generic title word (`contact`, `shipping`,
+`policy`) counts only as the page's whole slug, because it also names products;
+multi-word phrases may appear anywhere. When page content was not observed (a
+client-rendered shell), a winning route or title suggestion is low confidence
+and the evidence records `content_unobserved`. The persisted classifier version
+is the configured base plus a digest of every classification input, so a
+pattern edit cannot ship under an unchanged version. Recommendation cards
 and shared chrome cannot replace primary purpose. If incompatible kinds have
 strongest-tier evidence, the classifier returns `other` and preserves all
 alternatives, conflicts and reasons.
@@ -263,7 +271,10 @@ penalty.
 
 Any page kind can receive a score from independently applicable checks.
 Rule applicability still requires the relevant structural evidence; route-only
-classification cannot activate a mandatory purpose penalty. Repeated cards
+classification cannot activate a mandatory purpose penalty. Product and
+category purpose checks fail only on a page with its own commerce structure (a
+purchase control or price, or a captured collection) or a structural
+classification; otherwise a failure is unknown with `page_kind_unconfirmed`. Repeated cards
 and pagination alone do not promote editorial or comparison indexes to a
 category; decisive collection affordances remain structural evidence. Exact
 blog, news, article, insights, resources and press archive routes, including

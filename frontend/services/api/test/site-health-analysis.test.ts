@@ -238,6 +238,15 @@ describe('page checklist', () => {
     expect(createsIssue(meta)).toBe(true);
   });
 
+  it('never penalizes a purpose that only the URL suggests', () => {
+    const rows = evaluations(
+      '<html><head><title>Widget story</title></head><body><main><h1>Widget story</h1><p>How we designed the widget over three years of testing with customers.</p></main></body></html>',
+      'https://example.test/products/widget-story',
+    );
+    for (const id of ['aeo.product_answer_facts', 'aeo.offer_freshness_signal'])
+      expect(createsIssue(rows.get(id)!), id).toBe(false);
+  });
+
   it('requires a public price unless an explicit pricing action makes the product quote-led', () => {
     const product = (action: string) =>
       evaluations(

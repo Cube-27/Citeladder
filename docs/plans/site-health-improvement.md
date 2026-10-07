@@ -150,6 +150,13 @@ Classification is deterministic (`site-health/analysis/page-kinds.ts:284`); no m
 | 3.6 | Derive the classifier version from a content hash of the classification config, including the route, slug and homepage patterns in acquisition.json, so pattern edits cannot ship under an unchanged version. | `config/site-health.ts` |
 | 3.7 | Share one URL normalizer between `routes.ts` and `source-pages/assessment.ts` (extension stripping differs). Update the kind list in docs/site-health.md (19 kinds in config, 16 documented). | `site-health/routes.ts`, `source-pages/assessment.ts` |
 
+Progress: 3.2 (failure-only purpose gate; a real route-only "missing price" penalty
+was confirmed by test first), 3.3, 3.4, 3.5 (classifier and the `contact_intent`
+trait), 3.6 and the 3.7 doc list are implemented on `feat/site-health-classification`.
+3.1 is reduced: kind-gated rules stay not-applicable on unclassified pages
+(unknown would only add noise without changing any score); the unclassified
+count is reported through the Phase 4 coverage funnel instead.
+
 Extend the calibration corpus (`test/fixtures/site-health/classifier-calibration.json`)
 for every branch: non-English slugs, `/shop/<item>`, locale roots, client-rendered shells and unclassified states.
 

@@ -5,15 +5,13 @@
  * always names the single signal that chose the kind. Structured data is the
  * page's claim about itself and never decides alone.
  */
-import { policy } from '../../config.ts';
 import { compareText } from '../../text-order.ts';
-import { documentUrl, normalizedPath, routeSignal } from '../routes.ts';
+import { documentUrl, isHomepagePath, normalizedPath, routeSignal } from '../routes.ts';
 import { analysisPolicy, limits } from './policy.ts';
 import { observedQuestionCount } from './questions.ts';
 import { list, record, text, textList, type Facts } from './read-facts.ts';
 
 const c = analysisPolicy.classification;
-const HOMEPAGE_PATHS = new Set(policy.site_health.homepage_paths);
 const SIGNAL_TIERS: Record<string, string> = c.signal_tiers;
 const TIER_CONFIDENCE: Record<string, string> = c.tier_confidence;
 const SIGNAL_ORDER = [
@@ -203,7 +201,10 @@ function titleSuggestion(path: string, facts: Facts) {
   if (!haystack.trim()) return null;
   let best: { length: number; index: number; kind: string; phrase: string } | null = null;
   c.title_keywords.forEach(([kind, phrase], index) => {
-    if (!haystack.includes(` ${phrase} `)) return;
+    // A lone generic word ("contact", "shipping") names products too ("Contact lenses"):
+    // it counts only as the page's whole slug, while a phrase may appear anywhere.
+    const single = !phrase!.includes(' ');
+    if (single ? slug.trim() !== phrase : !haystack.includes(` ${phrase} `)) return;
     if (!best || phrase!.length > best.length)
       best = { length: phrase!.length, index, kind: kind!, phrase: phrase! };
   });
@@ -234,7 +235,7 @@ function classificationSignals(finalUrl: string, facts: Facts): [Signal[], strin
   const path = normalizedPath(url);
   const schema = schemaSuggestion(facts)?.[0] ?? null;
   // The root path is an exact fact: a homepage stays one even when it renders a product grid.
-  if (HOMEPAGE_PATHS.has(path)) return [[signal('root_path', 'homepage', path || '/')], schema];
+  if (isHomepagePath(path)) return [[signal('root_path', 'homepage', path || '/')], schema];
   const routed = routeSignal(path);
   const route = routed ? [signal('path_pattern', routed.kind, routed.pattern)] : [];
   return [
@@ -292,6 +293,10 @@ export function classify(finalUrl: string, facts: Facts) {
       tier === 'structural' && matched.some((item) => item.page_kind !== winner.page_kind)
         ? 'medium'
         : TIER_CONFIDENCE[tier]!;
+  // Without observed page content (a client-rendered shell), a URL or title guess is weak evidence.
+  const extraction = record(facts.extraction);
+  const unobserved = extraction.state === 'unavailable' ? text(extraction.reason) : '';
+  if (unobserved && winner && confidence !== 'unknown') confidence = 'low';
   return {
     page_kind: kind ?? 'other',
     evidence: {
@@ -313,6 +318,7 @@ export function classify(finalUrl: string, facts: Facts) {
         }))
         .slice(0, c.max_alternatives),
       other_reason: otherReason(matched, winner),
+      content_unobserved: unobserved || null,
     },
   };
 }

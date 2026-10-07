@@ -6,6 +6,12 @@ const MAX_PATH_CHARS = policy.site_health.page_analysis.facts.limits.path_chars;
 const slugPatterns = policy.site_health.slug_patterns.map(
   ([kind, pattern]) => [kind!, new RegExp(pattern!)] as const,
 );
+const HOMEPAGE_PATHS = new Set(policy.site_health.homepage_paths);
+const LOCALE_ROOT = new RegExp(policy.site_health.homepage_locale_root_pattern, 'u');
+
+/** A site root: the bare root, a known index file or language root, or any region-qualified locale root (`/en-in`, `/es-419`). */
+export const isHomepagePath = (path: string) => HOMEPAGE_PATHS.has(path) || LOCALE_ROOT.test(path);
+
 const routePatterns = policy.site_health.route_patterns.map(
   ([kind, pattern]) => [kind!, new RegExp(pattern!, 'd')] as const,
 );
@@ -50,6 +56,6 @@ export function routePageKind(value: string): string | null {
   const url = documentUrl(value);
   if (!url) return null;
   const path = normalizedPath(url);
-  if (policy.site_health.homepage_paths.includes(path)) return 'homepage';
+  if (isHomepagePath(path)) return 'homepage';
   return routeSignal(path)?.kind ?? null;
 }

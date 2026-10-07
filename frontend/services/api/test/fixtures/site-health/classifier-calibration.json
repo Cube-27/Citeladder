@@ -1134,6 +1134,122 @@
       },
       "deliberate_abstention": false,
       "structural_reason": "An alternatives page names the shape in its slug and is not a plain comparison."
+    },
+    {
+      "id": "locale_region_root",
+      "source_label": "Synthetic regional locale root",
+      "observation_date": "2026-10-07",
+      "condition": "healthy",
+      "url": "https://example.test/en-in",
+      "content_type": "text/html",
+      "fixture": {
+        "kind": "facts",
+        "facts": {
+          "title": "Example India",
+          "headings": {
+            "h1_texts": ["Example India"],
+            "h2_texts": []
+          }
+        }
+      },
+      "expected": {
+        "page_kind": "homepage",
+        "traits": [],
+        "deciding_signal": "root_path",
+        "allowed_deciding_tiers": ["structural"],
+        "allowed_confidence": ["high"],
+        "rejected_kinds": ["category", "service"],
+        "other_reason": null
+      },
+      "deliberate_abstention": false,
+      "structural_reason": "A region-qualified locale root is the site root for that market, whether or not it is in a fixed list."
+    },
+    {
+      "id": "numeric_region_root",
+      "source_label": "Synthetic UN M.49 locale root",
+      "observation_date": "2026-10-07",
+      "condition": "healthy",
+      "url": "https://example.test/es-419",
+      "content_type": "text/html",
+      "fixture": {
+        "kind": "facts",
+        "facts": {
+          "title": "Ejemplo Latinoamérica",
+          "headings": {
+            "h1_texts": ["Ejemplo Latinoamérica"],
+            "h2_texts": []
+          }
+        }
+      },
+      "expected": {
+        "page_kind": "homepage",
+        "traits": [],
+        "deciding_signal": "root_path",
+        "allowed_deciding_tiers": ["structural"],
+        "allowed_confidence": ["high"],
+        "rejected_kinds": ["category", "service"],
+        "other_reason": null
+      },
+      "deliberate_abstention": false,
+      "structural_reason": "A numeric region code (es-419) names a locale root just like a country code."
+    },
+    {
+      "id": "generic_word_in_product_title",
+      "source_label": "Synthetic product title containing a policy word",
+      "observation_date": "2026-10-07",
+      "condition": "ambiguous",
+      "url": "https://example.test/daily-contact-lenses",
+      "content_type": "text/html",
+      "fixture": {
+        "kind": "facts",
+        "facts": {
+          "title": "Daily Contact Lenses",
+          "headings": {
+            "h1_texts": ["Daily Contact Lenses"],
+            "h2_texts": []
+          }
+        }
+      },
+      "expected": {
+        "page_kind": "other",
+        "traits": [],
+        "deciding_signal": "none",
+        "allowed_deciding_tiers": [""],
+        "allowed_confidence": ["unknown"],
+        "rejected_kinds": ["about_contact", "homepage"],
+        "other_reason": "no_classification_signals"
+      },
+      "deliberate_abstention": true,
+      "structural_reason": "A lone generic word such as contact names products too; without route or structure there is no purpose evidence."
+    },
+    {
+      "id": "two_letter_product_path",
+      "source_label": "Synthetic two-letter product path",
+      "observation_date": "2026-10-07",
+      "condition": "ambiguous",
+      "url": "https://example.test/ai",
+      "content_type": "text/html",
+      "fixture": {
+        "kind": "facts",
+        "facts": {
+          "title": "AI Assistant",
+          "headings": {
+            "h1_texts": ["AI Assistant"],
+            "h2_texts": []
+          }
+        }
+      },
+      "expected": {
+        "page_kind": "other",
+        "traits": [],
+        "deciding_signal": "none",
+        "allowed_deciding_tiers": [""],
+        "allowed_confidence": ["unknown"],
+        "rejected_kinds": ["about_contact", "homepage"],
+        "other_reason": "no_classification_signals"
+      },
+      "deliberate_abstention": true,
+      "structural_reason": "Only listed language roots are bare two-letter homepages; /ai is not a locale."
     }
   ]
 }

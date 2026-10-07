@@ -1,4 +1,5 @@
 /** Native Site Health policy. */
+import { createHash } from 'node:crypto';
 import { compareText } from '../text-order.ts';
 import architecture from './site-health/architecture.json' with { type: 'json' };
 import acquisition from './site-health/acquisition.json' with { type: 'json' };
@@ -13,6 +14,17 @@ import { companyIdentity } from './company-identity.ts';
 import { validateSiteHealthCatalog } from './site-health/validation.ts';
 
 const contentChecks = new Set(Object.keys(reads.reads.content_addressable_check_fields));
+
+/**
+ * The persisted classifier version names its full input: the configured base plus
+ * a digest of every catalog classification reads, so a pattern edit can never
+ * ship under an unchanged version.
+ */
+export function classifierVersion(base: string, inputs: unknown) {
+  const digest = createHash('sha256').update(JSON.stringify(inputs)).digest('hex').slice(0, 10);
+  return `${base}+${digest}`;
+}
+const { version: classifierBase, ...classificationPolicy } = analysis.page_analysis.classification;
 const ruleVersion = 'sh-rules-2';
 
 /** Mutation-time allowance projection shares the acquisition owner's bounds. */
@@ -69,6 +81,13 @@ export const siteHealth = {
     ...analysis.page_analysis,
     classification: {
       ...analysis.page_analysis.classification,
+      version: classifierVersion(classifierBase, [
+        classificationPolicy,
+        acquisition.route_patterns,
+        acquisition.slug_patterns,
+        acquisition.homepage_paths,
+        acquisition.homepage_locale_root_pattern,
+      ]),
       page_kinds: [...analysis.page_analysis.classification.page_kinds].sort(compareText),
     },
     facts: {
