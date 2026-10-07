@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import { extractPageFacts, factSettings } from '../src/site-health/analysis/facts.ts';
-import { discoveryLinks } from '../src/site-health/discover-task.ts';
+import { discoveryLinks } from '../src/site-health/discovery-links.ts';
 import { classifyUrlAdmission } from '../src/site-health/url-admission.ts';
 import { document } from '../src/web-evidence/html.ts';
 import { parseSitemap, SitemapCollector, SitemapParseError } from '../src/web-evidence/sitemaps.ts';

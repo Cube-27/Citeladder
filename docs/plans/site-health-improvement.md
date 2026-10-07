@@ -53,6 +53,9 @@ and 1.7 are implemented on `feat/site-health-throughput`. 1.5 is implemented on 
 | 1.7 | Tune: `analysis_dependency_retry_max_seconds` 15 → 5; return `deferred` without running `reconcileAfterTask`. | `config/site-health/settings.json`, `analyze-task.ts:344-360` | Root analyze starts within about 5 s of site_setup settling. |
 | 1.8 | Later scale item: claim ranking runs a window over every claimable row. Add a partial claim index or a per-workspace lateral top-N. | `queue/task-queue.ts:67-120`, `migrations/versions/0001_initial.py` | Claim plan stays index-bounded with 50k queued tasks. |
 
+Progress: 1.1-1.3, 1.6 and 1.7 shipped in #293; 1.5 (persistent pool) in #297, with
+discovery's parse moved onto it alongside 1.4 (worker access TTL). 1.8 waits for scale.
+
 Target: a 100-URL / 20-analyzed crawl completes in under 60 s of runner time
 after the execution starts.
 

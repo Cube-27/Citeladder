@@ -69,3 +69,22 @@ export async function requireWorkspaceAccess(db: Database, workspaceId: string) 
     );
   return access;
 }
+
+/**
+ * `requireWorkspaceAccess` for a long-running worker: a grant is reused for
+ * `ttlMs`, so a revocation takes effect within that window, while a denial or
+ * failure is never cached and concurrent checks share one read.
+ */
+export function cachedWorkspaceAccess(db: Database, ttlMs: number, now = () => performance.now()) {
+  const granted = new Map<string, { until: number; check: Promise<unknown> }>();
+  return (workspaceId: string) => {
+    const cached = granted.get(workspaceId);
+    if (cached && now() < cached.until) return cached.check;
+    const check = requireWorkspaceAccess(db, workspaceId);
+    granted.set(workspaceId, { until: now() + ttlMs, check });
+    check.catch(() => {
+      if (granted.get(workspaceId)?.check === check) granted.delete(workspaceId);
+    });
+    return check;
+  };
+}

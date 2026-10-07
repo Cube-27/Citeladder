@@ -6,8 +6,10 @@
 import { Worker } from 'node:worker_threads';
 import { policy, resolveSettingSpec } from '../../config.ts';
 import type { analyzePage, PageContext } from './analyze-page.ts';
-import type { Delivery, factSettings } from './facts.ts';
+import type { Delivery, factSettings, PageFacts } from './facts.ts';
 import type { Facts } from './read-facts.ts';
+import type { discoveryLinks } from '../discovery-links.ts';
+import type { Scope } from '../url-admission.ts';
 
 export type Interpretation =
   | {
@@ -16,7 +18,14 @@ export type Interpretation =
       delivery: Delivery;
       settings: ReturnType<typeof factSettings>;
     }
-  | { kind: 'analyze'; facts: Facts; context: PageContext };
+  | { kind: 'analyze'; facts: Facts; context: PageContext }
+  | {
+      kind: 'discover';
+      body: Uint8Array;
+      delivery: Delivery;
+      settings: ReturnType<typeof factSettings>;
+      scope: Scope;
+    };
 
 type Pending = { resolve: (value: unknown) => void; reject: (error: Error) => void };
 type Slot = { worker: Worker; pending: Map<number, Pending> };
@@ -96,3 +105,18 @@ export const extractFactsAsync = (
 
 export const analyzePageAsync = (facts: Facts, context: PageContext) =>
   interpret<ReturnType<typeof analyzePage>>({ kind: 'analyze', facts, context });
+
+/** A discovered page's links and facts from one parse of the whole document. */
+export const discoverAsync = (
+  body: Uint8Array,
+  delivery: Delivery,
+  settings: ReturnType<typeof factSettings>,
+  scope: Scope,
+) =>
+  interpret<{ discovery: ReturnType<typeof discoveryLinks>; facts: PageFacts }>({
+    kind: 'discover',
+    body,
+    delivery,
+    settings,
+    scope,
+  });

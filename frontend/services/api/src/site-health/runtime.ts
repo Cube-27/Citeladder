@@ -19,6 +19,8 @@ export function siteWorkerSettings(env: Record<string, string | undefined> = pro
     claimWindow: number('claim_window_seconds'),
     /** Unscoped stalled/overdue/cancelled crawl backstops; well inside the stalled threshold. */
     backstopInterval: number('backstop_interval_seconds'),
+    /** A granted workspace stays granted this long inside one worker; a denial is never cached. */
+    accessTtl: number('access_check_ttl_seconds'),
     concurrency: Math.max(1, Math.min(number('worker_concurrency'), number('global_concurrency'))),
     maxAttempts: number('max_attempts'),
     retryBase: number('retry_base_delay_seconds'),

@@ -339,6 +339,12 @@
     "default": 15.0,
     "exclusive_minimum": 0
   },
+  "access_check_ttl_seconds": {
+    "env": ["SITE_HEALTH_ACCESS_CHECK_TTL_SECONDS"],
+    "type": "float",
+    "default": 30.0,
+    "minimum": 0
+  },
   "stalled_crawl_reconcile_seconds": {
     "env": ["SITE_HEALTH_STALLED_CRAWL_RECONCILE_SECONDS"],
     "type": "float",
