@@ -192,7 +192,7 @@ itself cost crawlability, indexing or answer eligibility):
 |---|---|---|
 | `aeo.content_recency` (advisory) | Authored editorial kinds | Newest declared date within `content_recency_max_age_days` (365) of the audit time; undated is the date check's finding (`no_content_date`, not applicable); unreadable, future or no audit time stay unknown |
 | `aeo.entity_profiles` (advisory) | Site root with Organization markup | `sameAs` names a profile on another site; own-host links do not count; no Organization block is the identity check's finding |
-| `technical.sitemap_canonical` (defect) | Sitemap-listed HTML with a canonical | The canonical names the page itself (tracking parameters and trailing slash ignored) |
+| `technical.sitemap_canonical` (defect) | Sitemap-listed HTML with a canonical | The canonical names the URL the sitemap lists, so a listed URL that redirects fails (tracking parameters and trailing slash ignored) |
 
 Considered and not added:
 - FAQPage/HowTo validity: `schema_required_valid` already enforces the required properties.

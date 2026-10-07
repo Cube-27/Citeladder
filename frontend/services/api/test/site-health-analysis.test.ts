@@ -751,9 +751,18 @@ describe('unscored visibility checks', () => {
   });
 
   it('flags a sitemap URL whose canonical names another page', () => {
-    const sitemap = (member: boolean, canonical: string) =>
-      rule('technical.sitemap_canonical', { sitemap_member: member, canonical_url: canonical });
+    const sitemap = (member: boolean, canonical: string, listed?: string) =>
+      rule('technical.sitemap_canonical', {
+        sitemap_member: member,
+        canonical_url: canonical,
+        sitemap_url: listed,
+      });
     expect(outcome(sitemap(true, '/guides/setup/?utm_source=x'))).toEqual(['satisfied', undefined]);
+    // The sitemap lists a URL that redirects to the canonical page: still not canonical.
+    expect(outcome(sitemap(true, '/guides/setup', 'https://www.example.test/old-setup'))).toEqual([
+      'missing',
+      'sitemap_lists_non_canonical',
+    ]);
     expect(outcome(sitemap(false, '/guides/other'))).toEqual(['not_applicable', 'not_in_sitemap']);
     const conflict = sitemap(true, '/guides/other');
     expect(outcome(conflict)).toEqual(['missing', 'sitemap_lists_non_canonical']);

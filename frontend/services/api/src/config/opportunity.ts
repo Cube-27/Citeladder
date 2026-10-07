@@ -402,8 +402,6 @@ export const opportunities = {
     'aeo.listing_answer_set': 'content_structure_incomplete',
     'aeo.visible_attribution': 'citability_trust_incomplete',
     'aeo.content_date_present': 'citability_trust_incomplete',
-    'aeo.content_recency': 'citability_trust_incomplete',
-    'aeo.entity_profiles': 'citability_trust_incomplete',
     'aeo.offer_freshness_signal': 'citability_trust_incomplete',
     'aeo.assortment_freshness_signal': 'citability_trust_incomplete',
     'aeo.source_support_present': 'citability_trust_incomplete',

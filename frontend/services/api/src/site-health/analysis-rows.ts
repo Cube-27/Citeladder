@@ -173,7 +173,7 @@ async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string)
   if (urls && !urls.length) return null;
   const row = await db
     .selectFrom('site_url_observations')
-    .select('id')
+    .select(['id', 'observed_url'])
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('crawl_id', '=', crawl.id)
@@ -183,7 +183,7 @@ async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string)
     )
     .limit(1)
     .executeTakeFirst();
-  return row?.id ?? null;
+  return row ?? null;
 }
 
 /** Site-level facts belong to the crawl root's analysis only. */
@@ -309,10 +309,13 @@ export async function pageAnalysisContext(
   task: SiteTask & { site_url_id: string },
 ) {
   const auditTime = crawl.started_at ?? crawl.created_at;
-  const observationId = await sitemapObservation(db, crawl, task.site_url_id);
+  const observation = await sitemapObservation(db, crawl, task.site_url_id);
+  const observationId = observation?.id ?? null;
   const siteFacts = rootSiteFacts(crawl, task);
   return {
     sitemapMember: observationId !== null,
+    // The URL as the sitemap lists it: a redirect makes it differ from the final URL.
+    sitemapUrl: observation?.observed_url ?? null,
     siteFacts,
     auditTime: auditTime ? new Date(auditTime).toISOString() : null,
     // The crawl owns setup facts and audit time; the observation owns membership.

@@ -7,6 +7,7 @@ import { deriveTraits } from './traits.ts';
 
 export type PageContext = {
   sitemapMember: boolean;
+  sitemapUrl?: string | null;
   /** Only the crawl root carries site-level facts (robots.txt, llms.txt). */
   siteFacts: Facts | null;
   auditTime: string | null;
@@ -28,6 +29,7 @@ export function analyzePage(facts: Facts, context: PageContext) {
     page_kind_evidence: assessment.evidence,
     page_traits: traits,
     sitemap_member: context.sitemapMember,
+    ...(context.sitemapUrl ? { sitemap_url: context.sitemapUrl } : {}),
     ...(context.siteFacts ? { site: context.siteFacts } : {}),
     ...(context.auditTime ? { audit_time: context.auditTime } : {}),
   };

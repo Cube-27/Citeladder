@@ -83,11 +83,17 @@ export function checkSitemapCanonical(facts: Facts): CheckResult {
   const declared = text(facts.canonical_url).trim();
   if (!declared) return ['not_applicable', { reason: 'no_canonical' }];
   const finalUrl = text(record(facts.delivery).final_url);
+  // Judge the URL the sitemap lists: one that redirects is not canonical either.
+  const listedUrl = text(facts.sitemap_url).trim() || finalUrl;
   const canonical = resolveCanonical(declared, finalUrl);
-  const evidence = { canonical_url: canonical.slice(0, 2048), final_url: finalUrl.slice(0, 2048) };
+  const evidence = {
+    canonical_url: canonical.slice(0, 2048),
+    listed_url: listedUrl.slice(0, 2048),
+    final_url: finalUrl.slice(0, 2048),
+  };
   if (!canonicalOrigin(canonical))
     return ['unknown', { ...evidence, reason: 'insufficient_evidence' }];
-  return comparableUrl(canonical) === comparableUrl(finalUrl)
+  return comparableUrl(canonical) === comparableUrl(listedUrl)
     ? ['satisfied', evidence]
     : ['missing', { ...evidence, reason: 'sitemap_lists_non_canonical' }];
 }
