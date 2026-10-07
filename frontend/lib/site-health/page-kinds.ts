@@ -76,7 +76,7 @@ export function byPageKindRows(
  * reports how strong the deciding evidence was, not a score, so the UI names
  * the evidence rather than printing a number that looks calibrated.
  */
-export const CONFIDENCE_LABELS: Readonly<Record<string, string>> = {
+const CONFIDENCE_LABELS: Readonly<Record<string, string>> = {
   high: 'High — page structure',
   medium: 'Medium — URL pattern',
   low: 'Low — semantic evidence',

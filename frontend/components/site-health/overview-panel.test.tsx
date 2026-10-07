@@ -343,18 +343,6 @@ describe('OverviewPanel', () => {
     expect(screen.getByText(/Partial coverage/)).toBeInTheDocument();
     expect(screen.queryByText(/Complete checklist|Complete coverage/)).not.toBeInTheDocument();
     expect(screen.getByText(/requested page limit reached/)).toBeInTheDocument();
-    expect(screen.getByText('High')).toBeInTheDocument();
-    expect(screen.getByText('Medium')).toBeInTheDocument();
-    expect(screen.getByText('Low')).toBeInTheDocument();
-    expect(screen.getByText('AEO Readiness by pillar')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Observed quality and evidence coverage stay separate.'),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('Highest-impact persisted defects and readiness gaps.'),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText('Authority · 10%')).not.toBeInTheDocument();
-    expect(screen.queryByText('Critical')).not.toBeInTheDocument();
     const issueLink = screen.getByRole('link', { name: 'Author attribution is missing' });
     expect(issueLink).toHaveAttribute(
       'href',

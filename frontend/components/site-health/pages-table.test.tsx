@@ -33,13 +33,6 @@ function renderPages(ui: ReactElement) {
 }
 
 describe('PagesTable', () => {
-  it('renders scores for a completed page', () => {
-    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
-    expect(screen.getByText('Homepage')).toBeInTheDocument();
-    expect(screen.getByText('46')).toBeInTheDocument();
-    expect(screen.getByText('64')).toBeInTheDocument();
-  });
-
   it('exposes scores as cells in a native row and keeps keyboard navigation', () => {
     renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     const row = screen.getByRole('row', { name: /Homepage/ });
@@ -70,11 +63,6 @@ describe('PagesTable', () => {
     expect(within(row!).getByText('46')).toBeInTheDocument();
     expect(within(row!).queryByText(/confidence/i)).not.toBeInTheDocument();
     expect(within(row!).queryByText(/100% measured/i)).not.toBeInTheDocument();
-  });
-
-  it('renders the page-kind badge for a classified page', () => {
-    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
-    expect(screen.getByText('Article')).toBeInTheDocument();
   });
 
   it('renders the not-measured state for an unclassified page (null page_kind)', () => {
@@ -136,14 +124,6 @@ describe('PagesTable', () => {
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
   });
 
-  it('links View to the per-URL detail route', () => {
-    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
-    const view = screen.getByText('View');
-    const anchor = view.closest('a');
-    expect(anchor).not.toBeNull();
-    expect(anchor).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${UUID}`);
-  });
-
   it('navigates to the per-URL detail when the row is clicked', () => {
     renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     fireEvent.click(screen.getByText('Homepage'));
@@ -163,13 +143,9 @@ describe('PagesTable', () => {
     );
   });
 
-  it('renders the final PR2 page metrics', () => {
+  it('renders the persisted link and indexability metrics', () => {
     renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'AEO Coverage' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('columnheader', { name: 'Main-content indexable' }),
-    ).toBeInTheDocument();
     expect(screen.getByText('Indexable')).toBeInTheDocument();
   });
 

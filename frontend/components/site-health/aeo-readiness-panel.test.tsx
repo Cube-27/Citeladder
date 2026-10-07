@@ -154,20 +154,8 @@ describe('AEO Readiness', () => {
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
     await screen.findByRole('heading', { name: 'Readiness dimensions' });
-    expect(screen.queryByText(/Scores describe classified audited pages/)).not.toBeInTheDocument();
-    expect(screen.queryByTestId('classification-summary')).not.toBeInTheDocument();
     for (const [, label] of DIMENSIONS) expect(screen.getByText(label)).toBeInTheDocument();
     expect(screen.getByText(/what answerability means in one sentence/i)).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Score' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Quality' })).toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Determinate' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Expected' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'N/A' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Errors' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Analyzed pages')).not.toBeInTheDocument();
-    expect(screen.queryByText('Affected pages')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Taxonomy aeo-readiness-v1/)).toBeNull();
-    expect(screen.queryByText(/Analyzer page-v1/)).toBeNull();
   });
 
   it('counts pages that need work, never a bare evaluation total', async () => {

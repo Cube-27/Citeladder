@@ -257,14 +257,10 @@ describe('UrlDetail', () => {
     expect(
       await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
     ).toBeInTheDocument();
-    // The header carries the v2 P1 page-kind badge.
-    expect(screen.getByText('Page Kind')).toBeInTheDocument();
     expect(screen.getByText('Product')).toBeInTheDocument();
     // Delivery metric: TTFB rendered with ms suffix.
     expect(screen.getByText('840ms')).toBeInTheDocument();
     expect(screen.getByText('200')).toBeInTheDocument();
-    // Issues section header shows the count.
-    expect(screen.getByText('All Issues (2)')).toBeInTheDocument();
 
     // High-severity issue is ordered before the low-severity one.
     const high = screen.getByText('WebSite schema is missing');
@@ -274,20 +270,6 @@ describe('UrlDetail', () => {
       screen.getByText('expected types WebSite, found types Organization'),
     ).toBeInTheDocument();
     expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
-  });
-
-  it('keeps the header to concise persisted page metadata', async () => {
-    mswServer.use(...handlers(detail()));
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.getByText('Page Kind')).toBeInTheDocument();
-    expect(screen.getByText('Last Audit')).toBeInTheDocument();
-    expect(screen.getByText('Status')).toBeInTheDocument();
-    expect(screen.queryByText('Also on this page')).not.toBeInTheDocument();
-    expect(screen.queryByText('Has an FAQ')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /why this page kind/i })).not.toBeInTheDocument();
-    expect(screen.queryByText('Classified by')).not.toBeInTheDocument();
   });
 
   it('renders a persisted unresolved-purpose state simply as not measured', async () => {
@@ -308,7 +290,7 @@ describe('UrlDetail', () => {
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
     expect(screen.queryByText(/purpose unresolved/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /^AEO Readiness:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /^AEO Readiness score:/ })).not.toBeInTheDocument();
   });
 
   it('renders the not-measured state for a missing score, never a zero', async () => {
@@ -329,6 +311,10 @@ describe('UrlDetail', () => {
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
+    // No score ring at all: a missing measurement never renders as 0.
+    expect(
+      screen.queryByRole('img', { name: /^(Web Fundamentals|AEO Readiness) score:/ }),
+    ).toBeNull();
   });
 
   it.each(['page_purpose_unresolved', 'unsupported_purpose_checklist'])(

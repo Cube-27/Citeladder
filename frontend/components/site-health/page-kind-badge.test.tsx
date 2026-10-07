@@ -9,18 +9,8 @@ describe('PageKindBadge', () => {
     expect(screen.getByText('About / Contact')).toBeInTheDocument();
   });
 
-  it('renders the acronym label untouched (FAQ, not Faq)', () => {
-    render(<PageKindBadge pageKind="faq" />);
-    expect(screen.getByText('FAQ')).toBeInTheDocument();
-  });
-
-  it('renders the not-measured state for an unclassified page (null) — never a guessed type', () => {
-    render(<PageKindBadge pageKind={null} />);
-    expect(screen.getByText('Not measured')).toBeInTheDocument();
-  });
-
-  it('renders the not-measured state when the projection does not carry the field', () => {
-    render(<PageKindBadge pageKind={undefined} />);
+  it.each([null, undefined])('renders %s as not measured, never a guessed type', (pageKind) => {
+    render(<PageKindBadge pageKind={pageKind} />);
     expect(screen.getByText('Not measured')).toBeInTheDocument();
   });
 });

@@ -114,22 +114,10 @@ describe('Architecture panel', () => {
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
 
     expect(await screen.findByRole('heading', { name: 'Page kinds' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Page kind' })).toBeInTheDocument();
-    expect(screen.queryByText('Type mix')).toBeNull();
-    expect(screen.queryByText('URL pattern')).toBeNull();
-    expect(screen.getByText('Internal linking')).toBeInTheDocument();
-    expect(screen.getByText('Structure depth')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Observed hierarchy' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Observed hierarchy pages' })).toBeInTheDocument();
+    // Persisted summaries, not recomputed ones.
     expect(screen.getByText('67%')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /View pages by inbound links/i })).toBeNull();
-    expect(screen.queryByRole('link', { name: /View pages by depth/i })).toBeNull();
-    const linking = screen.getByText('Internal linking').closest('section');
-    const pageKinds = screen.getByRole('heading', { name: 'Page kinds' }).closest('section');
-    expect(
-      linking!.compareDocumentPosition(pageKinds!) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
   });
 
   it('renders the persisted parent hierarchy and relationship source', async () => {

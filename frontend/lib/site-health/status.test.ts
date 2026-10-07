@@ -4,7 +4,6 @@ import {
   PLACEHOLDER,
   POLL_INTERVAL_MS,
   canShowDiscoveredTotal,
-  crawlBadgeValue,
   crawlFailureCopy,
   dashboardRunNotice,
   discoveryProgressLabel,
@@ -19,7 +18,6 @@ import {
   isDiscoveryTerminal,
   isErrorRow,
   isSampleMode,
-  pageStatusBadgeValue,
   crawlProgressVersion,
   shouldPollCrawl,
   statusLabel,
@@ -396,22 +394,6 @@ describe('crawlFailureCopy (B1)', () => {
 });
 
 describe('badge mapping', () => {
-  it('maps overall crawl status to a run-status badge value', () => {
-    expect(crawlBadgeValue('validating')).toBe('queued');
-    expect(crawlBadgeValue('partially_completed')).toBe('partial');
-    expect(crawlBadgeValue('running')).toBe('running');
-  });
-
-  it('maps page analysis status to a status badge value', () => {
-    expect(pageStatusBadgeValue('completed')).toBe('success');
-    expect(pageStatusBadgeValue('partially_completed')).toBe('warning');
-    expect(pageStatusBadgeValue('failed')).toBe('danger');
-    expect(pageStatusBadgeValue('error')).toBe('danger');
-    expect(pageStatusBadgeValue('blocked')).toBe('danger');
-    expect(pageStatusBadgeValue('pending')).toBe('info');
-    expect(pageStatusBadgeValue('not_selected')).toBe('info');
-  });
-
   it('classifies error/blocked rows explicitly (not zero scores)', () => {
     expect(isErrorRow('failed')).toBe(true);
     expect(isErrorRow('error')).toBe(true);

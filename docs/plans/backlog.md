@@ -123,6 +123,10 @@ are shipped. Remaining investigation and policy-dependent work:
   log/access/retention controls; measure capacity against agreed workload and budget.
 - Reconcile older provisioning proposals with completed self-serve authentication
   before scoping additional admission work.
+- Site Health claim scale (from the Site Health review, item 1.8): claim ranking
+  windows over every claimable task row. Add a partial claim index or a
+  per-workspace lateral top-N once queued tasks approach tens of thousands; the
+  acceptance is an index-bounded claim plan with 50k queued tasks.
 
 Security alerts remain explicitly deferred, not an implicit release prerequisite.
 Infrastructure redesigns and paid security tiers require demonstrated need. Recovery,
