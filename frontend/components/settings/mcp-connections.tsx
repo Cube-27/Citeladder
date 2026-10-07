@@ -2,6 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Stack } from '@/components/ui/layout';
+import { ReadError } from '@/components/ui/read-error';
+import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
 import { humanizeApiError } from '@/lib/api/errors';
 import { mcpConnectionsApi } from '@/lib/api/mcp-connections';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -21,38 +25,44 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
   if (query.isPending) return <output>Loading connections…</output>;
   if (query.isError)
     return (
-      <Alert tone="danger">
-        {humanizeApiError(query.error).message}
-        <Button onClick={() => void query.refetch()}>Retry</Button>
-      </Alert>
+      <ReadError
+        error={query.error}
+        fallback="Connections could not be loaded."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
     );
   return (
-    <section className="grid gap-4">
-      <h2>{workspaceId ? 'Connections authorized for this workspace' : 'Your MCP connections'}</h2>
+    <Stack as="section" gap="compact">
+      <EditorialSectionHeader
+        title={workspaceId ? 'Connections authorized for this workspace' : 'Your MCP connections'}
+      />
       {query.data.length === 0 ? (
-        <p>No active connections.</p>
+        <p className={textRole('body')}>No active connections.</p>
       ) : (
-        query.data.map((connection) => (
-          <div key={connection.id} className="flex items-center justify-between gap-4">
-            <p>
-              {connection.client_name}
-              {connection.requires_consent ? ' — reconnect to select workspaces' : ''}
-            </p>
-            <Button
-              variant="secondary"
-              disabled={revoke.isPending}
-              onClick={() => revoke.mutate(connection.id)}
-              aria-label={`Revoke ${connection.client_name}`}
-            >
-              {workspaceId ? 'Remove workspace access' : 'Revoke connection'}
-            </Button>
-          </div>
-        ))
+        <div className={ledgerClasses('open')}>
+          {query.data.map((connection) => (
+            <div key={connection.id} className="flex items-center justify-between gap-4 py-3">
+              <p className={textRole('body')}>
+                {connection.client_name}
+                {connection.requires_consent ? ' — reconnect to select workspaces' : ''}
+              </p>
+              <Button
+                variant="secondary"
+                disabled={revoke.isPending}
+                onClick={() => revoke.mutate(connection.id)}
+                aria-label={`Revoke ${connection.client_name}`}
+              >
+                {workspaceId ? 'Remove workspace access' : 'Revoke connection'}
+              </Button>
+            </div>
+          ))}
+        </div>
       )}
       {revoke.isError ? (
         <Alert tone="danger">{humanizeApiError(revoke.error).message}</Alert>
       ) : null}
-    </section>
+    </Stack>
   );
 }
 
@@ -60,11 +70,11 @@ export function McpConnections() {
   const { activeWorkspaceId } = useProjectContext();
   const mayManage = useWorkspaceCapability('manage_members');
   return (
-    <div className="grid gap-[var(--page-section-gap)]">
+    <Stack gap="section">
       <ConnectionList />
       {mayManage && activeWorkspaceId ? (
         <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />
       ) : null}
-    </div>
+    </Stack>
   );
 }

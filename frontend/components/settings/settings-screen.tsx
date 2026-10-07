@@ -29,7 +29,8 @@ import { emailInitials } from '@/lib/utils';
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { Stack } from '@/components/ui/layout';
+import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 
@@ -40,8 +41,8 @@ function DetailRow({
   numeric = false,
 }: Readonly<{ label: string; children: React.ReactNode; numeric?: boolean }>) {
   return (
-    <div className="border-border-subtle grid min-h-12 grid-cols-[minmax(0,180px)_1fr] items-center gap-4 border-b py-2 last:border-b-0">
-      <dt className={textRole('itemTitle')}>{label}</dt>
+    <div className="grid min-h-12 grid-cols-[minmax(0,180px)_1fr] items-center gap-4 py-2">
+      <dt className={textRole('label')}>{label}</dt>
       <dd className={numeric ? 'type-caption tabular-nums' : 'type-body text-foreground'}>
         {children}
       </dd>
@@ -113,7 +114,7 @@ function ProjectDeletionControls() {
   if (!hasCapability(PROJECT_DELETION_CAPABILITY)) return null;
   return (
     <>
-      <section className="grid gap-4">
+      <Stack as="section" gap="workspace">
         <EditorialSectionHeader
           title="Danger zone"
           description="Permanently delete the active project and everything inside it."
@@ -153,7 +154,7 @@ function ProjectDeletionControls() {
         ) : (
           <p className="type-body">No project selected.</p>
         )}
-      </section>
+      </Stack>
       <Dialog
         open={confirmOpen}
         onOpenChange={(open) => {
@@ -237,66 +238,65 @@ export function SettingsScreen() {
           />
         }
       >
-        <TabPanel
-          value="account"
-          forceMount
-          className="focus-ring grid gap-4 data-[state=inactive]:hidden"
-        >
-          {/* Two columns from lg, not a narrow centred rail. These cards are
+        <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
+          <Stack gap="section">
+            {/* Two columns from lg, not a narrow centred rail. These cards are
             short, so a max-w-2xl column left most of a wide screen empty and
             pushed everything below the fold for no reason. */}
-          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-            <section className="grid gap-4">
-              <div className="flex items-center gap-4">
-                <span
-                  aria-hidden
-                  // The same solid accent disc as the topbar avatar, one size
-                  // up because this one identifies the account rather than
-                  // triggering a menu. A pale tint with accent ink read as a
-                  // disabled chip beside the address it belongs to.
-                  className={textRole(
-                    'itemTitle',
-                    'bg-well text-secondary flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
-                  )}
-                >
-                  {emailInitials(user.email)}
-                </span>
-                <div className="grid min-w-0 flex-1 gap-0.5">
-                  <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
-                  <div className="type-body capitalize">{user.role}</div>
+            <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-2 lg:items-start">
+              <Stack as="section" gap="workspace">
+                <div className="flex items-center gap-4">
+                  <span
+                    aria-hidden
+                    // The same solid accent disc as the topbar avatar, one size
+                    // up because this one identifies the account rather than
+                    // triggering a menu. A pale tint with accent ink read as a
+                    // disabled chip beside the address it belongs to.
+                    className={textRole(
+                      'itemTitle',
+                      'bg-well text-secondary flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
+                    )}
+                  >
+                    {emailInitials(user.email)}
+                  </span>
+                  <div className="grid min-w-0 flex-1 gap-0.5">
+                    <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
+                    <div className="type-body capitalize">{user.role}</div>
+                  </div>
+                  <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
+                    {user.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
                 </div>
-                <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
-                  {user.is_active ? 'Active' : 'Inactive'}
-                </Badge>
-              </div>
 
-              {/* Only what the header above does NOT already state. Email, role
+                {/* Only what the header above does NOT already state. Email, role
                   and status were each rendered twice — once in the identity row
                   and again as a detail row. */}
-              <dl className="border-border-subtle mt-[var(--card-padding)] border-t">
-                {createdLabel ? (
-                  <DetailRow label="Account created" numeric>
-                    {createdLabel}
-                  </DetailRow>
-                ) : null}
-                {updatedLabel ? (
-                  <DetailRow label="Last updated" numeric>
-                    {updatedLabel}
-                  </DetailRow>
-                ) : null}
-                {user.id ? (
-                  <DetailRow label="User ID" numeric>
-                    {user.id}
-                  </DetailRow>
-                ) : null}
-              </dl>
-            </section>
-          </div>
+                <dl className={ledgerClasses('open', 'border-border-subtle border-t')}>
+                  {createdLabel ? (
+                    <DetailRow label="Account created" numeric>
+                      {createdLabel}
+                    </DetailRow>
+                  ) : null}
+                  {updatedLabel ? (
+                    <DetailRow label="Last updated" numeric>
+                      {updatedLabel}
+                    </DetailRow>
+                  ) : null}
+                  {user.id ? (
+                    <DetailRow label="User ID" numeric>
+                      {user.id}
+                    </DetailRow>
+                  ) : null}
+                </dl>
+              </Stack>
+              <Stack gap="section">
+                <TimeZoneSetting />
+                <AccountSecurity />
+              </Stack>
+            </div>
 
-          <TimeZoneSetting />
-          <AccountSecurity />
-
-          <ProjectDeletionControls />
+            <ProjectDeletionControls />
+          </Stack>
         </TabPanel>
 
         <TabPanel value="members" forceMount className="focus-ring data-[state=inactive]:hidden">

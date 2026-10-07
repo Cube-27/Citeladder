@@ -8,6 +8,8 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Stack } from '@/components/ui/layout';
+import { panelClasses } from '@/components/ui/panel';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -108,7 +110,7 @@ function BusinessMapForm({
     setDrafts((prev) => prev.map((draft, i) => (i === index ? next : draft)));
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <Stack gap="workspace">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className={textRole('body', 'text-secondary')}>
           Describe each offering so generated prompts cover real buyer situations. Leave anything
@@ -132,7 +134,7 @@ function BusinessMapForm({
           onChange={(next) => update(index, next)}
         />
       ))}
-    </div>
+    </Stack>
   );
 }
 
@@ -168,9 +170,11 @@ function OfferingEditor({
   };
 
   return (
-    <section
+    <Stack
+      as="section"
+      gap="workspace"
       aria-labelledby={headingId}
-      className="bg-well grid gap-4 rounded-[var(--radius-control)] p-[var(--card-padding)]"
+      className={panelClasses({ tone: 'well' })}
     >
       <h3 id={headingId} className={textRole('itemTitle')}>
         {draft.offering}
@@ -192,7 +196,7 @@ function OfferingEditor({
         disabled={disabled}
         onChange={(exclusions) => onChange({ ...draft, exclusions })}
       />
-    </section>
+    </Stack>
   );
 }
 

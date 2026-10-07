@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 
 import type { Audit, AuditStatus } from '@/lib/api/types';
 
-import { ProgressPanel } from './progress-panel';
+import { ProgressPanel, RunActions } from './progress-panel';
 
 /**
  * `components/runs` shipped with no colocated tests. The run lifecycle surface
@@ -36,15 +36,25 @@ const BASE_AUDIT: Audit = {
   completed_at: null,
 };
 
-function renderPanel(audit: Partial<Audit> = {}, props: Record<string, unknown> = {}) {
+/** The run route renders the actions in its identity band beside the panel. */
+function renderPanel(
+  audit: Partial<Audit> = {},
+  props: { cancelPending?: boolean; onRerunFailures?: () => void; rerunPending?: boolean } = {},
+) {
   const onCancel = vi.fn();
+  const run = { ...BASE_AUDIT, ...audit };
   render(
-    <ProgressPanel
-      audit={{ ...BASE_AUDIT, ...audit }}
-      onCancel={onCancel}
-      cancelPending={false}
-      {...props}
-    />,
+    <>
+      <RunActions
+        audit={run}
+        onCancel={onCancel}
+        cancelPending={false}
+        onExport={vi.fn()}
+        exporting={null}
+        {...props}
+      />
+      <ProgressPanel audit={run} />
+    </>,
   );
   return { onCancel };
 }

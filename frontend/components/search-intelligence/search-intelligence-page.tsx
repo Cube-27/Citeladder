@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Settings2, Unplug } from 'lucide-react';
 
+import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { DisplayTime } from '@/components/ui/display-time';
 import { ProjectLink } from '@/components/layout/scoped-link';
@@ -154,7 +155,7 @@ export function SearchIntelligencePage() {
   if (readiness.isPending)
     return (
       <PageShell>
-        <Skeleton className="h-80 w-full" />
+        <PageLoading label="Loading Search Intelligence…" />
       </PageShell>
     );
   if (readiness.isError)

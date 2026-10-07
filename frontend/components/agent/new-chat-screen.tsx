@@ -17,7 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import {
   agentHandoffHref,
@@ -102,7 +103,11 @@ function NewChat({
   return (
     <PageShell
       measure="workflow"
-      className="flex min-h-[calc(100dvh-var(--page-band-identity))] flex-col"
+      // Fill the viewport below the shell chrome so the composer sits at the
+      // bottom of a short thread. `--route-chrome-height` (globals.css) owns the
+      // chrome above the route at each breakpoint; the gutter is the shell's
+      // padding under the route. Kept identical in chat- and new-chat-screen.
+      className="flex min-h-[calc(100dvh-var(--route-chrome-height)-var(--content-gutter))] flex-col"
     >
       <Stack gap="section" className="my-auto">
         <h2 className={textRole('sectionTitle', 'text-center')}>What can I help with?</h2>
@@ -210,19 +215,22 @@ function TopActions({
   const top = query.data?.items.slice(0, AGENT_TOP_ACTIONS) ?? [];
   if (top.length === 0) return null;
   return (
-    <section aria-labelledby="top-actions" className="grid gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <SectionTitle id="top-actions">Recommended Actions</SectionTitle>
-        <Button asChild variant="ghost" size="sm">
-          <ProjectLink href="/agent/actions">All Actions</ProjectLink>
-        </Button>
-      </div>
+    <Stack as="section" aria-labelledby="top-actions">
+      <EditorialSectionHeader
+        title="Recommended Actions"
+        headingId="top-actions"
+        actions={
+          <Button asChild variant="ghost" size="sm">
+            <ProjectLink href="/agent/actions">All Actions</ProjectLink>
+          </Button>
+        }
+      />
       <ul className="grid gap-2">
         {top.map((action) => (
           <TopActionRow key={action.id} action={action} />
         ))}
       </ul>
-    </section>
+    </Stack>
   );
 }
 

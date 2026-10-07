@@ -5,6 +5,7 @@ import { useId, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -97,88 +98,86 @@ export function TopicRail({
     <>
       {/* Desktop rail: raised surface that clips its own content
           so nothing from the right pane can overlap it. */}
-      <nav
-        id={desktopId}
-        aria-label="Topics"
-        className="bg-panel hidden min-w-0 content-start gap-1 rounded-[var(--radius-card)] p-2 lg:sticky lg:top-4 lg:grid"
-      >
-        <div className="flex items-center justify-between px-1">
-          <h3 className={eyebrowClasses}>Topics</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Add topic"
-            onClick={() => setAdding((v) => !v)}
-          >
-            <Plus className="size-4" aria-hidden />
-          </Button>
-        </div>
+      <Card className="hidden min-w-0 p-2 lg:sticky lg:top-4 lg:block">
+        <nav id={desktopId} aria-label="Topics" className="grid min-w-0 content-start gap-1">
+          <div className="flex items-center justify-between px-1">
+            <h3 className={eyebrowClasses}>Topics</h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Add topic"
+              onClick={() => setAdding((v) => !v)}
+            >
+              <Plus className="size-4" aria-hidden />
+            </Button>
+          </div>
 
-        {errorBanner}
+          {errorBanner}
 
-        {adding ? (
-          <form
-            className="grid gap-2 px-1 pb-1"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void submit();
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <Input
-                // oxlint-disable-next-line jsx-a11y/no-autofocus -- Add topic explicitly opens this form; focus follows the invoking action.
-                autoFocus
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Topic name"
-                aria-label="Topic name"
-                className="h-8"
-              />
-              <Button
-                type="submit"
-                variant="secondary"
-                size="sm"
-                disabled={isCreating || !name.trim()}
-              >
-                Add
-              </Button>
-            </div>
-            {parents.length ? (
-              <Select
-                value={parentId}
-                onValueChange={setParentId}
-                ariaLabel="Add under"
-                className="w-full"
-                options={[
-                  { value: '', label: 'Top-level topic' },
-                  ...parents.map((topic) => ({
-                    value: topic.id,
-                    label: `Subtopic of ${topic.name}`,
-                  })),
-                ]}
-              />
-            ) : null}
-          </form>
-        ) : null}
+          {adding ? (
+            <form
+              className="grid gap-2 px-1 pb-1"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submit();
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <Input
+                  // oxlint-disable-next-line jsx-a11y/no-autofocus -- Add topic explicitly opens this form; focus follows the invoking action.
+                  autoFocus
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Topic name"
+                  aria-label="Topic name"
+                  className="h-8"
+                />
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  size="sm"
+                  disabled={isCreating || !name.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+              {parents.length ? (
+                <Select
+                  value={parentId}
+                  onValueChange={setParentId}
+                  ariaLabel="Add under"
+                  className="w-full"
+                  options={[
+                    { value: '', label: 'Top-level topic' },
+                    ...parents.map((topic) => ({
+                      value: topic.id,
+                      label: `Subtopic of ${topic.name}`,
+                    })),
+                  ]}
+                />
+              ) : null}
+            </form>
+          ) : null}
 
-        <TopicItem
-          label="All topics"
-          selected={selectedTopicId === null}
-          onSelect={() => onSelect(null)}
-        />
-        {orderTopicsForRail(topics).map(({ topic, nested, label }) => (
           <TopicItem
-            key={topic.id}
-            label={topic.name}
-            accessibleName={nested ? label : undefined}
-            nested={nested}
-            activeCount={topic.active_count}
-            selected={selectedTopicId === topic.id}
-            onSelect={() => onSelect(topic.id)}
-            onDelete={() => onDelete(topic)}
+            label="All topics"
+            selected={selectedTopicId === null}
+            onSelect={() => onSelect(null)}
           />
-        ))}
-      </nav>
+          {orderTopicsForRail(topics).map(({ topic, nested, label }) => (
+            <TopicItem
+              key={topic.id}
+              label={topic.name}
+              accessibleName={nested ? label : undefined}
+              nested={nested}
+              activeCount={topic.active_count}
+              selected={selectedTopicId === topic.id}
+              onSelect={() => onSelect(topic.id)}
+              onDelete={() => onDelete(topic)}
+            />
+          ))}
+        </nav>
+      </Card>
 
       {/* Narrow selector: full-width Topics picker shown below the lg
           breakpoint, stacked above the status tabs. */}

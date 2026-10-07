@@ -16,34 +16,36 @@
     var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-heading), sans-serif;
 
-  --color-background: #f3f5f7;
-  --color-background-alt: #f7f9fb;
+  /* The app shares the public palette (owner decision, 2026-10-07): a quiet
+     green-tinted neutral ground with white paper, near-black ink and hairlines,
+     so the site, auth, onboarding and the product read as one system. */
+  --color-background: #f4f5f4;
+  --color-background-alt: #f6f7f6;
   --color-panel: #ffffff;
-  --color-panel-tonal: #f7f9fb;
+  --color-panel-tonal: #f8f9f8;
   --color-elevated: #ffffff;
-  --color-well: #e9edf1;
+  --color-well: #eff1f0;
   --color-hover: color-mix(in srgb, var(--color-panel), var(--color-foreground) 4%);
   --color-selected: color-mix(in srgb, var(--color-panel), var(--color-foreground) 8%);
   --color-active: color-mix(in srgb, var(--color-panel), var(--color-foreground) 12%);
   --color-disabled: color-mix(in srgb, var(--color-panel), var(--color-foreground) 3%);
   /* Recessed selection track; state tints follow their enclosing surface. */
-  --color-track: #e6eaf0;
+  --color-track: #eceeed;
   --color-input: #ffffff;
-  /* The elevation ladder is rail → ground → paper: the sidebar sits one step
-     below the shell ground, and cards and tables (--color-panel) sit one step
-     above it, so every chrome plane reads at its own depth in both themes.
-     The token must be a literal (the policy requires six-digit hex here); the
-     dark rebind holds the same relationship one ramp down. */
-  --color-sidebar: #e9edf1;
-  --color-surface-inverse: #14532d;
+  /* Floating-sheet shell: the sidebar shares the shell ground and the work
+     floats above both on one white sheet, so there is no rail step below the
+     ground any more. The token must be a literal (the policy requires
+     six-digit hex here); the dark rebind holds the same relationship. */
+  --color-sidebar: #f4f5f4;
+  --color-surface-inverse: #0b0f0d;
 
   /* Shell/workspace ground and its stronger neutral inset. Cards and tables
      retain the white panel fill; interaction alone uses the accent ramp. */
-  --color-shell: #f3f5f7;
-  --color-shell-alt: #e9edf1;
+  --color-shell: #f4f5f4;
+  --color-shell-alt: #eceeed;
 
   /* The public soft band, for alternating sections and tool wells. */
-  --color-canvas-soft: #f7f9fb;
+  --color-canvas-soft: #f6f7f6;
 
   /* The separation ladder. Four rungs that must each be visibly different
      from the one above it, because they carry the whole hierarchy: the app
@@ -62,20 +64,20 @@
 
      `border` used to sit a hair under `subtle`, so the two rungs collapsed and
      every object edge dissolved into its own contents. It now steps clear. */
-  --color-border: #d3dae4;
-  --color-border-subtle: #e5e9ef;
-  --color-border-strong: #c3ccd9;
-  --color-border-bold: #8a95a5;
+  --color-border: #e1e4e2;
+  --color-border-subtle: #eceeed;
+  --color-border-strong: #cfd4d1;
+  --color-border-bold: #858d88;
 
   /* Reading inks plus the graduated chrome ladder. Faint is decorative only. */
-  --color-ink-faint: #8a95a5;
-  --color-ink-subtle: #5b6678;
-  --color-ink-soft: #526074;
-  --color-ink-chip: #3f4e63;
-  --color-ink-icon: #334155;
-  --color-foreground: #0f172a;
-  --color-secondary: #334155;
-  --color-muted: #5b6678;
+  --color-ink-faint: #8e9690;
+  --color-ink-subtle: #5c645f;
+  --color-ink-soft: #525a55;
+  --color-ink-chip: #3b423e;
+  --color-ink-icon: #2d332f;
+  --color-foreground: #0b0f0d;
+  --color-secondary: #3b423e;
+  --color-muted: #5c645f;
   --color-on-inverse: #ffffff;
 
   /* Forest uses the deep shade for white-on-colour controls and text. The
@@ -89,8 +91,8 @@
   --color-accent-soft: #f0fdf4;
   --color-accent-border: #86efac;
   --color-accent-text: #14532d;
-  --color-selection: #86efac;
-  --color-selection-fg: #0f172a;
+  --color-selection: #bbf7d0;
+  --color-selection-fg: #0b0f0d;
 
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
@@ -121,7 +123,7 @@
   --color-info-bg: #eef5fa;
   --color-info-border: #c8d9e8;
   --color-info-text: #24476b;
-  --color-neutral-bg: #eef1f5;
+  --color-neutral-bg: #eff1f0;
 
   /* Marketing icon tiles — the pastel colour carriers for public-section
      iconography (docs/design.md §Colour). Decorative only: they never carry
@@ -185,7 +187,7 @@
   --color-gsc-impressions: #673ab7;
   --color-gsc-ctr: #00897b;
   --color-gsc-position: #e65100;
-  --color-overlay-scrim: rgb(20 33 61 / 45%);
+  --color-overlay-scrim: rgb(11 15 13 / 32%);
 
   /* Tailwind's default radius scale is cleared so the ladder cannot be
      side-stepped by reaching for a size name. What remains is the 4px micro
@@ -198,11 +200,14 @@
   /* Detached elevation; resting objects use the surface recipes below. */
   --shadow-*: initial;
   --shadow-none: none;
+  /* The public menu and frame shadows: a hairline ring, a close contact
+     shadow and one long soft ambient layer. */
   --shadow-overlay:
-    0 5px 15px rgb(15 23 42 / 8%), 0 15px 35px -5px rgb(15 23 42 / 16%);
+    0 0 0 1px rgb(11 15 13 / 7%), 0 4px 8px -2px rgb(11 15 13 / 6%),
+    0 16px 40px -8px rgb(11 15 13 / 14%);
   --shadow-modal:
-    0 0 0 1px rgb(15 23 42 / 6%), 0 5px 15px rgb(15 23 42 / 8%),
-    0 15px 35px -5px rgb(15 23 42 / 20%);
+    0 0 0 1px rgb(11 15 13 / 7%), 0 1px 2px rgb(11 15 13 / 4%),
+    0 12px 32px -8px rgb(11 15 13 / 12%), 0 40px 80px -24px rgb(11 15 13 / 20%);
 
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
@@ -275,9 +280,9 @@
   --tag-yellow-bg: #faf6dd;
   --tag-yellow-border: #e3daa4;
   --tag-yellow-text: #685914;
-  --tag-neutral-bg: #edf0f4;
-  --tag-neutral-border: #d3dae4;
-  --tag-neutral-text: #3f4e63;
+  --tag-neutral-bg: #eff1f0;
+  --tag-neutral-border: #dce0dd;
+  --tag-neutral-text: #3b423e;
   --state-surface: var(--color-panel);
   --sidebar-width: 240px;
   --compact-topbar-height: 56px;
@@ -295,6 +300,7 @@
   --workflow-max-width: 1040px;
   /* The sanctioned two-column split. A screen picks a role, never a ratio. */
   --pane-list-detail: minmax(18rem, 0.9fr) minmax(0, 2fr);
+  --pane-main-aside: minmax(0, 2fr) minmax(18rem, 1fr);
   /* The spacing scale is the 4px grid: 4 8 12 16 20 24 32 40 48 64, plus 2px
      for hairline insets only. Each rhythm role below names one step. */
   --page-section-gap: 24px;
@@ -311,28 +317,32 @@
   --control-height-lg: 36px;
   --marketing-cta-height: 36px;
   --marketing-hero-cta-height: 44px;
-  /* Clerk-inspired material, using CiteLadder's existing palette. The fine
-     inset edge preserves layout geometry; ambient layers establish depth. */
-  --surface-highlight: rgb(255 255 255 / 70%);
-  --surface-ring: rgb(15 23 42 / 14%);
-  --surface-inset-ring: rgb(255 255 255 / 60%);
-  --surface-drop: rgb(15 23 42 / 8%);
+  /* The public material (docs/design.md §Colour): every raised object is a
+     hairline ring plus a close contact shadow, and larger objects add one long
+     soft ambient layer. Nothing glows and nothing carries an inset bevel; the
+     only sheen is the primary action's faint top highlight. The ring is a
+     shadow, so it never changes an object's box geometry. */
+  --surface-highlight: rgb(255 255 255 / 16%);
+  --surface-ring: rgb(11 15 13 / 8%);
+  --surface-drop: rgb(11 15 13 / 5%);
   --surface-sheen: rgb(255 255 255 / 10%);
   --elevation-control:
-    0 2px 3px var(--surface-drop), 0 0 0 1px var(--surface-ring),
-    inset 0 1px 0 var(--surface-highlight), inset 0 0 0 1px var(--surface-inset-ring);
+    0 0 0 1px var(--surface-ring), 0 1px 2px var(--surface-drop);
   --elevation-primary:
-    0 3px 5px var(--surface-drop), 0 0 0 1px var(--surface-ring),
-    inset 0 2px 4px rgb(255 255 255 / 20%), inset 0 0 0 1px rgb(255 255 255 / 15%),
-    inset 0 -4px 8px rgb(0 0 0 / 10%);
+    0 0 0 1px var(--color-accent-active), inset 0 1px 0 var(--surface-highlight),
+    0 1px 2px rgb(11 15 13 / 16%), 0 2px 6px -2px rgb(20 83 45 / 35%);
   --elevation-card:
-    0 2px 6px var(--surface-drop), 0 0 0 1px var(--surface-ring),
-    inset 0 1px 0 var(--surface-highlight), inset 0 0 0 1px var(--surface-inset-ring);
+    0 0 0 1px rgb(11 15 13 / 7%), 0 1px 2px rgb(11 15 13 / 4%),
+    0 4px 12px -6px rgb(11 15 13 / 6%);
+  /* The workspace sheet and focused task sheets: the public frame shadow. */
   --elevation-flow:
-    inset 0 0 0 1px var(--color-border-subtle),
-    0 5px 15px rgb(15 23 42 / 6%), 0 15px 35px -5px rgb(15 23 42 / 12%);
-  --elevation-track: inset 0 1px 2px rgb(15 23 42 / 8%), inset 0 0 0 1px var(--color-border-subtle);
-  --elevation-field: inset 0 1px 2px rgb(15 23 42 / 3%), 0 1px 0 var(--surface-highlight);
+    0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
+    0 8px 24px -6px rgb(11 15 13 / 8%), 0 32px 64px -24px rgb(11 15 13 / 12%);
+  --elevation-sheet:
+    0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
+    0 8px 24px -12px rgb(11 15 13 / 8%);
+  --elevation-track: inset 0 0 0 1px var(--color-border-subtle);
+  --elevation-field: 0 1px 2px rgb(11 15 13 / 4%);
   --shadow-marketing-cta: var(--elevation-primary);
   --field-end-target: var(--control-height-sm);
   --menu-item-height: 32px;
@@ -355,10 +365,16 @@
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 0px;
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
-  --radius-control: 6px;
+  --radius-control: 8px;
   --radius-card: 12px;
   --radius-overlay: 12px;
-  --radius-workspace: 12px;
+  --radius-workspace: 14px;
+  /* The workspace sheet's inset from the viewport and the sidebar. */
+  --workspace-inset: 8px;
+  /* Shell chrome above a route's content, for screens that fill the viewport
+     (the Agent thread): on desktop the identity band, its rule and the sheet's
+     inset above and below. Rebound below for the compact layouts. */
+  --route-chrome-height: calc(var(--page-band-identity) + 1px + 2 * var(--workspace-inset));
   /* Public objects use the roomier bento radius. */
   --radius-marketing-card: 16px;
   --radius-marketing-well: 16px;
@@ -369,7 +385,7 @@
   --site-gutter: 20px;
   --section-y: 72px;
   --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
-  --skeleton-base: #eef2f6;
+  --skeleton-base: #eff1f0;
   --skeleton-highlight: #ffffff;
   --value-placeholder: var(--color-muted);
 }
@@ -480,6 +496,7 @@ body {
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
   letter-spacing: normal;
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-synthesis: none;
@@ -495,12 +512,14 @@ body {
    `text-danger-text`) still overrides the ink where the value's meaning is its
    colour. Edit a role here and every screen moves with it. */
 @layer components {
+  /* Titles take the public display treatment at product scale: 600 with
+     tracking that tightens as size grows. */
   .type-page-title {
     font-family: var(--font-display);
-    font-size: 1.125rem;
-    line-height: 1.5rem;
+    font-size: 1.25rem;
+    line-height: 1.75rem;
     font-weight: 600;
-    letter-spacing: normal;
+    letter-spacing: -0.016em;
     color: var(--color-foreground);
   }
   .type-section-title {
@@ -508,7 +527,7 @@ body {
     font-size: 1rem;
     line-height: 1.5rem;
     font-weight: 600;
-    letter-spacing: -0.005em;
+    letter-spacing: -0.011em;
     color: var(--color-foreground);
   }
   .type-item-title {
@@ -516,7 +535,7 @@ body {
     font-size: 0.875rem;
     line-height: 1.25rem;
     font-weight: 600;
-    letter-spacing: 0;
+    letter-spacing: -0.006em;
     color: var(--color-foreground);
   }
   .type-body {
@@ -562,7 +581,7 @@ body {
     font-size: 1.5rem;
     line-height: 2rem;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     color: var(--color-foreground);
   }
@@ -860,6 +879,16 @@ a.focus-ring:active .type-caption {
   box-shadow: var(--elevation-card);
 }
 
+/* A bare table's boundary on the white sheet: a hairline ring, no lift. A
+   table inside a card or a sheet shares that container's edge instead. */
+.table-frame {
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+:where(.surface-card, [role='dialog']) .table-frame {
+  box-shadow: none;
+}
+
 .flow-content.app-pane {
   box-shadow: var(--elevation-flow);
 }
@@ -873,32 +902,39 @@ a.focus-ring:active .type-caption {
 }
 
 .control-raised:not(:disabled, [aria-disabled='true']) {
-  background-image: linear-gradient(var(--surface-sheen), transparent);
   box-shadow: var(--elevation-control);
 }
 
+/* Filled actions carry the public primary face: a faint top sheen, a ring in
+   the fill's own pressed shade and a shallow tinted contact shadow. */
 .control-raised:is([data-button-variant='primary'], [data-button-variant='destructive']):not(:disabled, [aria-disabled='true']) {
+  background-image: linear-gradient(var(--surface-sheen), transparent);
   box-shadow: var(--elevation-primary);
+}
+
+.control-raised[data-button-variant='destructive']:not(:disabled, [aria-disabled='true']) {
+  box-shadow:
+    0 0 0 1px var(--color-danger-solid-hover), inset 0 1px 0 var(--surface-highlight),
+    0 1px 2px rgb(11 15 13 / 16%);
 }
 
 .control-raised:not(:disabled, [aria-disabled='true']):active {
   background-image: none;
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 12%);
+  box-shadow: 0 0 0 1px var(--surface-ring);
 }
 
 .selection-track {
   box-shadow: var(--elevation-track);
-  background-image: linear-gradient(var(--surface-sheen), transparent);
 }
 
 .selection-raised:not(:disabled) {
   box-shadow: var(--elevation-control);
-  background-image: linear-gradient(var(--surface-sheen), transparent);
 }
 
+/* The rail shares the shell ground; the floating sheet beside it is the
+   separation, so the rail draws no edge of its own. */
 .shell-rail {
-  border-right: 1px solid var(--color-border-subtle);
-  background-image: linear-gradient(var(--surface-sheen), transparent 12rem);
+  background-color: var(--color-sidebar);
 }
 
 [data-marketing-nav][data-scrolled='true'] {
@@ -958,19 +994,10 @@ a.focus-ring:active .type-caption {
 }
 
 /* Auth and onboarding take the website's material: the task sheet floats on
-   the public frame shadow and primary actions carry the same sheen. */
+   the public frame shadow. Primary actions already share the product face. */
 :root:not([data-theme='dark']) [data-flow-surface] .app-pane {
   border-radius: 16px;
   box-shadow: var(--public-frame-shadow);
-}
-
-:root:not([data-theme='dark'])
-  [data-flow-surface]
-  [data-button-variant='primary']:not(:disabled, [aria-disabled='true']) {
-  background-image: linear-gradient(rgb(255 255 255 / 10%), transparent);
-  box-shadow:
-    0 0 0 1px var(--color-accent-active), inset 0 1px 0 rgb(255 255 255 / 16%),
-    0 1px 2px rgb(11 15 13 / 16%), 0 2px 6px -2px rgb(20 83 45 / 35%);
 }
 
 [data-public-surface] .marketing-cta-button:not([aria-disabled='true']):active {
@@ -1143,39 +1170,39 @@ input:-webkit-autofill:focus {
   --tag-yellow-bg: #33301a;
   --tag-yellow-border: #5a5228;
   --tag-yellow-text: #fde68a;
-  --tag-neutral-bg: #2a2a2a;
-  --tag-neutral-border: #363636;
-  --tag-neutral-text: #cfcfcf;
-  /* The dark ramp mirrors the light ladder one ramp down: rail #0a0a0a →
-     ground #111111 → paper #1a1a1a. Wells sink below the ground, hover and
-     overlay rungs rise above the paper, and the border rungs keep their old
-     deltas against the new paper fill. */
-  --color-background: #111111;
-  --color-background-alt: #1e1e1e;
-  --color-canvas-soft: #161616;
-  --color-panel: #1a1a1a;
-  --color-panel-tonal: #1e1e1e;
-  --color-elevated: #262626;
-  --color-well: #0e0e0e;
-  --color-input: #141414;
-  --color-sidebar: #0a0a0a;
-  --color-shell: #111111;
-  --color-shell-alt: #161616;
-  /* Text ink sits 15% below full white so long reading on the dark ground
-     does not glare; the ladder keeps its foreground > secondary > muted steps. */
-  --color-foreground: #d2d2d0;
-  --color-secondary: #c0c0be;
-  --color-muted: #999996;
-  --color-ink-faint: #737379;
-  --color-ink-subtle: #99999c;
-  --color-ink-soft: #a9a9b0;
-  --color-ink-chip: #ceced3;
-  --color-ink-icon: #dddde3;
-  --color-track: #141414;
-  --color-border-subtle: #272727;
-  --color-border: #343434;
-  --color-border-strong: #5c5c59;
-  --color-border-bold: #76766f;
+  --tag-neutral-bg: #232825;
+  --tag-neutral-border: #313733;
+  --tag-neutral-text: #cdd3cf;
+  /* The dark ramp keeps the light system's order in near-black neutrals with
+     the same slight green tint: ground and rail #0b0d0c → sheet #131614 →
+     overlay #1b1f1d. Wells sink below the sheet, and the border rungs keep
+     their deltas against it. */
+  --color-background: #0b0d0c;
+  --color-background-alt: #181b19;
+  --color-canvas-soft: #111412;
+  --color-panel: #131614;
+  --color-panel-tonal: #171a18;
+  --color-elevated: #1b1f1d;
+  --color-well: #0e100f;
+  --color-input: #0f1210;
+  --color-sidebar: #0b0d0c;
+  --color-shell: #0b0d0c;
+  --color-shell-alt: #121513;
+  /* Text ink sits below full white so long reading on the dark ground does
+     not glare; the ladder keeps its foreground > secondary > muted steps. */
+  --color-foreground: #e1e5e2;
+  --color-secondary: #bfc5c1;
+  --color-muted: #959c98;
+  --color-ink-faint: #6d746f;
+  --color-ink-subtle: #959c98;
+  --color-ink-soft: #a6ada9;
+  --color-ink-chip: #cbd1cd;
+  --color-ink-icon: #dce1de;
+  --color-track: #0f1210;
+  --color-border-subtle: #212522;
+  --color-border: #2b302d;
+  --color-border-strong: #3d433f;
+  --color-border-bold: #737b76;
   --color-accent: #76df9c;
   --color-accent-hover: #94ebb0;
   --color-accent-active: #b2f4c6;
@@ -1186,8 +1213,8 @@ input:-webkit-autofill:focus {
   --color-accent-border: rgb(118 223 156 / 45%);
   --color-selection: rgb(118 223 156 / 35%);
   --color-selection-fg: #faf9f5;
-  --color-surface-inverse: #76df9c;
-  --color-on-inverse: #0d2618;
+  --color-surface-inverse: #e1e5e2;
+  --color-on-inverse: #0b0d0c;
   --color-success: #80dfa2;
   --color-success-bg: rgb(128 223 162 / 13%);
   --color-success-text: #a4edbd;
@@ -1248,18 +1275,21 @@ input:-webkit-autofill:focus {
   --color-gsc-ctr: #4db6ac;
   --color-gsc-position: #ff8a65;
   --color-overlay-scrim: rgb(0 0 0 / 72%);
-  --skeleton-base: #1e1e1e;
-  --skeleton-highlight: #292929;
-  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 40%);
-  --shadow-modal: 0 24px 64px rgb(0 0 0 / 60%);
-  --surface-highlight: rgb(255 255 255 / 10%);
-  --surface-ring: rgb(0 0 0 / 55%);
-  --surface-inset-ring: rgb(255 255 255 / 6%);
-  --surface-drop: rgb(0 0 0 / 24%);
-  --surface-sheen: rgb(255 255 255 / 4%);
-  --elevation-flow: inset 0 0 0 1px var(--color-border), inset 0 1px 0 var(--surface-highlight);
-  --elevation-track: inset 0 0 0 1px var(--color-border-subtle), inset 0 1px 2px rgb(0 0 0 / 24%);
-  --elevation-field: inset 0 1px 0 var(--surface-highlight);
+  --skeleton-base: #1a1e1b;
+  --skeleton-highlight: #232825;
+  /* On near-black a drop shadow carries no edge, so dark material leads with
+     a light hairline ring and keeps a deep shadow only for detached layers. */
+  --shadow-overlay: 0 0 0 1px rgb(255 255 255 / 8%), 0 16px 40px -8px rgb(0 0 0 / 60%);
+  --shadow-modal: 0 0 0 1px rgb(255 255 255 / 8%), 0 40px 80px -24px rgb(0 0 0 / 70%);
+  --surface-highlight: rgb(255 255 255 / 12%);
+  --surface-ring: rgb(255 255 255 / 8%);
+  --surface-drop: rgb(0 0 0 / 30%);
+  --surface-sheen: rgb(255 255 255 / 6%);
+  --elevation-card: 0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 30%);
+  --elevation-flow: 0 0 0 1px rgb(255 255 255 / 7%), 0 24px 48px -24px rgb(0 0 0 / 60%);
+  --elevation-sheet: 0 0 0 1px rgb(255 255 255 / 6%), 0 1px 2px rgb(0 0 0 / 30%);
+  --elevation-track: inset 0 0 0 1px var(--color-border-subtle);
+  --elevation-field: none;
 }
 
 :root[data-theme='dark'] .brand-wordmark {
@@ -1306,23 +1336,27 @@ input:-webkit-autofill:focus {
   animation: citeladder-loading-appear var(--motion-fast) var(--ease-enter) 300ms forwards;
 }
 
-/* The focused auth/onboarding task column stays paper against shell ground.
-   The workspace overrides that fill below to complete its rail → ground →
-   paper ladder without changing the focused flows. */
+/* The focused auth/onboarding task column stays paper against shell ground. */
 .app-pane {
   background: var(--color-panel);
   border-radius: var(--radius-workspace);
   box-shadow: var(--elevation-flow);
 }
 
-/* The workspace pane fills the shell rather than floating in it: it meets the
-   sidebar on the left and the viewport on the right and bottom, so only its top
-   corners have ground behind them. Rounding an edge with nothing behind it cuts
-   a notch instead of softening anything. */
+/* The floating sheet (owner decision, 2026-10-07): the work lives on one white
+   sheet inset from the viewport and the rail on every side, so all four
+   corners have ground behind them. The document still scrolls; the sheet
+   grows with its content and fills the viewport when the content is short. */
 .app-pane-workspace {
-  background: var(--color-shell);
-  border-radius: var(--radius-workspace) 0 0;
-  box-shadow: none;
+  background: var(--color-panel);
+  border-radius: var(--radius-workspace);
+  box-shadow: var(--elevation-sheet);
+  margin: var(--workspace-inset) var(--workspace-inset) var(--workspace-inset) 0;
+  min-height: calc(100dvh - 2 * var(--workspace-inset));
+  /* Full-bleed page bands paint paper to the sheet's edges; clipping keeps
+     the corners round without creating a scroll container, so sticky bands
+     and the document's own scrolling are unchanged. */
+  overflow: clip;
 }
 
 /* A 16px corner against the viewport edge reads as a rendering artefact rather
@@ -1332,11 +1366,20 @@ input:-webkit-autofill:focus {
 @media (max-width: 980px) {
   :root {
     --sticky-header-offset: var(--compact-topbar-height);
+    /* The compact topbar, then the identity band in its padded compact form. */
+    --route-chrome-height: calc(
+      var(--compact-topbar-height) + var(--page-header-padding-top) +
+        var(--page-header-padding-bottom) + var(--control-height-md) + 1px
+    );
   }
   .app-pane,
   .app-pane-workspace {
     border-radius: 0;
     box-shadow: none;
+  }
+  .app-pane-workspace {
+    margin: 0;
+    min-height: 0;
   }
 }
 

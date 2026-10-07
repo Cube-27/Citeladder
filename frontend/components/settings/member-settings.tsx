@@ -6,6 +6,7 @@ import { UserPlus } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
 import { textRole } from '@/components/ui/typography';
@@ -140,17 +141,17 @@ export function MemberSettings() {
 
   if (!mayManage) {
     return (
-      <div className="grid gap-[var(--workspace-gap)]">
+      <Stack gap="workspace">
         <Alert tone="info">
           Managing members is available to the workspace owner and admins. Ask one of them to change
           roles or invite someone to this workspace.
         </Alert>
-      </div>
+      </Stack>
     );
   }
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <Stack gap="workspace">
       {/* The tab already names this section; the row states the scope and
           carries the roster's controls. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -211,6 +212,6 @@ export function MemberSettings() {
         onResend={(invitationId) => resend.mutate(invitationId)}
         onRevoke={(invitationId) => revoke.mutate(invitationId)}
       />
-    </div>
+    </Stack>
   );
 }

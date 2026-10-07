@@ -17,9 +17,10 @@ import { cn } from '@/lib/utils';
  *  - hover uses the surface's hover tint; `highlight` uses the distinct
  *    selected tint for the user's own row
  * The wrapper is scroll-capable so the sticky header pins on vertical scroll;
- * the scroll clip also keeps the pinned header inside the shell's radius. It
- * draws NO edge of its own: fill contrast against the ground is the boundary,
- * and inside a Card the flush fill melts into it.
+ * the scroll clip also keeps the pinned header inside the shell's radius. On
+ * the white workspace sheet its boundary is the `table-frame` hairline ring
+ * (an outer shadow, so it never changes the box); inside a Card the ring drops
+ * and the flush fill melts into the card.
  *
  * Column headers take the `label` role (13/18, 500, muted): a header names the
  * values beneath it, exactly as a metric label does.
@@ -40,7 +41,7 @@ export function Table({
     <div
       ref={wrapperRef}
       className={cn(
-        'bg-panel relative w-full max-w-full min-w-0 overflow-auto rounded-[var(--radius-card)]',
+        'table-frame bg-panel relative w-full max-w-full min-w-0 overflow-auto rounded-[var(--radius-card)]',
         wrapperClassName,
       )}
     >

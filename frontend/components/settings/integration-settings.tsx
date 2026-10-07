@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { CrawlLogConnections } from '@/components/ai-traffic/crawl-log-connections';
 import { Card, CardContent } from '@/components/ui/card';
+import { Stack } from '@/components/ui/layout';
+import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GRANT_FAMILY, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
 import { IntegrationCardView } from '@/components/settings/integration-card-view';
@@ -149,24 +151,29 @@ export function IntegrationSettings() {
   if (!workspaceId) return <Alert tone="info">Loading your workspace…</Alert>;
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <Stack gap="workspace">
       <CallbackNotice notice={notice} />
       <CrawlLogConnections />
 
       {connectionsQuery.isError ? (
-        <Alert tone="danger">
-          Could not load integrations. Check your connection and try again.
-        </Alert>
+        <ReadError
+          error={connectionsQuery.error}
+          fallback="Could not load integrations. Check your connection and try again."
+          onRetry={() => void connectionsQuery.refetch()}
+          pending={connectionsQuery.isFetching}
+        />
       ) : null}
 
       {connectionsQuery.isLoading ? (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
           {[0, 1].map((i) => (
             <Card key={i}>
-              <CardContent className="grid gap-3">
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
+              <CardContent>
+                <Stack gap="compact">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </Stack>
               </CardContent>
             </Card>
           ))}
@@ -178,7 +185,7 @@ export function IntegrationSettings() {
       ) : null}
 
       {!connectionsQuery.isLoading && !connectionsQuery.isError && connections.length > 0 ? (
-        <div className="grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr))] gap-4">
+        <div className="grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr))] gap-[var(--workspace-gap)]">
           {FAMILY_ORDER.map((family) => (
             <IntegrationCardView
               workspaceId={workspaceId}
@@ -189,6 +196,6 @@ export function IntegrationSettings() {
           ))}
         </div>
       ) : null}
-    </div>
+    </Stack>
   );
 }

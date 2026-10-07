@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Select } from '@/components/ui/select';
 import {
@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -59,44 +59,44 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
   if (view.llms_txt.fetched) llmsStatus = view.llms_txt.present ? 'present' : 'absent';
   return (
     <Card className="min-w-0">
-      <CardContent className="grid min-w-0 gap-3 p-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid min-w-0 flex-1 gap-2">
-            <SectionTitle>AI crawler robots policy</SectionTitle>
-            <p className={textRole('caption')}>
-              What robots.txt permits over known URLs. This does not prove that a crawler retrieved
-              a page.
-            </p>
-            <p className={textRole('caption')}>
-              robots.txt: {robotsStatusLabels[view.robots.status]}
-              {view.robots.status_code !== null ? ` (HTTP ${view.robots.status_code})` : ''} ·
-              llms.txt: {llmsStatus}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Select
-              className="w-48 max-w-full"
-              ariaLabel="Filter crawlers by purpose"
-              value={purpose}
-              onValueChange={setPurpose}
-              options={[
-                { value: 'all', label: 'All purposes' },
-                ...purposes.map((value) => ({ value, label: crawlerPurposeLabels[value] })),
-              ]}
-            />
-            <Button variant="secondary" size="sm" asChild>
-              <ProjectLink
-                projectId={crawl.project_id}
-                href={agentHandoffHref({
-                  siteFacts: { crawlId: crawl.id },
-                  prompt: `Explain the persisted AI crawlability and robots policy for crawl ${crawl.id}. Use read_ai_crawlability and distinguish robots permission from observed retrieval.`,
-                })}
-              >
-                Ask agent
-              </ProjectLink>
-            </Button>
-          </div>
+      <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
+        <div className="grid min-w-0 flex-1 gap-2">
+          <CardTitle>AI crawler robots policy</CardTitle>
+          <p className={textRole('caption')}>
+            What robots.txt permits over known URLs. This does not prove that a crawler retrieved a
+            page.
+          </p>
+          <p className={textRole('caption')}>
+            robots.txt: {robotsStatusLabels[view.robots.status]}
+            {view.robots.status_code !== null ? ` (HTTP ${view.robots.status_code})` : ''} ·
+            llms.txt: {llmsStatus}
+          </p>
         </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Select
+            className="w-48 max-w-full"
+            ariaLabel="Filter crawlers by purpose"
+            value={purpose}
+            onValueChange={setPurpose}
+            options={[
+              { value: 'all', label: 'All purposes' },
+              ...purposes.map((value) => ({ value, label: crawlerPurposeLabels[value] })),
+            ]}
+          />
+          <Button variant="secondary" size="sm" asChild>
+            <ProjectLink
+              projectId={crawl.project_id}
+              href={agentHandoffHref({
+                siteFacts: { crawlId: crawl.id },
+                prompt: `Explain the persisted AI crawlability and robots policy for crawl ${crawl.id}. Use read_ai_crawlability and distinguish robots permission from observed retrieval.`,
+              })}
+            >
+              Ask agent
+            </ProjectLink>
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="grid min-w-0 gap-3">
         {unknown ? (
           <Alert tone="warning">
             robots.txt could not be read. Root access and robots policy are unknown.

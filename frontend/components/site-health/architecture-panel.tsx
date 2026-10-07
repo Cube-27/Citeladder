@@ -1,7 +1,6 @@
 'use client';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Fragment, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Link2, ListTree } from 'lucide-react';
@@ -18,6 +17,7 @@ import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
@@ -30,6 +30,7 @@ import {
   TableRecordMetricCell,
   TableRow,
 } from '@/components/ui/table';
+import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type {
   ArchitectureNode,
@@ -88,10 +89,10 @@ export function ArchitecturePanel({
 
   if (architecture.isLoading) {
     return (
-      <output className="grid gap-4" aria-label="Loading the observed architecture">
+      <Stack as="output" gap="workspace" aria-label="Loading the observed architecture">
         <Skeleton className="h-28 w-full" />
         <Skeleton className="h-72 w-full" />
-      </output>
+      </Stack>
     );
   }
   if (architecture.isError)
@@ -142,7 +143,7 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
   );
 
   return (
-    <div className="grid min-w-0 gap-[var(--workspace-gap)]" data-testid="site-architecture">
+    <Stack gap="workspace" className="min-w-0" data-testid="site-architecture">
       <ArchitectureEvidence data={data} />
       <Card>
         <CardHeader className="gap-2">
@@ -186,7 +187,7 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
         </CardContent>
       </Card>
       <HierarchyCard nodes={data.nodes} crawlId={data.crawl_id} />
-    </div>
+    </Stack>
   );
 }
 
@@ -225,20 +226,16 @@ function ArchitectureMetrics({
     ],
   ];
   return (
-    <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+    <MetricGroup>
       {items.map(([label, value, supporting]) => (
-        <div
+        <MetricItem
           key={label}
-          className="border-border-subtle grid gap-0.5 border-b px-3 py-2 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
-        >
-          <dt className={eyebrowClasses}>{label}</dt>
-          <dd className={textRole('figure')}>
-            {value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value}
-          </dd>
-          {supporting ? <span className="type-caption">{supporting}</span> : null}
-        </div>
+          label={label}
+          value={value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value}
+          detail={supporting}
+        />
       ))}
-    </dl>
+    </MetricGroup>
   );
 }
 
@@ -350,7 +347,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           <CardTitle>Internal linking</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 pt-2">
-          <div className="grid grid-cols-3 gap-4">
+          <MetricGroup>
             <EvidenceMetric label="Internal links" value={String(linking.internal_link_count)} />
             <EvidenceMetric
               label="Have incoming links"
@@ -362,7 +359,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
               total={linking.orphan_page_count}
               onOpen={() => setOrphansOpen(true)}
             />
-          </div>
+          </MetricGroup>
           <OrphanPageDrawer
             pages={linking.orphan_pages}
             total={linking.orphan_page_count}

@@ -4,10 +4,11 @@ import { ScoreSection } from '@/components/site-health/score-section';
 import { SiteFactsPanel } from '@/components/site-health/site-facts-panel';
 import { StatusStrip } from '@/components/site-health/status-strip';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Stack } from '@/components/ui/layout';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import type { SiteHealthEntitlement } from '@/lib/api/types';
-import { textRole } from '@/components/ui/typography';
+import { ICONS } from '@/lib/icons';
 
 /**
  * The canonical Site Health dashboard layout.
@@ -48,25 +49,24 @@ export function SiteHealthDashboardLayout({
   return (
     // `min-w-0` so a wide table inside a section scrolls in its own wrapper
     // instead of widening this column (and every ancestor) to its max-content.
-    <div className="grid min-w-0 gap-[var(--workspace-gap)]" data-testid="site-health-canonical">
+    <Stack gap="workspace" className="min-w-0" data-testid="site-health-canonical">
       {!crawl ? (
-        <Card data-testid="site-health-empty">
-          <CardContent className="grid justify-items-start gap-3 py-[var(--empty-state-padding)]">
-            <div className="grid max-w-2xl gap-1">
-              <h2 className={textRole('sectionTitle')}>Run your first site crawl</h2>
-              <p className={textRole('body')}>
-                Crawl your site to see page health, issues, and recommendations as results arrive.
-              </p>
-            </div>
-            <Button onClick={() => startCrawl()} disabled={startPending || !mutationsAllowed}>
-              {startPending ? 'Starting…' : 'Run new crawl'}
-            </Button>
-          </CardContent>
-        </Card>
+        <div data-testid="site-health-empty">
+          <EmptyState
+            icon={ICONS.siteHealth}
+            heading="Run your first site crawl"
+            description="Crawl your site to see page health, issues, and recommendations as results arrive."
+            action={
+              <Button onClick={() => startCrawl()} disabled={startPending || !mutationsAllowed}>
+                {startPending ? 'Starting…' : 'Run new crawl'}
+              </Button>
+            }
+          />
+        </div>
       ) : (
         <>
           {/* Where the crawl stands and headline summary scores */}
-          <div className="grid gap-3">
+          <Stack>
             <StatusStrip
               crawl={crawl}
               phase={phase}
@@ -79,7 +79,7 @@ export function SiteHealthDashboardLayout({
             />
 
             <ScoreSection crawl={crawl} dashboard={dashboardQuery.data} />
-          </div>
+          </Stack>
 
           <InventorySection mode={inventoryMode} crawl={crawl} active={active} />
 
@@ -88,6 +88,6 @@ export function SiteHealthDashboardLayout({
           <SiteFactsPanel crawl={crawl} dashboard={dashboardQuery.data} />
         </>
       )}
-    </div>
+    </Stack>
   );
 }

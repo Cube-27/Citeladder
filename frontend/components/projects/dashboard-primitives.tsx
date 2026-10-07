@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, GripVertical, TrendingUp } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
-import { hairlineBandItemClasses } from '@/components/ui/workspace';
+import { metricItemClasses } from '@/components/ui/workspace';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { useState } from 'react';
 
@@ -46,21 +46,18 @@ export function StateMetric({
   inverse?: boolean;
 }>) {
   return (
-    <div
-      className={cn(
-        hairlineBandItemClasses,
-        'flex min-h-[104px] flex-col justify-between min-[981px]:grid min-[981px]:min-h-0 min-[981px]:content-start min-[981px]:gap-1',
-      )}
-    >
-      <p className={eyebrowClasses}>{label}</p>
-      <MetricValue
-        value={value === null ? null : metricValue(value, suffix)}
-        label={availabilityLabel('not_measured')}
-      />
+    <div className={metricItemClasses}>
+      <dt className={eyebrowClasses}>{label}</dt>
+      <dd>
+        <MetricValue
+          value={value === null ? null : metricValue(value, suffix)}
+          label={availabilityLabel('not_measured')}
+        />
+      </dd>
       {/* A missing value has no change to report; the section states why once. */}
-      <p className={cn(textRole('delta'), deltaToneClass(delta))}>
+      <dd className={cn(textRole('delta'), deltaToneClass(delta))}>
         {value === null ? '\u00a0' : deltaLabel(delta, inverse)}
-      </p>
+      </dd>
     </div>
   );
 }

@@ -2,11 +2,14 @@
 
 import { Check, HelpCircle } from 'lucide-react';
 
+import { Card, CardContent } from '@/components/ui/card';
+import { Stack } from '@/components/ui/layout';
 import { MetricValue } from '@/components/ui/metric-value';
 import { Pressable } from '@/components/ui/pressable';
 import { panelClasses } from '@/components/ui/panel';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
+import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import type { PerformanceWindow } from '@/lib/api/performance';
 import { availabilityLabel, formatCount } from '@/lib/format';
 import {
@@ -150,8 +153,10 @@ function MetricCard({
       onClick={() => onToggle(card.key)}
       data-testid={`metric-card-${card.key}`}
       className={cn(
-        panelClasses({ tone: 'panel', pad: 'compact', edge: 'flush' }),
-        'text-foreground relative flex min-h-[96px] flex-col justify-between gap-1 p-4 text-left transition-colors',
+        panelClasses({ tone: 'panel', pad: 'none', edge: 'flush' }),
+        // The metric band's cell rhythm (`metricItemClasses`): the strip is a
+        // pressable MetricGroup, so its cells sit on the same padding.
+        'text-foreground relative flex flex-col justify-between gap-1 px-4 py-3 text-left transition-colors',
         index === 0 && 'rounded-tl-[var(--radius-card)]',
         seamClasses(index),
         // Selected is a quiet accent wash, not a filled tile. Unselected is
@@ -286,6 +291,18 @@ const GA4_SUMMARY_ENTRIES = [
  * comparability that does not exist. A null value means no included GA4 row
  * fed the window and renders as not measured, never as zero.
  */
+/** An unimported window is a different fact from a metric missing in an imported one. */
+function ga4ComparisonLabel(
+  comparison: PerformanceWindow,
+  value: number | null | undefined,
+  compareLabel: string,
+) {
+  if (comparison.evidence_state === 'not_run') return `${compareLabel} — not imported`;
+  if (value === null || value === undefined)
+    return `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`;
+  return `${compareLabel}: ${formatCount(value)}`;
+}
+
 export function Ga4SummaryRow({
   selected,
   comparison,
@@ -298,37 +315,42 @@ export function Ga4SummaryRow({
   loading?: boolean;
 }>) {
   return (
-    <dl
-      className="border-border bg-panel flex flex-wrap gap-x-8 gap-y-2 rounded-[var(--radius-control)] border px-3 py-2"
-      data-testid="ga4-summary"
-    >
-      {GA4_SUMMARY_ENTRIES.map((entry) => {
-        const value = selected.totals[entry.key];
-        const comparisonValue = comparison ? comparison.totals[entry.key] : undefined;
-        return (
-          <div key={entry.key} className="flex items-baseline gap-2">
-            <dt className="type-caption">{entry.label}</dt>
-            <dd>
-              <MetricValue
-                size="figureSm"
-                value={value === null ? null : formatCount(value)}
-                label={NOT_MEASURED}
-                loading={loading}
-              />
-            </dd>
-            {comparison ? (
-              <dd className="type-caption tabular-nums">
-                {comparisonValue === null || comparisonValue === undefined
-                  ? `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`
-                  : `${compareLabel}: ${formatCount(comparisonValue)}`}
-              </dd>
-            ) : null}
-          </div>
-        );
-      })}
-      <p className="type-caption">
-        Google Analytics 4 · Property-wide organic and AI sessions · Key events as configured in GA4
-      </p>
-    </dl>
+    <Card data-testid="ga4-summary">
+      <CardContent>
+        <Stack gap="compact">
+          <MetricGroup>
+            {GA4_SUMMARY_ENTRIES.map((entry) => {
+              const value = selected.totals[entry.key];
+              const comparisonValue = comparison ? comparison.totals[entry.key] : undefined;
+              return (
+                <MetricItem
+                  key={entry.key}
+                  label={entry.label}
+                  value={
+                    <MetricValue
+                      size="figureSm"
+                      value={value === null ? null : formatCount(value)}
+                      label={NOT_MEASURED}
+                      loading={loading}
+                    />
+                  }
+                  detail={
+                    comparison ? (
+                      <span className="tabular-nums">
+                        {ga4ComparisonLabel(comparison, comparisonValue, compareLabel)}
+                      </span>
+                    ) : undefined
+                  }
+                />
+              );
+            })}
+          </MetricGroup>
+          <p className="type-caption">
+            Google Analytics 4 · Property-wide organic and AI sessions · Key events as configured in
+            GA4
+          </p>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }

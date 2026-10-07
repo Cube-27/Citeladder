@@ -2,12 +2,16 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Stack } from '@/components/ui/layout';
+import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { ExecutionsTable } from '@/components/runs/executions-table';
 import { ProgressPanel } from '@/components/runs/progress-panel';
 import { PageLoading } from '@/components/layout/page-loading';
-import { humanizeApiError } from '@/lib/api/errors';
+import { ICONS } from '@/lib/icons';
 import type { MutationNotice } from '@/lib/api/mutation-notice';
 import type { Audit, Execution } from '@/lib/api/types';
 
@@ -15,12 +19,13 @@ type RunDetailViewProps = {
   audit: Audit | undefined;
   auditLoading: boolean;
   auditError: unknown;
+  auditRetrying: boolean;
+  onRetryAudit: () => void;
   executions: Execution[] | undefined;
   executionsLoading: boolean;
   executionsError: boolean;
-  cancelPending: boolean;
+  exportError: string | null;
   cancelNotice: MutationNotice | null;
-  rerunPending: boolean;
   rerunNotice: MutationNotice | null;
   onCancel: () => void;
   onRerunFailures: () => void;
@@ -31,15 +36,23 @@ function AuditSection({
   audit,
   auditLoading,
   auditError,
-  cancelPending,
+  auditRetrying,
+  onRetryAudit,
+  exportError,
   cancelNotice,
-  rerunPending,
   rerunNotice,
   onCancel,
   onRerunFailures,
 }: RunDetailViewProps) {
   if (auditError && !audit) {
-    return <Alert tone="danger">{humanizeApiError(auditError).message}</Alert>;
+    return (
+      <ReadError
+        error={auditError}
+        fallback="Something went wrong. Please try again."
+        onRetry={onRetryAudit}
+        pending={auditRetrying}
+      />
+    );
   }
   if (auditLoading || !audit) {
     return <PageLoading label="Loading run…" />;
@@ -47,12 +60,9 @@ function AuditSection({
   return (
     <ProgressPanel
       audit={audit}
-      onCancel={onCancel}
-      cancelPending={cancelPending}
+      exportError={exportError}
       cancelNotice={cancelNotice}
       onCancelRetry={onCancel}
-      onRerunFailures={onRerunFailures}
-      rerunPending={rerunPending}
       rerunNotice={rerunNotice}
       onRerunRetry={onRerunFailures}
     />
@@ -82,16 +92,18 @@ function ExecutionsSection({
   }
   if (executions.length === 0) {
     return (
-      <Card>
-        <CardContent className={textRole('body', 'py-[var(--empty-state-padding)]')}>
-          No executions yet. They appear as the run is planned and processed.
-        </CardContent>
-      </Card>
+      <EmptyState
+        variant="compact"
+        headingLevel={3}
+        icon={ICONS.runs}
+        heading="No executions yet."
+        description="They appear as the run is planned and processed."
+      />
     );
   }
   return (
     <Card>
-      <CardContent className="p-0">
+      <CardContent flush>
         <ExecutionsTable executions={executions} onSelectEvidence={onSelectEvidence} />
       </CardContent>
     </Card>
@@ -100,7 +112,7 @@ function ExecutionsSection({
 
 export function RunDetailView(props: RunDetailViewProps) {
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <Stack gap="workspace">
       <ProjectLink
         href="/runs"
         projectId={props.audit?.project_id}
@@ -109,10 +121,10 @@ export function RunDetailView(props: RunDetailViewProps) {
         ← Back to runs
       </ProjectLink>
       <AuditSection {...props} />
-      <div className="grid gap-3">
-        <SectionTitle>Executions</SectionTitle>
+      <Stack gap="compact">
+        <EditorialSectionHeader title="Executions" />
         <ExecutionsSection {...props} />
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

@@ -6,7 +6,7 @@ import { Sparkles } from 'lucide-react';
 import type { NewChatInput } from '@/components/agent/use-chat-turns';
 import { Button } from '@/components/ui/button';
 import { panelClasses } from '@/components/ui/panel';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_BRIEFING_ACTIONS } from '@/lib/config/agent';
 
@@ -39,28 +39,28 @@ export function BriefingCard({
       ? `Reads your evidence and your top ${top.length} open ${actionLabel}.`
       : 'Reads your evidence across Visibility, Site Health, Demand and Performance.';
   return (
-    <section
-      aria-labelledby="agent-briefing"
-      className={panelClasses({ pad: 'compact' }, 'flex flex-wrap items-center gap-3')}
-    >
-      <div className="grid min-w-0 flex-1 gap-1">
-        <SectionTitle id="agent-briefing">What should I work on?</SectionTitle>
-        <p className={textRole('caption')}>{basis} Runs once when you ask; nothing is scheduled.</p>
-      </div>
-      <Button
-        disabled={disabled || pending || actions.isPending}
-        onClick={() =>
-          onStart({
-            message: BRIEFING_REQUEST,
-            skillId: 'growth_plan',
-            context: {},
-            mentions: top.map((action) => action.id),
-          })
+    <section aria-labelledby="agent-briefing" className={panelClasses({ pad: 'compact' })}>
+      <EditorialSectionHeader
+        title="What should I work on?"
+        headingId="agent-briefing"
+        description={`${basis} Runs once when you ask; nothing is scheduled.`}
+        actions={
+          <Button
+            disabled={disabled || pending || actions.isPending}
+            onClick={() =>
+              onStart({
+                message: BRIEFING_REQUEST,
+                skillId: 'growth_plan',
+                context: {},
+                mentions: top.map((action) => action.id),
+              })
+            }
+          >
+            <Sparkles className="size-4" aria-hidden />
+            Brief me
+          </Button>
         }
-      >
-        <Sparkles className="size-4" aria-hidden />
-        Brief me
-      </Button>
+      />
     </section>
   );
 }

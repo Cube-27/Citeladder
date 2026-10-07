@@ -8,7 +8,8 @@ import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
 import { CursorPager } from '@/components/ui/cursor-pager';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health';
@@ -28,6 +29,7 @@ import { UrlDetailView } from './url-detail-view';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { PageLoading } from '@/components/layout/page-loading';
+import { PageShell } from '@/components/layout/page-shell';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const HISTORY_LIMIT = 25;
@@ -94,15 +96,22 @@ export function UrlDetail({
     onError: (error) => setRerunError(rerunErrorMessage(error)),
   });
 
-  if (detailQuery.isLoading) return <PageLoading label="Loading page detail…" />;
+  if (detailQuery.isLoading)
+    return (
+      <PageShell>
+        <PageLoading label="Loading page detail…" />
+      </PageShell>
+    );
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <ReadError
-        error={detailQuery.error}
-        fallback="Could not load this page. It may not exist in this crawl."
-        onRetry={() => void detailQuery.refetch()}
-        pending={detailQuery.isFetching}
-      />
+      <PageShell>
+        <ReadError
+          error={detailQuery.error}
+          fallback="Could not load this page. It may not exist in this crawl."
+          onRetry={() => void detailQuery.refetch()}
+          pending={detailQuery.isFetching}
+        />
+      </PageShell>
     );
   }
 
@@ -174,8 +183,10 @@ function IssueHistory({
 
   return (
     <Card>
+      <CardHeader>
+        <CardTitle>Issue History</CardTitle>
+      </CardHeader>
       <CardContent className="grid gap-3">
-        <h2 className={textRole('sectionTitle')}>Issue History</h2>
         {historyQuery.isError ? (
           <ReadError
             error={historyQuery.error}
@@ -211,10 +222,10 @@ function IssueHistory({
 
 function HistorySkeleton() {
   return (
-    <div className="grid gap-2">
+    <Stack>
       <Skeleton className="h-6 w-full" />
       <Skeleton className="h-6 w-full" />
-    </div>
+    </Stack>
   );
 }
 

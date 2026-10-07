@@ -5,7 +5,9 @@ import { useMemo, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent } from '@/components/ui/card';
+import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { splitPaneClasses } from '@/components/ui/workspace';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
 import { SourceTableToolbar } from '@/components/visibility/source-toolbar';
@@ -249,7 +251,7 @@ export function SourcesPanel({
     );
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <Stack gap="workspace">
       {onChangeDimension ? (
         <SegmentedControl
           value={dimension}
@@ -259,7 +261,7 @@ export function SourcesPanel({
         />
       ) : null}
 
-      <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className={splitPaneClasses('main-aside')}>
         <UsageCard dimension={dimension} query={seriesQuery} />
         <TypesCard slices={slices} total={data?.total_citations ?? 0} query={sourceQuery} />
       </div>
@@ -322,7 +324,7 @@ export function SourcesPanel({
           />
         </CardContent>
       </Card>
-    </div>
+    </Stack>
   );
 }
 

@@ -9,13 +9,12 @@ import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { cardClasses } from '@/components/ui/card-variants';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
+import { ledgerClasses } from '@/components/ui/workspace';
 import type { DeliveryFacts, IssueOccurrence, PageDetail } from '@/lib/api/types';
 import {
   dimensionLabel,
@@ -55,7 +54,6 @@ export function UrlDetailView({
 }>) {
   return (
     <PageShell
-      className="pt-4"
       title={pageDisplayTitle(detail.title, detail.display_url)}
       actions={
         <>
@@ -102,89 +100,93 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
   );
   if (isMobile) {
     return (
-      <div className="grid min-w-0 gap-[var(--workspace-gap)]">
-        <section className={`${cardClasses()} grid gap-4 p-[var(--card-padding)]`}>
-          <EditorialSectionHeader
-            title="Delivery Metrics"
-            description="Static HTTP-level measurements"
-          />
-          <DeliveryMetrics delivery={detail.delivery} />
-        </section>
-        <section className={`${cardClasses()} grid gap-4 p-[var(--card-padding)]`}>
-          {detail.internal_links ? (
-            <EditorialSectionHeader
-              title="Internal Links"
-              description={`Modelled over ${detail.internal_links.source_page_count} observed crawl page${detail.internal_links.source_page_count === 1 ? '' : 's'}${detail.internal_links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
-            />
-          ) : (
-            <EditorialSectionHeader title="Internal Links" />
-          )}
-          {detail.internal_links ? (
-            <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
-          ) : (
-            <p className={textRole('body')}>Internal links not measured for this page.</p>
-          )}
-        </section>
-      </div>
+      <Stack gap="workspace" className="min-w-0">
+        <Card>
+          <CardHeader>
+            <CardTitle>Delivery Metrics</CardTitle>
+            <CardDescription>Static HTTP-level measurements</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DeliveryMetrics delivery={detail.delivery} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            {/* The card states its own crawl scope; repeating it here doubled it. */}
+            <CardTitle>Internal Links</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {detail.internal_links ? (
+              <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
+            ) : (
+              <p className={textRole('body')}>Internal links not measured for this page.</p>
+            )}
+          </CardContent>
+        </Card>
+      </Stack>
     );
   }
   return (
-    <section className={`${cardClasses()} min-w-0 p-[var(--card-padding)]`}>
-      <Tabs
-        value={selected}
-        onValueChange={setSelected}
-        items={[
-          { value: 'delivery', label: 'Delivery Metrics' },
-          { value: 'links', label: 'Internal Links' },
-        ]}
-        ariaLabel="Page measurements"
-      >
-        <TabPanel value="delivery" forceMount className="pt-4">
-          <DeliveryMetrics delivery={detail.delivery} />
-        </TabPanel>
-        <TabPanel value="links" forceMount className="pt-4">
-          {detail.internal_links ? (
-            <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
-          ) : (
-            <p className={textRole('body')}>Internal links not measured for this page.</p>
-          )}
-        </TabPanel>
-      </Tabs>
-    </section>
+    <Card className="min-w-0">
+      <CardContent>
+        <Tabs
+          value={selected}
+          onValueChange={setSelected}
+          items={[
+            { value: 'delivery', label: 'Delivery Metrics' },
+            { value: 'links', label: 'Internal Links' },
+          ]}
+          ariaLabel="Page measurements"
+        >
+          <TabPanel value="delivery" forceMount className="pt-4">
+            <DeliveryMetrics delivery={detail.delivery} />
+          </TabPanel>
+          <TabPanel value="links" forceMount className="pt-4">
+            {detail.internal_links ? (
+              <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
+            ) : (
+              <p className={textRole('body')}>Internal links not measured for this page.</p>
+            )}
+          </TabPanel>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }
 
 function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
   const timeZone = useDisplayTimeZone();
   return (
-    <section className={`${cardClasses()} min-w-0 p-[var(--card-padding)]`}>
-      <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
-        <DetailFact label="URL" className="min-[701px]:col-span-2 xl:col-span-1">
-          <ExternalHttpLink
-            href={detail.display_url}
-            className={textRole(
-              'itemTitle',
-              'tabular-nums text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline',
-            )}
-          >
-            {detail.display_url}
-          </ExternalHttpLink>
-        </DetailFact>
-        <DetailFact label="Page Kind">
-          <PageKindBadge pageKind={detail.page_kind} />
-        </DetailFact>
-        <DetailFact label="Last Audit">
-          <span className={textRole('itemTitle')}>
-            {formatAudited(detail.last_audited, timeZone)}
-          </span>
-        </DetailFact>
-        <DetailFact label="Status">
-          <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
-            {statusLabel(detail.analysis_status)}
-          </Badge>
-        </DetailFact>
-      </dl>
-    </section>
+    <Card className="min-w-0">
+      <CardContent>
+        <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+          <DetailFact label="URL" className="min-[701px]:col-span-2 xl:col-span-1">
+            <ExternalHttpLink
+              href={detail.display_url}
+              className={textRole(
+                'itemTitle',
+                'tabular-nums text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline',
+              )}
+            >
+              {detail.display_url}
+            </ExternalHttpLink>
+          </DetailFact>
+          <DetailFact label="Page Kind">
+            <PageKindBadge pageKind={detail.page_kind} />
+          </DetailFact>
+          <DetailFact label="Last Audit">
+            <span className={textRole('itemTitle')}>
+              {formatAudited(detail.last_audited, timeZone)}
+            </span>
+          </DetailFact>
+          <DetailFact label="Status">
+            <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
+              {statusLabel(detail.analysis_status)}
+            </Badge>
+          </DetailFact>
+        </dl>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -225,7 +227,7 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
     { label: 'Wire Size', value: formatBytes(delivery.wire_bytes) },
   ];
   return (
-    <div className="grid gap-3">
+    <Stack>
       <p className={textRole('caption', 'max-[980px]:hidden')}>Static HTTP-level measurements</p>
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {items.map((item) => (
@@ -237,7 +239,7 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
           </div>
         ))}
       </dl>
-    </div>
+    </Stack>
   );
 }
 
@@ -245,11 +247,11 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
   const ordered = [...issues].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
   return (
     <Card>
-      <CardContent className="grid gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className={textRole('sectionTitle')}>All Issues ({issues.length})</h2>
-          <span className="type-caption">Sorted by severity</span>
-        </div>
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
+        <CardTitle>All Issues ({issues.length})</CardTitle>
+        <span className="type-caption">Sorted by severity</span>
+      </CardHeader>
+      <CardContent>
         {ordered.length === 0 ? (
           <p className={textRole('body')}>No issues detected on this page.</p>
         ) : (

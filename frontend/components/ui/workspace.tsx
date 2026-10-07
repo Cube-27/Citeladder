@@ -33,6 +33,28 @@ export const pageToolbarClasses =
 export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:last:pe-0';
 
 /**
+ * The sanctioned two-column splits. A screen picks a role, never a ratio:
+ * pages had drifted to 2fr/1fr, 3fr/2fr, 1.15fr/1fr and fixed rem widths for
+ * the same two layouts, so the same kind of page moved its seam on every route.
+ *
+ *   `list-detail` — a selectable list beside the selected item's evidence.
+ *   `main-aside`  — the primary surface beside supporting context.
+ *
+ * Both stack below `lg`, with the first child first, and share the workspace
+ * gap. Columns align to the top so a short aside never stretches.
+ */
+const SPLIT_PANE = {
+  'list-detail': 'lg:grid-cols-[var(--pane-list-detail)]',
+  'main-aside': 'lg:grid-cols-[var(--pane-main-aside)]',
+} as const;
+
+export type SplitPaneRole = keyof typeof SPLIT_PANE;
+
+export function splitPaneClasses(role: SplitPaneRole, className?: string) {
+  return cn('grid min-w-0 items-start gap-[var(--workspace-gap)]', SPLIT_PANE[role], className);
+}
+
+/**
  * The ledger: a vertical list of peers separated by rules rather than boxed
  * individually. Six different wrappers existed for this one idea — borderless,
  * hung off a rule, and boxed at two different radii — so the same list of
@@ -74,10 +96,12 @@ export function MetricGroup({
  * One cell of a `MetricGroup`. The edge padding is paired with the same
  * breakpoints the group reflows at, so the first and last cells stay flush with
  * the card's own padding at every column count. Exported because a band whose
- * cell is not a plain label/value pair still has to sit on this grid.
+ * cell is not a plain label/value pair still has to sit on this grid. The cell
+ * owns its label → value rhythm (the 4px `tight` rung), so its children never
+ * carry margins.
  */
 export const metricItemClasses =
-  'min-w-0 px-0 py-3 sm:px-4 sm:odd:ps-0 sm:even:pe-0 sm:last:pe-0 lg:px-4 lg:odd:ps-4 lg:even:pe-4 lg:first:ps-0 lg:last:pe-0';
+  'grid min-w-0 content-start gap-1 px-0 py-3 sm:px-4 sm:odd:ps-0 sm:even:pe-0 sm:last:pe-0 lg:px-4 lg:odd:ps-4 lg:even:pe-4 lg:first:ps-0 lg:last:pe-0';
 
 export function MetricItem({
   label,
@@ -98,8 +122,8 @@ export function MetricItem({
         <span className="truncate">{label}</span>
         {marker}
       </dt>
-      <dd className={cn(textRole('figure'), 'mt-1')}>{value}</dd>
-      {detail ? <dd className={textRole('caption', 'mt-1')}>{detail}</dd> : null}
+      <dd className={textRole('figure')}>{value}</dd>
+      {detail ? <dd className={textRole('caption')}>{detail}</dd> : null}
     </div>
   );
 }

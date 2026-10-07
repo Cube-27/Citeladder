@@ -1,10 +1,11 @@
 'use client';
 
-import { CheckCircle2, ExternalLink, Search, XCircle } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Quote, Search, XCircle } from 'lucide-react';
 
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { SurfaceEvidence } from '@/components/runs/surface-evidence';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Label, textRole } from '@/components/ui/typography';
 import { engineLabel, productModelLabel, productTransportLabel } from '@/lib/providers/catalog';
 import type { ExecutionEvidence } from '@/lib/api/types';
@@ -330,9 +331,12 @@ function EvidenceCitationsList({
         </span>
       </div>
       {citations.length === 0 ? (
-        <div className="type-body bg-background-alt rounded-[var(--radius-card)] p-4 text-center">
-          No citations were captured from this response.
-        </div>
+        <EmptyState
+          variant="compact"
+          headingLevel={3}
+          icon={Quote}
+          heading="No citations were captured from this response."
+        />
       ) : (
         <ol className={ledgerClasses('boxed')}>
           {citations.map((citation) => (
@@ -401,7 +405,7 @@ function EvidenceStat({
   positive,
 }: Readonly<{ label: string; value: string; positive?: boolean }>) {
   return (
-    <div className="border-border bg-well grid min-w-0 gap-0.5 rounded-[var(--radius-control)] border px-3 py-3">
+    <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid min-w-0 gap-0.5')}>
       <span className="type-caption">{label}</span>
       <span className={cn(textRole('itemTitle', 'truncate'), outcomeToneClass(positive))}>
         {value}

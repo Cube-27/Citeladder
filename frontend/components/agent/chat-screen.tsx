@@ -13,12 +13,13 @@ import {
   useFollowUp,
   type FollowUp,
 } from '@/components/agent/use-chat-turns';
+import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Stack } from '@/components/ui/layout';
 import { ReadError } from '@/components/ui/read-error';
-import { Skeleton } from '@/components/ui/skeleton';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { isRunActive } from '@/lib/agent/run-state';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
@@ -46,7 +47,7 @@ export function ChatScreen() {
   if (!query.data)
     return (
       <PageShell>
-        <Skeleton className="h-64 w-full" />
+        <PageLoading />
       </PageShell>
     );
   if (query.data.chat.project_id !== activeProjectId)
@@ -76,10 +77,14 @@ function ChatView({
   return (
     <PageShell
       measure="workflow"
-      className="flex min-h-[calc(100dvh-var(--page-band-identity)-2*var(--content-gutter))] flex-col pb-0"
+      // Fill the viewport below the shell chrome so the composer sits at the
+      // bottom of a short thread. `--route-chrome-height` (globals.css) owns the
+      // chrome above the route at each breakpoint; the gutter is the shell's
+      // padding under the route. Kept identical in chat- and new-chat-screen.
+      className="flex min-h-[calc(100dvh-var(--route-chrome-height)-var(--content-gutter))] flex-col pb-0"
       actions={<ChatHeaderActions detail={detail} />}
     >
-      <div className="grid min-w-0 flex-1 content-start gap-4">
+      <Stack gap="workspace" className="min-w-0 flex-1 content-start">
         <Conversation
           detail={detail}
           output={
@@ -105,7 +110,7 @@ function ChatView({
         />
         {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
         <FollowUpFailure turn={turn} actionId={detail.chat.action_id} canSend={access.canSend} />
-      </div>
+      </Stack>
       {/* The composer stays at the bottom of the window while the thread scrolls. */}
       <div className="bg-panel z-sticky sticky bottom-0 pt-2 pb-4">
         {showJump ? (

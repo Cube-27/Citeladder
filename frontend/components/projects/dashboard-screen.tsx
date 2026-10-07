@@ -5,10 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 import { TopInsights } from '@/components/intelligence/top-insights';
 import { PageShell } from '@/components/layout/page-shell';
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Stack } from '@/components/ui/layout';
+import { ReadError } from '@/components/ui/read-error';
+import { splitPaneClasses } from '@/components/ui/workspace';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { CommandCenter, Project } from '@/lib/api/types';
@@ -26,7 +27,6 @@ import { useCommandCenterActions } from './use-command-center-actions';
 
 const DASHBOARD_METRIC_PLACEHOLDERS = ['metric-a', 'metric-b', 'metric-c'] as const;
 const DASHBOARD_ACTION_PLACEHOLDERS = ['action-a', 'action-b', 'action-c'] as const;
-const overviewInset = 'pt-[var(--workspace-gap)] min-[981px]:pt-[var(--content-gutter)]';
 
 export function DashboardScreen({
   onEditProject,
@@ -45,11 +45,16 @@ export function DashboardScreen({
   if (context.isLoading || (context.activeProject && commandCenter.isLoading)) {
     return <DashboardLoading />;
   }
-  if (!context.activeProject) return <PageShell className={overviewInset} />;
+  if (!context.activeProject) return <PageShell />;
   if (commandCenter.isError || !commandCenter.data)
     return (
-      <PageShell className={overviewInset}>
-        <LoadError onRetry={commandCenter.refetch} />
+      <PageShell>
+        <ReadError
+          error={commandCenter.error}
+          fallback="The command center could not be loaded."
+          onRetry={() => void commandCenter.refetch()}
+          pending={commandCenter.isFetching}
+        />
       </PageShell>
     );
 
@@ -65,12 +70,9 @@ export function DashboardScreen({
 
 function DashboardLoading() {
   return (
-    <PageShell
-      actions={<Skeleton className="h-8 w-44 rounded-[var(--radius-control)]" />}
-      className={overviewInset}
-    >
+    <PageShell actions={<Skeleton className="h-8 w-44 rounded-[var(--radius-control)]" />}>
       <Stack gap="section" aria-busy="true">
-        <div className="grid gap-[var(--workspace-gap)]">
+        <Stack gap="workspace">
           <output className="sr-only">Loading your command center…</output>
 
           <div className="flex min-w-0 items-center gap-4">
@@ -81,7 +83,7 @@ function DashboardLoading() {
             </div>
           </div>
 
-          <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className={splitPaneClasses('main-aside')}>
             <Card className="grid content-start gap-3 p-[var(--card-padding)]">
               <div className="flex items-center justify-between gap-3">
                 <Skeleton className="h-5 w-28" />
@@ -147,7 +149,7 @@ function DashboardLoading() {
               ))}
             </div>
           </div>
-        </div>
+        </Stack>
 
         <div className="grid gap-3">
           <Skeleton className="h-5 w-28" />
@@ -165,17 +167,6 @@ function DashboardLoading() {
   );
 }
 
-function LoadError({ onRetry }: Readonly<{ onRetry: () => void }>) {
-  return (
-    <Alert tone="danger">
-      The command center could not be loaded.{' '}
-      <Button variant="ghost" size="sm" onClick={onRetry}>
-        Try again
-      </Button>
-    </Alert>
-  );
-}
-
 function DashboardData({
   data,
   activeProject,
@@ -188,7 +179,6 @@ function DashboardData({
   const actions = useCommandCenterActions(data, activeProject);
   return (
     <PageShell
-      className={overviewInset}
       actions={
         <DashboardActions
           data={data}
@@ -200,7 +190,7 @@ function DashboardData({
       }
     >
       <Stack gap="section">
-        <div className="grid gap-[var(--page-section-gap)]" data-tour="command-center">
+        <Stack gap="section" data-tour="command-center">
           <DashboardHeader data={data} activeProject={activeProject} />
           {data.active_prompt_count === 0 ? <PromptSetupCard /> : null}
           {actions.downloadError ? (
@@ -223,7 +213,7 @@ function DashboardData({
             pending={actions.reorderPending}
             onMove={actions.move}
           />
-        </div>
+        </Stack>
         <TopInsights workspaceId={activeProject.workspace_id} projectId={activeProject.id} />
         <CompanyFacts data={data} />
       </Stack>

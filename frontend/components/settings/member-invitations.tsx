@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -19,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, ROLE_SUMMARY } from './member-roles';
@@ -77,8 +79,8 @@ export function InviteDialog({
         </>
       }
     >
-      <div className="grid gap-4">
-        <div className="grid gap-2">
+      <Stack gap="workspace">
+        <Stack gap="tight">
           <label htmlFor="invite-email" className={textRole('label')}>
             Email
           </label>
@@ -90,8 +92,8 @@ export function InviteDialog({
             onChange={(event) => setEmail(event.target.value)}
             placeholder="teammate@example.com"
           />
-        </div>
-        <div className="grid gap-2">
+        </Stack>
+        <Stack gap="tight">
           <label htmlFor="invite-role" className={textRole('label')}>
             Workspace role
           </label>
@@ -103,7 +105,7 @@ export function InviteDialog({
             ariaLabel="Invitation role"
           />
           <p className={textRole('caption')}>{ROLE_SUMMARY[role]}</p>
-        </div>
+        </Stack>
         {issuedToken ? (
           <Alert tone="info">
             <div className="grid gap-2">
@@ -125,7 +127,7 @@ export function InviteDialog({
             </div>
           </Alert>
         ) : null}
-      </div>
+      </Stack>
     </Dialog>
   );
 }
@@ -147,8 +149,8 @@ export function PendingInvitations({
   if (isLoading) return <Skeleton className="h-16 w-full" />;
   if (invitations.length === 0) return null;
   return (
-    <section className="grid gap-3">
-      <h3 className={textRole('sectionTitle')}>Pending invitations</h3>
+    <Stack as="section" gap="compact">
+      <EditorialSectionHeader title="Pending invitations" />
       <Table>
         <TableHeader>
           <TableRow>
@@ -192,6 +194,6 @@ export function PendingInvitations({
           ))}
         </TableBody>
       </Table>
-    </section>
+    </Stack>
   );
 }

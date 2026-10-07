@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
+import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { ReadError } from '@/components/ui/read-error';
-import { Skeleton } from '@/components/ui/skeleton';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { outputKindLabel, skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
@@ -34,13 +35,14 @@ export function SkillsScreen() {
         pending={query.isFetching}
       />
     );
-  else if (!query.data) body = <Skeleton className="h-48 w-full" />;
+  else if (!query.data) body = <PageLoading />;
   else body = <SkillGroups skills={query.data.skills} />;
 
   return (
     <PageShell measure="workflow">
       <Stack gap="section">
-        <p className={textRole('body', 'max-w-2xl')}>
+        {/* PageShell has no description slot, so the route's intro is the body's first child. */}
+        <p className={textRole('body', 'max-w-[72ch]')}>
           Skills are the agent’s available methods. It selects a method when a deliverable needs
           one, or you can choose here or in the composer. Typing / opens that same skill menu.
           Questions can stay simple replies.
@@ -60,20 +62,18 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
   return (
     <Stack gap="section">
       {[...groups].map(([group, rows]) => (
-        <section key={group} aria-label={group} className="grid gap-3">
-          <div className="flex items-baseline gap-2">
-            <SectionTitle>{group}</SectionTitle>
-            <span className={textRole('caption')}>
-              {rows.length} {rows.length === 1 ? 'skill' : 'skills'}
-            </span>
-          </div>
+        <Stack as="section" key={group} aria-label={group}>
+          <EditorialSectionHeader
+            title={group}
+            description={`${rows.length} ${rows.length === 1 ? 'skill' : 'skills'}`}
+          />
           <ul className="grid gap-3 sm:grid-cols-2">
             {rows.map((skill) => (
-              <li key={skill.id} className={panelClasses({ pad: 'compact' }, 'grid gap-3')}>
-                <div className="grid gap-1">
+              <Stack as="li" key={skill.id} className={panelClasses({ pad: 'compact' })}>
+                <Stack gap="tight">
                   <h3 className={textRole('itemTitle')}>{skill.label}</h3>
                   <p className={textRole('body')}>{skill.description}</p>
-                </div>
+                </Stack>
                 <div className="flex flex-wrap items-center justify-between gap-2 self-end">
                   <Badge>Produces {outputKindLabel(skill.output_kind).toLowerCase()}</Badge>
                   <Button asChild variant="ghost" size="sm">
@@ -85,10 +85,10 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
                     </ProjectLink>
                   </Button>
                 </div>
-              </li>
+              </Stack>
             ))}
           </ul>
-        </section>
+        </Stack>
       ))}
     </Stack>
   );

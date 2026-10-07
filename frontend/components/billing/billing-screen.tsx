@@ -17,9 +17,11 @@ import { UsageMeters } from '@/components/billing/usage-meters';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { Alert } from '@/components/ui/alert';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
+import { splitPaneClasses } from '@/components/ui/workspace';
 import {
   billingApi,
   createIdempotencyKey,
@@ -155,7 +157,11 @@ export function BillingScreen() {
   }, [workspaceId, country, details, resetPrepared]);
 
   if (entitlementLoading || entitlementQuery.isLoading) {
-    return <PageLoading label="Loading billing…" />;
+    return (
+      <PageShell>
+        <PageLoading label="Loading billing…" />
+      </PageShell>
+    );
   }
   if (entitlementQuery.isError) {
     return (
@@ -173,7 +179,7 @@ export function BillingScreen() {
 
   return (
     <PageShell>
-      <div className="grid gap-[var(--page-section-gap)]">
+      <Stack gap="section">
         <CheckoutStatus checkout={checkout} />
         {canManage ? null : (
           <Alert tone="info">
@@ -195,8 +201,8 @@ export function BillingScreen() {
             renewsOn={entitlement?.subscription?.current_period_end ?? null}
           />
         ) : null}
-        <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-12 lg:items-start">
-          <div className="grid gap-[var(--workspace-gap)] lg:col-span-7">
+        <div className={splitPaneClasses('main-aside')}>
+          <Stack gap="workspace">
             <PlanSection
               catalog={catalog}
               catalogLoading={catalogQuery.isLoading}
@@ -208,10 +214,8 @@ export function BillingScreen() {
               onBuyExtra={buyExtra}
               newSubscription={{ country, setCountry, details, setDetails, subscribe }}
             />
-          </div>
-          <div className="lg:col-span-5">
-            <UsageMeters />
-          </div>
+          </Stack>
+          <UsageMeters />
         </div>
         <InvoiceHistory
           invoices={invoiceQuery.data ?? []}
@@ -219,7 +223,7 @@ export function BillingScreen() {
           error={invoiceQuery.isError}
         />
         <BillingSupport contact={catalog?.support_contact ?? null} />
-      </div>
+      </Stack>
     </PageShell>
   );
 }

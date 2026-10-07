@@ -34,8 +34,16 @@ export function AiTrafficScreen() {
 function TrafficDataView({ tab, tabs }: Readonly<{ tab: TrafficDataTab; tabs: React.ReactNode }>) {
   const model = useTrafficData(tab);
   const { projectId, workspaceId, summary, crawlers, activity, catalog, pager, next } = model;
+  const controls = <TrafficControls model={model} />;
+  // First load keeps the identity, tab and control bands; only the work waits.
+  if (model.isLoading || model.current.isLoading)
+    return (
+      <PageShell tabs={tabs} controls={controls}>
+        <PageLoading label="Loading AI Traffic…" />
+      </PageShell>
+    );
   return (
-    <PageShell title="AI Traffic" tabs={tabs} controls={<TrafficControls model={model} />}>
+    <PageShell tabs={tabs} controls={controls}>
       <Stack gap="workspace">
         <TrafficStatus model={model} />
         {tab === 'overview' && summary.data ? (
@@ -91,13 +99,10 @@ function PagesPanel({ model }: Readonly<{ model: ReturnType<typeof useTrafficDat
   );
 }
 function TrafficStatus({ model }: Readonly<{ model: ReturnType<typeof useTrafficData> }>) {
-  const { isLoading, current, projectId, exporting } = model;
+  const { current, projectId, exporting } = model;
   return (
     <>
-      {isLoading || current.isLoading ? <PageLoading label="Loading AI Traffic…" /> : null}
-      {!isLoading && !projectId ? (
-        <Alert tone="info">Select a project to inspect AI Traffic.</Alert>
-      ) : null}
+      {projectId ? null : <Alert tone="info">Select a project to inspect AI Traffic.</Alert>}
       {current.isError ? (
         <ReadError
           error={current.error}

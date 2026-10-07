@@ -11,11 +11,12 @@ import {
   ContextualLinkDeclarationRoute,
 } from '@/components/agent/action-declaration';
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
 import { Alert } from '@/components/ui/alert';
-import { cardClasses } from '@/components/ui/card-variants';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Button } from '@/components/ui/button';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
@@ -23,8 +24,8 @@ import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { panelClasses } from '@/components/ui/panel';
 import { ReadError } from '@/components/ui/read-error';
-import { Skeleton } from '@/components/ui/skeleton';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader, ledgerClasses, splitPaneClasses } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import {
   approachLabel,
@@ -64,7 +65,7 @@ export function ActionDetailScreen() {
   if (!query.data)
     return (
       <PageShell>
-        <Skeleton className="h-48 w-full" />
+        <PageLoading />
       </PageShell>
     );
   if (query.data.project_id !== activeProjectId)
@@ -106,19 +107,19 @@ function ActionDetailView({
           />
         ) : null}
         <ActionFacts action={action} />
-        <div className="grid min-w-0 items-start gap-[var(--workspace-gap)] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div className="grid min-w-0 gap-[var(--workspace-gap)]">
+        <div className={splitPaneClasses('main-aside')}>
+          <Stack gap="workspace" className="min-w-0">
             <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
             <Implementation action={action} workspaceId={workspaceId} />
-          </div>
-          <aside className="grid min-w-0 gap-[var(--workspace-gap)]">
+          </Stack>
+          <Stack as="aside" gap="workspace" className="min-w-0">
             <ActionEvidence action={action} />
             <TextList title="Avoid" items={action.diagnosis.donts ?? []} />
             <TextList
               title="Measure with"
               items={(action.diagnosis.measure_with ?? []).map(measurementLegLabel).filter(isText)}
             />
-          </aside>
+          </Stack>
         </div>
         <LinkedChats action={action} workspaceId={workspaceId} />
       </Stack>
@@ -184,7 +185,7 @@ function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
     { label: 'Target', value: targetKindLabel(action.target_kind) ?? 'Target' },
   ];
   return (
-    <section aria-label="Summary" className="grid gap-3">
+    <Stack as="section" aria-label="Summary">
       {action.target_url ? (
         <ExternalHttpLink
           href={action.target_url}
@@ -205,7 +206,7 @@ function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
       {action.evidence_cleared_at ? (
         <Alert tone="info">No current evidence targets this Action. Its chats are kept.</Alert>
       ) : null}
-    </section>
+    </Stack>
   );
 }
 
@@ -214,21 +215,17 @@ function Diagnosis({
   onOpenEvidence,
 }: Readonly<{ action: ActionDetail; onOpenEvidence: (id: string) => void }>) {
   return (
-    <section
-      aria-labelledby="action-diagnosis"
-      className={`${cardClasses()} grid gap-4 p-[var(--card-padding)]`}
-    >
-      <SectionTitle id="action-diagnosis">Diagnosis</SectionTitle>
-      <div className="grid gap-2">
+    <Card aria-labelledby="action-diagnosis">
+      <CardHeader>
+        <CardTitle id="action-diagnosis">Diagnosis</CardTitle>
+      </CardHeader>
+      <CardContent>
         {action.members.length === 0 ? (
           <p className={textRole('body')}>No current finding targets this Action.</p>
         ) : (
-          <ul className="grid gap-2">
+          <ul className={ledgerClasses()}>
             {action.members.map((member) => (
-              <li
-                key={member.id}
-                className="border-border-subtle flex flex-wrap items-start gap-3 border-b py-3 last:border-b-0"
-              >
+              <li key={member.id} className="flex flex-wrap items-start gap-3 py-3">
                 <span className={textRole('itemTitle', 'min-w-0 flex-1')}>{member.title}</span>
                 <Button variant="ghost" size="sm" onClick={() => onOpenEvidence(member.id)}>
                   View evidence
@@ -237,8 +234,8 @@ function Diagnosis({
             ))}
           </ul>
         )}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -258,50 +255,57 @@ function Implementation({
   const canDeclare = isDeclarable(action) && mayWrite;
   if (!action.declaration && !canDeclare && !approach) return null;
   return (
-    <section
-      aria-labelledby="action-implementation"
-      className={`${cardClasses()} grid gap-3 p-[var(--card-padding)]`}
-    >
-      <SectionTitle id="action-implementation">Implementation</SectionTitle>
-      {approach ? <p className={textRole('itemTitle')}>{approach}</p> : null}
-      {action.declaration ? (
-        <DeclarationStatus declaration={action.declaration} />
-      ) : canDeclare ? (
-        <div className="grid gap-3">
-          <p className={textRole('body')}>
-            When this work is live, declare it so CiteLadder can measure it. To declare an Agent
-            output, use Mark implemented in its chat.
-          </p>
-          <div>
-            {action.members.some((member) => member.rule_id === 'site_contextual_links') ? (
-              <ContextualLinkDeclarationRoute />
-            ) : (
-              <MarkImplementedButton
-                workspaceId={workspaceId}
-                actionId={action.id}
-                revision={null}
-              />
-            )}
-          </div>
-        </div>
-      ) : null}
-    </section>
+    <Card aria-labelledby="action-implementation">
+      <CardHeader>
+        <CardTitle id="action-implementation">Implementation</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Stack>
+          {approach ? <p className={textRole('itemTitle')}>{approach}</p> : null}
+          {action.declaration ? (
+            <DeclarationStatus declaration={action.declaration} />
+          ) : canDeclare ? (
+            <Stack>
+              <p className={textRole('body')}>
+                When this work is live, declare it so CiteLadder can measure it. To declare an Agent
+                output, use Mark implemented in its chat.
+              </p>
+              <div>
+                {action.members.some((member) => member.rule_id === 'site_contextual_links') ? (
+                  <ContextualLinkDeclarationRoute />
+                ) : (
+                  <MarkImplementedButton
+                    workspaceId={workspaceId}
+                    actionId={action.id}
+                    revision={null}
+                  />
+                )}
+              </div>
+            </Stack>
+          ) : null}
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }
 
 function TextList({ title, items }: Readonly<{ title: string; items: string[] }>) {
   if (items.length === 0) return null;
   return (
-    <div className={`${cardClasses()} grid gap-3 p-[var(--card-padding)]`}>
-      <h3 className={textRole('sectionTitle')}>{title}</h3>
-      <ul className="grid list-disc gap-1 ps-5">
-        {items.map((item) => (
-          <li key={item} className={textRole('body')}>
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="grid list-disc gap-1 ps-5">
+          {items.map((item) => (
+            <li key={item} className={textRole('body')}>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -314,8 +318,8 @@ function LinkedChats({
   );
   const rows = chats.data?.pages.flatMap((page) => page.items) ?? [];
   return (
-    <section aria-labelledby="action-chats" className="grid gap-3">
-      <SectionTitle id="action-chats">Chats</SectionTitle>
+    <Stack as="section" aria-labelledby="action-chats">
+      <EditorialSectionHeader title="Chats" headingId="action-chats" />
       {chats.isError ? (
         <ReadError
           error={chats.error}
@@ -357,7 +361,7 @@ function LinkedChats({
           Show more chats
         </Button>
       ) : null}
-    </section>
+    </Stack>
   );
 }
 
@@ -380,12 +384,18 @@ function ActionEvidence({ action }: Readonly<{ action: ActionDetail }>) {
     </dl>
   );
   return (
-    <section className={`${cardClasses()} grid gap-4 p-[var(--card-padding)]`}>
-      <SectionTitle>Evidence</SectionTitle>
-      {sources(supporting)}
-      {other.length > 0 ? (
-        <Disclosure title={`Other sources (${other.length})`}>{sources(other)}</Disclosure>
-      ) : null}
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>Evidence</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Stack>
+          {sources(supporting)}
+          {other.length > 0 ? (
+            <Disclosure title={`Other sources (${other.length})`}>{sources(other)}</Disclosure>
+          ) : null}
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }

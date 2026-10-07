@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { Label, Metric, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
+import { MetricGroup, MetricItem, metricItemClasses } from '@/components/ui/workspace';
 import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
@@ -22,75 +24,122 @@ import {
   shouldPollAudit,
 } from '@/lib/runs/status';
 
-function ProgressHeader({
+type ExportFormat = 'csv' | 'md';
+
+/**
+ * Authenticated CSV/MD export state for one run. Exports use the audit's
+ * persisted workspace identity rather than a headerless navigation that could
+ * resolve another workspace. The route owns this so its actions can live in the
+ * page's identity band while the panel still reports an export failure.
+ */
+export function useRunExport(audit: Audit | undefined) {
+  // The route stays mounted across runs (a repair run is a navigation, not a
+  // remount), so each state belongs to the run it was started for and is ignored
+  // once the reader is looking at another one.
+  const [exporting, setExporting] = useState<{ auditId: string; format: ExportFormat } | null>(
+    null,
+  );
+  const [exportError, setExportError] = useState<{ auditId: string; message: string } | null>(null);
+
+  async function download(format: ExportFormat) {
+    if (!audit) return;
+    const auditId = audit.id;
+    setExporting({ auditId, format });
+    setExportError(null);
+    try {
+      const blob = await runsApi.downloadExport(auditId, format, {
+        workspaceId: audit.workspace_id,
+      });
+      saveBlob(blob, `audit-${auditId}.${format}`);
+    } catch (error) {
+      setExportError({ auditId, message: humanizeApiError(error).message });
+    } finally {
+      setExporting((current) => (current?.auditId === auditId ? null : current));
+    }
+  }
+
+  const current = audit?.id;
+  return {
+    exporting: exporting && exporting.auditId === current ? exporting.format : null,
+    exportError: exportError && exportError.auditId === current ? exportError.message : null,
+    onExport: (format: ExportFormat) => void download(format),
+  };
+}
+
+/**
+ * The run's actions: exports, a Cancel enabled only while the backend still
+ * accepts a cooperative cancel (i.e. not `reporting`/terminal), and a failure
+ * rerun when something failed. Rendered in the route's identity band.
+ */
+export function RunActions({
   audit,
-  polling,
-  cancelable,
   cancelPending,
   onCancel,
   onRerunFailures,
-  rerunPending,
+  rerunPending = false,
   onExport,
   exporting,
 }: Readonly<{
   audit: Audit;
-  polling: boolean;
-  cancelable: boolean;
   cancelPending: boolean;
   onCancel: () => void;
   onRerunFailures?: () => void;
-  rerunPending: boolean;
-  onExport: (format: 'csv' | 'md') => void;
-  exporting: 'csv' | 'md' | null;
+  rerunPending?: boolean;
+  onExport: (format: ExportFormat) => void;
+  exporting: ExportFormat | null;
 }>) {
+  const cancelable = isAuditCancelable(audit.status);
   return (
-    <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="run-status" value={auditBadgeValue(audit.status)}>
-          {auditStatusLabel(audit.status)}
-        </Badge>
-        <MeasurementContext provenance={audit.model_provenance} />
-        {polling ? (
-          <span
-            className="type-caption inline-flex items-center gap-2 tabular-nums"
-            aria-live="polite"
-          >
-            <span className="activity-dot bg-run-running inline-block size-1.5" aria-hidden />
-            Updating…
-          </span>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => onExport('csv')}
-          disabled={exporting !== null}
-        >
-          {exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
+    <>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => onExport('csv')}
+        disabled={exporting !== null}
+      >
+        {exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => onExport('md')}
+        disabled={exporting !== null}
+      >
+        {exporting === 'md' ? 'Exporting…' : 'Export MD'}
+      </Button>
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={onCancel}
+        disabled={!cancelable || cancelPending}
+      >
+        {cancelPending ? 'Cancelling…' : 'Cancel run'}
+      </Button>
+      {audit.failed_count > 0 && onRerunFailures ? (
+        <Button variant="secondary" size="sm" onClick={onRerunFailures} disabled={rerunPending}>
+          {rerunPending ? 'Creating repair…' : 'Rerun failed'}
         </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => onExport('md')}
-          disabled={exporting !== null}
+      ) : null}
+    </>
+  );
+}
+
+function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: boolean }>) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Badge variant="run-status" value={auditBadgeValue(audit.status)}>
+        {auditStatusLabel(audit.status)}
+      </Badge>
+      <MeasurementContext provenance={audit.model_provenance} />
+      {polling ? (
+        <span
+          className="type-caption inline-flex items-center gap-2 tabular-nums"
+          aria-live="polite"
         >
-          {exporting === 'md' ? 'Exporting…' : 'Export MD'}
-        </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={onCancel}
-          disabled={!cancelable || cancelPending}
-        >
-          {cancelPending ? 'Cancelling…' : 'Cancel run'}
-        </Button>
-        {audit.failed_count > 0 && onRerunFailures ? (
-          <Button variant="secondary" size="sm" onClick={onRerunFailures} disabled={rerunPending}>
-            {rerunPending ? 'Creating repair…' : 'Rerun failed'}
-          </Button>
-        ) : null}
-      </div>
+          <span className="activity-dot bg-run-running inline-block size-1.5" aria-hidden />
+          Updating…
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -125,24 +174,22 @@ function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
   const failedColor = audit.failed_count > 0 ? 'text-run-failed' : 'text-muted';
 
   return (
-    <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      <div className="border-border-subtle grid gap-1 border-r pr-2 last:border-0 sm:pr-4">
-        <Label>Requested</Label>
-        <Metric>{audit.requested_count}</Metric>
+    <MetricGroup>
+      <MetricItem label="Requested" value={audit.requested_count} />
+      <MetricItem
+        label="Completed"
+        value={<span className="text-run-completed">{audit.completed_count}</span>}
+      />
+      <MetricItem
+        label="Failed"
+        value={<span className={failedColor}>{audit.failed_count}</span>}
+      />
+      {/* A timestamp is not a figure: same grid cell, item-title value. */}
+      <div className={metricItemClasses}>
+        <dt className={eyebrowClasses}>Created</dt>
+        <dd className={textRole('itemTitle')}>{formatDateTime(audit.created_at, timeZone)}</dd>
       </div>
-      <div className="border-border-subtle grid gap-1 border-r pr-2 last:border-0 sm:pr-4">
-        <Label>Completed</Label>
-        <Metric className="text-run-completed">{audit.completed_count}</Metric>
-      </div>
-      <div className="border-border-subtle grid gap-1 border-r pr-2 last:border-0 sm:pr-4">
-        <Label>Failed</Label>
-        <Metric className={failedColor}>{audit.failed_count}</Metric>
-      </div>
-      <div className="grid gap-1">
-        <Label>Created</Label>
-        <span className={textRole('itemTitle')}>{formatDateTime(audit.created_at, timeZone)}</span>
-      </div>
-    </dl>
+    </MetricGroup>
   );
 }
 
@@ -171,70 +218,36 @@ function ProgressNotices({
 /**
  * Run progress panel (F10, design.md §9.7).
  *
- * Shows the audit's status badge, the requested/completed/failed counts,
- * the created + completed timestamps, a Cancel button (enabled only while the
- * backend still accepts a cooperative cancel — i.e. not `reporting`/terminal),
- * and authenticated CSV/MD exports. Progress is driven by the parent's polling
- * of `GET /audits/{id}`; exports use the audit's persisted workspace identity
- * rather than a headerless navigation that could resolve another workspace.
+ * Shows the audit's status badge, the requested/completed/failed counts, the
+ * created timestamp, and the outcome of the run's actions (export, cancel and
+ * rerun failures). The actions themselves are `RunActions`, rendered by the
+ * route in its identity band. Progress is driven by the parent's polling of
+ * `GET /audits/{id}`.
  */
 export function ProgressPanel({
   audit,
-  onCancel,
-  cancelPending,
+  exportError,
   cancelNotice,
   onCancelRetry,
-  onRerunFailures,
-  rerunPending = false,
   rerunNotice,
   onRerunRetry,
 }: Readonly<{
   audit: Audit;
-  onCancel: () => void;
-  cancelPending: boolean;
+  /** A failed export from `useRunExport`. */
+  exportError?: string | null;
   /** The A4 mutation notice for a failed cancel (verbatim 4xx, transient retry). */
   cancelNotice?: MutationNoticeData | null;
   /** Retry affordance for a transient cancel failure. */
   onCancelRetry?: () => void;
-  onRerunFailures?: () => void;
-  rerunPending?: boolean;
   rerunNotice?: MutationNoticeData | null;
   onRerunRetry?: () => void;
 }>) {
   const polling = shouldPollAudit(audit.status);
-  const cancelable = isAuditCancelable(audit.status);
-  const [exporting, setExporting] = useState<'csv' | 'md' | null>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
-
-  async function download(format: 'csv' | 'md') {
-    setExporting(format);
-    setExportError(null);
-    try {
-      const blob = await runsApi.downloadExport(audit.id, format, {
-        workspaceId: audit.workspace_id,
-      });
-      saveBlob(blob, `audit-${audit.id}.${format}`);
-    } catch (error) {
-      setExportError(humanizeApiError(error).message);
-    } finally {
-      setExporting(null);
-    }
-  }
 
   return (
     <Card>
       <CardContent className="grid gap-4">
-        <ProgressHeader
-          audit={audit}
-          polling={polling}
-          cancelable={cancelable}
-          cancelPending={cancelPending}
-          onCancel={onCancel}
-          onRerunFailures={onRerunFailures}
-          rerunPending={rerunPending}
-          onExport={(format) => void download(format)}
-          exporting={exporting}
-        />
+        <ProgressStatus audit={audit} polling={polling} />
 
         {polling && audit.requested_count > 0 ? (
           <ProgressBar requested={audit.requested_count} completed={audit.completed_count} />

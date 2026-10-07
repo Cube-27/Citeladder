@@ -4,6 +4,8 @@ import {
   hairlineBandClasses,
   hairlineBandItemClasses,
   ledgerClasses,
+  MetricGroup,
+  splitPaneClasses,
 } from '@/components/ui/workspace';
 import { ProjectLink } from '@/components/layout/scoped-link';
 
@@ -43,7 +45,7 @@ export function DashboardHeader({
 }>) {
   const website = data.project.website_url;
   return (
-    <section className="grid gap-[var(--workspace-gap)]">
+    <Stack as="section" gap="workspace">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
           <BrandLogo
@@ -82,7 +84,7 @@ export function DashboardHeader({
           </div>
         </div>
       </div>
-    </section>
+    </Stack>
   );
 }
 
@@ -198,7 +200,7 @@ function PdfButton({
 export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <>
-      <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className={splitPaneClasses('main-aside')}>
         <Card
           aria-labelledby="project-state"
           className="grid content-start gap-3 p-[var(--card-padding)]"
@@ -207,11 +209,11 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
             <SectionTitle id="project-state">Project state</SectionTitle>
             <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
           </div>
-          <div className={cn(hairlineBandClasses, 'sm:grid-cols-3')}>
+          <MetricGroup>
             <StateMetric label="Visibility" {...data.state.visibility} />
             <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
             <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
-          </div>
+          </MetricGroup>
         </Card>
         <Track data={data} />
       </div>
@@ -323,7 +325,7 @@ export function ActionsAndProof({
   onMove: (from: number, to: number) => void;
 }>) {
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <Stack gap="workspace">
       <section aria-labelledby="ranked-actions" className="grid gap-3">
         <EditorialSectionHeader
           title="Ranked actions"
@@ -366,12 +368,12 @@ export function ActionsAndProof({
       >
         <div className="grid gap-1">
           <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>
-          <p className="type-caption max-w-[65ch]">
+          <p className="type-caption max-w-[72ch]">
             {data.resolved_actions.count} action(s) resolved since the comparable run. Metric
             movement is shown alongside completion without claiming causation.
           </p>
         </div>
       </section>
-    </div>
+    </Stack>
   );
 }

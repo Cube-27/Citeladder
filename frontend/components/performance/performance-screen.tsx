@@ -21,6 +21,7 @@ import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
 import { Alert } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ChartNoAxesColumn } from 'lucide-react';
 import { integrationsApi } from '@/lib/api/integrations';
@@ -182,7 +183,7 @@ function SearchConsoleWorkspace({
 }>) {
   if (!available) return null;
   return (
-    <div className="border-border bg-panel overflow-hidden rounded-[var(--radius-card)] border">
+    <Card className="overflow-hidden">
       <div className="border-border-subtle flex flex-col border-b lg:flex-row lg:items-stretch lg:justify-between">
         <MetricCards
           selected={selected}
@@ -202,7 +203,7 @@ function SearchConsoleWorkspace({
       <div className="p-3">
         <PerformanceChart series={series} />
       </div>
-    </div>
+    </Card>
   );
 }
 
