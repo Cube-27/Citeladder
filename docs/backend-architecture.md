@@ -100,7 +100,9 @@ Internal Links, audits, Agent turns, integration syncs, Performance range
 projections and Commerce competitor discovery. These requests reuse existing
 workers scoped to the admitted work, with bounded admission and provider
 deadlines, so initial progress does not require a new Cloud Run job. PostgreSQL
-leases arbitrate concurrent API and runner claims. Reads remain persisted-only;
+leases arbitrate concurrent API and runner claims. Interactive crawls and
+competitor discovery also honor the shared drain lock to preserve crawler pacing.
+Reads remain persisted-only;
 large workloads, future retries and scheduled work retain background execution.
 No per-owner daemon remains.
 One PostgreSQL advisory lock admits one drain at a time across executions.

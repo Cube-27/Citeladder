@@ -26,7 +26,9 @@ Discovery runs as a queued, versioned attempt whose status is exposed to the
 workspace until it terminalizes. After admission the browser starts a separate
 authorized POST for the returned task IDs, using the existing analytics worker
 with bounded search and page acquisition. Queue leases arbitrate competing
-requests and background workers; unfinished targets retain background recovery.
+requests and background workers. The shared runner drain lock keeps interactive
+page acquisition from running alongside background crawls; unfinished targets
+retain background recovery.
 Tavily is optional; an unavailable provider
 produces an explicit unavailable state. Product queries include bounded product
 type, attribute, and price-band context; category queries retain their separate

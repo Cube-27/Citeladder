@@ -10,6 +10,7 @@ import {
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { configEnvironment, policy, resolveSettingSpec } from '../config.ts';
 import { SiteHealthWorker } from '../workers/site-health-worker.ts';
+import { exclusiveDrain } from '../workers/runner.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { SitePageFetcher, siteFetchSettings } from '../site-health/page-fetch.ts';
 import { fetchWebsite } from '../projects/safe-fetch.ts';
@@ -87,7 +88,15 @@ export const siteHealthCrawlRoutes = [
         signal,
       });
       // Observe committed successors: a runner may have drained before this request finishes.
-      await worker.runUntilIdle(signal, interactive.admission_seconds);
+      // Keep publisher pacing under one crawler, including API requests and background jobs.
+      await exclusiveDrain(
+        config,
+        {
+          signal,
+          deadline: performance.now() + interactive.admission_seconds * 1000,
+        },
+        0,
+      )(() => worker.runUntilIdle(signal, interactive.admission_seconds));
       return siteCrawlSchema.parse(projectCrawl(await loadCrawl(db, workspaceId, path.crawl_id)));
     },
   }),

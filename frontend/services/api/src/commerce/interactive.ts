@@ -4,6 +4,7 @@ import type { Database } from '../db/database.ts';
 import { fetchWebsite } from '../projects/safe-fetch.ts';
 import { leaseSignal } from '../queue/heartbeat.ts';
 import { AnalyticsWorker } from '../workers/analytics-worker.ts';
+import { exclusiveDrain } from '../workers/runner.ts';
 import { competitorDiscovery } from './discovery.ts';
 import { competitorSearch } from './discovery-provider.ts';
 import { discoveries, type CommerceScope } from './reads.ts';
@@ -37,6 +38,13 @@ export async function executeCompetitorDiscoveries(
       },
     },
   );
-  await worker.runUntilIdle(taskIds.length, signal);
+  await exclusiveDrain(
+    config,
+    {
+      signal,
+      deadline: performance.now() + interactiveExecution.admissionSeconds * 1000,
+    },
+    0,
+  )(() => worker.runUntilIdle(taskIds.length, signal));
   return discoveries(db, scope, taskIds);
 }

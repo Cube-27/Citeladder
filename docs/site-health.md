@@ -45,6 +45,9 @@ Internal Links uses a 180-second judgment deadline and publishes its committed
 results in the same request; timed-out judgments remain uncertain. These bounds
 belong to the native feature configuration. Concurrent requests and background
 jobs share the same PostgreSQL leases, retry backoff and attempt ceilings.
+Interactive crawls also honor the runner's shared PostgreSQL drain lock; an
+active drain retains the work so API and background crawlers do not pace hosts
+independently at the same time.
 The normal job wake-up and periodic recovery remain available when a browser
 leaves or a request is interrupted. Committed successors also wake the runner
 after interactive execution. Read endpoints never start this work.

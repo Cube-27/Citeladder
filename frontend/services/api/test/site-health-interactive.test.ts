@@ -1,6 +1,7 @@
 import { afterAll, expect, it, vi } from 'vitest';
 import * as safeFetch from '../src/projects/safe-fetch.ts';
 import { policy } from '../src/config.ts';
+import { exclusiveDrain } from '../src/workers/runner.ts';
 import { createApp } from '../src/app.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -85,4 +86,35 @@ it('bounds even the initial robots request and leaves interrupted work recoverab
     policy.site_health.interactive.timeout_seconds = timeout;
     transport.mockRestore();
   }
+});
+
+it('leaves work to an active background drain instead of bypassing crawler pacing', async () => {
+  const seed = await fixtures.crawl();
+  const taskId = await fixtures.task(seed);
+  await exclusiveDrain(
+    config,
+    {
+      signal: AbortSignal.timeout(30_000),
+      deadline: performance.now() + 30_000,
+    },
+    0,
+  )(async () => {
+    expect((await run(seed)).status).toBe(200);
+    expect(
+      await db
+        .selectFrom('site_crawl_tasks')
+        .select(['status', 'attempt_count'])
+        .where('id', '=', taskId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ status: 'queued', attempt_count: 0 });
+    return 0;
+  });
+  expect((await run(seed)).status).toBe(200);
+  expect(
+    await db
+      .selectFrom('site_crawl_tasks')
+      .select(['status', 'attempt_count'])
+      .where('id', '=', taskId)
+      .executeTakeFirstOrThrow(),
+  ).toEqual({ status: 'succeeded', attempt_count: 1 });
 });
