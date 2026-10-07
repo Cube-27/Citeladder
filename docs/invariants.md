@@ -125,6 +125,14 @@ binary: only `satisfied` and `missing` are determinate; `partial` earns no credi
 Scores use determinate checks only. Unresolved checks remain in coverage and
 keep page, pillar and crawl measurement states partial even when a score exists.
 
+A check moves a score only when failing it affects crawlability, indexing,
+AI-answer eligibility or page performance, and every scored check surfaces as
+a visible finding; a hidden diagnostic is never scored. The catalog's
+`score_roles` is the single source of membership. A purpose penalty (a product
+or category requirement) needs page-owned evidence of that purpose, never the
+URL or title alone. Site-scoped checks apply to every page of the crawl, and
+each final page manifest names the site evaluations it used.
+
 ## 9. Deterministic code owns measurable facts
 
 Code owns URL/media disposition, parsing, exact identifiers, dates, units,
