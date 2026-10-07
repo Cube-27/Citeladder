@@ -200,10 +200,6 @@
   margin: 56px auto 0;
   padding: 27px 27px 0;
   border-radius: var(--radius-marketing-preview) var(--radius-marketing-preview) 0 0;
-  background:
-    radial-gradient(circle at 15% 15%, var(--color-atmosphere-green), transparent 45%),
-    radial-gradient(circle at 82% 20%, var(--color-atmosphere-blue), transparent 47%),
-    var(--color-canvas-soft);
 }
 .cl-engine-strip {
   border-bottom: 1px solid var(--cl-line);
@@ -528,20 +524,13 @@
   padding: 32px 32px 0;
   overflow: hidden;
   border-radius: var(--radius-marketing-preview);
-  background:
-    radial-gradient(
-      circle at 0% 0%,
-      color-mix(in srgb, var(--cl-hue) 16%, var(--cl-raised)),
-      transparent 60%
-    ),
-    var(--cl-hue-well);
 }
 .cl-product-stage::after {
   content: '';
   position: absolute;
   inset: auto 0 0;
   height: 56px;
-  background: linear-gradient(to bottom, transparent, var(--cl-hue-well));
+  background: linear-gradient(to bottom, transparent, var(--color-panel));
   pointer-events: none;
 }
 .cl-evidence {
@@ -587,9 +576,6 @@
   min-width: 0;
   padding: 32px;
   border-radius: var(--radius-marketing-preview);
-  background:
-    radial-gradient(circle at 100% 0%, var(--color-atmosphere-green), transparent 55%),
-    var(--cl-well);
 }
 .cl-integrations {
   background: var(--cl-paper);

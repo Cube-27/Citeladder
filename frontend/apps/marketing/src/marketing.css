@@ -30,19 +30,58 @@
 }
 
 .marketing-footer-card {
-  --color-foreground: var(--marketing-footer-foreground);
-  --color-muted: var(--marketing-footer-muted);
-  --color-border-subtle: var(--marketing-footer-line);
-  background: var(--marketing-footer-background);
+  --color-muted: var(--color-secondary);
+  --color-border-subtle: var(--color-border-strong);
   color: var(--color-foreground);
   border-radius: 0;
   overflow: hidden;
 }
 
-.marketing-footer-card .marketing-footer-description {
-  color: var(--marketing-footer-foreground);
+/* Saturated color burns into paper; grain belongs to the backdrop alone. */
+.marketing-snapshot-grain,
+.marketing-footer-card {
+  --marketing-grain-hue: var(--cl-hue, var(--marketing-grain-green));
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 85% 90%, var(--color-panel) 12%, transparent 70%),
+    linear-gradient(
+      135deg,
+      var(--marketing-grain-hue),
+      color-mix(in srgb, var(--marketing-grain-hue) 45%, var(--color-panel)) 40%,
+      var(--color-panel) 78%
+    );
 }
 
-.marketing-footer-card .brand-wordmark {
-  filter: brightness(0) invert(1);
+.marketing-snapshot-grain::before,
+.marketing-footer-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.12;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+.marketing-snapshot-blue {
+  --marketing-grain-hue: var(--marketing-grain-blue);
+}
+.marketing-snapshot-indigo {
+  --marketing-grain-hue: var(--marketing-grain-indigo);
+}
+.marketing-snapshot-purple {
+  --marketing-grain-hue: var(--marketing-grain-purple);
+}
+.marketing-snapshot-green {
+  --marketing-grain-hue: var(--marketing-grain-green);
+}
+
+.marketing-footer-card {
+  background:
+    linear-gradient(to bottom, var(--color-panel) 48%, transparent),
+    radial-gradient(ellipse at 85% 100%, var(--color-panel) 12%, transparent 70%),
+    var(--marketing-grain-hue);
 }

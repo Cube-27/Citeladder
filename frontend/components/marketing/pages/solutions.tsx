@@ -29,8 +29,8 @@ const SEGMENT_ICONS = {
  * Product hues, one per segment (the reference system's four-hue set; `pr`
  * bookends the page with `agencies`' blue). The hue rides the segment's
  * eyebrow dot, check marks, hero chip icon, and the evidence panel's soft
- * wallpaper fill — deep rungs for ink on the soft tile fill, matching the
- * tile tokens in globals.css.
+ * grain gradient — deep rungs for ink inside the product window, matching
+ * the tile tokens in globals.css.
  */
 type HueKey = 'blue' | 'indigo' | 'purple' | 'green';
 

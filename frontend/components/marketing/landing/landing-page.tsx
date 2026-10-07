@@ -63,7 +63,7 @@ function Hero() {
             Brand mentions · Cited sources · Competitor visibility · Site health
           </p>
         </div>
-        <div className="cl-hero-stage">
+        <div className="cl-hero-stage marketing-snapshot-grain">
           <HeroPreview />
         </div>
       </div>

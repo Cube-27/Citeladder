@@ -1174,10 +1174,10 @@ input:-webkit-autofill:focus {
    previews keep reading as the product. */
 [data-public-surface] {
   --cl-closing: #e8edf1;
-  --marketing-footer-background: #1d1b19;
-  --marketing-footer-foreground: #f8f8f7;
-  --marketing-footer-muted: #b9b8b5;
-  --marketing-footer-line: #4b4845;
+  --marketing-grain-blue: #3b82f6;
+  --marketing-grain-indigo: #6366f1;
+  --marketing-grain-purple: #a855f7;
+  --marketing-grain-green: #22c55e;
   --color-background: #ffffff;
   --color-foreground: #0f172a;
   --color-secondary: #1e293b;
