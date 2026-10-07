@@ -7,7 +7,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { SiteRuleEvaluations } from '../generated/db-schema.ts';
 import type { RuleEvaluation } from './analysis/rules.ts';
-import { scoreAnalysis } from './analysis/scoring.ts';
+import { appliedSiteChecks, scoreAnalysis } from './analysis/scoring.ts';
 import type { Crawl } from './task-fence.ts';
 
 export function persistedEvaluation(row: Selectable<SiteRuleEvaluations>): RuleEvaluation {
@@ -57,11 +57,17 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
     .where('crawl_id', '=', crawl.id)
     .where('id', '=', sql<string>`any(${ids}::uuid[])`)
     .execute();
+  // Site checks score on every page, so each page's manifest names the site evaluations it used.
+  const siteSources = evaluations.filter(
+    (row) => appliedSiteChecks([persistedEvaluation(row)]).length > 0,
+  );
+  const site = siteSources.map(persistedEvaluation);
   const auditTime = crawl.started_at ?? crawl.created_at;
   const finalizedAt = new Date();
   const revisions = initials.map((initial) => {
-    const sources = byAnalysis.get(initial.id) ?? [];
-    const scores = scoreAnalysis(sources.map(persistedEvaluation), initial.page_kind);
+    const own = (byAnalysis.get(initial.id) ?? []).filter((row) => row.scope !== 'site');
+    const sources = [...own, ...siteSources];
+    const scores = scoreAnalysis(own.map(persistedEvaluation), initial.page_kind, site);
     const byRule = new Map(sources.map((row) => [row.rule_id, row.id]));
     return {
       ...initial,

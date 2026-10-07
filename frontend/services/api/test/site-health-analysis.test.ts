@@ -227,14 +227,15 @@ describe('page checklist', () => {
     const rows = byRule(result.evaluations);
     for (const id of [
       'technical.title_present',
-      'technical.meta_description_present',
-      'technical.canonical_present',
-      'web.accessibility_heading_order',
+      'web.accessibility_document_language',
+      'web.mobile_viewport',
     ])
       expect(rows.get(id)!.score_roles).toContain('web_fundamentals');
+    // Advisory: shown as an issue, never scored.
     const meta = rows.get('technical.meta_description_present')!;
     expect(meta.outcome).toBe('missing');
-    expect(createsIssue({ ...meta, score_roles: [], score_applicability: false })).toBe(true);
+    expect(meta.score_roles).toEqual([]);
+    expect(createsIssue(meta)).toBe(true);
   });
 
   it('requires a public price unless an explicit pricing action makes the product quote-led', () => {
@@ -354,6 +355,21 @@ describe('page checklist', () => {
     expect(unreadable.outcome).toBe('unknown');
     expect(createsIssue(unreadable)).toBe(false);
     expect(robots(undefined).outcome).toBe('not_applicable');
+  });
+
+  it('never reports an unrequested llms.txt as missing, and never scores it', () => {
+    const llms = (fetched: boolean, present: boolean) =>
+      byRule(
+        evaluatePageRules({
+          site: { llms_txt: { fetched, present, url: 'https://example.com/llms.txt' } },
+        }),
+      ).get('aeo.llms_txt_present')!;
+    const unrequested = llms(false, false);
+    expect(unrequested.outcome).toBe('unknown');
+    expect(createsIssue(unrequested)).toBe(false);
+    const absent = llms(true, false);
+    expect(absent.outcome).toBe('missing');
+    expect(absent.score_roles).toEqual([]);
   });
 });
 

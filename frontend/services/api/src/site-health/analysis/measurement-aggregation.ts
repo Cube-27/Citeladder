@@ -1,7 +1,7 @@
 /** Equal-page aggregation; a page with more checks never gets more influence. */
 import { policy } from '../../config.ts';
 import { compareText } from '../../text-order.ts';
-import { readinessReason, scoreAnalysis } from './scoring.ts';
+import { appliedSiteChecks, readinessReason, scoreAnalysis } from './scoring.ts';
 import type { RuleEvaluation } from './rules.ts';
 
 type Measurement = ReturnType<typeof scoreAnalysis>;
@@ -34,7 +34,8 @@ function role(pages: Measurement[], role: 'web' | 'aeo') {
 }
 
 export function aggregateMeasurements(rows: MeasuredPage[]) {
-  const pages = rows.map((row) => scoreAnalysis(row.evaluations, row.page_kind));
+  const site = appliedSiteChecks(rows.flatMap((row) => row.evaluations));
+  const pages = rows.map((row) => scoreAnalysis(row.evaluations, row.page_kind, site));
   const web = role(pages, 'web');
   const aeo = role(pages, 'aeo');
   const empty = scoreAnalysis([], 'other').readiness_dimensions;
