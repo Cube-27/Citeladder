@@ -20,21 +20,29 @@ async function collect(packageDir) {
   if (storeEntries.has(entry)) return;
   storeEntries.add(entry);
   const siblings = path.join(store, entry, 'node_modules');
-  for (const name of await readdir(siblings)) {
-    const names = name.startsWith('@')
-      ? (await readdir(path.join(siblings, name))).map((scoped) => `${name}/${scoped}`)
-      : [name];
-    for (const dependency of names) await collect(await realpath(path.join(siblings, dependency)));
-  }
+  const names = await Promise.all(
+    (await readdir(siblings)).map(async (name) =>
+      name.startsWith('@')
+        ? (await readdir(path.join(siblings, name))).map((scoped) => `${name}/${scoped}`)
+        : [name],
+    ),
+  );
+  await Promise.all(
+    names
+      .flat()
+      .map(async (dependency) => collect(await realpath(path.join(siblings, dependency)))),
+  );
 }
 
 await collect(await realpath(path.join(modules, 'wrangler')));
 
 const target = path.join(path.resolve(destination), 'node_modules');
 const copyOptions = { recursive: true, verbatimSymlinks: true };
-for (const entry of storeEntries) {
-  await cp(path.join(store, entry), path.join(target, '.pnpm', entry), copyOptions);
-}
+await Promise.all(
+  [...storeEntries].map((entry) =>
+    cp(path.join(store, entry), path.join(target, '.pnpm', entry), copyOptions),
+  ),
+);
 await mkdir(path.join(target, '.bin'), { recursive: true });
 await cp(path.join(modules, 'wrangler'), path.join(target, 'wrangler'), copyOptions);
 await cp(path.join(modules, '.bin', 'wrangler'), path.join(target, '.bin', 'wrangler'));
