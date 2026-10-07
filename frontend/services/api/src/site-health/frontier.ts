@@ -100,15 +100,17 @@ export function crawlScope(crawl: Crawl): Scope {
  * random but reproducible from the crawl, never biased to header and footer links.
  */
 const seededRank = (seed: string, hash: string) =>
-  createHash('md5').update(`${seed}${hash}`).digest('hex');
-const byOrder = (seed: string) => (a: Candidate, b: Candidate) =>
-  b.priority - a.priority ||
-  compareText(seededRank(seed, a.hash), seededRank(seed, b.hash)) ||
-  compareText(a.hash, b.hash);
+  createHash('sha256').update(`${seed}${hash}`).digest('hex');
 /** One candidate per URL, and one of each www/apex twin pair. */
 export function orderedUnique(candidates: Candidate[], seed: string) {
+  // One hash per candidate, not two per comparison.
+  const rank = new Map(candidates.map((item) => [item.hash, seededRank(seed, item.hash)]));
+  const byOrder = (a: Candidate, b: Candidate) =>
+    b.priority - a.priority ||
+    compareText(rank.get(a.hash) ?? '', rank.get(b.hash) ?? '') ||
+    compareText(a.hash, b.hash);
   const unique = new Map<string, Candidate>();
-  for (const item of candidates.toSorted(byOrder(seed))) {
+  for (const item of candidates.toSorted(byOrder)) {
     const twin = hostTwinHash(item.url);
     if (!unique.has(item.hash) && !(twin && unique.has(twin))) unique.set(item.hash, item);
   }
@@ -473,7 +475,7 @@ async function pendingFrontier(trx: Database, crawl: Crawl, settings: Settings) 
     .where('crawl_id', '=', crawl.id)
     .where('status', '=', crawlPolicy.frontier_statuses.pending)
     .orderBy('value_priority', 'desc')
-    .orderBy(sql`md5(${crawl.id} || url_hash)`)
+    .orderBy(sql`sha256(convert_to(${crawl.id} || url_hash, 'UTF8'))`)
     .orderBy('url_hash')
     .limit(Math.min(remaining, settings.batch))
     .forUpdate()
