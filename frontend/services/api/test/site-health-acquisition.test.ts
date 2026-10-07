@@ -10,6 +10,7 @@ import {
   orderedUnique,
 } from '../src/site-health/frontier.ts';
 import { reconcileDuplicateAliases } from '../src/site-health/canonical-alias.ts';
+import { valueKindCoverage } from '../src/site-health/coverage.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { runSiteSetup, setupSettings } from '../src/site-health/site-setup-task.ts';
@@ -658,6 +659,31 @@ describe('frontier admission', () => {
     const sample = await crawl({ sample: true, config: { automatic_monitor_limit: 0 } });
     expect((await admit(sample, [apex!])).admitted).toBe(1);
     expect((await admit(sample, [twinOf(apex!)])).admitted).toBe(0);
+  });
+
+  it('reports found and analyzed pages per value tier, and the expected tiers it never found', async () => {
+    const seed = await crawl({ config: { automatic_monitor_limit: 0 } });
+    await admit(seed, ['/products/a', '/products/b', '/about-us']);
+    const live = await db
+      .selectFrom('site_crawls')
+      .selectAll()
+      .where('id', '=', seed.crawlId)
+      .executeTakeFirstOrThrow();
+    expect(await valueKindCoverage(db, live)).toEqual([
+      { kind: 'product', found: 2, analyzed: 0 },
+      { kind: 'pricing', found: 0, analyzed: 0 },
+      { kind: 'about', found: 1, analyzed: 0 },
+      { kind: 'contact', found: 0, analyzed: 0 },
+    ]);
+    const sample = await crawl({ sample: true, config: { automatic_monitor_limit: 0 } });
+    await admit(sample, ['/products/a']);
+    const sampled = await db
+      .selectFrom('site_crawls')
+      .selectAll()
+      .where('id', '=', sample.crawlId)
+      .executeTakeFirstOrThrow();
+    // A sample admits without a frontier: no funnel, rather than "nothing found".
+    expect(await valueKindCoverage(db, sampled)).toEqual([]);
   });
 
   it('never admits a hard-excluded or out-of-scope candidate', async () => {

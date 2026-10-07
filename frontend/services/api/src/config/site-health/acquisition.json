@@ -102,7 +102,8 @@
       "about": "about_contact",
       "contact": "about_contact",
       "trust": "trust_policy"
-    }
+    },
+    "coverage_expected_value_kinds": ["about", "contact", "pricing"]
   },
   "route_patterns": [
     [
@@ -149,22 +150,15 @@
     "/ar",
     "/da",
     "/de",
-    "/default.aspx",
-    "/default.html",
+    "/default",
     "/en",
     "/es",
     "/fi",
     "/fr",
     "/hi",
     "/home",
-    "/home.html",
     "/id",
     "/index",
-    "/index.asp",
-    "/index.aspx",
-    "/index.htm",
-    "/index.html",
-    "/index.php",
     "/it",
     "/ja",
     "/ko",
@@ -179,6 +173,7 @@
     "/vi",
     "/zh"
   ],
+  "route_document_extensions": ["asp", "aspx", "htm", "html", "jsp", "php"],
   "homepage_locale_root_pattern": "^/[a-z]{2}[-_](?:[a-z]{2}|[0-9]{3}|hans|hant|latn|cyrl)$",
   "tracking_params": [
     "_hsenc",

@@ -31,7 +31,6 @@ export function urlFormat(value: string): { format: string; method: string } {
     .replaceAll(/-{2,}/gu, '-');
   for (const [pattern, format] of p.url_formats)
     if (new RegExp(pattern!).test(slug)) return { format: format!, method: 'url_pattern' };
-  url.pathname = url.pathname.replace(/\.(html?|php|aspx?|jsp)$/iu, '');
   const kind = routePageKind(url.href);
   const format = kind ? p.kind_formats[kind as keyof typeof p.kind_formats] : undefined;
   if (format) return { format, method: 'url_pattern' };
