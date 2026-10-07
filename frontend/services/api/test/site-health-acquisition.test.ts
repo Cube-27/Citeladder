@@ -571,7 +571,7 @@ describe('frontier admission', () => {
     await admit(seed, ['/known']);
     const result = await admit(seed, ['/known', '/a', '/b']);
     expect(result.admitted).toBe(1);
-    expect((await tasks(seed, 'discover')).length).toBe(2);
+    expect(await tasks(seed, 'discover')).toHaveLength(2);
     expect((await crawlRow(seed)).admitted_url_count).toBe(2);
   });
 

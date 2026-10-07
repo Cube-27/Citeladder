@@ -91,9 +91,18 @@ export class SiteHealthWorker {
       settings: siteTaskSettings(),
     };
   }
+  /** One claim pass: up to `limit` tasks, each settled before returning. */
   async runOnce(limit = this.settings.concurrency, canAdmit: () => boolean = () => true) {
     await this.#recover();
     await this.#maintain();
+    if (!canAdmit()) return 0;
+    return this.#claimAndExecute(limit, () => false);
+  }
+  /** Like `runOnce`, but refills each freed slot while the caller admits, within the claim window. */
+  async drain(limit = this.settings.concurrency, canAdmit: () => boolean = () => true) {
+    await this.#recover();
+    await this.#maintain();
+    if (!canAdmit()) return 0;
     return this.#claimAndExecute(limit, canAdmit);
   }
   async #scope() {
@@ -113,19 +122,26 @@ export class SiteHealthWorker {
    * task enqueues become claimable on the next refill. Refills stop once the
    * caller stops admitting or the claim window ends; claimed work always settles.
    */
-  async #claimAndExecute(limit: number, canAdmit: () => boolean = () => true) {
+  async #claimAndExecute(limit: number, refillWhile: () => boolean) {
     const windowEnd = performance.now() + this.settings.claimWindow * 1000;
-    const refill = () => canAdmit() && !this.signal?.aborted && performance.now() < windowEnd;
+    const refill = () => refillWhile() && !this.signal?.aborted && performance.now() < windowEnd;
     const inFlight = new Set<Promise<void>>();
     const failures: unknown[] = [];
     let claimed = 0;
     const claim = async () => {
-      const tasks = await this.queue.claim({
-        owner: this.owner,
-        kinds: policy.site_health.ts_owned_task_kinds,
-        limit: limit - inFlight.size,
-        scope: await this.#scope(),
-      });
+      let tasks: SiteTask[];
+      try {
+        tasks = await this.queue.claim({
+          owner: this.owner,
+          kinds: policy.site_health.ts_owned_task_kinds,
+          limit: limit - inFlight.size,
+          scope: await this.#scope(),
+        });
+      } catch (error) {
+        // In-flight work still settles before the failure surfaces.
+        failures.push(error);
+        return;
+      }
       claimed += tasks.length;
       for (const task of tasks) {
         const running: Promise<void> = this.execute(task)

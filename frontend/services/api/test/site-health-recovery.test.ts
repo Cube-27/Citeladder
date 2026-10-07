@@ -282,7 +282,7 @@ it('refills a freed slot while a slow task is still running', async () => {
     },
   });
   try {
-    expect(await worker.runOnce(2)).toBe(3);
+    expect(await worker.drain(2)).toBe(3);
     expect(order).toEqual(['third', 'slow']);
   } finally {
     clearTimeout(fallback);

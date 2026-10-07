@@ -22,12 +22,16 @@ beforeAll(async () => {
        where status = any($1::text[])`,
       [ACTIVE_CRAWL],
     );
-    for (const table of ['site_crawl_tasks', 'analytics_tasks'])
-      await client.query(
-        `update ${table} set status = 'cancelled', lease_owner = null, lease_expires_at = null
-         where status = any($1::text[])`,
-        [active],
-      );
+    // One client runs these in order; there is nothing to gain from awaiting each.
+    await Promise.all(
+      ['site_crawl_tasks', 'analytics_tasks'].map((table) =>
+        client.query(
+          `update ${table} set status = 'cancelled', lease_owner = null, lease_expires_at = null
+           where status = any($1::text[])`,
+          [active],
+        ),
+      ),
+    );
   } finally {
     await client.end();
   }

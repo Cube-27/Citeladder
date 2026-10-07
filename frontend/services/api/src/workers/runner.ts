@@ -211,7 +211,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       {
         name: 'site-health',
         run: (canAdmit) =>
-          site.runOnce(Math.min(site.settings.concurrency, config.execution.poolSize), canAdmit),
+          site.drain(Math.min(site.settings.concurrency, config.execution.poolSize), canAdmit),
         nextDue: () => site.nextDue(),
       },
       {

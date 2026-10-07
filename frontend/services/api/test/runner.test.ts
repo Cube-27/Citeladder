@@ -68,7 +68,7 @@ describe('bounded runner', () => {
     async (concurrency) => {
       const config = testConfig({ SITE_HEALTH_WORKER_CONCURRENCY: String(concurrency) });
       const db = createDatabase(config, { execution: true });
-      const run = vi.spyOn(SiteHealthWorker.prototype, 'runOnce').mockResolvedValue(0);
+      const run = vi.spyOn(SiteHealthWorker.prototype, 'drain').mockResolvedValue(0);
       try {
         const owners = await runnerOwners(db, config);
         await owners.lanes.find((lane) => lane.name === 'site-health')!.run(() => true);

@@ -527,6 +527,36 @@ type Planned = Entry & {
   discover: boolean;
 };
 
+/** The batch's known state, in URL-hash space, updated as each admission is decided. */
+class AdmissionLedger {
+  readonly active: Set<string>;
+  readonly observed: Set<string>;
+  readonly discovering: Set<string>;
+  remaining: number | null;
+  admitted = 0;
+  constructor(known: AdmissionState, remaining: number | null) {
+    const hashOf = new Map([...known.siteUrlIds].map(([hash, id]) => [id, hash]));
+    const hashes = (ids: Set<string>) => new Set([...ids].map((id) => hashOf.get(id)!));
+    this.active = hashes(known.activeMembers);
+    this.observed = hashes(known.observed);
+    this.discovering = new Set(known.discovering);
+    this.remaining = remaining;
+  }
+  /** Select for analysis while the allowance lasts; only a new activation spends it. */
+  select(item: Candidate) {
+    const selected = item.disposition === 'analyze' && (this.remaining ?? 0) > 0;
+    if (!selected) return false;
+    if (!this.active.has(item.hash) && this.remaining !== null) this.remaining--;
+    this.active.add(item.hash);
+    return true;
+  }
+  /** Count toward the ceiling only what is new: a sample's observation, otherwise its discover task. */
+  count(hash: string, sample: boolean, discover: boolean) {
+    const known = sample ? this.observed.has(hash) : discover && this.discovering.has(hash);
+    if (!known) this.admitted++;
+  }
+}
+
 /**
  * Decide admissions in order, as the budgets require: a URL spends the
  * automatic allowance only when its membership newly activates, and counts
@@ -538,28 +568,18 @@ function planAdmission(
   known: AdmissionState,
   options: { ceiling: number; remaining: number | null; enqueueChildren: boolean },
 ) {
-  const hashOf = new Map([...known.siteUrlIds].map(([hash, id]) => [id, hash]));
-  const hashes = (ids: Set<string>) => new Set([...ids].map((id) => hashOf.get(id)!));
-  const active = hashes(known.activeMembers);
-  const observed = hashes(known.observed);
-  const discovering = new Set(known.discovering);
+  const ledger = new AdmissionLedger(known, options.remaining);
   const sample = crawl.sample_mode;
   const discover = !sample && options.enqueueChildren;
-  let { remaining } = options;
-  let admitted = 0;
   const planned: Planned[] = [];
   for (const [position, entry] of batch.entries()) {
-    if (crawl.admitted_url_count + admitted >= options.ceiling) break;
+    if (crawl.admitted_url_count + ledger.admitted >= options.ceiling) break;
     const { hash } = entry.item;
-    const selected = entry.item.disposition === 'analyze' && (remaining ?? 0) > 0;
-    if (selected && !active.has(hash) && remaining !== null) remaining--;
-    if (selected) active.add(hash);
+    const selected = ledger.select(entry.item);
     const observe = sample || selected;
-    let counted = !discover || !discovering.has(hash);
-    if (sample) counted = !observed.has(hash);
-    if (observe) observed.add(hash);
-    if (discover) discovering.add(hash);
-    if (counted) admitted++;
+    ledger.count(hash, sample, discover);
+    if (observe) ledger.observed.add(hash);
+    if (discover) ledger.discovering.add(hash);
     planned.push({
       ...entry,
       position,
@@ -569,7 +589,7 @@ function planAdmission(
       discover,
     });
   }
-  return { planned, remaining };
+  return { planned, remaining: ledger.remaining };
 }
 
 /** Apply a plan in a fixed number of statements; counts come from what the writes changed. */
