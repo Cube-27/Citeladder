@@ -77,36 +77,60 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
   const pause =
     options.pause ??
     ((ms: number, signal: AbortSignal) => sleep(ms, undefined, { signal }).catch(() => undefined));
-  const idlePollMs = options.idlePollMs ?? 5000;
   const failures: unknown[] = [];
   const failed = new Set<string>();
   const first = options.firstLane ?? randomInt(Math.max(1, lanes.length));
   let tasks = 0;
   while (canAdmit()) {
-    let progress = 0;
-    for (let offset = 0; offset < lanes.length; offset++) {
-      if (!canAdmit()) break;
-      const lane = lanes[(first + offset) % lanes.length]!;
-      if (failed.has(lane.name)) continue;
-      try {
-        progress += Number((await lane.run(canAdmit)) ?? 0); // NOSONAR -- Sequential admission preserves the shared pool and budget.
-      } catch (error) {
-        // Attempt other owners, but leave an infrastructure failure visible to the job.
-        failed.add(lane.name);
-        failures.push(error);
-        getLogger('workers.runner').warning('runner_lane_failed', { lane: lane.name });
-      }
-    }
+    const progress = await drainPass(lanes, first, canAdmit, failed, failures); // NOSONAR -- Passes are sequential.
     tasks += progress;
     if (progress || !canAdmit()) continue;
-    const wait = await nextDueDelay(lanes.filter((lane) => !failed.has(lane.name)));
-    if (wait === null || now() + wait >= options.deadline) break;
-    // The floor stops a due-but-unclaimable row (locked by another claimer) from spinning.
-    const ms = Math.min(Math.max(wait, 250), idlePollMs, options.deadline - now());
+    const ms = idlePause(
+      await nextDueDelay(lanes.filter((lane) => !failed.has(lane.name))), // NOSONAR -- Probed only when idle.
+      options.deadline - now(),
+      options.idlePollMs ?? 5000,
+    );
+    if (ms === null) break;
     await pause(ms, options.signal); // NOSONAR -- Idle until deferred work is due.
   }
   if (failures.length) throw new AggregateError(failures, 'Runner lanes failed');
   return tasks;
+}
+
+/** One round-robin pass; a failed lane is skipped for the rest of the drain. */
+async function drainPass(
+  lanes: readonly RunnerLane[],
+  first: number,
+  canAdmit: () => boolean,
+  failed: Set<string>,
+  failures: unknown[],
+) {
+  let progress = 0;
+  for (let offset = 0; offset < lanes.length; offset++) {
+    if (!canAdmit()) break;
+    const lane = lanes[(first + offset) % lanes.length]!;
+    if (failed.has(lane.name)) continue;
+    try {
+      progress += Number((await lane.run(canAdmit)) ?? 0); // NOSONAR -- Sequential admission preserves the shared pool and budget.
+    } catch (error) {
+      // Attempt other owners, but leave an infrastructure failure visible to the job.
+      failed.add(lane.name);
+      failures.push(error);
+      getLogger('workers.runner').warning('runner_lane_failed', { lane: lane.name });
+    }
+  }
+  return progress;
+}
+
+/**
+ * How long an idle drain pauses before its next pass, or null to exit. Work
+ * already due but unclaimed (a row locked by another claimer) backs off briefly
+ * instead of spinning; a pause must fit inside the remaining budget.
+ */
+export function idlePause(wait: number | null, remaining: number, pollMs: number) {
+  if (wait === null || wait >= remaining) return null;
+  const ms = Math.min(wait > 0 ? wait : 250, pollMs);
+  return ms < remaining ? ms : null;
 }
 
 export type Exclusive = (drain: () => Promise<number>) => Promise<number>;

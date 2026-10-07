@@ -46,7 +46,7 @@ no parallel stores or policy copies, no dead code, and tests that earn their pla
 2. **Audit.** Review against the four parameters with production evidence where
    available. Record findings with file references, and verify each one before
    it enters the plan.
-3. **Plan.** Write `plans/<feature>-improvement.md`: findings, owner decisions
+3. **Plan.** Write `docs/plans/<feature>-improvement.md`: findings, owner decisions
    needed, phased changes with acceptance criteria, and the chosen UX addition.
    The owner answers the decisions before implementation.
 4. **Implement.** Ship coherent PRs per phase. Each PR removes the debt it

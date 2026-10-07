@@ -1,5 +1,11 @@
-import { afterAll, describe, expect, it, vi } from 'vitest';
-import { drainLanes, exclusiveDrain, tickAndDrain, runnerOwners } from '../src/workers/runner.ts';
+import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
+import {
+  drainLanes,
+  exclusiveDrain,
+  idlePause,
+  tickAndDrain,
+  runnerOwners,
+} from '../src/workers/runner.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
@@ -98,6 +104,10 @@ describe('bounded runner', () => {
     expect(drain).not.toHaveBeenCalled();
   });
   it('keeps an idle drain until deferred work is due within the budget', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-07T00:00:00Z') });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     let due: Date | null = new Date(Date.now() + 2000);
     let deferred = 1;
     const pauses: number[] = [];
@@ -117,9 +127,7 @@ describe('bounded runner', () => {
       { ...options(), deadline: 10_000, pause: async (ms) => pauses.push(ms) },
     );
     expect(tasks).toBe(1);
-    expect(pauses).toHaveLength(1);
-    expect(pauses[0]).toBeGreaterThan(1000);
-    expect(pauses[0]).toBeLessThanOrEqual(2000);
+    expect(pauses).toEqual([2000]);
   });
 
   it('leaves work due after the deadline instead of pausing past it', async () => {
@@ -136,6 +144,16 @@ describe('bounded runner', () => {
     );
     expect(tasks).toBe(0);
     expect(pause).not.toHaveBeenCalled();
+  });
+
+  it('pauses only within the remaining budget and backs off on due-but-unclaimed work', () => {
+    expect(idlePause(null, 10_000, 5000)).toBeNull();
+    expect(idlePause(40, 300, 5000)).toBe(40);
+    // A due row another claimer holds must not spin, nor pause past the deadline.
+    expect(idlePause(0, 10_000, 5000)).toBe(250);
+    expect(idlePause(0, 200, 5000)).toBeNull();
+    expect(idlePause(60_000, 300_000, 5000)).toBe(5000);
+    expect(idlePause(9000, 8000, 5000)).toBeNull();
   });
 
   it('reports only claimable Site Health work as next due', async () => {

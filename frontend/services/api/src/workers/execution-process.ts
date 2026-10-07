@@ -21,7 +21,9 @@ export async function runExecution(tick: boolean) {
     // The drain lock is released: work due within a fresh budget gets a successor
     // now instead of waiting for the next tick. The starter skips an active drain.
     const due = stop.signal.aborted ? null : await nextDueDelay(owners.lanes);
-    const successor = due !== null && due < config.execution.budgetSeconds * 1000;
+    // Shutdown may arrive while the probe runs; never start a successor after it.
+    const successor =
+      !stop.signal.aborted && due !== null && due < config.execution.budgetSeconds * 1000;
     if (successor) await runnerStarter(config, db)();
     getLogger('workers.runner').info('runner_completed', {
       tick,
