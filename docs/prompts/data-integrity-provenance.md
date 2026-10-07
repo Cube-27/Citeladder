@@ -57,7 +57,7 @@ report, not code changes.
 
 ## Not a finding
 
-- Absence of `0002+` migrations; semantic versions equal to `1`.
+- Absence of `0002+` migrations; a semantic version bumped once for a release.
 - Updates to lifecycle/status/lease columns on task and queue rows.
 
 ## Subagent split

@@ -26,6 +26,15 @@ describe('evidenceFacts', () => {
     ).toEqual(['<link rel="canonical">']);
   });
 
+  it('lists the failing link targets for the emitted link rules', () => {
+    const evidence = {
+      failing_targets: [{ url: 'https://example.test/gone', status_code: 404 }],
+      rate_limited_targets: [],
+    };
+    for (const rule of ['technical.broken_internal_link', 'technical.sitemap_url_unreachable'])
+      expect(evidenceFacts(rule, evidence)).toEqual(['https://example.test/gone → 404']);
+  });
+
   it('stays silent about the signal that passed', () => {
     expect(
       evidenceFacts('aeo.content_date_present', { has_published: true, has_modified: false }),
