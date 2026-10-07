@@ -1,5 +1,10 @@
-/** CPU-bound page interpretation stays off the network worker's event loop. */
+/**
+ * CPU-bound page interpretation stays off the network worker's event loop, on a
+ * small persistent pool: spawning a thread (and loading the analyzer) per page
+ * cost more than many analyses on a one-vCPU runner.
+ */
 import { Worker } from 'node:worker_threads';
+import { policy, resolveSettingSpec } from '../../config.ts';
 import type { analyzePage, PageContext } from './analyze-page.ts';
 import type { Delivery, factSettings } from './facts.ts';
 import type { Facts } from './read-facts.ts';
@@ -13,22 +18,73 @@ export type Interpretation =
     }
   | { kind: 'analyze'; facts: Facts; context: PageContext };
 
+type Pending = { resolve: (value: unknown) => void; reject: (error: Error) => void };
+type Slot = { worker: Worker; pending: Map<number, Pending> };
+type Reply = { id: number; result?: unknown; error?: string };
+
+const slots: Slot[] = [];
+let nextId = 0;
+
+const poolSize = () =>
+  Math.max(
+    1,
+    Number(
+      resolveSettingSpec(policy.site_health.settings.interpretation_worker_threads, process.env),
+    ),
+  );
+
+/** Idle threads never keep a draining job process alive. */
+function settle(slot: Slot) {
+  if (slot.pending.size) slot.worker.ref();
+  else slot.worker.unref();
+}
+
+function start(): Slot {
+  const worker = new Worker(new URL('./interpret-worker.ts', import.meta.url), {
+    // Do not inherit a test runner's preload/loader into the native TS worker.
+    execArgv: [],
+  });
+  const slot: Slot = { worker, pending: new Map() };
+  worker.on('message', ({ id, result, error }: Reply) => {
+    const job = slot.pending.get(id);
+    if (!job) return;
+    slot.pending.delete(id);
+    settle(slot);
+    if (error === undefined) job.resolve(result);
+    else job.reject(new Error(error));
+  });
+  // A crashed thread fails only its own jobs; the next request starts a replacement.
+  const fail = (error: Error) => {
+    const index = slots.indexOf(slot);
+    if (index >= 0) slots.splice(index, 1);
+    for (const job of slot.pending.values()) job.reject(error);
+    slot.pending.clear();
+  };
+  worker.on('error', fail);
+  worker.on('exit', (code) => fail(new Error(`Page interpretation exited (${code})`)));
+  slots.push(slot);
+  return slot;
+}
+
+/** The least-busy thread, starting one while the pool is below its size. */
+function slot(): Slot {
+  const idle = slots.find((candidate) => candidate.pending.size === 0);
+  if (idle) return idle;
+  const [first, ...rest] = slots;
+  if (!first || slots.length < poolSize()) return start();
+  return rest.reduce(
+    (best, candidate) => (candidate.pending.size < best.pending.size ? candidate : best),
+    first,
+  );
+}
+
 function interpret<T>(input: Interpretation): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL('./interpret-worker.ts', import.meta.url), {
-      workerData: input,
-      // Do not inherit a test runner's preload/loader into the native TS worker.
-      execArgv: [],
-    });
-    let received = false;
-    worker.once('message', (result: T) => {
-      received = true;
-      resolve(result);
-    });
-    worker.once('error', reject);
-    worker.once('exit', (code) => {
-      if (!received) reject(new Error(`Page interpretation exited without a result (${code})`));
-    });
+  const target = slot();
+  const id = nextId++;
+  return new Promise<T>((resolve, reject) => {
+    target.pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
+    settle(target);
+    target.worker.postMessage({ id, input });
   });
 }
 

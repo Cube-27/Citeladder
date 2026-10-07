@@ -279,6 +279,12 @@
     "type": "float",
     "default": 1.0
   },
+  "interpretation_worker_threads": {
+    "env": ["SITE_HEALTH_INTERPRETATION_WORKER_THREADS"],
+    "type": "int",
+    "default": 1,
+    "minimum": 1
+  },
   "claim_window_seconds": {
     "env": ["SITE_HEALTH_CLAIM_WINDOW_SECONDS"],
     "type": "float",
