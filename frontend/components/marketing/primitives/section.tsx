@@ -124,7 +124,13 @@ export function SectionHeader({
 }>) {
   const center = align === 'center';
   return (
-    <div className={cn('flex flex-col gap-4', center && 'items-center text-center', className)}>
+    <div
+      className={cn(
+        'mk-reveal flex flex-col gap-4',
+        center && 'items-center text-center',
+        className,
+      )}
+    >
       <Heading
         id={headingId}
         className={cn(

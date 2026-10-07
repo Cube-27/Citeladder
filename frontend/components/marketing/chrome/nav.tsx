@@ -22,6 +22,15 @@ const DROP_LAYOUT: Record<NavDropKey, { width: number }> = {
   resources: { width: 620 },
 };
 
+/**
+ * Hover intent: a pointer must rest this long on a trigger before the first
+ * panel opens, so sweeping across the bar does not flash menus. Once a panel
+ * is open, moving to a neighbouring trigger switches immediately.
+ */
+const HOVER_OPEN_DELAY_MS = 110;
+/** Matches the exit animation in globals.css (`marketing-nav-panel-out`). */
+const PANEL_EXIT_MS = 170;
+
 /** How far down the page the bar changes from transparent to a surface. */
 const SCROLLED_THRESHOLD_PX = 10;
 
@@ -64,10 +73,22 @@ function useScrolled() {
 }
 
 function useDesktopDropdown() {
-  const [openDrop, setOpenDrop] = useState<NavDropKey | null>(null);
+  const [openDrop, setOpenDropState] = useState<NavDropKey | null>(null);
+  /** Mirrors `openDrop` so timer and key handlers read the current panel. */
+  const openDropRef = useRef<NavDropKey | null>(null);
+  const setOpenDrop = (key: NavDropKey | null) => {
+    openDropRef.current = key;
+    setOpenDropState(key);
+  };
   const [openSource, setOpenSource] = useState<OpenSource | null>(null);
   const [panelLeft, setPanelLeft] = useState(0);
+  /** The panel playing its exit animation; it is inert while it does. */
+  const [closingDrop, setClosingDrop] = useState<NavDropKey | null>(null);
+  /** Whether the open panel arrived from a closed bar (and so animates in). */
+  const [entering, setEntering] = useState(false);
   const closeTimer = useRef<number | null>(null);
+  const openTimer = useRef<number | null>(null);
+  const exitTimer = useRef<number | null>(null);
   const linksRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -85,13 +106,26 @@ function useDesktopDropdown() {
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     closeTimer.current = null;
   };
+  const cancelPendingOpen = () => {
+    if (openTimer.current) window.clearTimeout(openTimer.current);
+    openTimer.current = null;
+  };
+  const playExit = (key: NavDropKey | null) => {
+    if (exitTimer.current) window.clearTimeout(exitTimer.current);
+    setClosingDrop(key);
+    if (key) exitTimer.current = window.setTimeout(() => setClosingDrop(null), PANEL_EXIT_MS);
+  };
   const closeDrop = () => {
+    cancelPendingOpen();
+    playExit(openDropRef.current);
     setOpenDrop(null);
     setOpenSource(null);
   };
   const selectDrop = (key?: NavDropKey) => {
     suppressedDrop.current = key ?? null;
     clearDropClose();
+    cancelPendingOpen();
+    playExit(null);
     setOpenDrop(null);
   };
   const releaseSuppression = (key?: NavDropKey) => {
@@ -101,6 +135,7 @@ function useDesktopDropdown() {
   };
   const scheduleDropClose = () => {
     clearDropClose();
+    cancelPendingOpen();
     closeTimer.current = window.setTimeout(closeDrop, 220);
   };
   const openDropAt = (key: NavDropKey, trigger: HTMLElement, source: OpenSource = 'hover') => {
@@ -120,6 +155,23 @@ function useDesktopDropdown() {
       returnFocus.current = document.getElementById(`desktop-nav-trigger-${key}`);
     }
     clearDropClose();
+    cancelPendingOpen();
+    if (source === 'hover' && openDropRef.current === null) {
+      openTimer.current = window.setTimeout(
+        () => showDrop(key, trigger, source),
+        HOVER_OPEN_DELAY_MS,
+      );
+      return;
+    }
+    showDrop(key, trigger, source);
+  };
+  const showDrop = (key: NavDropKey, trigger: HTMLElement, source: OpenSource) => {
+    const container = linksRef.current;
+    const nav = navRef.current;
+    if (!container || !nav) return;
+    openTimer.current = null;
+    setEntering(openDropRef.current === null);
+    playExit(null);
     setOpenDrop(key);
     setOpenSource(source);
     const triggerBox = trigger.getBoundingClientRect();
@@ -136,7 +188,9 @@ function useDesktopDropdown() {
 
   useEffect(
     () => () => {
-      if (closeTimer.current) window.clearTimeout(closeTimer.current);
+      for (const timer of [closeTimer, openTimer, exitTimer]) {
+        if (timer.current) window.clearTimeout(timer.current);
+      }
     },
     [],
   );
@@ -155,6 +209,8 @@ function useDesktopDropdown() {
   return {
     openDrop,
     openSource,
+    closingDrop,
+    entering,
     panelLeft,
     linksRef,
     navRef,
@@ -178,6 +234,8 @@ export function MarketingNav() {
     linksRef,
     openDrop,
     openSource,
+    closingDrop,
+    entering,
     panelLeft,
     clearDropClose,
     closeDrop,
@@ -256,6 +314,8 @@ export function MarketingNav() {
           panelLeft={panelLeft}
           openDrop={openDrop}
           openSource={openSource}
+          closingDrop={closingDrop}
+          entering={entering}
           linksRef={linksRef}
           clearDropClose={clearDropClose}
           scheduleDropClose={scheduleDropClose}

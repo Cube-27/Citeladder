@@ -160,6 +160,21 @@
   }
 }
 
+/* Switching a tour tab cross-fades the view inside the same frame, so the
+   window stays put and only its content changes. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-hero-frame .pv-main > :last-child {
+    animation: lp-view-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes lp-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 @keyframes lp-frame-in {
   from {
     opacity: 0;

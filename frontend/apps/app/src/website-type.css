@@ -310,8 +310,11 @@
   opacity: 0.5;
 }
 
+/* Opaque so a long step scrolls cleanly beneath it; the hairline makes the
+   bar read as the site header rather than a white strip across the stage. */
 .flow-bar {
   background: var(--color-panel);
+  border-bottom: 1px solid var(--color-border-subtle);
   position: sticky;
   top: 0;
   z-index: var(--z-index-sticky);

@@ -1666,16 +1666,43 @@ samp {
   }
 }
 
+/* Header menus unfold rather than blink: the panel eases down out of the bar,
+   its rows settle a beat later, and it folds back up on close. The hover-intent
+   delay before the first open lives in the nav component. */
 @keyframes marketing-nav-panel-in {
   from {
     opacity: 0;
-    transform: translateY(-3px) scale(0.99);
+    transform: translateY(-8px) scale(0.97);
+  }
+}
+
+@keyframes marketing-nav-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes marketing-nav-panel-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
   }
 }
 
 .marketing-nav-panel {
   transform-origin: top center;
-  animation: marketing-nav-panel-in 160ms var(--ease-standard) both;
+  animation: marketing-nav-panel-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.marketing-nav-panel > * {
+  animation: marketing-nav-content-in 280ms cubic-bezier(0.16, 1, 0.3, 1) 70ms both;
+}
+
+.marketing-nav-panel-out {
+  transform-origin: top center;
+  pointer-events: none;
+  animation: marketing-nav-panel-out 170ms var(--ease-exit) both;
 }
 
 

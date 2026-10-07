@@ -138,7 +138,7 @@ function HeroTour() {
 function Hero() {
   return (
     <header className="lp-hero">
-      <div className="lp-wrap lp-hero-copy">
+      <div className="lp-wrap lp-hero-copy mk-hero-in">
         <h1 className="website-hero-display">Know what AI tells your buyers about you.</h1>
         <p className="website-lead lp-hero-lead">
           CiteLadder tracks how ChatGPT, Gemini, Claude and Google AI Overviews answer the questions

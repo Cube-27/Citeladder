@@ -379,7 +379,7 @@ The same insight retains its server ID/cache identity everywhere. No resolvable 
 
 ### Marketing and auth
 
-Product proof comes from coded product views (`components/marketing/scenes/product-views.tsx`): synthetic records in the product's own layout and vocabulary, wrapped by `ProductShot` in a stage, a window frame and an "Illustrative example" caption. Every capability has its own view, so no page repeats one illustration. The homepage hero is a centred headline, lead, Start free trial and Book a demo, then a large app-shell frame with a four-tab product tour (Visibility, Citations, Site Health, Agent) — the page's signature interaction — that rises into place once on arrival (the one authored motion; none under reduced motion). The engine strip labels API collection honestly (OpenAI API, Gemini API, Claude API, Google AI Overviews). Platform pages share one template: breadcrumb, left-aligned title and lead, actions, a hero product shot, three hairline-topped highlights, alternating copy/visual feature rows on the soft band, FAQ, related link cards and a closing band.
+Product proof comes from coded product views (`components/marketing/scenes/product-views.tsx`): synthetic records in the product's own layout and vocabulary, wrapped by `ProductShot` in a stage, a window frame and an "Illustrative example" caption. Every capability has its own view, so no page repeats one illustration. The homepage hero is a centred headline, lead, Start free trial and Book a demo, then a large app-shell frame with a four-tab product tour (Visibility, Citations, Site Health, Agent) — the page's signature interaction — that rises into place once on arrival and cross-fades between tabs (see Motion and accessibility; none under reduced motion). The engine strip labels API collection honestly (OpenAI API, Gemini API, Claude API, Google AI Overviews). Platform pages share one template: breadcrumb, left-aligned title and lead, actions, a hero product shot, three hairline-topped highlights, alternating copy/visual feature rows on the soft band, FAQ, related link cards and a closing band.
 
 Section grammar: heading → optional short lead → evidence/media, list or table → at most one primary action per band. There are no eyebrow or kicker labels above headings; breadcrumbs are wayfinding, not labels. Prefer split layouts, hairline-divided lists and real product views over icon-card walls; cards are reserved for clickable destinations and real objects such as pricing plans. Number only a real sequence. Body measure is about 60–70 characters; one H1 per page; space separates same-tone sections and the tone change is the edge between different ones.
 
@@ -405,7 +405,10 @@ MCP and Changelog are the top-level entry points; Updates is the final sidebar
 group. Public font loading is shared through `PublicFonts.astro`.
 Search uses the shared dialog, input and buttons with keyboard access and
 focus restoration. Articles are server-built HTML and remain readable without
-JavaScript. No decorative motion or alternate design system is introduced.
+JavaScript. It wears the website's chrome: one compact header row (wordmark
+with a Docs tag, section tabs with a forest underline, a field-style search,
+the marketing Open app button) and compact 32px navigation rows. No decorative
+motion or alternate design system is introduced.
 
 ## Component recipes
 
@@ -435,7 +438,7 @@ Confirmed first-use analytical states omit filters, charts, and table reservatio
 
 ### Documentation
 
-Docs uses a white reading surface, a 240px navigation column, a 220px contents rail and a 65–75-character article measure. Desktop gutters are 40–56px; the contents rail collapses below 1200px and navigation below 768px. Section tabs and navigation groups use Lucide icons, with strong active labels and quiet neutral navigation highlights.
+Docs uses a white reading surface, a 240px navigation column, a 216px contents rail and a 46rem article column. Desktop gutters are 20–40px; the contents rail collapses below 1200px, the tabs wrap below 900px and navigation collapses below 768px. Section tabs and navigation groups use Lucide icons. The current page is the only accent: an accent-soft row with a forest rail in navigation, a forest edge in the contents rail, and the article's group label above its title. Tables and code sit in framed panels; notes are forest-railed callouts; previous/next links are raised cards.
 
 The contents panels include H2/H3 entries, omit leading step-number prefixes from link labels, and retain authored headings and anchor IDs. Active-heading tracking is progressive enhancement: ordinary anchors remain usable without JavaScript. Existing quotes, code and table headers use semantic tinted surfaces. Search, generated tool references, keyboard access, CSP and print support remain intact.
 
@@ -468,6 +471,8 @@ Only `shadow-none`, `shadow-overlay` and `shadow-modal` utilities are available 
 ## Motion and accessibility
 
 Product and shared-control motion consumes the centralized roles: `--motion-fast` 110ms for hover/micro-feedback, `--motion-normal` 150ms for menus/tooltips, `--motion-slow` 240ms for dialogs/drawers/toasts. Implicit Tailwind transitions inherit the fast duration and standard easing. Standard and enter easing are cubic-bezier(0.33, 1, 0.68, 1), exit is (0.2, 0, 1, 0.9). Repeating activity/shimmer cycles derive from these roles. Keyboard command interfaces and route/tab content update immediately; press feedback begins on pointer-down. Separately owned marketing choreography and onboarding research's 220ms/60ms reveal/stagger remain scoped. Functional delays (tooltip delay, toast dwell, first-load reveal delay) remain independent from motion duration. Browser autofill's paint-suppression timing is a technical exception.
+
+Public-site motion is quiet and never gates content. Header menus open after a 110ms hover intent (immediately when switching between open menus or on click/focus), unfold over 300ms with their rows settling 70ms later, and fold away over 170ms while already inert. Page heroes rise in reading order with an 80ms stagger; the title only sharpens and settles, so it is never invisible at first paint. Section openers, product stages and cards rise on scroll through native scroll-driven animation only where supported. Stage dot lattices drift slowly, tour tabs cross-fade their view, and call-to-action arrows lean toward their destination on hover.
 
 Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window walkthrough; native CSS scroll fade/rise reveals that never hide server-rendered content after hydration; master-detail continuity/domain-owned measured expansion; onboarding research results resolving below factual activity with a 220ms fade/rise and 60ms stagger.
 

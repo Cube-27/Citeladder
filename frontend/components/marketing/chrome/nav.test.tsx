@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -40,7 +40,9 @@ describe('marketing navigation', () => {
     render(<MarketingNav />);
     const trigger = screen.getByRole('button', { name: 'Platform' });
     await user.hover(trigger);
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    // Hover intent: the first panel opens after a short rest, not instantly.
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'true'));
     await user.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     await user.click(trigger);

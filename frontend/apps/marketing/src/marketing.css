@@ -527,3 +527,96 @@
   color: var(--color-accent-text);
   transform: translateX(2px);
 }
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
+
+/* Quiet, Attio-style motion. Nothing here gates content: every rule only runs
+   for readers who have not asked for reduced motion, and the scroll reveals
+   only where the browser supports scroll-driven animation, so content is
+   never left hidden. */
+
+/* Arrow glyphs in calls to action lean toward where they go. */
+[data-public-surface] .marketing-cta-button svg:is(.lucide-arrow-right, .lucide-arrow-up-right),
+.mk-text-link svg {
+  transition: transform var(--motion-slow) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-public-surface] .marketing-cta-button:hover svg.lucide-arrow-right {
+  transform: translateX(3px);
+}
+
+[data-public-surface] .marketing-cta-button:hover svg.lucide-arrow-up-right {
+  transform: translate(2px, -2px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The dot lattice drifts very slowly, so a stage reads as a live surface
+     without anything competing with the product shown on it. */
+  .product-stage::before {
+    animation: product-stage-drift 48s linear infinite;
+  }
+
+  /* Page heroes arrive in reading order: title, lead, then actions. */
+  .mk-hero-in > * {
+    animation: mk-rise-in 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* The title is the page's largest paint, so it never starts invisible: it
+     only sharpens and settles, which keeps it a first-paint LCP candidate. */
+  .mk-hero-in > h1 {
+    animation-name: mk-focus-in;
+  }
+
+  .mk-hero-in > :nth-child(2) {
+    animation-delay: 80ms;
+  }
+
+  .mk-hero-in > :nth-child(3) {
+    animation-delay: 160ms;
+  }
+
+  .mk-hero-in > :nth-child(n + 4) {
+    animation-delay: 220ms;
+  }
+
+  @supports (animation-timeline: view()) {
+    /* Section openers, product stages and cards rise as they scroll in. */
+    .mk-reveal,
+    .lp-head,
+    main .product-stage:not(.lp-hero-stage),
+    .mk-capability,
+    .mk-related-card {
+      animation: mk-reveal-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
+}
+
+@keyframes product-stage-drift {
+  to {
+    background-position: 18px 36px;
+  }
+}
+
+@keyframes mk-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+}
+
+@keyframes mk-focus-in {
+  from {
+    transform: translateY(10px);
+    filter: blur(5px);
+  }
+}
+
+@keyframes mk-reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}

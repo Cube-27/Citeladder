@@ -23,6 +23,10 @@ type DesktopNavigationProps = {
   panelLeft: number;
   openDrop: NavDropKey | null;
   openSource: OpenSource | null;
+  /** The panel playing its exit animation, if any. */
+  closingDrop: NavDropKey | null;
+  /** The open panel arrived from a closed bar, so it animates in. */
+  entering: boolean;
   linksRef: RefObject<HTMLDivElement | null>;
   clearDropClose: () => void;
   scheduleDropClose: () => void;
@@ -39,6 +43,8 @@ export function DesktopNavigation({
   panelLeft,
   openDrop,
   openSource,
+  closingDrop,
+  entering,
   linksRef,
   clearDropClose,
   scheduleDropClose,
@@ -92,10 +98,9 @@ export function DesktopNavigation({
             </button>
             <DesktopDropPanel
               dropKey={key}
-              hidden={!open}
+              state={panelState(open, closingDrop === key, entering)}
               layout={layout}
               panelLeft={panelLeft}
-              animate={openSource === 'hover'}
               clearDropClose={clearDropClose}
               selectDrop={selectDrop}
             />
@@ -126,20 +131,25 @@ export function DesktopNavigation({
   );
 }
 
+type PanelState = 'hidden' | 'entering' | 'open' | 'closing';
+
+function panelState(open: boolean, closing: boolean, entering: boolean): PanelState {
+  if (open) return entering ? 'entering' : 'open';
+  return closing ? 'closing' : 'hidden';
+}
+
 function DesktopDropPanel({
   dropKey,
-  hidden,
+  state,
   layout,
   panelLeft,
-  animate,
   clearDropClose,
   selectDrop,
 }: Readonly<{
   dropKey: NavDropKey;
-  hidden: boolean;
+  state: PanelState;
   layout: DropLayout;
   panelLeft: number;
-  animate: boolean;
   clearDropClose: () => void;
   selectDrop: (key?: NavDropKey) => void;
 }>) {
@@ -148,7 +158,11 @@ function DesktopDropPanel({
 
   return (
     <div
-      hidden={hidden}
+      hidden={state === 'hidden'}
+      // A closing panel is still painted for its exit animation, but it is
+      // already gone for assistive technology and pointer input.
+      aria-hidden={state === 'closing' || undefined}
+      inert={state === 'closing' || undefined}
       id={`desktop-nav-panel-${dropKey}`}
       onMouseEnter={clearDropClose}
       style={{
@@ -159,7 +173,8 @@ function DesktopDropPanel({
       }}
       className={cn(
         'nav-panel absolute top-full mt-1.5 overflow-auto',
-        animate && 'marketing-nav-panel',
+        state === 'entering' && 'marketing-nav-panel',
+        state === 'closing' && 'marketing-nav-panel-out',
       )}
     >
       <div

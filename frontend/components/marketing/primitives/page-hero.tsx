@@ -30,7 +30,9 @@ export function PageHero({
 }>) {
   return (
     <header className="relative pt-14 pb-12 md:pt-24 md:pb-16">
-      <Container className={cn('gap-0 md:gap-0', centered && 'items-center text-center')}>
+      <Container
+        className={cn('mk-hero-in gap-0 md:gap-0', centered && 'items-center text-center')}
+      >
         {breadcrumb && breadcrumb.length > 0 && (
           <nav aria-label="Breadcrumb" className="mb-6">
             <ol
