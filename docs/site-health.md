@@ -338,7 +338,7 @@ declarations fail. An unavailable target is unresolved. A healthy redirect can
 be consolidation guidance and does not automatically fail.
 
 AEO scoring covers crawlability (indexability, snippet access, and site-level
-search and AI-crawler access), machine readability (initial HTML rendering and
+access for search and AI-search crawlers), machine readability (initial HTML rendering and
 valid, content-matching structured data), answer and evidence facts on product
 and collection pages, provenance and freshness on authored and product pages,
 and heading structure. Open Graph, structured-data presence, answer-first and
@@ -474,8 +474,10 @@ The AEO pillars and baseline weights are:
 
 Checks are binary and equal weight inside their role/pillar. Site-scoped
 checks are evaluated where the site facts were observed (the crawl root) and
-apply to every page: a site that blocks GPTBot fails AI-crawler access on each
-page's crawlability pillar. Final page revisions list those site evaluation IDs
+apply to every page: a site that blocks OAI-SearchBot fails crawler access on
+each page's crawlability pillar. Blocking only training crawlers (GPTBot,
+ClaudeBot, Google-Extended) is a visible, unscored finding: it does not stop
+answer-time retrieval. Final page revisions list those site evaluation IDs
 in their source manifest; evaluation rows are never copied.
 
 ```text
