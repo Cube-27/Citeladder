@@ -16,9 +16,21 @@ const routePatterns = policy.site_health.route_patterns.map(
   ([kind, pattern]) => [kind!, new RegExp(pattern!, 'd')] as const,
 );
 
-/** The lower-cased path without trailing slashes; the root is `''`. */
+const DOCUMENT_EXTENSION = new RegExp(
+  String.raw`\.(?:${policy.site_health.route_document_extensions.join('|')})$`,
+  'u',
+);
+
+/**
+ * The lower-cased path without trailing slashes or a server-page extension
+ * (`/pricing.html` is `/pricing`); the root is `''`. Shared by Site Health
+ * classification and source-page assessment.
+ */
 export const normalizedPath = (url: URL) =>
-  stripTrailing(url.pathname.slice(0, MAX_PATH_CHARS).toLowerCase(), '/');
+  stripTrailing(url.pathname.slice(0, MAX_PATH_CHARS).toLowerCase(), '/').replace(
+    DOCUMENT_EXTENSION,
+    '',
+  );
 
 /** An absolute http(s) URL with a host, or null: only those have a path to reason about. */
 export function documentUrl(value: string): URL | null {

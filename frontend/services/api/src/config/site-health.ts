@@ -87,6 +87,7 @@ export const siteHealth = {
         acquisition.slug_patterns,
         acquisition.homepage_paths,
         acquisition.homepage_locale_root_pattern,
+        acquisition.route_document_extensions,
         analysis.page_analysis.entity.listing_min_card_items,
         analysis.page_analysis.facts.limits.path_chars,
         analysis.page_analysis.facts.limits.signal_detail_chars,

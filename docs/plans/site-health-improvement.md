@@ -190,7 +190,8 @@ The analyzed count is the monitored-URL entitlement (20 for baseline and trial,
 Progress: 4.2, 4.3 (seeded within value tiers), 4.4 (twin dedupe at admission;
 stored identities unchanged), 4.5 (Overview coverage sentence and found-page
 denominator: the feature's UX addition) and 4.6 are implemented on
-`feat/site-health-coverage`. A per-kind skipped-URL funnel remains a follow-up.
+`feat/site-health-coverage`. The per-tier funnel (found, analyzed, expected tiers never found) followed with the
+shared extension-stripping route normalizer (3.7).
 
 Acceptance: the analyzed sample is reproducible from its recorded seed, and
 apex/www duplicates never take two slots.

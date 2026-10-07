@@ -3,6 +3,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
+import { compareText } from '../text-order.ts';
 import type { Crawl } from './task-fence.ts';
 
 export type CoverageSignals = {
@@ -21,7 +22,10 @@ export type CoverageSignals = {
   failedUrlCount: number;
   /** This crawl's automatic analysis allowance (the plan's monitored pages); null when none was recorded. */
   automaticLimit: number | null;
+  /** Found and analyzed URLs per admission value tier; empty when nothing went through the frontier. */
+  valueKinds?: ValueKindCoverage[];
 };
+export type ValueKindCoverage = { kind: string; found: number; analyzed: number };
 
 const BOUNDED_DISCOVERY = new Set(['cancelled', 'sample_completed', 'stopped']);
 
@@ -78,6 +82,7 @@ export function assessCoverage(signals: CoverageSignals) {
       analyzed_url_count: signals.analyzedUrlCount,
       failed_url_count: signals.failedUrlCount,
       automatic_limit: signals.automaticLimit,
+      value_kinds: signals.valueKinds ?? [],
     },
   };
 }
@@ -87,6 +92,53 @@ function allowance(value: unknown) {
   if (value === undefined || value === null || value === '') return null;
   const limit = Number(value);
   return Number.isFinite(limit) && limit >= 0 ? limit : null;
+}
+
+const PRIORITIES: Record<string, number> = policy.site_health.crawl.value_priorities;
+const EXPECTED_KINDS: readonly string[] = policy.site_health.crawl.coverage_expected_value_kinds;
+
+/**
+ * "Kind not found" apart from "found but not analyzed": the crawl's frontier by
+ * value tier, with the expected tiers it never found as zero. A crawl that
+ * admitted nothing through the frontier (a sample) has no funnel to report.
+ */
+export async function valueKindCoverage(db: Database, crawl: Crawl): Promise<ValueKindCoverage[]> {
+  const rows = await db
+    .selectFrom('site_discovery_frontier as f')
+    .leftJoin('site_urls as u', (join) =>
+      join
+        .onRef('u.url_hash', '=', 'f.url_hash')
+        .onRef('u.workspace_id', '=', 'f.workspace_id')
+        .on('u.project_id', '=', crawl.project_id),
+    )
+    .leftJoin('site_page_analyses as a', (join) =>
+      join
+        .onRef('a.site_url_id', '=', 'u.id')
+        .onRef('a.workspace_id', '=', 'u.workspace_id')
+        .on('a.crawl_id', '=', crawl.id)
+        .on('a.is_current', '=', true),
+    )
+    .select([
+      'f.value_kind as kind',
+      sql<number>`count(distinct f.url_hash)::int`.as('found'),
+      sql<number>`count(distinct a.site_url_id)::int`.as('analyzed'),
+    ])
+    .where('f.workspace_id', '=', crawl.workspace_id)
+    .where('f.crawl_id', '=', crawl.id)
+    .groupBy('f.value_kind')
+    .execute();
+  if (!rows.length) return [];
+  const seen = new Set(rows.map((row) => row.kind));
+  return [
+    ...rows,
+    ...EXPECTED_KINDS.filter((kind) => !seen.has(kind)).map((kind) => ({
+      kind,
+      found: 0,
+      analyzed: 0,
+    })),
+  ].toSorted(
+    (a, b) => (PRIORITIES[b.kind] ?? 0) - (PRIORITIES[a.kind] ?? 0) || compareText(a.kind, b.kind),
+  );
 }
 
 export async function crawlCoverage(db: Database, crawl: Crawl) {
@@ -131,5 +183,6 @@ export async function crawlCoverage(db: Database, crawl: Crawl) {
     analyzedUrlCount: crawl.analyzed_url_count,
     failedUrlCount: crawl.failed_url_count,
     automaticLimit: allowance(config[policy.site_health.crawl.automatic_monitor_limit_key]),
+    valueKinds: await valueKindCoverage(db, crawl),
   });
 }

@@ -269,7 +269,9 @@ The classifier reads page-owned structure before route/title suggestions.
 Structured data can suggest a type but cannot certify the type whose markup is
 being checked. The root-path homepage exception is exact: the bare root, known
 index files, listed two-letter language roots and any region-qualified locale
-root (`/en-in`, `/es-419`, `/zh-hant`; not `/en-shop`). A lone generic title
+root (`/en-in`, `/es-419`, `/zh-hant`; not `/en-shop`). Paths are read without a
+server-page extension (`/pricing.html` is `/pricing`); source-page assessment
+shares the same normalizer. A lone generic title
 word (`contact`, `shipping`, `policy`) counts only as a whole page name (the
 slug, the H1, or the title before its site suffix), because it also names
 products ("Contact lenses"); multi-word phrases may appear anywhere. A product or
@@ -553,7 +555,13 @@ limit 20 per crawl · 2 failed to load". An unknown crawl keeps "Coverage
 unknown", a crawl that found nothing shows "No pages found" rather than a
 percentage, and any reason the counts do not already explain is appended. A
 crawl with no recorded allowance stores `automatic_limit: null`, never 0.
-Snapshots saved before these counts keep the earlier reason caveat. Bulk "first N" monitored selection takes the most
+Snapshots saved before these counts keep the earlier reason caveat. Coverage
+evidence also lists each admission value tier's found and analyzed URL counts
+(`value_kinds`), with the expected tiers (`coverage_expected_value_kinds`: about,
+contact, pricing) at zero when the crawl never found one. Overview shows "Pages
+analyzed by type" and "Not found in this crawl" separately, because a missing
+page and an unanalyzed one need different fixes. A sample crawl admits without
+a frontier and reports no tiers rather than "not found". Bulk "first N" monitored selection takes the most
 valuable pages first (highest observed value tier), URL order within a tier.
 Website Overview and Pages use compact metric strips without repeated audit
 captions; Overview also omits supporting occurrence, page and checklist counts.

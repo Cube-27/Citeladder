@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { extractPageFacts } from '../src/site-health/analysis/facts.ts';
 import { analyzePage } from '../src/site-health/analysis/analyze-page.ts';
 import { createsIssue, type RuleEvaluation } from '../src/site-health/analysis/rules.ts';
-import { isHomepagePath } from '../src/site-health/routes.ts';
+import { isHomepagePath, routePageKind } from '../src/site-health/routes.ts';
 
 const prose =
   'Teams can investigate website observations and compare practical improvements using a clear record of the evidence they collected during their review.';
@@ -34,6 +34,15 @@ describe('page-purpose regression boundaries', () => {
       ).result.assessment.page_kind;
     expect(kind('FAQ | Acme', '/acme-info')).toBe('faq');
     expect(kind('Contact lenses | Acme', '/catalog/item-42')).not.toBe('about_contact');
+  });
+
+  it('reads a route through its server-page extension', () => {
+    const kind = (path: string) => routePageKind(`https://example.test${path}`);
+    expect([kind('/pricing.html'), kind('/faq.aspx'), kind('/index.php')]).toEqual([
+      'pricing',
+      'faq',
+      'homepage',
+    ]);
   });
 
   it('treats language-region and script roots as homepages, not ordinary hyphenated paths', () => {
