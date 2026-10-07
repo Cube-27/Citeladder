@@ -4,49 +4,43 @@ import { createContext, useContext } from 'react';
 import type { NavDropItem } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
+import { NavIcon, hasNavIcon } from './nav-icons';
+
 const ROW =
-  'group flex items-start gap-3 rounded-[var(--radius-control)] px-3.5 py-3 transition-colors duration-150 ' +
-  'hover:bg-background-alt focus-visible:bg-background-alt active:bg-background-alt';
+  'nav-row group flex items-start gap-3 rounded-[var(--radius-marketing-control)] px-3 py-2.5 ' +
+  'transition-colors duration-150 hover:bg-background-alt focus-visible:bg-background-alt';
 
 export const NavigationPath = createContext('');
 
-function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
+function RowBody({ item, compact }: Readonly<{ item: NavDropItem; compact: boolean }>) {
   return (
     <>
-      {'num' in item && (
-        <span className="text-accent-text pt-2 text-xs tabular-nums">{item.num}</span>
+      {hasNavIcon(item.href) && (
+        <span className="nav-row-icon" aria-hidden>
+          <NavIcon href={item.href} className="size-4" />
+        </span>
       )}
       <span className="min-w-0">
-        {/* Row titles are a UI role, not a display rung: Inter Variable at 600, one
-            size above the 400 description, so the hierarchy reads even though
-            the row is only two lines tall. */}
-        <span className="text-foreground block font-sans text-base font-semibold">
-          {item.title}
-        </span>
-        {/* Let descriptions wrap so every capability remains readable. */}
-        <span className="website-body text-muted mt-1 block">{item.desc}</span>
+        <span className="nav-row-title">{item.title}</span>
+        {!compact && <span className="nav-row-desc">{item.desc}</span>}
       </span>
     </>
   );
 }
 
 /**
- * One navigation row, shared by the desktop dropdown and the mobile accordion.
+ * One navigation row, shared by the desktop panels and the mobile sheet.
  *
- * Neither surface uses the ARIA menu pattern. The desktop panel dropped
- * `role="menu"` because it holds ordinary links rather than `menuitem`
- * children, and that pattern would promise arrow-key navigation this nav does
- * not implement — so a `menuitem` role on the rows would be both invalid
- * (there is no `menu` ancestor) and actively harmful, since it overrides the
- * link role a screen reader should announce.
- *
- * External rows open in a new tab and say so with a visible glyph rather than
- * relying on the target alone.
+ * Neither surface uses the ARIA menu pattern: the panels hold ordinary links,
+ * and `menuitem` roles would promise arrow-key navigation this nav does not
+ * implement while hiding the link role a screen reader should announce.
+ * External rows open in a new tab and say so with a visible glyph.
  */
 export function NavItemLink({
   item,
   onSelect,
-}: Readonly<{ item: NavDropItem; onSelect: () => void }>) {
+  compact = false,
+}: Readonly<{ item: NavDropItem; onSelect: () => void; compact?: boolean }>) {
   const path = useContext(NavigationPath);
   if ('external' in item && item.external) {
     return (
@@ -57,8 +51,10 @@ export function NavItemLink({
         rel="noreferrer"
         onClick={onSelect}
       >
-        <RowBody item={item} />
-        <ArrowUpRight className="text-muted mt-1.5 size-4 shrink-0" aria-hidden />
+        <span className="flex items-start gap-3">
+          <RowBody item={item} compact={compact} />
+        </span>
+        <ArrowUpRight className="text-muted mt-0.5 size-3.5 shrink-0" aria-hidden />
       </a>
     );
   }
@@ -70,7 +66,7 @@ export function NavItemLink({
       aria-current={path === item.href ? 'page' : undefined}
       onClick={onSelect}
     >
-      <RowBody item={item} />
+      <RowBody item={item} compact={compact} />
     </a>
   );
 }

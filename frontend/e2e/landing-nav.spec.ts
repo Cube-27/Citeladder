@@ -28,7 +28,9 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     const page = await context.newPage();
     await page.goto('/platform');
     await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
-    const toggle = page.getByRole('button', { name: 'Toggle Platform menu' });
+    const toggle = page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('button', { name: 'Platform', exact: true });
     await toggle.tap();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('#desktop-nav-panel-platform')).toBeVisible();
@@ -41,7 +43,9 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/platform/site-health');
     await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
-    const toggle = page.getByRole('button', { name: 'Toggle Platform menu' });
+    const toggle = page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('button', { name: 'Platform', exact: true });
     await toggle.focus();
     await page.keyboard.press('Enter');
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');

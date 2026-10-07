@@ -20,7 +20,7 @@ CiteLadder (`citeladder.com`) is an evidence-led enterprise system. Its **Prism 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup: `frontend/public/citeladder-logo.svg` for the wordmark and the matching inline glyph for mark-only mode. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts. The mark inherits `currentColor`; non-empty `alt` supplies either rendering's accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same black silhouette across frames.
 - **Typography:** self-hosted Inter Variable (sans) on every surface for body, UI, data, headings and display roles, capped at weight 600 by its `@font-face` range; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
-- **Surface identity:** Light is the default. The app and onboarding headers carry a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Emerald is the sole action accent on public and product surfaces. The logo and provider marks retain their fixed brand colours. The app uses a sidebar rail below neutral workspace ground, with paper cards and tables above it; auth and onboarding retain a centred paper task column against neutral ground. Dark mode keeps the same tonal order in near-black neutrals. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only with their own editorial ink.
+- **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Emerald is the sole action accent on public and product surfaces. The logo and provider marks retain their fixed brand colours. The app uses a sidebar rail below neutral workspace ground, with paper cards and tables above it. Auth and onboarding share the public website's light world (white stage, public palette, frame-shadowed task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
 
 ## Source of truth and implementation rules
 
@@ -75,9 +75,9 @@ status dots and their meanings remain separate.
 
 Reading text must meet 4.5:1 contrast. Use primary ink on selected surfaces when secondary ink would lose contrast. Accent denotes action, never success or positive metric deltas. Success, warning, danger and info denote their corresponding statuses; danger also denotes destructive intent. Metrics use data-viz or neutral signed/directional treatments. Decorative icons and category labels use neutral ink. Dark mode keeps colour concentrated in actions and meaningful evidence. Never communicate meaning through colour alone.
 
-Marketing subpages use the semantic public canvas, centred Inter Variable hero, quiet surface bands, and the shared full-width footer. The landing and solutions product snapshot backdrops use saturated identity gradients that burn into white under fine grain; the footer shares this treatment with dark editorial ink. Grain stays behind the product windows and text. The homepage uses a white canvas with distinct neutral bands and capability-tinted wells, with scoped aliases resolving to shared semantic roles. The owner-scoped `[data-public-surface]` rebind deepens light-mode inks and strengthens hairlines. Use divided hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews.
+The public website, login and onboarding follow the B2B SaaS category standard at Attio/Linear craft (owner decision, 2026-10-07). `[data-public-surface]` (and `[data-flow-surface]` in light mode) rebinds a white ground, near-black green-tinted ink, a soft neutral band (`background-alt`) and quiet hairlines, and defines three public shadows: `--public-frame-shadow` for product frames and focused sheets, `--public-raised-shadow` for small raised objects (secondary buttons, icon tiles, link cards) and `--public-menu-shadow` for navigation panels. There is no grain, no saturated gradient wash and no dark band. The only texture is a faint dot lattice behind product stages, the closing band and the auth stage, masked so it never sits behind text. Evidence colour lives only inside product views.
 
-The homepage may use marketing-only geometry roles: `--radius-marketing-card` (16px), `--radius-marketing-well` (16px), `--radius-marketing-preview` (16px), and `--radius-marketing-control` (6px). The homepage shares the public container measure (`max-w-7xl` plus `--site-gutter`) with the navigation and footer. White capability and integration objects sit on neutral edges; each capability owns one identity hue (`--cl-hue-*`: visibility blue, sources green, site health indigo, demand teal, content orange, MCP pink) that `landing.css` derives into a tint for its wells and an ink for its labels, icons and bars; everything else uses the accent-tinted `--cl-well`. Identity hues never carry actions, which stay Emerald. Section heads stack a single-line heading over the lead; embedded sub-headings stay a rung below the section heading. Homepage headings use weight 500 at most. Product data and status colours retain their own meaning. These roles do not change the authenticated application's 12px `--radius-card` contract.
+Public geometry: `--radius-marketing-control` (8px) for public buttons and controls; product frames 14px; stages, bento tiles and link cards 16–20px; auth/onboarding sheets 16px. The public container measure (`max-w-7xl` plus `--site-gutter`) is shared by navigation, hero, sections and footer. These roles do not change the authenticated application's 12px `--radius-card` contract.
 
 ## Token contract
 
@@ -106,12 +106,8 @@ consumers without becoming another value authority.
 | `--color-accent-subtle` | state-tint | Stronger action-selection wash | Action on panel | `#dcfce7` | `rgb(118 223 156 / 18%)` |
 | `--color-accent-text` | ink | Readable action/link text | On neutral surfaces | `#14532d` | `#86e5a6` |
 | `--color-active` | state-tint | Pressed neutral surface | Surface + 12% primary ink | `#e2e3e5` | `#303030` |
-| `--color-atmosphere-blue` | brand | atmosphere blue identity wash | Fixed mark or separate public decoration | `rgb(219 234 248 / 55%)` | `rgb(219 234 248 / 55%)` |
-| `--color-atmosphere-green` | brand | atmosphere green identity wash | Fixed mark or separate public decoration | `rgb(214 236 222 / 60%)` | `rgb(214 236 222 / 60%)` |
 | `--color-background` | surface | Page ground | Ground | `#f3f5f7` | `#111111` |
 | `--color-background-alt` | surface | Public alternating canvas or neutral inset | Ground/inset | `#f7f9fb` | `#1e1e1e` |
-| `--color-band-indigo` | surface | Public indigo feature canvas | Public ground | `#1b1938` | `#1b1938` |
-| `--color-band-teal` | surface | Public teal feature canvas | Public ground | `#0e3030` | `#0e3030` |
 | `--color-border` | border | Control, inset and overlay boundary | Between surfaces | `#d3dae4` | `#343434` |
 | `--color-border-bold` | border | Small choice-control boundary | Inside panel | `#8a95a5` | `#76766f` |
 | `--color-border-strong` | border | Emphasized or hovered boundary | Between surfaces | `#c3ccd9` | `#5c5c59` |
@@ -150,7 +146,6 @@ consumers without becoming another value authority.
 | `--color-gsc-ctr` | data-viz | gsc ctr evidence encoding | Observed data layer | `#00897b` | `#4db6ac` |
 | `--color-gsc-impressions` | data-viz | gsc impressions evidence encoding | Observed data layer | `#673ab7` | `#c58af9` |
 | `--color-gsc-position` | data-viz | gsc position evidence encoding | Observed data layer | `#e65100` | `#ff8a65` |
-| `--color-hairline-warm` | border | Public editorial boundary | Public surfaces | `#e8e4dd` | `#343434` |
 | `--color-hover` | state-tint | Hovered neutral surface | Surface + 4% primary ink | `#f5f6f6` | `#212121` |
 | `--color-info` | semantic-status | info status mark | Labelled status layer | `#24476b` | `#8ad4e1` |
 | `--color-info-bg` | semantic-status | info bg | Labelled status layer | `#eef5fa` | `rgb(138 212 225 / 13%)` |
@@ -164,10 +159,6 @@ consumers without becoming another value authority.
 | `--color-input` | surface | Field interior | Inside panel boundary | `#ffffff` | `#141414` |
 | `--color-muted` | ink | Helpers, metadata and disabled labels | On reading surfaces | `#5b6678` | `#999996` |
 | `--color-neutral-bg` | surface | Neutral badge or progress track | Inside panel | `#e9edf1` | `#222222` |
-| `--color-marketing-grain-blue` | brand | Blue snapshot backdrop | Public decoration | `#3b82f6` | `#3b82f6` |
-| `--color-marketing-grain-indigo` | brand | Indigo snapshot backdrop | Public decoration | `#6366f1` | `#6366f1` |
-| `--color-marketing-grain-purple` | brand | Purple snapshot backdrop | Public decoration | `#a855f7` | `#a855f7` |
-| `--color-marketing-grain-green` | brand | Green snapshot and footer backdrop | Public decoration | `#22c55e` | `#22c55e` |
 | `--color-on-inverse` | ink | Label on inverse surface | On surface-inverse | `#ffffff` | `#0d2618` |
 | `--color-overlay-scrim` | surface | Modal backdrop | Between ground and modal | `rgb(20 33 61 / 45%)` | `rgb(0 0 0 / 72%)` |
 | `--color-panel` | surface | Resting content or chrome | On ground | `#ffffff` | `#1a1a1a` |
@@ -225,7 +216,7 @@ consumers without becoming another value authority.
 
 ## Typography
 
-Inter Variable headings use normal letter spacing, without custom tracking. The homepage H1 steps down by 4px at the mobile breakpoint (540px and below).
+Public display headings (hero, page title, section heading) use weight 600 with tracking that tightens as size grows (about −0.024em to −0.032em) and Inter Variable's optical sizing; feature and small headings use 600 at about −0.011em. Product-app headings keep normal tracking.
 
 Use Inter Variable for text, figures, page titles and public headings; metrics, dates, ranks, and percentages explicitly use tabular numerals, not monospace. Numbers retain their data roles rather than display roles. Weights are 400 (sentences), 500 (labels, controls, badges) and 600 (titles, figures). Do not assemble page-local size/weight/ink hierarchies.
 
@@ -238,11 +229,11 @@ Roles own all typography properties. The general ladder is mobile-first: base be
 | Flow group title | 16/24px | 600 | -0.2px | `ink-strong` |
 | Flow help | 14/20px | 400 | 0 | `muted` |
 | Flow metadata | 12/16px | 500 | 0 | `muted`, tabular |
-| Lead | 18/26px | 400 | 0 | `ink` |
-| Large body | 16/22px | 400 | 0 | `ink` |
-| Body baseline | 14/20px | 400 | 0 | `ink` |
+| Lead | 18/28px → 20/30px at 768px | 400 | −0.011em | `muted` on public pages |
+| Large body | 16/26px | 400 | −0.006em | `secondary` |
+| Body baseline | 15/24px | 400 | 0 | `secondary` |
 | Navigation/actions | 14/20px | 500 | 0 | `ink` or inverse |
-| Label/caption/eyebrow | 13/18px | 400–500 | 0 | `muted` |
+| Label/caption | 13/18px | 500 | 0 | `muted` |
 
 `website-data-display` is pricing-only: Inter Variable 500, tabular, 30/36px → 40/46px at 768px. Never apply it to prose or headings.
 
@@ -388,15 +379,15 @@ The same insight retains its server ID/cache identity everywhere. No resolvable 
 
 ### Marketing and auth
 
-Marketing is an editorial stack of full-width sections with centred content. The home hero uses a neutral ground, centred value proposition, sign-up and demo actions, and a compact interactive dashboard preview. The separate product explorer retains its full preview cards. The main heading is 48px and lead is 16px at desktop widths; the mobile display is 36/40px. Four static surface logos follow the hero: ChatGPT, Gemini, Claude, and Google AI Overviews. The landing uses the selected action accent against neutral section backgrounds, with accent text in the emphasized hero headline. Closing calls to action centre their message and place actions below it. The shared footer is a full-width grain gradient retaining its logo, destinations, and legal options.
+Product proof comes from coded product views (`components/marketing/scenes/product-views.tsx`): synthetic records in the product's own layout and vocabulary, wrapped by `ProductShot` in a stage, a window frame and an "Illustrative example" caption. Every capability has its own view, so no page repeats one illustration. The homepage hero is a centred headline, lead, Start free trial and Book a demo, then a large app-shell frame with a four-tab product tour (Visibility, Citations, Site Health, Agent) — the page's signature interaction — that rises into place once on arrival and cross-fades between tabs (see Motion and accessibility; none under reduced motion). The engine strip labels API collection honestly (OpenAI API, Gemini API, Claude API, Google AI Overviews). Platform pages share one template: breadcrumb, left-aligned title and lead, actions, a hero product shot, three hairline-topped highlights, alternating copy/visual feature rows on the soft band, FAQ, related link cards and a closing band.
 
-Use optional eyebrow → heading → short lead → evidence/media or focused grid → at most one primary CTA per band. Secondary intents belong in navigation or another band. Prefer asymmetric text/media, proof ledgers, and concise grids over feature-card walls. The operating loop uses open numbered stages with quiet separators and named steps. Body measure is about 60–70 characters; one H1 per page; spacing follows the surface's section rhythm.
+Section grammar: heading → optional short lead → evidence/media, list or table → at most one primary action per band. There are no eyebrow or kicker labels above headings; breadcrumbs are wayfinding, not labels. Prefer split layouts, hairline-divided lists and real product views over icon-card walls; cards are reserved for clickable destinations and real objects such as pricing plans. Number only a real sequence. Body measure is about 60–70 characters; one H1 per page; space separates same-tone sections and the tone change is the edge between different ones.
 
-Marketing navigation retains Log in at every width and Sign up from `sm` up. On phones, sign-up/account links are pinned in the full-screen menu sheet. Its scrolled surface is opaque with shallow elevation. Desktop links sit in a recessed neutral track with a softly raised hover selection.
+Marketing navigation is a white bar (hairline once scrolled) with the logo, centred text links (Platform, Solutions and Resources open panels from a single disclosure button each; Enterprise and Pricing are links) and exactly two account actions: Log in and Sign up (Sign up only while self-serve sign-up is open, from `sm` up). Platform opens a three-column panel of icon rows plus an overview footer. Below `lg` a full-height sheet lists the same destinations with Log in and Sign up pinned at its foot. The footer has no buttons: brand line, Platform/Solutions/Resources/Company columns derived from the navigation registry, and a legal row.
 
 ### Patterns
 
-Capability modules are peer surfaces with one neutral treatment; status and data carry the colour. Number only an actual sequence, such as Discover → Observe → Diagnose → Act → Verify. Use eyebrows sparingly at major transitions. On phones, only the landing hero product image, the landing product explorer's tab images, and the Solutions product images scale their desktop illustrations inside their own frames. The surrounding sections and authenticated app keep responsive mobile layouts, readable type, and touch targets. Keep one shared horizontal grid for navigation, hero, and sections, and use equal heading and description columns when a section has both.
+Product views render responsively at every width; nothing is scaled down as an image. On phones the app-shell frame drops its sidebar and split panels stack. Keep one shared horizontal grid for navigation, hero, sections and footer.
 
 Cookie consent is a compact bottom-right floating panel with equal-width Reject and Accept actions. On phones it expands only to the viewport gutters and respects the bottom safe area; it never becomes a full-width page banner.
 
@@ -414,7 +405,10 @@ MCP and Changelog are the top-level entry points; Updates is the final sidebar
 group. Public font loading is shared through `PublicFonts.astro`.
 Search uses the shared dialog, input and buttons with keyboard access and
 focus restoration. Articles are server-built HTML and remain readable without
-JavaScript. No decorative motion or alternate design system is introduced.
+JavaScript. It wears the website's chrome: one compact header row (wordmark
+with a Docs tag, section tabs with a forest underline, a field-style search,
+the marketing Open app button) and compact 32px navigation rows. No decorative
+motion or alternate design system is introduced.
 
 ## Component recipes
 
@@ -444,7 +438,7 @@ Confirmed first-use analytical states omit filters, charts, and table reservatio
 
 ### Documentation
 
-Docs uses a white reading surface, a 240px navigation column, a 220px contents rail and a 65–75-character article measure. Desktop gutters are 40–56px; the contents rail collapses below 1200px and navigation below 768px. Section tabs and navigation groups use Lucide icons, with strong active labels and quiet neutral navigation highlights.
+Docs uses a white reading surface, a 240px navigation column, a 216px contents rail and a 46rem article column. Desktop gutters are 20–40px; the contents rail collapses below 1200px, the tabs wrap below 900px and navigation collapses below 768px. Section tabs and navigation groups use Lucide icons. The current page is the only accent: an accent-soft row with a forest rail in navigation, a forest edge in the contents rail, and the article's group label above its title. Tables and code sit in framed panels; notes are forest-railed callouts; previous/next links are raised cards.
 
 The contents panels include H2/H3 entries, omit leading step-number prefixes from link labels, and retain authored headings and anchor IDs. Active-heading tracking is progressive enhancement: ordinary anchors remain usable without JavaScript. Existing quotes, code and table headers use semantic tinted surfaces. Search, generated tool references, keyboard access, CSP and print support remain intact.
 
@@ -472,11 +466,13 @@ The contents panels include H2/H3 entries, omit leading step-number prefixes fro
 
 Focus uses the central recipe for every interactive family. Invalid states apply where the existing component API supports validation; this refresh does not add props or validation policy to choice/navigation/status owners.
 
-Only `shadow-none`, `shadow-overlay` and `shadow-modal` utilities are available to product consumers. Shared material classes own resting elevation: `surface-card`, `control-raised`, `selection-track`, `selection-raised` and `shell-link`; feature call sites do not author shadows. Their `--elevation-*` recipes live in `globals.css`, including dark-mode overrides. Detached menus/popovers/tooltips/palette use overlay, dialogs/drawers/floating toast use modal. Radius families are control 6px, card/well 12px, overlay 12px, xs 4px for intrinsic sub-elements and full for true pills/dots/avatars. Public bento cards and focused flow sheets use 16px corners.
+Only `shadow-none`, `shadow-overlay` and `shadow-modal` utilities are available to product consumers. Shared material classes own resting elevation: `surface-card`, `control-raised`, `selection-track`, `selection-raised` and `shell-link`; feature call sites do not author shadows. Their `--elevation-*` recipes live in `globals.css`, including dark-mode overrides. Detached menus/popovers/tooltips/palette use overlay, dialogs/drawers/floating toast use modal. Radius families are control 6px, card/well 12px, overlay 12px, xs 4px for intrinsic sub-elements and full for true pills/dots/avatars. Public stages, tiles, link cards and focused flow sheets use 16–20px corners.
 
 ## Motion and accessibility
 
 Product and shared-control motion consumes the centralized roles: `--motion-fast` 110ms for hover/micro-feedback, `--motion-normal` 150ms for menus/tooltips, `--motion-slow` 240ms for dialogs/drawers/toasts. Implicit Tailwind transitions inherit the fast duration and standard easing. Standard and enter easing are cubic-bezier(0.33, 1, 0.68, 1), exit is (0.2, 0, 1, 0.9). Repeating activity/shimmer cycles derive from these roles. Keyboard command interfaces and route/tab content update immediately; press feedback begins on pointer-down. Separately owned marketing choreography and onboarding research's 220ms/60ms reveal/stagger remain scoped. Functional delays (tooltip delay, toast dwell, first-load reveal delay) remain independent from motion duration. Browser autofill's paint-suppression timing is a technical exception.
+
+Public-site motion is quiet and never gates content. Header menus open after a 110ms hover intent (immediately when switching between open menus or on click/focus), unfold over 300ms with their rows settling 70ms later, and fold away over 170ms while already inert. Page heroes rise in reading order with an 80ms stagger; the title only sharpens and settles, so it is never invisible at first paint. Section openers, product stages and cards rise on scroll through native scroll-driven animation only where supported. Stage dot lattices drift slowly, tour tabs cross-fade their view, and call-to-action arrows lean toward their destination on hover.
 
 Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window walkthrough; native CSS scroll fade/rise reveals that never hide server-rendered content after hydration; master-detail continuity/domain-owned measured expansion; onboarding research results resolving below factual activity with a 220ms fade/rise and 60ms stagger.
 

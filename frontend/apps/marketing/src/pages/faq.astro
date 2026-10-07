@@ -1,5 +1,5 @@
 ---
-import { FaqGroups } from '@/components/marketing/pages/faq';
+import { FaqCta, FaqGroups } from '@/components/marketing/pages/faq';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { FAQ_GROUPS } from '@/lib/marketing-content/faq';
 import { faqPageJsonLd } from '@/lib/seo/json-ld';
@@ -17,11 +17,10 @@ const description =
 >
   <main id="main">
     <PageHero
-      eyebrow="FAQ"
-      title="Frequently asked"
-      accent="questions."
-      lead="Short answers on AEO, AI visibility, evidence, security, and billing. Written by the product team at Cube27."
+      title="Frequently asked questions."
+      lead="Short answers on AEO, AI visibility, evidence, security and billing, written by the product team at Cube27."
     />
     <FaqGroups />
+    <FaqCta />
   </main>
 </MarketingLayout>

@@ -1,7 +1,8 @@
 /** Reviewed commercial entry-page copy. Routes remain owned by Astro pages. */
 export type CommercialPage = {
   kind: 'share';
-  eyebrow: string;
+  /** Current-page crumb; mirrors the route's breadcrumb structured data. */
+  breadcrumb: string;
   heading: string;
   introduction: string;
   secondary: { label: string; href: string };
@@ -10,7 +11,7 @@ export type CommercialPage = {
   workflow: { heading: string; lead: string; steps: readonly { heading: string; body: string }[] };
   contextHeading: string;
   context: string;
-  /** Internal next steps rendered after the context section. */
+  /** Internal next steps rendered in the context section. */
   related: readonly { label: string; href: string }[];
   faqs: readonly { q: string; a: string }[];
   closingHeading: string;
@@ -19,7 +20,7 @@ export type CommercialPage = {
 
 export const SHARE_OF_VOICE_PAGE: CommercialPage = {
   kind: 'share',
-  eyebrow: 'AI search share of voice',
+  breadcrumb: 'AI share of voice',
   heading: 'Know where your brand stands in AI answers.',
   introduction:
     'Compare your brand with competitors across a defined set of buyer questions. Keep the measurement scope visible and inspect the answers behind a change in visibility.',

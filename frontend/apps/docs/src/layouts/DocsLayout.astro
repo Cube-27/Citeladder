@@ -1,7 +1,7 @@
 ---
 import { ArrowUpRight, BookOpen, Bot, Plug, History, List } from 'lucide-react';
 import { LogoMark } from '@/components/ui/logo-mark';
-import { buttonVariants } from '@/components/ui/button-variants';
+import { ButtonLink } from '@/components/marketing/primitives/button';
 import PublicFonts from '@/components/marketing/chrome/PublicFonts.astro';
 import { docsHref } from '@/lib/config/docs';
 import DocsNav from '../components/DocsNav.astro';
@@ -45,13 +45,16 @@ const tabs = [
     <a href="#main" class="skip-link">Skip to content</a>
     <header class="docs-header">
       <div class="docs-header-inner">
-        <a href="/" aria-label="CiteLadder documentation home" class="docs-brand"><LogoMark priority /><span class="website-label">Docs</span></a>
+        <a href="/" aria-label="CiteLadder documentation home" class="docs-brand"><LogoMark priority /><span class="docs-brand-tag">Docs</span></a>
+        <nav aria-label="Documentation sections" class="docs-tabs">
+          {tabs.map((tab) => { const Icon = tab.icon; return <a href={tab.href} aria-current={tab.selected ? 'page' : undefined}><Icon className="size-4" aria-hidden />{tab.label}</a>; })}
+        </nav>
         <div class="docs-search"><DocsSearch client:load /><noscript>Use the guide navigation below.</noscript></div>
-        <a href="https://app.citeladder.com" class={buttonVariants({ variant: 'ghost', size: 'md' })}>Open app <ArrowUpRight className="size-4" aria-hidden /></a>
+        <div class="docs-header-actions">
+          <a class="docs-site-link website-nav" href="https://citeladder.com">citeladder.com</a>
+          <ButtonLink href="https://app.citeladder.com">Open app <ArrowUpRight aria-hidden /></ButtonLink>
+        </div>
       </div>
-      <nav aria-label="Documentation sections" class="docs-tabs">
-        {tabs.map((tab) => { const Icon = tab.icon; return <a href={tab.href} aria-current={tab.selected ? 'page' : undefined}><Icon className="size-4" aria-hidden />{tab.label}</a>; })}
-      </nav>
     </header>
     <div class="docs-grid">
       <aside class="docs-sidebar"><DocsNav /></aside>
@@ -60,7 +63,7 @@ const tabs = [
         {headings.length > 0 && <details class="docs-mobile-toc"><summary>On this page</summary><DocsContents headings={headings} /></details>}
         <slot />
         <footer class="docs-footer website-label">
-          <span>CiteLadder documentation</span>
+          <span>© CiteLadder documentation</span>
           <a href="https://citeladder.com/contact">Get help</a>
           <a href="https://citeladder.com/privacy">Privacy</a>
         </footer>

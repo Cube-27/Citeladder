@@ -6,92 +6,83 @@ import {
   REFERENCE_ENTITIES,
 } from '@/lib/marketing-content/ai-reference';
 
-import { Section } from '../primitives/section';
+import { PageHero } from '../primitives/page-hero';
+import { Container } from '../primitives/section';
 
-const REFERENCE_LINK = 'text-accent-text hover:text-accent-hover underline underline-offset-4';
+const REFERENCES = [
+  { title: 'AI Instructions', href: '/ai-instructions' },
+  { title: 'Entity Map', href: '/entity-map' },
+] as const;
 
+type ReferenceTitle = (typeof REFERENCES)[number]['title'];
+
+/** A reference document: title, date and sibling switch, then rail + column. */
 function ReferencePage({
   title,
   description,
   sections,
   children,
 }: Readonly<{
-  title: string;
+  title: ReferenceTitle;
   description: string;
   sections: readonly { id: string; title: string }[];
   children: ReactNode;
 }>) {
   return (
     <main id="main">
-      <header className="border-border-subtle border-b pt-16 pb-8">
-        <div className="mx-auto w-full max-w-5xl px-[var(--site-gutter)]">
-          <p className="website-eyebrow text-muted">Company reference</p>
-          <h1 className="website-page-title mt-3">{title}</h1>
-          <p className="website-body-lg text-muted mt-4 max-w-[65ch]">{description}</p>
-          <p className="website-label mt-5">
+      <PageHero title={title} lead={description}>
+        <div className="ed-doc-meta website-label">
+          <span className="text-muted tabular-nums">
             Last updated · <time dateTime={AI_REFERENCE_UPDATED}>{AI_REFERENCE_UPDATED}</time>
-          </p>
-          <nav
-            aria-label="Company references"
-            className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm"
-          >
-            <a
-              href="/ai-instructions"
-              className={REFERENCE_LINK}
-              aria-current={title === 'AI Instructions' ? 'page' : undefined}
-            >
-              AI Instructions
-            </a>
-            <a
-              href="/entity-map"
-              className={REFERENCE_LINK}
-              aria-current={title === 'Entity Map' ? 'page' : undefined}
-            >
-              Entity Map
-            </a>
+          </span>
+          <nav aria-label="Company references" className="flex flex-wrap gap-x-5 gap-y-1">
+            {REFERENCES.map((reference) => (
+              <a
+                key={reference.href}
+                href={reference.href}
+                aria-current={reference.title === title ? 'page' : undefined}
+              >
+                {reference.title}
+              </a>
+            ))}
           </nav>
         </div>
-      </header>
-      <Section rhythm="tight" dense>
-        <div className="mx-auto grid w-full max-w-5xl gap-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-14">
-          <nav aria-label="On this page" className="lg:sticky lg:top-24 lg:self-start">
-            <p className="website-eyebrow mb-3">On this page</p>
-            <ol className="grid gap-2">
-              {sections.map((section) => (
-                <li key={section.id}>
-                  <a href={`#${section.id}`} className="text-muted hover:text-foreground text-sm">
-                    {section.title}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-          <article className="min-w-0">{children}</article>
-        </div>
-      </Section>
+      </PageHero>
+      <div className="border-border-subtle border-t">
+        <Container className="py-[calc(var(--section-y)*0.75)]">
+          <div className="ed-doc">
+            <nav aria-label="On this page" className="ed-rail">
+              <p className="website-label ed-rail-title">On this page</p>
+              <ol>
+                {sections.map((section) => (
+                  <li key={section.id}>
+                    <a className="website-label" href={`#${section.id}`}>
+                      {section.title}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+            <article className="ed-prose">{children}</article>
+          </div>
+        </Container>
+      </div>
     </main>
   );
 }
 
 function Sources({ links }: Readonly<{ links: readonly { label: string; href: string }[] }>) {
   return (
-    <div className="mt-5">
-      <p className="website-label">Official sources</p>
-      <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-        {links.map((link) => (
-          <li key={link.href}>
-            <a href={link.href} className={REFERENCE_LINK}>
-              {link.label}
-            </a>
-          </li>
-        ))}
-      </ul>
+    <div className="ed-sources website-body">
+      <span className="website-label text-muted">Official sources</span>
+      {links.map((link) => (
+        <a key={link.href} href={link.href} className="ed-link">
+          {link.label}
+        </a>
+      ))}
     </div>
   );
 }
-
-const REFERENCE_SECTION =
-  'border-border-subtle scroll-mt-28 border-b py-8 first:pt-0 last:border-b-0';
 
 export function AiInstructionsPage() {
   return (
@@ -104,28 +95,25 @@ export function AiInstructionsPage() {
         <section
           key={section.id}
           id={section.id}
-          className={REFERENCE_SECTION}
+          className="ed-prose-section"
           aria-labelledby={`${section.id}-heading`}
         >
-          <h2 id={`${section.id}-heading`} className="website-feature-heading">
+          <h2 id={`${section.id}-heading`} className="website-feature-heading ed-h2">
             {section.title}
           </h2>
           {section.paragraphs?.map((paragraph) => (
-            <p key={paragraph} className="website-body-lg mt-4">
+            <p key={paragraph} className="website-body-lg">
               {paragraph}
             </p>
           ))}
           {section.facts && (
-            <dl className="border-border-subtle mt-5 divide-y divide-[var(--color-border-subtle)] border-y">
+            <dl className="ed-facts website-body">
               {section.facts.map((fact) => (
-                <div
-                  key={fact.label}
-                  className="grid gap-1 py-3 text-sm sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-4"
-                >
-                  <dt className="font-medium">{fact.label}</dt>
-                  <dd className="text-muted break-words">
+                <div key={fact.label}>
+                  <dt className="text-foreground">{fact.label}</dt>
+                  <dd className="text-muted">
                     {fact.href ? (
-                      <a href={fact.href} className={REFERENCE_LINK}>
+                      <a href={fact.href} className="ed-link">
                         {fact.value}
                       </a>
                     ) : (
@@ -137,7 +125,7 @@ export function AiInstructionsPage() {
             </dl>
           )}
           {section.bullets && (
-            <ul className="website-body-lg mt-4 grid list-disc gap-3 pl-5">
+            <ul className="ed-bullets website-body-lg">
               {section.bullets.map((bullet) => (
                 <li key={bullet}>{bullet}</li>
               ))}
@@ -161,23 +149,22 @@ export function EntityMapPage() {
         <section
           key={entity.id}
           id={entity.id}
-          className={REFERENCE_SECTION}
+          className="ed-prose-section"
           aria-labelledby={`${entity.id}-heading`}
         >
-          <p className="website-eyebrow mb-2">{entity.kind}</p>
-          <h2 id={`${entity.id}-heading`} className="website-feature-heading">
-            {entity.name}
-          </h2>
-          <p className="website-body-lg mt-4">{entity.description}</p>
-          <dl className="mt-5 grid gap-3 text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h2 id={`${entity.id}-heading`} className="website-feature-heading ed-h2">
+              {entity.name}
+            </h2>
+            <span className="ed-kind website-label text-muted">{entity.kind}</span>
+          </div>
+          <p className="website-body-lg">{entity.description}</p>
+          <dl className="ed-facts website-body">
             {entity.relations.map((relation) => (
-              <div
-                key={`${relation.label}-${relation.target.href}`}
-                className="grid gap-1 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-4"
-              >
+              <div key={`${relation.label}-${relation.target.href}`}>
                 <dt className="text-muted">{relation.label}</dt>
                 <dd>
-                  <a href={relation.target.href} className={REFERENCE_LINK}>
+                  <a href={relation.target.href} className="ed-link">
                     {relation.target.label}
                   </a>
                 </dd>

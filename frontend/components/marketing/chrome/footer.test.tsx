@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { describe, expect, it } from 'vite-plus/test';
 import { render, screen, within } from '@testing-library/react';
 
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
-import { DEMO_HREF, PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
+import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
 
 import { MarketingFooter } from './footer';
@@ -19,29 +19,23 @@ describe('MarketingFooter', () => {
     const footerNav = within(footer).getByRole('navigation', { name: 'Footer' });
     expect(within(footerNav).getAllByRole('link').length).toBeGreaterThan(0);
     for (const item of PUBLISHED_PLATFORM) {
-      const scope = item.href === '/platform' ? footer : footerNav;
-      expect(within(scope).getByRole('link', { name: item.title })).toHaveAttribute(
+      expect(within(footerNav).getByRole('link', { name: item.title })).toHaveAttribute(
         'href',
         item.href,
       );
     }
   });
 
-  it('points the company column at the demo funnel and login', async () => {
-    vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
+  it('carries no account or demo actions, only destinations and references', async () => {
     render(await MarketingFooter());
 
-    expect(screen.getByRole('link', { name: /book a demo/i })).toHaveAttribute('href', DEMO_HREF);
-    expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute(
-      'href',
-      'https://app.citeladder.com/login',
-    );
+    expect(screen.queryByRole('link', { name: /book a demo/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /log in/i })).toBeNull();
     expect(screen.getByRole('link', { name: 'AI Instructions' })).toHaveAttribute(
       'href',
       '/ai-instructions',
     );
     expect(screen.getByRole('link', { name: 'Entity Map' })).toHaveAttribute('href', '/entity-map');
-    vi.unstubAllEnvs();
   });
 
   it('links to public documentation but not the private repository', async () => {

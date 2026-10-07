@@ -70,6 +70,11 @@ export function blockIdentity(block: BlogBlock): string {
  */
 const HEATMAP_EMPHASIS_PERCENT = 33;
 
+function emphasisedCell(cell: string, heatmap: boolean | undefined): boolean {
+  if (!heatmap || !/^[+-]?\d+(\.\d+)?%$/.test(cell.trim())) return false;
+  return Number.parseFloat(cell) >= HEATMAP_EMPHASIS_PERCENT;
+}
+
 function PostTable({
   headers,
   rows,
@@ -82,60 +87,33 @@ function PostTable({
   heatmap?: boolean;
 }>) {
   return (
-    <div className="border-border-subtle bg-panel my-6 overflow-hidden rounded-[var(--radius-card)] border">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-sm">
-          {/* A real `<caption>`, not a styled bar above the table: assistive
-              technology only announces the table's name when the text is the
-              table's own caption element. `caption-side` keeps it on top. */}
-          {caption && (
-            <caption className="border-border-subtle bg-panel-tonal website-label text-muted caption-top border-b px-4 py-2.5 text-left">
-              {caption}
-            </caption>
-          )}
-          <thead>
-            <tr className="border-border-subtle bg-panel-tonal/60 border-b">
-              {withOccurrenceKeys(headers, (header) => header).map(({ key, value }) => (
-                <th
-                  key={key}
-                  scope="col"
-                  className="website-label text-foreground px-4 py-3 font-semibold"
-                >
-                  {value}
-                </th>
+    <div className="cp-table">
+      <table>
+        {/* A real `<caption>`, not a styled bar above the table: assistive
+            technology only announces the table's name when the text is the
+            table's own caption element. */}
+        {caption && <caption>{caption}</caption>}
+        <thead>
+          <tr>
+            {withOccurrenceKeys(headers, (header) => header).map(({ key, value }) => (
+              <th key={key} scope="col">
+                {value}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {withOccurrenceKeys(rows, (row) => row.join('')).map(({ key: rowKey, value: row }) => (
+            <tr key={rowKey}>
+              {withOccurrenceKeys(row, (cell) => cell).map(({ key: cellKey, value: cell }) => (
+                <td key={cellKey} data-emphasised={emphasisedCell(cell, heatmap) || undefined}>
+                  {cell}
+                </td>
               ))}
             </tr>
-          </thead>
-          <tbody className="divide-border-subtle divide-y">
-            {withOccurrenceKeys(rows, (row) => row.join('')).map(({ key: rowKey, value: row }) => (
-              <tr key={rowKey} className="hover:bg-accent-soft/30 transition-colors">
-                {withOccurrenceKeys(row, (cell) => cell).map(
-                  ({ key: cellKey, value: cell }, cIdx) => {
-                    const percent =
-                      heatmap && /^[+-]?\d+(\.\d+)?%$/.test(cell.trim())
-                        ? Number.parseFloat(cell)
-                        : undefined;
-                    const emphasised = percent !== undefined && percent >= HEATMAP_EMPHASIS_PERCENT;
-                    return (
-                      <td
-                        key={cellKey}
-                        data-emphasised={emphasised || undefined}
-                        className={cn(
-                          'px-4 py-3 align-top text-sm text-muted',
-                          cIdx === 0 && 'font-medium text-foreground',
-                          emphasised && 'bg-accent-soft/60 font-semibold text-accent-text',
-                        )}
-                      >
-                        {cell}
-                      </td>
-                    );
-                  },
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -148,30 +126,20 @@ function PostChecklist({
   title?: string;
 }>) {
   return (
-    <div className="border-border-subtle bg-panel my-6 rounded-[var(--radius-card)] border p-5 md:p-6">
-      {title && (
-        <h3 className="website-small-heading text-foreground mb-4 font-semibold">{title}</h3>
-      )}
-      <div className="grid gap-4">
+    <div className="cp-checklist">
+      {title && <h3 className="website-feature-heading mb-3">{title}</h3>}
+      <ul>
         {withOccurrenceKeys(items, (item) => item.title).map(({ key, value: item }) => (
-          <div key={key} className="flex items-start gap-3.5">
-            <div className="bg-accent-soft text-accent-text mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
-              <Check className="size-3.5 stroke-[2.5]" aria-hidden="true" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-foreground text-sm font-medium">{item.title}</span>
-                {item.badge && (
-                  <span className="bg-accent-soft text-accent-text rounded-full px-2.5 py-0.5 text-xs font-medium">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-              <p className="website-body text-muted mt-1 leading-relaxed">{item.description}</p>
-            </div>
-          </div>
+          <li key={key}>
+            <Check className="size-4" aria-hidden="true" />
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="cp-node-title">{item.title}</span>
+              {item.badge && <span className="cp-chip">{item.badge}</span>}
+            </span>
+            <p className="website-body text-muted">{item.description}</p>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
@@ -180,38 +148,44 @@ function DiagramArchitecture({
   data,
 }: Readonly<{ data: Extract<BlogDiagram, { variant: 'architecture' }>['data'] }>) {
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-3">
       <div className="grid gap-3 sm:grid-cols-3">
         {data.sources.map((source) => (
-          <div
-            key={source.title}
-            className="border-border-subtle bg-panel-tonal flex flex-col justify-between rounded-[var(--radius-control)] border p-4"
-          >
-            <div>
-              <span className="bg-accent-soft text-accent-text mb-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium">
-                {source.badge}
-              </span>
-              <h4 className="website-body text-foreground font-semibold">{source.title}</h4>
-              <p className="website-body text-muted mt-2 leading-relaxed">{source.description}</p>
-            </div>
+          <div key={source.title} className="cp-node">
+            <span className="cp-chip">{source.badge}</span>
+            <h4 className="cp-node-title">{source.title}</h4>
+            <p className="cp-node-text">{source.description}</p>
           </div>
         ))}
       </div>
-      <div className="my-2 flex items-center justify-center">
-        <div className="bg-accent-soft text-accent-text flex size-8 items-center justify-center rounded-full">
-          <ArrowDown className="size-4" aria-hidden="true" />
-        </div>
-      </div>
+      <ArrowDown className="text-muted mx-auto size-4" aria-hidden="true" />
       {data.destination && (
-        <div className="border-accent-border/60 bg-accent-soft/30 rounded-[var(--radius-control)] border p-4 text-center">
-          <h4 className="website-small-heading origin-centre text-foreground font-semibold">
-            {data.destination.title}
-          </h4>
-          <p className="website-body text-muted mt-1 leading-relaxed">
-            {data.destination.description}
-          </p>
+        <div className="cp-node cp-node-strong text-center">
+          <h4 className="cp-node-title">{data.destination.title}</h4>
+          <p className="cp-node-text">{data.destination.description}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function SplitColumn({
+  title,
+  badge,
+  items,
+  strong = false,
+}: Readonly<{ title: string; badge: string; items: readonly string[]; strong?: boolean }>) {
+  return (
+    <div className={cn('cp-node gap-3', strong && 'cp-node-strong')}>
+      <div className="flex items-center justify-between gap-3">
+        <h4 className="cp-node-title">{title}</h4>
+        <span className="cp-chip">{badge}</span>
+      </div>
+      <ul className="cp-node-list">
+        {withOccurrenceKeys(items, (item) => item).map(({ key, value }) => (
+          <li key={key}>{value}</li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -220,42 +194,9 @@ function DiagramSplit({
   data,
 }: Readonly<{ data: Extract<BlogDiagram, { variant: 'split' }>['data'] }>) {
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <div className="border-border-subtle bg-panel-tonal/60 rounded-[var(--radius-control)] border p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h4 className="website-body text-foreground font-semibold">{data.leftTitle}</h4>
-          <span className="border-border-subtle bg-panel-tonal text-muted rounded-full border px-2 py-0.5 text-xs">
-            {data.leftBadge}
-          </span>
-        </div>
-        <div className="grid gap-2">
-          {withOccurrenceKeys(data.leftItems, (item) => item).map(({ key, value }) => (
-            <div key={key} className="text-muted flex items-start gap-2 text-sm">
-              <span className="bg-border mt-1 size-1.5 shrink-0 rounded-full" aria-hidden="true" />
-              <span>{value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="border-accent-border/60 bg-accent-soft/20 rounded-[var(--radius-control)] border p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h4 className="website-body text-foreground font-semibold">{data.rightTitle}</h4>
-          <span className="bg-accent-soft text-accent-text rounded-full px-2 py-0.5 text-xs font-medium">
-            {data.rightBadge}
-          </span>
-        </div>
-        <div className="grid gap-2">
-          {withOccurrenceKeys(data.rightItems, (item) => item).map(({ key, value }) => (
-            <div key={key} className="text-foreground flex items-start gap-2 text-sm">
-              <span
-                className="bg-accent-text mt-1 size-1.5 shrink-0 rounded-full"
-                aria-hidden="true"
-              />
-              <span>{value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="grid gap-3 md:grid-cols-2">
+      <SplitColumn title={data.leftTitle} badge={data.leftBadge} items={data.leftItems} />
+      <SplitColumn title={data.rightTitle} badge={data.rightBadge} items={data.rightItems} strong />
     </div>
   );
 }
@@ -264,22 +205,15 @@ function DiagramFlow({
   data,
 }: Readonly<{ data: Extract<BlogDiagram, { variant: 'flow' }>['data'] }>) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {data.steps.map((step) => (
-        <div
-          key={step.step}
-          className="border-border-subtle bg-panel-tonal relative flex flex-col justify-between rounded-[var(--radius-control)] border p-4"
-        >
-          <div>
-            <span className="bg-accent-soft text-accent-text mb-2.5 flex size-6 items-center justify-center rounded-full text-xs font-semibold">
-              {step.step}
-            </span>
-            <h4 className="website-body text-foreground font-semibold">{step.title}</h4>
-            <p className="website-body text-muted mt-1.5 leading-relaxed">{step.desc}</p>
-          </div>
-        </div>
+        <li key={step.step} className="cp-node">
+          <span className="cp-step">{step.step}</span>
+          <h4 className="cp-node-title">{step.title}</h4>
+          <p className="cp-node-text">{step.desc}</p>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 
@@ -287,22 +221,17 @@ function DiagramTaxonomy({
   data,
 }: Readonly<{ data: Extract<BlogDiagram, { variant: 'taxonomy' }>['data'] }>) {
   return (
-    <div>
-      <div className="border-accent-border/60 bg-accent-soft/30 mb-4 rounded-[var(--radius-control)] border p-3 text-center">
-        <span className="website-label text-accent-text">Category Anchor</span>
-        <h4 className="website-body text-foreground mt-0.5 font-semibold">{data.root}</h4>
+    <div className="grid gap-3">
+      <div className="cp-node cp-node-strong text-center">
+        <span className="website-label">Category anchor</span>
+        <h4 className="cp-node-title">{data.root}</h4>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
         {data.nodes.map((node) => (
-          <div
-            key={node.category}
-            className="border-border-subtle bg-panel-tonal rounded-[var(--radius-control)] border p-4"
-          >
-            <span className="bg-accent-soft text-accent-text mb-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium">
-              {node.intent}
-            </span>
-            <h5 className="website-body text-foreground font-medium">{node.category}</h5>
-            <p className="website-body text-muted mt-2 leading-relaxed">{node.details}</p>
+          <div key={node.category} className="cp-node">
+            <span className="cp-chip">{node.intent}</span>
+            <h5 className="cp-node-title">{node.category}</h5>
+            <p className="cp-node-text">{node.details}</p>
           </div>
         ))}
       </div>
@@ -313,16 +242,13 @@ function DiagramTaxonomy({
 /** Renders one diagram block; the payload is narrowed by `variant`, never cast. */
 function PostDiagram({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'diagram' }> }>) {
   return (
-    <div className="border-border-subtle bg-panel my-8 rounded-[var(--radius-card)] border p-5 md:p-6">
+    <figure className="cp-figure">
       {/* The h3 is unconditional. Every diagram variant renders h4s inside it,
           so making the h3 depend on a visible title left those h4s hanging
           under the section's h2 -- a skipped level whenever a diagram is
           declared without one, which the type permits. */}
       {block.title ? (
-        <div className="border-border-subtle mb-6 flex items-center justify-between border-b pb-3">
-          <h3 className="website-small-heading text-foreground font-semibold">{block.title}</h3>
-          <span className="website-label text-muted">System Model</span>
-        </div>
+        <h3 className="website-small-heading cp-figure-title">{block.title}</h3>
       ) : (
         <h3 className="sr-only">System model</h3>
       )}
@@ -330,17 +256,16 @@ function PostDiagram({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'di
       {block.variant === 'split' && <DiagramSplit data={block.data} />}
       {block.variant === 'flow' && <DiagramFlow data={block.data} />}
       {block.variant === 'taxonomy' && <DiagramTaxonomy data={block.data} />}
-    </div>
+    </figure>
   );
 }
 
-// Tone colours come from the design tokens the rest of the site uses. Raw
-// Tailwind palette hues (`amber-500`, `sky-500`) would be the only ones in
-// the codebase and would not follow a rebrand of the token set.
+// Tone colours come from the design tokens the rest of the site uses, and only
+// the icon carries them: the note itself stays a quiet tinted panel.
 const CALLOUT_TONES = {
-  warning: { icon: AlertTriangle, rail: 'border-l-warning', mark: 'text-warning' },
-  info: { icon: Info, rail: 'border-l-info', mark: 'text-info' },
-  accent: { icon: CheckCircle2, rail: 'border-l-accent-border', mark: 'text-accent-text' },
+  warning: { icon: AlertTriangle, mark: 'text-warning' },
+  info: { icon: Info, mark: 'text-info' },
+  accent: { icon: CheckCircle2, mark: 'text-accent-text' },
 } as const;
 
 function PostCallout({
@@ -352,30 +277,19 @@ function PostCallout({
   title?: string;
   tone?: 'accent' | 'warning' | 'info';
 }>) {
-  const { icon: Icon, rail, mark } = CALLOUT_TONES[tone];
+  const { icon: Icon, mark } = CALLOUT_TONES[tone];
   return (
-    <div
-      className={cn(
-        'border-border-subtle my-6 rounded-[var(--radius-card)] border border-l-4 p-5',
-        tone === 'accent' ? 'bg-panel-tonal/60' : 'bg-panel-tonal',
-        rail,
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <Icon className={cn('mt-0.5 size-5 shrink-0', mark)} aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          {/* h3, not h4: a callout follows either a `heading` (h2) or a
-              `subheading` (h3), so h4 skipped a level whenever no subheading
-              stood between it and the section it belongs to -- which was the
-              case in three of the five posts. h3 is correct under a heading and
-              level-flat under a subheading; neither is a skip. */}
-          {title && (
-            <h3 className="website-small-heading text-foreground mb-1.5 font-semibold">{title}</h3>
-          )}
-          <p className="website-body text-muted leading-relaxed">{text}</p>
-        </div>
+    <aside className="cp-callout">
+      <Icon className={cn('size-4', mark)} aria-hidden="true" />
+      <div className="grid min-w-0 gap-1">
+        {/* h3, not h4: a callout follows either a `heading` (h2) or a
+            `subheading` (h3), so h4 skipped a level whenever no subheading
+            stood between it and the section it belongs to. h3 is correct under
+            a heading and level-flat under a subheading; neither is a skip. */}
+        {title && <h3 className="website-small-heading">{title}</h3>}
+        <p>{text}</p>
       </div>
-    </div>
+    </aside>
   );
 }
 
@@ -387,7 +301,7 @@ function RichParagraph({
   sources: readonly BlogSource[];
 }>) {
   return (
-    <p className="website-body text-muted my-4 leading-relaxed">
+    <p>
       {content.map((part, index) => {
         if (typeof part === 'string') return <span key={`${part}:${index}`}>{part}</span>;
         if (part.type === 'link') {
@@ -396,7 +310,6 @@ function RichParagraph({
               key={`${part.href}:${index}`}
               href={part.href}
               {...(part.href.startsWith('https://') ? { target: '_blank', rel: 'noreferrer' } : {})}
-              className="text-accent-text decoration-accent-border underline underline-offset-4 hover:decoration-current"
             >
               {part.text}
             </a>
@@ -412,7 +325,7 @@ function RichParagraph({
             target="_blank"
             rel="noreferrer"
             aria-label={`Source ${sourceIndex + 1}: ${source.title}`}
-            className="text-accent-text ml-1 align-super text-xs font-semibold hover:underline"
+            className="cp-cite"
           >
             {part.label ?? `[${sourceIndex + 1}]`}
           </a>
@@ -422,6 +335,11 @@ function RichParagraph({
   );
 }
 
+/**
+ * One body block. Prose blocks carry no measure or colour of their own: the
+ * `cp-prose` article column sets the reading measure and rhythm for its direct
+ * children, so a post and a Markdown research guide read identically.
+ */
 export function PostBlock({
   block,
   sources = [],
@@ -429,38 +347,24 @@ export function PostBlock({
   switch (block.type) {
     case 'heading':
       return (
-        <h2
-          id={headingId(block.text)}
-          className="website-feature-heading text-foreground mt-10 mb-4 scroll-mt-28"
-        >
+        <h2 id={headingId(block.text)} className="website-section-heading cp-prose-h2">
           {block.text}
         </h2>
       );
     case 'subheading':
       return (
-        <h3
-          id={headingId(block.text)}
-          className="website-small-heading text-foreground mt-8 mb-3 scroll-mt-28"
-        >
+        <h3 id={headingId(block.text)} className="website-feature-heading cp-prose-h3">
           {block.text}
         </h3>
       );
-    case 'list':
-      return block.ordered ? (
-        <ol className="website-body text-muted my-4 grid list-decimal gap-2 pl-5 leading-relaxed">
-          {withOccurrenceKeys(block.items, (item) => item).map(({ key, value }) => (
-            <li key={key}>{value}</li>
-          ))}
-        </ol>
-      ) : (
-        <ul className="website-body text-muted my-4 grid list-disc gap-2 pl-5 leading-relaxed">
-          {withOccurrenceKeys(block.items, (item) => item).map(({ key, value }) => (
-            <li key={key}>{value}</li>
-          ))}
-        </ul>
-      );
+    case 'list': {
+      const items = withOccurrenceKeys(block.items, (item) => item).map(({ key, value }) => (
+        <li key={key}>{value}</li>
+      ));
+      return block.ordered ? <ol>{items}</ol> : <ul>{items}</ul>;
+    }
     case 'paragraph':
-      return <p className="website-body text-muted my-4 leading-relaxed">{block.text}</p>;
+      return <p>{block.text}</p>;
     case 'richParagraph':
       return <RichParagraph content={block.content} sources={sources} />;
     case 'table':

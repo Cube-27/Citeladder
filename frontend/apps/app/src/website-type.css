@@ -61,7 +61,7 @@
   font-size: 1.875rem;
   line-height: 2.25rem;
   font-weight: 600;
-  letter-spacing: normal;
+  letter-spacing: -0.024em;
   color: var(--color-foreground);
 }
 
@@ -98,38 +98,49 @@
 :where([data-public-surface], [data-flow-surface])
   :where(h1, h2, h3, h4, h5, h6):not(.app-type-scale *) {
   font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: normal;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 :where([data-public-surface], [data-flow-surface]) :where(h1):not(.app-type-scale *) {
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 :where([data-public-surface], [data-flow-surface]) :where(h2):not(.app-type-scale *) {
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 :where([data-public-surface], [data-flow-surface]) :where(h3, h4, h5, h6):not(.app-type-scale *) {
-  line-height: 1.25;
+  line-height: 1.3;
 }
 
 /* Named website/auth roles. Size, leading, weight, tracking, and default colour
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs use Inter Variable at the display role's natural
-   medium weight, without faux-bold browser synthesis.
-   Body rungs render in Inter Variable at 400/500/600. */
+   Display rungs are set tight: Inter Variable's optical-size axis switches to
+   its display cut at these sizes, and tracking closes as size grows. Body
+   rungs render in Inter Variable at 400/500/600. */
 .website-hero-display,
 .website-page-title,
 .website-section-heading,
 .website-feature-heading,
 .website-small-heading {
   font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: normal;
+  font-optical-sizing: auto;
   text-wrap: balance;
+}
+
+.website-hero-display,
+.website-page-title,
+.website-section-heading {
+  font-weight: 600;
+}
+
+.website-feature-heading,
+.website-small-heading {
+  font-weight: 600;
+  letter-spacing: -0.011em;
 }
 
 /* Centred display headings compress around their own centre line instead of
@@ -140,28 +151,31 @@
 
 /* The display ladder is mobile-first and steps at 768px below. */
 .website-hero-display {
-  font-size: clamp(2.25rem, 5vw, 3.5rem);
-  line-height: 1.08;
+  font-size: clamp(2.25rem, 4.2vw + 0.6rem, 4.25rem);
+  line-height: 1.04;
+  letter-spacing: -0.032em;
 }
 
 .website-page-title {
-  font-size: 1.875rem;
-  line-height: 2.125rem;
+  font-size: 2rem;
+  line-height: 2.25rem;
+  letter-spacing: -0.028em;
 }
 
 .website-section-heading {
-  font-size: 1.5rem;
-  line-height: 1.875rem;
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  letter-spacing: -0.024em;
 }
 
 .website-feature-heading {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   line-height: 1.5rem;
 }
 
 .website-small-heading {
-  font-size: 1.0625rem;
-  line-height: 1.35rem;
+  font-size: 1rem;
+  line-height: 1.375rem;
 }
 
 .website-lead,
@@ -206,10 +220,10 @@
    hold one size across breakpoints, because body copy that grows with the
    viewport just makes the measure fight the column. */
 .website-lead {
-  font-size: 1.0625rem;
-  line-height: 1.625rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
   font-weight: 400;
-  letter-spacing: 0;
+  letter-spacing: -0.011em;
   text-wrap: pretty;
 }
 
@@ -217,7 +231,7 @@
   font-size: 1rem;
   line-height: 1.625rem;
   font-weight: 400;
-  letter-spacing: 0;
+  letter-spacing: -0.006em;
   text-wrap: pretty;
 }
 
@@ -238,9 +252,9 @@
 
 .website-label,
 .website-eyebrow {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.125rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .website-label {
@@ -254,11 +268,11 @@
 
 :where([data-public-surface], [data-flow-surface]) [data-button-size='md']:not(.app-type-scale *),
 :where([data-public-surface], [data-flow-surface]) [data-button-size='lg']:not(.app-type-scale *) {
-  min-height: 2.75rem;
-  font-size: 1rem;
+  min-height: 2.5rem;
+  font-size: 0.9375rem;
   line-height: 1.25rem;
   font-weight: 500;
-  letter-spacing: 0;
+  letter-spacing: -0.005em;
 }
 
 /* Rectangle geometry is the WEBSITE and marketing treatment (docs/design.md,
@@ -269,19 +283,46 @@
    geometry rather than inheriting a marketing shape. */
 :where([data-public-surface]) [data-button-size='md']:not(.app-type-scale *),
 :where([data-public-surface]) [data-button-size='lg']:not(.app-type-scale *) {
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-marketing-control);
 }
 
 :where([data-public-surface]) [data-shape='pill']:not(.app-type-scale *) {
   border-radius: var(--radius-full);
 }
 
+/* The flow sits on the website's stage: white paper, a faint dot lattice and
+   a soft accent wash, with the task sheet floating above it. */
+:root:not([data-theme='dark']) [data-flow-surface] {
+  background:
+    radial-gradient(90% 60% at 50% 0%, var(--color-accent-soft), transparent 70%),
+    var(--color-panel);
+}
+
+:root:not([data-theme='dark']) [data-flow-surface]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(var(--color-border-strong) 1px, transparent 1px);
+  background-size: 18px 18px;
+  mask-image: radial-gradient(80% 60% at 50% 20%, black, transparent);
+  opacity: 0.5;
+}
+
+/* Opaque so a long step scrolls cleanly beneath it; the hairline makes the
+   bar read as the site header rather than a white strip across the stage. */
 .flow-bar {
   background: var(--color-panel);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-subtle);
   position: sticky;
   top: 0;
   z-index: var(--z-index-sticky);
+}
+
+[data-theme='dark'] .flow-bar {
+  background: var(--color-panel);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .flow-bar-content {
@@ -325,7 +366,7 @@
   font-size: 1.75rem;
   line-height: 2.125rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.026em;
 }
 
 .auth-form-heading .flow-help {
@@ -500,10 +541,15 @@
   border-radius: var(--radius-marketing-card);
 }
 
-.flow-footer,
+.flow-footer {
+  position: relative;
+  z-index: 1;
+  padding: var(--flow-answer) var(--flow-gutter);
+}
+
 .flow-actions {
   background: var(--color-panel);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-subtle);
   position: sticky;
   bottom: 0;
   z-index: var(--z-index-sticky);
@@ -1084,28 +1130,28 @@
   }
 
   .website-page-title {
-    font-size: 2.5rem;
-    line-height: 2.75rem;
+    font-size: 3rem;
+    line-height: 3.25rem;
   }
 
   .website-section-heading {
-    font-size: 2.125rem;
-    line-height: 2.375rem;
+    font-size: 2.625rem;
+    line-height: 2.875rem;
   }
 
   .website-feature-heading {
-    font-size: 1.375rem;
+    font-size: 1.125rem;
     line-height: 1.625rem;
   }
 
   .website-small-heading {
-    font-size: 1.25rem;
+    font-size: 1.0625rem;
     line-height: 1.5rem;
   }
 
   .website-lead {
-    font-size: 1.125rem;
-    line-height: 1.625rem;
+    font-size: 1.25rem;
+    line-height: 1.875rem;
   }
 
   .website-data-display {

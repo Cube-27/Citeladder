@@ -1,133 +1,102 @@
-import {
-  ArrowRight,
-  Check,
-  FileCheck2,
-  KeyRound,
-  Scale,
-  ShieldCheck,
-  UsersRound,
-  type LucideIcon,
-} from 'lucide-react';
-
-import { cn } from '@/lib/utils';
+import { ArrowRight, Check } from 'lucide-react';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
-import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
-import { TrustStrip } from '../primitives/trust-strip';
+import { AnswerView, ProductShot } from '../scenes/product-views';
 
-type Capability = {
-  icon: LucideIcon;
-  title: string;
-  tagline: string;
-  highlights: readonly string[];
-};
+/**
+ * Enterprise (`/enterprise`). Every statement here describes how the product
+ * is built today; there are no certifications, customers or commitments that
+ * an agreement has not set.
+ */
 
-const CAPABILITIES: readonly Capability[] = [
+const EVIDENCE_POINTS = [
+  'Raw answers are stored before any metric is calculated',
+  'Deterministic rules and versioned analysis show how each result was produced',
+  'Coverage gaps, unavailable and observed-zero results stay distinct',
+] as const;
+
+const GOVERNANCE = [
   {
-    icon: KeyRound,
-    title: 'Keep the credential boundary clear',
-    tagline: 'Your provider account remains yours from setup through execution.',
-    highlights: [
-      'Provider keys are encrypted at rest and resolved only at execution time',
+    title: 'Credentials',
+    points: [
+      'Bring your own provider API keys',
+      'Keys are encrypted at rest and resolved only at execution time',
       'Keys are never returned in API responses or logged in clear text',
-      'Same-origin API proxying keeps backend topology out of the browser bundle',
     ],
   },
   {
-    icon: Scale,
-    title: 'Trace every reported number',
-    tagline: 'Security, analytics, and growth teams can inspect the same evidence.',
-    highlights: [
-      'Raw responses are persisted before derived metrics are calculated',
-      'Deterministic rules and versioned analysis explain how a result was produced',
-      'Coverage, unavailable, and observed-zero states stay distinct',
+    title: 'Evidence',
+    points: [
+      'Projects, prompts, connections and history are scoped to the owning workspace',
+      'Each derived metric keeps the source answers it came from',
+      'No LLM-as-judge scoring',
     ],
   },
   {
-    icon: ShieldCheck,
-    title: 'Operate with durable runs',
-    tagline: 'Long-running crawls and audits have an explicit execution trail.',
-    highlights: [
-      'PostgreSQL provides durable state and the work queue',
-      'Leases, heartbeats, retries, and terminal states are recorded',
+    title: 'Execution',
+    points: [
+      'PostgreSQL holds durable state and the work queue',
+      'Leases, heartbeats, retries and terminal states are recorded for every run',
       'Runtime Zod and Pydantic contracts validate the browser/API boundary',
     ],
   },
-];
+] as const;
 
-const DATA_FLOW_STEPS = [
+const DATA_FLOW = [
   { title: 'Browser', detail: 'Authenticated HTTPS' },
   { title: 'Same-origin app', detail: 'Relative API requests' },
-  { title: 'API boundary', detail: 'Schema + workspace auth' },
-  { title: 'PostgreSQL', detail: 'Evidence + durable queue' },
+  { title: 'API boundary', detail: 'Schema and workspace authorization' },
+  { title: 'PostgreSQL', detail: 'Evidence and durable queue' },
   { title: 'Workers', detail: 'Leased execution' },
   { title: 'Answer engines', detail: 'Your configured keys' },
 ] as const;
 
-type EnterpriseFit = {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-};
-
-const ENTERPRISE_FIT: readonly EnterpriseFit[] = [
+const FIT = [
   {
-    icon: FileCheck2,
     title: 'Security-led evaluation',
-    description:
-      'Give reviewers a concise map of credential handling, workspace authorization, evidence retention, and the managed-cloud boundary.',
+    body: 'Reviewers get a short map of credential handling, workspace authorization, evidence retention and the managed-cloud boundary.',
   },
   {
-    icon: UsersRound,
-    title: 'Multiple teams or brands',
-    description:
-      'Keep projects, prompts, provider connections, and audit history scoped to the workspace that owns them.',
+    title: 'Several teams or brands',
+    body: 'Projects, prompts, provider connections and audit history stay with the workspace that owns them.',
   },
   {
-    icon: Scale,
     title: 'A measurement program',
-    description:
-      'Define a prompt portfolio, run comparable audits, and give each reported observation the context needed for review.',
+    body: 'A defined prompt portfolio, comparable audits and enough context to review every observation.',
   },
 ] as const;
 
-const CUSTOM_LIMITS = [
+const AGREEMENT = [
   {
     title: 'Monthly audit runs',
-    badge: 'Volume',
-    unit: 'prompt × engine × repetition',
+    unit: 'Prompt × engine × repetition',
     desc: 'Sized to concurrent evaluation across your active brand topics.',
   },
   {
     title: 'Monitored URLs',
-    badge: 'Coverage',
-    unit: 'total monitored URL set',
-    desc: 'Brand, product and competitor pages included in your site-health scope.',
+    unit: 'Total monitored URL set',
+    desc: 'Brand, product and competitor pages in your site-health scope.',
   },
   {
-    title: 'Projects & seats',
-    badge: 'Teams',
-    unit: 'per enterprise workspace',
+    title: 'Projects and seats',
+    unit: 'Per enterprise workspace',
     desc: 'Each project keeps its own prompts, competitors, engines and trails.',
   },
   {
     title: 'Evidence retention',
-    badge: 'History',
-    unit: 'set by agreement',
+    unit: 'Set by agreement',
     desc: 'Retention terms for raw responses, artifacts and derived metrics.',
   },
   {
     title: 'Engine connections',
-    badge: 'Providers',
     unit: 'OpenAI, Google, Anthropic',
-    desc: 'The supported direct transports, each using workspace BYOK credentials.',
+    desc: 'The supported direct transports, each on workspace BYOK credentials.',
   },
   {
-    title: 'Support & SLA',
-    badge: 'Response',
-    unit: 'set by agreement',
+    title: 'Support and SLA',
+    unit: 'Set by agreement',
     desc: 'Response commitments and support channels defined in the contract.',
   },
 ] as const;
@@ -135,165 +104,139 @@ const CUSTOM_LIMITS = [
 export function EnterpriseHero() {
   return (
     <PageHero
-      eyebrow="Enterprise"
-      title="AI visibility your security team"
-      accent="can inspect."
-      lead="Measure how your brand appears in ChatGPT, Gemini, and Claude with a workspace-scoped evidence trail. Ready for procurement, security review, and the teams who act on the result."
       centered
+      title="AI visibility your security team can inspect."
+      lead="Measure how ChatGPT, Gemini and Claude describe your brand, with an evidence trail scoped to your workspace. Ready for procurement and security review."
     >
-      <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
-        <DemoButtonLink>
+      <div className="mt-9 flex flex-wrap justify-center gap-3">
+        <DemoButtonLink size="marketing">
           Book a demo
           <ArrowRight aria-hidden />
         </DemoButtonLink>
-        <ButtonLink href="/pricing" variant="ghost">
+        <ButtonLink href="/pricing" variant="soft" size="marketing">
           Compare plans
         </ButtonLink>
       </div>
-      <TrustStrip className="mt-8 justify-center" />
     </PageHero>
   );
 }
 
-export function EnterpriseOps() {
+export function EnterpriseEvidence() {
   return (
-    <Section id="capabilities" tone="paper" rhythm="base" aria-label="Enterprise capabilities">
-      <SectionHeader
-        eyebrow="Trust"
-        title="A defensible path from prompt to proof."
-        lead="The important boundaries are visible: credentials, evidence, and execution each have one accountable owner."
-        headingId="enterprise-caps-title"
-      />
-
-      <StaggerGroup className="grid gap-5 md:grid-cols-3">
-        {CAPABILITIES.map(({ icon: Icon, title, tagline, highlights }) => (
-          <StaggerItem key={title} className="h-full">
-            <article className="bg-panel border-border-subtle hover:border-accent-border flex h-full flex-col rounded-[var(--radius-card)] border p-7 transition-colors duration-200">
-              <div className="bg-accent-soft text-accent-text grid size-10 place-items-center rounded-[var(--radius-control)]">
-                <Icon aria-hidden className="size-5" />
-              </div>
-              <h3 className="website-feature-heading text-foreground mt-5">{title}</h3>
-              <p className="website-body text-muted mt-3">{tagline}</p>
-              <ul className="border-border-subtle mt-6 space-y-3 border-t pt-6">
-                {highlights.map((item) => (
-                  <li key={item} className="text-foreground flex gap-3 text-sm">
-                    <Check aria-hidden className="text-success-text mt-0.5 size-4 shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          </StaggerItem>
-        ))}
-      </StaggerGroup>
-
-      <section aria-label="Platform data flow" className="mt-12">
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <p className="website-body text-muted font-medium">How a request travels</p>
-          <span className="text-subtle text-xs">Managed cloud · same-origin boundary</span>
-        </div>
-        <Reveal className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border">
-          <ol className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            {DATA_FLOW_STEPS.map((step, index) => (
-              <li
-                key={step.title}
-                className={cn(
-                  'relative flex flex-col gap-2 p-5',
-                  index < DATA_FLOW_STEPS.length - 1 &&
-                    'border-border-subtle max-xl:border-b xl:border-r',
-                )}
-              >
-                <span className="text-accent-text text-xs font-medium tabular-nums">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <p className="website-body text-foreground font-medium">{step.title}</p>
-                <p className="website-label text-muted">{step.detail}</p>
+    <Section rhythm="tight" className="pt-0" aria-label="Evidence trail">
+      <div className="mk-dive">
+        <div className="mk-dive-copy">
+          <h2 className="website-page-title mk-dive-title">
+            Every number traces to a stored answer.
+          </h2>
+          <p className="website-body-lg text-muted">
+            Security, analytics and growth teams read the same evidence: the prompt, the engine, the
+            answer and the sources it cited.
+          </p>
+          <ul className="mk-checks">
+            {EVIDENCE_POINTS.map((point) => (
+              <li key={point}>
+                <Check aria-hidden className="size-4" />
+                {point}
               </li>
             ))}
-          </ol>
-        </Reveal>
-      </section>
+          </ul>
+        </div>
+        <ProductShot title="Answer evidence">
+          <AnswerView />
+        </ProductShot>
+      </div>
+    </Section>
+  );
+}
+
+export function EnterpriseGovernance() {
+  return (
+    <Section id="security" tone="soft" aria-label="Security and governance">
+      <div className="mk-split">
+        <SectionHeader
+          title="Every boundary has one owner."
+          lead="Credentials, evidence and execution are each handled in one place, so a reviewer can check them one at a time."
+          headingId="enterprise-governance-title"
+        />
+        <div className="cm-groups">
+          {GOVERNANCE.map((group) => (
+            <div key={group.title} className="cm-group">
+              <h3 className="website-small-heading text-foreground">{group.title}</h3>
+              <ul className="cm-list">
+                {group.points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+export function EnterpriseDataFlow() {
+  return (
+    <Section aria-label="How a request travels">
+      <SectionHeader
+        title="How a request travels."
+        lead="Managed cloud, one same-origin boundary. Provider keys are resolved only when a worker calls an engine."
+        headingId="enterprise-flow-title"
+      />
+      <ol className="cm-flow">
+        {DATA_FLOW.map((step, index) => (
+          <li key={step.title}>
+            <span className="cm-flow-step">{index + 1}</span>
+            <h3 className="website-small-heading text-foreground">{step.title}</h3>
+            <p className="website-label text-muted">{step.detail}</p>
+          </li>
+        ))}
+      </ol>
     </Section>
   );
 }
 
 export function EnterpriseFit() {
   return (
-    <Section id="fit" tone="sunken" rhythm="base" aria-label="Who Enterprise is for">
+    <Section id="fit" tone="soft" aria-label="Who Enterprise is for">
       <SectionHeader
-        eyebrow="Designed for review"
-        title="A clear fit for high-trust teams."
-        lead="Enterprise is the right conversation when your measurement program needs more operating context than a self-serve plan provides."
+        title="Built for high-trust teams."
+        lead="Enterprise is the right conversation when your program needs more operating context than a self-serve plan provides."
         headingId="enterprise-fit-title"
       />
-
-      <StaggerGroup className="grid gap-5 md:grid-cols-3">
-        {ENTERPRISE_FIT.map(({ icon: Icon, title, description }) => (
-          <StaggerItem key={title} className="h-full">
-            <article className="bg-panel border-border-subtle flex h-full flex-col rounded-[var(--radius-card)] border p-6 md:p-7">
-              <Icon aria-hidden className="text-accent-text size-6" />
-              <h3 className="website-feature-heading text-foreground mt-6">{title}</h3>
-              <p className="website-body text-muted mt-3">{description}</p>
-            </article>
-          </StaggerItem>
+      <ul className="mk-highlights">
+        {FIT.map((item) => (
+          <li key={item.title}>
+            <h3 className="website-feature-heading">{item.title}</h3>
+            <p className="website-body text-muted">{item.body}</p>
+          </li>
         ))}
-      </StaggerGroup>
+      </ul>
     </Section>
   );
 }
 
 export function EnterpriseLimits() {
   return (
-    <Section id="limits" tone="paper" rhythm="base" aria-label="Custom limits">
-      <SectionHeader
-        eyebrow="Sizing"
-        title="Scope the agreement around the work."
-        lead="Enterprise sizing follows your measurement program: its volume, coverage, teams, history, provider setup, and support model."
-        headingId="enterprise-limits-title"
-      />
-
-      <Reveal className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border">
-        <div className="border-border-subtle bg-accent-soft flex flex-col justify-between gap-4 border-b px-6 py-5 md:flex-row md:items-center md:px-8">
-          <div>
-            <h3 className="website-section-heading text-foreground">Enterprise agreement</h3>
-            <p className="website-body text-muted mt-1">Six inputs. One operating plan.</p>
-          </div>
-          <span className="border-accent-border bg-panel text-accent-text shrink-0 rounded-[var(--radius-control)] border px-4 py-2 text-xs font-medium tracking-wide uppercase">
-            Quoted to fit
-          </span>
-        </div>
-
-        <StaggerGroup className="bg-background-alt grid gap-px md:grid-cols-2 xl:grid-cols-3">
-          {CUSTOM_LIMITS.map((item) => (
-            <StaggerItem
-              key={item.title}
-              className="bg-panel hover:bg-accent-soft p-6 transition-colors duration-200 md:p-7"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-                <h4 className="website-small-heading text-foreground">{item.title}</h4>
-                <span className="bg-well text-secondary shrink-0 rounded-[var(--radius-control)] px-2.5 py-1 text-xs font-medium">
-                  {item.badge}
-                </span>
-              </div>
-              <p className="website-label text-accent-text mt-3 font-medium">{item.unit}</p>
-              <p className="website-body text-muted mt-2">{item.desc}</p>
-            </StaggerItem>
+    <Section id="limits" aria-label="Custom limits">
+      <div className="mk-split">
+        <SectionHeader
+          title="Scope the agreement around the work."
+          lead="Six inputs set an Enterprise agreement. Each is quoted to fit your program."
+          headingId="enterprise-limits-title"
+        />
+        <dl className="cm-spec">
+          {AGREEMENT.map((item) => (
+            <div key={item.title}>
+              <dt>
+                <span className="cm-spec-title">{item.title}</span>
+                <span className="cm-spec-unit">{item.unit}</span>
+              </dt>
+              <dd className="website-body text-muted">{item.desc}</dd>
+            </div>
           ))}
-        </StaggerGroup>
-      </Reveal>
-
-      <div className="bg-panel border-border-subtle mt-8 flex flex-col items-start justify-between gap-6 rounded-[var(--radius-card)] border p-6 md:flex-row md:items-center md:p-8">
-        <div>
-          <p className="website-section-heading text-foreground">Audit trail included</p>
-          <p className="website-body text-muted mt-2 max-w-[60ch]">
-            Your proposal can start with the evidence boundary: deterministic rules, immutable
-            artifacts, and provenance on each derived metric.
-          </p>
-        </div>
-        <DemoButtonLink className="shrink-0">
-          Request custom quote
-          <ArrowRight aria-hidden />
-        </DemoButtonLink>
+        </dl>
       </div>
     </Section>
   );
@@ -301,32 +244,20 @@ export function EnterpriseLimits() {
 
 export function EnterpriseContactCta() {
   return (
-    <Section
-      id="contact"
-      tone="paper"
-      rhythm="base"
-      className="marketing-closing-band"
-      aria-label="Contact sales"
-    >
-      <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-4 max-w-[28ch]">
-          Give your AI visibility program a reviewable operating model.
-        </h2>
-        <p className="website-lead text-muted mx-auto max-w-[56ch]">
-          Tell us about your volumes, constraints, provider setup, and review process. We will map
-          the conversation to the evidence your team needs.
-        </p>
-        <div className="mt-8 flex items-stretch justify-center gap-3 sm:items-center sm:gap-4">
-          <DemoButtonLink className="min-w-0 flex-1 sm:flex-none">
-            Book a demo
-            <ArrowRight aria-hidden />
-          </DemoButtonLink>
-          <ButtonLink href="/faq" variant="ghost" className="min-w-0 flex-1 sm:flex-none">
+    <Section id="contact" className="marketing-closing-band" aria-label="Contact sales">
+      <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
+        <SectionHeader
+          title="Bring your volumes and your review process."
+          lead="Tell us about your constraints and provider setup. We will map the conversation to the evidence your team needs."
+          align="center"
+        />
+        <div className="flex flex-wrap justify-center gap-3">
+          <DemoButtonLink size="marketing">Book a demo</DemoButtonLink>
+          <ButtonLink href="/faq" variant="soft" size="marketing">
             Read the FAQ
           </ButtonLink>
         </div>
-        <TrustStrip className="mt-8 justify-center" />
-      </Reveal>
+      </div>
     </Section>
   );
 }

@@ -1,0 +1,512 @@
+/* Page styles owned by the editorial-pages group; see MarketingLayout.astro.
+   Solutions, comparisons, the share-of-voice guide, company references and
+   legal documents. Prefix: `ed-`. Tokens only. */
+
+/* ── Solutions: in-page team index ─────────────────────────────────────── */
+
+.ed-jump {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-self: stretch;
+  gap: 0.25rem 1.75rem;
+  margin-top: 2.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.ed-jump a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.375rem;
+  color: var(--color-secondary);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.ed-jump a svg {
+  color: var(--color-muted);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.ed-jump a:hover,
+.ed-jump a:hover svg {
+  color: var(--color-foreground);
+}
+
+.ed-segment-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.75rem;
+  padding-top: 0.25rem;
+}
+
+/* ── Reading layout: contents rail + measured column ───────────────────── */
+
+.ed-doc {
+  display: grid;
+  gap: 2.5rem;
+  width: 100%;
+}
+
+@media (min-width: 64rem) {
+  .ed-doc {
+    grid-template-columns: 13.5rem minmax(0, 1fr);
+    gap: 4.5rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  .ed-doc.ed-doc-single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ed-rail {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .ed-rail {
+    position: sticky;
+    top: calc(var(--marketing-nav-offset, 5rem) + 1.5rem);
+    display: block;
+    align-self: start;
+    max-height: calc(100vh - var(--marketing-nav-offset, 5rem) - 3rem);
+    overflow-y: auto;
+  }
+}
+
+.ed-rail-title {
+  margin-bottom: 0.75rem;
+  color: var(--color-foreground);
+}
+
+.ed-rail ol {
+  display: grid;
+  border-left: 1px solid var(--color-border-subtle);
+}
+
+.ed-rail a {
+  display: block;
+  margin-left: -1px;
+  padding: 0.3125rem 0 0.3125rem 0.875rem;
+  border-left: 1px solid transparent;
+  color: var(--color-muted);
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.ed-rail a:hover {
+  border-color: var(--color-foreground);
+  color: var(--color-foreground);
+}
+
+/* The article column holds a ~68ch measure; wide figures may use the track. */
+.ed-prose {
+  min-width: 0;
+  max-width: 68ch;
+}
+
+.ed-prose-section {
+  scroll-margin-top: calc(var(--marketing-nav-offset, 5rem) + 1.5rem);
+  padding-block: 2.5rem;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.ed-prose-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.ed-prose-section > * + * {
+  margin-top: 1rem;
+}
+
+.ed-prose-section > h2 + * {
+  margin-top: 1.25rem;
+}
+
+/* Document section heading: a step above body copy for dense policies and
+   references, where the full section rung would shout on every section. */
+.ed-h2.website-feature-heading {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  letter-spacing: -0.012em;
+}
+
+.ed-prose-section > .ed-subsection {
+  margin-top: 1.75rem;
+}
+
+.ed-prose ul.ed-bullets {
+  display: grid;
+  gap: 0.625rem;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.ed-prose ul.ed-bullets li::marker {
+  color: var(--color-muted);
+}
+
+/* Short reference notes: a quiet tinted block, no accent border. */
+.ed-note {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-marketing-control);
+  background: var(--color-background-alt);
+}
+
+/* Document header meta line under the lead. */
+.ed-doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.ed-doc-meta a[aria-current='page'] {
+  color: var(--color-foreground);
+}
+
+.ed-doc-meta a {
+  color: var(--color-muted);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.ed-doc-meta a:hover {
+  color: var(--color-foreground);
+}
+
+.ed-doc-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* ── Quiet tables ──────────────────────────────────────────────────────── */
+
+.ed-table-wrap {
+  overflow-x: auto;
+}
+
+.ed-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.ed-table th,
+.ed-table td {
+  padding: 0.75rem 1rem 0.75rem 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: top;
+}
+
+.ed-table th:last-child,
+.ed-table td:last-child {
+  padding-right: 0;
+}
+
+.ed-table thead th {
+  padding-block: 0.5rem;
+  border-bottom-color: var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  font-weight: 500;
+}
+
+.ed-table tbody th {
+  color: var(--color-foreground);
+  font-weight: 500;
+}
+
+.ed-table td {
+  color: var(--color-secondary);
+}
+
+.ed-num {
+  text-align: right;
+}
+
+/* ── Worked example (share-of-voice guide) ─────────────────────────────── */
+
+.ed-example {
+  margin-top: 1.5rem;
+  border-radius: 14px;
+  background: var(--color-panel);
+  box-shadow: var(--public-raised-shadow);
+}
+
+.ed-example-body {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.25rem;
+}
+
+@media (min-width: 40rem) {
+  .ed-example-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2rem;
+    padding: 1.5rem;
+  }
+}
+
+.ed-example-results {
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+}
+
+.ed-example-results dd {
+  margin-top: 0.25rem;
+}
+
+.ed-example figcaption {
+  padding: 0.875rem 1.25rem;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* ── Ordered steps (real sequence) ─────────────────────────────────────── */
+
+.ed-steps {
+  display: grid;
+  counter-reset: ed-step;
+}
+
+.ed-steps li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.25rem 0.5rem;
+  padding-block: 1.25rem;
+  border-top: 1px solid var(--color-border-subtle);
+  counter-increment: ed-step;
+}
+
+.ed-steps li::before {
+  content: counter(ed-step);
+  grid-row: span 2;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Link ledgers (compare index, related reading) ─────────────────────── */
+
+.ed-ledger {
+  border-top: 1px solid var(--color-border);
+}
+
+.ed-ledger li {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.ed-ledger a {
+  display: grid;
+  gap: 0.25rem 2rem;
+  align-items: baseline;
+  padding: 1.25rem 0.75rem;
+  margin-inline: -0.75rem;
+  border-radius: var(--radius-marketing-control);
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+@media (min-width: 48rem) {
+  .ed-ledger a {
+    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) auto;
+  }
+}
+
+.ed-ledger a:hover {
+  background: var(--color-background-alt);
+}
+
+.ed-ledger svg {
+  display: none;
+  align-self: center;
+  color: var(--color-muted);
+  transition:
+    transform var(--motion-normal) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+@media (min-width: 48rem) {
+  .ed-ledger svg {
+    display: block;
+  }
+}
+
+.ed-ledger a:hover svg {
+  color: var(--color-accent-text);
+  transform: translateX(2px);
+}
+
+@media (min-width: 64rem) {
+  .mk-related.ed-guides {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Compact single-column ledger for link lists inside a reading column. */
+.ed-links {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.ed-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.875rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-foreground);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.ed-links a svg {
+  flex: none;
+  color: var(--color-muted);
+  transition: transform var(--motion-normal) var(--ease-standard);
+}
+
+.ed-links a:hover {
+  color: var(--color-accent-text);
+}
+
+.ed-links a:hover svg {
+  transform: translateX(2px);
+}
+
+/* ── Comparison table ──────────────────────────────────────────────────── */
+
+@media (min-width: 48rem) {
+  .ed-compare col.ed-compare-label {
+    width: 11rem;
+  }
+}
+
+.ed-compare thead th {
+  color: var(--color-foreground);
+  font-size: 0.9375rem;
+  line-height: 1.375rem;
+  font-weight: 600;
+}
+
+.ed-compare th,
+.ed-compare td {
+  padding-block: 1.125rem;
+}
+
+.ed-compare tbody th {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+  font-weight: 500;
+}
+
+@media (max-width: 47.99rem) {
+  .ed-compare,
+  .ed-compare tbody,
+  .ed-compare tr,
+  .ed-compare td,
+  .ed-compare tbody th {
+    display: block;
+  }
+
+  .ed-compare thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .ed-compare colgroup {
+    display: none;
+  }
+
+  .ed-compare tr {
+    padding-block: 1rem;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .ed-compare tbody th,
+  .ed-compare td {
+    padding: 0;
+    border: 0;
+  }
+
+  .ed-compare td {
+    margin-top: 0.625rem;
+  }
+
+  .ed-compare td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--color-foreground);
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+  }
+}
+
+/* ── Reference documents ───────────────────────────────────────────────── */
+
+.ed-facts {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.ed-facts > div {
+  display: grid;
+  gap: 0.125rem 1.5rem;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+@media (min-width: 40rem) {
+  .ed-facts > div {
+    grid-template-columns: 10rem minmax(0, 1fr);
+  }
+}
+
+.ed-facts dd {
+  overflow-wrap: anywhere;
+}
+
+.ed-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.375rem 1.25rem;
+}
+
+.ed-kind {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--radius-marketing-control);
+  background: var(--color-background-alt);
+}
+
+/* Inline document link: underline stays visible inside running text. */
+.ed-link {
+  color: var(--color-accent-text);
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-border-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--motion-fast) var(--ease-standard);
+}
+
+.ed-link:hover {
+  text-decoration-color: currentColor;
+}

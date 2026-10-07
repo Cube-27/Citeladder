@@ -90,10 +90,11 @@ export function ToolForm({
     }
   }
   return (
-    <div className="grid min-w-0 items-start gap-8 lg:grid-cols-2">
-      <form onSubmit={submit} className="flex min-w-0 flex-col gap-5">
+    <div className="cp-tool">
+      <form onSubmit={submit} className="cp-tool-pane">
+        <h2 className="website-small-heading cp-tool-head">Your input</h2>
         {children}
-        <div className="flex flex-wrap gap-3">
+        <div className="cp-tool-actions">
           <Button type="submit">{action}</Button>
           <Button
             type="button"
@@ -113,12 +114,11 @@ export function ToolForm({
           </p>
         )}
       </form>
-      <section
-        aria-label="Tool output"
-        className="bg-canvas-soft border-border-subtle flex min-w-0 flex-col gap-5 rounded-[var(--radius-card)] border p-5 md:p-7"
-      >
-        <h2 className="website-feature-heading">Your result</h2>
-        <output className="website-body text-muted">{status}</output>
+      <section aria-label="Tool output" className="cp-tool-pane cp-tool-result">
+        <div className="cp-tool-head">
+          <h2 className="website-small-heading">Your result</h2>
+          <output className="website-label">{status}</output>
+        </div>
         {preview}
         {current && (
           <>
@@ -129,7 +129,7 @@ export function ToolForm({
               value={current}
               aria-label="Generated output"
             />
-            <div className="flex flex-wrap gap-3">
+            <div className="cp-tool-actions">
               <CopyButton value={current}>Copy result</CopyButton>
               <Button type="button" variant="secondary" onClick={() => download(current, filename)}>
                 Download

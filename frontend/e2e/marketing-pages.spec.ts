@@ -104,7 +104,7 @@ test.describe('marketing routes', () => {
     expect(schemas).toHaveLength(0);
   });
 
-  test('product previews reserve their scaled height before hydration', async ({
+  test('product frames keep their size and position through hydration', async ({
     browser,
     baseURL,
   }) => {
@@ -125,9 +125,7 @@ test.describe('marketing routes', () => {
           await route.continue();
         });
         await page.goto(path, { waitUntil: 'commit' });
-        const frames = page.locator(
-          path === '/' ? '.cl-hero-scaled-preview' : '.cl-solution-preview',
-        );
+        const frames = page.locator('main .product-frame');
         await expect(frames.first()).toBeVisible();
         await page.waitForFunction(() =>
           [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].every(
@@ -155,7 +153,7 @@ test.describe('marketing routes', () => {
         releaseScripts();
         await page.waitForLoadState('networkidle');
         if (path === '/')
-          await expect(page.getByRole('tab', { name: 'Trends', exact: true })).toBeVisible();
+          await expect(page.getByRole('tab', { name: 'Visibility', exact: true })).toBeVisible();
         const after = await boxes();
         for (let index = 0; index < before.length; index += 1) {
           expect(before[index]!.height).toBeGreaterThan(0);
@@ -206,7 +204,7 @@ test.describe('marketing routes', () => {
         ),
       );
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        "Let's talk about CiteLadder",
+        'Talk to the CiteLadder team.',
       );
       await expect(page).toHaveTitle('Contact CiteLadder');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -454,7 +452,7 @@ test.describe('marketing routes', () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );
-      const strip = page.locator('.cl-module-tabs');
+      const strip = page.getByRole('tablist', { name: 'Product tour' });
       await strip.scrollIntoViewIfNeeded();
       const last = strip.getByRole('tab').last();
       await last.focus();
@@ -499,112 +497,22 @@ test.describe('marketing routes', () => {
     await expect(roster.getByText('DataForSEO')).toHaveCount(0);
   });
 
-  test('Sources URLs keep the preview width stable at desktop and phone widths', async ({
-    page,
-  }) => {
-    for (const width of [1280, 760, 375]) {
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto('/');
-      await page.waitForFunction(() =>
-        [...document.querySelectorAll('astro-island')].some(
-          (island) =>
-            island.getAttribute('component-url')?.includes('landing-page') &&
-            !island.hasAttribute('ssr'),
-        ),
-      );
-      const panel = page.getByRole('tabpanel', { name: /sources/i }).last();
-      const card = panel.locator('.cl-product-card');
-      if (width < 640) {
-        await expect
-          .poll(() =>
-            panel
-              .locator('.cl-product-preview > div')
-              .evaluate(
-                (element) =>
-                  element.getBoundingClientRect().width / (element as HTMLElement).offsetWidth,
-              ),
-          )
-          .toBeLessThan(1);
-      }
-      await expect(card).toBeVisible();
-      const before = await card.boundingBox();
-      await panel.getByRole('button', { name: 'URLs' }).click();
-      await expect(panel.getByText('zernovelle.example/platform')).toBeVisible();
-      const after = await card.boundingBox();
-      expect(
-        Math.abs((after?.width ?? 0) - (before?.width ?? 0)),
-        `${width}px width`,
-      ).toBeLessThanOrEqual(1);
-      expect(
-        Math.abs((after?.x ?? 0) - (before?.x ?? 0)),
-        `${width}px position`,
-      ).toBeLessThanOrEqual(1);
-      const cardOverflow = await card.evaluate(
-        (element) => element.scrollWidth - element.clientWidth,
-      );
-      expect(cardOverflow, `${width}px card overflow`).toBeLessThanOrEqual(1);
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      );
-      expect(overflow, `${width}px page overflow`).toBeLessThanOrEqual(1);
-    }
-  });
-
-  test('phone scaling stays inside the three product illustration surfaces', async ({ page }) => {
+  test('product frames fit the viewport on the landing and Solutions pages', async ({ page }) => {
     for (const width of [375, 760, 1280]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto('/');
-      await page.waitForFunction(() =>
-        [...document.querySelectorAll('astro-island')].some(
-          (island) =>
-            island.getAttribute('component-url')?.includes('landing-page') &&
-            !island.hasAttribute('ssr'),
-        ),
-      );
-      const hero = page.locator('.cl-hero-scaled-preview > div');
-      const product = page
-        .getByRole('tabpanel', { name: /sources/i })
-        .last()
-        .locator('.cl-product-preview > div');
-      await expect(hero).toBeVisible();
-      await expect(product).toBeVisible();
-      if (width === 375) {
-        for (const image of [hero, product]) {
-          await expect
-            .poll(() =>
-              image.evaluate(
-                (element) =>
-                  element.getBoundingClientRect().width / (element as HTMLElement).offsetWidth,
-              ),
-            )
-            .toBeLessThan(1);
-        }
+      for (const path of ['/', '/solutions']) {
+        await page.goto(path);
+        const frames = page.locator('main .product-frame');
+        await expect(frames.first()).toBeVisible();
+        const widest = await frames.evaluateAll((elements) =>
+          Math.max(...elements.map((element) => element.getBoundingClientRect().right)),
+        );
+        expect(widest, `${path} at ${width}px: frame edge`).toBeLessThanOrEqual(width + 1);
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        );
+        expect(overflow, `${path} at ${width}px overflow`).toBeLessThanOrEqual(1);
       }
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      );
-      expect(overflow, `${width}px landing overflow`).toBeLessThanOrEqual(1);
-      expect(
-        await page.locator('.cl-record').evaluate((element) => getComputedStyle(element).transform),
-      ).toBe('none');
-
-      await page.goto('/solutions');
-      const solution = page.locator('.cl-solution-preview > div').first();
-      await expect(solution).toBeVisible();
-      if (width === 375) {
-        await expect
-          .poll(() =>
-            solution.evaluate(
-              (element) =>
-                element.getBoundingClientRect().width / (element as HTMLElement).offsetWidth,
-            ),
-          )
-          .toBeLessThan(1);
-      }
-      const solutionOverflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      );
-      expect(solutionOverflow, `${width}px Solutions overflow`).toBeLessThanOrEqual(1);
     }
   });
 
@@ -632,10 +540,9 @@ test.describe('marketing routes', () => {
 
   test('shared navigation and footer work from a subpage', async ({ page }) => {
     await page.goto('/faq');
-    const resources = page
-      .getByRole('navigation', { name: 'Main navigation' })
-      .getByRole('link', { name: 'Resources', exact: true });
-    await expect(resources).toHaveAttribute('href', '/blog');
+    const nav = page.getByRole('navigation', { name: 'Main navigation' });
+    await nav.getByRole('button', { name: 'Resources', exact: true }).click();
+    await expect(nav.getByRole('link', { name: /Blog & guides/ })).toHaveAttribute('href', '/blog');
 
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toBeVisible();

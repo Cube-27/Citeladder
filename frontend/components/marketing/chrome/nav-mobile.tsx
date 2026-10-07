@@ -11,7 +11,7 @@ import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { cn } from '@/lib/utils';
 
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { ButtonLink } from '../primitives/button';
 import { NavItemLink, NavigationPath } from './nav-items';
 
 type MobileNavigationProps = {
@@ -30,82 +30,79 @@ export function MobileNavigation({
 }: Readonly<MobileNavigationProps>) {
   const path = useContext(NavigationPath);
   return (
-    // A sheet, not a dropdown card: it fills the viewport below the bar, the
-    // destinations step up (they are the content), the labels step down, and
-    // the account links pin to the bottom.
+    // A sheet, not a dropdown card: it fills the viewport below the bar and
+    // pins the two account actions to its foot.
     <div
       id="mobile-menu"
-      className="safe-bottom bg-background flex max-h-[calc(100dvh-var(--marketing-nav-offset))] min-h-[calc(100dvh-var(--marketing-nav-offset))] flex-col overflow-y-auto overscroll-contain px-6 py-3 xl:hidden"
+      className="safe-bottom bg-panel flex max-h-[calc(100dvh-var(--marketing-nav-offset))] min-h-[calc(100dvh-var(--marketing-nav-offset))] flex-col overflow-y-auto overscroll-contain px-[var(--site-gutter)] pt-2 pb-4 lg:hidden"
     >
-      {NAV_DROPS.map(({ key, label, href, groups }) => (
-        <div key={key} className="border-border-subtle border-b last:border-b-0">
-          <div className="flex items-center">
-            <a
-              href={href}
-              aria-current={path === href ? 'page' : undefined}
-              className="text-foreground flex-1 py-3.5 text-lg font-medium tracking-[-0.02em]"
-              onClick={closeMenu}
-            >
-              {label}
-            </a>
+      <div className="grid">
+        {NAV_DROPS.map(({ key, label, groups }) => (
+          <div key={key} className="border-border-subtle border-b">
             <button
               type="button"
-              className="text-foreground grid size-10 place-items-center"
-              aria-label={`Open ${label} menu`}
+              className="mobile-nav-trigger"
               aria-expanded={openAcc === key}
               aria-controls={`acc-${key}`}
               onClick={() => setOpenAcc((current) => (current === key ? null : key))}
             >
+              {label}
               <ChevronDown
                 aria-hidden
                 className={cn(
-                  'size-4 transition-transform duration-300',
+                  'text-muted size-4 transition-transform duration-200',
                   openAcc === key && 'rotate-180',
                 )}
               />
             </button>
+            <div id={`acc-${key}`} hidden={openAcc !== key} className="-mx-3 pb-3">
+              {key === 'platform' && (
+                <NavItemLink item={PLATFORM_OVERVIEW} onSelect={closeMenu} compact />
+              )}
+              {groups.map((group) => (
+                <Fragment key={group.label ?? 'items'}>
+                  {group.label && <p className="nav-group-label">{group.label}</p>}
+                  {group.items.map((item) => (
+                    <NavItemLink key={item.title} item={item} onSelect={closeMenu} compact />
+                  ))}
+                </Fragment>
+              ))}
+            </div>
           </div>
-          <div id={`acc-${key}`} hidden={openAcc !== key} className="pb-2">
-            {key === 'platform' && <NavItemLink item={PLATFORM_OVERVIEW} onSelect={closeMenu} />}
-            {groups.map((group) => (
-              <Fragment key={group.label ?? 'items'}>
-                {group.label && (
-                  <p className="website-eyebrow text-muted px-4 pt-4 pb-2">{group.label}</p>
-                )}
-                {group.items.map((item) => (
-                  <NavItemLink key={item.title} item={item} onSelect={closeMenu} />
-                ))}
-              </Fragment>
-            ))}
-          </div>
-        </div>
-      ))}
-
-      <div className="border-border-subtle mt-auto grid border-t pt-2">
+        ))}
         {NAV_LINKS.map(({ label, href }) => (
           <a
             key={href}
             href={href}
             aria-current={path === href ? 'page' : undefined}
-            className="text-foreground py-3.5 text-lg font-medium tracking-[-0.02em]"
+            className="mobile-nav-trigger border-border-subtle border-b"
             onClick={closeMenu}
           >
             {label}
           </a>
         ))}
-        <a
+      </div>
+
+      <div className="mt-auto grid gap-2 pt-6">
+        <ButtonLink
           href={appHref('/login')}
-          className="text-muted py-3.5 text-lg font-medium"
+          variant="soft"
+          size="marketing"
+          className="w-full"
           onClick={closeMenu}
         >
           Log in
-        </a>
+        </ButtonLink>
         {selfServeSignupOpen() ? (
-          <ButtonLink href={appHref('/register')} className="w-full" onClick={closeMenu}>
-            Start free trial
+          <ButtonLink
+            href={appHref('/register')}
+            size="marketing"
+            className="w-full"
+            onClick={closeMenu}
+          >
+            Sign up
           </ButtonLink>
         ) : null}
-        <DemoButtonLink variant="soft" onClick={closeMenu} className="mt-3" />
       </div>
     </div>
   );

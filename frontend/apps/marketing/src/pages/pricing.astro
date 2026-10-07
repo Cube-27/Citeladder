@@ -1,8 +1,8 @@
 ---
-import { PricingCta } from '@/components/marketing/pages/pricing';
+import { PricingCta, PricingFaq } from '@/components/marketing/pages/pricing';
 import { PublicPricingCatalog } from '@/components/marketing/pricing/public-pricing-catalog';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
-import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
+import { Section, SectionHeader } from '@/components/marketing/primitives/section';
 import { selfServeCheckoutComingSoon } from '@/lib/billing/catalog';
 import { displayCountry, publicCatalog } from '../public-catalog';
 import { workerApexEnv } from '../worker-env';
@@ -10,9 +10,9 @@ import MarketingLayout from '../layouts/MarketingLayout.astro';
 
 const env = workerApexEnv();
 const catalog = await publicCatalog(env, displayCountry(Astro.request.headers));
-const checkoutComingSoon = catalog !== null && selfServeCheckoutComingSoon(catalog);
-const description = checkoutComingSoon
-  ? 'CiteLadder paid plans are coming soon. Explore AI visibility with a free trial.'
+const checkoutClosed = catalog !== null && selfServeCheckoutComingSoon(catalog);
+const description = checkoutClosed
+  ? 'CiteLadder plans, trial limits and access options for AI visibility tracking. Paid self-serve checkout is not currently open.'
   : 'Explore CiteLadder plans, provider-key usage and early-access options. Review published limits and confirm availability before choosing a plan.';
 const initialByok = Astro.url.searchParams.get('byok') !== '0';
 Astro.response.headers.set('Cache-Control', 'no-store');
@@ -25,22 +25,23 @@ Astro.response.headers.set('Cache-Control', 'no-store');
 >
   <main id="main" class="w-full max-w-full min-w-0 overflow-x-clip">
     <PageHero
-      eyebrow="Pricing"
-      title="Pay for the intelligence."
-      accent="Not the API markup."
-      lead="Model calls run on your own provider keys. Usage bills straight to your accounts at provider rates. CiteLadder charges for the workspace, the intelligence, and the evidence behind every recommendation."
+      title="Pay for the intelligence, not the API markup."
+      lead="When you use your own provider keys, model calls bill to your provider accounts at provider rates. CiteLadder charges for the workspace, the analysis and the evidence behind every recommendation."
       centered
-    >
-      <TrustStrip className="mt-8 justify-center" />
-    </PageHero>
+    />
     {catalog ? (
       <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} client:load />
     ) : (
-      <section aria-label="Plans" class="mx-auto max-w-5xl p-8">
-        <h2 class="website-section-heading">Plans are temporarily unavailable.</h2>
-        <p class="website-body text-muted">Please try again shortly. No price is shown while the public catalog is unavailable.</p>
-      </section>
+      <Section rhythm="tight" className="pt-0" aria-label="Plans">
+        <SectionHeader
+          title="Plans are temporarily unavailable."
+          lead="Please try again shortly. No price is shown while the public catalog is unavailable."
+          size="h3"
+          align="center"
+        />
+      </Section>
     )}
-    {catalog && !checkoutComingSoon && <PricingCta />}
+    <PricingFaq />
+    <PricingCta />
   </main>
 </MarketingLayout>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import type {
   BillingCatalog,
@@ -18,16 +18,20 @@ import {
 import { publicPricingSelectionHref } from '@/lib/billing/public-pricing-selection';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
 import { contactSalesHref } from '@/lib/config/contact';
+import { formatCount } from '@/lib/format';
 import {
   BYOK_DISCLOSURE,
   BYOK_SWITCH_LABEL,
   PLAN_PRESENTATION,
+  capabilityLabel,
   type PlanKey,
 } from '@/lib/marketing-content/pricing';
+import { cn } from '@/lib/utils';
 
+import { ButtonLink } from '../primitives/button';
 import { Section, SectionHeader } from '../primitives/section';
 import { PricingComparison } from './pricing-comparison';
-import { PricingComingSoonStrip } from './pricing-coming-soon-strip';
+import { PricingTrial } from './pricing-trial';
 
 /**
  * INR prices are published exclusive of GST, which the server quote adds for
@@ -42,28 +46,63 @@ function priceLabel(price: HeadlinePrice, minorUnits: number): string {
   return price.kind === 'contact' ? 'Contact sales' : 'Not yet priced';
 }
 
-function PlanAction({ plan, href }: Readonly<{ plan: CatalogPlan; href: string | null }>) {
+/**
+ * The headline limits a plan card lists, in reading order. Values come from
+ * the plan's published capabilities; a capability the plan does not publish
+ * (or publishes as off) is simply not listed — the comparison table below
+ * carries the full grid.
+ */
+const CARD_CAPABILITIES = [
+  'project_slots',
+  'prompt_slots',
+  'monitored_urls',
+  'manual_runs_per_day',
+  'agent',
+  'ai_credits',
+] as const;
+
+type CardFact = { key: string; label: string; value: string | null };
+
+function cardFacts(plan: CatalogPlan): CardFact[] {
+  return CARD_CAPABILITIES.flatMap((key): CardFact[] => {
+    const value = plan.capabilities.find((capability) => capability.key === key)?.value;
+    if (value === undefined || value === null || value === false) return [];
+    const label = capabilityLabel(key);
+    if (value === true) return [{ key, label, value: null }];
+    return [{ key, label, value: typeof value === 'number' ? formatCount(value) : value }];
+  });
+}
+
+function PlanAction({
+  plan,
+  href,
+  highlighted,
+}: Readonly<{ plan: CatalogPlan; href: string | null; highlighted: boolean }>) {
   if (href) {
     return (
-      <a
-        className="bg-accent text-accent-fg mt-auto rounded-[var(--radius-control)] px-5 py-3 text-center font-medium"
+      <ButtonLink
         href={href}
+        variant={highlighted ? 'primary' : 'soft'}
+        size="marketing"
+        className="w-full"
       >
         Choose {plan.name}
-      </a>
+      </ButtonLink>
     );
   }
   if (plan.contact_only) {
     return (
-      <a
-        className="border-border-subtle mt-auto rounded-[var(--radius-control)] border px-5 py-3 text-center font-medium"
+      <ButtonLink
         href={contactSalesHref(plan.contact_url, CONTACT_SALES_HREF)}
+        variant="soft"
+        size="marketing"
+        className="w-full"
       >
         Contact sales
-      </a>
+      </ButtonLink>
     );
   }
-  return <p className="website-body text-muted mt-auto">Checkout unavailable</p>;
+  return <p className="website-body text-muted">Checkout unavailable</p>;
 }
 
 function PlanCard({
@@ -80,28 +119,48 @@ function PlanCard({
   const price = headlinePrice(plan, mode);
   const choice = checkoutSelection(plan, mode);
   const presentation = PLAN_PRESENTATION[plan.key as PlanKey];
+  const highlighted = presentation?.highlighted === true;
   const href = choice.ok
     ? publicPricingSelectionHref(
         { kind: 'checkout', catalog_key: choice.catalog_key, quantity: 1, byok: mode === 'byok' },
         appOrigin,
       )
     : null;
+  const facts = cardFacts(plan);
   return (
-    <article className="border-border bg-panel flex flex-col rounded-[var(--radius-card)] border p-6">
-      <h3 className="website-feature-heading text-foreground">{plan.name}</h3>
-      <p className="website-body text-muted mt-3">{presentation?.blurb ?? plan.description}</p>
-      <p className="website-data-display text-foreground mt-6">
-        {priceLabel(price, catalog.currency_minor_units)}
-      </p>
-      {price.kind === 'price' && (
-        <p className="website-label text-muted">per month · {taxNote(catalog.currency)}</p>
+    <article className={cn('cm-plan', highlighted && 'cm-plan-highlighted')}>
+      <div className="cm-plan-head">
+        <h3 className="website-feature-heading text-foreground">{plan.name}</h3>
+        <p className="website-body text-muted">{presentation?.blurb ?? plan.description}</p>
+      </div>
+      <div className="cm-plan-price">
+        <p className="website-data-display text-foreground">
+          {priceLabel(price, catalog.currency_minor_units)}
+        </p>
+        {price.kind === 'price' && (
+          <p className="website-label text-muted">per month · {taxNote(catalog.currency)}</p>
+        )}
+      </div>
+      <PlanAction plan={plan} href={href} highlighted={highlighted} />
+      {facts.length > 0 && (
+        <ul className="cm-plan-facts" aria-label={`${plan.name} limits`}>
+          {facts.map((fact) => (
+            <li key={fact.key}>
+              <span>{fact.label}</span>
+              {fact.value === null ? (
+                <span className="cm-plan-included">Included</span>
+              ) : (
+                <span className="cm-plan-value">{fact.value}</span>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
-      <PlanAction plan={plan} href={href} />
     </article>
   );
 }
 
-function ExtraCard({
+function ExtraRow({
   entry,
   kind,
   catalog,
@@ -121,28 +180,61 @@ function ExtraCard({
       )
     : null;
   return (
-    <article className="border-border-subtle bg-panel flex flex-col gap-3 rounded-[var(--radius-card)] border p-5">
-      <h3 className="website-feature-heading text-foreground">{entry.name}</h3>
-      <p className="website-body text-muted">{entry.description}</p>
-      <p className="website-body text-foreground">
-        {entry.unit_price
-          ? formatMoney(entry.unit_price, catalog.currency_minor_units)
-          : 'Not yet priced'}
-      </p>
-      {entry.unit_price ? (
-        <p className="website-label text-muted">
-          one-time · {taxNote(catalog.currency)} · usable for {entry.expiry_days} days while your
-          plan is active
+    <li className="cm-extra">
+      <div className="cm-extra-copy">
+        <h3 className="website-small-heading text-foreground">{entry.name}</h3>
+        <p className="website-body text-muted">{entry.description}</p>
+      </div>
+      <div className="cm-extra-price">
+        <p className="website-body text-foreground">
+          {entry.unit_price
+            ? formatMoney(entry.unit_price, catalog.currency_minor_units)
+            : 'Not yet priced'}
         </p>
-      ) : null}
-      {href ? (
-        <a className="text-accent-text mt-auto underline" href={href}>
-          Choose {entry.name}
-        </a>
-      ) : (
-        <p className="website-label text-muted mt-auto">Unavailable</p>
-      )}
-    </article>
+        {entry.unit_price ? (
+          <p className="website-label text-muted">
+            one-time · {taxNote(catalog.currency)} · usable for {entry.expiry_days} days while your
+            plan is active
+          </p>
+        ) : null}
+      </div>
+      <div className="cm-extra-action">
+        {href ? (
+          <a className="mk-text-link" href={href}>
+            Choose {entry.name}
+          </a>
+        ) : (
+          <p className="website-label text-muted">Unavailable</p>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function ByokSwitch({
+  byok,
+  onChange,
+}: Readonly<{ byok: boolean; onChange: (value: boolean) => void }>) {
+  const id = useId();
+  return (
+    <div className="cm-byok">
+      <input
+        id={`${id}-input`}
+        type="checkbox"
+        className="cm-switch"
+        checked={byok}
+        aria-describedby={`${id}-hint`}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="cm-byok-copy">
+        <label htmlFor={`${id}-input`} className="cm-byok-label">
+          {BYOK_SWITCH_LABEL}
+        </label>
+        <span id={`${id}-hint`} className="website-label text-muted">
+          {BYOK_DISCLOSURE}
+        </span>
+      </span>
+    </div>
   );
 }
 
@@ -154,17 +246,16 @@ export function PublicPricingCatalog({
   const [byok, setByok] = useState(initialByok);
   const mode = byok ? 'byok' : 'funded';
   if (selfServeCheckoutComingSoon(catalog)) {
-    return <PricingComingSoonStrip appOrigin={appOrigin} />;
+    return <PricingTrial appOrigin={appOrigin} checkoutOpen={false} />;
   }
+  const origin = new URL(appOrigin);
   return (
     <>
-      <Section tone="paper" rhythm="tight" aria-label="Plans">
-        <label className="border-border-subtle bg-background-alt mb-8 flex items-center gap-3 rounded-[var(--radius-card)] border p-4">
-          <input
-            type="checkbox"
-            checked={byok}
-            onChange={(event) => {
-              const value = event.target.checked;
+      <Section tone="paper" rhythm="tight" className="pt-0" aria-label="Plans">
+        <div className="cm-plans-bar">
+          <ByokSwitch
+            byok={byok}
+            onChange={(value) => {
               setByok(value);
               const url = new URL(window.location.href);
               if (value) url.searchParams.delete('byok');
@@ -172,66 +263,69 @@ export function PublicPricingCatalog({
               window.history.replaceState(null, '', url);
             }}
           />
-          <span className="text-foreground text-sm font-medium">{BYOK_SWITCH_LABEL}</span>
-          <span className="website-label text-muted">{BYOK_DISCLOSURE}</span>
-        </label>
-        <p className="website-body text-muted mb-6">
-          Provider usage may be billed separately from your CiteLadder plan. Review the selected
-          usage option and its costs before starting a run.
-        </p>
-        <p className="website-label text-muted mb-6">
-          Prices shown in {catalog.currency}
-          {catalog.currency === 'INR' ? ', exclusive of GST' : ''}. Your billing country sets the
-          final currency and tax, confirmed in the app before payment.
-        </p>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {catalog.plans.map((plan) => (
-            <PlanCard
-              key={plan.key}
-              plan={plan}
-              catalog={catalog}
-              mode={mode}
-              appOrigin={new URL(appOrigin)}
-            />
-          ))}
+          <p className="website-label text-muted cm-plans-currency">
+            Prices shown in {catalog.currency}
+            {catalog.currency === 'INR' ? ', exclusive of GST' : ''}. Your billing country sets the
+            final currency and tax, confirmed in the app before payment.
+          </p>
         </div>
+        <div className="grid gap-5">
+          <div className="cm-plans">
+            {catalog.plans.map((plan) => (
+              <PlanCard
+                key={plan.key}
+                plan={plan}
+                catalog={catalog}
+                mode={mode}
+                appOrigin={origin}
+              />
+            ))}
+          </div>
+          <p className="website-label text-muted">
+            Provider usage may be billed separately from your CiteLadder plan. Review the selected
+            usage option and its costs before starting a run.
+          </p>
+        </div>
+        <PricingTrial appOrigin={appOrigin} checkoutOpen />
       </Section>
-      <Section tone="sunken" rhythm="tight" aria-label="Plan comparison">
+      <Section tone="soft" aria-label="Plan comparison">
         <SectionHeader
-          eyebrow="Compare"
-          title="Choose based on what you actually need."
+          title="Compare every published limit."
+          lead="Every value comes from the live plan catalog. A dash means the plan does not include it."
           headingId="pricing-compare-title"
         />
         <PricingComparison catalog={catalog} />
       </Section>
       {(catalog.addons.length > 0 || catalog.topups.length > 0) && (
-        <Section tone="paper" rhythm="tight" aria-label="Add-ons and top-ups">
-          <SectionHeader
-            eyebrow="Extend"
-            title="Add what your workspace needs."
-            headingId="pricing-extras-title"
-          />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {catalog.addons.map((entry) => (
-              <ExtraCard
-                key={entry.key}
-                entry={entry}
-                kind="addon"
-                catalog={catalog}
-                appOrigin={new URL(appOrigin)}
-                byok={byok}
-              />
-            ))}
-            {catalog.topups.map((entry) => (
-              <ExtraCard
-                key={entry.key}
-                entry={entry}
-                kind="topup"
-                catalog={catalog}
-                appOrigin={new URL(appOrigin)}
-                byok={byok}
-              />
-            ))}
+        <Section tone="paper" aria-label="Add-ons and top-ups">
+          <div className="mk-split">
+            <SectionHeader
+              title="Add capacity when you need it."
+              lead="One-time purchases on top of an active plan."
+              headingId="pricing-extras-title"
+            />
+            <ul className="cm-extras">
+              {catalog.addons.map((entry) => (
+                <ExtraRow
+                  key={entry.key}
+                  entry={entry}
+                  kind="addon"
+                  catalog={catalog}
+                  appOrigin={origin}
+                  byok={byok}
+                />
+              ))}
+              {catalog.topups.map((entry) => (
+                <ExtraRow
+                  key={entry.key}
+                  entry={entry}
+                  kind="topup"
+                  catalog={catalog}
+                  appOrigin={origin}
+                  byok={byok}
+                />
+              ))}
+            </ul>
           </div>
         </Section>
       )}

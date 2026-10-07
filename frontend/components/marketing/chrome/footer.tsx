@@ -1,16 +1,13 @@
 import { ArrowUpRight } from 'lucide-react';
 
 import { LogoMark } from '@/components/ui/logo-mark';
-import { appHref } from '@/lib/config/app-link';
 
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { NAV_DROPS, PLATFORM_GROUPS, PLATFORM_OVERVIEW } from '@/lib/marketing-content/nav';
-import { DemoButtonLink } from '../primitives/button';
 import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
 
-import { COOKIE_PREFERENCES_ATTRIBUTE } from './cookie-banner';
-
 import { Container } from '../primitives/section';
+import { COOKIE_PREFERENCES_ATTRIBUTE } from './cookie-banner';
 
 type FooterLink = {
   label: string;
@@ -19,12 +16,22 @@ type FooterLink = {
 };
 type FooterColumn = { key: string; label: string; links: readonly FooterLink[] };
 
+/**
+ * Footer columns derive from the same registry as the header, so a published
+ * destination cannot drift between the two. Platform reads as one list: the
+ * overview first, then every capability in menu order.
+ */
 const FOOTER_COLUMNS: readonly FooterColumn[] = [
-  ...PLATFORM_GROUPS.map((group) => ({
-    key: group.label,
-    label: group.label,
-    links: group.items.map((item) => ({ label: item.title, href: item.href })),
-  })),
+  {
+    key: 'platform',
+    label: 'Platform',
+    links: [
+      { label: PLATFORM_OVERVIEW.title, href: PLATFORM_OVERVIEW.href },
+      ...PLATFORM_GROUPS.flatMap((group) =>
+        group.items.map((item) => ({ label: item.title, href: item.href })),
+      ),
+    ],
+  },
   ...NAV_DROPS.filter((drop) => drop.key !== 'platform').map((drop) => ({
     key: drop.key,
     label: drop.label,
@@ -49,126 +56,95 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
   },
 ];
 
-const LINK =
-  'text-sm text-muted hover:text-foreground inline-flex items-center gap-2 transition-colors duration-300';
-
 function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   if (link.external) {
     return (
-      <a className={LINK} href={link.href} target="_blank" rel="noreferrer">
+      <a className="footer-link" href={link.href} target="_blank" rel="noreferrer">
         {link.label}
-        <ArrowUpRight className="size-3" aria-hidden />
+        <ArrowUpRight className="size-3 opacity-60" aria-hidden />
       </a>
     );
   }
   return (
-    <a className={LINK} href={link.href}>
+    <a className="footer-link" href={link.href}>
       {link.label}
     </a>
   );
 }
 
-const LEGAL_STRIP_LINK =
-  'text-muted hover:text-foreground text-xs font-medium underline-offset-4 hover:underline';
-
-/** Shared editorial footer: product links, the ownership line and every published policy. */
+/** Shared footer: every published destination, the ownership line and each policy. */
 export async function MarketingFooter() {
   'use cache';
 
   const year = new Date().getFullYear();
 
   return (
-    <footer className="marketing-footer relative">
-      <div className="marketing-footer-card mx-auto w-full">
-        <Container className="pt-14 pb-10 sm:pt-20 sm:pb-14">
-          <div className="grid gap-10">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-5">
-                <a href="/" aria-label="CiteLadder home" className="inline-block">
-                  <LogoMark />
-                </a>
-
-                <p className="marketing-footer-description website-body max-w-[38ch]">
-                  AI search intelligence. From observed answers to informed action.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-6">
-                <DemoButtonLink />
-                <FooterColumnLink link={{ label: 'Log in', href: appHref('/login') }} />
-                <FooterColumnLink
-                  link={{ label: PLATFORM_OVERVIEW.title, href: PLATFORM_OVERVIEW.href }}
-                />
-              </div>
-            </div>
-
-            <nav
-              aria-label="Footer"
-              className="hidden gap-x-7 gap-y-9 md:grid md:grid-cols-3 xl:grid-cols-6"
-            >
-              {FOOTER_COLUMNS.map((column) => (
-                <div key={column.key}>
-                  <h2 className="website-nav text-foreground mb-5">{column.label}</h2>
-                  <div className="grid justify-items-start gap-3.5">
-                    {column.links.map((link) => (
-                      <FooterColumnLink key={link.label} link={link} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </nav>
-            <nav aria-label="Footer mobile" className="md:hidden">
-              {FOOTER_COLUMNS.map((column) => (
-                <details key={column.key} className="border-border-subtle border-b py-4">
-                  <summary className="website-nav cursor-pointer">{column.label}</summary>
-                  <div className="grid justify-items-start gap-4 py-4">
-                    {column.links.map((link) => (
-                      <FooterColumnLink key={link.href} link={link} />
-                    ))}
-                  </div>
-                </details>
-              ))}
-            </nav>
-          </div>
-
-          <div className="border-border-subtle mt-12 flex flex-col gap-5 border-t pt-8 lg:flex-row lg:items-center lg:justify-between">
-            {/* CiteLadder is a Cube27 product, so the parent company is named in
-              the ownership line rather than tucked into a link column alone. */}
-            <p className="website-label text-muted">
-              © {year} CiteLadder. A{' '}
-              <a
-                href={PARENT_COMPANY.href}
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-foreground underline-offset-4 transition-colors hover:underline"
-              >
-                {PARENT_COMPANY.name}
-              </a>{' '}
-              product. All rights reserved.
+    <footer className="site-footer">
+      <Container className="pt-16 pb-10 md:pt-20">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4fr)] lg:gap-16">
+          <div className="flex flex-col items-start gap-5">
+            <a href="/" aria-label="CiteLadder home" className="focus-ring inline-block rounded-xs">
+              <LogoMark />
+            </a>
+            <p className="website-body text-muted max-w-[30ch]">
+              AI search intelligence. From observed answers to informed action.
             </p>
-            <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 lg:justify-end">
-              {/* Contact already sits in the Company column. */}
-              {FOOTER_LEGAL_LINKS.filter((link) => link.href !== '/contact').map((link) => (
-                <a key={link.href} className={LEGAL_STRIP_LINK} href={link.href}>
-                  {link.label}
-                </a>
-              ))}
-              <a className={LEGAL_STRIP_LINK} href="/ai-instructions">
-                AI Instructions
-              </a>
-              <a className={LEGAL_STRIP_LINK} href="/entity-map">
-                Entity Map
-              </a>
-              <button
-                type="button"
-                className={LEGAL_STRIP_LINK}
-                {...{ [COOKIE_PREFERENCES_ATTRIBUTE]: '' }}
-              >
-                Cookie preferences
-              </button>
-            </nav>
           </div>
-        </Container>
-      </div>
+
+          <nav aria-label="Footer" className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4">
+            {FOOTER_COLUMNS.map((column) => (
+              <div key={column.key} className="min-w-0">
+                <h2 className="footer-heading">{column.label}</h2>
+                <ul className="mt-4 grid gap-2.5">
+                  {column.links.map((link) => (
+                    <li key={link.href}>
+                      <FooterColumnLink link={link} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </nav>
+        </div>
+
+        <div className="border-border mt-16 flex flex-col gap-4 border-t pt-6 lg:flex-row lg:items-center lg:justify-between">
+          {/* CiteLadder is a Cube27 product, so the parent company is named in
+              the ownership line rather than tucked into a link column alone. */}
+          <p className="website-label text-muted">
+            © {year} CiteLadder. A{' '}
+            <a
+              href={PARENT_COMPANY.href}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-foreground underline-offset-4 transition-colors hover:underline"
+            >
+              {PARENT_COMPANY.name}
+            </a>{' '}
+            product. All rights reserved.
+          </p>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 lg:justify-end">
+            {/* Contact already sits in the Company column. */}
+            {FOOTER_LEGAL_LINKS.filter((link) => link.href !== '/contact').map((link) => (
+              <a key={link.href} className="footer-legal-link" href={link.href}>
+                {link.label}
+              </a>
+            ))}
+            <a className="footer-legal-link" href="/ai-instructions">
+              AI Instructions
+            </a>
+            <a className="footer-legal-link" href="/entity-map">
+              Entity Map
+            </a>
+            <button
+              type="button"
+              className="footer-legal-link"
+              {...{ [COOKIE_PREFERENCES_ATTRIBUTE]: '' }}
+            >
+              Cookie preferences
+            </button>
+          </nav>
+        </div>
+      </Container>
     </footer>
   );
 }

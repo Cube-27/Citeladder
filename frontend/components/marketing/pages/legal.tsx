@@ -3,11 +3,11 @@ import {
   LEGAL_ENTITY,
   type LegalDocument,
 } from '@/lib/marketing-content/legal';
+import { cn } from '@/lib/utils';
 
-import { Meta } from '../primitives/label';
 import { Linkify } from '../primitives/linkify';
-import { Section } from '../primitives/section';
-import { Reveal } from '../primitives/reveal';
+import { PageHero } from '../primitives/page-hero';
+import { Container } from '../primitives/section';
 
 const UPDATED_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
@@ -22,126 +22,110 @@ function formatUpdated(iso: string): string {
   return UPDATED_DATE_FORMATTER.format(date);
 }
 
+/** Policies with fewer sections read without a contents rail. */
+const RAIL_MIN_SECTIONS = 4;
+
 /**
- * Shared legal document layout — compact header, readable measure, TOC for
- * long policies. Uses the same light semantic tokens as the rest of marketing.
+ * Shared legal document layout: the page title and date, then one measured
+ * reading column with a sticky contents rail on desktop for long policies.
+ * Design only — every string comes verbatim from the legal content modules.
  */
 export function LegalDocumentView({ document }: Readonly<{ document: LegalDocument }>) {
+  const updated = document.lastUpdated ?? LEGAL_ENTITY.lastUpdated;
+  const rail = document.sections.length >= RAIL_MIN_SECTIONS;
   return (
     <main id="main">
-      <header className="border-border-subtle border-b pt-16 pb-6 md:pb-8">
-        <div className="mx-auto w-full max-w-3xl px-[var(--site-gutter)]">
-          <Reveal>
-            <p className="website-eyebrow text-muted">Legal</p>
-            <h1 className="website-page-title text-foreground mt-3">{document.title}</h1>
-            <p className="website-body-lg text-muted mt-3 max-w-[60ch]">{document.description}</p>
-            <Meta as="p" className="mt-5">
-              Last updated · {formatUpdated(document.lastUpdated ?? LEGAL_ENTITY.lastUpdated)}
-            </Meta>
-          </Reveal>
-        </div>
-      </header>
+      <PageHero title={document.title} lead={document.description}>
+        <p className="website-label text-muted mt-6 tabular-nums">
+          Last updated · <time dateTime={updated}>{formatUpdated(updated)}</time>
+        </p>
+      </PageHero>
 
-      <Section tone="paper" rhythm="tight" dense>
-        <div className="mx-auto grid max-w-3xl gap-10 lg:max-w-5xl lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-14">
-          <nav aria-label="On this page" className="lg:sticky lg:top-24 lg:self-start">
-            <p className="website-eyebrow text-muted mb-3">On this page</p>
-            <ol className="grid gap-2">
+      <div className="border-border-subtle border-t">
+        <Container className="py-[calc(var(--section-y)*0.75)]">
+          <div className={cn('ed-doc', !rail && 'ed-doc-single')}>
+            {rail && (
+              <nav aria-label="On this page" className="ed-rail">
+                <p className="website-label ed-rail-title">On this page</p>
+                <ol>
+                  {document.sections.map((section) => (
+                    <li key={section.id}>
+                      <a className="website-label" href={`#${section.id}`}>
+                        {section.title}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
+
+            <article className="ed-prose">
               {document.sections.map((section) => (
-                <li key={section.id}>
-                  <a
-                    href={`#${section.id}`}
-                    className="text-muted hover:text-foreground text-sm transition-colors"
-                  >
-                    {section.title}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-
-          <article className="min-w-0">
-            {document.sections.map((section) => (
-              <section
-                key={section.id}
-                id={section.id}
-                className="border-border-subtle scroll-mt-28 border-b py-8 last:border-b-0"
-              >
-                <h2 className="website-section-heading text-foreground">{section.title}</h2>
-                {/* Policy text names sibling policies by path. Rendered as a
-                    plain string those were dead text, so a reader was pointed
-                    at a policy they then had to retype. */}
-                {section.paragraphs?.map((paragraph, index) => (
-                  <p key={`${section.id}-p-${index}`} className="website-body-lg text-muted mt-4">
-                    <Linkify text={paragraph} />
-                  </p>
-                ))}
-                {section.bullets && section.bullets.length > 0 ? (
-                  <ul className="text-muted mt-4 grid list-disc gap-2 pl-5 text-base leading-relaxed">
-                    {section.bullets.map((item, index) => (
-                      <li key={`${section.id}-b-${index}`}>
-                        <Linkify text={item} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {section.table ? (
-                  <div className="mt-5 overflow-x-auto">
-                    <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
-                      <caption className="sr-only">{section.table.caption}</caption>
-                      <thead>
-                        <tr className="border-border-strong border-b">
-                          {section.table.headings.map((heading) => (
-                            <th key={heading} scope="col" className="px-3 py-3 font-semibold">
-                              {heading}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {section.table.rows.map(([header, ...cells]) => (
-                          <tr key={header} className="border-border-subtle border-b align-top">
-                            <th scope="row" className="px-3 py-3 font-medium break-words">
-                              {header}
-                            </th>
-                            {cells.map((cell, index) => (
-                              <td key={`${header}-${index}`} className="px-3 py-3">
-                                {cell}
-                              </td>
+                <section key={section.id} id={section.id} className="ed-prose-section">
+                  <h2 className="website-feature-heading ed-h2">{section.title}</h2>
+                  {/* Policy text names sibling policies by path; Linkify keeps
+                      those references navigable. */}
+                  {section.paragraphs?.map((paragraph, index) => (
+                    <p key={`${section.id}-p-${index}`} className="website-body-lg">
+                      <Linkify text={paragraph} />
+                    </p>
+                  ))}
+                  {section.bullets && section.bullets.length > 0 ? (
+                    <ul className="ed-bullets website-body-lg">
+                      {section.bullets.map((item, index) => (
+                        <li key={`${section.id}-b-${index}`}>
+                          <Linkify text={item} />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {section.table ? (
+                    <div className="ed-table-wrap">
+                      <table className="ed-table website-body min-w-[34rem]">
+                        <caption className="sr-only">{section.table.caption}</caption>
+                        <thead>
+                          <tr>
+                            {section.table.headings.map((heading) => (
+                              <th key={heading} scope="col">
+                                {heading}
+                              </th>
                             ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-                {section.note ? (
-                  <p className="website-label border-border-subtle bg-background-alt text-subtle mt-5 rounded-[var(--radius-control)] border px-4 py-3">
-                    {section.note}
-                  </p>
-                ) : null}
-              </section>
-            ))}
+                        </thead>
+                        <tbody>
+                          {section.table.rows.map(([header, ...cells]) => (
+                            <tr key={header}>
+                              <th scope="row" className="break-words">
+                                {header}
+                              </th>
+                              {cells.map((cell, index) => (
+                                <td key={`${header}-${index}`}>{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                  {section.note ? (
+                    <p className="ed-note website-body text-muted">{section.note}</p>
+                  ) : null}
+                </section>
+              ))}
 
-            <nav
-              aria-label="Other legal documents"
-              className="border-border-subtle mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t pt-6"
-            >
-              {FOOTER_LEGAL_LINKS.filter((link) => link.href !== `/${document.slug}`).map(
-                (link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    className="text-accent-text hover:text-accent-hover text-sm font-medium"
-                  >
-                    {link.label}
-                  </a>
-                ),
-              )}
-            </nav>
-          </article>
-        </div>
-      </Section>
+              <nav aria-label="Other legal documents" className="ed-doc-footer">
+                {FOOTER_LEGAL_LINKS.filter((link) => link.href !== `/${document.slug}`).map(
+                  (link) => (
+                    <a key={link.href} href={link.href} className="ed-link website-body">
+                      {link.label}
+                    </a>
+                  ),
+                )}
+              </nav>
+            </article>
+          </div>
+        </Container>
+      </div>
     </main>
   );
 }

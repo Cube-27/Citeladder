@@ -1,165 +1,171 @@
-import { ArrowRight, ChevronDown } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ArrowRight } from 'lucide-react';
 
 import type { CommercialPage } from '@/lib/marketing-content/commercial-pages';
+
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
-import { Section, SectionHeader } from '../primitives/section';
+import { Container, Section, SectionHeader } from '../primitives/section';
+import { FaqList } from './platform';
 
-export function CommercialEntryPage({ page }: Readonly<{ page: CommercialPage }>) {
+/**
+ * A commercial guide as a reading page: a sticky contents rail beside one
+ * measured column. `children` (a product module) renders after the guide and
+ * before the closing band.
+ */
+export function CommercialEntryPage({
+  page,
+  children,
+}: Readonly<{ page: CommercialPage; children?: ReactNode }>) {
+  const contents = [
+    { id: 'definitions', title: page.overview.heading },
+    { id: 'method', title: page.workflow.heading },
+    { id: 'context', title: page.contextHeading },
+    { id: 'questions', title: 'Questions, answered' },
+  ];
   return (
     <>
-      <PageHero eyebrow={page.eyebrow} title={page.heading} lead={page.introduction} centered>
-        <div className="mt-8 flex flex-wrap justify-center gap-4" data-cta-placement="hero">
-          <DemoButtonLink />
-          <ButtonLink href={page.secondary.href} variant="soft">
+      <PageHero
+        title={page.heading}
+        lead={page.introduction}
+        breadcrumb={[{ label: 'Home', href: '/' }, { label: page.breadcrumb }]}
+      >
+        <div className="mt-9 flex flex-wrap gap-3" data-cta-placement="hero">
+          <DemoButtonLink size="marketing" />
+          <ButtonLink href={page.secondary.href} variant="soft" size="marketing">
             {page.secondary.label}
           </ButtonLink>
         </div>
-        <CommercialEvidence />
       </PageHero>
 
-      <Section>
-        <SectionHeader title={page.overview.heading} lead={page.overview.lead} />
-        <div className="grid gap-8 md:grid-cols-2 md:gap-16">
-          {page.definitions.map((definition) => (
-            <div key={definition.heading} className="space-y-3">
-              <h3 className="website-feature-heading text-foreground">{definition.heading}</h3>
-              <p className="website-body-lg text-secondary max-w-[65ch]">{definition.body}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
-      <Section tone="sunken">
-        <div className="grid items-start gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
-          <SectionHeader title={page.workflow.heading} lead={page.workflow.lead} />
-          <ol className="divide-border-subtle divide-y">
-            {page.workflow.steps.map((step, index) => (
-              <li key={step.heading} className="flex gap-5 py-6 first:pt-0 last:pb-0">
-                <span className="website-label text-muted pt-1 tabular-nums" aria-hidden>
-                  {index + 1}
-                </span>
-                <div className="space-y-3">
-                  <h3 className="website-feature-heading text-foreground">{step.heading}</h3>
-                  <p className="website-body-lg text-secondary">{step.body}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </Section>
-      <Section>
-        <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-20">
-          <SectionHeader title={page.contextHeading} lead={page.context} />
-          <ul className="divide-border-subtle divide-y" aria-label="Related pages">
-            {page.related.map((link) => (
-              <li key={link.href}>
-                <a
-                  className="website-body-lg text-accent-text hover:text-accent-hover flex items-center justify-between gap-5 py-4 transition-colors"
-                  href={link.href}
-                >
-                  <span>{link.label}</span>
-                  <ArrowRight className="size-4 shrink-0" aria-hidden />
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Section>
-      <Section tone="sunken">
-        <div className="grid items-start gap-10 lg:grid-cols-[0.65fr_1.35fr] lg:gap-20">
-          <SectionHeader
-            title="Frequently asked questions"
-            lead="What the observations mean, and where their limits are."
-          />
-          <div>
-            {page.faqs.map((faq) => (
-              <details key={faq.q} className="group border-border-subtle border-b py-5 first:pt-0">
-                <summary className="website-feature-heading text-foreground flex cursor-pointer list-none items-start justify-between gap-5 [&::-webkit-details-marker]:hidden">
-                  <span>{faq.q}</span>
-                  <ChevronDown
-                    className="mt-1 size-4 shrink-0 transition-transform group-open:rotate-180"
-                    aria-hidden
-                  />
-                </summary>
-                <p className="website-body-lg text-muted mt-4">{faq.a}</p>
-              </details>
-            ))}
+      <section aria-label="Guide" className="border-border-subtle border-t">
+        <Container className="py-[var(--section-y)]">
+          <div className="ed-doc">
+            <nav aria-label="On this page" className="ed-rail">
+              <p className="website-label ed-rail-title">On this page</p>
+              <ol>
+                {contents.map((item) => (
+                  <li key={item.id}>
+                    <a className="website-label" href={`#${item.id}`}>
+                      {item.title}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+
+            <article className="ed-prose">
+              <section id="definitions" className="ed-prose-section">
+                <h2 className="website-section-heading">{page.overview.heading}</h2>
+                <p className="website-lead text-muted">{page.overview.lead}</p>
+                {page.definitions.map((definition) => (
+                  <div key={definition.heading} className="ed-subsection">
+                    <h3 className="website-feature-heading">{definition.heading}</h3>
+                    <p className="website-body-lg mt-2">{definition.body}</p>
+                  </div>
+                ))}
+                <WorkedExample />
+              </section>
+
+              <section id="method" className="ed-prose-section">
+                <h2 className="website-section-heading">{page.workflow.heading}</h2>
+                <p className="website-body-lg">{page.workflow.lead}</p>
+                <ol className="ed-steps">
+                  {page.workflow.steps.map((step) => (
+                    <li key={step.heading}>
+                      <h3 className="website-feature-heading">{step.heading}</h3>
+                      <p className="website-body-lg">{step.body}</p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+
+              <section id="context" className="ed-prose-section">
+                <h2 className="website-section-heading">{page.contextHeading}</h2>
+                <p className="website-body-lg">{page.context}</p>
+                <ul className="ed-links" aria-label="Related pages">
+                  {page.related.map((link) => (
+                    <li key={link.href}>
+                      <a className="website-body-lg" href={link.href}>
+                        {link.label}
+                        <ArrowRight className="size-4" aria-hidden />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section id="questions" className="ed-prose-section">
+                <h2 className="website-section-heading">Questions, answered</h2>
+                <FaqList faqs={page.faqs} />
+              </section>
+            </article>
           </div>
-        </div>
-      </Section>
+        </Container>
+      </section>
+
+      {children}
+
       <Section className="marketing-closing-band" aria-label="Get started">
-        <div
-          className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center"
-          data-cta-placement="closing"
-        >
-          <SectionHeader title={page.closingHeading} lead={page.closing} />
-          <DemoButtonLink />
+        <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
+          <SectionHeader title={page.closingHeading} lead={page.closing} align="center" />
+          <DemoButtonLink size="marketing" />
         </div>
       </Section>
     </>
   );
 }
 
-/** Static teaching examples, deliberately separate from product previews and live metrics. */
-function CommercialEvidence() {
+/** A static teaching example, deliberately separate from product previews and live metrics. */
+function WorkedExample() {
   return (
-    <figure className="bg-panel border-border mt-12 overflow-hidden rounded-[var(--radius-card)] border text-left">
-      <div className="website-label text-muted border-border-subtle flex flex-wrap justify-between gap-3 border-b px-6 py-4">
-        <span>Read the denominator before the percentage</span>
-        <span>Illustrative example</span>
-      </div>
-      <div className="grid md:grid-cols-2">
-        <div className="p-6 md:p-8">
-          <table className="website-body w-full text-left">
-            <caption className="website-feature-heading text-foreground mb-5 text-left">
+    <figure className="ed-example">
+      <div className="ed-example-body">
+        <div>
+          <table className="ed-table website-body">
+            <caption className="website-small-heading pb-3 text-left">
               100 completed answers
             </caption>
-            <thead className="website-label text-muted border-border-subtle border-b">
+            <thead>
               <tr>
-                <th scope="col" className="pb-3">
-                  Observation
-                </th>
-                <th scope="col" className="pb-3 text-right">
+                <th scope="col">Observation</th>
+                <th scope="col" className="ed-num">
                   Answers
                 </th>
               </tr>
             </thead>
-            <tbody className="text-secondary divide-border-subtle divide-y">
+            <tbody>
               <tr>
-                <th scope="row" className="py-4">
-                  Brand mentioned
-                </th>
-                <td className="py-4 text-right tabular-nums">30</td>
+                <th scope="row">Brand mentioned</th>
+                <td className="ed-num">30</td>
               </tr>
               <tr>
-                <th scope="row" className="py-4">
-                  Brand absent
-                </th>
-                <td className="py-4 text-right tabular-nums">70</td>
+                <th scope="row">Brand absent</th>
+                <td className="ed-num">70</td>
               </tr>
             </tbody>
           </table>
           <p className="website-label text-muted mt-3">
-            Missing or failed observations are separate.
+            Missing or failed observations are counted separately.
           </p>
         </div>
-        <dl className="bg-canvas-soft space-y-6 p-6 md:p-8">
-          <div className="space-y-2">
+        <dl className="ed-example-results">
+          <div>
             <dt className="website-label text-muted">Answer-level mention rate</dt>
-            <dd className="website-feature-heading text-foreground tabular-nums">30 / 100 = 30%</dd>
+            <dd className="website-feature-heading tabular-nums">30 / 100 = 30%</dd>
           </div>
-          <div className="space-y-2">
+          <div>
             <dt className="website-label text-muted">Share of tracked brand appearances</dt>
-            <dd className="website-feature-heading text-foreground">Not calculated here</dd>
-            <dd className="website-body text-secondary">
-              Needs competitor counts and a stated counting rule. Multiple brands can appear in one
+            <dd className="website-feature-heading">Not calculated here</dd>
+            <dd className="website-body text-muted">
+              Needs competitor counts and a stated counting rule. Several brands can appear in one
               answer.
             </dd>
           </div>
         </dl>
       </div>
-      <figcaption className="website-label text-muted border-border-subtle border-t px-6 py-4">
-        A teaching example, not a benchmark or CiteLadder’s scoring formula.
+      <figcaption className="website-label text-muted">
+        Illustrative example. A teaching aid, not a benchmark or CiteLadder’s scoring formula.
       </figcaption>
     </figure>
   );
