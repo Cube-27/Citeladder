@@ -1,7 +1,9 @@
 # Site Health improvement plan
 
 Feature 1 of the [feature review tracker](feature-review-tracker.md); this is its
-audit-derived plan, executed through that review. Owner contract: [Site Health](../site-health.md).
+audit-derived plan, executed through that review. **Status: complete (2026-10-08).**
+Each phase records what shipped and what was declined; 1.8 moved to the backlog.
+Shipped behaviour is owned by [Site Health](../site-health.md), not by this plan. Owner contract: [Site Health](../site-health.md).
 Constraints: [invariants](../invariants.md), especially workspace authorization,
 persisted-projection reads, append-only evidence with processing versions, and
 distinct unknown / not-applicable / excluded states.

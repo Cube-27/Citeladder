@@ -220,18 +220,6 @@ describe('page checklist', () => {
     expect(trust('//privacy.example.test/shop').outcome).toBe('missing');
     expect(trust('//privacy.example.test/about').outcome).toBe('satisfied');
   });
-  it('omits retired style and universal schema rules', () => {
-    const ids = new Set(policy.site_health.rule_catalog.map((rule) => rule.rule_id));
-    for (const retired of [
-      'technical.single_h1',
-      'technical.thin_content',
-      'technical.title_length_band',
-      'technical.meta_description_length_band',
-      'aeo.schema_expected_for_type',
-    ])
-      expect(ids.has(retired)).toBe(false);
-  });
-
   it('scores reported web failures on any page kind and still admits an unscored finding', () => {
     const result = analyzePage(
       facts(

@@ -71,7 +71,7 @@ Status values: `queued`, `inventory`, `audit`, `plan`, `implementing`, `docs`, `
 
 | # | Feature | Main code | Current documents | Status | Plan |
 |---|---|---|---|---|---|
-| 1 | Site Health: crawl, page understanding, checks, scoring | `services/api/src/site-health`, `analysis`, `web-evidence`, `workers/site-health-worker.ts`; `components/site-health` | [site-health.md](../site-health.md) | implementing | [site-health-improvement](site-health-improvement.md) |
+| 1 | Site Health: crawl, page understanding, checks, scoring | `services/api/src/site-health`, `analysis`, `web-evidence`, `workers/site-health-worker.ts`; `components/site-health` | [site-health.md](../site-health.md) | done | [site-health-improvement](site-health-improvement.md) |
 | 2 | Onboarding, company facts and competitor discovery | `services/api/src/projects`, `workers/discovery-worker.ts`; `components/onboarding` | [onboarding.md](../onboarding.md) | queued | — |
 | 3 | Prompt generation, audits and AI Visibility | `prompts`, `audits`, `visibility`, `answer-engines`, `providers`; `components/prompts`, `visibility`, `runs` | [visibility-prompt.md](../visibility-prompt.md) | queued | — |
 | 4 | Opportunities, actions and verification | `opportunities`; `components/opportunities` | [opportunities.md](../opportunities.md) | queued | — |
@@ -107,3 +107,4 @@ when the owner asks.
 | 2026-10-07 | 1 Site Health | Phase 1 slice: sliding claim window, no score rebuild on non-analysis settlements, batched link admission, 15 s backstop cadence, test-file queue isolation. |
 | 2026-10-07 | 1 Site Health | Phases 2-5 shipped as a stacked series: scoring membership, classifier fixes, coverage UX, a persistent parse pool, and three unscored checks (content recency, entity profiles, sitemap/canonical agreement). Invariant 5 now bumps semantic versions instead of resetting data, because production can't be reset. |
 | 2026-10-07 | 4 Opportunities (carried forward) | `SITE_ISSUE_TO_OPPORTUNITY_RULE_ID` and the opportunity fixtures name five rules no catalog emits (`aeo.schema_expected_for_type`, `technical.thin_content`, `aeo.editorial_lead_present`, `aeo.entity_value_proposition`, `aeo.assortment_freshness_signal`); retire or reinstate them in that review. |
+| 2026-10-08 | 1 Site Health | Closed. Phases 2-5 merged (#294-#298). The follow-up stack (#299-#302) adds the worker access TTL, discovery on the parse pool, root-safe site checks, sampled crawler access, coverage by page type, one route normalizer, the rewritten feature doc and the test-debt pass. 2.5 and 2.8 were declined with reasons in the plan; 1.8 moved to the backlog. |

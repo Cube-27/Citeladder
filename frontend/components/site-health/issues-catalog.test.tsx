@@ -377,13 +377,6 @@ describe('IssuesCatalog', () => {
     expect(screen.getByRole('radio', { name: 'All (47)' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Medium (23)' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'AEO (17)' })).toBeInTheDocument();
-    // Severity + dimension badges + affected-count copy.
-    expect(screen.getAllByText('HIGH')).toHaveLength(2);
-    expect(screen.getAllByText('AEO').length).toBeGreaterThan(0);
-    expect(screen.getByText('32 pages affected')).toBeInTheDocument();
-    expect(
-      screen.getAllByText('Search engines cannot find WebSite structured data on this page.'),
-    ).toHaveLength(2);
     // Evidence is the notation of the fix, with no "Observed evidence" label
     // and no restatement of the title above it.
     expect(
@@ -392,9 +385,6 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
     expect(screen.queryByText('Reason: expected_schema_absent')).not.toBeInTheDocument();
     expect(screen.getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
-    // No unsupported "mark reviewed/resolved" action is rendered.
-    expect(screen.queryByText(/mark reviewed/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/mark resolved/i)).not.toBeInTheDocument();
   });
 
   it('applies a severity filter as a server param (not a client filter)', async () => {

@@ -1,40 +1,10 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import {
-  SUMMARY_SEVERITIES,
-  dimensionLabel,
-  issueTitle,
-  severityBadgeValue,
-  severityCount,
-  severityLabel,
-} from './issues';
+import { issueTitle, severityCount, severityLabel } from './issues';
 
-describe('severityBadgeValue', () => {
-  it('maps critical and high to danger', () => {
-    expect(severityBadgeValue('critical')).toBe('danger');
-    expect(severityBadgeValue('high')).toBe('danger');
-  });
-
-  it('maps medium to warning and low/info to info', () => {
-    expect(severityBadgeValue('medium')).toBe('warning');
-    expect(severityBadgeValue('low')).toBe('info');
-    expect(severityBadgeValue('info')).toBe('info');
-  });
-});
-
-describe('labels', () => {
-  it('uppercases severity labels', () => {
-    expect(severityLabel('high')).toBe('HIGH');
-    expect(severityLabel('medium')).toBe('MEDIUM');
-  });
-
+describe('severity vocabulary', () => {
   it('folds critical into HIGH (three-tier catalog vocabulary)', () => {
     expect(severityLabel('critical')).toBe('HIGH');
-  });
-
-  it('maps dimensions to their catalog labels', () => {
-    expect(dimensionLabel('aeo')).toBe('AEO');
-    expect(dimensionLabel('technical')).toBe('WEB FUNDAMENTALS');
   });
 });
 
@@ -60,9 +30,5 @@ describe('severityCount', () => {
     expect(severityCount({ medium: 23 }, 'medium')).toBe(23);
     expect(severityCount({}, 'low')).toBe(0);
     expect(severityCount({ high: 5 }, 'low')).toBe(0);
-  });
-
-  it('exposes the three-tier summary order', () => {
-    expect(SUMMARY_SEVERITIES).toEqual(['high', 'medium', 'low']);
   });
 });

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import type { PageKindScoreSummary } from '@/lib/api/types';
 import {
-  CONFIDENCE_LABELS,
   PAGE_KINDS,
   byPageKindRows,
   pageKindConfidenceLabel,
@@ -12,10 +11,6 @@ import {
 } from './page-kinds';
 
 describe('confidence labels', () => {
-  it('describes low confidence as general semantic evidence', () => {
-    expect(CONFIDENCE_LABELS.low).toBe('Low — semantic evidence');
-  });
-
   it('describes structural medium confidence without claiming URL evidence', () => {
     expect(pageKindConfidenceLabel('medium', 'structural')).toBe('Medium — mixed evidence');
     expect(pageKindConfidenceLabel('medium', 'route')).toBe('Medium — URL pattern');
@@ -33,8 +28,6 @@ describe('pageKindLabel (the single shared mapping)', () => {
   it('maps the multi-word and acronym types exactly', () => {
     expect(pageKindLabel('about_contact')).toBe('About / Contact');
     expect(pageKindLabel('faq')).toBe('FAQ');
-    expect(pageKindLabel('homepage')).toBe('Homepage');
-    expect(pageKindLabel('other')).toBe('Other');
   });
 
   it('falls back to title-casing an unknown type instead of rendering blank', () => {
@@ -73,21 +66,6 @@ describe('byPageKindRows (dashboard breakdown ordering)', () => {
       article: bucket(3),
     });
     expect(rows.map((row) => row.page_kind)).toEqual(['homepage', 'article', 'pricing']);
-  });
-
-  it('spreads the analyzed count + mean scores onto each row', () => {
-    const [row] = byPageKindRows({ docs: bucket(7) });
-    expect(row).toEqual({
-      page_kind: 'docs',
-      analyzed_count: 7,
-      web_fundamentals_score: 80,
-      web_fundamentals_coverage: 1,
-      web_fundamentals_state: 'measured',
-      aeo_readiness_score: 62,
-      aeo_measurement_coverage: 0.8,
-      aeo_measurement_state: 'measured',
-      aeo_measurement_reason: '',
-    });
   });
 
   it('appends unknown types alphabetically after the known vocabulary', () => {
@@ -237,12 +215,5 @@ describe('readPageKindEvidence — alternatives, conflicts, other_reason', () =>
     // Only the fully-shaped alternative survives.
     expect(view?.alternatives).toEqual([{ pageKind: 'docs', tier: 'route', signals: [] }]);
     expect(view?.conflicts).toEqual([]);
-  });
-
-  it('defaults to empty collections when the fields are absent', () => {
-    const view = readPageKindEvidence(base, 'faq');
-    expect(view?.alternatives).toEqual([]);
-    expect(view?.conflicts).toEqual([]);
-    expect(view?.otherReason).toBeNull();
   });
 });

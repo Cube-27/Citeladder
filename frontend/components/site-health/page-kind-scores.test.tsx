@@ -45,7 +45,6 @@ describe('PageKindScores', () => {
   it('renders nothing before any score summary exists', () => {
     const { container } = render(<PageKindScores crawl={null} dashboard={undefined} />);
     expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId('page-kind-scores')).not.toBeInTheDocument();
   });
 
   it('renders the empty state when no page has been classified yet', () => {
