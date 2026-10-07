@@ -14,6 +14,11 @@ COPY frontend/services/api/package.json ./services/api/
 COPY frontend/packages/mcp-app/package.json ./packages/mcp-app/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
+# The runtime only runs `wrangler dev`: ship its locked closure, not the toolchain.
+FROM dependencies AS wrangler
+COPY frontend/scripts/copy-wrangler-runtime.mjs ./scripts/
+RUN node scripts/copy-wrangler-runtime.mjs /wrangler
+
 FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder
 
 ARG PUBLIC_DOCS_ORIGIN
@@ -33,10 +38,11 @@ FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c
 
 ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false
 WORKDIR /app
+
+# Copy dependencies first so this layer is shared with the other Worker images.
+COPY --from=wrangler --chown=node:node /wrangler/node_modules ./node_modules
 # Wrangler keeps its local state under the working directory.
 RUN chown node:node /app
-
-COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/package.json ./
 COPY --from=builder --chown=node:node /app/apps/docs/wrangler.jsonc ./apps/docs/wrangler.jsonc
 COPY --from=builder --chown=node:node /app/apps/docs/dist ./apps/docs/dist
