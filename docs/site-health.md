@@ -80,8 +80,9 @@ provisional summary on cadence. A still-queued row skips it too. Other
 settlements (discover, site setup, failed analysis) update counters and
 sub-states without rebuilding the provisional score, which only a new analysis
 can change. Terminal
-lease recovery reconciles the affected crawls. Each worker pass, including a
-drain over an empty queue, runs three backstops: stalled crawls (active, no
+lease recovery reconciles the affected crawls. A worker runs three backstops
+every `backstop_interval_seconds` (a crawl-scoped interactive worker on every
+poll), including during a drain over an empty queue: stalled crawls (active, no
 outstanding work, no write for `stalled_crawl_reconcile_seconds`), overdue
 crawls (outstanding tasks fail with `crawl_overdue` and the same transaction
 reconciles) and cancelled crawls. Cancellation commits only the stop, task

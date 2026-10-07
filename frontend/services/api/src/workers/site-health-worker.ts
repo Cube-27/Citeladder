@@ -187,7 +187,7 @@ export class SiteHealthWorker {
       });
     return this.#recovery;
   }
-  /** Crawl backstops, at most once per poll interval across this worker's slots. */
+  /** Crawl backstops, at most once per interval across this worker's slots. */
   async #maintain() {
     if (this.#maintenance) return;
     if (Date.now() < this.#nextMaintenance) return;
@@ -210,7 +210,9 @@ export class SiteHealthWorker {
         publishCancelledCrawls(this.db, lifecycle.batch),
       );
     })().finally(() => {
-      this.#nextMaintenance = Date.now() + Math.max(50, this.settings.poll * 1000);
+      // A scoped crawl's reconcile is its own finalizer; global backstops are a slower safety net.
+      const interval = this.taskScope ? this.settings.poll : this.settings.backstopInterval;
+      this.#nextMaintenance = Date.now() + Math.max(50, interval * 1000);
       this.#maintenance = null;
     });
     return this.#maintenance;
