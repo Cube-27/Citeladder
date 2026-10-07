@@ -132,6 +132,28 @@ const memberships = (seed: SiteSeed) =>
 const url = (path: string) => `https://example.test${path}`;
 
 describe('discover', () => {
+  it('interrupts request-bound acquisition and leaves durable work for background retry', async () => {
+    const seed = await crawl();
+    const id = await queued(seed, 'discover');
+    const controller = new AbortController();
+    const site = new SiteHealthWorker(db, {
+      taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
+      settings: workerSettings,
+      signal: controller.signal,
+      fetcher: new SitePageFetcher(
+        db,
+        async (_url, options) => {
+          controller.abort(new Error('interactive deadline'));
+          options?.signal?.throwIfAborted();
+          throw new Error('request should be aborted');
+        },
+        fetchSettings,
+      ),
+    });
+    await run(site, id);
+    expect(await task(id)).toMatchObject({ status: 'retry_wait', lease_owner: null });
+    expect((await crawlRow(seed)).status).not.toBe('completed');
+  });
   it('settles concurrent discovers that link each other without a lock conflict', async () => {
     const seed = await crawl({ siteFacts: {}, config: { automatic_monitor_limit: 2 } });
     const a = await queued(seed, 'discover', '/a');

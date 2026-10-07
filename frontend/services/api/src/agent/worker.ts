@@ -1,7 +1,7 @@
 import { agentPolicy, AgentError } from './contracts.ts';
 import { AgentQueue } from './queue.ts';
 import { AgentRuntime } from './runtime.ts';
-import { maintainLease } from '../queue/heartbeat.ts';
+import { leaseSignal, maintainLease } from '../queue/heartbeat.ts';
 import { getLogger } from '../logging.ts';
 
 /** One bounded turn; the process owner handles recovery and drain policy. */
@@ -11,8 +11,10 @@ export async function runAgentOnce(
   owner: string,
   workspaceIds: readonly string[],
   retryDelay: (attempt: number) => number,
+  options: { runId?: string; signal?: AbortSignal } = {},
 ) {
-  const claimed = await queue.claim(owner, workspaceIds);
+  if (options.signal?.aborted) return false;
+  const claimed = await queue.claim(owner, workspaceIds, options.runId);
   if (!claimed) return false;
   let lease;
   try {
@@ -26,13 +28,16 @@ export async function runAgentOnce(
     agentPolicy.heartbeat_seconds * 1000,
   );
   try {
-    await runtime.execute(lease, heartbeat.signal);
+    await runtime.execute(lease, leaseSignal(heartbeat.signal, options.signal));
+    if (options.signal?.aborted) throw new AgentError('provider_error', true);
   } catch (error) {
     if (heartbeat.signal.aborted) return true;
     if (!(error instanceof AgentError && error.retryable)) throw error;
-    await queue.retry(lease, retryDelay(lease.attempt), (db, run) =>
-      runtime.deps.models.reconcile(db, run),
-    );
+    await queue
+      .retry(lease, retryDelay(lease.attempt), (db, run) => runtime.deps.models.reconcile(db, run))
+      .catch((failure: unknown) => {
+        if (!(failure instanceof AgentError && failure.code === 'lease')) throw failure;
+      });
   } finally {
     await heartbeat.stop();
   }

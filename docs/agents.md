@@ -135,6 +135,11 @@ Idempotency keys are workspace-scoped and bound to the requester and full reques
 project, message, skill, Action and context for a new chat. A reused key with a changed
 request or requester conflicts; concurrent identical submissions by one actor
 replay once. Actor binding does not change workspace authorization.
+After accepting a new chat, message or outline approval, the browser starts a
+separate authorized POST scoped to that chat and run. It executes the existing
+leased turn in the API, with a 240-second execution deadline, so first progress
+does not wait for a worker job to start. Interrupted turns retain the existing
+attempt settlement and durable retry path; chat reads only render saved state.
 Pre-cutover Python keys return an explicit `agent_idempotency_conflict` with
 `legacy_runtime` details, including non-ASCII requests. Historical chats remain
 readable; new work requires a new key rather than reinterpreting an old hash.

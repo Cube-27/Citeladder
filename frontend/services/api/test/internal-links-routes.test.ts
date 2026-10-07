@@ -38,6 +38,43 @@ afterAll(async () => {
 });
 
 describe('internal link analysis admission', () => {
+  it('executes and publishes only the requested analysis once across concurrent requests', async () => {
+    const seed = await actionFixture<ActionSeed>('content');
+    const other = await actionFixture<ActionSeed>('content');
+    seeds.push(seed, other);
+    const admit = async (target: ActionSeed) =>
+      internalLinksReadSchema.parse(
+        await (
+          await request(target, '/analyses', {
+            crawl_id: target.crawl_id,
+            idempotency_key: randomUUID(),
+          })
+        ).json(),
+      ).analysis!.id;
+    const id = await admit(seed);
+    const otherId = await admit(other);
+    expect((await request(other, `/analyses/${id}/run`, {})).status).toBe(404);
+    const responses = await Promise.all([
+      request(seed, `/analyses/${id}/run`, {}),
+      request(seed, `/analyses/${id}/run`, {}),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    const result = internalLinksReadSchema.parse(await (await request(seed)).json());
+    // With no provider configured, execution publishes honest unavailability immediately.
+    expect(result.analysis).toMatchObject({ id, state: 'unavailable' });
+    expect(result.analysis!.diagnostics!.pending).toBe(0);
+    const tasks = await db
+      .selectFrom('analytics_tasks')
+      .selectAll()
+      .where('workspace_id', '=', seed.workspace_id)
+      .where('task_kind', '=', 'internal_link_judgment')
+      .execute();
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toMatchObject({ status: 'succeeded', attempt_count: 1 });
+    expect(
+      internalLinksReadSchema.parse(await (await request(other)).json()).analysis,
+    ).toMatchObject({ id: otherId, state: 'queued' });
+  });
   it('publishes frozen links into page Actions and declares the explicit selection with the other page findings', async () => {
     const seed = await actionFixture<ActionSeed>('content');
     seeds.push(seed);

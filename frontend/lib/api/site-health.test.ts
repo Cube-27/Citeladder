@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
+import { waitFor } from '@testing-library/react';
 
 import { queryKeys } from './query-keys';
 import {
@@ -108,8 +109,31 @@ describe('siteHealthEntitlementSchema (quota authority)', () => {
   });
 });
 
-describe('URL preview contract', () => {
+describe('crawl admission and URL preview', () => {
   beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+  it('starts execution in the creating workspace without holding up crawl admission', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const execution = vi.fn();
+    mswServer.use(
+      http.post('/api/v1/site-crawls', () => HttpResponse.json(crawl)),
+      http.post(`/api/v1/site-crawls/${crawl.id}/run`, async ({ request }) => {
+        execution(request.headers.get('x-workspace-id'));
+        await pending;
+        return HttpResponse.json(crawl);
+      }),
+    );
+    try {
+      expect(
+        await siteHealthApi.createCrawl({ project_id: UUID }, { workspaceId: UUID2 }),
+      ).toMatchObject({ id: crawl.id });
+      await waitFor(() => expect(execution).toHaveBeenCalledWith(UUID2));
+    } finally {
+      release();
+    }
+  });
   afterEach(() => mswServer.resetHandlers());
   afterAll(() => mswServer.close());
   it('uses the same-origin preview endpoint and preserves exclusion reasons', async () => {

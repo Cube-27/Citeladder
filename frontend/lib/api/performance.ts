@@ -30,6 +30,7 @@ import {
 } from '@citeladder/contracts/performance';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
+import { startInteractiveWork } from './interactive-work';
 
 export type PerformanceRange = z.infer<typeof performanceRangeSchema>;
 export type PerformanceCompare = z.infer<typeof performanceCompareSchema>;
@@ -116,7 +117,9 @@ export const performanceApi = {
   ) => {
     const path = withQuery(`/projects/${projectId}/performance/range`, definedQuery(params));
     const res = await apiClient.post<PerformanceRangeTask>(path, undefined, options);
-    return strictValidate(performanceRangeTaskSchema, res, 'performance.enqueueRange');
+    const task = strictValidate(performanceRangeTaskSchema, res, 'performance.enqueueRange');
+    startInteractiveWork(`/projects/${projectId}/performance/range/${task.task_id}/run`, options);
+    return task;
   },
   getRangeTask: async (projectId: string, taskId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<PerformanceRangeTask>(
@@ -138,7 +141,13 @@ export const performanceApi = {
       undefined,
       options,
     );
-    return strictValidate(performanceSyncEnqueueResponseSchema, res, 'performance.syncNow');
+    const runs = strictValidate(performanceSyncEnqueueResponseSchema, res, 'performance.syncNow');
+    for (const run of runs)
+      startInteractiveWork(
+        `/integrations/${run.connection_id}/run?sync_run_id=${run.sync_run_id}`,
+        options,
+      );
+    return runs;
   },
 };
 

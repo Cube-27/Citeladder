@@ -12,6 +12,8 @@
  * backend redacts for Free arrive `null`/absent and are validated as such.
  */
 import { mutationOptions, queryOptions } from '@tanstack/react-query';
+import { SITE_HEALTH_EXECUTION_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
+import { startInteractiveWork } from './interactive-work';
 
 import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
@@ -143,7 +145,12 @@ export const siteHealthApi = {
   },
   createCrawl: async (input: CreateCrawlInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<SiteCrawl>('/site-crawls', input, options);
-    return strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
+    const crawl = strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
+    startInteractiveWork(`/site-crawls/${crawl.id}/run`, {
+      ...options,
+      timeoutMs: SITE_HEALTH_EXECUTION_REQUEST_TIMEOUT_MS,
+    });
+    return crawl;
   },
   previewUrls: async (input: UrlPreviewInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<UrlPreviewResponse>(

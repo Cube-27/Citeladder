@@ -197,13 +197,21 @@ export class ModelCalls {
         .execute();
     });
   }
-  async call(lease: Lease, ordinal: number, model: AgentModel, request: ModelRequest) {
+  async call(
+    lease: Lease,
+    ordinal: number,
+    model: AgentModel,
+    request: ModelRequest,
+    executionSignal?: AbortSignal,
+  ) {
+    executionSignal?.throwIfAborted();
     const attempt = await this.dispatch(lease, ordinal, model, request);
     let result: ModelResult;
     try {
       const remaining = attempt.deadline_at.getTime() - Date.now();
       if (remaining <= 0) throw new AgentError('provider_error');
-      const signal = AbortSignal.timeout(remaining);
+      const deadline = AbortSignal.timeout(remaining);
+      const signal = executionSignal ? AbortSignal.any([deadline, executionSignal]) : deadline;
       result = await abortable(() => model.complete(request, signal), signal);
     } catch (error) {
       await this.receipt(lease.workspaceId, attempt.id, null);

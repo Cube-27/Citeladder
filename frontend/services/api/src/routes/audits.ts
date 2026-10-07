@@ -10,6 +10,7 @@ import { auditEventSchema } from '@citeladder/contracts/audit-events';
 import { configEnvironment } from '../config.ts';
 import { readBody } from '../http/body.ts';
 import { createAudit } from '../audits/creation.ts';
+import { executeInteractiveAudit } from '../audits/interactive.ts';
 import { auditCreateInput, auditInput } from '../audits/inputs.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { estimateAudit, estimateInput } from '../audits/estimate.ts';
@@ -53,6 +54,19 @@ function exportRoute(format: 'csv' | 'md') {
   });
 }
 export const auditRoutes = [
+  definePostRoute({
+    family,
+    path: `${root}/{audit_id}/run`,
+    params,
+    capability: 'run',
+    response: auditSchema,
+    async handle({ c, db, config }, { path }) {
+      const workspaceId = c.get('workspace').workspaceId;
+      await readAudit(db, workspaceId, path.audit_id);
+      await executeInteractiveAudit(db, config, workspaceId, path.audit_id);
+      return readAudit(db, workspaceId, path.audit_id);
+    },
+  }),
   definePostRoute({
     family,
     path: root,

@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { readBody, readOptionalBody } from '../http/body.ts';
+import { executeInteractiveSyncs } from '../integrations/interactive.ts';
 import { IntegrationClient, IntegrationError } from '../integrations/client.ts';
 import { integrationPolicy } from '../integrations/config.ts';
 import {
@@ -98,6 +99,34 @@ function integrationFailure(error: unknown): never {
 }
 
 export const integrationRoutes = [
+  definePostRoute({
+    family,
+    path: '/api/v1/integrations/{connection_id}/run',
+    capability: 'run',
+    params: {
+      path: connectionPath,
+      query: {
+        sync_run_id: { scalar: { kind: 'uuid' } },
+        mapping_id: { scalar: { kind: 'uuid' } },
+      },
+    },
+    response: z.null(),
+    async handle({ c, db, config }, { path, query }) {
+      const workspaceId = c.get('workspace').workspaceId;
+      const connection = await db
+        .selectFrom('integration_connections')
+        .select('id')
+        .where('workspace_id', '=', workspaceId)
+        .where('id', '=', path.connection_id)
+        .executeTakeFirst();
+      if (!connection) throw notFound('Integration connection');
+      await executeInteractiveSyncs(db, config, workspaceId, path.connection_id, {
+        runId: query.sync_run_id ?? undefined,
+        mappingId: query.mapping_id ?? undefined,
+      });
+      return null;
+    },
+  }),
   defineGetRoute({
     family,
     path: '/api/v1/integrations/oauth/{provider}/start',

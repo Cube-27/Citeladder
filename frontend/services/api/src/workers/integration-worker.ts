@@ -5,7 +5,7 @@ import { policy } from '../config.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { queueRecovery } from '../config/queue-recovery.ts';
 import { recoverIntegrationLeases } from '../queue/recovery.ts';
-import { maintainLease } from '../queue/heartbeat.ts';
+import { leaseSignal, maintainLease } from '../queue/heartbeat.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import type { ImportPage } from '../integrations/client.ts';
@@ -89,8 +89,10 @@ export class IntegrationWorker {
     this.#scope = scope;
   }
 
-  async runOnce(): Promise<boolean> {
+  async runOnce(signal?: AbortSignal): Promise<boolean> {
+    if (signal?.aborted) return false;
     await recoverIntegrationLeases(this.#db, queueRecovery.batchSize, this.#scope);
+    if (signal?.aborted) return false;
     const run = await this.#claim();
     if (!run) return false;
     const heartbeat = maintainLease(
@@ -112,10 +114,20 @@ export class IntegrationWorker {
       (error) => logger.exception('integration_heartbeat_failed', error, { sync_run_id: run.id }),
     );
     try {
-      await this.#execute(run, heartbeat.signal);
+      await this.#execute(run, leaseSignal(heartbeat.signal, signal));
       if (!heartbeat.signal.aborted) await this.#finish(run, null);
     } catch (error) {
-      if (!heartbeat.signal.aborted) await this.#finish(run, error);
+      if (!heartbeat.signal.aborted)
+        await this.#finish(
+          run,
+          signal?.aborted
+            ? new IntegrationError(
+                'provider_api_error',
+                'Interactive execution deadline reached',
+                true,
+              )
+            : error,
+        );
     } finally {
       await heartbeat.stop();
     }

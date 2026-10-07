@@ -13,6 +13,7 @@
 import type { z } from 'zod';
 
 import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
+import { startInteractiveWork } from './interactive-work';
 import {
   integrationBackfillProgressSchema,
   integrationConnectionListSchema,
@@ -70,7 +71,12 @@ export const integrationsApi = {
       input,
       options,
     );
-    return strictValidate(integrationSyncEnqueueSchema, res, 'integrations.sync');
+    const run = strictValidate(integrationSyncEnqueueSchema, res, 'integrations.sync');
+    startInteractiveWork(
+      `/integrations/${connectionId}/run?sync_run_id=${run.sync_run_id}`,
+      options,
+    );
+    return run;
   },
   listSyncs: async (connectionId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<IntegrationSyncRun[]>(
@@ -133,7 +139,13 @@ export const integrationsApi = {
       input,
       options,
     );
-    return strictValidate(integrationPropertyMappingSchema, res, 'integrations.createMapping');
+    const mapping = strictValidate(
+      integrationPropertyMappingSchema,
+      res,
+      'integrations.createMapping',
+    );
+    startInteractiveWork(`/integrations/${connectionId}/run?mapping_id=${mapping.id}`, options);
+    return mapping;
   },
   deleteMapping: (mappingId: string, options?: ApiRequestOptions) =>
     apiClient.delete<void>(`/integrations/mappings/${mappingId}`, options),

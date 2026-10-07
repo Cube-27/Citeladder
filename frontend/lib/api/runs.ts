@@ -18,6 +18,7 @@ import {
 } from '@citeladder/contracts/audits';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
+import { startInteractiveWork } from './interactive-work';
 import type {
   Audit,
   AuditSchedule,
@@ -76,7 +77,9 @@ export const runsApi = {
   },
   launchAudit: async (input: LaunchAuditInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<Audit>('/audits', input, options);
-    return strictValidate(auditSchema, res, 'runs.launchAudit');
+    const audit = strictValidate(auditSchema, res, 'runs.launchAudit');
+    startInteractiveWork(`/audits/${audit.id}/run`, options);
+    return audit;
   },
   listAudits: async (params?: { project_id?: string }, options?: ApiRequestOptions) => {
     const path = withQuery('/audits', definedQuery(params));
@@ -97,7 +100,9 @@ export const runsApi = {
     options?: ApiRequestOptions,
   ) => {
     const res = await apiClient.post<Audit>(`/audits/${auditId}/rerun-failures`, input, options);
-    return strictValidate(auditSchema, res, 'runs.rerunFailures');
+    const audit = strictValidate(auditSchema, res, 'runs.rerunFailures');
+    startInteractiveWork(`/audits/${audit.id}/run`, options);
+    return audit;
   },
   listSchedules: async (projectId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<AuditSchedule[]>(

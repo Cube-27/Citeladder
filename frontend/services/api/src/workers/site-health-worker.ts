@@ -9,7 +9,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import { TaskQueue, type SiteTask } from '../queue/task-queue.ts';
-import { maintainLease } from '../queue/heartbeat.ts';
+import { maintainLease, leaseSignal } from '../queue/heartbeat.ts';
 import { persistLinkMetrics } from '../site-health/link-metrics.ts';
 import { persistArchitecture } from '../site-health/architecture.ts';
 import { runAnalyze } from '../site-health/analyze-task.ts';
@@ -58,6 +58,7 @@ export class SiteHealthWorker {
   readonly executors: Record<string, SiteExecutor>;
   readonly acquisition: SiteTaskContext;
   readonly taskScope?: { workspaceId: string; crawlId: string };
+  readonly signal?: AbortSignal;
   readonly #cadence: ScoreRefreshCadence;
   #recovery: Promise<number> | null = null;
   #nextRecovery = 0;
@@ -71,10 +72,12 @@ export class SiteHealthWorker {
       executors?: Record<string, SiteExecutor>;
       fetcher?: SitePageFetcher;
       taskScope?: { workspaceId: string; crawlId: string };
+      signal?: AbortSignal;
     } = {},
   ) {
     this.db = db;
     this.taskScope = options.taskScope;
+    this.signal = options.signal;
     this.owner = options.owner ?? `site-worker-ts-${randomUUID().slice(0, 12)}`;
     this.settings = options.settings ?? siteWorkerSettings();
     this.executors = options.executors ?? executors;
@@ -225,7 +228,7 @@ export class SiteHealthWorker {
       (error) => logger.exception('heartbeat failed', error, { task_id: claimed.id }),
     );
     try {
-      await body(heartbeat.signal);
+      await body(leaseSignal(heartbeat.signal, this.signal));
     } catch (error) {
       if (!heartbeat.signal.aborted && !(error instanceof TaskCancelledError)) {
         logger.exception('site health task failed', error, { task_id: claimed.id });

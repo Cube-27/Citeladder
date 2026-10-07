@@ -6,6 +6,7 @@ import {
 import { readBody } from '../http/body.ts';
 import { requireProject } from '../projects/access.ts';
 import { admitLinkRun, cancelLinkRun, linkRun } from '../site-health/internal-link-runs.ts';
+import { executeLinkRun } from '../site-health/internal-link-execution.ts';
 import { defineGetRoute, definePostRoute } from './define.ts';
 
 const family = 'site-health-internal-links';
@@ -14,6 +15,21 @@ const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
 
 export const internalLinkRoutes = [
+  definePostRoute({
+    family,
+    path: `${root}/analyses/{analysis_id}/run`,
+    capability: 'run',
+    params: { path: { ...projectPath, analysis_id: uuid }, query: {} },
+    response: internalLinksReadSchema,
+    async handle({ c, db, config }, { path }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      const scope = { workspaceId: workspace.workspaceId, projectId: path.project_id };
+      await linkRun(db, scope, path.analysis_id);
+      await executeLinkRun(db, config, scope, path.analysis_id);
+      return linkRun(db, scope, path.analysis_id);
+    },
+  }),
   defineGetRoute({
     family,
     path: root,

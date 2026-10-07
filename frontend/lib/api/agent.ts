@@ -30,6 +30,7 @@ import {
 } from '@citeladder/contracts/agent';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
+import { startInteractiveWork } from './interactive-work';
 
 export type AgentRun = z.infer<typeof agentRunSchema>;
 export type AgentRevision = z.infer<typeof agentRevisionSchema>;
@@ -77,6 +78,21 @@ const withKey = (idempotencyKey: string, options?: ApiRequestOptions): ApiReques
   retryNetworkFailures: true,
 });
 
+async function admitTurn(
+  path: string,
+  input: unknown,
+  idempotencyKey: string,
+  options?: ApiRequestOptions,
+) {
+  const accepted = strictValidate(
+    agentTurnAcceptedSchema,
+    await apiClient.post(path, input, withKey(idempotencyKey, options)),
+    'agent.turn',
+  );
+  startInteractiveWork(`/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`, options);
+  return accepted;
+}
+
 const agentApi = {
   skills: async (options?: ApiRequestOptions) =>
     strictValidate(
@@ -102,16 +118,7 @@ const agentApi = {
     input: NewChatInput,
     idempotencyKey: string,
     options?: ApiRequestOptions,
-  ) =>
-    strictValidate(
-      agentTurnAcceptedSchema,
-      await apiClient.post(
-        `/projects/${projectId}/agent/chats`,
-        input,
-        withKey(idempotencyKey, options),
-      ),
-      'agent.createChat',
-    ),
+  ) => admitTurn(`/projects/${projectId}/agent/chats`, input, idempotencyKey, options),
   getChat: async (chatId: string, options?: ApiRequestOptions) =>
     strictValidate(
       agentChatDetailSchema,
@@ -123,16 +130,7 @@ const agentApi = {
     input: { message: string; skill_id?: string | null; mentions?: string[] },
     idempotencyKey: string,
     options?: ApiRequestOptions,
-  ) =>
-    strictValidate(
-      agentTurnAcceptedSchema,
-      await apiClient.post(
-        `/agent/chats/${chatId}/messages`,
-        input,
-        withKey(idempotencyKey, options),
-      ),
-      'agent.sendMessage',
-    ),
+  ) => admitTurn(`/agent/chats/${chatId}/messages`, input, idempotencyKey, options),
   cancelRun: async (chatId: string, runId: string, options?: ApiRequestOptions) =>
     strictValidate(
       agentRunSchema,
@@ -171,14 +169,11 @@ const agentApi = {
     idempotencyKey: string,
     options?: ApiRequestOptions,
   ) =>
-    strictValidate(
-      agentTurnAcceptedSchema,
-      await apiClient.post(
-        `/agent/chats/${chatId}/output/approve-outline`,
-        { revision_id: revisionId },
-        withKey(idempotencyKey, options),
-      ),
-      'agent.approveOutline',
+    admitTurn(
+      `/agent/chats/${chatId}/output/approve-outline`,
+      { revision_id: revisionId },
+      idempotencyKey,
+      options,
     ),
   instructions: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(

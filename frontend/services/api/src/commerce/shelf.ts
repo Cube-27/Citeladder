@@ -6,7 +6,7 @@ import type { AuditTask } from '../queue/audit-queue.ts';
 import type { DeriveExecution, ExecutionResult } from '../audits/result-persistence.ts';
 import { analyzeExecution } from '../analysis/execution.ts';
 import { auditPolicy } from '../audits/config.ts';
-import { createModelGateway } from '../models/gateway.ts';
+import { createModelGateway, gatewaySettings } from '../models/gateway.ts';
 import {
   boundedText,
   frozenTargetSchema,
@@ -23,9 +23,12 @@ import {
 export function frozenShelfIds(frozen: Record<string, unknown>) {
   return strings(frozen.prompt_target_ids).filter((id) => z.uuid().safeParse(id).success);
 }
-function configuredResolver(): ShelfResolver | undefined {
+export function configuredShelfResolver(
+  env: Record<string, string | undefined> = process.env,
+  signal?: AbortSignal,
+): ShelfResolver | undefined {
   try {
-    const gateway = createModelGateway();
+    const gateway = createModelGateway(gatewaySettings(env));
     return {
       model: gateway.model,
       resolve: async (span) =>
@@ -34,6 +37,7 @@ function configuredResolver(): ShelfResolver | undefined {
             'Extract only recommended products from this bounded answer span. Keep product identity separate from merchant and citation URLs. Set product_url only when the URL identifies the recommended PDP; set merchant_url only for a seller link. Return an empty list when uncertain.',
             JSON.stringify({ span }),
             resolvedBatchSchema,
+            signal,
           )
         ).value,
     };
@@ -83,7 +87,7 @@ export async function prepareShelfExecution(
   const prepared = await prepareRecommendations(
     result.answer_text,
     catalog,
-    resolver === undefined ? configuredResolver() : (resolver ?? undefined),
+    resolver === undefined ? configuredShelfResolver() : (resolver ?? undefined),
   );
   const versions = {
     parser:

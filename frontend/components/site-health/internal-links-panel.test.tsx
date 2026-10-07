@@ -95,6 +95,37 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('Internal links', () => {
+  it('starts queued analysis immediately while keeping progress and cancellation responsive', async () => {
+    let admitted = false;
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const execution = vi.fn();
+    const queued = read(analysis({ state: 'queued' }));
+    mswServer.use(
+      http.get(endpoint, () => HttpResponse.json(admitted ? queued : read(null))),
+      http.post(`${endpoint}/analyses`, () => {
+        admitted = true;
+        return HttpResponse.json(queued);
+      }),
+      http.post(`${endpoint}/analyses/${run}/run`, async ({ request }) => {
+        execution(request.headers.get('x-workspace-id'));
+        await pending;
+        return HttpResponse.json(queued);
+      }),
+    );
+    renderPanel();
+    const start = await screen.findByRole('button', { name: 'Analyze internal links' });
+    expect(execution).not.toHaveBeenCalled();
+    try {
+      await userEvent.click(start);
+      await waitFor(() => expect(execution).toHaveBeenCalledWith(project.workspace_id));
+      expect(await screen.findByRole('button', { name: /cancel/i })).toBeEnabled();
+    } finally {
+      release();
+    }
+  });
   it('refreshes the default analysis after a rerun when navigating Back', async () => {
     const previous = analysis({ page_count: 20 });
     const next = analysis({ id: uuid(22), page_count: 42 });

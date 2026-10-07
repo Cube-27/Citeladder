@@ -76,6 +76,9 @@ export const PROMPT_GENERATION_REQUEST_TIMEOUT_MS = 240_000;
 export const ONBOARDING_COMPLETION_REQUEST_TIMEOUT_MS = 60_000;
 // Interactive research owns a 180-second server budget, plus response overhead.
 export const ONBOARDING_RESEARCH_REQUEST_TIMEOUT_MS = 195_000;
+// Interactive crawl/link work has a 180-second server bound plus settlement overhead.
+export const SITE_HEALTH_EXECUTION_REQUEST_TIMEOUT_MS = 195_000;
+export const INTERACTIVE_EXECUTION_REQUEST_TIMEOUT_MS = 255_000;
 
 /**
  * Bounded backoff between the API client's network-failure retries (A3). The

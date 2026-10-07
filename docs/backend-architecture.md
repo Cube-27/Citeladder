@@ -94,8 +94,17 @@ Periodic owners recheck admission before each occurrence, revocation or recovery
 unit. The scheduler claims one occurrence at a time under a runner budget, so
 stopping never strands a preclaimed batch; admitted units finish settlement.
 Worker-owned lease and crawl backstops still run in each lane, including idle
-passes. Runner and tick own background execution; interactive discovery also
-uses the same worker inside its bounded API request. No per-owner daemon remains.
+passes. Runner and tick own background execution. After durable admission, the
+browser starts a separate authorized POST for onboarding discovery, Site Health,
+Internal Links, audits, Agent turns, integration syncs, Performance range
+projections and Commerce competitor discovery. These requests reuse existing
+workers scoped to the admitted work, with bounded admission and provider
+deadlines, so initial progress does not require a new Cloud Run job. PostgreSQL
+leases arbitrate concurrent API and runner claims. Interactive crawls and
+competitor discovery also honor the shared drain lock to preserve crawler pacing.
+Reads remain persisted-only;
+large workloads, future retries and scheduled work retain background execution.
+No per-owner daemon remains.
 One PostgreSQL advisory lock admits one drain at a time across executions.
 
 With `CLOUD_RUN_RUNNER_JOB` configured, the API observes successful queue/billing
@@ -104,8 +113,10 @@ successful COMMIT marks work; rollback, savepoint rollback, aborted transactions
 and no-op writes do not. After the request settles, it awaits a bounded Cloud Run
 job-start request using service-account metadata credentials. This also covers
 requests whose later operation fails after earlier work committed. Reads do not
-start jobs; worker writes never recursively start jobs, including request-bound
-discovery lease and settlement writes. Duplicate starts are
+start jobs; background worker writes never recursively start jobs. Request-bound
+discovery suppresses wake-up because it has no successors. Other interactive
+workers keep observation active so successors committed after a
+background drain exits still wake the runner. Duplicate starts are
 allowed and existing leases arbitrate claims. A failed start is logged without
 tokens/provider bodies and leaves the committed response and work intact for tick.
 
