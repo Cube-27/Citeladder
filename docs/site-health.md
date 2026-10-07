@@ -252,9 +252,12 @@ The classifier reads page-owned structure before route/title suggestions.
 Structured data can suggest a type but cannot certify the type whose markup is
 being checked. The root-path homepage exception is exact: the bare root, known
 index files, listed two-letter language roots and any region-qualified locale
-root (`/en-in`, `/es-419`). A lone generic title word (`contact`, `shipping`,
-`policy`) counts only as the page's whole slug, because it also names products;
-multi-word phrases may appear anywhere. When page content was not observed (a
+root (`/en-in`, `/es-419`, `/zh-hant`; not `/en-shop`). A lone generic title
+word (`contact`, `shipping`, `policy`) counts only as a whole page name (the
+slug, the H1, or the title before its site suffix), because it also names
+products ("Contact lenses"); multi-word phrases may appear anywhere. A product or
+category purpose failure needs a purchase control, a price or captured
+collection items; otherwise it is unknown (`page_kind_unconfirmed`). When page content was not observed (a
 client-rendered shell), a winning route or title suggestion is low confidence
 and the evidence records `content_unobserved`. The persisted classifier version
 is the configured base plus a digest of every classification input, so a

@@ -200,11 +200,17 @@ function titleSuggestion(path: string, facts: Facts) {
   const haystack = ` ${tokens([text(facts.title), ...h1, slug].filter(Boolean).join(' ')).join(' ')} `;
   if (!haystack.trim()) return null;
   let best: { length: number; index: number; kind: string; phrase: string } | null = null;
+  // A lone generic word ("contact", "shipping") names products too ("Contact lenses"):
+  // it counts only as a whole name (the slug, the H1, or the title before its site
+  // suffix), while a phrase may appear anywhere.
+  const names = new Set(
+    [slug, ...h1, text(facts.title).split(/\s+[|–—:·-]\s+|[|–—·]/u)[0] ?? ''].map((name) =>
+      tokens(name).join(' '),
+    ),
+  );
   c.title_keywords.forEach(([kind, phrase], index) => {
-    // A lone generic word ("contact", "shipping") names products too ("Contact lenses"):
-    // it counts only as the page's whole slug, while a phrase may appear anywhere.
     const single = !phrase!.includes(' ');
-    if (single ? slug.trim() !== phrase : !haystack.includes(` ${phrase} `)) return;
+    if (single ? !names.has(phrase!) : !haystack.includes(` ${phrase} `)) return;
     if (!best || phrase!.length > best.length)
       best = { length: phrase!.length, index, kind: kind!, phrase: phrase! };
   });
