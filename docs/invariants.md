@@ -67,12 +67,12 @@ Persistence means observed, not automatically true.
 Analyses, rule evaluations, scores, demand signals, opportunities, briefs,
 prompts, validations, verifications, and agent results reference exact source
 IDs and every relevant extractor, classifier, analyzer, rule, scoring, formula,
-template, provider, and model version. During disposable pre-launch
-development, active semantic versions remain `1`; semantic changes use a fresh
-disposable database instead of preserving cross-version history. Resetting an
-existing database requires explicit authorization and confirmation that it is
-disposable pre-launch development data. Never reset non-disposable, shared,
-staging or production environments under this policy.
+template, provider, and model version. A semantic change bumps the affected
+version once per release, so persisted results from before and after it are
+never compared as like for like; production data is never reset to avoid a
+bump. Resetting an existing database requires explicit authorization and
+confirmation that it is disposable development data. Never reset
+non-disposable, shared, staging or production environments.
 
 ## 6. Reads are persisted projections
 
@@ -236,8 +236,7 @@ never ad-hoc mutation of historical rows.
 Before launch, schema changes are folded into
 `migrations/versions/0001_initial.py`. Verify from an empty disposable database
 with `alembic upgrade head` and `alembic check`; do not add `0002+` without an
-explicit policy change. All active development semantic versions remain `1`
-under the same reset policy. Alembic is the only schema author in every
+explicit policy change. Semantic versions follow invariant 5. Alembic is the only schema author in every
 language: TypeScript services hold generated Kysely types and never contain
 migrations or DDL (`scripts/quality.mjs --scope api`).
 

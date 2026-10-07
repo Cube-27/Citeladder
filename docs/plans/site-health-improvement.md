@@ -185,11 +185,20 @@ apex/www duplicates never take two slots.
 
 ## Phase 5: new AEO checkpoints (after Phases 2-3)
 
-FAQPage/HowTo schema validity; Person/author schema (E-E-A-T) beyond visible
-attribution; `dateModified` freshness band; hreflang self-reference and
-x-default; canonical vs sitemap agreement; `sameAs`/Wikidata entity linking;
-llms.txt validity and `llms-full.txt`. Each check needs a scope, applicability,
-pillar membership and unknown/not-applicable handling before it ships.
+Shipped, all unscored under owner decision 1 (a missing signal here does not by
+itself cost crawlability, indexing or answer eligibility):
+
+| Check | Scope and applicability | Outcomes |
+|---|---|---|
+| `aeo.content_recency` (advisory) | Authored editorial kinds | Newest declared date within `content_recency_max_age_days` (365) of the audit time; undated is the date check's finding (`no_content_date`, not applicable); unreadable, future or no audit time stay unknown |
+| `aeo.entity_profiles` (advisory) | Site root with Organization markup | `sameAs` names a profile on another site; own-host links do not count; no Organization block is the identity check's finding |
+| `technical.sitemap_canonical` (defect) | Sitemap-listed HTML with a canonical | The canonical names the page itself (tracking parameters and trailing slash ignored) |
+
+Considered and not added:
+- FAQPage/HowTo validity: `schema_required_valid` already enforces the required properties.
+- Person/author schema: `visible_attribution` owns authorship. Markup adds nothing the reader-visible byline lacks.
+- hreflang self-reference and x-default: both are optional in Google's guidance, and `hreflang_conflict` owns the return-tag failure that does break clusters.
+- llms.txt validity and `llms-full.txt`: excluded by owner decision 1.
 
 ## Sequencing
 

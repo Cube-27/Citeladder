@@ -108,6 +108,65 @@ function contentDatePresent(facts: Facts): CheckResult {
   return [passFail(published || modified), evidence];
 }
 
+const DAY_MS = 86_400_000;
+/**
+ * The newest declared date against the audit time. An undated page is the date
+ * check's finding, not this one's; a date that cannot be read stays unknown.
+ */
+function contentRecency(facts: Facts): CheckResult {
+  const dates = record(facts.dates);
+  const declared = [text(dates.published), text(dates.modified)].filter((value) => value.trim());
+  if (!declared.length) return ['not_applicable', { reason: 'no_content_date' }];
+  const parsed = declared.map((value) => Date.parse(value)).filter((time) => !Number.isNaN(time));
+  const evidence: Record<string, unknown> = {
+    declared_dates: declared,
+    max_age_days: analysisPolicy.rules.content_recency_max_age_days,
+  };
+  if (!parsed.length) return ['unknown', { ...evidence, reason: 'content_date_unparseable' }];
+  const audit = typeof facts.audit_time === 'string' ? Date.parse(facts.audit_time) : Number.NaN;
+  if (Number.isNaN(audit)) return ['unknown', { ...evidence, reason: 'audit_time_unavailable' }];
+  const ageDays = Math.floor((audit - Math.max(...parsed)) / DAY_MS);
+  evidence.age_days = ageDays;
+  if (ageDays < -analysisPolicy.rules.content_recency_future_tolerance_days)
+    return ['unknown', { ...evidence, reason: 'content_date_in_future' }];
+  if (ageDays <= analysisPolicy.rules.content_recency_max_age_days) return ['satisfied', evidence];
+  return ['missing', { ...evidence, reason: 'content_not_recent' }];
+}
+
+const bareHost = (value: string) => {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol)
+      ? url.hostname.toLowerCase().replace(/^www\./u, '')
+      : '';
+  } catch {
+    return '';
+  }
+};
+/** The organization links to profiles elsewhere (Wikidata, LinkedIn, ...) that confirm the entity. */
+function entityProfiles(facts: Facts): CheckResult {
+  const types = new Set(analysisPolicy.rules.organization_bearing_schema_types);
+  const blocks = records(record(facts.structured_data).blocks).filter((block) =>
+    types.has(text(block.type)),
+  );
+  if (!blocks.length) return ['not_applicable', { reason: 'no_expected_type_block' }];
+  const site = bareHost(text(record(facts.delivery).final_url));
+  const profiles = [
+    ...new Set(
+      blocks
+        .flatMap((block) => textList(block.same_as))
+        .filter((url) => {
+          const host = bareHost(url);
+          return host && host !== site && !host.endsWith(`.${site}`);
+        }),
+    ),
+  ];
+  return [
+    passFail(profiles.length > 0),
+    { profile_count: profiles.length, profiles: profiles.slice(0, 8) },
+  ];
+}
+
 function sourceSupportPresent(facts: Facts): CheckResult {
   const support = record(facts.source_support);
   const sources = list(support.attached_sources);
@@ -447,6 +506,8 @@ export function contentChecks(
     'aeo.open_graph_present': openGraphPresent,
     'aeo.visible_attribution': visibleAttribution,
     'aeo.content_date_present': contentDatePresent,
+    'aeo.content_recency': contentRecency,
+    'aeo.entity_profiles': entityProfiles,
     'aeo.source_support_present': sourceSupportPresent,
     'aeo.organization_identity': organizationIdentity,
     'aeo.trust_path_present': trustPath,

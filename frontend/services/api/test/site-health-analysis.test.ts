@@ -698,3 +698,66 @@ describe('classifier calibration corpus', () => {
       ).toEqual(EMPTY_COLLECTION);
   });
 });
+
+describe('unscored visibility checks', () => {
+  const rule = (ruleId: string, extra: Record<string, unknown>) =>
+    byRule(
+      evaluatePageRules({
+        has_html: true,
+        delivery: { final_url: 'https://www.example.test/guides/setup' },
+        ...extra,
+      }),
+    ).get(ruleId)!;
+  const outcome = (row: RuleEvaluation) => [row.outcome, row.evidence.reason];
+
+  it('judges recency from the newest declared date at audit time', () => {
+    const recency = (published: string, modified: string, auditTime: string | null) =>
+      outcome(
+        rule('aeo.content_recency', {
+          page_kind: 'guide',
+          authored_content: true,
+          dates: { published, modified },
+          audit_time: auditTime,
+        }),
+      );
+    const audit = '2026-10-07T00:00:00Z';
+    expect(recency('2023-01-01', '2026-03-01', audit)).toEqual(['satisfied', undefined]);
+    expect(recency('2024-01-01', '', audit)).toEqual(['missing', 'content_not_recent']);
+    // The missing date is the date check's finding, not a stale page.
+    expect(recency('', '', audit)).toEqual(['not_applicable', 'no_content_date']);
+    expect(recency('someday', '', audit)).toEqual(['unknown', 'content_date_unparseable']);
+    expect(recency('2026-01-01', '', null)).toEqual(['unknown', 'audit_time_unavailable']);
+    expect(recency('2027-06-01', '', audit)).toEqual(['unknown', 'content_date_in_future']);
+  });
+
+  it('counts only entity profiles on other sites', () => {
+    const profiles = (sameAs: string[] | null) =>
+      outcome(
+        rule('aeo.entity_profiles', {
+          site: {},
+          structured_data: {
+            blocks: sameAs ? [{ type: 'Organization', name: 'Example', same_as: sameAs }] : [],
+          },
+        }),
+      );
+    expect(profiles(['https://www.wikidata.org/wiki/Q1', 'https://example.test/about'])).toEqual([
+      'satisfied',
+      undefined,
+    ]);
+    expect(profiles(['https://example.test/about', 'https://blog.example.test/'])[0]).toBe(
+      'missing',
+    );
+    expect(profiles(null)).toEqual(['not_applicable', 'no_expected_type_block']);
+  });
+
+  it('flags a sitemap URL whose canonical names another page', () => {
+    const sitemap = (member: boolean, canonical: string) =>
+      rule('technical.sitemap_canonical', { sitemap_member: member, canonical_url: canonical });
+    expect(outcome(sitemap(true, '/guides/setup/?utm_source=x'))).toEqual(['satisfied', undefined]);
+    expect(outcome(sitemap(false, '/guides/other'))).toEqual(['not_applicable', 'not_in_sitemap']);
+    const conflict = sitemap(true, '/guides/other');
+    expect(outcome(conflict)).toEqual(['missing', 'sitemap_lists_non_canonical']);
+    // Visible as an issue, never part of a score.
+    expect([createsIssue(conflict), conflict.score_applicability]).toEqual([true, false]);
+  });
+});

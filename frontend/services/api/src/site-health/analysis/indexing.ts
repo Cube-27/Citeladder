@@ -77,6 +77,21 @@ function resolveIntent(facts: Facts, evidence: Record<string, unknown>) {
   return ['unknown', 'insufficient_evidence'] as const;
 }
 
+/** A sitemap lists the URLs a site wants indexed; listing one that names another canonical is a mixed signal. */
+export function checkSitemapCanonical(facts: Facts): CheckResult {
+  if (facts.sitemap_member !== true) return ['not_applicable', { reason: 'not_in_sitemap' }];
+  const declared = text(facts.canonical_url).trim();
+  if (!declared) return ['not_applicable', { reason: 'no_canonical' }];
+  const finalUrl = text(record(facts.delivery).final_url);
+  const canonical = resolveCanonical(declared, finalUrl);
+  const evidence = { canonical_url: canonical.slice(0, 2048), final_url: finalUrl.slice(0, 2048) };
+  if (!canonicalOrigin(canonical))
+    return ['unknown', { ...evidence, reason: 'insufficient_evidence' }];
+  return comparableUrl(canonical) === comparableUrl(finalUrl)
+    ? ['satisfied', evidence]
+    : ['missing', { ...evidence, reason: 'sitemap_lists_non_canonical' }];
+}
+
 export function checkIndexable(facts: Facts): CheckResult {
   const robots = record(facts.robots);
   const noindex = Boolean(robots.noindex);

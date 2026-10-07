@@ -377,7 +377,8 @@
       "authored_content_check_ids": [
         "aeo.visible_attribution",
         "aeo.source_support_present",
-        "aeo.content_date_present"
+        "aeo.content_date_present",
+        "aeo.content_recency"
       ],
       "purpose_confirmed_check_ids": [
         "aeo.product_answer_facts",
@@ -599,6 +600,7 @@
         "format_has_no_html",
         "intentional_non_indexing",
         "no_canonical",
+        "no_content_date",
         "no_expected_type_block",
         "no_hreflang",
         "no_html",
@@ -607,6 +609,7 @@
         "no_required_properties",
         "no_schema_names",
         "no_sitemap",
+        "not_in_sitemap",
         "not_site_root",
         "other_page_kind",
         "quote_led_offer",
@@ -623,8 +626,13 @@
         "question_relationships_unavailable",
         "page_kind_unconfirmed",
         "robots_not_fetched",
-        "unknown_applicability"
-      ]
+        "unknown_applicability",
+        "audit_time_unavailable",
+        "content_date_in_future",
+        "content_date_unparseable"
+      ],
+      "content_recency_max_age_days": 365,
+      "content_recency_future_tolerance_days": 2
     },
     "acquisition": {
       "error_codes": {

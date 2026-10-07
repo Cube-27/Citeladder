@@ -210,6 +210,12 @@ const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> 
   'aeo.trust_path_present': () => ['about', 'contact', 'privacy', 'terms'],
   'aeo.content_date_present': (evidence) =>
     absent(evidence, { has_published: 'datePublished', has_modified: 'dateModified' }),
+  'aeo.content_recency': (evidence) =>
+    typeof evidence.age_days === 'number'
+      ? [`dateModified ${evidence.age_days} days old`]
+      : reasonPhrase(evidence),
+  'aeo.entity_profiles': () => ['sameAs'],
+  'technical.sitemap_canonical': (evidence) => [`canonical ${text(evidence.canonical_url)}`],
   'aeo.visible_attribution': (evidence) =>
     text(evidence.declared_name) ? ['visible author'] : ['author'],
   'aeo.source_support_present': () => ['citation'],
@@ -229,8 +235,8 @@ const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> 
   'web.accessibility_document_language': () => ['<html lang>'],
   'web.mobile_viewport': () => ['<meta name="viewport">'],
   'web.security_mixed_content': (evidence) => textList(evidence.assets),
-  'architecture.broken_internal_links': failingLinkTargets,
-  'architecture.sitemap_unreachable_urls': failingLinkTargets,
+  'technical.broken_internal_link': failingLinkTargets,
+  'technical.sitemap_url_unreachable': failingLinkTargets,
   'architecture.duplicate_metadata_in_page_kind': duplicateMetadataKinds,
 };
 
