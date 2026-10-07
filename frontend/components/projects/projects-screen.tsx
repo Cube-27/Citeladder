@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
-import { Stack } from '@/components/ui/layout';
 import type { Project } from '@/lib/api/types';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
@@ -87,8 +86,10 @@ export function ProjectsScreen() {
     );
   }
 
+  // A fragment: the dashboard is a PageShell whose bands must meet flush, and
+  // the edit panel is an overlay, so there is no rhythm here to own.
   return (
-    <Stack gap="section">
+    <>
       <DashboardScreen onEditProject={(project) => setEditing(project)} />
 
       {editing ? (
@@ -101,6 +102,6 @@ export function ProjectsScreen() {
           }}
         />
       ) : null}
-    </Stack>
+    </>
   );
 }

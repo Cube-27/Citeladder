@@ -33,26 +33,37 @@ type ExportFormat = 'csv' | 'md';
  * page's identity band while the panel still reports an export failure.
  */
 export function useRunExport(audit: Audit | undefined) {
-  const [exporting, setExporting] = useState<ExportFormat | null>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
+  // The route stays mounted across runs (a repair run is a navigation, not a
+  // remount), so each state belongs to the run it was started for and is ignored
+  // once the reader is looking at another one.
+  const [exporting, setExporting] = useState<{ auditId: string; format: ExportFormat } | null>(
+    null,
+  );
+  const [exportError, setExportError] = useState<{ auditId: string; message: string } | null>(null);
 
   async function download(format: ExportFormat) {
     if (!audit) return;
-    setExporting(format);
+    const auditId = audit.id;
+    setExporting({ auditId, format });
     setExportError(null);
     try {
-      const blob = await runsApi.downloadExport(audit.id, format, {
+      const blob = await runsApi.downloadExport(auditId, format, {
         workspaceId: audit.workspace_id,
       });
-      saveBlob(blob, `audit-${audit.id}.${format}`);
+      saveBlob(blob, `audit-${auditId}.${format}`);
     } catch (error) {
-      setExportError(humanizeApiError(error).message);
+      setExportError({ auditId, message: humanizeApiError(error).message });
     } finally {
-      setExporting(null);
+      setExporting((current) => (current?.auditId === auditId ? null : current));
     }
   }
 
-  return { exporting, exportError, onExport: (format: ExportFormat) => void download(format) };
+  const current = audit?.id;
+  return {
+    exporting: exporting && exporting.auditId === current ? exporting.format : null,
+    exportError: exportError && exportError.auditId === current ? exportError.message : null,
+    onExport: (format: ExportFormat) => void download(format),
+  };
 }
 
 /**

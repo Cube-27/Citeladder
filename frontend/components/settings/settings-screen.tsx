@@ -289,10 +289,11 @@ export function SettingsScreen() {
                   ) : null}
                 </dl>
               </Stack>
+              <Stack gap="section">
+                <TimeZoneSetting />
+                <AccountSecurity />
+              </Stack>
             </div>
-
-            <TimeZoneSetting />
-            <AccountSecurity />
 
             <ProjectDeletionControls />
           </Stack>

@@ -291,6 +291,18 @@ const GA4_SUMMARY_ENTRIES = [
  * comparability that does not exist. A null value means no included GA4 row
  * fed the window and renders as not measured, never as zero.
  */
+/** An unimported window is a different fact from a metric missing in an imported one. */
+function ga4ComparisonLabel(
+  comparison: PerformanceWindow,
+  value: number | null | undefined,
+  compareLabel: string,
+) {
+  if (comparison.evidence_state === 'not_run') return `${compareLabel} — not imported`;
+  if (value === null || value === undefined)
+    return `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`;
+  return `${compareLabel}: ${formatCount(value)}`;
+}
+
 export function Ga4SummaryRow({
   selected,
   comparison,
@@ -325,9 +337,7 @@ export function Ga4SummaryRow({
                   detail={
                     comparison ? (
                       <span className="tabular-nums">
-                        {comparisonValue === null || comparisonValue === undefined
-                          ? `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`
-                          : `${compareLabel}: ${formatCount(comparisonValue)}`}
+                        {ga4ComparisonLabel(comparison, comparisonValue, compareLabel)}
                       </span>
                     ) : undefined
                   }

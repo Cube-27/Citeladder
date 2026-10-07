@@ -103,12 +103,11 @@ function NewChat({
   return (
     <PageShell
       measure="workflow"
-      // Fill the viewport below the identity band so the composer sits at the
-      // bottom of a short thread. Subtracted: the identity band, the shell's
-      // gutter under the route, and (desktop) the floating sheet's inset above
-      // and below. PageShell's own top padding is inside this box (border-box).
-      // Kept identical in chat-screen.tsx and new-chat-screen.tsx.
-      className="flex min-h-[calc(100dvh-var(--page-band-identity)-var(--content-gutter))] flex-col min-[981px]:min-h-[calc(100dvh-var(--page-band-identity)-var(--content-gutter)-2*var(--workspace-inset))]"
+      // Fill the viewport below the shell chrome so the composer sits at the
+      // bottom of a short thread. `--route-chrome-height` (globals.css) owns the
+      // chrome above the route at each breakpoint; the gutter is the shell's
+      // padding under the route. Kept identical in chat- and new-chat-screen.
+      className="flex min-h-[calc(100dvh-var(--route-chrome-height)-var(--content-gutter))] flex-col"
     >
       <Stack gap="section" className="my-auto">
         <h2 className={textRole('sectionTitle', 'text-center')}>What can I help with?</h2>

@@ -112,12 +112,8 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
         </Card>
         <Card>
           <CardHeader>
+            {/* The card states its own crawl scope; repeating it here doubled it. */}
             <CardTitle>Internal Links</CardTitle>
-            {detail.internal_links ? (
-              <CardDescription>
-                {`Modelled over ${detail.internal_links.source_page_count} observed crawl page${detail.internal_links.source_page_count === 1 ? '' : 's'}${detail.internal_links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
-              </CardDescription>
-            ) : null}
           </CardHeader>
           <CardContent>
             {detail.internal_links ? (
