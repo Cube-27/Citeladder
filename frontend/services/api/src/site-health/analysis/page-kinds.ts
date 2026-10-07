@@ -204,7 +204,7 @@ function titleSuggestion(path: string, facts: Facts) {
   // it counts only as a whole name (the slug, the H1, or the title before its site
   // suffix), while a phrase may appear anywhere.
   const names = new Set(
-    [slug, ...h1, text(facts.title).split(/\s+[|–—:·-]\s+|[|–—·]/u)[0] ?? ''].map((name) =>
+    [slug, ...h1, text(facts.title).split(/ [-:] |[|–—·]/u)[0] ?? ''].map((name) =>
       tokens(name).join(' '),
     ),
   );
