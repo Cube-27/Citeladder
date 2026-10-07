@@ -113,14 +113,19 @@ successful COMMIT marks work; rollback, savepoint rollback, aborted transactions
 and no-op writes do not. After the request settles, it awaits a bounded Cloud Run
 job-start request using service-account metadata credentials. This also covers
 requests whose later operation fails after earlier work committed. Reads do not
-start jobs; background worker writes never recursively start jobs. Request-bound
+start jobs; background worker writes never start jobs. Instead, an execution
+that idles keeps its drain while a lane's earliest pending task (Site Health
+deferrals and retry backoff) becomes due within its budget, polling for new work
+meanwhile. After releasing the drain lock, an execution whose pending work is due
+within a fresh budget starts one successor; work due later waits for tick. Request-bound
 discovery suppresses wake-up because it has no successors. Other interactive
 workers keep observation active so successors committed after a
 background drain exits still wake the runner. Duplicate starts are
 allowed and existing leases arbitrate claims. A failed start is logged without
 tokens/provider bodies and leaves the committed response and work intact for tick.
 
-The Cloud Run API (`K_SERVICE`, or configured runner job) requires the existing
+The Cloud Run API (`K_SERVICE`, or configured runner job outside a job
+execution) requires the existing
 `CITELADDER_ORIGIN_TOKEN` on every request, including health/readiness and MCP;
 the previous token may be accepted during rotation. Missing tokens fail startup.
 An admitted request must also name an allowlisted public host (the app or apex

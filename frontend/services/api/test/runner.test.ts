@@ -97,6 +97,76 @@ describe('bounded runner', () => {
     expect(processed).toBe(1);
     expect(drain).not.toHaveBeenCalled();
   });
+  it('keeps an idle drain until deferred work is due within the budget', async () => {
+    let due: Date | null = new Date(Date.now() + 2000);
+    let deferred = 1;
+    const pauses: number[] = [];
+    const tasks = await drainLanes(
+      [
+        {
+          name: 'site-health',
+          run: async () => {
+            if (!deferred || pauses.length === 0) return 0;
+            deferred = 0;
+            due = null;
+            return 1;
+          },
+          nextDue: async () => due,
+        },
+      ],
+      { ...options(), deadline: 10_000, pause: async (ms) => pauses.push(ms) },
+    );
+    expect(tasks).toBe(1);
+    expect(pauses).toHaveLength(1);
+    expect(pauses[0]).toBeGreaterThan(1000);
+    expect(pauses[0]).toBeLessThanOrEqual(2000);
+  });
+
+  it('leaves work due after the deadline instead of pausing past it', async () => {
+    const pause = vi.fn(async () => undefined);
+    const tasks = await drainLanes(
+      [
+        {
+          name: 'site-health',
+          run: async () => 0,
+          nextDue: async () => new Date(Date.now() + 60_000),
+        },
+      ],
+      { ...options(), deadline: 10_000, pause },
+    );
+    expect(tasks).toBe(0);
+    expect(pause).not.toHaveBeenCalled();
+  });
+
+  it('reports only claimable Site Health work as next due', async () => {
+    const db = createDatabase(testConfig({}), { execution: true });
+    const fixtures = new SiteFixtures(db);
+    try {
+      const seed = await fixtures.crawl('running');
+      const worker = new SiteHealthWorker(db, {
+        taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
+      });
+      expect(await worker.nextDue()).toBeNull();
+      const later = new Date(Date.now() + 30_000);
+      const earlier = new Date(Date.now() + 5000);
+      const [deferred, running] = [await fixtures.task(seed), await fixtures.task(seed)];
+      await db
+        .updateTable('site_crawl_tasks')
+        .set({ available_at: later })
+        .where('id', '=', deferred)
+        .execute();
+      await db
+        .updateTable('site_crawl_tasks')
+        .set({ status: 'running', available_at: earlier })
+        .where('id', '=', running)
+        .execute();
+      expect((await worker.nextDue())?.getTime()).toBe(later.getTime());
+    } finally {
+      await fixtures.cleanup();
+      await db.destroy();
+    }
+  });
+
   it('drains successors into earlier lanes before declaring idle', async () => {
     let earlier = 0,
       later = 1;
@@ -410,6 +480,15 @@ it('refuses arbitrary credential destinations, unbounded pools and unprotected C
   expect(() => executionSettings({ RUNNER_BUDGET_SECONDS: '0' })).toThrow();
   expect(() => executionSettings({ K_SERVICE: 'api' })).toThrow();
   expect(() => executionSettings({ CITELADDER_ORIGIN_TOKEN_PREVIOUS: 'a'.repeat(32) })).toThrow();
+  // A job execution serves no HTTP; it may start its successor without the origin token.
+  const job = 'projects/p/locations/us-central1/jobs/citeladder-runner';
+  expect(
+    executionSettings({ CLOUD_RUN_RUNNER_JOB: job, CLOUD_RUN_JOB: 'citeladder-runner' }),
+  ).toMatchObject({
+    runnerJob: job,
+    protectOrigin: false,
+  });
+  expect(() => executionSettings({ CLOUD_RUN_RUNNER_JOB: job })).toThrow();
 });
 
 describe('exclusive drain on PostgreSQL', () => {

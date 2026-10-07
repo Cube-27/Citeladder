@@ -93,7 +93,8 @@ oldest-first `SKIP LOCKED` batches before claiming work. Recovery spends one
 attempt, releases the lease, and either makes the task due immediately or
 fails it at its attempt ceiling.
 The runner's Site Health lane processes due work and successors until idle or
-the runner admission budget stops new claims. Already claimed work finishes
+the runner admission budget stops new claims. An idle drain waits for a deferred
+or backed-off task that becomes due within the budget instead of exiting. Already claimed work finishes
 under its existing task/acquisition bounds before the execution exits.
 Each pass admits a parallel batch bounded by Site Health worker/global
 concurrency and the runner's database pool size; host pacing and acquisition

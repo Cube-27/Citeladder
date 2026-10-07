@@ -140,7 +140,8 @@ resource "google_cloud_run_v2_job" "execution" {
         }
 
         dynamic "env" {
-          for_each = local.shared_env
+          # A drain that ends with work due soon starts its own successor.
+          for_each = merge(local.shared_env, { CLOUD_RUN_RUNNER_JOB = local.runner_job })
           content {
             name  = env.key
             value = env.value

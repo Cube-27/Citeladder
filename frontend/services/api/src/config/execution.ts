@@ -54,7 +54,9 @@ export function executionSettings(env: Record<string, string | undefined>) {
     throw new ConfigError(
       'Origin tokens must contain at least 32 characters; rotation requires a current token',
     );
-  const protectOrigin = Boolean(env.K_SERVICE || runnerJob);
+  // A job execution (Cloud Run sets CLOUD_RUN_JOB) serves no HTTP; it holds the
+  // runner job only to start its own successor.
+  const protectOrigin = !env.CLOUD_RUN_JOB && Boolean(env.K_SERVICE || runnerJob);
   if (protectOrigin && !originToken)
     throw new ConfigError('Cloud Run API requires CITELADDER_ORIGIN_TOKEN');
   return {
