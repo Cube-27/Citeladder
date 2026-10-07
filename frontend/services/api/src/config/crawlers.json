@@ -1,5 +1,5 @@
 {
-  "catalog_version": "1",
+  "catalog_version": "2",
   "resource_rules": [
     {
       "resource_class": "robots",
@@ -184,7 +184,7 @@
         "method": "ip_ranges",
         "source_url": "https://claude.com/crawling/bots.json"
       },
-      "checks": []
+      "checks": ["ai_crawler_access", "search_crawler_access"]
     },
     {
       "bot_id": "anthropic_user",
@@ -198,7 +198,7 @@
         "method": "ip_ranges",
         "source_url": "https://claude.com/crawling/bots.json"
       },
-      "checks": []
+      "checks": ["ai_crawler_access"]
     },
     {
       "bot_id": "apple_applebot",

@@ -261,6 +261,11 @@ describe('page checklist', () => {
     );
     for (const id of ['aeo.product_answer_facts', 'aeo.offer_freshness_signal'])
       expect(createsIssue(rows.get(id)!), id).toBe(false);
+    const listing = evaluations(
+      '<html><head><title>Summer story</title></head><body><main><h1>Summer story</h1><p>How the summer range came together after a year of sketches and fittings.</p></main></body></html>',
+      'https://example.test/collections/summer-story',
+    );
+    expect(listing.get('aeo.listing_answer_set')!.evidence.reason).toBe('page_kind_unconfirmed');
   });
 
   it('requires a public price unless an explicit pricing action makes the product quote-led', () => {

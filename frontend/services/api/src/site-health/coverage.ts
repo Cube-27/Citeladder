@@ -19,8 +19,8 @@ export type CoverageSignals = {
   failedDiscoveryTaskCount: number;
   analyzedUrlCount: number;
   failedUrlCount: number;
-  /** This crawl's automatic analysis allowance (the plan's monitored pages); 0 when none. */
-  automaticLimit: number;
+  /** This crawl's automatic analysis allowance (the plan's monitored pages); null when none was recorded. */
+  automaticLimit: number | null;
 };
 
 const BOUNDED_DISCOVERY = new Set(['cancelled', 'sample_completed', 'stopped']);
@@ -82,6 +82,13 @@ export function assessCoverage(signals: CoverageSignals) {
   };
 }
 
+/** The crawl's frozen allowance, or null when none was recorded (never a silent zero). */
+function allowance(value: unknown) {
+  if (value === undefined || value === null || value === '') return null;
+  const limit = Number(value);
+  return Number.isFinite(limit) && limit >= 0 ? limit : null;
+}
+
 export async function crawlCoverage(db: Database, crawl: Crawl) {
   const discovery = await db
     .selectFrom('site_crawl_tasks')
@@ -123,6 +130,6 @@ export async function crawlCoverage(db: Database, crawl: Crawl) {
     failedDiscoveryTaskCount: discovery.failed,
     analyzedUrlCount: crawl.analyzed_url_count,
     failedUrlCount: crawl.failed_url_count,
-    automaticLimit: Number(config[policy.site_health.crawl.automatic_monitor_limit_key] || 0),
+    automaticLimit: allowance(config[policy.site_health.crawl.automatic_monitor_limit_key]),
   });
 }

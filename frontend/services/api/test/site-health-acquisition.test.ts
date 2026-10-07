@@ -520,7 +520,11 @@ describe('frontier admission', () => {
         linkOrdinal: ordinal,
       });
     });
-  const admit = (seed: SiteSeed, paths: string[], options = {}) =>
+  const twinOf = (item: ReturnType<typeof candidates>[number]) => {
+    const wwwUrl = item.url.replace('://', '://www.');
+    return { ...item, url: wwwUrl, hash: canonicalIdentity(wwwUrl).hash };
+  };
+  const admit = (seed: SiteSeed, paths: string[] | ReturnType<typeof candidates>, options = {}) =>
     db.transaction().execute(async (trx) => {
       const live = await trx
         .selectFrom('site_crawls')
@@ -528,7 +532,8 @@ describe('frontier admission', () => {
         .where('id', '=', seed.crawlId)
         .executeTakeFirstOrThrow();
       const runtime = await lockRuntime(trx, seed.workspaceId);
-      const result = await admitCandidates(trx, live, candidates(paths), runtime, options);
+      const items = paths.map((path) => (typeof path === 'string' ? candidates([path])[0]! : path));
+      const result = await admitCandidates(trx, live, items, runtime, options);
       await trx
         .updateTable('site_crawls')
         .set((eb) => ({ admitted_url_count: eb('admitted_url_count', '+', result.admitted) }))
@@ -613,6 +618,24 @@ describe('frontier admission', () => {
     const wwwUrl = twin.url.replace('://', '://www.');
     const www = { ...twin, url: wwwUrl, hash: canonicalIdentity(wwwUrl).hash };
     expect(orderedUnique([twin, www], 'crawl-a')).toHaveLength(1);
+  });
+
+  it('filters by page kind, never lets an inadmissible twin displace its pair, and samples one twin per crawl', async () => {
+    const filtered = await crawl({
+      config: { automatic_monitor_limit: 0, page_kinds: ['about_contact'] },
+    });
+    // About and contact are separate value tiers of the one `about_contact` page kind.
+    expect((await admit(filtered, ['/about-us', '/contact', '/products/widget'])).admitted).toBe(2);
+
+    const full = await crawl({ config: { automatic_monitor_limit: 0 } });
+    const [apex] = candidates(['/guide']);
+    // Ranked first but too deep to admit: the admissible twin must still get the slot.
+    const deep = { ...twinOf(apex!), depth: 999, priority: 1000 };
+    expect((await admit(full, [deep, apex!])).admitted).toBe(1);
+
+    const sample = await crawl({ sample: true, config: { automatic_monitor_limit: 0 } });
+    expect((await admit(sample, [apex!])).admitted).toBe(1);
+    expect((await admit(sample, [twinOf(apex!)])).admitted).toBe(0);
   });
 
   it('never admits a hard-excluded or out-of-scope candidate', async () => {

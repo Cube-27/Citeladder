@@ -70,9 +70,11 @@ function start(): Slot {
 function slot(): Slot {
   const idle = slots.find((candidate) => candidate.pending.size === 0);
   if (idle) return idle;
-  if (slots.length < poolSize()) return start();
-  return slots.reduce((best, candidate) =>
-    candidate.pending.size < best.pending.size ? candidate : best,
+  const [first, ...rest] = slots;
+  if (!first || slots.length < poolSize()) return start();
+  return rest.reduce(
+    (best, candidate) => (candidate.pending.size < best.pending.size ? candidate : best),
+    first,
   );
 }
 

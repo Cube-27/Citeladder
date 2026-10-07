@@ -116,12 +116,15 @@ export function orderedUnique(candidates: Candidate[], seed: string) {
   }
   return [...unique.values()];
 }
+const PAGE_KIND_OF_VALUE: Record<string, string> = crawlPolicy.value_kind_page_kinds;
 function allowed(item: Candidate, crawl: Crawl, settings: Settings) {
   if (!classifyUrlAdmission(item.url, crawlScope(crawl)).accepted || item.depth > settings.maxDepth)
     return false;
   const kinds = record(crawl.configuration).page_kinds;
   const selected = Array.isArray(kinds) ? kinds : [];
-  return !selected.length || ['root', 'other', ...selected].includes(item.valueKind);
+  // Value tiers are finer than page kinds (about and contact are both `about_contact`).
+  const pageKind = PAGE_KIND_OF_VALUE[item.valueKind] ?? item.valueKind;
+  return !selected.length || ['root', 'other', ...selected].includes(pageKind);
 }
 
 const requestedTarget = (crawl: Crawl, settings: Settings) =>
@@ -407,8 +410,10 @@ async function storeFrontier(
   candidates: Candidate[],
   settings: Settings,
 ) {
-  const eligible = orderedUnique(candidates, crawl.id).filter((item) =>
-    allowed(item, crawl, settings),
+  // Filter before choosing a twin, so a too-deep twin never displaces an admissible one.
+  const eligible = orderedUnique(
+    candidates.filter((item) => allowed(item, crawl, settings)),
+    crawl.id,
   );
   if (!eligible.length) return;
   const existing = await trx
@@ -525,8 +530,10 @@ async function admissionBatch(
   settings: Settings,
 ): Promise<Entry[]> {
   if (crawl.sample_mode)
-    return orderedUnique(candidates, crawl.id)
-      .filter((item) => allowed(item, crawl, settings))
+    return orderedUnique(
+      candidates.filter((item) => allowed(item, crawl, settings)),
+      crawl.id,
+    )
       .slice(0, settings.batch)
       .map((item) => ({ frontierId: null, item }));
   await storeFrontier(trx, crawl, candidates, settings);
@@ -591,6 +598,9 @@ function planAdmission(
   for (const [position, entry] of batch.entries()) {
     if (crawl.admitted_url_count + ledger.admitted >= options.ceiling) break;
     const { hash } = entry.item;
+    // A sample has no stored frontier to dedupe against: an observed twin is the same page.
+    const twin = hostTwinHash(entry.item.url);
+    if (sample && twin && ledger.observed.has(twin)) continue;
     const selected = ledger.select(entry.item);
     const observe = sample || selected;
     ledger.count(hash, sample, discover);
@@ -703,7 +713,7 @@ export async function admitCandidates(
   const known = await readAdmissionState(
     trx,
     current,
-    batch.map((entry) => entry.item.hash),
+    batch.flatMap((entry) => [entry.item.hash, hostTwinHash(entry.item.url) ?? '']).filter(Boolean),
   );
   const plan = planAdmission(current, batch, known, { ceiling, remaining, enqueueChildren });
   const automatic =

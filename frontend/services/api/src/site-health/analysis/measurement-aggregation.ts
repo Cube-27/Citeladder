@@ -33,8 +33,11 @@ function role(pages: Measurement[], role: 'web' | 'aeo') {
   };
 }
 
-export function aggregateMeasurements(rows: MeasuredPage[]) {
-  const site = appliedSiteChecks(rows.flatMap((row) => row.evaluations));
+const siteChecksOf = (rows: MeasuredPage[]) =>
+  appliedSiteChecks(rows.flatMap((row) => row.evaluations));
+
+/** `site` comes from the whole crawl: a page-kind subset rarely includes the root that holds it. */
+export function aggregateMeasurements(rows: MeasuredPage[], site = siteChecksOf(rows)) {
   const pages = rows.map((row) => scoreAnalysis(row.evaluations, row.page_kind, site));
   const web = role(pages, 'web');
   const aeo = role(pages, 'aeo');
@@ -79,9 +82,13 @@ export function aggregateMeasurements(rows: MeasuredPage[]) {
 }
 
 export function aggregateByPageKind(rows: MeasuredPage[]) {
+  const site = siteChecksOf(rows);
   return Object.fromEntries(
     [...new Set(rows.map((row) => row.page_kind))].sort(compareText).map((kind) => {
-      const aggregate = aggregateMeasurements(rows.filter((row) => row.page_kind === kind));
+      const aggregate = aggregateMeasurements(
+        rows.filter((row) => row.page_kind === kind),
+        site,
+      );
       const {
         readiness_dimensions: dimensions,
         analyzed_url_count: analyzed,
