@@ -66,6 +66,8 @@ Keep one primary intent per page. If two proposed articles would give the same r
 
 ## 2. Fix access for the relevant AI surface
 
+Use [Site Health](/platform/site-health) to inspect captured page evidence before choosing a correction.
+
 Review access separately for search crawlers, training crawlers and user-triggered fetches. The [GEO guide's engine comparison](/generative-engine-optimization) explains why one generic “allow AI” setting is inadequate.
 
 Use server and CDN logs to investigate real response failures, not merely the presence of a crawler name. Check the affected URL, response status, redirects and whether essential information was available.
@@ -116,6 +118,8 @@ Separate the original data owner from your analysis. Give the collection dates, 
 If the sample is small or selected for convenience, say so. Readers can still use a careful result without pretending it describes an entire market.
 
 ## 6. Consolidate overlapping and outdated pages
+
+For a bounded brief, proposed page edit or internal-link plan, explore [Content Intelligence](/platform/content-intelligence). These Agent workflows prepare work for review and are not included in the current public trial.
 
 When several pages answer the same question with conflicting details, decide which one should be maintained as the primary resource. Redirect or consolidate only after checking traffic, links, user needs and technical consequences.
 

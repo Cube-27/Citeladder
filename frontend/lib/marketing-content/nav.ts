@@ -1,7 +1,6 @@
 /**
  * Navigation content for the marketing chrome (desktop dropdowns + the mobile
- * accordions, which render the same tree). Anchors are absolute (`/#see-it`)
- * so every row resolves from a subpage, not just from `/`.
+ * accordions, footer, product cards and published platform routes).
  */
 import { docsHref } from '@/lib/config/docs';
 
@@ -20,27 +19,103 @@ export type NavDrop = {
   groups: readonly NavDropGroup[];
 };
 
+export const PLATFORM_OVERVIEW = {
+  title: 'Platform overview',
+  desc: 'AI visibility, website evidence and action.',
+  href: '/platform',
+} as const;
+
+export const PLATFORM_GROUPS: readonly {
+  label: string;
+  items: readonly { title: string; desc: string; href: string }[];
+}[] = [
+  {
+    label: 'Measure',
+    items: [
+      {
+        title: 'AI Visibility',
+        desc: 'Track brand presence across your buyer questions.',
+        href: '/platform/ai-visibility',
+      },
+      {
+        title: 'Citation Intelligence',
+        desc: 'Inspect the domains and pages cited in answers.',
+        href: '/platform/citation-intelligence',
+      },
+      {
+        title: 'AI Referral Analytics',
+        desc: 'Review identifiable AI visits and landing-page outcomes.',
+        href: '/platform/ai-referral-analytics',
+      },
+      {
+        title: 'Commerce Intelligence',
+        desc: 'Measure product and category appearances in AI answers.',
+        href: '/platform/commerce-intelligence',
+      },
+    ],
+  },
+  {
+    label: 'Diagnose',
+    items: [
+      {
+        title: 'Site Health',
+        desc: 'Investigate technical, content and crawler-access findings.',
+        href: '/platform/site-health',
+      },
+      {
+        title: 'Demand Intelligence',
+        desc: 'Find opportunities in your first-party search data.',
+        href: '/platform/demand-intelligence',
+      },
+      {
+        title: 'Search Intelligence',
+        desc: 'Research keywords, competitors and backlinks.',
+        href: '/platform/search-intelligence',
+      },
+    ],
+  },
+  {
+    label: 'Improve & connect',
+    items: [
+      {
+        title: 'Content Intelligence',
+        desc: 'Prepare briefs, page edits and internal-link plans.',
+        href: '/platform/content-intelligence',
+      },
+      {
+        title: 'AI Agent',
+        desc: 'Work through findings with saved project context.',
+        href: '/platform/agents',
+      },
+      {
+        title: 'MCP',
+        desc: 'Read CiteLadder evidence in compatible AI assistants.',
+        href: '/platform/mcp',
+      },
+      {
+        title: 'Integrations',
+        desc: 'Connect search, analytics and provider accounts.',
+        href: '/platform/integrations',
+      },
+    ],
+  },
+];
+
+/** Editorial publication only: never an entitlement or rollout switch. */
+export const PUBLISHED_PLATFORM = [
+  PLATFORM_OVERVIEW,
+  ...PLATFORM_GROUPS.flatMap((group) => group.items),
+];
+export function platformLabel(href: string) {
+  return PUBLISHED_PLATFORM.find((item) => item.href === href)?.title;
+}
+
 export const NAV_DROPS: readonly NavDrop[] = [
   {
     key: 'platform',
     label: 'Platform',
-    href: '/#see-it',
-    groups: [
-      {
-        items: [
-          {
-            title: 'How it works',
-            desc: 'From discovery to verification',
-            href: '/#how-it-works',
-          },
-          {
-            title: 'Integrations',
-            desc: 'The connected marketing stack',
-            href: '/#integrations',
-          },
-        ],
-      },
-    ],
+    href: PLATFORM_OVERVIEW.href,
+    groups: PLATFORM_GROUPS,
   },
   {
     key: 'solutions',
@@ -62,7 +137,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
           { title: 'Founders', desc: 'See if engines recommend you', href: '/solutions#founders' },
           {
             title: 'Ecommerce',
-            desc: 'Product share of voice and price accuracy',
+            desc: 'Product and category answer evidence',
             href: '/solutions#commerce',
           },
           {
@@ -82,13 +157,13 @@ export const NAV_DROPS: readonly NavDrop[] = [
       {
         items: [
           {
-            title: 'Docs',
+            title: 'Documentation',
             desc: 'Guides for the product, the Agent and MCP',
             href: docsHref(),
             external: true,
           },
           {
-            title: 'Blog',
+            title: 'Blog & guides',
             desc: 'Practical guides to AI visibility and site evidence',
             href: '/blog',
           },
@@ -101,6 +176,17 @@ export const NAV_DROPS: readonly NavDrop[] = [
             title: 'Free tools',
             desc: 'Crawler rules, markup and sitemap utilities',
             href: '/tools',
+          },
+          {
+            title: 'AI citation tracking guide',
+            desc: 'Learn citation measurement and interpretation',
+            href: '/ai-citation-tracking',
+          },
+          {
+            title: 'Changelog',
+            desc: 'Product updates',
+            href: docsHref('/changelog/'),
+            external: true,
           },
           { title: 'FAQ', desc: 'Answers on AEO, evidence, security, and billing', href: '/faq' },
           {

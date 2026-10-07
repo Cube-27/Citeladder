@@ -18,7 +18,8 @@ import { DATA_PROCESSING_AGREEMENT, SUBPROCESSORS } from './legal-dpa';
 import { PRIVACY_POLICY } from './legal-privacy';
 import { TERMS_OF_SERVICE } from './legal-terms';
 import { LLMS_TXT } from './llms';
-import { NAV_DROPS, NAV_LINKS, type NavDropItem } from './nav';
+import { NAV_DROPS, NAV_LINKS, PUBLISHED_PLATFORM, type NavDropItem } from './nav';
+import { PLATFORM_PAGES } from './platform-pages';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { PLAN_PRESENTATION, capabilityLabel } from './pricing';
 import { CITELADDER_LINKEDIN, CONTACT_EMAIL } from './social';
@@ -92,6 +93,9 @@ function blockText(block: BlogBlock): string {
 }
 
 function marketingRouteExists(href: string): boolean {
+  if (PUBLISHED_PLATFORM.some((item) => item.href === href)) {
+    return PLATFORM_PAGES.some((page) => page.path === href);
+  }
   const pathname = href.split('#', 1)[0].replace(/^\//, '');
   const pages = resolve(import.meta.dirname, '../../apps/marketing/src/pages');
   const candidates = pathname
@@ -294,7 +298,12 @@ describe('blog content', () => {
             )
           : [],
       );
-      expect([...internalLinks, post.closing?.secondary?.href], post.slug).toContain('/solutions');
+      expect(
+        [...internalLinks, post.closing?.secondary?.href].some(
+          (href) => href === '/solutions' || PUBLISHED_PLATFORM.some((item) => item.href === href),
+        ),
+        post.slug,
+      ).toBe(true);
       expect(
         internalLinks.some((href) => href.startsWith('/blog/')),
         post.slug,

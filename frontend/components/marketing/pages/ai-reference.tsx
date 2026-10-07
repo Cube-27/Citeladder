@@ -29,7 +29,7 @@ function ReferencePage({
           <h1 className="website-page-title mt-3">{title}</h1>
           <p className="website-body-lg text-muted mt-4 max-w-[65ch]">{description}</p>
           <p className="website-label mt-5">
-            Last updated · <time dateTime={AI_REFERENCE_UPDATED}>3 October 2026</time>
+            Last updated · <time dateTime={AI_REFERENCE_UPDATED}>{AI_REFERENCE_UPDATED}</time>
           </p>
           <nav
             aria-label="Company references"

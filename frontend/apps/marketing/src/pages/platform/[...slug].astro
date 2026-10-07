@@ -1,0 +1,23 @@
+---
+import { PlatformPageContent } from '@/components/marketing/pages/platform';
+import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
+import { PUBLISHED_PLATFORM, platformLabel } from '@/lib/marketing-content/nav';
+import { breadcrumbJsonLd, platformWebPageJsonLd } from '@/lib/seo/json-ld';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+
+const slug = Astro.params.slug?.replace(/\/$/, '');
+const path = slug ? `/platform/${slug}` : '/platform';
+const page = PUBLISHED_PLATFORM.some(item => item.href === path)
+  ? PLATFORM_PAGES.find(item => item.path === path) : undefined;
+if (!page) return new Response('Not found', { status: 404 });
+if (Astro.url.pathname.endsWith('/')) return Astro.redirect(path + Astro.url.search, 301);
+const breadcrumb = breadcrumbJsonLd([
+  { name: 'Home', path: '/' },
+  { name: 'Platform overview', path: '/platform' },
+  ...(path === '/platform' ? [] : [{ name: platformLabel(path)!, path }]),
+]);
+const webPage = platformWebPageJsonLd(page);
+---
+<MarketingLayout title={page.title} description={page.description} canonical={page.path} jsonLd={[...(breadcrumb ? [breadcrumb] : []), ...(webPage ? [webPage] : [])]}>
+  <main id="main"><PlatformPageContent page={page} /></main>
+</MarketingLayout>

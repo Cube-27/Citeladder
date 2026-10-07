@@ -4,6 +4,7 @@ import { FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal';
 import { absoluteUrl } from '@/lib/seo/site';
 import { RESEARCH_ARTICLES } from '../research-articles';
 import { FREE_TOOLS } from '@/lib/marketing-content/tools';
+import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 
 type RouteEntry = {
   path: string;
@@ -41,6 +42,11 @@ const escapeXml = (value: string) =>
 export function GET() {
   const routes: RouteEntry[] = [
     ...staticRoutes,
+    ...PUBLISHED_PLATFORM.map((item) => ({
+      path: item.href,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
     ...RESEARCH_ARTICLES.map(({ frontmatter }) => ({
       path: frontmatter.slug,
       changeFrequency: 'yearly' as const,

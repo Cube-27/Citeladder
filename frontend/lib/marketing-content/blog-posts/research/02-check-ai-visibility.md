@@ -184,6 +184,8 @@ Absence tells you what happened in the observation. It does not tell you whether
 
 ## Manual checks or an AI visibility platform?
 
+To build an inspectable baseline from collected answers, explore [CiteLadder AI Visibility](/platform/ai-visibility). For identifiable visits reported by GA4, use [AI Referral Analytics](/platform/ai-referral-analytics); those sessions are separate from answer visibility.
+
 Manual checks are useful for validating your definitions and inspecting answer quality. A platform becomes more useful when the cost of retaining and comparing evidence exceeds the cost of automation.
 
 Before choosing one, ask whether it preserves raw answers, identifies the engine and run conditions, exposes source URLs, separates mentions from citations, and lets you export the underlying observations. See our [AI visibility platform comparison](/best-ai-visibility-platforms) for a buying framework.

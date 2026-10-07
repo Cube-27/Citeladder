@@ -1,13 +1,18 @@
 import { ChevronDown } from 'lucide-react';
-import { Fragment } from 'react';
+import { Fragment, useContext } from 'react';
 
-import { NAV_DROPS, NAV_LINKS, type NavDropKey } from '@/lib/marketing-content/nav';
+import {
+  NAV_DROPS,
+  NAV_LINKS,
+  PLATFORM_OVERVIEW,
+  type NavDropKey,
+} from '@/lib/marketing-content/nav';
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { cn } from '@/lib/utils';
 
-import { ButtonLink } from '../primitives/button';
-import { NavItemLink } from './nav-items';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { NavItemLink, NavigationPath } from './nav-items';
 
 type MobileNavigationProps = {
   openAcc: NavDropKey | null;
@@ -17,25 +22,27 @@ type MobileNavigationProps = {
   closeMenu: () => void;
 };
 
-/** Mobile accordion navigation, rendered only while the menu is open. */
+/** Mobile accordion navigation stays in initial HTML, hidden until opened. */
 export function MobileNavigation({
   openAcc,
   setOpenAcc,
   closeMenu,
 }: Readonly<MobileNavigationProps>) {
+  const path = useContext(NavigationPath);
   return (
     // A sheet, not a dropdown card: it fills the viewport below the bar, the
     // destinations step up (they are the content), the labels step down, and
     // the account links pin to the bottom.
     <div
       id="mobile-menu"
-      className="safe-bottom bg-background flex max-h-[calc(100dvh-4rem)] min-h-[calc(100dvh-4rem)] flex-col overflow-y-auto overscroll-contain px-6 py-3 lg:hidden"
+      className="safe-bottom bg-background flex max-h-[calc(100dvh-var(--marketing-nav-offset))] min-h-[calc(100dvh-var(--marketing-nav-offset))] flex-col overflow-y-auto overscroll-contain px-6 py-3 xl:hidden"
     >
       {NAV_DROPS.map(({ key, label, href, groups }) => (
         <div key={key} className="border-border-subtle border-b last:border-b-0">
           <div className="flex items-center">
             <a
               href={href}
+              aria-current={path === href ? 'page' : undefined}
               className="text-foreground flex-1 py-3.5 text-lg font-medium tracking-[-0.02em]"
               onClick={closeMenu}
             >
@@ -59,6 +66,7 @@ export function MobileNavigation({
             </button>
           </div>
           <div id={`acc-${key}`} hidden={openAcc !== key} className="pb-2">
+            {key === 'platform' && <NavItemLink item={PLATFORM_OVERVIEW} onSelect={closeMenu} />}
             {groups.map((group) => (
               <Fragment key={group.label ?? 'items'}>
                 {group.label && (
@@ -78,6 +86,7 @@ export function MobileNavigation({
           <a
             key={href}
             href={href}
+            aria-current={path === href ? 'page' : undefined}
             className="text-foreground py-3.5 text-lg font-medium tracking-[-0.02em]"
             onClick={closeMenu}
           >
@@ -93,9 +102,10 @@ export function MobileNavigation({
         </a>
         {selfServeSignupOpen() ? (
           <ButtonLink href={appHref('/register')} className="w-full" onClick={closeMenu}>
-            Sign up
+            Start free trial
           </ButtonLink>
         ) : null}
+        <DemoButtonLink variant="soft" onClick={closeMenu} className="mt-3" />
       </div>
     </div>
   );

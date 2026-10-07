@@ -1,4 +1,5 @@
 import { ArrowUpRight } from 'lucide-react';
+import { createContext, useContext } from 'react';
 
 import type { NavDropItem } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
@@ -6,6 +7,8 @@ import { cn } from '@/lib/utils';
 const ROW =
   'group flex items-start gap-3 rounded-[var(--radius-control)] px-3.5 py-3 transition-colors duration-150 ' +
   'hover:bg-background-alt focus-visible:bg-background-alt active:bg-background-alt';
+
+export const NavigationPath = createContext('');
 
 function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
   return (
@@ -20,9 +23,8 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
         <span className="text-foreground block font-sans text-base font-semibold">
           {item.title}
         </span>
-        {/* One line, always: a menu row that wraps turns the panel into a
-            wall of paragraphs and doubles its height. */}
-        <span className="text-muted mt-1 block truncate text-sm">{item.desc}</span>
+        {/* Let descriptions wrap so every capability remains readable. */}
+        <span className="website-body text-muted mt-1 block">{item.desc}</span>
       </span>
     </>
   );
@@ -45,6 +47,7 @@ export function NavItemLink({
   item,
   onSelect,
 }: Readonly<{ item: NavDropItem; onSelect: () => void }>) {
+  const path = useContext(NavigationPath);
   if ('external' in item && item.external) {
     return (
       <a
@@ -61,7 +64,12 @@ export function NavItemLink({
   }
 
   return (
-    <a className={ROW} href={item.href} onClick={onSelect}>
+    <a
+      className={ROW}
+      href={item.href}
+      aria-current={path === item.href ? 'page' : undefined}
+      onClick={onSelect}
+    >
       <RowBody item={item} />
     </a>
   );

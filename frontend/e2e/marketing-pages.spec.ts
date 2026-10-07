@@ -1,11 +1,76 @@
 import { expect, test } from '@playwright/test';
-import { CITATION_PAGE, SHARE_OF_VOICE_PAGE } from '@/lib/marketing-content/commercial-pages';
+import { SHARE_OF_VOICE_PAGE } from '@/lib/marketing-content/commercial-pages';
+import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
+import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 import { POSTS } from '@/lib/marketing-content/blog';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { filterAndSortPosts, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 
 test.describe('marketing routes', () => {
+  test('published platform pages render linked evidence and metadata without JavaScript', async ({
+    browser,
+    baseURL,
+    request,
+  }) => {
+    const context = await browser.newContext({ baseURL, javaScriptEnabled: false });
+    const page = await context.newPage();
+    const sitemap = await (await request.get('/sitemap.xml')).text();
+    for (const item of PUBLISHED_PLATFORM) {
+      const copy = PLATFORM_PAGES.find((entry) => entry.path === item.href)!;
+      const response = await page.goto(item.href);
+      expect(response?.status()).toBe(200);
+      await expect(page).toHaveTitle(copy.title);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(copy.heading);
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+        'href',
+        new URL(item.href, baseURL).href,
+      );
+      await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+        'content',
+        copy.description,
+      );
+      await expect(page.locator('main')).toContainText(copy.lead);
+      await expect(page.locator('main figure').first()).toContainText('Illustrative example');
+      const schemas = await page
+        .locator('script[type="application/ld+json"]')
+        .evaluateAll((scripts) => scripts.map((script) => JSON.parse(script.textContent ?? '{}')));
+      const product = schemas.find((schema) => schema['@type'] === 'WebApplication');
+      expect(schemas.find((schema) => schema['@type'] === 'WebPage')?.about['@id']).toBe(
+        product['@id'],
+      );
+      expect(schemas.filter((schema) => schema['@type'] === 'FAQPage')).toHaveLength(0);
+      expect(sitemap).toContain(`<loc>${new URL(item.href, baseURL).href}</loc>`);
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          item.href,
+        ).toBe(true);
+      }
+      for (const href of copy.related) {
+        await expect(page.locator(`main a[href="${href}"]`).first()).toBeAttached();
+        expect((await request.get(href)).status()).toBe(200);
+      }
+    }
+    for (const path of ['/platform/not-published', '/platform/crawler-analytics']) {
+      expect((await request.get(path)).status()).toBe(404);
+    }
+    const redirect = await request.get('/platform/site-health/?source=test', { maxRedirects: 0 });
+    expect(redirect.status()).toBe(301);
+    expect(redirect.headers().location).toBe('/platform/site-health?source=test');
+    await page.goto('/ai-citation-tracking');
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(
+      page.locator('main a[href="/platform/citation-intelligence"]').first(),
+    ).toBeVisible();
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      new URL('/ai-citation-tracking', baseURL).href,
+    );
+    await context.close();
+  });
+
   test('free tools hub opens a usable crawler checker and rejects unknown tools', async ({
     page,
   }) => {
@@ -23,7 +88,7 @@ test.describe('marketing routes', () => {
     expect(missing?.status()).toBe(404);
   });
 
-  test('homepage FAQ schema describes the rendered questions and answers', async ({ page }) => {
+  test('homepage FAQ remains visible without adding FAQ rich-result markup', async ({ page }) => {
     await page.goto('/');
     const { schemas, visible } = await page.evaluate(() => ({
       schemas: [...document.querySelectorAll('script[type="application/ld+json"]')]
@@ -36,8 +101,7 @@ test.describe('marketing routes', () => {
       })),
     }));
     expect(visible.length).toBeGreaterThan(0);
-    expect(schemas).toHaveLength(1);
-    expect(schemas[0].mainEntity).toEqual(visible);
+    expect(schemas).toHaveLength(0);
   });
 
   test('product previews reserve their scaled height before hydration', async ({
@@ -311,10 +375,7 @@ test.describe('marketing routes', () => {
       reducedMotion: 'reduce',
     });
     const page = await context.newPage();
-    const entries = [
-      { path: '/ai-citation-tracking', copy: CITATION_PAGE },
-      { path: '/ai-search-share-of-voice', copy: SHARE_OF_VOICE_PAGE },
-    ];
+    const entries = [{ path: '/ai-search-share-of-voice', copy: SHARE_OF_VOICE_PAGE }];
     for (const { path, copy } of entries) {
       const response = await request.get(path);
       expect(response.status()).toBe(200);
@@ -377,7 +438,6 @@ test.describe('marketing routes', () => {
       }
       await page.goto('/compare');
       await expect(page.locator(`main a[href="${path}"]`)).toBeVisible();
-      await expect(page.locator(`footer a[href="${path}"]`)).toBeAttached();
     }
     expect((await request.get('/ai-citation-tracking/does-not-exist')).status()).toBe(404);
     await context.close();
@@ -579,8 +639,8 @@ test.describe('marketing routes', () => {
 
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toBeVisible();
-    await expect(footer.getByRole('link', { name: 'Blog', exact: true })).toBeVisible();
-    await expect(footer.getByRole('link', { name: 'Docs', exact: true })).toHaveAttribute(
+    await expect(footer.getByRole('link', { name: 'Blog & guides', exact: true })).toBeVisible();
+    await expect(footer.getByRole('link', { name: 'Documentation', exact: true })).toHaveAttribute(
       'href',
       'https://docs.citeladder.com/',
     );

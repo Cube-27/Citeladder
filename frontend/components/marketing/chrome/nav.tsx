@@ -8,7 +8,7 @@ import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 import { type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
-import { ButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 import { appHref } from '@/lib/config/app-link';
@@ -18,10 +18,10 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 export type OpenSource = 'hover' | 'focus';
 
 const COLUMN = 380;
-const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
-  platform: { width: COLUMN, twoColumn: false },
-  solutions: { width: COLUMN, twoColumn: false },
-  resources: { width: COLUMN, twoColumn: false },
+const DROP_LAYOUT: Record<NavDropKey, { width: number }> = {
+  platform: { width: 900 },
+  solutions: { width: COLUMN },
+  resources: { width: COLUMN },
 };
 
 /** How far down the page the bar changes from transparent to a surface. */
@@ -73,6 +73,7 @@ function useDesktopDropdown() {
   const closeTimer = useRef<number | null>(null);
   const linksRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
+  const returnFocus = useRef<HTMLElement | null>(null);
   /**
    * Set when a trigger is chosen. The panel opens on hover, and clicking a
    * top-level trigger leaves the pointer sitting exactly where the trigger is.
@@ -122,10 +123,12 @@ function useDesktopDropdown() {
     // focusing clears the suppression.
     if (source === 'focus') {
       suppressedDrop.current = null;
+      returnFocus.current = trigger;
     } else if (suppressedDrop.current === key) {
       return;
     } else {
       suppressedDrop.current = null;
+      returnFocus.current = document.getElementById(`desktop-nav-trigger-${key}`);
     }
     clearDropClose();
     setOpenDrop(key);
@@ -153,8 +156,9 @@ function useDesktopDropdown() {
     if (openDrop === null) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
+      returnFocus.current?.focus();
+      clearDropClose();
       closeDrop();
-      (document.activeElement as HTMLElement | null)?.blur();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -219,7 +223,13 @@ export function MarketingNav() {
   useEffect(() => {
     if (!mobileOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeMenu();
+      if (event.key === 'Escape') {
+        closeMenu();
+        const toggle = chromeRef.current?.querySelector<HTMLButtonElement>(
+          'button[aria-controls="mobile-menu"]',
+        );
+        if (toggle?.getClientRects().length) toggle.focus();
+      }
     };
     const onPointerDown = (event: PointerEvent) => {
       const chrome = chromeRef.current;
@@ -252,24 +262,8 @@ export function MarketingNav() {
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        // From `lg` up: three tracks, not a flex row. The links sit in the
-        // middle track, so their position is a function of the viewport alone.
-        // As a flex row they were centred in whatever space the actions left
-        // over, and the actions change width twice on a returning visitor's
-        // refresh (the anonymous pair, then the pending placeholder, then
-        // the account menu) — which slid the whole navigation sideways each time. The
-        // side tracks are `minmax(0,1fr)` so they stay exactly equal regardless
-        // of what either one holds.
-        //
-        // Below `lg` it is a plain row, and that is not a stylistic choice.
-        // `DesktopNavigation` is `hidden` there, so it generates no box and is
-        // not a grid item at all — which handed the ACTIONS the middle `auto`
-        // track and left the trailing `1fr` empty. `justify-self-end` does
-        // nothing in a track sized to its content, so "Log in" and the
-        // hamburger sat marooned in the middle of the bar with dead space to
-        // their right, and the two empty gutters ate 40px that a 320px phone
-        // does not have. Two items want two ends: `justify-between`.
-        className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-5 px-[var(--site-gutter)] lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
+        // Keep the expanded public actions and navigation within one responsive row.
+        className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-[var(--site-gutter)]"
       >
         <HomeLogoLink onNavigate={closeMenu} />
 
@@ -294,9 +288,9 @@ export function MarketingNav() {
         <NavActions mobileOpen={mobileOpen} onToggleMenu={() => setMobileOpen((open) => !open)} />
       </nav>
 
-      {mobileOpen && (
+      <div hidden={!mobileOpen}>
         <MobileNavigation openAcc={openAcc} setOpenAcc={setOpenAcc} closeMenu={closeMenu} />
-      )}
+      </div>
     </div>
   );
 }
@@ -351,9 +345,10 @@ function ProductActions() {
       >
         Log in
       </a>
+      <DemoButtonLink variant="soft" className="hidden xl:inline-flex" />
       {selfServeSignupOpen() ? (
         <ButtonLink href={appHref('/register')} className="hidden min-h-10 px-4 sm:inline-flex">
-          Sign up
+          Start free trial
         </ButtonLink>
       ) : null}
     </>
@@ -372,14 +367,14 @@ function NavActions({
       {/* While the sheet is open it owns the account actions. Hiding the header account
           control keeps the close button clear of a second account affordance. Hidden in
           CSS rather than unmounted so a phone-width menu left open across a
-          resize to desktop, where the sheet itself is `lg:hidden`, does not
+          resize to desktop, where the sheet itself is `xl:hidden`, does not
           take the desktop actions down with it. */}
-      <div className={cn('flex items-center gap-3', mobileOpen && 'max-lg:hidden')}>
+      <div className={cn('flex items-center gap-3', mobileOpen && 'max-xl:hidden')}>
         <ProductActions />
       </div>
       <button
         type="button"
-        className="border-border-subtle text-foreground grid size-10 place-items-center rounded-[var(--radius-control)] border lg:hidden"
+        className="border-border-subtle text-foreground grid size-10 place-items-center rounded-[var(--radius-control)] border xl:hidden"
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={mobileOpen}
         aria-controls="mobile-menu"

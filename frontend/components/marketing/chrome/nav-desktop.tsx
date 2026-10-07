@@ -1,17 +1,22 @@
 import { ChevronDown } from 'lucide-react';
-import type { RefObject } from 'react';
+import { useContext, type RefObject } from 'react';
 
-import { NAV_DROPS, NAV_LINKS, type NavDropKey } from '@/lib/marketing-content/nav';
+import {
+  NAV_DROPS,
+  NAV_LINKS,
+  PLATFORM_OVERVIEW,
+  type NavDropKey,
+} from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import type { OpenSource } from './nav';
-import { NavItemLink } from './nav-items';
+import { NavItemLink, NavigationPath } from './nav-items';
 
 const NAV_LINK =
   'website-nav text-foreground relative z-1 inline-flex items-center gap-1.5 ' +
-  'rounded-[var(--radius-control)] px-4 py-2.5 font-medium transition-colors duration-300';
+  'rounded-[var(--radius-control)] whitespace-nowrap px-2 py-2.5 font-medium transition-colors duration-300';
 
-type DropLayout = Record<NavDropKey, { width: number; twoColumn: boolean }>;
+type DropLayout = Record<NavDropKey, { width: number }>;
 
 type DesktopNavigationProps = {
   layout: DropLayout;
@@ -50,11 +55,11 @@ export function DesktopNavigation({
   moveLens,
   clearLens,
 }: Readonly<DesktopNavigationProps>) {
+  const path = useContext(NavigationPath);
   return (
-    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- Escape and blur are delegated from the focusable links inside this navigation boundary.
     <div
       ref={linksRef}
-      className="marketing-nav-track relative mx-auto hidden items-center lg:flex"
+      className="marketing-nav-track relative mx-auto hidden items-center xl:flex"
       onMouseEnter={clearDropClose}
       onMouseLeave={() => {
         // Leaving the nav is what re-arms hover after a selection.
@@ -64,9 +69,6 @@ export function DesktopNavigation({
       }}
       onBlurCapture={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) closeDrop();
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') closeDrop();
       }}
     >
       {lens && (
@@ -83,30 +85,49 @@ export function DesktopNavigation({
       {NAV_DROPS.map(({ key, label, href }) => (
         <div
           key={key}
-          className="group/drop relative z-1 flex items-center"
-          onMouseEnter={(event) => openDropAt(key, event.currentTarget)}
+          className="group/drop z-1 flex items-center"
+          onPointerEnter={(event) => {
+            if (event.pointerType !== 'touch') openDropAt(key, event.currentTarget);
+          }}
           onMouseLeave={() => releaseSuppression(key)}
         >
           <a
+            id={`desktop-nav-trigger-${key}`}
             href={href}
+            aria-current={path === href ? 'page' : undefined}
             className={NAV_LINK}
-            aria-haspopup="true"
             aria-expanded={openDrop === key}
             aria-controls={openDrop === key ? `desktop-nav-panel-${key}` : undefined}
             onClick={() => selectDrop(key)}
             onFocus={(event) => {
-              const parent = event.currentTarget.parentElement;
               // 'focus' so tabbing here opens the panel even right after a
               // selection suppressed hover.
-              if (parent) openDropAt(key, parent, 'focus');
+              openDropAt(key, event.currentTarget, 'focus');
             }}
           >
             {label}
-            <ChevronDown
-              aria-hidden
-              className="text-muted size-3.5 transition-transform duration-200 group-hover/drop:rotate-180"
-            />
           </a>
+          <button
+            type="button"
+            className="text-muted p-2"
+            aria-label={`Toggle ${label} menu`}
+            aria-expanded={openDrop === key}
+            aria-controls={`desktop-nav-panel-${key}`}
+            onClick={(event) =>
+              openDrop === key ? closeDrop() : openDropAt(key, event.currentTarget, 'focus')
+            }
+          >
+            <ChevronDown aria-hidden className="size-3.5" />
+          </button>
+          <DesktopDropPanel
+            dropKey={key}
+            hidden={openDrop !== key}
+            layout={layout}
+            panelLeft={panelLeft}
+            animate={openSource === 'hover'}
+            clearDropClose={clearDropClose}
+            selectDrop={selectDrop}
+          />
         </div>
       ))}
 
@@ -114,6 +135,7 @@ export function DesktopNavigation({
         <a
           key={href}
           href={href}
+          aria-current={path === href ? 'page' : undefined}
           className={NAV_LINK}
           onClick={() => selectDrop()}
           onMouseEnter={(event) => {
@@ -130,23 +152,13 @@ export function DesktopNavigation({
           {label}
         </a>
       ))}
-
-      {openDrop !== null && (
-        <DesktopDropPanel
-          dropKey={openDrop}
-          layout={layout}
-          panelLeft={panelLeft}
-          animate={openSource === 'hover'}
-          clearDropClose={clearDropClose}
-          selectDrop={selectDrop}
-        />
-      )}
     </div>
   );
 }
 
 function DesktopDropPanel({
   dropKey,
+  hidden,
   layout,
   panelLeft,
   animate,
@@ -154,6 +166,7 @@ function DesktopDropPanel({
   selectDrop,
 }: Readonly<{
   dropKey: NavDropKey;
+  hidden: boolean;
   layout: DropLayout;
   panelLeft: number;
   animate: boolean;
@@ -164,20 +177,23 @@ function DesktopDropPanel({
 
   return (
     <div
+      hidden={hidden}
       id={`desktop-nav-panel-${dropKey}`}
       onMouseEnter={clearDropClose}
       style={{
         left: panelLeft,
         width: layout[dropKey].width,
         maxWidth: 'calc(100vw - 2rem)',
+        maxHeight: 'calc(100dvh - var(--marketing-nav-offset) - 2rem)',
       }}
       className={cn(
         'bg-panel shadow-overlay absolute top-full rounded-[var(--radius-overlay)] p-3',
-        'mt-2 overflow-hidden',
+        'mt-2 overflow-auto',
         animate && 'marketing-nav-panel',
       )}
     >
-      <div className={cn('grid', layout[dropKey].twoColumn && 'sm:grid-cols-2')}>
+      {dropKey === 'platform' && <NavItemLink item={PLATFORM_OVERVIEW} onSelect={selectDrop} />}
+      <div className={cn('grid', dropKey === 'platform' && 'grid-cols-3')}>
         {groups.map((group) => (
           <DesktopDropGroup key={group.label ?? 'items'} group={group} selectDrop={selectDrop} />
         ))}
@@ -193,18 +209,11 @@ function DesktopDropGroup({
   group: (typeof NAV_DROPS)[number]['groups'][number];
   selectDrop: (key?: NavDropKey) => void;
 }>) {
-  if (!group.label)
-    return (
-      <div>
-        {group.items.map((item) => (
-          <NavItemLink key={item.title} item={item} onSelect={selectDrop} />
-        ))}
-      </div>
-    );
-
   return (
     <div>
-      <p className="website-eyebrow text-muted px-3.5 pt-2.5 pb-2">{group.label}</p>
+      {group.label && (
+        <p className="website-eyebrow text-muted px-3.5 pt-2.5 pb-2">{group.label}</p>
+      )}
       {group.items.map((item) => (
         <NavItemLink key={item.title} item={item} onSelect={selectDrop} />
       ))}
