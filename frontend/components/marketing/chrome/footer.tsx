@@ -1,6 +1,7 @@
 import { ArrowUpRight } from 'lucide-react';
 
 import { LogoMark } from '@/components/ui/logo-mark';
+import { appHref } from '@/lib/config/app-link';
 
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { NAV_DROPS, PLATFORM_GROUPS, PLATFORM_OVERVIEW } from '@/lib/marketing-content/nav';
@@ -93,6 +94,7 @@ export async function MarketingFooter() {
               </div>
               <div className="flex flex-wrap items-center gap-6">
                 <DemoButtonLink />
+                <FooterColumnLink link={{ label: 'Log in', href: appHref('/login') }} />
                 <FooterColumnLink
                   link={{ label: PLATFORM_OVERVIEW.title, href: PLATFORM_OVERVIEW.href }}
                 />

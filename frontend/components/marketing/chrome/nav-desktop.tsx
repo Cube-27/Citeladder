@@ -16,7 +16,7 @@ const NAV_LINK =
   'website-nav text-foreground relative z-1 inline-flex items-center gap-1.5 ' +
   'rounded-[var(--radius-control)] whitespace-nowrap px-2 py-2.5 font-medium transition-colors duration-300';
 
-type DropLayout = Record<NavDropKey, { width: number; twoColumn: boolean }>;
+type DropLayout = Record<NavDropKey, { width: number }>;
 
 type DesktopNavigationProps = {
   layout: DropLayout;
@@ -57,7 +57,6 @@ export function DesktopNavigation({
 }: Readonly<DesktopNavigationProps>) {
   const path = useContext(NavigationPath);
   return (
-    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- Blur is delegated from the focusable links inside this navigation boundary.
     <div
       ref={linksRef}
       className="marketing-nav-track relative mx-auto hidden items-center xl:flex"
@@ -99,10 +98,9 @@ export function DesktopNavigation({
             aria-controls={openDrop === key ? `desktop-nav-panel-${key}` : undefined}
             onClick={() => selectDrop(key)}
             onFocus={(event) => {
-              const parent = event.currentTarget.parentElement;
               // 'focus' so tabbing here opens the panel even right after a
               // selection suppressed hover.
-              if (parent) openDropAt(key, parent, 'focus');
+              openDropAt(key, event.currentTarget, 'focus');
             }}
           >
             {label}
@@ -193,12 +191,7 @@ function DesktopDropPanel({
       )}
     >
       {dropKey === 'platform' && <NavItemLink item={PLATFORM_OVERVIEW} onSelect={selectDrop} />}
-      <div
-        className={cn(
-          'grid',
-          dropKey === 'platform' ? 'grid-cols-3' : layout[dropKey].twoColumn && 'sm:grid-cols-2',
-        )}
-      >
+      <div className={cn('grid', dropKey === 'platform' && 'grid-cols-3')}>
         {groups.map((group) => (
           <DesktopDropGroup key={group.label ?? 'items'} group={group} selectDrop={selectDrop} />
         ))}
@@ -214,18 +207,11 @@ function DesktopDropGroup({
   group: (typeof NAV_DROPS)[number]['groups'][number];
   selectDrop: (key?: NavDropKey) => void;
 }>) {
-  if (!group.label)
-    return (
-      <div>
-        {group.items.map((item) => (
-          <NavItemLink key={item.title} item={item} onSelect={selectDrop} />
-        ))}
-      </div>
-    );
-
   return (
     <div>
-      <p className="website-eyebrow text-muted px-3.5 pt-2.5 pb-2">{group.label}</p>
+      {group.label && (
+        <p className="website-eyebrow text-muted px-3.5 pt-2.5 pb-2">{group.label}</p>
+      )}
       {group.items.map((item) => (
         <NavItemLink key={item.title} item={item} onSelect={selectDrop} />
       ))}

@@ -18,10 +18,10 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 export type OpenSource = 'hover' | 'focus';
 
 const COLUMN = 380;
-const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
-  platform: { width: 900, twoColumn: false },
-  solutions: { width: COLUMN, twoColumn: false },
-  resources: { width: COLUMN, twoColumn: false },
+const DROP_LAYOUT: Record<NavDropKey, { width: number }> = {
+  platform: { width: 900 },
+  solutions: { width: COLUMN },
+  resources: { width: COLUMN },
 };
 
 /** How far down the page the bar changes from transparent to a surface. */
@@ -73,6 +73,7 @@ function useDesktopDropdown() {
   const closeTimer = useRef<number | null>(null);
   const linksRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
+  const returnFocus = useRef<HTMLElement | null>(null);
   /**
    * Set when a trigger is chosen. The panel opens on hover, and clicking a
    * top-level trigger leaves the pointer sitting exactly where the trigger is.
@@ -122,10 +123,12 @@ function useDesktopDropdown() {
     // focusing clears the suppression.
     if (source === 'focus') {
       suppressedDrop.current = null;
+      returnFocus.current = trigger;
     } else if (suppressedDrop.current === key) {
       return;
     } else {
       suppressedDrop.current = null;
+      returnFocus.current = document.getElementById(`desktop-nav-trigger-${key}`);
     }
     clearDropClose();
     setOpenDrop(key);
@@ -153,7 +156,8 @@ function useDesktopDropdown() {
     if (openDrop === null) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      document.getElementById(`desktop-nav-trigger-${openDrop}`)?.focus();
+      returnFocus.current?.focus();
+      clearDropClose();
       closeDrop();
     };
     document.addEventListener('keydown', onKeyDown);
@@ -221,9 +225,10 @@ export function MarketingNav() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         closeMenu();
-        chromeRef.current
-          ?.querySelector<HTMLButtonElement>('button[aria-controls="mobile-menu"]')
-          ?.focus();
+        const toggle = chromeRef.current?.querySelector<HTMLButtonElement>(
+          'button[aria-controls="mobile-menu"]',
+        );
+        if (toggle?.getClientRects().length) toggle.focus();
       }
     };
     const onPointerDown = (event: PointerEvent) => {

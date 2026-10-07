@@ -35,7 +35,7 @@ export function MobileNavigation({
     // the account links pin to the bottom.
     <div
       id="mobile-menu"
-      className="safe-bottom bg-background flex max-h-[calc(100dvh-4rem)] min-h-[calc(100dvh-4rem)] flex-col overflow-y-auto overscroll-contain px-6 py-3 xl:hidden"
+      className="safe-bottom bg-background flex max-h-[calc(100dvh-var(--marketing-nav-offset))] min-h-[calc(100dvh-var(--marketing-nav-offset))] flex-col overflow-y-auto overscroll-contain px-6 py-3 xl:hidden"
     >
       {NAV_DROPS.map(({ key, label, href, groups }) => (
         <div key={key} className="border-border-subtle border-b last:border-b-0">

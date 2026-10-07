@@ -16,6 +16,26 @@ import { NAV_DROPS } from '@/lib/marketing-content/nav';
 const DROP_KEYS = NAV_DROPS.map((drop) => drop.key);
 
 test.describe('marketing navigation (real-engine CSS contract)', () => {
+  test('Escape restores the desktop disclosure focus without reopening it', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/platform/site-health');
+    await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
+    const toggle = page.getByRole('button', { name: 'Toggle Platform menu' });
+    await toggle.focus();
+    await page.keyboard.press('Enter');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Escape');
+    await expect(toggle).toBeFocused();
+    await expect(page.locator('#desktop-nav-panel-platform')).toBeHidden();
+    await page.setViewportSize({ width: 390, height: 900 });
+    const mobileToggle = page.getByRole('button', { name: 'Open menu' });
+    await mobileToggle.click();
+    await page.keyboard.press('Escape');
+    await expect(mobileToggle).toBeFocused();
+    await expect(page.locator('#mobile-menu')).toBeHidden();
+  });
+
   test('serves the desktop nav above the lg breakpoint and the mobile menu below it', async ({
     page,
   }) => {

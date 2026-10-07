@@ -34,31 +34,31 @@ const SECONDARY_ACTIONS: Readonly<Record<string, { href: string; label: string }
   '/platform/search-intelligence': { href: '/contact', label: 'Discuss setup' },
 };
 
+const CLOSING_ACTIONS: Readonly<Record<string, { href: string; label: string }>> = {
+  '/platform/agents': {
+    href: '/platform/content-intelligence',
+    label: 'Explore Content Intelligence',
+  },
+  '/platform/content-intelligence': { href: '/platform/agents', label: 'Explore the AI Agent' },
+};
+
 export function PlatformActions({
   path,
   closing = false,
 }: Readonly<{ path: string; closing?: boolean }>) {
-  const trial = path === '/' || path === '/platform' || path === '/platform/ai-visibility';
-  const secondary =
-    closing && path === '/platform/agents'
-      ? { href: '/platform/content-intelligence', label: 'Explore Content Intelligence' }
-      : closing && path === '/platform/content-intelligence'
-        ? { href: '/platform/agents', label: 'Explore the AI Agent' }
-        : (SECONDARY_ACTIONS[path] ?? { href: '/platform', label: 'Explore the platform' });
+  const trial = ['/', '/platform', '/platform/ai-visibility'].includes(path);
+  const showTrial = trial && selfServeSignupOpen();
+  const mcp = path === '/platform/mcp';
+  const secondary = (closing ? CLOSING_ACTIONS[path] : undefined) ??
+    SECONDARY_ACTIONS[path] ?? { href: '/platform', label: 'Explore the platform' };
   return (
     <div className="flex flex-wrap justify-center gap-4">
-      {trial && selfServeSignupOpen() && (
-        <ButtonLink href={appHref('/register')}>Start free trial</ButtonLink>
-      )}
-      {path === '/platform/mcp' && (
-        <ButtonLink href={docsHref('/mcp/')}>Read setup guide</ButtonLink>
-      )}
-      <DemoButtonLink
-        variant={(trial && selfServeSignupOpen()) || path === '/platform/mcp' ? 'soft' : 'primary'}
-      >
+      {showTrial && <ButtonLink href={appHref('/register')}>Start free trial</ButtonLink>}
+      {mcp && <ButtonLink href={docsHref('/mcp/')}>Read setup guide</ButtonLink>}
+      <DemoButtonLink variant={showTrial || mcp ? 'soft' : 'primary'}>
         {path === '/platform/integrations' ? 'Discuss setup' : 'Book a demo'}
       </DemoButtonLink>
-      {!trial && path !== '/platform/mcp' && (
+      {!trial && !mcp && (
         <ButtonLink href={secondary.href} variant="soft">
           {secondary.label}
         </ButtonLink>
@@ -196,31 +196,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
           ))}
         </div>
       </Section>
-      {page.related.length > 0 && (
-        <Section aria-label="Related capabilities and guides">
-          <SectionHeader title="Continue your investigation" />
-          <ul className="grid gap-4 md:grid-cols-2">
-            {page.related.map((href) => {
-              const label = platformLabel(href) ?? GUIDE_LABELS[href];
-              return label ? (
-                <li key={href}>
-                  <a
-                    className="website-body-lg text-accent-text underline underline-offset-4"
-                    href={href}
-                  >
-                    {label}
-                  </a>
-                </li>
-              ) : null;
-            })}
-          </ul>
-          {page.path === '/platform/mcp' && (
-            <a className="website-body-lg text-accent-text underline" href={docsHref('/mcp/')}>
-              MCP setup and tool reference
-            </a>
-          )}
-        </Section>
-      )}
+      <RelatedCapabilities page={page} />
       <Section className="marketing-closing-band">
         <div className="mx-auto max-w-3xl space-y-8 text-center" data-cta-placement="closing">
           <SectionHeader title={page.closing} />
@@ -228,5 +204,34 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         </div>
       </Section>
     </>
+  );
+}
+
+function RelatedCapabilities({ page }: Readonly<{ page: PlatformPage }>) {
+  if (!page.related.length) return null;
+  return (
+    <Section aria-label="Related capabilities and guides">
+      <SectionHeader title="Continue your investigation" />
+      <ul className="grid gap-4 md:grid-cols-2">
+        {page.related.map((href) => {
+          const label = platformLabel(href) ?? GUIDE_LABELS[href];
+          return label ? (
+            <li key={href}>
+              <a
+                className="website-body-lg text-accent-text underline underline-offset-4"
+                href={href}
+              >
+                {label}
+              </a>
+            </li>
+          ) : null;
+        })}
+      </ul>
+      {page.path === '/platform/mcp' && (
+        <a className="website-body-lg text-accent-text underline" href={docsHref('/mcp/')}>
+          MCP setup and tool reference
+        </a>
+      )}
+    </Section>
   );
 }

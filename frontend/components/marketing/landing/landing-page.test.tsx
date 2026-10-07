@@ -9,7 +9,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe('LandingPage', () => {
   it.each([
     ['true', 'Start free trial', 'https://app.citeladder.com/register'],
-    ['false', 'Explore citation tracking', '/ai-citation-tracking'],
+    ['false', 'Book a demo', '/contact'],
   ])('routes the hero action with self-serve signup %s', (enabled, label, href) => {
     vi.stubEnv('NEXT_PUBLIC_SELF_SERVE_SIGNUP', enabled);
     vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');

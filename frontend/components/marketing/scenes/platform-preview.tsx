@@ -117,20 +117,16 @@ function Deliverable({ conversation = false }: Readonly<{ conversation?: boolean
   );
 }
 
-export function PlatformPreview({ path }: Readonly<{ path: string }>) {
-  let view: ReactNode;
+function PreviewContent({ path }: Readonly<{ path: string }>): ReactNode {
   switch (path) {
     case '/platform/site-health':
-      view = <Finding />;
-      break;
+      return <Finding />;
     case '/platform/agents':
-      view = <Deliverable conversation />;
-      break;
+      return <Deliverable conversation />;
     case '/platform/content-intelligence':
-      view = <Deliverable />;
-      break;
+      return <Deliverable />;
     case '/platform/citation-intelligence':
-      view = (
+      return (
         <div className="space-y-5">
           <Ledger
             title="Sources · Domains / URLs"
@@ -144,9 +140,8 @@ export function PlatformPreview({ path }: Readonly<{ path: string }>) {
           </p>
         </div>
       );
-      break;
     case '/platform/ai-referral-analytics':
-      view = (
+      return (
         <div className="space-y-5">
           <Ledger
             title="AI Traffic · Referrals · Selected GA4 window"
@@ -165,14 +160,13 @@ export function PlatformPreview({ path }: Readonly<{ path: string }>) {
             ]}
           />
           <p className="type-body text-muted">
-            Identifiable sources only. Key events follow this property's configuration. Missing
+            Identifiable sources only. Key events follow this property&apos;s configuration. Missing
             attribution remains unknown; page totals have a different scope from property totals.
           </p>
         </div>
       );
-      break;
     case '/platform/demand-intelligence':
-      view = (
+      return (
         <div className="grid gap-6 md:grid-cols-2">
           <Ledger
             title="Search Demand · Grouped by page"
@@ -195,9 +189,8 @@ export function PlatformPreview({ path }: Readonly<{ path: string }>) {
           </Card>
         </div>
       );
-      break;
     case '/platform/search-intelligence':
-      view = (
+      return (
         <div className="grid gap-6 md:grid-cols-2">
           <Ledger
             title="Saved research · Keywords / Competitors / Backlinks"
@@ -232,9 +225,8 @@ export function PlatformPreview({ path }: Readonly<{ path: string }>) {
           </Card>
         </div>
       );
-      break;
     case '/platform/commerce-intelligence':
-      view = (
+      return (
         <div className="space-y-5">
           <Ledger
             title="Commerce · Selected catalog target"
@@ -255,9 +247,8 @@ export function PlatformPreview({ path }: Readonly<{ path: string }>) {
           </p>
         </div>
       );
-      break;
     case '/platform/mcp':
-      view = (
+      return (
         <Card className="space-y-5 p-6">
           <p className="type-label text-muted">Compatible assistant · Authorized saved evidence</p>
           <h3 className="type-section-title">Show the page findings supporting this Action.</h3>
@@ -274,9 +265,8 @@ export function PlatformPreview({ path }: Readonly<{ path: string }>) {
           </p>
         </Card>
       );
-      break;
     case '/platform/integrations':
-      view = (
+      return (
         <div className="space-y-6">
           <Card className="space-y-4 p-6">
             <p className="type-label text-muted">Integrations · Property mapping</p>
@@ -330,9 +320,8 @@ export function PlatformPreview({ path }: Readonly<{ path: string }>) {
           />
         </div>
       );
-      break;
     default:
-      view = (
+      return (
         <div className="space-y-5">
           <Ledger
             title="AI Visibility · Trends · Selected answer set"
@@ -354,10 +343,15 @@ export function PlatformPreview({ path }: Readonly<{ path: string }>) {
         </div>
       );
   }
+}
+
+export function PlatformPreview({ path }: Readonly<{ path: string }>) {
   const advanced = path === '/platform/agents' || path === '/platform/content-intelligence';
   return (
     <figure className="min-w-0 space-y-4 text-left">
-      <div className="bg-well rounded-card p-4 md:p-8">{view}</div>
+      <div className="bg-well rounded-card p-4 md:p-8">
+        <PreviewContent path={path} />
+      </div>
       <figcaption className="website-label text-muted">
         Illustrative example. {platformLabel(path) ?? 'AI Visibility'} · Synthetic records in a
         static product excerpt.

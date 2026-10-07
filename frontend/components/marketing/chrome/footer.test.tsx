@@ -1,41 +1,28 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { render, screen, within } from '@testing-library/react';
 
-import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
-import { DEMO_HREF } from '@/lib/marketing-content/nav';
+import { DEMO_HREF, PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
 
 import { MarketingFooter } from './footer';
 
 /**
  * The footer is a cached async server component with no islands, so resolve it
- * before rendering. What is worth pinning is the commercial contract: five columns, a
- * Compare column derived from the content module, and — because the repo is
- * private — no GitHub or documentation links anywhere on a commercial page.
+ * before rendering. Cover published destinations, account entry and legal links.
  */
 describe('MarketingFooter', () => {
-  it('renders five labelled columns inside the Footer landmark', async () => {
+  it('makes published platform destinations reachable from the footer', async () => {
     render(await MarketingFooter());
 
     const footer = screen.getByRole('contentinfo');
     const footerNav = within(footer).getByRole('navigation', { name: 'Footer' });
     expect(within(footerNav).getAllByRole('link').length).toBeGreaterThan(0);
-    const headings = within(footerNav).getAllByRole('heading', { level: 2 });
-    expect(headings).toHaveLength(5);
-  });
-
-  it('derives the Compare column from the content module', async () => {
-    render(await MarketingFooter());
-
-    expect(screen.getByRole('link', { name: 'All comparisons' })).toHaveAttribute(
-      'href',
-      '/compare',
-    );
-    for (const competitor of COMPETITORS) {
-      expect(screen.getByRole('link', { name: `vs ${competitor.name}` })).toHaveAttribute(
+    for (const item of PUBLISHED_PLATFORM) {
+      const scope = item.href === '/platform' ? footer : footerNav;
+      expect(within(scope).getByRole('link', { name: item.title })).toHaveAttribute(
         'href',
-        `/compare/${competitor.slug}`,
+        item.href,
       );
     }
   });
@@ -61,7 +48,8 @@ describe('MarketingFooter', () => {
     render(await MarketingFooter());
 
     expect(screen.queryByRole('link', { name: /github/i })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Docs' })).toHaveAttribute(
+    const footerNav = screen.getByRole('navigation', { name: 'Footer' });
+    expect(within(footerNav).getByRole('link', { name: 'Documentation' })).toHaveAttribute(
       'href',
       'https://docs.citeladder.com/',
     );
@@ -72,9 +60,11 @@ describe('MarketingFooter', () => {
 
     // The policies are CiteLadder's own pages on this domain, so none of them
     // may leave the site the way the former parent-company links did.
-    const footer = screen.getByRole('contentinfo');
     for (const { label, href } of FOOTER_LEGAL_LINKS) {
-      const links = within(footer)
+      const scope = screen.getByRole('navigation', {
+        name: href === '/contact' ? 'Footer' : 'Legal',
+      });
+      const links = within(scope)
         .getAllByRole('link', { name: label })
         .filter((link) => link.getAttribute('href') === href);
       expect(links, href).toHaveLength(1);
@@ -98,9 +88,10 @@ describe('MarketingFooter', () => {
       'href',
       PARENT_COMPANY.href,
     );
-    expect(screen.getByRole('link', { name: 'CiteLadder on LinkedIn' })).toHaveAttribute(
-      'href',
-      CITELADDER_LINKEDIN,
-    );
+    expect(
+      within(screen.getByRole('navigation', { name: 'Footer' })).getByRole('link', {
+        name: 'CiteLadder on LinkedIn',
+      }),
+    ).toHaveAttribute('href', CITELADDER_LINKEDIN);
   });
 });
