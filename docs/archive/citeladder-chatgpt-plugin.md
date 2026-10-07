@@ -1,5 +1,9 @@
 # CiteLadder ChatGPT plugin plan
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 Status: repository implementation complete on 5 October 2026; installed-client acceptance and public release remain open.
 Prepared: 5 October 2026. Platform documentation checked on the same date.
 
@@ -14,7 +18,7 @@ the user waived founder-pilot gating and requested fixture/mock-host verificatio
 without requiring their participation. Repository work may include Site Health
 and sidebar/context integration; actual client acceptance remains an external
 release check, never a claim inferred from mocks.
-[MCP Events](citeladder-mcp-events.md) has its own retained plan and is outside
+MCP Events has its own retained plan and is outside
 this implementation roadmap. The user's assignment authorizes repository
 implementation and disposable mock-account tests, not deployment or publication.
 
@@ -298,7 +302,7 @@ resolved. Submission, approval and publication remain distinct milestones.
 
 ### Separate follow-up MCP Events
 
-[The Events plan](citeladder-mcp-events.md) retains subscription, authorization,
+The Events plan retains subscription, authorization,
 delivery, persistence and rollout design. Its proposed first event is
 `visibility.measurement_changed`: domain owners determine measured deltas,
 subscriptions specify which changes matter, and ChatGPT follows the user's

@@ -217,7 +217,7 @@ JourneyDefinition and reviewed conversion-journey mapping were proposed in older
 documentation but are not implemented persistence/API owners. Do not describe
 them as shipped, infer a conversion definition from GA4 events or interpret
 missing event configuration as zero. First-party generative-AI report ingestion
-is also unverified; [pending work](plans/citeladder-integrations-audit-followups.md)
+is also unverified; [pending work](plans/backlog.md#integrations-and-ai-visibility)
 retains the evidence/authorization gate.
 
 ## Read and UI

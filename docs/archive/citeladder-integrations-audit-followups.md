@@ -1,5 +1,9 @@
 # Integrations and AI Visibility — pending work
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 Pending, selected by the owner; no active implementation is established.
 [Connected data](../integrations-traffic-analytics.md),
 [Visibility](../visibility-prompt.md) and [Opportunities](../opportunities.md)

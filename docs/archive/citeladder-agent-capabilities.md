@@ -1,5 +1,9 @@
 # Agent capabilities
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 ## Status and scope
 
 Revised on 30 September 2026 at the owner's request. The clarified objective
@@ -202,7 +206,7 @@ stay in the current chat.
 The TypeScript migration is complete. The native Agent runtime, funding,
 provider custody and shared MCP readers are established; application policy is
 native. Future runtime refinements, streaming or memory work extend those owners in separately
-assigned slices. The [archived migration](../archive/citeladder-typescript-migration.md)
+assigned slices. The archived migration
 retains the historical sequence, not a prerequisite queue.
 
 ## Delivery slices and acceptance
@@ -235,7 +239,7 @@ Multi-read steps are deferred until measurements justify a protocol change.
 ## Deferred proposals from the original plan
 
 - Structured measurement-plan outputs remain deferred from the
-  [Agent/Action implementation](../archive/citeladder-action-center.md#pr-3--implementation-measurement-and-search-demand).
+  Agent/Action implementation.
   Verification currently uses member-rule checks; free-text chat plans cannot
   add expected checks without a separately approved structured output contract.
 

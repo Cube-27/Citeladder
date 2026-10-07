@@ -91,7 +91,7 @@ transitive dependencies and meaningful schema test/static-analysis tools remain
 separate. The Python environment and one-shot migration image are retained.
 
 [Invariant 17](../invariants.md#17-the-migration-baseline-remains-singular) and
-D4 of the [earlier migration plan](citeladder-typescript-migration.md#4-decisions)
+D4 of the earlier migration plan
 continue to require Alembic as sole schema author. Kysely types remain generated
 from the Alembic-migrated database. The accepted boundary is recorded in
 [decisions](../decisions.md#typescript-application-python-schema-tooling).

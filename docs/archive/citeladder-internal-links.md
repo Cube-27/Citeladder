@@ -1,5 +1,9 @@
 # Internal link suggestions
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 ## Status and authorization
 
 Planned and implemented on 28 September 2026 in branch `codex/content-structure`.

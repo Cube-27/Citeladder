@@ -1,5 +1,9 @@
 # Agent end-to-end reliability and workflow plan
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 Status: slices A–G implemented locally on `plan/agent-end-to-end`, following
 the owner's implementation assignment on 5 October 2026. Publication, CI,
 deployment and live-provider quality evaluation remain separate. The audit and

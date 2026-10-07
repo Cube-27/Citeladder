@@ -22,9 +22,8 @@ always-on service. PRs 1–5 implement this boundary: operators, bootstrap, seed
 tools and application policy are native; Python retains schema maintenance.
 
 Source: owner-selected target in the 4 October 2026 migration-planning
-conversation. The [completed migration plan](archive/citeladder-python-retirement.md)
-records the slices; schema migration and full Python-environment retirement
-are outside its scope.
+conversation, implemented through PR #268. Schema migration and full
+Python-environment retirement are outside the accepted scope.
 
 ## One commercial account per workspace
 
@@ -43,7 +42,8 @@ Source: owner-confirmed commercial and workspace decisions, implemented in
 [PR #61](https://github.com/Cube-27/Citeladder/pull/61) (44fc0d22), with shell
 selection in [PR #58](https://github.com/Cube-27/Citeladder/pull/58) (cae5717f).
 [Workspace access](workspace-access.md) and [billing](billing-entitlements.md)
-own shipped behavior. Sign-in selection and invitation delivery remain deferred.
+own shipped behavior. Sign-in workspace selection remains deferred; invitation
+delivery is implemented through self-serve authentication (#280).
 
 ## Preserve provider portability; do not enable payments
 
@@ -56,8 +56,8 @@ commercial accounting to change a payment transport.
 Source: owner-confirmed provider-portability decision, implemented in
 [PR #61](https://github.com/Cube-27/Citeladder/pull/61) (44fc0d22).
 On 24 September 2026 the owner resumed
-Razorpay under the [activation plan](plans/citeladder-razorpay-activation.md);
-payments stay disabled until that plan's sign-off.
+Razorpay activation; payments stay disabled until the separate live sign-off
+tracked in the [backlog](plans/backlog.md#acceptance-calibration-and-rollout).
 
 Real sandbox captures, recurring-method acceptance and GST parity remain
 unverified. [Provider readiness](billing-provider-readiness.md) owns the
@@ -81,7 +81,7 @@ place to converge. The retired `content_creation` and `growth_agent` keys were
 then renamed to one `agent` capability, route and rate key without read-time
 aliases; pre-launch, the demo database is reset instead (26 September 2026).
 
-Source: owner-settled [Agent workspace plan](archive/citeladder-action-center.md),
+Source: owner-settled Agent workspace plan,
 25 September 2026. [Agent](agents.md) and [Opportunities](opportunities.md)
 own shipped behavior.
 
@@ -95,7 +95,7 @@ the owner judged low quality, added a completion worker and a polling state, and
 committed users to prompts they had not chosen.
 
 Source: owner decision of 26 September 2026 in the
-[prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 1.
+prompt generation v2 plan, PR 1.
 [Onboarding](onboarding.md) and [prompts and Visibility](visibility-prompt.md)
 own the shipped behavior.
 
@@ -110,7 +110,7 @@ audit, capacity and visibility query would then have to exclude proposals and
 one miss would corrupt measurement.
 
 Source: owner decision of 26 September 2026 in the
-[prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3a.
+prompt generation v2 plan, PR 3a.
 [Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
 
 ## The quality judgment gates generated prompts
@@ -129,7 +129,7 @@ narrows "rejected candidates are deleted". Code still owns every check code
 can make, and a judgment never retires a tracked prompt.
 
 Source: owner decisions of 26 September 2026 (PR 3b) and 27 September 2026
-(PR 3c) for the [prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md).
+(PR 3c) for the prompt generation v2 plan.
 [Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
 
 ## TypeSafe is a published subprocessor; production runs JEV

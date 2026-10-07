@@ -24,8 +24,7 @@ it must retain verification/access enforcement and compatible schema/data.
 
 This is the owner procedure for production hosting. The design target is under
 ₹500 a month in fixed hosting, excluding provider usage (models, JEV,
-DataForSEO) and the domain. Background and decisions are in the
-[low-cost hosting plan](../archive/citeladder-typescript-migration.md#9-low-cost-hosting-prs-2124-proposed-1-october-2026).
+DataForSEO) and the domain. The current topology and operating procedures follow below.
 Terraform lives in [`infra/gcp`](../../infra/gcp/README.md). Never place a
 long-lived Google service-account key in GitHub.
 

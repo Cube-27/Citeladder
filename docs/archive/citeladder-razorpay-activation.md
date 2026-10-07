@@ -1,5 +1,9 @@
 # Razorpay activation — three PRs, then acceptance
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 Status: approved 24 September 2026. PR A (commercial core) implemented.
 PR B (payment paths) implemented except slice B8: the real test-mode smoke run
 needs a browser payment and has not been performed, so it moves to the start of

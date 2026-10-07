@@ -189,8 +189,8 @@ frontend/packages/contracts/           shared TypeScript API contracts
 backend/app/                           SQLAlchemy schema metadata and migration configuration
 migrations/versions/0001_initial.py    pre-launch canonical database baseline
 docs/README.md                         sole active documentation index
-docs/plans/                            live plans, indexed by docs/plans/ACTIVE.md
-docs/archive/                          completed implementation plans and historical evidence
+docs/plans/                            consolidated backlog and current-work index
+docs/archive/                          historical plans and evidence; no active dependencies
 docs/decisions.md                      accepted cross-feature decisions and rationale
 ```
 

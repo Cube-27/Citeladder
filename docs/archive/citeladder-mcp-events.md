@@ -1,8 +1,12 @@
 # CiteLadder MCP Events plan
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 Status: proposed, retained follow-up; implementation is not assigned.
 Prepared: 5 October 2026. Extracted from the
-[ChatGPT plugin plan](citeladder-chatgpt-plugin.md), whose release does not depend
+ChatGPT plugin plan, whose release does not depend
 on this work. Assign this plan separately after the read-only plugin experience
 is proven. No deployment, subscriptions or outbound deliveries are authorized
 by retaining this document.

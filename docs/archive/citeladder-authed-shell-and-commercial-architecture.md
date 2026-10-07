@@ -1,5 +1,9 @@
 # Authenticated shell and commercial ownership — retained follow-up
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 Implementation delivered through #58 (cae5717f) and #61 (44fc0d22), with later
 shell corrections. This retained plan is not active and is not a third pending
 implementation assignment. The owner retained it for its deferred items.

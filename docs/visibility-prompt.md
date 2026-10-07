@@ -343,7 +343,7 @@ persisted against the response, so nothing links one to a citation.
 Browser history restores the analytical context. Competitor suggestions remain
 in Overview Facts rather than becoming measurement evidence automatically.
 
-The [pending integrations work](plans/citeladder-integrations-audit-followups.md)
+The [pending integrations work](plans/backlog.md#integrations-and-ai-visibility)
 covers richer observed-state/action links and selected-search-query generation.
 Existing observed-query context does not mean that selection/provenance UX is
 complete. Historical evaluation numbers do not establish current acceptance

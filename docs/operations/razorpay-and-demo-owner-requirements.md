@@ -18,8 +18,10 @@ API contracts. Follow the tested command and incident procedures in
 
 ## 0. Recorded owner decisions (24 September 2026)
 
-Non-secret values only. The full decision table lives in the
-[activation plan](../plans/citeladder-razorpay-activation.md).
+Non-secret values only. The [launch configuration](CiteLadder_Launch_Config.md)
+owns the commercial contract; the
+[payment acceptance backlog](../plans/backlog.md#acceptance-calibration-and-rollout)
+tracks remaining acceptance and sign-off.
 
 ```text
 Catalog version: launch-pricing-v1

@@ -1,5 +1,9 @@
 # CiteLadder demo and production hardening plan
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 Date: 25 September 2026
 
 Status: repository-side Phase 1 controls are shipped in the native owners.

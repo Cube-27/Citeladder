@@ -1,5 +1,9 @@
 # Self-serve authentication, verified email and trial access
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 Status: repository implementation complete on 6 October 2026 in [PR #280](https://github.com/Cube-27/Citeladder/pull/280).
 Public rollout, deployed-schema compatibility and live-provider acceptance remain
 separately authorized operations.

@@ -1,5 +1,9 @@
 # Prompt generation v2: empty onboarding, direct prompt workflow, rebuilt generation
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 Status: implementation complete; retained for live calibration. Owner-approved direction (26 September 2026; revised the same day
 after the prompt-universe and JEV feasibility research). PR 1 merged as `54e6f4b8`
 (#161); PR 2 merged as `42c73cfe` (#162); PR 3a merged as `adadf505`

@@ -13,8 +13,11 @@ and curl-cffi transport. Current runtime owners are documented in
 [Site Health](../site-health.md); this dated evidence does not redefine their
 implementation or the outstanding legal decisions.
 
-**26 September remediation addendum:** the active assignment and all supplied
-proposed decisions are retained in [the remediation plan](../plans/citeladder-audit-remediation.md).
+**26 September remediation addendum:** remaining implementation and unresolved
+approval categories are now consolidated in the
+[remediation backlog](../plans/backlog.md#audit-remediation-and-enterprise-readiness).
+The historical assignment is not current execution authority; proposed decisions
+remain unapproved unless separately recorded as accepted.
 Part 0 below is dated historical evidence, not current deployed configuration.
 Its crawler findings (Chrome impersonation, fail-open robots, capped delay) are
 superseded in code by audit-remediation PR 1; see [Site Health](../site-health.md#acquisition-and-evidence-guarantees).

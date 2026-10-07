@@ -86,8 +86,9 @@ evidence for the release candidate satisfies them:
   credentialed audit/schedule validation.
 - AI Visibility: bounded live DataForSEO acceptance for both scrapers, all-six
   coexistence, citations, available ChatGPT fanouts, costs and partial failure.
-  The [archived release boundaries](archive/citeladder-dataforseo-llm-visibility.md#release-boundaries)
-  retain the acceptance scope; native tests alone do not establish it.
+  Enable selection only after the full path and focused checks pass; native tests
+  alone do not establish live acceptance. On rollback, disable new admission,
+  retain historical evidence and allow accepted paid tasks to finish retrieval.
 - Billing: commercial/tax confirmation, real provider test-mode acceptance,
   separate live-readiness approval and observed production alert delivery.
   [Provider readiness](billing-provider-readiness.md) and the

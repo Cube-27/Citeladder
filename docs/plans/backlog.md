@@ -1,0 +1,208 @@
+# Backlog
+
+Consolidated on 7 October 2026. This is the single remaining-work record, queued
+through [plan status](ACTIVE.md). It records documented status, not a fresh code
+audit or production acceptance. Historical plans have been archived; their removal
+does not close the unfinished work below.
+
+Select and scope an item before implementation. Order here is organizational, not
+an approved delivery sequence. Feature owners in [the documentation index](../README.md)
+and accepted [invariants](../invariants.md) remain authoritative. No archived document
+is required to select work; establish a current owner/code inventory when scoping it.
+
+## Remaining engineering
+
+### Audit remediation and enterprise readiness
+
+PR 1 (#156) and partial PR 2 (#158) are implemented. Extend existing workspace,
+integration, Agent, MCP, acquisition and security-event owners:
+
+- Durable operator export/deletion jobs with verified authority, scope, deadlines,
+  idempotency, progress, failures and category-specific legal holds. Distinguish
+  account, workspace, project and integration-history requests.
+- Execution/access fences across API admission, schedules, queues, credentials,
+  Agent and MCP, including dispatch and terminal writes. Retries and late workers
+  must not recreate deleted data; preserve other members' workspaces and require
+  ownership transfer or explicit closure for a sole owner's workspace.
+- Redacted JSON/CSV exports and Agent Markdown with provenance and omission/licensing
+  manifests; no secrets. Retryable purge, deletion replay before restored access
+  reopens, and separate backup-expiry verification. Reactivation may cancel scheduled
+  offboarding before purge, never silently cancel explicit deletion.
+- Remaining security-event callers and recoverable policy-revision history. Enterprise
+  agreement references and some membership, Google and credential events already
+  exist. Events must reflect committed operations and exclude confidential payloads.
+- Owned-site authority receipts and broader direct-acquisition robots/pacing coverage.
+  Resolve the sitemap/link observation ordering dependency before the broader cutover;
+  preserve immutable provenance, SSRF controls, suppression and the kill switch.
+- Enforced provider licensing permissions for storage, display, export, Agent and MCP;
+  Google revocation/history deletion and permitted downstream-use controls. Ambiguous
+  rights block the affected use until approved evidence exists.
+- Policy/enterprise package closure, deployed dependency and asset notices, and
+  subprocessor-change notification mechanics with an accountable owner.
+
+**Retention requirements:** trial expiry requires active-data purge within 30 calendar
+days; paid-service end allows 30 calendar days for export, then a further 30 to purge;
+verified deletion requests require deletion within 30 calendar days or sooner where
+required. Residual backups expire within 90 calendar days of active deletion, preserving
+shorter existing lifetimes. Necessary legal records/holds are category-scoped exceptions.
+
+**Scope decision:** reconcile purge with immutable billing/financial evidence and
+restrictive foreign keys. Decide whether narrow retention-related schema separation
+is allowed; do not cascade or weaken accounting provenance. Affected purge stays
+disabled until resolved. Independent engineering is not blocked wholesale.
+
+Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
+[Agent](../agents.md), [Site Health](../site-health.md), [Earned sources](../earned-sources.md),
+[Connected data](../integrations-traffic-analytics.md) and [Billing](../billing-entitlements.md).
+
+### Integrations and AI Visibility
+
+- Make Mentions & Citations actionable: mentioned-and-cited, mentioned-only,
+  cited-only and neither; engine coverage, competitor evidence and existing
+  Opportunity/Content handoffs.
+- Generate explicitly from selected search queries, retaining QueryEvidenceRow
+  identity and observation provenance through generation, validation and editing.
+- Improve evidence-backed Opportunity sorting/labels without another blended score;
+  expose existing three-leg verification, gap changes, overlapping actions and
+  the causality notice.
+- Add an evidence-grounded Trends summary with comparable selection.
+- Improve property selection using project site identity and page equivalence.
+  Assess moving history-backfill fan-out from HTTP into the existing task owner.
+- Review server-side Query Fanout grouping; full-selection totals already run there.
+- Verify public copy and correct unsupported claims of importing first-party
+  generative-AI Search Console reports. Integration requires a documented endpoint,
+  supported authentication and an authorized successful response. Do not scrape an
+  authenticated dashboard or substitute ordinary search traffic; keep first-party
+  AI observations separate from search traffic and CiteLadder experiments.
+
+Subsequent prompt grounding in relevance-ranked persisted GSC evidence remains deferred.
+Never auto-replace the tracked portfolio, equate GSC impressions with AI prompt volume,
+overwrite the user's Content skill choice or auto-publish.
+
+Owners: [Connected data](../integrations-traffic-analytics.md),
+[Visibility](../visibility-prompt.md) and [Opportunities](../opportunities.md).
+
+### Authorized crawl and domain verification
+
+AI Traffic A1–A3 are implemented (#257/#258/#260). Part B remains separate:
+
+- Domain/host verification using DNS TXT, file or meta challenges; scoped attestation,
+  append-only authorization receipts, re-verification, downgrade and revocation.
+  DNS proves the named domain/subdomain with descendants only by opt-in; file/meta
+  verification proves the serving host only; attestation covers the project host.
+- Crawl-policy decisions with live authorization checks before each robots-excluded
+  request, including redirects. Leaving the authorized scope falls back to Standard
+  handling; revocation/downgrade stops further excluded fetches immediately.
+- Settings, verified-scope status and result presentation distinguishing authorized
+  robots-excluded pages from ordinary pages and page-level access failures.
+
+Authorization changes robots handling only, never page access controls, credentials,
+WAF/CAPTCHA handling, rate limits, SSRF protections or suppression. Competitor and
+earned/source acquisition remain Standard. Frozen receipts preserve provenance, not
+perpetual permission. Verification commits before network I/O; reads never verify.
+
+Depends on audit-remediation authority receipts. Before enablement, decide whether
+attestation alone is sufficient, any depth/page-limit differences and legal Terms wording.
+
+Owners: [Site Health](../site-health.md) and [AI Traffic](../ai-traffic.md).
+
+### Production hardening
+
+Repository Phase 1 replay, saved-window/manual-refresh admission and CSP controls
+are shipped. Remaining investigation and policy-dependent work:
+
+- Inventory current cloud callers/dependencies before retiring obsolete integrations,
+  keys, APIs or resources and narrowing IAM. Historical VM observations are not
+  current topology evidence.
+- Define and implement measured workspace-wide Demand refresh rate/aggregate limits;
+  one-refresh-per-project only partially addresses that risk.
+- Choose recovery objectives, backup/deletion protections and verify isolated restore.
+- Establish data-preserving release/schema-evolution policy before customer data;
+  protect against accidental reset/destruction.
+- Apply approved production access, recovery access, key lifecycle and purpose-specific
+  log/access/retention controls; measure capacity against agreed workload and budget.
+- Reconcile older provisioning proposals with completed self-serve authentication
+  before scoping additional admission work.
+
+Security alerts remain explicitly deferred, not an implicit release prerequisite.
+Infrastructure redesigns and paid security tiers require demonstrated need. Recovery,
+retention, access and cost decisions must precede their dependent implementation.
+
+Owners: [Google Cloud operations](../operations/GOOGLE_CLOUD.md),
+[GCP runbook](../operations/GCP_RUNBOOK.md) and [Workers runbook](../operations/WORKERS_RUNBOOK.md).
+
+## Deferred proposals
+
+Optional later assignments, not prerequisites for completed features:
+
+| Area | Retained proposal and boundary |
+|---|---|
+| Agent streaming | Authorized persisted progress delivery first; reconnect must not replay execution. Provider text needs a separate safe transport/publication contract; incomplete text cannot become a saved/approved artifact. Polling remains the baseline. |
+| Agent memory promotion | Reviewed Save to Context with expected-base revision, idempotency and source-message provenance. Preferences use instruction revisions; company facts use the reviewed brand-profile owner. |
+| Agent plan execution | Durable user-approved steps/child-chat links, fresh authorization/funding and retry semantics; no autonomous execution chain. |
+| Agent skill policy | Server-enforced per-project enablement/order and frozen run policy; user-authored skills remain out of scope. |
+| Agent evaluation and outputs | Expanded skill evaluation corpus and structured measurement-plan outputs. Durable checkpoint/resume, aggregate elapsed-time policy, multi-read steps and bulk page orchestration need separately measured/scoped work. |
+| MCP Events | Measured Visibility change events, scoped subscription lifecycle/callback verification, durable delivery and host acceptance. Use canonical comparable measurements, exact source IDs, explicit units/thresholds and distinct zero/unavailable states. PostgreSQL owns intents/retries; recheck grants, membership, expiry and entitlements before dispatch; unsubscribe/revocation fence delivery. Decide baseline, expiry, replay, retention, retry/cooldown, entitlements and volume first. Recheck current protocol requirements when assigned; independent of plugin release. |
+| Sign-in workspace selection | Multi-workspace selection at sign-in; retain the in-app switcher until a complete selection policy is assigned. Invitation delivery is implemented. |
+| Prompt generation | Agent-driven Build with Agent generation, advisory Site Health semantic-quality observations, competitor-candidate cleanup and stable-core/experimental portfolio split. Recheck against current owners before selection. |
+| Internal links | Separate judgment-policy version, normalized recommendation rows and catalog-based product variants, only if real runs justify them. |
+| AI Traffic extensions | Customer-authorized Cloudflare deployment, durable Queue-backed Worker, additional log providers/presets, reverse-DNS verification, device/geography breakdowns, first-party session tracking, real-time streaming and Opportunities from insights. |
+| Funded billing | Managed AI checkout, funded prices and scheduled-coverage reserve remain separate; current payment launch scope is BYOK. |
+
+Owners: [Agent](../agents.md), [MCP](../mcp.md), [Workspace access](../workspace-access.md),
+[Visibility](../visibility-prompt.md), [Site Health](../site-health.md),
+[AI Traffic](../ai-traffic.md) and [Billing](../billing-entitlements.md).
+
+## Acceptance, calibration and rollout
+
+Implemented code is not deployed, provider or legal acceptance. Failures found here
+may require focused fixes; these rows do not presume another implementation.
+
+| Area | Remaining gate |
+|---|---|
+| Self-serve authentication | #280 implementation complete. Verify deployed-schema compatibility, Google callback/configuration, Resend sender and controlled-inbox delivery, verification/trial enforcement and coordinated API/product/marketing signup rollout. Preserve existing login/recovery on rollback. |
+| ChatGPT plugin | Visibility, Site Health, public workflows and sidebar/context implementation complete. Installed-client acceptance, reviewer account/cases/walkthrough, CIMD assessment, domain verification/scans, submission, approval and publication remain distinct gates. Founder-pilot gating was waived for fixture/mock-host checks. |
+| Razorpay | Commercial core, payment paths and customer surfaces implemented. Complete B8 test-mode payments/webhooks/refunds, commercial/tax inputs, live provisioning and sign-off, then controlled live purchase/refund and rollout. Payments stay disabled until sign-off; rollback closes checkout while webhooks/reconciliation continue. |
+| Prompt generation v2 | Implementation through #173 complete; policy published and production key configured on 28 September. Calibrate provisional thresholds from live accept/reject outcomes. |
+| Internal links | Implementation and placement refinement merged in #196/#205. Calibrate against editor-reviewed outcomes. |
+| Agent | Capabilities foundations/MVP and conversation A–D complete; reliability A–G merged in #271. Deployment, manual conversational acceptance and live-provider quality evaluation remain separate from native/mocked coverage. |
+| Crawl Logs / AI Traffic | Confirm eligible plans/quotas, raw-request retention and privacy/DPA wording for transient IP processing and retained path hashes before production enablement. The proposed 90-day raw retention is not an approved decision. |
+| Hardening | Obtain current deployed TLS/cache/provisioning and authenticated scanner evidence, effective ingress/state protection and cloud dependency inventory. Successful delivery workflows do not establish manual acceptance. |
+| Cross-feature release | Manual feature/cloud acceptance, isolated restore and incident exercises, privileged access/MFA, log retrieval/retention, credential rotation and verified-request handling remain external evidence gates. |
+
+Current acceptance owners: [release checklist](../release-checklist.md),
+[Google Cloud acceptance](../operations/GOOGLE_CLOUD.md),
+[billing provider readiness](../billing-provider-readiness.md),
+[payment owner requirements](../operations/razorpay-and-demo-owner-requirements.md)
+and [launch configuration](../operations/CiteLadder_Launch_Config.md).
+
+## Legal, management and operational decisions
+
+Retain unresolved approvals under the
+[legal review draft](../operations/CiteLadder_Legal_Pages_Final_Review_Draft_2026-09-24.md):
+
+- Named grievance contact and business telephone; enterprise liability, indemnities,
+  dispute forum and agreement precedence; final policy/MSA/order-form approval.
+- Country admission, transfers and mandatory rights; category-specific finance/legal/
+  security retention exceptions and legal-hold procedure. Preserve accepted retention
+  clocks above until an explicit replacement resolves conflicting proposals.
+- Provider contracts, processing locations, no-training settings and ambiguous data-use
+  rights; deployed license/notice clearance and subprocessor-notice ownership/delivery.
+- Named incident/support owners, recovery objectives, operational evidence and
+  cyber/E&O insurance decision.
+- Accountant-approved tax/export inputs and remaining commercial policy decisions,
+  including mistaken add-on/top-up refunds. Proposed clauses are not approved policy.
+- Deferred B20 legal wording and [console spend-cap setup](../operations/GCP_RUNBOOK.md#budget-and-log-controls)
+  retained from completed security/backend work.
+
+## Completed baseline
+
+TypeScript migration/Python retirement (#268), backend debt (#256), security
+hardening (#255) and design contracts (#230) are complete implementation history,
+not new assignments. Their operational/legal exceptions are retained above.
+
+Invitation delivery is implemented, the prompt-generation policy is published and
+internal-links work is merged. Do not reopen these tasks from stale historical text.
+Update this backlog when remaining scope, blockers or completion change; update
+ACTIVE.md when selection or queue state changes. Routine validation belongs in PR/CI
+records, not another progress document.

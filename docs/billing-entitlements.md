@@ -224,7 +224,7 @@ Provider keys are write-only; neither UI nor logs receive their plaintext.
 ## Acceptance limits
 
 Razorpay activation follows its
-[activation plan](plans/citeladder-razorpay-activation.md).
+[payment acceptance backlog](plans/backlog.md#acceptance-calibration-and-rollout).
 Provider selection, sandbox captures, recurring methods, tax parity and live
 payment enablement are not established by local tests. The
 [release checklist](release-checklist.md) retains external acceptance gates.

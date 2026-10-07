@@ -6,8 +6,7 @@
 
 Sections 1–6 are the implementation contract. Section 7 is reference-only economics.
 
-> **Owner amendments, 24 September 2026** (recorded in the
-> [activation plan](../plans/citeladder-razorpay-activation.md)):
+> **Owner amendments, 24 September 2026:**
 > launch sells **BYOK plans only**; funded prices stay published but not
 > purchasable. INR prices for add-ons and top-ups follow the catalog rule
 > `ceil(USD × 90 / 100) × 100 − 1` (GST-exclusive), replacing `INR: null`.

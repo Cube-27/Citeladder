@@ -10,11 +10,11 @@ Nothing in this repository has been verified against a live payment network.
 
 Razorpay approved the merchant, including Subscriptions and international
 payments. Activation follows the
-[Razorpay activation plan](plans/citeladder-razorpay-activation.md): PR A
+[payment acceptance backlog](plans/backlog.md#acceptance-calibration-and-rollout): PR A
 (commercial core) implements the launch catalog, currency rule, tax,
 documents and entitlements with checkout still off; PR B connects the payment
 paths; PR C builds the customer surfaces (all three implemented); test-mode acceptance and the live
-sign-off come last. Enablement still requires that plan's recorded sign-off.
+sign-off come last. Enablement still requires recorded live sign-off.
 
 Everything below marked "verified" is verified by LOCAL tests only. None of it
 is evidence that money can be taken correctly.

@@ -48,6 +48,8 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 ## Work and decisions
 
 [Plan status](plans/ACTIVE.md) is the only current-work index.
+[Backlog](plans/backlog.md) consolidates remaining implementation, proposals,
+decisions and acceptance gates; it is queued, not an execution assignment.
 [Decisions](decisions.md) records accepted cross-feature choices and rationale.
 An indexed plan is not authorization to run it. Read a plan only for work
 assigned to that plan; completed plans retain evidence and limitations, not
@@ -77,9 +79,10 @@ origin provisioning, configuration and cutover release records.
 [Operations](operations/) contains live deployment, billing and recovery
 procedures; use the procedure relevant to the requested operation.
 
-Fixtures consumed by current tests remain with those tests. [The archive](archive/),
-Git and PRs retain completed plans, audits and dated evidence. Historical observations do not
-establish current acceptance.
+Fixtures consumed by current tests remain with those tests. Git and PRs retain
+historical plans, audits and dated evidence. Archived copies are disposable;
+current documentation must not link to or depend on them. Historical observations
+do not establish current acceptance.
 
 Published blog content belongs to
 [the marketing content modules](../frontend/lib/marketing-content/blog-posts/),

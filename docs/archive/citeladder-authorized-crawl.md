@@ -1,5 +1,9 @@
 # AI Traffic analytics, crawl logs and authorized crawl
 
+> Archived on 7 October 2026. Retained as historical scope and evidence, not
+> execution authority or a current status report. Remaining work is consolidated
+> in [the backlog](../plans/backlog.md), queued through [plan status](../plans/ACTIVE.md).
+
 ## Status and boundaries
 
 Status: A1–A3 merged in #257/#258/#260; Part B and operational decisions remain queued. Plan history:
@@ -923,7 +927,7 @@ Part A. It builds on the robots policy shipped with audit remediation PR 2
 (see the
 [Site Health table](../site-health.md#acquisition-and-evidence-guarantees))
 and on the owned-site authority receipts that
-[audit remediation](citeladder-audit-remediation.md) Section 4 still
+audit remediation Section 4 still
 requires.
 
 The customer-facing Terms wording below is a draft for Cube27 legal review.
