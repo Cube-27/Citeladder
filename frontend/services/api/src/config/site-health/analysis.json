@@ -227,7 +227,7 @@
       "product_nested_value_keys": ["name", "ratingValue"]
     },
     "classification": {
-      "version": "sh-classifier-1",
+      "version": "sh-classifier-2",
       "page_kinds": [
         "homepage",
         "article",
@@ -330,7 +330,7 @@
       }
     },
     "traits": {
-      "version": "sh-traits-1",
+      "version": "sh-traits-2",
       "order": [
         "has_faq",
         "has_reviews",
@@ -351,7 +351,7 @@
         "comparison_content": ["compare", "comparison", "comparisons", "vs"]
       },
       "title_phrases": {
-        "contact_intent": ["contact us", "get in touch", "contact"],
+        "contact_intent": ["contact us", "get in touch"],
         "about_intent": ["about us", "our story", "who we are"],
         "case_study_intent": ["case study", "customer story", "success story"],
         "comparison_content": ["vs", "versus", "compared", "comparison"]
@@ -379,6 +379,15 @@
         "aeo.source_support_present",
         "aeo.content_date_present"
       ],
+      "purpose_confirmed_check_ids": [
+        "aeo.product_answer_facts",
+        "aeo.product_evidence_facts",
+        "aeo.product_brand_identity",
+        "aeo.offer_freshness_signal",
+        "aeo.listing_answer_set",
+        "aeo.listing_item_facts"
+      ],
+      "purpose_confirmed_page_kinds": ["product", "category"],
       "applicability_prefixes": {
         "page_kind": "page_kind:",
         "page_kind_html": "page_kind_html:",
@@ -612,6 +621,7 @@
         "insufficient_evidence",
         "question_answers_unavailable",
         "question_relationships_unavailable",
+        "page_kind_unconfirmed",
         "robots_not_fetched",
         "unknown_applicability"
       ]

@@ -23,6 +23,32 @@ const STRUCTURAL_NA = new Set(r.structural_na_reasons);
 const UNKNOWN_REASONS = new Set([...r.unavailable_reasons, ...r.unknown_reasons]);
 const FAILING = new Set(policy.site_health.reads.failing_outcomes);
 const AUTHORED_CHECKS = new Set(r.authored_content_check_ids);
+const PURPOSE_CHECKS = new Set(r.purpose_confirmed_check_ids);
+const PURPOSE_KINDS = new Set(r.purpose_confirmed_page_kinds);
+
+/** Page-owned commerce structure: a purchase control or price, or a captured collection. */
+function ownsPurpose(kind: string, facts: Facts) {
+  if (record(facts.page_kind_evidence).tier === 'structural') return true;
+  const entity = record(facts.entity);
+  if (kind === 'product') {
+    const product = record(entity.product);
+    return Boolean(product.has_purchase_control || product.has_primary_price);
+  }
+  // The empty default carries the same keys, so only captured items confirm a collection.
+  const container = record(record(record(entity.listing).collection_evidence).container);
+  return Number(container.item_count) > 0;
+}
+
+/**
+ * A product or category purpose check asserts what that page must offer. When
+ * only the URL or title suggested that purpose (no page-owned commerce
+ * structure), its failure is unknown rather than a finding.
+ */
+const purposeUnconfirmed = (rule: Rule, facts: Facts) =>
+  PURPOSE_CHECKS.has(rule.rule_id) &&
+  PURPOSE_KINDS.has(pageKind(facts)) &&
+  typeof record(facts.page_kind_evidence).tier === 'string' &&
+  !ownsPurpose(pageKind(facts), facts);
 
 export type RuleEvaluation = {
   rule_id: string;
@@ -207,6 +233,10 @@ function runCheck(
   if (outcome === 'missing' && record(facts.extraction).truncated && needsExtraction(rule)) {
     outcome = 'unknown';
     evidence.reason = 'extraction_truncated';
+  }
+  if (FAILING.has(outcome) && purposeUnconfirmed(rule, facts)) {
+    outcome = 'unknown';
+    evidence.reason = 'page_kind_unconfirmed';
   }
   const [final, reason] = normalized(rule, outcome, evidence);
   return { outcome: final, evidence, reason_code: reason };
