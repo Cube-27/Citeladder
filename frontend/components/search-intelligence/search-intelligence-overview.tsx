@@ -1,7 +1,9 @@
 import { Database } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
+import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
@@ -13,17 +15,15 @@ export function SearchMetrics({
   metrics,
 }: Readonly<{ metrics: readonly (readonly [string, unknown])[] }>) {
   return (
-    <div className="border-border bg-panel flex flex-wrap overflow-hidden rounded-[var(--radius-card)] border">
-      {metrics.map(([label, value]) => (
-        <div
-          key={label}
-          className="border-border-subtle grid min-w-40 flex-1 gap-1 border-r p-4 last:border-0"
-        >
-          <span className={textRole('label')}>{label}</span>
-          <span className={textRole('figureSm')}>{formatSearchNumber(value)}</span>
-        </div>
-      ))}
-    </div>
+    <Card>
+      <CardContent>
+        <MetricGroup>
+          {metrics.map(([label, value]) => (
+            <MetricItem key={label} label={label} value={formatSearchNumber(value)} />
+          ))}
+        </MetricGroup>
+      </CardContent>
+    </Card>
   );
 }
 

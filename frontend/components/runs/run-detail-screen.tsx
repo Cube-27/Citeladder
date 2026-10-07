@@ -5,6 +5,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
+import { RunActions, useRunExport } from '@/components/runs/progress-panel';
 import { RunDetailView } from '@/components/runs/run-detail-view';
 import { PageShell } from '@/components/layout/page-shell';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -81,16 +82,35 @@ export function RunDetailScreen() {
   const selectedExecution =
     executions.find((execution) => execution.id === activeExecutionId) ?? null;
 
+  const audit = auditQuery.data;
+  const runExport = useRunExport(audit);
+
   return (
-    <PageShell>
+    <PageShell
+      actions={
+        audit ? (
+          <RunActions
+            audit={audit}
+            cancelPending={cancelMutation.isPending}
+            onCancel={() => cancelMutation.mutate()}
+            onRerunFailures={() => rerunFailuresMutation.mutate()}
+            rerunPending={rerunFailuresMutation.isPending}
+            onExport={runExport.onExport}
+            exporting={runExport.exporting}
+          />
+        ) : null
+      }
+    >
       <RunDetailView
-        audit={auditQuery.data}
+        audit={audit}
         auditLoading={auditQuery.isLoading}
         auditError={auditQuery.isError ? auditQuery.error : null}
+        auditRetrying={auditQuery.isFetching}
+        onRetryAudit={() => void auditQuery.refetch()}
         executions={executionsQuery.data}
         executionsLoading={executionsQuery.isLoading}
         executionsError={executionsQuery.isError}
-        cancelPending={cancelMutation.isPending}
+        exportError={runExport.exportError}
         cancelNotice={
           cancelMutation.isError
             ? mutationNoticeForError(cancelMutation.error, {
@@ -98,7 +118,6 @@ export function RunDetailScreen() {
               })
             : null
         }
-        rerunPending={rerunFailuresMutation.isPending}
         rerunNotice={
           rerunFailuresMutation.isError
             ? mutationNoticeForError(rerunFailuresMutation.error, {

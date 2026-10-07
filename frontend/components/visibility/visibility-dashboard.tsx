@@ -12,6 +12,7 @@ import { VisibilityActions, VisibilityToolbar } from '@/components/visibility/vi
 import { VisibilityTrends } from '@/components/visibility/visibility-trends';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { PageShell } from '@/components/layout/page-shell';
+import { ReadError } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
 import { useProjectContext } from '@/lib/project/project-context';
 import { VISIBILITY_TABS, type VisibilityTab } from '@/lib/visibility/dashboard';
@@ -54,15 +55,22 @@ function dashboardState(
 
 function DashboardState({
   state,
-}: Readonly<{ state: Exclude<VisibilityDashboardState, 'empty' | null> }>) {
+  auditsQuery,
+}: Readonly<{
+  state: Exclude<VisibilityDashboardState, 'empty' | null>;
+  auditsQuery: ReturnType<typeof useVisibilityQueries>['auditsQuery'];
+}>) {
   if (state === 'loading') return <PageLoading label="Loading visibility…" />;
   if (state === 'missing-project')
     return <Alert tone="info">Select or create a project to see its AI-visibility results.</Alert>;
   if (state === 'error')
     return (
-      <Alert tone="danger">
-        Could not load this project&apos;s runs. Check your connection and try again.
-      </Alert>
+      <ReadError
+        error={auditsQuery.error}
+        fallback="Could not load this project's runs. Check your connection and try again."
+        onRetry={() => void auditsQuery.refetch()}
+        pending={auditsQuery.isFetching}
+      />
     );
   return null;
 }
@@ -131,7 +139,7 @@ function VisibilityWorkspace({
           {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
           <TabPanel value={filters.activeTab} className="focus-ring">
             {state ? (
-              <DashboardState state={state} />
+              <DashboardState state={state} auditsQuery={queries.auditsQuery} />
             ) : (
               <DashboardPanel filters={filters} queries={queries} />
             )}

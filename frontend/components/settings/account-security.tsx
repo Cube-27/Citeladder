@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
 import { AuthPasswordField } from '@/components/auth/auth-form';
+import { Stack } from '@/components/ui/layout';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 
 function SecurityIdentity({
@@ -52,7 +53,7 @@ export default function AccountSecurity({
     onSuccess: (response) => hardNavigate(response.authorize_url),
   });
   return (
-    <section className="grid max-w-xl gap-4" aria-label="Account security">
+    <Stack as="section" gap="workspace" className="max-w-xl" aria-label="Account security">
       {showHeading && <EditorialSectionHeader title="Account security" />}
       {security.isPending && <p>Loading account security…</p>}
       {security.isError && (
@@ -65,8 +66,9 @@ export default function AccountSecurity({
       )}
       <SecurityIdentity data={security.data} />
       {security.data?.methods.includes('password') ? (
-        <form
-          className="grid gap-4"
+        <Stack
+          as="form"
+          gap="workspace"
           onSubmit={(event) => {
             event.preventDefault();
             mutation.mutate('change-password');
@@ -109,7 +111,7 @@ export default function AccountSecurity({
               </Button>
             )}
           </div>
-        </form>
+        </Stack>
       ) : (
         <Button
           className="w-fit"
@@ -138,6 +140,6 @@ export default function AccountSecurity({
       >
         <p>This signs out every device, including this one.</p>
       </Dialog>
-    </section>
+    </Stack>
   );
 }

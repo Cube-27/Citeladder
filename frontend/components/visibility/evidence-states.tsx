@@ -5,9 +5,9 @@ import { Info, Inbox, RefreshCw, SearchX } from 'lucide-react';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IconChip } from '@/components/ui/icon-chip';
-import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 
 /**
@@ -55,20 +55,21 @@ export function EvidenceError({
   return (
     <Card>
       <CardContent>
-        <div className="grid gap-3 py-[var(--empty-state-padding)]">
+        <Stack gap="tight">
           <CardEyebrow>{title}</CardEyebrow>
-          <IconChip className="bg-danger-bg text-danger-text">
-            <ICONS.warning className="size-5" aria-hidden />
-          </IconChip>
-          <h3 className={textRole('sectionTitle')}>Couldn&apos;t load this evidence</h3>
-          <p className="type-body max-w-xs">
-            The request failed or timed out. Your filters are unchanged.
-          </p>
-          <Button variant="primary" size="sm" onClick={onRetry}>
-            <RefreshCw className="size-4" aria-hidden />
-            Retry
-          </Button>
-        </div>
+          <EmptyState
+            headingLevel={3}
+            icon={ICONS.warning}
+            heading="Couldn't load this evidence"
+            description="The request failed or timed out. Your filters are unchanged."
+            action={
+              <Button variant="primary" size="sm" onClick={onRetry}>
+                <RefreshCw className="size-4" aria-hidden />
+                Retry
+              </Button>
+            }
+          />
+        </Stack>
       </CardContent>
     </Card>
   );
@@ -82,17 +83,20 @@ export function EvidenceEmpty({
   return (
     <Card>
       <CardContent>
-        <div className="grid gap-3 py-[var(--empty-state-padding)]">
+        <Stack gap="tight">
           <CardEyebrow>{title}</CardEyebrow>
-          <IconChip className="bg-neutral-bg text-muted">
-            <Inbox className="size-5" aria-hidden />
-          </IconChip>
-          <h3 className={textRole('sectionTitle')}>{heading}</h3>
-          <p className="type-body max-w-sm">{body}</p>
-          <Button asChild variant="ghost" size="sm">
-            <ProjectLink href="/runs">View Runs</ProjectLink>
-          </Button>
-        </div>
+          <EmptyState
+            headingLevel={3}
+            icon={Inbox}
+            heading={heading}
+            description={body}
+            action={
+              <Button asChild variant="ghost" size="sm">
+                <ProjectLink href="/runs">View Runs</ProjectLink>
+              </Button>
+            }
+          />
+        </Stack>
       </CardContent>
     </Card>
   );
@@ -106,19 +110,22 @@ export function EvidenceFilteredEmpty({
   return (
     <Card>
       <CardContent>
-        <div className="grid gap-3 py-[var(--empty-state-padding)]">
+        <Stack gap="tight">
           <CardEyebrow>{title}</CardEyebrow>
-          <IconChip className="bg-neutral-bg text-muted">
-            <SearchX className="size-5" aria-hidden />
-          </IconChip>
-          <h3 className={textRole('sectionTitle')}>No results match these filters</h3>
-          <p className="type-body max-w-sm">{body}</p>
-          {onClear ? (
-            <Button variant="ghost" size="sm" onClick={onClear}>
-              Clear filters
-            </Button>
-          ) : null}
-        </div>
+          <EmptyState
+            headingLevel={3}
+            icon={SearchX}
+            heading="No results match these filters"
+            description={body}
+            action={
+              onClear ? (
+                <Button variant="ghost" size="sm" onClick={onClear}>
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
+          />
+        </Stack>
       </CardContent>
     </Card>
   );

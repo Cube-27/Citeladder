@@ -64,7 +64,9 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             <a href="#main" className="skip-link">
               Skip to main content
             </a>
-            <aside className="shell-rail bg-sidebar sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col min-[981px]:flex">
+            {/* The rail starts one sheet inset down, so its rows line up with
+                the bands of the floating sheet beside it. */}
+            <aside className="shell-rail bg-sidebar sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col pt-[var(--workspace-inset)] min-[981px]:flex">
               {/* The project selector is the sidebar's first row, at the same
                   height as the header beside it. The rail reads project →
                   tools → destinations → brand: the switcher is the thing a
@@ -107,7 +109,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               {/* Compact only, exactly as before. On desktop the account
                   trigger rides the route's own header row instead, so the shell
                   adds no second bar above the work. */}
-              <header className="bg-shell z-sticky sticky top-0 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-[var(--content-gutter)] min-[981px]:hidden">
+              <header className="bg-panel border-border-subtle z-sticky sticky top-0 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b px-[var(--content-gutter)] min-[981px]:hidden">
                 <div className="flex items-center">
                   <Button
                     variant="ghost"

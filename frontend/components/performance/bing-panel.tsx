@@ -4,10 +4,10 @@ import { useState } from 'react';
 
 import { DimensionTable } from './dimension-table';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { Stack } from '@/components/ui/layout';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { PerformanceDimension } from '@/lib/api/performance';
 import { BING_DIMENSION_TABS } from '@/lib/performance/performance';
-import { cn } from '@/lib/utils';
 
 /**
  * Bing Webmaster Tools, in a panel of its own.
@@ -39,14 +39,11 @@ export function BingPanel({
   const [dimension, setDimension] = useState<PerformanceDimension>('bing_query');
 
   return (
-    <section className="grid gap-3" aria-label="Bing performance" data-testid="bing-panel">
-      <div className="grid gap-0.5">
-        <h2 className={textRole('sectionTitle')}>Bing</h2>
-        <p className={cn(textRole('caption'))}>
-          Bing Webmaster Tools, counted separately. These figures are never added to the Search
-          Console totals above.
-        </p>
-      </div>
+    <Stack as="section" gap="compact" aria-label="Bing performance" data-testid="bing-panel">
+      <EditorialSectionHeader
+        title="Bing"
+        description="Bing Webmaster Tools, counted separately. These figures are never added to the Search Console totals above."
+      />
       <Tabs
         value={dimension}
         onValueChange={(value) => setDimension(value as PerformanceDimension)}
@@ -70,6 +67,6 @@ export function BingPanel({
           </TabPanel>
         ))}
       </Tabs>
-    </section>
+    </Stack>
   );
 }

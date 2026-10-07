@@ -14,7 +14,8 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { agentMutations, agentQueries } from '@/lib/api/agent';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectsApi } from '@/lib/api/projects';
@@ -56,11 +57,12 @@ function AgentInstructions({
 }: Readonly<{ workspaceId: string; projectId: string }>) {
   const query = useQuery(agentQueries.instructions(workspaceId, projectId));
   return (
-    <section aria-labelledby="agent-instructions" className="grid gap-3">
-      <SectionTitle id="agent-instructions">Agent instructions</SectionTitle>
-      <p className={textRole('body')}>
-        Audience, voice and standing requirements the agent follows in every chat for this project.
-      </p>
+    <Stack as="section" aria-labelledby="agent-instructions">
+      <EditorialSectionHeader
+        title="Agent instructions"
+        headingId="agent-instructions"
+        description="Audience, voice and standing requirements the agent follows in every chat for this project."
+      />
       {query.isError ? (
         <ReadError
           error={query.error}
@@ -80,7 +82,7 @@ function AgentInstructions({
           savedAt={query.data.created_at}
         />
       ) : null}
-    </section>
+    </Stack>
   );
 }
 
@@ -183,11 +185,12 @@ function CompanyFacts({
       visibilityApi.listCompetitorSuggestions(project.id, { signal, workspaceId }),
   });
   return (
-    <section aria-labelledby="company-facts" className="grid gap-3">
-      <SectionTitle id="company-facts">Company facts</SectionTitle>
-      <p className={textRole('body')}>
-        The canonical facts and competitors used across CiteLadder, including by the agent.
-      </p>
+    <Stack as="section" aria-labelledby="company-facts">
+      <EditorialSectionHeader
+        title="Company facts"
+        headingId="company-facts"
+        description="The canonical facts and competitors used across CiteLadder, including by the agent."
+      />
       {profile.isError ? (
         <ReadError
           error={profile.error}
@@ -213,6 +216,6 @@ function CompanyFacts({
           }
         />
       ) : null}
-    </section>
+    </Stack>
   );
 }

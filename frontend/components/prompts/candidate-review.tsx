@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import type { PromptCandidate, Topic } from '@/lib/api/types';
 import { qualityFlagLabel, qualityStatusLabel } from '@/lib/prompts/candidate-quality';
@@ -90,7 +91,12 @@ export function CandidateReview({
       </div>
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {notice ? <Alert tone="success">{notice}</Alert> : null}
-      <div className="bg-panel-tonal flex items-center justify-between gap-3 rounded-[var(--radius-control)] px-1 py-1">
+      <div
+        className={panelClasses(
+          { tone: 'tonal', pad: 'none' },
+          'flex items-center justify-between gap-3 px-1 py-1',
+        )}
+      >
         <Checkbox
           label="Select all"
           checked={allState}

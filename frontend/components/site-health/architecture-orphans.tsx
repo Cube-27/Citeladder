@@ -15,6 +15,7 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { MetricItem, metricItemClasses } from '@/components/ui/workspace';
 import { textRole } from '@/components/ui/typography';
 import type { SiteArchitecture } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
@@ -41,23 +42,25 @@ export function OrphanMetric({
   // the fold to say something the number already said; the drawer is where
   // every other Site Health surface puts its supporting rows.
   return (
-    <div className="grid content-start gap-1">
-      <span className={eyebrowClasses}>Orphaned pages</span>
-      {pages.length > 0 ? (
-        // The visible label is the bare number, which as an accessible name
-        // says only "1" — a control a screen-reader user has no reason to
-        // press. Name the action instead.
-        <Pressable
-          onClick={onOpen}
-          aria-label={`View ${total} orphaned ${total === 1 ? 'page' : 'pages'}`}
-          className="text-accent-text justify-self-start hover:underline"
-        >
+    <div className={metricItemClasses}>
+      <dt className={eyebrowClasses}>Orphaned pages</dt>
+      <dd>
+        {pages.length > 0 ? (
+          // The visible label is the bare number, which as an accessible name
+          // says only "1" — a control a screen-reader user has no reason to
+          // press. Name the action instead.
+          <Pressable
+            onClick={onOpen}
+            aria-label={`View ${total} orphaned ${total === 1 ? 'page' : 'pages'}`}
+            className="text-accent-text justify-self-start hover:underline"
+          >
+            <span className={textRole('figure')}>{total}</span>
+          </Pressable>
+        ) : (
           <span className={textRole('figure')}>{total}</span>
-        </Pressable>
-      ) : (
-        <span className={textRole('figure')}>{total}</span>
-      )}
-      <span className="type-caption">{ORPHAN_SCOPE_NOTE}</span>
+        )}
+      </dd>
+      <dd className={textRole('caption')}>{ORPHAN_SCOPE_NOTE}</dd>
     </div>
   );
 }
@@ -116,14 +119,10 @@ export function EvidenceMetric({
   supporting,
 }: Readonly<{ label: string; value: string; supporting?: string }>) {
   return (
-    <div className="grid content-start gap-1">
-      <span className={eyebrowClasses}>{label}</span>
-      {value === PLACEHOLDER ? (
-        <UnavailableValue state="not_measured" />
-      ) : (
-        <span className={textRole('figure')}>{value}</span>
-      )}
-      {supporting ? <span className="type-caption">{supporting}</span> : null}
-    </div>
+    <MetricItem
+      label={label}
+      value={value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value}
+      detail={supporting}
+    />
   );
 }

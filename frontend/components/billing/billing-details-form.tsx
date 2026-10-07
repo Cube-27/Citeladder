@@ -4,6 +4,8 @@ import type { BillingCustomerDetails } from '@/lib/api/billing';
 
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Stack } from '@/components/ui/layout';
+import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 
 type BillingDetailsFormProps = Readonly<{
@@ -31,7 +33,7 @@ export function BillingDetailsForm({
   const india = country.trim().toUpperCase() === 'IN';
 
   return (
-    <fieldset className="border-border grid gap-3 rounded-[var(--radius-card)] border p-4">
+    <Stack as="fieldset" gap="compact" className={panelClasses({ pad: 'compact' })}>
       <legend className={textRole('label', 'px-1')}>Billing details</legend>
       <div className="grid gap-3 sm:grid-cols-2">
         {addressFields.map(([key, label, autoComplete]) => (
@@ -76,6 +78,6 @@ export function BillingDetailsForm({
           onCheckedChange={(checked) => update('export_eligibility_attested', checked === true)}
         />
       )}
-    </fieldset>
+    </Stack>
   );
 }

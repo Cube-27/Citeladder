@@ -8,6 +8,7 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
+import { Skeleton } from '@/components/ui/skeleton';
 import { InfoHint } from '@/components/ui/info-hint';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { textRole } from '@/components/ui/typography';
@@ -130,10 +131,10 @@ export function VisibilityTrends({
 function VisibilitySelectionLoading() {
   return (
     <Stack gap="workspace" aria-busy="true" aria-label="Loading selected measurement">
-      <div className="bg-surface-2 min-h-24 rounded-[var(--radius-card)]" />
+      <Skeleton className="min-h-24 rounded-[var(--radius-card)]" />
       <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
-        <div className="bg-surface-2 min-h-72 rounded-[var(--radius-card)]" />
-        <div className="bg-surface-2 min-h-72 rounded-[var(--radius-card)]" />
+        <Skeleton className="min-h-72 rounded-[var(--radius-card)]" />
+        <Skeleton className="min-h-72 rounded-[var(--radius-card)]" />
       </div>
     </Stack>
   );

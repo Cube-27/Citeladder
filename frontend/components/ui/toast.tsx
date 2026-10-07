@@ -37,7 +37,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             onOpenChange={(open) => {
               if (!open) setMessages((current) => current.filter((item) => item.id !== message.id));
             }}
-            className="toast-panel border-border bg-elevated shadow-modal grid w-[min(24rem,calc(100vw-2rem))] grid-cols-[auto_1fr_auto] items-start gap-2 rounded-[var(--radius-overlay)] border p-3"
+            className="toast-panel bg-elevated shadow-modal grid w-[min(24rem,calc(100vw-2rem))] grid-cols-[auto_1fr_auto] items-start gap-2 rounded-[var(--radius-overlay)] border border-transparent p-3"
           >
             <CheckCircle2 className="text-success mt-0.5 size-4" aria-hidden />
             <div className="min-w-0">

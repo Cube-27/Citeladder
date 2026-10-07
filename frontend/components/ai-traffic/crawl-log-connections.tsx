@@ -105,7 +105,7 @@ function Connections({
             ? 'Choose the collection method you operate. One live source per host; uploads are backfill.'
             : 'Crawl log collection availability'
         }
-        className="w-[36rem]"
+        className="w-144"
         footer={setupAvailable ? <CrawlLogSetupSubmit model={model} /> : undefined}
       >
         <CrawlLogCredential issued={model.issued} />

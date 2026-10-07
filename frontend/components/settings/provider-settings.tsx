@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppModelCard } from '@/components/providers/app-model-card';
 import { ProviderList } from '@/components/providers/provider-list';
@@ -28,7 +29,7 @@ export function ProviderSettings() {
   const connections = connectionsQuery.data ?? [];
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]" data-tour="provider-settings">
+    <Stack gap="workspace" data-tour="provider-settings">
       <Card>
         <CardHeader>
           <CardTitle>Measurement providers</CardTitle>
@@ -53,6 +54,6 @@ export function ProviderSettings() {
           connections={connections}
         />
       )}
-    </div>
+    </Stack>
   );
 }

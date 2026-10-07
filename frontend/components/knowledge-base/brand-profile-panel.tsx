@@ -8,6 +8,8 @@ import { Alert } from '@/components/ui/alert';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Stack } from '@/components/ui/layout';
+import { panelClasses } from '@/components/ui/panel';
 import { Textarea } from '@/components/ui/textarea';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
@@ -151,7 +153,7 @@ function ProfileTabPanel({
 }>) {
   if (activeTab === 'facts') {
     return (
-      <div className="grid gap-[var(--workspace-gap)]">
+      <Stack gap="workspace">
         <Field label="Description" hint="Core mission, value proposition, and brand summary.">
           {(field) => (
             <Textarea
@@ -177,13 +179,13 @@ function ProfileTabPanel({
             />
           )}
         </Field>
-      </div>
+      </Stack>
     );
   }
 
   if (activeTab === 'audience') {
     return (
-      <div className="grid gap-[var(--workspace-gap)]">
+      <Stack gap="workspace">
         <Field
           label="Target audience"
           hint="Key demographics, customer personas, and ideal buyers."
@@ -209,12 +211,12 @@ function ProfileTabPanel({
             />
           )}
         </Field>
-      </div>
+      </Stack>
     );
   }
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <Stack gap="workspace">
       <section aria-labelledby="tracked-competitors" className="grid gap-2">
         <h3 id="tracked-competitors" className={textRole('itemTitle')}>
           Tracked competitors
@@ -224,9 +226,9 @@ function ProfileTabPanel({
             {competitors.map((competitor) => (
               <li
                 key={`${competitor.name}:${competitor.domains[0] ?? ''}`}
-                className={textRole(
-                  'label',
-                  'bg-well flex min-w-0 items-center gap-2 rounded-[var(--radius-control)] px-3 py-2',
+                className={panelClasses(
+                  { tone: 'well', pad: 'none' },
+                  textRole('label', 'flex min-w-0 items-center gap-2 px-3 py-2'),
                 )}
               >
                 <BrandLogo
@@ -244,7 +246,7 @@ function ProfileTabPanel({
         )}
       </section>
       {competitorSuggestions}
-    </div>
+    </Stack>
   );
 }
 

@@ -17,7 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import {
   agentHandoffHref,
@@ -102,7 +103,12 @@ function NewChat({
   return (
     <PageShell
       measure="workflow"
-      className="flex min-h-[calc(100dvh-var(--page-band-identity))] flex-col"
+      // Fill the viewport below the identity band so the composer sits at the
+      // bottom of a short thread. Subtracted: the identity band, the shell's
+      // gutter under the route, and (desktop) the floating sheet's inset above
+      // and below. PageShell's own top padding is inside this box (border-box).
+      // Kept identical in chat-screen.tsx and new-chat-screen.tsx.
+      className="flex min-h-[calc(100dvh-var(--page-band-identity)-var(--content-gutter))] flex-col min-[981px]:min-h-[calc(100dvh-var(--page-band-identity)-var(--content-gutter)-2*var(--workspace-inset))]"
     >
       <Stack gap="section" className="my-auto">
         <h2 className={textRole('sectionTitle', 'text-center')}>What can I help with?</h2>
@@ -210,19 +216,22 @@ function TopActions({
   const top = query.data?.items.slice(0, AGENT_TOP_ACTIONS) ?? [];
   if (top.length === 0) return null;
   return (
-    <section aria-labelledby="top-actions" className="grid gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <SectionTitle id="top-actions">Recommended Actions</SectionTitle>
-        <Button asChild variant="ghost" size="sm">
-          <ProjectLink href="/agent/actions">All Actions</ProjectLink>
-        </Button>
-      </div>
+    <Stack as="section" aria-labelledby="top-actions">
+      <EditorialSectionHeader
+        title="Recommended Actions"
+        headingId="top-actions"
+        actions={
+          <Button asChild variant="ghost" size="sm">
+            <ProjectLink href="/agent/actions">All Actions</ProjectLink>
+          </Button>
+        }
+      />
       <ul className="grid gap-2">
         {top.map((action) => (
           <TopActionRow key={action.id} action={action} />
         ))}
       </ul>
-    </section>
+    </Stack>
   );
 }
 

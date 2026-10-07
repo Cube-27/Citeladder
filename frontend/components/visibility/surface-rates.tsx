@@ -5,6 +5,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Label, textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import type { AioRate, SurfaceRates } from '@/lib/api/types';
@@ -121,7 +122,7 @@ export function SurfaceRatesPanel({
 }: Readonly<{ query: UseQueryResult<SurfaceRates, unknown> }>) {
   const data = query.data;
   if (query.isError) return <Alert tone="danger">Could not load the AI Overview rates.</Alert>;
-  if (!data) return <div className="bg-surface-2 min-h-48 rounded-[var(--radius-card)]" />;
+  if (!data) return <Skeleton className="min-h-48 rounded-[var(--radius-card)]" />;
   // These rates are RETAINED across a surface or run change, the same way
   // the sources and evidence panels retain theirs, so the reader is not
   // handed a skeleton for every round trip. Retained numbers carry no

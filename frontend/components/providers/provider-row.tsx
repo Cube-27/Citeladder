@@ -5,6 +5,7 @@ import { useId, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
+import { CardTitle } from '@/components/ui/card';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import type { ProviderConnection } from '@/lib/api/types';
@@ -142,7 +143,7 @@ export function ProviderRow({
             size="md"
           />
           <div className="grid min-w-0 gap-0.5">
-            <h3 className={textRole('sectionTitle')}>{group.label}</h3>
+            <CardTitle>{group.label}</CardTitle>
             <p className={textRole('caption')}>{group.engines.map(engineSummary).join(' · ')}</p>
           </div>
         </div>

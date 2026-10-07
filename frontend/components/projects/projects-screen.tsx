@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageLoading } from '@/components/layout/page-loading';
+import { PageShell } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
 import type { Project } from '@/lib/api/types';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
@@ -58,30 +60,35 @@ export function ProjectsScreen() {
   // Reading that as "no projects" is what showed this empty state to someone
   // who had just created their first project, until they refreshed.
   if (projects.length === 0 && !projectsSettled) {
-    return <PageLoading label="Loading your projects…" />;
+    return (
+      <PageShell>
+        <PageLoading label="Loading your projects…" />
+      </PageShell>
+    );
   }
   if (projects.length === 0) {
     return (
-      <EmptyState
-        icon={FolderOpen}
-        headingLevel={1}
-        heading="No projects yet"
-        description="Add a brand to start tracking how AI answers describe it."
-        action={
-          <Button
-            disabled={!canAddProject}
-            onClick={() => navigate(newProjectDestination(activeWorkspaceId))}
-          >
-            <Plus className="size-4" aria-hidden />
-            Add project
-          </Button>
-        }
-      />
+      <PageShell>
+        <EmptyState
+          icon={FolderOpen}
+          heading="No projects yet"
+          description="Add a brand to start tracking how AI answers describe it."
+          action={
+            <Button
+              disabled={!canAddProject}
+              onClick={() => navigate(newProjectDestination(activeWorkspaceId))}
+            >
+              <Plus className="size-4" aria-hidden />
+              Add project
+            </Button>
+          }
+        />
+      </PageShell>
     );
   }
 
   return (
-    <div className="grid gap-[var(--page-section-gap)] min-[981px]:block">
+    <Stack gap="section">
       <DashboardScreen onEditProject={(project) => setEditing(project)} />
 
       {editing ? (
@@ -94,6 +101,6 @@ export function ProjectsScreen() {
           }}
         />
       ) : null}
-    </div>
+    </Stack>
   );
 }

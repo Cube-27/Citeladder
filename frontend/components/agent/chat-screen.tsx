@@ -13,12 +13,13 @@ import {
   useFollowUp,
   type FollowUp,
 } from '@/components/agent/use-chat-turns';
+import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Stack } from '@/components/ui/layout';
 import { ReadError } from '@/components/ui/read-error';
-import { Skeleton } from '@/components/ui/skeleton';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { isRunActive } from '@/lib/agent/run-state';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
@@ -46,7 +47,7 @@ export function ChatScreen() {
   if (!query.data)
     return (
       <PageShell>
-        <Skeleton className="h-64 w-full" />
+        <PageLoading />
       </PageShell>
     );
   if (query.data.chat.project_id !== activeProjectId)
@@ -76,10 +77,15 @@ function ChatView({
   return (
     <PageShell
       measure="workflow"
-      className="flex min-h-[calc(100dvh-var(--page-band-identity)-2*var(--content-gutter))] flex-col pb-0"
+      // Fill the viewport below the identity band so the composer sits at the
+      // bottom of a short thread. Subtracted: the identity band, the shell's
+      // gutter under the route, and (desktop) the floating sheet's inset above
+      // and below. PageShell's own top padding is inside this box (border-box).
+      // Kept identical in chat-screen.tsx and new-chat-screen.tsx.
+      className="flex min-h-[calc(100dvh-var(--page-band-identity)-var(--content-gutter))] flex-col pb-0 min-[981px]:min-h-[calc(100dvh-var(--page-band-identity)-var(--content-gutter)-2*var(--workspace-inset))]"
       actions={<ChatHeaderActions detail={detail} />}
     >
-      <div className="grid min-w-0 flex-1 content-start gap-4">
+      <Stack gap="workspace" className="min-w-0 flex-1 content-start">
         <Conversation
           detail={detail}
           output={
@@ -105,7 +111,7 @@ function ChatView({
         />
         {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
         <FollowUpFailure turn={turn} actionId={detail.chat.action_id} canSend={access.canSend} />
-      </div>
+      </Stack>
       {/* The composer stays at the bottom of the window while the thread scrolls. */}
       <div className="bg-panel z-sticky sticky bottom-0 pt-2 pb-4">
         {showJump ? (

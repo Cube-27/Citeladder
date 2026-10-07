@@ -20,7 +20,7 @@ function PageSummary({
   page,
 }: Readonly<{ heading: string; page: InternalLink['source'] }>) {
   return (
-    <section className="space-y-2">
+    <Stack as="section" className="justify-items-start">
       <h3 className="type-section-title">{heading}</h3>
       <ExternalHttpLink className="type-body text-accent-text break-all" href={page.url}>
         {page.title || page.url}
@@ -28,7 +28,7 @@ function PageSummary({
       {page.description || page.excerpt ? (
         <p className="type-body">{page.description || page.excerpt}</p>
       ) : null}
-    </section>
+    </Stack>
   );
 }
 
@@ -59,7 +59,7 @@ export function InternalLinkReview({
       {link ? (
         <Stack gap="section">
           <PageSummary heading="Source page" page={link.source} />
-          <section className="space-y-2">
+          <Stack as="section">
             <h3 className="type-section-title">Source passage</h3>
             {link.placement ? (
               <p className="type-body">
@@ -72,9 +72,9 @@ export function InternalLinkReview({
                 This saved suggestion has no captured placement. Run a new analysis to check it.
               </p>
             )}
-          </section>
+          </Stack>
           <PageSummary heading="Add a link to" page={link.target} />
-          <section className="space-y-2">
+          <Stack as="section">
             <h3 className="type-section-title">Suggested anchor text</h3>
             <p className="type-body">{link.anchor}</p>
             <p className="type-caption">
@@ -85,7 +85,7 @@ export function InternalLinkReview({
                 ? 'Link the highlighted phrase in the captured passage. Check the current page before editing.'
                 : 'Verify the source text before using this historical suggestion.'}
             </p>
-          </section>
+          </Stack>
           <div className="flex flex-wrap gap-2">
             <CopyButton value={link.anchor}>Copy anchor</CopyButton>
             <CopyButton value={link.target.url}>Copy URL</CopyButton>
@@ -144,7 +144,7 @@ function LinkDeclaration({
   const related = links.filter((item) => item.source.site_url_id === link.source.site_url_id);
   const selectedIds = new Set(selected);
   return (
-    <section className="space-y-3">
+    <Stack as="section">
       <h3 className="type-section-title">Which links are live on this page?</h3>
       <p className="type-body">
         Select every link you have added before declaring this page Action.
@@ -169,6 +169,6 @@ function LinkDeclaration({
         disabled={!selected.length}
         selectionDescription="Declare that the selected internal links are live on this source page."
       />
-    </section>
+    </Stack>
   );
 }

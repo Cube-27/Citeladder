@@ -1,10 +1,19 @@
 'use client';
 
-import { Check, ExternalLink, Minus } from 'lucide-react';
+import { Check, ExternalLink, Link2, Minus, Users } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { DisplayTime } from '@/components/ui/display-time';
+import { EmptyState } from '@/components/ui/empty-state';
 import { panelClasses } from '@/components/ui/panel';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Label, textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import type { SearchSurfaceEvidence, SurfaceEntity } from '@/lib/api/types';
@@ -42,7 +51,7 @@ function SurfaceStat({
   hint,
 }: Readonly<{ label: string; value: string; hint?: string }>) {
   return (
-    <div className="border-border bg-well grid min-w-0 gap-0.5 rounded-[var(--radius-control)] border px-3 py-3">
+    <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid min-w-0 gap-0.5')}>
       <span className="type-caption">{label}</span>
       <span className={textRole('itemTitle', 'truncate')}>{value}</span>
       {hint ? <span className="type-caption truncate">{hint}</span> : null}
@@ -54,7 +63,7 @@ function SurfaceStat({
 function SignalCell({ present, label }: Readonly<{ present: boolean; label: string }>) {
   const Icon = present ? Check : Minus;
   return (
-    <td className="px-3 py-3">
+    <TableCell>
       <span
         className={cn(
           'type-body inline-flex items-center gap-2',
@@ -65,14 +74,17 @@ function SignalCell({ present, label }: Readonly<{ present: boolean; label: stri
         <span className="sr-only">{label}: </span>
         {present ? 'Yes' : 'No'}
       </span>
-    </td>
+    </TableCell>
   );
 }
 
 function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
   return (
-    <tr className="border-border-subtle border-t">
-      <th scope="row" className="px-3 py-3 text-left">
+    <TableRow>
+      <th
+        scope="row"
+        className="border-border-subtle border-b px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle [tr:last-child>&]:border-b-0"
+      >
         <span className="flex min-w-0 flex-wrap items-center gap-2">
           <span className={textRole('itemTitle', 'truncate')}>{entity.name}</span>
           {entity.kind === 'brand' ? <Badge variant="neutral">Your brand</Badge> : null}
@@ -81,7 +93,7 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
       <SignalCell present={entity.mentioned} label="Named in the answer" />
       <SignalCell present={entity.linked} label="Linked from the answer" />
       <SignalCell present={entity.cited} label="Cited in the references" />
-      <td className="type-body px-3 py-3">
+      <TableCell>
         {/* Null is "never named", which is not last place, so it says so
             rather than taking a number one position behind everyone else. */}
         {entity.mention_order === null ? (
@@ -89,48 +101,39 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
         ) : (
           `#${entity.mention_order}`
         )}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
 function PresenceTable({ entities }: Readonly<{ entities: readonly SurfaceEntity[] }>) {
   if (entities.length === 0) {
     return (
-      <div className="type-body border-border rounded-[var(--radius-card)] border border-dashed p-4 text-center">
-        No tracked brands were configured for this run.
-      </div>
+      <EmptyState
+        variant="compact"
+        headingLevel={3}
+        icon={Users}
+        heading="No tracked brands were configured for this run."
+      />
     );
   }
   return (
-    <div className="border-border min-w-0 overflow-x-auto rounded-[var(--radius-card)] border">
-      <table className="w-full min-w-[34rem] border-collapse text-left">
-        <thead>
-          <tr className="type-caption">
-            <th scope="col" className="px-3 py-2">
-              Brand
-            </th>
-            <th scope="col" className="px-3 py-2">
-              Named
-            </th>
-            <th scope="col" className="px-3 py-2">
-              Linked
-            </th>
-            <th scope="col" className="px-3 py-2">
-              Cited
-            </th>
-            <th scope="col" className="px-3 py-2">
-              Mention order
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {entities.map((entity) => (
-            <EntityRow key={`${entity.kind}-${entity.name}`} entity={entity} />
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table className="min-w-[34rem]">
+      <TableHeader>
+        <tr>
+          <TableHead scope="col">Brand</TableHead>
+          <TableHead scope="col">Named</TableHead>
+          <TableHead scope="col">Linked</TableHead>
+          <TableHead scope="col">Cited</TableHead>
+          <TableHead scope="col">Mention order</TableHead>
+        </tr>
+      </TableHeader>
+      <TableBody>
+        {entities.map((entity) => (
+          <EntityRow key={`${entity.kind}-${entity.name}`} entity={entity} />
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -159,9 +162,12 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
         </p>
       </div>
       {links.length === 0 ? (
-        <div className="type-body border-border rounded-[var(--radius-card)] border border-dashed p-4 text-center">
-          The overview&rsquo;s text carried no inline links.
-        </div>
+        <EmptyState
+          variant="compact"
+          headingLevel={3}
+          icon={Link2}
+          heading="The overview’s text carried no inline links."
+        />
       ) : (
         <ul className={ledgerClasses('boxed')}>
           {links.map((link) => {

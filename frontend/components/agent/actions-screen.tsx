@@ -4,11 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { CursorPager } from '@/components/ui/cursor-pager';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Stack } from '@/components/ui/layout';
 import { ReadError } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -62,7 +64,7 @@ export function ActionsScreen() {
   return (
     <PageShell
       controls={
-        <div className="flex flex-wrap items-center gap-2">
+        <>
           <Select
             ariaLabel="Status"
             value={status}
@@ -75,7 +77,7 @@ export function ActionsScreen() {
             options={TARGET_OPTIONS}
             onValueChange={(value) => setTarget(value, 'replace')}
           />
-        </div>
+        </>
       }
     >
       {activeProjectId && activeWorkspaceId ? (
@@ -94,7 +96,7 @@ export function ActionsScreen() {
 }
 
 function ProjectRequired({ loading }: Readonly<{ loading: boolean }>) {
-  if (loading) return <Skeleton className="h-40 w-full" />;
+  if (loading) return <PageLoading />;
   return <Alert tone="info">Select or create a project to see its Actions.</Alert>;
 }
 
@@ -150,7 +152,7 @@ function ActionsList({
   }
   const next = page.next_cursor;
   return (
-    <div className="grid gap-3" aria-busy={query.isFetching || undefined}>
+    <Stack aria-busy={query.isFetching || undefined}>
       <ActionsTable actions={page.items} />
       {cursors.length > 0 || next ? (
         <div className="flex items-center justify-end gap-2">
@@ -163,7 +165,7 @@ function ActionsList({
           />
         </div>
       ) : null}
-    </div>
+    </Stack>
   );
 }
 

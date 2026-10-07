@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { textRole } from '@/components/ui/typography';
 import {
   saveTimeZonePreference,
@@ -51,13 +53,17 @@ export function TimeZoneSetting() {
   };
 
   return (
-    <section aria-labelledby="display-timezone-heading" className="grid max-w-lg gap-3">
-      <div>
-        <h2 id="display-timezone-heading" className={textRole('sectionTitle')}>
-          Display timezone
-        </h2>
-        <p className="type-body">Timestamps currently display in {displayZone}.</p>
-      </div>
+    <Stack
+      as="section"
+      gap="compact"
+      aria-labelledby="display-timezone-heading"
+      className="max-w-xl"
+    >
+      <EditorialSectionHeader
+        title="Display timezone"
+        headingId="display-timezone-heading"
+        description={`Timestamps currently display in ${displayZone}.`}
+      />
       <Select
         value={choice}
         onValueChange={choose}
@@ -65,7 +71,7 @@ export function TimeZoneSetting() {
         ariaLabel="Display timezone preference"
       />
       {choice === 'custom' ? (
-        <div className="grid gap-2">
+        <Stack gap="tight">
           <label htmlFor="named-display-timezone" className={textRole('label')}>
             IANA timezone
           </label>
@@ -82,9 +88,9 @@ export function TimeZoneSetting() {
             />
             <Button onClick={saveNamedZone}>Save timezone</Button>
           </div>
-        </div>
+        </Stack>
       ) : null}
       {error ? <Alert tone="danger">{error}</Alert> : null}
-    </section>
+    </Stack>
   );
 }

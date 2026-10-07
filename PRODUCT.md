@@ -36,7 +36,7 @@ Users connect an owned site and integrations, review automatically discovered fa
 
 The product name is CiteLadder. Voice is direct, confident, specific, and evidence-led, with one idea per sentence and no inflated causal or AI claims. The canonical logo assets are `frontend/public/citeladder-logo-black.svg`, `frontend/public/citeladder-logo-white.svg`, and `frontend/public/citeladder-favicon.ico`.
 
-The public website, login and onboarding share one light-theme visual language that follows the B2B SaaS category standard executed at full craft — chosen deliberately on 2026-10-07. Attio and Linear set the quality bar (Stripe, Superhuman, Jasper and Clay are secondary references). The Emerald forest accent is the one retained brand colour. The authenticated application keeps its own existing visual system.
+The public website, login and onboarding share one light-theme visual language that follows the B2B SaaS category standard executed at full craft — chosen deliberately on 2026-10-07. Attio and Linear set the quality bar (Stripe, Superhuman, Jasper and Clay are secondary references). The Emerald forest accent is the one retained brand colour. On 2026-10-07 the owner extended the same system to the authenticated application ("apply to app as well"), so the site, docs, auth, onboarding and app read as one system. The app keeps its light/dark preference, with dark mode rebuilt in the same system.
 
 ## Evidence on Hand
 

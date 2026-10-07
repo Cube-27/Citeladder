@@ -11,10 +11,14 @@ import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Pressable } from '@/components/ui/pressable';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { splitPaneClasses } from '@/components/ui/workspace';
 import { siteHealthQueries } from '@/lib/api/site-health';
+import { ICONS } from '@/lib/icons';
 import { ISSUE_OCCURRENCE_LIMIT, ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
 import type { IssuesSummary, SiteIssue } from '@/lib/api/types';
 import {
@@ -123,10 +127,12 @@ export function IssuesCatalog({
     );
 
   let issuesBody: ReactNode = (
-    <div
+    <Card
       // `min-h` matches the loading placeholder's, so the pane keeps its height
       // while the rail's own read lands rather than growing under the reader.
-      className="bg-panel border-border grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[22rem_minmax(0,1fr)]"
+      // `overflow-clip` (not `hidden`) rounds the corners without becoming a
+      // scroll container, so the detail rail stays sticky against the page.
+      className={splitPaneClasses('list-detail', 'min-h-[32rem] gap-0 overflow-clip')}
       aria-busy={issuesQuery.isFetching}
     >
       <IssueGroupList
@@ -147,13 +153,13 @@ export function IssuesCatalog({
           }}
         />
       ) : null}
-    </div>
+    </Card>
   );
   if (issuesQuery.isError) {
     issuesBody = <Alert tone="danger">Could not load issues for this crawl. Please refresh.</Alert>;
   } else if (rows.length === 0) {
     issuesBody = (
-      <p className="type-body py-[var(--empty-state-padding)]">No issues match this view.</p>
+      <EmptyState variant="compact" icon={ICONS.issues} heading="No issues match this view." />
     );
   }
 
@@ -340,7 +346,7 @@ function IssueGroupList({
   onSelect: (groupId: string) => void;
 }>) {
   return (
-    <div className="border-border-subtle divide-border-subtle flex min-w-0 divide-x overflow-x-auto border-b min-[701px]:grid min-[701px]:divide-x-0 min-[701px]:divide-y min-[701px]:overflow-visible min-[701px]:border-r min-[701px]:border-b-0">
+    <div className="border-border-subtle divide-border-subtle flex min-w-0 divide-x overflow-x-auto border-b lg:grid lg:divide-x-0 lg:divide-y lg:overflow-visible lg:border-r lg:border-b-0">
       {rows.map((issue) => {
         const selected = issue.group_id === selectedGroupId;
         return (
@@ -350,7 +356,7 @@ function IssueGroupList({
             onClick={() => onSelect(issue.group_id)}
             aria-pressed={selected}
             className={cn(
-              'focus-ring border-l grid w-[272px] shrink-0 gap-2 px-4 py-3 text-left transition-colors min-[701px]:w-full',
+              'focus-ring border-l grid w-72 shrink-0 gap-2 px-4 py-3 text-left transition-colors lg:w-full',
               selected
                 ? 'border-accent bg-selected text-foreground'
                 : 'border-transparent bg-panel hover:bg-hover active:bg-active',

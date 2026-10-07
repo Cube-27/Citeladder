@@ -69,7 +69,7 @@ export function ResizablePromptWorkspace({
   return (
     <div
       ref={containerRef}
-      className="flex min-w-0 flex-col items-start gap-3 lg:flex-row lg:gap-0"
+      className="flex min-w-0 flex-col items-start gap-[var(--workspace-gap)] lg:flex-row lg:gap-0"
       style={workspaceStyle}
     >
       <div className="w-full min-w-0 lg:w-[var(--topic-rail-width)] lg:shrink-0">{rail}</div>

@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -51,7 +52,7 @@ export function AcceptInvitationScreen() {
 
   if (!token) {
     return (
-      <div className="grid gap-[var(--workspace-gap)]">
+      <Stack gap="workspace">
         <EditorialSectionHeader
           title="Invitation"
           description="This link is missing its invitation token."
@@ -59,18 +60,18 @@ export function AcceptInvitationScreen() {
         <Alert tone="danger">
           Open the invitation link exactly as it was sent to you, or ask for a new one.
         </Alert>
-      </div>
+      </Stack>
     );
   }
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <Stack gap="workspace">
       <EditorialSectionHeader
         title="Joining workspace"
         description="Invitations are single-use and expire, and they only work for the address they were sent to."
       />
       {accept.isError ? (
-        <div className="grid gap-3">
+        <Stack gap="compact">
           <MutationNotice
             notice={mutationNoticeForError(accept.error, {
               action: 'accept this invitation',
@@ -81,7 +82,7 @@ export function AcceptInvitationScreen() {
               Go to your workspace
             </Button>
           </div>
-        </div>
+        </Stack>
       ) : (
         <Alert tone="info">
           {accept.isSuccess
@@ -89,6 +90,6 @@ export function AcceptInvitationScreen() {
             : 'Checking your invitation.'}
         </Alert>
       )}
-    </div>
+    </Stack>
   );
 }

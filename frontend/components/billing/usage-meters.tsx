@@ -3,11 +3,12 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingApi, type UsageItem } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
-import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
@@ -53,13 +54,13 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
 
   return (
     <div className={panelClasses({}, 'grid gap-3')}>
-      <div className="grid gap-0.5">
-        <h2 className={textRole('sectionTitle')}>Usage</h2>
-        <p className="type-caption">Measured against the allowances your active grants provide.</p>
-      </div>
-      <div className="grid gap-3">
+      <EditorialSectionHeader
+        title="Usage"
+        description="Measured against the allowances your active grants provide."
+      />
+      <Stack gap="compact">
         <UsageBody enabled={enabled} query={usageQuery} />
-      </div>
+      </Stack>
     </div>
   );
 }

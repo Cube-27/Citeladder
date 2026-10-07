@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { Pressable } from '@/components/ui/pressable';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -221,7 +222,7 @@ export function DimensionTable({
   }
 
   return (
-    <div className="border-border bg-panel flex min-h-[520px] flex-col justify-between overflow-hidden rounded-[var(--radius-panel)] border">
+    <Card className="overflow-hidden">
       {/* 12px for the data inside the tab: these tables are dense and read
           as a block of figures, so the smaller size fits more of a row on
           screen without shrinking the tab labels that head them. */}
@@ -367,6 +368,6 @@ export function DimensionTable({
         onNext={() => table.push(nextCursor)}
         busy={query.isFetching}
       />
-    </div>
+    </Card>
   );
 }

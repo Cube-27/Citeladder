@@ -25,7 +25,8 @@ import type { SiteHealthOverview } from '@/lib/api/types';
 import { formatScore, PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
-import { ledgerClasses } from '@/components/ui/workspace';
+import { Stack } from '@/components/ui/layout';
+import { EditorialSectionHeader, ledgerClasses, splitPaneClasses } from '@/components/ui/workspace';
 
 function percent(value: number | null): string {
   return value === null ? PLACEHOLDER : `${Math.round(value * 100)}%`;
@@ -36,11 +37,11 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
   return (
     <>
       {data.limitations.length > 0 ? <Alert tone="info">{data.limitations.join(' ')}</Alert> : null}
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[1.15fr_1fr]">
+      <div className={splitPaneClasses('main-aside')}>
         <DimensionLedger dimensions={data.aeo_dimensions} />
         <TopIssues issues={data.top_issues} />
       </div>
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-3">
         <WebFundamentalsCard
           data={data.web_fundamentals}
           onOpen={() => setWebFundamentalsOpen(true)}
@@ -59,8 +60,8 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
 
 export function OverviewDetailsSkeleton() {
   return (
-    <div className="grid gap-4" aria-busy="true" aria-label="Loading Overview details">
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_1fr]" aria-hidden>
+    <Stack gap="workspace" aria-busy="true" aria-label="Loading Overview details">
+      <div className={splitPaneClasses('main-aside')} aria-hidden>
         {[0, 1].map((key) => (
           <Card key={key}>
             <CardContent className="grid gap-3">
@@ -72,7 +73,7 @@ export function OverviewDetailsSkeleton() {
           </Card>
         ))}
       </div>
-      <div className="grid gap-4 xl:grid-cols-3" aria-hidden>
+      <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-3" aria-hidden>
         {[0, 1, 2].map((key) => (
           <Card key={key}>
             <CardContent className="grid gap-3">
@@ -83,7 +84,7 @@ export function OverviewDetailsSkeleton() {
           </Card>
         ))}
       </div>
-    </div>
+    </Stack>
   );
 }
 
@@ -102,7 +103,7 @@ function DimensionLedger({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent flush>
         <Table>
           <TableHeader>
             <TableRow>
@@ -172,7 +173,7 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent flush>
         <Table>
           <TableHeader>
             <TableRow>
@@ -399,19 +400,21 @@ function WebFundamentalsDrawer({
       <div className={ledgerClasses()}>
         {data.areas.map((area) => (
           <section key={area.key} className="grid gap-3 py-4 first:pt-0">
-            <header className="grid gap-1">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className={textRole('sectionTitle', 'capitalize')}>{area.key}</h2>
+            <EditorialSectionHeader
+              title={<span className="capitalize">{area.key}</span>}
+              description={
+                <>
+                  {percent(area.coverage)} evidence coverage · {area.passed_count} passed ·{' '}
+                  {area.missing_count} missing
+                </>
+              }
+              actions={
                 <Badge variant="status" value={measurementTone(area.state)}>
                   {statusLabel(area.state)}
                 </Badge>
-              </div>
-              <p className={textRole('body')}>
-                {percent(area.coverage)} evidence coverage · {area.passed_count} passed ·{' '}
-                {area.missing_count} missing
-              </p>
-            </header>
-            <div className="grid gap-3">
+              }
+            />
+            <Stack>
               {area.top_findings.length === 0 ? (
                 <p className={textRole('body')}>No missing HTTP-evidence checks.</p>
               ) : (
@@ -424,7 +427,7 @@ function WebFundamentalsDrawer({
                   </div>
                 ))
               )}
-            </div>
+            </Stack>
           </section>
         ))}
       </div>

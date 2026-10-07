@@ -4,8 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
-import { textRole } from '@/components/ui/typography';
-import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageLoading } from '@/components/layout/page-loading';
+import { ICONS } from '@/lib/icons';
 import {
   promptsApi,
   type PromptGenerateInput,
@@ -324,9 +325,11 @@ export function PromptLibrary({
     libraryBody = <PromptEmptyState onGenerate={openGenerateDialog} onAdd={openAdd} />;
   } else if (visible.length === 0) {
     libraryBody = (
-      <p className={textRole('body', 'px-[var(--card-padding)] py-[var(--empty-state-padding)]')}>
-        No prompts match your search or filters.
-      </p>
+      <EmptyState
+        variant="compact"
+        icon={ICONS.prompts}
+        heading="No prompts match your search or filters."
+      />
     );
   }
 
@@ -342,10 +345,7 @@ export function PromptLibrary({
   if (isLoading) {
     return (
       <PageShell>
-        <Stack gap="compact">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </Stack>
+        <PageLoading />
       </PageShell>
     );
   }
@@ -400,7 +400,7 @@ export function PromptLibrary({
             />
           }
         >
-          <div className="grid min-w-0 content-start gap-3">
+          <Stack gap="compact" className="min-w-0 content-start">
             <Tabs
               value={statusTab}
               onValueChange={setStatusTab}
@@ -419,7 +419,7 @@ export function PromptLibrary({
             />
 
             {libraryBody}
-          </div>
+          </Stack>
         </ResizablePromptWorkspace>
 
         <PromptLibraryDialogs

@@ -5,13 +5,12 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { IssuesLoading } from '@/components/site-health/issues-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { ReadError } from '@/components/ui/read-error';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
-import { AccentEyebrow } from '@/components/ui/eyebrow';
-import { textRole } from '@/components/ui/typography';
+import { ICONS } from '@/lib/icons';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { SiteHealthDashboard } from '@/lib/api/types';
 import { httpErrorStatus } from '@/lib/api/errors';
@@ -128,19 +127,16 @@ function IssuesLoadedRegion({
   if (!crawl) {
     return (
       <PageShell>
-        <Card>
-          <CardContent className="grid gap-3 py-[var(--empty-state-padding)]">
-            <AccentEyebrow>Issues</AccentEyebrow>
-            <h2 className={textRole('sectionTitle')}>No Site Health crawl yet</h2>
-            <p className="type-body max-w-md">
-              Run Site Health to discover and analyze this project&apos;s pages — grouped issues
-              will appear here once a crawl finishes.
-            </p>
+        <EmptyState
+          icon={ICONS.issues}
+          heading="No Site Health crawl yet"
+          description="Run Site Health to discover and analyze this project's pages — grouped issues will appear here once a crawl finishes."
+          action={
             <Button variant="secondary" asChild>
               <ProjectLink href="/site">Go to Website</ProjectLink>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       </PageShell>
     );
   }

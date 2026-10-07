@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Drawer } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
+import { panelClasses } from '@/components/ui/panel';
 import { Select } from '@/components/ui/select';
 import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
@@ -435,7 +436,7 @@ export function SearchIntelligenceReviewDrawer({
             />
           </label>
           {[...grouped.entries()].map(([owner, options]) => (
-            <fieldset key={owner} className="border-border rounded-[var(--radius-card)] border p-3">
+            <fieldset key={owner} className={panelClasses({ tone: 'panel', pad: 'compact' })}>
               <legend className={textRole('label', 'px-1')}>
                 {owner === 'owned'
                   ? 'Owned site'

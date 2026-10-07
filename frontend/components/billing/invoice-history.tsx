@@ -9,9 +9,10 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
-import { panelClasses } from '@/components/ui/panel';
+import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/download';
 
@@ -44,55 +45,57 @@ export function InvoiceHistory({
   };
 
   return (
-    <section className={panelClasses({}, 'grid gap-3')} aria-label="Billing documents">
-      <div>
+    <Stack as="section" gap="compact" aria-label="Billing documents">
+      <Stack gap="tight">
         <p className={eyebrowClasses}>Billing documents</p>
-        <h2 className={textRole('sectionTitle')}>Invoices, receipts and credit notes</h2>
-      </div>
+        <EditorialSectionHeader title="Invoices, receipts and credit notes" />
+      </Stack>
       {error ? <Alert tone="danger">Receipts could not be loaded.</Alert> : null}
       {downloadError ? <Alert tone="danger">Receipt download failed. Please retry.</Alert> : null}
       {loading ? <Skeleton className="h-16 w-full" /> : null}
       {!loading && !error && invoices.length === 0 ? (
         <p className={textRole('caption')}>No invoices have been issued yet.</p>
       ) : null}
-      <div className="grid gap-2">
-        {invoices.map((invoice) => (
-          <div
-            key={invoice.invoice_id}
-            className="border-border flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
-          >
-            <div className="type-body grid gap-1">
-              <span className={textRole('emphasis')}>
-                {invoice.status === 'credited'
-                  ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
-                  : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
-              </span>
-              <span className="text-muted">
-                {invoice.status === 'credited' ? 'Credited' : 'Paid'}{' '}
-                <DisplayTime value={invoice.paid_at} dateOnly /> ·{' '}
-                {formatMoney(invoice.amount_paid, 2)}
-              </span>
-              <span className="type-caption">
-                GST: {invoice.tax_treatment.replaceAll('_', ' ')} · CGST{' '}
-                {formatMoney(invoice.cgst, 2)} · SGST {formatMoney(invoice.sgst, 2)} · IGST{' '}
-                {formatMoney(invoice.igst, 2)}
-              </span>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={downloading === invoice.invoice_id}
-              onClick={() => void download(invoice)}
+      {invoices.length > 0 ? (
+        <div className={ledgerClasses('boxed')}>
+          {invoices.map((invoice) => (
+            <div
+              key={invoice.invoice_id}
+              className="flex flex-wrap items-center justify-between gap-3 px-[var(--card-padding)] py-3"
             >
-              {downloading === invoice.invoice_id
-                ? 'Preparing…'
-                : invoice.status === 'credited'
-                  ? 'Download credit note'
-                  : 'Download receipt'}
-            </Button>
-          </div>
-        ))}
-      </div>
-    </section>
+              <div className="type-body grid gap-1">
+                <span className={textRole('emphasis')}>
+                  {invoice.status === 'credited'
+                    ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
+                    : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
+                </span>
+                <span className="text-muted">
+                  {invoice.status === 'credited' ? 'Credited' : 'Paid'}{' '}
+                  <DisplayTime value={invoice.paid_at} dateOnly /> ·{' '}
+                  {formatMoney(invoice.amount_paid, 2)}
+                </span>
+                <span className="type-caption">
+                  GST: {invoice.tax_treatment.replaceAll('_', ' ')} · CGST{' '}
+                  {formatMoney(invoice.cgst, 2)} · SGST {formatMoney(invoice.sgst, 2)} · IGST{' '}
+                  {formatMoney(invoice.igst, 2)}
+                </span>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={downloading === invoice.invoice_id}
+                onClick={() => void download(invoice)}
+              >
+                {downloading === invoice.invoice_id
+                  ? 'Preparing…'
+                  : invoice.status === 'credited'
+                    ? 'Download credit note'
+                    : 'Download receipt'}
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </Stack>
   );
 }

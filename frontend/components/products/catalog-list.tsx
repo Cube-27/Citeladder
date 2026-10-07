@@ -1,10 +1,12 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, PackageOpen, SearchX } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { EmptyState } from '@/components/ui/empty-state';
+import { panelClasses } from '@/components/ui/panel';
 import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pressable } from '@/components/ui/pressable';
@@ -177,7 +179,12 @@ function CatalogTree({
   return (
     <fieldset className="grid min-w-0 gap-3">
       <legend className="sr-only">Catalog targets</legend>
-      <div className="bg-panel-tonal flex items-center justify-between gap-3 rounded-[var(--radius-control)] px-1 py-1">
+      <div
+        className={panelClasses(
+          { tone: 'tonal', pad: 'none' },
+          'flex items-center justify-between gap-3 px-1 py-1',
+        )}
+      >
         <Checkbox
           label="Select all shown"
           checked={checkboxState(shownSelectionCount, shownKeys.length)}
@@ -326,11 +333,14 @@ export function CatalogList({
       </div>
       <div className="grid min-w-0 gap-3 p-[var(--card-padding)] pt-3">
         {empty ? (
-          <p className="type-body px-2 py-[var(--empty-state-padding)]">
-            {needle
-              ? `Nothing matches “${search.trim()}”.`
-              : 'Nothing projected yet. Run a Site Health crawl or import a CSV.'}
-          </p>
+          <EmptyState
+            variant="compact"
+            icon={needle ? SearchX : PackageOpen}
+            headingLevel={3}
+            heading={needle ? `Nothing matches “${search.trim()}”.` : 'Nothing projected yet.'}
+            description={needle ? undefined : 'Run a Site Health crawl or import a CSV.'}
+            className="px-2"
+          />
         ) : (
           <CatalogTree
             categories={shown.categories}

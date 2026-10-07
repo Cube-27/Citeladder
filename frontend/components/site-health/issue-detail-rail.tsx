@@ -10,6 +10,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { CopyButton } from '@/components/ui/copy-button';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -48,10 +49,10 @@ export function IssueDetailRail({
   });
   return (
     <section
-      className="min-w-0 min-[701px]:sticky min-[701px]:top-[var(--workspace-gap)] min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))] min-[701px]:overflow-hidden"
+      className="min-w-0 lg:sticky lg:top-[var(--workspace-gap)] lg:max-h-[calc(100dvh-2*var(--workspace-gap))] lg:overflow-hidden"
       aria-busy={detailQuery.isFetching}
     >
-      <div className="relative flex flex-col min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))]">
+      <div className="relative flex flex-col lg:max-h-[calc(100dvh-2*var(--workspace-gap))]">
         <BusyBar active={detailQuery.isFetching} label="Updating issue evidence" />
         <header className="border-border-subtle grid min-w-0 shrink-0 gap-3 border-b p-[var(--card-padding)]">
           <div className="flex min-w-0 items-start justify-between gap-[var(--workspace-gap)] max-[700px]:flex-col">
@@ -84,7 +85,7 @@ export function IssueDetailRail({
           </div>
           <IssueActions issue={issue} crawlId={crawlId} />
         </header>
-        <div className="content-scroll grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)] min-[701px]:flex-1 min-[701px]:overflow-y-auto">
+        <div className="content-scroll grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)] lg:flex-1 lg:overflow-y-auto">
           {issue.description ? (
             <p className="type-body whitespace-pre-line">{issue.description}</p>
           ) : null}
@@ -94,10 +95,10 @@ export function IssueDetailRail({
               <p className="type-body whitespace-pre-line">{issue.remediation}</p>
             </div>
           ) : null}
-          <section className="grid gap-3">
+          <Stack as="section">
             <h3 className={textRole('itemTitle')}>Affected pages</h3>
             <OccurrenceList issue={issue} detail={detail} crawlId={crawlId} query={detailQuery} />
-          </section>
+          </Stack>
         </div>
         {detail && (canPrevious || detail.next_cursor) ? (
           <footer className="border-border-subtle bg-panel flex shrink-0 items-center justify-end gap-2 border-t p-3">
