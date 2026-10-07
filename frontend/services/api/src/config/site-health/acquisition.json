@@ -22,11 +22,14 @@
       ["product", ["products", "p", "shop", "store"]],
       ["comparison", ["compare", "vs", "versus"]],
       ["service", ["services", "solutions"]],
+      ["local", ["locations", "location", "store-locator"]],
       ["category", ["collections", "collection", "categories"]],
       ["pricing", ["plans", "prices"]],
       ["about", ["company", "team", "story", "who-we-are"]],
       ["article", ["blog", "articles", "news", "insights"]],
       ["guide", ["guides", "resources", "learn", "help"]],
+      ["faq", ["faqs"]],
+      ["docs", ["documentation"]],
       ["contact", ["get-in-touch", "support"]],
       ["trust", ["privacy", "terms", "legal", "policy", "policies", "security"]]
     ],
@@ -64,7 +67,7 @@
     ],
     "disposition_version": "sh-disposition-1",
     "automatic_monitor_limit_key": "automatic_monitor_limit",
-    "admission_policy_version": "sh-url-admission-1",
+    "admission_policy_version": "sh-url-admission-2",
     "site_setup_priority_boost": 1000,
     "cancel_db_conflict_retries": 3,
     "analyze_priority_boost": 1000,
@@ -94,7 +97,12 @@
       "application/xml",
       "text/xml"
     ],
-    "sitemap_path_suffixes": [".xml", ".xml.gz"]
+    "sitemap_path_suffixes": [".xml", ".xml.gz"],
+    "value_kind_page_kinds": {
+      "about": "about_contact",
+      "contact": "about_contact",
+      "trust": "trust_policy"
+    }
   },
   "route_patterns": [
     [

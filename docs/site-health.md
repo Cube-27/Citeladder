@@ -229,9 +229,13 @@ Admission orders candidates by URL value tier (whole path tokens, the
 section a URL sits in first, so `/blog/product-review` is an article), then by a
 shuffle seeded by the crawl ID. The analyzed sample within a tier is random but
 reproducible, and never biased to header or footer links. A URL whose `www.`/apex
-twin is already in the crawl's frontier or batch is not admitted again, so a
-site that answers on both hosts cannot spend two slots on one page; stored URL
-identities are unchanged.
+twin is already in the crawl's frontier, batch or (for a sample) observations is
+not admitted again, so a site that answers on both hosts cannot spend two slots
+on one page; stored URL identities are unchanged. Admissibility (scope, depth,
+page-kind filter) is decided before a twin is chosen. Value tiers are finer than
+page kinds: a page-kind filter maps `about` and `contact` to `about_contact` and
+`trust` to `trust_policy`. Ordering is computed in memory once per candidate and
+in one sort over the crawl's capped frontier per batch, so it never slows the crawl.
 
 Discovery and normalized facts share the parsed HTML document before fact
 extraction prunes non-content subtrees. Discovery keeps its own scope-filtered
@@ -533,8 +537,11 @@ Crawl coverage evidence also records the analyzed and failed URL counts and the
 crawl's automatic analysis allowance. Overview's Crawl Coverage metric is the
 share of found pages analyzed (not of the pages the crawl selected) and states
 the reason in plain words, for example "20 of 100 found pages analyzed · plan
-limit 20 per crawl · 2 failed to load"; snapshots saved before these counts keep
-the earlier reason caveat. Bulk "first N" monitored selection takes the most
+limit 20 per crawl · 2 failed to load". An unknown crawl keeps "Coverage
+unknown", a crawl that found nothing shows "No pages found" rather than a
+percentage, and any reason the counts do not already explain is appended. A
+crawl with no recorded allowance stores `automatic_limit: null`, never 0.
+Snapshots saved before these counts keep the earlier reason caveat. Bulk "first N" monitored selection takes the most
 valuable pages first (highest observed value tier), URL order within a tier.
 Website Overview and Pages use compact metric strips without repeated audit
 captions; Overview also omits supporting occurrence, page and checklist counts.
