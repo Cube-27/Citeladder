@@ -91,8 +91,8 @@ finishes anything left. Reads never start work.
   and robots denial are terminal.
 - Only `lease-recovery.ts` recovers expired leases: oldest-first `SKIP LOCKED`
   batches, one attempt each, reconciling crawls whose tasks hit the ceiling.
-- A granted access check is reused for `access_check_ttl_seconds`; a denial is
-  never cached.
+- A granted access check is reused for `access_check_ttl_seconds`, never past
+  the grant's own expiry; a denial is never cached.
 
 **Terminalization** (`lifecycle.ts`, the only path to a terminal crawl). Each
 settled lifecycle task reconciles counters and sub-states under the crawl row
@@ -373,7 +373,8 @@ evaluated (no root analysis or no site facts) is `unknown`
 
 **Crawler access.** A bot fails when its root, or every sampled URL, is
 disallowed. Partial closure is `restricted` and passes. Without a fetched
-robots.txt the result is `unknown` (`robots_not_fetched`). Check membership is
+robots.txt the result is `unknown` (`robots_not_fetched`); a fetched but
+unreadable one with no observed block is `unknown` (`robots_unreadable`). Check membership is
 each bot's `checks` array:
 
 - `search.crawler_access` (scored) covers Googlebot, Bingbot, OAI-SearchBot,
@@ -442,7 +443,9 @@ frontier, such as a sample, reports no tiers.
 **Overview.** Crawl Coverage (`overview-metrics.tsx`) is analyzed ÷ found
 (`observation_count`), not ÷ selected. Its caption looks like "20 of 100 found
 pages analyzed · plan limit 20 per crawl · 2 failed to load", followed by any
-reason the counts do not explain.
+reason the counts do not explain. Below the metrics (`coverage-by-kind.tsx`), one line lists
+pages analyzed by type and the expected types "not found in this crawl", which
+is absence from the crawl, not proof of absence from the site.
 
 - An `unknown` state prefixes "Coverage unknown".
 - Zero found shows "No pages found" with no percentage.

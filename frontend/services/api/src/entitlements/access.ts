@@ -81,10 +81,18 @@ export function cachedWorkspaceAccess(db: Database, ttlMs: number, now = () => p
     const cached = granted.get(workspaceId);
     if (cached && now() < cached.until) return cached.check;
     const check = requireWorkspaceAccess(db, workspaceId);
-    granted.set(workspaceId, { until: now() + ttlMs, check });
-    check.catch(() => {
-      if (granted.get(workspaceId)?.check === check) granted.delete(workspaceId);
-    });
+    const entry = { until: now() + ttlMs, check: check as Promise<unknown> };
+    granted.set(workspaceId, entry);
+    check.then(
+      // A grant that ends inside the window (a trial) is reused only until it ends.
+      ({ expires_at: expiresAt }) => {
+        if (expiresAt)
+          entry.until = Math.min(entry.until, now() + (Date.parse(expiresAt) - Date.now()));
+      },
+      () => {
+        if (granted.get(workspaceId)?.check === check) granted.delete(workspaceId);
+      },
+    );
     return check;
   };
 }
