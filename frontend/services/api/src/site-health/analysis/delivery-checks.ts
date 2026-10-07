@@ -58,10 +58,11 @@ const crawlerAccess =
     const restricted = bots
       .filter((bot) => sampled(bot.bot_id) === 'restricted')
       .map((bot) => bot.label);
-    return [
-      passFail(!blocked.length),
-      { ...evidence, blocked, restricted, checked: bots.map((bot) => bot.label) },
-    ];
+    const detail = { ...evidence, blocked, restricted, checked: bots.map((bot) => bot.label) };
+    // A fetched but unreadable robots.txt proves nothing: no block observed is not a pass.
+    if (!blocked.length && bots.some((bot) => stance.get(bot.bot_id) !== 'allowed'))
+      return ['unknown', { ...detail, reason: 'robots_unreadable' }];
+    return [passFail(!blocked.length), detail];
   };
 
 function robotsTxtPresent(facts: Facts): CheckResult {
