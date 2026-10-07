@@ -70,9 +70,6 @@ export function issueTitle(issue: { title: string; rule_id: string }): string {
   return title.length > 0 ? title : issue.rule_id;
 }
 
-/** Severity keys shown in the catalog summary, in stable display order. */
-export const SUMMARY_SEVERITIES: readonly IssueSeverity[] = ['high', 'medium', 'low'];
-
 /**
  * Read one severity's group count from the API-owned `severity_counts` map.
  * `critical` folds into `high` so the tiles match the three-tier catalog UI;
