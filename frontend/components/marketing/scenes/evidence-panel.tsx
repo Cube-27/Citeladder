@@ -28,11 +28,11 @@ const PLATFORM_LOGOS: Record<string, string> = {
   'Gemini API': '/brand/gemini.webp',
 };
 
-const TINT_CLASSES: Record<Tint, string> = {
-  blue: 'bg-tile-blue',
-  indigo: 'bg-tile-indigo',
-  purple: 'bg-tile-purple',
-  green: 'bg-tile-green',
+const WALLPAPER_CLASSES: Record<Tint, string> = {
+  blue: 'marketing-snapshot-blue',
+  indigo: 'marketing-snapshot-indigo',
+  purple: 'marketing-snapshot-purple',
+  green: 'marketing-snapshot-green',
 };
 
 /** Tinted wells and chips inside the window — the section's hue at low strength. */
@@ -456,7 +456,7 @@ export function SolutionEvidencePanel({
 }>) {
   return (
     <ScaledPreview width={640} className={cn('cl-solution-preview', className)}>
-      <WallpaperPanel className={cn('p-5', TINT_CLASSES[tint])}>
+      <WallpaperPanel className={cn('marketing-snapshot-grain p-5', WALLPAPER_CLASSES[tint])}>
         <div className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border shadow-[0_2px_8px_rgb(12_16_36/0.06),0_24px_56px_-24px_rgb(12_16_36/0.18)]">
           <WindowChrome label={PANEL_LABELS[scene]} />
           {/* The illustrative rows stay hidden from assistive technology so they

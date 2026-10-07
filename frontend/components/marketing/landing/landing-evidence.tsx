@@ -55,7 +55,7 @@ export function Evidence() {
             </div>
           </div>
         </div>
-        <div className="cl-record-stage">
+        <div className="cl-record-stage marketing-snapshot-grain">
           <div className="cl-record">
             <div className="cl-window-bar">
               <FileText size={14} aria-hidden /> Answer record · Illustrative example

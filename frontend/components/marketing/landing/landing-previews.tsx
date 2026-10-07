@@ -349,7 +349,9 @@ export function PlatformExplorer({
                   </a>
                 </div>
                 <ScaledPreview width={640} className="cl-product-preview">
-                  <div className={`cl-product-stage cl-product-stage-${item.id}`}>
+                  <div
+                    className={`cl-product-stage cl-product-stage-${item.id} marketing-snapshot-grain`}
+                  >
                     <div className="cl-product-card">
                       <div className="cl-window-bar">
                         <Grid2X2 size={14} aria-hidden />
