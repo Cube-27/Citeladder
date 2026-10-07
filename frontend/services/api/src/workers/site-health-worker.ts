@@ -60,6 +60,7 @@ export class SiteHealthWorker {
   readonly taskScope?: { workspaceId: string; crawlId: string };
   readonly signal?: AbortSignal;
   readonly #cadence: ScoreRefreshCadence;
+  readonly #access: (workspaceId: string) => Promise<unknown>;
   #recovery: Promise<number> | null = null;
   #nextRecovery = 0;
   #maintenance: Promise<void> | null = null;
@@ -83,6 +84,8 @@ export class SiteHealthWorker {
     this.executors = options.executors ?? executors;
     this.queue = new TaskQueue(db, { leaseTtlSeconds: this.settings.lease }, 'site_crawl_tasks');
     this.#cadence = new ScoreRefreshCadence(this.settings.scoreRefresh);
+    // Each acquisition checks twice; a short-lived grant spares four queries per check.
+    this.#access = cachedWorkspaceAccess(db, (this.settings.accessTtl || 0) * 1000);
     // One fetcher for the worker: robots caching and per-host pacing span every task.
     this.acquisition = {
       db,
@@ -267,7 +270,7 @@ export class SiteHealthWorker {
       : undefined;
     if (acquire) {
       await this.#leased(claimed, async (signal) => {
-        const checkAccess = () => requireWorkspaceAccess(this.db, claimed.workspace_id);
+        const checkAccess = () => this.#access(claimed.workspace_id);
         await checkAccess();
         await acquire({ ...this.acquisition, signal, checkAccess }, claimed);
       });
@@ -299,7 +302,7 @@ export class SiteHealthWorker {
     }
   }
   async #executeInTransaction(claimed: SiteTask, signal: AbortSignal) {
-    await requireWorkspaceAccess(this.db, claimed.workspace_id);
+    await this.#access(claimed.workspace_id);
     await this.db.transaction().execute(async (trx) => {
       signal.throwIfAborted();
       const { crawl, task } = await lockSiteTask(trx, claimed, this.owner, 'fence');
@@ -370,4 +373,4 @@ export class SiteHealthWorker {
     });
   }
 }
-import { requireWorkspaceAccess } from '../entitlements/access.ts';
+import { cachedWorkspaceAccess } from '../entitlements/access.ts';

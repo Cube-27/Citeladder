@@ -4,7 +4,7 @@ import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
 import { reserveTrialAnswer, settleTrialAnswer } from '../src/audits/trial-answers.ts';
-import { workspaceAccess } from '../src/entitlements/access.ts';
+import { cachedWorkspaceAccess, workspaceAccess } from '../src/entitlements/access.ts';
 import { issueBundle, revokeBundle } from '../src/entitlements/grants.ts';
 import type { AuditTask } from '../src/queue/audit-queue.ts';
 
@@ -45,6 +45,41 @@ it('distinguishes revoked authority from natural trial expiry', async () => {
     }),
   );
   expect((await workspaceAccess(db, t.workspaceId)).status).toBe('access_unresolved');
+});
+it('lets a worker reuse a grant briefly, but a revocation lands within the TTL and a denial is never cached', async () => {
+  const t = await fixtures.tenant();
+  const account = await db
+    .selectFrom('billing_accounts')
+    .selectAll()
+    .where('workspace_id', '=', t.workspaceId)
+    .executeTakeFirstOrThrow();
+  accounts.push(account.id);
+  let clock = 0;
+  const access = cachedWorkspaceAccess(db, 30_000, () => clock);
+  await access(t.workspaceId);
+  const grant = await db
+    .selectFrom('account_grants')
+    .selectAll()
+    .where('billing_account_id', '=', account.id)
+    .where('key', '=', 'workspace_access')
+    .executeTakeFirstOrThrow();
+  await db.transaction().execute((trx) =>
+    revokeBundle(trx, {
+      workspaceId: t.workspaceId,
+      accountId: account.id,
+      grantIds: [grant.id],
+      key: randomUUID(),
+      reason: 'Revoke mid-crawl',
+      actorKind: 'operator',
+      actorId: t.userId,
+      at: new Date(),
+    }),
+  );
+  clock = 29_000;
+  await expect(access(t.workspaceId)).resolves.toBeDefined();
+  clock = 31_000;
+  await expect(access(t.workspaceId)).rejects.toMatchObject({ status: 403 });
+  await expect(access(t.workspaceId)).rejects.toMatchObject({ status: 403 });
 });
 afterAll(async () => {
   if (accounts.length)

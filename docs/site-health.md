@@ -85,7 +85,9 @@ every `backstop_interval_seconds` (a crawl-scoped interactive worker on every
 poll), including during a drain over an empty queue: stalled crawls (active, no
 outstanding work, no write for `stalled_crawl_reconcile_seconds`), overdue
 crawls (outstanding tasks fail with `crawl_overdue` and the same transaction
-reconciles) and cancelled crawls. Cancellation commits only the stop, task
+reconciles) and cancelled crawls. A worker reuses a workspace's access grant for
+`access_check_ttl_seconds` (30 s), so a revocation stops new acquisitions within
+that window; a denial is never cached. Cancellation commits only the stop, task
 cancellation and fetch settlement, so Stop stays short under a busy crawl. The
 worker then publishes the cancelled run's final revisions, snapshot and
 successors under the crawl lock. It selects only crawls with a completed
@@ -239,7 +241,8 @@ page kinds: a page-kind filter maps `about` and `contact` to `about_contact` and
 `trust` to `trust_policy`. Ordering is computed in memory once per candidate and
 in one sort over the crawl's capped frontier per batch, so it never slows the crawl.
 
-Discovery and normalized facts share the parsed HTML document before fact
+Discovery and normalized facts share one parse of the HTML document, on the
+persistent interpretation pool rather than the worker's event loop, before fact
 extraction prunes non-content subtrees. Discovery keeps its own scope-filtered
 link budget; an oversized document still uses the stricter fact-extraction byte
 cap. Sitemap documents are fetched in bounded concurrent groups through the
