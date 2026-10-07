@@ -7,7 +7,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { SiteRuleEvaluations } from '../generated/db-schema.ts';
 import type { RuleEvaluation } from './analysis/rules.ts';
-import { appliedSiteChecks, scoreAnalysis } from './analysis/scoring.ts';
+import { appliedSiteChecks, crawlSiteChecks, scoreAnalysis } from './analysis/scoring.ts';
 import type { Crawl } from './task-fence.ts';
 
 export function persistedEvaluation(row: Selectable<SiteRuleEvaluations>): RuleEvaluation {
@@ -61,7 +61,8 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
   const siteSources = evaluations.filter(
     (row) => appliedSiteChecks([persistedEvaluation(row)]).length > 0,
   );
-  const site = siteSources.map(persistedEvaluation);
+  // Scored site checks the crawl never evaluated score as unknown, with no source to name.
+  const site = crawlSiteChecks(siteSources.map(persistedEvaluation));
   const auditTime = crawl.started_at ?? crawl.created_at;
   const finalizedAt = new Date();
   const revisions = initials.map((initial) => {

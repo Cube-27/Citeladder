@@ -621,6 +621,7 @@
         "no_ttfb_measurement"
       ],
       "unknown_reasons": [
+        "site_facts_unavailable",
         "insufficient_evidence",
         "question_answers_unavailable",
         "question_relationships_unavailable",

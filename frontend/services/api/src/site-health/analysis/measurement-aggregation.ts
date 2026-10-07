@@ -1,7 +1,7 @@
 /** Equal-page aggregation; a page with more checks never gets more influence. */
 import { policy } from '../../config.ts';
 import { compareText } from '../../text-order.ts';
-import { appliedSiteChecks, readinessReason, scoreAnalysis } from './scoring.ts';
+import { crawlSiteChecks, readinessReason, scoreAnalysis } from './scoring.ts';
 import type { RuleEvaluation } from './rules.ts';
 
 type Measurement = ReturnType<typeof scoreAnalysis>;
@@ -34,7 +34,7 @@ function role(pages: Measurement[], role: 'web' | 'aeo') {
 }
 
 const siteChecksOf = (rows: MeasuredPage[]) =>
-  appliedSiteChecks(rows.flatMap((row) => row.evaluations));
+  crawlSiteChecks(rows.flatMap((row) => row.evaluations));
 
 /** `site` comes from the whole crawl: a page-kind subset rarely includes the root that holds it. */
 export function aggregateMeasurements(rows: MeasuredPage[], site = siteChecksOf(rows)) {

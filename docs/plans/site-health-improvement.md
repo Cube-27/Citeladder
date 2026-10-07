@@ -139,6 +139,15 @@ Progress: 2.1, 2.2, 2.3 and site-level crawler scoring are implemented on `feat/
 |---|---|---|
 | 2.8 | Score broken internal links at site level once graph-scope evaluations can feed page scoring. | `site-health/architecture.ts`, `analysis/scoring.ts` |
 
+Progress (follow-up): 2.4 (the crawl root is never resolved as a canonical alias; a
+scored site check the crawl never evaluated scores unknown, `site_facts_unavailable`),
+2.6 (a bot fails when every sampled sitemap URL is closed; partial closures are
+`restricted` evidence) and 2.7 (weight and severity documented as non-scoring) are done.
+2.5 needs no change: finalize evaluations take their pillar from `membership()`, and
+scoring rows that disagree are transient, so a conflict reason would have no reader.
+2.8 is declined under owner decision 1: a broken link does not make the linking page
+less crawlable, indexable or answerable, so it stays a visible, unscored defect.
+
 ## Phase 3: classification
 
 Classification is deterministic (`site-health/analysis/page-kinds.ts:284`); no model is involved.

@@ -503,13 +503,20 @@ The AEO pillars and baseline weights are:
 | Freshness | 5 |
 | Crawlability | 15 |
 
-Checks are binary and equal weight inside their role/pillar. Site-scoped
+Checks are binary and equal weight inside their role/pillar. A rule's catalog
+`severity` orders and filters issues and classifies change regressions; its
+`weight` is persisted with the evaluation for provenance. Neither moves a score. Site-scoped
 checks are evaluated where the site facts were observed (the crawl root) and
 apply to every page: a site that blocks OAI-SearchBot fails crawler access on
 each page's crawlability pillar. Blocking only training crawlers (GPTBot,
 ClaudeBot, Google-Extended) is a visible, unscored finding: it does not stop
-answer-time retrieval. Final page revisions list those site evaluation IDs
-in their source manifest; evaluation rows are never copied.
+answer-time retrieval. A bot fails when robots.txt closes the root or every
+sampled sitemap URL; closing only some paths is recorded as `restricted`. The
+crawl root is never resolved as a canonical alias, so its site evaluations stay
+current. A scored site check the crawl never evaluated (no root analysis or no
+site facts) scores as unknown (`site_facts_unavailable`), keeping measurement
+partial. Final page revisions list those site evaluation IDs in their source
+manifest; evaluation rows are never copied.
 
 ```text
 Web = 100 * satisfied checks / determinate applicable checks
