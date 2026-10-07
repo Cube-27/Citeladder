@@ -255,6 +255,40 @@ it('finishes its leased batch and stops new claims once the budget expires or sh
   }
 });
 
+it('refills a freed slot while a slow task is still running', async () => {
+  // Separate crawls: transactional executors serialize on their crawl's row lock.
+  const slow = await fixtures.task(await fixtures.crawl(), 'link_metrics', { priority: 100 });
+  await fixtures.task(await fixtures.crawl(), 'link_metrics', { priority: 90 });
+  const third = await fixtures.task(await fixtures.crawl(), 'link_metrics');
+  const order: string[] = [];
+  let releaseSlow: () => void = () => {};
+  const slowDone = new Promise<void>((resolve) => {
+    releaseSlow = resolve;
+  });
+  // Without refilling, the third task would wait for the slow one: fail fast instead of hanging.
+  const fallback = setTimeout(releaseSlow, 3000);
+  const worker = new SiteHealthWorker(db, {
+    settings,
+    executors: {
+      link_metrics: async (_trx, _crawl, task) => {
+        if (task.id === slow) {
+          await slowDone;
+          order.push('slow');
+        } else if (task.id === third) {
+          order.push('third');
+          releaseSlow();
+        }
+      },
+    },
+  });
+  try {
+    expect(await worker.drain(2)).toBe(3);
+    expect(order).toEqual(['third', 'slow']);
+  } finally {
+    clearTimeout(fallback);
+  }
+});
+
 it('drains every bounded recovery batch before treating an empty claim as idle', async () => {
   const seed = await fixtures.crawl();
   const ids = await Promise.all([

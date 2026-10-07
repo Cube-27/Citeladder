@@ -37,13 +37,18 @@ page-kind coverage then found the issues below. File references are to
 
 ## Phase 1: crawl throughput (highest user-visible impact)
 
+Progress (2026-10-07): 1.1, 1.2, 1.3 (sliding window; the pool cap stays until
+production timings justify raising in-flight parses on the 1-vCPU runner), 1.6
+and 1.7 are implemented on `feat/site-health-throughput`. 1.4 and 1.5 are next;
+1.8 waits for a measured backlog.
+
 | # | Change | Where | Acceptance |
 |---|---|---|---|
 | 1.1 | Skip the full `reconcileCrawl` for a settled non-terminal discover/site_setup while lifecycle work is outstanding, and pass every non-terminal live-score refresh through `ScoreRefreshCadence`. Today every discover settlement locks the crawl, recounts observations and rebuilds the live score (O(N²) per crawl). | `site-health/lifecycle.ts:378-385`, `snapshot.ts:199` | PostgreSQL test: N discover settlements trigger at most the cadence-bounded number of live-score refreshes; terminal reconcile still finalizes. |
 | 1.2 | Batch link admission: multi-row `INSERT … ON CONFLICT … RETURNING` for site URLs, observations, memberships and tasks, with budget/order logic in memory. Today it is about 5 round trips per link inside the workspace runtime lock, which also serializes every analyze commit. | `site-health/frontier.ts:620-640`, `discover-task.ts:386-394` | Same admitted set and order as today on a 200-link fixture; query count per discover is bounded and independent of link count. |
 | 1.3 | Replace batch-then-wait with a sliding window: refill a slot as each site task settles, up to the Site Health concurrency limit (no longer capped by the DB pool, since fetches hold no connection), instead of `Promise.allSettled` per batch. One 20 s timeout currently stalls the other slots. | `workers/site-health-worker.ts:118-120`, `workers/runner.ts` | A slow fake task does not delay claims for fast ones; the pool bound and lease heartbeats are preserved. |
 | 1.4 | Cache `requireWorkspaceAccess` per workspace for a short TTL inside a worker, and check once per task (analyze and discover check twice; each check is 4 queries). | `entitlements/access.ts`, `site-health-worker.ts:210`, `analyze-task.ts:167` | Revocation still takes effect within the TTL; test covers a revoked workspace mid-crawl. |
-| 1.5 | Use a persistent 1-2 thread parse pool instead of a new `Worker` per extract/analyze, and move discover's main-thread parse onto it. | `site-health/analysis/off-thread.ts:21`, `discover-task.ts:186-204` | Heartbeats keep firing during a 5 MB parse; no worker spawn per page. |
+| 1.5 | Evidence: on a loaded dev machine, an analyze test that parses two pages timed out at 5 s while spawning workers (2026-10-07). Use a persistent 1-2 thread parse pool instead of a new `Worker` per extract/analyze, and move discover's main-thread parse onto it. | `site-health/analysis/off-thread.ts:21`, `discover-task.ts:186-204` | Heartbeats keep firing during a 5 MB parse; no worker spawn per page. |
 | 1.6 | Move stalled/overdue/cancelled crawl backstops from every 1 s claim pass to the tick's periodic phase (or a 15-30 s cadence). | `site-health-worker.ts:94-98`, `lifecycle.ts:511-543` | Backstops still finalize a stalled crawl within one tick. |
 | 1.7 | Tune: `analysis_dependency_retry_max_seconds` 15 → 5; return `deferred` without running `reconcileAfterTask`. | `config/site-health/settings.json`, `analyze-task.ts:344-360` | Root analyze starts within about 5 s of site_setup settling. |
 | 1.8 | Later scale item: claim ranking runs a window over every claimable row. Add a partial claim index or a per-workspace lateral top-N. | `queue/task-queue.ts:67-120`, `migrations/versions/0001_initial.py` | Claim plan stays index-bounded with 50k queued tasks. |

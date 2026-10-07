@@ -265,6 +265,26 @@ describe('crawl lifecycle', () => {
     expect(await tasksOf(seed.crawlId, 'link_metrics')).toHaveLength(1);
   });
 
+  it('settles discovery without rebuilding a score only analyses can change', async () => {
+    const seed = await running({ discovery_status: 'running' });
+    const done = await monitoredPage(seed, '/');
+    await fixtures.analyzable(seed, '/pending');
+    const discover = await fixtures.task(seed, 'discover');
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'succeeded' })
+      .where('id', '=', discover)
+      .execute();
+    await reconcileAfterTask(db, settled(seed, discover), cadence());
+    expect(await crawlRow(seed.crawlId)).toMatchObject({
+      status: 'running',
+      discovery_status: 'completed',
+      score_summary: null,
+    });
+    await reconcileAfterTask(db, settled(seed, done.taskId), cadence());
+    expect((await crawlRow(seed.crawlId)).score_summary).toMatchObject({ analyzed_count: 1 });
+  });
+
   it('does not count a policy exclusion as an incomplete analysis', async () => {
     const seed = await running();
     await monitoredPage(seed, '/');

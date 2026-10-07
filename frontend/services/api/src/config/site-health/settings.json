@@ -279,6 +279,12 @@
     "type": "float",
     "default": 1.0
   },
+  "claim_window_seconds": {
+    "env": ["SITE_HEALTH_CLAIM_WINDOW_SECONDS"],
+    "type": "float",
+    "default": 30.0,
+    "exclusive_minimum": 0
+  },
   "analysis_dependency_retry_seconds": {
     "env": ["SITE_HEALTH_ANALYSIS_DEPENDENCY_RETRY_SECONDS"],
     "type": "float",
@@ -288,7 +294,7 @@
   "analysis_dependency_retry_max_seconds": {
     "env": ["SITE_HEALTH_ANALYSIS_DEPENDENCY_RETRY_MAX_SECONDS"],
     "type": "float",
-    "default": 15.0,
+    "default": 5.0,
     "exclusive_minimum": 0
   },
   "analysis_dependency_max_wait_seconds": {
@@ -319,6 +325,12 @@
     "env": ["SITE_HEALTH_DRAIN_BUDGET_SECONDS"],
     "type": "float",
     "default": 300.0,
+    "exclusive_minimum": 0
+  },
+  "backstop_interval_seconds": {
+    "env": ["SITE_HEALTH_BACKSTOP_INTERVAL_SECONDS"],
+    "type": "float",
+    "default": 15.0,
     "exclusive_minimum": 0
   },
   "stalled_crawl_reconcile_seconds": {

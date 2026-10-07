@@ -71,7 +71,7 @@ Status values: `queued`, `inventory`, `audit`, `plan`, `implementing`, `docs`, `
 
 | # | Feature | Main code | Current documents | Status | Plan |
 |---|---|---|---|---|---|
-| 1 | Site Health: crawl, page understanding, checks, scoring | `services/api/src/site-health`, `analysis`, `web-evidence`, `workers/site-health-worker.ts`; `components/site-health` | [site-health.md](../site-health.md) | plan | [site-health-improvement](site-health-improvement.md) |
+| 1 | Site Health: crawl, page understanding, checks, scoring | `services/api/src/site-health`, `analysis`, `web-evidence`, `workers/site-health-worker.ts`; `components/site-health` | [site-health.md](../site-health.md) | implementing | [site-health-improvement](site-health-improvement.md) |
 | 2 | Onboarding, company facts and competitor discovery | `services/api/src/projects`, `workers/discovery-worker.ts`; `components/onboarding` | [onboarding.md](../onboarding.md) | queued | — |
 | 3 | Prompt generation, audits and AI Visibility | `prompts`, `audits`, `visibility`, `answer-engines`, `providers`; `components/prompts`, `visibility`, `runs` | [visibility-prompt.md](../visibility-prompt.md) | queued | — |
 | 4 | Opportunities, actions and verification | `opportunities`; `components/opportunities` | [opportunities.md](../opportunities.md) | queued | — |
@@ -84,7 +84,7 @@ Status values: `queued`, `inventory`, `audit`, `plan`, `implementing`, `docs`, `
 | 11 | Billing, entitlements and usage | `billing`, `entitlements`; `components/billing` | [billing-entitlements.md](../billing-entitlements.md), [billing-provider-readiness.md](../billing-provider-readiness.md) | queued | — |
 | 12 | Authentication, workspaces, projects and roles | `auth`, `workspaces`, `projects`; `components/auth`, `settings`, `projects` | [workspace-access.md](../workspace-access.md) | queued | — |
 | 13 | MCP hosted tools and OAuth | `mcp` | [mcp.md](../mcp.md) | queued | — |
-| 14 | Execution platform: queues, runner, tick, recovery | `queue`, `workers/runner.ts`, `db`, `infra/gcp` | [backend-architecture.md](../backend-architecture.md), [operations](../operations/GCP_RUNBOOK.md) | queued | — |
+| 14 | Execution platform: queues, runner, tick, recovery, residual Python schema tooling (`backend/`, about 60k lines) | `queue`, `workers/runner.ts`, `db`, `infra/gcp`, `backend` | [backend-architecture.md](../backend-architecture.md), [operations](../operations/GCP_RUNBOOK.md) | queued | — |
 | 15 | Product app shell, navigation, tour and design system | `apps/app`, `components/layout`, `ui`, `tour` | [frontend-architecture.md](../frontend-architecture.md), [design.md](../design.md) | queued | — |
 | 16 | Public site and documentation site | `apps/marketing`, `apps/docs` | [design.md](../design.md) | queued | — |
 
@@ -104,3 +104,4 @@ when the owner asks.
 | Date | Feature | Event |
 |---|---|---|
 | 2026-10-07 | 1 Site Health | Production crawl stall diagnosed (runner exited while a deferred task was due in 5 s); fix shipped with this tracker. Audit of performance, classification, checks and page-kind coverage produced the plan; owner answered its four decisions. |
+| 2026-10-07 | 1 Site Health | Phase 1 slice: sliding claim window, no score rebuild on non-analysis settlements, batched link admission, 15 s backstop cadence, test-file queue isolation. |
