@@ -120,6 +120,21 @@ export class SiteHealthWorker {
     for (const result of results) if (result.status === 'rejected') throw result.reason;
     return tasks.length;
   }
+  /** When the earliest claimable task becomes available (deferred analysis, retry backoff). */
+  async nextDue(): Promise<Date | null> {
+    const row = await this.db
+      .selectFrom('site_crawl_tasks')
+      .select((eb) => eb.fn.min('available_at').as('due'))
+      .where('status', 'in', policy.task_queue.claimable)
+      .where('task_kind', 'in', policy.site_health.ts_owned_task_kinds)
+      .$if(this.taskScope !== undefined, (q) =>
+        q
+          .where('workspace_id', '=', this.taskScope!.workspaceId)
+          .where('crawl_id', '=', this.taskScope!.crawlId),
+      )
+      .executeTakeFirst();
+    return row?.due ? new Date(row.due) : null;
+  }
   async #recover() {
     // Another slot owns the in-flight pass; this slot keeps claiming instead of waiting.
     if (this.#recovery) return 0;
