@@ -29,18 +29,10 @@
   background: var(--cl-closing);
 }
 
-.marketing-footer-card {
-  --color-muted: var(--color-secondary);
-  --color-border-subtle: var(--color-border-strong);
-  color: var(--color-foreground);
-  border-radius: 0;
-  overflow: hidden;
-}
-
 /* Saturated color burns into paper; grain belongs to the backdrop alone. */
 .marketing-snapshot-grain,
 .marketing-footer-card {
-  --marketing-grain-hue: var(--cl-hue, var(--marketing-grain-green));
+  --marketing-grain-hue: var(--cl-hue, var(--color-marketing-grain-green));
   position: relative;
   isolation: isolate;
   background:
@@ -67,19 +59,24 @@
 }
 
 .marketing-snapshot-blue {
-  --marketing-grain-hue: var(--marketing-grain-blue);
+  --marketing-grain-hue: var(--color-marketing-grain-blue);
 }
 .marketing-snapshot-indigo {
-  --marketing-grain-hue: var(--marketing-grain-indigo);
+  --marketing-grain-hue: var(--color-marketing-grain-indigo);
 }
 .marketing-snapshot-purple {
-  --marketing-grain-hue: var(--marketing-grain-purple);
+  --marketing-grain-hue: var(--color-marketing-grain-purple);
 }
 .marketing-snapshot-green {
-  --marketing-grain-hue: var(--marketing-grain-green);
+  --marketing-grain-hue: var(--color-marketing-grain-green);
 }
 
 .marketing-footer-card {
+  --color-muted: var(--color-secondary);
+  --color-border-subtle: var(--color-border-strong);
+  color: var(--color-foreground);
+  border-radius: 0;
+  overflow: hidden;
   background:
     linear-gradient(to bottom, var(--color-panel) 48%, transparent),
     radial-gradient(ellipse at 85% 100%, var(--color-panel) 12%, transparent 70%),

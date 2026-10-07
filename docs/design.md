@@ -164,6 +164,10 @@ consumers without becoming another value authority.
 | `--color-input` | surface | Field interior | Inside panel boundary | `#ffffff` | `#141414` |
 | `--color-muted` | ink | Helpers, metadata and disabled labels | On reading surfaces | `#5b6678` | `#999996` |
 | `--color-neutral-bg` | surface | Neutral badge or progress track | Inside panel | `#e9edf1` | `#222222` |
+| `--color-marketing-grain-blue` | brand | Blue snapshot backdrop | Public decoration | `#3b82f6` | `#3b82f6` |
+| `--color-marketing-grain-indigo` | brand | Indigo snapshot backdrop | Public decoration | `#6366f1` | `#6366f1` |
+| `--color-marketing-grain-purple` | brand | Purple snapshot backdrop | Public decoration | `#a855f7` | `#a855f7` |
+| `--color-marketing-grain-green` | brand | Green snapshot and footer backdrop | Public decoration | `#22c55e` | `#22c55e` |
 | `--color-on-inverse` | ink | Label on inverse surface | On surface-inverse | `#ffffff` | `#0d2618` |
 | `--color-overlay-scrim` | surface | Modal backdrop | Between ground and modal | `rgb(20 33 61 / 45%)` | `rgb(0 0 0 / 72%)` |
 | `--color-panel` | surface | Resting content or chrome | On ground | `#ffffff` | `#1a1a1a` |

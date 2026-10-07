@@ -48,6 +48,11 @@
      nothing inside those bands names a dark colour itself. */
   --color-band-indigo: #1b1938;
   --color-band-teal: #0e3030;
+  /* Marketing decorations are emitted only by stylesheets that consume them. */
+  --color-marketing-grain-blue: #3b82f6;
+  --color-marketing-grain-indigo: #6366f1;
+  --color-marketing-grain-purple: #a855f7;
+  --color-marketing-grain-green: #22c55e;
 
   /* The marketing canvases (docs/design.md §Marketing): the barely warm
      off-white for alternating body bands, warm hairlines for white surfaces,
@@ -1174,10 +1179,6 @@ input:-webkit-autofill:focus {
    previews keep reading as the product. */
 [data-public-surface] {
   --cl-closing: #e8edf1;
-  --marketing-grain-blue: #3b82f6;
-  --marketing-grain-indigo: #6366f1;
-  --marketing-grain-purple: #a855f7;
-  --marketing-grain-green: #22c55e;
   --color-background: #ffffff;
   --color-foreground: #0f172a;
   --color-secondary: #1e293b;
