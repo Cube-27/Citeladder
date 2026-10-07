@@ -94,16 +94,45 @@ function measurementMetric(context: MetricContext): MetricModel {
   };
 }
 
+const count = (value: unknown) =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+
+/** Found, analyzed and why the rest were not: saved by the crawl, absent on older snapshots. */
+function coverageCounts(coverage: SiteHealthOverview['crawl_coverage'] | undefined) {
+  const evidence = coverage?.evidence ?? {};
+  const found = count(evidence.observation_count);
+  const analyzed = count(evidence.analyzed_url_count);
+  if (found === null || analyzed === null || found === 0) return null;
+  return {
+    found,
+    analyzed,
+    failed: count(evidence.failed_url_count) ?? 0,
+    limit: count(evidence.automatic_limit) ?? 0,
+  };
+}
+
 function crawlMetric(context: MetricContext): MetricModel {
-  const progress = context.selected > 0 ? (100 * context.analyzed) / context.selected : null;
   const terminalCoverage = context.overview?.crawl_coverage;
+  const counts = coverageCounts(terminalCoverage);
+  // Share of the pages the crawl found, not of the pages it chose: 20 of 100 is not 100%.
+  let progress = context.selected > 0 ? (100 * context.analyzed) / context.selected : null;
+  if (counts) progress = (100 * Math.min(counts.analyzed, counts.found)) / counts.found;
   return {
     title: 'Crawl Coverage',
     value: progress,
-    caveat: coverageCaveat(terminalCoverage, context.active),
+    caveat: counts ? coverageSentence(counts) : coverageCaveat(terminalCoverage, context.active),
     href: '/site?tab=pages',
     icon: ICONS.site,
   };
+}
+
+/** What a reader needs to act: how many pages were left out, and the reason. */
+function coverageSentence(counts: NonNullable<ReturnType<typeof coverageCounts>>) {
+  const parts = [`${counts.analyzed} of ${counts.found} found pages analyzed`];
+  if (counts.limit > 0 && counts.analyzed >= counts.limit && counts.found > counts.analyzed)
+    parts.push(`plan limit ${counts.limit} per crawl`);
+  if (counts.failed > 0) parts.push(`${counts.failed} failed to load`);
+  return parts.join(' · ');
 }
 
 function coverageCaveat(

@@ -300,7 +300,22 @@ export async function bulkMonitoredSet(
     input.mode === 'none'
       ? []
       : (
-          await query.orderBy('u.normalized_url').orderBy('u.id').limit(Math.max(0, cap)).execute()
+          await query
+            // Most valuable pages first (product and pricing before posts), URL order within a tier.
+            .orderBy(
+              (eb) =>
+                eb
+                  .selectFrom('site_url_observations as o')
+                  .select((inner) => inner.fn.max('o.value_priority').as('value'))
+                  .whereRef('o.site_url_id', '=', 'u.id')
+                  .where('o.workspace_id', '=', workspaceId)
+                  .where('o.crawl_id', 'in', inventoryCrawlIds(crawl)),
+              (order) => order.desc().nullsLast(),
+            )
+            .orderBy('u.normalized_url')
+            .orderBy('u.id')
+            .limit(Math.max(0, cap))
+            .execute()
         ).map((row) => row.id);
   if (limit > 0 && ids.length > limit) {
     const used = await db

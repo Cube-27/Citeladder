@@ -524,6 +524,13 @@ retains incomplete checks within scored pages. Pillar rollups likewise count
 scored pages and retain unresolved-check counts. Check completion, scored-page
 coverage, classification coverage and discovery limits remain separate.
 The UI rounds scores to whole numbers without inferring confidence from coverage.
+Crawl coverage evidence also records the analyzed and failed URL counts and the
+crawl's automatic analysis allowance. Overview's Crawl Coverage metric is the
+share of found pages analyzed (not of the pages the crawl selected) and states
+the reason in plain words, for example "20 of 100 found pages analyzed · plan
+limit 20 per crawl · 2 failed to load"; snapshots saved before these counts keep
+the earlier reason caveat. Bulk "first N" monitored selection takes the most
+valuable pages first (highest observed value tier), URL order within a tier.
 Website Overview and Pages use compact metric strips without repeated audit
 captions; Overview also omits supporting occurrence, page and checklist counts.
 Measurement caveats remain available to assistive technology, and detailed
