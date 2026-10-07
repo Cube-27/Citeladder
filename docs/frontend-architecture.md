@@ -71,7 +71,9 @@ Product pages have their own metadata and WebPage/breadcrumb relationships to
 the single CiteLadder software identity. Unknown or held capability paths return
 404. The `/mcp` protocol endpoint and blocked former app roots remain unchanged.
 
-Illustrative product excerpts use synthetic records and label their scope.
+Illustrative product excerpts are coded views in
+`frontend/components/marketing/scenes/product-views.tsx`; they use synthetic
+records, import no app runtime and label their scope.
 Editorial publication never grants access: Agent/content workflows use demo
 CTAs, Commerce is project-dependent, and crawler analytics remains unpublished.
 Signup CTAs continue to use the existing public-signup switch and app URL helper.

@@ -24,7 +24,11 @@ describe('comparison evidence and next steps', () => {
         source.reviewedDate,
       );
     }
-    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('list', { name: 'Questions to ask both vendors.' })).getAllByRole(
+        'listitem',
+      ).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: 'CiteLadder pricing' })).toHaveAttribute(
       'href',
       '/pricing',

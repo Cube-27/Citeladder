@@ -144,7 +144,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'How much does CiteLadder cost?',
-        'See the pricing page for published plans and current availability. Paid checkout is not currently open; contact us to continue after the trial or discuss an enterprise agreement. Under BYOK, provider usage is billed to your connected accounts without a CiteLadder markup.',
+        'See the pricing page for published plans and whether self-serve checkout is open. Contact us to continue after the trial or to discuss an enterprise agreement. Under BYOK, provider usage is billed to your connected accounts without a CiteLadder markup.',
       ),
       faqItem(
         'Do you mark up model usage?',

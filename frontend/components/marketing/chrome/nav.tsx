@@ -4,11 +4,10 @@ import { LogoMark } from '@/components/ui/logo-mark';
 import { Menu, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 import { type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { ButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 import { appHref } from '@/lib/config/app-link';
@@ -17,11 +16,10 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 /** What asked for a dropdown: a resting pointer, or an explicit focus move. */
 export type OpenSource = 'hover' | 'focus';
 
-const COLUMN = 380;
 const DROP_LAYOUT: Record<NavDropKey, { width: number }> = {
-  platform: { width: 900 },
-  solutions: { width: COLUMN },
-  resources: { width: COLUMN },
+  platform: { width: 820 },
+  solutions: { width: 320 },
+  resources: { width: 620 },
 };
 
 /** How far down the page the bar changes from transparent to a surface. */
@@ -68,7 +66,6 @@ function useScrolled() {
 function useDesktopDropdown() {
   const [openDrop, setOpenDrop] = useState<NavDropKey | null>(null);
   const [openSource, setOpenSource] = useState<OpenSource | null>(null);
-  const [lens, setLens] = useState<{ left: number; width: number } | null>(null);
   const [panelLeft, setPanelLeft] = useState(0);
   const closeTimer = useRef<number | null>(null);
   const linksRef = useRef<HTMLDivElement>(null);
@@ -96,7 +93,6 @@ function useDesktopDropdown() {
     suppressedDrop.current = key ?? null;
     clearDropClose();
     setOpenDrop(null);
-    setLens(null);
   };
   const releaseSuppression = (key?: NavDropKey) => {
     if (!key || suppressedDrop.current === key) {
@@ -106,13 +102,6 @@ function useDesktopDropdown() {
   const scheduleDropClose = () => {
     clearDropClose();
     closeTimer.current = window.setTimeout(closeDrop, 220);
-  };
-  const moveLens = (element: HTMLElement) => {
-    const container = linksRef.current;
-    if (!container) return;
-    const trigger = element.getBoundingClientRect();
-    const bounds = container.getBoundingClientRect();
-    setLens({ left: trigger.left - bounds.left, width: trigger.width });
   };
   const openDropAt = (key: NavDropKey, trigger: HTMLElement, source: OpenSource = 'hover') => {
     const container = linksRef.current;
@@ -133,7 +122,6 @@ function useDesktopDropdown() {
     clearDropClose();
     setOpenDrop(key);
     setOpenSource(source);
-    moveLens(trigger);
     const triggerBox = trigger.getBoundingClientRect();
     const containerBox = container.getBoundingClientRect();
     const navBox = nav.getBoundingClientRect();
@@ -167,7 +155,6 @@ function useDesktopDropdown() {
   return {
     openDrop,
     openSource,
-    lens,
     panelLeft,
     linksRef,
     navRef,
@@ -177,14 +164,11 @@ function useDesktopDropdown() {
     releaseSuppression,
     scheduleDropClose,
     openDropAt,
-    moveLens,
-    clearLens: () => setLens(null),
   };
 }
 
 /** Fixed marketing chrome with accessible desktop dropdowns and mobile accordions. */
 export function MarketingNav() {
-  const reduceMotion = useReducedMotion();
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<NavDropKey | null>(null);
@@ -194,7 +178,6 @@ export function MarketingNav() {
     linksRef,
     openDrop,
     openSource,
-    lens,
     panelLeft,
     clearDropClose,
     closeDrop,
@@ -202,10 +185,7 @@ export function MarketingNav() {
     releaseSuppression,
     scheduleDropClose,
     openDropAt,
-    moveLens,
-    clearLens,
   } = useDesktopDropdown();
-  const surfaceVisible = scrolled || mobileOpen;
   const closeMenu = () => {
     setMobileOpen(false);
     setOpenAcc(null);
@@ -255,25 +235,27 @@ export function MarketingNav() {
       // cached blur for 300ms, at exactly the moment the reader started
       // moving. At 95% the "content passes underneath" reading survives.
       className={cn(
-        'safe-top fixed inset-x-0 top-0 z-50 w-full max-w-full border-b transition-[background-color,border-color] duration-300',
-        surfaceVisible ? 'border-border-subtle bg-panel/95' : 'border-transparent bg-transparent',
+        'safe-top fixed inset-x-0 top-0 z-50 w-full max-w-full transition-[background-color,box-shadow] duration-300',
+        mobileOpen ? 'bg-panel' : 'bg-transparent',
       )}
     >
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        // Keep the expanded public actions and navigation within one responsive row.
-        className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-[var(--site-gutter)]"
+        // Three tracks from `lg` up: the links sit in the middle track, so their
+        // position depends on the viewport alone, not on the width of the
+        // account actions (which change once a returning visitor's session
+        // resolves). Below `lg` the links are hidden and two items want two
+        // ends, so it is a plain row.
+        className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-[var(--site-gutter)] lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
       >
         <HomeLogoLink onNavigate={closeMenu} />
 
         <DesktopNavigation
           layout={DROP_LAYOUT}
-          lens={lens}
           panelLeft={panelLeft}
           openDrop={openDrop}
           openSource={openSource}
-          reduceMotion={reduceMotion}
           linksRef={linksRef}
           clearDropClose={clearDropClose}
           scheduleDropClose={scheduleDropClose}
@@ -281,8 +263,6 @@ export function MarketingNav() {
           selectDrop={selectDrop}
           releaseSuppression={releaseSuppression}
           openDropAt={openDropAt}
-          moveLens={moveLens}
-          clearLens={clearLens}
         />
 
         <NavActions mobileOpen={mobileOpen} onToggleMenu={() => setMobileOpen((open) => !open)} />
@@ -315,7 +295,7 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
     <a
       href="/"
       aria-label="CiteLadder home"
-      className="focus-ring inline-flex shrink-0 items-center rounded-xs"
+      className="focus-ring inline-flex shrink-0 items-center justify-self-start rounded-xs"
       onClick={(event) => {
         onNavigate();
         // Read on click rather than through usePathname(): the path only decides
@@ -335,20 +315,19 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
   );
 }
 
-/** Direct links to the app's account entry points. */
+/** The app's two account entry points: nothing else competes in the bar. */
 function ProductActions() {
   return (
     <>
       <a
         href={appHref('/login')}
-        className="website-nav text-muted hover:text-accent-text inline-flex px-4 transition-colors"
+        className="nav-link website-nav rounded-[var(--radius-marketing-control)] px-3 py-2"
       >
         Log in
       </a>
-      <DemoButtonLink variant="soft" className="hidden xl:inline-flex" />
       {selfServeSignupOpen() ? (
-        <ButtonLink href={appHref('/register')} className="hidden min-h-10 px-4 sm:inline-flex">
-          Start free trial
+        <ButtonLink href={appHref('/register')} className="hidden sm:inline-flex">
+          Sign up
         </ButtonLink>
       ) : null}
     </>
@@ -363,18 +342,18 @@ function NavActions({
   onToggleMenu: () => void;
 }>) {
   return (
-    <div className="flex shrink-0 items-center gap-3 justify-self-end">
+    <div className="flex shrink-0 items-center gap-2 justify-self-end">
       {/* While the sheet is open it owns the account actions. Hiding the header account
           control keeps the close button clear of a second account affordance. Hidden in
           CSS rather than unmounted so a phone-width menu left open across a
-          resize to desktop, where the sheet itself is `xl:hidden`, does not
+          resize to desktop, where the sheet itself is `lg:hidden`, does not
           take the desktop actions down with it. */}
-      <div className={cn('flex items-center gap-3', mobileOpen && 'max-xl:hidden')}>
+      <div className={cn('flex items-center gap-2', mobileOpen && 'max-lg:hidden')}>
         <ProductActions />
       </div>
       <button
         type="button"
-        className="border-border-subtle text-foreground grid size-10 place-items-center rounded-[var(--radius-control)] border xl:hidden"
+        className="text-foreground hover:bg-background-alt grid size-10 place-items-center rounded-[var(--radius-marketing-control)] lg:hidden"
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={mobileOpen}
         aria-controls="mobile-menu"

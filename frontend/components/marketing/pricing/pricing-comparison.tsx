@@ -6,13 +6,12 @@ import type { BillingCatalog } from '@/lib/api/billing';
 import { formatCount } from '@/lib/format';
 import { comparisonRows } from '@/lib/billing/catalog';
 import { capabilityLabel } from '@/lib/marketing-content/pricing';
-import { cn } from '@/lib/utils';
 
 /**
- * Compact plan comparison grid.
+ * Plan comparison table.
  *
- * Rows and values come from the published catalog. Dense padding, a sticky
- * capability column, and semantic check/dash cells keep the table scannable.
+ * Rows and values come from the published catalog. Hairline rows, a sticky
+ * capability column and semantic check/dash cells keep it scannable.
  */
 export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalog }>) {
   const rows = comparisonRows(catalog);
@@ -20,83 +19,61 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
   if (rows.length === 0) return null;
 
   return (
-    <div className="border-border bg-panel w-full max-w-full min-w-0 overflow-hidden rounded-[var(--radius-card)] border">
-      {/* The table is wider than a phone by design, so it scrolls INSIDE this
-          box. `overscroll-x-contain` keeps that gesture from chaining out to
-          the page once the table hits its end — without it the whole document
-          slides sideways and the vertical scroll stutters. */}
-      <div className="w-full max-w-full min-w-0 overflow-x-auto overscroll-x-contain">
-        <table className="w-full min-w-[36rem] border-collapse text-left">
-          <thead>
-            <tr className="border-border-subtle bg-background-alt border-b">
-              <th
-                scope="col"
-                className="text-muted bg-background-alt text-support sticky left-0 z-1 px-4 py-3 font-medium"
-              >
-                Capability
+    // The table is wider than a phone by design, so it scrolls INSIDE this
+    // box. `overscroll-x-contain` keeps that gesture from chaining out to the
+    // page once the table hits its end.
+    <div className="cm-table-scroll">
+      <table className="cm-table">
+        <thead>
+          <tr>
+            <th scope="col">Capability</th>
+            {comparedPlans.map((plan) => (
+              <th key={plan.key} scope="col">
+                {plan.name}
               </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.key}>
+              <th scope="row">{capabilityLabel(row.key)}</th>
               {comparedPlans.map((plan) => (
-                <th
-                  key={plan.key}
-                  scope="col"
-                  className="text-foreground px-4 py-3 text-sm font-medium whitespace-nowrap"
-                >
-                  {plan.name}
-                </th>
+                <td key={plan.key}>{renderCell(row.values[plan.key]?.value)}</td>
               ))}
             </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr
-                key={row.key}
-                className={cn(
-                  'border-border-subtle border-b last:border-b-0',
-                  index % 2 === 1 && 'bg-background-alt/60',
-                )}
-              >
-                <th
-                  scope="row"
-                  className={cn(
-                    'text-foreground z-1 sticky left-0 px-4 py-2.5 text-sm font-medium',
-                    index % 2 === 1 ? 'bg-background-alt' : 'bg-panel',
-                  )}
-                >
-                  {capabilityLabel(row.key)}
-                </th>
-                {comparedPlans.map((plan) => (
-                  <td key={plan.key} className="text-muted px-4 py-2.5 text-sm whitespace-nowrap">
-                    {renderCell(row.values[plan.key]?.value)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
+function NotIncluded() {
+  return (
+    <span className="cm-cell-none">
+      <span aria-hidden>—</span>
+      <span className="sr-only">Not included</span>
+    </span>
+  );
+}
+
 /**
- * A capability a plan does not publish renders as an em dash — the honest
- * "not included", distinct from a published zero. Booleans use a success check
- * so the table stays compact and colour is never the only signal.
+ * A capability a plan does not publish renders as a dash — the honest "not
+ * included", distinct from a published zero. Booleans use a check so colour
+ * is never the only signal.
  */
 function renderCell(value: boolean | number | string | null | undefined) {
-  if (value === undefined || value === null) {
-    return <span className="text-subtle">—</span>;
-  }
-  if (typeof value === 'boolean') {
-    return value ? (
-      <span className="text-success-text inline-flex items-center gap-1.5 font-medium">
-        <Check aria-hidden className="size-3.5" />
+  if (value === undefined || value === null || value === false) return <NotIncluded />;
+  if (value === true) {
+    return (
+      <span className="cm-cell-check">
+        <Check aria-hidden className="size-4" />
         <span className="sr-only">Included</span>
       </span>
-    ) : (
-      <span className="text-subtle">—</span>
     );
   }
-  const display = typeof value === 'number' ? formatCount(value) : value;
-  return <span className="text-foreground tabular-nums">{display}</span>;
+  return (
+    <span className="cm-cell-value">{typeof value === 'number' ? formatCount(value) : value}</span>
+  );
 }

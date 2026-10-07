@@ -1,272 +1,290 @@
-import { ArrowLeft, ArrowRight, PenLine } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
-import { BlogIndexExplorer } from '@/components/marketing/blog/blog-index-explorer';
+import { BlogIndexExplorer, PostMeta } from '@/components/marketing/blog/blog-index-explorer';
 import {
   BLOG_EMPTY_STATE,
   BLOG_START_PATHS,
   POSTS,
   type BlogPost,
 } from '@/lib/marketing-content/blog';
-import { formatBlogDate, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import {
+  filterAndSortPosts,
+  formatBlogDate,
+  toBlogPostSummary,
+} from '@/lib/marketing-content/blog-index';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 import { blogPostingJsonLd } from '@/lib/seo/json-ld';
-import { cn } from '@/lib/utils';
 
 import { blockIdentity, headingId, PostBlock, withOccurrenceKeys } from '../blog/post-blocks';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
-import { Meta } from '../primitives/label';
 import { LinkedInMark } from '../primitives/linkedin-mark';
-import { Reveal } from '../primitives/reveal';
-import { Container, Section } from '../primitives/section';
+import { PageHero } from '../primitives/page-hero';
+import { Container, Section, SectionHeader } from '../primitives/section';
 import { JsonLd } from '../seo/json-ld';
 
 /**
  * `/blog` and `/blog/[slug]`.
  */
-function TagRow({ tags, className }: Readonly<{ tags: readonly string[]; className?: string }>) {
-  if (tags.length === 0) return null;
-  return (
-    <div className={cn('mb-4 flex flex-wrap gap-2', className)}>
-      {tags.map((tag) => (
-        <span
-          key={tag}
-          className="bg-accent-soft text-accent-text rounded-full px-3 py-1 text-xs font-medium"
-        >
-          {tag}
-        </span>
-      ))}
-    </div>
-  );
-}
 
-function AuthorByline({ name, href }: Readonly<{ name: string; href?: string }>) {
-  const mark = href ? (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      aria-label={`${name} on LinkedIn`}
-      className="text-muted hover:text-accent-text inline-flex"
-    >
-      <LinkedInMark />
-    </a>
-  ) : null;
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      BY : <span className="text-foreground">{name}</span>
-      {mark}
-    </span>
-  );
-}
+type ResearchGuide = { title: string; href: string; description: string };
 
-function PostByline({
-  post,
-  linkedin = false,
-  className,
-}: Readonly<{ post: BlogPost; linkedin?: boolean; className?: string }>) {
-  if (!(post.author || post.date || post.readTime)) return null;
-  const updated = post.dateModified && post.dateModified !== post.date ? post.dateModified : null;
-  const items = [
-    post.author
-      ? {
-          id: 'author',
-          node: <AuthorByline name={post.author} href={linkedin ? post.authorUrl : undefined} />,
-        }
-      : null,
-    post.date ? { id: 'date', node: <span>PUBLISHED : {formatBlogDate(post.date)}</span> } : null,
-    updated ? { id: 'updated', node: <span>UPDATED : {formatBlogDate(updated)}</span> } : null,
-    post.readTime ? { id: 'read', node: <span>READING TIME : {post.readTime}</span> } : null,
-  ].filter((item) => item !== null);
-  return (
-    <p
-      className={cn(
-        'website-label text-muted mt-3 flex flex-wrap items-center gap-x-2 gap-y-1',
-        className,
-      )}
-    >
-      {items.map((item, index) => (
-        <span key={item.id} className="contents">
-          {index > 0 ? <span aria-hidden>,</span> : null}
-          {item.node}
-        </span>
-      ))}
-    </p>
+function postHeadings(post: BlogPost) {
+  return post.body.filter(
+    (block): block is { type: 'heading'; text: string } => block.type === 'heading',
   );
 }
 
 function BlogCta({
   title,
-  body = 'Build a measurement practice your team can inspect, explain, and improve.',
+  body = 'Build a measurement practice your team can inspect, explain and improve.',
   secondary,
 }: Readonly<{ title: string; body?: string; secondary: { href: string; label: string } }>) {
   return (
-    <Section tone="paper" rhythm="base" className="marketing-closing-band" aria-label="Get started">
-      <Reveal className="mx-auto w-full max-w-3xl min-w-0 text-center">
-        <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-3 max-w-[28ch]">
-          {title}
-        </h2>
-        <p className="website-body-lg text-muted mx-auto max-w-[52ch]">{body}</p>
-        <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <DemoButtonLink className="min-w-0 flex-1 sm:flex-none">
+    <Section className="marketing-closing-band" aria-label="Get started">
+      <div className="flex flex-col items-center gap-9">
+        <SectionHeader title={title} lead={body} align="center" />
+        <div className="flex flex-wrap justify-center gap-3">
+          <DemoButtonLink>
             {DEMO_CTA}
             <ArrowRight aria-hidden />
           </DemoButtonLink>
-          <ButtonLink href={secondary.href} variant="ghost" className="min-w-0 flex-1 sm:flex-none">
+          <ButtonLink href={secondary.href} variant="soft">
             {secondary.label}
           </ButtonLink>
         </div>
-      </Reveal>
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * The newest post, set as a typographic cover. The posts carry no
+ * photography, so the second column shows what the article actually covers:
+ * its section outline, each line a link into the post.
+ */
+function FeaturedPost({ post }: Readonly<{ post: BlogPost }>) {
+  const outline = postHeadings(post).slice(0, 5);
+  const href = `/blog/${post.slug}`;
+  return (
+    <Section rhythm="tight" className="pt-0" aria-label="Featured article">
+      <article className="cp-feature">
+        <div className="cp-feature-copy">
+          {post.tags[0] && <span className="cp-chip">{post.tags[0]}</span>}
+          <h2 className="website-section-heading cp-feature-title">
+            <a href={href} className="cp-title-link focus-ring rounded-xs">
+              {post.title}
+            </a>
+          </h2>
+          <p className="website-lead text-muted max-w-[56ch]">{post.excerpt}</p>
+          <PostMeta post={toBlogPostSummary(post)} />
+          <a href={href} className="mk-text-link focus-ring rounded-xs">
+            Read article
+            <ArrowRight aria-hidden className="size-4" />
+          </a>
+        </div>
+        {outline.length > 0 && (
+          <nav className="cp-feature-outline" aria-label={`Sections in ${post.title}`}>
+            <p className="website-label">In this article</p>
+            <ol>
+              {withOccurrenceKeys(outline, (block) => block.text).map(({ key, value }) => (
+                <li key={key}>
+                  <a href={`${href}#${headingId(value.text)}`} className="focus-ring">
+                    {value.text}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
+      </article>
+    </Section>
+  );
+}
+
+function StartPaths() {
+  return (
+    <Section tone="soft" aria-labelledby="blog-start-title">
+      <div className="mk-split">
+        <SectionHeader
+          headingId="blog-start-title"
+          title="Start with the question you have."
+          lead="Three guides cover the questions most teams ask first."
+        />
+        <ul className="cp-link-list">
+          {BLOG_START_PATHS.map((path) => (
+            <li key={path.slug}>
+              <a href={`/blog/${path.slug}`} className="cp-link-row focus-ring">
+                <span className="cp-link-title">{path.heading}</span>
+                <span className="cp-link-desc">{path.body}</span>
+                <ArrowRight aria-hidden className="size-4" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Section>
+  );
+}
+
+function ResearchGuides({ guides }: Readonly<{ guides: readonly ResearchGuide[] }>) {
+  return (
+    <Section aria-labelledby="blog-research-title">
+      <SectionHeader
+        headingId="blog-research-title"
+        title="Research guides"
+        lead="Long-form references on measuring AI visibility and tracking citations, each with its sources."
+      />
+      <ul className="cp-link-list cp-link-list-2">
+        {guides.map((guide) => (
+          <li key={guide.href}>
+            <a href={guide.href} className="cp-link-row focus-ring">
+              <span className="cp-link-title">{guide.title}</span>
+              <span className="cp-link-desc line-clamp-2">{guide.description}</span>
+              <ArrowRight aria-hidden className="size-4" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+function EmptyBlog() {
+  return (
+    <Section aria-label="No posts yet">
+      <div className="cp-empty">
+        <h2 className="website-section-heading">{BLOG_EMPTY_STATE.heading}</h2>
+        <p className="website-body-lg text-muted max-w-[48ch]">{BLOG_EMPTY_STATE.body}</p>
+      </div>
     </Section>
   );
 }
 
 export function BlogIndex({
   researchGuides = [],
-}: Readonly<{ researchGuides?: readonly { title: string; href: string; description: string }[] }>) {
+}: Readonly<{ researchGuides?: readonly ResearchGuide[] }>) {
   const summaries = POSTS.map(toBlogPostSummary);
+  const newest = filterAndSortPosts(summaries, null, 'latest')[0];
+  const featured = POSTS.find((post) => post.slug === newest?.slug);
   return (
     <>
-      <header className="border-border-subtle border-b py-10 md:py-12">
-        <Container>
-          <Reveal className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
-            <div>
-              <p className="website-eyebrow text-accent-text">Blog</p>
-              <h1 className="website-page-title text-foreground mt-4">
-                Practical guides to AI visibility.
-              </h1>
-              <p className="website-body-lg text-muted mt-5 max-w-[56ch]">
-                Learn how to build a useful baseline, investigate the sources behind an answer, and
-                check whether important website information is accessible. Start with the question
-                your team is trying to answer.
-              </p>
-            </div>
-            <div className="relative hidden aspect-[12/7] lg:block">
-              <img
-                src="/blog/editorial/hero-ai-visibility.svg"
-                alt=""
-                aria-hidden="true"
-                width={384}
-                height={224}
-                loading="eager"
-                fetchPriority="high"
-                sizes="(max-width: 1279px) 288px, 384px"
-                className="absolute inset-0 size-full object-contain"
-              />
-            </div>
-          </Reveal>
-        </Container>
-      </header>
+      <PageHero
+        title="Practical guides to AI visibility."
+        lead="How to build a baseline, trace the sources behind an answer and check that your website can be read. Start with the question your team is asking."
+      />
 
-      <Section rhythm="tight" aria-label="Start here">
-        <h2 className="website-section-heading text-foreground">Start here</h2>
-        <div className="grid gap-5 md:grid-cols-3">
-          {BLOG_START_PATHS.map((path) => (
-            <article
-              key={path.slug}
-              className="border-border-subtle bg-panel space-y-4 rounded-[var(--radius-card)] border p-5"
-            >
-              <h3 className="website-feature-heading text-foreground">{path.heading}</h3>
-              <p className="website-body text-muted">{path.body}</p>
-              <a
-                href={`/blog/${path.slug}`}
-                className="website-body text-accent-text underline underline-offset-2"
-              >
-                {path.label}
-              </a>
-            </article>
-          ))}
-        </div>
-      </Section>
+      {featured && <FeaturedPost post={featured} />}
 
       {summaries.length ? (
-        <Section tone="paper" rhythm="tight" aria-label="Blog articles">
+        <Section rhythm="tight" aria-label="Blog articles">
           <BlogIndexExplorer posts={summaries} />
         </Section>
       ) : (
-        <Section tone="paper" rhythm="tight" aria-label="No posts yet">
-          <Reveal className="border-border-subtle mx-auto max-w-xl rounded-[var(--radius-card)] border border-dashed p-10 text-center">
-            <span className="bg-accent-soft text-accent-text mx-auto grid size-10 place-items-center rounded-[var(--radius-control)]">
-              <PenLine aria-hidden className="size-5" />
-            </span>
-            <h2 className="website-section-heading text-foreground mt-6">
-              {BLOG_EMPTY_STATE.heading}
-            </h2>
-            <p className="website-body text-muted mx-auto mt-3 max-w-[48ch]">
-              {BLOG_EMPTY_STATE.body}
-            </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <DemoButtonLink>
-                {DEMO_CTA}
-                <ArrowRight aria-hidden />
-              </DemoButtonLink>
-              <ButtonLink href="/faq" variant="ghost">
-                Read the FAQ
-              </ButtonLink>
-            </div>
-          </Reveal>
-        </Section>
+        <EmptyBlog />
       )}
 
-      {researchGuides.length > 0 && (
-        <Section rhythm="tight" aria-label="Research guides">
-          <h2 className="website-section-heading text-foreground mb-6">Research guides</h2>
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {researchGuides.map((guide) => (
-              <article
-                key={guide.href}
-                className="border-border-subtle bg-panel space-y-4 rounded-[var(--radius-card)] border p-5"
-              >
-                <h3 className="website-feature-heading text-foreground">
-                  <a
-                    href={guide.href}
-                    className="hover:text-accent-text underline underline-offset-4"
-                  >
-                    {guide.title}
-                  </a>
-                </h3>
-                <p className="website-body text-muted">{guide.description}</p>
-              </article>
-            ))}
-          </div>
-        </Section>
-      )}
+      <StartPaths />
+
+      {researchGuides.length > 0 && <ResearchGuides guides={researchGuides} />}
 
       <BlogCta
         title="Put the method into practice."
-        body="Explore how CiteLadder brings answer observations, source analysis and website findings into your team’s workflow."
+        body="See how CiteLadder brings answer observations, source analysis and website findings into one workflow."
         secondary={{ href: '/compare', label: 'Compare AI visibility tools' }}
       />
     </>
   );
 }
 
+function AuthorName({ post }: Readonly<{ post: BlogPost }>) {
+  if (!post.author) return null;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="cp-meta-strong">{post.author}</span>
+      {post.authorUrl ? (
+        <a
+          href={post.authorUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`${post.author} on LinkedIn`}
+          className="text-muted hover:text-accent-text focus-ring inline-flex rounded-xs"
+        >
+          <LinkedInMark />
+        </a>
+      ) : null}
+    </span>
+  );
+}
+
+function PostHeader({ post }: Readonly<{ post: BlogPost }>) {
+  const updated = post.dateModified && post.dateModified !== post.date ? post.dateModified : null;
+  const hasByline = Boolean(post.author || post.date || post.readTime);
+  return (
+    <header className="cp-article-head">
+      <nav aria-label="Breadcrumb" className="cp-crumbs">
+        <ol>
+          <li>
+            <a href="/" className="focus-ring rounded-xs">
+              Home
+            </a>
+          </li>
+          <li>
+            <a href="/blog" className="focus-ring rounded-xs">
+              Blog
+            </a>
+          </li>
+        </ol>
+      </nav>
+      <h1 className="website-page-title">{post.title}</h1>
+      <p className="website-lead text-muted max-w-[62ch]">{post.excerpt}</p>
+      {post.tags.length > 0 && (
+        <ul className="flex flex-wrap gap-2" aria-label="Topics">
+          {post.tags.map((tag) => (
+            <li key={tag} className="cp-chip">
+              {tag}
+            </li>
+          ))}
+        </ul>
+      )}
+      {hasByline && (
+        <p className="cp-meta cp-byline">
+          {post.author && <AuthorName post={post} />}
+          {post.date && (
+            <span>
+              Published <time dateTime={post.date}>{formatBlogDate(post.date)}</time>
+            </span>
+          )}
+          {updated && (
+            <span>
+              Updated <time dateTime={updated}>{formatBlogDate(updated)}</time>
+            </span>
+          )}
+          {post.readTime && <span>{post.readTime}</span>}
+        </p>
+      )}
+      {post.editorialNote && <p className="website-label max-w-[68ch]">{post.editorialNote}</p>}
+    </header>
+  );
+}
+
 /**
- * The companion rail beside a post: contents, then the byline.
+ * The companion rail: contents, then the author. Sticky beside the article
+ * from `lg` up; below that the contents sit above the article and the author
+ * block is dropped, because the byline already names them.
  *
- * It earns the width the prose deliberately does not take. Sticky from `lg`
- * up, where there is a second column to be sticky in; below that it is a
- * plain block above the article, so a phone still reads top to bottom.
- *
- * A post with no headings gets no contents list rather than an empty box —
- * short guides are a real case and a lone "Contents" label helps nobody.
+ * A post with no headings gets no contents list rather than an empty box.
  */
 function PostAside({ post }: Readonly<{ post: BlogPost }>) {
-  const headings = post.body.filter(
-    (block): block is { type: 'heading'; text: string } => block.type === 'heading',
-  );
-
+  const headings = postHeadings(post);
   return (
-    <aside className="lg:sticky lg:top-24 lg:self-start">
+    <aside>
       {headings.length > 0 && (
-        <nav aria-label="On this page">
-          <p className="website-eyebrow text-muted mb-3">Contents</p>
-          <ol className="grid gap-2">
+        <nav aria-label="On this page" className="cp-toc">
+          <p className="website-label">On this page</p>
+          <ol>
             {withOccurrenceKeys(headings, (block) => block.text).map(({ key, value }) => (
               <li key={key}>
-                <a
-                  href={`#${headingId(value.text)}`}
-                  className="text-muted hover:text-foreground text-sm transition-colors"
-                >
+                <a href={`#${headingId(value.text)}`} className="focus-ring">
                   {value.text}
                 </a>
               </li>
@@ -274,116 +292,87 @@ function PostAside({ post }: Readonly<{ post: BlogPost }>) {
           </ol>
         </nav>
       )}
-
       {post.author && (
-        <div className="border-border-subtle mt-6 border-t pt-6 lg:mt-8 lg:pt-8">
-          <p className="website-eyebrow text-muted mb-3">Written by</p>
-          <p className="website-body text-foreground flex items-center gap-2 font-medium">
-            {post.author}
-            {post.authorUrl ? (
-              <a
-                href={post.authorUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${post.author} on LinkedIn`}
-                className="text-muted hover:text-accent-text inline-flex"
-              >
-                <LinkedInMark />
-              </a>
-            ) : null}
+        <div className="cp-author">
+          <p className="website-label">Written by</p>
+          <p className="website-body">
+            <AuthorName post={post} />
           </p>
-          {post.authorRole && (
-            <Meta as="p" className="mt-1.5">
-              {post.authorRole}
-            </Meta>
-          )}
+          {post.authorRole && <p className="website-label">{post.authorRole}</p>}
         </div>
       )}
     </aside>
   );
 }
 
-function ArticleLinks({ post }: Readonly<{ post: BlogPost }>) {
-  const postIndex = POSTS.findIndex((candidate) => candidate.slug === post.slug);
-  const previous = postIndex > 0 ? POSTS[postIndex - 1] : undefined;
-  const next = postIndex >= 0 ? POSTS[postIndex + 1] : undefined;
+function Sources({ post }: Readonly<{ post: BlogPost }>) {
+  if (!post.sources.length) return null;
+  return (
+    <section aria-labelledby="article-sources" className="grid gap-4">
+      <h2 id="article-sources" className="website-feature-heading">
+        Sources
+      </h2>
+      <ol className="cp-sources">
+        {post.sources.map((source) => (
+          <li key={source.id}>
+            <a href={source.url} target="_blank" rel="noreferrer">
+              {source.title}
+            </a>{' '}
+            — {source.publisher}
+            {source.publishedDate ? ` (${formatBlogDate(source.publishedDate)})` : null}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function RelatedReading({ post }: Readonly<{ post: BlogPost }>) {
   const related = post.relatedSlugs
     .map((slug) => POSTS.find((candidate) => candidate.slug === slug))
     .filter((candidate): candidate is BlogPost => Boolean(candidate));
-
+  if (!related.length) return null;
   return (
-    <div className="border-border-subtle mt-10 border-t pt-8">
-      {post.sources.length ? (
-        <section aria-labelledby="article-sources">
-          <h2 id="article-sources" className="website-feature-heading text-foreground">
-            Sources
-          </h2>
-          <ol className="website-body text-muted mt-4 grid list-decimal gap-3 pl-5">
-            {post.sources.map((source) => (
-              <li key={source.id}>
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent-text decoration-accent-border underline underline-offset-4 hover:decoration-current"
-                >
-                  {source.title}
-                </a>{' '}
-                — {source.publisher}
-                {source.publishedDate ? ` (${formatBlogDate(source.publishedDate)})` : null}
-              </li>
-            ))}
-          </ol>
-        </section>
-      ) : null}
-
-      {related.length ? (
-        <section aria-labelledby="related-reading" className="mt-10">
-          <h2 id="related-reading" className="website-feature-heading text-foreground">
-            Related reading
-          </h2>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {related.map((relatedPost) => (
-              <li key={relatedPost.slug}>
-                <a
-                  href={`/blog/${relatedPost.slug}`}
-                  className="border-border-subtle bg-panel hover:border-accent-border text-foreground focus-ring block rounded-[var(--radius-control)] border p-4 text-sm font-medium transition-colors"
-                >
-                  {relatedPost.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {(previous || next) && (
-        <nav aria-label="Previous and next articles" className="mt-10 grid gap-4 sm:grid-cols-2">
-          {previous ? (
-            <a
-              href={`/blog/${previous.slug}`}
-              className="border-border-subtle hover:border-accent-border focus-ring rounded-[var(--radius-control)] border p-4 transition-colors"
-            >
-              <span className="website-label text-muted">Previous</span>
-              <span className="text-foreground mt-1 block text-sm font-medium">
-                {previous.title}
-              </span>
+    <section aria-labelledby="related-reading" className="grid gap-5">
+      <h2 id="related-reading" className="website-feature-heading">
+        Related reading
+      </h2>
+      <ul className="grid gap-4 sm:grid-cols-2">
+        {related.map((relatedPost) => (
+          <li key={relatedPost.slug}>
+            <a href={`/blog/${relatedPost.slug}`} className="mk-related-card focus-ring">
+              {relatedPost.tags[0] && <span className="cp-chip mb-2">{relatedPost.tags[0]}</span>}
+              <span className="cp-link-title pr-6">{relatedPost.title}</span>
+              <span className="cp-link-desc line-clamp-3">{relatedPost.excerpt}</span>
+              <ArrowRight aria-hidden className="mk-related-arrow size-4" />
             </a>
-          ) : (
-            <span />
-          )}
-          {next ? (
-            <a
-              href={`/blog/${next.slug}`}
-              className="border-border-subtle hover:border-accent-border focus-ring rounded-[var(--radius-control)] border p-4 text-right transition-colors"
-            >
-              <span className="website-label text-muted">Next</span>
-              <span className="text-foreground mt-1 block text-sm font-medium">{next.title}</span>
-            </a>
-          ) : null}
-        </nav>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Pager({ post }: Readonly<{ post: BlogPost }>) {
+  const postIndex = POSTS.findIndex((candidate) => candidate.slug === post.slug);
+  const previous = postIndex > 0 ? POSTS[postIndex - 1] : undefined;
+  const next = postIndex >= 0 ? POSTS[postIndex + 1] : undefined;
+  if (!previous && !next) return null;
+  return (
+    <nav aria-label="Previous and next articles" className="cp-pager">
+      {previous && (
+        <a href={`/blog/${previous.slug}`} className="focus-ring">
+          <span className="website-label">Previous</span>
+          <span className="cp-link-title">{previous.title}</span>
+        </a>
       )}
-    </div>
+      {next && (
+        <a href={`/blog/${next.slug}`} className="cp-pager-next focus-ring">
+          <span className="website-label">Next</span>
+          <span className="cp-link-title">{next.title}</span>
+        </a>
+      )}
+    </nav>
   );
 }
 
@@ -397,44 +386,22 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
           keywords: post.tags,
         }}
       />
-      <header className="border-border-subtle border-b pt-16 pb-8 md:pb-10">
-        <Container>
-          <Reveal className="mx-auto w-full max-w-4xl text-center lg:max-w-5xl">
-            <a
-              href="/blog"
-              className="text-muted hover:text-foreground mx-auto mb-5 flex w-fit items-center gap-2 text-sm font-medium transition-colors"
-            >
-              <ArrowLeft className="size-4" aria-hidden />
-              All guides
-            </a>
-            <TagRow tags={post.tags} className="justify-center" />
-            <h1 className="website-page-title origin-centre text-foreground mx-auto mt-4 max-w-4xl text-balance">
-              {post.title}
-            </h1>
-            <PostByline
-              post={post}
-              linkedin
-              className="border-border-subtle mt-6 justify-center border-t pt-5"
-            />
-          </Reveal>
-        </Container>
-      </header>
-
       <Container>
-        <div className="grid w-full gap-10 py-8 md:py-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-14">
-          <PostAside post={post} />
-          <article aria-label="Post content" className="min-w-0">
-            <p className="website-body-lg bg-accent-soft text-foreground mb-6 rounded-[var(--radius-card)] px-5 py-4 font-medium">
-              {post.excerpt}
-            </p>
-            {post.editorialNote && (
-              <p className="website-label text-muted mb-6">{post.editorialNote}</p>
-            )}
-            {withOccurrenceKeys(post.body, blockIdentity).map(({ key, value }) => (
-              <PostBlock key={key} block={value} sources={post.sources} />
-            ))}
-            <ArticleLinks post={post} />
-          </article>
+        <div className="cp-article">
+          <PostHeader post={post} />
+          <div className="cp-article-grid">
+            <PostAside post={post} />
+            <article aria-label="Post content" className="cp-prose">
+              {withOccurrenceKeys(post.body, blockIdentity).map(({ key, value }) => (
+                <PostBlock key={key} block={value} sources={post.sources} />
+              ))}
+              <div className="cp-article-end">
+                <Sources post={post} />
+                <RelatedReading post={post} />
+                <Pager post={post} />
+              </div>
+            </article>
+          </div>
         </div>
       </Container>
 

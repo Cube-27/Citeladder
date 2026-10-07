@@ -1,19 +1,19 @@
-import { Plus } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 import { FAQ_GROUPS, type FaqGroup } from '@/lib/marketing-content/faq';
 
-import { Meta } from '../primitives/label';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Linkify } from '../primitives/linkify';
-import { Section } from '../primitives/section';
+import { Section, SectionHeader } from '../primitives/section';
 
 /**
- * FAQ body (`/faq`) — a sticky group rail beside the four question groups.
+ * FAQ body (`/faq`) — a sticky group index beside the question groups.
  *
- * The accordion is native <details>/<summary> on purpose: it keeps the page a
- * sync RSC with zero client JS, and it stays keyboard- and search-accessible
- * without any of the ARIA a hand-rolled accordion would need. The sunken tone
- * matches the page hero's fill, so the opener and the body read as one plane
- * rather than two stacked backgrounds.
+ * The accordion is native <details>/<summary> (the shared `mk-faq-list`
+ * pattern) on purpose: it keeps the page a sync server render with zero client
+ * JS, and it stays keyboard- and search-accessible without any of the ARIA a
+ * hand-rolled accordion would need. The FAQPage JSON-LD is built from the
+ * same `FAQ_GROUPS` in faq.astro.
  */
 const GROUP_ANCHORS: Record<string, string> = {
   Platform: 'faq-platform',
@@ -45,61 +45,82 @@ function groupAnchor(group: FaqGroup): string {
 
 export function FaqGroups() {
   return (
-    <Section tone="sunken" className="pb-30">
-      <div className="grid gap-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16">
-        <nav aria-label="FAQ groups" className="lg:sticky lg:top-28 lg:self-start">
-          <div className="grid gap-2">
+    <Section rhythm="tight" className="pt-0">
+      <div className="cm-faq">
+        <nav aria-label="FAQ groups" className="cm-faq-index">
+          <ul>
             {FAQ_GROUPS.map((group) => (
-              <a
-                key={group.heading}
-                href={`#${groupAnchor(group)}`}
-                className="text-muted hover:bg-panel hover:text-foreground flex items-center justify-between gap-4 rounded-[var(--radius-control)] px-4 py-3 text-sm transition-colors duration-200"
-              >
-                {group.heading}
-                <Meta>{group.items.length}</Meta>
-              </a>
+              <li key={group.heading}>
+                <a href={`#${groupAnchor(group)}`}>
+                  <span>{group.heading}</span>
+                  <span className="cm-faq-count">{group.items.length}</span>
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </nav>
 
-        <div className="grid gap-12">
+        <div className="cm-faq-groups">
           {FAQ_GROUPS.map((group) => (
-            <section key={group.heading} id={groupAnchor(group)} aria-label={group.heading}>
-              <div className="border-border-subtle mb-3 flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1 border-b pb-5">
-                <h2 className="website-section-heading text-foreground">{group.heading}</h2>
-                <Meta>{group.items.length} answers</Meta>
+            <section
+              key={group.heading}
+              id={groupAnchor(group)}
+              aria-labelledby={`${groupAnchor(group)}-title`}
+              className="cm-faq-group"
+            >
+              <h2
+                id={`${groupAnchor(group)}-title`}
+                className="website-feature-heading text-foreground"
+              >
+                {group.heading}
+              </h2>
+              <div className="mk-faq-list">
+                {group.items.map((item) => (
+                  <details key={item.q} name="citeladder-faq">
+                    <summary>
+                      <span className="text-balance">{item.q}</span>
+                      <ChevronDown aria-hidden className="size-4" />
+                    </summary>
+                    <p className="website-body-lg text-muted">
+                      <Linkify text={item.a} />
+                      {item.links?.map((link) => (
+                        <span key={link.href}>
+                          {' '}
+                          <a
+                            href={link.href}
+                            className="text-accent-text underline underline-offset-2"
+                          >
+                            {link.label}
+                          </a>
+                        </span>
+                      ))}
+                    </p>
+                  </details>
+                ))}
               </div>
-              {group.items.map((item) => (
-                <details
-                  key={item.q}
-                  name="citeladder-faq"
-                  className="border-border-subtle group open:bg-panel/40 -mx-3 rounded-[var(--radius-control)] border-b px-3 transition-colors duration-200"
-                >
-                  <summary className="text-foreground hover:text-accent-text flex cursor-pointer list-none items-center justify-between gap-8 py-5 text-base font-medium transition-colors [&::-webkit-details-marker]:hidden">
-                    <span className="text-balance">{item.q}</span>
-                    <Plus
-                      aria-hidden
-                      className="text-muted size-4 shrink-0 transition-transform duration-300 group-open:rotate-45"
-                    />
-                  </summary>
-                  <p className="website-body text-muted max-w-[64ch] pb-6">
-                    <Linkify text={item.a} />
-                    {item.links?.map((link) => (
-                      <span key={link.href}>
-                        {' '}
-                        <a
-                          href={link.href}
-                          className="text-accent-text underline underline-offset-2"
-                        >
-                          {link.label}
-                        </a>
-                      </span>
-                    ))}
-                  </p>
-                </details>
-              ))}
             </section>
           ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/** Closing band for questions the page does not answer. */
+export function FaqCta() {
+  return (
+    <Section className="marketing-closing-band" aria-label="Ask us directly">
+      <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
+        <SectionHeader
+          title="Still have a question?"
+          lead="Ask us directly, or see the product on your own category."
+          align="center"
+        />
+        <div className="flex flex-wrap justify-center gap-3">
+          <DemoButtonLink size="marketing">Book a demo</DemoButtonLink>
+          <ButtonLink href="/pricing" variant="soft" size="marketing">
+            See pricing
+          </ButtonLink>
         </div>
       </div>
     </Section>

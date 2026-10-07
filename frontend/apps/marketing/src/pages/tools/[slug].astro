@@ -3,6 +3,7 @@ import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { Section } from '@/components/marketing/primitives/section';
 import { FREE_TOOLS } from '@/lib/marketing-content/tools';
+import { ToolNotes } from '@/components/marketing/tools/tools-index';
 import { CrawlerChecker, RobotsGenerator } from '@/components/marketing/tools/robots-tools';
 import { MetaChecker, StructuredDataBuilder } from '@/components/marketing/tools/markup-tools';
 import { SitemapComparison } from '@/components/marketing/tools/sitemap-tool';
@@ -16,11 +17,11 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
 ---
 <MarketingLayout title={`Free ${tool.title} | CiteLadder`} description={tool.description} canonical={`/tools/${tool.slug}`}>
   <main id="main">
-    <PageHero eyebrow="Free tools · No signup" title={tool.title} lead={tool.description} />
-    <Section rhythm="tight">
-      <a href="/tools" class="website-body text-accent-text underline underline-offset-2">← All free tools</a>
-      <p class="website-body text-muted">Your input is processed in this browser. Text and files are not uploaded or saved by this tool. Use up to 200,000 characters per text area.</p>
-      <noscript><p>Enable JavaScript to run this browser-based tool. No account is required.</p></noscript>
+    <PageHero title={tool.title} lead={tool.description} breadcrumb={[{ label: 'Free tools', href: '/tools' }, { label: tool.title }]}>
+      <p class="cp-privacy">Your input is processed in this browser. Text and files are not uploaded or saved by this tool. Use up to 200,000 characters per text area.</p>
+    </PageHero>
+    <Section tone="soft" rhythm="tight" aria-label={tool.title}>
+      <noscript><p class="website-body">Enable JavaScript to run this browser-based tool. No account is required.</p></noscript>
       {tool.slug === 'ai-crawler-checker' && <CrawlerChecker bots={bots} client:load />}
       {tool.slug === 'robots-txt-generator' && <RobotsGenerator bots={bots} client:load />}
       {tool.slug === 'meta-directive-checker' && <MetaChecker client:load />}
@@ -28,13 +29,6 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
       {tool.slug === 'sitemap-comparison' && <SitemapComparison client:load />}
       {tool.slug === 'social-preview' && <SocialPreview client:load />}
     </Section>
-    <Section rhythm="tight" tone="sunken">
-      <h2 class="website-feature-heading">What this tool can tell you</h2>
-      <p class="website-body text-muted max-w-3xl">{tool.limitation}</p>
-      <p class="website-body">Need evidence across your website? Use <a href="/platform/site-health" class="text-accent-text underline underline-offset-2">Site Health</a> to inspect captured page evidence before choosing a correction.</p>
-      <nav aria-label="Related tools" class="website-body flex flex-wrap gap-x-6 gap-y-3">
-        {FREE_TOOLS.filter((item) => item.slug !== tool.slug).map((item) => <a class="text-accent-text underline underline-offset-2" href={`/tools/${item.slug}`}>{item.title}</a>)}
-      </nav>
-    </Section>
+    <ToolNotes slug={tool.slug} />
   </main>
 </MarketingLayout>

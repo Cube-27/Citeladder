@@ -1,269 +1,380 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Check } from 'lucide-react';
+
+import { appHref } from '@/lib/config/app-link';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
+import { cn } from '@/lib/utils';
+
+import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { CapabilityGrid, FaqList } from '../pages/platform';
 import {
-  ArrowRight,
-  ArrowUpRight,
-  ChevronDown,
-  FileText,
-  Link2,
-  Search,
-  ShieldCheck,
-} from 'lucide-react';
+  AgentView,
+  AnswerView,
+  AppShellFrame,
+  DemandView,
+  ProductShot,
+  SiteHealthView,
+  SourcesView,
+  VisibilityView,
+  type ShellSection,
+} from '../scenes/product-views';
 
-import { EngineLogo } from '../primitives/engine-logo';
-import { DemoButtonLink } from '../primitives/button';
-import { DEMO_CTA } from '@/lib/marketing-content/nav';
-import { PlatformActions, PlatformCards } from '../pages/platform';
-import { PlatformPreview } from '../scenes/platform-preview';
-import { TRIAL_NOTE } from '@/lib/marketing-content/platform-pages';
+import { FAQS } from './landing-data';
+import { Integrations, Teams, TextLink, Trust } from './landing-sections';
 
-import { FAQS, INTEGRATIONS, TEAMS, WORKFLOW_STEPS, type ModuleId } from './landing-data';
-import { Evidence } from './landing-evidence';
-import { HeroPreview, PlatformExplorer } from './landing-previews';
+/* ── Shared bits ────────────────────────────────────────────────────────── */
 
-function DemoLink() {
+function PrimaryActions({ size = 'marketing' }: Readonly<{ size?: 'lg' | 'marketing' }>) {
+  const signup = selfServeSignupOpen();
   return (
-    <DemoButtonLink size="marketing" className="cl-cta">
-      {DEMO_CTA} <ArrowRight size={18} aria-hidden />
-    </DemoButtonLink>
+    <div className="lp-actions">
+      {signup ? (
+        <ButtonLink href={appHref('/register')} size={size}>
+          Start free trial
+        </ButtonLink>
+      ) : null}
+      <DemoButtonLink variant={signup ? 'soft' : 'primary'} size={size} />
+    </div>
+  );
+}
+
+/* ── Hero and product tour ──────────────────────────────────────────────── */
+
+const TOUR = [
+  {
+    id: 'visibility',
+    label: 'Visibility',
+    section: 'AI Visibility',
+    title: 'AI Visibility',
+    subtitle: 'Brand performance across 42 tracked buyer prompts',
+    View: VisibilityView,
+  },
+  {
+    id: 'citations',
+    label: 'Citations',
+    section: 'Sources',
+    title: 'Sources',
+    subtitle: 'Domains and pages cited in completed answers',
+    View: SourcesView,
+  },
+  {
+    id: 'health',
+    label: 'Site Health',
+    section: 'Site Health',
+    title: 'Site Health',
+    subtitle: 'Latest crawl of zernovelle.example',
+    View: SiteHealthView,
+  },
+  {
+    id: 'agent',
+    label: 'Agent',
+    section: 'Agent',
+    title: 'Agent',
+    subtitle: 'Technical fix brief · attached to an Action',
+    View: AgentView,
+  },
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  section: ShellSection;
+  title: string;
+  subtitle: string;
+  View: () => ReactNode;
+}[];
+
+type TourId = (typeof TOUR)[number]['id'];
+
+function HeroTour() {
+  const [active, setActive] = useState<TourId>('visibility');
+  const step = TOUR.find((item) => item.id === active) ?? TOUR[0];
+  return (
+    <div className="lp-tour">
+      <div className="lp-tour-tabs" role="tablist" aria-label="Product tour">
+        {TOUR.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            id={`tour-tab-${item.id}`}
+            aria-selected={item.id === active}
+            aria-controls="tour-panel"
+            tabIndex={item.id === active ? 0 : -1}
+            onClick={() => setActive(item.id)}
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+              const index = TOUR.findIndex((entry) => entry.id === active);
+              const next =
+                TOUR[(index + (event.key === 'ArrowRight' ? 1 : TOUR.length - 1)) % TOUR.length];
+              setActive(next.id);
+              document.getElementById(`tour-tab-${next.id}`)?.focus();
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div className="lp-hero-stage product-stage">
+        <div
+          id="tour-panel"
+          role="tabpanel"
+          aria-labelledby={`tour-tab-${step.id}`}
+          className="lp-hero-frame"
+        >
+          <AppShellFrame active={step.section} title={step.title} subtitle={step.subtitle}>
+            <step.View />
+          </AppShellFrame>
+        </div>
+      </div>
+      <p className="product-caption text-center">
+        Illustrative example with synthetic data. Engine availability depends on your plan.
+      </p>
+    </div>
   );
 }
 
 function Hero() {
   return (
-    <header className="cl-hero">
-      <div className="cl-wrap">
-        <div className="cl-hero-copy">
-          <span className="cl-overline">
-            AI visibility, website intelligence and content workflows
-          </span>
-          <h1>Understand your AI visibility. Know what to improve next.</h1>
-          <p>
-            CiteLadder connects the answers that mention your brand with the sources, website
-            findings and search data behind your next decision. Track visibility, investigate gaps
-            and prepare improvements your team can review.
-          </p>
-          <div className="cl-hero-actions" data-cta-placement="hero">
-            <PlatformActions path="/" />
-          </div>
-          <p className="cl-hero-note">{TRIAL_NOTE}</p>
-          <p className="cl-hero-note">
-            AI Visibility · Citations · Site Health · Search Intelligence · AI Referrals · Agent
-            &amp; MCP
-          </p>
-        </div>
-        <div className="cl-hero-stage marketing-snapshot-grain">
-          <HeroPreview />
-        </div>
+    <header className="lp-hero">
+      <div className="lp-wrap lp-hero-copy">
+        <h1 className="website-hero-display">Know what AI tells your buyers about you.</h1>
+        <p className="website-lead lp-hero-lead">
+          CiteLadder tracks how ChatGPT, Gemini, Claude and Google AI Overviews answer the questions
+          your buyers ask — which brands they recommend, which pages they cite — and shows what to
+          fix to earn a place in the answer.
+        </p>
+        <PrimaryActions />
+        {selfServeSignupOpen() && (
+          <p className="lp-hero-note">7-day free trial on ChatGPT answers. Trial limits apply.</p>
+        )}
+      </div>
+      <div className="lp-wrap lp-wrap-wide">
+        <HeroTour />
       </div>
     </header>
   );
 }
 
+const ENGINES: readonly [OfficialEngineKey, string][] = [
+  ['openai', 'OpenAI API'],
+  ['gemini', 'Gemini API'],
+  ['claude', 'Claude API'],
+  ['google', 'Google AI Overviews'],
+];
+
 function EngineStrip() {
   return (
-    <div className="cl-engine-strip">
-      <div className="cl-wrap cl-engine-inner">
-        <p>
-          AI ANSWER
-          <br />
-          MONITORING
-        </p>
-        <section className="cl-engines" aria-label="Monitored answer engines">
-          <span>
-            <EngineLogo engine="openai" className="cl-engine-icon" />
-            OpenAI API
-          </span>
-          <span>
-            <EngineLogo engine="gemini" className="cl-engine-icon" />
-            Gemini API
-          </span>
-          <span>
-            <EngineLogo engine="claude" className="cl-engine-icon" />
-            Claude API
-          </span>
-          <span>
-            <EngineLogo engine="google" className="cl-engine-icon" />
-            Google AI Overviews
-          </span>
-        </section>
+    <section className="lp-engines" aria-label="Monitored answer engines">
+      <div className="lp-wrap lp-engines-inner">
+        <p className="lp-engines-label">Answers collected from</p>
+        <ul>
+          {ENGINES.map(([engine, name]) => (
+            <li key={engine}>
+              <EngineLogo engine={engine} className="size-5" />
+              {name}
+            </li>
+          ))}
+        </ul>
       </div>
+    </section>
+  );
+}
+
+/* ── Statement and the loop ─────────────────────────────────────────────── */
+
+function Statement() {
+  return (
+    <section className="lp-section lp-statement">
+      <div className="lp-wrap">
+        <p className="lp-statement-text">
+          Buyers ask AI before they ask you.{' '}
+          <span>
+            The answer names a few brands, cites a few pages and moves on. CiteLadder shows whether
+            you are in it, why, and the next change most likely to put you there.
+          </span>
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function BentoTile({
+  title,
+  body,
+  href,
+  className,
+  children,
+}: Readonly<{
+  title: string;
+  body: string;
+  href: string;
+  className?: string;
+  children: ReactNode;
+}>) {
+  return (
+    <a href={href} className={cn('lp-tile', className)}>
+      <div className="lp-tile-copy">
+        <h3 className="website-feature-heading">{title}</h3>
+        <p className="website-body text-muted">{body}</p>
+      </div>
+      <div className="lp-tile-visual app-type-scale" aria-hidden>
+        {children}
+      </div>
+    </a>
+  );
+}
+
+function Loop() {
+  return (
+    <section className="lp-section" id="how-it-works">
+      <span id="see-it" className="lp-anchor" aria-hidden />
+      <div className="lp-wrap lp-stack">
+        <div className="lp-head">
+          <h2 className="website-section-heading">From an AI answer to the fix that moves it.</h2>
+          <p className="website-lead text-muted">
+            Measure the questions that matter, trace each result to its sources, and turn what you
+            find into reviewable work. Then measure again.
+          </p>
+        </div>
+        <div className="lp-bento">
+          <BentoTile
+            className="lp-tile-wide"
+            title="Track your share of the answer"
+            body="Brand mentions, position and competitors across the prompts your buyers actually ask."
+            href="/platform/ai-visibility"
+          >
+            <VisibilityView />
+          </BentoTile>
+          <BentoTile
+            title="See which pages get cited"
+            body="Every cited domain and URL, classified as owned, review, editorial, community or competitor."
+            href="/platform/citation-intelligence"
+          >
+            <SourcesView />
+          </BentoTile>
+          <BentoTile
+            title="Find what holds pages back"
+            body="Technical and answer-readiness checks per page, including which AI crawlers you allow."
+            href="/platform/site-health"
+          >
+            <SiteHealthView />
+          </BentoTile>
+          <BentoTile
+            className="lp-tile-wide"
+            title="Turn findings into work your team can ship"
+            body="The Agent drafts briefs, page edits and plans from your saved evidence. Nothing publishes without you."
+            href="/platform/agents"
+          >
+            <AgentView />
+          </BentoTile>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Deep dives ─────────────────────────────────────────────────────────── */
+
+function DeepDive({
+  title,
+  body,
+  points,
+  link,
+  reverse = false,
+  children,
+}: Readonly<{
+  title: string;
+  body: string;
+  points: readonly string[];
+  link: { href: string; label: string };
+  reverse?: boolean;
+  children: ReactNode;
+}>) {
+  return (
+    <div className={cn('mk-dive', reverse && 'mk-dive-reverse')}>
+      <div className="mk-dive-copy">
+        <h3 className="website-page-title mk-dive-title">{title}</h3>
+        <p className="website-body-lg text-muted">{body}</p>
+        <ul className="mk-checks">
+          {points.map((point) => (
+            <li key={point}>
+              <Check aria-hidden className="size-4" />
+              {point}
+            </li>
+          ))}
+        </ul>
+        <TextLink href={link.href}>{link.label}</TextLink>
+      </div>
+      {children}
     </div>
   );
 }
 
-function Intelligence() {
+function DeepDives() {
   return (
-    <section className="cl-section" id="why">
-      <div className="cl-wrap">
-        <div className="cl-section-head cl-section-head-wide">
-          <h2>More than another visibility chart</h2>
-          <p>
-            An AI answer is only one part of the picture. Your team also needs to know which sources
-            appeared, what your own pages communicate and which visits reached your website.
-            CiteLadder keeps those observations connected without treating them as the same metric.
-          </p>
-        </div>
-        <div className="space-y-8">
-          <h2 className="website-section-heading">
-            Discover what your team can measure, diagnose and improve
-          </h2>
-          <PlatformCards />
-        </div>
+    <section className="lp-section lp-soft" id="why">
+      <div className="lp-wrap lp-dives">
+        <DeepDive
+          title="Every number opens the answer behind it."
+          body="Click any metric and read the recorded answer: the engine, the prompt, the date, where your brand appeared and which sources it cited."
+          points={[
+            'Mentions, citations and referral visits stay separate signals',
+            'Answers are kept as recorded, never rewritten',
+            'Later audits compare like with like',
+          ]}
+          link={{ href: '/platform/citation-intelligence', label: 'Explore Citation Intelligence' }}
+        >
+          <ProductShot title="Answer record">
+            <AnswerView />
+          </ProductShot>
+        </DeepDive>
+        <DeepDive
+          reverse
+          title="Fix the site issues that keep you out of answers."
+          body="Crawl your site and get page-level findings with the evidence attached, from indexing and structured data to which AI crawlers your robots.txt lets in."
+          points={[
+            'Technical and answer-readiness checks per page',
+            'AI crawler permissions by purpose: search, training, user fetch',
+            'Coverage shown next to every score',
+          ]}
+          link={{ href: '/platform/site-health', label: 'Explore Site Health' }}
+        >
+          <ProductShot title="Site Health">
+            <SiteHealthView />
+          </ProductShot>
+        </DeepDive>
+        <DeepDive
+          title="Bring in the search data you already trust."
+          body="Connect Search Console and GA4 to see the queries that reach your pages and the visits AI assistants send, then add keyword and backlink research when you need it."
+          points={[
+            'Striking-distance queries and CTR gaps from Search Console',
+            'AI referral sessions and landing pages from GA4',
+            'Optional DataForSEO research, priced before you confirm',
+          ]}
+          link={{ href: '/platform/demand-intelligence', label: 'Explore Demand Intelligence' }}
+        >
+          <ProductShot title="Search Demand">
+            <DemandView />
+          </ProductShot>
+        </DeepDive>
       </div>
     </section>
   );
 }
 
-function ConnectedEvidence() {
-  return (
-    <section className="cl-section">
-      <div className="cl-wrap space-y-12">
-        <div className="cl-section-head cl-section-head-wide">
-          <h2>Keep different signals distinct</h2>
-          <p>
-            <strong>A mention</strong> shows that a brand appeared in a collected answer.{' '}
-            <strong>A citation</strong> shows a source reference.{' '}
-            <strong>A referral session</strong> shows an identifiable visit reported by connected
-            analytics. These observations answer different questions; none alone proves a sale or
-            explains why an engine selected a source.
-          </p>
-        </div>
-        <PlatformPreview path="/platform/site-health" />
-        <PlatformPreview path="/platform/agents" />
-      </div>
-    </section>
-  );
-}
+/* ── Platform, integrations, teams, trust ───────────────────────────────── */
 
-function Workflow() {
+function PlatformGrid() {
   return (
-    <section className="cl-section cl-workflow" id="how-it-works">
-      <div className="cl-wrap">
-        <div className="cl-section-head">
-          <h2>From an observation to a reviewable improvement</h2>
+    <section className="lp-section" id="platform">
+      <div className="lp-wrap lp-stack">
+        <div className="lp-head lp-head-split">
+          <h2 className="website-section-heading">Everything in one project.</h2>
+          <TextLink href="/platform">See the whole platform</TextLink>
         </div>
-        <ol className="cl-steps">
-          {WORKFLOW_STEPS.map(([number, title, body]) => (
-            <li key={number}>
-              <span className="cl-step-number">{number}</span>
-              <div className="cl-step-copy">
-                <h3>{title}</h3>
-                <p>{body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-function Integrations() {
-  return (
-    <section className="cl-section cl-integrations" id="integrations">
-      <div className="cl-wrap">
-        <div className="cl-section-head">
-          <h2>Start small. Connect more evidence when it helps.</h2>
-          <p>
-            Begin with the AI questions you need to understand. Add website diagnostics, first-party
-            search data and other available connections as your work requires them. Explore advanced
-            content and Agent workflows in a demo.
-          </p>
-        </div>
-        <div className="cl-integration-grid">
-          {INTEGRATIONS.map(([icon, title, body]) => (
-            <article key={title}>
-              <span className="cl-integration-icon" aria-hidden>
-                {icon}
-              </span>
-              <div>
-                <h3>{title}</h3>
-                <p>{body}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-        <a className="cl-text-link" href="/platform/integrations">
-          Explore integrations <ArrowUpRight size={16} aria-hidden />
-        </a>
-      </div>
-    </section>
-  );
-}
-
-function Teams({ selectModule }: Readonly<{ selectModule: (module: ModuleId) => void }>) {
-  return (
-    <section className="cl-section cl-teams" id="teams">
-      <div className="cl-wrap">
-        <div className="cl-section-head">
-          <h2>Shared context across teams.</h2>
-          <p>
-            Distinct responsibilities supported by a common record of observations and findings.
-          </p>
-        </div>
-        <div className="cl-team-grid">
-          {TEAMS.map(([title, body, action, module]) => (
-            <article key={title}>
-              <h3>{title}</h3>
-              <p>{body}</p>
-              <a className="cl-text-link" href="/#see-it" onClick={() => selectModule(module)}>
-                {action} <ArrowRight size={16} aria-hidden />
-              </a>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Enterprise() {
-  const items = [
-    [
-      ShieldCheck,
-      'Workspace isolation',
-      'Customer information scoped to the relevant workspace and project.',
-    ],
-    [
-      Search,
-      'Provider credential control',
-      'Encrypted provider secrets resolved for authorized execution.',
-    ],
-    [
-      FileText,
-      'Retained analysis records',
-      'Answers, source context and subsequent observations remain inspectable.',
-    ],
-    [
-      Link2,
-      'Implementation support',
-      'Onboarding, deployment and ongoing support scoped to the engagement.',
-    ],
-  ] as const;
-  return (
-    <section className="cl-section cl-enterprise" id="trust">
-      <div className="cl-wrap cl-enterprise-grid">
-        <div>
-          <h2>Project-level control. Source-level accountability.</h2>
-          <p>
-            Scoped access, provider credential controls and retained records support a governed AI
-            search workflow.
-          </p>
-          <DemoLink />
-        </div>
-        <div className="cl-governance">
-          {items.map(([Icon, title, body]) => (
-            <article key={title}>
-              <Icon size={22} aria-hidden />
-              <div>
-                <h3>{title}</h3>
-                <p>{body}</p>
-              </div>
-            </article>
-          ))}
-        </div>
+        <CapabilityGrid />
       </div>
     </section>
   );
@@ -271,25 +382,13 @@ function Enterprise() {
 
 function Faq() {
   return (
-    <section className="cl-section cl-faq" id="landing-faq">
-      <div className="cl-wrap cl-faq-grid">
-        <div>
-          <h2>Frequently asked questions.</h2>
-          <a className="cl-text-link" href="/faq">
-            All product questions <ArrowUpRight size={16} aria-hidden />
-          </a>
+    <section className="lp-section" id="landing-faq">
+      <div className="lp-wrap lp-faq">
+        <div className="lp-head">
+          <h2 className="website-section-heading">Questions, answered.</h2>
+          <TextLink href="/faq">All questions</TextLink>
         </div>
-        <div>
-          {FAQS.map(([question, answer]) => (
-            <details key={question}>
-              <summary>
-                {question}
-                <ChevronDown size={20} aria-hidden />
-              </summary>
-              <p>{answer}</p>
-            </details>
-          ))}
-        </div>
+        <FaqList faqs={FAQS} />
       </div>
     </section>
   );
@@ -297,37 +396,31 @@ function Faq() {
 
 function Closing() {
   return (
-    <section className="cl-section cl-closing" id="get-started">
-      <div className="cl-wrap cl-closing-grid">
-        <div>
-          <h2>See the product in the context of your business</h2>
-          <p>
-            Bring your website and a few questions your buyers ask. Explore how CiteLadder connects
-            visibility evidence with a practical next step.
-          </p>
-        </div>
-        <div className="cl-closing-actions">
-          <PlatformActions path="/" />
-        </div>
+    <section className="lp-section marketing-closing-band" id="get-started">
+      <div className="lp-wrap lp-closing">
+        <h2 className="website-section-heading">See what AI says about you today.</h2>
+        <p className="website-lead text-muted">
+          Add your site and a few questions your buyers ask. Get your first baseline, then decide
+          what to fix.
+        </p>
+        <PrimaryActions />
       </div>
     </section>
   );
 }
 
 export function LandingPage() {
-  const [module, setModule] = useState<ModuleId>('sources');
   return (
-    <div className="cl-landing">
+    <div className="lp">
       <Hero />
       <EngineStrip />
-      <Intelligence />
-      <Workflow />
-      <PlatformExplorer selected={module} selectModule={setModule} />
-      <ConnectedEvidence />
-      <Evidence />
+      <Statement />
+      <Loop />
+      <DeepDives />
+      <PlatformGrid />
       <Integrations />
-      <Teams selectModule={setModule} />
-      <Enterprise />
+      <Teams />
+      <Trust />
       <Faq />
       <Closing />
     </div>

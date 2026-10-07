@@ -8,6 +8,7 @@ type ComparisonSource = {
 export type Competitor = {
   slug: string;
   name: string;
+  /** The vendor's public positioning in one line, restated from the sourced `lead`. */
   tagline: string;
   lead: string;
   context: string;
@@ -24,6 +25,13 @@ const SOURCES_REVIEWED = '2026-10-02';
 
 export const COMPARISON_DISCLOSURE =
   'This comparison is written by CiteLadder. It summarizes public product information and provides evaluation questions. It is not an independent review or a promise that every feature is included in every plan.';
+
+/** CiteLadder's side of every comparison table; the same claims the leads make. */
+export const CITELADDER_POSITION = {
+  focus:
+    'Tracked AI answers, cited-source analysis and Site Health findings in one project workflow.',
+  when: 'Your team needs to inspect a recorded answer, follow its cited sources and review the relevant website findings.',
+} as const;
 
 export const COMPARISON_CHECKLIST = [
   {
@@ -57,7 +65,7 @@ export const COMPETITORS: readonly Competitor[] = [
     slug: 'profound',
     name: 'Profound',
     tagline:
-      'Explore a comparison with Profound’s broader AI marketing platform, including its monitoring and agent workflows.',
+      'A broad AI marketing platform: answer-engine insights, prompt intelligence, agent analytics and marketing agents.',
     lead: 'Profound presents a broad AI marketing platform with answer-engine insights, prompt intelligence, agent analytics and marketing agents. CiteLadder’s workflow brings AI visibility, citation analysis and website findings together.',
     context:
       'The useful comparison is the work your team needs to complete: monitoring a defined set of questions, investigating the supporting sources, or running a broader set of marketing workflows.',
@@ -81,7 +89,7 @@ export const COMPETITORS: readonly Competitor[] = [
     slug: 'otterly-ai',
     name: 'Otterly AI',
     tagline:
-      'Compare monitoring, citation investigation and the evaluation questions that matter for your prompt portfolio.',
+      'AI search monitoring and optimization: brand visibility, cited sources and website-related recommendations.',
     lead: 'Otterly AI presents an AI search monitoring and optimization workflow covering brand visibility, cited sources and website-related recommendations. CiteLadder connects tracked answer observations with source analysis and Site Health.',
     context:
       'Compare how each workflow supports the questions your team tracks and the investigation it needs to perform after a change appears.',
@@ -105,7 +113,7 @@ export const COMPETITORS: readonly Competitor[] = [
     slug: 'scrunch-ai',
     name: 'Scrunch',
     tagline:
-      'Consider AI visibility measurement alongside Scrunch’s monitoring, diagnostics and agent-delivery capabilities.',
+      'AI visibility monitoring, content diagnostics, bot observability and agent delivery through its Agent Experience Platform.',
     lead: 'Scrunch describes a platform spanning AI visibility monitoring, content diagnostics, bot observability and its Agent Experience Platform for agent delivery. CiteLadder combines answer observations, cited-source analysis and website findings.',
     context:
       'Treat monitoring, diagnostics and changes to content delivery as distinct requirements when evaluating the two products.',
@@ -129,7 +137,7 @@ export const COMPETITORS: readonly Competitor[] = [
     slug: 'peec-ai',
     name: 'Peec AI',
     tagline:
-      'Compare an AI search analytics workflow with CiteLadder’s visibility, source-analysis and website context.',
+      'AI search analytics for marketing teams, with visibility reporting and reporting/export integrations.',
     lead: 'Peec AI presents AI search analytics for marketing teams, with visibility reporting and reporting/export integrations. CiteLadder brings tracked AI answers, cited-source analysis and Site Health into a shared project workflow.',
     context:
       'Compare the reporting questions your team needs to answer and how easily it can move from an aggregate result to the underlying evidence.',

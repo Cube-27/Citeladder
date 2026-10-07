@@ -14,7 +14,6 @@ import { trackContactSubmitted } from '@/components/analytics/google-analytics';
 import { CONTACT_PAGE } from '@/lib/marketing-content/legal-billing';
 import { Linkify } from '../primitives/linkify';
 import { Section } from '../primitives/section';
-import { Eyebrow } from '../primitives/label';
 
 type FormState = 'idle' | 'sending' | 'success' | 'error' | 'rate-limited';
 type FormErrors = Partial<Record<'name' | 'email' | 'company' | 'message', string>>;
@@ -82,7 +81,7 @@ function ContactForm() {
         aria-live="polite"
         className="grid gap-4"
       >
-        <h2 id="contact-sent-title" className="website-section-heading">
+        <h2 id="contact-sent-title" className="website-feature-heading text-foreground">
           Message sent
         </h2>
         <p className="website-body text-muted">
@@ -177,37 +176,60 @@ function ContactForm() {
   );
 }
 
+/**
+ * What happens after a message is sent. These describe the reply process,
+ * not a response-time commitment.
+ */
+const NEXT_STEPS = [
+  {
+    title: 'Tell us what you need',
+    body: 'A few lines on your team, your category and what you want to measure is enough.',
+  },
+  {
+    title: 'We reply by email',
+    body: 'We get back to you at the work email you provide.',
+  },
+  {
+    title: 'We show you the product',
+    body: 'If a demo helps, we walk through your own prompts, competitors and sources.',
+  },
+] as const;
+
 export function ContactPage() {
   return (
     <main id="main">
-      <Section>
-        <div className="mx-auto grid w-full max-w-6xl items-start gap-12 lg:grid-cols-2 lg:gap-20">
-          <div className="min-w-0">
-            <header>
-              <Eyebrow>Contact</Eyebrow>
-              <h1 className="website-page-title mt-6 mb-6">Let&apos;s talk about CiteLadder</h1>
+      <Section className="cm-contact">
+        <div className="cm-contact-grid">
+          <div className="cm-contact-copy">
+            <header className="grid gap-5">
+              <h1 className="website-page-title text-foreground">Talk to the CiteLadder team.</h1>
               <p className="website-lead text-muted">
-                Have a question, want to see CiteLadder in action, or want to discuss how it could
-                fit your team? Send us a note and we&apos;ll get back to you.
-              </p>
-              <p className="website-body mt-6">
-                Prefer email?{' '}
-                <a
-                  href={`mailto:${CONTACT_EMAIL}`}
-                  className="text-accent-text underline underline-offset-2"
-                >
-                  {CONTACT_EMAIL}
-                </a>
+                Ask a question, book a demo or check whether CiteLadder fits your team.
               </p>
             </header>
-            <details className="border-border-subtle mt-8 border-t pt-6">
-              <summary className="website-label cursor-pointer">
-                Company, support and grievance details
-              </summary>
+            <div className="grid gap-5">
+              <h2 className="website-small-heading text-foreground">What happens next</h2>
+              <ol className="cm-steps">
+                {NEXT_STEPS.map((step) => (
+                  <li key={step.title}>
+                    <h3 className="website-small-heading text-foreground">{step.title}</h3>
+                    <p className="website-body text-muted">{step.body}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <p className="website-body text-muted">
+              Prefer email?{' '}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="mk-text-link">
+                {CONTACT_EMAIL}
+              </a>
+            </p>
+            <details className="cm-legal">
+              <summary className="website-label">Company, support and grievance details</summary>
               <div className="grid gap-6 pt-6">
                 {CONTACT_PAGE.sections.map((section) => (
                   <section key={section.id} id={section.id} className="grid gap-3">
-                    <h2 className="website-feature-heading">{section.title}</h2>
+                    <h2 className="website-small-heading text-foreground">{section.title}</h2>
                     {section.paragraphs?.map((paragraph) => (
                       <p key={paragraph} className="website-body text-muted">
                         <Linkify text={paragraph} />
@@ -218,7 +240,7 @@ export function ContactPage() {
               </div>
             </details>
           </div>
-          <div className="w-full max-w-xl min-w-0 lg:justify-self-end">
+          <div className="cm-contact-panel">
             <ContactForm />
             <noscript>
               <p className="website-body mt-6">

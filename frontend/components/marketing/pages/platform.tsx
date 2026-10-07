@@ -1,237 +1,361 @@
 import type { ReactNode } from 'react';
-import { Card } from '@/components/ui/card';
+import { ArrowRight, Check, ChevronDown } from 'lucide-react';
+
 import { appHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { PLATFORM_GROUPS, PLATFORM_OVERVIEW, platformLabel } from '@/lib/marketing-content/nav';
-import { TRIAL_NOTE, type PlatformPage } from '@/lib/marketing-content/platform-pages';
+import type {
+  PlatformCta,
+  PlatformPage,
+  PlatformVisual,
+} from '@/lib/marketing-content/platform-pages';
+import { cn } from '@/lib/utils';
+
+import { NavIcon, hasNavIcon } from '../chrome/nav-icons';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
-import { PlatformPreview } from '../scenes/platform-preview';
+import {
+  AcquisitionView,
+  ActionsView,
+  AgentView,
+  AnswerView,
+  CitedUrlView,
+  CommerceView,
+  DemandView,
+  IntegrationsView,
+  McpToolsView,
+  McpView,
+  PageEvidenceView,
+  PageReportView,
+  ProductShot,
+  PromptsView,
+  PropertyMappingView,
+  QueryPageView,
+  ReferralView,
+  RevisionsView,
+  SearchView,
+  ShelfSetupView,
+  SiteHealthView,
+  SkillsView,
+  SourcesView,
+  VisibilityView,
+} from '../scenes/product-views';
 
-const GUIDE_LABELS: Record<string, string> = {
-  '/ai-citation-tracking': 'AI citation tracking guide',
-  '/ai-search-share-of-voice': 'AI share of voice',
-  '/solutions#commerce': 'Ecommerce solutions',
+const VIEWS: Readonly<Record<PlatformVisual, () => ReactNode>> = {
+  visibility: VisibilityView,
+  answer: AnswerView,
+  sources: SourcesView,
+  'site-health': SiteHealthView,
+  referrals: ReferralView,
+  demand: DemandView,
+  search: SearchView,
+  agent: AgentView,
+  commerce: CommerceView,
+  mcp: McpView,
+  integrations: IntegrationsView,
+  actions: ActionsView,
+  prompts: PromptsView,
+  'cited-url': CitedUrlView,
+  'page-evidence': PageEvidenceView,
+  'page-report': PageReportView,
+  'query-page': QueryPageView,
+  acquisition: AcquisitionView,
+  revisions: RevisionsView,
+  skills: SkillsView,
+  'shelf-setup': ShelfSetupView,
+  'mcp-tools': McpToolsView,
+  'property-mapping': PropertyMappingView,
 };
 
-const SECONDARY_ACTIONS: Readonly<Record<string, { href: string; label: string }>> = {
-  '/platform/citation-intelligence': {
-    href: '/ai-citation-tracking',
-    label: 'Read the citation tracking guide',
-  },
-  '/platform/site-health': { href: '/platform/ai-visibility', label: 'Explore AI Visibility' },
-  '/platform/commerce-intelligence': {
-    href: '/platform/ai-visibility',
-    label: 'Explore AI Visibility',
-  },
-  '/platform/demand-intelligence': {
-    href: '/platform/search-intelligence',
-    label: 'Explore Search Intelligence',
-  },
-  '/platform/ai-referral-analytics': { href: '/contact', label: 'Discuss GA4 setup' },
-  '/platform/search-intelligence': { href: '/contact', label: 'Discuss setup' },
+const VIEW_TITLES: Readonly<Record<PlatformVisual, string>> = {
+  visibility: 'AI Visibility',
+  answer: 'Answer record',
+  sources: 'Sources',
+  'site-health': 'Site Health',
+  referrals: 'AI Traffic · Referrals',
+  demand: 'Search Demand',
+  search: 'Search Intelligence',
+  agent: 'Agent',
+  commerce: 'AI Shelf',
+  mcp: 'MCP client',
+  integrations: 'Integrations',
+  actions: 'Actions',
+  prompts: 'Prompts',
+  'cited-url': 'Sources · URL',
+  'page-evidence': 'Site Health · Page',
+  'page-report': 'Page report',
+  'query-page': 'Search Demand · Page',
+  acquisition: 'Search Intelligence · Review',
+  revisions: 'Agent · Output',
+  skills: 'Agent · New chat',
+  'shelf-setup': 'AI Shelf · Setup',
+  'mcp-tools': 'MCP · Tools',
+  'property-mapping': 'Integrations · Property',
 };
 
-const CLOSING_ACTIONS: Readonly<Record<string, { href: string; label: string }>> = {
-  '/platform/agents': {
-    href: '/platform/content-intelligence',
-    label: 'Explore Content Intelligence',
+/** Guides and solution anchors a product page may relate to. */
+const GUIDES: Readonly<Record<string, { title: string; desc: string }>> = {
+  '/ai-citation-tracking': {
+    title: 'AI citation tracking guide',
+    desc: 'How citation measurement works and how to read it.',
   },
-  '/platform/content-intelligence': { href: '/platform/agents', label: 'Explore the AI Agent' },
+  '/ai-search-share-of-voice': {
+    title: 'AI share of voice',
+    desc: 'Compare brand presence across AI answers.',
+  },
+  '/solutions#commerce': {
+    title: 'Ecommerce solutions',
+    desc: 'Product and category answer evidence.',
+  },
 };
 
+/** The page's primary and secondary actions, chosen by what a visitor can do today. */
 export function PlatformActions({
-  path,
-  closing = false,
-}: Readonly<{ path: string; closing?: boolean }>) {
-  const trial = ['/', '/platform', '/platform/ai-visibility'].includes(path);
-  const showTrial = trial && selfServeSignupOpen();
-  const mcp = path === '/platform/mcp';
-  const secondary = (closing ? CLOSING_ACTIONS[path] : undefined) ??
-    SECONDARY_ACTIONS[path] ?? { href: '/platform', label: 'Explore the platform' };
+  cta,
+  size = 'marketing',
+}: Readonly<{ cta: PlatformCta; size?: 'lg' | 'marketing' }>) {
+  const trial = cta === 'trial' && selfServeSignupOpen();
   return (
-    <div className="flex flex-wrap justify-center gap-4">
-      {showTrial && <ButtonLink href={appHref('/register')}>Start free trial</ButtonLink>}
-      {mcp && <ButtonLink href={docsHref('/mcp/')}>Read setup guide</ButtonLink>}
-      <DemoButtonLink variant={showTrial || mcp ? 'soft' : 'primary'}>
-        {path === '/platform/integrations' ? 'Discuss setup' : 'Book a demo'}
+    <div className="flex flex-wrap justify-center gap-3">
+      {trial && (
+        <ButtonLink href={appHref('/register')} size={size}>
+          Start free trial
+        </ButtonLink>
+      )}
+      {cta === 'mcp' && (
+        <ButtonLink href={docsHref('/mcp/')} size={size}>
+          Read setup guide
+        </ButtonLink>
+      )}
+      <DemoButtonLink variant={trial || cta === 'mcp' ? 'soft' : 'primary'} size={size}>
+        {cta === 'setup' ? 'Discuss setup' : 'Book a demo'}
       </DemoButtonLink>
-      {!trial && !mcp && (
-        <ButtonLink href={secondary.href} variant="soft">
-          {secondary.label}
+      {(cta === 'demo' || cta === 'setup') && (
+        <ButtonLink href="/pricing" variant="soft" size={size}>
+          See pricing
         </ButtonLink>
       )}
     </div>
   );
 }
 
-export function PlatformCards() {
+/** Every published capability, grouped as in the navigation. */
+export function CapabilityGrid() {
   return (
-    <div className="grid gap-8 lg:grid-cols-3">
+    <div className="mk-capabilities">
       {PLATFORM_GROUPS.map((group) => (
-        <div key={group.label} className="space-y-5">
-          <h3 className="website-feature-heading">{group.label}</h3>
-          {group.items.map((item) => (
-            <Card key={item.href} className="space-y-3 p-6">
-              <a
-                href={item.href}
-                className="website-feature-heading text-accent-text underline-offset-4 hover:underline"
-                data-marketing-cta=""
-              >
-                {item.title}
-              </a>
-              <p className="website-body text-muted">{item.desc}</p>
-            </Card>
-          ))}
+        <div key={group.label} className="mk-capability-group">
+          <p className="mk-group-label">{group.label}</p>
+          <ul>
+            {group.items.map((item) => {
+              return (
+                <li key={item.href}>
+                  <a href={item.href} className="mk-capability">
+                    {hasNavIcon(item.href) && (
+                      <span className="nav-row-icon" aria-hidden>
+                        <NavIcon href={item.href} className="size-4" />
+                      </span>
+                    )}
+                    <span>
+                      <span className="mk-capability-title">{item.title}</span>
+                      <span className="mk-capability-desc">{item.desc}</span>
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       ))}
     </div>
   );
 }
 
-function Copy({ text }: Readonly<{ text: string }>) {
+function Shot({ visual, title }: Readonly<{ visual: PlatformVisual; title?: string }>) {
+  const View = VIEWS[visual];
+  return (
+    <ProductShot title={title ?? VIEW_TITLES[visual]}>
+      <View />
+    </ProductShot>
+  );
+}
+
+export function FaqList({ faqs }: Readonly<{ faqs: readonly { q: string; a: string }[] }>) {
+  return (
+    <div className="mk-faq-list">
+      {faqs.map((faq) => (
+        <details key={faq.q}>
+          <summary>
+            {faq.q}
+            <ChevronDown aria-hidden className="size-4" />
+          </summary>
+          <p className="website-body-lg text-muted">{faq.a}</p>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+/** One template for /platform and every capability page. */
+export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) {
+  const overview = page.path === PLATFORM_OVERVIEW.href;
+  const label = platformLabel(page.path) ?? 'Platform';
   return (
     <>
-      {text
-        .split(/(\*\*.*?\*\*)/g)
-        .map((part, index) =>
-          part.startsWith('**') ? <strong key={index}>{part.slice(2, -2)}</strong> : part,
-        )}
+      <PageHero
+        centered
+        title={page.heading}
+        lead={page.lead}
+        breadcrumb={
+          overview
+            ? [{ label: 'Platform' }]
+            : [{ label: 'Platform', href: PLATFORM_OVERVIEW.href }, { label }]
+        }
+      >
+        <div className="mt-9 grid justify-items-center gap-4" data-cta-placement="hero">
+          <PlatformActions cta={page.cta} />
+          {page.note && <p className="website-label text-muted">{page.note}</p>}
+        </div>
+      </PageHero>
+
+      <Section rhythm="tight" className="pt-0" aria-label={`${label} preview`}>
+        <Shot visual={page.visual} title={page.visualTitle} />
+        <ul className="mk-highlights">
+          {page.highlights.map((highlight) => (
+            <li key={highlight.title}>
+              <h2 className="website-feature-heading">{highlight.title}</h2>
+              <p className="website-body text-muted">{highlight.body}</p>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      {page.features.length > 0 && (
+        <Section tone="soft">
+          <div className="mk-features">
+            {page.features.map((feature, index) => (
+              <div
+                key={feature.title}
+                className={cn('mk-dive', index % 2 === 1 && 'mk-dive-reverse')}
+              >
+                <div className="mk-dive-copy">
+                  <h2 className="website-page-title mk-dive-title">{feature.title}</h2>
+                  <p className="website-body-lg text-muted">{feature.body}</p>
+                  <ul className="mk-checks">
+                    {feature.points.map((point) => (
+                      <li key={point}>
+                        <Check aria-hidden className="size-4" />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <Shot visual={feature.visual} />
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {overview && (
+        <Section id="capabilities">
+          <SectionHeader
+            title="Everything in one project."
+            lead="Start with AI visibility. Add the capabilities your questions need."
+          />
+          <CapabilityGrid />
+        </Section>
+      )}
+
+      <Section tone={overview ? 'soft' : 'paper'}>
+        <div className="mk-split">
+          <SectionHeader title="Questions, answered." />
+          <FaqList faqs={page.faqs} />
+        </div>
+      </Section>
+
+      {!overview && <Related page={page} />}
+
+      <Section className="marketing-closing-band">
+        <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
+          <SectionHeader title={page.closing} align="center" />
+          <PlatformActions cta={page.cta} />
+        </div>
+      </Section>
     </>
   );
 }
 
+function Related({ page }: Readonly<{ page: PlatformPage }>) {
+  const items = page.related.flatMap((href) => {
+    const product = PLATFORM_GROUPS.flatMap((group) => group.items).find(
+      (item) => item.href === href,
+    );
+    const entry =
+      product ??
+      (href === PLATFORM_OVERVIEW.href
+        ? { title: PLATFORM_OVERVIEW.title, desc: PLATFORM_OVERVIEW.desc }
+        : GUIDES[href]);
+    return entry ? [{ href, title: entry.title, desc: entry.desc }] : [];
+  });
+  if (!items.length) return null;
+  return (
+    <Section tone="soft" aria-label="Related capabilities and guides">
+      <SectionHeader title="Keep exploring." />
+      <ul className="mk-related">
+        {items.map((item) => {
+          return (
+            <li key={item.href}>
+              <a href={item.href} className="mk-related-card">
+                {hasNavIcon(item.href) && (
+                  <span className="nav-row-icon" aria-hidden>
+                    <NavIcon href={item.href} className="size-4" />
+                  </span>
+                )}
+                <span className="mk-capability-title">{item.title}</span>
+                <span className="mk-capability-desc">{item.desc}</span>
+                <ArrowRight aria-hidden className="mk-related-arrow size-4" />
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+      {page.path === '/platform/mcp' && (
+        <a className="mk-text-link" href={docsHref('/mcp/')}>
+          MCP setup and tool reference
+          <ArrowRight aria-hidden className="size-4" />
+        </a>
+      )}
+    </Section>
+  );
+}
+
+const MODULE_VISUALS: Readonly<Record<string, PlatformVisual>> = {
+  '/platform/ai-visibility': 'visibility',
+  '/platform/citation-intelligence': 'sources',
+};
+
+/** A compact product callout for research guides: copy beside one product view. */
 export function ProductModule({
   path,
   heading,
   children,
 }: Readonly<{ path: string; heading: string; children: ReactNode }>) {
   return (
-    <Section tone="sunken">
-      <SectionHeader title={heading} />
-      <p className="website-body-lg text-secondary max-w-3xl">{children}</p>
-      <a className="website-body-lg text-accent-text underline underline-offset-4" href={path}>
-        Explore {platformLabel(path)}
-      </a>
-    </Section>
-  );
-}
-
-/** Product narratives remain distinct from the retained research/measurement pages. */
-export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) {
-  const overview = page.path === PLATFORM_OVERVIEW.href;
-  const advanced =
-    page.path === '/platform/agents' || page.path === '/platform/content-intelligence';
-  return (
-    <>
-      <PageHero
-        eyebrow={platformLabel(page.path) ?? 'Platform'}
-        title={page.heading}
-        lead={page.lead}
-        centered
-      >
-        <div className="mt-8 space-y-5" data-cta-placement="hero">
-          <PlatformActions path={page.path} />
-          {(overview || page.path === '/platform/ai-visibility') && (
-            <p className="website-body text-muted">{TRIAL_NOTE}</p>
-          )}
-          {advanced && (
-            <p className="website-body text-muted">
-              Agent workflows are not included in the current public trial. Book a demo to discuss
-              access.
-            </p>
-          )}
+    <Section tone="soft">
+      <div className="mk-dive">
+        <div className="mk-dive-copy">
+          <h2 className="website-section-heading">{heading}</h2>
+          <p className="website-body-lg text-muted">{children}</p>
+          <a className="mk-text-link" href={path}>
+            Explore {platformLabel(path)}
+            <ArrowRight aria-hidden className="size-4" />
+          </a>
         </div>
-      </PageHero>
-      <Section aria-label="Product preview">
-        <SectionHeader
-          title={overview ? 'Start with the answer evidence' : `Inside ${platformLabel(page.path)}`}
-        />
-        <PlatformPreview path={overview ? '/platform/ai-visibility' : page.path} />
-      </Section>
-      {page.sections.map((section, index) => (
-        <Section key={section.heading} tone={index % 2 === 0 ? 'sunken' : 'paper'}>
-          <div className="grid gap-8 lg:grid-cols-2 lg:gap-16">
-            <SectionHeader title={section.heading} />
-            <div className="space-y-5">
-              {section.paragraphs.map((paragraph) => (
-                <p key={paragraph} className="website-body-lg text-secondary max-w-3xl">
-                  <Copy text={paragraph} />
-                </p>
-              ))}
-            </div>
-          </div>
-          {overview && index === 1 && <PlatformPreview path="/platform/site-health" />}
-          {overview && index === 2 && <PlatformPreview path="/platform/agents" />}
-        </Section>
-      ))}
-      {page.workflow && (
-        <Section>
-          <SectionHeader title="A workflow your team can review" />
-          <p className="website-lead text-secondary">{page.workflow}</p>
-        </Section>
-      )}
-      {page.examples && (
-        <Section>
-          <SectionHeader title="Start with a focused question" />
-          <p className="website-body-lg text-secondary">{page.examples}</p>
-        </Section>
-      )}
-      {overview && (
-        <Section id="capabilities">
-          <SectionHeader title="Explore the platform" />
-          <PlatformCards />
-        </Section>
-      )}
-      <Section tone="sunken">
-        <SectionHeader title="Frequently asked questions" />
-        <div className="grid gap-8 md:grid-cols-2">
-          {page.faqs.map((faq) => (
-            <div key={faq.q} className="space-y-3">
-              <h3 className="website-feature-heading">{faq.q}</h3>
-              <p className="website-body-lg text-muted">{faq.a}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
-      <RelatedCapabilities page={page} />
-      <Section className="marketing-closing-band">
-        <div className="mx-auto max-w-3xl space-y-8 text-center" data-cta-placement="closing">
-          <SectionHeader title={page.closing} />
-          <PlatformActions path={page.path} closing />
-        </div>
-      </Section>
-    </>
-  );
-}
-
-function RelatedCapabilities({ page }: Readonly<{ page: PlatformPage }>) {
-  if (!page.related.length) return null;
-  return (
-    <Section aria-label="Related capabilities and guides">
-      <SectionHeader title="Continue your investigation" />
-      <ul className="grid gap-4 md:grid-cols-2">
-        {page.related.map((href) => {
-          const label = platformLabel(href) ?? GUIDE_LABELS[href];
-          return label ? (
-            <li key={href}>
-              <a
-                className="website-body-lg text-accent-text underline underline-offset-4"
-                href={href}
-              >
-                {label}
-              </a>
-            </li>
-          ) : null;
-        })}
-      </ul>
-      {page.path === '/platform/mcp' && (
-        <a className="website-body-lg text-accent-text underline" href={docsHref('/mcp/')}>
-          MCP setup and tool reference
-        </a>
-      )}
+        <Shot visual={MODULE_VISUALS[path] ?? 'visibility'} />
+      </div>
     </Section>
   );
 }

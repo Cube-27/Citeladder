@@ -17,55 +17,23 @@ function inlineText(children: ReactNode): string {
     .join('');
 }
 
+/**
+ * Prose elements carry no measure or colour classes: the `cp-prose` article
+ * column owns reading measure, rhythm and link styling for its direct children,
+ * so a research guide and a block post read identically.
+ */
 const components: Components = {
   h2: ({ children }) => (
-    <h2
-      id={headingId(inlineText(children))}
-      className="website-section-heading text-foreground mt-10 mb-4 scroll-mt-28"
-    >
+    <h2 id={headingId(inlineText(children))} className="website-section-heading cp-prose-h2">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3
-      id={headingId(inlineText(children))}
-      className="website-feature-heading text-foreground mt-8 mb-3 scroll-mt-28"
-    >
+    <h3 id={headingId(inlineText(children))} className="website-feature-heading cp-prose-h3">
       {children}
     </h3>
   ),
-  p: ({ children }) => <p className="website-body-lg text-secondary mb-5">{children}</p>,
-  a: ({ children, href }) => (
-    <a href={href} className="text-accent-text wrap-anywhere underline underline-offset-4">
-      {children}
-    </a>
-  ),
-  ul: ({ children }) => (
-    <ul className="website-body-lg text-secondary mb-6 list-disc pl-6">{children}</ul>
-  ),
-  ol: ({ children, start }) => (
-    <ol start={start} className="website-body-lg text-secondary mb-6 list-decimal pl-6">
-      {children}
-    </ol>
-  ),
-  li: ({ children }) => <li className="mb-2">{children}</li>,
-  blockquote: ({ children }) => (
-    <blockquote className="bg-accent-soft text-foreground border-accent-border my-6 border-l-2 px-5 py-4">
-      {children}
-    </blockquote>
-  ),
-  th: ({ children }) => (
-    <th
-      scope="col"
-      className="border-border-subtle text-foreground bg-background-alt border-b px-4 py-3 align-top"
-    >
-      {children}
-    </th>
-  ),
-  td: ({ children }) => (
-    <td className="border-border-subtle text-secondary border-b px-4 py-3 align-top">{children}</td>
-  ),
-  pre: ({ children }) => <pre className="bg-well my-6 overflow-x-auto p-5">{children}</pre>,
+  th: ({ children }) => <th scope="col">{children}</th>,
 };
 
 function markdownComponents(markdown: string): Components {
@@ -83,11 +51,9 @@ function markdownComponents(markdown: string): Components {
         <section
           aria-labelledby={heading ? headingId(heading) : undefined}
           aria-label={heading ? undefined : 'Research table'}
-          className="border-border-subtle bg-panel focus-ring my-6 overflow-x-auto rounded-[var(--radius-card)] border"
+          className="cp-table cp-table-wide focus-ring"
         >
-          <table className="website-body w-full min-w-[40rem] border-collapse text-left">
-            {children}
-          </table>
+          <table>{children}</table>
         </section>
       );
     },
@@ -97,11 +63,11 @@ function markdownComponents(markdown: string): Components {
 const sourceComponents: Components = {
   ...components,
   ol: ({ children }) => (
-    <ol className="website-body-lg text-secondary mb-6 list-decimal pl-6">
+    <ol className="cp-sources">
       {Children.toArray(children)
         .filter((child) => typeof child !== 'string')
         .map((child, index) => (
-          <li key={index + 1} id={`source-${index + 1}`} className="mb-3 scroll-mt-28">
+          <li key={index + 1} id={`source-${index + 1}`} className="scroll-mt-28">
             {child}
           </li>
         ))}

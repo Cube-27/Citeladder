@@ -2,9 +2,6 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { Eyebrow } from './label';
-import { Reveal } from './reveal';
-
 // The public editorial ladder resolves these semantic rungs responsively;
 // embedded product previews reset to the compact app ladder.
 const SECTION_HEADING_CLASSES = {
@@ -16,17 +13,19 @@ const SECTION_HEADING_CLASSES = {
 /** Shared public section rhythm resolves through the central responsive token. */
 const RHYTHM = {
   base: 'py-[var(--section-y)]',
-  tight: 'py-[calc(var(--section-y)*0.65)]',
+  tight: 'py-[calc(var(--section-y)*0.6)]',
 } as const;
 
 type Rhythm = keyof typeof RHYTHM;
 
-/** Public section tones use the existing semantic canvas owners. */
+/**
+ * Public grounds: white paper, or the soft neutral band. Space separates
+ * same-tone sections; the tone change itself is the edge between different
+ * ones.
+ */
 const TONE = {
   paper: '',
-  sunken: 'bg-canvas-soft',
-  indigo: 'bg-band-indigo',
-  teal: 'bg-band-teal',
+  soft: 'bg-background-alt',
 } as const;
 
 type Tone = keyof typeof TONE;
@@ -39,7 +38,7 @@ type SectionProps = Readonly<{
   divided?: boolean;
   /** Full-bleed: skips the container so the child owns its width. */
   bleed?: boolean;
-  /** Dense single-block sections drop the 50px container gap to 10px. */
+  /** Dense single-block sections tighten the container gap. */
   dense?: boolean;
   id?: string;
   className?: string;
@@ -61,14 +60,13 @@ export function Section({
   return (
     <section
       id={id}
-      // Two same-tone neighbours stack bottom + top padding and open a gap
-      // twice the intended rhythm, which reads as a hole in the page rather
-      // than a section break. `data-citeladder-section` lets globals.css collapse
-      // the seam; a tone change keeps the full pair, because there the fill edge
-      // is the boundary and needs the room.
-      data-citeladder-section={tone}
+      // Two same-tone neighbours would stack bottom + top padding into a gap
+      // twice the intended rhythm. `data-citeladder-section` lets globals.css
+      // collapse that seam; a tone change keeps both, because there the fill
+      // edge is the boundary and needs the room.
+      data-citeladder-section={tone === 'soft' ? 'soft' : 'paper'}
       className={cn(
-        'band-grain relative w-full',
+        'relative w-full scroll-mt-[var(--marketing-nav-offset)]',
         TONE[tone],
         RHYTHM[rhythm],
         divided && 'border-border-subtle border-t',
@@ -91,7 +89,7 @@ export function Container({
     <div
       className={cn(
         'relative z-1 mx-auto flex w-full max-w-7xl min-w-0 flex-col px-[var(--site-gutter)]',
-        dense ? 'gap-3' : 'gap-6 md:gap-8',
+        dense ? 'gap-4' : 'gap-10 md:gap-14',
         className,
       )}
     >
@@ -101,42 +99,43 @@ export function Container({
 }
 
 /**
- * The section heading group: eyebrow → heading → lead, at the 10–20px internal
- * gap the spec sets for a heading group (§3). Every section head goes through
- * this component — that is what keeps eyebrow distance and heading size from
- * drifting page by page.
- *
- * Entrance delays follow the spec's 0.1s sequence (eyebrow/heading 0.1s, lead
- * 0.2s), applied by `Reveal` on the group rather than per element.
+ * The section heading group: heading, then an optional lead. Every section
+ * head goes through this component so heading size and lead measure cannot
+ * drift page by page. There is no label above the heading; the heading
+ * carries its own weight.
  */
 export function SectionHeader({
-  eyebrow,
   title,
   lead,
   size = 'h2',
+  align = 'start',
   headingId,
   as: Heading = 'h2',
   className,
 }: Readonly<{
-  eyebrow?: ReactNode;
   title: ReactNode;
   lead?: ReactNode;
   /** `h2` is the section default; `h3` is the compact rung for dense bands. */
   size?: 'h1' | 'h2' | 'h3';
+  align?: 'start' | 'center';
   headingId?: string;
   as?: 'h1' | 'h2' | 'h3';
   className?: string;
 }>) {
+  const center = align === 'center';
   return (
-    <Reveal className={cn('flex flex-col gap-3', className)}>
-      {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+    <div className={cn('flex flex-col gap-4', center && 'items-center text-center', className)}>
       <Heading
         id={headingId}
-        className={cn('text-foreground max-w-[48ch] text-balance', SECTION_HEADING_CLASSES[size])}
+        className={cn(
+          'text-foreground text-balance',
+          size === 'h3' ? 'max-w-[48ch]' : 'max-w-[32ch]',
+          SECTION_HEADING_CLASSES[size],
+        )}
       >
         {title}
       </Heading>
-      {lead && <p className="website-lead text-muted max-w-[65ch]">{lead}</p>}
-    </Reveal>
+      {lead && <p className="website-lead text-muted max-w-[72ch]">{lead}</p>}
+    </div>
   );
 }

@@ -10,6 +10,8 @@ web
 
 CiteLadder serves growth, content, and search teams responsible for improving how an owned website is understood, mentioned, and cited across search and AI answer engines. During onboarding, a user is establishing the owned domain, comparable brands, audience, offerings, and market scope that the product will measure.
 
+The public website serves its Solutions segments evenly — in-house marketing and SEO teams, agencies, founders and small teams, ecommerce, and PR/comms — with no single primary audience. It converts through self-serve sign-up and demo requests.
+
 ## Product Purpose
 
 CiteLadder connects site, demand, and answer-engine evidence into one measurable loop: connect, analyze, act, improve or verify, and track. Success means users can move from persisted observations to explicit, evidence-backed actions and compare observed mention and citation share under compatible audit conditions.
@@ -34,9 +36,11 @@ Users connect an owned site and integrations, review automatically discovered fa
 
 The product name is CiteLadder. Voice is direct, confident, specific, and evidence-led, with one idea per sentence and no inflated causal or AI claims. The canonical logo assets are `frontend/public/citeladder-logo-black.svg`, `frontend/public/citeladder-logo-white.svg`, and `frontend/public/citeladder-favicon.ico`.
 
+The public website, login and onboarding share one light-theme visual language that follows the B2B SaaS category standard executed at full craft — chosen deliberately on 2026-10-07. Attio and Linear set the quality bar (Stripe, Superhuman, Jasper and Clay are secondary references). The Emerald forest accent is the one retained brand colour. The authenticated application keeps its own existing visual system.
+
 ## Evidence on Hand
 
-Canonical product and system truth lives in `AGENTS.md`, `docs/architecture.md`, `docs/invariants.md`, and the active subsystem documentation routed from them. Shipped behavior is described by current code and tests. No customer testimonials, public benchmarks, or outcome claims are available for invention.
+Canonical product and system truth lives in `AGENTS.md`, `docs/architecture.md`, `docs/invariants.md`, and the active subsystem documentation routed from them. Shipped behavior is described by current code and tests. No customer testimonials, public benchmarks, or outcome claims are available for invention. The public website may show labelled illustrative product views built from synthetic records and sanitized screenshots of the real application.
 
 ## Product Principles
 

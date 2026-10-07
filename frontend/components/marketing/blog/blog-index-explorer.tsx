@@ -1,9 +1,8 @@
 'use client';
 
-import { ArrowRight, RotateCcw } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import {
   blogCategories,
@@ -12,111 +11,58 @@ import {
   type BlogPostSummary,
   type BlogSort,
 } from '@/lib/marketing-content/blog-index';
-import { cn } from '@/lib/utils';
 
 const SORT_OPTIONS = [
   { value: 'latest', label: 'Latest' },
   { value: 'oldest', label: 'Oldest' },
 ] as const;
 
-function CompactMeta({ post }: Readonly<{ post: BlogPostSummary }>) {
-  const values = [post.author, post.date ? formatBlogDate(post.date) : null, post.readTime].filter(
-    Boolean,
-  );
-  return <p className="website-label text-muted mt-4">{values.join(' · ')}</p>;
-}
-
-function ArticleCard({ post }: Readonly<{ post: BlogPostSummary }>) {
+/** Author, date and reading time, each only when the post supplies it. */
+export function PostMeta({ post }: Readonly<{ post: BlogPostSummary }>) {
+  if (!(post.author || post.date || post.readTime)) return null;
   return (
-    <article className="border-border-subtle bg-panel hover:border-accent-border overflow-hidden rounded-[var(--radius-card)] border transition-colors">
-      <div className="flex flex-col sm:flex-row">
-        {(post.cardImage ?? post.image) && (
-          <a
-            href={`/blog/${post.slug}`}
-            tabIndex={-1}
-            aria-hidden="true"
-            className="bg-panel-tonal relative aspect-[12/7] shrink-0 sm:w-[15rem] lg:w-[16rem]"
-          >
-            <img
-              src={post.cardImage ?? post.image}
-              alt=""
-              width={1080}
-              height={630}
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 size-full object-contain"
-            />
-          </a>
-        )}
-        <div className="min-w-0 flex-1 p-5 sm:p-6">
-          {post.tags[0] ? (
-            <span className="bg-accent-soft text-accent-text inline-flex rounded-full px-3 py-1 text-xs font-medium">
-              {post.tags[0]}
-            </span>
-          ) : null}
-          <h2 className="website-feature-heading text-foreground mt-3">
-            <a
-              href={`/blog/${post.slug}`}
-              className="hover:text-accent-text focus-ring rounded-xs transition-colors"
-            >
-              {post.title}
-            </a>
-          </h2>
-          <p className="website-body text-muted mt-2 sm:line-clamp-2">{post.excerpt}</p>
-          <CompactMeta post={post} />
-          <a
-            href={`/blog/${post.slug}`}
-            className="text-accent-text focus-ring mt-4 inline-flex items-center gap-2 rounded-xs text-sm font-medium"
-          >
-            Read article <ArrowRight className="size-4" aria-hidden />
-          </a>
-        </div>
-      </div>
-    </article>
+    <p className="cp-meta">
+      {post.author && <span className="cp-meta-strong">{post.author}</span>}
+      {post.date && <time dateTime={post.date}>{formatBlogDate(post.date)}</time>}
+      {post.readTime && <span>{post.readTime}</span>}
+    </p>
   );
 }
 
-function ReadingSidebar({ posts }: Readonly<{ posts: readonly BlogPostSummary[] }>) {
-  const featured = posts[0];
-  if (!featured) return null;
+/**
+ * One archive row: date, then the title and excerpt, then the topic and the
+ * way in. The posts' illustrations are deliberately not shown here; the row is
+ * typographic so the list scans like an index.
+ */
+function ArticleRow({ post }: Readonly<{ post: BlogPostSummary }>) {
+  const href = `/blog/${post.slug}`;
   return (
-    <aside className="grid content-start gap-5" aria-label="Featured and recommended reading">
-      <div className="border-border-subtle bg-panel rounded-[var(--radius-card)] border p-5">
-        <p className="website-eyebrow text-accent-text">Featured</p>
-        <h2 className="website-small-heading text-foreground mt-3">
-          <a
-            href={`/blog/${featured.slug}`}
-            className="hover:text-accent-text focus-ring rounded-xs transition-colors"
-          >
-            {featured.title}
+    <article>
+      <p className="cp-row-date">
+        {post.date ? <time dateTime={post.date}>{formatBlogDate(post.date)}</time> : null}
+      </p>
+      <div className="cp-row-main">
+        <h2 className="website-feature-heading">
+          <a href={href} className="cp-title-link focus-ring rounded-xs">
+            {post.title}
           </a>
         </h2>
-        <p className="website-body text-muted mt-3 line-clamp-3">{featured.excerpt}</p>
-        <a
-          href={`/blog/${featured.slug}`}
-          className="text-accent-text focus-ring mt-4 inline-flex items-center gap-2 rounded-xs text-sm font-medium"
-        >
-          Read article <ArrowRight className="size-4" aria-hidden />
+        <p className="website-body text-muted md:line-clamp-2">{post.excerpt}</p>
+        {(post.author || post.readTime) && (
+          <p className="cp-meta">
+            {post.author && <span>{post.author}</span>}
+            {post.readTime && <span>{post.readTime}</span>}
+          </p>
+        )}
+      </div>
+      <div className="cp-row-side">
+        {post.tags[0] && <span className="cp-chip">{post.tags[0]}</span>}
+        <a href={href} className="mk-text-link focus-ring rounded-xs">
+          Read article
+          <ArrowRight className="size-4" aria-hidden />
         </a>
       </div>
-      {posts.length > 1 ? (
-        <div className="border-border-subtle bg-panel rounded-[var(--radius-card)] border p-5">
-          <p className="website-eyebrow text-muted">Recommended reading</p>
-          <ol className="divide-border-subtle mt-2 divide-y">
-            {posts.slice(1, 5).map((post) => (
-              <li key={post.slug} className="py-4">
-                <a
-                  href={`/blog/${post.slug}`}
-                  className="text-foreground hover:text-accent-text focus-ring rounded-xs text-sm leading-snug font-medium transition-colors"
-                >
-                  {post.title}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
-    </aside>
+    </article>
   );
 }
 
@@ -130,27 +76,24 @@ export function BlogIndexExplorer({ posts }: Readonly<{ posts: readonly BlogPost
   );
 
   return (
-    <>
-      <div className="border-border-subtle mb-6 flex flex-col gap-4 border-b pb-5 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap gap-2" aria-label="Filter articles by category">
+    <div className="grid gap-2">
+      <div className="cp-toolbar">
+        <fieldset className="flex min-w-0 flex-wrap gap-2">
+          <legend className="sr-only">Filter articles by category</legend>
           {[null, ...categories].map((value) => (
-            <Button
+            <button
               key={value ?? 'all'}
-              variant="secondary"
-              size="sm"
+              type="button"
               aria-pressed={category === value}
               onClick={() => setCategory(value)}
-              className={cn(
-                'rounded-full',
-                category === value && 'border-accent-border bg-accent-soft text-accent-text',
-              )}
+              className="cp-filter focus-ring"
             >
               {value ?? 'All posts'}
-            </Button>
+            </button>
           ))}
-        </div>
+        </fieldset>
         <div className="flex items-center gap-3 self-end md:self-auto">
-          <span id="blog-sort-label" className="website-label text-muted">
+          <span id="blog-sort-label" className="website-label">
             Sort
           </span>
           <Select
@@ -163,24 +106,23 @@ export function BlogIndexExplorer({ posts }: Readonly<{ posts: readonly BlogPost
           />
         </div>
       </div>
-      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="grid content-start gap-5" aria-live="polite">
-          {visiblePosts.length ? (
-            visiblePosts.map((post) => <ArticleCard key={post.slug} post={post} />)
-          ) : (
-            <div className="border-border-subtle bg-panel rounded-[var(--radius-card)] border border-dashed p-8 text-center">
-              <h2 className="website-feature-heading text-foreground">
-                No articles match this filter.
-              </h2>
-              <p className="website-body text-muted mt-2">Reset the category to see every guide.</p>
-              <Button variant="secondary" className="mt-5" onClick={() => setCategory(null)}>
-                <RotateCcw className="size-4" aria-hidden /> Reset filters
-              </Button>
-            </div>
-          )}
-        </div>
-        <ReadingSidebar posts={posts} />
+      <div className="cp-rows" aria-live="polite">
+        {visiblePosts.length ? (
+          visiblePosts.map((post) => <ArticleRow key={post.slug} post={post} />)
+        ) : (
+          <div className="cp-empty">
+            <h2 className="website-feature-heading">No articles match this filter.</h2>
+            <p className="website-body text-muted">Show every topic to see all guides.</p>
+            <button
+              type="button"
+              className="cp-filter focus-ring"
+              onClick={() => setCategory(null)}
+            >
+              Show all posts
+            </button>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }

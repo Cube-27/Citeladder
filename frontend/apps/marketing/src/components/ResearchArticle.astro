@@ -1,5 +1,7 @@
 ---
+import { ArrowRight } from 'lucide-react';
 import type { ResearchArticle } from '../research-articles';
+import { RESEARCH_ARTICLES } from '../research-articles';
 import { ResearchMarkdown, researchHeadings } from '@/components/marketing/blog/research-markdown';
 import { Container } from '@/components/marketing/primitives/section';
 import { formatBlogDate } from '@/lib/marketing-content/blog-index';
@@ -8,35 +10,60 @@ interface Props { article: ResearchArticle }
 const { article } = Astro.props;
 const { frontmatter } = article;
 const headings = researchHeadings(article.markdown);
+// The next guides in publication order, wrapping, so every guide ends with a way on.
+const position = RESEARCH_ARTICLES.findIndex((candidate) => candidate.frontmatter.slug === frontmatter.slug);
+const more = [1, 2]
+  .map((step) => RESEARCH_ARTICLES[(position + step) % RESEARCH_ARTICLES.length])
+  .filter((candidate) => candidate && candidate.frontmatter.slug !== frontmatter.slug);
 ---
 
-<header class="border-border-subtle border-b pt-16 pb-8 md:pb-10">
-  <Container>
-    <div class="mx-auto max-w-5xl text-center">
-      <nav aria-label="Breadcrumb" class="website-label text-muted mb-5">
-        <a href="/">Home</a> / <a href="/blog">Guides</a> / <span>{frontmatter.title}</span>
-      </nav>
-      <h1 class="website-page-title text-foreground mx-auto max-w-4xl text-balance">{frontmatter.title}</h1>
-      <p class="website-label text-muted mt-5">
-        Research reviewed <time datetime={frontmatter.reviewed_at}>{formatBlogDate(frontmatter.reviewed_at)}</time>
-      </p>
-    </div>
-  </Container>
-</header>
 <Container>
-  <div class="grid w-full gap-10 py-8 md:py-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-14">
-    <aside class="lg:sticky lg:top-24 lg:self-start">
-      <nav aria-label="On this page">
-        <p class="website-eyebrow text-muted mb-3">Contents</p>
-        <ol class="grid gap-2">
-          {headings.map((heading) => <li><a class="text-muted hover:text-foreground text-sm" href={`#${heading.slug}`}>{heading.text}</a></li>)}
+  <div class="cp-article">
+    <header class="cp-article-head">
+      <nav aria-label="Breadcrumb" class="cp-crumbs">
+        <ol>
+          <li><a href="/" class="focus-ring rounded-xs">Home</a></li>
+          <li><a href="/blog" class="focus-ring rounded-xs">Guides</a></li>
         </ol>
-        <slot name="contents" />
       </nav>
-    </aside>
-    <article aria-label="Guide content" class="research-prose min-w-0">
-      <ResearchMarkdown markdown={article.markdown} />
-      <slot />
-    </article>
+      <h1 class="website-page-title">{frontmatter.title}</h1>
+      <p class="website-lead text-muted max-w-[62ch]">{frontmatter.meta_description}</p>
+      <p class="cp-meta cp-byline">
+        <span>Research reviewed <time datetime={frontmatter.reviewed_at}>{formatBlogDate(frontmatter.reviewed_at)}</time></span>
+      </p>
+    </header>
+    <div class="cp-article-grid">
+      <aside>
+        <nav aria-label="On this page" class="cp-toc">
+          <p class="website-label">On this page</p>
+          <ol>
+            {headings.map((heading) => <li><a class="focus-ring" href={`#${heading.slug}`}>{heading.text}</a></li>)}
+          </ol>
+          <slot name="contents" />
+        </nav>
+      </aside>
+      <article aria-label="Guide content" class="cp-prose">
+        <ResearchMarkdown markdown={article.markdown} />
+        <slot />
+        {more.length > 0 && (
+          <div class="cp-article-end">
+            <section aria-labelledby="more-guides" class="grid gap-5">
+              <h2 id="more-guides" class="website-feature-heading">More guides</h2>
+              <ul class="grid gap-4 sm:grid-cols-2">
+                {more.map((guide) => (
+                  <li>
+                    <a href={guide.frontmatter.slug} class="mk-related-card focus-ring">
+                      <span class="cp-link-title pr-6">{guide.frontmatter.title}</span>
+                      <span class="cp-link-desc line-clamp-3">{guide.frontmatter.meta_description}</span>
+                      <ArrowRight aria-hidden="true" className="mk-related-arrow size-4" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        )}
+      </article>
+    </div>
   </div>
 </Container>

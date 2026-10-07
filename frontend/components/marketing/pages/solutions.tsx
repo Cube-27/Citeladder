@@ -1,85 +1,57 @@
+import type { ComponentType } from 'react';
 import { ArrowRight, Briefcase, Building2, Megaphone, ShoppingBag, Sparkles } from 'lucide-react';
 
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
-import { SOLUTION_SEGMENTS, SOLUTIONS_HERO } from '@/lib/marketing-content/solutions';
+import {
+  SOLUTION_SEGMENTS,
+  SOLUTIONS_HERO,
+  type SolutionScene,
+} from '@/lib/marketing-content/solutions';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink, DemoButtonLink, DemoTextLink } from '../primitives/button';
-import { Meta } from '../primitives/label';
 import { PageHero } from '../primitives/page-hero';
-import { Section } from '../primitives/section';
-import { Reveal } from '../primitives/reveal';
-import { SolutionEvidencePanel } from '../scenes/evidence-panel';
+import { Section, SectionHeader } from '../primitives/section';
+import {
+  AnswerView,
+  CommerceView,
+  ProductShot,
+  SiteHealthView,
+  SourcesView,
+  VisibilityView,
+} from '../scenes/product-views';
 
 /**
- * `/solutions` — five audience segments, each alternating copy and an
- * evidence panel. The section ids (`agencies`, `in-house`, `founders`,
- * `commerce`, `pr`) are the targets of the nav's Solutions dropdown and the
- * footer, so they are part of the route's contract.
+ * `/solutions` — one page, one row per team: copy beside the product view
+ * that team reads first. The section ids (`agencies`, `in-house`, `founders`,
+ * `commerce`, `pr`) are targets of the nav's Solutions menu and the footer,
+ * so they are part of the route's contract.
  */
-const SEGMENT_ICONS = {
+const SEGMENT_ICONS: Readonly<Record<string, ComponentType<{ className?: string }>>> = {
   agencies: Briefcase,
   'in-house': Building2,
   founders: Sparkles,
   commerce: ShoppingBag,
   pr: Megaphone,
-} as const;
-
-/**
- * Product hues, one per segment (the reference system's four-hue set; `pr`
- * bookends the page with `agencies`' blue). The hue rides the segment's
- * eyebrow dot, check marks, hero chip icon, and the evidence panel's soft
- * grain gradient — deep rungs for ink inside the product window, matching
- * the tile tokens in globals.css.
- */
-type HueKey = 'blue' | 'indigo' | 'purple' | 'green';
-
-// `satisfies` (not a bare annotation) so the map stays exhaustive over the ids
-// actually shipped: adding a segment without a hue is a compile error rather
-// than an undefined class name at the two lookup sites below.
-const SEGMENT_HUES = {
-  agencies: 'blue',
-  'in-house': 'indigo',
-  founders: 'green',
-  commerce: 'purple',
-  pr: 'blue',
-} satisfies Record<(typeof SOLUTION_SEGMENTS)[number]['id'], HueKey>;
-
-/** Total lookup: an id outside the map falls back to the page's opening hue. */
-const hueFor = (id: string): HueKey => (SEGMENT_HUES as Record<string, HueKey>)[id] ?? 'blue';
-
-const HUE_DOT: Record<HueKey, string> = {
-  blue: 'bg-tile-blue-ink',
-  indigo: 'bg-tile-indigo-ink',
-  purple: 'bg-tile-purple-ink',
-  green: 'bg-tile-green-ink',
 };
 
-const HUE_ICON: Record<HueKey, string> = {
-  blue: 'text-tile-blue-ink',
-  indigo: 'text-tile-indigo-ink',
-  purple: 'text-tile-purple-ink',
-  green: 'text-tile-green-ink',
+const SCENE_VIEWS: Readonly<Record<SolutionScene, { title: string; View: ComponentType }>> = {
+  share: { title: 'AI Visibility', View: VisibilityView },
+  health: { title: 'Site Health', View: SiteHealthView },
+  sample: { title: 'Answer record', View: AnswerView },
+  commerce: { title: 'AI Shelf', View: CommerceView },
+  citations: { title: 'Sources', View: SourcesView },
 };
 
 export function SolutionsHero() {
   return (
-    <PageHero
-      eyebrow={SOLUTIONS_HERO.eyebrow}
-      title={SOLUTIONS_HERO.title}
-      lead={SOLUTIONS_HERO.lead}
-      centered
-    >
-      <nav aria-label="Solutions by team" className="mt-8 flex flex-wrap justify-center gap-4">
+    <PageHero title={SOLUTIONS_HERO.title} lead={SOLUTIONS_HERO.lead} centered>
+      <nav aria-label="Solutions by team" className="ed-jump">
         {SOLUTION_SEGMENTS.map(({ id, label }) => {
-          const Icon = SEGMENT_ICONS[id as keyof typeof SEGMENT_ICONS];
+          const Icon = SEGMENT_ICONS[id];
           return (
-            <a
-              key={id}
-              href={`#${id}`}
-              className="border-border-subtle bg-panel text-foreground hover:bg-accent-soft inline-flex items-center gap-4 rounded-[var(--radius-card)] border px-5 py-4 text-sm font-medium transition-colors duration-200"
-            >
-              <Icon aria-hidden className={cn('size-4', HUE_ICON[hueFor(id)])} />
+            <a key={id} href={`#${id}`} className="website-nav">
+              {Icon && <Icon aria-hidden className="size-4" />}
               {label}
             </a>
           );
@@ -93,59 +65,43 @@ export function SolutionSegments() {
   return (
     <>
       {SOLUTION_SEGMENTS.map((segment, index) => {
-        const hue = hueFor(segment.id);
+        const { title, View } = SCENE_VIEWS[segment.scene];
         return (
           <Section
             key={segment.id}
             id={segment.id}
-            tone={index % 2 ? 'sunken' : 'paper'}
-            rhythm="base"
-            aria-label={segment.label}
+            divided={index > 0}
+            aria-labelledby={`${segment.id}-title`}
           >
-            {/* The product surface is the section's content and always owns the
-                3fr track; the copy column stays at 2fr. Odd rows flip the
-                tracks and place explicitly — reordering children would let the
-                panel fall into the narrow track. */}
-            <Reveal
-              className={cn(
-                'grid items-center gap-10 lg:gap-16',
-                index % 2 === 1 ? 'lg:grid-cols-[3fr_2fr]' : 'lg:grid-cols-[2fr_3fr]',
-              )}
-            >
-              <div className={cn(index % 2 === 1 && 'lg:col-start-2 lg:row-start-1')}>
-                <Meta as="p" className="flex items-center gap-2">
-                  <span aria-hidden className={cn('size-2 shrink-0 rounded-full', HUE_DOT[hue])} />
-                  {segment.eyebrow}
-                </Meta>
-                <h2 className="website-section-heading text-foreground mt-5 max-w-[28ch]">
+            <div className={cn('mk-dive', index % 2 === 1 && 'mk-dive-reverse')}>
+              <div className="mk-dive-copy">
+                <h2
+                  id={`${segment.id}-title`}
+                  className="website-section-heading max-w-[26ch] text-balance"
+                >
                   {segment.title}
                 </h2>
-                <p className="website-body-lg text-muted mt-5 max-w-[42ch]">{segment.lead}</p>
+                <p className="website-body-lg text-muted max-w-[60ch]">{segment.lead}</p>
                 {segment.body && (
-                  <p className="website-body-lg text-muted mt-5 max-w-[42ch]">{segment.body}</p>
+                  <p className="website-body-lg text-muted max-w-[60ch]">{segment.body}</p>
                 )}
-                {segment.guide && (
-                  <a
-                    className="website-body text-accent-text mt-5 block underline"
-                    href={segment.guide.href}
-                  >
-                    {segment.guide.label}
-                  </a>
-                )}
-                <div className="mt-8">
-                  <DemoTextLink>
+                <div className="ed-segment-links">
+                  {segment.guide && (
+                    <a className="mk-text-link" href={segment.guide.href}>
+                      {segment.guide.label}
+                      <ArrowRight aria-hidden className="size-4" />
+                    </a>
+                  )}
+                  <DemoTextLink className="website-body">
                     {segment.cta}
                     <ArrowRight aria-hidden />
                   </DemoTextLink>
                 </div>
               </div>
-
-              <SolutionEvidencePanel
-                scene={segment.scene}
-                tint={hue}
-                className={cn(index % 2 === 1 && 'lg:col-start-1 lg:row-start-1')}
-              />
-            </Reveal>
+              <ProductShot title={title}>
+                <View />
+              </ProductShot>
+            </div>
           </Section>
         );
       })}
@@ -155,25 +111,20 @@ export function SolutionSegments() {
 
 export function SolutionsCta() {
   return (
-    <Section tone="paper" rhythm="base" className="marketing-closing-band" aria-label="Get started">
-      <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-5 max-w-[32ch] text-balance">
-          Bring your team the version of the truth it reports in.
-        </h2>
-        <p className="website-lead text-muted mx-auto max-w-[58ch]">
-          One observation field, five ways of reading it. We will walk through the one that matches
-          how you are measured.
-        </p>
-        <div className="mt-8 flex items-stretch justify-center gap-3 sm:items-center sm:gap-4">
-          <DemoButtonLink className="min-w-0 flex-1 sm:flex-none">
-            {DEMO_CTA}
-            <ArrowRight aria-hidden />
-          </DemoButtonLink>
-          <ButtonLink href="/pricing" variant="ghost" className="min-w-0 flex-1 sm:flex-none">
+    <Section className="marketing-closing-band" aria-label="Get started">
+      <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
+        <SectionHeader
+          title="See the workflow that matches how you are measured."
+          lead="One set of evidence, read five ways. We will walk through the one your team reports in."
+          align="center"
+        />
+        <div className="flex flex-wrap justify-center gap-3">
+          <DemoButtonLink size="marketing">{DEMO_CTA}</DemoButtonLink>
+          <ButtonLink href="/pricing" variant="soft" size="marketing">
             See pricing
           </ButtonLink>
         </div>
-      </Reveal>
+      </div>
     </Section>
   );
 }
