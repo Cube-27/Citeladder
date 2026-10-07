@@ -17,7 +17,7 @@ const routePatterns = policy.site_health.route_patterns.map(
 );
 
 const DOCUMENT_EXTENSION = new RegExp(
-  `\\.(?:${policy.site_health.route_document_extensions.join('|')})$`,
+  String.raw`\.(?:${policy.site_health.route_document_extensions.join('|')})$`,
   'u',
 );
 

@@ -317,7 +317,7 @@ describe('OverviewPanel', () => {
     );
 
     expect(await screen.findByTestId('coverage-by-kind')).toHaveTextContent(
-      'Pages analyzed by type: Product 4 of 16. Not found on the site: Pricing.',
+      'Pages analyzed by type: Product 4 of 16. Not found in this crawl: Pricing.',
     );
   });
 

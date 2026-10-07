@@ -559,7 +559,7 @@ Snapshots saved before these counts keep the earlier reason caveat. Coverage
 evidence also lists each admission value tier's found and analyzed URL counts
 (`value_kinds`), with the expected tiers (`coverage_expected_value_kinds`: about,
 contact, pricing) at zero when the crawl never found one. Overview shows "Pages
-analyzed by type" and "Not found on the site" separately, because a missing
+analyzed by type" and "Not found in this crawl" separately, because a missing
 page and an unanalyzed one need different fixes. A sample crawl admits without
 a frontier and reports no tiers rather than "not found". Bulk "first N" monitored selection takes the most
 valuable pages first (highest observed value tier), URL order within a tier.

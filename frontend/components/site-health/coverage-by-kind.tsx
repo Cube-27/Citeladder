@@ -37,6 +37,7 @@ function tiers(coverage: SiteHealthOverview['crawl_coverage']): Tier[] {
 /**
  * Which kinds of page the crawl found and analyzed, and which it never found:
  * "no pricing page" is a different fix from "pricing found but not analyzed".
+ * Absence is the crawl's, not the site's: a partial crawl may simply not have reached it.
  */
 export function CoverageByKind({
   coverage,
@@ -55,7 +56,7 @@ export function CoverageByKind({
       ) : null}
       {missing.length ? (
         <>
-          {found.length ? ' ' : null}Not found on the site:{' '}
+          {found.length ? ' ' : null}Not found in this crawl:{' '}
           {missing.map((row) => LABELS[row.kind]).join(', ')}.
         </>
       ) : null}
