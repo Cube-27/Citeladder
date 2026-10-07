@@ -132,3 +132,9 @@ it('fails answer-crawler access when every sampled page is closed, not when only
     { blocked: [], restricted: ['OAI-SearchBot'] },
   ]);
 });
+it('keeps crawler access unknown when robots.txt was fetched but could not be read', () => {
+  const bots = crawlerRootFacts(robotsPolicy(origin, 503, ''), origin);
+  expect(
+    DELIVERY_CHECKS['search.crawler_access']!({ site: { robots: { fetched: true, bots } } }),
+  ).toMatchObject(['unknown', { reason: 'robots_unreadable' }]);
+});
