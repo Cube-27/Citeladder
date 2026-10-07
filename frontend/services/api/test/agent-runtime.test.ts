@@ -939,6 +939,56 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     );
     expect((await fixtures.run(queued.id)).status).toBe('succeeded');
   });
+  it.each(['model', 'tool'] as const)(
+    'scopes concurrent interactive turns and retries an interrupted %s call',
+    async (boundary) => {
+      const scope = await fixtures.scope();
+      const store = fixtures.store();
+      const requested = await store.enqueue(scope, { key: randomUUID(), message: 'Requested' });
+      const sibling = await store.enqueue(scope, { key: randomUUID(), message: 'Other chat' });
+      const controller = new AbortController();
+      const interrupt = vi.fn(async (signal: AbortSignal) => {
+        controller.abort();
+        expect(signal.aborted).toBe(true);
+        signal.throwIfAborted();
+        throw new Error('Expected interruption');
+      });
+      const model =
+        boundary === 'model'
+          ? {
+              ...scripted([]),
+              complete: (_request: unknown, signal: AbortSignal) => interrupt(signal),
+            }
+          : scripted([
+              JSON.stringify({ action: 'call_tool', tool: 'read_evidence', arguments: {} }),
+            ]);
+      const tools = new ToolRegistry('test-tools-1', [
+        {
+          name: 'read_evidence',
+          description: 'Interrupted persisted read',
+          arguments: z.object({}).strict(),
+          read: (_scope, _args, signal) => interrupt(signal),
+        },
+      ]);
+      const runtime = fixtures.runtime(scope, model, { tools });
+      const queue = new AgentQueue(db, 30);
+      await Promise.all(
+        ['first', 'second'].map((owner) =>
+          runAgentOnce(queue, runtime, owner, [scope.workspaceId], () => 60, {
+            runId: requested.id,
+            signal: controller.signal,
+          }),
+        ),
+      );
+      expect(interrupt).toHaveBeenCalledTimes(1);
+      expect(await fixtures.run(requested.id)).toMatchObject({
+        status: 'retry_wait',
+        attempt_count: 1,
+        lease_owner: null,
+      });
+      expect(await fixtures.run(sibling.id)).toMatchObject({ status: 'queued', attempt_count: 0 });
+    },
+  );
   it('retries classified transient failures, stops malformed steps and recovers abandoned cancellations', async () => {
     const scope = await fixtures.scope();
     const queued = await fixtures

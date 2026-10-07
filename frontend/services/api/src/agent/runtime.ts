@@ -23,6 +23,7 @@ import { parseRecordId } from '../mcp/retrieval.ts';
 import { record } from '../db/json.ts';
 import { lockRun, terminalize } from './queue.ts';
 import { getChat, appendMessage } from './store.ts';
+import { leaseSignal } from '../queue/heartbeat.ts';
 import { refused, ToolRegistry, type ToolOutcome } from './tools.ts';
 
 const TRAILING_PUNCTUATION = new Set(['.', ',', ';', ':', '!', '?']);
@@ -204,7 +205,7 @@ export class AgentRuntime {
           .execute();
       });
       await requireWorkspaceAccess(this.db, lease.workspaceId);
-      const result = await this.deps.models.call(lease, ordinal, model, assembled.request);
+      const result = await this.deps.models.call(lease, ordinal, model, assembled.request, signal);
       signal?.throwIfAborted();
       const step = this.parse(result.content, state);
       if (!step) continue;
@@ -259,7 +260,7 @@ export class AgentRuntime {
       }
       // Sequential by design: each step's prompt depends on the previous committed result.
       if (step.action === 'call_tool')
-        await this.callTool(lease, turn.scope, ordinal, step, budget, state); // NOSONAR
+        await this.callTool(lease, turn.scope, ordinal, step, budget, state, signal); // NOSONAR
     }
     await this.fail(lease, 'stopped_at_limit', true);
   }
@@ -308,6 +309,7 @@ export class AgentRuntime {
     step: Extract<Step, { action: 'call_tool' }>,
     budget: Budget,
     state: TurnState,
+    signal?: AbortSignal,
   ) {
     const refusal = this.refusal(step.tool, ordinal, budget, state.toolsUsed);
     const started = performance.now();
@@ -320,7 +322,7 @@ export class AgentRuntime {
           scope,
           step.tool,
           step.arguments,
-          AbortSignal.timeout(budget.execution_timeout_seconds * 1000),
+          leaseSignal(AbortSignal.timeout(budget.execution_timeout_seconds * 1000), signal),
           budget.tool_result_max_chars,
         );
     if (!refusal) state.toolsUsed++;

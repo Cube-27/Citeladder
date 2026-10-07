@@ -54,7 +54,7 @@ export class AgentQueue {
     if (!Number.isFinite(leaseSeconds) || leaseSeconds <= 0)
       throw new TypeError('Invalid lease TTL');
   }
-  claim(owner: string, workspaceIds: readonly string[]): Promise<Run | null> {
+  claim(owner: string, workspaceIds: readonly string[], runId?: string): Promise<Run | null> {
     if (!workspaceIds.length) return Promise.resolve(null);
     return this.db.transaction().execute(async (trx) => {
       const row = await trx
@@ -66,6 +66,7 @@ export class AgentQueue {
         )
         .selectAll('run')
         .where('run.workspace_id', 'in', workspaceIds)
+        .$if(Boolean(runId), (query) => query.where('run.id', '=', runId!))
         .where('run.status', 'in', claimable)
         .where('run.available_at', '<=', sql<Date>`clock_timestamp()`)
         .whereRef('run.attempt_count', '<', 'run.max_attempts')

@@ -122,6 +122,7 @@ export class AnalyticsWorker {
   readonly #settings: WorkerSettings;
   readonly #executors: Readonly<Record<string, Executor>>;
   readonly #scope?: ClaimScope;
+  readonly #signal?: AbortSignal;
 
   constructor(
     db: Database,
@@ -130,6 +131,7 @@ export class AnalyticsWorker {
       owner?: string;
       executors?: Readonly<Record<string, Executor>>;
       taskScope?: ClaimScope;
+      signal?: AbortSignal;
     } = {},
   ) {
     this.#db = db;
@@ -137,16 +139,19 @@ export class AnalyticsWorker {
     this.#queue = new TaskQueue(db, { leaseTtlSeconds: settings.leaseTtlSeconds });
     this.#executors = options.executors ?? EXECUTORS;
     this.#scope = options.taskScope;
+    this.#signal = options.signal;
     this.owner = options.owner ?? `analytics-worker-ts-${randomBytes(6).toString('hex')}`;
   }
 
   /** Claim one row of a TypeScript-owned kind and run it; the count run. */
   async runOnce(): Promise<number> {
+    if (this.#signal?.aborted) return 0;
     await recoverAnalyticsLeases(this.#db, this.#settings.leaseReclaimBatchSize, this.#scope);
     // Compensation is secondary: its failure must not block claiming new work.
     await compensateTerminalTasks(this.#db, this.#scope).catch((error: unknown) =>
       logger.exception('analytics_terminal_compensation_failed', error),
     );
+    if (this.#signal?.aborted) return 0;
     const rows = await this.#queue.claim({
       owner: this.owner,
       kinds: this.#scope ? Object.keys(this.#executors) : policy.analytics.ts_owned_task_kinds,
@@ -204,6 +209,7 @@ export class AnalyticsWorker {
         );
       }
       await requireWorkspaceAccess(this.#db, claimed.workspace_id);
+      this.#signal?.throwIfAborted();
       const settlement = await executor(claimed, {
         db: this.#db,
         maxAttempts: this.#settings.taskMaxAttempts,
@@ -216,6 +222,7 @@ export class AnalyticsWorker {
           }
         },
       });
+      // A completed executor owns its evidence settlement, even at the request deadline.
       return settlement ?? null;
     } catch (error) {
       return error instanceof Error ? error : new Error(String(error));

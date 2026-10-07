@@ -251,6 +251,30 @@ it('refuses an oversized valid Tavily envelope before parsing candidates', async
   });
 });
 
+it('preserves a completed evidence settlement when the interactive deadline expires', async () => {
+  const id = await enqueue();
+  const sibling = await enqueue();
+  const controller = new AbortController();
+  const discovery = competitorDiscovery({ search: successful, fetcher });
+  const interactive = new AnalyticsWorker(db, settings, {
+    taskScope: { workspaceId: t.workspaceId, taskIds: [id] },
+    signal: controller.signal,
+    executors: {
+      commerce_competitor_discovery: async (task, context) => {
+        const settlement = await discovery(task, context);
+        controller.abort();
+        return settlement;
+      },
+    },
+  });
+  await interactive.runOnce();
+  expect(await queueTask(id)).toMatchObject({ status: 'succeeded', attempt_count: 1 });
+  expect(await attempts()).toHaveLength(1);
+  expect(await candidates()).toHaveLength(1);
+  expect(await interactive.runOnce()).toBe(0);
+  expect(await queueTask(sibling)).toMatchObject({ status: 'queued', attempt_count: 0 });
+});
+
 it('refuses unusable names before provider I/O and fences foreign targets', async () => {
   await db
     .updateTable('commerce_products')

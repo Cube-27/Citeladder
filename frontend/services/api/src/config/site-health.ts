@@ -43,6 +43,7 @@ function remediationRoute(rule: (typeof rules)[number]) {
 }
 
 export const siteHealth = {
+  interactive: { admission_seconds: 30, timeout_seconds: 180, concurrency: 2 },
   ...architecture,
   ...links,
   ...acquisition,

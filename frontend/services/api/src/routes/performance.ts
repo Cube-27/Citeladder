@@ -6,7 +6,9 @@ import {
 } from '@citeladder/contracts/performance';
 import { z } from 'zod';
 
-import { loadWorkerSettings } from '../config.ts';
+import { configEnvironment, loadWorkerSettings } from '../config.ts';
+import { AnalyticsWorker } from '../workers/analytics-worker.ts';
+import { projectPerformanceRange } from '../traffic/snapshot.ts';
 import { notFound } from '../errors.ts';
 import { requireProject } from '../projects/access.ts';
 import { enqueueTask, taskKey } from '../referrals/enqueue.ts';
@@ -32,6 +34,35 @@ function taskResponse(task: { id: string; status: string; payload: unknown }) {
 }
 
 export const performanceRoutes = [
+  definePostRoute({
+    family,
+    path: `${root}/range/{task_id}/run`,
+    capability: 'run',
+    params: { path: { ...projectPath, task_id: { ...uuid, required: true } }, query: {} },
+    response: performanceRangeTaskSchema,
+    async handle({ c, db, config }, { path }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      const read = () =>
+        db
+          .selectFrom('analytics_tasks')
+          .select(['id', 'status', 'payload'])
+          .where('workspace_id', '=', workspace.workspaceId)
+          .where('project_id', '=', path.project_id)
+          .where('task_kind', '=', 'performance_range_projection')
+          .where('id', '=', path.task_id)
+          .executeTakeFirst();
+      if (!(await read())) throw notFound('Performance range task');
+      const worker = new AnalyticsWorker(db, loadWorkerSettings(configEnvironment(config)), {
+        taskScope: { workspaceId: workspace.workspaceId, taskIds: [path.task_id] },
+        executors: { performance_range_projection: projectPerformanceRange },
+      });
+      await worker.runOnce();
+      const row = await read();
+      if (!row) throw notFound('Performance range task');
+      return taskResponse(row);
+    },
+  }),
   defineGetRoute({
     family: 'readiness',
     path: '/api/v1/projects/{project_id}/readiness',

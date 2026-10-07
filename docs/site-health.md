@@ -36,6 +36,19 @@ references. Python retains fixed schema defaults and persisted status vocabulary
 Native entitlement owners resolve allowances; native writers freeze configured
 limits on durable task and crawl rows.
 
+After explicit crawl or Internal Links admission, the browser starts a separate
+workspace-authorized POST to that run's `/run` endpoint while continuing to poll
+persisted progress. The API awaits the existing scoped worker, avoiding Cloud Run
+Job startup latency. Crawl execution admits work for 30 seconds, at concurrency
+two or the smaller worker/pool limit, with a 180-second acquisition deadline.
+Internal Links uses a 180-second judgment deadline and publishes its committed
+results in the same request; timed-out judgments remain uncertain. These bounds
+belong to the native feature configuration. Concurrent requests and background
+jobs share the same PostgreSQL leases, retry backoff and attempt ceilings.
+The normal job wake-up and periodic recovery remain available when a browser
+leaves or a request is interrupted. Committed successors also wake the runner
+after interactive execution. Read endpoints never start this work.
+
 Advanced crawl controls are available to the configured development operator's
 owned workspace even when the general rollout switch is off. Entitlement reads
 and crawl admission use the same development access check; URL admission and

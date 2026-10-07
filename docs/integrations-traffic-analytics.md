@@ -64,6 +64,14 @@ count toward capacity; terminal runs free it. An identical active window keeps
 the existing 409 conflict without spending another budget unit or slot.
 Scheduled imports and approved backfills bypass these admission limits.
 
+After manual sync admission, the browser starts a separate authorized execution
+POST for the exact connection and sync run. Mapping creation can start the first
+due history windows for that mapping, newest first. These requests reuse the
+integration worker and its leases, bound provider execution to 240 seconds, and
+leave remaining history, retries and downstream projections to the runner.
+Custom Performance range admission likewise starts its exact persisted analytics
+task through a separate POST; dashboard reads remain projection-only.
+
 [Integration workers](../frontend/services/api/src/workers/integration-worker.ts)
 claim leased PostgreSQL work, commit before I/O, persist append-only import
 artifacts and derive versioned metric rows. Dataset configuration owns provider

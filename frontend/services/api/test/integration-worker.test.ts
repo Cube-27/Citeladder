@@ -118,6 +118,44 @@ async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
 }
 
 describe('integration worker paging and resume', () => {
+  it('releases an interrupted interactive sync for retry without claiming another run', async () => {
+    const selected = await seedRun();
+    const other = await seedRun();
+    try {
+      const controller = new AbortController();
+      const client: Pick<IntegrationClient, 'page'> = {
+        page: async () => {
+          controller.abort();
+          throw new Error('Interrupted transport');
+        },
+      };
+      const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token', {
+        workspaceId: selected.workspaceId,
+        runId: selected.runId,
+      });
+      await worker.runOnce(controller.signal);
+      expect(await worker.runOnce(controller.signal)).toBe(false);
+      const rows = await db
+        .selectFrom('integration_sync_runs')
+        .selectAll()
+        .where('id', 'in', [selected.runId, other.runId])
+        .execute();
+      expect(rows.find((row) => row.id === selected.runId)).toMatchObject({
+        status: 'retry_wait',
+        attempt_count: 1,
+        lease_owner: null,
+      });
+      expect(rows.find((row) => row.id === other.runId)).toMatchObject({
+        status: 'queued',
+        attempt_count: 0,
+      });
+    } finally {
+      await db
+        .deleteFrom('workspaces')
+        .where('id', 'in', [selected.workspaceId, other.workspaceId])
+        .execute();
+    }
+  });
   it('recovers only the selected seed run, leaving sibling and foreign leases untouched', async () => {
     const selected = await seedRun();
     const foreign = await seedRun();

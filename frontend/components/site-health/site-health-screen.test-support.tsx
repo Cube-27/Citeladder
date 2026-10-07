@@ -153,6 +153,9 @@ function mockRoutes(
     http.get('/api/v1/projects', () => HttpResponse.json([project])),
     http.get('/api/v1/audits', () => HttpResponse.json([])),
     http.post('/api/v1/projects/:id/logos/refresh', () => HttpResponse.json(project)),
+    http.post('/api/v1/site-crawls/:id/run', ({ params }) =>
+      HttpResponse.json(crawl({ ...crawlOverrides, id: params.id })),
+    ),
     http.get('/api/v1/entitlements', () => HttpResponse.json(entitlement)),
     http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
       HttpResponse.json({

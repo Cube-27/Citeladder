@@ -12,6 +12,7 @@ import { z } from 'zod';
 
 import { decideBuyerPrompt, decideCandidate } from '../commerce/decisions.ts';
 import { discoveryInput, enqueueDiscoveries } from '../commerce/discovery.ts';
+import { executeCompetitorDiscoveries } from '../commerce/interactive.ts';
 import {
   buyerGenerateInput,
   buyerManualInput,
@@ -46,6 +47,11 @@ const candidateBody = z.object({
   decision: competitorCandidateSchema.shape.state.extract(['approved', 'rejected']),
 });
 const promptBody = z.object({ approved: z.boolean() });
+const executeDiscoveriesBody = z
+  .object({
+    task_ids: z.array(z.uuid()).min(1).max(policy.commerce.buyer_prompts.targets_max),
+  })
+  .strict();
 
 async function scopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
   const workspace = c.get('workspace');
@@ -54,6 +60,19 @@ async function scopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
 }
 
 export const commerceRoutes = [
+  definePostRoute({
+    family,
+    path: `${root}/competitors/discoveries/run`,
+    capability: 'run',
+    params: { path: projectPath, query: {} },
+    body: executeDiscoveriesBody,
+    response: z.array(competitorDiscoveryTaskSchema),
+    async handle({ c, db, config }, { path }) {
+      const scope = await scopeOf(db, c, path.project_id);
+      const { task_ids } = await readBody(c, executeDiscoveriesBody);
+      return executeCompetitorDiscoveries(db, config, scope, task_ids);
+    },
+  }),
   definePostRoute({
     family,
     path: `${root}/competitors/discover`,

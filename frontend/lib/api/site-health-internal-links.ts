@@ -4,6 +4,8 @@ import { internalLinksReadSchema } from '@citeladder/contracts/site-health';
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import { strictValidate } from '@citeladder/contracts/validation';
+import { SITE_HEALTH_EXECUTION_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
+import { startInteractiveWork } from './interactive-work';
 
 const root = (projectId: string) => `/projects/${projectId}/site-health/internal-links`;
 
@@ -22,11 +24,17 @@ export const internalLinksApi = {
     input: { crawl_id: string; idempotency_key: string },
     options: ApiRequestOptions,
   ) {
-    return strictValidate(
+    const result = strictValidate(
       internalLinksReadSchema,
       await apiClient.post(`${root(projectId)}/analyses`, input, options),
       'internalLinks.analyze',
     );
+    if (result.analysis?.state === 'queued' || result.analysis?.state === 'running')
+      startInteractiveWork(`${root(projectId)}/analyses/${result.analysis.id}/run`, {
+        ...options,
+        timeoutMs: SITE_HEALTH_EXECUTION_REQUEST_TIMEOUT_MS,
+      });
+    return result;
   },
   async cancel(projectId: string, analysisId: string, options: ApiRequestOptions) {
     return strictValidate(

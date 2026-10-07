@@ -2,6 +2,7 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
+import { startInteractiveWork } from './interactive-work';
 import { COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
 import { strictValidate } from '@citeladder/contracts/validation';
 import {
@@ -58,12 +59,15 @@ export const commerceApi = {
     projectId: string,
     targets: CommerceTarget[],
     options?: ApiRequestOptions,
-  ) =>
-    strictValidate(
+  ) => {
+    const discovery = strictValidate(
       competitorDiscoverySchema,
       await apiClient.post(path(projectId, 'competitors/discover'), { targets }, options),
       'commerce.discoverCompetitors',
-    ),
+    );
+    startInteractiveWork(path(projectId, 'competitors/discoveries/run'), options, discovery);
+    return discovery;
+  },
   /**
    * Discovery task status. Omitting `taskIds` asks the server for whatever is
    * still in flight for the project — the only form a page reload can recover

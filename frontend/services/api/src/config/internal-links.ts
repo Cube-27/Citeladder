@@ -20,6 +20,7 @@ export const internalLinks = {
   max_anchor_chars: 90,
   accept_threshold: 0.6,
   job_deadline_seconds: 900,
+  interactive_deadline_seconds: 180,
   outcome_batch: 50,
   publish_every: 200,
   history_limit: 20,

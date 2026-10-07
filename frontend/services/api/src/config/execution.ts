@@ -1,6 +1,12 @@
 import { ConfigError } from './config-error.ts';
 
 export const heartbeatFailureLimit = 2;
+/** Interactive POSTs borrow existing workers without waiting for a new job. */
+export const interactiveExecution = {
+  admissionSeconds: 30,
+  timeoutSeconds: 240,
+  concurrency: 2,
+};
 
 const defaults = {
   budgetSeconds: 300,

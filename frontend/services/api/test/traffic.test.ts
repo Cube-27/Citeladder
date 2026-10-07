@@ -233,6 +233,39 @@ describe('traffic projections and Performance', () => {
     ).toBe(422);
   });
 
+  it('runs an authorized custom range once while leaving sibling tasks queued', async () => {
+    const seed = await importSeed(db, t);
+    await metric(db, seed, {});
+    const admitted = await request('performance/range?from=2026-07-01&to=2026-07-28', {
+      method: 'POST',
+    });
+    const sibling = await task(db, t, 'performance_range_projection', ['2026-07-02', '2026-07-28']);
+    const route = `performance/range/${admitted.body.task_id}/run`;
+    const other = await tenant(db, fixtures);
+    expect(
+      (await request(route, { method: 'POST', workspace: other.workspaceId })).response.status,
+    ).toBe(404);
+    const responses = await Promise.all([
+      request(route, { method: 'POST' }),
+      request(route, { method: 'POST' }),
+    ]);
+    expect(responses.map(({ response }) => response.status)).toEqual([200, 200]);
+    expect((await request(`performance/range/${admitted.body.task_id}`)).body.status).toBe(
+      'succeeded',
+    );
+    expect(
+      (await request('performance?range=custom&from=2026-07-01&to=2026-07-28')).body.selected
+        .snapshot_id,
+    ).not.toBeNull();
+    expect(
+      await db
+        .selectFrom('analytics_tasks')
+        .select(['status', 'attempt_count'])
+        .where('id', '=', sibling.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ status: 'queued', attempt_count: 0 });
+  });
+
   it('rejects foreign workspace/project/task IDs and viewer writes', async () => {
     await refreshed();
     const other = await tenant(db, fixtures);

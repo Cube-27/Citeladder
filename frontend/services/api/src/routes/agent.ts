@@ -18,6 +18,8 @@ import {
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { readBody } from '../http/body.ts';
 import { agentBindings } from '../agent/bindings.ts';
+import { runAgentOnce } from '../agent/worker.ts';
+import { interactiveExecution } from '../config/execution.ts';
 import { agentPolicy, AgentError, type Scope } from '../agent/contracts.ts';
 import { authorize } from '../agent/access.ts';
 import { readChat, listChats, listRevisions, runView, revisionView } from '../agent/reads.ts';
@@ -87,6 +89,49 @@ function conflictCode(code: string) {
   return code;
 }
 export const agentRoutes = [
+  definePostRoute({
+    family,
+    path: '/api/v1/agent/chats/{chat_id}/runs/{run_id}/run',
+    capability: 'run',
+    params: {
+      path: { ...chatPath, run_id: { scalar: { kind: 'uuid' }, required: true } },
+      query: {},
+    },
+    response: agentRunSchema,
+    async handle({ db, c }, { path }) {
+      const value = await chatScope(db, c, path.chat_id);
+      const read = () =>
+        db
+          .selectFrom('agent_runs')
+          .selectAll()
+          .where('workspace_id', '=', value.workspaceId)
+          .where('chat_id', '=', path.chat_id)
+          .where('id', '=', path.run_id)
+          .executeTakeFirst();
+      if (!(await read())) throw notFound('Agent run');
+      const { queue, runtime, settings } = await agentBindings(db);
+      await mapped(() =>
+        runAgentOnce(
+          queue,
+          runtime,
+          `interactive-agent:${randomUUID()}`,
+          [value.workspaceId],
+          (attempt) =>
+            Math.min(
+              settings.retryMaxSeconds,
+              settings.retryBaseSeconds * 2 ** Math.max(0, attempt - 1),
+            ),
+          {
+            runId: path.run_id,
+            signal: AbortSignal.timeout(interactiveExecution.timeoutSeconds * 1000),
+          },
+        ),
+      );
+      const run = await read();
+      if (!run) throw notFound('Agent run');
+      return runView(run);
+    },
+  }),
   defineGetRoute({
     family,
     path: '/api/v1/agent/skills',

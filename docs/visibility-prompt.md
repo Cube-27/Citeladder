@@ -242,6 +242,13 @@ engines and repetitions, not transport
 measurement modes. Every brand/Commerce/manual/scheduled/repaired audit uses
 the approved citation-capable policy.
 
+Manual launches and failure reruns start a separate, workspace-authorized
+`POST /audits/{audit_id}/run` after admission. It claims only that audit's tasks
+through the existing worker, starts due work immediately, and retains provider
+capacity limits, due times, cancellation and queue recovery. The request admits
+work for 30 seconds and bounds provider execution to 240 seconds; remaining
+tasks and future provider polls continue through the runner.
+
 Admission freezes prompt text/cohorts, roster, model/retrieval identity, request
 configuration and relevant versions. benchmark_mode is prompt framing, not a
 provider policy. Funding/occupancy is checked by

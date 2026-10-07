@@ -75,6 +75,7 @@ describe('Commerce workspace boundaries', () => {
     ['/competitors', 'GET', undefined],
     ['/competitors/discoveries', 'GET', undefined],
     ['/competitors/discover', 'POST', { targets: [{ kind: 'product', id: randomUUID() }] }],
+    ['/competitors/discoveries/run', 'POST', { task_ids: [randomUUID()] }],
     [`/competitors/${randomUUID()}`, 'PATCH', { decision: 'approved' }],
     ['/buyer-prompts', 'GET', undefined],
     [`/buyer-prompts/${randomUUID()}`, 'PATCH', { approved: true }],
@@ -97,6 +98,48 @@ describe('Commerce workspace boundaries', () => {
 });
 
 describe('CSV evidence and catalog', () => {
+  it('executes only admitted discovery IDs and retains one attempt across concurrent requests', async () => {
+    await importCsv();
+    const product = (await call<CommerceCatalog>('/catalog')).body.products[0]!;
+    const admit = () =>
+      call<{ task_ids: string[] }>('/competitors/discover', {
+        method: 'POST',
+        body: { targets: [{ kind: 'product', id: product.id }] },
+      });
+    const requested = (await admit()).body.task_ids;
+    const sibling = (await admit()).body.task_ids;
+    expect(
+      (
+        await call('/competitors/discoveries/run', {
+          method: 'POST',
+          body: { task_ids: [randomUUID()] },
+        })
+      ).status,
+    ).toBe(404);
+    const responses = await Promise.all(
+      [0, 1].map(() =>
+        call('/competitors/discoveries/run', {
+          method: 'POST',
+          body: { task_ids: requested },
+        }),
+      ),
+    );
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    const tasks = await db
+      .selectFrom('analytics_tasks')
+      .selectAll()
+      .where('id', 'in', [...requested, ...sibling])
+      .execute();
+    expect(tasks.find((row) => row.id === requested[0])).toMatchObject({
+      status: 'failed',
+      attempt_count: 1,
+      error_code: 'provider_unavailable',
+    });
+    expect(tasks.find((row) => row.id === sibling[0])).toMatchObject({
+      status: 'queued',
+      attempt_count: 0,
+    });
+  });
   it('queues a frozen discovery per distinct target, starts a new run on repeat, and rejects foreign targets atomically', async () => {
     await importCsv();
     const product = (await call<CommerceCatalog>('/catalog')).body.products[0]!;

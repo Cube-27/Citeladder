@@ -100,10 +100,14 @@ export class AuditWorker {
   }
   async runOnce(signal?: AbortSignal) {
     const at = this.#now();
-    if (at.getTime() - this.#lastSweep >= this.#runtime.audits.poll_interval_seconds * 1000) {
+    if (
+      !this.#taskScope &&
+      at.getTime() - this.#lastSweep >= this.#runtime.audits.poll_interval_seconds * 1000
+    ) {
       this.#lastSweep = at.getTime();
       await this.#maintenance.runOnce(at);
     }
+    if (signal?.aborted) return 0;
     const tasks = await this.#queue.claim(
       this.owner,
       this.#runtime.audits.worker_concurrency,
