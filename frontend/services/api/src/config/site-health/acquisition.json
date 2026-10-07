@@ -9,16 +9,26 @@
       "local": 80,
       "category": 70,
       "pricing": 70,
+      "about": 65,
       "article": 60,
       "guide": 60,
       "faq": 60,
       "docs": 60,
+      "contact": 45,
       "trust": 40,
       "other": 20
     },
     "value_fallback_tokens": [
-      ["product", ["product", "/p/", "shop"]],
-      ["article", ["blog", "article", "news"]]
+      ["product", ["products", "p", "shop", "store"]],
+      ["comparison", ["compare", "vs", "versus"]],
+      ["service", ["services", "solutions"]],
+      ["category", ["collections", "collection", "categories"]],
+      ["pricing", ["plans", "prices"]],
+      ["about", ["company", "team", "story", "who-we-are"]],
+      ["article", ["blog", "articles", "news", "insights"]],
+      ["guide", ["guides", "resources", "learn", "help"]],
+      ["contact", ["get-in-touch", "support"]],
+      ["trust", ["privacy", "terms", "legal", "policy", "policies", "security"]]
     ],
     "exclusions": {
       "hard_path": "hard_excluded_path",

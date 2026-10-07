@@ -7,7 +7,7 @@
  * hold the workspace runtime lock (the first rung of the Site Health lock
  * order) and own the transaction.
  */
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 
 import { policy, resolveSettingSpec } from '../config.ts';
@@ -16,6 +16,7 @@ import { record } from '../db/json.ts';
 import type { WorkspaceSiteHealthRuntime } from '../generated/db-schema.ts';
 import { compareText } from '../text-order.ts';
 import { classifyUrlAdmission, type Admission, type Scope } from './url-admission.ts';
+import { hostTwinHash } from './url-identity.ts';
 import { ACTIVE_CRAWL } from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
 import {
@@ -94,16 +95,23 @@ export function crawlScope(crawl: Crawl): Scope {
   };
 }
 
-/** Value first, then the parent's position and the link's document order. */
-const byOrder = (a: Candidate, b: Candidate) =>
+/**
+ * Value tier first, then a per-crawl seeded shuffle: the sample within a tier is
+ * random but reproducible from the crawl, never biased to header and footer links.
+ */
+const seededRank = (seed: string, hash: string) =>
+  createHash('md5').update(`${seed}${hash}`).digest('hex');
+const byOrder = (seed: string) => (a: Candidate, b: Candidate) =>
   b.priority - a.priority ||
-  a.parentPosition - b.parentPosition ||
-  a.linkOrdinal - b.linkOrdinal ||
+  compareText(seededRank(seed, a.hash), seededRank(seed, b.hash)) ||
   compareText(a.hash, b.hash);
-function orderedUnique(candidates: Candidate[]) {
+/** One candidate per URL, and one of each www/apex twin pair. */
+export function orderedUnique(candidates: Candidate[], seed: string) {
   const unique = new Map<string, Candidate>();
-  for (const item of candidates.toSorted(byOrder))
-    if (!unique.has(item.hash)) unique.set(item.hash, item);
+  for (const item of candidates.toSorted(byOrder(seed))) {
+    const twin = hostTwinHash(item.url);
+    if (!unique.has(item.hash) && !(twin && unique.has(twin))) unique.set(item.hash, item);
+  }
   return [...unique.values()];
 }
 function allowed(item: Candidate, crawl: Crawl, settings: Settings) {
@@ -397,7 +405,9 @@ async function storeFrontier(
   candidates: Candidate[],
   settings: Settings,
 ) {
-  const eligible = orderedUnique(candidates).filter((item) => allowed(item, crawl, settings));
+  const eligible = orderedUnique(candidates, crawl.id).filter((item) =>
+    allowed(item, crawl, settings),
+  );
   if (!eligible.length) return;
   const existing = await trx
     .selectFrom('site_discovery_frontier')
@@ -415,11 +425,16 @@ async function storeFrontier(
         .select('url_hash')
         .where('workspace_id', '=', crawl.workspace_id)
         .where('crawl_id', '=', crawl.id)
-        .where('url_hash', '=', (eb) => eb.fn.any(eb.val(eligible.map((item) => item.hash))))
+        .where('url_hash', '=', (eb) =>
+          eb.fn.any(eb.val(eligible.flatMap((item) => [item.hash, hostTwinHash(item.url) ?? '']))),
+        )
         .execute()
     ).map((row) => row.url_hash),
   );
-  const fresh = eligible.filter((item) => !known.has(item.hash)).slice(0, capacity);
+  const twinKnown = (item: Candidate) => known.has(hostTwinHash(item.url) ?? '');
+  const fresh = eligible
+    .filter((item) => !known.has(item.hash) && !twinKnown(item))
+    .slice(0, capacity);
   const now = new Date();
   for (let offset = 0; offset < fresh.length; offset += settings.batch)
     await trx // NOSONAR: batches bound each insert's bind parameters, in order in one transaction.
@@ -458,8 +473,7 @@ async function pendingFrontier(trx: Database, crawl: Crawl, settings: Settings) 
     .where('crawl_id', '=', crawl.id)
     .where('status', '=', crawlPolicy.frontier_statuses.pending)
     .orderBy('value_priority', 'desc')
-    .orderBy('parent_position')
-    .orderBy('link_ordinal')
+    .orderBy(sql`md5(${crawl.id} || url_hash)`)
     .orderBy('url_hash')
     .limit(Math.min(remaining, settings.batch))
     .forUpdate()
@@ -509,7 +523,7 @@ async function admissionBatch(
   settings: Settings,
 ): Promise<Entry[]> {
   if (crawl.sample_mode)
-    return orderedUnique(candidates)
+    return orderedUnique(candidates, crawl.id)
       .filter((item) => allowed(item, crawl, settings))
       .slice(0, settings.batch)
       .map((item) => ({ frontierId: null, item }));

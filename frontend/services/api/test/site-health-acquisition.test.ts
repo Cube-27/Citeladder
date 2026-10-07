@@ -3,7 +3,12 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
-import { admitCandidates, candidate, lockRuntime } from '../src/site-health/frontier.ts';
+import {
+  admitCandidates,
+  candidate,
+  lockRuntime,
+  orderedUnique,
+} from '../src/site-health/frontier.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { runSiteSetup, setupSettings } from '../src/site-health/site-setup-task.ts';
@@ -595,6 +600,19 @@ describe('frontier admission', () => {
       });
     };
     expect(await statements(40)).toBe(await statements(4));
+  });
+
+  it('samples each value tier in a seeded order that ignores link position, and keeps one www/apex twin', () => {
+    const pages = candidates(Array.from({ length: 12 }, (_, index) => `/page-${index}`));
+    const order = (items: typeof pages, seed: string) =>
+      orderedUnique(items, seed).map((item) => item.url);
+    const reversed = pages.map((item, index) => ({ ...item, linkOrdinal: pages.length - index }));
+    expect(order(reversed, 'crawl-a')).toEqual(order(pages, 'crawl-a'));
+    expect(order(pages, 'crawl-b')).not.toEqual(order(pages, 'crawl-a'));
+    const twin = candidates(['/page-0'])[0]!;
+    const wwwUrl = twin.url.replace('://', '://www.');
+    const www = { ...twin, url: wwwUrl, hash: canonicalIdentity(wwwUrl).hash };
+    expect(orderedUnique([twin, www], 'crawl-a')).toHaveLength(1);
   });
 
   it('never admits a hard-excluded or out-of-scope candidate', async () => {

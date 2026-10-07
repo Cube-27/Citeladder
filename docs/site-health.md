@@ -225,6 +225,14 @@ There is no legacy `ai_crawlers` or `crawler_roles` reader.
   unavailable rather than guessed.
 - Cancellation and partial completion preserve all evidence already committed.
 
+Admission orders candidates by URL value tier (whole path tokens, the
+section a URL sits in first, so `/blog/product-review` is an article), then by a
+shuffle seeded by the crawl ID. The analyzed sample within a tier is random but
+reproducible, and never biased to header or footer links. A URL whose `www.`/apex
+twin is already in the crawl's frontier or batch is not admitted again, so a
+site that answers on both hosts cannot spend two slots on one page; stored URL
+identities are unchanged.
+
 Discovery and normalized facts share the parsed HTML document before fact
 extraction prunes non-content subtrees. Discovery keeps its own scope-filtered
 link budget; an oversized document still uses the stricter fact-extraction byte
