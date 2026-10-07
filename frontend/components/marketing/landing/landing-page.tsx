@@ -4,7 +4,6 @@ import { useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
-  Check,
   ChevronDown,
   FileText,
   Link2,
@@ -13,18 +12,13 @@ import {
 } from 'lucide-react';
 
 import { EngineLogo } from '../primitives/engine-logo';
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { DemoButtonLink } from '../primitives/button';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
-import { appHref } from '@/lib/config/app-link';
-import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
-import {
-  CAPABILITIES,
-  FAQS,
-  INTEGRATIONS,
-  TEAMS,
-  WORKFLOW_STEPS,
-  type ModuleId,
-} from './landing-data';
+import { PlatformActions, PlatformCards } from '../pages/platform';
+import { PlatformPreview } from '../scenes/platform-preview';
+import { TRIAL_NOTE } from '@/lib/marketing-content/platform-pages';
+
+import { FAQS, INTEGRATIONS, TEAMS, WORKFLOW_STEPS, type ModuleId } from './landing-data';
 import { Evidence } from './landing-evidence';
 import { HeroPreview, PlatformExplorer } from './landing-previews';
 
@@ -41,26 +35,22 @@ function Hero() {
     <header className="cl-hero">
       <div className="cl-wrap">
         <div className="cl-hero-copy">
-          <span className="cl-overline">AI visibility and citation tracking</span>
-          <h1>AI visibility software for brands that want to be found.</h1>
+          <span className="cl-overline">
+            AI visibility, website intelligence and content workflows
+          </span>
+          <h1>Understand your AI visibility. Know what to improve next.</h1>
           <p>
-            Understand where your brand appears in AI answers, which sources get cited, and how your
-            visibility compares with competitors.
+            CiteLadder connects the answers that mention your brand with the sources, website
+            findings and search data behind your next decision. Track visibility, investigate gaps
+            and prepare improvements your team can review.
           </p>
-          <div className="cl-hero-actions">
-            <DemoLink />
-            <ButtonLink
-              href={selfServeSignupOpen() ? appHref('/register') : '/ai-citation-tracking'}
-              variant="soft"
-              size="marketing"
-              className="cl-cta"
-            >
-              {selfServeSignupOpen() ? 'Start free trial' : 'Explore citation tracking'}{' '}
-              <ArrowRight size={18} aria-hidden />
-            </ButtonLink>
+          <div className="cl-hero-actions" data-cta-placement="hero">
+            <PlatformActions path="/" />
           </div>
+          <p className="cl-hero-note">{TRIAL_NOTE}</p>
           <p className="cl-hero-note">
-            Brand mentions · Cited sources · Competitor visibility · Site health
+            AI Visibility · Citations · Site Health · Search Intelligence · AI Referrals · Agent
+            &amp; MCP
           </p>
         </div>
         <div className="cl-hero-stage marketing-snapshot-grain">
@@ -108,79 +98,40 @@ function Intelligence() {
     <section className="cl-section" id="why">
       <div className="cl-wrap">
         <div className="cl-section-head cl-section-head-wide">
-          <h2>Turn AI answers into a clearer marketing picture.</h2>
+          <h2>More than another visibility chart</h2>
           <p>
-            AI answers can introduce a buyer to your brand, leave it out, or rely on another website
-            to describe it. CiteLadder helps you examine those observations across the questions
-            your team chooses to track.
-          </p>
-          <p>
-            Start with the answer, inspect the sources, and connect the finding to a specific next
-            step.
+            An AI answer is only one part of the picture. Your team also needs to know which sources
+            appeared, what your own pages communicate and which visits reached your website.
+            CiteLadder keeps those observations connected without treating them as the same metric.
           </p>
         </div>
-        <div className="cl-capabilities">
-          {CAPABILITIES.map((capability) => (
-            <article className={`cl-capability cl-hue-${capability.tab}`} key={capability.tab}>
-              <div className="cl-cap-well">
-                <div className="cl-cap-top">
-                  <span>{capability.label}</span>
-                  <span>Illustrative example</span>
-                </div>
-                <div className="cl-cap-graphic" aria-hidden>
-                  {capability.tab === 'visibility' ? (
-                    <>
-                      <strong>64.4%</strong>
-                      <span>Brand visibility</span>
-                      <div className="cl-stacked-bars">
-                        <i />
-                        <i />
-                        <i />
-                      </div>
-                    </>
-                  ) : capability.tab === 'sources' ? (
-                    <>
-                      <div>
-                        <span>Owned sources</span>
-                        <i style={{ width: '82%' }} />
-                      </div>
-                      <div>
-                        <span>Review sources</span>
-                        <i style={{ width: '64%' }} />
-                      </div>
-                      <div>
-                        <span>Editorial sources</span>
-                        <i style={{ width: '43%' }} />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <Check size={16} />
-                        Crawl access <span>Passed</span>
-                      </div>
-                      <div>
-                        <Check size={16} />
-                        Page structure <span>Passed</span>
-                      </div>
-                      <div>
-                        <ShieldCheck size={16} />
-                        Structured data <span>Review</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="cl-cap-body">
-                <h3>{capability.title}</h3>
-                <p>{capability.body}</p>
-                <a className="cl-text-link" href={capability.href} data-marketing-cta="">
-                  {capability.action} <ArrowRight size={16} aria-hidden />
-                </a>
-              </div>
-            </article>
-          ))}
+        <div className="space-y-8">
+          <h2 className="website-section-heading">
+            Discover what your team can measure, diagnose and improve
+          </h2>
+          <PlatformCards />
         </div>
+      </div>
+    </section>
+  );
+}
+
+function ConnectedEvidence() {
+  return (
+    <section className="cl-section">
+      <div className="cl-wrap space-y-12">
+        <div className="cl-section-head cl-section-head-wide">
+          <h2>Keep different signals distinct</h2>
+          <p>
+            <strong>A mention</strong> shows that a brand appeared in a collected answer.{' '}
+            <strong>A citation</strong> shows a source reference.{' '}
+            <strong>A referral session</strong> shows an identifiable visit reported by connected
+            analytics. These observations answer different questions; none alone proves a sale or
+            explains why an engine selected a source.
+          </p>
+        </div>
+        <PlatformPreview path="/platform/site-health" />
+        <PlatformPreview path="/platform/agents" />
       </div>
     </section>
   );
@@ -191,7 +142,7 @@ function Workflow() {
     <section className="cl-section cl-workflow" id="how-it-works">
       <div className="cl-wrap">
         <div className="cl-section-head">
-          <h2>Start with a question your buyer would ask.</h2>
+          <h2>From an observation to a reviewable improvement</h2>
         </div>
         <ol className="cl-steps">
           {WORKFLOW_STEPS.map(([number, title, body]) => (
@@ -214,10 +165,11 @@ function Integrations() {
     <section className="cl-section cl-integrations" id="integrations">
       <div className="cl-wrap">
         <div className="cl-section-head">
-          <h2>Part of the existing marketing stack.</h2>
+          <h2>Start small. Connect more evidence when it helps.</h2>
           <p>
-            First-party analytics, AI providers and connected tools contribute distinct context to
-            the workspace.
+            Begin with the AI questions you need to understand. Add website diagnostics, first-party
+            search data and other available connections as your work requires them. Explore advanced
+            content and Agent workflows in a demo.
           </p>
         </div>
         <div className="cl-integration-grid">
@@ -233,8 +185,8 @@ function Integrations() {
             </article>
           ))}
         </div>
-        <a className="cl-text-link" href="/pricing">
-          Provider-key and pricing details <ArrowUpRight size={16} aria-hidden />
+        <a className="cl-text-link" href="/platform/integrations">
+          Explore integrations <ArrowUpRight size={16} aria-hidden />
         </a>
       </div>
     </section>
@@ -348,17 +300,14 @@ function Closing() {
     <section className="cl-section cl-closing" id="get-started">
       <div className="cl-wrap cl-closing-grid">
         <div>
-          <h2>See how CiteLadder fits your AI visibility workflow.</h2>
+          <h2>See the product in the context of your business</h2>
           <p>
-            Bring the questions your buyers ask. We’ll walk through the visibility and source
-            evidence that can help your team decide what to investigate next.
+            Bring your website and a few questions your buyers ask. Explore how CiteLadder connects
+            visibility evidence with a practical next step.
           </p>
         </div>
         <div className="cl-closing-actions">
-          <DemoLink />
-          <ButtonLink href="/pricing" variant="dark" size="marketing" className="cl-cta">
-            View pricing <ArrowRight size={18} aria-hidden />
-          </ButtonLink>
+          <PlatformActions path="/" />
         </div>
       </div>
     </section>
@@ -374,6 +323,7 @@ export function LandingPage() {
       <Intelligence />
       <Workflow />
       <PlatformExplorer selected={module} selectModule={setModule} />
+      <ConnectedEvidence />
       <Evidence />
       <Integrations />
       <Teams selectModule={setModule} />

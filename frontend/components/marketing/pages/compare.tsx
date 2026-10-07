@@ -40,6 +40,9 @@ export function CompareIndex() {
           <a href="/ai-search-share-of-voice" className="underline underline-offset-2">
             Understand AI share of voice
           </a>
+          <a href="/platform/citation-intelligence" className="underline underline-offset-2">
+            Explore CiteLadder Citation Intelligence
+          </a>
         </div>
         <div className="mb-5 flex items-center justify-between gap-4">
           <Meta as="p">Choose a tool</Meta>

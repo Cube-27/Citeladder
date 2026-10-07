@@ -1,11 +1,12 @@
 ---
-import { CommercialEntryPage } from '@/components/marketing/pages/commercial';
-import { CITATION_PAGE } from '@/lib/marketing-content/commercial-pages';
+import { ProductModule } from '@/components/marketing/pages/platform';
 import { researchArticle } from '../research-articles';
 import ResearchLayout from '../layouts/ResearchLayout.astro';
 const article = researchArticle('/ai-citation-tracking')!;
 ---
 
 <ResearchLayout article={article}>
-  <CommercialEntryPage page={CITATION_PAGE} showHero={false} />
+  <ProductModule path="/platform/citation-intelligence" heading="Put citation analysis into practice">
+    CiteLadder's Citation Intelligence helps you inspect the domains and URLs referenced in your tracked AI answers. Move from the source pattern to the supporting response, then choose the page or publisher information worth investigating.
+  </ProductModule>
 </ResearchLayout>

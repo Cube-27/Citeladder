@@ -3,6 +3,7 @@ import { POSTS } from './blog';
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from './legal';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { CITELADDER_LINKEDIN } from './social';
+import { PUBLISHED_PLATFORM } from './nav';
 
 /**
  * Plain-text facts for answer engines at `/llms.txt`. Keep this aligned with
@@ -12,7 +13,7 @@ import { CITELADDER_LINKEDIN } from './social';
 export const LLMS_TXT = [
   '# CiteLadder',
   '',
-  '> CiteLadder is an evidence-grounded AI visibility and AEO platform. It crawls owned pages, connects Search Console and GA4, measures how ChatGPT, Gemini, and Claude mention or cite a brand under a versioned prompt set, and helps teams act on gaps. Metrics open to the persisted answer. Model calls use the customer’s own provider keys. Nothing publishes without an explicit user action.',
+  '> CiteLadder connects observed AI answers and citations with website findings, first-party search data, optional external research and reviewable Agent workflows. Available engines and capabilities depend on account access and configuration. Nothing publishes automatically.',
   '',
   'CiteLadder is a Cube27 product.',
   `Parent: ${PARENT_COMPANY.legalName} (${PARENT_COMPANY.href})`,
@@ -26,23 +27,25 @@ export const LLMS_TXT = [
   '',
   '- AI visibility software for observed mentions, citations, and share under comparable audit conditions.',
   '- Site Health: crawl, page-kind classification, deterministic checks, issues, recrawl verification.',
-  '- Content Intelligence: evidence-grounded briefs, drafts, and schema. Save is a human decision.',
+  '- Content Intelligence: Agent-supported briefs, proposed page edits and internal-link plans for human review.',
   '- Demand Intelligence: Google Search Console and GA4 beside owned-page evidence.',
   '- Agent: chats and reviewable outputs over the same read tools as the MCP server. No second knowledge store. No autonomous publish.',
   '',
   '## What CiteLadder is not',
   '',
   '- Not a claim that a content change caused rankings, traffic, or revenue.',
-  '- Not a hosted-key AI visibility dashboard. Measurement runs on customer BYOK credentials.',
+  '- The public trial is limited AI visibility access for seven days, not access to the whole platform. Agent access is not included.',
+  '- General crawler-log ingestion remains unavailable. Commerce requires eligible projects. Optional external research requires scope-and-cost review and separate confirmation.',
   '- Not an open-source or self-hosted product.',
   '',
   '## Engines measured directly',
   '',
-  'ChatGPT, Gemini, and Claude. Perplexity, Grok, and Copilot are coming soon.',
+  'Engine access follows the supported collection configuration and account setup. The current public trial is ChatGPT-only. Provider/API observations are not identical to every consumer-app experience.',
   '',
   '## Public pages',
   '',
   '- [CiteLadder](https://citeladder.com/)',
+  ...PUBLISHED_PLATFORM.map((item) => `- [${item.title}](https://citeladder.com${item.href})`),
   '- [Pricing](https://citeladder.com/pricing)',
   '- [Enterprise](https://citeladder.com/enterprise)',
   '- [Solutions](https://citeladder.com/solutions)',

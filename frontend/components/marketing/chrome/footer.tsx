@@ -1,13 +1,11 @@
 import { ArrowUpRight } from 'lucide-react';
 
 import { LogoMark } from '@/components/ui/logo-mark';
-import { docsHref } from '@/lib/config/docs';
 
-import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
-import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { NAV_DROPS, PLATFORM_GROUPS, PLATFORM_OVERVIEW } from '@/lib/marketing-content/nav';
+import { DemoButtonLink } from '../primitives/button';
 import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
-import { appHref } from '@/lib/config/app-link';
 
 import { COOKIE_PREFERENCES_ATTRIBUTE } from './cookie-banner';
 
@@ -17,76 +15,35 @@ type FooterLink = {
   label: string;
   href: string;
   external?: boolean;
-  app?: boolean;
-  demo?: boolean;
 };
 type FooterColumn = { key: string; label: string; links: readonly FooterLink[] };
 
 const FOOTER_COLUMNS: readonly FooterColumn[] = [
-  {
-    key: 'platform',
-    label: 'Platform',
-    links: [
-      { label: 'What CiteLadder reveals', href: '/#why' },
-      { label: 'The operating loop', href: '/#how-it-works' },
-      { label: 'See it', href: '/#see-it' },
-      { label: 'Citation tracking', href: '/ai-citation-tracking' },
-      { label: 'AI share of voice', href: '/ai-search-share-of-voice' },
-      { label: 'Pricing', href: '/pricing' },
-      { label: 'Enterprise', href: '/enterprise' },
-    ],
-  },
-  {
-    key: 'resources',
-    label: 'Resources',
-    links: [
-      { label: 'Docs', href: docsHref(), external: true },
-      { label: 'Blog', href: '/blog' },
-      { label: 'Free tools', href: '/tools' },
-      { label: 'Changelog', href: docsHref('/changelog/'), external: true },
-      { label: 'FAQ', href: '/faq' },
-    ],
-  },
-  {
-    key: 'solutions',
-    label: 'Solutions',
-    links: [
-      { label: 'Agencies', href: '/solutions#agencies' },
-      { label: 'In-house teams', href: '/solutions#in-house' },
-      { label: 'Founders', href: '/solutions#founders' },
-      { label: 'Ecommerce', href: '/solutions#commerce' },
-      { label: 'PR & comms', href: '/solutions#pr' },
-    ],
-  },
-  {
-    key: 'compare',
-    label: 'Compare',
-    links: [
-      { label: 'All comparisons', href: '/compare' },
-      ...COMPETITORS.map((competitor) => ({
-        label: `vs ${competitor.name}`,
-        href: `/compare/${competitor.slug}`,
+  ...PLATFORM_GROUPS.map((group) => ({
+    key: group.label,
+    label: group.label,
+    links: group.items.map((item) => ({ label: item.title, href: item.href })),
+  })),
+  ...NAV_DROPS.filter((drop) => drop.key !== 'platform').map((drop) => ({
+    key: drop.key,
+    label: drop.label,
+    links: drop.groups.flatMap((group) =>
+      group.items.map((item) => ({
+        label: item.title,
+        href: item.href,
+        external: 'external' in item && item.external,
       })),
-    ],
-  },
+    ),
+  })),
   {
     key: 'company',
     label: 'Company',
     links: [
-      // No `mailto:` here. Cloudflare's email obfuscation rewrites a raw
-      // address into `/cdn-cgi/l/email-protection#<hex>` and injects a decoder
-      // script: the link is dead without JS -- invisible to the AI crawlers
-      // this product exists to be read by -- and the rewritten URL 404s once
-      // its fragment is dropped, which a crawler then books as a broken
-      // internal link on every page carrying this footer. `DEMO_CTA` already
-      // reaches CiteLadder's own contact form.
-      { label: DEMO_CTA, href: DEMO_HREF, external: DEMO_EXTERNAL, demo: true },
+      { label: 'Contact', href: '/contact' },
+      { label: 'Enterprise', href: '/enterprise' },
+      { label: 'Pricing', href: '/pricing' },
       { label: PARENT_COMPANY.name, href: PARENT_COMPANY.href, external: true },
       { label: 'CiteLadder on LinkedIn', href: CITELADDER_LINKEDIN, external: true },
-      { label: 'Contact', href: '/contact' },
-      { label: 'AI Instructions', href: '/ai-instructions' },
-      { label: 'Entity Map', href: '/entity-map' },
-      { label: 'Log in', href: '/login', app: true },
     ],
   },
 ];
@@ -97,24 +54,14 @@ const LINK =
 function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   if (link.external) {
     return (
-      <a
-        className={LINK}
-        href={link.href}
-        target="_blank"
-        rel="noreferrer"
-        data-demo-cta={link.demo ? '' : undefined}
-      >
+      <a className={LINK} href={link.href} target="_blank" rel="noreferrer">
         {link.label}
         <ArrowUpRight className="size-3" aria-hidden />
       </a>
     );
   }
   return (
-    <a
-      className={LINK}
-      href={link.app ? appHref(link.href as `/${string}`) : link.href}
-      data-demo-cta={link.demo ? '' : undefined}
-    >
+    <a className={LINK} href={link.href}>
       {link.label}
     </a>
   );
@@ -133,20 +80,28 @@ export async function MarketingFooter() {
     <footer className="marketing-footer relative">
       <div className="marketing-footer-card mx-auto w-full">
         <Container className="pt-14 pb-10 sm:pt-20 sm:pb-14">
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] lg:gap-12">
-            <div className="space-y-5">
-              <a href="/" aria-label="CiteLadder home" className="inline-block">
-                <LogoMark />
-              </a>
+          <div className="grid gap-10">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-5">
+                <a href="/" aria-label="CiteLadder home" className="inline-block">
+                  <LogoMark />
+                </a>
 
-              <p className="marketing-footer-description website-body max-w-[38ch]">
-                AI search intelligence with source-level context.
-              </p>
+                <p className="marketing-footer-description website-body max-w-[38ch]">
+                  AI search intelligence. From observed answers to informed action.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-6">
+                <DemoButtonLink />
+                <FooterColumnLink
+                  link={{ label: PLATFORM_OVERVIEW.title, href: PLATFORM_OVERVIEW.href }}
+                />
+              </div>
             </div>
 
             <nav
               aria-label="Footer"
-              className="grid grid-cols-2 gap-x-7 gap-y-9 sm:grid-cols-3 xl:grid-cols-5"
+              className="hidden gap-x-7 gap-y-9 md:grid md:grid-cols-3 xl:grid-cols-6"
             >
               {FOOTER_COLUMNS.map((column) => (
                 <div key={column.key}>
@@ -157,6 +112,18 @@ export async function MarketingFooter() {
                     ))}
                   </div>
                 </div>
+              ))}
+            </nav>
+            <nav aria-label="Footer mobile" className="md:hidden">
+              {FOOTER_COLUMNS.map((column) => (
+                <details key={column.key} className="border-border-subtle border-b py-4">
+                  <summary className="website-nav cursor-pointer">{column.label}</summary>
+                  <div className="grid justify-items-start gap-4 py-4">
+                    {column.links.map((link) => (
+                      <FooterColumnLink key={link.href} link={link} />
+                    ))}
+                  </div>
+                </details>
               ))}
             </nav>
           </div>
@@ -183,6 +150,12 @@ export async function MarketingFooter() {
                   {link.label}
                 </a>
               ))}
+              <a className={LEGAL_STRIP_LINK} href="/ai-instructions">
+                AI Instructions
+              </a>
+              <a className={LEGAL_STRIP_LINK} href="/entity-map">
+                Entity Map
+              </a>
               <button
                 type="button"
                 className={LEGAL_STRIP_LINK}

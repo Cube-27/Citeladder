@@ -112,8 +112,8 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
               CiteLadder pricing
             </a>{' '}
             ·{' '}
-            <a className="underline" href="/ai-citation-tracking">
-              Citation tracking
+            <a className="underline" href="/platform/citation-intelligence">
+              Citation Intelligence
             </a>{' '}
             ·{' '}
             <a className="underline" href="/ai-search-share-of-voice">

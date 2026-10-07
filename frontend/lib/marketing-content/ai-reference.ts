@@ -1,10 +1,11 @@
 import { docsHref } from '@/lib/config/docs';
+import { PUBLISHED_PLATFORM } from './nav';
 
 import { PARENT_COMPANY } from './legal';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { CITELADDER_LINKEDIN } from './social';
 
-export const AI_REFERENCE_UPDATED = '2026-10-03';
+export const AI_REFERENCE_UPDATED = '2026-10-07';
 
 const PRODUCT_DESCRIPTION =
   'CiteLadder is an evidence-grounded AI visibility and answer engine optimization (AEO) platform. It connects website findings, search demand, and AI answer evidence so teams can decide what to improve and measure what happens afterwards.';
@@ -62,13 +63,13 @@ export const AI_INSTRUCTIONS: readonly ReferenceSection[] = [
     bullets: [
       'AI Visibility tracks brand mentions, cited sources, and competitor presence in observed AI answers, with access to the underlying responses.',
       'Site Health crawls owned pages, identifies their structural purpose, and records checks, issues, and later recrawl evidence.',
-      'Content Intelligence supports evidence-grounded briefs, drafts, and schema for review.',
+      'Content Intelligence uses Agent workflows to prepare briefs, proposed page edits and internal-link plans for review. Agent access is not included in the public trial.',
       'Demand Intelligence connects Google Search Console and Google Analytics 4 evidence to owned pages and search opportunities.',
       'The Agent helps explain evidence, plan work, and produce reviewable deliverables. It uses the same project evidence and read tools as the MCP server.',
       'The MCP server lets authorized assistants read project evidence through scoped tools.',
     ],
     sources: [
-      { label: 'Product overview', href: '/#how-it-works' },
+      ...PUBLISHED_PLATFORM.map((item) => ({ label: item.title, href: item.href })),
       { label: 'Documentation', href: docsHref() },
       { label: 'Agent guide', href: docsHref('/agent/') },
       { label: 'MCP guide', href: docsHref('/mcp/') },
@@ -94,6 +95,7 @@ export const AI_INSTRUCTIONS: readonly ReferenceSection[] = [
     id: 'availability',
     title: 'Pricing, providers, and availability',
     paragraphs: [
+      'The current public trial is a limited seven-day AI visibility entry point. Agent workflows are not included. Commerce requires eligible projects, external research requires access and confirmation, and general crawler-log ingestion is not available.',
       'Use the current pricing page for plan amounts, allowances, billing options, and included capabilities. Check the project setup and documentation for engine and collection availability. Do not turn planned support into a claim of current availability.',
       'CiteLadder offers a bring-your-own-API-keys option. Under BYOK, provider usage is billed directly to the connected provider accounts without a CiteLadder markup; run speed depends on provider rate limits.',
     ],
@@ -155,7 +157,7 @@ export const REFERENCE_ENTITIES: readonly ReferenceEntity[] = [
       { label: 'Supports', target: entity('Answer engine optimization', 'aeo') },
     ],
     sources: [
-      { label: 'Product overview', href: '/' },
+      { label: 'Product overview', href: '/platform' },
       { label: 'AI Instructions', href: '/ai-instructions#identity' },
     ],
   },

@@ -67,11 +67,13 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'Can CiteLadder create content?',
-        'Content Intelligence turns a detected gap into an evidence-grounded brief, draft, and schema. Nothing is published automatically. Claims the draft cannot support from your project facts are flagged before you save, and saving is your decision.',
+        'Content Intelligence uses Agent workflows to prepare briefs, proposed page edits and internal-link plans. Review factual claims and source support before implementation. Nothing is published automatically, and Agent access is not included in the public trial.',
+        [{ label: 'Content Intelligence', href: '/platform/content-intelligence' }],
       ),
       faqItem(
         'Which analytics sources can I connect?',
-        'Demand Intelligence connects Google Search Console and GA4 so query and behavioral evidence sit beside your owned-page knowledge. Work is prioritized by demand that actually exists, not by a guessed keyword list.',
+        'Connect supported Google Search Console, GA4 and Bing evidence. Demand Intelligence examines first-party queries and pages; AI Referral Analytics examines identifiable GA4 visits and reported outcomes. Connection, mapping and coverage requirements apply.',
+        [{ label: 'Integrations', href: '/platform/integrations' }],
       ),
       faqItem(
         'What do I actually have to do?',
@@ -133,12 +135,20 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     heading: 'Account & billing',
     items: [
       faqItem(
+        'What is included in the current public trial?',
+        'The seven-day trial includes one project, 20 prompts, 20 monitored URLs and ChatGPT-only access, with 20 successful answers and one successful answer per prompt under the current trial rules. Agent access and AI credits are not included. Contact us to continue after the trial or discuss advanced workflows.',
+        [
+          { label: 'Explore AI Visibility', href: '/platform/ai-visibility' },
+          { label: 'Discuss access', href: '/contact' },
+        ],
+      ),
+      faqItem(
         'How much does CiteLadder cost?',
-        'Self-serve plans are published at /pricing, priced for your billing country. Enterprise is a custom, sales-assisted agreement. India is charged in INR with GST added. International cards are charged in USD. Model usage bills to your provider at their rates and is never marked up by us.',
+        'See the pricing page for published plans and current availability. Paid checkout is not currently open; contact us to continue after the trial or discuss an enterprise agreement. Under BYOK, provider usage is billed to your connected accounts without a CiteLadder markup.',
       ),
       faqItem(
         'Do you mark up model usage?',
-        'No. Model usage bills straight to your provider accounts and never passes through us. CiteLadder charges for the workspace, the intelligence, and the evidence. Current plan prices are at /pricing.',
+        'Under BYOK, provider usage bills directly to your connected accounts without a CiteLadder markup. Funding and access for other workflows depend on the account setup. See the pricing page for current options.',
       ),
       faqItem(
         'How do I get started?',
@@ -147,7 +157,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'Can I change plan later?',
-        'Yes. Plan changes take effect on the next billing period. Your projects, evidence, and exports are unaffected by a plan change.',
+        'Contact us to discuss a change in access or capacity. Current paid checkout availability and published plan information are shown on the pricing page.',
       ),
     ],
   },

@@ -1,5 +1,8 @@
 ---
 import { CommercialEntryPage } from '@/components/marketing/pages/commercial';
+import { ProductModule } from '@/components/marketing/pages/platform';
+import { PlatformPreview } from '@/components/marketing/scenes/platform-preview';
+import { Section } from '@/components/marketing/primitives/section';
 import { SHARE_OF_VOICE_PAGE } from '@/lib/marketing-content/commercial-pages';
 import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
@@ -18,5 +21,9 @@ const breadcrumb = breadcrumbJsonLd([
 >
   <main id="main">
     <CommercialEntryPage page={SHARE_OF_VOICE_PAGE} />
+    <Section aria-label="AI Visibility product preview"><PlatformPreview path="/platform/ai-visibility" /></Section>
+    <ProductModule path="/platform/ai-visibility" heading="Compare brand presence with the answer in view">
+      Use CiteLadder AI Visibility to review your selected prompt portfolio, compare recorded brand observations and inspect the responses behind a change. Keep the competitor set, collection conditions and successful-answer coverage visible.
+    </ProductModule>
   </main>
 </MarketingLayout>

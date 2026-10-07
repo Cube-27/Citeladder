@@ -1,33 +1,23 @@
-import { ArrowRight, ChevronDown, FileText, MessageSquare } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 
 import type { CommercialPage } from '@/lib/marketing-content/commercial-pages';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
 
-export function CommercialEntryPage({
-  page,
-  showHero = true,
-}: Readonly<{ page: CommercialPage; showHero?: boolean }>) {
+export function CommercialEntryPage({ page }: Readonly<{ page: CommercialPage }>) {
   return (
     <>
-      {showHero && (
-        <PageHero eyebrow={page.eyebrow} title={page.heading} lead={page.introduction} centered>
-          <div className="mt-8 flex flex-wrap justify-center gap-4" data-cta-placement="hero">
-            <DemoButtonLink />
-            <ButtonLink href={page.secondary.href} variant="soft">
-              {page.secondary.label}
-            </ButtonLink>
-          </div>
-          <CommercialEvidence kind={page.kind} />
-        </PageHero>
-      )}
-      {!showHero && (
-        <Section aria-label="CiteLadder citation workflow">
-          <SectionHeader title={page.heading} lead={page.introduction} />
-          <CommercialEvidence kind={page.kind} />
-        </Section>
-      )}
+      <PageHero eyebrow={page.eyebrow} title={page.heading} lead={page.introduction} centered>
+        <div className="mt-8 flex flex-wrap justify-center gap-4" data-cta-placement="hero">
+          <DemoButtonLink />
+          <ButtonLink href={page.secondary.href} variant="soft">
+            {page.secondary.label}
+          </ButtonLink>
+        </div>
+        <CommercialEvidence />
+      </PageHero>
+
       <Section>
         <SectionHeader title={page.overview.heading} lead={page.overview.lead} />
         <div className="grid gap-8 md:grid-cols-2 md:gap-16">
@@ -111,110 +101,65 @@ export function CommercialEntryPage({
 }
 
 /** Static teaching examples, deliberately separate from product previews and live metrics. */
-function CommercialEvidence({ kind }: Readonly<{ kind: CommercialPage['kind'] }>) {
+function CommercialEvidence() {
   return (
     <figure className="bg-panel border-border mt-12 overflow-hidden rounded-[var(--radius-card)] border text-left">
       <div className="website-label text-muted border-border-subtle flex flex-wrap justify-between gap-3 border-b px-6 py-4">
-        <span>
-          {kind === 'citation'
-            ? 'From buyer question to cited source'
-            : 'Read the denominator before the percentage'}
-        </span>
+        <span>Read the denominator before the percentage</span>
         <span>Illustrative example</span>
       </div>
-      {kind === 'citation' ? (
-        <div className="grid md:grid-cols-[1.15fr_0.85fr]">
-          <div className="space-y-5 p-6 md:p-8">
-            <p className="website-label text-muted flex items-center gap-3">
-              <MessageSquare className="size-4" aria-hidden /> Buyer question
-            </p>
-            <p className="website-feature-heading text-foreground">
-              Which scheduling tools work across several clinic locations?
-            </p>
-            <div className="bg-well space-y-3 rounded-[var(--radius-card)] p-5">
-              <p className="website-label text-muted">Answer observation</p>
-              <p className="website-body-lg text-secondary">
-                The answer names your product but cites an independent comparison.
-              </p>
-            </div>
-          </div>
-          <dl className="bg-canvas-soft space-y-6 p-6 md:p-8">
-            <div className="space-y-2">
-              <dt className="website-label text-muted">Brand mentioned</dt>
-              <dd className="website-feature-heading text-foreground">Your product</dd>
-            </div>
-            <div className="space-y-2">
-              <dt className="website-label text-muted flex items-center gap-3">
-                <FileText className="size-4" aria-hidden /> Source cited
-              </dt>
-              <dd className="website-feature-heading text-foreground">An independent comparison</dd>
-            </div>
-            <div className="space-y-2">
-              <dt className="website-label text-muted">Next question</dt>
-              <dd className="website-body text-secondary">
-                Does that comparison describe your current features accurately?
-              </dd>
-            </div>
-          </dl>
+      <div className="grid md:grid-cols-2">
+        <div className="p-6 md:p-8">
+          <table className="website-body w-full text-left">
+            <caption className="website-feature-heading text-foreground mb-5 text-left">
+              100 completed answers
+            </caption>
+            <thead className="website-label text-muted border-border-subtle border-b">
+              <tr>
+                <th scope="col" className="pb-3">
+                  Observation
+                </th>
+                <th scope="col" className="pb-3 text-right">
+                  Answers
+                </th>
+              </tr>
+            </thead>
+            <tbody className="text-secondary divide-border-subtle divide-y">
+              <tr>
+                <th scope="row" className="py-4">
+                  Brand mentioned
+                </th>
+                <td className="py-4 text-right tabular-nums">30</td>
+              </tr>
+              <tr>
+                <th scope="row" className="py-4">
+                  Brand absent
+                </th>
+                <td className="py-4 text-right tabular-nums">70</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="website-label text-muted mt-3">
+            Missing or failed observations are separate.
+          </p>
         </div>
-      ) : (
-        <div className="grid md:grid-cols-2">
-          <div className="p-6 md:p-8">
-            <table className="website-body w-full text-left">
-              <caption className="website-feature-heading text-foreground mb-5 text-left">
-                100 completed answers
-              </caption>
-              <thead className="website-label text-muted border-border-subtle border-b">
-                <tr>
-                  <th scope="col" className="pb-3">
-                    Observation
-                  </th>
-                  <th scope="col" className="pb-3 text-right">
-                    Answers
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-secondary divide-border-subtle divide-y">
-                <tr>
-                  <th scope="row" className="py-4">
-                    Brand mentioned
-                  </th>
-                  <td className="py-4 text-right tabular-nums">30</td>
-                </tr>
-                <tr>
-                  <th scope="row" className="py-4">
-                    Brand absent
-                  </th>
-                  <td className="py-4 text-right tabular-nums">70</td>
-                </tr>
-              </tbody>
-            </table>
-            <p className="website-label text-muted mt-3">
-              Missing or failed observations are separate.
-            </p>
+        <dl className="bg-canvas-soft space-y-6 p-6 md:p-8">
+          <div className="space-y-2">
+            <dt className="website-label text-muted">Answer-level mention rate</dt>
+            <dd className="website-feature-heading text-foreground tabular-nums">30 / 100 = 30%</dd>
           </div>
-          <dl className="bg-canvas-soft space-y-6 p-6 md:p-8">
-            <div className="space-y-2">
-              <dt className="website-label text-muted">Answer-level mention rate</dt>
-              <dd className="website-feature-heading text-foreground tabular-nums">
-                30 / 100 = 30%
-              </dd>
-            </div>
-            <div className="space-y-2">
-              <dt className="website-label text-muted">Share of tracked brand appearances</dt>
-              <dd className="website-feature-heading text-foreground">Not calculated here</dd>
-              <dd className="website-body text-secondary">
-                Needs competitor counts and a stated counting rule. Multiple brands can appear in
-                one answer.
-              </dd>
-            </div>
-          </dl>
-        </div>
-      )}
+          <div className="space-y-2">
+            <dt className="website-label text-muted">Share of tracked brand appearances</dt>
+            <dd className="website-feature-heading text-foreground">Not calculated here</dd>
+            <dd className="website-body text-secondary">
+              Needs competitor counts and a stated counting rule. Multiple brands can appear in one
+              answer.
+            </dd>
+          </div>
+        </dl>
+      </div>
       <figcaption className="website-label text-muted border-border-subtle border-t px-6 py-4">
-        {kind === 'citation'
-          ? 'A teaching example, not a customer result or a live product screenshot.'
-          : 'A teaching example, not a benchmark or CiteLadder’s scoring formula.'}
+        A teaching example, not a benchmark or CiteLadder’s scoring formula.
       </figcaption>
     </figure>
   );

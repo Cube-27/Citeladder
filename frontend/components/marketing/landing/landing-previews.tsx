@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ArrowUpRight, Check, Grid2X2, Search } from 'lucide-react';
 
-import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
+import { PlatformPreview } from '../scenes/platform-preview';
 import { docsHref } from '@/lib/config/docs';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { MODULES, SOURCE_ROWS, type ModuleId } from './landing-data';
@@ -224,37 +225,7 @@ function DemandPreview() {
 function ContentPreview() {
   return (
     <div className="cl-preview-content">
-      <div className="cl-preview-heading">
-        <div>
-          <h4>Content Intelligence</h4>
-          <p>Source-backed content preparation</p>
-        </div>
-        <span className="cl-pill">Draft</span>
-      </div>
-      <div className="cl-brief">
-        <div className="cl-brief-nav">
-          <b>Content brief</b>
-          <span>Overview</span>
-          <span>Source evidence</span>
-          <span>Suggested outline</span>
-          <span>Structured data</span>
-        </div>
-        <div>
-          <span className="cl-overline">Comparison content</span>
-          <h5>Workflow software for multi-team operations</h5>
-          <p>Comparison criteria supported by documented product capabilities.</p>
-          <dl>
-            <div>
-              <dt>Supporting sources</dt>
-              <dd>4 project records</dd>
-            </div>
-            <div>
-              <dt>Claim review</dt>
-              <dd>1 item requires evidence</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
+      <PlatformPreview path="/platform/content-intelligence" />
     </div>
   );
 }
@@ -320,6 +291,10 @@ export function PlatformExplorer({
           />
           {MODULES.map((item) => {
             const Preview = PREVIEWS[item.id];
+            const product = PUBLISHED_PLATFORM.find(
+              (product) =>
+                product.title === (item.id === 'sources' ? 'Citation Intelligence' : item.label),
+            )!;
             return (
               <TabPanel
                 key={item.id}
@@ -339,13 +314,8 @@ export function PlatformExplorer({
                       </li>
                     ))}
                   </ul>
-                  <a
-                    className="cl-text-link"
-                    href={DEMO_HREF}
-                    data-demo-cta=""
-                    {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
-                  >
-                    {DEMO_CTA} <ArrowUpRight size={16} aria-hidden />
+                  <a className="cl-text-link" href={product.href}>
+                    Explore {product.title} <ArrowUpRight size={16} aria-hidden />
                   </a>
                 </div>
                 <ScaledPreview width={640} className="cl-product-preview">
@@ -394,10 +364,10 @@ export function HeroPreview() {
             <span className="cl-sidebar-label">WORKSPACE</span>
             <span>Overview</span>
             <span className="cl-sidebar-active">AI Visibility</span>
-            <span>Sources</span>
+            <span>Prompts</span>
             <span>Site Health</span>
             <span>Demand</span>
-            <span>Content</span>
+            <span>Agent</span>
           </aside>
           <div className="cl-hero-preview-main">
             <div className="cl-hero-preview-title">

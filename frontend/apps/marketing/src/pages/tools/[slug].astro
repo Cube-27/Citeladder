@@ -31,7 +31,7 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
     <Section rhythm="tight" tone="sunken">
       <h2 class="website-feature-heading">What this tool can tell you</h2>
       <p class="website-body text-muted max-w-3xl">{tool.limitation}</p>
-      <p class="website-body">Need evidence across your website? <a href="/solutions" class="text-accent-text underline underline-offset-2">Explore CiteLadder’s site-wide workflow</a>.</p>
+      <p class="website-body">Need evidence across your website? Use <a href="/platform/site-health" class="text-accent-text underline underline-offset-2">Site Health</a> to inspect captured page evidence before choosing a correction.</p>
       <nav aria-label="Related tools" class="website-body flex flex-wrap gap-x-6 gap-y-3">
         {FREE_TOOLS.filter((item) => item.slug !== tool.slug).map((item) => <a class="text-accent-text underline underline-offset-2" href={`/tools/${item.slug}`}>{item.title}</a>)}
       </nav>

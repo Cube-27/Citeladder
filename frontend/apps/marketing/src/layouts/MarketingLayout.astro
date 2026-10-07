@@ -94,7 +94,7 @@ const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</
   <body class="bg-background text-foreground relative isolate min-h-dvh">
     {gaMeasurementId && <GoogleAnalytics measurementId={gaMeasurementId} client:load />}
     <a href="#main" class="skip-link">Skip to main content</a>
-    <MarketingNavIsland client:load />
+    <MarketingNavIsland path={Astro.url.pathname} client:load />
     <div class="relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>
     <div class="relative z-1"><MarketingFooter /></div>
     <CookieBanner client:load />

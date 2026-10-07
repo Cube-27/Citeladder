@@ -60,6 +60,22 @@ The documentation Worker serves assets only, with no Worker script, so Astro emi
 
 ## Routes and shared shell
 
+### Public platform pages
+
+The marketing content registry in `frontend/lib/marketing-content/nav.ts` owns
+the published Platform labels, destinations and groups for desktop/mobile
+navigation, footer, overview cards and sitemap. The Astro `/platform/[...slug]`
+route admits only those published destinations; substantive narratives live in
+`platform-pages.ts` and render on the server with the existing marketing primitives.
+Product pages have their own metadata and WebPage/breadcrumb relationships to
+the single CiteLadder software identity. Unknown or held capability paths return
+404. The `/mcp` protocol endpoint and blocked former app roots remain unchanged.
+
+Illustrative product excerpts use synthetic records and label their scope.
+Editorial publication never grants access: Agent/content workflows use demo
+CTAs, Commerce is project-dependent, and crawler analytics remains unpublished.
+Signup CTAs continue to use the existing public-signup switch and app URL helper.
+
 ### Public research guides
 
 Reviewed SEO articles live as Markdown under
@@ -84,9 +100,10 @@ Canonical article paths use the site's no-trailing-slash convention:
 | AI and SEO outlook | `/blog/will-ai-replace-seo` |
 | Reference discovery | `/blog/can-chatgpt-find-citations` |
 
-The citation destination retains its product workflow, teaching example, FAQs
-and demo links. The existing measurement destination retains the distinct
-share-of-appearances worked example. The older
+The citation destination retains its research body and a compact contextual link
+to `/platform/citation-intelligence`; it no longer appends a full commercial page.
+The guide and product page self-canonicalize separately. The existing measurement
+destination retains the distinct share-of-appearances worked example. The older
 `/blog/tracking-brand-visibility-ai-search` and `/check-ai-visibility` redirect
 permanently to the measurement destination; `/blog/track-optimize-ai-citations`
 redirects to citation tracking. The middleware also redirects article slash

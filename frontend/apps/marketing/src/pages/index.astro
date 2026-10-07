@@ -1,19 +1,16 @@
 ---
 import { LandingPage } from '@/components/marketing/landing/landing-page';
-import { FAQS } from '@/components/marketing/landing/landing-data';
-import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import './landing.css';
 
 const description =
-  'Track brand mentions, citations and competitor presence in AI answers. Connect visibility insights with source analysis and site health in CiteLadder.';
+  "Track AI visibility and citations, investigate website and search evidence, and prepare better content with CiteLadder's connected intelligence platform.";
 ---
 
 <MarketingLayout
-  title="AI Visibility Software for Brands and Teams | CiteLadder"
+  title="AI Visibility & Search Intelligence Software | CiteLadder"
   description={description}
   canonical="/"
-  jsonLd={[faqPageJsonLd([{ heading: 'Homepage FAQ', items: FAQS.map(([q, a]) => ({ q, a })) }])]}
 >
   <main id="main">
     <LandingPage client:load />

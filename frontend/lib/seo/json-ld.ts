@@ -80,6 +80,7 @@ export function softwareApplicationJsonLd(): JsonLdObject | null {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
+    '@id': new URL('#software', url).toString(),
     name: SITE_NAME,
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'All',
@@ -92,6 +93,26 @@ export function softwareApplicationJsonLd(): JsonLdObject | null {
       name: SITE_NAME,
       url,
     },
+  };
+}
+
+export function platformWebPageJsonLd(page: {
+  path: string;
+  title: string;
+  description: string;
+}): JsonLdObject | null {
+  const url = absoluteUrl(page.path);
+  const home = absoluteUrl('/');
+  if (!url || !home) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': url,
+    url,
+    name: page.title,
+    description: page.description,
+    about: { '@id': new URL('#software', home).toString() },
+    publisher: { '@id': new URL('#organization', home).toString() },
   };
 }
 

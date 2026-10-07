@@ -52,53 +52,26 @@ export const HERO_SOURCE_MIX = [
   { name: 'Competitor', percent: 8 },
 ] as const;
 
-export const CAPABILITIES = [
-  {
-    label: 'BRAND PRESENCE',
-    title: 'Track brand visibility',
-    body: 'Review brand mentions and competitor presence across your tracked questions. Compare observations over time with the prompt and run context kept in view.',
-    action: 'Explore AI share of voice',
-    href: '/ai-search-share-of-voice',
-    tab: 'visibility',
-  },
-  {
-    label: 'CITATION CONTEXT',
-    title: 'Investigate cited sources',
-    body: 'See which domains and pages appear as sources in recorded answers. Distinguish your own pages from the other sources shaping the response.',
-    action: 'Explore citation tracking',
-    href: '/ai-citation-tracking',
-    tab: 'sources',
-  },
-  {
-    label: 'WEBSITE READINESS',
-    title: 'Examine website readiness',
-    body: 'Connect an answer observation with page-level Site Health findings. Investigate whether important information is accessible, clearly presented and supported.',
-    action: 'Explore team workflows',
-    href: '/solutions',
-    tab: 'health',
-  },
-] as const;
-
 export const WORKFLOW_STEPS = [
   [
     '01',
-    'Choose the questions',
-    'Build a prompt set around the products, services and buying decisions that matter to your business.',
+    'Measure the questions that matter.',
+    'Build a buyer-question portfolio and inspect the answers collected for your project.',
   ],
   [
     '02',
-    'Review the answers',
-    'Look at mentions, competitors and cited sources within the recorded responses.',
+    'Investigate the evidence.',
+    'Follow a visibility change into cited sources, page findings, relevant search data or referral activity.',
   ],
   [
     '03',
-    'Choose an improvement',
-    'Use the evidence to investigate a product page, explanation, comparison or external source.',
+    'Prepare the next action.',
+    'Use an appropriate Agent workflow to develop a brief, proposed edit or plan. Your team reviews and implements the change.',
   ],
   [
     '04',
-    'Check again',
-    'Compare later observations with the earlier baseline, keeping changes to prompts and collection conditions visible.',
+    'Measure again.',
+    'Compare later observations with the earlier baseline and check whether the collection conditions remain comparable.',
   ],
 ] as const;
 
@@ -148,7 +121,7 @@ export const MODULES = [
     label: 'Content Intelligence',
     eyebrow: 'CONTENT DEVELOPMENT',
     title: 'Content grounded in source evidence.',
-    body: 'Identified gaps become structured briefs, drafts and schema, with unsupported claims flagged for review.',
+    body: 'Use Agent workflows to prepare briefs and proposed edits for human review. Agent access is not included in the current public trial.',
     points: [
       'Evidence-backed briefs and drafts',
       'Source references retained',
@@ -177,7 +150,7 @@ export const INTEGRATIONS = [
   ['AI', 'Google AI Overviews', 'Observed answer and source context from Google Search.'],
   ['KEY', 'Model providers', 'Configured OpenAI, Google and Anthropic accounts.'],
   ['MCP', 'MCP', 'Read-only project context in compatible AI assistants.'],
-  ['↓', 'Reports & exports', 'Documented findings for analysis and team reporting.'],
+  ['BING', 'Bing Webmaster Tools', 'Search evidence through separate consent and saved datasets.'],
 ] as const;
 
 export const TEAMS = [
@@ -203,23 +176,15 @@ export const TEAMS = [
 
 export const FAQS = [
   [
-    'What does CiteLadder measure?',
-    'CiteLadder records brand mentions, positions and citations in AI answers and brings those observations together with website, search demand and content analysis. A mention, a citation and a recommendation are distinct observations.',
+    'Is CiteLadder only an AI visibility tracker?',
+    'No. It combines AI answer and citation observations with website diagnostics, connected search and analytics data, and reviewable Agent workflows. Availability depends on the capability and account setup.',
   ],
   [
-    'How are mentions and citations different?',
-    'A mention is the appearance of a brand, product or domain in an answer. A citation is a reference to a source. A brand can be mentioned without its website being cited, and a cited source is not necessarily a recommendation.',
+    'Does the free trial include the whole platform?',
+    'No. The current trial provides limited AI visibility access for seven days. Contact us to explore advanced workflows or continue after the trial.',
   ],
   [
-    'Are provider API keys required?',
-    'Model calls use connected provider accounts. Provider usage is billed to those accounts separately from CiteLadder platform access. Available engines and run capacity depend on the connected provider configuration.',
-  ],
-  [
-    'Does content publish automatically?',
-    'No. Content Intelligence prepares briefs, drafts and schema for review. Saving content and running or scheduling audits are explicit actions.',
-  ],
-  [
-    'How does MCP fit into the workflow?',
-    'MCP provides read-only access to saved project context in compatible AI assistants, including visibility, Site Health, demand and opportunities.',
+    'Does CiteLadder publish changes automatically?',
+    'No. The Agent helps prepare work for review. Your team controls external implementation and later measurement.',
   ],
 ] as const;
