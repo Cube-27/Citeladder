@@ -86,7 +86,9 @@ export function DesktopNavigation({
         <div
           key={key}
           className="group/drop z-1 flex items-center"
-          onMouseEnter={(event) => openDropAt(key, event.currentTarget)}
+          onPointerEnter={(event) => {
+            if (event.pointerType !== 'touch') openDropAt(key, event.currentTarget);
+          }}
           onMouseLeave={() => releaseSuppression(key)}
         >
           <a
