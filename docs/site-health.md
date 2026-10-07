@@ -105,8 +105,10 @@ by the runner's database pool size) in flight, refilling a slot as each task
 settles rather than waiting for the slowest task of a batch. Refills stop when
 the runner stops admitting or after `claim_window_seconds`, so other runner
 lanes still get turns; host pacing and acquisition limits still apply.
-Analyze tasks extract facts and evaluate rules in Node worker threads before
-taking commit locks. The commit rechecks the page's site/sitemap context;
+Analyze tasks extract facts and evaluate rules on a small persistent pool of Node
+worker threads (`interpretation_worker_threads`, default one) before taking commit
+locks; idle threads never keep a job process alive, and a crashed thread fails
+only its own jobs before a replacement starts. The commit rechecks the page's site/sitemap context;
 changed context is interpreted once under the crawl lock without spending another attempt.
 Source inspection and internal-link judgments run in the TypeScript analytics
 worker; their failed-task recovery also covers native sweeper terminalization.

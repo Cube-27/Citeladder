@@ -173,6 +173,22 @@ describe('page checklist', () => {
     );
   });
 
+  it('returns each concurrent interpretation to its own caller on the shared pool', async () => {
+    const pages = ['/products/a', '/blog/b', '/pricing', '/contact', '/faq', '/about'].map(
+      (path) => `https://example.test${path}`,
+    );
+    const body = (url: string) =>
+      Buffer.from(
+        `<html><head><title>${url}</title></head><body><main><h1>${url}</h1></main></body></html>`,
+      );
+    const results = await Promise.all(
+      pages.map((url) =>
+        extractFactsAsync(body(url), { finalUrl: url, contentType: 'text/html' }, factSettings({})),
+      ),
+    );
+    expect(results.map((facts) => facts.title)).toEqual(pages);
+  });
+
   it.each(['février 12, 2026', 'Март १२, २०२६'])(
     'excludes Unicode date metadata %s from prose',
     (date) => {

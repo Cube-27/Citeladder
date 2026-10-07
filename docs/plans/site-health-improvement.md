@@ -39,7 +39,7 @@ page-kind coverage then found the issues below. File references are to
 
 Progress (2026-10-07): 1.1, 1.2, 1.3 (sliding window; the pool cap stays until
 production timings justify raising in-flight parses on the 1-vCPU runner), 1.6
-and 1.7 are implemented on `feat/site-health-throughput`. 1.4 and 1.5 are next;
+and 1.7 are implemented on `feat/site-health-throughput`. 1.5 is implemented on `feat/site-health-parse-pool` (discover still parses on the main thread); 1.4 is next;
 1.8 waits for a measured backlog.
 
 | # | Change | Where | Acceptance |
