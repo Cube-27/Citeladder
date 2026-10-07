@@ -260,9 +260,12 @@ The classifier reads page-owned structure before route/title suggestions.
 Structured data can suggest a type but cannot certify the type whose markup is
 being checked. The root-path homepage exception is exact: the bare root, known
 index files, listed two-letter language roots and any region-qualified locale
-root (`/en-in`, `/es-419`). A lone generic title word (`contact`, `shipping`,
-`policy`) counts only as the page's whole slug, because it also names products;
-multi-word phrases may appear anywhere. When page content was not observed (a
+root (`/en-in`, `/es-419`, `/zh-hant`; not `/en-shop`). A lone generic title
+word (`contact`, `shipping`, `policy`) counts only as a whole page name (the
+slug, the H1, or the title before its site suffix), because it also names
+products ("Contact lenses"); multi-word phrases may appear anywhere. A product or
+category purpose failure needs a purchase control, a price or captured
+collection items; otherwise it is unknown (`page_kind_unconfirmed`). When page content was not observed (a
 client-rendered shell), a winning route or title suggestion is low confidence
 and the evidence records `content_unobserved`. The persisted classifier version
 is the configured base plus a digest of every classification input, so a
@@ -357,7 +360,7 @@ declarations fail. An unavailable target is unresolved. A healthy redirect can
 be consolidation guidance and does not automatically fail.
 
 AEO scoring covers crawlability (indexability, snippet access, and site-level
-search and AI-crawler access), machine readability (initial HTML rendering and
+access for search and AI-search crawlers), machine readability (initial HTML rendering and
 valid, content-matching structured data), answer and evidence facts on product
 and collection pages, provenance and freshness on authored and product pages,
 and heading structure. Open Graph, structured-data presence, answer-first and
@@ -493,8 +496,10 @@ The AEO pillars and baseline weights are:
 
 Checks are binary and equal weight inside their role/pillar. Site-scoped
 checks are evaluated where the site facts were observed (the crawl root) and
-apply to every page: a site that blocks GPTBot fails AI-crawler access on each
-page's crawlability pillar. Final page revisions list those site evaluation IDs
+apply to every page: a site that blocks OAI-SearchBot fails crawler access on
+each page's crawlability pillar. Blocking only training crawlers (GPTBot,
+ClaudeBot, Google-Extended) is a visible, unscored finding: it does not stop
+answer-time retrieval. Final page revisions list those site evaluation IDs
 in their source manifest; evaluation rows are never copied.
 
 ```text

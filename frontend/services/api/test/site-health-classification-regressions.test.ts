@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { extractPageFacts } from '../src/site-health/analysis/facts.ts';
 import { analyzePage } from '../src/site-health/analysis/analyze-page.ts';
 import { createsIssue, type RuleEvaluation } from '../src/site-health/analysis/rules.ts';
+import { isHomepagePath } from '../src/site-health/routes.ts';
 
 const prose =
   'Teams can investigate website observations and compare practical improvements using a clear record of the evidence they collected during their review.';
@@ -25,6 +26,23 @@ const grid = (prefix: string, wrapper = '') =>
   ).join('')}</div>`;
 
 describe('page-purpose regression boundaries', () => {
+  it('reads a lone keyword only as the whole page name', () => {
+    const kind = (title: string, path: string) =>
+      inspect(
+        `<title>${title}</title><main><h1>${title.split(' | ')[0]}</h1><p>${prose}</p></main>`,
+        path,
+      ).result.assessment.page_kind;
+    expect(kind('FAQ | Acme', '/acme-info')).toBe('faq');
+    expect(kind('Contact lenses | Acme', '/catalog/item-42')).not.toBe('about_contact');
+  });
+
+  it('treats language-region and script roots as homepages, not ordinary hyphenated paths', () => {
+    for (const path of ['/en-in', '/es-419', '/zh-hant', '/pt_br'])
+      expect(isHomepagePath(path), path).toBe(true);
+    for (const path of ['/en-shop', '/my-blog', '/de-sale'])
+      expect(isHomepagePath(path), path).toBe(false);
+  });
+
   it.each(['currency', 'country', 'quantity', 'payment'])(
     'does not treat %s controls as product variants',
     (name) => {

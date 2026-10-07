@@ -171,7 +171,7 @@
     "/vi",
     "/zh"
   ],
-  "homepage_locale_root_pattern": "^/[a-z]{2}[-_](?:[a-z]{2,4}|[0-9]{3})$",
+  "homepage_locale_root_pattern": "^/[a-z]{2}[-_](?:[a-z]{2}|[0-9]{3}|hans|hant|latn|cyrl)$",
   "tracking_params": [
     "_hsenc",
     "_hsmi",
