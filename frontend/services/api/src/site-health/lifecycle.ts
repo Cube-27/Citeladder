@@ -254,8 +254,17 @@ async function terminalize(
   else await enqueueTerminalAnalyticsRefresh(db, crawl, null);
 }
 
+type ReconcileOptions = {
+  /**
+   * Rebuild the provisional score while work remains. Only a new analysis can
+   * change it, and the rebuild reloads the whole measurement projection under
+   * the crawl lock, so a settled discover or failed analysis skips it.
+   */
+  refreshScore?: boolean;
+};
+
 /** Reconcile one crawl whose row the caller holds FOR UPDATE. */
-async function reconcileLockedCrawl(db: Database, crawl: Crawl) {
+async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: ReconcileOptions = {}) {
   if (!ACTIVE.includes(crawl.status)) return;
   const summary = await taskSummary(db, crawl);
   await refreshCounters(db, crawl, summary);
@@ -263,7 +272,7 @@ async function reconcileLockedCrawl(db: Database, crawl: Crawl) {
   reconcileAnalysis(crawl, summary, fullyFailed);
   if (summary.discoverOpen || summary.analyzeOpen) {
     await saveState(db, crawl);
-    await refreshLiveScoreSummary(db, crawl);
+    if (options.refreshScore ?? true) await refreshLiveScoreSummary(db, crawl);
     return;
   }
   // Cross-page rules read persisted facts and run before the snapshot so
@@ -284,10 +293,15 @@ function lockCrawl(db: Database, workspaceId: string, crawlId: string) {
     .executeTakeFirst();
 }
 
-export async function reconcileCrawl(db: Database, workspaceId: string, crawlId: string) {
+export async function reconcileCrawl(
+  db: Database,
+  workspaceId: string,
+  crawlId: string,
+  options: ReconcileOptions = {},
+) {
   await db.transaction().execute(async (trx) => {
     const crawl = await lockCrawl(trx, workspaceId, crawlId);
-    if (crawl) await reconcileLockedCrawl(trx, crawl);
+    if (crawl) await reconcileLockedCrawl(trx, crawl, options);
   });
 }
 
@@ -346,7 +360,8 @@ type SettledTask = { id: string; crawl_id: string; workspace_id: string };
  * a boundary. A row still non-terminal (deferred, re-queued, lease lost) is
  * itself the outstanding work; a successful analysis while siblings remain
  * only refreshes the live summary on cadence. Taking the crawl lock for
- * either is pure contention with the user's Stop.
+ * either is pure contention with the user's Stop. Other settlements update
+ * counters and sub-states without rebuilding the score they cannot change.
  */
 export async function reconcileAfterTask(
   db: Database,
@@ -382,7 +397,10 @@ export async function reconcileAfterTask(
     row.crawl_status === 'running' &&
     row.analysis_status === 'running' &&
     row.outstanding;
-  if (!intermediate) return reconcileCrawl(db, task.workspace_id, task.crawl_id);
+  if (!intermediate)
+    return reconcileCrawl(db, task.workspace_id, task.crawl_id, {
+      refreshScore: row.task_kind === 'analyze' && row.status === 'succeeded',
+    });
   if (!cadence.admits(task.crawl_id)) return;
   await db.transaction().execute(async (trx) => {
     const crawl = await lockCrawl(trx, task.workspace_id, task.crawl_id);

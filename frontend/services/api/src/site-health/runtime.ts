@@ -15,6 +15,8 @@ export function siteWorkerSettings(env: Record<string, string | undefined> = pro
     lease,
     heartbeat,
     poll: number('poll_interval_seconds'),
+    /** How long one claim pass keeps refilling freed slots before yielding. */
+    claimWindow: number('claim_window_seconds'),
     concurrency: Math.max(1, Math.min(number('worker_concurrency'), number('global_concurrency'))),
     maxAttempts: number('max_attempts'),
     retryBase: number('retry_base_delay_seconds'),

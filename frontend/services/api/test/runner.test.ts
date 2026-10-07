@@ -72,7 +72,10 @@ describe('bounded runner', () => {
       try {
         const owners = await runnerOwners(db, config);
         await owners.lanes.find((lane) => lane.name === 'site-health')!.run(() => true);
-        expect(run).toHaveBeenCalledWith(Math.min(concurrency, config.execution.poolSize));
+        expect(run).toHaveBeenCalledWith(
+          Math.min(concurrency, config.execution.poolSize),
+          expect.any(Function),
+        );
       } finally {
         run.mockRestore();
         await db.destroy();

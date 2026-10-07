@@ -210,7 +210,8 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       { name: 'audits', run: () => audit.runOnce() },
       {
         name: 'site-health',
-        run: () => site.runOnce(Math.min(site.settings.concurrency, config.execution.poolSize)),
+        run: (canAdmit) =>
+          site.runOnce(Math.min(site.settings.concurrency, config.execution.poolSize), canAdmit),
         nextDue: () => site.nextDue(),
       },
       {

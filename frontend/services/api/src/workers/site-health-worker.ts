@@ -91,34 +91,58 @@ export class SiteHealthWorker {
       settings: siteTaskSettings(),
     };
   }
-  async runOnce(limit = this.settings.concurrency) {
+  async runOnce(limit = this.settings.concurrency, canAdmit: () => boolean = () => true) {
     await this.#recover();
     await this.#maintain();
-    return this.#claimAndExecute(limit);
+    return this.#claimAndExecute(limit, canAdmit);
   }
-  async #claimAndExecute(limit: number) {
-    const scope = this.taskScope
-      ? {
-          workspaceId: this.taskScope.workspaceId,
-          taskIds: (
-            await this.db
-              .selectFrom('site_crawl_tasks')
-              .select('id')
-              .where('workspace_id', '=', this.taskScope.workspaceId)
-              .where('crawl_id', '=', this.taskScope.crawlId)
-              .execute()
-          ).map((row) => row.id),
-        }
-      : undefined;
-    const tasks = await this.queue.claim({
-      owner: this.owner,
-      kinds: policy.site_health.ts_owned_task_kinds,
-      limit,
-      scope,
-    });
-    const results = await Promise.allSettled(tasks.map((task) => this.execute(task)));
-    for (const result of results) if (result.status === 'rejected') throw result.reason;
-    return tasks.length;
+  async #scope() {
+    if (!this.taskScope) return undefined;
+    const { workspaceId, crawlId } = this.taskScope;
+    const rows = await this.db
+      .selectFrom('site_crawl_tasks')
+      .select('id')
+      .where('workspace_id', '=', workspaceId)
+      .where('crawl_id', '=', crawlId)
+      .execute();
+    return { workspaceId, taskIds: rows.map((row) => row.id) };
+  }
+  /**
+   * Keep up to `limit` tasks in flight: each settlement frees a slot that the
+   * next claim refills, so one slow fetch never idles the others. Successors a
+   * task enqueues become claimable on the next refill. Refills stop once the
+   * caller stops admitting or the claim window ends; claimed work always settles.
+   */
+  async #claimAndExecute(limit: number, canAdmit: () => boolean = () => true) {
+    const windowEnd = performance.now() + this.settings.claimWindow * 1000;
+    const refill = () => canAdmit() && !this.signal?.aborted && performance.now() < windowEnd;
+    const inFlight = new Set<Promise<void>>();
+    const failures: unknown[] = [];
+    let claimed = 0;
+    const claim = async () => {
+      const tasks = await this.queue.claim({
+        owner: this.owner,
+        kinds: policy.site_health.ts_owned_task_kinds,
+        limit: limit - inFlight.size,
+        scope: await this.#scope(),
+      });
+      claimed += tasks.length;
+      for (const task of tasks) {
+        const running: Promise<void> = this.execute(task)
+          .catch((error: unknown) => {
+            failures.push(error);
+          })
+          .finally(() => inFlight.delete(running));
+        inFlight.add(running);
+      }
+    };
+    await claim();
+    while (inFlight.size) {
+      await Promise.race(inFlight); // NOSONAR -- Wait for the next free slot.
+      if (!failures.length && refill()) await claim(); // NOSONAR -- One refill per settlement.
+    }
+    if (failures.length) throw failures[0];
+    return claimed;
   }
   /** When the earliest claimable task becomes available (deferred analysis, retry backoff). */
   async nextDue(): Promise<Date | null> {
@@ -210,7 +234,10 @@ export class SiteHealthWorker {
       // Maintenance runs even on an empty queue, so a drain still finalizes stalled crawls.
       await this.#maintain();
       if (signal.aborted || performance.now() >= deadline) break;
-      const count = await this.#claimAndExecute(this.settings.concurrency);
+      const count = await this.#claimAndExecute(
+        this.settings.concurrency,
+        () => !signal.aborted && performance.now() < deadline,
+      );
       total += count;
       if (!count && recovered < this.settings.reclaimBatch) break;
     }
