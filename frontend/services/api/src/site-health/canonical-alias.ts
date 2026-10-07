@@ -16,6 +16,14 @@ import type { Crawl } from './task-fence.ts';
 import { inScope } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
+function rootHash(crawl: Crawl) {
+  try {
+    return canonicalIdentity(crawl.root_url).hash;
+  } catch {
+    return '';
+  }
+}
+
 function targetHash(crawl: Crawl, hash: string, declared: string, base: string) {
   if (!declared.trim()) return '';
   const configured = record(crawl.configuration).root_registrable_domain;
@@ -27,7 +35,8 @@ function targetHash(crawl: Crawl, hash: string, declared: string, base: string) 
   } catch {
     return '';
   }
-  if (target.hash === hash || !root || !inScope(target.url, root)) return '';
+  if (target.hash === hash || hash === rootHash(crawl) || !root || !inScope(target.url, root))
+    return '';
   return target.hash;
 }
 
@@ -119,9 +128,13 @@ export async function reconcileDuplicateAliases(db: Database, crawl: Crawl) {
     .execute();
   const admitted = new Set(rows.map((row) => row.url_hash));
   const active = new Set(rows.filter((row) => row.active).map((row) => row.url_hash));
-  const protectedHashes = new Set(
-    rows.filter((row) => row.active && row.selection_source === 'user').map((row) => row.url_hash),
-  );
+  // User selections and the crawl root, which carries the site-wide checks every page scores.
+  const protectedHashes = new Set([
+    ...rows
+      .filter((row) => row.active && row.selection_source === 'user')
+      .map((row) => row.url_hash),
+    rootHash(crawl),
+  ]);
   const artifacts = await db
     .selectFrom('site_crawl_tasks as t')
     .innerJoin('site_fetch_artifacts as a', (join) =>

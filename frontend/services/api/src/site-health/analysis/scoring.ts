@@ -1,7 +1,8 @@
 /** Binary scoring of the public checklist: Web Fundamentals and weighted AEO readiness. */
 import { policy } from '../../config.ts';
+import { finalizeEvaluation } from './finalize.ts';
 import { analysisPolicy } from './policy.ts';
-import type { RuleEvaluation } from './rules.ts';
+import { membership, type RuleEvaluation } from './rules.ts';
 
 const reads = policy.site_health.reads;
 const LABELS: Record<string, string> = reads.aeo_dimension_labels;
@@ -18,6 +19,25 @@ const DETERMINATE = new Set(['satisfied', 'missing']);
  */
 export const appliedSiteChecks = (rows: RuleEvaluation[]) =>
   rows.filter((row) => row.scope === 'site' && row.outcome !== 'not_applicable');
+
+const SCORED_SITE_RULES = policy.site_health.rule_catalog
+  .filter((rule) => rule.scope === 'site' && membership(rule.rule_id).score_roles.length)
+  .map((rule) => rule.rule_id);
+/**
+ * The crawl's applied site checks, with every scored site check the crawl never
+ * evaluated (no root analysis, no site facts) as unknown: a missing crawler
+ * verdict keeps measurement partial instead of silently dropping out.
+ */
+export function crawlSiteChecks(rows: RuleEvaluation[]) {
+  const applied = appliedSiteChecks(rows);
+  const seen = new Set(applied.map((row) => row.rule_id));
+  return [
+    ...applied,
+    ...SCORED_SITE_RULES.filter((id) => !seen.has(id)).map((id) =>
+      finalizeEvaluation(id, 'unknown', { reason: 'site_facts_unavailable' }),
+    ),
+  ];
+}
 
 const withSiteChecks = (rows: RuleEvaluation[], siteRows: RuleEvaluation[]) => [
   ...rows.filter((row) => row.scope === 'page'),

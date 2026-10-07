@@ -34,7 +34,10 @@ const crawlerAccess =
   (facts: Facts): CheckResult => {
     const robots = siteRobots(facts);
     const bots = policy.crawlers.bots.filter((bot) => bot.checks.includes(check));
-    const stance = new Map(records(robots.bots).map((bot) => [text(bot.bot_id), bot.root_access]));
+    const botFacts = new Map(records(robots.bots).map((bot) => [text(bot.bot_id), bot]));
+    const stance = new Map([...botFacts].map(([id, bot]) => [id, bot.root_access]));
+    // The root may be open while every sampled content URL is closed: that bot sees no pages.
+    const sampled = (id: string) => text(botFacts.get(id)?.policy);
     const bounded = Object.fromEntries(
       bots.map((bot) => [bot.bot_id, stance.get(bot.bot_id) ?? 'unknown']),
     );
@@ -46,12 +49,20 @@ const crawlerAccess =
     };
     if (!robots.fetched) return ['not_applicable', { ...evidence, reason: 'robots_not_fetched' }];
     const blocked = bots
-      .filter((bot) => stance.get(bot.bot_id) === 'disallowed')
+      .filter(
+        (bot) =>
+          stance.get(bot.bot_id) === 'disallowed' || sampled(bot.bot_id) === 'all_disallowed',
+      )
       .map((bot) => bot.label);
-    return [
-      passFail(!blocked.length),
-      { ...evidence, blocked, checked: bots.map((bot) => bot.label) },
-    ];
+    // Closing some paths (an admin area) is ordinary; it is evidence, not a failure.
+    const restricted = bots
+      .filter((bot) => sampled(bot.bot_id) === 'restricted')
+      .map((bot) => bot.label);
+    const detail = { ...evidence, blocked, restricted, checked: bots.map((bot) => bot.label) };
+    // A fetched but unreadable robots.txt proves nothing: no block observed is not a pass.
+    if (!blocked.length && bots.some((bot) => stance.get(bot.bot_id) !== 'allowed'))
+      return ['unknown', { ...detail, reason: 'robots_unreadable' }];
+    return [passFail(!blocked.length), detail];
   };
 
 function robotsTxtPresent(facts: Facts): CheckResult {

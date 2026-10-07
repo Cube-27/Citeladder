@@ -109,3 +109,32 @@ it('retains the root-access decision for training and search checks', () => {
   ]);
   expect(DELIVERY_CHECKS['search.crawler_access']!(facts)[0]).toBe('satisfied');
 });
+it('fails answer-crawler access when every sampled page is closed, not when only some are', () => {
+  const searchFacts = (body: string, urls: string[]) => {
+    const parsed = robotsPolicy(origin, 200, body);
+    const bots = crawlerRootFacts(parsed, origin).map((fact) => ({
+      ...fact,
+      ...crawlerSamplePolicy(
+        parsed,
+        loadCrawlerCatalog(catalog).bots.find((entry) => entry.bot_id === fact.bot_id)!
+          .robots_tokens,
+        urls,
+      ),
+    }));
+    return DELIVERY_CHECKS['search.crawler_access']!({ site: { robots: { fetched: true, bots } } });
+  };
+  const closed = 'User-agent: OAI-SearchBot\nDisallow: /blog/';
+  const pages = [`${origin}/blog/a`, `${origin}/blog/b`];
+  // The root is open, but the bot can reach none of the content pages.
+  expect(searchFacts(closed, pages)).toMatchObject(['missing', { blocked: ['OAI-SearchBot'] }]);
+  expect(searchFacts(closed, [...pages, `${origin}/pricing`])).toMatchObject([
+    'satisfied',
+    { blocked: [], restricted: ['OAI-SearchBot'] },
+  ]);
+});
+it('keeps crawler access unknown when robots.txt was fetched but could not be read', () => {
+  const bots = crawlerRootFacts(robotsPolicy(origin, 503, ''), origin);
+  expect(
+    DELIVERY_CHECKS['search.crawler_access']!({ site: { robots: { fetched: true, bots } } }),
+  ).toMatchObject(['unknown', { reason: 'robots_unreadable' }]);
+});

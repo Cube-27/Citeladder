@@ -9,6 +9,7 @@ import {
   lockRuntime,
   orderedUnique,
 } from '../src/site-health/frontier.ts';
+import { reconcileDuplicateAliases } from '../src/site-health/canonical-alias.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { runSiteSetup, setupSettings } from '../src/site-health/site-setup-task.ts';
@@ -289,6 +290,27 @@ describe('discover', () => {
       url('/'),
       url('/a'),
     ]);
+  });
+
+  it('never resolves the crawl root as a canonical alias, so its site checks stay current', async () => {
+    const seed = await crawl({ config: { automatic_monitor_limit: 5 } });
+    const root = await queued(seed, 'discover');
+    const site = worker({
+      '/': { body: html('<a href="/home">x</a>', '<link rel="canonical" href="/home">') },
+      '/home': { body: links() },
+    });
+    await run(site, root);
+    await run(
+      site,
+      ...(await tasks(seed, 'discover')).filter((row) => row.id !== root).map((row) => row.id),
+    );
+    const live = await db
+      .selectFrom('site_crawls')
+      .selectAll()
+      .where('id', '=', seed.crawlId)
+      .executeTakeFirstOrThrow();
+    await reconcileDuplicateAliases(db, live);
+    expect((await urlRow(seed, '/')).corpus_disposition).not.toBe('exclude');
   });
 
   it('admits a sample directly up to the workspace allowance and closes discovery', async () => {

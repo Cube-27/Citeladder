@@ -104,6 +104,22 @@ describe('terminal checks from persisted evidence', () => {
     expect(result.web_fundamentals_state).toBe('limited_evidence');
   });
 
+  it('keeps a crawl without site evaluations partial rather than silently measured', () => {
+    const indexable = {
+      ...canonical(['/a']),
+      rule_id: 'technical.indexable',
+      outcome: 'satisfied',
+      score_roles: ['aeo_readiness'],
+      readiness_dimension: 'crawlability',
+      readiness_weight: 1,
+    };
+    const result = aggregateMeasurements([
+      { id: 'page', page_kind: 'article', evaluations: [indexable] },
+    ]);
+    // The answer-crawler verdict was never observed: unknown, so coverage stays partial.
+    expect(result.aeo_measurement_state).toBe('limited_evidence');
+  });
+
   it('scores a site-level crawler block on every page, not only the site root', () => {
     const crawlability = {
       ...canonical(['/a']),
