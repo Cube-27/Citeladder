@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
@@ -564,6 +564,37 @@ describe('frontier admission', () => {
     expect((await memberships(seed)).filter((row) => row.active)).toHaveLength(4);
     expect(await tasks(seed, 'discover')).toHaveLength(6);
     expect((await crawlRow(seed)).admitted_url_count).toBe(6);
+  });
+
+  it('skips an already-discovering URL without spending the ceiling on it', async () => {
+    const seed = await crawl({ config: { automatic_monitor_limit: 0, requested_page_limit: 2 } });
+    await admit(seed, ['/known']);
+    const result = await admit(seed, ['/known', '/a', '/b']);
+    expect(result.admitted).toBe(1);
+    expect((await tasks(seed, 'discover')).length).toBe(2);
+    expect((await crawlRow(seed)).admitted_url_count).toBe(2);
+  });
+
+  it('admits a batch in a fixed number of statements, whatever its size', async () => {
+    const statements = async (count: number) => {
+      const seed = await crawl({ config: { automatic_monitor_limit: count } });
+      const paths = Array.from({ length: count }, (_, index) => `/page-${index}`);
+      return db.transaction().execute(async (trx) => {
+        const live = await trx
+          .selectFrom('site_crawls')
+          .selectAll()
+          .where('id', '=', seed.crawlId)
+          .executeTakeFirstOrThrow();
+        const runtime = await lockRuntime(trx, seed.workspaceId);
+        const executor = trx.getExecutor();
+        const spy = vi.spyOn(executor, 'executeQuery');
+        const result = await admitCandidates(trx, live, candidates(paths), runtime);
+        spy.mockRestore();
+        expect(result.admitted).toBe(count);
+        return spy.mock.calls.length;
+      });
+    };
+    expect(await statements(40)).toBe(await statements(4));
   });
 
   it('never admits a hard-excluded or out-of-scope candidate', async () => {

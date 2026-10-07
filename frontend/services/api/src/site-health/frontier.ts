@@ -18,6 +18,15 @@ import { compareText } from '../text-order.ts';
 import { classifyUrlAdmission, type Admission, type Scope } from './url-admission.ts';
 import { ACTIVE_CRAWL } from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
+import {
+  activateMemberships,
+  enqueueSiteTasks,
+  insertObservations,
+  markFrontierAdmitted,
+  readAdmissionState,
+  upsertSiteUrls,
+  type AdmissionState,
+} from './admission-writes.ts';
 
 const crawlPolicy = policy.site_health.crawl;
 type Runtime = Selectable<WorkspaceSiteHealthRuntime>;
@@ -490,15 +499,7 @@ type AdmissionOptions = {
   sourceArtifactId?: string;
   settings?: Settings;
 };
-type Admitting = {
-  trx: Database;
-  crawl: Crawl;
-  settings: Settings;
-  enqueueChildren: boolean;
-  artifactId: string | undefined;
-  remaining: number | null;
-  result: AdmissionResult;
-};
+type Entry = { frontierId: string | null; item: Candidate };
 
 /** A sample admits its candidates directly; a full crawl persists them and takes the frontier's best. */
 async function admissionBatch(
@@ -506,7 +507,7 @@ async function admissionBatch(
   crawl: Crawl,
   candidates: Candidate[],
   settings: Settings,
-): Promise<{ frontierId: string | null; item: Candidate }[]> {
+): Promise<Entry[]> {
   if (crawl.sample_mode)
     return orderedUnique(candidates)
       .filter((item) => allowed(item, crawl, settings))
@@ -516,85 +517,124 @@ async function admissionBatch(
   return pendingFrontier(trx, crawl, settings);
 }
 
-/** A sample observes the URL and, while its allowance lasts, monitors and analyzes it. */
-async function admitSample(state: Admitting, siteUrlId: string, item: Candidate) {
-  const automatic =
-    Number(record(state.crawl.configuration)[crawlPolicy.automatic_monitor_limit_key]) || 0;
-  const [activated, observed] = await observe(
-    state.trx,
-    state.crawl,
-    siteUrlId,
-    item,
-    {
-      analyze: item.disposition === 'analyze' && (state.remaining ?? 0) > 0,
-      source: automatic > 0 ? 'bootstrap' : 'free_sample',
-      artifactId: state.artifactId,
-    },
-    state.settings,
-  );
-  if (activated && state.remaining !== null) state.remaining--;
-  if (observed) state.result.admitted++;
-}
+/** One admitted URL and the writes its admission implies. */
+type Planned = Entry & {
+  position: number;
+  /** Selected for analysis: membership, crawl observation and (unless discovery follows) analysis. */
+  selected: boolean;
+  observe: boolean;
+  analyze: boolean;
+  discover: boolean;
+};
 
-/** A full crawl selects the URL while its automatic allowance lasts and queues its discovery. */
-async function admitDiscovery(
-  state: Admitting,
-  siteUrlId: string,
-  item: Candidate,
-  position: number,
+/**
+ * Decide admissions in order, as the budgets require: a URL spends the
+ * automatic allowance only when its membership newly activates, and counts
+ * toward the ceiling only when its observation (sample) or discover task is new.
+ */
+function planAdmission(
+  crawl: Crawl,
+  batch: Entry[],
+  known: AdmissionState,
+  options: { ceiling: number; remaining: number | null; enqueueChildren: boolean },
 ) {
-  if (item.disposition === 'analyze' && (state.remaining ?? 0) > 0) {
-    const [activated] = await observe(
-      state.trx,
-      state.crawl,
-      siteUrlId,
-      item,
-      {
-        analyze: true,
-        afterDiscovery: state.enqueueChildren,
-        source: 'bootstrap',
-        artifactId: state.artifactId,
-      },
-      state.settings,
-    );
-    if (activated) state.remaining!--;
+  const hashOf = new Map([...known.siteUrlIds].map(([hash, id]) => [id, hash]));
+  const hashes = (ids: Set<string>) => new Set([...ids].map((id) => hashOf.get(id)!));
+  const active = hashes(known.activeMembers);
+  const observed = hashes(known.observed);
+  const discovering = new Set(known.discovering);
+  const sample = crawl.sample_mode;
+  const discover = !sample && options.enqueueChildren;
+  let { remaining } = options;
+  let admitted = 0;
+  const planned: Planned[] = [];
+  for (const [position, entry] of batch.entries()) {
+    if (crawl.admitted_url_count + admitted >= options.ceiling) break;
+    const { hash } = entry.item;
+    const selected = entry.item.disposition === 'analyze' && (remaining ?? 0) > 0;
+    if (selected && !active.has(hash) && remaining !== null) remaining--;
+    if (selected) active.add(hash);
+    const observe = sample || selected;
+    let counted = !discover || !discovering.has(hash);
+    if (sample) counted = !observed.has(hash);
+    if (observe) observed.add(hash);
+    if (discover) discovering.add(hash);
+    if (counted) admitted++;
+    planned.push({
+      ...entry,
+      position,
+      selected,
+      observe,
+      analyze: selected && (sample || !options.enqueueChildren),
+      discover,
+    });
   }
-  const queued = state.enqueueChildren
-    ? await enqueueSiteTask(
-        state.trx,
-        state.crawl,
-        {
-          kind: 'discover',
-          siteUrlId,
-          url: item.url,
-          hash: item.hash,
-          depth: item.depth,
-          priority: item.priority,
-          position,
-        },
-        state.settings,
-      )
-    : crawlPolicy.frontier_statuses.admitted;
-  if (queued) state.result.admitted++;
+  return { planned, remaining };
 }
 
-async function admitOne(
-  state: Admitting,
-  { frontierId, item }: { frontierId: string | null; item: Candidate },
-  position: number,
+/** Apply a plan in a fixed number of statements; counts come from what the writes changed. */
+async function writeAdmission(
+  trx: Database,
+  crawl: Crawl,
+  planned: Planned[],
+  settings: Settings,
+  options: { source: string; artifactId: string | null; enqueueChildren: boolean },
 ) {
-  const siteUrlId = await upsertSiteUrl(state.trx, state.crawl, item);
-  state.result.siteUrlIds.set(item.hash, siteUrlId);
-  state.result.observed++;
-  if (state.crawl.sample_mode) await admitSample(state, siteUrlId, item);
-  else await admitDiscovery(state, siteUrlId, item, position);
-  if (frontierId)
-    await state.trx
-      .updateTable('site_discovery_frontier')
-      .set({ status: crawlPolicy.frontier_statuses.admitted, admitted_at: new Date() })
-      .where('id', '=', frontierId)
-      .where('workspace_id', '=', state.crawl.workspace_id)
-      .execute();
+  const ids = await upsertSiteUrls(
+    trx,
+    crawl,
+    planned.map((entry) => entry.item),
+    crawlPolicy.disposition_version,
+  );
+  const withId = (entry: Planned) => ({ siteUrlId: ids.get(entry.item.hash)!, item: entry.item });
+  await activateMemberships(
+    trx,
+    crawl,
+    planned.filter((entry) => entry.selected).map((entry) => withId(entry).siteUrlId),
+    options.source,
+  );
+  const observedNew = await insertObservations(
+    trx,
+    crawl,
+    planned.filter((entry) => entry.observe).map(withId),
+    options.artifactId,
+  );
+  await enqueueSiteTasks(
+    trx,
+    crawl,
+    'analyze',
+    planned
+      .filter((entry) => entry.analyze)
+      .map((entry) => ({
+        ...withId(entry),
+        priority: entry.item.priority + crawlPolicy.analyze_priority_boost,
+        position: 0,
+      })),
+    settings.maxAttempts,
+  );
+  const discoverNew = await enqueueSiteTasks(
+    trx,
+    crawl,
+    'discover',
+    planned
+      .filter((entry) => entry.discover)
+      .map((entry) => ({
+        ...withId(entry),
+        priority: entry.item.priority,
+        position: entry.position,
+      })),
+    settings.maxAttempts,
+  );
+  await markFrontierAdmitted(
+    trx,
+    crawl,
+    planned.flatMap((entry) => (entry.frontierId ? [entry.frontierId] : [])),
+    crawlPolicy.frontier_statuses.admitted,
+  );
+  let admitted = planned.length;
+  if (crawl.sample_mode) admitted = observedNew;
+  else if (options.enqueueChildren) admitted = discoverNew;
+  return { ids, admitted };
 }
 
 /**
@@ -620,24 +660,29 @@ export async function admitCandidates(
     .where('workspace_id', '=', crawl.workspace_id)
     .executeTakeFirstOrThrow();
   const current = { ...crawl, admitted_url_count: live.admitted_url_count };
-  const state: Admitting = {
-    trx,
-    crawl: current,
-    settings,
-    enqueueChildren: options.enqueueChildren ?? true,
-    artifactId: options.sourceArtifactId,
-    remaining: await automaticRemaining(trx, current, runtime),
-    result: { admitted: 0, observed: 0, sampleCapped: false, siteUrlIds: new Map() },
-  };
+  const enqueueChildren = options.enqueueChildren ?? true;
+  const remaining = await automaticRemaining(trx, current, runtime);
   const ceiling = Math.min(requestedTarget(current, settings), frontierLimit(current, settings));
   const batch = await admissionBatch(trx, current, candidates, settings);
-  for (const [position, entry] of batch.entries()) {
-    if (current.admitted_url_count + state.result.admitted >= ceiling) break;
-    await admitOne(state, entry, position); // NOSONAR: admission is order-dependent (budgets, allowance).
-  }
-  state.result.sampleCapped =
-    current.sample_mode && state.remaining !== null && state.remaining <= 0;
-  return state.result;
+  const known = await readAdmissionState(
+    trx,
+    current,
+    batch.map((entry) => entry.item.hash),
+  );
+  const plan = planAdmission(current, batch, known, { ceiling, remaining, enqueueChildren });
+  const automatic =
+    Number(record(current.configuration)[crawlPolicy.automatic_monitor_limit_key]) || 0;
+  const { ids, admitted } = await writeAdmission(trx, current, plan.planned, settings, {
+    source: current.sample_mode && automatic <= 0 ? 'free_sample' : 'bootstrap',
+    artifactId: options.sourceArtifactId ?? null,
+    enqueueChildren,
+  });
+  return {
+    admitted,
+    observed: plan.planned.length,
+    sampleCapped: current.sample_mode && plan.remaining !== null && plan.remaining <= 0,
+    siteUrlIds: ids,
+  };
 }
 
 /** Queue analysis for a URL whose discover artifact now exists, if it is still an active member. */
