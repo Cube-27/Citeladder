@@ -314,27 +314,38 @@ evidence of irrelevance. `unknown` covers unavailable, ambiguous, truncated or
 conflicting evidence. `error` records evaluator failure. Legacy `partial` may be
 read from old evidence but is incomplete and receives no public score credit.
 
-Findings are independent of score membership. An established applicable defect
-or improvement can create a `SiteIssue` even when unscored or unsupported by a
-generator. Diagnostics describe limitations and do not assert defects. Grouping
-occurrences never multiplies score influence or claims a shared template fix
-without template evidence.
+A check is **scored** only when failing it demonstrably reduces crawlability,
+indexing, AI-answer eligibility or page performance and its detection is
+reliable enough to show a customer; every other check is **advisory**: shown
+with guidance, never scored. The catalog's `score_roles` is the single source of
+membership (`web_fundamentals`, `aeo_readiness`); startup validation requires an
+AEO-scored rule to have exactly one pillar and rejects a scored diagnostic, so no
+check moves a score without a visible finding. An established applicable defect
+or improvement can still create a `SiteIssue` when advisory. Diagnostics
+describe limitations and do not assert defects. Grouping occurrences never
+multiplies score influence or claims a shared template fix without template
+evidence.
 
-The config-owned Web checklist uses equal-weight checks for title and meta
-description presence, canonical presence/integrity, indexability, soft errors,
-HTTPS, HSTS, compression, TTFB, mixed content, image alternatives, form names,
-document language, heading order and viewport.
+The Web checklist uses equal-weight checks for title presence, canonical
+integrity, indexability, soft errors, HTTPS, compression, mixed content, image
+alternatives, document language and viewport. Meta description and canonical
+presence, HSTS, TTFB (a single sample from one region), form names and heading
+order are advisory.
 
 Canonical integrity merges declaration conflict and target resolution. All
 bounded declarations are preserved. No declaration is N/A. Multiple or invalid
 declarations fail. An unavailable target is unresolved. A healthy redirect can
 be consolidation guidance and does not automatically fail.
 
-The AEO catalog also includes Open Graph, structured-data presence and initial
-HTML rendering. Score membership is separate from finding class. These checks
-do not establish Google limits, Core Web Vitals, general security, actual
-indexing or citation eligibility. Lengths, H1 counts and `llms.txt` remain
-unscored facts, diagnostics or improvements.
+AEO scoring covers crawlability (indexability, snippet access, and site-level
+access for search and AI-search crawlers), machine readability (initial HTML rendering and
+valid, content-matching structured data), answer and evidence facts on product
+and collection pages, provenance and freshness on authored and product pages,
+and heading structure. Open Graph, structured-data presence, answer-first and
+question-heading style, source support, organization identity, trust paths and
+`llms.txt` (an unadopted convention, unknown when never requested) are advisory.
+These checks do not establish Google limits, Core Web Vitals, general security,
+actual indexing or citation eligibility.
 
 Broken links, hreflang and sitemap relationships retain checked, unchecked and
 rate-limited counts and remain unscored. Incomplete target resolution cannot
@@ -461,7 +472,13 @@ The AEO pillars and baseline weights are:
 | Freshness | 5 |
 | Crawlability | 15 |
 
-Checks are binary and equal weight inside their role/pillar.
+Checks are binary and equal weight inside their role/pillar. Site-scoped
+checks are evaluated where the site facts were observed (the crawl root) and
+apply to every page: a site that blocks OAI-SearchBot fails crawler access on
+each page's crawlability pillar. Blocking only training crawlers (GPTBot,
+ClaudeBot, Google-Extended) is a visible, unscored finding: it does not stop
+answer-time retrieval. Final page revisions list those site evaluation IDs
+in their source manifest; evaluation rows are never copied.
 
 ```text
 Web = 100 * satisfied checks / determinate applicable checks

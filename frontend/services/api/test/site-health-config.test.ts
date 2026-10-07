@@ -45,7 +45,6 @@ it('refuses a catalog change that breaks triggered siblings or weighted pillar c
       rules,
       s.reads.readiness_dimension_weights,
       pillars,
-      s.page_analysis.rules.web_check_ids,
       s.reads.content_addressable_check_fields,
     );
   const triggered = s.rule_catalog.find((rule) => rule.kind_evidence === 'triggered')!;
@@ -64,4 +63,25 @@ it('refuses a catalog change that breaks triggered siblings or weighted pillar c
       ) as typeof s.reads.aeo_check_pillar,
     ),
   ).toThrow('pillar');
+});
+
+it('keeps score membership in one place and never scores a hidden diagnostic', () => {
+  const s = policy.site_health;
+  const validate = (rules: typeof s.rule_catalog) =>
+    validateSiteHealthCatalog(
+      rules,
+      s.reads.readiness_dimension_weights,
+      s.reads.aeo_check_pillar,
+      s.reads.content_addressable_check_fields,
+    );
+  const advisory = s.rule_catalog.find((rule) => rule.rule_id === 'technical.hsts_present')!;
+  expect(advisory.finding_class).toBe('diagnostic');
+  const scoredDiagnostic = s.rule_catalog.map((rule) =>
+    rule === advisory ? { ...rule, score_roles: ['web_fundamentals'] } : rule,
+  );
+  expect(() => validate(scoredDiagnostic)).toThrow('visible finding');
+  const unpillared = s.rule_catalog.map((rule) =>
+    rule.rule_id === 'aeo.open_graph_present' ? { ...rule, score_roles: ['aeo_readiness'] } : rule,
+  );
+  expect(() => validate(unpillared)).toThrow('pillar disagree');
 });

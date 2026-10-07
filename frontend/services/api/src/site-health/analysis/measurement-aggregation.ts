@@ -1,7 +1,7 @@
 /** Equal-page aggregation; a page with more checks never gets more influence. */
 import { policy } from '../../config.ts';
 import { compareText } from '../../text-order.ts';
-import { readinessReason, scoreAnalysis } from './scoring.ts';
+import { appliedSiteChecks, readinessReason, scoreAnalysis } from './scoring.ts';
 import type { RuleEvaluation } from './rules.ts';
 
 type Measurement = ReturnType<typeof scoreAnalysis>;
@@ -33,8 +33,12 @@ function role(pages: Measurement[], role: 'web' | 'aeo') {
   };
 }
 
-export function aggregateMeasurements(rows: MeasuredPage[]) {
-  const pages = rows.map((row) => scoreAnalysis(row.evaluations, row.page_kind));
+const siteChecksOf = (rows: MeasuredPage[]) =>
+  appliedSiteChecks(rows.flatMap((row) => row.evaluations));
+
+/** `site` comes from the whole crawl: a page-kind subset rarely includes the root that holds it. */
+export function aggregateMeasurements(rows: MeasuredPage[], site = siteChecksOf(rows)) {
+  const pages = rows.map((row) => scoreAnalysis(row.evaluations, row.page_kind, site));
   const web = role(pages, 'web');
   const aeo = role(pages, 'aeo');
   const empty = scoreAnalysis([], 'other').readiness_dimensions;
@@ -78,9 +82,13 @@ export function aggregateMeasurements(rows: MeasuredPage[]) {
 }
 
 export function aggregateByPageKind(rows: MeasuredPage[]) {
+  const site = siteChecksOf(rows);
   return Object.fromEntries(
     [...new Set(rows.map((row) => row.page_kind))].sort(compareText).map((kind) => {
-      const aggregate = aggregateMeasurements(rows.filter((row) => row.page_kind === kind));
+      const aggregate = aggregateMeasurements(
+        rows.filter((row) => row.page_kind === kind),
+        site,
+      );
       const {
         readiness_dimensions: dimensions,
         analyzed_url_count: analyzed,

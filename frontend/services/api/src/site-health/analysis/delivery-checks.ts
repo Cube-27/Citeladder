@@ -136,10 +136,15 @@ const deliveryChecks: Record<string, (facts: Facts) => CheckResult> = {
   'aeo.llms_txt_present': (facts) => {
     const llms = record(record(facts.site).llms_txt);
     const present = Boolean(llms.present);
-    return [
-      passFail(present),
-      { fetched: Boolean(llms.fetched), present, url: text(llms.url).slice(0, 2048) },
-    ];
+    const evidence = {
+      fetched: Boolean(llms.fetched),
+      present,
+      url: text(llms.url).slice(0, 2048),
+    };
+    // A crawl that never requested llms.txt (a sample) has not observed its absence.
+    if (!evidence.fetched)
+      return ['not_applicable', { ...evidence, reason: 'insufficient_evidence' }];
+    return [passFail(present), evidence];
   },
   'technical.soft_error': softError,
   'aeo.server_rendered_content': (facts) => {

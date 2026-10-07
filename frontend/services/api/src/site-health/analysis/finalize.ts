@@ -1,7 +1,7 @@
 /** Cross-page checks use only the persisted acquisition evidence supplied by the caller. */
 import { policy } from '../../config.ts';
 import { scalarText } from '../../text-order.ts';
-import type { RuleEvaluation } from './rules.ts';
+import { membership, type RuleEvaluation } from './rules.ts';
 
 const limits = policy.site_health.page_analysis.facts.limits;
 const bounded = (urls: string[]) =>
@@ -14,10 +14,7 @@ export function finalizeEvaluation(
 ): RuleEvaluation {
   const rule = policy.site_health.rule_catalog.find((entry) => entry.rule_id === ruleId);
   if (!rule) throw new Error(`Missing finalize rule: ${ruleId}`);
-  const web = policy.site_health.page_analysis.rules.web_check_ids.includes(ruleId);
-  const pillars: Record<string, string> = policy.site_health.reads.aeo_check_pillar;
-  const pillar = pillars[ruleId];
-  const roles = [...(web ? ['web_fundamentals'] : []), ...(pillar ? ['aeo_readiness'] : [])];
+  const { score_roles: roles, readiness_dimension: pillar } = membership(ruleId);
   return {
     rule_id: rule.rule_id,
     rule_version: rule.rule_version,
@@ -35,8 +32,8 @@ export function finalizeEvaluation(
     score_applicability: roles.length > 0 && outcome !== 'not_applicable',
     reason_code: scalarText(evidence.reason),
     score_roles: roles,
-    readiness_dimension: '',
-    readiness_weight: 0,
+    readiness_dimension: pillar,
+    readiness_weight: pillar ? 1 : 0,
   };
 }
 

@@ -13,7 +13,7 @@ import { companyIdentity } from './company-identity.ts';
 import { validateSiteHealthCatalog } from './site-health/validation.ts';
 
 const contentChecks = new Set(Object.keys(reads.reads.content_addressable_check_fields));
-const ruleVersion = 'sh-rules-1';
+const ruleVersion = 'sh-rules-2';
 
 /** Mutation-time allowance projection shares the acquisition owner's bounds. */
 export const siteHealthRuntime = {
@@ -95,6 +95,5 @@ validateSiteHealthCatalog(
   siteHealth.rule_catalog,
   siteHealth.reads.readiness_dimension_weights,
   siteHealth.reads.aeo_check_pillar,
-  siteHealth.page_analysis.rules.web_check_ids,
   siteHealth.reads.content_addressable_check_fields,
 );

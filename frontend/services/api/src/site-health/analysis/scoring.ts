@@ -11,13 +11,25 @@ const DIMENSIONS = analysisPolicy.rules.aeo_dimensions;
 const PAGE_KINDS = new Set(analysisPolicy.classification.page_kinds);
 const DETERMINATE = new Set(['satisfied', 'missing']);
 
-/** One applicable page check per rule; duplicates that disagree count as unknown. */
+/**
+ * The crawl's site-level checks that applied (evaluated where the site facts
+ * were observed). A blocked crawler makes every page ineligible, so each page
+ * scores these in place of its own site rows.
+ */
+export const appliedSiteChecks = (rows: RuleEvaluation[]) =>
+  rows.filter((row) => row.scope === 'site' && row.outcome !== 'not_applicable');
+
+const withSiteChecks = (rows: RuleEvaluation[], siteRows: RuleEvaluation[]) => [
+  ...rows.filter((row) => row.scope === 'page'),
+  ...appliedSiteChecks(siteRows),
+];
+
+/** One applicable check per rule; duplicates that disagree count as unknown. */
 function applicableChecks(rows: RuleEvaluation[], role: string) {
   const byId = new Map<string, RuleEvaluation>();
   const conflicted = new Set<string>();
   for (const row of rows) {
-    if (row.scope !== 'page' || !row.score_roles.includes(role) || row.outcome === 'not_applicable')
-      continue;
+    if (!row.score_roles.includes(role) || row.outcome === 'not_applicable') continue;
     const seen = byId.get(row.rule_id);
     if (!seen) byId.set(row.rule_id, row);
     else if (seen.outcome !== row.outcome) conflicted.add(row.rule_id);
@@ -120,7 +132,13 @@ export function readinessReason(
   return kind === 'other' ? 'page_purpose_unresolved' : 'no_applicable_checks';
 }
 
-export function scoreAnalysis(rows: RuleEvaluation[], pageKind: string) {
+/** `siteRows` defaults to the page's own rows, which carry the site checks on the root analysis. */
+export function scoreAnalysis(
+  pageRows: RuleEvaluation[],
+  pageKind: string,
+  siteRows: RuleEvaluation[] = pageRows,
+) {
+  const rows = withSiteChecks(pageRows, siteRows);
   const kind = PAGE_KINDS.has(pageKind) ? pageKind : 'other';
   const web = roleResult(applicableChecks(rows, 'web_fundamentals'));
   const aeoRows = applicableChecks(rows, 'aeo_readiness');

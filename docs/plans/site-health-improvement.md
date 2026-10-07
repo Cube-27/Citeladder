@@ -68,6 +68,74 @@ after the execution starts.
 | 2.6 | Evaluate AI-crawler access for sampled and sitemap paths, not just the root. | `analysis/delivery-checks.ts:33-55` |
 | 2.7 | Either use rules.json `weight`/`severity` in scoring or document them as display-only (scoring hard-codes weight 1). | `analysis/scoring.ts:159`, `docs/site-health.md` |
 
+## Phase 2 rule classification (decided 2026-10-07 under owner decisions 1-2)
+
+Test for **scored**: failing it demonstrably reduces crawlability, indexing,
+AI-answer eligibility or page performance, and detection is reliable enough to
+put in front of a customer. Everything else is **advisory**: shown with
+guidance, never in a score. Every scored rule creates a visible issue.
+
+| Rule | Today | Decision | Reason |
+|---|---|---|---|
+| technical.indexable | scored (Web+AEO) | scored | noindex/blocked removes the page from search and AI retrieval |
+| search.snippet_access | scored (AEO) | scored | nosnippet / max-snippet:0 prevents quotation in answers |
+| search.crawler_access | site, unscored gate | scored, site level | robots blocking search crawlers removes the site |
+| technical.ai_crawler_access | site, diagnostic, weight 0 | visible defect, unscored | answer-time crawlers (OAI-SearchBot, PerplexityBot, Claude-SearchBot) already score through `search.crawler_access`; blocking only training crawlers (GPTBot, ClaudeBot, Google-Extended) is a legitimate choice that does not remove answer eligibility |
+| aeo.server_rendered_content | scored silently | scored, visible defect | most AI crawlers do not execute JavaScript; JS-only content is invisible to them |
+| technical.title_present | scored | scored | primary relevance and citation label |
+| technical.https | scored | scored | browser and engine trust signal; mixed/insecure pages are demoted |
+| technical.soft_error | scored | scored | a 200 error page wastes crawl and gets dropped |
+| technical.canonical_integrity | scored | scored | conflicting/invalid canonicals split or misdirect indexing |
+| web.mobile_viewport | scored | scored | mobile-first indexing |
+| web.security_mixed_content | scored | scored | blocked resources and insecure warnings |
+| technical.uncompressed_html | scored silently | scored, visible defect | deterministic, cheap to fix, measurable transfer-time cost |
+| web.accessibility_document_language | scored | scored | language targeting for search and answer engines |
+| web.accessibility_image_alt | scored | scored | image understanding by engines (image search, multimodal answers) |
+| aeo.schema_required_valid | scored (AEO) | scored | invalid structured data is ignored or misread |
+| aeo.schema_matches_content | scored (AEO) | scored | mismatched markup is a spam/trust signal |
+| aeo.product_answer_facts | scored (product) | scored | price/availability are what shopping answers quote |
+| aeo.offer_freshness_signal | scored (product) | scored | stale offers are excluded from shopping answers |
+| aeo.product_evidence_facts | scored (product) | scored | reviews/specs are the evidence answers cite |
+| aeo.product_brand_identity | scored (product) | scored | brand attribution in product answers |
+| aeo.content_date_present | scored (article kinds) | scored | answer engines prefer dated, fresh sources |
+| aeo.visible_attribution | scored (article kinds) | scored | authorship is a primary trust signal for citation |
+| aeo.listing_answer_set | scored (category) | scored | "best X" answers draw from collection pages |
+| technical.broken_internal_link | unscored | advisory for now | should be scored at site level; graph-scope rows come from the architecture pass, so it follows as item 2.8 |
+| technical.meta_description_present | scored | advisory | engines rewrite snippets; absence does not reduce visibility |
+| technical.canonical_present | scored | advisory | a missing canonical is harmless; conflicts are scored via integrity |
+| technical.hsts_present | scored silently | advisory | security hardening, no visibility effect |
+| technical.ttfb_band | scored silently | advisory | one sample from one region is too noisy to score |
+| web.accessibility_form_names | scored | advisory | accessibility quality, no visibility effect |
+| web.accessibility_heading_order | scored | advisory | accessibility quality; answer structure covered by aeo.heading_hierarchy |
+| aeo.heading_hierarchy | scored (AEO) | scored | sole Structure-pillar check; heading structure aids passage extraction |
+| aeo.structured_data_present | scored (AEO) | advisory | absence does not block; invalid markup is scored separately |
+| aeo.open_graph_present | scored (AEO) | advisory | social previews, not answer engines |
+| aeo.listing_item_facts | scored (category) | advisory | detection depends on retained card details; keep until calibrated |
+| aeo.answer_first | AEO role, no pillar | advisory | style guidance |
+| aeo.question_headings | scored (FAQ) | advisory | style guidance |
+| aeo.source_support_present | scored (article kinds) | advisory | depends on unconfirmed authorship evidence |
+| aeo.schema_recommended_present | AEO role, no pillar | advisory | recommended fields only |
+| aeo.organization_identity | AEO role, never scored | advisory | requires JSON-LD; visible identity is not detected yet |
+| aeo.trust_path_present | AEO role, never scored | advisory | English-only substring detection; fix detection first |
+| aeo.llms_txt_present | diagnostic | advisory | unadopted convention (owner decision 1); fix unfetched-shown-as-missing |
+| technical.robots_txt_present | advisory | advisory | a missing robots.txt permits crawling |
+| technical.sitemap_url_unreachable | unscored | advisory | sitemap hygiene |
+| technical.sitemap_orphan | unscored | advisory | sitemap hygiene |
+| technical.hreflang_conflict | unscored | advisory | relevant only to multilingual sites; keep visible |
+| architecture.* (6 rules) | unscored | advisory | structural guidance from a sampled crawl |
+
+Net effect: 23 scored, 28 unscored. AI-training access is visible but unscored; search
+and AI-search crawler access (now including Claude-SearchBot) reaches every page's score, and server rendering and compression move
+from silent scoring to visible defects. The catalog's `score_roles` is the single
+source of membership (`web_check_ids` is retired); validation rejects a scored
+diagnostic and any AEO role without a pillar.
+
+Progress: 2.1, 2.2, 2.3 and site-level crawler scoring are implemented on `feat/site-health-scoring`.
+
+| # | Change | Where |
+|---|---|---|
+| 2.8 | Score broken internal links at site level once graph-scope evaluations can feed page scoring. | `site-health/architecture.ts`, `analysis/scoring.ts` |
+
 ## Phase 3: classification
 
 Classification is deterministic (`site-health/analysis/page-kinds.ts:284`); no model is involved.

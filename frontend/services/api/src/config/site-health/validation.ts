@@ -31,6 +31,7 @@ export function validateSiteHealthSettings(values: Record<string, unknown>) {
 type Rule = {
   rule_id: string;
   finding_class: string;
+  score_roles: readonly string[];
   kind_evidence: string;
   scope: string;
   triggered_by: string;
@@ -73,7 +74,6 @@ export function validateSiteHealthCatalog(
   rules: readonly Rule[],
   weights: Record<string, number>,
   pillars: Record<string, string>,
-  webChecks: readonly string[],
   contentFields: Record<string, string>,
 ) {
   const byId = new Map(rules.map((rule) => [rule.rule_id, rule]));
@@ -90,6 +90,24 @@ export function validateSiteHealthCatalog(
     [...covered].some((pillar) => !(pillar in weights))
   )
     throw new Error('Every readiness pillar requires a configured check');
-  for (const id of [...Object.keys(pillars), ...webChecks, ...Object.keys(contentFields)])
+  for (const id of [...Object.keys(pillars), ...Object.keys(contentFields)])
     if (!byId.has(id)) throw new Error(`Public checklist names an unknown rule: ${id}`);
+  validateScoreMembership(rules, pillars);
+}
+
+/**
+ * `score_roles` is the one source of score membership. An AEO-scored rule needs
+ * exactly one pillar, and a scored rule must surface as an issue: no check may
+ * move a score without a visible finding.
+ */
+function validateScoreMembership(rules: readonly Rule[], pillars: Record<string, string>) {
+  for (const rule of rules) {
+    const roles = new Set(rule.score_roles);
+    if ([...roles].some((role) => role !== 'web_fundamentals' && role !== 'aeo_readiness'))
+      throw new Error(`Unknown score role on ${rule.rule_id}`);
+    if (roles.has('aeo_readiness') !== Boolean(pillars[rule.rule_id]))
+      throw new Error(`AEO membership and pillar disagree for ${rule.rule_id}`);
+    if (roles.size && rule.finding_class === 'diagnostic')
+      throw new Error(`Scored rule ${rule.rule_id} must create a visible finding`);
+  }
 }

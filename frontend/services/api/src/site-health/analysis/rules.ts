@@ -17,7 +17,6 @@ const CATALOG: readonly Rule[] = policy.site_health.rule_catalog;
 const RULES = new Map(CATALOG.map((rule) => [rule.rule_id, rule]));
 const r = analysisPolicy.rules;
 const prefixes = r.applicability_prefixes;
-const WEB_CHECKS = new Set(r.web_check_ids);
 const PILLARS: Record<string, string> = policy.site_health.reads.aeo_check_pillar;
 const PAGE_KINDS = new Set(analysisPolicy.classification.page_kinds);
 const STRUCTURAL_NA = new Set(r.structural_na_reasons);
@@ -137,11 +136,10 @@ function applicability(rule: Rule, facts: Facts): [boolean, string] {
   return [false, 'unknown_applicability'];
 }
 
-function membership(ruleId: string) {
-  const roles: string[] = [];
-  if (WEB_CHECKS.has(ruleId)) roles.push('web_fundamentals');
-  const pillar = PILLARS[ruleId] ?? '';
-  if (pillar) roles.push('aeo_readiness');
+/** Score membership from the catalog's `score_roles`, the single source (validated at startup). */
+export function membership(ruleId: string) {
+  const roles = [...(RULES.get(ruleId)?.score_roles ?? [])];
+  const pillar = roles.includes('aeo_readiness') ? (PILLARS[ruleId] ?? '') : '';
   return {
     score_applicability: roles.length > 0,
     score_roles: roles,

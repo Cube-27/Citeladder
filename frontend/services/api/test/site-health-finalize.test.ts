@@ -5,7 +5,10 @@ import {
   hreflangConflict,
   sitemapOrphan,
 } from '../src/site-health/analysis/finalize.ts';
-import { aggregateMeasurements } from '../src/site-health/analysis/measurement-aggregation.ts';
+import {
+  aggregateByPageKind,
+  aggregateMeasurements,
+} from '../src/site-health/analysis/measurement-aggregation.ts';
 import {
   canonicalResolution,
   resolutionSet,
@@ -99,6 +102,35 @@ describe('terminal checks from persisted evidence', () => {
     expect(result.web_fundamentals_score).toBe(75);
     expect(result.web_fundamentals_coverage).toBeCloseTo(2 / 3);
     expect(result.web_fundamentals_state).toBe('limited_evidence');
+  });
+
+  it('scores a site-level crawler block on every page, not only the site root', () => {
+    const crawlability = {
+      ...canonical(['/a']),
+      score_roles: ['aeo_readiness'],
+      readiness_dimension: 'crawlability',
+      readiness_weight: 1,
+    };
+    const blocked = {
+      ...crawlability,
+      rule_id: 'technical.ai_crawler_access',
+      scope: 'site',
+      outcome: 'missing',
+    };
+    const indexable = { ...crawlability, rule_id: 'technical.indexable', outcome: 'satisfied' };
+    const rows = [
+      { id: 'root', page_kind: 'homepage', evaluations: [blocked] },
+      // Another page records the site rule as not applicable; the root's verdict still applies.
+      {
+        id: 'page',
+        page_kind: 'article',
+        evaluations: [indexable, { ...blocked, outcome: 'not_applicable' }],
+      },
+    ];
+    // Root 0 (blocked), page 50 (indexable, blocked); without the site check the page would be 100.
+    expect(aggregateMeasurements(rows).aeo_readiness_score).toBe(25);
+    // The article subset excludes the root but still carries its site verdict.
+    expect(aggregateByPageKind(rows).article!.aeo_readiness_score).toBe(50);
   });
 });
 
