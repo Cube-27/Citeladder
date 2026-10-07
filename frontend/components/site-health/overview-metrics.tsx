@@ -102,12 +102,12 @@ function coverageCounts(coverage: SiteHealthOverview['crawl_coverage'] | undefin
   const evidence = coverage?.evidence ?? {};
   const found = count(evidence.observation_count);
   const analyzed = count(evidence.analyzed_url_count);
-  if (found === null || analyzed === null || found === 0) return null;
+  if (found === null || analyzed === null) return null;
   return {
     found,
     analyzed,
     failed: count(evidence.failed_url_count) ?? 0,
-    limit: count(evidence.automatic_limit) ?? 0,
+    limit: count(evidence.automatic_limit),
   };
 }
 
@@ -116,23 +116,51 @@ function crawlMetric(context: MetricContext): MetricModel {
   const counts = coverageCounts(terminalCoverage);
   // Share of the pages the crawl found, not of the pages it chose: 20 of 100 is not 100%.
   let progress = context.selected > 0 ? (100 * context.analyzed) / context.selected : null;
-  if (counts) progress = (100 * Math.min(counts.analyzed, counts.found)) / counts.found;
+  if (counts)
+    progress = counts.found ? (100 * Math.min(counts.analyzed, counts.found)) / counts.found : null;
   return {
     title: 'Crawl Coverage',
     value: progress,
-    caveat: counts ? coverageSentence(counts) : coverageCaveat(terminalCoverage, context.active),
+    caveat:
+      terminalCoverage && counts
+        ? coverageNote(terminalCoverage, counts)
+        : coverageCaveat(terminalCoverage, context.active),
     href: '/site?tab=pages',
     icon: ICONS.site,
   };
 }
 
-/** What a reader needs to act: how many pages were left out, and the reason. */
-function coverageSentence(counts: NonNullable<ReturnType<typeof coverageCounts>>) {
-  const parts = [`${counts.analyzed} of ${counts.found} found pages analyzed`];
-  if (counts.limit > 0 && counts.analyzed >= counts.limit && counts.found > counts.analyzed)
+/** Reasons the count sentence already states. */
+const COUNTED_REASONS = new Set([
+  'frontier_exhausted',
+  'frontier_not_exhausted',
+  'requested_page_limit_reached',
+]);
+const firstReason = (coverage: SiteHealthOverview['crawl_coverage'], skip = new Set<string>()) => {
+  const reasons = coverage.evidence.reasons;
+  return Array.isArray(reasons)
+    ? reasons.find((value): value is string => typeof value === 'string' && !skip.has(value))
+    : undefined;
+};
+
+/** What a reader needs to act: how many pages were left out, and why; uncertainty stays visible. */
+function coverageNote(
+  coverage: SiteHealthOverview['crawl_coverage'],
+  counts: NonNullable<ReturnType<typeof coverageCounts>>,
+) {
+  const parts = [coverage.state === 'unknown' ? 'Coverage unknown' : null];
+  if (!counts.found) parts.push('No pages found');
+  else parts.push(`${counts.analyzed} of ${counts.found} found pages analyzed`);
+  if (
+    counts.limit !== null &&
+    counts.limit > 0 &&
+    counts.analyzed >= counts.limit &&
+    counts.found > counts.analyzed
+  )
     parts.push(`plan limit ${counts.limit} per crawl`);
   if (counts.failed > 0) parts.push(`${counts.failed} failed to load`);
-  return parts.join(' · ');
+  parts.push(firstReason(coverage, COUNTED_REASONS)?.replaceAll('_', ' ') ?? null);
+  return parts.filter(Boolean).join(' · ');
 }
 
 function coverageCaveat(
@@ -142,9 +170,6 @@ function coverageCaveat(
   if (!coverage) return active ? 'In progress' : 'Coverage unavailable';
   if (coverage.state === 'complete') return null;
   const label = coverage.state === 'partial' ? 'Partial coverage' : 'Coverage unknown';
-  const reasons = coverage.evidence.reasons;
-  const reason = Array.isArray(reasons)
-    ? reasons.find((value): value is string => typeof value === 'string')
-    : undefined;
+  const reason = firstReason(coverage);
   return reason ? `${label} · ${reason.replaceAll('_', ' ')}` : label;
 }

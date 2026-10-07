@@ -251,6 +251,41 @@ describe('OverviewPanel', () => {
     expect(screen.getByRole('img', { name: 'Crawl Coverage score: 20' })).toBeInTheDocument();
   });
 
+  it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
+        HttpResponse.json(
+          terminalOverview({
+            crawl_coverage: {
+              state: 'unknown',
+              evidence: {
+                reasons: ['discovery_failed', 'no_observed_urls'],
+                observation_count: 0,
+                analyzed_url_count: 0,
+                failed_url_count: 0,
+                automatic_limit: null,
+              },
+              denominator_kind: 'selected_intended_public_urls',
+            },
+          }),
+        ),
+      ),
+    );
+    renderWithProviders(
+      <OverviewPanel
+        projectId={PROJECT}
+        crawlId={CRAWL}
+        crawl={{ status: 'completed', analyzed_count: 4, visible_url_count: 4 } as never}
+        dashboard={undefined}
+      />,
+    );
+
+    expect(
+      await screen.findByText('Coverage unknown · No pages found · discovery failed'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Crawl Coverage score/ })).not.toBeInTheDocument();
+  });
+
   it('opens persisted HTTP Web Fundamentals evidence without browser-only checks', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>

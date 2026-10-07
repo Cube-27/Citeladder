@@ -34,9 +34,9 @@ function ownsPurpose(kind: string, facts: Facts) {
     const product = record(entity.product);
     return Boolean(product.has_purchase_control || product.has_primary_price);
   }
-  return (
-    Object.keys(record(record(record(entity.listing).collection_evidence).container)).length > 0
-  );
+  // The empty default carries the same keys, so only captured items confirm a collection.
+  const container = record(record(record(entity.listing).collection_evidence).container);
+  return Number(container.item_count) > 0;
 }
 
 /**

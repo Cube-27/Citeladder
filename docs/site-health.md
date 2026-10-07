@@ -231,9 +231,13 @@ Admission orders candidates by URL value tier (whole path tokens, the
 section a URL sits in first, so `/blog/product-review` is an article), then by a
 shuffle seeded by the crawl ID. The analyzed sample within a tier is random but
 reproducible, and never biased to header or footer links. A URL whose `www.`/apex
-twin is already in the crawl's frontier or batch is not admitted again, so a
-site that answers on both hosts cannot spend two slots on one page; stored URL
-identities are unchanged.
+twin is already in the crawl's frontier, batch or (for a sample) observations is
+not admitted again, so a site that answers on both hosts cannot spend two slots
+on one page; stored URL identities are unchanged. Admissibility (scope, depth,
+page-kind filter) is decided before a twin is chosen. Value tiers are finer than
+page kinds: a page-kind filter maps `about` and `contact` to `about_contact` and
+`trust` to `trust_policy`. Ordering is computed in memory once per candidate and
+in one sort over the crawl's capped frontier per batch, so it never slows the crawl.
 
 Discovery and normalized facts share the parsed HTML document before fact
 extraction prunes non-content subtrees. Discovery keeps its own scope-filtered
@@ -262,9 +266,12 @@ The classifier reads page-owned structure before route/title suggestions.
 Structured data can suggest a type but cannot certify the type whose markup is
 being checked. The root-path homepage exception is exact: the bare root, known
 index files, listed two-letter language roots and any region-qualified locale
-root (`/en-in`, `/es-419`). A lone generic title word (`contact`, `shipping`,
-`policy`) counts only as the page's whole slug, because it also names products;
-multi-word phrases may appear anywhere. When page content was not observed (a
+root (`/en-in`, `/es-419`, `/zh-hant`; not `/en-shop`). A lone generic title
+word (`contact`, `shipping`, `policy`) counts only as a whole page name (the
+slug, the H1, or the title before its site suffix), because it also names
+products ("Contact lenses"); multi-word phrases may appear anywhere. A product or
+category purpose failure needs a purchase control, a price or captured
+collection items; otherwise it is unknown (`page_kind_unconfirmed`). When page content was not observed (a
 client-rendered shell), a winning route or title suggestion is low confidence
 and the evidence records `content_unobserved`. The persisted classifier version
 is the configured base plus a digest of every classification input, so a
@@ -359,7 +366,7 @@ declarations fail. An unavailable target is unresolved. A healthy redirect can
 be consolidation guidance and does not automatically fail.
 
 AEO scoring covers crawlability (indexability, snippet access, and site-level
-search and AI-crawler access), machine readability (initial HTML rendering and
+access for search and AI-search crawlers), machine readability (initial HTML rendering and
 valid, content-matching structured data), answer and evidence facts on product
 and collection pages, provenance and freshness on authored and product pages,
 and heading structure. Open Graph, structured-data presence, answer-first and
@@ -495,8 +502,10 @@ The AEO pillars and baseline weights are:
 
 Checks are binary and equal weight inside their role/pillar. Site-scoped
 checks are evaluated where the site facts were observed (the crawl root) and
-apply to every page: a site that blocks GPTBot fails AI-crawler access on each
-page's crawlability pillar. Final page revisions list those site evaluation IDs
+apply to every page: a site that blocks OAI-SearchBot fails crawler access on
+each page's crawlability pillar. Blocking only training crawlers (GPTBot,
+ClaudeBot, Google-Extended) is a visible, unscored finding: it does not stop
+answer-time retrieval. Final page revisions list those site evaluation IDs
 in their source manifest; evaluation rows are never copied.
 
 ```text
@@ -530,8 +539,11 @@ Crawl coverage evidence also records the analyzed and failed URL counts and the
 crawl's automatic analysis allowance. Overview's Crawl Coverage metric is the
 share of found pages analyzed (not of the pages the crawl selected) and states
 the reason in plain words, for example "20 of 100 found pages analyzed · plan
-limit 20 per crawl · 2 failed to load"; snapshots saved before these counts keep
-the earlier reason caveat. Bulk "first N" monitored selection takes the most
+limit 20 per crawl · 2 failed to load". An unknown crawl keeps "Coverage
+unknown", a crawl that found nothing shows "No pages found" rather than a
+percentage, and any reason the counts do not already explain is appended. A
+crawl with no recorded allowance stores `automatic_limit: null`, never 0.
+Snapshots saved before these counts keep the earlier reason caveat. Bulk "first N" monitored selection takes the most
 valuable pages first (highest observed value tier), URL order within a tier.
 Website Overview and Pages use compact metric strips without repeated audit
 captions; Overview also omits supporting occurrence, page and checklist counts.

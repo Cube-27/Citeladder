@@ -80,7 +80,7 @@ guidance, never in a score. Every scored rule creates a visible issue.
 | technical.indexable | scored (Web+AEO) | scored | noindex/blocked removes the page from search and AI retrieval |
 | search.snippet_access | scored (AEO) | scored | nosnippet / max-snippet:0 prevents quotation in answers |
 | search.crawler_access | site, unscored gate | scored, site level | robots blocking search crawlers removes the site |
-| technical.ai_crawler_access | site, diagnostic, weight 0 | scored, site level | blocking GPTBot/ClaudeBot/PerplexityBot/Google-Extended directly removes AI-answer eligibility; the product's core purpose |
+| technical.ai_crawler_access | site, diagnostic, weight 0 | visible defect, unscored | answer-time crawlers (OAI-SearchBot, PerplexityBot, Claude-SearchBot) already score through `search.crawler_access`; blocking only training crawlers (GPTBot, ClaudeBot, Google-Extended) is a legitimate choice that does not remove answer eligibility |
 | aeo.server_rendered_content | scored silently | scored, visible defect | most AI crawlers do not execute JavaScript; JS-only content is invisible to them |
 | technical.title_present | scored | scored | primary relevance and citation label |
 | technical.https | scored | scored | browser and engine trust signal; mixed/insecure pages are demoted |
@@ -124,8 +124,8 @@ guidance, never in a score. Every scored rule creates a visible issue.
 | technical.hreflang_conflict | unscored | advisory | relevant only to multilingual sites; keep visible |
 | architecture.* (6 rules) | unscored | advisory | structural guidance from a sampled crawl |
 
-Net effect: 24 scored, 27 advisory. AI-crawler access becomes scored, search-crawler
-access now reaches every page's score, and server rendering and compression move
+Net effect: 23 scored, 28 unscored. AI-training access is visible but unscored; search
+and AI-search crawler access (now including Claude-SearchBot) reaches every page's score, and server rendering and compression move
 from silent scoring to visible defects. The catalog's `score_roles` is the single
 source of membership (`web_check_ids` is retired); validation rejects a scored
 diagnostic and any AEO role without a pillar.
