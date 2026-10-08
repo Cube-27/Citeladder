@@ -7,6 +7,7 @@ import type { IntegrationClient } from '../src/integrations/client.ts';
 import { IntegrationError } from '../src/integrations/client.ts';
 import { integrationPolicy, integrationSettings } from '../src/integrations/config.ts';
 import { IntegrationWorker } from '../src/workers/integration-worker.ts';
+import { selectedPartition } from '../src/integrations/partitions.ts';
 import { recoverIntegrationLeases, recoverQueues } from '../src/queue/recovery.ts';
 import { referralEventFields } from '../src/referrals/events.ts';
 import { seedProject } from './referral-fixtures.ts';
@@ -140,8 +141,10 @@ describe('integration worker paging and resume', () => {
         .selectAll()
         .where('id', 'in', [selected.runId, other.runId])
         .execute();
+      // A deadline stop is not a provider failure: the run is released for the
+      // next claim, and an attempt that committed nothing still counts.
       expect(rows.find((row) => row.id === selected.runId)).toMatchObject({
-        status: 'retry_wait',
+        status: 'queued',
         attempt_count: 1,
         lease_owner: null,
       });
@@ -156,6 +159,109 @@ describe('integration worker paging and resume', () => {
         .execute();
     }
   });
+  it('refunds a deadline stop that committed a page, so long imports are not written off', async () => {
+    const { runId, workspaceId } = await seedRun();
+    try {
+      const controller = new AbortController();
+      let calls = 0;
+      const client: Pick<IntegrationClient, 'page'> = {
+        async page() {
+          calls += 1;
+          if (calls > 1) controller.abort();
+          const rows = [
+            { keys: ['2026-07-20'], clicks: 1, impressions: 2, ctr: 0.5, position: 3 },
+            { keys: ['2026-07-21'], clicks: 1, impressions: 2, ctr: 0.5, position: 3 },
+          ];
+          return { payload: { rows }, rawRowCount: rows.length };
+        },
+      };
+      const run = await db
+        .updateTable('integration_sync_runs')
+        .set({ attempt_count: 3 })
+        .where('id', '=', runId)
+        .returning('max_attempts')
+        .executeTakeFirstOrThrow();
+      expect(run.max_attempts).toBe(4);
+      await new IntegrationWorker(db, client, settings, async () => 'recorded-token', {
+        workspaceId,
+        runId,
+      }).runOnce(controller.signal);
+      // The fourth attempt reached the deadline after committing a page: it is
+      // refunded, so the run stays claimable instead of exhausting its attempts.
+      expect(
+        await db
+          .selectFrom('integration_sync_runs')
+          .select(['status', 'attempt_count'])
+          .where('id', '=', runId)
+          .executeTakeFirstOrThrow(),
+      ).toEqual({ status: 'queued', attempt_count: 3 });
+      const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token');
+      expect(await worker.nextDue()).not.toBeNull();
+    } finally {
+      await db.deleteFrom('workspaces').where('id', '=', workspaceId).execute();
+    }
+  });
+
+  it('refreshes a refused token once, and a property 403 leaves the shared grant connected', async () => {
+    const refreshed = await seedRun();
+    const forbidden = await seedRun();
+    try {
+      const resolved: Array<string | undefined> = [];
+      const resolver = async (
+        _db: unknown,
+        _grant: string,
+        _workspace: string,
+        _client?: unknown,
+        rejected?: string,
+      ) => {
+        resolved.push(rejected);
+        return rejected ? 'rotated-token' : 'stale-token';
+      };
+      const unauthorized: Pick<IntegrationClient, 'page'> = {
+        async page(_provider, token) {
+          if (token === 'stale-token')
+            throw new IntegrationError('grant_auth_failed', 'HTTP 401', false, null, 401);
+          return { payload: { rows: [] }, rawRowCount: 0 };
+        },
+      };
+      await new IntegrationWorker(db, unauthorized, settings, resolver, {
+        workspaceId: refreshed.workspaceId,
+        runId: refreshed.runId,
+      }).runOnce();
+      expect(resolved).toContain('stale-token');
+      const denied: Pick<IntegrationClient, 'page'> = {
+        async page() {
+          throw new IntegrationError('property_not_accessible', 'HTTP 403', false, null, 403);
+        },
+      };
+      await new IntegrationWorker(db, denied, settings, async () => 'token', {
+        workspaceId: forbidden.workspaceId,
+        runId: forbidden.runId,
+      }).runOnce();
+      const runs = await db
+        .selectFrom('integration_sync_runs')
+        .select(['id', 'status', 'error_code'])
+        .where('id', 'in', [refreshed.runId, forbidden.runId])
+        .execute();
+      expect(runs.find((run) => run.id === refreshed.runId)?.status).toBe('succeeded');
+      expect(runs.find((run) => run.id === forbidden.runId)).toMatchObject({
+        status: 'failed',
+        error_code: 'property_not_accessible',
+      });
+      const grants = await db
+        .selectFrom('integration_oauth_grants')
+        .select('status')
+        .where('id', 'in', [refreshed.grantId, forbidden.grantId])
+        .execute();
+      expect(grants.map((grant) => grant.status)).toEqual(['connected', 'connected']);
+    } finally {
+      await db
+        .deleteFrom('workspaces')
+        .where('id', 'in', [refreshed.workspaceId, forbidden.workspaceId])
+        .execute();
+    }
+  });
+
   it('recovers only the selected seed run, leaving sibling and foreign leases untouched', async () => {
     const selected = await seedRun();
     const foreign = await seedRun();
@@ -403,8 +509,9 @@ describe('integration worker paging and resume', () => {
       .execute();
     const grants: string[] = [];
     const client = { page: vi.fn(async () => ({ payload: { rows: [] }, rawRowCount: 0 })) };
+    // A token is resolved per page; record each claimed run's grant once.
     const token: ConstructorParameters<typeof IntegrationWorker>[3] = async (_db, grantId) => {
-      grants.push(grantId);
+      if (!grants.includes(grantId)) grants.push(grantId);
       return 'recorded-token';
     };
     const workers = [
@@ -680,6 +787,35 @@ describe('integration worker paging and resume', () => {
     expect(
       artifacts.every((artifact) => (artifact.payload as { rows: unknown[] }).rows.length === 4),
     ).toBe(true);
+  });
+
+  it('publishes a Bing run whose full-history report reaches outside the window', async () => {
+    const { projectId } = await seedRun('bing');
+    const rows = ['2026-05-01', '2026-07-20', '2026-07-21'].map((date) => ({
+      keys: ['example query', date],
+      clicks: 3,
+      impressions: 10,
+    }));
+    const client: Pick<IntegrationClient, 'page'> = {
+      async page() {
+        return { payload: { rows }, rawRowCount: rows.length };
+      },
+    };
+    await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+    // Out-of-window days are not invalid rows, so the partition is complete and
+    // the readers select it.
+    const selected = await db
+      .selectFrom('integration_metric_rows')
+      .select('dimension_key')
+      .where('project_id', '=', projectId)
+      .where('dataset', '=', 'bing_query_daily')
+      .where(selectedPartition())
+      .orderBy('dimension_key')
+      .execute();
+    expect(selected.map((row) => row.dimension_key)).toEqual([
+      'example query | 2026-07-20',
+      'example query | 2026-07-21',
+    ]);
   });
 
   it('falls back narrowly for GA4, reuses the capability, and produces consumable referral keys', async () => {

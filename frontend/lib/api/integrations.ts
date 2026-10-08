@@ -1,6 +1,6 @@
 /**
  * Integrations domain endpoints (F1): GSC/GA4/Bing connection management —
- * list, test, sync, sync-run history/detail, disconnect — plus the OAuth
+ * list, test, sync, sync-run detail, disconnect — plus the OAuth
  * start URL used for full-page 302 navigation.
  *
  * Owns transport for the integrations slice. Every JSON response passes
@@ -21,7 +21,6 @@ import {
   integrationPropertyMappingListSchema,
   integrationPropertyMappingSchema,
   integrationSyncEnqueueSchema,
-  integrationSyncRunListSchema,
   integrationSyncRunSchema,
   integrationTestResultSchema,
   type integrationConnectionSchema,
@@ -77,13 +76,6 @@ export const integrationsApi = {
       options,
     );
     return run;
-  },
-  listSyncs: async (connectionId: string, options?: ApiRequestOptions) => {
-    const res = await apiClient.get<IntegrationSyncRun[]>(
-      `/integrations/${connectionId}/syncs`,
-      options,
-    );
-    return strictValidate(integrationSyncRunListSchema, res, 'integrations.listSyncs');
   },
   /**
    * The connection's history-import rollup. A projection, so it is safe to

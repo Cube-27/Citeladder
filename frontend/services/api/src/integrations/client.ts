@@ -13,12 +13,21 @@ export class IntegrationError extends Error {
   readonly code: string;
   readonly retryable: boolean;
   readonly retryAfter: number | null;
+  /** The provider's HTTP status, when the error is a provider response. */
+  readonly httpStatus: number | null;
 
-  constructor(code: string, message: string, retryable = false, retryAfter: number | null = null) {
+  constructor(
+    code: string,
+    message: string,
+    retryable = false,
+    retryAfter: number | null = null,
+    httpStatus: number | null = null,
+  ) {
     super(message);
     this.code = code;
     this.retryable = retryable;
     this.retryAfter = retryAfter;
+    this.httpStatus = httpStatus;
   }
 }
 
@@ -71,12 +80,16 @@ function statusError(status: number, retryAfter: string | null): IntegrationErro
   const seconds = !retryAfter?.trim() ? Number.NaN : Number(retryAfter);
   let code = codes.ERROR_PROVIDER_API;
   if (status === 429) code = codes.ERROR_RATE_LIMITED;
-  else if (status === 401 || status === 403) code = codes.ERROR_GRANT_AUTH_FAILED;
+  // A 401 is the credential; a 403 is this property's permission, which must
+  // not demote a grant that still serves the workspace's other properties.
+  else if (status === 401) code = codes.ERROR_GRANT_AUTH_FAILED;
+  else if (status === 403) code = codes.ERROR_PROPERTY_NOT_ACCESSIBLE;
   return new IntegrationError(
     code,
     `Integration provider returned HTTP ${status}`,
     status === 429 || [500, 502, 503, 504].includes(status),
     Number.isFinite(seconds) && seconds >= 0 ? seconds : null,
+    status,
   );
 }
 

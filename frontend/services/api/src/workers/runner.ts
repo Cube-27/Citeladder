@@ -179,6 +179,27 @@ export function exclusiveDrain(
   };
 }
 
+/**
+ * Run `work` with a signal that aborts once the drain stops admitting, so a long
+ * sync yields at the deadline instead of holding every later lane until the
+ * job timeout. Committed pages resume on the next claim.
+ */
+export async function untilAdmissionEnds<T>(
+  canAdmit: () => boolean,
+  work: (signal: AbortSignal) => Promise<T>,
+  pollMs = 1_000,
+): Promise<T> {
+  const abort = new AbortController();
+  const timer = setInterval(() => {
+    if (!canAdmit()) abort.abort();
+  }, pollMs);
+  try {
+    return await work(abort.signal);
+  } finally {
+    clearInterval(timer);
+  }
+}
+
 export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = configEnvironment(config);
   const runtime = auditRuntime(env);
@@ -209,7 +230,11 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
         run: () => discovery.runOnce(owner),
         nextDue: () => discovery.queue.nextDue(),
       },
-      { name: 'integrations', run: () => integration.runOnce() },
+      {
+        name: 'integrations',
+        run: (canAdmit) => untilAdmissionEnds(canAdmit, (signal) => integration.runOnce(signal)),
+        nextDue: () => integration.nextDue(),
+      },
       { name: 'agent', run: () => agent.runOnce() },
       { name: 'audits', run: () => audit.runOnce(), nextDue: () => audit.nextDue() },
       {

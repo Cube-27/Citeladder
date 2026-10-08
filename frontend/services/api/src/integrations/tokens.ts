@@ -12,12 +12,17 @@ function decryptCredential(client: IntegrationClient, value: string): string {
   }
 }
 
-/** Refresh a grant outside a transaction and persist only while its fence holds. */
+/**
+ * Refresh a grant outside a transaction and persist only while its fence holds.
+ * `rejected` is a token the provider just refused: it is refreshed even before
+ * its expiry, unless another caller has already rotated it.
+ */
 export async function freshAccessToken(
   db: Database,
   grantId: string,
   workspaceId: string,
   client = new IntegrationClient(),
+  rejected?: string,
 ): Promise<string> {
   const settings = client.settings;
   const cutoff = Date.now() + settings.token_refresh_skew_seconds * 1000;
@@ -28,7 +33,7 @@ export async function freshAccessToken(
     wait += settings.token_refresh_poll_seconds * 1000
   ) {
     const claimId = randomUUID();
-    const claimed = await claimRefresh(db, grantId, workspaceId, client, cutoff, claimId);
+    const claimed = await claimRefresh(db, grantId, workspaceId, client, cutoff, claimId, rejected);
     if (claimed?.token) return claimed.token;
     if (claimed === null) {
       await new Promise<void>((resolve) => {
@@ -52,6 +57,7 @@ function claimRefresh(
   client: IntegrationClient,
   cutoff: number,
   claimId: string,
+  rejected?: string,
 ) {
   const settings = client.settings;
   return db.transaction().execute(async (trx) => {
@@ -65,7 +71,8 @@ function claimRefresh(
     if (grant === undefined || grant.status !== 'connected')
       throw new IntegrationError('grant_auth_failed', 'Integration grant is unavailable');
     if (grant.token_expires_at === null || new Date(grant.token_expires_at).getTime() > cutoff) {
-      return { token: decryptCredential(client, grant.access_token_encrypted), claim: null };
+      const token = decryptCredential(client, grant.access_token_encrypted);
+      if (rejected === undefined || token !== rejected) return { token, claim: null };
     }
     if (
       grant.refresh_claim_expires_at !== null &&

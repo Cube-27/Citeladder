@@ -27,7 +27,7 @@ import {
   enqueueSyncRun,
   getBackfillProgress,
   listMappings,
-  listSyncRuns,
+  getSyncRun,
 } from '../integrations/sync.ts';
 import { freshAccessToken } from '../integrations/tokens.ts';
 import { getLogger } from '../logging.ts';
@@ -329,17 +329,6 @@ export const integrationRoutes = [
   }),
   defineGetRoute({
     family,
-    path: '/api/v1/integrations/{connection_id}/syncs',
-    params: { path: connectionPath, query: {} },
-    response: integrationSyncRunListSchema,
-    async handle({ c, db }, { path }) {
-      return integrationSyncRunListSchema.parse(
-        await listSyncRuns(db, c.get('workspace').workspaceId, path.connection_id),
-      );
-    },
-  }),
-  defineGetRoute({
-    family,
     path: '/api/v1/integrations/{connection_id}/syncs/progress',
     params: { path: connectionPath, query: {} },
     response: integrationBackfillProgressSchema,
@@ -355,8 +344,12 @@ export const integrationRoutes = [
     params: { path: syncPath, query: {} },
     response: integrationSyncRunListSchema.element,
     async handle({ c, db }, { path }) {
-      const rows = await listSyncRuns(db, c.get('workspace').workspaceId, path.connection_id);
-      const row = rows.find((item) => item.id === path.sync_run_id);
+      const row = await getSyncRun(
+        db,
+        c.get('workspace').workspaceId,
+        path.connection_id,
+        path.sync_run_id,
+      );
       if (row === undefined) throw notFound('Integration sync run');
       return integrationSyncRunListSchema.element.parse(row);
     },

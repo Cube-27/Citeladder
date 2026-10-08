@@ -4,7 +4,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   integrationSyncEnqueueSchema,
   integrationSyncRunSchema,
-  integrationSyncRunListSchema,
   integrationBackfillProgressSchema,
 } from '@citeladder/contracts/integrations';
 import { createApp } from '../src/app.ts';
@@ -320,15 +319,10 @@ describe('integration sync API and immutable windows', () => {
     });
   });
 
-  it('lists the newest runs and sums their own immutable artifacts', async () => {
+  it('reads one run and sums only its own immutable artifacts', async () => {
     const target = await seedTarget();
     const older = await enqueue(target, { window_start: '2026-07-01', window_end: '2026-07-03' });
     const newer = await enqueue(target, { window_start: '2026-07-04', window_end: '2026-07-06' });
-    await db
-      .updateTable('integration_sync_runs')
-      .set({ created_at: new Date('2026-07-01T00:00:00Z') })
-      .where('id', '=', older.sync_run_id)
-      .execute();
     for (const count of [5, 7]) {
       await db
         .insertInto('integration_import_artifacts')
@@ -348,13 +342,43 @@ describe('integration sync API and immutable windows', () => {
         })
         .execute();
     }
-    const response = await request(target, '/syncs');
-    expect(response.status).toBe(200);
-    const runs = integrationSyncRunListSchema.parse(await response.json());
-    expect(runs.map((run) => [run.id, run.row_count])).toEqual([
-      [newer.sync_run_id, 0],
-      [older.sync_run_id, 12],
-    ]);
+    expect((await detail(target, older.sync_run_id)).row_count).toBe(12);
+    expect((await detail(target, newer.sync_run_id)).row_count).toBe(0);
+  });
+
+  it('re-reads only the late-data days after coverage, even past a failed history gap', async () => {
+    const target = await seedTarget();
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const daysBefore = (days: number) =>
+      new Date(Date.parse(`${yesterday}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
+    for (const [start, end, status] of [
+      [daysBefore(120), daysBefore(91), 'succeeded'],
+      [daysBefore(90), daysBefore(61), 'failed'],
+      [daysBefore(60), daysBefore(5), 'succeeded'],
+    ] as const) {
+      const run = await enqueueSyncRun(db, {
+        ...target,
+        windowStart: start,
+        windowEnd: end,
+        syncKind: 'backfill',
+      });
+      await db
+        .updateTable('integration_sync_runs')
+        .set({ status })
+        .where('id', '=', run.sync_run_id)
+        .execute();
+    }
+    const lateDays = settings.sync_late_data_revision_days;
+    for (const syncKind of ['on_demand', 'scheduled'] as const) {
+      const queued = await enqueueSyncRun(db, { ...target, syncKind });
+      const run = await detail(target, queued.sync_run_id);
+      expect([run.window_start, run.window_end]).toEqual([daysBefore(5 + lateDays - 1), yesterday]);
+      await db
+        .updateTable('integration_sync_runs')
+        .set({ status: 'cancelled' })
+        .where('id', '=', queued.sync_run_id)
+        .execute();
+    }
   });
 
   it('hides unknown runs, mismatched connections, and another workspace', async () => {
@@ -365,7 +389,6 @@ describe('integration sync API and immutable windows', () => {
     for (const [selected, suffix, user] of [
       [target, `/syncs/${randomUUID()}`, ownerId],
       [other, `/syncs/${enqueued.sync_run_id}`, ownerId],
-      [target, '/syncs', foreignOwner],
       [target, `/syncs/${enqueued.sync_run_id}`, foreignOwner],
       [target, '/syncs/progress', foreignOwner],
     ] as const)
@@ -378,7 +401,7 @@ describe('integration sync API and immutable windows', () => {
 
   it('requires authentication for sync writes and projections', async () => {
     const target = await seedTarget();
-    for (const suffix of ['/syncs', `/syncs/${randomUUID()}`, '/syncs/progress'])
+    for (const suffix of [`/syncs/${randomUUID()}`, '/syncs/progress'])
       expect((await request(target, suffix, undefined, null)).status).toBe(401);
     expect((await request(target, '/sync', undefined, null, 'POST')).status).toBe(401);
   });
@@ -483,8 +506,14 @@ describe('backfill projection and retry', () => {
   it('queues the free history allowance once and preserves the frozen property', async () => {
     const target = await seedTarget();
     await enqueueHistoryBackfill(db, target);
-    const response = await request(target, '/syncs');
-    const runs = integrationSyncRunListSchema.parse(await response.json());
+    const runs = await db
+      .selectFrom('integration_sync_runs')
+      .select([
+        sql<string>`window_start::text`.as('window_start'),
+        sql<string>`window_end::text`.as('window_end'),
+      ])
+      .where('connection_id', '=', target.connectionId)
+      .execute();
     expect(runs.length).toBeGreaterThan(0);
     const totalDays = runs.reduce(
       (sum, run) =>

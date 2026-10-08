@@ -42,7 +42,8 @@ export async function executeInteractiveSyncs(
       db,
       client,
       client.settings,
-      (database, grantId, workspace) => freshAccessToken(database, grantId, workspace, client),
+      (database, grantId, workspace, _client, rejected) =>
+        freshAccessToken(database, grantId, workspace, client, rejected),
       { workspaceId, runId: row.id },
     );
     await worker.runOnce(signal);
