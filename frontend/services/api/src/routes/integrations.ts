@@ -488,7 +488,7 @@ export const integrationRoutes = [
           .returning('project_id')
           .execute();
         for (const projectId of new Set(retired.map((row) => row.project_id)))
-          await enqueueTrafficInsights(trx, { workspaceId, projectId });
+          await enqueueTrafficInsights(trx, { workspaceId, projectId }); // NOSONAR -- One transaction runs one statement at a time.
         await trx
           .insertInto('integration_events')
           .values({

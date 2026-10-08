@@ -248,6 +248,73 @@ async function scan(
   }
 }
 
+/**
+ * The snapshots one refresh writes: the trigger window (display ranges only
+ * where a granularity is missing), the presets ending at the Search Console
+ * anchor, and the Demand policy window ending there too.
+ */
+function planTargets(input: {
+  displayOnly: boolean;
+  windowStart: string;
+  windowEnd: string;
+  anchor: string | null;
+  existing: readonly string[];
+  projectOrigin: string | undefined;
+  allowedHosts: ReadonlySet<string>;
+}) {
+  const targets: Target[] = [];
+  const add = (
+    start: string,
+    end: string,
+    grain: string,
+    preset: number | null,
+    verifies: boolean,
+  ) =>
+    targets.push({
+      start,
+      end,
+      grain,
+      preset,
+      verifies,
+      builder: new TrafficProjectionBuilder({
+        windowStart: start,
+        windowEnd: end,
+        granularity: grain,
+        projectOrigin: input.projectOrigin,
+        allowedHosts: input.allowedHosts,
+      }),
+    });
+  for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
+    if (!input.existing.includes(grain))
+      add(
+        input.windowStart,
+        input.windowEnd,
+        grain,
+        null,
+        !input.displayOnly && grain === p.TRAFFIC_DEFAULT_GRANULARITY,
+      );
+  if (!input.displayOnly && input.anchor)
+    for (const days of p.PERFORMANCE_SNAPSHOT_WINDOW_DAYS)
+      for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
+        add(addDays(input.anchor, -(days - 1)), input.anchor, grain, days, false);
+  // Demand always reads the policy window ending at the anchor; the trigger
+  // window only decides whether that window's evidence changed.
+  const demandEnd = input.anchor ?? input.windowEnd;
+  const demandWindow = [
+    addDays(demandEnd, -(policy.demand.DEMAND_WINDOW_DAYS - 1)),
+    demandEnd,
+  ] as const;
+  const covered = targets.some(
+    (target) =>
+      target.start === demandWindow[0] &&
+      target.end === demandWindow[1] &&
+      target.grain === p.TRAFFIC_DEFAULT_GRANULARITY,
+  );
+  if (!input.displayOnly && !covered)
+    add(...demandWindow, p.TRAFFIC_DEFAULT_GRANULARITY, null, false);
+  return { targets, demandWindow };
+}
+
 function executor(displayOnly: boolean): Executor {
   return async (task, { db, checkCancelled, maxAttempts }) => {
     const projectId = await taskProject(db, task);
@@ -270,59 +337,16 @@ function executor(displayOnly: boolean): Executor {
           .where('window_end', '=', sql<Date>`${windowEnd}::date`)
           .execute()
       : [];
-    const targets: Target[] = [];
     const allowedHosts = await projectHosts(db, task.workspace_id, projectId);
-    const add = (
-      start: string,
-      end: string,
-      grain: string,
-      preset: number | null,
-      verifies: boolean,
-    ) =>
-      targets.push({
-        start,
-        end,
-        grain,
-        preset,
-        verifies,
-        builder: new TrafficProjectionBuilder({
-          windowStart: start,
-          windowEnd: end,
-          granularity: grain,
-          projectOrigin: origin?.root_url,
-          allowedHosts,
-        }),
-      });
-    for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
-      if (!existing.some((r) => r.granularity === grain))
-        add(
-          windowStart,
-          windowEnd,
-          grain,
-          null,
-          !displayOnly && grain === p.TRAFFIC_DEFAULT_GRANULARITY,
-        );
-    if (!displayOnly && anchor)
-      for (const days of p.PERFORMANCE_SNAPSHOT_WINDOW_DAYS)
-        for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
-          add(addDays(anchor, -(days - 1)), anchor, grain, days, false);
-    // Demand always reads the policy window ending at the anchor; the trigger
-    // window only decides whether that window's evidence changed.
-    const demandEnd = anchor ?? windowEnd;
-    const demandWindow = [
-      addDays(demandEnd, -(policy.demand.DEMAND_WINDOW_DAYS - 1)),
-      demandEnd,
-    ] as const;
-    if (
-      !displayOnly &&
-      !targets.some(
-        (target) =>
-          target.start === demandWindow[0] &&
-          target.end === demandWindow[1] &&
-          target.grain === p.TRAFFIC_DEFAULT_GRANULARITY,
-      )
-    )
-      add(...demandWindow, p.TRAFFIC_DEFAULT_GRANULARITY, null, false);
+    const { targets, demandWindow } = planTargets({
+      displayOnly,
+      windowStart,
+      windowEnd,
+      anchor,
+      existing: existing.map((row) => row.granularity),
+      projectOrigin: origin?.root_url,
+      allowedHosts,
+    });
     if (!targets.length) return;
     const demand = new DemandRevision(...demandWindow);
     await scan(db, task, targets, demand, checkCancelled);

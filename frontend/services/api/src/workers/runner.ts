@@ -190,7 +190,7 @@ async function untilAdmissionEnds<T>(
   work: (signal: AbortSignal) => Promise<T>,
   pollMs = 1_000,
 ): Promise<T> {
-  const admission = maintainLease(async () => canAdmit(), pollMs);
+  const admission = maintainLease(() => Promise.resolve(canAdmit()), pollMs);
   try {
     return await work(admission.signal);
   } finally {

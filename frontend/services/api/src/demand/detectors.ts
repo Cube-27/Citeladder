@@ -261,7 +261,7 @@ function trendType(prior: number, recent: number) {
  */
 export function detectTrends(rows: QueryInput[], windowEnd: string): Evaluation {
   const observed = rows.map((r) => r.observed_date).filter((day) => day <= windowEnd);
-  const anchor = observed.length ? observed.reduce((a, b) => (b > a ? b : a)) : windowEnd;
+  const anchor = observed.reduce((a, b) => (b > a ? b : a), '') || windowEnd;
   if (!hasTrendCoverage(rows, anchor))
     return {
       state: 'insufficient_history',

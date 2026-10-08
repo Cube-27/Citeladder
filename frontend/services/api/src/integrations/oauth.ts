@@ -304,14 +304,15 @@ async function queueCatchUp(db: Database, workspaceId: string, grantId: string) 
     .where('mapping.status', '=', 'active')
     .execute();
   for (const mapping of mappings) {
+    const target = {
+      workspaceId,
+      connectionId: mapping.connection_id,
+      mappingId: mapping.id,
+      projectId: mapping.project_id,
+      syncKind: 'scheduled' as const,
+    };
     try {
-      await enqueueSyncRun(db, {
-        workspaceId,
-        connectionId: mapping.connection_id,
-        mappingId: mapping.id,
-        projectId: mapping.project_id,
-        syncKind: 'scheduled',
-      });
+      await enqueueSyncRun(db, target); // NOSONAR -- Each enqueue takes the workspace lock.
     } catch (error) {
       if (!(error instanceof ApiError)) throw error;
       // Best effort: the scheduled dispatcher still covers this mapping.

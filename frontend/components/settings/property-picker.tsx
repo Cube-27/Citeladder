@@ -94,15 +94,17 @@ function PropertyOptions({
   properties,
   selected,
   blocked,
-  pendingRef,
+  selecting,
   onSelect,
 }: Readonly<{
   properties: IntegrationProperty[];
   selected: string;
   blocked: boolean;
-  pendingRef: string | null;
+  /** The selection mutation: its variables name the row being imported. */
+  selecting: { isPending: boolean; variables?: string };
   onSelect: (propertyRef: string) => void;
 }>) {
+  const pendingRef = selecting.isPending ? selecting.variables : undefined;
   return ownPropertiesFirst(properties).map((property) => (
     <PropertyOption
       key={property.property_ref}
@@ -290,7 +292,7 @@ export function PropertyPicker({
             properties={discovery.data ?? []}
             selected={selected}
             blocked={!activeProject || selectMutation.isPending}
-            pendingRef={selectMutation.isPending ? (selectMutation.variables ?? null) : null}
+            selecting={selectMutation}
             onSelect={(propertyRef) => selectMutation.mutate(propertyRef)}
           />
 
