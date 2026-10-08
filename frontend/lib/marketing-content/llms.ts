@@ -1,5 +1,6 @@
 import { COMPETITORS } from './compare';
 import { POSTS } from './blog';
+import { CONTACT_EMAIL } from '@/lib/config/contact';
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from './legal';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { CITELADDER_LINKEDIN } from './social';
@@ -21,7 +22,7 @@ export const LLMS_TXT = [
   `LinkedIn: ${CITELADDER_LINKEDIN}`,
   `Product: ${PRODUCT_HEAD.name}, ${PRODUCT_HEAD.role} (${PRODUCT_HEAD.linkedin})`,
   `Company: ${FOUNDER.name}, ${FOUNDER.role} (${FOUNDER.linkedin})`,
-  `Contact: ${PRODUCT_HEAD.email}`,
+  `Contact: ${CONTACT_EMAIL}`,
   '',
   '## What CiteLadder is',
   '',
@@ -37,6 +38,27 @@ export const LLMS_TXT = [
   '- The public trial is limited AI visibility access for seven days, not access to the whole platform. Agent access is not included.',
   '- General crawler-log ingestion remains unavailable. Commerce requires eligible projects. Optional external research requires scope-and-cost review and separate confirmation.',
   '- Not an open-source or self-hosted product.',
+  '',
+  '## When to use CiteLadder',
+  '',
+  'Reach for CiteLadder when a user with a CiteLadder account wants to:',
+  '',
+  '- Check whether ChatGPT, Claude or Gemini mention, cite or recommend their brand for buyer prompts, and which sources those answers cite.',
+  '- Compare their observed citation share with named competitors under the same prompts, engine and audit window.',
+  '- Find the Site Health issues on their own site that affect visibility or performance, and confirm fixes after a recrawl.',
+  '- Read Google Search Console and GA4 demand, AI referral traffic or saved Search Intelligence datasets beside the pages they concern.',
+  '- Turn those findings into a report or a prioritised list of content and page improvements for a human to review.',
+  '',
+  'Do not use CiteLadder to publish or edit a website, start crawls or audits, buy data, or answer questions about sites the user has no CiteLadder project for. Run those workflows in the CiteLadder app.',
+  '',
+  '## How agents connect (MCP)',
+  '',
+  '- Endpoint: https://citeladder.com/mcp (remote Streamable HTTP MCP).',
+  '- Authorization: browser OAuth authorization code flow with PKCE (S256) and dynamic client registration. The only scope is `citeladder:read`; never ask the user for a session cookie or API key.',
+  '- Protected-resource metadata (RFC 9728): https://citeladder.com/.well-known/oauth-protected-resource/mcp',
+  '- Authorization-server metadata (RFC 8414): https://citeladder.com/.well-known/oauth-authorization-server',
+  '- Access is read-only and follows the workspaces the signed-in account can see. Start by listing projects, pick one explicitly, then list its saved datasets before reading results.',
+  '- Setup and tool reference: https://docs.citeladder.com/mcp/connect/ and https://docs.citeladder.com/mcp/tools/',
   '',
   '## Engines measured directly',
   '',

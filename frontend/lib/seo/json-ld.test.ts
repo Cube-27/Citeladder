@@ -32,6 +32,11 @@ describe('organizationJsonLd', () => {
     expect(data?.url).toBe('https://example.test/');
     expect(data?.logo).toBe('https://example.test/citeladder-logo.svg');
     expect(data?.['@id']).toBe('https://example.test/#organization');
+    expect(data?.contactPoint).toMatchObject({
+      '@type': 'ContactPoint',
+      email: 'contact@citeladder.com',
+      url: 'https://example.test/contact',
+    });
     expect((websiteJsonLd()?.publisher as Record<string, unknown> | undefined)?.['@id']).toBe(
       data?.['@id'],
     );

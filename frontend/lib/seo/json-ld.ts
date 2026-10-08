@@ -1,3 +1,4 @@
+import { CONTACT_EMAIL } from '@/lib/config/contact';
 import type { BlogPost } from '@/lib/marketing-content/blog';
 import { blogPostFreshness, type BlogPostSummary } from '@/lib/marketing-content/blog-index';
 import type { FaqGroup } from '@/lib/marketing-content/faq';
@@ -21,7 +22,14 @@ export function organizationJsonLd(): JsonLdObject | null {
     description: SITE_TAGLINE,
     url,
     logo: absoluteUrl('/citeladder-logo.svg'),
-    email: PARENT_COMPANY.email,
+    email: CONTACT_EMAIL,
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: CONTACT_EMAIL,
+      url: absoluteUrl('/contact'),
+      availableLanguage: 'English',
+    },
     sameAs: [CITELADDER_LINKEDIN],
     parentOrganization: {
       '@type': 'Organization',

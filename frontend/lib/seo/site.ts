@@ -10,6 +10,11 @@ export const SITE_TAGLINE = 'AI visibility with evidence you can open';
 /** One-sentence product description. Single source for metadata and JSON-LD. */
 export const SITE_DESCRIPTION =
   'Connect site and demand evidence, act on grounded opportunities, and track observed answer-engine citation share.';
+/** Social card for pages without their own image (1080x630, matching blog images). */
+export const DEFAULT_SOCIAL_IMAGE = {
+  path: '/social/citeladder.png',
+  alt: 'CiteLadder: AI visibility with evidence you can open',
+} as const;
 
 /** Canonical website origin supplied by the public-origin config owner. */
 export function siteOrigin(): URL | null {
