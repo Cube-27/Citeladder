@@ -132,7 +132,7 @@ describe('structurally bounded Agent prompts', () => {
       omitted_sections: ['evidence'],
     });
   });
-  it('omits a large diagnosis as one section and withdraws its citation grant', () => {
+  it('omits a large diagnosis as one disclosed section', () => {
     const source = '00000000-0000-4000-8000-000000000001';
     const manifest = {
       version: 'agent-context-1',
