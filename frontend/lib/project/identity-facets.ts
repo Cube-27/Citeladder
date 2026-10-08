@@ -25,12 +25,9 @@ export type IdentityFacets = {
   market_scope: MarketScope | null;
 };
 
-/**
- * Read the identity facets from a persisted business context. Older contexts
- * name the buyer facet `business_type`; unknown values stay unset.
- */
+/** Read the identity facets from a persisted business context; unknown values stay unset. */
 export function identityFacets(context: Record<string, unknown>): IdentityFacets {
-  const buyer = buyerTypeSchema.safeParse(context.buyer_type ?? context.business_type);
+  const buyer = buyerTypeSchema.safeParse(context.buyer_type);
   const scope = marketScopeSchema.safeParse(context.market_scope);
   return {
     category: typeof context.category === 'string' ? context.category : '',

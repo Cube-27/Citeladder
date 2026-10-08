@@ -189,9 +189,6 @@ export class DiscoveryWorker {
             competitors: JSON.stringify(result.competitors),
             evidence: JSON.stringify(result.evidence),
             warnings: JSON.stringify(result.warnings),
-            topics: '[]',
-            prompt_suggestions: '[]',
-            gaps: '[]',
             error_code: '',
             error_detail: '',
             progress: JSON.stringify(

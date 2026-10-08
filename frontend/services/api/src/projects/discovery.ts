@@ -353,8 +353,6 @@ export async function completeDiscovery(
         domains: JSON.stringify(domains),
         competitors: JSON.stringify(competitors),
         profile: JSON.stringify(input.profile),
-        topics: '[]',
-        prompt_suggestions: '[]',
         input_data: JSON.stringify({
           ...data,
           completion_idempotency_key: key,

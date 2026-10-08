@@ -102,8 +102,7 @@ describe('BrandProfilePanel', () => {
         projectId={projectId}
         profile={{
           ...profile,
-          // Older contexts name the buyer facet `business_type`.
-          business_context: { category: 'feed software', business_type: 'b2b' },
+          business_context: { category: 'feed software', buyer_type: 'b2b' },
         }}
       />,
     );

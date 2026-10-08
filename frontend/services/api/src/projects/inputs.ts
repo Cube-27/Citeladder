@@ -7,6 +7,8 @@ const cfg = policy.projects;
 const profile = policy.brand_identity;
 const text = (max: number) => z.string().trim().max(max);
 const list = z.array(text(1024));
+/** The confirmed category buyers would search for. */
+export const categoryInput = z.string().trim().min(1).max(profile.category_max_chars);
 export const competitorInput = z.object({
   name: text(255).min(1),
   aliases: list.default([]),

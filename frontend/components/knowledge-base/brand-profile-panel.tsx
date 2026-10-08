@@ -310,36 +310,53 @@ function IdentityFields({
         )}
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <span className={textRole('label')} aria-hidden>
-            Who buys it
-          </span>
-          <RadioGroup
-            variant="chip"
-            ariaLabel="Who buys it"
-            value={identity.buyer_type ?? ''}
-            options={BUYER_TYPE_CHOICES}
-            onValueChange={(value) => {
-              if (value && !disabled) onChange({ ...identity, buyer_type: value });
-            }}
-          />
-        </div>
-        <div className="grid gap-2">
-          <span className={textRole('label')} aria-hidden>
-            Where they buy it
-          </span>
-          <RadioGroup
-            variant="chip"
-            ariaLabel="Where they buy it"
-            value={identity.market_scope ?? ''}
-            options={MARKET_SCOPE_CHOICES}
-            onValueChange={(value) => {
-              if (value && !disabled) onChange({ ...identity, market_scope: value });
-            }}
-          />
-        </div>
+        <FacetChoice
+          label="Who buys it"
+          value={identity.buyer_type}
+          options={BUYER_TYPE_CHOICES}
+          disabled={disabled}
+          onPick={(buyer_type) => onChange({ ...identity, buyer_type })}
+        />
+        <FacetChoice
+          label="Where they buy it"
+          value={identity.market_scope}
+          options={MARKET_SCOPE_CHOICES}
+          disabled={disabled}
+          onPick={(market_scope) => onChange({ ...identity, market_scope })}
+        />
       </div>
     </>
+  );
+}
+
+function FacetChoice<T extends string>({
+  label,
+  value,
+  options,
+  disabled,
+  onPick,
+}: Readonly<{
+  label: string;
+  value: T | null;
+  options: readonly { value: T; label: string }[];
+  disabled: boolean;
+  onPick: (value: T) => void;
+}>) {
+  return (
+    <div className="grid gap-2">
+      <span className={textRole('label')} aria-hidden>
+        {label}
+      </span>
+      <RadioGroup<T | ''>
+        variant="chip"
+        ariaLabel={label}
+        value={value ?? ''}
+        options={options}
+        onValueChange={(next) => {
+          if (next && !disabled) onPick(next);
+        }}
+      />
+    </div>
   );
 }
 

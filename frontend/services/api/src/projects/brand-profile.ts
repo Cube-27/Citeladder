@@ -25,6 +25,7 @@ import { jsonObject } from '../db/json.ts';
 import type { BrandProfiles } from '../generated/db-schema.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { notFound } from '../errors.ts';
+import { categoryInput } from './inputs.ts';
 
 export type ProjectScope = { workspaceId: string; projectId: string };
 type BrandProfile = z.input<typeof brandProfileSchema>;
@@ -54,7 +55,7 @@ export const brandProfileUpdate = z.object({
   positioning: text,
   products_services: z.array(z.string().max(PRODUCT_MAX)).max(PRODUCTS_MAX).nullish(),
   target_audience: text,
-  category: z.string().trim().min(1).max(policy.brand_identity.category_max_chars).nullish(),
+  category: categoryInput.nullish(),
   buyer_type: buyerTypeSchema.nullish(),
   market_scope: marketScopeSchema.nullish(),
 });
@@ -107,6 +108,28 @@ function byField<T>(stored: Record<string, T>): Record<Field, T | null> {
   >;
 }
 
+/**
+ * Older contexts name the buyer facet `business_type`. Fold it into
+ * `buyer_type` (a reviewed legacy value wins over an unreviewed current one) so
+ * every reader and writer sees one key.
+ */
+function withBuyerType(stored: Record<string, unknown>): Record<string, unknown> {
+  if (!('business_type' in stored)) return stored;
+  const { business_type: legacy, ...business } = stored;
+  const { business_type: legacySource, ...sources } = jsonObject(
+    stored.field_sources ?? {},
+    'business_context.field_sources',
+  );
+  if (
+    !('buyer_type' in business) ||
+    (legacySource === 'reviewed' && sources.buyer_type !== 'reviewed')
+  ) {
+    business.buyer_type = legacy;
+    if (legacySource !== undefined) sources.buyer_type = legacySource;
+  }
+  return { ...business, field_sources: sources };
+}
+
 function view(row: ProfileRow): BrandProfile {
   return {
     id: row.id,
@@ -117,7 +140,9 @@ function view(row: ProfileRow): BrandProfile {
     positioning: row.positioning,
     products_services: profileProducts(row),
     target_audience: row.target_audience,
-    business_context: jsonObject(row.business_context, 'brand_profiles.business_context'),
+    business_context: withBuyerType(
+      jsonObject(row.business_context, 'brand_profiles.business_context'),
+    ),
     sources: byField(viewedSources.parse(row.sources)),
     source_artifact_ids: byField(storedArtifacts.parse(row.source_artifact_ids)),
     created_at: row.created_at.toISOString(),
@@ -154,21 +179,9 @@ export async function readBrandMemory(db: Database, scope: ProjectScope) {
     .where('project_id', '=', scope.projectId)
     .executeTakeFirst();
   if (!row) return null;
-  const profile = view(row),
-    business = { ...profile.business_context },
-    sources = { ...jsonObject(business.field_sources ?? {}, 'business_context.field_sources') };
-  if ('business_type' in business) {
-    if (
-      !('buyer_type' in business) ||
-      (sources.business_type === 'reviewed' && sources.buyer_type !== 'reviewed')
-    ) {
-      business.buyer_type = business.business_type;
-      if (sources.business_type !== undefined) sources.buyer_type = sources.business_type;
-    }
-    delete business.business_type;
-    delete sources.business_type;
-  }
-  delete business.business_map;
+  const profile = view(row);
+  const { business_map: _map, ...business } = profile.business_context;
+  const sources = jsonObject(business.field_sources ?? {}, 'business_context.field_sources');
   return { ...profile, business_context: { ...business, field_sources: sources } };
 }
 
@@ -229,7 +242,9 @@ export function updateBrandProfile(
       };
       delete artifacts[field];
     }
-    const context = jsonObject(row.business_context, 'brand_profiles.business_context');
+    const context = withBuyerType(
+      jsonObject(row.business_context, 'brand_profiles.business_context'),
+    );
     const facets = IDENTITY_FACETS.filter((facet) => update[facet] != null);
     if (facets.length) {
       const fieldSources: Record<string, unknown> = {
@@ -238,12 +253,6 @@ export function updateBrandProfile(
       for (const facet of facets) {
         context[facet] = update[facet];
         fieldSources[facet] = 'reviewed';
-      }
-      // Older contexts named the buyer facet `business_type`; a reviewed
-      // buyer type supersedes it.
-      if (facets.includes('buyer_type')) {
-        delete context.business_type;
-        delete fieldSources.business_type;
       }
       context.field_sources = fieldSources;
     }
