@@ -8,7 +8,6 @@ export const integrationKeys = {
   all: ['integrations'] as const,
   connections: (workspaceId: string | null) =>
     ['integrations', 'connections', workspaceId ?? 'default'] as const,
-  syncs: (connectionId: string) => ['integrations', 'syncs', connectionId] as const,
   // The history-import rollup, polled only while windows drain.
   backfillProgress: (connectionId: string) =>
     ['integrations', 'backfill-progress', connectionId] as const,

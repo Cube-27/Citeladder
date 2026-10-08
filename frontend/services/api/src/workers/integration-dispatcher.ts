@@ -10,15 +10,6 @@ import { getLogger } from '../logging.ts';
 const logger = getLogger('workers.integration-dispatcher');
 const settings = integrationSettings();
 
-function day(value: Date): string {
-  return value.toISOString().slice(0, 10);
-}
-function addDays(value: string, amount: number): string {
-  return new Date(Date.parse(`${value}T00:00:00Z`) + amount * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-}
-
 export class IntegrationDispatcher {
   readonly #db: Database;
   readonly #client: Pick<IntegrationClient, 'secrets' | 'revoke'>;
@@ -55,26 +46,31 @@ export class IntegrationDispatcher {
         'mapping.connection_id',
         'mapping.project_id',
       ])
+      // Each mapping's newest scheduled run, in the same read.
+      .leftJoinLateral(
+        (eb) =>
+          eb
+            .selectFrom('integration_sync_runs as run')
+            .select('run.created_at as last_scheduled')
+            .whereRef('run.mapping_id', '=', 'mapping.id')
+            .whereRef('run.workspace_id', '=', 'mapping.workspace_id')
+            .where('run.sync_kind', '=', 'scheduled')
+            .orderBy('run.created_at', 'desc')
+            .limit(1)
+            .as('scheduled'),
+        (join) => join.onTrue(),
+      )
+      .select('scheduled.last_scheduled')
       .where('mapping.status', '=', 'active')
       .where('grant.status', '=', 'connected')
       .where('connection.provider', 'in', ['gsc', 'ga4', 'bing'])
       .execute();
-    const now = new Date();
-    const end = day(new Date(now.getTime() - 86_400_000));
-    const start = addDays(end, -(settings.sync_default_window_days - 1));
+    const now = Date.now();
     for (const target of targets) {
       if (!canAdmit()) break;
-      const previous = await this.#db
-        .selectFrom('integration_sync_runs')
-        .select('created_at')
-        .where('mapping_id', '=', target.mapping_id)
-        .where('sync_kind', '=', 'scheduled')
-        .orderBy('created_at', 'desc')
-        .executeTakeFirst();
       if (
-        previous &&
-        now.getTime() - new Date(previous.created_at).getTime() <
-          settings.sync_cadence_seconds * 1000
+        target.last_scheduled &&
+        now - new Date(target.last_scheduled).getTime() < settings.sync_cadence_seconds * 1000
       )
         continue;
       try {
@@ -83,9 +79,8 @@ export class IntegrationDispatcher {
           connectionId: target.connection_id,
           mappingId: target.mapping_id,
           projectId: target.project_id,
+          // No window: the sync owner re-reads the late-data days after coverage.
           syncKind: 'scheduled',
-          windowStart: start,
-          windowEnd: end,
         });
       } catch (error) {
         if (error instanceof ApiError && error.code === 'sync_active_window_conflict') continue;

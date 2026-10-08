@@ -28,11 +28,32 @@ include_granted_scopes. Bing uses separate Microsoft consent even if the Bing
 account was created with a Google identity. Property discovery supplies verified
 sites or GA4 account summaries; users do not type a property reference.
 Discovery is an Owner/Admin `manage_credentials` POST on
-`/integrations/{connection_id}/properties`, initiated when the picker opens
-with no retries or background refetch. Members/viewers read saved mappings.
+`/integrations/{connection_id}/properties`, initiated by the user or on return
+from consent, with no retries or background refetch. Naming a project in the
+request marks each Search Console or Bing property that belongs to its site
+(`matches_project`), using the same rule that mapping creation enforces
+([host scope](../frontend/services/api/src/integrations/host-scope.ts): the
+project website and owned domains, `sc-domain:` and a leading `www.` ignored).
+GA4 summaries carry no site, so their match is unknown (`null`).
+Members/viewers read saved mappings.
 OAuth completion rechecks current credential authority before code exchange
 and under the workspace lock before grant persistence; exchange holds no
 database transaction open.
+
+OAuth start accepts a same-origin `return_to` path. Only the configured app
+screens qualify (Performance, Search Demand, AI Traffic and Settings); the
+validated path travels in the signed state, and the callback lands there with
+`connected=` or `error=`, otherwise on Settings → Integrations. A start that
+fails before consent redirects with the reason instead of returning JSON to a
+full-page navigation. A completed consent queues a catch-up sync for the
+grant's active mappings, so a reconnect resumes without waiting for the
+scheduled run.
+
+Disconnect acts on the grant: it moves to `pending_revocation` (the dispatcher
+revokes it at the provider) and every mapping it serves is retired. Connections,
+sync runs, artifacts and metric rows are kept, as raw evidence is append-only;
+a reconnect reuses the same connections. Removing one property retires only
+that project's mapping.
 
 [Integration routes](../frontend/services/api/src/routes/integrations.ts) use
 the TypeScript integration owner in
@@ -53,9 +74,14 @@ the mapping and retries missing history work rather than creating a duplicate.
 mapping_id, property_ref and project_id onto each IntegrationSyncRun. An omitted
 or null sync body uses the default window. Windows remain calendar dates in
 enqueue, history and coverage projections regardless of server timezone.
-Dispatcher fan-out is per mapping. Fetch and resume use frozen identity, never
-the mutable connection pointer. A retired mapping fails its in-flight work rather than
-relabeling imported evidence.
+Dispatcher fan-out is per mapping, read in one grouped query. Fetch and resume
+use frozen identity, never the mutable connection pointer. A retired mapping fails
+its in-flight work rather than relabeling imported evidence.
+
+An unwindowed on-demand or scheduled sync re-reads only the configured late-data
+days after the newest succeeded window for its mapping; the default window applies
+only before anything has succeeded. Gaps left by failed history chunks belong to
+history retry, never to a routine sync.
 
 On-demand enqueue takes the workspace lock before the connection lock. New
 windows require fewer than 20 active sync runs in that workspace and use a
@@ -74,9 +100,20 @@ task through a separate POST; dashboard reads remain projection-only.
 
 [Integration workers](../frontend/services/api/src/workers/integration-worker.ts)
 claim leased PostgreSQL work, commit before I/O, persist append-only import
-artifacts and derive versioned metric rows. Dataset configuration owns provider
-report grains, compatibility, coverage and truncation. Provider errors, expired
-credentials and partial data remain distinguishable from an observed zero.
+artifacts and derive versioned metric rows in batched inserts. Dataset
+configuration owns provider report grains, compatibility, coverage and truncation.
+An artifact is truncated only when provider rows fail to parse; a valid row dated
+outside the window is dropped without marking it, because Bing returns its whole
+history whatever window is requested. Provider errors, expired credentials and
+partial data remain distinguishable from an observed zero.
+
+The runner's integrations lane reports its next due run, so retries and history
+chunks run as soon as they are due. The drain deadline aborts a running sync; a
+deadline stop releases the run for the next claim and is not charged as an
+attempt when it committed a page, so long history imports resume instead of
+being written off. A token is resolved for each page. A provider 401 refreshes
+the refused token once before the grant is marked `needs_reauth`; a 403 fails the
+run as `property_not_accessible` and leaves the shared grant connected.
 Interactive probes and workers share a fenced grant refresh claim: the claim
 commits before OAuth I/O, concurrent callers wait within a bound, and a rotated
 token is saved only while the claim and credential revision still match.
@@ -86,9 +123,11 @@ so a remapped property remains comparable across connections. Readers select the
 latest complete, untruncated revision of each project/property/provider/dataset/day
 partition, including empty successful extracts, and never sum revisions. A row
 missing from a replacement is removed; a failed or truncated partition uses the
-prior complete revision with `partition_fallback`. Incremental sync re-reads the configured late-data
-window. History is imported once per project/property and resumes missing/failed
-chunks, bounded by the resolved history_window allowance.
+prior complete revision with `partition_fallback`. History is imported once per
+project/property when it is first mapped and resumes failed chunks. It is bounded
+by the resolved history_window allowance and capped at the configured maximum
+(480 days, inside Search Console's retention); a later plan upgrade does not yet
+extend it.
 
 Traffic, Demand and Referrals reject a mixed-revision projection if a sync
 changes the project's partition epoch between their persisted-input scans.
@@ -137,17 +176,26 @@ be added together into a total because provider privacy filtering differs.
 Each dimension table reads its own dataset. No date-only evidence means null
 headline values, not a zero reconstructed from dimensions.
 
-Refresh materializes configured presets anchored to the latest complete GSC
-date. A separate performance_range_projection task creates a custom/comparison
+Refresh materializes configured presets anchored to the latest date with
+selected Search Console day rows. Search Console finalizes data days late, so
+days after that anchor are unavailable, not zero; a property that has never
+reported a row keeps the window-end anchor, so a genuinely silent property
+reads as measured zero. Refresh writes under a per-project advisory lock. A separate performance_range_projection task creates a custom/comparison
 display snapshot from stored evidence only; it does not sync providers, refresh
 Demand or enqueue verification. Exact windows cannot fall back to an unrelated
-snapshot.
+snapshot. A custom end after the latest imported date is clamped to it, a range
+that starts after it is rejected, and a failed range can be requested again.
+Three- and six-month ranges anchor on the latest preset, never on a custom range.
 
 [AI Referrals](../frontend/services/api/src/referrals/projection.ts) uses
 ga4_source_medium_daily as the canonical session grain. AI-source sessions are
 the numerator; all sessions of that same report are the denominator. Alternate
 referrer reports retain provenance but are not added again. Public rows show
 AI sources only. Formula changes require explicit derived rebuilds, never reads.
+A run that carries referral datasets refreshes AI Referrals once, at the end of
+its ingest and classification chain; quality and pending classification are
+judged per bucket. Host-like UTM sources match subdomains (`www.perplexity.ai`);
+bare tokens stay exact.
 
 The same referral refresh replaces `ai_referral_landing_daily` over its selected
 window, with canonical path hash, property-local reporting day, AI source,
@@ -188,7 +236,8 @@ Text, minimum-volume and intent filters run across persisted rows. Cursors bind 
 
 [Query evidence](../frontend/services/api/src/demand/query-evidence.ts) builds immutable,
 versioned QueryEvidenceSnapshot/Row projections from latest gsc_query_page_daily
-evidence before detector computation. Rows retain exact metric/artifact IDs,
+evidence before detector computation. When the configured row bound truncates
+the source, the highest-impression rows are kept, newest first. Rows retain exact metric/artifact IDs,
 query, date, metrics, importer identity and owned-page resolution. Identical
 inputs converge idempotently; changed source/window/version appends and
 supersedes. Build bounds apply in SQL before materialization; read cursors bind
@@ -201,8 +250,13 @@ and preferred-origin hints rank candidates but do not prove a join. Heuristic-on
 matches remain ambiguous; invalid URLs or absent candidates return unresolved. Every query is
 workspace/project-scoped.
 
-Detectors cover branded demand, striking distance, cannibalization,
-property-relative CTR gaps and coverage-qualified adjacent-window trends.
+Demand always computes the configured policy window (28 days) ending at the
+Search Console anchor, whatever sync triggered it; the latest snapshot is the one
+with the newest window end, for every reader. Detectors cover branded demand,
+striking distance, cannibalization, property-relative CTR gaps, high-impression
+low-CTR targets (non-branded queries and pages only, capped, highest impressions
+first) and coverage-qualified adjacent-window trends anchored on the latest
+observed day.
 Branded query classification uses canonical brand/alias/domain vocabulary;
 the newest append-only override for an exact normalized query wins.
 Detector availability and limitations persist with the snapshot.
@@ -269,8 +323,16 @@ leads with an "Act on this" band of promoted signals, one entry per page's
 Action, then one table grouped by page with a signal chip per row; each signal
 type is explained once in a legend, and the evidence drawer keeps the reading,
 relevance, competing pages and provenance.
-Search Demand's missing-snapshot state links to the selected project's
-Performance setup. The AI Traffic Referrals tab retains its range and granularity controls when
+[Data source setup](../frontend/components/integrations/data-source-setup.tsx)
+connects sources where they are needed: Performance (Search Console, with GA4 and
+Bing offered), Search Demand (Search Console) and the AI Traffic referrals view
+(GA4). Each source shows only its next step: Connect (one Google consent covers
+Search Console and GA4), Reconnect, or choose the property, with the single
+property that matches the project offered as one click. Consent returns to the
+same screen and opens the property list; choosing a property starts the history
+import and refreshes readiness and data at once. It renders nothing once the
+required sources import into the project, and members see who to ask instead
+of consent controls. Settings → Integrations remains the full management view. The AI Traffic Referrals tab retains its range and granularity controls when
 the selected projection is empty because another persisted range or granularity
 may still be available; measured zero retains them as well.
 [Sync tests](../frontend/services/api/test/integration-sync.test.ts) and

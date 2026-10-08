@@ -27,13 +27,37 @@ export const windowDays = (start: string, end: string) =>
   (Date.parse(end) - Date.parse(start)) / 86_400_000 + 1;
 export type Window = readonly [string, string];
 type Scope = { workspaceId: string; projectId: string };
-export function customWindow(start?: string | null, end?: string | null): Window | null {
+function customWindow(start?: string | null, end?: string | null): Window | null {
   if (start == null && end == null) return null;
   if (!start || !end) throw new ApiError(422, "'from' and 'to' must be supplied together");
   if (end < start) throw new ApiError(422, "'to' must not be before 'from'");
   if (windowDays(start, end) > p.PERFORMANCE_CUSTOM_RANGE_MAX_DAYS)
     throw new ApiError(422, `window exceeds ${p.PERFORMANCE_CUSTOM_RANGE_MAX_DAYS} days`);
   return [start, end];
+}
+/**
+ * A custom window ending no later than the latest imported date, so a future
+ * `to` names the same persisted window as the data it can contain. A window
+ * that starts after that date is returned unchanged (and has no evidence);
+ * `latest` is null without any imported evidence.
+ */
+export async function clampedCustomWindow(
+  db: Database,
+  scope: Scope,
+  start?: string | null,
+  end?: string | null,
+): Promise<{ window: Window | null; latest: string | null }> {
+  const window = customWindow(start, end);
+  if (!window) return { window, latest: null };
+  const row = await new WorkspaceScope(scope.workspaceId)
+    .selectFrom(db, 'integration_metric_rows')
+    .select(isoDateText(sql`max(date)`).as('end'))
+    .where('project_id', '=', scope.projectId)
+    .where('dataset', 'in', p.TRAFFIC_CONSUMED_DATASETS)
+    .executeTakeFirst();
+  const latest = row?.end ?? null;
+  if (latest === null || window[1] <= latest || window[0] > latest) return { window, latest };
+  return { window: [window[0], latest], latest };
 }
 function choice(
   label: string,
@@ -73,7 +97,7 @@ async function selectedDates(
   if (explicit) return explicit;
   const presets: Record<string, number> = p.PERFORMANCE_PRESET_RANGE_DAYS;
   const extended: Record<string, number> = p.PERFORMANCE_EXTENDED_RANGE_DAYS;
-  let query = snapshots(db, scope)
+  const query = snapshots(db, scope)
     .where('granularity', '=', p.TRAFFIC_DEFAULT_GRANULARITY)
     .orderBy('window_end', 'desc');
   if (range in presets) {
@@ -94,11 +118,17 @@ async function selectedDates(
     const floor = addDays(row.end, -(p.TRAFFIC_MAX_WINDOW_DAYS - 1));
     return [row.start > floor ? row.start : floor, row.end];
   }
-  query = query.orderBy('window_start', 'asc').orderBy('id', 'desc');
-  const row = await query.executeTakeFirst();
-  return row
-    ? [range in extended ? addDays(row.end, -(extended[range]! - 1)) : row.start, row.end]
-    : null;
+  if (range in extended) {
+    // The preset family ends at the refresh's partition anchor; a display-only
+    // custom snapshot (possibly ending later) must not move this range.
+    const anchor = await query
+      .where('preset_window_days', 'is not', null)
+      .orderBy('id', 'desc')
+      .executeTakeFirst();
+    return anchor ? [addDays(anchor.end, -(extended[range]! - 1)), anchor.end] : null;
+  }
+  const row = await query.orderBy('window_start', 'asc').orderBy('id', 'desc').executeTakeFirst();
+  return row ? [row.start, row.end] : null;
 }
 
 function performanceWindow(
@@ -159,7 +189,8 @@ export async function getPerformance(
     p.PERFORMANCE_DEFAULT_COMPARE,
     p.PERFORMANCE_COMPARE_MODES,
   );
-  const window = await selectedDates(db, options, range, customWindow(options.from, options.to));
+  const custom = await clampedCustomWindow(db, options, options.from, options.to);
+  const window = await selectedDates(db, options, range, custom.window);
   const snapshot = window ? await exactSnapshot(db, options, window, granularity) : undefined;
   let comparison = null;
   if (window && compare !== p.PERFORMANCE_COMPARE_NONE) {

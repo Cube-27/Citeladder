@@ -23,11 +23,16 @@ import {
   selectedItemDataset,
 } from '../integrations/sync-state.ts';
 import { enqueuePostSyncProjections } from '../integrations/projections.ts';
+import { cachedWorkspaceAccess } from '../entitlements/access.ts';
 
 const logger = getLogger('workers.integrations');
 const statuses = policy.task_queue.statuses;
 const templates = Object.values(integrationPolicy.datasets);
 const excluded = new Set(integrationPolicy.excluded_datasets);
+// 13 bound parameters a row stays well inside PostgreSQL's 65,535 limit.
+const METRIC_INSERT_BATCH = 2_000;
+/** Marks a stop requested by the caller's deadline rather than a failure. */
+const DEADLINE = Symbol('deadline');
 
 type Run = {
   id: string;
@@ -74,6 +79,9 @@ export class IntegrationWorker {
   readonly #settings: ReturnType<typeof integrationSettings>;
   readonly #tokenResolver: typeof freshAccessToken;
   readonly #scope?: { workspaceId: string; runId: string };
+  readonly #access: (workspaceId: string) => Promise<unknown>;
+  /** Pages this attempt committed; a deadline stop with progress is not charged. */
+  #committedPages = 0;
 
   constructor(
     db: Database,
@@ -87,6 +95,7 @@ export class IntegrationWorker {
     this.#settings = settings;
     this.#tokenResolver = tokenResolver;
     this.#scope = scope;
+    this.#access = cachedWorkspaceAccess(db, settings.access_check_ttl_seconds * 1000);
   }
 
   async runOnce(signal?: AbortSignal): Promise<boolean> {
@@ -113,21 +122,12 @@ export class IntegrationWorker {
       this.#settings.heartbeat_interval_seconds * 1000,
       (error) => logger.exception('integration_heartbeat_failed', error, { sync_run_id: run.id }),
     );
+    this.#committedPages = 0;
     try {
       await this.#execute(run, leaseSignal(heartbeat.signal, signal));
       if (!heartbeat.signal.aborted) await this.#finish(run, null);
     } catch (error) {
-      if (!heartbeat.signal.aborted)
-        await this.#finish(
-          run,
-          signal?.aborted
-            ? new IntegrationError(
-                'provider_api_error',
-                'Interactive execution deadline reached',
-                true,
-              )
-            : error,
-        );
+      if (!heartbeat.signal.aborted) await this.#finish(run, signal?.aborted ? DEADLINE : error);
     } finally {
       await heartbeat.stop();
     }
@@ -192,6 +192,17 @@ export class IntegrationWorker {
     });
   }
 
+  /** Earliest claimable run, so an idle runner stays for a retry or history chunk due soon. */
+  async nextDue(): Promise<Date | null> {
+    const row = await this.#db
+      .selectFrom('integration_sync_runs')
+      .select((eb) => eb.fn.min('available_at').as('due'))
+      .where('status', 'in', [statuses.queued, statuses.retry_wait])
+      .whereRef('attempt_count', '<', 'max_attempts')
+      .executeTakeFirst();
+    return row?.due ? new Date(row.due) : null;
+  }
+
   async runUntilIdle(signal?: AbortSignal) {
     const deadline = performance.now() + queueRecovery.drainBudgetSeconds * 1000;
     let count = 0;
@@ -207,7 +218,7 @@ export class IntegrationWorker {
   }
 
   async #execute(run: Run, signal: AbortSignal): Promise<void> {
-    await requireWorkspaceAccess(this.#db, run.workspace_id);
+    await this.#access(run.workspace_id);
     signal.throwIfAborted();
     await this.#db.transaction().execute(async (trx) => {
       await this.#ownedTarget(trx, run);
@@ -230,7 +241,6 @@ export class IntegrationWorker {
     if (connection.grant_status !== 'connected')
       throw new IntegrationError('grant_auth_failed', 'Integration grant needs reconnection');
     const provider = connection.provider as 'gsc' | 'ga4' | 'bing';
-    const token = await this.#tokenResolver(this.#db, connection.grant_id, run.workspace_id);
     const artifacts = await this.#db
       .selectFrom('integration_import_artifacts')
       .select(['dataset', 'query_snapshot', 'row_count'])
@@ -240,18 +250,18 @@ export class IntegrationWorker {
     await this.#importTemplates(
       run,
       provider,
-      token,
+      connection.grant_id,
       this.#selectedTemplates(provider, connection.dataset_capabilities),
       artifacts,
       signal,
     );
   }
 
-  /** Dataset imports share a token and lease; finish each before advancing. */
+  /** Dataset imports share a grant and lease; finish each before advancing. */
   async #importTemplates(
     run: Run,
     provider: IntegrationProvider,
-    token: string,
+    grantId: string,
     templates: Dataset[],
     artifacts: Artifact[],
     signal: AbortSignal,
@@ -259,8 +269,8 @@ export class IntegrationWorker {
     const [template, ...remaining] = templates;
     if (!template) return;
     signal.throwIfAborted();
-    await this.#importDataset(run, provider, token, template, artifacts, signal);
-    await this.#importTemplates(run, provider, token, remaining, artifacts, signal);
+    await this.#importDataset(run, provider, grantId, template, artifacts, signal);
+    await this.#importTemplates(run, provider, grantId, remaining, artifacts, signal);
   }
 
   #selectedTemplates(provider: IntegrationProvider, capabilities: unknown) {
@@ -278,7 +288,7 @@ export class IntegrationWorker {
   async #importDataset(
     run: Run,
     provider: IntegrationProvider,
-    token: string,
+    grantId: string,
     initial: Dataset,
     artifacts: Artifact[],
     signal: AbortSignal,
@@ -311,7 +321,7 @@ export class IntegrationWorker {
       const fetched = await this.#fetchPage(
         run,
         provider,
-        token,
+        grantId,
         template,
         offset,
         offsets.size > 0,
@@ -321,6 +331,7 @@ export class IntegrationWorker {
       template = fetched.template;
       await this.#persistPage(run, provider, template, offset, fetched.page);
       offsets.add(offset);
+      this.#committedPages += 1;
       if (provider === 'bing' || fetched.page.rawRowCount < this.#settings.sync_page_size) return;
       offset += this.#settings.sync_page_size;
       if (pageNumber === this.#settings.sync_max_pages - 1)
@@ -334,7 +345,7 @@ export class IntegrationWorker {
   async #fetchPage(
     run: Run,
     provider: IntegrationProvider,
-    token: string,
+    grantId: string,
     template: Dataset,
     offset: number,
     hasPages: boolean,
@@ -342,17 +353,9 @@ export class IntegrationWorker {
   ) {
     signal.throwIfAborted();
     let page;
-    await requireWorkspaceAccess(this.#db, run.workspace_id);
+    await this.#access(run.workspace_id);
     try {
-      page = await this.#client.page(
-        provider,
-        token,
-        run.property_ref,
-        template,
-        valueDate(run.window_start),
-        valueDate(run.window_end),
-        offset,
-      );
+      page = await this.#page(run, provider, grantId, template, offset);
     } catch (error) {
       if (
         !(error instanceof IntegrationError) ||
@@ -363,9 +366,28 @@ export class IntegrationWorker {
         throw error;
       signal.throwIfAborted();
       template = await this.#itemFallback(run);
-      await requireWorkspaceAccess(this.#db, run.workspace_id);
+      await this.#access(run.workspace_id);
       signal.throwIfAborted();
-      page = await this.#client.page(
+      page = await this.#page(run, provider, grantId, template, offset);
+    }
+
+    return { page, template };
+  }
+
+  /**
+   * One provider page with a token resolved for it: a run can outlast the
+   * refresh skew. A 401 refreshes the refused token once before it counts as
+   * a credential failure that demotes the grant.
+   */
+  async #page(
+    run: Run,
+    provider: IntegrationProvider,
+    grantId: string,
+    template: Dataset,
+    offset: number,
+  ) {
+    const fetch = (token: string) =>
+      this.#client.page(
         provider,
         token,
         run.property_ref,
@@ -374,9 +396,15 @@ export class IntegrationWorker {
         valueDate(run.window_end),
         offset,
       );
+    const token = await this.#tokenResolver(this.#db, grantId, run.workspace_id);
+    try {
+      return await fetch(token);
+    } catch (error) {
+      if (!(error instanceof IntegrationError) || error.httpStatus !== 401) throw error;
+      return fetch(
+        await this.#tokenResolver(this.#db, grantId, run.workspace_id, undefined, token),
+      );
     }
-
-    return { page, template };
   }
 
   async #persistPage(
@@ -401,7 +429,7 @@ export class IntegrationWorker {
       startRow: offset,
       partition_complete: provider === 'bing' || page.rawRowCount < this.#settings.sync_page_size,
     };
-    const rows = normalizedRows(
+    const { rows, invalid, received } = normalizedRows(
       provider,
       template.dataset,
       template,
@@ -409,7 +437,13 @@ export class IntegrationWorker {
       valueDate(run.window_start),
       valueDate(run.window_end),
     );
-    const metadata = extractMetadata(page.payload, rows.length !== page.rawRowCount, provider);
+    // Rows the provider sent that never became a payload row (Bing parses before
+    // persisting) are invalid too; rows merely dated outside the window are not.
+    const metadata = extractMetadata(
+      page.payload,
+      invalid > 0 || received !== page.rawRowCount,
+      provider,
+    );
     await this.#db.transaction().execute(async (trx) => {
       await this.#ownedTarget(trx, run);
       const hosts =
@@ -452,25 +486,29 @@ export class IntegrationWorker {
           created_at: new Date(),
         })
         .execute();
-      // All derived rows use the same artifact and locked page transaction.
-      for (const row of rows) {
+      // All derived rows use the same artifact and locked page transaction,
+      // batched so a 25,000-row page is a few statements rather than one per row.
+      const createdAt = new Date();
+      for (let index = 0; index < rows.length; index += METRIC_INSERT_BATCH) {
         await trx
           .insertInto('integration_metric_rows')
-          .values({
-            id: randomUUID(),
-            workspace_id: run.workspace_id,
-            project_id: run.project_id,
-            property_ref: run.property_ref,
-            provider,
-            dataset: template.dataset,
-            date: new Date(`${row.date}T00:00:00Z`),
-            dimension_key: row.dimension_key,
-            metrics: JSON.stringify(row.metrics),
-            source_artifact_id: id,
-            resync_seq: run.resync_seq,
-            importer_version: integrationPolicy.importer_version,
-            created_at: new Date(),
-          })
+          .values(
+            rows.slice(index, index + METRIC_INSERT_BATCH).map((row) => ({
+              id: randomUUID(),
+              workspace_id: run.workspace_id,
+              project_id: run.project_id,
+              property_ref: run.property_ref,
+              provider,
+              dataset: template.dataset,
+              date: new Date(`${row.date}T00:00:00Z`),
+              dimension_key: row.dimension_key,
+              metrics: JSON.stringify(row.metrics),
+              source_artifact_id: id,
+              resync_seq: run.resync_seq,
+              importer_version: integrationPolicy.importer_version,
+              created_at: createdAt,
+            })),
+          )
           .onConflict((conflict) =>
             conflict
               .columns([
@@ -593,8 +631,41 @@ export class IntegrationWorker {
         }
       }
       if (failure === null) await this.#succeed(trx, run, now);
+      else if (failure === DEADLINE) await this.#release(trx, run, now);
       else await this.#fail(trx, run, now, failure);
     });
+  }
+
+  /**
+   * The caller's deadline stopped the run, not the provider. Committed pages
+   * resume on the next claim, so an attempt that made progress is refunded;
+   * one that committed nothing still counts, which bounds a run that cannot
+   * finish a single page inside the budget.
+   */
+  async #release(trx: Database, run: Run, now: Date): Promise<void> {
+    const refund = this.#committedPages > 0 ? 1 : 0;
+    const exhausted = run.attempt_count - refund >= run.max_attempts;
+    if (exhausted) {
+      await this.#fail(
+        trx,
+        run,
+        now,
+        new IntegrationError('provider_api_error', 'Execution deadline reached', false),
+      );
+      return;
+    }
+    await trx
+      .updateTable('integration_sync_runs')
+      .set({
+        status: statuses.queued,
+        available_at: now,
+        attempt_count: run.attempt_count - refund,
+        lease_owner: null,
+        lease_expires_at: null,
+        updated_at: now,
+      })
+      .where('id', '=', run.id)
+      .execute();
   }
 
   async #succeed(trx: Database, run: Run, now: Date): Promise<void> {
@@ -708,4 +779,3 @@ export class IntegrationWorker {
     );
   }
 }
-import { requireWorkspaceAccess } from '../entitlements/access.ts';

@@ -1,22 +1,19 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, Globe, Search, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { BackfillProgress } from '@/components/settings/backfill-progress';
-import { FAMILY_META, type GrantModel } from '@/components/settings/grant-model';
+import { PROVIDER_META, type GrantModel } from '@/components/settings/grant-model';
+import { useRefreshAfterMapping } from '@/components/integrations/data-sources';
+import { useProjectContext } from '@/lib/project/project-context';
 import { PropertyPicker, useActiveMapping } from '@/components/settings/property-picker';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog } from '@/components/ui/dialog';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
-import {
-  integrationsApi,
-  type IntegrationConnection,
-  type IntegrationProvider,
-} from '@/lib/api/integrations';
+import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { formatCount, formatShortDate } from '@/lib/format';
@@ -33,17 +30,23 @@ type ConnectionMutation = {
 };
 type SyncRun = Awaited<ReturnType<typeof integrationsApi.getSync>>;
 
-const PROVIDER_META: Record<IntegrationProvider, { label: string; Icon: LucideIcon }> = {
-  gsc: { label: 'Google Search Console', Icon: Search },
-  ga4: { label: 'Google Analytics 4', Icon: BarChart3 },
-  bing: { label: 'Bing Webmaster Tools', Icon: Globe },
+const SYNC_RUN_LABEL: Record<SyncRun['status'], string> = {
+  queued: 'Queued',
+  leased: 'Starting',
+  running: 'Running',
+  retry_wait: 'Retrying',
+  succeeded: 'Succeeded',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
 };
 
-/** Revoking is only offered when there is a grant left to revoke. */
-function disconnectLabel(pending: boolean, hadConnection: boolean): string {
-  if (pending) return 'Disconnecting…';
-  return hadConnection ? 'Disconnect & revoke' : 'Disconnect';
-}
+/** Test failures in words; the provider code stays out of the UI. */
+const TEST_FAILURE: Record<string, string> = {
+  grant_auth_failed: 'The provider refused this grant. Reconnect to renew consent.',
+  token_refresh_failed: 'The provider did not renew access. Try again, or reconnect.',
+  property_not_accessible: 'This account can no longer read the selected property.',
+  rate_limited: 'The provider is rate limiting requests. Try again in a few minutes.',
+};
 
 function ConnectionActions({
   connection,
@@ -55,9 +58,10 @@ function ConnectionActions({
   runActive,
   testPending,
   syncPending,
+  removePending,
   onTest,
   onSync,
-  onDisconnect,
+  onRemove,
 }: Readonly<{
   connection: IntegrationConnection;
   grant: GrantModel;
@@ -68,9 +72,10 @@ function ConnectionActions({
   runActive: boolean;
   testPending: boolean;
   syncPending: boolean;
+  removePending: boolean;
   onTest: () => void;
   onSync: () => void;
-  onDisconnect: () => void;
+  onRemove: () => void;
 }>) {
   const syncDisabled = busy || runActive || !hasProperty || grant.status !== 'connected';
 
@@ -95,6 +100,7 @@ function ConnectionActions({
           className="min-w-[56px]"
           onClick={onTest}
           disabled={busy}
+          aria-label={`Test ${label}`}
         >
           {testPending ? 'Testing…' : 'Test'}
         </Button>
@@ -107,12 +113,23 @@ function ConnectionActions({
           disabled={syncDisabled}
           pending={syncPending}
           pendingLabel="Syncing…"
+          aria-label={`Sync ${label} now`}
         >
           Sync now
         </Button>
-        <Button variant="destructiveGhost" size="sm" onClick={onDisconnect} disabled={busy}>
-          Disconnect
-        </Button>
+        {hasProperty ? (
+          <Button
+            variant="destructiveGhost"
+            size="sm"
+            onClick={onRemove}
+            disabled={busy}
+            pending={removePending}
+            pendingLabel="Removing…"
+            aria-label={`Remove ${label} property from this project`}
+          >
+            Remove
+          </Button>
+        ) : null}
       </div>
     </div>
   );
@@ -141,7 +158,7 @@ function ConnectionMetadata({
       {runActive && activeRun ? (
         <div className="flex items-center gap-2">
           <Badge variant="run-status" value={SYNC_RUN_BADGE[activeRun.status]}>
-            {activeRun.status.replace('_', ' ')}
+            {SYNC_RUN_LABEL[activeRun.status]}
           </Badge>
           <span className="type-caption whitespace-nowrap tabular-nums">
             {activeRun.status === 'running' ? (
@@ -163,106 +180,13 @@ function ConnectionMetadata({
   );
 }
 
-function DisconnectDialog({
-  connection,
-  grant,
-  label,
-  open,
-  setOpen,
-  deleteMutation,
-}: Readonly<{
-  connection: IntegrationConnection;
-  grant: GrantModel;
-  label: string;
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  deleteMutation: ConnectionMutation;
-}>) {
-  const lastConnection = grant.connections.length === 1;
-  const siblings = grant.connections.filter((sibling) => sibling.id !== connection.id);
-  const familyTitle = FAMILY_META[grant.family].title;
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!deleteMutation.isPending) setOpen(nextOpen);
-      }}
-      title={`Disconnect ${label}`}
-      description={
-        <>
-          Remove <span className="type-emphasis tabular-nums">{connection.account_ref}</span> from
-          this workspace?
-        </>
-      }
-      footer={
-        <>
-          <Button
-            variant="secondary"
-            onClick={() => setOpen(false)}
-            disabled={deleteMutation.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => deleteMutation.mutate()}
-            disabled={deleteMutation.isPending}
-          >
-            {disconnectLabel(deleteMutation.isPending, Boolean(lastConnection))}
-          </Button>
-        </>
-      }
-    >
-      <div className="grid gap-2">
-        {lastConnection ? (
-          <>
-            <p className={textRole('body')}>
-              This is the <strong>last connection</strong> on the {familyTitle} OAuth grant, so
-              disconnecting it also <strong>revokes the grant</strong>: CiteLadder&rsquo;s access at{' '}
-              {familyTitle} is removed and the stored tokens are deleted. Previously imported{' '}
-              {label} data is kept.
-            </p>
-            <p className={textRole('body')}>
-              If {familyTitle}&nbsp;can&rsquo;t be reached to complete the revocation, the grant
-              moves to <strong>pending revocation</strong> and CiteLadder retries in the background.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className={textRole('body')}>
-              CiteLadder stops syncing {label} for{' '}
-              <span className="type-emphasis tabular-nums">{connection.account_ref}</span> and
-              removes this connection. Previously imported data is kept.
-            </p>
-            <p className={textRole('body')}>
-              <strong>
-                {siblings.map((sibling) => PROVIDER_META[sibling.provider].label).join(' and ')}{' '}
-                stays connected
-              </strong>
-              , so the shared {familyTitle} OAuth grant remains active. The grant is only revoked —
-              and {familyTitle} access removed for every connection — when its last connection is
-              disconnected.
-            </p>
-          </>
-        )}
-        {deleteMutation.isError ? (
-          <Alert tone="danger">{humanizeApiError(deleteMutation.error).message}</Alert>
-        ) : null}
-      </div>
-    </Dialog>
-  );
-}
-
 function ConnectionRowView({
   connection,
   grant,
   testMutation,
   syncMutation,
-  deleteMutation,
+  removeMutation,
   testState,
-  confirmOpen,
-  setConfirmOpen,
   activeRun,
   runActive,
   busy,
@@ -272,10 +196,8 @@ function ConnectionRowView({
   grant: GrantModel;
   testMutation: ConnectionMutation;
   syncMutation: ConnectionMutation;
-  deleteMutation: ConnectionMutation;
+  removeMutation: ConnectionMutation;
   testState: { ok: boolean; message: string } | null;
-  confirmOpen: boolean;
-  setConfirmOpen: (open: boolean) => void;
   activeRun: SyncRun | null;
   runActive: boolean;
   busy: boolean;
@@ -298,9 +220,10 @@ function ConnectionRowView({
         runActive={runActive}
         testPending={testMutation.isPending}
         syncPending={syncMutation.isPending}
+        removePending={removeMutation.isPending}
         onTest={testMutation.mutate}
         onSync={syncMutation.mutate}
-        onDisconnect={() => setConfirmOpen(true)}
+        onRemove={removeMutation.mutate}
       />
       <ConnectionMetadata connection={connection} activeRun={activeRun} runActive={runActive} />
       {testState ? (
@@ -308,19 +231,13 @@ function ConnectionRowView({
           <Alert tone={testState.ok ? 'success' : 'danger'}>{testState.message}</Alert>
         </div>
       ) : null}
-      {syncMutation.isError ? (
+      {syncMutation.isError || removeMutation.isError ? (
         <div className="pt-3">
-          <Alert tone="danger">{humanizeApiError(syncMutation.error).message}</Alert>
+          <Alert tone="danger">
+            {humanizeApiError(syncMutation.error ?? removeMutation.error).message}
+          </Alert>
         </div>
       ) : null}
-      <DisconnectDialog
-        connection={connection}
-        grant={grant}
-        label={label}
-        open={confirmOpen}
-        setOpen={setConfirmOpen}
-        deleteMutation={deleteMutation}
-      />
     </div>
   );
 }
@@ -332,7 +249,13 @@ export function ConnectionRow({
 }: Readonly<{ connection: IntegrationConnection; grant: GrantModel }>) {
   const queryClient = useQueryClient();
   const [testState, setTestState] = useState<{ ok: boolean; message: string } | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { activeProject } = useProjectContext();
+  const refreshAfterMapping = useRefreshAfterMapping();
+  const mapping = useActiveMapping(
+    connection.workspace_id,
+    connection.id,
+    activeProject?.id ?? null,
+  );
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null);
   const testMutation = useMutation({
     mutationFn: () => integrationsApi.test(connection.id, { workspaceId: connection.workspace_id }),
@@ -342,9 +265,9 @@ export function ConnectionRow({
           ? { ok: true, message: 'Connection succeeded.' }
           : {
               ok: false,
-              message: result.detail
-                ? `Connection failed (${result.error_code || 'unknown'}): ${result.detail}`
-                : `Connection failed (${result.error_code || 'unknown'}).`,
+              message: `Connection failed. ${
+                TEST_FAILURE[result.error_code] ?? 'The provider did not accept the request.'
+              }`,
             },
       );
     },
@@ -353,8 +276,11 @@ export function ConnectionRow({
   // The terminal sync poll invalidates integrations; enqueueing alone persists no projection.
   // react-doctor-disable-next-line
   const syncMutation = useMutation({
+    // Name the project: a connection serving several projects needs it.
     mutationFn: () =>
-      integrationsApi.sync(connection.id, {}, { workspaceId: connection.workspace_id }),
+      integrationsApi.sync(connection.id, activeProject ? { project_id: activeProject.id } : {}, {
+        workspaceId: connection.workspace_id,
+      }),
     onSuccess: (enqueued) => {
       setTestState(null);
       setActiveSyncId(enqueued.sync_run_id);
@@ -383,16 +309,17 @@ export function ConnectionRow({
     }
   }, [queryClient, runTerminal]);
 
-  const deleteMutation = useMutation({
-    mutationFn: () =>
-      integrationsApi.delete(connection.id, { workspaceId: connection.workspace_id }),
-    onSuccess: async () => {
-      setConfirmOpen(false);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
+  // Stops importing this property into the project; imported data stays.
+  const removeMutation = useMutation({
+    mutationFn: async () => {
+      // Remove renders only with a mapping; a stale click after it is gone is a no-op.
+      if (mapping)
+        await integrationsApi.deleteMapping(mapping.id, { workspaceId: connection.workspace_id });
     },
+    onSuccess: () => refreshAfterMapping(),
   });
-  const busy = testMutation.isPending || syncMutation.isPending || deleteMutation.isPending;
-  const hasProperty = useActiveMapping(connection.workspace_id, connection.id) !== null;
+  const busy = testMutation.isPending || syncMutation.isPending || removeMutation.isPending;
+  const hasProperty = mapping !== null;
 
   return (
     <ConnectionRowView
@@ -400,10 +327,8 @@ export function ConnectionRow({
       grant={grant}
       testMutation={testMutation}
       syncMutation={syncMutation}
-      deleteMutation={deleteMutation}
+      removeMutation={removeMutation}
       testState={testState}
-      confirmOpen={confirmOpen}
-      setConfirmOpen={setConfirmOpen}
       activeRun={activeRun}
       runActive={runActive}
       busy={busy}

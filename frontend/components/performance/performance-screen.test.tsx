@@ -24,6 +24,9 @@ const SNAPSHOT = '22222222-2222-4222-8222-222222222222';
 const TASK = '33333333-3333-4333-8333-333333333333';
 const activeProject = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 
+vi.mock('@/components/integrations/data-source-setup', () => ({
+  DataSourceSetup: ({ title }: { title: string }) => <section aria-label={title} />,
+}));
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => WORKSPACE,
   useProjectContext: () => ({ activeProject, isLoading: false }),

@@ -37,6 +37,7 @@
     },
     "INTEGRATION_OAUTH_CALLBACK_PATH": "/api/v1/integrations/oauth/{provider}/callback",
     "INTEGRATION_OAUTH_LANDING_PATH": "/settings?tab=integrations",
+    "INTEGRATION_OAUTH_RETURN_PATHS": ["/performance", "/demand", "/ai-traffic", "/settings"],
     "INTEGRATION_OAUTH_TRANSACTION_COOKIE": "citeladder_integration_oauth",
     "INTEGRATION_OAUTH_TRANSACTION_COOKIE_PATH": "/api/v1/integrations/oauth",
     "GSC_API_BASE_URL": "https://www.googleapis.com",
@@ -95,18 +96,6 @@
       "default": 480,
       "exclusive_minimum": 0
     },
-    "sync_backfill_window_days": {
-      "env": ["INTEGRATION_SYNC_BACKFILL_WINDOW_DAYS"],
-      "type": "int",
-      "default": 365,
-      "exclusive_minimum": 0
-    },
-    "dispatcher_interval_seconds": {
-      "env": ["INTEGRATION_DISPATCHER_INTERVAL_SECONDS"],
-      "type": "float",
-      "default": 30.0,
-      "exclusive_minimum": 0
-    },
     "sync_cadence_seconds": {
       "env": ["INTEGRATION_SYNC_CADENCE_SECONDS"],
       "type": "float",
@@ -137,28 +126,22 @@
       "default": 60.0,
       "exclusive_minimum": 0
     },
-    "sync_resync_alloc_max_attempts": {
-      "env": ["INTEGRATION_SYNC_RESYNC_ALLOC_MAX_ATTEMPTS"],
-      "type": "int",
-      "default": 8,
-      "exclusive_minimum": 0
-    },
     "lease_ttl_seconds": {
       "env": ["INTEGRATION_LEASE_TTL_SECONDS"],
       "type": "float",
       "default": 120.0,
       "exclusive_minimum": 0
     },
+    "access_check_ttl_seconds": {
+      "env": ["INTEGRATION_ACCESS_CHECK_TTL_SECONDS"],
+      "type": "float",
+      "default": 30.0,
+      "minimum": 0
+    },
     "heartbeat_interval_seconds": {
       "env": ["INTEGRATION_HEARTBEAT_INTERVAL_SECONDS"],
       "type": "float",
       "default": 30.0,
-      "exclusive_minimum": 0
-    },
-    "poll_interval_seconds": {
-      "env": ["INTEGRATION_POLL_INTERVAL_SECONDS"],
-      "type": "float",
-      "default": 1.0,
       "exclusive_minimum": 0
     },
     "retry_base_delay_seconds": {
@@ -194,7 +177,7 @@
     "token_refresh_poll_seconds": {
       "env": ["INTEGRATION_TOKEN_REFRESH_POLL_SECONDS"],
       "type": "float",
-      "default": 0.2,
+      "default": 1.0,
       "exclusive_minimum": 0
     },
     "max_inline_payload_bytes": {

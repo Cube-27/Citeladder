@@ -37,9 +37,14 @@ export function latestQuerySnapshot(db: Database, scope: DemandScope) {
     .executeTakeFirst();
 }
 
+/**
+ * The selected revision's rows: one per identity, because the partition rule
+ * selects one resync_seq and `uq_integration_metric_row_identity` admits one
+ * row per identity within it (a repeated provider row is dropped on insert).
+ * Truncation keeps the highest-impression rows, newest first.
+ */
 async function sourceRows(db: Database, scope: DemandScope) {
-  const identity = ['property_ref', 'provider', 'dataset', 'date', 'dimension_key'] as const;
-  let query = new WorkspaceScope(scope.workspaceId)
+  const rows = await new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'integration_metric_rows')
     .selectAll()
     .select(isoDateText(sql.ref('date')).as('day'))
@@ -48,15 +53,15 @@ async function sourceRows(db: Database, scope: DemandScope) {
     .where(selectedPartition())
     .where('date', '>=', sql<Date>`${scope.windowStart}::date`)
     .where('date', '<=', sql<Date>`${scope.windowEnd}::date`)
-    .distinctOn([...identity]);
-  for (const column of identity) query = query.orderBy(column);
-  const rows = await query
-    .orderBy('resync_seq', 'desc')
-    .orderBy('id', 'desc')
+    .orderBy(
+      sql`case when jsonb_typeof(metrics->'impressions')='number'
+        then (metrics->>'impressions')::double precision end desc nulls last`,
+    )
+    .orderBy('date', 'desc')
+    .orderBy('id')
     .limit(p.QUERY_EVIDENCE_MAX_ROWS + 1)
     .execute();
-  const key = (r: (typeof rows)[number]) => [r.day, r.dataset, r.dimension_key, r.id].join('\0');
-  return rows.sort((a, b) => compareText(key(a), key(b)));
+  return rows;
 }
 
 async function sourceMaterial(db: Database, scope: DemandScope) {
@@ -110,7 +115,12 @@ async function sourceMaterial(db: Database, scope: DemandScope) {
     : [];
   if ((await partitionEpoch(db, scope)) !== epoch)
     throw new Error('Integration partitions changed during Demand projection; retry');
-  const selected = material.slice(0, p.QUERY_EVIDENCE_MAX_ROWS);
+  const key = (r: (typeof material)[number]) =>
+    [r.source.day, r.source.dataset, r.source.dimension_key, r.source.id].join('\0');
+  // Truncate in priority order, then project in a stable identity order.
+  const selected = material
+    .slice(0, p.QUERY_EVIDENCE_MAX_ROWS)
+    .sort((a, b) => compareText(key(a), key(b)));
   const sourceHash = stableHash({
     window: [scope.windowStart, scope.windowEnd],
     rows: selected.map((r) => [r.source.id, r.source.resync_seq]),

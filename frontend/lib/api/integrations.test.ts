@@ -2,7 +2,6 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { integrationsApi } from './integrations';
-import { queryKeys } from './query-keys';
 import {
   integrationConnectionSchema,
   integrationSyncRunSchema,
@@ -159,19 +158,6 @@ describe('integrationsApi.sync + sync-run projections', () => {
     expect(seenBody).toEqual({ window_start: '2026-07-16', window_end: '2026-07-22' });
   });
 
-  it('lists sync-run projections (status, window, row counts)', async () => {
-    mswServer.use(
-      http.get(`/api/v1/integrations/${CONN}/syncs`, () =>
-        HttpResponse.json([{ ...syncRun, status: 'succeeded', row_count: 1523 }]),
-      ),
-    );
-    const runs = await integrationsApi.listSyncs(CONN);
-    expect(runs).toHaveLength(1);
-    expect(runs[0].status).toBe('succeeded');
-    expect(runs[0].row_count).toBe(1523);
-    expect(runs[0].window_start).toBe('2026-07-16');
-  });
-
   it('gets a single sync-run projection for polling', async () => {
     mswServer.use(
       http.get(`/api/v1/integrations/${CONN}/syncs/${SYNC}`, () =>
@@ -250,19 +236,5 @@ describe('integrations schemas (drift policy)', () => {
     expect(() =>
       strictValidate(integrationSyncRunSchema, { ...syncRun, status: 'provisioning' }, 'test'),
     ).toThrow(/test/);
-  });
-});
-
-describe('integrations query keys', () => {
-  it('scopes connections by workspace and syncs by connection', () => {
-    expect(queryKeys.integrations.all).toEqual(['integrations']);
-    expect(queryKeys.integrations.connections(WS)).toEqual(['integrations', 'connections', WS]);
-    expect(queryKeys.integrations.connections(null)).toEqual([
-      'integrations',
-      'connections',
-      'default',
-    ]);
-    expect(queryKeys.integrations.syncs(CONN)).toEqual(['integrations', 'syncs', CONN]);
-    expect(queryKeys.integrations.sync(CONN, SYNC)).toEqual(['integrations', 'sync', CONN, SYNC]);
   });
 });

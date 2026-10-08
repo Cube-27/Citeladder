@@ -21,6 +21,9 @@ const project = vi.hoisted(() => ({
   workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
 }));
 
+vi.mock('@/components/integrations/data-source-setup', () => ({
+  DataSourceSetup: ({ title }: { title: string }) => <section aria-label={title} />,
+}));
 vi.mock('@/lib/project/project-context', () => {
   const context = () => ({
     activeProject: { id: project.id, workspace_id: project.workspace_id },
@@ -319,15 +322,13 @@ describe('DemandProjection', () => {
     expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(readsBeforeRevisit);
   });
 
-  it('routes first-use recovery through the selected project Performance screen', async () => {
+  it('offers Search Console setup in place when no snapshot exists', async () => {
     vi.mocked(demandApi.getLatest).mockRejectedValue(new ApiError('No demand snapshot', 404, ''));
     renderProjection();
 
     expect(await screen.findByText('No Search Demand snapshot yet')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Performance' })).toHaveAttribute(
-      'href',
-      `/performance?project=${project.id}`,
-    );
+    expect(screen.getByRole('region', { name: 'Connect Search Console' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open Performance' })).not.toBeInTheDocument();
   });
 
   it('opens the evidence drawer with provenance and candidate breakdown when inspect is clicked', async () => {

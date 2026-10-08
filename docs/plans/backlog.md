@@ -66,8 +66,25 @@ Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
   expose existing three-leg verification, gap changes, overlapping actions and
   the causality notice.
 - Add an evidence-grounded Trends summary with comparable selection.
-- Improve property selection using project site identity and page equivalence.
+- Match GA4 properties to the project through their web data-stream URL. Search
+  Console and Bing properties are already matched to the project's site; GA4
+  summaries carry no URL, and matching them would add a provider call per property.
   Assess moving history-backfill fan-out from HTTP into the existing task owner.
+- Connected-data storage (feature 6 review): snapshot retention, and storing
+  page/query stats once per window instead of once per granularity. This needs a
+  reference inventory across verification, Opportunity and Demand provenance, and
+  a growth measurement on production, before anything is pruned.
+- Retire the referral events and classification tables in favour of inline
+  classification from metric rows (the `ga4_referrer_daily` half is never read),
+  under the replacement gate. The retention sweep is never scheduled; if it
+  is scheduled first, set its retention to at least the longest preset.
+- Extend history after a plan upgrade, with per-provider history caps (Search
+  Console keeps 16 months, so longer requests would read as false zeros). Wait
+  until billing is live.
+- Per-stat coverage in the Performance contract, so that one flagged day stops
+  turning zeros into unavailable values across the whole window.
+- A UI for branded-query overrides (API only today), and a decision on the two
+  query-evidence routes that only MCP or nothing calls.
 - Review server-side Query Fanout grouping; full-selection totals already run there.
 - Verify public copy and correct unsupported claims of importing first-party
   generative-AI Search Console reports. Integration requires a documented endpoint,

@@ -4,15 +4,20 @@ import {
   performanceTablePageSchema,
   projectReadinessSchema,
 } from '@citeladder/contracts/performance';
+import { sql } from 'kysely';
 import { z } from 'zod';
 
-import { configEnvironment, loadWorkerSettings } from '../config.ts';
+import { configEnvironment, loadWorkerSettings, policy } from '../config.ts';
 import { AnalyticsWorker } from '../workers/analytics-worker.ts';
 import { projectPerformanceRange } from '../traffic/snapshot.ts';
-import { notFound } from '../errors.ts';
+import { ApiError, notFound } from '../errors.ts';
 import { requireProject } from '../projects/access.ts';
 import { enqueueTask, taskKey } from '../referrals/enqueue.ts';
-import { customWindow, getPerformance, getPerformanceTable } from '../traffic/performance.ts';
+import {
+  clampedCustomWindow,
+  getPerformance,
+  getPerformanceTable,
+} from '../traffic/performance.ts';
 import { record } from '../db/json.ts';
 import { defineGetRoute, definePostRoute } from './define.ts';
 import { readProjectReadiness } from '../integrations/readiness.ts';
@@ -23,6 +28,9 @@ const date = { scalar: { kind: 'date' } } as const;
 const string = { scalar: { kind: 'str' } } as const;
 const uuid = { scalar: { kind: 'uuid' } } as const;
 const family = 'performance';
+const { statuses } = policy.task_queue;
+/** Terminal range tasks that a new request may replace. */
+const retryable = new Set<string>([statuses.failed, statuses.cancelled]);
 function taskResponse(task: { id: string; status: string; payload: unknown }) {
   const payload = record(task.payload);
   return {
@@ -142,23 +150,40 @@ export const performanceRoutes = [
     async handle({ c, db }, { path, query }) {
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
-      customWindow(query.from, query.to);
-      const keyParts = [path.project_id, query.from, query.to];
+      const scope = { workspaceId: workspace.workspaceId, projectId: path.project_id };
+      const { window, latest } = await clampedCustomWindow(db, scope, query.from, query.to);
+      if (!window) throw new ApiError(422, "'from' and 'to' must be supplied together");
+      const [from, to] = window;
+      if (latest !== null && from > latest)
+        throw new ApiError(422, `'from' is after the latest imported date (${latest})`);
       const kind = 'performance_range_projection';
-      // A repeat of the same range dedupes to the existing task, so the
-      // response always reads the row back by its key.
+      const tasks = () =>
+        workspace.scope
+          .selectFrom(db, 'analytics_tasks')
+          .select(['id', 'status', 'payload'])
+          .where('project_id', '=', path.project_id)
+          .where('task_kind', '=', kind);
+      // A repeat of the same range dedupes to its latest task. After that task
+      // failed or was cancelled, the next request keys on it, so the range can
+      // be projected again while concurrent retries still dedupe.
+      const previous = await tasks()
+        .where(sql<boolean>`payload->>'window_start' = ${from} and payload->>'window_end' = ${to}`)
+        .orderBy('created_at', 'desc')
+        .orderBy('id', 'desc')
+        .executeTakeFirst();
+      if (previous && !retryable.has(previous.status)) return taskResponse(previous);
+      const keyParts = previous
+        ? [path.project_id, from, to, 'after', previous.id]
+        : [path.project_id, from, to];
       await enqueueTask(db, {
         workspaceId: workspace.workspaceId,
         projectId: path.project_id,
         kind,
-        payload: { window_start: query.from, window_end: query.to },
+        payload: { window_start: from, window_end: to },
         keyParts,
         maxAttempts: loadWorkerSettings().taskMaxAttempts,
       });
-      const row = await workspace.scope
-        .selectFrom(db, 'analytics_tasks')
-        .select(['id', 'status', 'payload'])
-        .where('project_id', '=', path.project_id)
+      const row = await tasks()
         .where('idempotency_key', '=', taskKey(kind, keyParts))
         .executeTakeFirst();
       if (!row) throw notFound('Performance range task');

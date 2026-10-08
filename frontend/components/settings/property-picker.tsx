@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Check } from 'lucide-react';
 import { useState } from 'react';
 
@@ -15,18 +15,18 @@ import {
   type IntegrationConnection,
   type IntegrationProperty,
 } from '@/lib/api/integrations';
-import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { tagClasses } from '@/components/ui/filter-chip-variants';
-
-const PROVIDER_NOUN: Record<IntegrationConnection['provider'], string> = {
-  gsc: 'Search Console property',
-  ga4: 'Analytics property',
-  bing: 'Bing site',
-};
+import {
+  activeMappingFor,
+  mappingsQuery,
+  ownPropertiesFirst,
+  useRefreshAfterMapping,
+} from '@/components/integrations/data-sources';
+import { PROVIDER_META } from '@/components/settings/grant-model';
 
 /**
  * One selectable row in the picker list.
@@ -71,6 +71,102 @@ function PropertyOption({
 }
 
 /**
+ * The connection's ACTIVE property mapping for `projectId`, or `null`.
+ *
+ * The mapping — not `connection.account_ref` — is what decides whether a sync
+ * produces anything, and one connection can serve several projects, so only
+ * the active project's mapping describes this row.
+ */
+export function useActiveMapping(
+  workspaceId: string,
+  connectionId: string,
+  projectId: string | null,
+) {
+  const query = useQuery(mappingsQuery(connectionId, workspaceId));
+  return activeMappingFor(query.data, projectId);
+}
+
+/**
+ * The discovered properties, the project's own first. A property of another
+ * site is shown but cannot be chosen: mapping it would be refused.
+ */
+function PropertyOptions({
+  properties,
+  selected,
+  blocked,
+  selecting,
+  onSelect,
+}: Readonly<{
+  properties: IntegrationProperty[];
+  selected: string;
+  blocked: boolean;
+  /** The selection mutation: its variables name the row being imported. */
+  selecting: { isPending: boolean; variables?: string };
+  onSelect: (propertyRef: string) => void;
+}>) {
+  const pendingRef = selecting.isPending ? selecting.variables : undefined;
+  return ownPropertiesFirst(properties).map((property) => (
+    <PropertyOption
+      key={property.property_ref}
+      property={property}
+      selected={property.property_ref === selected}
+      disabled={blocked || property.matches_project === false}
+      pending={pendingRef === property.property_ref}
+      onSelect={() => onSelect(property.property_ref)}
+    />
+  ));
+}
+
+/** The chosen property, or a visible "none selected", and the control to choose one. */
+function SelectedProperty({
+  selected,
+  noun,
+  provider,
+  canChoose,
+  disabled,
+  onChoose,
+}: Readonly<{
+  selected: string;
+  noun: string;
+  provider: IntegrationConnection['provider'];
+  canChoose: boolean;
+  disabled: boolean;
+  onChoose: () => void;
+}>) {
+  const verb = selected ? 'Change' : 'Select';
+  return (
+    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+      {selected ? (
+        <span className={tagClasses('outline', 'max-w-full truncate tabular-nums')}>
+          {selected}
+        </span>
+      ) : (
+        <span
+          className={textRole(
+            'label',
+            'text-warning-text bg-warning-bg/50 max-w-full truncate rounded-xs px-2 py-0.5',
+          )}
+        >
+          No {noun} selected
+        </span>
+      )}
+      {canChoose ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onChoose}
+          disabled={disabled}
+          data-testid={`select-property-${provider}`}
+          aria-label={`${verb} ${noun}`}
+        >
+          {verb}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * Property picker for one integration connection.
  *
  * A connected OAuth grant does not by itself tell a sync WHAT to pull: the
@@ -84,44 +180,23 @@ function PropertyOption({
  * text, so a ref can't be typed wrong. That call is live and lazy: it runs
  * only once the dialog opens.
  */
-/**
- * The connection's ACTIVE property mapping, or `null`.
- *
- * The mapping — not `connection.account_ref` — is what decides whether a sync
- * produces anything: the worker fetches from `account_ref`, but derivation
- * then has to resolve that ref back to a project through an active mapping,
- * and a run whose mapping is missing fails `unmapped_property` after the
- * fetch. The two drift apart for real: mappings cascade away when their
- * project is deleted, while `account_ref` lives on the connection and
- * survives. Reading `account_ref` alone therefore renders a confidently
- * "selected" property whose every sync is failing.
- *
- * Shared with `integration-card` so the row's Sync button and the picker
- * agree; react-query dedupes the two subscribers onto one request.
- */
-export function useActiveMapping(workspaceId: string, connectionId: string) {
-  const query = useQuery({
-    queryKey: queryKeys.integrations.mappings(connectionId),
-    queryFn: ({ signal }) => integrationsApi.listMappings(connectionId, { signal, workspaceId }),
-    staleTime: 60 * 1000,
-  });
-  return query.data?.find((mapping) => mapping.status === 'active') ?? null;
-}
-
 export function PropertyPicker({
   connection,
   disabled = false,
 }: Readonly<{ connection: IntegrationConnection; disabled?: boolean }>) {
-  const queryClient = useQueryClient();
+  const refreshAfterMapping = useRefreshAfterMapping();
   const { activeProject } = useProjectContext();
   const mayDiscover = useWorkspaceCapability('manage_credentials');
-  const activeMapping = useActiveMapping(connection.workspace_id, connection.id);
+  const activeMapping = useActiveMapping(
+    connection.workspace_id,
+    connection.id,
+    activeProject?.id ?? null,
+  );
   const [open, setOpen] = useState(false);
-  const [pendingRef, setPendingRef] = useState<string | null>(null);
 
   const discovery = useMutation({
     mutationFn: () =>
-      integrationsApi.discoverProperties(connection.id, {
+      integrationsApi.discoverProperties(connection.id, activeProject?.id, {
         workspaceId: connection.workspace_id,
       }),
     retry: false,
@@ -142,53 +217,32 @@ export function PropertyPicker({
     },
     onSuccess: async () => {
       setOpen(false);
-      setPendingRef(null);
       // account_ref moved with the mapping — refresh the connection list.
-      await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
+      await refreshAfterMapping();
     },
-    onError: () => setPendingRef(null),
   });
 
   // The active mapping, never the connection's account_ref — see
   // `useActiveMapping`. A stale account_ref would show a property as chosen
   // while every sync of it fails.
   const selected = activeMapping?.property_ref ?? '';
-  const noun = PROVIDER_NOUN[connection.provider];
+  const noun = PROVIDER_META[connection.provider].noun;
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 pt-0.5">
-        {selected ? (
-          <span className={tagClasses('outline', 'max-w-full truncate tabular-nums')}>
-            {selected}
-          </span>
-        ) : (
-          <span
-            className={textRole(
-              'label',
-              'text-warning-text bg-warning-bg/50 max-w-full truncate rounded-xs px-2 py-0.5',
-            )}
-          >
-            No {noun} selected
-          </span>
-        )}
-        {mayDiscover ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (discovery.isPending) return;
-              discovery.reset();
-              setOpen(true);
-              discovery.mutate();
-            }}
-            disabled={disabled || discovery.isPending}
-            data-testid={`select-property-${connection.provider}`}
-          >
-            {selected ? 'Change' : 'Select'}
-          </Button>
-        ) : null}
-      </div>
+      <SelectedProperty
+        selected={selected}
+        noun={noun}
+        provider={connection.provider}
+        canChoose={mayDiscover}
+        disabled={disabled || discovery.isPending}
+        onChoose={() => {
+          if (discovery.isPending) return;
+          discovery.reset();
+          setOpen(true);
+          discovery.mutate();
+        }}
+      />
 
       <Dialog
         open={open}
@@ -234,19 +288,13 @@ export function PropertyPicker({
             </Alert>
           ) : null}
 
-          {discovery.data?.map((property) => (
-            <PropertyOption
-              key={property.property_ref}
-              property={property}
-              selected={property.property_ref === selected}
-              disabled={!activeProject || selectMutation.isPending}
-              pending={pendingRef === property.property_ref}
-              onSelect={() => {
-                setPendingRef(property.property_ref);
-                selectMutation.mutate(property.property_ref);
-              }}
-            />
-          ))}
+          <PropertyOptions
+            properties={discovery.data ?? []}
+            selected={selected}
+            blocked={!activeProject || selectMutation.isPending}
+            selecting={selectMutation}
+            onSelect={(propertyRef) => selectMutation.mutate(propertyRef)}
+          />
 
           {selectMutation.isError ? (
             <Alert tone="danger">{humanizeApiError(selectMutation.error).message}</Alert>

@@ -48,6 +48,7 @@ export async function partitionEpoch(
   );
   return result.rows[0]!.epoch;
 }
+/** The latest day covered by a complete partition of `dataset`, rows or not. */
 export async function partitionAnchor(
   db: Database,
   workspaceId: string,
@@ -63,7 +64,37 @@ export async function partitionAnchor(
   );
   return result.rows[0]?.day ?? null;
 }
+
+const searchConsoleDay = policy.traffic.DATASET_GSC_DAY_DAILY;
+// Search Console finalizes days late and returns no rows until then, so a
+// complete but empty trailing day is not evidence of zero.
+const latestSearchConsoleRow = (workspaceId: string, projectId: string) =>
+  sql<string | null>`(select max(m.date) from integration_metric_rows m
+    where m.workspace_id=${workspaceId}::uuid and m.project_id=${projectId}::uuid
+      and m.dataset=${searchConsoleDay} and ${selectedPartition('m')})`;
+
+/**
+ * The Search Console anchor: the latest day with selected date-only rows.
+ * A property that has never reported a row falls back to its complete
+ * coverage, where an empty day cannot be told apart from lag.
+ */
+export async function searchConsoleAnchor(db: Database, workspaceId: string, projectId: string) {
+  const result = await sql<{
+    day: string | null;
+  }>`select to_char(${latestSearchConsoleRow(workspaceId, projectId)},'YYYY-MM-DD') as day`.execute(
+    db,
+  );
+  return (
+    result.rows[0]?.day ?? (await partitionAnchor(db, workspaceId, projectId, searchConsoleDay))
+  );
+}
+
 export async function partitionQuality(db: Database, scope: PartitionScope, dataset: string) {
+  const provider = dataset.split('_')[0];
+  const lagging =
+    provider === 'gsc'
+      ? sql<boolean>`d.day > (select day from search_console)`
+      : sql<boolean>`false`;
   const result = await sql<{
     day: string;
     revision: number | null;
@@ -74,12 +105,13 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
     excluded_hosts: number;
   }>`
     with days as (select d::date as day from generate_series(${scope.start}::date,${scope.end}::date,interval '1 day') d),
+    search_console as (select ${provider === 'gsc' ? latestSearchConsoleRow(scope.workspaceId, scope.projectId) : sql`null::date`} as day),
     revisions as (select d.day,r.resync_seq,r.property_ref,a.id,a.extract_metadata,${complete} as complete,
       ${incompatibleLanding('a')} as incompatible
       from days d join integration_sync_runs r on d.day between r.window_start and r.window_end
       join integration_connections connection on connection.id=r.connection_id and connection.workspace_id=r.workspace_id
       left join integration_import_artifacts a on a.workspace_id=r.workspace_id and a.sync_run_id=r.id and a.dataset=${dataset}
-      where r.workspace_id=${scope.workspaceId}::uuid and r.project_id=${scope.projectId}::uuid and connection.provider=${dataset.split('_')[0]}
+      where r.workspace_id=${scope.workspaceId}::uuid and r.project_id=${scope.projectId}::uuid and connection.provider=${provider}
         and (a.id is not null or r.status<>'succeeded')),
     selected as (select day,property_ref,max(resync_seq) filter(where complete) as revision,max(resync_seq) as newest
       from revisions group by day,property_ref)
@@ -98,7 +130,7 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
         union select 'partition_fallback' where s.newest>s.revision
         union select 'extract_contract_mismatch' where exists(select 1 from revisions old
           where old.day=d.day and old.property_ref=s.property_ref and old.resync_seq=s.newest and old.incompatible)
-        union select 'unavailable' where s.revision is null) f on true
+        union select 'unavailable' where s.revision is null or coalesce(${lagging},false)) f on true
     group by d.day order by d.day`.execute(db);
   return result.rows.map((r) => ({
     ...r,

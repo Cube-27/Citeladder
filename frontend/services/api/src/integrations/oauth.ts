@@ -7,6 +7,8 @@ import { policy } from '../config.ts';
 import { resolveWorkspaceMember } from '../auth/workspace.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { ApiError } from '../errors.ts';
+import { enqueueSyncRun } from './sync.ts';
+import { getLogger } from '../logging.ts';
 import {
   endpoints,
   integrationPolicy,
@@ -15,6 +17,7 @@ import {
 } from './config.ts';
 
 const secrets = integrationSecrets();
+const logger = getLogger('api.integrations.oauth');
 const key = new TextEncoder().encode(secrets.jwtSecret);
 
 export function providerKnown(provider: string): provider is 'gsc' | 'ga4' | 'bing' {
@@ -28,9 +31,43 @@ export function oauthCookieOptions(maxAge: number) {
   return `Path=${endpoints.INTEGRATION_OAUTH_TRANSACTION_COOKIE_PATH}; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${isInsecure ? '' : '; Secure'}`;
 }
 
+const RETURN_PATH_MAX = 512;
+
+/**
+ * A same-origin app path the callback may land on, or null. Only the listed
+ * screens qualify, so an OAuth round trip can never redirect off-site; any
+ * earlier callback result in the query is dropped.
+ */
+export function oauthReturnPath(value: string | null | undefined): string | null {
+  if (!value || value.length > RETURN_PATH_MAX || !value.startsWith('/') || value.startsWith('//'))
+    return null;
+  let url: URL;
+  try {
+    url = new URL(value, 'https://app.invalid');
+  } catch {
+    return null;
+  }
+  if (url.origin !== 'https://app.invalid') return null;
+  const allowed = endpoints.INTEGRATION_OAUTH_RETURN_PATHS.some(
+    (path) => url.pathname === path || url.pathname.startsWith(`${path}/`),
+  );
+  if (!allowed) return null;
+  url.searchParams.delete('connected');
+  url.searchParams.delete('error');
+  return `${url.pathname}${url.search}`;
+}
+
+/** The return path carried by a signed state, or null when absent or unverifiable. */
+export async function stateReturnPath(state: string | null | undefined): Promise<string | null> {
+  if (!state) return null;
+  const verified = await jwtVerify(state, key, { algorithms: ['HS256'] }).catch(() => null);
+  const claim = verified?.payload.return_to;
+  return typeof claim === 'string' ? oauthReturnPath(claim) : null;
+}
+
 export async function startOAuth(
   db: Database,
-  input: { workspaceId: string; userId: string; provider: string },
+  input: { workspaceId: string; userId: string; provider: string; returnTo?: string | null },
 ) {
   if (!providerKnown(input.provider))
     throw new IntegrationError('provider_api_error', 'Unknown integration provider');
@@ -45,6 +82,7 @@ export async function startOAuth(
       'The integration provider is not configured',
     );
 
+  const returnTo = oauthReturnPath(input.returnTo);
   const nonce = randomBytes(32).toString('base64url');
   const jti = randomBytes(24).toString('base64url');
   const now = Math.floor(Date.now() / 1000);
@@ -54,6 +92,7 @@ export async function startOAuth(
     session_nonce: nonce,
     workspace_id: input.workspaceId,
     user_id: input.userId,
+    ...(returnTo ? { return_to: returnTo } : {}),
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject('oauth-state')
@@ -152,7 +191,7 @@ export async function completeOAuth(
     code: input.code,
     redirect_uri: redirectUri,
   });
-  await db.transaction().execute(async (trx) => {
+  const connectedGrant = await db.transaction().execute(async (trx) => {
     await requireCredentialAuthority(trx, workspaceId, userId, true);
     const existing = await trx
       .selectFrom('integration_oauth_grants')
@@ -241,7 +280,48 @@ export async function completeOAuth(
         created_at: new Date(),
       })
       .execute();
+    return grantId;
   });
+  await queueCatchUp(db, workspaceId, connectedGrant);
+}
+
+/**
+ * A reconnect resumes the grant's mapped properties at once rather than at the
+ * next scheduled run; each sync re-reads only the days after its coverage.
+ * Best effort: the scheduled dispatcher covers anything this cannot queue.
+ */
+async function queueCatchUp(db: Database, workspaceId: string, grantId: string) {
+  const mappings = await db
+    .selectFrom('integration_property_mappings as mapping')
+    .innerJoin('integration_connections as connection', (join) =>
+      join
+        .onRef('connection.id', '=', 'mapping.connection_id')
+        .onRef('connection.workspace_id', '=', 'mapping.workspace_id'),
+    )
+    .select(['mapping.id', 'mapping.connection_id', 'mapping.project_id'])
+    .where('mapping.workspace_id', '=', workspaceId)
+    .where('connection.grant_id', '=', grantId)
+    .where('mapping.status', '=', 'active')
+    .execute();
+  for (const mapping of mappings) {
+    const target = {
+      workspaceId,
+      connectionId: mapping.connection_id,
+      mappingId: mapping.id,
+      projectId: mapping.project_id,
+      syncKind: 'scheduled' as const,
+    };
+    try {
+      await enqueueSyncRun(db, target); // NOSONAR -- Each enqueue takes the workspace lock.
+    } catch (error) {
+      if (!(error instanceof ApiError)) throw error;
+      // Best effort: the scheduled dispatcher still covers this mapping.
+      logger.info('integration_catch_up_skipped', {
+        mapping_id: mapping.id,
+        error_code: error.code,
+      });
+    }
+  }
 }
 
 /** Any authority failure reads as an invalid state; `lock` holds the workspace for the write. */

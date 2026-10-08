@@ -1,10 +1,7 @@
-import { Link } from 'react-router-dom';
 import { BarChart3, SearchX } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { EmptyState } from '@/components/ui/empty-state';
-import { workspaceDestination } from '@/lib/navigation/project-destination';
-import { useProjectContext } from '@/lib/project/project-context';
 import { CrawlLogConnections } from './crawl-log-connections';
 
 /**
@@ -26,29 +23,23 @@ export function TrafficNoResults({
 }
 
 /**
- * Empty state for `/ai-traffic`. Referral measurement begins only after a
- * persisted GA4 source/medium report has been synced.
+ * Empty state for the AI Traffic referrals view. Referral measurement begins
+ * once a GA4 source/medium report has been imported, so GA4 is connected here
+ * rather than in Settings.
  */
 export function AiReferralsEmptyState() {
-  const { activeWorkspaceId } = useProjectContext();
-  const settingsHref = activeWorkspaceId
-    ? workspaceDestination(
-        '/settings',
-        new URLSearchParams({ tab: 'integrations' }),
-        activeWorkspaceId,
-      )
-    : '/settings?tab=integrations';
-
   return (
-    <EmptyState
-      icon={BarChart3}
-      heading="No AI-referral data yet"
-      description="Connect Google Analytics 4 and sync traffic to see which known AI sources send sessions."
-      action={
-        <Button asChild size="md">
-          <Link to={settingsHref}>Open integration settings</Link>
-        </Button>
-      }
-    />
+    <div className="grid gap-4">
+      <DataSourceSetup
+        required={['ga4']}
+        title="Connect Google Analytics 4"
+        description="AI referrals come from this project's own GA4 sessions. Connect Google and choose the Analytics property for this site."
+      />
+      <EmptyState
+        icon={BarChart3}
+        heading="No AI-referral data yet"
+        description="Referrals appear here once GA4 sessions have been imported."
+      />
+    </div>
   );
 }

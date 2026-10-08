@@ -5,9 +5,10 @@ import type { z } from 'zod';
 import type { aiTrafficOverviewSchema, crawlSummarySchema } from '@citeladder/contracts/ai-traffic';
 import { formatPercent } from '@/lib/ai-traffic/series';
 import { connectionLabel, coverageLabel, words } from '@/lib/ai-traffic/vocabulary';
-import { projectDestination, workspaceDestination } from '@/lib/navigation/project-destination';
+import { projectDestination } from '@/lib/navigation/project-destination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DisplayTime } from '@/components/ui/display-time';
 import { MetricValue } from '@/components/ui/metric-value';
@@ -42,10 +43,8 @@ function SignalCard({
 }
 export function ReferralSignal({
   data,
-  workspaceId,
 }: Readonly<{
   data: z.infer<typeof aiTrafficOverviewSchema>['referrals'];
-  workspaceId: string;
 }>) {
   const latest = data.referral_volume.at(-1);
   const synced = data.window_end !== null;
@@ -56,15 +55,8 @@ export function ReferralSignal({
       action={
         synced ? null : (
           <Button asChild variant="secondary" size="sm">
-            <Link
-              to={workspaceDestination(
-                '/settings',
-                new URLSearchParams({ tab: 'integrations' }),
-                workspaceId,
-              )}
-            >
-              Connect GA4
-            </Link>
+            {/* The referrals view connects GA4 in place. */}
+            <ProjectLink href="/ai-traffic?tab=referrals">Connect GA4</ProjectLink>
           </Button>
         )
       }

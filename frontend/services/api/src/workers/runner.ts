@@ -30,6 +30,7 @@ import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { getLogger } from '../logging.ts';
 import { cleanupMcpProtocol } from '../mcp/maintenance.ts';
 import { DRAIN_LOCK } from '../config/execution.ts';
+import { maintainLease } from '../queue/heartbeat.ts';
 
 export type RunnerLane = {
   name: string;
@@ -179,6 +180,24 @@ export function exclusiveDrain(
   };
 }
 
+/**
+ * Run `work` with a signal that aborts once the drain stops admitting, so a long
+ * sync yields at the deadline instead of holding every later lane until the
+ * job timeout. Committed pages resume on the next claim.
+ */
+async function untilAdmissionEnds<T>(
+  canAdmit: () => boolean,
+  work: (signal: AbortSignal) => Promise<T>,
+  pollMs = 1_000,
+): Promise<T> {
+  const admission = maintainLease(() => Promise.resolve(canAdmit()), pollMs);
+  try {
+    return await work(admission.signal);
+  } finally {
+    await admission.stop();
+  }
+}
+
 export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = configEnvironment(config);
   const runtime = auditRuntime(env);
@@ -209,7 +228,11 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
         run: () => discovery.runOnce(owner),
         nextDue: () => discovery.queue.nextDue(),
       },
-      { name: 'integrations', run: () => integration.runOnce() },
+      {
+        name: 'integrations',
+        run: (canAdmit) => untilAdmissionEnds(canAdmit, (signal) => integration.runOnce(signal)),
+        nextDue: () => integration.nextDue(),
+      },
       { name: 'agent', run: () => agent.runOnce() },
       { name: 'audits', run: () => audit.runOnce(), nextDue: () => audit.nextDue() },
       {

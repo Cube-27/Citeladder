@@ -6,6 +6,7 @@ import { ApiError, notFound } from '../errors.ts';
 import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
 import { integrationPolicy, integrationSettings } from './config.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { isoDateText } from '../db/timestamps.ts';
 
 const settings = integrationSettings();
 
@@ -183,6 +184,12 @@ async function resolveSyncTarget(trx: Database, input: SyncInput) {
   return target;
 }
 
+/**
+ * An unwindowed on-demand or scheduled sync re-reads only the late-data days
+ * after the newest succeeded window; the default window applies only before
+ * anything has succeeded. Older gaps belong to history retry, so one failed
+ * history chunk never turns every sync into a full re-import.
+ */
 async function syncWindow(
   trx: Database,
   input: SyncInput,
@@ -192,22 +199,17 @@ async function syncWindow(
   if (
     input.windowStart === undefined &&
     input.windowEnd === undefined &&
-    (input.syncKind ?? 'on_demand') === 'on_demand'
+    (input.syncKind ?? 'on_demand') !== 'backfill'
   ) {
     const yesterday = isoDay(new Date(Date.now() - 86_400_000));
-    const windows = await trx
+    const latest = await trx
       .selectFrom('integration_sync_runs')
-      .select([
-        sql<string>`window_start::text`.as('window_start'),
-        sql<string>`window_end::text`.as('window_end'),
-      ])
+      .select(isoDateText(sql`max(window_end)`).as('covered'))
       .where('mapping_id', '=', mappingId)
       .where('workspace_id', '=', input.workspaceId)
       .where('status', '=', 'succeeded')
-      .orderBy('window_start', 'asc')
-      .orderBy('window_end', 'asc')
-      .execute();
-    const covered = contiguousEnd(windows);
+      .executeTakeFirst();
+    const covered = latest?.covered ?? null;
     if (covered !== null) {
       const earliest = dateAfter(yesterday, -(settings.sync_backfill_max_days - 1));
       windowStart = dateAfter(covered, 1 - settings.sync_late_data_revision_days);
@@ -218,23 +220,6 @@ async function syncWindow(
   }
 
   return [windowStart, windowEnd];
-}
-
-function contiguousEnd(
-  windows: Array<{ window_start: Date | string; window_end: Date | string }>,
-): string | null {
-  let covered: string | null = null;
-  for (const item of windows) {
-    const start = isoDay(item.window_start);
-    const end = isoDay(item.window_end);
-    if (covered === null) {
-      covered = end;
-      continue;
-    }
-    if (start > dateAfter(covered, 1)) break;
-    if (end > covered) covered = end;
-  }
-  return covered;
 }
 
 function previousSequence(
@@ -256,6 +241,7 @@ function previousSequence(
       ]),
     )
     .orderBy('resync_seq', 'desc')
+    .limit(1)
     .executeTakeFirst();
 }
 
@@ -377,7 +363,13 @@ function backfillState(total: number, pending: number, failed: number): string {
   return 'complete';
 }
 
-export async function listSyncRuns(db: Database, workspaceId: string, connectionId: string) {
+/** One sync run of the connection, with its imported row count; undefined when absent. */
+export async function getSyncRun(
+  db: Database,
+  workspaceId: string,
+  connectionId: string,
+  syncRunId: string,
+) {
   const connection = await db
     .selectFrom('integration_connections')
     .select('id')
@@ -385,9 +377,13 @@ export async function listSyncRuns(db: Database, workspaceId: string, connection
     .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
   if (connection === undefined) throw notFound('Integration connection');
-  const rows = await db
+  const row = await db
     .selectFrom('integration_sync_runs as runs')
-    .leftJoin('integration_import_artifacts as artifacts', 'artifacts.sync_run_id', 'runs.id')
+    .leftJoin('integration_import_artifacts as artifacts', (join) =>
+      join
+        .onRef('artifacts.sync_run_id', '=', 'runs.id')
+        .onRef('artifacts.workspace_id', '=', 'runs.workspace_id'),
+    )
     .select([
       'runs.id',
       'runs.connection_id',
@@ -409,18 +405,20 @@ export async function listSyncRuns(db: Database, workspaceId: string, connection
     )
     .where('runs.workspace_id', '=', workspaceId)
     .where('runs.connection_id', '=', connectionId)
+    .where('runs.id', '=', syncRunId)
     .groupBy(['runs.id'])
-    .orderBy('runs.created_at', 'desc')
-    .execute();
-  return rows.map((row) => ({
-    ...row,
-    window_start: isoDay(row.window_start),
-    window_end: isoDay(row.window_end),
-    created_at: isoTimestamp(row.created_at),
-    updated_at: isoTimestamp(row.updated_at),
-    completed_at: isoTimestamp(row.completed_at),
-    row_count: Number(row.row_count),
-  }));
+    .executeTakeFirst();
+  return (
+    row && {
+      ...row,
+      window_start: isoDay(row.window_start),
+      window_end: isoDay(row.window_end),
+      created_at: isoTimestamp(row.created_at),
+      updated_at: isoTimestamp(row.updated_at),
+      completed_at: isoTimestamp(row.completed_at),
+      row_count: Number(row.row_count),
+    }
+  );
 }
 
 export async function listMappings(db: Database, workspaceId: string, connectionId: string) {

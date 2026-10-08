@@ -56,7 +56,7 @@ export function usePerformanceSync(projectId: string | null) {
   const startedAt = currentBatch?.startedAt ?? null;
   const notice =
     currentBatch && !runs.length
-      ? 'No active mapped sync connection — connect and map one in Settings to start syncing.'
+      ? 'Nothing to sync yet. Connect a data source and choose its property above.'
       : null;
   const mutation = useMutation({
     mutationFn: async () => {

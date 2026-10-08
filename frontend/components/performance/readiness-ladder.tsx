@@ -41,8 +41,8 @@ const LADDER: readonly { stage: ProjectReadinessStage; label: string }[] = [
 ] as const;
 
 /** What the user should understand, in one line, at each stage. */
-const EXPLANATION: Record<ProjectReadinessStage, string> = {
-  not_connected: 'Connect Search Console or Analytics to start importing this project.',
+/** `not_connected` belongs to the data source setup, which can act on it. */
+const EXPLANATION: Record<Exclude<ProjectReadinessStage, 'not_connected'>, string> = {
   connected: 'Connected. The first history import has not started yet.',
   importing:
     'Importing your history. Numbers below fill in as each chunk lands — they are not final yet.',
@@ -126,17 +126,11 @@ function ladderStepState(index: number, reached: number): 'done' | 'active' | 'p
   return index === reached ? 'active' : 'pending';
 }
 
-export function ReadinessLadder({
-  data,
-  hideDisconnected,
-}: Readonly<{ data: ProjectReadiness | undefined; hideDisconnected: boolean }>) {
-  if (!data || data.stage === 'analysis_ready') return null;
+export function ReadinessLadder({ data }: Readonly<{ data: ProjectReadiness | undefined }>) {
+  if (!data || data.stage === 'analysis_ready' || data.stage === 'not_connected') return null;
 
   if (data.stage === 'import_failed') {
     return <Alert tone="danger">{EXPLANATION.import_failed}</Alert>;
-  }
-  if (data.stage === 'not_connected') {
-    return hideDisconnected ? null : <Alert tone="info">{EXPLANATION.not_connected}</Alert>;
   }
 
   const reached = stageIndex(data.stage);

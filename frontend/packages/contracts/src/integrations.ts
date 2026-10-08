@@ -103,9 +103,6 @@ export const integrationSyncRunSchema = responseObject({
   completed_at: z.string().nullable(),
 });
 
-// `GET /integrations/{id}/syncs` — bare array of run projections.
-export const integrationSyncRunListSchema = z.array(integrationSyncRunSchema);
-
 // `GET /integrations/{id}/syncs/progress` — the history-import rollup behind
 // the connection card. A projection over the connection's backfill runs, so
 // `state` keeps the cases apart that a count alone would blur: `not_started`
@@ -132,6 +129,9 @@ export const integrationBackfillProgressSchema = responseObject({
 export const integrationPropertySchema = responseObject({
   property_ref: z.string(),
   label: z.string(),
+  // Whether the property belongs to the project named in the discovery request;
+  // null when no project was named or the provider exposes no site (GA4).
+  matches_project: z.boolean().nullable(),
 });
 
 export const integrationPropertyListSchema = z.array(integrationPropertySchema);

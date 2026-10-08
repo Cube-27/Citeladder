@@ -1,9 +1,8 @@
 /**
  * The snapshot-JSONB to DTO read shape of a metric series.
  *
- * Ports `metric_series_points` from `app/domain/analytics/schemas.py`, which
- * the traffic reads still use: non-list fragments and non-object entries
- * degrade to nothing rather than failing the read.
+ * Performance and AI Referrals reads use it: non-list fragments and non-object
+ * entries degrade to nothing rather than failing the read.
  */
 import { scalarText } from '../text-order.ts';
 

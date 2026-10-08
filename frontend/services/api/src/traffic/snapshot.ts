@@ -22,9 +22,10 @@ import { compareText } from '../text-order.ts';
 import {
   selectedPartition,
   partitionQuality,
-  partitionAnchor,
   partitionEpoch,
+  searchConsoleAnchor,
 } from '../integrations/partitions.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import { projectHosts } from '../integrations/host-scope.ts';
 
 const p = policy.traffic;
@@ -37,7 +38,11 @@ type Target = {
   builder: TrafficProjectionBuilder;
 };
 
-/** Exact Python demand enqueue revision: BLAKE2b-128 XOR, then sorted-key SHA256. */
+/**
+ * The Demand handoff revision: an order-independent digest (XOR of BLAKE2b-128
+ * row-ID hashes) of the selected rows in the Demand window, so an unchanged
+ * window dedupes however the refresh was triggered.
+ */
 class DemandRevision {
   private count = 0;
   private digest = 0n;
@@ -243,6 +248,73 @@ async function scan(
   }
 }
 
+/**
+ * The snapshots one refresh writes: the trigger window (display ranges only
+ * where a granularity is missing), the presets ending at the Search Console
+ * anchor, and the Demand policy window ending there too.
+ */
+function planTargets(input: {
+  displayOnly: boolean;
+  windowStart: string;
+  windowEnd: string;
+  anchor: string | null;
+  existing: readonly string[];
+  projectOrigin: string | undefined;
+  allowedHosts: ReadonlySet<string>;
+}) {
+  const targets: Target[] = [];
+  const add = (
+    start: string,
+    end: string,
+    grain: string,
+    preset: number | null,
+    verifies: boolean,
+  ) =>
+    targets.push({
+      start,
+      end,
+      grain,
+      preset,
+      verifies,
+      builder: new TrafficProjectionBuilder({
+        windowStart: start,
+        windowEnd: end,
+        granularity: grain,
+        projectOrigin: input.projectOrigin,
+        allowedHosts: input.allowedHosts,
+      }),
+    });
+  for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
+    if (!input.existing.includes(grain))
+      add(
+        input.windowStart,
+        input.windowEnd,
+        grain,
+        null,
+        !input.displayOnly && grain === p.TRAFFIC_DEFAULT_GRANULARITY,
+      );
+  if (!input.displayOnly && input.anchor)
+    for (const days of p.PERFORMANCE_SNAPSHOT_WINDOW_DAYS)
+      for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
+        add(addDays(input.anchor, -(days - 1)), input.anchor, grain, days, false);
+  // Demand always reads the policy window ending at the anchor; the trigger
+  // window only decides whether that window's evidence changed.
+  const demandEnd = input.anchor ?? input.windowEnd;
+  const demandWindow = [
+    addDays(demandEnd, -(policy.demand.DEMAND_WINDOW_DAYS - 1)),
+    demandEnd,
+  ] as const;
+  const covered = targets.some(
+    (target) =>
+      target.start === demandWindow[0] &&
+      target.end === demandWindow[1] &&
+      target.grain === p.TRAFFIC_DEFAULT_GRANULARITY,
+  );
+  if (!input.displayOnly && !covered)
+    add(...demandWindow, p.TRAFFIC_DEFAULT_GRANULARITY, null, false);
+  return { targets, demandWindow };
+}
+
 function executor(displayOnly: boolean): Executor {
   return async (task, { db, checkCancelled, maxAttempts }) => {
     const projectId = await taskProject(db, task);
@@ -255,9 +327,7 @@ function executor(displayOnly: boolean): Executor {
       .select('root_url')
       .where('project_id', '=', projectId)
       .executeTakeFirst();
-    const anchor = {
-      day: await partitionAnchor(db, task.workspace_id, projectId, p.DATASET_GSC_DAY_DAILY),
-    };
+    const anchor = await searchConsoleAnchor(db, task.workspace_id, projectId);
     const existing = displayOnly
       ? await scope
           .selectFrom(db, 'traffic_snapshots')
@@ -267,44 +337,18 @@ function executor(displayOnly: boolean): Executor {
           .where('window_end', '=', sql<Date>`${windowEnd}::date`)
           .execute()
       : [];
-    const targets: Target[] = [];
     const allowedHosts = await projectHosts(db, task.workspace_id, projectId);
-    const add = (
-      start: string,
-      end: string,
-      grain: string,
-      preset: number | null,
-      verifies: boolean,
-    ) =>
-      targets.push({
-        start,
-        end,
-        grain,
-        preset,
-        verifies,
-        builder: new TrafficProjectionBuilder({
-          windowStart: start,
-          windowEnd: end,
-          granularity: grain,
-          projectOrigin: origin?.root_url,
-          allowedHosts,
-        }),
-      });
-    for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
-      if (!existing.some((r) => r.granularity === grain))
-        add(
-          windowStart,
-          windowEnd,
-          grain,
-          null,
-          !displayOnly && grain === p.TRAFFIC_DEFAULT_GRANULARITY,
-        );
-    if (!displayOnly && anchor?.day)
-      for (const days of p.PERFORMANCE_SNAPSHOT_WINDOW_DAYS)
-        for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
-          add(addDays(anchor.day, -(days - 1)), anchor.day, grain, days, false);
+    const { targets, demandWindow } = planTargets({
+      displayOnly,
+      windowStart,
+      windowEnd,
+      anchor,
+      existing: existing.map((row) => row.granularity),
+      projectOrigin: origin?.root_url,
+      allowedHosts,
+    });
     if (!targets.length) return;
-    const demand = new DemandRevision(windowStart, windowEnd);
+    const demand = new DemandRevision(...demandWindow);
     await scan(db, task, targets, demand, checkCancelled);
     const extent = await scope
       .selectFrom(db, 'integration_metric_rows')
@@ -319,6 +363,8 @@ function executor(displayOnly: boolean): Executor {
     };
     await checkCancelled('snapshot write');
     await db.transaction().execute(async (trx) => {
+      // One writer per project, like the Referrals and Demand refreshes.
+      await subjectXactLock(trx, `traffic_snapshot:${projectId}`);
       const verifying: string[] = [];
       const allQuality: Record<string, Awaited<ReturnType<typeof partitionQuality>>> = {};
       const qualityScope = {
@@ -365,12 +411,12 @@ function executor(displayOnly: boolean): Executor {
           projectId,
           kind: 'demand_snapshot_refresh',
           payload: {
-            window_start: windowStart,
-            window_end: windowEnd,
+            window_start: demandWindow[0],
+            window_end: demandWindow[1],
             source_revision: demand.revision(),
             manual: false,
           },
-          keyParts: [projectId, windowStart, windowEnd, 0, demand.revision()],
+          keyParts: [projectId, ...demandWindow, 0, demand.revision()],
           maxAttempts,
         });
     });

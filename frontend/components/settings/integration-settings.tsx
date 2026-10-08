@@ -14,6 +14,7 @@ import { GRANT_FAMILY, type GrantFamily, type GrantModel } from '@/components/se
 import { IntegrationCardView } from '@/components/settings/integration-card-view';
 import { IntegrationsEmptyState } from '@/components/settings/integrations-empty-state';
 import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
+import { oauthErrorMessage } from '@/components/integrations/data-sources';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
@@ -97,9 +98,7 @@ function CallbackNotice({
   if (notice.error) {
     return (
       <Alert tone="danger">
-        <strong>Connection failed.</strong> The provider did not complete the connect flow (
-        <code className="tabular-nums">{notice.error}</code>). No grant was created and nothing was
-        stored — you can retry whenever you&rsquo;re ready.
+        <strong>Connection failed.</strong> {oauthErrorMessage(notice.error)}
       </Alert>
     );
   }
@@ -153,7 +152,6 @@ export function IntegrationSettings() {
   return (
     <Stack gap="workspace">
       <CallbackNotice notice={notice} />
-      <CrawlLogConnections />
 
       {connectionsQuery.isError ? (
         <ReadError
@@ -196,6 +194,7 @@ export function IntegrationSettings() {
           ))}
         </div>
       ) : null}
+      <CrawlLogConnections />
     </Stack>
   );
 }

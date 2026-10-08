@@ -63,8 +63,17 @@ function connection(overrides: Partial<IntegrationConnection> = {}): Integration
 
 // Distinct labels so a query for the label can never also match the ref.
 const properties = [
-  { property_ref: 'sc-domain:example.com', label: 'Example (domain property)' },
-  { property_ref: 'https://www.example.com/', label: 'Example (URL prefix)' },
+  {
+    property_ref: 'sc-domain:example.com',
+    label: 'Example (domain property)',
+    matches_project: true,
+  },
+  {
+    property_ref: 'https://www.example.com/',
+    label: 'Example (URL prefix)',
+    matches_project: true,
+  },
+  { property_ref: 'https://other.test/', label: 'Another site', matches_project: false },
 ];
 
 function mockProperties(items: unknown[] = properties) {
@@ -73,14 +82,14 @@ function mockProperties(items: unknown[] = properties) {
   );
 }
 
-function mapping(propertyRef: string, status = 'active') {
+function mapping(propertyRef: string, status = 'active', projectId = PROJECT) {
   return {
     id: '99999999-9999-4999-8999-999999999999',
     workspace_id: WS,
     connection_id: CONN,
     provider: 'gsc',
     property_ref: propertyRef,
-    project_id: PROJECT,
+    project_id: projectId,
     status,
     created_at: '2026-07-31T00:00:00Z',
     updated_at: '2026-07-31T00:00:00Z',
@@ -107,14 +116,16 @@ describe('PropertyPicker', () => {
     mockMappings([mapping('sc-domain:example.com')]);
     renderWithProviders(<PropertyPicker connection={connection()} />);
     expect(await screen.findByText('sc-domain:example.com')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Change' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Change Search Console property' })).toBeNull();
   });
   it('flags an unselected connection instead of showing an empty ref', () => {
     renderWithProviders(<PropertyPicker connection={connection()} />);
 
     // The state that made syncs fail silently must be visible, not blank.
     expect(screen.getByText('No Search Console property selected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Select Search Console property' }),
+    ).toBeInTheDocument();
   });
 
   it('does not call the provider until the dialog opens', async () => {
@@ -131,7 +142,7 @@ describe('PropertyPicker', () => {
     // Discovery is a live upstream call — it must be lazy, not on mount.
     expect(calls).toBe(0);
 
-    await ue.click(screen.getByRole('button', { name: 'Select' }));
+    await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
     await waitFor(() => expect(calls).toBe(1));
   });
 
@@ -160,7 +171,7 @@ describe('PropertyPicker', () => {
     );
     renderWithProviders(<PropertyPicker connection={connection()} />);
 
-    await ue.click(screen.getByRole('button', { name: 'Select' }));
+    await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
     await ue.click(await screen.findByText('Example (domain property)'));
 
     await waitFor(() => expect(body).not.toBeNull());
@@ -186,10 +197,10 @@ describe('PropertyPicker', () => {
     );
     renderWithProviders(<PropertyPicker connection={connection()} />);
     try {
-      await ue.click(screen.getByRole('button', { name: 'Select' }));
+      await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
       await waitFor(() => expect(calls).toBe(1));
       await ue.click(screen.getByRole('button', { name: 'Close dialog' }));
-      const select = screen.getByRole('button', { name: 'Select' });
+      const select = screen.getByRole('button', { name: 'Select Search Console property' });
       expect(select).toBeDisabled();
       await ue.click(select);
       expect(calls).toBe(1);
@@ -221,7 +232,7 @@ describe('PropertyPicker', () => {
     );
     renderWithProviders(<PropertyPicker connection={connection()} />);
 
-    await ue.click(screen.getByRole('button', { name: 'Select' }));
+    await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
 
     // A broken upstream must never read as "you own no properties".
     expect(await screen.findByText(/Could not load your properties/)).toBeInTheDocument();
@@ -234,7 +245,7 @@ describe('PropertyPicker', () => {
     mockProperties();
     renderWithProviders(<PropertyPicker connection={connection()} />);
 
-    await ue.click(screen.getByRole('button', { name: 'Select' }));
+    await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
 
     expect(await screen.findByText(/No active project/)).toBeInTheDocument();
     const option = await screen.findByText('Example (domain property)');
@@ -246,7 +257,9 @@ describe('PropertyPicker', () => {
     renderWithProviders(<PropertyPicker connection={connection()} />);
 
     expect(await screen.findByText('sc-domain:example.com')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Change' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Change Search Console property' }),
+    ).toBeInTheDocument();
   });
 
   it('reports no selection when account_ref outlives its mapping', async () => {
@@ -259,6 +272,24 @@ describe('PropertyPicker', () => {
     );
 
     expect(await screen.findByText('No Search Console property selected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Select Search Console property' }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows only the active project's property, and refuses another site's property", async () => {
+    const ue = userEvent.setup();
+    // The connection also serves another project; that mapping is not this row's.
+    mockMappings([
+      mapping('https://other.test/', 'active', '77777777-7777-4777-8777-777777777777'),
+    ]);
+    mockProperties();
+    renderWithProviders(<PropertyPicker connection={connection()} />);
+
+    expect(await screen.findByText('No Search Console property selected')).toBeInTheDocument();
+    await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
+    const foreign = await screen.findByText('Another site');
+    expect(foreign.closest('button')).toBeDisabled();
+    expect(screen.getByText('Example (domain property)').closest('button')).toBeEnabled();
   });
 });
