@@ -101,7 +101,7 @@ describe('frozen audit execution identity', () => {
       timeout_seconds: runtime.audits.audit_timeout_seconds,
       max_output_tokens: runtime.audits.audit_max_output_tokens,
       retrieval_enabled: true,
-      reasoning_effort: 'off',
+      reasoning_effort: 'low',
     });
     const stored = await db
       .selectFrom('audit_tasks')

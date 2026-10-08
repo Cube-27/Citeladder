@@ -73,6 +73,14 @@ describe('frozen answer-engine execution', () => {
       });
     },
   );
+  it.each([
+    ['off', { effort: 'none' }],
+    ['low', { effort: 'low' }],
+    ['unrecorded', undefined],
+  ])('sends OpenAI reasoning effort %s as the model accepts it', (effort, reasoning) => {
+    const body = answerPayload({ ...request('chatgpt'), reasoning_effort: effort });
+    expect(body.reasoning).toEqual(reasoning);
+  });
   it.each(['chatgpt', 'gemini', 'claude'] as const)(
     'runs %s with fresh policy and no tools when retrieval is off',
     async (engine) => {

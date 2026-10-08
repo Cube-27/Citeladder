@@ -9,7 +9,7 @@ import {
   requireActiveTransport,
   tenantConnections,
 } from './connections.ts';
-import { providerPolicy, type Engine, type ProviderSettings } from './config.ts';
+import { openaiReasoning, providerPolicy, type Engine, type ProviderSettings } from './config.ts';
 import {
   ProbeError,
   sendProbe,
@@ -270,7 +270,7 @@ function probeRequest(
         input: prompt,
         store: false,
         max_output_tokens: cap,
-        ...(effort === 'off' ? { reasoning: { effort: 'none' } } : {}),
+        ...openaiReasoning(effort),
       },
     };
   if (transport === 'google')
