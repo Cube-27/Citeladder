@@ -311,8 +311,11 @@ export function ConnectionRow({
 
   // Stops importing this property into the project; imported data stays.
   const removeMutation = useMutation({
-    mutationFn: () =>
-      integrationsApi.deleteMapping(mapping!.id, { workspaceId: connection.workspace_id }),
+    mutationFn: async () => {
+      // Remove renders only with a mapping; a stale click after it is gone is a no-op.
+      if (mapping)
+        await integrationsApi.deleteMapping(mapping.id, { workspaceId: connection.workspace_id });
+    },
     onSuccess: () => refreshAfterMapping(),
   });
   const busy = testMutation.isPending || syncMutation.isPending || removeMutation.isPending;

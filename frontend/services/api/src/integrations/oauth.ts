@@ -8,6 +8,7 @@ import { resolveWorkspaceMember } from '../auth/workspace.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { ApiError } from '../errors.ts';
 import { enqueueSyncRun } from './sync.ts';
+import { getLogger } from '../logging.ts';
 import {
   endpoints,
   integrationPolicy,
@@ -16,6 +17,7 @@ import {
 } from './config.ts';
 
 const secrets = integrationSecrets();
+const logger = getLogger('api.integrations.oauth');
 const key = new TextEncoder().encode(secrets.jwtSecret);
 
 export function providerKnown(provider: string): provider is 'gsc' | 'ga4' | 'bing' {
@@ -312,6 +314,11 @@ async function queueCatchUp(db: Database, workspaceId: string, grantId: string) 
       });
     } catch (error) {
       if (!(error instanceof ApiError)) throw error;
+      // Best effort: the scheduled dispatcher still covers this mapping.
+      logger.info('integration_catch_up_skipped', {
+        mapping_id: mapping.id,
+        error_code: error.code,
+      });
     }
   }
 }

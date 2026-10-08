@@ -152,7 +152,8 @@ export const performanceRoutes = [
       await requireProject(db, workspace, path.project_id);
       const scope = { workspaceId: workspace.workspaceId, projectId: path.project_id };
       const { window, latest } = await clampedCustomWindow(db, scope, query.from, query.to);
-      const [from, to] = window!;
+      if (!window) throw new ApiError(422, "'from' and 'to' must be supplied together");
+      const [from, to] = window;
       if (latest !== null && from > latest)
         throw new ApiError(422, `'from' is after the latest imported date (${latest})`);
       const kind = 'performance_range_projection';

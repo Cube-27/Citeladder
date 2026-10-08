@@ -38,7 +38,9 @@ export function latestQuerySnapshot(db: Database, scope: DemandScope) {
 }
 
 /**
- * The selected revision's rows (one per identity, by the partition rule).
+ * The selected revision's rows: one per identity, because the partition rule
+ * selects one resync_seq and `uq_integration_metric_row_identity` admits one
+ * row per identity within it (a repeated provider row is dropped on insert).
  * Truncation keeps the highest-impression rows, newest first.
  */
 async function sourceRows(db: Database, scope: DemandScope) {
