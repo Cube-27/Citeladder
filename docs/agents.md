@@ -211,9 +211,13 @@ they can support facts or citations; prior model prose is not evidence.
 Prompts offers **Build with Agent**, preselecting Prompt discovery. The
 `read_prompt_portfolio` tool includes a bounded canonical topic list, including
 empty topics, and reports topic truncation. A saved prompt portfolio includes
-typed core-question rows tied to those IDs. **Review in Prompts** explicitly
-submits the saved revision to the Prompts owner's admission and quality checks;
-users still accept candidates separately. The Agent gains no write tool.
+typed core-question rows tied to those IDs. Prompt discovery (skill v4) is the
+niche mode: the Generate dialog covers the broad market, and the skill targets
+a place, persona, constraint or intent the user names, asking when the request
+does not say; a row's optional `targeting` records that niche. **Review in
+Prompts** explicitly submits the saved revision to the Prompts owner's admission
+and quality checks; users still accept candidates separately. The Agent gains
+no write tool.
 
 The composer takes inline commands: `/` picks a skill and `@` mentions up to
 five of the project's Actions. Mention selection restores the caret when the

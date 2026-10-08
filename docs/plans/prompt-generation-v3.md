@@ -2,9 +2,10 @@
 
 The follow-up PR named by the [visibility plan](visibility-prompt-improvement.md#follow-up-prompt-generation-and-brand-matching)
 (feature 3 of the [feature review tracker](feature-review-tracker.md)).
-**Status: decision-ready (2026-10-08), not implemented.** Shipped behaviour is
-owned by [Visibility](../visibility-prompt.md) and [Agent](../agents.md), not by
-this plan. Constraints: [invariants](../invariants.md) 2 (policy is
+**Status: phases 1-4 implemented (2026-10-08) with every recommended owner
+decision; phase 5 live calibration is outstanding (operator-run).** Shipped
+behaviour is owned by [Visibility](../visibility-prompt.md) and
+[Agent](../agents.md), not by this plan. Constraints: [invariants](../invariants.md) 2 (policy is
 configuration), 5 (provenance and version bumps, never a reset), 9
 (deterministic code owns measurable facts), 11-12 (bounded, inspectable context;
 no fabricated facts) and 13 (the Agent is bounded orchestration). File

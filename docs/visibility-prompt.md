@@ -31,9 +31,26 @@ sets, prompts, topics, import, generation and candidate review
 Native `config/prompt-library.json` owns library bounds, cohorts, write locks,
 binding and generation settings; `config/api.json` owns HTTP admission limits.
 Native prompt normalization owns persisted identity. Generation defaults
-resolve at use time. Prompt generation and brand disambiguation are being
-redesigned in a [follow-up](plans/visibility-prompt-improvement.md#follow-up-prompt-generation-and-brand-matching);
-this section describes the current code.
+resolve at use time.
+
+**Quick generate** (the Generate dialog) samples the broad market: the
+category's buyer questions across offerings, stages, intents and personas, with
+places only where the market scope calls for them. **Build with Agent** is the
+niche dive (a place, persona, constraint or intent the user names). Both stage
+into the same candidate review.
+
+A request asks for at most `GENERATION_MAX_COUNT` (50) questions. Draft batches
+run with bounded concurrency (`GENERATION_DRAFT_CONCURRENCY`) under a request
+deadline (`GENERATION_DEADLINE_SECONDS`, below the edge proxy's limit) that stops
+starting batches and cuts in-flight ones; what was admitted is judged and
+staged, and `shortfall_reason` reports `deadline`. A provider error in a later
+batch is recorded in `model_results` without discarding earlier drafts
+(`model_error`); only a run with nothing admitted fails. An `Idempotency-Key`
+header is stored in the run request: a repeat within candidate retention
+returns that run's still-pending candidates from persisted rows without provider
+I/O, and a key reused for another request is a 409. The context read selects
+named columns. A deployment without a model reports that generation is not
+available, without operator configuration names.
 `POST /prompt-sets/{id}/candidates/review` takes `accept_ids`/`reject_ids`:
 accept runs prompt-slot occupancy
 ([`src/entitlements/`](../frontend/services/api/src/entitlements/)) and the
@@ -87,35 +104,52 @@ An offer matching the business category stays eligible alongside other offers;
 provider-only labels are rejected. Configuration and native onboarding topic admission
 own these decisions, not a copied vocabulary list in documentation.
 
-Generation plans `count × GENERATION_OVERGENERATE_FACTOR`
-[cells](../frontend/services/api/src/prompts/generation-drafts.ts): per selected topic,
-its offering plus at most two attribute, situation/constraint or audience
-entries, a target buyer stage and, for area-served businesses, a market.
-Excluded pairs never share a cell and the full product is never enumerated;
-Non-bare cells precede bare cells, confirmed facets precede suggestions, and
-values spread least-used-first. Location-free cells remain eligible. A
-subtopic uses its parent's offering map; a topic without a map gets bare cells,
-never invented facts. Each slot carries its cell as `buyer_need`, and the model
-writes a natural question expressing a useful buyer decision, labelling
-buyer stage and prompt intent (code resolves legacy intent).
-Category-plus-market restatements and cosmetic question wrappers are discouraged.
-Business context retains field-level review provenance in model inputs. Inferred
-values remain provisional and fields without a source are unverified, including
-when the same values appear in the compact knowledge-base projection.
-Generated buyer scenarios are hypotheses, not observed demand or new business
-facts; cell provenance records that distinction. Geography belongs in the
-wording only when it materially changes the answer.
+The [universe planner](../frontend/services/api/src/prompts/generation-plan.ts)
+plans `count × GENERATION_OVERGENERATE_FACTOR` cells round-robin over the
+selected topics. Each offering covers every buyer stage with a bare cell before
+any facet; afterwards at most `facet_cell_share` of its cells carry an
+attribute, situation/constraint or persona (confirmed audiences, else inferred
+buyer roles as suggestions), confirmed values before suggestions,
+least-used-first, never an excluded pair. A market attaches only to the reviewed
+`market_scope`'s `location_policy` share (local 0.5, regional 0.25, national,
+global and unknown 0), drawn from `service_areas`; a national business's service
+areas never become wording. A subtopic uses its parent's offering map; a topic
+without one gets bare cells, never invented facts. Each slot carries its cell
+as `buyer_need` and the intents that suit its stage as `target_prompt_intents`.
+
+Draft batches receive a narrow brief (category, category terms, offerings,
+business model, buyer type, market scope, language and country, with their
+review provenance), the batch's cells and tracked texts for de-duplication
+only: no profile prose, knowledge-base sources, demand signals, competitors or
+earlier drafts. The model writes a natural question per cell, names a place
+only in a cell with a market, and labels buyer stage, prompt intent and
+`names_place`. Generated buyer scenarios are hypotheses, not observed demand or
+new business facts; cell provenance records that distinction. Map suggestions
+never keep a value that names the project's places.
 
 Admission runs before any quality judgment: known slots, topic ownership,
-allowed labels, cohort identity, normalized exact duplicates, the shared length
-bound, topical binding, texts already tracked or pending, and exact copies of
-observed demand queries. Core queries cannot name the tracked brand, aliases or
-supplied competitors; diagnostics name the brand and comparisons also name an
-accepted competitor. [Selection](../frontend/services/api/src/prompts/generation-quality.ts)
+allowed labels (a planned core row's intent must suit the stage it is labelled
+with), cohort identity, normalized exact duplicates, the shared length bound,
+topical binding (service areas do not bind generated or proposed text), a place
+named in a cell without a market (`location_unplanned`, decided on the project's
+geography vocabulary with the model's `names_place` label recorded beside it),
+texts already tracked or pending, and exact copies of observed demand queries.
+Core queries cannot name the tracked brand, aliases or supplied competitors
+under the project's mention rules (below); diagnostics name the brand and
+comparisons also name an accepted competitor. The judge sees the planned cell,
+not the business's service areas.
+[Selection](../frontend/services/api/src/prompts/generation-quality.ts)
 keeps at most `count` after judgment, preferring passing judgments while treating
-uncertain and unjudged candidates equally, then spread across topic, stage, audience,
-situation, attribute and market; a
-shortfall is reported, never filled. `candidates_generated` counts what passed
+uncertain and unjudged candidates equally, then spread across topic, stage, intent,
+audience, situation, attribute and market; a
+shortfall is reported, never filled. Run provenance records `distribution`
+(counts by stage, intent, offering and persona, and located and bare drafts) for
+admitted and selected drafts, measured by
+[generation metrics](../frontend/services/api/src/prompts/generation-metrics.ts);
+the same module scores fixture and live calibration sets against
+`eval_thresholds` in `config/prompt-generation.ts`. `pnpm prompts:eval --live`
+is the operator-only live calibration over the business-context fixtures; it
+calls the configured provider and never runs in CI. `candidates_generated` counts what passed
 admission and is never a market size. Every dropped row is counted under the
 first admission rule it broke (`admission_drops`, also frozen in run
 provenance), and the Generate dialog and agent handoff show that breakdown.
@@ -174,7 +208,12 @@ generation endpoint accepts `agent_revision_id`, loads that authorized project's
 saved portfolio, validates its bounded core rows, and applies the same
 admission, JEV and candidate staging path without another text generation call.
 The block's fence is matched case-insensitively; a row filed under an unknown
-topic is dropped as `unknown_topic` rather than failing the portfolio. The report
+topic is dropped as `unknown_topic` rather than failing the portfolio. A row may
+carry `targeting` (`place`, `persona`, `constraint`; any other key fails the
+proposal), which becomes its cell's market, audience and situation facets.
+Location and stage-intent admission do not apply to Agent rows: targeting is the
+point, and an untargeted row admits as before. New runs record
+`generation_mode` `quick` or `agent_proposal`. The report
 hides the block only when there is exactly one closed JSON block with valid topic UUIDs
 and a nonempty row count within the UI generation ceiling. The API also enforces
 its configured runtime limit. Run provenance retains the exact output/revision/run references.
@@ -336,7 +375,24 @@ the selected evidence. The [visibility readers](../frontend/services/api/src/vis
 project source and prompt outcomes and brand and competitor rankings from them.
 Mention, citation, recommendation identity, citation URL and
 rank remain distinct observations. Unsupported entity assessments are
-unavailable, not absent. Source-pattern and Opportunity mapping stay in
+unavailable, not absent.
+
+A name counts as a mention under the project's
+[mention rules](../frontend/services/api/src/analysis/entity-matching.ts), stored in
+`BusinessContext.entity_matching` and edited per brand and competitor in the
+project edit panel. `always` counts every whole-word occurrence; under
+`context_required` an occurrence counts only with a context term within
+`context_window_tokens` of it, and an occurrence inside an exclusion phrase never
+counts. A name that is one common word (`common_noun_names`, the generator's
+common words or binding stopwords) defaults to `context_required`, seeded from
+category terms and offerings; only rules a person changed are saved. Admission
+freezes the effective rules into the audit configuration, analysis reads that
+frozen copy, and the comparison key includes it. One
+[matcher](../frontend/services/api/src/analysis/aliases.ts) serves scoring, entity
+assessment and generation admission; text in scripts written without spaces is
+word-segmented first, so a Chinese, Japanese or Thai name inside a sentence is
+found. These semantics are `grounded-analysis-v2` and `entity-assessment-2`;
+earlier results keep their versions. Source-pattern and Opportunity mapping stay in
 [Opportunities](opportunities.md).
 
 **Visibility** means the brand mention rate everywhere: the share of answers
