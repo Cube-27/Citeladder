@@ -210,7 +210,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
             <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
           </div>
           <MetricGroup>
-            <StateMetric label="Visibility" {...data.state.visibility} />
+            <StateMetric label="Visibility" {...data.state.visibility} suffix="%" />
             <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
             <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
           </MetricGroup>

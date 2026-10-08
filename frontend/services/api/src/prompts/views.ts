@@ -46,10 +46,6 @@ export function promptView(row: PromptRow): PromptView {
     enabled: row.enabled,
     status: promptStatusSchema.parse(row.status),
     origin: promptOrigin.parse(row.origin),
-    generation_evidence:
-      row.generation_evidence === null
-        ? null
-        : jsonObject(row.generation_evidence, 'prompts.generation_evidence'),
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   };

@@ -175,7 +175,8 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     expect(screen.getByRole('heading', { name: 'Acme' })).toBeInTheDocument();
-    expect(screen.getByText('72.5')).toBeInTheDocument();
+    // Visibility is a mention rate, so the tile carries a percent unit.
+    expect(screen.getByText('72.5%')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Project state' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Movement' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Ranked actions' })).toBeInTheDocument();

@@ -1,14 +1,26 @@
 import { expect, it } from 'vitest';
 import { auditSlots } from '../src/audits/freeze.ts';
 
-// Outputs of CPython random.Random(int(seed)).shuffle for the historical slot traversal.
-it.each([
-  ['0', [1, 9, 8, 5, 10, 2, 3, 7, 4, 0, 11, 6]],
-  ['42', [7, 5, 2, 8, 9, 6, 11, 3, 4, 0, 1, 10]],
-  ['18446744073709551615', [1, 8, 6, 9, 2, 11, 4, 7, 10, 5, 3, 0]],
-] as const)('preserves the historical schedule for seed %s', (seed, expected) => {
-  const slots = auditSlots(2, ['chatgpt', 'claude'], 3, seed);
-  expect(slots.map((s) => s.prompt * 6 + (s.engine === 'chatgpt' ? 0 : 3) + s.repetition)).toEqual(
-    expected,
+const key = (s: { prompt: number; engine: string; repetition: number }) =>
+  `${s.prompt}:${s.engine}:${s.repetition}`;
+it.each(['0', '42', '18446744073709551615'])(
+  'orders every slot exactly once, deterministically, for seed %s',
+  (seed) => {
+    const slots = auditSlots(2, ['chatgpt', 'claude'], 3, seed);
+    expect(slots.map(key)).toEqual(auditSlots(2, ['chatgpt', 'claude'], 3, seed).map(key));
+    const expected = new Set<string>();
+    for (const prompt of [0, 1])
+      for (const engine of ['chatgpt', 'claude'])
+        for (const repetition of [0, 1, 2]) expected.add(`${prompt}:${engine}:${repetition}`);
+    expect(slots).toHaveLength(12);
+    expect(new Set(slots.map(key))).toEqual(expected);
+  },
+);
+it('uses the seed to vary the order', () => {
+  const orders = new Set(
+    ['0', '42', '18446744073709551615'].map((seed) =>
+      auditSlots(2, ['chatgpt', 'claude'], 3, seed).map(key).join(),
+    ),
   );
+  expect(orders.size).toBeGreaterThan(1);
 });

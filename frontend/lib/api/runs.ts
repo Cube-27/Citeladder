@@ -123,6 +123,19 @@ export const runsApi = {
     );
     return strictValidate(auditScheduleSchema, res, 'runs.createSchedule');
   },
+  updateSchedule: async (
+    projectId: string,
+    scheduleId: string,
+    input: { enabled: boolean },
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.patch<AuditSchedule>(
+      `/projects/${projectId}/audit-schedules/${scheduleId}`,
+      input,
+      options,
+    );
+    return strictValidate(auditScheduleSchema, res, 'runs.updateSchedule');
+  },
   listExecutions: async (auditId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<Execution[]>(`/audits/${auditId}/executions`, options);
     return strictValidate(executionListSchema, res, 'runs.listExecutions');

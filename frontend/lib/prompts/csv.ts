@@ -17,6 +17,7 @@
 import type { PromptImportRow } from '@/lib/api/prompts';
 import { promptIntentSchema } from '@citeladder/contracts/project';
 import type { PromptIntent } from '@/lib/api/types';
+import { PROMPT_IMPORT_MAX_ROWS } from '@/lib/config/prompts';
 
 /** The import's column contract, in the order the sample file uses. */
 export const PROMPT_CSV_COLUMNS = ['topic', 'prompt'] as const;
@@ -41,7 +42,7 @@ const INTENT_KEYS = new Set(['intent']);
 const COHORT_KEYS = new Set(['cohort']);
 const ENABLED_KEYS = new Set(['enabled', 'is_enabled', 'active']);
 
-/** Backend bounds (`config/http.py`), counted in code points as Python does. */
+/** API prompt-library bounds, counted in code points. */
 const PROMPT_MAX_CHARS = 300;
 const TOPIC_MAX_CHARS = 255;
 const THEME_MAX_CHARS = 255;
@@ -218,6 +219,11 @@ export function parsePromptCsv(raw: string): ParsedCsv {
 
   const errors: string[] = [];
   if (rows.length === 0) errors.push('No data rows were found.');
+  // The API rejects an oversized upload whole; say so before the preview reads as ready.
+  if (rows.length > PROMPT_IMPORT_MAX_ROWS)
+    errors.push(
+      `The file has ${rows.length} rows; import up to ${PROMPT_IMPORT_MAX_ROWS} at a time by splitting it.`,
+    );
 
   return { rows, hasHeader, errors };
 }

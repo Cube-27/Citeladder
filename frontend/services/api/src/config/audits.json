@@ -13,7 +13,7 @@
   },
   "analysis": {
     "entity_assessment_version": "entity-assessment-1",
-    "scoring_rule_version": "prompt-composite-v1",
+    "scoring_rule_version": "prompt-composite-v2",
     "prompt_score_visibility_weight": 0.6,
     "prompt_score_competitive_weight": 0.25,
     "prompt_score_owned_citation_weight": 0.15,
@@ -86,18 +86,6 @@
       "default": 6,
       "exclusive_minimum": 0
     },
-    "worker_db_sessions_per_task": {
-      "env": ["AUDIT_WORKER_DB_SESSIONS_PER_TASK"],
-      "type": "int",
-      "default": 2,
-      "exclusive_minimum": 0
-    },
-    "operational_headroom": {
-      "env": ["AUDIT_OPERATIONAL_HEADROOM"],
-      "type": "int",
-      "default": 4,
-      "minimum": 0
-    },
     "capacity_lease_ttl_seconds": {
       "env": ["AUDIT_CAPACITY_LEASE_TTL_SECONDS"],
       "type": "float",
@@ -122,6 +110,12 @@
       "default": 0.0,
       "minimum": 0
     },
+    "access_check_ttl_seconds": {
+      "env": ["AUDIT_ACCESS_CHECK_TTL_SECONDS"],
+      "type": "float",
+      "default": 30.0,
+      "minimum": 0
+    },
     "max_run_seconds": {
       "env": ["AUDIT_MAX_RUN_SECONDS"],
       "type": "float",
@@ -131,7 +125,7 @@
     "max_attempts": {
       "env": ["AUDIT_MAX_ATTEMPTS"],
       "type": "int",
-      "default": 5,
+      "default": 3,
       "exclusive_minimum": 0
     },
     "retry_base_delay_seconds": {
@@ -288,24 +282,12 @@
   "min_repetitions": 1,
   "max_repetitions": 10,
   "route_policies": {
-    "chatgpt": {
-      "batch_enabled": false
-    },
-    "claude": {
-      "batch_enabled": false
-    },
-    "gemini": {
-      "batch_enabled": false
-    },
-    "google_ai_overview": {
-      "batch_enabled": false
-    },
-    "chatgpt_search": {
-      "batch_enabled": false
-    },
-    "gemini_consumer": {
-      "batch_enabled": false
-    }
+    "chatgpt": {},
+    "claude": {},
+    "gemini": {},
+    "google_ai_overview": {},
+    "chatgpt_search": {},
+    "gemini_consumer": {}
   },
   "dev_test_allow_platform": {
     "env": ["DEV_TEST_LOGIN_ALLOW_PLATFORM_CREDENTIALS"],

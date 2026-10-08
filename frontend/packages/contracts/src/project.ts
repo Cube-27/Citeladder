@@ -69,9 +69,6 @@ export const promptSchema = responseObject({
   enabled: z.boolean(),
   status: promptStatusSchema,
   origin: z.enum(['manual', 'imported', 'generated']),
-  // Provenance for AI-generated prompts (model identity, run id, hashes) —
-  // never contains credentials. Null for manual/imported prompts.
-  generation_evidence: z.record(z.string(), z.unknown()).nullable().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });

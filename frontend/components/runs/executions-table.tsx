@@ -13,7 +13,11 @@ import {
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { engineLabel, productTransportLabel } from '@/lib/providers/catalog';
 import type { Execution } from '@/lib/api/types';
-import { executionBadgeValue, executionStatusLabel } from '@/lib/runs/status';
+import {
+  executionBadgeValue,
+  executionFailureReason,
+  executionStatusLabel,
+} from '@/lib/runs/status';
 import { textRole } from '@/components/ui/typography';
 
 /**
@@ -58,9 +62,16 @@ export function ExecutionsTable({
               ) : null}
             </TableCell>
             <TableCell>
-              <Badge variant="status" value={executionBadgeValue(execution.status)}>
-                {executionStatusLabel(execution.status)}
-              </Badge>
+              <div className="flex flex-col items-start gap-1">
+                <Badge variant="status" value={executionBadgeValue(execution.status)}>
+                  {executionStatusLabel(execution.status, engineLabel(execution.logical_engine))}
+                </Badge>
+                {execution.status === 'failed' ? (
+                  <p className="type-caption max-w-xs">
+                    {executionFailureReason(execution.error_code)}
+                  </p>
+                ) : null}
+              </div>
             </TableCell>
             <TableCell numeric>
               {execution.latency_ms == null ? (

@@ -66,12 +66,13 @@ export async function loadExecutionContext(
   encryptionKey: string,
   at = new Date(),
   env: Record<string, string | undefined> = process.env,
+  access?: (workspaceId: string) => Promise<unknown>,
 ) {
   return db.transaction().execute(async (trx) => {
     const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return null;
     const { task, audit } = locked;
-    await requireWorkspaceAccess(trx, audit.workspace_id);
+    await (access ? access(audit.workspace_id) : requireWorkspaceAccess(trx, audit.workspace_id));
     const parsed = routeSchema.safeParse(task.provider_route_snapshot);
     if (!parsed.success) throw unavailable();
     const route = parsed.data;

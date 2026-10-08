@@ -112,6 +112,18 @@ export async function getVisibility(
   return { ...view.response, comparison };
 }
 
+/** One run's projection with no baseline comparison, for summary surfaces such as Overview. */
+export async function getRunVisibility(
+  db: Database,
+  scope: RunScope,
+  auditId: string,
+  cohort: string,
+): Promise<VisibilityResponse & { rankings: RankingRow[] }> {
+  validateCohort(cohort);
+  const run = await selectedRun(db, scope, auditId);
+  return (await runView(db, scope, run, { auditId, logicalEngine: null, cohort })).response;
+}
+
 type SelectedRun = Omit<MeasuredRun, 'completedAt'> & { completedAt: string | null };
 
 /** The named run, or the latest dashboard-ready one; its snapshot must exist. */
@@ -465,6 +477,10 @@ async function rangeVisibility(
     owned_citation_rate: point.owned_citation_rate,
     prompt_performance_score: null,
     visibility_score: null,
+    // Pooled like the counts above; the last run's own values would describe one run only.
+    avg_position: point.avg_position ?? null,
+    model_provenance: point.model_provenance ?? [],
+    citation_totals: undefined,
     rankings,
     per_engine: rangeEngines(runs, sources, query),
     comparison,

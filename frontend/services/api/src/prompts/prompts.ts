@@ -142,9 +142,10 @@ export async function createPrompt(
   try {
     return await db.transaction().execute(async (trx) => {
       const set = await scopedPromptSet(trx, workspaceId, promptSetId);
-      await requireBinding(trx, set.project_id, input.text, input.topic_id ?? null);
       await acquireProjectLock(trx, set.project_id);
       await acquirePromptSetLock(trx, set.id);
+      // Bound under the project lock, so the topic vocabulary cannot change before the insert.
+      await requireBinding(trx, set.project_id, input.text, input.topic_id ?? null);
       const hash = promptTextHash(input.text);
       const existing = await trx
         .selectFrom('prompts')
@@ -215,7 +216,10 @@ async function applyPromptUpdate(
   const topicId = topicGiven ? (input.topic_id ?? null) : prompt.topic_id;
   if (topicGiven && topicId !== null) await topicText(db, prompt.project_id, topicId);
   const activates = input.status === P.status_active && prompt.status !== P.status_active;
-  if (input.text != null || activates) {
+  // Re-filing an active prompt under another topic changes what it must bind to.
+  const refiled =
+    topicId !== prompt.topic_id && (input.status ?? prompt.status) === P.status_active;
+  if (input.text != null || activates || refiled) {
     await requireBinding(db, prompt.project_id, input.text ?? prompt.text, topicId);
   }
   const changes: Partial<PromptRow> = {

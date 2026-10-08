@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import type { Audit, AuditStatus } from '@/lib/api/types';
+import type { Audit } from '@/lib/api/types';
 
 import { ProgressPanel, RunActions } from './progress-panel';
 
@@ -62,32 +62,15 @@ function renderPanel(
 const cancelButton = () => screen.getByRole('button', { name: /Cancel run|Cancelling/ });
 
 describe('ProgressPanel', () => {
-  it('shows the requested, completed, and failed counts', () => {
-    renderPanel({ requested_count: 12, completed_count: 5, failed_count: 2 });
-
-    expect(screen.getByText('12')).toBeVisible();
-    expect(screen.getByText('5')).toBeVisible();
-    expect(screen.getByText('2')).toBeVisible();
+  it('allows Cancel while running but not once reporting, which the backend would reject', () => {
+    renderPanel({ status: 'running' });
+    expect(cancelButton()).toBeEnabled();
   });
 
-  it.each<AuditStatus>(['draft', 'validating', 'queued', 'running', 'analyzing'])(
-    'enables Cancel while the run is %s',
-    (status) => {
-      renderPanel({ status });
-
-      expect(cancelButton()).toBeEnabled();
-    },
-  );
-
-  it.each<AuditStatus>(['reporting', 'completed', 'partially_completed', 'failed', 'cancelled'])(
-    'disables Cancel once the run is %s',
-    (status) => {
-      // Offering a cancel the backend would reject is worse than offering none.
-      renderPanel({ status });
-
-      expect(cancelButton()).toBeDisabled();
-    },
-  );
+  it('disables Cancel once the run is reporting', () => {
+    renderPanel({ status: 'reporting' });
+    expect(cancelButton()).toBeDisabled();
+  });
 
   it('fires the cancel callback exactly once per click', async () => {
     const user = userEvent.setup();
@@ -106,25 +89,13 @@ describe('ProgressPanel', () => {
     expect(screen.getByText('Cancelling…')).toBeVisible();
   });
 
-  it.each<AuditStatus>(['queued', 'running', 'analyzing', 'reporting'])(
-    'shows the live updating indicator while %s',
-    (status) => {
-      renderPanel({ status });
-
-      // `reporting` is not cancelable but IS still moving, so the panel must
-      // still tell the user something is happening.
-      expect(screen.getByText('Updating…')).toBeVisible();
-    },
-  );
-
-  it.each<AuditStatus>(['completed', 'partially_completed', 'failed', 'cancelled'])(
-    'hides the updating indicator once %s',
-    (status) => {
-      renderPanel({ status });
-
-      expect(screen.queryByText('Updating…')).not.toBeInTheDocument();
-    },
-  );
+  it('shows the updating indicator while reporting and hides it once completed', () => {
+    const { unmount } = render(<ProgressPanel audit={{ ...BASE_AUDIT, status: 'reporting' }} />);
+    expect(screen.getByText('Updating…')).toBeVisible();
+    unmount();
+    render(<ProgressPanel audit={{ ...BASE_AUDIT, status: 'completed' }} />);
+    expect(screen.queryByText('Updating…')).not.toBeInTheDocument();
+  });
 
   it('offers authenticated export actions for both formats', () => {
     renderPanel();

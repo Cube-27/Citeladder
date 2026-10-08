@@ -88,7 +88,7 @@ export function CsvImportDialog({
           <Button
             variant="primary"
             onClick={confirm}
-            disabled={isImporting || importable.length === 0}
+            disabled={isImporting || importable.length === 0 || Boolean(parsed?.errors.length)}
           >
             {isImporting ? 'Importing…' : `Import ${importable.length} ${importNoun}`}
           </Button>

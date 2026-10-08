@@ -8,7 +8,9 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 - [Feature review tracker](feature-review-tracker.md): owner-assigned
   feature-by-feature audit and rebuild (2026-10-07). Features 1 Site Health and
   2 Onboarding are done ([Site Health plan](site-health-improvement.md),
-  [Onboarding plan](onboarding-improvement.md)); next is 3 Prompt generation.
+  [Onboarding plan](onboarding-improvement.md)). Feature 3 is implementing
+  ([Visibility plan](visibility-prompt-improvement.md)); its prompt-generation
+  follow-up is the next PR.
 
 ## Queued
 

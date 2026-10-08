@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import { toCsvForTest } from '@/lib/csv/download';
+import { PROMPT_IMPORT_MAX_ROWS } from '@/lib/config/prompts';
 
 import {
   PROMPT_CSV_COLUMNS,
@@ -72,5 +73,14 @@ describe('parsePromptCsv', () => {
 
   it('reports a file-level error for an empty file', () => {
     expect(parsePromptCsv('').errors.length).toBeGreaterThan(0);
+  });
+
+  it('rejects a file over the import row limit as a file-level error, and accepts one at it', () => {
+    const file = (count: number) =>
+      ['prompt', ...Array.from({ length: count }, (_, i) => `Prompt number ${i}`)].join('\n');
+    expect(parsePromptCsv(file(PROMPT_IMPORT_MAX_ROWS)).errors).toEqual([]);
+    const over = parsePromptCsv(file(PROMPT_IMPORT_MAX_ROWS + 1));
+    expect(over.errors).toHaveLength(1);
+    expect(over.errors[0]).toContain(String(PROMPT_IMPORT_MAX_ROWS + 1));
   });
 });

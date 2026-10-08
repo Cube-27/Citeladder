@@ -16,7 +16,6 @@ import {
 } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
-import { visibilityApi } from '@/lib/api/visibility';
 import { topicsApi } from '@/lib/api/topics';
 import type {
   Prompt,
@@ -37,8 +36,10 @@ import { Tabs } from '@/components/ui/tabs';
 
 import { PendingReviewNotice } from './candidate-review';
 import { PromptEmptyState } from './prompt-empty-state';
+import type { PendingDelete } from './confirm-delete-dialog';
 import { PromptLibraryDialogs } from './prompt-library-dialogs';
-import { PromptTable, type PromptMeasurement } from './prompt-table';
+import { PromptTable } from './prompt-table';
+import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { PageShell } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
 
@@ -46,7 +47,7 @@ import { PromptActions, PromptFilterControls } from './prompt-toolbar';
 import { ResizablePromptWorkspace } from './resizable-prompt-workspace';
 import { TopicRail } from './topic-rail';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
-import { resolveProjectRequestScope, type ProjectRequestScope } from '@/lib/project/request-scope';
+import { resolveProjectRequestScope } from '@/lib/project/request-scope';
 
 function mutationErrorMessage(
   create: { isError: boolean; error: unknown },
@@ -234,6 +235,12 @@ export function PromptLibrary({
     onSuccess: invalidate,
   });
 
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const confirmDelete = (pending: PendingDelete) => {
+    if (pending.kind === 'topic') return deleteTopicMutation.mutate(pending.topic);
+    setBusyId(pending.prompt.id);
+    deleteMutation.mutate(pending.prompt.id);
+  };
   const deleteTopicMutation = useMutation({
     mutationFn: (topic: Topic) => topicsApi.remove(topic.id, requestOptions()),
     onSuccess: async (_data, topic) => {
@@ -298,10 +305,7 @@ export function PromptLibrary({
     <PromptTable
       prompts={visible}
       onEdit={openEdit}
-      onDelete={(prompt) => {
-        setBusyId(prompt.id);
-        deleteMutation.mutate(prompt.id);
-      }}
+      onDelete={(prompt) => setPendingDelete({ kind: 'prompt', prompt })}
       onToggleEnabled={(prompt) => {
         setBusyId(prompt.id);
         toggleMutation.mutate(prompt);
@@ -393,7 +397,7 @@ export function PromptLibrary({
               onCreate={async (name, parentId) => {
                 await createTopicMutation.mutateAsync({ name, parentId });
               }}
-              onDelete={(topic) => deleteTopicMutation.mutate(topic)}
+              onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
               isCreating={createTopicMutation.isPending}
               loadError={topicsQuery.isError}
               actionError={topicActionError}
@@ -423,6 +427,9 @@ export function PromptLibrary({
         </ResizablePromptWorkspace>
 
         <PromptLibraryDialogs
+          pendingDelete={pendingDelete}
+          setPendingDelete={setPendingDelete}
+          confirmDelete={confirmDelete}
           formOpen={formOpen}
           setFormOpen={setFormOpen}
           editing={editing}
@@ -460,40 +467,4 @@ export function PromptLibrary({
       </Stack>
     </PageShell>
   );
-}
-
-/**
- * What the project's latest run measured for each prompt.
- *
- * Keyed by the SOURCE prompt id, because that is what this table's rows are.
- * A prompt added since the last run simply has no entry, which reads as
- * "Not measured" rather than a fabricated zero.
- */
-function useLatestPromptMeasurements(scope: ProjectRequestScope) {
-  const { workspaceId, projectId } = scope;
-  const result = useQuery({
-    queryKey: queryKeys.visibility.prompts(projectId),
-    queryFn: ({ signal }) =>
-      visibilityApi.getPromptMetrics(projectId, undefined, {
-        signal,
-        workspaceId,
-      }),
-    enabled: scope.enabled,
-  });
-  return useMemo(() => {
-    const map = new Map<string, PromptMeasurement>();
-    // A failed read is not a measured absence. Returning an empty map drops the
-    // columns entirely, which says "no run yet" rather than "every prompt is
-    // unmeasured" — the honest reading when we could not load the figures.
-    if (result.isError) return map;
-    for (const row of result.data ?? []) {
-      if (!row.prompt_id) continue;
-      map.set(row.prompt_id, {
-        visibilityRate: row.visibility_rate ?? null,
-        change: row.visibility_delta ?? null,
-        position: row.avg_position ?? null,
-      });
-    }
-    return map;
-  }, [result.data, result.isError]);
 }

@@ -8,6 +8,7 @@ import { auditInput } from '../audits/inputs.ts';
 import type { AuditRuntime } from '../audits/config.ts';
 import { nextRunAfter } from '../audits/schedule-cadence.ts';
 import { getLogger } from '../logging.ts';
+import { ApiError } from '../errors.ts';
 
 export function schedulerSettings(env: Record<string, string | undefined> = process.env) {
   return Object.fromEntries(
@@ -135,7 +136,7 @@ export class AuditScheduler {
           .execute();
         await sql`release savepoint schedule_planning`.execute(trx);
         return true;
-      } catch {
+      } catch (error) {
         await sql`rollback to savepoint schedule_planning`.execute(trx);
         await sql`release savepoint schedule_planning`.execute(trx);
         const failures = schedule.failure_count + 1;
@@ -144,7 +145,8 @@ export class AuditScheduler {
           .set({
             ...release,
             failure_count: failures,
-            last_error: 'audit_planning_failed',
+            // The admission reason (trial ended, budget exhausted) is what the owner can act on.
+            last_error: error instanceof ApiError ? error.code : 'audit_planning_failed',
             last_failure_at: at,
             enabled: failures < this.settings.max_consecutive_failures,
             next_run_at: new Date(at.getTime() + this.settings.failure_retry_seconds * 1000),

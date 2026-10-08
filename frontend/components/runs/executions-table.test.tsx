@@ -80,14 +80,6 @@ describe('ExecutionsTable', () => {
     expect(screen.getByText('Google')).toBeVisible();
   });
 
-  it('renders latency in milliseconds', () => {
-    render(
-      <ExecutionsTable executions={[execution({ latency_ms: 1234 })]} onSelectEvidence={vi.fn()} />,
-    );
-
-    expect(screen.getByText('1234 ms')).toBeVisible();
-  });
-
   it('renders an unreported latency as a placeholder, not as zero', () => {
     render(
       <ExecutionsTable
@@ -105,7 +97,39 @@ describe('ExecutionsTable', () => {
       <ExecutionsTable executions={[execution({ latency_ms: 0 })]} onSelectEvidence={vi.fn()} />,
     );
 
-    expect(screen.getByText('0 ms')).toBeVisible();
+    expect(screen.getByText(/^0\s?ms$/)).toBeVisible();
+  });
+
+  it('gives a failed execution a plain reason that never shows the raw error code', () => {
+    render(
+      <ExecutionsTable
+        executions={[execution({ status: 'failed', error_code: 'some_new_provider_code' })]}
+        onSelectEvidence={vi.fn()}
+      />,
+    );
+
+    const row = screen.getAllByRole('row')[1]!;
+    expect(row).not.toHaveTextContent('some_new_provider_code');
+    expect(row.textContent).toMatch(/try/i);
+  });
+
+  it('shows no failure reason for an execution that did not fail', () => {
+    render(<ExecutionsTable executions={[execution()]} onSelectEvidence={vi.fn()} />);
+
+    expect(screen.getAllByRole('row')[1]!.textContent).not.toMatch(/try|reconnect|Settings/i);
+  });
+
+  it('names the engine an execution is waiting on', () => {
+    render(
+      <ExecutionsTable
+        executions={[
+          execution({ status: 'awaiting_provider_result', logical_engine: 'chatgpt_search' }),
+        ]}
+        onSelectEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByRole('row')[1]!.textContent).toMatch(/waiting for .*chatgpt/i);
   });
 
   it('offers evidence for a succeeded execution', async () => {

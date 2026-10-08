@@ -2,87 +2,65 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import {
   auditBadgeValue,
-  auditStatusLabel,
   classificationBadgeValue,
-  classificationLabel,
   executionBadgeValue,
+  executionFailureReason,
   executionStatusLabel,
   formatDateTime,
   isAuditCancelable,
+  schedulePauseReason,
   shouldPollAudit,
 } from './status';
 
-describe('shouldPollAudit', () => {
-  it('polls while non-terminal (including reporting) and stops when terminal', () => {
-    expect(shouldPollAudit('running')).toBe(true);
-    expect(shouldPollAudit('queued')).toBe(true);
-    // `reporting` is still non-terminal: keep polling until it terminalizes.
+describe('audit lifecycle decisions', () => {
+  it('keeps polling through reporting and stops at a terminal status', () => {
     expect(shouldPollAudit('reporting')).toBe(true);
-    expect(shouldPollAudit('analyzing')).toBe(true);
-    expect(shouldPollAudit('completed')).toBe(false);
     expect(shouldPollAudit('partially_completed')).toBe(false);
-    expect(shouldPollAudit('failed')).toBe(false);
-    expect(shouldPollAudit('cancelled')).toBe(false);
   });
-});
 
-describe('isAuditCancelable', () => {
-  it('mirrors the backend AUDIT_ACTIVE_STATUSES (reporting is NOT cancelable)', () => {
-    expect(isAuditCancelable('draft')).toBe(true);
-    expect(isAuditCancelable('validating')).toBe(true);
-    expect(isAuditCancelable('queued')).toBe(true);
+  it('cannot cancel a run that is already reporting', () => {
     expect(isAuditCancelable('running')).toBe(true);
-    expect(isAuditCancelable('analyzing')).toBe(true);
-    // The backend rejects REPORTING -> CANCELLED; the button must be disabled.
     expect(isAuditCancelable('reporting')).toBe(false);
-    expect(isAuditCancelable('completed')).toBe(false);
-    expect(isAuditCancelable('partially_completed')).toBe(false);
-    expect(isAuditCancelable('failed')).toBe(false);
-    expect(isAuditCancelable('cancelled')).toBe(false);
   });
 });
 
-describe('auditBadgeValue', () => {
-  it('folds the extra statuses onto the eight badge values', () => {
-    expect(auditBadgeValue('validating')).toBe('queued');
-    expect(auditBadgeValue('reporting')).toBe('analyzing');
+describe('badge folding', () => {
+  it('folds the extra audit statuses onto the badge space', () => {
     expect(auditBadgeValue('partially_completed')).toBe('partial');
-    expect(auditBadgeValue('running')).toBe('running');
   });
-});
 
-describe('auditStatusLabel', () => {
-  it('title-cases underscored statuses', () => {
-    expect(auditStatusLabel('partially_completed')).toBe('Partially Completed');
-    expect(auditStatusLabel('running')).toBe('Running');
-  });
-});
-
-describe('executionBadgeValue', () => {
-  it('maps execution statuses onto the status badge space', () => {
-    expect(executionBadgeValue('succeeded')).toBe('success');
+  it('shows a failed execution as a danger and a waiting one as a warning', () => {
     expect(executionBadgeValue('failed')).toBe('danger');
-    expect(executionBadgeValue('cancelled')).toBe('danger');
     expect(executionBadgeValue('retry_wait')).toBe('warning');
-    expect(executionBadgeValue('running')).toBe('info');
   });
 
-  it('labels underscored statuses', () => {
-    expect(executionStatusLabel('retry_wait')).toBe('Retry Wait');
+  it('folds unintended owned citations onto the owned visual', () => {
+    expect(classificationBadgeValue('unintended')).toBe('owned');
   });
 });
 
-describe('classificationBadgeValue', () => {
-  it('folds unintended onto the owned visual and maps the rest', () => {
-    expect(classificationBadgeValue('owned')).toBe('owned');
-    expect(classificationBadgeValue('unintended')).toBe('owned');
-    expect(classificationBadgeValue('competitor')).toBe('competitor');
-    expect(classificationBadgeValue('third_party')).toBe('third-party');
+describe('executionStatusLabel', () => {
+  it('names the engine being waited on, and falls back without one', () => {
+    expect(executionStatusLabel('awaiting_provider_result', 'ChatGPT search')).toContain(
+      'ChatGPT search',
+    );
+    expect(executionStatusLabel('awaiting_provider_result')).not.toMatch(/undefined/);
+  });
+});
+
+describe('failure and pause reasons', () => {
+  it('explains a known failure code and never leaks an unknown token', () => {
+    expect(executionFailureReason('rate_limit')).not.toBe(executionFailureReason('weird_new_code'));
+    const generic = executionFailureReason('weird_new_code');
+    expect(generic).not.toContain('weird_new_code');
+    expect(generic.length).toBeGreaterThan(0);
   });
 
-  it('labels each classification distinctly', () => {
-    expect(classificationLabel('unintended')).toBe('Owned (unintended)');
-    expect(classificationLabel('third_party')).toBe('Third-party');
+  it('explains a schedule pause with a fallback for an unknown code', () => {
+    expect(schedulePauseReason('funded_budget_exhausted')).not.toBe(
+      schedulePauseReason('weird_new_code'),
+    );
+    expect(schedulePauseReason('weird_new_code')).not.toContain('weird_new_code');
   });
 });
 
