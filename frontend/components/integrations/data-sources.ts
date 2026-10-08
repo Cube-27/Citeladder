@@ -6,10 +6,12 @@ import { useCallback } from 'react';
 import {
   integrationsApi,
   type IntegrationConnection,
+  type IntegrationProperty,
   type IntegrationPropertyMapping,
   type IntegrationProvider,
 } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
+import { isGrantGone } from '@/components/settings/grant-model';
 
 /**
  * Where one data source stands for the active project, and so what the user
@@ -33,18 +35,37 @@ function sourceStep(
   projectId: string,
 ): SourceStep {
   const connection = connections.find((item) => item.provider === provider);
-  if (
-    !connection ||
-    connection.grant_status === 'revoked' ||
-    connection.grant_status === 'pending_revocation'
-  )
-    return { kind: 'connect' };
+  if (!connection || isGrantGone(connection.grant_status)) return { kind: 'connect' };
   if (connection.grant_status !== 'connected') return { kind: 'reconnect', connection };
-  // A connection can serve several projects; only this project's mapping counts.
-  const mapping = mappings
-    .get(connection.id)
-    ?.find((item) => item.status === 'active' && item.project_id === projectId);
+  const mapping = activeMappingFor(mappings.get(connection.id), projectId);
   return mapping ? { kind: 'ready', connection, mapping } : { kind: 'choose', connection };
+}
+
+/** A connection's mappings; one cache entry shared by Settings and the setup panel. */
+export function mappingsQuery(connectionId: string, workspaceId: string | null) {
+  return {
+    queryKey: queryKeys.integrations.mappings(connectionId),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      integrationsApi.listMappings(connectionId, { signal, workspaceId }),
+    staleTime: 60 * 1000,
+  };
+}
+
+/** A connection can serve several projects; only this project's active mapping counts. */
+export function activeMappingFor(
+  mappings: readonly IntegrationPropertyMapping[] | undefined,
+  projectId: string | null,
+): IntegrationPropertyMapping | null {
+  return (
+    mappings?.find((item) => item.status === 'active' && item.project_id === projectId) ?? null
+  );
+}
+
+/** The project's own properties first, otherwise in the provider's order. */
+export function ownPropertiesFirst(properties: readonly IntegrationProperty[]) {
+  return [...properties].sort(
+    (a, b) => Number(b.matches_project === true) - Number(a.matches_project === true),
+  );
 }
 
 /** The steps for `providers` in the active project, from the connection and mapping reads. */
@@ -58,14 +79,13 @@ export function useDataSources(
     queryFn: ({ signal }) => integrationsApi.list({ signal, workspaceId }),
     enabled: Boolean(workspaceId),
   });
-  const relevant = (connections.data ?? []).filter((item) => providers.includes(item.provider));
+  // Only the connection each step reads, and only while its grant is connected.
+  const relevant = providers.flatMap((provider) => {
+    const connection = connections.data?.find((item) => item.provider === provider);
+    return connection?.grant_status === 'connected' ? [connection] : [];
+  });
   const mappingQueries = useQueries({
-    queries: relevant.map((connection) => ({
-      queryKey: queryKeys.integrations.mappings(connection.id),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        integrationsApi.listMappings(connection.id, { signal, workspaceId }),
-      staleTime: 60 * 1000,
-    })),
+    queries: relevant.map((connection) => mappingsQuery(connection.id, workspaceId)),
   });
   const mappings = new Map(
     relevant.map((connection, index) => [connection.id, mappingQueries[index]?.data ?? []]),

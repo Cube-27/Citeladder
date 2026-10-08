@@ -170,8 +170,18 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
         day >= window.start &&
         day <= window.end &&
         bucketStart(day, window.granularity) === bucketStart(point, window.granularity);
+      const pendingBuckets = new Set(
+        facts
+          .filter(
+            (f) =>
+              f.is_ai_referral === null &&
+              f.occurred_date >= window.start &&
+              f.occurred_date <= window.end,
+          )
+          .map((f) => bucketStart(f.occurred_date, window.granularity)),
+      );
       const classificationPending = (point: string) =>
-        facts.some((f) => f.is_ai_referral === null && inBucket(f.occurred_date, point));
+        pendingBuckets.has(bucketStart(point, window.granularity));
       const extras = referralExtras(evidence, window.start, window.end);
       const content = {
         preset_window_days: window.presetDays,

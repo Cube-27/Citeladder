@@ -1,12 +1,18 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Info } from 'lucide-react';
 import { useState } from 'react';
 
-import { ConnectionRow, PROVIDER_META } from '@/components/settings/integration-connection-row';
+import { ConnectionRow } from '@/components/settings/integration-connection-row';
 import { Dialog } from '@/components/ui/dialog';
 import { humanizeApiError } from '@/lib/api/errors';
-import { queryKeys } from '@/lib/api/query-keys';
-import { FAMILY_META, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
+import {
+  FAMILY_META,
+  isGrantGone,
+  joinProviderLabels,
+  type GrantFamily,
+  type GrantModel,
+} from '@/components/settings/grant-model';
+import { useRefreshAfterMapping } from '@/components/integrations/data-sources';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -143,7 +149,8 @@ function ConnectCard({
  * resumes the same history.
  */
 function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
-  const queryClient = useQueryClient();
+  // Disconnecting stops imports into the same projections a new property feeds.
+  const refresh = useRefreshAfterMapping();
   const [open, setOpen] = useState(false);
   const title = FAMILY_META[grant.family].title;
   const connection = grant.connections[0]!;
@@ -152,10 +159,10 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
       integrationsApi.delete(connection.id, { workspaceId: connection.workspace_id }),
     onSuccess: async () => {
       setOpen(false);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
+      await refresh();
     },
   });
-  const sources = grant.connections.map((item) => PROVIDER_META[item.provider].label).join(' and ');
+  const sources = joinProviderLabels(grant.connections.map((item) => item.provider));
   return (
     <>
       <Button variant="destructiveGhost" size="sm" onClick={() => setOpen(true)}>
@@ -246,9 +253,7 @@ function ConnectedCard({
             >
               {grant.status === 'revoked' ? `Connect ${meta.title}` : 'Reconnect'}
             </Button>
-            {grant.status === 'revoked' || grant.status === 'pending_revocation' ? null : (
-              <DisconnectGrant grant={grant} />
-            )}
+            {isGrantGone(grant.status) ? null : <DisconnectGrant grant={grant} />}
           </div>
           <span className="type-caption text-right">
             Reconnecting renews consent for the whole grant.

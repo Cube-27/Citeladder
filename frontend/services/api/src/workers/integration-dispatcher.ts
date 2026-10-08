@@ -46,21 +46,19 @@ export class IntegrationDispatcher {
         'mapping.connection_id',
         'mapping.project_id',
       ])
-      // The last scheduled run per mapping, as one grouped read rather than a
-      // full run history per mapping.
-      .leftJoin(
+      // Each mapping's newest scheduled run, in the same read.
+      .leftJoinLateral(
         (eb) =>
           eb
-            .selectFrom('integration_sync_runs')
-            .select(['workspace_id', 'mapping_id'])
-            .select((inner) => inner.fn.max('created_at').as('last_scheduled'))
-            .where('sync_kind', '=', 'scheduled')
-            .groupBy(['workspace_id', 'mapping_id'])
+            .selectFrom('integration_sync_runs as run')
+            .select('run.created_at as last_scheduled')
+            .whereRef('run.mapping_id', '=', 'mapping.id')
+            .whereRef('run.workspace_id', '=', 'mapping.workspace_id')
+            .where('run.sync_kind', '=', 'scheduled')
+            .orderBy('run.created_at', 'desc')
+            .limit(1)
             .as('scheduled'),
-        (join) =>
-          join
-            .onRef('scheduled.mapping_id', '=', 'mapping.id')
-            .onRef('scheduled.workspace_id', '=', 'mapping.workspace_id'),
+        (join) => join.onTrue(),
       )
       .select('scheduled.last_scheduled')
       .where('mapping.status', '=', 'active')

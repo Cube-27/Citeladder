@@ -1,10 +1,18 @@
 'use client';
 
-import { BarChart3, Globe, Search, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
 import { BackfillProgress } from '@/components/settings/backfill-progress';
+import {
+  FAMILY_META,
+  GRANT_FAMILY,
+  PROVIDER_META,
+  isIntegrationProvider,
+  joinProviderLabels,
+  type GrantFamily,
+} from '@/components/settings/grant-model';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,39 +31,6 @@ import {
   useRefreshAfterMapping,
   type SourceStep,
 } from './data-sources';
-
-type Family = 'google' | 'microsoft';
-
-const SOURCE: Record<
-  IntegrationProvider,
-  { label: string; noun: string; console: string; family: Family; Icon: LucideIcon }
-> = {
-  gsc: {
-    label: 'Google Search Console',
-    noun: 'Search Console property',
-    console: 'Search Console',
-    family: 'google',
-    Icon: Search,
-  },
-  ga4: {
-    label: 'Google Analytics 4',
-    noun: 'Analytics property',
-    console: 'Google Analytics',
-    family: 'google',
-    Icon: BarChart3,
-  },
-  bing: {
-    label: 'Bing Webmaster Tools',
-    noun: 'Bing site',
-    console: 'Bing Webmaster Tools',
-    family: 'microsoft',
-    Icon: Globe,
-  },
-};
-
-const FAMILY_NAME: Record<Family, string> = { google: 'Google', microsoft: 'Bing' };
-/** The provider whose consent starts each family's grant. */
-const FAMILY_START: Record<Family, IntegrationProvider> = { google: 'gsc', microsoft: 'bing' };
 
 /**
  * The OAuth callback's result on this screen, read once and then removed from
@@ -81,15 +56,12 @@ function useOAuthReturn() {
       { replace: true },
     );
   }, [refresh, result, setParams]);
-  const connected =
-    result.connected === 'gsc' || result.connected === 'ga4' || result.connected === 'bing'
-      ? SOURCE[result.connected].family
-      : null;
+  const connected = isIntegrationProvider(result.connected) ? GRANT_FAMILY[result.connected] : null;
   return { connected, error: result.error };
 }
 
 type Row =
-  | { kind: 'connect'; family: Family; providers: IntegrationProvider[] }
+  | { kind: 'connect'; family: GrantFamily; providers: IntegrationProvider[] }
   | {
       kind: 'source';
       provider: IntegrationProvider;
@@ -108,7 +80,7 @@ function setupRows(
       rows.push({ kind: 'source', provider, step });
       continue;
     }
-    const family = SOURCE[provider].family;
+    const family = GRANT_FAMILY[provider];
     const existing = rows.find(
       (row): row is Extract<Row, { kind: 'connect' }> =>
         row.kind === 'connect' && row.family === family,
@@ -117,10 +89,6 @@ function setupRows(
     else rows.push({ kind: 'connect', family, providers: [provider] });
   }
   return rows;
-}
-
-function joinLabels(providers: readonly IntegrationProvider[]): string {
-  return providers.map((provider) => SOURCE[provider].label).join(' and ');
 }
 
 function RowFrame({
@@ -158,6 +126,42 @@ function RowFrame({
   );
 }
 
+/** Not yet connected: one consent for the family's sources. */
+function ConnectRow({
+  family,
+  providers,
+  required,
+  canManage,
+  startConnect,
+}: Readonly<{
+  family: GrantFamily;
+  providers: IntegrationProvider[];
+  required: boolean;
+  canManage: boolean;
+  startConnect: (family: GrantFamily) => void;
+}>) {
+  return (
+    <RowFrame
+      Icon={PROVIDER_META[providers[0]!].Icon}
+      title={joinProviderLabels(providers)}
+      status={required ? 'Not connected' : 'Optional'}
+      action={
+        canManage ? (
+          <Button
+            size="sm"
+            variant={required ? 'primary' : 'secondary'}
+            onClick={() => startConnect(family)}
+          >
+            Connect {FAMILY_META[family].title}
+          </Button>
+        ) : (
+          <span className="type-caption">Ask a workspace owner or admin</span>
+        )
+      }
+    />
+  );
+}
+
 function SourceRow({
   provider,
   step,
@@ -171,19 +175,21 @@ function SourceRow({
   projectId: string;
   canManage: boolean;
   autoStart: boolean;
-  startConnect: (family: Family) => void;
+  startConnect: (family: GrantFamily) => void;
 }>) {
-  const source = SOURCE[provider];
+  const source = PROVIDER_META[provider];
+  const family = GRANT_FAMILY[provider];
+  const familyName = FAMILY_META[family].title;
   if (step.kind === 'reconnect')
     return (
       <RowFrame
         Icon={source.Icon}
         title={source.label}
-        status={`${FAMILY_NAME[source.family]} needs your consent again. Imported data is kept.`}
+        status={`${familyName} needs your consent again. Imported data is kept.`}
         action={
           canManage ? (
-            <Button size="sm" onClick={() => startConnect(source.family)}>
-              Reconnect {FAMILY_NAME[source.family]}
+            <Button size="sm" onClick={() => startConnect(family)}>
+              Reconnect {familyName}
             </Button>
           ) : null
         }
@@ -214,7 +220,6 @@ function SourceRow({
       {canManage ? (
         <PropertyChoice
           provider={provider}
-          source={source}
           connection={step.connection}
           projectId={projectId}
           autoStart={autoStart}
@@ -262,18 +267,15 @@ export function DataSourceSetup({
   const allReady = required.every((provider) => sources.steps.get(provider)?.kind === 'ready');
   if (!sources.loading && !sources.error && allReady && !oauth.error) return null;
 
-  const startConnect = (family: Family) => {
-    const back = new URLSearchParams(params);
-    back.delete('connected');
-    back.delete('error');
+  // The callback params were already stripped from the address on return.
+  const startConnect = (family: GrantFamily) =>
     hardNavigate(
       integrationsApi.oauthStartUrl(
-        FAMILY_START[family],
+        FAMILY_META[family].connectProvider,
         activeWorkspaceId,
-        projectDestination(location.pathname, back, activeProject.id),
+        projectDestination(location.pathname, params, activeProject.id),
       ),
     );
-  };
 
   return (
     <Card data-testid="data-source-setup">
@@ -284,7 +286,7 @@ export function DataSourceSetup({
       <CardContent className="grid gap-3">
         {oauth.error ? <Alert tone="danger">{oauthErrorMessage(oauth.error)}</Alert> : null}
         {oauth.connected ? (
-          <Alert tone="success">{FAMILY_NAME[oauth.connected]} connected.</Alert>
+          <Alert tone="success">{FAMILY_META[oauth.connected].title} connected.</Alert>
         ) : null}
         {sources.error ? (
           <ReadError
@@ -302,32 +304,13 @@ export function DataSourceSetup({
           <ul className="grid">
             {setupRows(providers, sources.steps).map((row) =>
               row.kind === 'connect' ? (
-                <RowFrame
+                <ConnectRow
                   key={`connect-${row.family}`}
-                  Icon={SOURCE[row.providers[0]!].Icon}
-                  title={joinLabels(row.providers)}
-                  status={
-                    row.providers.some((provider) => required.includes(provider))
-                      ? 'Not connected'
-                      : 'Optional'
-                  }
-                  action={
-                    canManage ? (
-                      <Button
-                        size="sm"
-                        variant={
-                          row.providers.some((provider) => required.includes(provider))
-                            ? 'primary'
-                            : 'secondary'
-                        }
-                        onClick={() => startConnect(row.family)}
-                      >
-                        Connect {FAMILY_NAME[row.family]}
-                      </Button>
-                    ) : (
-                      <span className="type-caption">Ask a workspace owner or admin</span>
-                    )
-                  }
+                  family={row.family}
+                  providers={row.providers}
+                  required={row.providers.some((provider) => required.includes(provider))}
+                  canManage={canManage}
+                  startConnect={startConnect}
                 />
               ) : (
                 <SourceRow
@@ -336,7 +319,7 @@ export function DataSourceSetup({
                   step={row.step}
                   projectId={activeProject.id}
                   canManage={canManage}
-                  autoStart={oauth.connected === SOURCE[row.provider].family}
+                  autoStart={oauth.connected === GRANT_FAMILY[row.provider]}
                   startConnect={startConnect}
                 />
               ),

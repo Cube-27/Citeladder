@@ -1,11 +1,11 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, Globe, Search, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { BackfillProgress } from '@/components/settings/backfill-progress';
-import type { GrantModel } from '@/components/settings/grant-model';
+import { PROVIDER_META, type GrantModel } from '@/components/settings/grant-model';
 import { useRefreshAfterMapping } from '@/components/integrations/data-sources';
 import { useProjectContext } from '@/lib/project/project-context';
 import { PropertyPicker, useActiveMapping } from '@/components/settings/property-picker';
@@ -13,11 +13,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
-import {
-  integrationsApi,
-  type IntegrationConnection,
-  type IntegrationProvider,
-} from '@/lib/api/integrations';
+import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { formatCount, formatShortDate } from '@/lib/format';
@@ -50,12 +46,6 @@ const TEST_FAILURE: Record<string, string> = {
   token_refresh_failed: 'The provider did not renew access. Try again, or reconnect.',
   property_not_accessible: 'This account can no longer read the selected property.',
   rate_limited: 'The provider is rate limiting requests. Try again in a few minutes.',
-};
-
-export const PROVIDER_META: Record<IntegrationProvider, { label: string; Icon: LucideIcon }> = {
-  gsc: { label: 'Google Search Console', Icon: Search },
-  ga4: { label: 'Google Analytics 4', Icon: BarChart3 },
-  bing: { label: 'Bing Webmaster Tools', Icon: Globe },
 };
 
 function ConnectionActions({
@@ -241,13 +231,13 @@ function ConnectionRowView({
           <Alert tone={testState.ok ? 'success' : 'danger'}>{testState.message}</Alert>
         </div>
       ) : null}
-      {[syncMutation, removeMutation].map((mutation, index) =>
-        mutation.isError ? (
-          <div className="pt-3" key={index}>
-            <Alert tone="danger">{humanizeApiError(mutation.error).message}</Alert>
-          </div>
-        ) : null,
-      )}
+      {syncMutation.isError || removeMutation.isError ? (
+        <div className="pt-3">
+          <Alert tone="danger">
+            {humanizeApiError(syncMutation.error ?? removeMutation.error).message}
+          </Alert>
+        </div>
+      ) : null}
     </div>
   );
 }

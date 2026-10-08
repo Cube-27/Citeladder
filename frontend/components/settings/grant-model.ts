@@ -1,3 +1,5 @@
+import { BarChart3, Globe, Search, type LucideIcon } from 'lucide-react';
+
 import type { IntegrationConnection, IntegrationProvider } from '@/lib/api/integrations';
 
 /**
@@ -27,6 +29,44 @@ export const GRANT_FAMILY: Record<IntegrationProvider, GrantFamily> = {
   ga4: 'google',
   bing: 'microsoft',
 };
+
+/** Per-provider presentation, shared by Settings and the in-place setup. */
+export const PROVIDER_META: Record<
+  IntegrationProvider,
+  { label: string; noun: string; console: string; Icon: LucideIcon }
+> = {
+  gsc: {
+    label: 'Google Search Console',
+    noun: 'Search Console property',
+    console: 'Search Console',
+    Icon: Search,
+  },
+  ga4: {
+    label: 'Google Analytics 4',
+    noun: 'Analytics property',
+    console: 'Google Analytics',
+    Icon: BarChart3,
+  },
+  bing: {
+    label: 'Bing Webmaster Tools',
+    noun: 'Bing site',
+    console: 'Bing Webmaster Tools',
+    Icon: Globe,
+  },
+};
+
+export function isIntegrationProvider(value: string | null): value is IntegrationProvider {
+  return value !== null && Object.hasOwn(PROVIDER_META, value);
+}
+
+export function joinProviderLabels(providers: readonly IntegrationProvider[]): string {
+  return providers.map((provider) => PROVIDER_META[provider].label).join(' and ');
+}
+
+/** A disconnected grant: it can only be connected again, not reconnected. */
+export function isGrantGone(status: IntegrationConnection['grant_status']): boolean {
+  return status === 'revoked' || status === 'pending_revocation';
+}
 
 export const FAMILY_META: Record<
   GrantFamily,

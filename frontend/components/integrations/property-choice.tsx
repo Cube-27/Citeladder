@@ -15,9 +15,11 @@ import {
   type IntegrationProvider,
 } from '@/lib/api/integrations';
 
-import { useRefreshAfterMapping } from './data-sources';
+import { PROVIDER_META } from '@/components/settings/grant-model';
 
-/** Properties that belong to the project first; the provider's order otherwise. */
+import { ownPropertiesFirst, useRefreshAfterMapping } from './data-sources';
+
+/** The one property worth offering as a single click, if any. */
 function suggestedProperty(provider: IntegrationProvider, properties: IntegrationProperty[]) {
   const matching = properties.filter((property) => property.matches_project === true);
   if (matching.length === 1) return matching[0]!;
@@ -33,17 +35,16 @@ function suggestedProperty(provider: IntegrationProvider, properties: Integratio
  */
 export function PropertyChoice({
   provider,
-  source,
   connection,
   projectId,
   autoStart,
 }: Readonly<{
   provider: IntegrationProvider;
-  source: { label: string; noun: string; console: string };
   connection: IntegrationConnection;
   projectId: string;
   autoStart: boolean;
 }>) {
+  const source = PROVIDER_META[provider];
   const refresh = useRefreshAfterMapping();
   const [showAll, setShowAll] = useState(false);
   const discovery = useMutation({
@@ -71,9 +72,7 @@ export function PropertyChoice({
   }, [autoStart, discovery]);
 
   if (!discovery.isSuccess) return <DiscoveryStatus noun={source.noun} discovery={discovery} />;
-  const properties = [...discovery.data].sort(
-    (a, b) => Number(b.matches_project === true) - Number(a.matches_project === true),
-  );
+  const properties = ownPropertiesFirst(discovery.data);
   if (properties.length === 0)
     return (
       <Alert tone="neutral">

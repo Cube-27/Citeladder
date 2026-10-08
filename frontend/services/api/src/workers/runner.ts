@@ -30,6 +30,7 @@ import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { getLogger } from '../logging.ts';
 import { cleanupMcpProtocol } from '../mcp/maintenance.ts';
 import { DRAIN_LOCK } from '../config/execution.ts';
+import { maintainLease } from '../queue/heartbeat.ts';
 
 export type RunnerLane = {
   name: string;
@@ -189,14 +190,11 @@ async function untilAdmissionEnds<T>(
   work: (signal: AbortSignal) => Promise<T>,
   pollMs = 1_000,
 ): Promise<T> {
-  const abort = new AbortController();
-  const timer = setInterval(() => {
-    if (!canAdmit()) abort.abort();
-  }, pollMs);
+  const admission = maintainLease(async () => canAdmit(), pollMs);
   try {
-    return await work(abort.signal);
+    return await work(admission.signal);
   } finally {
-    clearInterval(timer);
+    await admission.stop();
   }
 }
 

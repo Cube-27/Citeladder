@@ -41,9 +41,8 @@ const LADDER: readonly { stage: ProjectReadinessStage; label: string }[] = [
 ] as const;
 
 /** What the user should understand, in one line, at each stage. */
-const EXPLANATION: Record<ProjectReadinessStage, string> = {
-  // Shown by the data source setup, which can act on it; the ladder stays silent.
-  not_connected: '',
+/** `not_connected` belongs to the data source setup, which can act on it. */
+const EXPLANATION: Record<Exclude<ProjectReadinessStage, 'not_connected'>, string> = {
   connected: 'Connected. The first history import has not started yet.',
   importing:
     'Importing your history. Numbers below fill in as each chunk lands — they are not final yet.',

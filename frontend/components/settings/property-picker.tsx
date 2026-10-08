@@ -15,19 +15,18 @@ import {
   type IntegrationConnection,
   type IntegrationProperty,
 } from '@/lib/api/integrations';
-import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { tagClasses } from '@/components/ui/filter-chip-variants';
-import { useRefreshAfterMapping } from '@/components/integrations/data-sources';
-
-const PROVIDER_NOUN: Record<IntegrationConnection['provider'], string> = {
-  gsc: 'Search Console property',
-  ga4: 'Analytics property',
-  bing: 'Bing site',
-};
+import {
+  activeMappingFor,
+  mappingsQuery,
+  ownPropertiesFirst,
+  useRefreshAfterMapping,
+} from '@/components/integrations/data-sources';
+import { PROVIDER_META } from '@/components/settings/grant-model';
 
 /**
  * One selectable row in the picker list.
@@ -83,16 +82,8 @@ export function useActiveMapping(
   connectionId: string,
   projectId: string | null,
 ) {
-  const query = useQuery({
-    queryKey: queryKeys.integrations.mappings(connectionId),
-    queryFn: ({ signal }) => integrationsApi.listMappings(connectionId, { signal, workspaceId }),
-    staleTime: 60 * 1000,
-  });
-  return (
-    query.data?.find(
-      (mapping) => mapping.status === 'active' && mapping.project_id === projectId,
-    ) ?? null
-  );
+  const query = useQuery(mappingsQuery(connectionId, workspaceId));
+  return activeMappingFor(query.data, projectId);
 }
 
 /**
@@ -112,18 +103,16 @@ function PropertyOptions({
   pendingRef: string | null;
   onSelect: (propertyRef: string) => void;
 }>) {
-  return [...properties]
-    .sort((a, b) => Number(b.matches_project === true) - Number(a.matches_project === true))
-    .map((property) => (
-      <PropertyOption
-        key={property.property_ref}
-        property={property}
-        selected={property.property_ref === selected}
-        disabled={blocked || property.matches_project === false}
-        pending={pendingRef === property.property_ref}
-        onSelect={() => onSelect(property.property_ref)}
-      />
-    ));
+  return ownPropertiesFirst(properties).map((property) => (
+    <PropertyOption
+      key={property.property_ref}
+      property={property}
+      selected={property.property_ref === selected}
+      disabled={blocked || property.matches_project === false}
+      pending={pendingRef === property.property_ref}
+      onSelect={() => onSelect(property.property_ref)}
+    />
+  ));
 }
 
 /** The chosen property, or a visible "none selected", and the control to choose one. */
@@ -202,7 +191,6 @@ export function PropertyPicker({
     activeProject?.id ?? null,
   );
   const [open, setOpen] = useState(false);
-  const [pendingRef, setPendingRef] = useState<string | null>(null);
 
   const discovery = useMutation({
     mutationFn: () =>
@@ -227,18 +215,16 @@ export function PropertyPicker({
     },
     onSuccess: async () => {
       setOpen(false);
-      setPendingRef(null);
       // account_ref moved with the mapping — refresh the connection list.
       await refreshAfterMapping();
     },
-    onError: () => setPendingRef(null),
   });
 
   // The active mapping, never the connection's account_ref — see
   // `useActiveMapping`. A stale account_ref would show a property as chosen
   // while every sync of it fails.
   const selected = activeMapping?.property_ref ?? '';
-  const noun = PROVIDER_NOUN[connection.provider];
+  const noun = PROVIDER_META[connection.provider].noun;
 
   return (
     <>
@@ -304,11 +290,8 @@ export function PropertyPicker({
             properties={discovery.data ?? []}
             selected={selected}
             blocked={!activeProject || selectMutation.isPending}
-            pendingRef={pendingRef}
-            onSelect={(propertyRef) => {
-              setPendingRef(propertyRef);
-              selectMutation.mutate(propertyRef);
-            }}
+            pendingRef={selectMutation.isPending ? (selectMutation.variables ?? null) : null}
+            onSelect={(propertyRef) => selectMutation.mutate(propertyRef)}
           />
 
           {selectMutation.isError ? (

@@ -80,6 +80,7 @@ export async function startOAuth(
       'The integration provider is not configured',
     );
 
+  const returnTo = oauthReturnPath(input.returnTo);
   const nonce = randomBytes(32).toString('base64url');
   const jti = randomBytes(24).toString('base64url');
   const now = Math.floor(Date.now() / 1000);
@@ -89,7 +90,7 @@ export async function startOAuth(
     session_nonce: nonce,
     workspace_id: input.workspaceId,
     user_id: input.userId,
-    ...(oauthReturnPath(input.returnTo) ? { return_to: oauthReturnPath(input.returnTo) } : {}),
+    ...(returnTo ? { return_to: returnTo } : {}),
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject('oauth-state')

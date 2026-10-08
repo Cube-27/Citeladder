@@ -6,6 +6,7 @@ import { ApiError, notFound } from '../errors.ts';
 import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
 import { integrationPolicy, integrationSettings } from './config.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { isoDateText } from '../db/timestamps.ts';
 
 const settings = integrationSettings();
 
@@ -203,12 +204,12 @@ async function syncWindow(
     const yesterday = isoDay(new Date(Date.now() - 86_400_000));
     const latest = await trx
       .selectFrom('integration_sync_runs')
-      .select(sql<string | null>`max(window_end)::text`.as('covered'))
+      .select(isoDateText(sql`max(window_end)`).as('covered'))
       .where('mapping_id', '=', mappingId)
       .where('workspace_id', '=', input.workspaceId)
       .where('status', '=', 'succeeded')
       .executeTakeFirst();
-    const covered = latest?.covered ? isoDay(latest.covered) : null;
+    const covered = latest?.covered ?? null;
     if (covered !== null) {
       const earliest = dateAfter(yesterday, -(settings.sync_backfill_max_days - 1));
       windowStart = dateAfter(covered, 1 - settings.sync_late_data_revision_days);

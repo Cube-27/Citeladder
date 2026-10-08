@@ -1,4 +1,5 @@
 import type { Database } from '../db/database.ts';
+import { normalizeDomain } from '../analysis/domains.ts';
 import { canonicalPage } from '../traffic/normalization.ts';
 import { pathIdentity } from '../crawl-logs/identity.ts';
 
@@ -7,14 +8,7 @@ import { pathIdentity } from '../crawl-logs/identity.ts';
  * `sc-domain:` and a leading `www.` removed. Empty when unparseable.
  */
 function siteDomain(value: string): string {
-  const bare = value.trim().replace(/^sc-domain:/iu, '');
-  try {
-    return new URL(bare.includes('://') ? bare : `https://${bare}`).hostname
-      .toLowerCase()
-      .replace(/^www\./u, '');
-  } catch {
-    return '';
-  }
+  return normalizeDomain(value.trim().replace(/^sc-domain:/iu, ''));
 }
 
 /** The project's sites (website plus owned domains), as `siteDomain` values. */
@@ -29,12 +23,11 @@ export async function projectSiteDomains(
     .where('workspace_id', '=', workspaceId)
     .where('id', '=', projectId)
     .executeTakeFirstOrThrow();
+  // The project read above already scoped it to the workspace.
   const domains = await db
     .selectFrom('owned_domains')
-    .innerJoin('projects', 'projects.id', 'owned_domains.project_id')
-    .select('owned_domains.domain')
-    .where('projects.workspace_id', '=', workspaceId)
-    .where('projects.id', '=', projectId)
+    .select('domain')
+    .where('project_id', '=', projectId)
     .execute();
   return new Set(
     [project.website_url, ...domains.map((d) => d.domain)].map(siteDomain).filter(Boolean),
