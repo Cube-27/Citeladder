@@ -84,6 +84,10 @@ const RECOVERY: Record<string, string> = {
     'The AI model did not respond after several attempts. Nothing was saved; try again in a moment.',
   cancelled: 'Stopped. Nothing from this turn was saved.',
   trial_expired: 'This workspace’s trial has ended, so the agent cannot run. Nothing was saved.',
+  access_unresolved:
+    'Workspace access could not be confirmed, so the agent stopped. Nothing was saved; contact support if this continues.',
+  internal_error:
+    'Something went wrong on our side while finishing this request. Nothing was saved; try again in a moment.',
   protocol_violation:
     'The AI model’s answer did not follow the required structure, so nothing was saved. Try again, or rephrase the request.',
 };

@@ -33,7 +33,7 @@ import { leaseSignal } from '../queue/heartbeat.ts';
 import { refused, ToolRegistry, type ToolOutcome } from './tools.ts';
 
 const ACCESS_CODES = new Set(['trial_expired', 'access_unresolved']);
-export function failureCode(error: unknown) {
+function failureCode(error: unknown) {
   if (error instanceof AgentError) return error.code;
   if (error instanceof ApiError) {
     if (ACCESS_CODES.has(error.code)) return error.code;
