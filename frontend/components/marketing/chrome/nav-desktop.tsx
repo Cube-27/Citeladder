@@ -144,6 +144,15 @@ function panelState(open: boolean, closing: boolean, entering: boolean): PanelSt
   return closing ? 'closing' : 'hidden';
 }
 
+/** The animation a panel plays: unfold from a closed bar, or slide on handover. */
+function panelAnimation(state: PanelState, slideFrom: SlideFrom | null): string | undefined {
+  if (state === 'entering') return 'marketing-nav-panel';
+  if (state === 'closing') {
+    return slideFrom ? 'marketing-nav-panel-slide-out' : 'marketing-nav-panel-out';
+  }
+  return state === 'open' && slideFrom ? 'marketing-nav-panel-slide' : undefined;
+}
+
 function DesktopDropPanel({
   dropKey,
   state,
@@ -182,10 +191,7 @@ function DesktopDropPanel({
       data-slide-from={slideFrom ?? undefined}
       className={cn(
         'nav-panel absolute top-full mt-1.5 overflow-auto',
-        state === 'entering' && 'marketing-nav-panel',
-        state === 'open' && slideFrom && 'marketing-nav-panel-slide',
-        state === 'closing' &&
-          (slideFrom ? 'marketing-nav-panel-slide-out' : 'marketing-nav-panel-out'),
+        panelAnimation(state, slideFrom),
       )}
     >
       <div

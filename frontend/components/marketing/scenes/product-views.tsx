@@ -16,8 +16,8 @@ export {
   ReferralView,
   ShelfSetupView,
   SourcesView,
-  VisibilityView,
 } from './views-measure';
+export { VisibilityView } from './views-visibility';
 export {
   AcquisitionView,
   DemandView,
