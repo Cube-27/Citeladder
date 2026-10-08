@@ -25,3 +25,13 @@ export function providerSettings(env: Record<string, string | undefined> = proce
   };
 }
 export type ProviderSettings = ReturnType<typeof providerSettings>;
+
+/**
+ * OpenAI reasoning control for a route's effort. `off` maps to `none` for
+ * models that accept it; supported levels are sent explicitly, since a model's
+ * own default (e.g. `medium`) costs more than the configured route effort.
+ */
+export function openaiReasoning(effort: string | null | undefined) {
+  if (effort === 'off') return { reasoning: { effort: 'none' } };
+  return effort && ['low', 'medium', 'high'].includes(effort) ? { reasoning: { effort } } : {};
+}

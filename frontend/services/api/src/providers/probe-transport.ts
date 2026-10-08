@@ -71,6 +71,9 @@ export const sendProbe: ProbeTransport = async (input) => {
       {
         method: body ? 'POST' : 'GET',
         agent: false,
+        // One pinned address: without a family, Node races families and asks
+        // the lookup for every address, which this single answer cannot satisfy.
+        family: target.family,
         signal,
         headers: { ...input.headers, ...(body ? { 'content-type': 'application/json' } : {}) },
         lookup: (_host, _options, callback) => callback(null, target.address, target.family),

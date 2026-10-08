@@ -205,9 +205,9 @@
     "chatgpt": {
       "logical_engine": "chatgpt",
       "transport_provider": "openai",
-      "transport_model": "gpt-5.5",
+      "transport_model": "gpt-6.1-sol",
       "retrieval_enabled": true,
-      "reasoning_effort": "off",
+      "reasoning_effort": "low",
       "reasoning_pinnable": true,
       "representative_status": "unverified",
       "surface_kind": "llm",
@@ -216,7 +216,7 @@
     "claude": {
       "logical_engine": "claude",
       "transport_provider": "anthropic",
-      "transport_model": "claude-sonnet-5",
+      "transport_model": "claude-sonnet-5-5",
       "retrieval_enabled": true,
       "reasoning_effort": "low",
       "reasoning_pinnable": true,

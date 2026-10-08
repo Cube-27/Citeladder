@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { providerErrorCode, transientStatus } from '../models/http.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
-import { providerPolicy, type ProviderSettings } from '../providers/config.ts';
+import { openaiReasoning, providerPolicy, type ProviderSettings } from '../providers/config.ts';
 import { answerRequestSchema, ProviderError, type AnswerRequest } from './contracts.ts';
 import { parseAnswer } from './parse.ts';
 import { boundedJson } from '../providers/response.ts';
@@ -24,7 +24,7 @@ export function answerPayload(request: AnswerRequest): Record<string, unknown> {
       store: false,
       max_output_tokens: request.max_output_tokens,
       ...(request.system_instruction ? { instructions: request.system_instruction } : {}),
-      ...(request.reasoning_effort === 'off' ? { reasoning: { effort: 'none' } } : {}),
+      ...openaiReasoning(request.reasoning_effort),
       ...(request.retrieval_enabled ? { tools: [{ type: 'web_search', ...location }] } : {}),
     };
   if (request.transport_provider === 'google')

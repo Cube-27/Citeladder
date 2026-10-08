@@ -13,7 +13,7 @@ import { http, HttpResponse } from 'msw';
 export const CONNECTION_ID = '11111111-1111-4111-8111-111111111111';
 export const WORKSPACE_ID = '22222222-2222-4222-8222-222222222222';
 const ROUTE_ID = '33333333-3333-4333-8333-333333333333';
-export const CHATGPT_MODEL = 'gpt-5.5';
+export const CHATGPT_MODEL = 'gpt-6.1-sol';
 
 export const providerCatalogFixture = {
   transports: ['openai', 'anthropic', 'google', 'dataforseo'],
@@ -23,9 +23,9 @@ export const providerCatalogFixture = {
       routes: [
         {
           transport_provider: 'openai',
-          transport_model: 'gpt-5.5',
+          transport_model: 'gpt-6.1-sol',
           retrieval_enabled: true,
-          reasoning_effort: 'off',
+          reasoning_effort: 'low',
           surface_kind: 'llm',
         },
       ],
@@ -47,7 +47,7 @@ export const providerCatalogFixture = {
       routes: [
         {
           transport_provider: 'anthropic',
-          transport_model: 'claude-sonnet-5',
+          transport_model: 'claude-sonnet-5-5',
           retrieval_enabled: true,
           reasoning_effort: 'low',
           surface_kind: 'llm',
