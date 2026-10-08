@@ -20,13 +20,12 @@ export function useAgentCatalog() {
   return useMemo(() => {
     const kinds = new Map(catalog.output_kinds.map((kind) => [kind.kind, kind]));
     const workflows = new Map(catalog.workflows.map((workflow) => [workflow.id, workflow]));
+    const outputKind = (kind: string | null | undefined) => (kind ? kinds.get(kind) : undefined);
     return {
       ...catalog,
-      loading: query.isPending,
       workflow: (id: string | null | undefined) => (id ? workflows.get(id) : undefined),
-      outputKind: (kind: string | null | undefined) => (kind ? kinds.get(kind) : undefined),
-      kindLabel: (kind: string | null | undefined) =>
-        (kind ? kinds.get(kind)?.label : undefined) ?? 'Output',
+      outputKind,
+      kindLabel: (kind: string | null | undefined) => outputKind(kind)?.label ?? 'Output',
     };
-  }, [catalog, query.isPending]);
+  }, [catalog]);
 }

@@ -15,7 +15,7 @@ import {
   type Scope,
   type Skill,
 } from './contracts.ts';
-import { getChat } from './messages.ts';
+import { getChat, touchChat } from './messages.ts';
 import { requireIdle } from './store.ts';
 
 type Output = Selectable<OutputTable>;
@@ -176,12 +176,7 @@ export class AgentOutputs {
       const chat = await getChat(trx, scope, chatId, true);
       await requireIdle(trx, chat);
       const result = await action(trx, chat);
-      await trx
-        .updateTable('agent_chats')
-        .set({ last_activity_at: new Date(), updated_at: new Date() })
-        .where('id', '=', chat.id)
-        .where('workspace_id', '=', scope.workspaceId)
-        .execute();
+      await touchChat(trx, scope.workspaceId, chat.id);
       return result;
     });
   }
