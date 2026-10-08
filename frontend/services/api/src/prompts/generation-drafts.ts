@@ -123,7 +123,8 @@ export function admitDrafts(
   );
   const brands = brandTerms(context);
   // Agent rows are targeted on purpose; only quick-generate cells plan places.
-  const geo = context.revision ? [] : geoTerms(context);
+  const quick = !context.revision;
+  const geo = quick ? geoTerms(context) : [];
   const competitors = context.context.competitors.flatMap((row) => [row.name, ...row.aliases]);
   const reason = (
     row: z.infer<typeof generatedRow>,
@@ -134,8 +135,13 @@ export function admitDrafts(
     if (!slot || usedSlots.has(slot.slot_id)) return 'unplanned_slot';
     if (!slot.allowed_prompt_intents.includes(row.prompt_intent)) return 'intent';
     if (!G.stages.includes(row.buyer_stage)) return 'stage';
-    // A core row's intent must suit the stage the model labelled it with.
-    if (input.cohort === 'core' && !G.stage_intents[row.buyer_stage]?.includes(row.prompt_intent))
+    // A planned core row's intent must suit the stage the model labelled it
+    // with; Agent rows keep the labels the user reviewed in the portfolio.
+    if (
+      quick &&
+      input.cohort === 'core' &&
+      !G.stage_intents[row.buyer_stage]?.includes(row.prompt_intent)
+    )
       return 'intent';
     if (seen.has(hash)) return 'duplicate';
     if (
@@ -280,6 +286,24 @@ async function suggestMaps(
   }
 }
 
+/** Agent targeting as planned-cell facets, so selection and provenance see one shape. */
+const TARGETING_FACETS = {
+  place: 'market',
+  persona: 'audience',
+  constraint: 'situation_or_constraint',
+} as const;
+function agentNeed(
+  offering: string,
+  targeting: Partial<Record<keyof typeof TARGETING_FACETS, string>> = {},
+) {
+  const need: Record<string, string> = { offering };
+  for (const [key, facet] of Object.entries(TARGETING_FACETS)) {
+    const value = targeting[key as keyof typeof TARGETING_FACETS];
+    if (value) need[facet] = value;
+  }
+  return need;
+}
+
 function proposal(context: GenerationContext) {
   const revision = context.revision!;
   const parsed = parsePromptProposal(revision.body, generationSetting('max_count'));
@@ -303,18 +327,18 @@ function proposal(context: GenerationContext) {
     });
     return [];
   });
-  const slots: Slot[] = rows.map(({ topic, slot_id }) => ({
+  const slots: Slot[] = rows.map(({ row, topic, slot_id }) => ({
     slot_id,
     topic_id: topic.id,
     topic_name: topic.name,
     topic_description: topic.description,
-    buyer_need: { offering: topic.name },
+    buyer_need: agentNeed(topic.name, row.targeting),
     target_buyer_stage: '',
     allowed_prompt_intents: Object.keys(G.intent_legacy),
     evidence_ref: {
       kind: 'agent_output_revision',
       id: revision.id,
-      offering: topic.name,
+      ...agentNeed(topic.name, row.targeting),
       evidence_type: 'hypothesis',
       review_state: 'suggested',
     },

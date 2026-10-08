@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+/**
+ * Optional Agent targeting on a proposed row: the niche the question was
+ * written for. An unknown targeting key fails the whole proposal.
+ */
+export const promptTargetingKeys = ['place', 'persona', 'constraint'] as const;
+const targeting = z
+  .object(
+    Object.fromEntries(
+      promptTargetingKeys.map((key) => [key, z.string().trim().min(1).max(120).optional()]),
+    ) as Record<(typeof promptTargetingKeys)[number], z.ZodOptional<z.ZodString>>,
+  )
+  .strict();
+
 /** Parse the one closed JSON block shared by portfolio display and admission. */
 export function parsePromptProposal(body: string, maxCount: number) {
   const blocks: { json: string; start: number; end: number }[] = [];
@@ -25,6 +38,7 @@ export function parsePromptProposal(body: string, maxCount: number) {
           text: z.string(),
           buyer_stage: z.string(),
           prompt_intent: z.string(),
+          targeting: targeting.optional(),
         }),
       )
       .min(1)

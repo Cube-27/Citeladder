@@ -5,13 +5,17 @@ import fixtures from './contexts.json' with { type: 'json' };
 export type GenerationFixture = (typeof fixtures)[number];
 export { fixtures as generationFixtures };
 
+/** A deterministic topic UUID for the offering at `index`. */
+export const fixtureTopicId = (index: number) =>
+  `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
+
 /** One topic per offering; binding vocabulary from the offering words. */
 export function fixtureContext(
   fixture: GenerationFixture,
   maps: GenerationContext['maps'] = [],
 ): GenerationContext {
   const topics = fixture.offerings.map((name, index) => ({
-    id: `topic-${index}`,
+    id: fixtureTopicId(index),
     name,
     description: '',
     parent_id: null,

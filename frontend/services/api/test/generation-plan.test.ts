@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
-import { admitDrafts } from '../src/prompts/generation-drafts.ts';
+import type { GenerationContext } from '../src/prompts/generation-context.ts';
+import { admitDrafts, generateDrafts } from '../src/prompts/generation-drafts.ts';
 import { generationInput } from '../src/prompts/generation-input.ts';
 import { setMetrics, thresholdFailures } from '../src/prompts/generation-metrics.ts';
 import { geoTerms, namesPlace, planSlots } from '../src/prompts/generation-plan.ts';
-import { fixtureContext, generationFixtures } from './fixtures/prompt-generation/context.ts';
+import {
+  fixtureContext,
+  fixtureTopicId,
+  generationFixtures,
+} from './fixtures/prompt-generation/context.ts';
 
 const G = policy.prompts.generation;
 const fixture = (name: string) => generationFixtures.find((item) => item.name === name)!;
@@ -184,5 +189,57 @@ describe('set metrics', () => {
     expect(thresholdFailures(metrics, { market_scope: 'national', requested: 20 })).toEqual(
       expect.arrayContaining(['near_duplicate_rate', 'shortfall']),
     );
+  });
+});
+
+describe('Agent portfolio rows', () => {
+  const school = fixture('regional-school');
+  const portfolio = (rows: Record<string, unknown>[]) => ({
+    ...fixtureContext(school),
+    revision: {
+      id: 'revision',
+      output_id: 'output',
+      run_id: null,
+      source_refs: [],
+      body: ['```json', JSON.stringify({ prompts: rows }), '```'].join('\n'),
+    },
+  });
+  const row = (text: string, extra: Record<string, unknown> = {}) => ({
+    topic_id: fixtureTopicId(0),
+    text,
+    buyer_stage: 'decision',
+    prompt_intent: 'buy',
+    ...extra,
+  });
+
+  it('keeps a targeted place as the cell market and admits untargeted rows as before', async () => {
+    const result = await generateDrafts(
+      portfolio([
+        row('Which boarding schools in Dehradun take first-time boarders?', {
+          targeting: { place: 'Dehradun', persona: 'working parents' },
+        }),
+        row('Which boarding schools suit a child who struggles with homesickness?'),
+      ]) as GenerationContext,
+      generationInput.parse({ count: 2 }),
+      null,
+      new AbortController().signal,
+    );
+    expect(result.drafts.map((draft) => draft.slot.buyer_need)).toEqual([
+      { offering: 'Boarding school', market: 'Dehradun', audience: 'working parents' },
+      { offering: 'Boarding school' },
+    ]);
+  });
+
+  it('refuses a portfolio with an unknown targeting key', async () => {
+    await expect(
+      generateDrafts(
+        portfolio([
+          row('Which boarding schools take day scholars?', { targeting: { city: 'X' } }),
+        ]) as GenerationContext,
+        generationInput.parse({ count: 1 }),
+        null,
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ status: 422 });
   });
 });

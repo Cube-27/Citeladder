@@ -1,4 +1,6 @@
 /** Packaged Agent skill metadata and vocabularies. */
+import { promptTargetingKeys } from '@citeladder/contracts/prompt-proposal';
+
 import { promptGeneration } from './prompt-generation.ts';
 
 export const agentSkills = {
@@ -24,5 +26,6 @@ export const agentSkills = {
   vocabularies: {
     buyer_stages: promptGeneration.stages,
     prompt_intents: Object.keys(promptGeneration.intent_legacy),
+    prompt_targeting_keys: promptTargetingKeys,
   },
 };

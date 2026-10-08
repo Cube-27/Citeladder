@@ -180,7 +180,7 @@ export function GeneratePromptsDialogView({
       description={
         reviewing
           ? 'Choose the questions your buyers would actually ask. Only accepted questions enter your tracked library.'
-          : 'Draft distinct buying questions from your business context, then choose what to track.'
+          : 'Draft distinct buying questions across your offerings and buying stages, then choose what to track. To target a place, persona or niche, use Build with Agent.'
       }
       className={reviewing ? 'w-200' : 'w-130'}
       footer={
