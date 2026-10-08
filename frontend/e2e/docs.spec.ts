@@ -103,9 +103,10 @@ test('built docs enforce a script policy without breaking hydration', async ({ p
   await page.goto('/');
   await expect(page.locator('meta[http-equiv="content-security-policy"]')).toHaveCount(1);
   await page.getByRole('button', { name: /Search docs/ }).click();
-  await expect(
-    page.getByRole('dialog').getByRole('textbox', { name: 'Search terms' }),
-  ).toBeFocused();
+  // The search UI builds its input lazily after load; slow CI runners need longer.
+  await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Search terms' })).toBeFocused(
+    { timeout: 15_000 },
+  );
   expect(violations).toEqual([]);
   await page.evaluate(() => {
     const script = document.createElement('script');

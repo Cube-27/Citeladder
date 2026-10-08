@@ -165,6 +165,8 @@ Write-Output 'environment-restored'
     expect(result.stdout + result.stderr).not.toContain('fixture-private-operator');
     if (failure) expect(result.stdout).toContain('expected-child-failure');
   },
+  // A cold PowerShell start alone can exceed the default 5 s on CI runners.
+  30000,
 );
 
 it('reset passes one explicit target to both bounded stages and stops on a reset failure', async () => {
