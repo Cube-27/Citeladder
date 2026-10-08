@@ -16,7 +16,8 @@ export const onRequest: MiddlewareHandler = async ({ request }, next) => {
     url.pathname = destination;
     redirect = Response.redirect(url, 301);
   }
-  const response = negotiateNotFound(request, routed ?? redirect ?? (await next()));
+  // Only Astro-rendered 404s negotiate; proxied backend and apex 404s keep their bodies.
+  const response = routed ?? redirect ?? negotiateNotFound(request, await next());
   const headers = new Headers(response.headers);
   if (!headers.has('Content-Security-Policy')) {
     headers.set('Content-Security-Policy', FALLBACK_CONTENT_SECURITY_POLICY);

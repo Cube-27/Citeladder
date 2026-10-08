@@ -446,8 +446,7 @@ describe('entity and llms.txt', () => {
   });
 
   it('tells agents when to use CiteLadder and where its MCP authorization metadata lives', () => {
-    const urls = LLMS_TXT.match(/https:\/\/\S+/g) ?? [];
-    expect(urls).toContain('https://citeladder.com/.well-known/oauth-protected-resource/mcp');
+    expect(LLMS_TXT).toContain('https://citeladder.com/.well-known/oauth-protected-resource/mcp');
     expect(LLMS_TXT).toContain('## When to use CiteLadder');
     expect(LLMS_TXT).toContain(`Contact: ${CONTACT_EMAIL}`);
   });
