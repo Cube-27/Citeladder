@@ -41,7 +41,7 @@ const fileSchema = z
   })
   .strict();
 
-export type Workflow = z.infer<typeof workflowSchema>;
+type Workflow = z.infer<typeof workflowSchema>;
 export type WorkflowCatalog = z.infer<typeof fileSchema> & {
   byId: ReadonlyMap<string, Workflow>;
 };

@@ -14,7 +14,6 @@
   "history_max_messages": 12,
   "history_message_max_chars": 4000,
   "prior_evidence_max_refs": 12,
-  "sources_max_refs": 200,
   "history_search_max_chars": 120,
   "message_max_chars": 8000,
   "mentions_max": 5,

@@ -92,15 +92,22 @@ function NewChat({
   const submit = () => {
     create.start({
       message,
-      skillId: pinned ? undefined : skillId,
-      workflowId: pinned?.id,
+      skillId: pinnedId ? undefined : skillId,
+      workflowId: pinnedId,
       actionId,
       context,
       mentions: commands.mentions.map((mention) => mention.id),
     });
   };
   const startWorkflow = (workflow: AgentWorkflow, text: string) =>
-    create.start({ message: text, skillId: undefined, workflowId: workflow.id, actionId, context });
+    create.start({
+      message: text,
+      skillId: undefined,
+      workflowId: workflow.id,
+      actionId,
+      context,
+      mentions: commands.mentions.map((mention) => mention.id),
+    });
 
   return (
     <PageShell
@@ -131,14 +138,14 @@ function NewChat({
           commands={commands}
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
           tools={
-            pinned ? (
+            pinnedId ? (
               <Button
                 variant="secondary"
                 size="sm"
-                aria-label={`Remove workflow ${pinned.label}`}
+                aria-label={`Remove workflow ${pinned?.label ?? ''}`.trim()}
                 onClick={() => setPinnedId(undefined)}
               >
-                {pinned.label}
+                {pinned?.label ?? 'Workflow'}
                 <X aria-hidden className="size-4" />
               </Button>
             ) : (

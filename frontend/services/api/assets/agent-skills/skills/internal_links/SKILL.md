@@ -28,7 +28,7 @@ If the priority pages are not known, propose a small map (money, hub, support, t
 1. **State coverage.** How many pages were crawled, the crawl date and limits. A capped or partial crawl cannot prove a page is orphaned site-wide.
 2. **Separate link types** when placement data exists: body links, navigation and footer, breadcrumbs, related-content modules. A link repeated across many pages is likely a template link; check before treating it as editorial.
 3. **Count fairly.** Count distinct source pages per target, excluding self-links. A component repeated on 50 pages is not 50 editorial endorsements.
-4. **Classify carefully:** *no inbound link found* (within a complete-enough crawl), *orphan candidate* (known from another list but crawl coverage is incomplete), or *only navigation links*. A page with no Search Console rows is not an orphan.
+4. **Classify carefully:** _no inbound link found_ (within a complete-enough crawl), _orphan candidate_ (known from another list but crawl coverage is incomplete), or _only navigation links_. A page with no Search Console rows is not an orphan.
 5. **Match supporting pages to targets.** Pick source pages whose readers naturally need the target next. Topic and reader task come first, then traffic and feasibility.
 6. **Spot imbalance.** Important pages starved of contextual links, accidental template concentration, and links to redirected or broken pages. Do not remove useful hub or navigation links just to redistribute.
 7. **Write each placement.** Source URL, target URL, the section and current sentence, the revised sentence, a descriptive anchor, and why it helps the reader. Skip placements that do not fit, even if a target has few links. Never invent the current text; if you do not have it, say the source copy is needed.
@@ -39,7 +39,7 @@ Some studies associate about four contextual inbound links with better performan
 
 One document with:
 
-- **Plan:** page roles, coverage, and the main findings. Include link-count summaries only when the crawl supports them; otherwise call it a *candidate placement plan*, not a full audit.
+- **Plan:** page roles, coverage, and the main findings. Include link-count summaries only when the crawl supports them; otherwise call it a _candidate placement plan_, not a full audit.
 - **Edits table:** source URL, target URL, section, current text, proposed text, anchor, placement type, reader benefit, target priority, dependency.
 
 Do not claim a link is live after drafting it. Suggest Technical health for broken targets, Create content for missing supporting pages, and Measure results for follow-up.

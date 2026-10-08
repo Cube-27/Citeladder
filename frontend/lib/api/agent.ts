@@ -25,7 +25,6 @@ import {
   agentRevisionSchema,
   agentRevisionsPageSchema,
   agentRunSchema,
-  agentOutputKindSchema,
   agentSkillCatalogSchema,
   agentSkillSchema,
   agentTurnAcceptedSchema,
@@ -43,7 +42,6 @@ export type AgentChatSummary = z.infer<typeof agentChatSummarySchema>;
 export type AgentChatDetail = z.infer<typeof agentChatDetailSchema>;
 export type AgentSkill = z.infer<typeof agentSkillSchema>;
 export type AgentWorkflow = z.infer<typeof agentWorkflowSchema>;
-export type AgentOutputKind = z.infer<typeof agentOutputKindSchema>;
 export type AgentCatalog = z.infer<typeof agentSkillCatalogSchema>;
 
 /**

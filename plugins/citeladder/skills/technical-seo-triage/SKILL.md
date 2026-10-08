@@ -11,8 +11,9 @@ description: Triage an authorized CiteLadder project's persisted Site Health sco
    incomplete coverage never means pass. If no snapshot exists, explain that
    the user must run a crawl in CiteLadder first.
 3. Call `read_site_pages` with that `crawl_id` for at most two pages of
-   results. Call `read_opportunities` for existing prioritized findings; check
-   they relate to this snapshot before linking them to it.
+   results. Call `read_opportunities` for existing prioritized findings. Label
+   current Actions separately from snapshot evidence; link an opportunity to
+   this snapshot only when its returned data supports that link.
 4. `fetch` at most three returned references to confirm the top findings. Do
    not fetch arbitrary URLs. Where supported, call `render_site_health` with the
    same snapshot.
