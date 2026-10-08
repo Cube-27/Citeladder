@@ -17,10 +17,9 @@ describe('structurally bounded Agent prompts', () => {
       content: `${index}:` + 'h'.repeat(5000),
     })),
     historyLimited: true,
-    observations: Array.from({ length: 6 }, (_, index) => ({
-      text: JSON.stringify({ index, body: 'o'.repeat(11000) }),
-      refs: [`record:${index}`],
-    })),
+    observations: Array.from({ length: 6 }, (_, index) =>
+      JSON.stringify({ index, body: 'o'.repeat(11000) }),
+    ),
     budget: admittedBudget(10),
   };
   it('preserves exact Unicode revisions, newest history and whole tool observations under pressure', () => {
@@ -32,14 +31,12 @@ describe('structurally bounded Agent prompts', () => {
     expect(user.omissions).toContain('oldest_history_messages');
     expect(user.omissions).toContain('history_query_limit');
     for (const text of user.observations) expect(() => JSON.parse(text)).not.toThrow();
-    expect(prompt.citations).toEqual(
-      user.observations.map((text: string) => `record:${JSON.parse(text).index}`),
-    );
   });
-  it('refuses a legal oversized saved revision before dispatch without changing it', () => {
-    const revision = { body: 'x'.repeat(100000) };
+  it('refuses a saved revision too large for the transcript before dispatch without changing it', () => {
+    const size = input.budget.transcript_max_chars;
+    const revision = { body: 'x'.repeat(size) };
     expect(() => assemblePrompt({ ...input, revision })).toThrow('output_context_size_limit');
-    expect(revision.body).toHaveLength(100000);
+    expect(revision.body).toHaveLength(size);
   });
   it('keeps selected issue totals and whole occurrence samples when background exceeds the budget', () => {
     const occurrences = Array.from({ length: 10 }, (_, index) => ({
@@ -135,7 +132,7 @@ describe('structurally bounded Agent prompts', () => {
       omitted_sections: ['evidence'],
     });
   });
-  it('omits a large diagnosis as one section and withdraws its citation grant', () => {
+  it('omits a large diagnosis as one disclosed section', () => {
     const source = '00000000-0000-4000-8000-000000000001';
     const manifest = {
       version: 'agent-context-1',
@@ -152,7 +149,6 @@ describe('structurally bounded Agent prompts', () => {
     };
     const supplied = suppliedManifest(manifest, 1500);
     expect(JSON.parse(supplied.text).action.diagnosis).toEqual({});
-    expect(supplied.citations.size).toBe(0);
     expect(supplied.omissions).toContain(`action.diagnosis:${source}`);
   });
   it('keeps generic tool envelopes valid and labels whole omitted fields', () => {

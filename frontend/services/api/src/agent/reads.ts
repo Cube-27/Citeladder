@@ -18,7 +18,7 @@ import { authorize } from './access.ts';
 import { agentPolicy, type Chat, type Run, type Scope } from './contracts.ts';
 import { currentOutput, revisionRefs } from './outputs.ts';
 import { active } from './queue.ts';
-import { getChat } from './store.ts';
+import { getChat } from './messages.ts';
 import { manifestSchema } from './context.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;

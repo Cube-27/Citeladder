@@ -44,18 +44,6 @@
       "default": 30.0,
       "exclusive_minimum": 0
     },
-    "context_limit": {
-      "env": ["DEFAULT_AGENT_CONTEXT_LIMIT"],
-      "type": "int",
-      "default": 32000,
-      "minimum": 1024
-    },
-    "reconcile_poll_seconds": {
-      "env": ["DEFAULT_AGENT_RECONCILE_POLL_SECONDS", "AGENT_RECONCILE_POLL_SECONDS"],
-      "type": "float",
-      "default": 2.0,
-      "exclusive_minimum": 0
-    },
     "retry_base_delay_seconds": {
       "env": ["DEFAULT_AGENT_RETRY_BASE_DELAY_SECONDS"],
       "type": "float",

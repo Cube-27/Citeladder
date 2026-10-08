@@ -19,10 +19,11 @@ import { AgentQueue, lockRun } from '../src/agent/queue.ts';
 import { AgentOutputs } from '../src/agent/outputs.ts';
 import { ModelCalls, type Funding } from '../src/agent/model-calls.ts';
 import { readChat, listChats, listRevisions, progress } from '../src/agent/reads.ts';
-import { appendMessage, getChat } from '../src/agent/store.ts';
+import { appendMessage, getChat, recoveryReply } from '../src/agent/messages.ts';
 import { ToolRegistry } from '../src/agent/tools.ts';
-import { contextCitations, manifestSchema, renderManifest } from '../src/agent/context.ts';
-import { bounded, stripUnverifiedRefs } from '../src/agent/runtime.ts';
+import { contextCitations, manifestSchema, suppliedManifest } from '../src/agent/context.ts';
+import { bounded } from '../src/agent/runtime.ts';
+import { scrubRecordRefs } from '../src/agent/sources.ts';
 import { fingerprint } from '../src/agent/store.ts';
 import { readAgentContext } from '../src/agent/context-adapter.ts';
 import { runAgentOnce } from '../src/agent/worker.ts';
@@ -214,13 +215,10 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const queue = new AgentQueue(db, 30);
     const claimed = await queue.claim('prompt-worker', [scope.workspaceId]);
     const lease = await queue.start(claimed!, 'prompt-worker');
-    const steps = [
+    const steps: Record<string, unknown>[] = [
       { action: 'call_tool', skill_id: 'prompt_portfolio', tool: 'read_evidence', arguments: {} },
       { action: 'call_tool', skill_id: '', tool: 'read_evidence', arguments: {} },
-      {
-        ...deliverable('outline', 'Coverage plan grounded in the current portfolio.'),
-        evidence: [`citeladder://project/${scope.projectId}`],
-      },
+      deliverable('outline', 'Coverage plan grounded in the current portfolio.'),
     ];
     await fixtures
       .runtime(
@@ -287,7 +285,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope, { skillId: 'content' });
     const formats = new Map([
-      ['page', { id: 'page', label: 'Website page', body: 'Write a page.' }],
+      ['page', { id: 'page', label: 'Website page', body: 'Write a page.', longForm: true }],
     ]);
     await fixtures
       .runtime(
@@ -384,7 +382,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       execute.mockRestore();
     }
   });
-  it('commits dispatch before model I/O, exposes progress, binds evidence and appends a reply atomically', async () => {
+  it('commits dispatch before model I/O, exposes progress, records read sources and appends a reply atomically', async () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope);
     const uri = `citeladder://project/${scope.projectId}`;
@@ -394,7 +392,6 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
         {
           action: 'respond',
           reply: `Read ${uri}; invented citeladder://project/${randomUUID()}.`,
-          evidence: [uri, 'invented'],
           output: { title: 'Plan', body: 'Use the supplied evidence.', phase: 'final' },
         },
       ],
@@ -420,7 +417,8 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       skill_id: 'plan',
     });
     expect(detail.messages.at(-1)).toMatchObject({ role: 'agent', evidence_refs: [uri] });
-    expect(detail.messages.at(-1)?.content).toContain('[unverified reference]');
+    // Sources are what the turn read; record references never reach the reader.
+    expect(detail.messages.at(-1)?.content).toMatch(/^Read; invented\.\n/u);
     expect(detail.output?.latest_revision).toMatchObject({ number: 1, source_refs: [uri] });
     expect(detail.output?.message_id).toBe(detail.messages.at(-1)?.id);
     const attempts = await db
@@ -438,7 +436,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       ),
     ).toBe(true);
   });
-  it('settles a model cancelled in flight exactly once and writes no late reply', async () => {
+  it('settles a model cancelled in flight exactly once and answers with the stop, not a late reply', async () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope);
     const settle = vi.fn(zeroFunding.settle);
@@ -454,7 +452,12 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .executeTakeFirstOrThrow();
     await models.receipt(scope.workspaceId, attempt.id, result(reply('Duplicate receipt')));
     expect(settle).toHaveBeenCalledTimes(1);
-    expect((await readChat(db, scope, run.chat_id)).messages).toHaveLength(1);
+    expect(
+      (await readChat(db, scope, run.chat_id)).messages.map(({ role, content }) => [role, content]),
+    ).toEqual([
+      ['user', expect.any(String)],
+      ['agent', recoveryReply('cancelled')],
+    ]);
     expect((await fixtures.run(run.id)).status).toBe('cancelled');
   });
   it('reconciles lost dispatch as unknown before retry and bounds the final expired attempt', async () => {
@@ -487,6 +490,23 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     await queue.recover([scope.workspaceId], 1, (trx, row) => models.reconcile(trx, row));
     expect((await fixtures.run(run.id)).status).toBe('failed');
     expect(await queue.claim('again', [scope.workspaceId])).toBeNull();
+    // An exhausted turn still answers its request.
+    expect((await readChat(db, scope, run.chat_id)).messages.at(-1)?.content).toBe(
+      recoveryReply('max_attempts_exceeded'),
+    );
+  });
+  it('answers a request whose retries are exhausted by the provider', async () => {
+    const scope = await fixtures.scope();
+    const { run, lease, queue } = await fixtures.claimed(scope);
+    await db.updateTable('agent_runs').set({ max_attempts: 1 }).where('id', '=', run.id).execute();
+    await queue.retry(lease, 0, () => Promise.resolve());
+    expect(await fixtures.run(run.id)).toMatchObject({ status: 'failed' });
+    expect(
+      (await readChat(db, scope, run.chat_id)).messages.map(({ role, content }) => [role, content]),
+    ).toEqual([
+      ['user', expect.any(String)],
+      ['agent', recoveryReply('provider_error')],
+    ]);
   });
   it('stops before dispatch for changed catalogs and removed members, with no model call', async () => {
     const scope = await fixtures.scope();
@@ -694,7 +714,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     expect(detail.latest_run?.error_code).toBe('stopped_at_limit');
     expect(detail.output).toBeNull();
   });
-  it('bounds unavailable tool results with explicit omissions and filters fabricated citations', async () => {
+  it('bounds unavailable tool results with explicit omissions and keeps record IDs out of replies', async () => {
     const scope = await fixtures.scope();
     const sourceId = randomUUID();
     const tools = new ToolRegistry('test-tools-1', [
@@ -713,7 +733,6 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const outcome = await tools.execute(db, scope, 'missing', {}, AbortSignal.timeout(1000));
     expect(outcome.status).toBe('unavailable');
     expect(outcome.refs).toEqual([{ id: sourceId }]);
-    expect(outcome.citationRefs).toEqual([]);
     expect(outcome.omissions).toContainEqual({
       reason: 'tool_result_truncated',
       count: 1,
@@ -729,7 +748,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
         scope,
         scripted([
           { action: 'call_tool', tool: 'missing', arguments: {} },
-          { ...reply(`Source citeladder://evidence/${sourceId}`), evidence: [sourceId] },
+          reply(`Source citeladder://evidence/${sourceId} (${sourceId})`),
         ]),
         { tools },
       )
@@ -742,12 +761,19 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     expect(attempt.artifact_refs).toEqual([{ id: sourceId }]);
     const completed = await readChat(db, scope, run.chat_id);
     expect(completed.messages.at(-1)).toMatchObject({
-      content: 'Source [unverified reference]',
+      content: 'Source',
       evidence_refs: [],
     });
-    expect(stripUnverifiedRefs('See citeladder://project/foreign.', new Set())).toBe(
-      'See [unverified reference].',
+    // A skill's fenced submission block keeps the IDs its schema needs.
+    // A fence line with an info string does not close the block.
+    const block = ['```json', '```not-a-close', `{"topic_id":"${sourceId}"}`, '```'].join('\n');
+    expect(scrubRecordRefs(`See [the run](citeladder://audit/${sourceId}).\n\n${block}`)).toBe(
+      `See the run.\n\n${block}`,
     );
+    // URI schemes are case-insensitive, and padding inside a link's parentheses is removed too.
+    expect(
+      scrubRecordRefs('Read CITELADDER://Audit/x and [the run]( citeladder://audit/y ).'),
+    ).toBe('Read and the run.');
     const id = randomUUID();
     const manifest = {
       version: 'agent-context-1',
@@ -766,13 +792,13 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     };
     expect(contextCitations(manifest)).toEqual(new Set([`citeladder://opportunity/${id}`]));
     expect(
-      renderManifest({
+      suppliedManifest({
         ...manifest,
         package: {
           ...emptyPackage,
           brand_block: 'x'.repeat(agentPolicy.context_package_max_chars),
         },
-      }).length,
+      }).text.length,
     ).toBeLessThanOrEqual(agentPolicy.context_package_max_chars);
     expect(bounded('123456', 3, 'CUT')).toBe('CUT');
     expect(() => parseStep('{"action":"respond","reply":"  "}')).toThrow('protocol_violation');
@@ -886,7 +912,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     });
     expect(detail.latest_run?.progress.map((step) => step.run_attempt)).toEqual([1, 1, 1, 2]);
   });
-  it('uses admitted size policy and refuses an oversized latest user edit before model dispatch', async () => {
+  it('uses admitted size policy and refuses a revision its frozen budget cannot hold before model dispatch', async () => {
     const scope = await fixtures.scope();
     const first = await fixtures.claimed(scope, { skillId: 'plan' });
     await fixtures.runtime(scope, scripted([deliverable('final')])).execute(first.lease);
@@ -896,9 +922,19 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       first.run.chat_id,
       output.latest_revision!.id,
       'Large edited document',
-      'x'.repeat(100000),
+      'x'.repeat(agentPolicy.output_body_max_chars),
     );
     const next = await fixtures.claimed(scope, { chatId: first.run.chat_id });
+    await db
+      .updateTable('agent_runs')
+      .set({
+        budget: {
+          ...(next.run.budget as object),
+          transcript_max_chars: agentPolicy.output_body_max_chars,
+        },
+      })
+      .where('id', '=', next.run.id)
+      .execute();
     const complete = vi.fn(scripted([deliverable()]).complete);
     await fixtures.runtime(scope, { ...scripted([]), complete }).execute(next.lease);
     expect(complete).not.toHaveBeenCalled();
@@ -1217,7 +1253,9 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
           async (request, ordinal) => {
             const actions = (request.schema.properties as Record<string, { enum: string[] }>)
               .action!.enum;
-            expect(actions).toEqual(ordinal === 1 ? ['respond', 'call_tool'] : ['respond']);
+            expect(actions).toEqual(
+              ordinal === 1 ? ['respond', 'call_tool', 'use_skill'] : ['respond'],
+            );
             if (ordinal === 2) {
               expect(request.schema.properties).toMatchObject({
                 skill_id: { type: 'null' },
@@ -1232,5 +1270,91 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     expect(detail.latest_run).toMatchObject({ status: 'succeeded', steps_used: 2, skill_id: null });
     expect(detail.messages.at(-1)?.content).toBe('The observed value is zero.');
     expect(detail.output).toBeNull();
+  });
+  it('loads a methodology with a short step before writing, so a deliverable is generated once', async () => {
+    const scope = await fixtures.scope();
+    const { run, lease } = await fixtures.claimed(scope);
+    const outputAllowed: boolean[] = [];
+    await fixtures
+      .runtime(
+        scope,
+        scripted(
+          [{ action: 'use_skill', skill_id: 'plan' }, deliverable('final')],
+          async (request) => {
+            const output = (request.schema.properties as Record<string, unknown>).output;
+            outputAllowed.push(JSON.stringify(output) !== JSON.stringify({ type: 'null' }));
+            if (outputAllowed.length === 2)
+              expect(request.system).toContain('Plan requested work.');
+          },
+        ),
+      )
+      .execute(lease);
+    // Without a methodology the schema cannot carry an output.
+    expect(outputAllowed).toEqual([false, true]);
+    const detail = await readChat(db, scope, run.chat_id);
+    expect(detail.latest_run).toMatchObject({
+      status: 'succeeded',
+      steps_used: 2,
+      skill_id: 'plan',
+    });
+    expect(detail.output?.latest_revision?.body).toBe('Requested document');
+  });
+  it.each(['length', 'max_tokens'])(
+    'ends a response cut off by %s as too long after one call, without a repair call',
+    async (finish_status) => {
+      const scope = await fixtures.scope();
+      const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });
+      const complete = vi.fn(async () => ({ ...result(deliverable()), finish_status }));
+      await fixtures.runtime(scope, { ...scripted([]), complete }).execute(lease);
+      expect(complete).toHaveBeenCalledTimes(1);
+      const detail = await readChat(db, scope, run.chat_id);
+      expect(detail.latest_run).toMatchObject({ status: 'failed', error_code: 'output_too_long' });
+      expect(detail.messages.at(-1)?.content).toBe(recoveryReply('output_too_long'));
+      expect(detail.output).toBeNull();
+    },
+  );
+  it('drafts short formats directly and starts long-form formats from an outline', async () => {
+    const scope = await fixtures.scope();
+    const formats = new Map([
+      ['post', { id: 'post', label: 'Post', body: 'Write a post.', longForm: false }],
+      ['guide', { id: 'guide', label: 'Guide', body: 'Write a guide.', longForm: true }],
+    ]);
+    const phases = [];
+    for (const format_id of ['post', 'guide']) {
+      const { run, lease } = await fixtures.claimed(scope, { skillId: 'content' });
+      await fixtures
+        .runtime(
+          scope,
+          scripted([
+            { ...deliverable('draft'), output: { ...deliverable('draft').output, format_id } },
+          ]),
+          { catalog: { ...catalog, formats } },
+        )
+        .execute(lease);
+      phases.push((await readChat(db, scope, run.chat_id)).output?.phase);
+    }
+    expect(phases).toEqual(['draft', 'outline']);
+  });
+  it('keeps a revision’s sources and adds the records its turn read', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope, { skillId: 'plan' });
+    const uri = `citeladder://project/${scope.projectId}`;
+    await fixtures
+      .runtime(
+        scope,
+        scripted([{ action: 'call_tool', tool: 'read_evidence', arguments: {} }, deliverable()]),
+      )
+      .execute(first.lease);
+    const next = await fixtures.claimed(scope, { chatId: first.run.chat_id });
+    await fixtures
+      .runtime(scope, scripted([deliverable('draft', `Revised with ${uri} kept.`)]))
+      .execute(next.lease);
+    const detail = await readChat(db, scope, first.run.chat_id);
+    expect(detail.output?.latest_revision).toMatchObject({
+      number: 2,
+      body: 'Revised with kept.',
+      source_refs: [uri],
+    });
+    expect(detail.messages.at(-1)?.evidence_refs).toEqual([]);
   });
 });

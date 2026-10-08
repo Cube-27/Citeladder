@@ -17,6 +17,7 @@ import {
 } from './contracts.ts';
 import { buildManifest, type ContextReader } from './context.ts';
 import { active, terminal } from './queue.ts';
+import { appendMessage, appendRecoveryReply, getChat } from './messages.ts';
 
 export type FundingIdentity = Pick<
   Run,
@@ -30,6 +31,11 @@ export type FundingIdentity = Pick<
 /** Admission owns capability, route selection and abuse capacity, in this transaction.
  * Required injection deliberately has no unmetered/platform fallback. */
 export type Admission = (db: Database, scope: Scope) => Promise<FundingIdentity>;
+// `agent-runtime-ts-5` → `agent-runtime-ts-`: every TypeScript runtime revision.
+const TS_RUNTIME_PREFIX = agentPolicy.runtime_version.slice(
+  0,
+  agentPolicy.runtime_version.lastIndexOf('-') + 1,
+);
 const messageSchema = z.string().trim().min(1).max(agentPolicy.message_max_chars);
 export type TurnInput = {
   chatId?: string;
@@ -41,18 +47,6 @@ export type TurnInput = {
   mentionIds?: string[];
 };
 
-export async function getChat(db: Database, scope: Scope, id: string, lock = false): Promise<Chat> {
-  let query = db
-    .selectFrom('agent_chats')
-    .selectAll()
-    .where('id', '=', id)
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId);
-  if (lock) query = query.forUpdate();
-  const chat = await query.executeTakeFirst();
-  if (!chat) throw notFound('Chat');
-  return chat;
-}
 export async function requireIdle(db: Database, chat: Chat) {
   const run = await db
     .selectFrom('agent_runs')
@@ -62,49 +56,6 @@ export async function requireIdle(db: Database, chat: Chat) {
     .where('status', 'in', active)
     .executeTakeFirst();
   if (run) throw new AgentError('agent_run_active');
-}
-export async function appendMessage(
-  db: Database,
-  chat: Chat,
-  input: {
-    role: 'user' | 'agent';
-    content: string;
-    userId?: string;
-    replyTo?: string;
-    skillId?: string | null;
-    skillSource?: string | null;
-    evidence?: string[];
-    steps?: Json[];
-    mentions?: Json[];
-  },
-) {
-  const previous = await db
-    .selectFrom('agent_messages')
-    .select(sql<number>`coalesce(max(sequence), 0)`.as('last'))
-    .where('workspace_id', '=', chat.workspace_id)
-    .where('chat_id', '=', chat.id)
-    .executeTakeFirstOrThrow();
-  return db
-    .insertInto('agent_messages')
-    .values({
-      id: randomUUID(),
-      workspace_id: chat.workspace_id,
-      project_id: chat.project_id,
-      chat_id: chat.id,
-      sequence: previous.last + 1,
-      role: input.role,
-      content: input.content,
-      author_user_id: input.userId ?? null,
-      reply_to_message_id: input.replyTo ?? null,
-      skill_id: input.skillId ?? null,
-      skill_source: input.skillSource ?? null,
-      evidence_refs: JSON.stringify(input.evidence ?? []),
-      steps: JSON.stringify(input.steps ?? []),
-      mentions: JSON.stringify(input.mentions ?? []),
-      created_at: new Date(),
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
 }
 // Hash canonical JSON to bind nested refs as well as the visible message.
 function canonical(value: unknown): unknown {
@@ -200,7 +151,8 @@ export class AgentStore {
         if (replay.user_id !== scope.userId) throw new AgentError('agent_idempotency_conflict');
         // Python hashes escaped JSON. Reusing that key requires its original runtime;
         // never interpret it as a TypeScript hash, even for an ASCII-only request.
-        if (replay.runtime_version !== agentPolicy.runtime_version)
+        // Every TypeScript runtime version shares one request fingerprint.
+        if (!replay.runtime_version.startsWith(TS_RUNTIME_PREFIX))
           throw new AgentError('agent_legacy_replay');
         if (replay.request_fingerprint !== hash) throw new AgentError('agent_idempotency_conflict');
         return replay;
@@ -422,6 +374,7 @@ export class AgentStore {
         .where('id', '=', run.id)
         .where('workspace_id', '=', scope.workspaceId)
         .execute();
+      await appendRecoveryReply(trx, run, 'cancelled');
     });
   }
 }

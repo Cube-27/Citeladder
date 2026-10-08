@@ -3,71 +3,52 @@ id: ai_visibility
 label: AI visibility diagnosis
 group: visibility
 order: 8
-version: 2
+version: 3
 output_kind: diagnosis
 description: Diagnose why a brand is absent, weakly cited, misrepresented or not recommended in CiteLadder AI results. Use raw prompt/answer/source evidence to choose owned, earned, technical or prompt-quality work.
 ---
 
 # AI visibility diagnosis
 
-Follow the operating contract. Bind only advertised read tools and use evidence actually supplied in this call. Earlier reads and upstream source references may need exact re-fetching. Another skill is explicit next-step advice, not an automatic invocation.
+## Goal
 
-## Outcome
+Find where a relevant buyer question fails to produce a useful, accurate mention of the brand, and pick the next fix from the actual answers. Do not apply a generic "AEO checklist" or guess at a model's private ranking logic.
 
-Identify the observed failure between a relevant buyer question and a useful, accurate appearance of the brand. Select the next intervention on its evidence, not a universal “AEO checklist.” Separate visibility measurement from speculation about a model's private retrieval/ranking process.
+## Read the right data
 
-## Inputs and scope
+1. `read_visibility_audit` to pick the audit. If the newest one is running or failed, use a completed one (`completed_baseline: true`) or say there is no usable baseline.
+2. `read_visibility_results` with that `audit_id` for the actual answers. Filter by `prompt_id`, `domain` or `url` to narrow. If a result only summarizes a record, open it with `fetch`.
+3. `read_visibility_sources` with the same `audit_id` for cited domains (`level: domain`) or URLs (`level: url` with `domain`).
+4. As needed: `read_visibility_overview` for headline rates, `read_prompt_portfolio` for which prompts are tracked, `get_project_business_context` for offers and competitors.
 
-Required for detailed diagnosis: actual prompt text/version, engine/surface, run status/time, answer text and observed citations/source references. A summary-only audit supports only a summary-level finding. Optional: repeated comparable runs, competitor mentions, source inspections, recorded fan-out queries/retrieved URLs, owned-page evidence, GSC, backlinks, referral traffic and business outcomes.
+Engines and surfaces are whatever the data shows; do not assume a fixed set. Keep `core` and `comparison` cohorts separate. A summary-only read supports only a summary-level finding. Report answers as unavailable only after the read fails or says they are absent.
 
-Discover available engines and surfaces; do not assume a fixed set of three. ChatGPT API output, a consumer ChatGPT search response, Google AI Mode and AI Overviews are not interchangeable samples. Preserve market/language and model/tool configuration where recorded.
+## Diagnose
 
-## Bind the selection before diagnosing
+1. **Check the prompts first.** Separate unbranded discovery, branded and informational prompts. A high mention rate on prompts that name the brand does not prove discovery. Note failed runs and changes in prompt, engine or cohort mix.
+2. **Read the decisive answers.** For each, note separately: cited, mentioned, recommended, recommended against, or misstated. A citation is not an endorsement; no citation does not prove the page was never retrieved. Check aliases, negation and context; a similar substring is not a mention.
+3. **Look at sources.** Map cited domains and URLs to who controls them (owned, competitor, independent publisher, platform). A brand's own YouTube video is owned content, not independent validation. Count appearances per distinct prompt run with a stated denominator; one repeated prompt is not many buyer needs.
+4. **Classify the failure:**
+   - **Measurement problem:** weak, leading or noncommercial prompts, wrong market, failed runs. Fix the prompts before the content.
+   - **Access problem:** a key owned page is shown to be blocked or broken. Absence from answers alone does not prove blocking.
+   - **Answer gap:** owned content lacks the explanation, proof or decision detail. Name the page and what is missing.
+   - **Source gap:** a frequently cited independent source covers alternatives but omits or misstates the brand.
+   - **Fit gap:** the answer knows the brand but prefers another option. Check whether that limitation is real; never write false superiority claims.
+   - **Volatility:** results differ across runs or engines. Look at repeated runs before calling one loss a trend.
+5. **Compare competitors fairly.** Keep direct competitors apart from publishers. Look at what claims or criteria earn their inclusion, not just mention counts.
+6. **Owned-page gaps.** `list_content_differentiation` (no arguments) returns up to 10 reports comparing an owned page with inspected organic results. Use the report for the relevant prompt if one is listed; if none is, treat the comparison as unavailable, not as parity. Quote any gap with its count out of pages inspected, and call a topic "unique" only within that inspected set. These are organic results, not AI citations.
 
-Read audit state before selecting a baseline. If the newest audit is running or failed, use a separately returned completed comparable audit only when accessible, otherwise report the baseline gap. For each conclusion, open the actual answer and source evidence; an artifact reference is not its contents. Answer co-occurrence does not prove a competitor appears on the cited publisher page. Domain recurrence used to schedule inspections is not the citation count for the selected engine, cohort or period.
+## Rules
 
-Use `read_visibility_audit` once to select the audit, then pass its `audit_id` to `read_visibility_results`. Open decisive returned `citeladder://visibility_result/` records with `fetch` to read the answer text; use `read_visibility_sources` for source details. Reserve calls for those reads instead of repeating the summary or searching for an audit already identified. A truncated summary is not unavailable evidence: follow its identifiers and continuations, and narrow or paginate detailed reads. Only report raw answers as unavailable after the relevant read fails or explicitly reports their absence.
+- No universal schema bonus, ideal paragraph length, "AI readiness" score or forecast.
+- An answer without source URLs cannot support source-level analysis.
+- For Google AI Overviews, separate "no AI Overview shown" from a provider error.
+- Never drop valid losing answers to improve a rate.
 
-## Workflow
+## Deliver
 
-1. **Validate the measurement frame.** Read business context, prompt portfolio and audit coverage. Separate unbranded discovery, branded evaluation and informational/citation prompts. A high score on questions naming the business does not prove discovery. Check completed versus failed runs and whether the prompt/version/engine mix changed.
-2. **Reconstruct observed outcomes per answer.** Record separately: retrieval/search evidence when actually exposed; explicit citation; brand mention; positive recommendation/shortlist inclusion; recommendation against; factual misstatement; and referral/conversion if independently measured. A cited article about the business is not automatically an endorsement. No citation does not prove the page was never retrieved.
-3. **Read the decisive answer passages.** Check aliases/entity identity, context, negation and recommendation framing. Use compact exact excerpts as evidence. A competitor-like substring or a corporate name in an unrelated context is not a valid mention. Do not convert sentiment into recommendation without the actual decision wording.
-4. **Build a source-role view.** Map observed citations and, separately, exposed retrieval URLs to domains, URL types, prompt decisions and engine/surface. Preserve hosting platform, publisher/author, content control and mentioned brands as different fields. A company-owned YouTube video is owned content hosted externally, not independent earned validation. Retain provider-specific source classifications rather than silently rewriting them.
-5. **Measure scope correctly.** Count domain/URL usage as distinct observed prompt-run appearances with a declared denominator; also show distinct prompt decisions when useful. Deduplicate repeated citations within the same answer for usage rates while retaining citation-event counts separately. Do not call 50 citations from one repeated prompt 50 independent buyer needs. Keep recorded fan-out query strings, retrieved URLs and cited URLs distinct.
-6. **Classify the failure and test alternatives.**
-   - **Measurement mismatch:** weak/noncommercial/leading prompts, wrong geography or failed collection. Repair the portfolio/data before optimizing copy.
-   - **Access/eligibility evidence:** a priority source is demonstrably blocked, broken or unusable. Route to technical verification; absence from an answer alone is not proof of blocked access.
-   - **Answer/evidence gap:** owned content lacks a relevant, accurate explanation, proof or decision detail. Identify the exact page and missing information.
-   - **Source-presence gap:** a frequently observed relevant independent source covers valid alternatives but omits or misstates the business. Inspect its inclusion criteria and editorial context before proposing outreach.
-   - **Positioning/fit gap:** the answer recognizes the brand but finds a different option more suitable. Check whether the limitation is true. Improve explanation/proof or accept the real product limitation; do not write false superiority claims.
-   - **Robustness/volatility:** appearances differ across runs, phrasings or surfaces. Inspect comparable repeated observations before treating one loss as a durable problem.
-7. **Compare like-for-like competitors.** Keep direct business alternatives separate from publishers. Inspect which claims/criteria support their inclusion, not merely their mention counts. Use source content to form hypotheses about possible influence; citations do not reveal the engine's full causal ranking logic. When the gap is on an owned page, read `list_content_differentiation` for that prompt: it compares the page with the inspected organic results by heading topics, tables and outbound source domains. Quote every parity or gap figure with its inspected-page numerator and denominator, call a topic "unique" only within that inspected set, and treat a missing report as unavailable, not as parity. These comparisons are organic results, not citations, and never change citation counts or scores.
-8. **Choose a targeted intervention.** Produce exact owned-page edits or content briefs, source-specific earned opportunities, verified technical tickets, entity-fact corrections or prompt-cohort changes. Every action names the buyer decision it should improve and the evidence gap it addresses. No generic “add schema,” “get Reddit mentions” or “publish 20 blogs” prescriptions.
-9. **Define the follow-up.** Keep the core prompt/engine/locale panel stable. Record intervention dates and use comparable future runs through the Measure results skill. For Google AI Overviews, distinguish observed no-AIO from a provider error and report AIO occurrence separately from conditional brand/citation rates. Never exclude valid losing answers to improve the score.
+For a direct question ("why are we missing?"), answer in a few paragraphs: what the answers actually show, the strongest next action, and the main remaining uncertainty.
 
-## Decision rules
+For a full diagnosis, the document covers: what was measured (audit date, engines, prompt cohorts, coverage); outcomes by type; the failure types found, with the decisive answer excerpts; source and competitor gaps; prioritized actions; and how to re-measure on the same prompts and engines. When useful, add a table of key observations: prompt text, engine, date, mentioned, recommended, factual issue, short answer excerpt, cited URLs.
 
-A useful source URL can be a citation opportunity without being a recommendation opportunity. Earned coverage can help a real buyer, but presence on a specific platform is not a guaranteed model signal. There is no universal evidence-backed citation paragraph length, schema bonus or source-type percentage. Do not create artificial “AI readiness” scores or forecasts from text alone. Preserve CiteLadder's measured metrics with their definitions; supplement them with explicit evidence, not a replacement vanity score.
-
-For newer Google AI reporting, inspect current account/tool support. Do not assume legacy aggregate Web performance isolates AI traffic, and do not assume a newer UI report is exposed by the tool catalog. A generated answer containing no source URLs cannot support source-level analysis.
-
-## Outputs
-
-Produce `ai-visibility-diagnosis.md` and, when raw observations exist, `visibility-evidence.csv`:
-
-```text
-prompt_id, prompt_version, cohort, engine, surface, market,
-run_id, observed_at, run_status, source_support_state,
-brand_mentioned, recommendation_state, factual_issue,
-answer_excerpt, cited_urls, exposed_retrieved_urls,
-observed_fanout_queries, evidence_refs
-```
-
-The report contains baseline/cohort coverage, outcomes separated by type, evidence-backed failure modes, source/competitor gaps, prioritized actions with exact targets, counterevidence and a measurement plan. Null indicates unavailable, not false.
-
-For a direct question such as why a brand is missing, lead with a short plain-language explanation of what the actual answers reveal, supported by the decisive prompt and answer passages. Check whether the questions invite brand recommendations at all or mostly ask for general advice. Distinguish that prompt-fit issue from competitors being selected on a buying question. Give the strongest supported next action and state remaining uncertainty once. Scale the report to the question; do not bury the explanation under repeated caveats or turn an unread record into a task for the user to inspect.
-
-## Validation and stops
-
-No raw evidence means no fabricated answer quotations, source lineage or recommendation judgments. Do not claim unseen retrieval chains. Check that rates use compatible valid denominators and that changing the prompt mix is disclosed. Pause source-specific conclusions if the source cannot be inspected. Route prompt gaps to the Prompt discovery skill, owned answers to the Create content skill, source gaps to the Earned authority skill, access defects to the Technical health skill, and measurement to the Measure results skill.
+Suggest next steps by name: Prompt discovery for prompt gaps, Create content for owned answers, Earned authority for source gaps, Technical health for access defects, Measure results for follow-up.

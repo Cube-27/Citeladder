@@ -3,52 +3,42 @@ id: comparison_content
 label: Comparison content
 group: content
 order: 11
-version: 2
+version: 3
 output_kind: content
 description: Research and write honest product, service or provider comparisons and alternatives pages grounded in CiteLadder buyer demand and verified claims. Use for named competitors, not fabricated superiority or neutral-looking promotion.
 ---
 
 # Comparison and alternatives content
 
-Follow the operating contract. Bind only advertised read tools and use evidence actually supplied in this call. Earlier reads and upstream source references may need exact re-fetching. Another skill is explicit next-step advice, not an automatic invocation.
+## Goal
 
-## Outcome and inputs
+Write a comparison that helps a real buyer decide. The sponsoring brand may be the best choice, a narrow-fit choice, or the wrong fit for some needs; say so honestly.
 
-Answer questions and clarifications directly without creating or revising the saved output. When the user requests comparison content, start with an outline for explicit approval, then write the complete comparison. Reuse the current revision for requested edits.
+## How the work flows
 
-Deliver a comparison that helps the stated buyer make an informed decision. The sponsoring brand may be a strong choice, a narrow-fit choice, or not the best fit for some needs. Do not force the “one narrow concession, our product wins broadly” premise from the supplied example.
+- Answer questions about the draft directly, without a new output.
+- Choose the format: usually `comparison` (set `format_id`). It is long-form, so first deliver an outline (the decision, the criteria, the options, the sections) for the user to approve, then write the full page. Edit the current document when the user asks for changes.
+- Research only the named comparison. Do not turn it into a full competitor survey.
 
-Required: the actual entities, buyer decision/market, verified facts and the requested page format. Optional: relevant GSC queries, AI prompts/answers, competitor selection, current comparison pages, user reviews, product documentation, pricing and approved firsthand tests. For a named comparison, research that comparison directly rather than launching a full competitor discovery program.
+## Inputs
 
-## Keep scope and factual symmetry
+You need the actual options being compared, the buyer and market, and facts about each option. Get company facts from `get_project_business_context`. Useful extras: buyer questions from tracked prompts and AI answers (`read_visibility_results`), search demand (`read_performance_table`, `read_search_dataset`), and existing owned pages. You cannot check the live web, so use only facts already saved or supplied by the user.
 
-A named comparison needs research on that comparison, not a new competitive-landscape project. Use the same decision criteria and current evidence standard for both providers. A competitor’s keyword footprint cannot establish its feature set. Compare alternatives by buyer fit, including more than one competitor advantage when supported; never constrain research to one convenient concession. Carry pricing, geographic coverage and packaging dates into the claim ledger and recheck them before public use.
+## Method
 
-## Workflow
+1. **Frame the decision.** Who is choosing, for what use, under which constraints, and where the options actually overlap. If the publisher is one of the options, make that clear on the page.
+2. **Check existing coverage.** Update an existing comparison page rather than creating a near-duplicate.
+3. **Set the same criteria for every option.** Use what matters to the buyer (fit, capabilities, service model, total cost, setup, limits, compatibility, availability). Do not pick trivial criteria the sponsor wins.
+4. **Use dated facts only.** Keep each fact's date. For prices, keep currency, billing period, commitment and add-ons. Unknown is not "missing", "free" or "worse". Absence from one page does not prove a feature is missing. Leave unverified facts out of the page and list them in the editorial notes.
+5. **Handle reviews carefully.** Attribute reported experiences; never invent ratings, quotes or hands-on tests.
+6. **Give fit guidance.** "Choose X if…" for each option, including the sponsor's real limits. If the evidence cannot support an overall verdict, give a factual table and conditional guidance instead.
+7. **Check fairness.** Would a buyer who picks the competitor feel fairly represented? Remove implied guarantees and unsupported claims.
 
-1. **Frame the decision.** Identify who is choosing, for what use case, under what material constraints and where the businesses actually overlap. Separate factual comparison from opinions/test experience. Disclose the publishing brand's relationship where a page might otherwise appear independent.
-2. **Inspect existing coverage and demand.** Read existing owned pages and the relevant prompt/query cohort. Decide whether to update a canonical comparison, create a genuinely distinct page or avoid duplication. Do not choose competitors merely because they are recognizable.
-3. **Define equivalent criteria first.** Use the buyer's material decision dimensions: suitability, scope, capabilities, service model, total cost, implementation, limitations, compatibility, geographic availability or verified compliance where relevant. Apply the same definitions and evidence standard to each option. Do not cherry-pick trivial criteria the sponsor wins.
-4. **Inspect persisted primary facts.** Use supplied official-source observations, preserving observation date and public-use review state. You cannot check the current web. Request missing official evidence in editorial notes and omit unverified current claims from public copy. Price comparisons preserve currency, cadence, commitment, seat/usage assumptions, mandatory add-ons, tax treatment when supplied, and quote-based language. Unknown does not mean missing/free/worse. Absence from an inspected page does not prove a missing capability.
-5. **Handle independent sentiment carefully.** Use credible attributed reviews for reported experiences, not universal capability claims. Do not invent review scores, customer quotes or personal hands-on testing. Resolve conflicts between current product facts and dated reviews; preserve uncertainty when unresolved.
-6. **Derive fit guidance from evidence.** Name the conditions under which each option is appropriate and the important limitations of the sponsor. Do not require exactly one competitor advantage or exactly three differentiators. If evidence is insufficient for an overall recommendation, publish a factual table with conditional choice guidance instead of a forced verdict.
-7. **Write complete content.** Include a clear title; concise decision summary with qualifications; a sourced like-for-like table; explanation of only decision-relevant differences; actual pricing context; when to choose each; migration/replacement caveats when applicable; real unanswered buyer questions; and a relevant, non-deceptive CTA. Do not repeat every table row in prose or add a year unless the comparison is actually maintained and current.
-8. **Make source and brand claims inspectable.** Keep critical qualifiers and source links near the relevant claim. Tables must not use unsupported checkmarks. Keep important visible content accessible in the implementation. Recommend structured data only when it truthfully fits the actual page/entity and current supported features. Do not default every comparison to Product + FAQPage or promise citation gains.
-9. **Review fairness and facts.** Recheck the strongest superiority/price/replacement claims against the same criteria and source dates. Ask whether a buyer choosing the competitor would feel their use case is represented honestly. Remove implied guarantees, unverified compliance claims and unsupported category-wide assertions.
+## Deliver
 
-## Outputs
+One document with:
 
-Produce `comparison-page.md` and `comparison-evidence.csv`:
+- **The page:** title, short decision summary, comparison table built only from supported facts (no unsupported checkmarks), the differences that matter, pricing context, when to choose each option, and an honest call to action. For an alternatives list, include only options that genuinely fit and say how they were chosen.
+- **Editorial notes:** a claim table (criterion, each option's claim, its source and date, qualifiers), facts still needing an official source, and which facts will go stale and when to recheck. Do not add a fake "updated" date.
 
-```text
-criterion, definition, buyer_relevance,
-option_a_claim, option_a_source, option_a_verified_at,
-option_b_claim, option_b_source, option_b_verified_at,
-qualifiers, unresolved_conflict, public_copy_location
-```
-
-For an alternatives list, add rows/options as actually justified and explain inclusion/exclusion criteria. Do not fill a “top 10” list with poor fits. Include a maintenance note naming volatile facts and a review trigger, not a fake updated date. Default to a reviewed draft, not publication.
-
-## Questions, validation and stop rules
-
-Ask only for an essential buyer/market/offer ambiguity. A missing current price blocks a definitive “cheaper” claim but not a comparison of verified capabilities. Stop a comparison premise that depends on false superiority; replace it with conditional evidence-led guidance. Do not publish defamatory allegations or disguise branded content as independent testing. No mandatory word count, FAQ count or narrow-concession quota. Route cross-page link needs to the Internal links skill and follow-up performance to the Measure results skill.
+Suggest Internal links for linking the page in, and Measure results for follow-up.

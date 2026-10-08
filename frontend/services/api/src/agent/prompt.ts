@@ -3,7 +3,6 @@ import type { z } from 'zod';
 import { AgentError, budgetSchema } from './contracts.ts';
 import type { ModelRequest } from './model-calls.ts';
 
-export type Observation = { text: string; refs: string[] };
 export function assemblePrompt(input: {
   system: string;
   schema: ModelRequest['schema'];
@@ -12,7 +11,7 @@ export function assemblePrompt(input: {
   revision: unknown;
   history: { role: string; content: string }[];
   historyLimited: boolean;
-  observations: Observation[];
+  observations: string[];
   budget: z.infer<typeof budgetSchema>;
 }) {
   const omissions: string[] = input.historyLimited ? ['history_query_limit'] : [];
@@ -21,7 +20,8 @@ export function assemblePrompt(input: {
     omissions.push(`history_message:${index}:content_size_limit`);
     return {
       ...message,
-      content: message.content.slice(0, input.budget.history_message_max_chars),
+      // Cut by code point so a surrogate pair is never split.
+      content: `${[...message.content].slice(0, input.budget.history_message_max_chars).join('')}\n[message shortened]`,
     };
   });
   const observations = [...input.observations];
@@ -31,7 +31,7 @@ export function assemblePrompt(input: {
     context,
     current_revision: input.revision,
     history,
-    observations: observations.map(({ text }) => text),
+    observations,
     omissions,
   });
   const request = () => ({
@@ -54,6 +54,5 @@ export function assemblePrompt(input: {
     request: request(),
     omissions,
     serializedChars: size(),
-    citations: observations.flatMap(({ refs }) => refs),
   };
 }

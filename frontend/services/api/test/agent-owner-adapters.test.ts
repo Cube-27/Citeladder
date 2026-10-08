@@ -63,7 +63,7 @@ describe('Agent bindings to the evidence and Action owners', () => {
       await site.cleanup();
     }
   });
-  it('offers every read tool referenced by the packaged model methodologies', async () => {
+  it('offers every read tool the packaged methodologies name, and no project picker or MCP App view', async () => {
     const packaged = await loadSkillCatalog(agentSettings({}).skillsDirectory);
     const named = new Set(
       [packaged.operatingContract, ...[...packaged.skills.values()].map((skill) => skill.body)]
@@ -73,6 +73,8 @@ describe('Agent bindings to the evidence and Action owners', () => {
     const offered = agentTools(db);
     expect(named.size).toBeGreaterThan(0);
     expect([...named].filter((name) => !offered.has(name))).toEqual([]);
+    const chatOnly = ['list_projects', 'render_visibility', 'render_site_health', 'open_analytics'];
+    expect(chatOnly.filter((name) => offered.has(name))).toEqual([]);
   });
   it('pins shared MCP reads and fetches to one project and rechecks the member', async () => {
     const scope = await fixtures.scope(),
@@ -173,14 +175,14 @@ describe('Agent bindings to the evidence and Action owners', () => {
       JSON.parse((await tools.execute(db, scope, 'list_actions', {}, signal())).text).items,
     ).toHaveLength(1);
   });
-  it('re-fetches prior evidence through its owner before granting follow-up citations', async () => {
+  it('offers earlier reads as re-read hints and lists only this turn’s reads as sources', async () => {
     const scope = await fixtures.scope();
     const tools = agentTools(db);
     const store = fixtures.store({ registryVersion: tools.version });
     const queue = new AgentQueue(db, 30);
     const uri = `citeladder://project/${scope.projectId}`;
     const fetch = { action: 'call_tool', tool: 'fetch', arguments: { id: uri } };
-    const answer = { action: 'respond', reply: `Project evidence ${uri}`, evidence: [uri] };
+    const answer = { action: 'respond', reply: `Project evidence ${uri}` };
     const first = await store.enqueue(scope, { key: randomUUID(), message: 'Explain project' });
     const execute = async (steps: unknown[], inspect?: Parameters<typeof scripted>[1]) => {
       const claimed = await queue.claim('evidence-continuity', [scope.workspaceId]);
@@ -217,7 +219,7 @@ describe('Agent bindings to the evidence and Action owners', () => {
       expect(JSON.parse(request.user).observations).toEqual([]);
     });
     expect(withoutRead.messages.at(-1)?.evidence_refs).toEqual([]);
-    expect(withoutRead.messages.at(-1)?.content).toContain('[unverified reference]');
+    expect(withoutRead.messages.at(-1)?.content).toBe('Project evidence');
     await store.enqueue(scope, {
       key: randomUUID(),
       chatId: first.chat_id,
@@ -398,8 +400,19 @@ describe('Agent bindings to the evidence and Action owners', () => {
   it('loads only the selected format methodology into a follow-up model request', async () => {
     const scope = await fixtures.scope();
     const formats = new Map([
-      ['guide', { id: 'guide', label: 'Guide', body: 'Explain the purchasing decision.' }],
-      ['faq', { id: 'faq', label: 'FAQ', body: 'Answer each customer question separately.' }],
+      [
+        'guide',
+        { id: 'guide', label: 'Guide', body: 'Explain the purchasing decision.', longForm: true },
+      ],
+      [
+        'faq',
+        {
+          id: 'faq',
+          label: 'FAQ',
+          body: 'Answer each customer question separately.',
+          longForm: false,
+        },
+      ],
     ]);
     const bound = { ...catalog, formats, formatPreamble: 'Use persisted evidence.' };
     const first = await fixtures.claimed(scope, { skillId: 'content' });

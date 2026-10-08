@@ -56,6 +56,11 @@ const completion = z.object({
   usage: z.record(z.string(), z.unknown()).optional(),
 });
 const logger = getLogger('app.connectors.agent.client');
+
+/** OpenAI-compatible providers name an output-cap stop either way. */
+export function truncatedFinish(finishStatus: string) {
+  return finishStatus === 'length' || finishStatus === 'max_tokens';
+}
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /** Model text without a leading ``` / ```json fence or a trailing ``` fence. */
