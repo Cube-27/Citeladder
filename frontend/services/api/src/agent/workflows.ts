@@ -50,6 +50,28 @@ function unique(values: string[], what: string) {
   if (new Set(values).size !== values.length) throw new TypeError(`Duplicate ${what}`);
 }
 
+function checkWorkflow(
+  workflow: Workflow,
+  groups: ReadonlySet<string>,
+  skills: ReadonlyMap<string, Skill>,
+  formats: ReadonlyMap<string, ContentFormat>,
+) {
+  const skill = skills.get(workflow.skill_id);
+  if (!skill) throw new TypeError(`Workflow ${workflow.id} names an unknown skill`);
+  if (!groups.has(workflow.group))
+    throw new TypeError(`Workflow ${workflow.id} names an unknown group`);
+  const formatKinds: readonly string[] = policy.agent_skills.format_kinds;
+  if (
+    workflow.format_id &&
+    (!formats.has(workflow.format_id) || !formatKinds.includes(skill.outputKind))
+  )
+    throw new TypeError(`Workflow ${workflow.id} names an unusable format`);
+  unique(
+    workflow.inputs.map((input) => input.key),
+    `input in ${workflow.id}`,
+  );
+}
+
 /** Every reference resolves, so a workflow can never select a missing skill or format. */
 export function parseWorkflows(
   raw: string,
@@ -66,22 +88,7 @@ export function parseWorkflows(
     'workflow',
   );
   const groups = new Set(file.groups.map((group) => group.id));
-  const formatKinds: readonly string[] = policy.agent_skills.format_kinds;
-  for (const workflow of file.workflows) {
-    const skill = skills.get(workflow.skill_id);
-    if (!skill) throw new TypeError(`Workflow ${workflow.id} names an unknown skill`);
-    if (!groups.has(workflow.group))
-      throw new TypeError(`Workflow ${workflow.id} names an unknown group`);
-    if (
-      workflow.format_id &&
-      (!formats.has(workflow.format_id) || !formatKinds.includes(skill.outputKind))
-    )
-      throw new TypeError(`Workflow ${workflow.id} names an unusable format`);
-    unique(
-      workflow.inputs.map((input) => input.key),
-      `input in ${workflow.id}`,
-    );
-  }
+  for (const workflow of file.workflows) checkWorkflow(workflow, groups, skills, formats);
   const byId = new Map(file.workflows.map((workflow) => [workflow.id, workflow]));
   const outputKinds: readonly string[] = policy.agent_skills.output_kinds;
   for (const [kind, presentation] of Object.entries(file.kinds)) {

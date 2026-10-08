@@ -23,7 +23,7 @@ export function WorkflowGallery({
   disabled,
 }: Readonly<{ onPick: (workflow: AgentWorkflow) => void; disabled: boolean }>) {
   const catalog = useAgentCatalog();
-  const [chosenGroup, setGroup] = useState<string | null>(null);
+  const [chosenGroup, setChosenGroup] = useState<string | null>(null);
   const group = chosenGroup ?? catalog.workflow_groups[0]?.id;
   if (catalog.workflows.length === 0) return null;
   const shown = catalog.workflows.filter((workflow) => workflow.group === group);
@@ -38,7 +38,7 @@ export function WorkflowGallery({
           <FilterChip
             key={option.id}
             active={option.id === group}
-            onClick={() => setGroup(option.id)}
+            onClick={() => setChosenGroup(option.id)}
           >
             {option.label}
           </FilterChip>

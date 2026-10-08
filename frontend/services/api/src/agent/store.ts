@@ -352,7 +352,7 @@ export class AgentStore {
     const workflow = latest?.workflow_id
       ? this.dependencies.catalog.workflows?.byId.get(latest.workflow_id)
       : undefined;
-    return workflow && workflow.skill_id === skillId ? workflow : undefined;
+    return workflow?.skill_id === skillId ? workflow : undefined;
   }
   private async turnSkill(
     db: Database,
