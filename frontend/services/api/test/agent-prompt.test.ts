@@ -17,9 +17,9 @@ describe('structurally bounded Agent prompts', () => {
       content: `${index}:` + 'h'.repeat(5000),
     })),
     historyLimited: true,
-    observations: Array.from({ length: 6 }, (_, index) => ({
-      text: JSON.stringify({ index, body: 'o'.repeat(11000) }),
-    })),
+    observations: Array.from({ length: 6 }, (_, index) =>
+      JSON.stringify({ index, body: 'o'.repeat(11000) }),
+    ),
     budget: admittedBudget(10),
   };
   it('preserves exact Unicode revisions, newest history and whole tool observations under pressure', () => {

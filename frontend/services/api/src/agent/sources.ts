@@ -3,11 +3,14 @@
  * model repeats. Record references are working values for later reads; they
  * never belong in text written for the user.
  */
-const FENCE = /^ {0,3}(`{3,}|~{3,})(.*)$/u;
+import { fenceTracker } from '../config/skill-inputs.ts';
+
 const LINKED_REF = /\[([^\]\n]+)\]\(\s*citeladder:\/\/[^)\s]*\s*\)/gu;
 // Trailing sentence punctuation belongs to the prose, not the reference.
 const BARE_REF = /\(?citeladder:\/\/[^\s<>()[\]"']*[^\s<>()[\]"'.,;:!?]\)?/gu;
 const UUID = /\(?\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b\)?/giu;
+// Most replies cite nothing; they skip the per-line work.
+const ANY_REF = /citeladder:\/\/|[0-9a-f]{8}-[0-9a-f]{4}-/iu;
 
 function scrubLine(line: string) {
   const scrubbed = line.replace(LINKED_REF, '$1').replace(BARE_REF, '').replace(UUID, '');
@@ -24,22 +27,13 @@ function scrubLine(line: string) {
  * left exact, because a skill's machine-readable submission may need its IDs.
  */
 export function scrubRecordRefs(text: string) {
-  let fence: string | null = null;
+  if (!ANY_REF.test(text)) return text;
+  const fences = fenceTracker();
   return text
     .split('\n')
     .map((line) => {
-      const marker = FENCE.exec(line);
-      if (marker) {
-        if (!fence) fence = marker[1]!;
-        else if (
-          marker[1]![0] === fence[0] &&
-          marker[1]!.length >= fence.length &&
-          !marker[2]!.trim()
-        )
-          fence = null;
-        return line;
-      }
-      return fence ? line : scrubLine(line);
+      const { marker, fenced } = fences(line);
+      return marker || fenced ? line : scrubLine(line);
     })
     .join('\n');
 }

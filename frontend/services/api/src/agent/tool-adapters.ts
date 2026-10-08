@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
+import { presentationTools } from '../mcp/app-resource.ts';
 import { definitions, dispatchTool } from '../mcp/tools.ts';
 import { parseRecordId } from '../mcp/retrieval.ts';
 import { getAction, listActions, requireAction } from '../opportunities/actions.ts';
@@ -33,12 +34,7 @@ function outcome(value: unknown, defaultState?: 'available') {
   };
 }
 // The chat's project is fixed, and MCP App views render nothing in a chat.
-const NOT_FOR_AGENT = new Set([
-  'list_projects',
-  'render_visibility',
-  'render_site_health',
-  'open_analytics',
-]);
+const NOT_FOR_AGENT = new Set(['list_projects', ...presentationTools]);
 function sharedTools(db: Database): ReadTool[] {
   return Object.entries(definitions)
     .filter(([name]) => !NOT_FOR_AGENT.has(name))
