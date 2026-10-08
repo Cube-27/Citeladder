@@ -146,6 +146,7 @@ async function demandSnapshot(db: Database, scope: ReadScope): Promise<Evidence>
       isoDateText(sql.ref('window_end')).as('end'),
     ])
     .where('project_id', '=', scope.projectId)
+    .orderBy('window_end', 'desc')
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .executeTakeFirst();

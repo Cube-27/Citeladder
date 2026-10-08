@@ -219,6 +219,7 @@ async function loopEvidence(db: Database, scope: ProjectScope) {
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
+    .orderBy('window_end', 'desc')
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .limit(1)
