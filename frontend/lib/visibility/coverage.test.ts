@@ -21,13 +21,14 @@ const comparison = (patch: Record<string, unknown>, extra: Record<string, unknow
   selected({ comparison: { baseline_at: '2026-03-01T00:00:00Z', ...patch }, ...extra });
 
 describe('coverageSummary answers', () => {
-  it('says so when nothing was observed', () => {
-    for (const none of [
-      selected({ counts: null }),
-      counts({ state: 'no_observations' }),
-      counts({ responses: 0 }),
-    ])
-      expect(coverageSummary(none, date).answers).toMatch(/no answers/i);
+  it('keeps missing counts, no observations and all-failed answers distinct', () => {
+    const missing = coverageSummary(selected({ counts: null }), date).answers;
+    const none = coverageSummary(counts({ state: 'no_observations', responses: 0 }), date).answers;
+    const failed = coverageSummary(counts({ responses: 0, failed: 4, not_run: 1 }), date).answers;
+    expect(none).toMatch(/no answers/i);
+    expect(missing).not.toBe(none);
+    expect(failed).toMatch(/4 failed/);
+    expect(failed).toMatch(/1 not run/);
   });
 
   it('states the denominator only when the expected count is known', () => {

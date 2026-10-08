@@ -155,6 +155,13 @@ export function mentionSov(
   return sum([...brandKeys].map((name) => counts[name] ?? 0)) / total;
 }
 
+/** The brand's mention-level share, or null when no brand count was persisted (as the tile reads it). */
+export function brandMentionSov(metrics: Metrics): number | null {
+  const counts = mentionCounts(metrics);
+  const brand = brandName(metrics);
+  return counts && Object.hasOwn(counts, brand) ? mentionSov(counts, new Set([brand])) : null;
+}
+
 export function storedMentionCounts(metrics: Metrics): Record<string, number> {
   return mentionCounts(metrics) ?? {};
 }
@@ -165,7 +172,7 @@ export function metricValues(metrics: Metrics): Record<string, number | null> {
     visibility: observedRate(metrics, 'brand_mention_rate'),
     owned_citation: observedRate(metrics, 'owned_citation_rate'),
     // The same mention-level share the Share of voice tile shows.
-    sov: mentionSov(storedMentionCounts(metrics), new Set([brandName(metrics)])),
+    sov: brandMentionSov(metrics),
     prompt_performance: promptPerformance(metrics),
   };
 }

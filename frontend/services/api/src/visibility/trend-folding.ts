@@ -13,6 +13,7 @@ import { buildModelProvenance } from '../analysis/provenance.ts';
 import { pydanticUtc } from '../db/timestamps.ts';
 import { compareText } from '../text-order.ts';
 import {
+  brandMentionSov,
   brandName,
   measurementCounts,
   mentionSov,
@@ -71,7 +72,7 @@ export function rawPoint(source: TrendSource): TrendPoint {
     source_audit_ids: [source.auditId],
     brand_mention_rate: visibilityRate,
     owned_citation_rate: observedRate(metrics, 'owned_citation_rate'),
-    sov: { mention: mentionSov(storedMentionCounts(metrics), new Set([brandName(metrics)])) },
+    sov: { mention: brandMentionSov(metrics) },
     rankings: rankingRows(metrics).map(trendRow),
     sentiment: null,
     avg_position: metricNumber(metrics.avg_position),

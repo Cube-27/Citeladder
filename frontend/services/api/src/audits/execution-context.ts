@@ -68,11 +68,14 @@ export async function loadExecutionContext(
   env: Record<string, string | undefined> = process.env,
   access?: (workspaceId: string) => Promise<unknown>,
 ) {
+  // A cached check reads outside the transaction, so it must run before taking the
+  // transaction's connection: with a one-connection pool it would otherwise wait on itself.
+  if (access) await access(claimed.workspace_id);
   return db.transaction().execute(async (trx) => {
     const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return null;
     const { task, audit } = locked;
-    await (access ? access(audit.workspace_id) : requireWorkspaceAccess(trx, audit.workspace_id));
+    if (!access) await requireWorkspaceAccess(trx, audit.workspace_id);
     const parsed = routeSchema.safeParse(task.provider_route_snapshot);
     if (!parsed.success) throw unavailable();
     const route = parsed.data;

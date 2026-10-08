@@ -67,6 +67,26 @@ describe('AuditSchedules', () => {
     await waitFor(() => expect(listSchedules).toHaveBeenCalledTimes(2));
   });
 
+  it('offers no Resume for a one-time schedule that already ran', async () => {
+    listSchedules.mockResolvedValue([
+      {
+        id: '55555555-5555-4555-8555-555555555555',
+        cadence: 'one_time',
+        engines: ['chatgpt'],
+        enabled: false,
+        failure_count: 0,
+        last_error: '',
+        audit_scope: 'brand',
+        next_run_at: null,
+      } as never,
+    ]);
+    renderWithProviders(
+      <AuditSchedules projectId="11111111-1111-4111-8111-111111111111" promptSets={[]} />,
+    );
+    expect(await screen.findByText(/Ran once/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Resume' })).toBeNull();
+  });
+
   it('resumes a paused schedule by enabling it, after saying why it paused', async () => {
     const user = userEvent.setup();
     const projectId = '11111111-1111-4111-8111-111111111111';

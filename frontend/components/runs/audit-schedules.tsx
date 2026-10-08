@@ -228,6 +228,16 @@ function WorkspaceSchedules({
   );
 }
 
+const finishedOnce = (schedule: AuditSchedule) =>
+  schedule.cadence === 'one_time' && !schedule.next_run_at && !schedule.failure_count;
+
+function pauseLabel(schedule: AuditSchedule) {
+  if (finishedOnce(schedule)) return 'Ran once.';
+  return schedule.failure_count
+    ? `Paused: ${schedulePauseReason(schedule.last_error)}.`
+    : 'Paused.';
+}
+
 function ScheduleRow({
   schedule,
   resuming,
@@ -251,12 +261,13 @@ function ScheduleRow({
         </span>
       ) : (
         <span className="text-secondary flex flex-wrap items-center gap-2">
-          {schedule.failure_count
-            ? `Paused: ${schedulePauseReason(schedule.last_error)}.`
-            : 'Paused.'}
-          <Button size="sm" variant="secondary" disabled={resuming} onClick={onResume}>
-            Resume
-          </Button>
+          {pauseLabel(schedule)}
+          {/* A one-time schedule that ran is finished, not paused; resuming would run it again. */}
+          {finishedOnce(schedule) ? null : (
+            <Button size="sm" variant="secondary" disabled={resuming} onClick={onResume}>
+              Resume
+            </Button>
+          )}
         </span>
       )}
     </li>

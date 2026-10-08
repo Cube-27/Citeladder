@@ -10,8 +10,17 @@ export type CoverageSummary = { answers: string; change: string };
 
 function answersLine(selected: Visibility): string {
   const counts = selected.counts;
-  if (!counts || counts.state === 'no_observations' || counts.responses === 0)
-    return 'No answers were recorded for this selection.';
+  // Missing counts, no observations and observed failures are three different states.
+  if (!counts) return 'Answer counts are unavailable for this selection.';
+  if (counts.responses === 0) {
+    const reasons = [
+      counts.failed ? `${formatCount(counts.failed)} failed` : null,
+      counts.not_run ? `${formatCount(counts.not_run)} not run` : null,
+    ].filter(Boolean);
+    return reasons.length
+      ? `No answers were collected: ${reasons.join(', ')}.`
+      : 'No answers were recorded for this selection.';
+  }
   const engines = selected.per_engine.length;
   const base =
     counts.expected === null
@@ -24,10 +33,10 @@ function answersLine(selected: Visibility): string {
 }
 
 /** Statuses whose change line is fixed: no change is shown, for this reason. */
-const INCOMPLETE = 'the earlier or current measurement did not complete every answer.';
 const NO_CHANGE: Record<string, string> = {
-  partial_coverage: INCOMPLETE,
-  coverage_unavailable: INCOMPLETE,
+  partial_coverage: 'the earlier or current measurement did not complete every answer.',
+  coverage_unavailable:
+    'the earlier or current measurement has no expected-answer count, so its coverage cannot be checked.',
   no_observations: 'one of the measurements recorded no answers.',
   changed_context: 'the chosen earlier run used different settings.',
   identity_unavailable: "this run's settings could not be identified.",
