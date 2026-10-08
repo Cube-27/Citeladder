@@ -119,8 +119,9 @@ const CHECK_REASON: Record<string, string> = {
   prompt_score_unavailable: 'The prompt has no score in that run.',
   no_frozen_baseline: 'There was no reading before the change to compare with.',
   not_page_scoped: 'Declared against site-wide clicks, which cannot verify one Action.',
+  unsupported_direction: 'The check names a change CiteLadder cannot compare.',
   no_traffic_snapshot: 'The Search Console window is no longer stored.',
-  window_overlaps_declaration: 'That window includes days before the change went live.',
+  window_overlaps_declaration: 'That window includes the go-live day or earlier.',
   no_search_console_row: 'Search Console reported no row for this page or query.',
   no_placement_check: 'The publisher page was never read, so it cannot be rechecked.',
   recheck_scheduled: 'Not on the page yet. It will be read again.',
@@ -160,7 +161,7 @@ const MOVEMENT_STATE_LABEL: Record<string, string> = {
 };
 
 export function movementStateLabel(state: string): string {
-  return MOVEMENT_STATE_LABEL[state] ?? 'not available';
+  return MOVEMENT_STATE_LABEL[state] ?? 'state not recognized';
 }
 
 const OUTPUT_KIND_LABEL: Record<string, string> = {

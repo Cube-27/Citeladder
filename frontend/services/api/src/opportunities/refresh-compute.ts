@@ -221,7 +221,7 @@ type CurrentSnapshot = {
 
 /**
  * Every persisted input a refresh reads, by identity: the audit, crawl, demand
- * revision, internal-link run and newest source-page reading. Two refreshes
+ * revision, internal-link run and source-page revision. Two refreshes
  * over equal identities compute the same set.
  */
 export type SourceIdentity = {
@@ -230,7 +230,7 @@ export type SourceIdentity = {
   demand_snapshot_id: string | null;
   demand_source_revision: string | null;
   internal_link_run_id: string | null;
-  source_page_reading_id: string | null;
+  source_pages_revision: string | null;
 };
 
 /** Equal identities; a stored one missing a field (an older snapshot) never matches. */

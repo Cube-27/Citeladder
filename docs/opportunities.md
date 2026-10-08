@@ -153,7 +153,7 @@ changed:
 |---|---|---|
 | Site Health rule | the rule passes on the page | the next crawl that analyzes the page after go-live |
 | Contextual link | the selected link is in main content | the next compatible crawl |
-| Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts on or after go-live |
+| Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts after the go-live day (that day is partly before the change) |
 | Prompt-targeted visibility | the prompt's composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
 | Earned page | the declared placement change | the placement recheck |
 
@@ -248,7 +248,7 @@ check with its latest folded state, reason and subject (`checks`), the end of
 its verification window (`measured_until`), and what each
 [loop leg](../frontend/services/api/src/opportunities/measurement-legs.ts) is waiting
 for, read from persisted rows: the next scheduled visibility run, the next
-Search Console window — a synced window that starts on or after the
+Search Console window — a synced window that starts after the
 declaration day, due a few days later, or a sync once that has passed — the
 next crawl (none is scheduled until someone runs one) and the earned-page
 placement recheck, each with the row it read. Nothing is triggered by a read.

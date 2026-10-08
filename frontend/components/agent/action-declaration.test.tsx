@@ -107,6 +107,8 @@ describe('Declaration status', () => {
     state,
     reason: state === 'unavailable' ? 'page_not_analyzed' : null,
     observed_at: NOW,
+    source_kind: 'site_crawl',
+    source_id: null,
     subject: 'Missing structured data',
   });
 

@@ -86,7 +86,8 @@ function ComparableMovement({ result }: Readonly<{ result: VerificationResult | 
 function GapChanges({ result }: Readonly<{ result: VerificationResult | undefined }>) {
   const changes = result?.gap_changes;
   if (!changes || typeof changes !== 'object' || !('state' in changes)) return null;
-  if (changes.state !== 'available') return <p>Gap comparison: not measured yet</p>;
+  if (changes.state === 'not_run') return <p>Gap comparison: not measured yet</p>;
+  if (changes.state !== 'available') return <p>Gap comparison: not available</p>;
   const count = (key: string) => {
     const value = key in changes ? changes[key as keyof typeof changes] : null;
     return Array.isArray(value) ? value.length : 0;
@@ -99,7 +100,8 @@ function GapChanges({ result }: Readonly<{ result: VerificationResult | undefine
   );
 }
 
+/** The leg's persisted state; a leg with none is unrecognized, not unavailable. */
 function legState(value: unknown): string {
-  if (!value || typeof value !== 'object' || !('state' in value)) return 'unavailable';
+  if (!value || typeof value !== 'object' || !('state' in value)) return 'unrecognized';
   return String(value.state);
 }

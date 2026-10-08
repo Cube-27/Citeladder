@@ -24,9 +24,9 @@ import { isPageRerun, pageRerunSql } from './page-rerun.ts';
 import { expectedRuleOutcome } from '../opportunities/verification-decisions.ts';
 
 const p = policy.site_health.change_intel;
-// The page limit is left out: it is the fetch budget left at admission, so it
-// varies between otherwise identical crawls, and the comparison already reads
-// only the pages both crawls analyzed.
+// The page limit and the automatic monitor limit derived from it are left out:
+// they follow the fetch budget left at admission, so they vary between
+// otherwise identical crawls, and the comparison reads only pages both analyzed.
 const SCOPE_KEYS = [
   'discovery_mode',
   'sample_mode',
@@ -36,7 +36,6 @@ const SCOPE_KEYS = [
   'input_mode',
   'seed_urls',
   'page_kinds',
-  'automatic_monitor_limit',
 ] as const;
 const RULE_FIELDS = new Map(Object.entries(p.field_rules).map(([field, rule]) => [rule, field]));
 

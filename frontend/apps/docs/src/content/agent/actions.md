@@ -42,7 +42,7 @@ CiteLadder uses the Action’s current findings to determine the expected checks
 
 ## Read the measurement result
 
-The declaration keeps the target, baseline and expected checks tied to that implementation event. Each check is read by the evidence that can answer it: a Site Health check by the next crawl that reads the page, a prompt by the next visibility run, and Search Console clicks per day on the page or query by each synced window that starts on or after the go-live day. Each check keeps its own latest reading, so a crawl and a Search Console window together can complete an Action that neither completes alone.
+The declaration keeps the target, baseline and expected checks tied to that implementation event. Each check is read by the evidence that can answer it: a Site Health check by the next crawl that reads the page, a prompt by the next visibility run, and Search Console clicks per day on the page or query by each synced window that starts after the go-live day. Each check keeps its own latest reading, so a crawl and a Search Console window together can complete an Action that neither completes alone.
 
 Review each check and what its reading is waiting for. A page check that is still waiting offers **Run crawl now**. A page the crawl did not read, or an incompatible window, is a reason for limited measurement, not an observed failure. New evidence is read for 30 days after the go-live day; after that, the last reading stands.
 

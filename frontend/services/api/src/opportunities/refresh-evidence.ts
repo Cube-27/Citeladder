@@ -121,7 +121,9 @@ export function declineValue(confidence: number): number {
 
 /** Size in multiples of the materiality the audit confirmed; at least one, capped. */
 export function declineGap(delta: number | null): number {
-  const multiple = Math.abs(delta ?? 0) / policy.audits.analysis.prompt_decline_materiality_points;
+  // An unmeasured size is the materiality the audit confirmed, never zero.
+  if (delta === null) return 1;
+  const multiple = Math.abs(delta) / policy.audits.analysis.prompt_decline_materiality_points;
   return Math.min(o.CONFIRMED_DECLINE_GAP_CAP, Math.max(1, multiple));
 }
 

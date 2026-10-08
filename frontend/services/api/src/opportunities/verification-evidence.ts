@@ -163,8 +163,9 @@ async function visibilityCheck(ctx: Context, auditId: string, check: Check) {
 }
 
 /**
- * Clicks per day on the declared page or query, in a window that starts on
- * or after the declaration day, against the frozen pre-declaration rate.
+ * Clicks per day on the declared page or query, in a window that starts
+ * after the go-live day (that day is partly before the change, and its UTC
+ * date can differ from the user's), against the frozen pre-declaration rate.
  * Sync windows differ in length, so windows compare as daily rates.
  */
 async function trafficCheck(ctx: Context, snapshotId: string, check: Check) {
@@ -182,7 +183,7 @@ async function trafficCheck(ctx: Context, snapshotId: string, check: Check) {
       .executeTakeFirst(),
   );
   if (!snapshot) return outcome(ctx.reading, 'unavailable', 'no_traffic_snapshot');
-  if (snapshot.start < dayOf(d.declared_implemented_at))
+  if (snapshot.start <= dayOf(d.declared_implemented_at))
     return outcome(ctx.reading, 'unavailable', 'window_overlaps_declaration');
   const { rowId, rate } = await scopedDailyRate(
     ctx.db,

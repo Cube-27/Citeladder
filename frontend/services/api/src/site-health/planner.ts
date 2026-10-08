@@ -162,7 +162,10 @@ async function seedMonitored(db: Database, crawl: Crawl) {
   const declared = new Set(
     await measuredTargetPages(db, { workspaceId: crawl.workspace_id, projectId: crawl.project_id }),
   );
-  rows.sort((left, right) => Number(declared.has(right.id)) - Number(declared.has(left.id)));
+  // The root keeps its slot: site checks read its facts.
+  const rank = (url: { id: string; normalized_url: string }) =>
+    url.normalized_url === crawl.root_url ? 0 : declared.has(url.id) ? 1 : 2;
+  rows.sort((left, right) => rank(left) - rank(right));
   const current = await db
     .selectFrom('site_crawl_tasks')
     .select(sql<number>`count(*)::int`.as('count'))

@@ -82,8 +82,8 @@ async function visibilityLeg(
 }
 
 /**
- * A synced window that starts on or after the declaration day is what a
- * traffic check reads. Search Console finalizes a day after a short lag, so
+ * A synced window that starts after the declaration day is what a traffic
+ * check reads. Search Console finalizes a day after a short lag, so
  * the first such window is due then; past it, a sync is what is missing.
  */
 export function searchConsoleState(
@@ -94,7 +94,7 @@ export function searchConsoleState(
   const day = declaredAt.toISOString().slice(0, 10);
   const ready = new Date(`${day}T00:00:00Z`);
   ready.setUTCDate(ready.getUTCDate() + 1 + a.SEARCH_CONSOLE_FINALIZATION_LAG_DAYS);
-  const observed = window !== null && window.start >= day;
+  const observed = window !== null && window.start > day;
   let state = a.LEG_STATE_WAITING;
   if (observed) state = a.LEG_STATE_OBSERVED;
   else if (now >= ready) state = a.LEG_STATE_SYNC_NEEDED;
@@ -115,7 +115,7 @@ async function searchLeg(db: Database, row: Declaration, now: Date): Promise<Leg
     (await base
       .where(
         'window_start',
-        '>=',
+        '>',
         sql<Date>`${row.declared_implemented_at.toISOString().slice(0, 10)}::date`,
       )
       .orderBy('window_end', 'desc')

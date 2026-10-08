@@ -191,7 +191,7 @@ async function verifyExistingEvidence(
     .where('workspace_id', '=', row.workspace_id)
     .where('project_id', '=', row.project_id)
     .where('granularity', '=', policy.traffic.TRAFFIC_DEFAULT_GRANULARITY)
-    .where(sql<boolean>`window_start::date >= ${declaredAt}::timestamptz::date`)
+    .where(sql<boolean>`window_start::date > ${declaredAt}::timestamptz::date`)
     .orderBy('window_end', 'desc')
     .orderBy('created_at', 'desc')
     .limit(1)

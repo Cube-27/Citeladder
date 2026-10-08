@@ -130,18 +130,23 @@ async function auditHits(
   return { audit, hits, projections, limitations };
 }
 
-/** The newest inspected source-page reading; earned-page hits read every reading. */
-async function latestSourcePageReading(db: Database, scope: Scope) {
-  const row = await new WorkspaceScope(scope.workspaceId)
-    .selectFrom(db, 'source_page_snapshots')
-    .select('id')
-    .where('project_id', '=', scope.projectId)
-    .where('outcome', '=', policy.opportunity.refresh.source_page_outcome_inspected)
-    .orderBy('fetched_at', 'desc')
-    .orderBy('id', 'desc')
-    .limit(1)
-    .executeTakeFirst();
-  return row?.id ?? null;
+/**
+ * The source-page state earned-page hits read: the newest inspected reading
+ * (older readings are immutable) and the latest change to any page's state,
+ * which a failed or blocked inspection moves without a new reading.
+ */
+async function sourcePagesRevision(db: Database, scope: Scope) {
+  const { rows } = await sql<{ reading: string | null; pages: string | null }>`
+    select
+      (select id from source_page_snapshots
+        where workspace_id = ${scope.workspaceId} and project_id = ${scope.projectId}
+          and outcome = ${policy.opportunity.refresh.source_page_outcome_inspected}
+        order by fetched_at desc, id desc limit 1)::text as reading,
+      (select max(updated_at) from source_pages
+        where workspace_id = ${scope.workspaceId} and project_id = ${scope.projectId})::text as pages
+  `.execute(db);
+  const { reading = null, pages = null } = rows[0] ?? {};
+  return reading === null && pages === null ? null : `${reading ?? ''}@${pages ?? ''}`;
 }
 
 /** The sources a refresh would read now, without loading their evidence. */
@@ -159,7 +164,7 @@ async function resolveSources(db: Database, scope: Scope): Promise<Sources> {
       demand_snapshot_id: demand?.id ?? null,
       demand_source_revision: demand?.source_hash ?? null,
       internal_link_run_id: crawl ? await internalLinkRunId(db, scope, crawl.id) : null,
-      source_page_reading_id: await latestSourcePageReading(db, scope),
+      source_pages_revision: await sourcePagesRevision(db, scope),
     },
   };
 }

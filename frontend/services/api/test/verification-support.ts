@@ -25,10 +25,9 @@ export type VerificationSeed = {
 export async function seedVerification(db: Database): Promise<VerificationSeed> {
   // Relative to now, so the verification window always contains the seed;
   // the text keeps microseconds a Date would truncate from the evidence key.
-  const { rows } = await sql<{ at: string; day: string; declared_day: string }>`
+  const { rows } = await sql<{ at: string; day: string }>`
     select to_char(t at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as at,
-      (t at time zone 'UTC')::date::text as day,
-      ((t - interval '1 day') at time zone 'UTC')::date::text as declared_day
+      (t at time zone 'UTC')::date::text as day
     from (select date_trunc('second', now() - interval '2 days') + interval '0.123456 seconds' as t) m
   `.execute(db);
   const clock = rows[0]!;
@@ -83,7 +82,8 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
       .values({
         ...scope,
         id: trafficId,
-        window_start: new Date(`${clock.declared_day}T00:00:00Z`),
+        // Starts after the go-live day, which is partly before the change.
+        window_start: new Date(`${clock.day}T00:00:00Z`),
         window_end: new Date(`${clock.day}T00:00:00Z`),
         granularity: 'day',
         // Site-wide clicks are high; only the declared page's own row may count.

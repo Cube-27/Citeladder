@@ -143,6 +143,8 @@ export function compareMetric(
 ): CheckOutcome {
   if (!numeric(baseline)) return outcome(reading, 'unavailable', 'no_frozen_baseline');
   if (value === null) return outcome(reading, 'unavailable', missing);
+  if (!['increase', 'decrease', 'equal'].includes(String(check.direction)))
+    return outcome(reading, 'unavailable', 'unsupported_direction');
   const matched = metricMatches(
     check.direction,
     value - baseline,

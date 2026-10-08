@@ -88,6 +88,10 @@ export const declarationCheckSchema = responseObject({
   state: z.enum(['waiting', 'met', 'unmet', 'unavailable']),
   reason: z.string().nullable(),
   observed_at: z.string().nullable(),
+  // The exact source of that reading: a crawl, audit, traffic snapshot or
+  // placement inspection.
+  source_kind: z.string().nullable(),
+  source_id: z.string().nullable(),
   // What the check names: a rule, a prompt, a page or query, a link or a placement.
   subject: z.string().nullable(),
 });

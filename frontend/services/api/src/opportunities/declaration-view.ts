@@ -38,6 +38,8 @@ function checkStates(checks: Record<string, unknown>[], result: unknown) {
       state: found?.state ?? ('waiting' as const),
       reason: found?.reason ?? null,
       observed_at: found?.observed_at ?? null,
+      source_kind: found?.source_kind ?? null,
+      source_id: found?.source_id ?? null,
       subject: subject(check),
     };
   });

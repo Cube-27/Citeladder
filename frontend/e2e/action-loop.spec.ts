@@ -137,6 +137,20 @@ const declaration = {
   ],
   state: 'verified',
   limitations: [],
+  checks: [
+    {
+      index: 0,
+      kind: 'visibility_metric',
+      leg: 'next_visibility_run',
+      state: 'met',
+      reason: null,
+      observed_at: '2026-08-28T00:04:00Z',
+      source_kind: 'audit',
+      source_id: SNAPSHOT,
+      subject: null,
+    },
+  ],
+  measured_until: '2026-09-27T00:03:00Z',
   verification_events: [
     {
       id: '77777777-7777-4777-8777-777777777777',
@@ -182,7 +196,9 @@ test('declaring an Action implemented shows comparable verification', async ({ p
         ...action,
         status: declarationBody ? 'done' : 'open',
         diagnosis: { approach: 'earned_placement', families: { sources: 'observed' } },
-        members: [row],
+        members: [{ ...row, remediation: 'Prepare a transparent expert-contribution brief.' }],
+        member_measurement: { [OPPORTUNITY]: 'placement_recheck' },
+        declarable_since: new Date(Date.now() - 30 * 86_400_000).toISOString(),
         declaration: declarationBody ? declaration : null,
       },
     }),
@@ -204,8 +220,9 @@ test('declaring an Action implemented shows comparable verification', async ({ p
     .getByRole('button', { name: 'Declare implemented' })
     .click();
 
-  await expect(page.getByText('visibility: available')).toBeVisible();
-  await expect(page.getByText('ai referral traffic: observed zero')).toBeVisible();
+  await expect(page.getByText('Every check is met.')).toBeVisible();
+  await expect(page.getByText('Visibility: compared', { exact: true })).toBeVisible();
+  await expect(page.getByText('AI referral traffic: compared (zero after)')).toBeVisible();
   await expect(page.getByText('Gaps: 1 no longer observed · 1 persistent · 1 new')).toBeVisible();
   expect(declarationBody).toMatchObject({ output_revision_id: null });
 });

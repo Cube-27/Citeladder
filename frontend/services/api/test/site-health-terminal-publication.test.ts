@@ -313,7 +313,7 @@ describe('crawl lifecycle', () => {
       .where('project_id', '=', seed.projectId)
       .execute();
     expect(handoff).toContainEqual({
-      task_kind: 'opportunity_verification',
+      task_kind: 'opportunity_refresh',
       payload: expect.objectContaining({ trigger_kind: 'site_crawl', trigger_id: seed.crawlId }),
     });
     expect(handoff).toContainEqual({ task_kind: 'ai_traffic_insights_refresh', payload: {} });

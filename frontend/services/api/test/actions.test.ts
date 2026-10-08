@@ -509,13 +509,17 @@ describe('Action routes', () => {
   });
 });
 
-it('waits for a Search Console window that starts on or after the declaration day', () => {
+it('waits for a Search Console window that starts after the declaration day', () => {
   const at = new Date('2026-09-01T15:00:00.123456Z');
   const before = { start: '2026-08-29', end: '2026-09-01' };
   expect(searchConsoleState(at, before, at).state).toBe('waiting');
   const due = searchConsoleState(at, null, at).due_at;
   expect(searchConsoleState(at, before, due).state).toBe('sync_needed');
+  // The go-live day itself is partly before the change.
   expect(searchConsoleState(at, { start: '2026-09-01', end: '2026-09-04' }, at).state).toBe(
+    'waiting',
+  );
+  expect(searchConsoleState(at, { start: '2026-09-02', end: '2026-09-04' }, at).state).toBe(
     'observed',
   );
 });
