@@ -223,11 +223,11 @@
     "discovery_confirm_domain_max_chars": 1024,
     "market_context_terms": {
       "GLOBAL": ["global", "worldwide", "international"],
-      "IN": ["India", "Indian", "INR"],
-      "AU": ["Australia", "Australian", "AUD"],
+      "IN": ["India", "Indian"],
+      "AU": ["Australia", "Australian"],
       "US": ["United States", "U.S.", "USA", "US", "US market"],
       "GB": ["United Kingdom", "UK", "British"],
-      "CA": ["Canada", "Canadian", "CAD"]
+      "CA": ["Canada", "Canadian"]
     },
     "competitor_excluded_domains": [
       "alternativeto.net",

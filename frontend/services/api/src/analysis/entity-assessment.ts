@@ -1,10 +1,15 @@
-import { normalizeAlias, normalizeText, occurrenceCounts, type EntityPolicy } from './aliases.ts';
+import {
+  countsAnywhere,
+  DENSE_SCRIPT,
+  normalizeAlias,
+  occurrenceCounts,
+  tokensOf,
+  type EntityPolicy,
+} from './aliases.ts';
 import type { ScoringConfig } from './scoring.ts';
 import { policy } from '../config.ts';
 const word = '[\\p{L}\\p{N}_]';
 const escapeRegex = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-const DENSE_SCRIPT =
-  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}]/u;
 const limitation =
   "Explicit-language detection over English phrasing in a 45-character window around the entity's FIRST mention. Not sentiment, not a calibrated judgement, and not a reading of the whole answer.";
 
@@ -20,15 +25,14 @@ function aliasMatches(alias: string, answer: string): RegExpExecArray[] {
   return [...answer.matchAll(new RegExp(pattern, 'giu'))];
 }
 
-const tokensOf = (text: string) => normalizeText(text).split(' ').filter(Boolean);
-
 /** The first raw match that counts under the entity's matching policy. */
 function firstMatch(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
   return aliases
     .flatMap((alias) => aliasMatches(alias, answer))
     .sort((a, b) => a.index - b.index)
     .find((match) => {
-      if (!matching) return true;
+      // Only a policy that reads the surroundings needs the answer tokenized.
+      if (countsAnywhere(matching)) return true;
       const before = tokensOf(answer.slice(0, match.index));
       const own = tokensOf(match[0]);
       const after = tokensOf(answer.slice(match.index + match[0].length));

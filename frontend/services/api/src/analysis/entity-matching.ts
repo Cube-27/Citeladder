@@ -8,11 +8,12 @@
  * defaults to `context_required`, seeded with the project's category terms and
  * offerings; every other name defaults to `always`. People override either.
  */
+import { entityMatchingModeSchema } from '@citeladder/contracts/project';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import { record, strings } from '../db/json.ts';
-import { normalizeAlias, type EntityPolicy } from './aliases.ts';
+import { normalizeAlias } from './aliases.ts';
 
 const A = policy.audits.analysis;
 const COMMON_WORDS = new Set([
@@ -22,13 +23,15 @@ const COMMON_WORDS = new Set([
 ]);
 
 const entityPolicy = z.object({
-  mode: z.enum(['always', 'context_required']),
+  mode: entityMatchingModeSchema,
   context_terms: z.array(z.string()).default([]),
   exclusion_phrases: z.array(z.string()).default([]),
 });
-const storedMatching = z.object({
-  entities: z.record(z.string(), entityPolicy).catch({}).default({}),
-});
+export type EntityPolicy = z.infer<typeof entityPolicy>;
+// Malformed storage reads as no saved policies.
+const storedMatching = z
+  .object({ entities: z.record(z.string(), entityPolicy).default({}) })
+  .catch({ entities: {} });
 
 export type MatchedEntity = { name: string; aliases: readonly string[] };
 export type EffectivePolicy = EntityPolicy & { common_word: boolean };
@@ -46,12 +49,11 @@ function commonWordName(entity: MatchedEntity): boolean {
 
 /** Policies a person saved, by entity key; malformed storage reads as none. */
 export function storedEntityMatching(businessContext: unknown): Record<string, EntityPolicy> {
-  return storedMatching.catch({ entities: {} }).parse(record(businessContext).entity_matching ?? {})
-    .entities;
+  return storedMatching.parse(record(businessContext).entity_matching ?? {}).entities;
 }
 
 /** Context terms a common-word default starts with: category terms, then offerings. */
-export function contextSeeds(businessContext: unknown, offerings: readonly string[]): string[] {
+function contextSeeds(businessContext: unknown, offerings: readonly string[]): string[] {
   const business = record(businessContext);
   return [
     ...new Set([...strings(business.category_terms), ...offerings].map((term) => term.trim())),
@@ -61,7 +63,7 @@ export function contextSeeds(businessContext: unknown, offerings: readonly strin
 }
 
 /** The policy each entity is matched under: saved, else its default. */
-export function effectiveEntityMatching(
+function effectiveEntityMatching(
   stored: Record<string, EntityPolicy>,
   entities: readonly MatchedEntity[],
   seeds: readonly string[],
@@ -80,12 +82,34 @@ export function effectiveEntityMatching(
   );
 }
 
+/**
+ * The policy each of a project's entities is matched under, from its stored
+ * business context and offerings. Freezing, project views and generation all
+ * read this one composition.
+ */
+export function projectEntityMatching(
+  businessContext: unknown,
+  offerings: readonly string[],
+  entities: readonly MatchedEntity[],
+) {
+  return effectiveEntityMatching(
+    storedEntityMatching(businessContext),
+    entities,
+    contextSeeds(businessContext, offerings),
+  );
+}
+
+/** The stored and frozen `entity_matching` shape. */
+export const matchingBlock = (entities: Record<string, EntityPolicy>) => ({
+  version: A.entity_matching_version,
+  entities,
+});
+
 /** The block frozen into an audit's configuration. */
 export function frozenEntityMatching(effective: Record<string, EffectivePolicy>) {
-  return {
-    version: A.entity_matching_version,
-    entities: Object.fromEntries(
+  return matchingBlock(
+    Object.fromEntries(
       Object.entries(effective).map(([key, { common_word: _common, ...rule }]) => [key, rule]),
     ),
-  };
+  );
 }

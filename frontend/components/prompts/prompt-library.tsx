@@ -202,7 +202,7 @@ export function PromptLibrary({
     mutationFn: async (input: PromptGenerateInput) => {
       const options = requestOptions();
       const set = await ensurePromptSet();
-      const request = JSON.stringify([set.id, input]);
+      const request = JSON.stringify(input);
       if (generateKey.current?.request !== request)
         generateKey.current = { request, key: crypto.randomUUID() };
       return promptsApi.generate(set.id, input, {
@@ -213,8 +213,9 @@ export function PromptLibrary({
     // Clear any prior success summary before a new attempt so a stale result
     // can never render alongside a later retry's error.
     onMutate: () => setGenerateResult(null),
-    onSuccess: async (result) => {
-      generateKey.current = null;
+    onSuccess: async (result, input) => {
+      // Only this request's key retires; a different pending request keeps its own.
+      if (generateKey.current?.request === JSON.stringify(input)) generateKey.current = null;
       setGenerateResult(result);
       review.clearNotice();
       // Candidates are reviewed in the dialog; topics may have been created.

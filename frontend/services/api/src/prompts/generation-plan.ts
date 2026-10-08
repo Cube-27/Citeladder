@@ -3,6 +3,7 @@
  * offering × stage × intent × facet × market cells, the narrow brief a draft
  * batch receives, and the geography vocabulary admission and metrics read.
  */
+import { DENSE_SCRIPT } from '../analysis/aliases.ts';
 import { policy } from '../config.ts';
 import { record, strings } from '../db/json.ts';
 import type { GenerationContext, OfferingMap } from './generation-context.ts';
@@ -30,8 +31,6 @@ type PlanContext = Pick<GenerationContext, 'selected' | 'topics' | 'maps'> & {
   context: Pick<GenerationContext['context'], 'business_context'>;
 };
 
-// Market context terms include currency codes ("INR"), which are not places.
-const CURRENCIES = new Set(Intl.supportedValuesOf('currency'));
 const business = (context: PlanContext) => record(context.context.business_context);
 
 /** The reviewed market scope's share of cells that may name a market. */
@@ -51,16 +50,14 @@ function plannedMarkets(context: PlanContext): string[] {
  */
 export function geoTerms(context: PlanContext): string[] {
   const values = business(context);
-  const market = String(values.primary_market ?? '').toUpperCase();
+  const market =
+    typeof values.primary_market === 'string' ? values.primary_market.toUpperCase() : '';
   const terms = (policy.discovery.constants.market_context_terms as Record<string, string[]>)[
     market
   ];
-  return [
-    ...new Set([
-      ...strings(values.service_areas),
-      ...(terms ?? []).filter((term) => !CURRENCIES.has(term)),
-    ]),
-  ].filter((term) => term.trim());
+  return [...new Set([...strings(values.service_areas), ...(terms ?? [])])].filter((term) =>
+    term.trim(),
+  );
 }
 
 const folded = (text: string) =>
@@ -70,8 +67,6 @@ const folded = (text: string) =>
     .toLowerCase()
     .normalize('NFC');
 const wordsOf = (text: string) => folded(text).match(/[\p{L}\p{N}]+/gu) ?? [];
-const DENSE_SCRIPT =
-  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}]/u;
 
 /**
  * Whether `text` names one of `terms` as whole words. A short all-capital term
@@ -84,7 +79,7 @@ export function namesPlace(text: string, terms: readonly string[]): boolean {
     if (DENSE_SCRIPT.test(term)) return folded(text).includes(folded(term.trim()));
     if (/^\p{Lu}{2,3}$/u.test(term.replaceAll('.', '')))
       return new RegExp(
-        `(?<![\\p{L}\\p{N}])${term.replaceAll('.', '\\.?')}(?![\\p{L}\\p{N}])`,
+        String.raw`(?<![\p{L}\p{N}])${term.replaceAll('.', String.raw`\.?`)}(?![\p{L}\p{N}])`,
         'u',
       ).test(text);
     const phrase = wordsOf(term).join(' ');
@@ -101,7 +96,7 @@ function combinations(map: OfferingMap | undefined, personas: Facet[]): Facet[][
         suggested: entry.review_state !== 'confirmed',
       })),
     ),
-    ...(map?.audiences.length ? [] : personas),
+    ...(map?.audiences.some((entry) => entry.review_state === 'confirmed') ? [] : personas),
   ];
   const result: Facet[][] = [[]];
   for (const option of options) {

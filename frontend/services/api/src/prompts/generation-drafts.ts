@@ -1,4 +1,7 @@
-import type { PromptAdmissionDropReason } from '@citeladder/contracts/project';
+import type {
+  PromptAdmissionDropReason,
+  promptGenerateResponseSchema,
+} from '@citeladder/contracts/project';
 import { parsePromptProposal } from '@citeladder/contracts/prompt-proposal';
 import { z } from 'zod';
 
@@ -24,7 +27,9 @@ import {
 import { promptTextHash } from './normalization.ts';
 
 const G = policy.prompts.generation;
-const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
+export const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
+/** An unfilled template slot such as `[city]` or `{product}`. */
+export const hasPlaceholder = (text: string) => /[[{<][^[\]{}<>]*[\]}>]/u.test(text);
 const containsName = (text: string, names: readonly string[]) =>
   names.some((name) => namesAlias(text, name));
 const stem = (token: string) => token.replace(/(?<=[sxz]|ch|sh)es$/u, '').replace(/(?<!s)s$/u, '');
@@ -56,7 +61,6 @@ function brandTerms(context: GenerationContext): string[] {
   ];
 }
 
-export type { Slot } from './generation-plan.ts';
 export type Draft = {
   slot: Slot;
   text: string;
@@ -129,27 +133,44 @@ export function admitDrafts(
   // Names count under the project's matching policy, so a common-word brand
   // in ordinary language ("target audience") is not a branded draft.
   const brandRule = context.matching[entityKey(context.context.brand_name)];
+  const competitors = context.context.competitors.map((row) => ({
+    aliases: [row.name, ...row.aliases],
+    rule: context.matching[entityKey(row.name)],
+  }));
   const namesCompetitor = (text: string) =>
-    context.context.competitors.some((row) =>
-      namesEntity(text, [row.name, ...row.aliases], context.matching[entityKey(row.name)]),
-    );
-  const reason = (
+    competitors.some(({ aliases, rule }) => namesEntity(text, aliases, rule));
+  /** Planning checks: the row answers an open slot with labels it allows. */
+  const planReason = (
     row: z.infer<typeof generatedRow>,
     slot: Slot | undefined,
-    text: string,
-    hash: string,
   ): PromptAdmissionDropReason | null => {
     if (!slot || usedSlots.has(slot.slot_id)) return 'unplanned_slot';
     if (!slot.allowed_prompt_intents.includes(row.prompt_intent)) return 'intent';
     if (!G.stages.includes(row.buyer_stage)) return 'stage';
     // A planned core row's intent must suit the stage the model labelled it
     // with; Agent rows keep the labels the user reviewed in the portfolio.
-    if (
-      quick &&
-      input.cohort === 'core' &&
-      !G.stage_intents[row.buyer_stage]?.includes(row.prompt_intent)
-    )
-      return 'intent';
+    const coherent = G.stage_intents[row.buyer_stage]?.includes(row.prompt_intent);
+    return quick && input.cohort === 'core' && !coherent ? 'intent' : null;
+  };
+  /** Identity checks: who the row names, by cohort. */
+  const cohortReason = (
+    row: z.infer<typeof generatedRow>,
+    text: string,
+  ): PromptAdmissionDropReason | null => {
+    if (input.cohort === 'core')
+      return namesEntity(text, brands, brandRule) || namesCompetitor(text) ? 'branded_core' : null;
+    if (!namesEntity(text, [context.context.brand_name], brandRule)) return 'brand_missing';
+    const compares = namesCompetitor(text) && row.prompt_intent === 'compare';
+    return input.cohort === 'comparison' && !compares ? 'competitor_missing' : null;
+  };
+  const reason = (
+    row: z.infer<typeof generatedRow>,
+    slot: Slot | undefined,
+    text: string,
+    hash: string,
+  ): PromptAdmissionDropReason | null => {
+    const planned = planReason(row, slot);
+    if (planned || !slot) return planned ?? 'unplanned_slot';
     if (seen.has(hash)) return 'duplicate';
     if (
       !text ||
@@ -157,19 +178,11 @@ export function admitDrafts(
       words(text).length < policy.prompts.text_min_words
     )
       return 'length';
-    if (/[[{<][^[\]{}<>]*[\]}>]/u.test(text)) return 'placeholder';
+    if (hasPlaceholder(text)) return 'placeholder';
     if (observed.has(hash)) return 'observed_copy';
     if (bindingFailure(text, context.vocabulary)) return 'off_topic';
     if (!slot.buyer_need.market && namesPlace(text, geo)) return 'location_unplanned';
-    if (input.cohort === 'core')
-      return namesEntity(text, brands, brandRule) || namesCompetitor(text) ? 'branded_core' : null;
-    if (!namesEntity(text, [context.context.brand_name], brandRule)) return 'brand_missing';
-    if (
-      input.cohort === 'comparison' &&
-      (!namesCompetitor(text) || row.prompt_intent !== 'compare')
-    )
-      return 'competitor_missing';
-    return null;
+    return cohortReason(row, text);
   };
   const admitted: Draft[] = [];
   const drops: Drops = {};
@@ -334,22 +347,25 @@ function proposal(context: GenerationContext) {
     });
     return [];
   });
-  const slots: Slot[] = rows.map(({ row, topic, slot_id }) => ({
-    slot_id,
-    topic_id: topic.id,
-    topic_name: topic.name,
-    topic_description: topic.description,
-    buyer_need: agentNeed(topic.name, row.targeting),
-    target_buyer_stage: '',
-    allowed_prompt_intents: Object.keys(G.intent_legacy),
-    evidence_ref: {
-      kind: 'agent_output_revision',
-      id: revision.id,
-      ...agentNeed(topic.name, row.targeting),
-      evidence_type: 'hypothesis',
-      review_state: 'suggested',
-    },
-  }));
+  const slots: Slot[] = rows.map(({ row, topic, slot_id }) => {
+    const need = agentNeed(topic.name, row.targeting);
+    return {
+      slot_id,
+      topic_id: topic.id,
+      topic_name: topic.name,
+      topic_description: topic.description,
+      buyer_need: need,
+      target_buyer_stage: '',
+      allowed_prompt_intents: Object.keys(G.intent_legacy),
+      evidence_ref: {
+        kind: 'agent_output_revision',
+        id: revision.id,
+        ...need,
+        evidence_type: 'hypothesis',
+        review_state: 'suggested',
+      },
+    };
+  });
   return {
     slots,
     rows: rows.map(({ row, slot_id }) => ({ ...row, slot_id })),
@@ -365,7 +381,7 @@ export const draftCallLimit = (count: number) =>
   ) + 1;
 
 /** Why a run stopped before every planned slot had a chance at admission. */
-type Stop = 'deadline' | 'model_error' | null;
+type Stop = z.infer<typeof promptGenerateResponseSchema.shape.shortfall_reason>;
 const errorCode = (error: ModelError) =>
   error.status ? providerErrorCode(error.status) : error.code;
 
@@ -401,6 +417,7 @@ async function draftBatches(
   let calls = 0,
     parseError = false,
     failure: ModelError | null = null,
+    crashed = false,
     cut = false;
   const nextBatch = () => {
     const accepted = new Set(drafts.map((row) => row.slot.slot_id));
@@ -437,24 +454,34 @@ async function draftBatches(
       }
     }
   };
-  const worker = async () => {
-    while (!failure && calls < limit) {
-      const batch = nextBatch();
-      if (!batch.length) return;
-      if (deadline.aborted) {
-        cut = true;
-        return;
-      }
-      for (const slot of batch) inFlight.add(slot.slot_id);
+  // Each worker drafts one batch, then takes the next; a defect in one stops
+  // the others from starting more provider calls.
+  const worker = async (): Promise<void> => {
+    if (failure || crashed || calls >= limit) return;
+    const batch = nextBatch();
+    if (!batch.length) return;
+    if (deadline.aborted) {
+      cut = true;
+      return;
+    }
+    for (const slot of batch) inFlight.add(slot.slot_id);
+    try {
       await draftOne(calls++, batch);
+    } catch (error) {
+      crashed = true;
+      throw error;
+    } finally {
       for (const slot of batch) inFlight.delete(slot.slot_id);
     }
+    return worker();
   };
   await Promise.all(Array.from({ length: generationSetting('draft_concurrency') }, worker));
   if (!drafts.length && failure) throw failure;
   if (!drafts.length && parseError && !cut) throw new ModelError('parse');
-  const stop: Stop = failure ? 'model_error' : cut ? 'deadline' : null;
-  return { drafts, drops, dropRecords, models, stop };
+  let stop: Stop = null;
+  if (failure) stop = 'model_error';
+  else if (cut) stop = 'deadline';
+  return { drafts, drops, dropRecords, models, stop, reference: brief as unknown };
 }
 
 export async function generateDrafts(
@@ -474,6 +501,7 @@ export async function generateDrafts(
       maps: [] as OfferingMap[],
       models: [] as unknown[],
       stop: null as Stop,
+      reference: context.context as unknown,
     };
   }
   if (!gateway) throw new ModelError('not_configured');

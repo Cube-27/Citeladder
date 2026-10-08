@@ -191,7 +191,11 @@ export function ProjectEditPanel({
               <Input
                 {...props}
                 value={brandName}
-                onChange={(event) => setBrandName(event.target.value)}
+                onChange={(event) => {
+                  setBrandName(event.target.value);
+                  // Rules are saved by name, so a renamed entity carries its rule.
+                  setBrandRule((rule) => ({ ...rule, touched: true }));
+                }}
               />
             )}
           </Field>
@@ -305,7 +309,12 @@ export function ProjectEditPanel({
                   <div className="flex items-center gap-2">
                     <Input
                       value={competitor.name}
-                      onChange={(event) => updateCompetitor(index, { name: event.target.value })}
+                      onChange={(event) =>
+                        updateCompetitor(index, {
+                          name: event.target.value,
+                          rule: { ...competitor.rule, touched: true },
+                        })
+                      }
                       aria-label={`Competitor ${index + 1} name`}
                       placeholder="Name"
                     />

@@ -11,14 +11,12 @@
  */
 import { policy } from '../config.ts';
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';
+import type { EntityPolicy } from './entity-matching.ts';
 
-export type EntityPolicy = {
-  mode: 'always' | 'context_required';
-  context_terms: string[];
-  exclusion_phrases: string[];
-};
+export type { EntityPolicy };
 
-const DENSE_SCRIPT =
+/** Scripts written without spaces between words. */
+export const DENSE_SCRIPT =
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}]/u;
 const WORDS = new Intl.Segmenter(undefined, { granularity: 'word' });
 
@@ -78,7 +76,29 @@ function* occurrences(tokens: readonly string[], compact: string): Generator<Occ
   }
 }
 
-const phraseTokens = (value: string) => normalizeText(value).split(' ').filter(Boolean);
+/** `value` as normalized tokens, the unit every occurrence check compares. */
+export const tokensOf = (value: string) => normalizeText(value).split(' ').filter(Boolean);
+
+// A frozen policy's phrases never change, so each policy is tokenized once.
+const policyTokens = new WeakMap<EntityPolicy, { exclusions: string[][]; context: string[][] }>();
+function tokenized(entity: EntityPolicy) {
+  let cached = policyTokens.get(entity);
+  if (!cached) {
+    const phrases = (values: readonly string[]) =>
+      values.map(tokensOf).filter((words) => words.length);
+    cached = {
+      exclusions: phrases(entity.exclusion_phrases),
+      context: phrases(entity.context_terms),
+    };
+    policyTokens.set(entity, cached);
+  }
+  return cached;
+}
+
+/** Whether every occurrence counts under `entity` without looking at its surroundings. */
+export const countsAnywhere = (entity: EntityPolicy | undefined) =>
+  !entity || (entity.mode === 'always' && !entity.exclusion_phrases.length);
+
 const phraseAt = (tokens: readonly string[], words: readonly string[], index: number) =>
   index >= 0 && words.every((word, offset) => tokens[index + offset] === word);
 
@@ -93,9 +113,8 @@ export function occurrenceCounts(
   entity: EntityPolicy | undefined,
 ): boolean {
   if (!entity) return true;
-  for (const phrase of entity.exclusion_phrases) {
-    const words = phraseTokens(phrase);
-    if (!words.length) continue;
+  const { exclusions, context } = tokenized(entity);
+  for (const words of exclusions) {
     for (let index = span.end - words.length; index <= span.start; index++)
       if (phraseAt(tokens, words, index)) return false;
   }
@@ -103,9 +122,7 @@ export function occurrenceCounts(
   const window = policy.audits.analysis.context_window_tokens;
   const low = Math.max(0, span.start - window),
     high = Math.min(tokens.length, span.end + window);
-  return entity.context_terms.some((term) => {
-    const words = phraseTokens(term);
-    if (!words.length) return false;
+  return context.some((words) => {
     for (let index = low; index + words.length <= high; index++) {
       const outside = index + words.length <= span.start || index >= span.end;
       if (outside && phraseAt(tokens, words, index)) return true;
@@ -159,11 +176,23 @@ export function namesAlias(text: string, name: string): boolean {
   return namesEntity(text, [name]);
 }
 
+/**
+ * Code-point offset of the entity's first counting occurrence in already
+ * normalized text, or null when it is not named.
+ */
+export function entityOffset(
+  normalizedText: string,
+  aliases: readonly string[],
+  entity?: EntityPolicy,
+): number | null {
+  return firstOccurrence(normalizedText, aliases, entity)?.codePoints ?? null;
+}
+
 /** Code-point offset in the normalized answer, matching persisted Python ranks. */
 export function firstAliasOffset(
   alias: string,
   normalized: string,
   entity?: EntityPolicy,
 ): number | null {
-  return firstOccurrence(normalized, [alias], entity)?.codePoints ?? null;
+  return entityOffset(normalized, [alias], entity);
 }

@@ -11,6 +11,7 @@
  */
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 
+import { DENSE_SCRIPT } from '../analysis/aliases.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
@@ -23,8 +24,6 @@ const {
   business_context_fields: CONTEXT_FIELDS,
 } = policy.prompts.binding;
 const STOPWORDS = new Set(stopwords);
-const DENSE_SCRIPT =
-  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}]/u;
 // ICU word boundaries also split scripts written without spaces (Chinese,
 // Japanese, Thai); for spaced scripts they match the separator split below.
 const WORDS = new Intl.Segmenter(undefined, { granularity: 'word' });

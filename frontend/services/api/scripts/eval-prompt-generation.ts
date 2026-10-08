@@ -5,9 +5,9 @@
  * only (it calls the provider and spends budget); never part of CI. Metrics and
  * the selected responses append to one log in the worktree's Git directory.
  */
-import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { appendFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { policy } from '../src/config.ts';
@@ -28,22 +28,32 @@ const { values } = parseArgs({
 if (!values.live)
   throw new Error('Calibration calls the configured model provider; pass --live to run it');
 const count = Number(values.count);
+// The same ceiling the API enforces, so an eval cannot outspend a request.
+if (!Number.isInteger(count) || count < 1 || count > generationSetting('max_count'))
+  throw new Error(`--count must be an integer from 1 to ${generationSetting('max_count')}`);
 const gateway = createModelGateway();
-const gitDir = execFileSync('git', ['rev-parse', '--absolute-git-dir'], {
-  encoding: 'utf8',
-}).trim();
-const log = join(gitDir, 'prompt-generation-eval.log');
+const log = join(gitDirectory(process.cwd()), 'prompt-generation-eval.log');
 const run = new Date().toISOString();
 
-for (const fixture of generationFixtures.filter(
-  (item) => !values.fixture || item.name === values.fixture,
-)) {
-  const context = fixtureContext(fixture);
-  const input = generationInput.parse({ count });
+/** The worktree's Git directory: `.git` itself, or the one a linked worktree's `.git` file names. */
+function gitDirectory(from: string): string {
+  for (let directory = resolve(from); ; directory = dirname(directory)) {
+    const marker = join(directory, '.git');
+    if (existsSync(marker)) {
+      if (statSync(marker).isDirectory()) return marker;
+      const pointer = /^gitdir:\s*(.+)$/mu.exec(readFileSync(marker, 'utf8'));
+      if (pointer) return resolve(directory, pointer[1]!.trim());
+    }
+    if (dirname(directory) === directory) throw new Error('Run the eval inside the repository');
+  }
+}
+
+/** One fixture through planning, the live model, admission and selection, scored. */
+async function evaluate(fixture: (typeof generationFixtures)[number]) {
   const started = performance.now();
   const output = await generateDrafts(
-    context,
-    input,
+    fixtureContext(fixture),
+    generationInput.parse({ count }),
     gateway,
     AbortSignal.timeout(generationSetting('generation_deadline_seconds') * 1000),
   );
@@ -62,35 +72,41 @@ for (const fixture of generationFixtures.filter(
       ...fixture.competitors.map((row) => row.name),
     ],
   });
-  const failures = thresholdFailures(metrics, {
-    market_scope: String(fixture.business_context.market_scope),
-    requested: count,
-  });
-  await appendFile(
-    log,
-    `${JSON.stringify({
-      run,
-      fixture: fixture.name,
-      generator_version: policy.prompts.generation.version,
-      elapsed_ms: Math.round(performance.now() - started),
-      stop: output.stop,
-      admission_drops: output.drops,
-      metrics,
-      failures,
-      models: output.models,
-      responses: selected.map((draft) => ({
-        buyer_need: draft.slot.buyer_need,
-        target_buyer_stage: draft.slot.target_buyer_stage,
-        text: draft.text,
-        buyer_stage: draft.buyer_stage,
-        prompt_intent: draft.prompt_intent,
-        names_place: draft.names_place ?? null,
-      })),
-    })}\n`,
-  );
+  return {
+    run,
+    fixture: fixture.name,
+    generator_version: policy.prompts.generation.version,
+    elapsed_ms: Math.round(performance.now() - started),
+    stop: output.stop,
+    admission_drops: output.drops,
+    metrics,
+    failures: thresholdFailures(metrics, {
+      market_scope: String(fixture.business_context.market_scope),
+      requested: count,
+    }),
+    models: output.models,
+    responses: selected.map((draft) => ({
+      buyer_need: draft.slot.buyer_need,
+      target_buyer_stage: draft.slot.target_buyer_stage,
+      text: draft.text,
+      buyer_stage: draft.buyer_stage,
+      prompt_intent: draft.prompt_intent,
+      names_place: draft.names_place ?? null,
+    })),
+  };
+}
+
+const records = await Promise.all(
+  generationFixtures
+    .filter((item) => !values.fixture || item.name === values.fixture)
+    .map(evaluate),
+);
+await appendFile(log, records.map((record) => `${JSON.stringify(record)}\n`).join(''));
+for (const { fixture, metrics, failures } of records) {
+  const verdict = failures.length ? 'failed ' + failures.join(', ') : 'within thresholds';
+  const located = metrics.located_share.toFixed(2);
   process.stdout.write(
-    `${fixture.name}: ${metrics.count}/${count} selected, located ${metrics.located_share.toFixed(2)}, ` +
-      `${failures.length ? `failed ${failures.join(', ')}` : 'within thresholds'}\n`,
+    `${fixture}: ${metrics.count}/${count} selected, located ${located}, ${verdict}\n`,
   );
 }
 process.stdout.write(`Log: ${log}\n`);

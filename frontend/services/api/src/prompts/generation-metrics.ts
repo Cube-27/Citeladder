@@ -6,7 +6,7 @@
 import { namesAlias } from '../analysis/aliases.ts';
 import { policy } from '../config.ts';
 import { bindingTokens } from './binding.ts';
-import type { Draft } from './generation-drafts.ts';
+import { hasPlaceholder, words, type Draft } from './generation-drafts.ts';
 import { namesPlace } from './generation-plan.ts';
 
 const NEAR_DUPLICATE_JACCARD = 0.6;
@@ -19,7 +19,6 @@ const tally = (values: readonly string[]): Counts => {
   return counts;
 };
 const share = (part: number, whole: number) => (whole ? part / whole : 0);
-const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
 
 /** Counts by stage, intent, offering and persona, and located versus bare cells. */
 export function distribution(drafts: readonly Draft[], geo: readonly string[]) {
@@ -80,7 +79,7 @@ export function setMetrics(input: SetMetricsInput) {
     category_restatement_rate: share(restated, texts.length),
     branded_leakage: texts.filter((text) => input.brands.some((name) => namesAlias(text, name)))
       .length,
-    placeholder_leakage: texts.filter((text) => /[[{<][^[\]{}<>]*[\]}>]/u.test(text)).length,
+    placeholder_leakage: texts.filter(hasPlaceholder).length,
     mean_words: share(
       texts.reduce((sum, text) => sum + words(text).length, 0),
       texts.length,

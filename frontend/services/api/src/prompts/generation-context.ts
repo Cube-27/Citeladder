@@ -6,11 +6,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
-import {
-  contextSeeds,
-  effectiveEntityMatching,
-  storedEntityMatching,
-} from '../analysis/entity-matching.ts';
+import { projectEntityMatching } from '../analysis/entity-matching.ts';
 import { currentDemandSnapshot } from '../opportunities/sources.ts';
 import { loadVocabulary } from './binding.ts';
 import {
@@ -227,11 +223,10 @@ export function generationContext(
           : null,
       })),
     };
-    const matching = effectiveEntityMatching(
-      storedEntityMatching(persistedBusiness),
-      [{ name: context.brand_name, aliases: context.brand_aliases }, ...context.competitors],
-      contextSeeds(persistedBusiness, offerings),
-    );
+    const matching = projectEntityMatching(persistedBusiness, offerings, [
+      { name: context.brand_name, aliases: context.brand_aliases },
+      ...context.competitors,
+    ]);
     const revision = input.agent_revision_id
       ? await trx
           .selectFrom('agent_output_revisions as revision')

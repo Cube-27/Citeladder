@@ -14,8 +14,11 @@ export type MentionRuleDraft = {
   mode: EntityMatching['mode'];
   contextTerms: string;
   exclusionPhrases: string;
-  /** The name is an ordinary word, so the rule is shown without asking. */
-  commonWord: boolean;
+  /**
+   * Shown open (an ordinary-word name, or one already needing context) rather
+   * than behind a disclosure; fixed while the panel is open.
+   */
+  open: boolean;
   touched: boolean;
 };
 
@@ -24,7 +27,7 @@ export function mentionRuleDraft(matching: EntityMatching | undefined): MentionR
     mode: matching?.mode ?? 'always',
     contextTerms: (matching?.context_terms ?? []).join(', '),
     exclusionPhrases: (matching?.exclusion_phrases ?? []).join(', '),
-    commonWord: matching?.common_word ?? false,
+    open: (matching?.common_word ?? false) || matching?.mode === 'context_required',
     touched: false,
   };
 }
@@ -87,6 +90,7 @@ export function MentionRuleFields({
       </Field>
     </fieldset>
   );
-  if (rule.commonWord || rule.mode === 'context_required') return fields;
+  // Decided once per draft, so toggling the switch never remounts the fields.
+  if (rule.open) return fields;
   return <Disclosure title="Mention rule">{fields}</Disclosure>;
 }

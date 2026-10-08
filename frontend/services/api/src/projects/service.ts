@@ -5,9 +5,9 @@ import type { Insertable, Selectable } from 'kysely';
 import type { z } from 'zod';
 
 import {
-  contextSeeds,
-  effectiveEntityMatching,
   entityKey,
+  matchingBlock,
+  projectEntityMatching,
   storedEntityMatching,
 } from '../analysis/entity-matching.ts';
 import { policy } from '../config.ts';
@@ -106,10 +106,10 @@ async function views(
       .filter((item) => item.project_id === row.id)
       .map((item) => ({ ...item, aliases: stringArray.parse(item.aliases) }));
     const profile = profiles.find((item) => item.project_id === row.id);
-    const matching = effectiveEntityMatching(
-      storedEntityMatching(profile?.business_context),
+    const matching = projectEntityMatching(
+      profile?.business_context,
+      strings(profile?.products_services),
       [{ name: brandName, aliases: brandAliases }, ...rivals],
-      contextSeeds(profile?.business_context, strings(profile?.products_services)),
     );
     return {
       ...row,
@@ -377,7 +377,7 @@ async function replaceEntityMatching(
     .set({
       business_context: JSON.stringify({
         ...context,
-        entity_matching: { version: policy.audits.analysis.entity_matching_version, entities },
+        entity_matching: matchingBlock(entities),
       }),
       updated_at: new Date(),
     })
