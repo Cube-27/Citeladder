@@ -14,6 +14,7 @@ import {
   agentChatDetailSchema,
   agentRevisionsPageSchema,
   agentChatsPageSchema,
+  agentTurnEventSchema,
 } from '@citeladder/contracts/agent';
 
 describe('served Agent cutover on PostgreSQL', () => {
@@ -53,6 +54,42 @@ describe('served Agent cutover on PostgreSQL', () => {
       worker: new AgentWorker(db, bindings, 'cutover-test-worker', scope.workspaceId),
     };
   }
+  it('streams one interactive turn as step, text and done events, saving the same reply', async () => {
+    const { scope, bindings, headers } = await setup();
+    const long = `Here is the answer. ${'Detail. '.repeat(40)}`.trim();
+    bindings.runtime.deps.modelFor = () => scripted([{ action: 'respond', reply: long }]);
+    const accepted = agentTurnAcceptedSchema.parse(
+      await (
+        await app.request(`/api/v1/projects/${scope.projectId}/agent/chats`, {
+          method: 'POST',
+          headers: { ...headers, 'Idempotency-Key': randomUUID() },
+          body: JSON.stringify({ message: 'Explain our visibility' }),
+        })
+      ).json(),
+    );
+    const response = await app.request(
+      `/api/v1/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`,
+      { method: 'POST', headers: { ...headers, Accept: 'text/event-stream' } },
+    );
+    expect(response.headers.get('content-type')).toContain('text/event-stream');
+    const events = (await response.text())
+      .split('\n\n')
+      .filter((frame) => frame.startsWith('data: '))
+      .map((frame) => agentTurnEventSchema.parse(JSON.parse(frame.slice(6))));
+    expect(events.map((event) => event.type)).toEqual(['step', 'text', 'text', 'done']);
+    expect(events.at(-2)).toMatchObject({ type: 'text', reply: long });
+    expect(events.at(-1)).toMatchObject({ type: 'done', run: { status: 'succeeded' } });
+    const detail = agentChatDetailSchema.parse(
+      await (await app.request(`/api/v1/agent/chats/${accepted.chat_id}`, { headers })).json(),
+    );
+    expect(detail.messages.at(-1)?.content).toBe(long);
+    // A second request for the finished turn never executes it again.
+    const again = await app.request(
+      `/api/v1/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`,
+      { method: 'POST', headers: { ...headers, Accept: 'text/event-stream' } },
+    );
+    expect((await again.text()).match(/"type":"(\w+)"/gu)).toEqual(['"type":"done"']);
+  });
   it('projects only public skill metadata on the raw HTTP wire', async () => {
     const { headers } = await setup();
     const response = await app.request('/api/v1/agent/skills', { headers });

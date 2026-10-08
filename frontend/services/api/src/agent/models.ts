@@ -51,6 +51,8 @@ export function agentModels(
       }
     } else {
       if (run.requested_model !== platform.model) throw new AgentError('model_changed');
+      // The platform transport passes response streams through; the customer
+      // probe transport buffers, so customer routes answer in one piece.
       gateway = createModelGateway(
         { ...platform, attempts: policy.agent.provider_max_attempts },
         transports.platform,
@@ -61,8 +63,14 @@ export function agentModels(
       endpointHost: gateway.baseUrlHost,
       adapter: customer ? 'openai_compatible_byok' : 'openai_compatible',
       retryableError: retryableModelError,
-      complete: (request, signal) =>
-        gateway.completeStructured(request.system, request.user, request.schema, signal),
+      complete: (request, signal, onText) =>
+        gateway.completeStructured(
+          request.system,
+          request.user,
+          request.schema,
+          signal,
+          customer ? undefined : onText,
+        ),
     };
   };
 }

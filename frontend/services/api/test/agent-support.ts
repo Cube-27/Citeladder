@@ -83,9 +83,12 @@ export function scripted(
     adapter: 'test',
     endpointHost: 'model.example.test',
     retryableError: () => false,
-    complete: async (request) => {
+    complete: async (request, _signal, onText) => {
       await onCall?.(request, count + 1);
-      return result(steps[count++] ?? reply());
+      const outcome = result(steps[count++] ?? reply());
+      onText?.(outcome.content.slice(0, Math.ceil(outcome.content.length / 2)));
+      onText?.(outcome.content);
+      return outcome;
     },
   };
 }

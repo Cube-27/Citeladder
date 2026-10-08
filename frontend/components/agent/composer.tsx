@@ -1,6 +1,6 @@
 'use client';
 
-import { SendHorizontal, X } from 'lucide-react';
+import { SendHorizontal, Square, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,8 @@ export function Composer({
   tools,
   commands,
   rows = 3,
+  onStop,
+  stopping = false,
 }: Readonly<{
   id: string;
   label: string;
@@ -48,6 +50,9 @@ export function Composer({
   commands?: ComposerCommands;
   /** Visible lines before the field scrolls. */
   rows?: number;
+  /** While a turn runs, the send button stops it instead. */
+  onStop?: () => void;
+  stopping?: boolean;
 }>) {
   const canSend = !disabled && !submissionDisabled && !pending && value.trim().length > 0;
   return (
@@ -93,10 +98,17 @@ export function Composer({
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1">{tools}</div>
-        <Button type="submit" size="sm" disabled={!canSend}>
-          <SendHorizontal className="size-4" aria-hidden />
-          {pending ? 'Sending…' : 'Send'}
-        </Button>
+        {onStop ? (
+          <Button type="button" variant="secondary" size="sm" disabled={stopping} onClick={onStop}>
+            <Square className="size-4" aria-hidden />
+            {stopping ? 'Stopping…' : 'Stop'}
+          </Button>
+        ) : (
+          <Button type="submit" size="sm" disabled={!canSend}>
+            <SendHorizontal className="size-4" aria-hidden />
+            {pending ? 'Sending…' : 'Send'}
+          </Button>
+        )}
       </div>
     </form>
   );

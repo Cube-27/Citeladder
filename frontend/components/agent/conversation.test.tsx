@@ -41,8 +41,7 @@ describe('Conversation order', () => {
           output={<section aria-label="Pricing page edits">Saved first-turn result.</section>}
           onRefine={vi.fn()}
           onRecover={vi.fn()}
-          onStop={vi.fn()}
-          stopping={false}
+          onRetry={vi.fn()}
           canSend
         />,
       );

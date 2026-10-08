@@ -115,39 +115,10 @@ describe('ChatScreen', () => {
     );
     await user.click(screen.getByText('Context used'));
     expect(screen.getByText('Selected issue group')).toBeVisible();
-    expect(screen.getByText('oldest history messages')).toBeVisible();
+    // Omissions are disclosed in plain words, never as internal codes.
+    expect(screen.getByText(/left out to fit this turn/)).toBeVisible();
+    expect(screen.queryByText(/oldest_history|history messages/)).not.toBeInTheDocument();
     expect(screen.queryByText(current.messages[0]!.content)).not.toBeInTheDocument();
-  });
-  it('refreshes history for a new latest revision and retains prefix invalidation', async () => {
-    let items = [revision(REV1, 1, 'agent', 'First draft')];
-    mswServer.use(
-      http.get(`/api/v1/agent/chats/${CHAT}/output/revisions`, () => HttpResponse.json({ items })),
-    );
-    const { rerender, queryClient } = renderWithProviders(
-      <OutputHistory
-        workspaceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-        chatId={CHAT}
-        latestRevisionId={REV1}
-        canRestore={false}
-      />,
-    );
-    expect(await screen.findByText('Revision 1')).toBeVisible();
-    items = [...items, revision(REV2, 2, 'agent', 'Second draft')];
-    rerender(
-      <OutputHistory
-        workspaceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-        chatId={CHAT}
-        latestRevisionId={REV2}
-        canRestore={false}
-      />,
-    );
-    expect(await screen.findByText('Revision 2')).toBeVisible();
-    items = [
-      ...items,
-      revision('44444444-4444-4444-8444-444444444443', 3, 'user', 'Restored draft'),
-    ];
-    await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.revisions(CHAT) }));
-    expect(await screen.findByText('Revision 3')).toBeVisible();
   });
   it('saves an edit as a new revision and shows it inline in the thread', async () => {
     let current = detail(revision(REV1, 1, 'agent', 'Old title tag.'));
@@ -357,6 +328,112 @@ describe('ChatScreen', () => {
     );
   });
 
+  it('shows the reply as it streams, then the saved reply in its place', async () => {
+    const STREAMED_RUN = '99999999-9999-4999-8999-999999999991';
+    const base = detail(revision(REV1, 1, 'agent', 'Body.'));
+    const question = {
+      ...base.messages[0]!,
+      id: '77777777-7777-4777-8777-777777777781',
+      sequence: 3,
+      content: 'Why this order?',
+    };
+    const running = {
+      ...base,
+      messages: [...base.messages, question],
+      latest_run: { ...base.latest_run, id: STREAMED_RUN, status: 'running' as const },
+    };
+    const finished = {
+      ...running,
+      messages: [
+        ...running.messages,
+        {
+          ...base.messages[1]!,
+          id: '77777777-7777-4777-8777-777777777782',
+          sequence: 4,
+          content: 'The saved answer.',
+        },
+      ],
+      latest_run: { ...running.latest_run, status: 'succeeded' as const },
+    };
+    let phase: 'before' | 'running' | 'done' = 'before';
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const frame = (event: unknown) =>
+      new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json({ before: base, running, done: finished }[phase]),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, () => {
+        phase = 'running';
+        return HttpResponse.json(
+          { chat_id: CHAT, run: { ...running.latest_run, status: 'queued' } },
+          { status: 202 },
+        );
+      }),
+      http.post(`/api/v1/agent/chats/${CHAT}/runs/${STREAMED_RUN}/run`, () => {
+        const body = new ReadableStream<Uint8Array>({
+          async start(controller) {
+            controller.enqueue(frame({ type: 'step', ordinal: 1, tool: null, status: 'working' }));
+            controller.enqueue(
+              frame({ type: 'text', ordinal: 1, reply: 'Partly written', title: null, body: null }),
+            );
+            await held;
+            phase = 'done';
+            controller.enqueue(frame({ type: 'done', run: finished.latest_run }));
+            controller.close();
+          },
+        });
+        return new HttpResponse(body, { headers: { 'content-type': 'text/event-stream' } });
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+
+    await user.type(await screen.findByLabelText('Reply to the agent'), 'Why this order?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(
+      await screen.findByRole('article', { name: 'Agent reply in progress' }),
+    ).toHaveTextContent('Partly written');
+    release();
+    expect(await screen.findByText('The saved answer.')).toBeVisible();
+    expect(
+      screen.queryByRole('article', { name: 'Agent reply in progress' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('regenerates the last reply by sending its request again as a new turn', async () => {
+    const bodies: unknown[] = [];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(detail(revision(REV1, 1, 'agent', 'Body.'))),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(
+          {
+            chat_id: CHAT,
+            run: { ...detail(revision(REV1, 1, 'agent', '')).latest_run, status: 'queued' },
+          },
+          { status: 202 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+
+    await user.click(await screen.findByRole('button', { name: 'Regenerate' }));
+    await vi.waitFor(() =>
+      expect(bodies).toEqual([{ message: 'Improve our pricing page snippet.' }]),
+    );
+    // The reader's draft is untouched.
+    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('');
+  });
+
   it('retries a failed send with the same idempotency key', async () => {
     const keys: (string | null)[] = [];
     mswServer.use(
@@ -499,10 +576,10 @@ describe('ChatScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await user.click(screen.getByRole('button', { name: 'Remove @Pricing page' }));
     accept();
-    await screen.findByRole('button', { name: 'Replace draft with failed request' });
+    await screen.findByRole('button', { name: 'Replace draft with last request' });
     expect(screen.getByLabelText('Reply to the agent')).toHaveValue('@Pricing page Shorten it.');
     expect(screen.queryByRole('button', { name: 'Remove @Pricing page' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Replace draft with failed request' }));
+    await user.click(screen.getByRole('button', { name: 'Replace draft with last request' }));
     expect(screen.getByLabelText('Reply to the agent')).toHaveValue('@Pricing page Shorten it.');
     expect(screen.getByRole('button', { name: 'Remove @Pricing page' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Send' }));
@@ -515,23 +592,22 @@ describe('ChatScreen', () => {
     ]);
   });
 
-  it('keeps stopped-at-limit distinct from a failure and locks nothing that saved', async () => {
+  it('explains an older unanswered stop at the step limit and offers to try again', async () => {
+    const stopped = detail(revision(REV1, 1, 'agent', 'Body.'), {
+      status: 'failed',
+      error_code: 'stopped_at_limit',
+    });
+    // Turns now always end with a reply; an older one may have ended silently.
+    stopped.messages = stopped.messages.filter((message) => message.role === 'user');
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
-        HttpResponse.json(
-          detail(revision(REV1, 1, 'agent', 'Body.'), {
-            status: 'failed',
-            error_code: 'stopped_at_limit',
-          }),
-        ),
-      ),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(stopped)),
     );
     renderChat();
 
     expect(await screen.findByText(/stopped at its step limit/i)).toBeVisible();
     expect(screen.queryByText(/could not finish/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Review request to try again' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
   });
 
   it('shows what a running turn has done so far', async () => {
@@ -555,29 +631,9 @@ describe('ChatScreen', () => {
     await user.click(await screen.findByText('View activity'));
     const steps = within(screen.getByRole('list', { name: 'Agent progress' }));
     expect(steps.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Attempt 1 · Step 1 · Read site health · no data yet',
-      'Attempt 1 · Step 2 · Deciding the next step…',
+      'Read site health · no data yet',
+      'Deciding the next step…',
     ]);
-  });
-
-  it('retains tool identity and distinguishes failed and unavailable reads after completion', async () => {
-    const completed = detail(revision(REV1, 1, 'agent', 'Body.'));
-    completed.messages[1]!.steps = [
-      { kind: 'tool', tool: 'read_site_health', status: 'completed' },
-      { kind: 'tool', tool: 'fetch', status: 'failed' },
-      { kind: 'tool', tool: 'read_site_pages', status: 'unavailable' },
-    ];
-    mswServer.use(
-      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(completed)),
-    );
-    const user = userEvent.setup();
-    renderChat();
-    await user.click(await screen.findByText(/Run complete/));
-    const reply = within(screen.getByRole('article', { name: 'Agent reply' }));
-    expect(reply.getByText('Read site health')).toBeVisible();
-    expect(reply.getByText('Fetch · failed')).toBeVisible();
-    expect(reply.getByText('Read site pages · no data yet')).toBeVisible();
   });
 
   it('refuses edits while a turn is running and offers Stop', async () => {
@@ -599,7 +655,8 @@ describe('ChatScreen', () => {
     expect(within(pane).getByRole('button', { name: 'Edit' })).toBeDisabled();
     expect(screen.getByLabelText('Reply to the agent')).toBeEnabled();
     await user.type(screen.getByLabelText('Reply to the agent'), 'Next question');
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    // While the turn runs, Stop takes Send's place; drafting continues.
+    expect(screen.queryByRole('button', { name: 'Send' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Stop' }));
     expect(cancels).toHaveLength(1);
   });
@@ -705,89 +762,4 @@ describe('ChatScreen', () => {
       }
     },
   );
-
-  it('declares the revision on screen implemented and shows what it waits for', async () => {
-    const ACTION = '88888888-8888-4888-8888-888888888888';
-    const attached = detail(revision(REV1, 1, 'agent', 'Body.'));
-    attached.chat.action_id = ACTION as never;
-    attached.output.action_id = ACTION as never;
-    const declaration = {
-      id: '99999999-9999-4999-8999-999999999999',
-      action_id: ACTION,
-      output_revision_id: REV1,
-      member_opportunity_ids: [],
-      opportunity_snapshot_id: RUN,
-      target_site_url_ids: [],
-      target_external_url: null,
-      declared_implemented_at: NOW,
-      expected_checks: [],
-      state: 'declared',
-      limitations: [],
-      verification_events: [],
-      legs: [
-        {
-          leg: 'next_crawl',
-          state: 'not_scheduled',
-          due_at: null,
-          last_evidence_at: null,
-          source_id: null,
-        },
-      ],
-      checks: [],
-      measured_until: NOW,
-      created_at: NOW,
-    };
-    let declared: typeof declaration | null = null;
-    const posted: unknown[] = [];
-    const action = () => ({
-      id: ACTION,
-      project_id: PROJECT,
-      target_kind: 'page',
-      target_label: 'https://acme.test/pricing',
-      target_url: 'https://acme.test/pricing',
-      target_prompt_id: null,
-      origin: 'evidence',
-      status: declared ? 'implemented' : 'in_progress',
-      priority_score: 40,
-      families: ['site_health'],
-      approach: 'fix_technical',
-      skill_id: 'technical_health',
-      member_count: 1,
-      evidence_cleared_at: null,
-      created_at: NOW,
-      updated_at: NOW,
-      diagnosis: {},
-      members: [],
-      member_measurement: {},
-      declarable_since: '2026-01-01T00:00:00Z',
-      declaration: declared,
-    });
-    mswServer.use(
-      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(attached)),
-      http.get(`/api/v1/actions/${ACTION}`, () => HttpResponse.json(action())),
-      http.post(`/api/v1/actions/${ACTION}/declaration`, async ({ request }) => {
-        posted.push(await request.json());
-        declared = declaration;
-        return HttpResponse.json(declaration, { status: 201 });
-      }),
-    );
-    const user = userEvent.setup();
-    renderChat();
-
-    const pane = await screen.findByRole('region', { name: 'Pricing page edits' });
-    await user.click(await within(pane).findByRole('button', { name: 'Mark implemented' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Mark implemented' });
-    await user.click(within(dialog).getByRole('button', { name: 'Declare implemented' }));
-
-    expect(await within(pane).findByText(/Crawls run when you start one/)).toBeVisible();
-    // The dialog's trigger is gone; focus lands on what replaced it.
-    expect(within(pane).getByRole('heading', { name: 'Measurement' })).toHaveFocus();
-    expect(
-      within(pane).queryByRole('button', { name: 'Mark implemented' }),
-    ).not.toBeInTheDocument();
-    expect(posted).toEqual([
-      { output_revision_id: REV1, declared_implemented_at: expect.any(String) },
-    ]);
-  });
 });

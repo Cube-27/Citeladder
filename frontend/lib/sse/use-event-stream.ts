@@ -24,7 +24,7 @@ type SseEventStreamOptions = {
   streamName: string;
 };
 
-function streamHeaders(
+export function streamHeaders(
   workspaceId: string | null,
   lastEventId: string | null,
 ): Record<string, string> {
@@ -34,7 +34,7 @@ function streamHeaders(
   return headers;
 }
 
-async function readSseResponse(
+export async function readSseResponse(
   body: ReadableStream<Uint8Array>,
   isCancelled: () => boolean,
   onFrame: (frame: RawSseFrame) => void,

@@ -3,18 +3,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import { FollowUpFailure } from '@/components/agent/chat-screen';
+import { ChatConversation, ReplyComposer, useChatThread } from '@/components/agent/chat-thread';
 import { Composer } from '@/components/agent/composer';
-import { Conversation } from '@/components/agent/conversation';
 import { SkillPicker } from '@/components/agent/skill-picker';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
-import {
-  useCancelRun,
-  useChatDetail,
-  useCreateChat,
-  useFollowUp,
-} from '@/components/agent/use-chat-turns';
+import { useChatDetail, useCreateChat } from '@/components/agent/use-chat-turns';
 import { navigationMode } from '@/components/layout/nav-items';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
@@ -25,7 +19,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { contextChips, withoutContext, type AgentHandoff } from '@/lib/agent/handoff';
 import { useAgentPanel } from '@/lib/agent/panel-context';
-import { isRunActive } from '@/lib/agent/run-state';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import type { AgentChatDetail } from '@/lib/api/agent';
 import { useProjectHref } from '@/lib/navigation/project-destination';
@@ -229,12 +222,9 @@ function PanelConversation({
   toolbar: ReactNode;
 }>) {
   const chatId = detail.chat.id;
-  const access = useAgentAccess();
   const navigate = useNavigate();
   const projectHref = useProjectHref();
-  const runActive = isRunActive(detail.latest_run);
-  const turn = useFollowUp(workspaceId, detail);
-  const cancel = useCancelRun(workspaceId, chatId);
+  const thread = useChatThread(workspaceId, detail);
   // The panel is too narrow for the output editor; the workspace owns it.
   const openOutput = () => {
     onLeave();
@@ -251,38 +241,18 @@ function PanelConversation({
               Jump to latest
             </Button>
           ) : null}
-          <Composer
-            rows={2}
+          <ReplyComposer
             id="agent-panel-reply"
-            label="Reply to the agent"
-            value={turn.draft}
-            onChange={turn.setDraft}
-            onSubmit={() => turn.send(turn.draft)}
-            pending={turn.pending}
-            disabled={!access.canSend}
-            submissionDisabled={runActive}
+            thread={thread}
+            detail={detail}
             placeholder="Ask a follow-up. / picks a skill, @ mentions an Action."
-            commands={turn.commands}
-            tools={
-              <SkillPicker
-                {...turn.commands.skillPicker}
-                value={turn.skillId}
-                onChange={turn.setSkillId}
-                outputKind={detail.output?.kind}
-                inheritedSkillId={
-                  detail.pinned_skill_id ??
-                  (!detail.chat.action_id ? detail.output?.skill_id : null)
-                }
-                hasAction={Boolean(detail.chat.action_id)}
-                disabled={!access.canSend || runActive}
-              />
-            }
           />
         </>
       }
     >
       {toolbar}
-      <Conversation
+      <ChatConversation
+        thread={thread}
         detail={detail}
         output={
           detail.output?.latest_revision ? (
@@ -294,16 +264,7 @@ function PanelConversation({
             </div>
           ) : null
         }
-        onRefine={turn.suggest}
-        onRecover={turn.recover}
-        hasDraft={Boolean(turn.draft.trim() || turn.commands.mentions.length)}
-        sending={turn.pending}
-        onStop={() => detail.latest_run && cancel.mutate({ chatId, runId: detail.latest_run.id })}
-        stopping={cancel.isPending}
-        canSend={access.canSend && !turn.pending}
       />
-      {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
-      <FollowUpFailure turn={turn} actionId={detail.chat.action_id} canSend={access.canSend} />
     </PanelLayout>
   );
 }

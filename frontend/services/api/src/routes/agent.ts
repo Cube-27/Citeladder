@@ -14,11 +14,13 @@ import {
   agentRevisionSchema,
   agentSkillCatalogSchema,
   agentInstructionsSchema,
+  agentTurnEventSchema,
 } from '@citeladder/contracts/agent';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { readBody } from '../http/body.ts';
 import { agentBindings } from '../agent/bindings.ts';
 import { runAgentOnce } from '../agent/worker.ts';
+import type { TurnEvents } from '../agent/stream.ts';
 import { interactiveExecution } from '../config/execution.ts';
 import { agentPolicy, AgentError, type Scope } from '../agent/contracts.ts';
 import { authorize } from '../agent/access.ts';
@@ -93,6 +95,49 @@ function conflictCode(code: string) {
   if (code === 'protocol_violation') return 'validation_error';
   return code;
 }
+/** One interactive turn as server-sent events, with a heartbeat under proxy idle limits. */
+function turnStream(
+  execute: (events: TurnEvents) => Promise<unknown>,
+  finished: () => Promise<z.infer<typeof agentRunSchema>>,
+) {
+  const encoder = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      let open = true;
+      const write = (chunk: string) => {
+        if (!open) return;
+        try {
+          controller.enqueue(encoder.encode(chunk));
+        } catch {
+          open = false;
+        }
+      };
+      const send = (event: z.input<typeof agentTurnEventSchema>) =>
+        write(`data: ${JSON.stringify(event)}\n\n`);
+      const heartbeat = setInterval(
+        () => write(': keep-alive\n\n'),
+        agentPolicy.stream_heartbeat_seconds * 1000,
+      );
+      void execute({
+        step: (event) => send({ type: 'step', ...event }),
+        text: (event) => send({ type: 'text', ...event }),
+      })
+        .then(async () => send({ type: 'done', run: await finished() }))
+        .catch((error: unknown) =>
+          send({
+            type: 'error',
+            code: error instanceof ApiError ? error.code : 'agent_call_failed',
+          }),
+        )
+        .finally(() => {
+          clearInterval(heartbeat);
+          if (open) controller.close();
+          open = false;
+        });
+    },
+  });
+}
+
 export const agentRoutes = [
   definePostRoute({
     family,
@@ -103,6 +148,7 @@ export const agentRoutes = [
       query: {},
     },
     response: agentRunSchema,
+    raw: true,
     async handle({ db, c }, { path }) {
       const value = await chatScope(db, c, path.chat_id);
       const read = () =>
@@ -115,26 +161,43 @@ export const agentRoutes = [
           .executeTakeFirst();
       if (!(await read())) throw notFound('Agent run');
       const { queue, runtime, settings } = await agentBindings(db);
-      await mapped(() =>
-        runAgentOnce(
-          queue,
-          runtime,
-          `interactive-agent:${randomUUID()}`,
-          [value.workspaceId],
-          (attempt) =>
-            Math.min(
-              settings.retryMaxSeconds,
-              settings.retryBaseSeconds * 2 ** Math.max(0, attempt - 1),
-            ),
-          {
-            runId: path.run_id,
-            signal: AbortSignal.timeout(interactiveExecution.timeoutSeconds * 1000),
-          },
-        ),
-      );
-      const run = await read();
-      if (!run) throw notFound('Agent run');
-      return runView(run);
+      // The turn runs to its own deadline whether or not the browser stays:
+      // a closed stream drops only the display, and recovery owns the rest.
+      const execute = (events?: TurnEvents) =>
+        mapped(() =>
+          runAgentOnce(
+            queue,
+            runtime,
+            `interactive-agent:${randomUUID()}`,
+            [value.workspaceId],
+            (attempt) =>
+              Math.min(
+                settings.retryMaxSeconds,
+                settings.retryBaseSeconds * 2 ** Math.max(0, attempt - 1),
+              ),
+            {
+              runId: path.run_id,
+              signal: AbortSignal.timeout(interactiveExecution.timeoutSeconds * 1000),
+              events,
+            },
+          ),
+        );
+      const finished = async () => {
+        const run = await read();
+        if (!run) throw notFound('Agent run');
+        return runView(run);
+      };
+      if (!c.req.header('accept')?.includes('text/event-stream')) {
+        await execute();
+        return c.json(await finished());
+      }
+      return new Response(turnStream(execute, finished), {
+        headers: {
+          'content-type': 'text/event-stream',
+          'cache-control': 'no-cache',
+          'x-accel-buffering': 'no',
+        },
+      });
     },
   }),
   defineGetRoute({

@@ -3,9 +3,10 @@
  *
  * Chats are the saved work: messages are append-only, a chat owns at most one
  * output with immutable revisions, and reads never execute a turn — the UI
- * polls persisted state while a run is active. Writes that queue a turn carry
- * an idempotency key bound to the full request, so a retried send replays the
- * same run instead of queueing a second one.
+ * shows a run's streamed progress and polls persisted state when no stream is
+ * open. Writes that queue a turn carry an idempotency key bound to the full
+ * request, so a retried send replays the same run instead of queueing a
+ * second one.
  */
 import { infiniteQueryOptions, mutationOptions, queryOptions } from '@tanstack/react-query';
 import type { z } from 'zod';
@@ -31,7 +32,7 @@ import {
 } from '@citeladder/contracts/agent';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
-import { startInteractiveWork } from './interactive-work';
+import { startLiveTurn } from '@/lib/agent/live-turns';
 
 export type AgentRun = z.infer<typeof agentRunSchema>;
 export type AgentRevision = z.infer<typeof agentRevisionSchema>;
@@ -94,7 +95,8 @@ async function admitTurn(
     await apiClient.post(path, input, withKey(idempotencyKey, options)),
     'agent.turn',
   );
-  startInteractiveWork(`/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`, options);
+  // The same interactive request, streamed so the turn is shown as it is written.
+  startLiveTurn(accepted.chat_id, accepted.run.id, options?.workspaceId ?? null);
   return accepted;
 }
 
