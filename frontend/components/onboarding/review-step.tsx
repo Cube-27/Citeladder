@@ -149,7 +149,7 @@ export function ReviewStep({
   return (
     <>
       <FlowGroup
-        className="flow-review-card"
+        className="flow-review-card flow-review-wide flow-review-sites"
         title="Your websites"
         meta={domains.length > 0 ? `${selectedDomains} of ${domains.length}` : undefined}
         help="Auto-verified from your domain."
@@ -157,7 +157,7 @@ export function ReviewStep({
         {domains.length === 0 ? (
           <p className="flow-help">No websites were found.</p>
         ) : (
-          <ul className="flow-entity-list">
+          <ul className="flow-entity-list flow-website-chips">
             {domains.map((entry, index) => (
               <EntityRow
                 key={entry.domain}
@@ -171,7 +171,7 @@ export function ReviewStep({
       </FlowGroup>
 
       <FlowGroup
-        className="flow-review-card"
+        className="flow-review-card flow-review-wide"
         title="Competitors"
         meta={`${selectedCompetitors} of ${maximumCompetitors ?? '…'}`}
         help="Pick the brands to compare against in every answer."

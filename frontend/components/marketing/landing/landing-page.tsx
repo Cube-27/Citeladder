@@ -121,7 +121,7 @@ function HeroTour() {
           id="tour-panel"
           role="tabpanel"
           aria-labelledby={`tour-tab-${step.id}`}
-          className="lp-hero-frame"
+          className="lp-hero-frame product-fit"
         >
           <AppShellFrame active={step.section} title={step.title} subtitle={step.subtitle}>
             <step.View />
@@ -219,7 +219,7 @@ function BentoTile({
         <h3 className="website-feature-heading">{title}</h3>
         <p className="website-body text-muted">{body}</p>
       </div>
-      <div className="lp-tile-visual app-type-scale" aria-hidden>
+      <div className="lp-tile-visual product-fit app-type-scale" aria-hidden>
         {children}
       </div>
     </a>

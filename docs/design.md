@@ -230,6 +230,8 @@ Roles own all typography properties. The general ladder is mobile-first: base be
 | Navigation/actions | 14/20px | 500 | 0 | `ink` or inverse |
 | Label/caption | 13/18px | 500 | 0 | `muted` |
 
+Display rungs track the viewport on phones so headlines stay short: the hero and page titles hold two lines from 360px, and long article titles (`website-article-title`) three. The hero tops out at 64px on desktop.
+
 `website-data-display` is pricing-only: Inter Variable 500, tabular, 30/36px → 40/46px at 768px. Never apply it to prose or headings.
 
 ### Product app ladder
@@ -382,7 +384,7 @@ Marketing navigation is a white bar (hairline once scrolled) with the logo, cent
 
 ### Patterns
 
-Product views render responsively at every width; nothing is scaled down as an image. On phones the app-shell frame drops its sidebar and split panels stack. Keep one shared horizontal grid for navigation, hero, sections and footer.
+Product views keep their desktop layout at every width (owner decision, 2026-10-08). Below its design width a view lays out at that width and `.product-fit` (`marketing.css`) shrinks it with `zoom`, so a phone sees a scaled copy of the desktop frame instead of a reflowed column; it is still live, selectable markup, not an image. Design widths sit at or below each frame's 1024px size, so desktop layouts are unaffected. Keep one shared horizontal grid for navigation, hero, sections and footer.
 
 Cookie consent is a compact bottom-right floating panel with equal-width Reject and Accept actions. On phones it expands only to the viewport gutters and respects the bottom safe area; it never becomes a full-width page banner.
 

@@ -148,6 +148,10 @@
   min-width: 0;
 }
 
+.lp-hero-frame.product-fit {
+  --product-fit-width: 768px;
+}
+
 .lp-hero-frame > .product-frame {
   border-bottom-right-radius: 0;
   border-bottom-left-radius: 0;
@@ -301,8 +305,12 @@
   pointer-events: none;
 }
 
-.lp-tile-wide .lp-tile-visual > .pv-view {
-  min-width: 36rem;
+.lp-tile-visual.product-fit {
+  --product-fit-width: 304px;
+}
+
+.lp-tile-wide .lp-tile-visual.product-fit {
+  --product-fit-width: 480px;
 }
 
 /* Deep dives ─────────────────────────────────────────────────────────────── */

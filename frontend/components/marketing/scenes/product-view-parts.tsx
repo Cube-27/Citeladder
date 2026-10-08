@@ -105,7 +105,7 @@ export function ProductShot({
 }: Readonly<{ title: string; children: ReactNode; caption?: string; className?: string }>) {
   return (
     <figure className={cn('min-w-0', className)}>
-      <div className="product-stage p-4 sm:p-8 lg:p-10">
+      <div className="product-stage product-fit p-4 sm:p-8 lg:p-10">
         <div className="product-frame app-type-scale">
           <div className="product-frame-bar">
             <span className="inline-flex items-center gap-2">
@@ -118,7 +118,7 @@ export function ProductShot({
             </span>
             <ArrowUpRight className="size-3.5 opacity-50" aria-hidden />
           </div>
-          <div className="p-4 sm:p-5">{children}</div>
+          <div className="p-5">{children}</div>
         </div>
       </div>
       <figcaption className="product-caption mt-3">{caption}</figcaption>
