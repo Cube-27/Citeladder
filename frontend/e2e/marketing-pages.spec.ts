@@ -139,8 +139,8 @@ test.describe('marketing routes', () => {
           Promise.allSettled(
             [
               '400 16px "Satoshi Variable"',
-              '600 16px "Satoshi Variable"',
-              '600 16px "Sentient Variable"',
+              '500 16px "Satoshi Variable"',
+              '500 16px "Sentient Variable"',
             ].map((font) => document.fonts.load(font)),
           ),
         );

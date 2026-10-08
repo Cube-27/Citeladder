@@ -227,7 +227,7 @@
   color: var(--color-foreground);
   font-size: 1.0625rem;
   line-height: 1.5rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.015em;
 }
 
@@ -243,7 +243,7 @@
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 2.6vw + 0.5rem, 2.375rem);
   line-height: 1.25;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.025em;
   text-wrap: pretty;
 }
@@ -377,7 +377,7 @@
   color: var(--color-foreground);
   font-size: 0.75rem;
   line-height: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   box-shadow: inset 0 0 0 1px var(--color-border-subtle);
 }

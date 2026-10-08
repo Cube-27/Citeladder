@@ -13,7 +13,7 @@ One system covers every surface (owner decision, 2026-10-07): the public site, d
 CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts a quiet green-tinted neutral ground behind the chrome and floats the work on one white sheet, using near-black green-tinted ink, forest actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup: `frontend/public/citeladder-logo.svg` for the wordmark and the matching inline glyph for mark-only mode. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts. The mark inherits `currentColor`; non-empty `alt` supplies either rendering's accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same black silhouette across frames.
-- **Typography:** self-hosted Satoshi (sans) on every surface for body, UI, data and product headings; self-hosted Sentient (serif) for public and focused-flow display headings only (`--font-editorial`, scoped by `website-type.css`; coded product previews reset to Satoshi). Both are capped at weight 600 by their `@font-face` ranges; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
+- **Typography:** self-hosted Satoshi (sans) on every surface for body, UI, data and product headings; self-hosted Sentient (serif) for public and focused-flow display headings only (`--font-editorial`, scoped by `website-type.css`; coded product previews reset to Satoshi). Both are capped at weight 500 by their `@font-face` ranges, with `font-synthesis-weight: none` so a bold request never renders a faux bold; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
 - **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Forest is the sole action accent on public and product surfaces. The logo and provider marks retain their fixed brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one white workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, frame-shadowed task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals with the same slight green tint, and its material leads with light hairline rings. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
 
@@ -211,9 +211,9 @@ consumers without becoming another value authority.
 
 ## Typography
 
-Public display headings (hero, page title, section heading) use weight 600 with tracking that tightens as size grows (about −0.024em to −0.032em) in Sentient; feature and small headings use 600 at about −0.011em. Product-app headings keep normal tracking.
+Public display headings (hero, page title, section heading) use weight 500 with tracking that tightens as size grows (about −0.024em to −0.032em) in Sentient; feature and small headings use 500 at about −0.011em. Product-app headings keep normal tracking.
 
-Use Satoshi for text, figures and product page titles, and Sentient for public and focused-flow headings only, never for dense UI or data; metrics, dates, ranks, and percentages explicitly use tabular numerals, not monospace. Numbers retain their data roles rather than display roles. Weights are 400 (sentences), 500 (labels, controls, badges) and 600 (titles, figures). Product titles and figures tighten their tracking as size grows (page title −0.016em, figure −0.02em, section title −0.011em). Do not assemble page-local size/weight/ink hierarchies.
+Use Satoshi for text, figures and product page titles, and Sentient for public and focused-flow headings only, never for dense UI or data; metrics, dates, ranks, and percentages explicitly use tabular numerals, not monospace. Numbers retain their data roles rather than display roles. Weights are 400 (sentences) and 500 (labels, controls, badges, titles, figures); there is no heavier rung, so titles separate from labels by size. Product titles and figures tighten their tracking as size grows (page title −0.016em, figure −0.02em, section title −0.011em). Do not assemble page-local size/weight/ink hierarchies.
 
 ### Website and focused-flow ladder
 
@@ -221,7 +221,7 @@ Roles own all typography properties. The general ladder is mobile-first: base be
 
 | Role | Size / line height | Weight | Tracking | Ink |
 | --- | --- | --- | --- | --- |
-| Flow group title | 16/24px | 600 | -0.2px | `ink-strong` |
+| Flow group title | 16/24px | 500 | -0.2px | `ink-strong` |
 | Flow help | 14/20px | 400 | 0 | `muted` |
 | Flow metadata | 12/16px | 500 | 0 | `muted`, tabular |
 | Lead | 18/28px → 20/30px at 768px | 400 | −0.011em | `muted` on public pages |
@@ -240,11 +240,11 @@ The roles are `.type-*` classes in `globals.css` (components layer, so a status 
 
 | Role | Class | Job | Size / line height | Weight | Ink |
 | --- | --- | --- | --- | --- | --- |
-| `pageTitle` | `type-page-title` | The route H1, one per page | 20/28, display, −0.016em | 600 | `foreground` |
-| `figure` | `type-figure` | A metric value | 24/32, display, tabular | 600 | `foreground` |
-| `sectionTitle` | `type-section-title` | Section, card, drawer and dialog headings | 16/24 | 600 | `foreground` |
-| `figureSm` | `type-figure-sm` | A value in a dense row or cell | 16/24, tabular | 600 | `foreground` |
-| `itemTitle` | `type-item-title` | Row, list-item and insight titles | 14/20 | 600 | `foreground` |
+| `pageTitle` | `type-page-title` | The route H1, one per page | 20/28, display, −0.016em | 500 | `foreground` |
+| `figure` | `type-figure` | A metric value | 24/32, display, tabular | 500 | `foreground` |
+| `sectionTitle` | `type-section-title` | Section, card, drawer and dialog headings | 16/24 | 500 | `foreground` |
+| `figureSm` | `type-figure-sm` | A value in a dense row or cell | 16/24, tabular | 500 | `foreground` |
+| `itemTitle` | `type-item-title` | Row, list-item and insight titles | 14/20 | 500 | `foreground` |
 | `body` | `type-body` | Sentences, descriptions, table cells | 14/20 | 400 | `secondary` |
 | `control` | `type-control` | Buttons, navigation, tabs, links | 13/18 | 500 | by state |
 | `label` | `type-label` | Names a value: metric, field and column labels | 13/18 | 500 | `ink-soft` |

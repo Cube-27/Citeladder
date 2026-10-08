@@ -41,39 +41,31 @@
          long after the reader started reading. `fallback` bounds that to ~3s
          — enough for a preloaded, same-origin file on any connection that
          was going to succeed at all. */
-      /* 600 is the design ceiling for both faces: a heavier request clamps
-         to it. */
+      /* 500 is the design ceiling for both faces: a heavier request, including
+         the browser's own bold for strong, b and th, clamps to it, and
+         `font-synthesis-weight: none` below stops a faux bold on top. */
       @font-face {
         font-family: 'Satoshi Variable';
         src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
-        font-weight: 300 600;
+        font-weight: 300 500;
         font-style: normal;
         font-display: fallback;
       }
       @font-face {
         font-family: 'Sentient Variable';
         src: url('/fonts/Sentient-Variable.woff2') format('woff2');
-        font-weight: 200 600;
+        font-weight: 200 500;
         font-style: normal;
         font-display: fallback;
       }
 
       /* Match Arial's x-height to Satoshi's (0.500em vs 0.519em). Vertical
          overrides use Satoshi's 1010/-240/100 hhea metrics (1000 UPM),
-         divided by size-adjust. Use the native bold face at weight 600. */
+         divided by size-adjust. */
       @font-face {
         font-family: 'Satoshi Fallback';
         src: local('Arial');
         font-weight: 100 500;
-        size-adjust: 96.42%;
-        ascent-override: 104.75%;
-        descent-override: 24.89%;
-        line-gap-override: 10.37%;
-      }
-      @font-face {
-        font-family: 'Satoshi Fallback';
-        src: local('Arial Bold'), local('Arial-BoldMT');
-        font-weight: 600;
         size-adjust: 96.42%;
         ascent-override: 104.75%;
         descent-override: 24.89%;
@@ -92,17 +84,9 @@
         descent-override: 30.57%;
         line-gap-override: 7.64%;
       }
-      @font-face {
-        font-family: 'Sentient Fallback';
-        src: local('Georgia Bold'), local('Georgia-Bold');
-        font-weight: 600;
-        size-adjust: 104.69%;
-        ascent-override: 91.7%;
-        descent-override: 30.57%;
-        line-gap-override: 7.64%;
-      }
 
       :root {
+        font-synthesis-weight: none;
         --font-text: 'Satoshi Variable', 'Satoshi Fallback', Arial;
         --font-heading: var(--font-text);
         /* Public and focused-flow headings only (website-type.css). */
