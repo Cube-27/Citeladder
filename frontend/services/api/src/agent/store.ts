@@ -31,7 +31,11 @@ export type FundingIdentity = Pick<
 /** Admission owns capability, route selection and abuse capacity, in this transaction.
  * Required injection deliberately has no unmetered/platform fallback. */
 export type Admission = (db: Database, scope: Scope) => Promise<FundingIdentity>;
-const TS_RUNTIME_PREFIX = agentPolicy.runtime_version.replace(/[0-9]+$/u, '');
+// `agent-runtime-ts-5` → `agent-runtime-ts-`: every TypeScript runtime revision.
+const TS_RUNTIME_PREFIX = agentPolicy.runtime_version.slice(
+  0,
+  agentPolicy.runtime_version.lastIndexOf('-') + 1,
+);
 const messageSchema = z.string().trim().min(1).max(agentPolicy.message_max_chars);
 export type TurnInput = {
   chatId?: string;
@@ -348,7 +352,7 @@ export class AgentStore {
     const workflow = latest?.workflow_id
       ? this.dependencies.catalog.workflows?.byId.get(latest.workflow_id)
       : undefined;
-    return workflow && workflow.skill_id === skillId ? workflow : undefined;
+    return workflow?.skill_id === skillId ? workflow : undefined;
   }
   private async turnSkill(
     db: Database,
