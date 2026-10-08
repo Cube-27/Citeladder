@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { enforceWorkspaceRequest, agentCallLimit } from '../src/abuse/usage.ts';
 import { policy } from '../src/config.ts';
@@ -27,6 +27,7 @@ afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
 });
+afterEach(() => vi.unstubAllEnvs());
 
 function dependencies(judgeProbability?: number) {
   const io = {
@@ -83,8 +84,40 @@ function dependencies(judgeProbability?: number) {
         );
   return { gateway: () => gateway, judge: () => judge, io };
 }
+/**
+ * A gateway that answers every planned slot of a batch with a distinct question,
+ * or fails the calls `fail` names (1-based) with a non-retried provider error.
+ */
+function echoDependencies(fail: number[] = [], onCall?: (call: number) => void) {
+  let calls = 0;
+  const fetch = vi.fn<typeof globalThis.fetch>(async (_url, init) => {
+    const call = ++calls;
+    onCall?.(call);
+    if (fail.includes(call)) return new Response('bad request', { status: 400 });
+    const body = JSON.parse(String(init?.body)) as { messages: { content: string }[] };
+    const user = JSON.parse(body.messages[1]!.content.split('\n\nReturn only JSON')[0]!) as {
+      slots: { slot_id: string }[];
+    };
+    const prompts = user.slots.map((slot) => ({
+      slot_id: slot.slot_id,
+      text: `Which running shoes suit runner ${slot.slot_id} best?`,
+      buyer_stage: 'consideration',
+      prompt_intent: 'recommend',
+    }));
+    return Response.json({ choices: [{ message: { content: JSON.stringify({ prompts }) } }] });
+  });
+  const gateway = createModelGateway(
+    { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
+    { fetch, sleep: async () => {} },
+  );
+  return { gateway: () => gateway, judge: () => null, io: { fetch } };
+}
+const oneSlotBatches = () => {
+  vi.stubEnv('GENERATION_MODEL_BATCH_SIZE', '1');
+  vi.stubEnv('GENERATION_DRAFT_CONCURRENCY', '1');
+};
 const input = () => generationInput.parse({ count: 2 });
-const generate = (deps = dependencies()) =>
+const generate = (deps: Parameters<typeof generatePrompts>[4] = dependencies()) =>
   generatePrompts(db, tenant.workspaceId, setId, input(), deps);
 
 describe('prompt generation at the PostgreSQL boundary', () => {
@@ -221,7 +254,11 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       .select('provenance')
       .where('id', '=', result.candidates[0]!.run_id)
       .executeTakeFirstOrThrow();
-    expect(run.provenance).toMatchObject({ generation_mode: 'model', quality_gate: 'off' });
+    expect(run.provenance).toMatchObject({
+      generation_mode: 'quick',
+      quality_gate: 'off',
+      distribution: { selected: { total: 2, located: 0 } },
+    });
     const account = await billingAccount(db, tenant.workspaceId);
     await grant(db, account, { value: 1 });
     await expect(
@@ -280,6 +317,76 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       body: JSON.stringify({ count: 2 }),
     });
     expect(response.status).toBe(404);
+  });
+  it('stages earlier batches when a later batch fails, and fails only with nothing admitted', async () => {
+    oneSlotBatches();
+    const result = await generatePrompts(
+      db,
+      tenant.workspaceId,
+      setId,
+      generationInput.parse({ count: 3 }),
+      echoDependencies([3, 4, 5, 6, 7]),
+    );
+    expect(result.candidates).toHaveLength(2);
+    expect(result.shortfall_reason).toBe('model_error');
+    const run = await db
+      .selectFrom('prompt_generation_runs')
+      .select('provenance')
+      .where('id', '=', result.candidates[0]!.run_id)
+      .executeTakeFirstOrThrow();
+    expect(run.provenance).toMatchObject({
+      stop_reason: 'model_error',
+      model_results: expect.arrayContaining([{ batch: 2, error_code: 'client_error' }]),
+    });
+    await expect(generate(echoDependencies([1, 2, 3, 4, 5]))).rejects.toMatchObject({
+      status: 502,
+    });
+  });
+  it('stops starting batches at the deadline and stages what was admitted', async () => {
+    oneSlotBatches();
+    const deadline = new AbortController();
+    const deps = {
+      ...echoDependencies([], (call) => {
+        if (call === 1) deadline.abort();
+      }),
+      deadline: () => deadline.signal,
+    };
+    const result = await generatePrompts(db, tenant.workspaceId, setId, input(), deps);
+    expect(deps.io.fetch).toHaveBeenCalledTimes(1);
+    expect(result.candidates).toHaveLength(1);
+    expect(result.shortfall_reason).toBe('deadline');
+  });
+  it('replays a repeated Idempotency-Key from persisted rows without a model call', async () => {
+    const first = await generatePrompts(
+      db,
+      tenant.workspaceId,
+      setId,
+      input(),
+      echoDependencies(),
+      'retry-key',
+    );
+    const deps = echoDependencies();
+    const again = await generatePrompts(db, tenant.workspaceId, setId, input(), deps, 'retry-key');
+    expect(deps.io.fetch).not.toHaveBeenCalled();
+    expect(again.candidates.map((row) => row.id).toSorted()).toEqual(
+      first.candidates.map((row) => row.id).toSorted(),
+    );
+    expect(again.requested_count).toBe(first.requested_count);
+    await expect(
+      generatePrompts(
+        db,
+        tenant.workspaceId,
+        setId,
+        generationInput.parse({ count: 3 }),
+        deps,
+        'retry-key',
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+    const other = await fixtures.tenant();
+    await expect(
+      generatePrompts(db, other.workspaceId, setId, input(), deps, 'retry-key'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(deps.io.fetch).not.toHaveBeenCalled();
   });
   it('serializes concurrent staging on the same set and drops newly pending duplicates', async () => {
     const deps = dependencies();

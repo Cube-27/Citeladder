@@ -12,7 +12,7 @@
     "cancelled": []
   },
   "analysis": {
-    "entity_assessment_version": "entity-assessment-1",
+    "entity_assessment_version": "entity-assessment-2",
     "scoring_rule_version": "prompt-composite-v2",
     "prompt_score_visibility_weight": 0.6,
     "prompt_score_competitive_weight": 0.25,
@@ -23,7 +23,33 @@
     "prompt_decline_min_engines": 2,
     "prompt_decline_repetition_agreement": 0.67,
     "prompt_decline_history_candidate_limit": 20,
-    "ambiguous_aliases": ["target"],
+    "entity_matching_version": "entity-matching-1",
+    "context_window_tokens": 12,
+    "entity_context_seed_max": 12,
+    "entity_terms_max": 20,
+    "common_noun_names": [
+      "apple",
+      "dove",
+      "gap",
+      "indeed",
+      "jaguar",
+      "linear",
+      "mercury",
+      "monday",
+      "nest",
+      "next",
+      "notion",
+      "oracle",
+      "orange",
+      "puma",
+      "ring",
+      "shell",
+      "slack",
+      "square",
+      "subway",
+      "target",
+      "zoom"
+    ],
     "fanout_feature_rules": {
       "community": ["reddit", "forum", "discussion", "experiences"],
       "review": ["review", "reviews", "rating", "ratings", "customer feedback"],
@@ -34,7 +60,7 @@
       "freshness": ["latest", "current", "today", "2026"],
       "product_evidence": ["material", "fabric", "size", "multipack", "availability", "stock"]
     },
-    "analyzer_version": "grounded-analysis-v1"
+    "analyzer_version": "grounded-analysis-v2"
   },
   "observed_competitors": {
     "analyzer_version": "observed-competitor-v1",

@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import {
@@ -101,6 +101,47 @@ describe('ProjectEditPanel', () => {
 
     await waitFor(() => expect(body).toBeDefined());
     expect(body?.owned_domains).toEqual(['acme.com', 'shop.acme.com']);
+  });
+
+  it('shows a common-word brand its mention rule and saves only the rule that changed', async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> | undefined;
+    mswServer.use(
+      http.patch(`/api/v1/projects/${PROJECT_ID}`, async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(project);
+      }),
+    );
+    const target = {
+      ...project,
+      brand_name: 'Target',
+      brand: {
+        aliases: [],
+        matching: {
+          mode: 'context_required' as const,
+          context_terms: ['Home goods'],
+          exclusion_phrases: [],
+          common_word: true,
+        },
+      },
+    };
+
+    renderWithProviders(<ProjectEditPanel project={target} open onOpenChange={vi.fn()} />);
+
+    const rule = screen.getByRole('group', { name: 'Mention rule for Target' });
+    expect(within(rule).getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    await user.type(within(rule).getByLabelText('Never counts inside'), 'target audience');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(body).toBeDefined());
+    expect(body?.entity_matching).toEqual([
+      {
+        name: 'Target',
+        mode: 'context_required',
+        context_terms: ['Home goods'],
+        exclusion_phrases: ['target audience'],
+      },
+    ]);
   });
 
   it('does not allow a sixth competitor', async () => {

@@ -87,6 +87,27 @@ describe('audit admission freeze', () => {
     expect(plan.configuration.country_code).toBe('US');
     expect(plan.prompts[0]?.text).toBe('Which running shoes suit road use?');
   });
+  it('freezes a common-word brand as needing context', async () => {
+    const t = await seed();
+    await db
+      .updateTable('brands')
+      .set({ name: 'Target' })
+      .where('project_id', '=', t.projectId)
+      .execute();
+    const freeze = () =>
+      prepareAudit(
+        db,
+        t.workspaceId,
+        auditInput.parse({ project_id: t.projectId, prompt_set_id: t.setId, engines: ['chatgpt'] }),
+        settings,
+        providers,
+        'manual',
+        searchSettings({}),
+      );
+    expect((await freeze()).configuration.entity_matching).toMatchObject({
+      entities: { target: { mode: 'context_required' } },
+    });
+  });
   it('rejects foreign, disabled and unreviewed explicit selections as a whole', async () => {
     const t = await seed();
     const foreign = await seed();

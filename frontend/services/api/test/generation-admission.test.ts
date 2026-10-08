@@ -5,7 +5,8 @@ import { ModelError } from '../src/models/http.ts';
 import type { JevClient } from '../src/models/jev.ts';
 import { bindingFailure } from '../src/prompts/binding.ts';
 import type { GenerationContext } from '../src/prompts/generation-context.ts';
-import { admitDrafts, planSlots, type Draft } from '../src/prompts/generation-drafts.ts';
+import { admitDrafts, type Draft } from '../src/prompts/generation-drafts.ts';
+import { planSlots } from '../src/prompts/generation-plan.ts';
 import { generationInput, validateSelection } from '../src/prompts/generation-input.ts';
 import {
   applyQualityPolicy,
@@ -17,6 +18,7 @@ const context = {
   prompts: [],
   candidates: [],
   maps: [],
+  matching: {},
   selected: [{ id: 'topic', name: 'Dresses', description: '', parent_id: null }],
   topics: [{ id: 'topic', name: 'Dresses', description: '', parent_id: null }],
   context: {

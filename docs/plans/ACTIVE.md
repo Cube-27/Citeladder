@@ -10,7 +10,8 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   2 Onboarding are done ([Site Health plan](site-health-improvement.md),
   [Onboarding plan](onboarding-improvement.md)). Feature 3 is implementing
   ([Visibility plan](visibility-prompt-improvement.md)); its prompt-generation
-  follow-up is the next PR.
+  follow-up, [Prompt generation v3](prompt-generation-v3.md), is implemented
+  with the recommended decisions; its live calibration round is outstanding.
 
 ## Queued
 

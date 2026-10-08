@@ -145,8 +145,6 @@ export async function judgeDrafts(
       'products_services',
       'target_audience',
       'buyer_roles',
-      'service_areas',
-      'primary_market',
     ]
       .filter((key) => business[key])
       .map((key) => [key, business[key]]),
@@ -233,6 +231,7 @@ export function selectDrafts(drafts: Draft[], count: number): Draft[] {
   const features = (draft: Draft) => [
     `topic:${draft.slot.topic_id}`,
     `stage:${draft.buyer_stage}`,
+    `intent:${draft.prompt_intent}`,
     ...Object.entries(draft.slot.buyer_need).map(([key, value]) => `${key}:${value}`),
   ];
   const used = (key: string) => usage.get(key) ?? 0;

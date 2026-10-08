@@ -1,4 +1,11 @@
-import { normalizeAlias } from './aliases.ts';
+import {
+  countsAnywhere,
+  DENSE_SCRIPT,
+  normalizeAlias,
+  occurrenceCounts,
+  tokensOf,
+  type EntityPolicy,
+} from './aliases.ts';
 import type { ScoringConfig } from './scoring.ts';
 import { policy } from '../config.ts';
 const word = '[\\p{L}\\p{N}_]';
@@ -6,21 +13,43 @@ const escapeRegex = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\
 const limitation =
   "Explicit-language detection over English phrasing in a 45-character window around the entity's FIRST mention. Not sentiment, not a calibrated judgement, and not a reading of the whole answer.";
 
-function aliasMatch(alias: string, answer: string) {
+/** Every raw-text match of `alias`; a space-free script matches inside words. */
+function aliasMatches(alias: string, answer: string): RegExpExecArray[] {
   const normalized = normalizeAlias(alias);
-  if (!normalized) return null;
+  if (!normalized) return [];
   const tokens = normalized
     .split(' ')
     .map((token) => (token === 'and' ? '(?:and|&)' : escapeRegex(token)));
-  const pattern = `(?<!${word})${tokens.join('[^0-9A-Za-z]*')}(?!${word})`;
-  if (!policy.audits.analysis.ambiguous_aliases.includes(normalized))
-    return new RegExp(pattern, 'iu').exec(answer);
-  return (
-    new RegExp(`${pattern}[^0-9A-Za-z]+australia(?!${word})`, 'iu').exec(answer) ??
-    new RegExp(`${pattern}(?!\\s+(?:audience|price|market|demographic))`, 'u').exec(answer)
-  );
+  const body = tokens.join('[^0-9A-Za-z]*');
+  const pattern = DENSE_SCRIPT.test(normalized) ? body : `(?<!${word})${body}(?!${word})`;
+  return [...answer.matchAll(new RegExp(pattern, 'giu'))];
 }
-function assessment(name: string, aliases: readonly string[], answer: string, kind: string) {
+
+/** The first raw match that counts under the entity's matching policy. */
+function firstMatch(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
+  return aliases
+    .flatMap((alias) => aliasMatches(alias, answer))
+    .sort((a, b) => a.index - b.index)
+    .find((match) => {
+      // Only a policy that reads the surroundings needs the answer tokenized.
+      if (countsAnywhere(matching)) return true;
+      const before = tokensOf(answer.slice(0, match.index));
+      const own = tokensOf(match[0]);
+      const after = tokensOf(answer.slice(match.index + match[0].length));
+      return occurrenceCounts(
+        [...before, ...own, ...after],
+        { start: before.length, end: before.length + own.length },
+        matching,
+      );
+    });
+}
+function assessment(
+  name: string,
+  aliases: readonly string[],
+  answer: string,
+  kind: string,
+  matching?: EntityPolicy,
+) {
   const row = (
     state: string,
     spans: { start: number; end: number; text: string }[],
@@ -38,10 +67,7 @@ function assessment(name: string, aliases: readonly string[], answer: string, ki
     limitation: detail,
   });
   if (!answer.trim()) return row('unavailable', [], 'Answer text is unavailable.');
-  const match = aliases
-    .map((alias) => aliasMatch(alias, answer))
-    .filter((m): m is RegExpExecArray => m !== null)
-    .sort((a, b) => a.index - b.index)[0];
+  const match = firstMatch(aliases, answer, matching);
   if (!match) return row('absent', []);
   const points = Array.from(answer),
     offset = Array.from(answer.slice(0, match.index)).length;
@@ -80,9 +106,14 @@ function assessment(name: string, aliases: readonly string[], answer: string, ki
 }
 export function assessEntities(answer: string, config: ScoringConfig) {
   return [
-    { name: config.brandName, aliases: config.brandAliases, kind: 'brand' },
+    {
+      name: config.brandName,
+      aliases: config.brandAliases,
+      kind: 'brand',
+      matching: config.brandMatching,
+    },
     ...config.competitors.map((c) => ({ ...c, kind: 'competitor' })),
   ]
     .filter((entity) => entity.name)
-    .map((entity) => assessment(entity.name, entity.aliases, answer, entity.kind));
+    .map((entity) => assessment(entity.name, entity.aliases, answer, entity.kind, entity.matching));
 }

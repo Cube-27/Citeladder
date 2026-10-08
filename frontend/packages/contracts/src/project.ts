@@ -7,12 +7,25 @@ const uuid = () => z.uuid();
 // Brand / project / prompts
 // ---------------------------------------------------------------------------
 
+// When a brand or competitor name counts as a mention. `context_required`
+// counts an occurrence only with a context term nearby; an exclusion phrase
+// ("target audience") never counts. `common_word` marks a name that is an
+// ordinary word, which defaults to needing context.
+export const entityMatchingModeSchema = z.enum(['always', 'context_required']);
+export const entityMatchingSchema = responseObject({
+  mode: entityMatchingModeSchema,
+  context_terms: z.array(z.string()).default([]),
+  exclusion_phrases: z.array(z.string()).default([]),
+  common_word: z.boolean().default(false),
+});
+
 export const competitorSchema = responseObject({
   id: uuid(),
   name: z.string(),
   aliases: z.array(z.string()),
   domains: z.array(z.string()),
   logo_url: z.string().nullable().optional(),
+  matching: entityMatchingSchema.optional(),
 });
 
 // Intent enum. The B3 backend `normalize_intent` casefolds a free-text intent
@@ -121,6 +134,7 @@ const promptAdmissionDropReasons = [
   'placeholder',
   'observed_copy',
   'off_topic',
+  'location_unplanned',
   'branded_core',
   'brand_missing',
   'competitor_missing',
@@ -150,6 +164,11 @@ export const promptGenerateResponseSchema = responseObject({
   admission_drops: z
     .partialRecord(promptAdmissionDropReasonSchema, z.number().int().nonnegative())
     .default({}),
+  // Why drafting stopped before every planned question was tried: the request
+  // deadline, or a provider failure after some questions were admitted. Null
+  // when drafting finished; a short set without a reason was limited by
+  // admission or the selected topics.
+  shortfall_reason: z.enum(['deadline', 'model_error']).nullable().default(null),
 });
 
 // `POST /prompt-sets/{id}/candidates/review` result.
@@ -274,6 +293,7 @@ export const projectSchema = responseObject({
   brand: responseObject({
     aliases: z.array(z.string()),
     logo_url: z.string().nullable().optional(),
+    matching: entityMatchingSchema.optional(),
   }),
   owned_domains: z.array(z.string()),
   unintended_domains: z.array(z.string()),

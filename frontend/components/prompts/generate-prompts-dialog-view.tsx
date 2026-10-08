@@ -13,6 +13,10 @@ import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 import { textRole } from '@/components/ui/typography';
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+const SHORTFALL: Record<NonNullable<PromptGenerateResponse['shortfall_reason']>, string> = {
+  deadline: 'Drafting stopped at the time limit; generate again for more.',
+  model_error: 'The AI provider failed partway, so the set is smaller; generate again for more.',
+};
 
 function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateResponse }>) {
   const total = result.candidates.length;
@@ -32,17 +36,19 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
   const shortfall =
     result.requested_count > total ? ` (${total} of ${result.requested_count} requested)` : '';
   const drops = admissionDropSummary(result.admission_drops, ['duplicate']);
+  const stopped = result.shortfall_reason ? ` ${SHORTFALL[result.shortfall_reason]}` : '';
   const judge =
     result.quality_gate === 'unavailable'
       ? ' Quality checks may have been unavailable for some suggestions, so an unflagged row may not have been checked.'
       : '';
   return (
-    <Alert tone={result.quality_gate === 'unavailable' ? 'warning' : 'info'}>
+    <Alert tone={result.quality_gate === 'unavailable' || stopped ? 'warning' : 'info'}>
       Drafted {plural(total, 'suggestion')}
       {shortfall}
       {topicCount ? ` across ${plural(topicCount, 'topic')}` : ''}
       {duplicates}
       {gated}. Accept the ones worth tracking.{drops ? ` ${drops}` : ''}
+      {stopped}
       {judge}
     </Alert>
   );
@@ -61,11 +67,7 @@ function GenerateErrorAlert({ error }: Readonly<{ error: unknown }>) {
   }
   if (status === 503) {
     return (
-      <Alert tone="warning">
-        No AI provider is configured. Set <code>DEFAULT_AGENT_API_KEY</code> (and optionally{' '}
-        <code>DEFAULT_AGENT_BASE_URL</code> / <code>DEFAULT_AGENT_MODEL</code>) in the backend
-        environment, then try again.
-      </Alert>
+      <Alert tone="warning">Prompt generation isn&apos;t available on this deployment yet.</Alert>
     );
   }
   if (status === 502)
@@ -178,7 +180,7 @@ export function GeneratePromptsDialogView({
       description={
         reviewing
           ? 'Choose the questions your buyers would actually ask. Only accepted questions enter your tracked library.'
-          : 'Draft distinct buying questions from your business context, then choose what to track.'
+          : 'Draft distinct buying questions across your offerings and buying stages, then choose what to track. To target a place, persona or niche, use Build with Agent.'
       }
       className={reviewing ? 'w-200' : 'w-130'}
       footer={

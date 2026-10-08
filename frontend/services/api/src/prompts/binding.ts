@@ -11,6 +11,7 @@
  */
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 
+import { DENSE_SCRIPT } from '../analysis/aliases.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
@@ -23,8 +24,6 @@ const {
   business_context_fields: CONTEXT_FIELDS,
 } = policy.prompts.binding;
 const STOPWORDS = new Set(stopwords);
-const DENSE_SCRIPT =
-  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}]/u;
 // ICU word boundaries also split scripts written without spaces (Chinese,
 // Japanese, Thai); for spaced scripts they match the separator split below.
 const WORDS = new Intl.Segmenter(undefined, { granularity: 'word' });
@@ -145,8 +144,11 @@ export function bindingFailure(
   return phrases.some((phrase) => padded.includes(` ${phrase} `)) ? null : 'off_topic';
 }
 
-function businessContextValues(context: Record<string, unknown>): string[] {
-  return CONTEXT_FIELDS.flatMap((field) => {
+function businessContextValues(
+  context: Record<string, unknown>,
+  excluded: readonly string[],
+): string[] {
+  return CONTEXT_FIELDS.filter((field) => !excluded.includes(field)).flatMap((field) => {
     const raw = context[field];
     const candidates = Array.isArray(raw) ? raw : [raw];
     return candidates.flatMap((value) => {
@@ -156,8 +158,16 @@ function businessContextValues(context: Record<string, unknown>): string[] {
   });
 }
 
-/** The project's identity vocabulary; the caller authorized the project. */
-export async function loadVocabulary(db: Database, projectId: string): Promise<Vocabulary> {
+/**
+ * The project's identity vocabulary; the caller authorized the project.
+ * `excluded` business-context fields do not bind (generated text omits
+ * service areas, so naming a place cannot stand in for an offering).
+ */
+export async function loadVocabulary(
+  db: Database,
+  projectId: string,
+  excluded: readonly string[] = [],
+): Promise<Vocabulary> {
   const [brand, domains, topics] = await Promise.all([
     db
       .selectFrom('brands')
@@ -191,7 +201,7 @@ export async function loadVocabulary(db: Database, projectId: string): Promise<V
     names.push(brand.name, ...aliases.map((row) => row.alias));
     texts.push(
       ...strings(brand.products_services),
-      ...businessContextValues(record(brand.business_context)),
+      ...businessContextValues(record(brand.business_context), excluded),
       brand.description ?? '',
       brand.positioning ?? '',
       brand.target_audience ?? '',

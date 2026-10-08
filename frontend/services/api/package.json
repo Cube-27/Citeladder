@@ -30,6 +30,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "check:routes": "node scripts/check-route-ownership.ts",
     "jev:calibrate": "node scripts/jev-calibration.ts",
+    "prompts:eval": "node scripts/eval-prompt-generation.ts",
     "mcp:reference": "node scripts/export-mcp-tool-reference.ts",
     "crawl:worker": "node scripts/export-crawl-worker.ts",
     "db:types": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern alembic_version --out-file src/generated/db-schema.ts",

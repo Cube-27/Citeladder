@@ -4,8 +4,15 @@ import { benchmarkModeSchema, projectSchema } from '@citeladder/contracts/projec
 import type { Insertable, Selectable } from 'kysely';
 import type { z } from 'zod';
 
+import {
+  entityKey,
+  matchingBlock,
+  projectEntityMatching,
+  storedEntityMatching,
+} from '../analysis/entity-matching.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { jsonObject, strings } from '../db/json.ts';
 import { admitProject, requireProjectDeletion } from '../entitlements/occupancy.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { Projects } from '../generated/db-schema.ts';
@@ -66,6 +73,12 @@ async function views(
     .selectAll()
     .where('project_id', 'in', ids)
     .execute();
+  const profiles = await db
+    .selectFrom('brand_profiles')
+    .select(['project_id', 'business_context', 'products_services'])
+    .where('workspace_id', '=', workspaceId)
+    .where('project_id', 'in', ids)
+    .execute();
   const sets = await db
     .selectFrom('prompt_sets')
     .selectAll()
@@ -85,27 +98,40 @@ async function views(
     .execute();
   return rows.map((row) => {
     const brand = brands.find((item) => item.project_id === row.id);
+    const brandName = brand?.name ?? row.brand_name;
+    const brandAliases = aliases
+      .filter((item) => item.brand_id === brand?.id)
+      .map((item) => item.alias);
+    const rivals = competitors
+      .filter((item) => item.project_id === row.id)
+      .map((item) => ({ ...item, aliases: stringArray.parse(item.aliases) }));
+    const profile = profiles.find((item) => item.project_id === row.id);
+    const matching = projectEntityMatching(
+      profile?.business_context,
+      strings(profile?.products_services),
+      [{ name: brandName, aliases: brandAliases }, ...rivals],
+    );
     return {
       ...row,
       benchmark_mode: benchmarkModeSchema.parse(row.benchmark_mode),
-      brand_name: brand?.name ?? row.brand_name,
+      brand_name: brandName,
       brand: {
-        aliases: aliases.filter((item) => item.brand_id === brand?.id).map((item) => item.alias),
+        aliases: brandAliases,
         logo_url: brand?.logo_asset_id ? brandLogoUrl(row.id) : null,
+        matching: matching[entityKey(brandName)],
       },
       owned_domains: owned.filter((item) => item.project_id === row.id).map((item) => item.domain),
       unintended_domains: unintended
         .filter((item) => item.project_id === row.id)
         .map((item) => item.domain),
-      competitors: competitors
-        .filter((item) => item.project_id === row.id)
-        .map((item) => ({
-          id: item.id,
-          name: item.name,
-          aliases: stringArray.parse(item.aliases),
-          domains: stringArray.parse(item.domains),
-          logo_url: item.logo_asset_id ? competitorLogoUrl(row.id, item.id) : null,
-        })),
+      competitors: rivals.map((item) => ({
+        id: item.id,
+        name: item.name,
+        aliases: item.aliases,
+        domains: stringArray.parse(item.domains),
+        logo_url: item.logo_asset_id ? competitorLogoUrl(row.id, item.id) : null,
+        matching: matching[entityKey(item.name)],
+      })),
       prompt_sets: sets
         .filter((item) => item.project_id === row.id)
         .map((set) =>
@@ -302,6 +328,63 @@ export async function createProject(
     .execute((trx) => insertProject(trx, workspaceId, userId, input));
   return readProject(db, { workspaceId, projectId });
 }
+/**
+ * Save the submitted matching policies over the stored ones and drop names the
+ * project no longer tracks; an untouched name keeps following its default.
+ * Only the `entity_matching` key of the business context changes.
+ */
+async function replaceEntityMatching(
+  db: Database,
+  scope: ProjectScope,
+  entries: NonNullable<ProjectUpdate['entity_matching']>,
+) {
+  const brand = await db
+    .selectFrom('brands')
+    .select('name')
+    .where('project_id', '=', scope.projectId)
+    .executeTakeFirst();
+  const rivals = await db
+    .selectFrom('competitors')
+    .select('name')
+    .where('project_id', '=', scope.projectId)
+    .execute();
+  const tracked = new Set([brand?.name ?? '', ...rivals.map((row) => row.name)].map(entityKey));
+  const profile = await db
+    .selectFrom('brand_profiles')
+    .select(['id', 'business_context'])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .forUpdate()
+    .executeTakeFirst();
+  if (!profile) throw new ApiError(409, 'Complete the brand profile before setting mention rules');
+  const context = jsonObject(profile.business_context, 'brand_profiles.business_context');
+  const saved = {
+    ...storedEntityMatching(context),
+    ...Object.fromEntries(
+      entries.map(({ name, mode, context_terms, exclusion_phrases }) => [
+        entityKey(name),
+        {
+          mode,
+          context_terms: cleanList(context_terms),
+          exclusion_phrases: cleanList(exclusion_phrases),
+        },
+      ]),
+    ),
+  };
+  const entities = Object.fromEntries(Object.entries(saved).filter(([key]) => tracked.has(key)));
+  await db
+    .updateTable('brand_profiles')
+    .set({
+      business_context: JSON.stringify({
+        ...context,
+        entity_matching: matchingBlock(entities),
+      }),
+      updated_at: new Date(),
+    })
+    .where('id', '=', profile.id)
+    .execute();
+}
+
 export async function updateProject(db: Database, scope: ProjectScope, input: ProjectUpdate) {
   await db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
@@ -311,7 +394,14 @@ export async function updateProject(db: Database, scope: ProjectScope, input: Pr
       .selectAll()
       .where('project_id', '=', scope.projectId)
       .executeTakeFirstOrThrow();
-    const { brand: brandInput, competitors, owned_domains, unintended_domains, ...fields } = input;
+    const {
+      brand: brandInput,
+      competitors,
+      owned_domains,
+      unintended_domains,
+      entity_matching,
+      ...fields
+    } = input;
     const updates: Partial<Insertable<Projects>> = { ...fields, updated_at: new Date() };
     if (input.country_code !== undefined || input.language_code !== undefined)
       Object.assign(
@@ -340,6 +430,7 @@ export async function updateProject(db: Database, scope: ProjectScope, input: Pr
       { brand: brandInput, competitors, owned_domains, unintended_domains },
       new Date(),
     );
+    if (entity_matching !== undefined) await replaceEntityMatching(trx, scope, entity_matching);
   });
   return readProject(db, scope);
 }

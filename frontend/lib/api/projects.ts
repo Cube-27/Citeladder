@@ -21,6 +21,7 @@ import type {
   BusinessMap,
   BusinessMapEntry,
   CommandCenter,
+  EntityMatching,
   Project,
   Workspace,
 } from './types';
@@ -40,6 +41,13 @@ export type ProjectInput = {
   owned_domains: string[];
   unintended_domains: string[];
   competitors: Array<{ name: string; aliases: string[]; domains: string[] }>;
+  /** Mention rules to save, by brand or competitor name. */
+  entity_matching: Array<{
+    name: string;
+    mode: EntityMatching['mode'];
+    context_terms: string[];
+    exclusion_phrases: string[];
+  }>;
 };
 
 export type BrandProfileUpdateInput = Partial<

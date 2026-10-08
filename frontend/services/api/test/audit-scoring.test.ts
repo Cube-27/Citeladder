@@ -56,8 +56,20 @@ describe('frozen deterministic execution scoring', () => {
       prompt_class: 'branded',
     });
   });
-  it('requires ambiguous brands to be disambiguated and preserves code-point ordering after Unicode folding', () => {
-    const target = scoringConfig({ brand_name: 'Target' });
+  it('counts a context-required brand only with nearby context, as frozen in the audit block', () => {
+    const target = scoringConfig({
+      brand_name: 'Target',
+      entity_matching: {
+        version: 'entity-matching-1',
+        entities: {
+          target: {
+            mode: 'context_required',
+            context_terms: ['store', 'Australia'],
+            exclusion_phrases: ['target audience'],
+          },
+        },
+      },
+    });
     const score = (answerText: string) =>
       scoreExecution({
         config: target,
@@ -68,10 +80,54 @@ describe('frozen deterministic execution scoring', () => {
         searchEvents: [],
         citations: [],
       });
-    expect(score('the target audience')).toMatchObject({ brand_mentioned: false });
-    expect(score('Target price')).toMatchObject({ brand_mentioned: false });
+    expect(score('Know your target audience before you visit a store.')).toMatchObject({
+      brand_mentioned: false,
+    });
+    expect(score('Hit the target price.')).toMatchObject({ brand_mentioned: false });
+    expect(score('Is there a Target store near me?')).toMatchObject({
+      brand_mentioned: true,
+      brand_first_offset: 11,
+    });
     expect(score('target Australia')).toMatchObject({ brand_mentioned: true });
-    expect(score('Shop at Target.')).toMatchObject({ brand_mentioned: true });
+    // An audit frozen before policies counts every occurrence.
+    expect(
+      scoreExecution({
+        config: scoringConfig({ brand_name: 'Target' }),
+        answerText: 'the target audience',
+        promptText: '',
+        searchUsed: false,
+        queryTextAvailable: true,
+        searchEvents: [],
+        citations: [],
+      }),
+    ).toMatchObject({ brand_mentioned: true });
+    const [brand] = assessEntities(
+      'Define the target audience. Then a Target store helps.',
+      target,
+    );
+    expect(brand).toMatchObject({ state: 'mentioned' });
+    expect(brand!.evidence_spans[0]!.text).toContain('Target store');
+    expect(assessEntities('Define the target audience first.', target)[0]!.state).toBe('absent');
+  });
+  it('finds names inside sentences of scripts written without spaces', () => {
+    const score = (brand_name: string, answerText: string) =>
+      scoreExecution({
+        config: scoringConfig({ brand_name }),
+        answerText,
+        promptText: '',
+        searchUsed: false,
+        queryTextAvailable: true,
+        searchEvents: [],
+        citations: [],
+      }).brand_mentioned;
+    expect(score('小米', 'おすすめのスマートフォンは小米です。')).toBe(true);
+    expect(score('ชาตรามือ', 'ร้านชาที่ดีที่สุดคือชาตรามือ')).toBe(true);
+    expect(score('小米', 'おすすめのスマートフォンはありません。')).toBe(false);
+    expect(
+      assessEntities('おすすめは小米です。', scoringConfig({ brand_name: '小米' }))[0]!.state,
+    ).toBe('mentioned');
+  });
+  it('preserves code-point ordering after Unicode folding', () => {
     expect(firstAliasOffset('Straße', normalizeAlias('😀 Rival then STRASSE'))).toBe(11);
     expect(firstAliasOffset('DuranDuran', normalizeAlias('Duran DuranDuran'))).toBe(6);
   });

@@ -3,7 +3,7 @@ id: prompt_discovery
 label: Prompt discovery
 group: demand
 order: 4
-version: 3
+version: 4
 output_kind: prompt_portfolio
 description: Create or improve the buyer questions tracked in AI visibility engines from CiteLadder business, demand and competitor evidence. Use for prompt portfolios, prompt quality audits and topic coverage; not ordinary task-prompt writing.
 ---
@@ -16,9 +16,13 @@ Follow the operating contract. Bind only advertised read tools and use evidence 
 
 Build a realistic, non-leading portfolio of buyer questions worth monitoring across the project's actual AI engines. The output must measure whether relevant buyers discover, evaluate and choose the business, not manufacture easy mentions. Generate buyer demand, not variations on marketing copy. This is an analysis skill: it proposes prompts; it does not activate prompts or run engine tests. The user adds accepted prompts in Prompts.
 
+## Mode: the niche dive
+
+**Generate prompts** in Prompts already samples the broad market: the category's buyer questions across offerings, stages and intents, without places. This skill is the methodical dive into a niche the user names: a chosen offering, a place, a persona, a constraint or an intent. When the request does not say which niche, ask in the coverage plan rather than covering the whole market again. Name a place, persona or constraint in a question only when it is the niche being targeted, and record it in that row's `targeting`.
+
 ## Required and optional inputs
 
-Required: confirmed offer, actual buyer/user, served geography/language and project scope. Recover these from business context and relevant owned pages. Optional: GSC query/page rows, provider keyword/SERP snapshots, existing prompt IDs/results, competitor set, sales/support questions, buyer interviews and observed query fan-outs. Private customer questions may inform abstraction but must not be exposed verbatim without approval.
+Required: confirmed offer, actual buyer/user, language and project scope. Served geography is required only when the user targets a market or the business serves a local or regional area; do not add geography to every portfolio. Recover these from business context and relevant owned pages. Optional: GSC query/page rows, provider keyword/SERP snapshots, existing prompt IDs/results, competitor set, sales/support questions, buyer interviews and observed query fan-outs. Private customer questions may inform abstraction but must not be exposed verbatim without approval.
 
 Before generating, inspect current prompt settings and available import/write schema, if any. Do not hardcode an engine count, a competitor count, language, geography or plan capacity. With no demand observations, produce a clearly labelled hypothesis portfolio rather than “the questions buyers ask.”
 
@@ -50,7 +54,7 @@ Use competitor and SERP evidence to understand alternatives and decision criteri
 
 ## 3. Draft three separated cohorts
 
-**Unbranded discovery/selection core.** Buyer questions where an answer could naturally recommend or compare named organizations/products without being told to mention the target business. Cover the commercial decisions relevant to this business. Examples of forms, not templates to fill mechanically: selecting a provider for a specific need, finding appropriate options in a served market, choosing between approaches under a real constraint, or asking which products satisfy a documented requirement. The target brand must not appear in this core.
+**Unbranded discovery/selection core.** Buyer questions where an answer could naturally recommend or compare named organizations/products without being told to mention the target business. Cover the commercial decisions relevant to this business. Examples of forms, not templates to fill mechanically: selecting a provider for a specific need, finding appropriate options in a targeted market, choosing between approaches under a real constraint, or asking which products satisfy a documented requirement. The target brand must not appear in this core.
 
 **Branded evaluation diagnostic.** Questions about a known target brand, comparison with a genuine alternative, limitations, pricing or suitability. Keep separate because the wording already supplies the brand; mention rate here is not evidence of discovery.
 
@@ -136,15 +140,24 @@ UUID); the app hides it from the readable view:
       "text": "A natural question expressing one useful buyer decision",
       "buyer_stage": "consideration",
       "prompt_intent": "recommend"
+    },
+    {
+      "topic_id": "<existing-topic-uuid>",
+      "text": "A question written for the targeted niche",
+      "buyer_stage": "decision",
+      "prompt_intent": "buy",
+      "targeting": { "place": "the targeted place" }
     }
   ]
 }
 ```
 
-Include only new unbranded core questions in that block, at most 100.
+Include only new unbranded core questions in that block, at most 50.
 Valid buyer stages: {{buyer_stages}}.
 Valid prompt intents: {{prompt_intents}}.
-Do not invent topic IDs or add keys to these submission rows. The user submits
+`targeting` is optional and takes only these keys: {{prompt_targeting_keys}}. Include it
+only when the question was written for that niche, with the value it targets.
+Do not invent topic IDs or add other keys to these submission rows. The user submits
 this saved revision for admission and quality checks, then explicitly accepts
 candidates in Prompts. Submission never activates tracking.
 

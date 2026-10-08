@@ -5,7 +5,7 @@ import { record, strings } from '../db/json.ts';
 import { routePageKind } from '../site-health/routes.ts';
 import type { ExtractedPage } from './extract.ts';
 import { publicUrl } from '../projects/safe-fetch.ts';
-import { aliasOffset, normalizeAlias } from '../analysis/aliases.ts';
+import { aliasOffset, normalizeAlias, normalizeText } from '../analysis/aliases.ts';
 
 const p = policy.source_pages;
 type Passage = { text: string; char_start: number; char_end: number; entity_ref: string };
@@ -98,7 +98,7 @@ function entity(
   }
   // Spelling variants ("Best&Less", "BestandLess") offset into normalized text,
   // which cannot be quoted, so a hit is ambiguous rather than present.
-  const haystack = normalizeAlias(text);
+  const haystack = normalizeText(text);
   const offsets = candidates.flatMap((alias) => aliasOffset(haystack, alias) ?? []);
   const offset = offsets.length ? Math.min(...offsets) : undefined;
   const sufficient =
