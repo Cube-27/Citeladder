@@ -212,6 +212,20 @@
   box-shadow: var(--public-frame-shadow);
 }
 
+/* A product view keeps its desktop layout at every width. Below its design
+   width the view lays out at that width and `zoom` shrinks it to fit, so a
+   phone sees the same picture as a laptop rather than a reflowed column that
+   ran several screens tall. tan(atan2(a, b)) is the unitless ratio a / b. */
+.product-fit {
+  --product-fit-width: 27rem;
+  container-type: inline-size;
+}
+
+.product-fit > * {
+  width: max(100cqi, var(--product-fit-width));
+  zoom: min(1, tan(atan2(100cqi, var(--product-fit-width))));
+}
+
 .product-frame-bar {
   display: flex;
   align-items: center;

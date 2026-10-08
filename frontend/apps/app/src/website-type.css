@@ -149,17 +149,24 @@
   text-align: center;
 }
 
-/* The display ladder is mobile-first and steps at 768px below. */
+/* The display ladder is mobile-first and steps at 768px below. On a phone the
+   display rungs track the viewport so a page title holds two lines (an article
+   title, which runs twice as long, three) from 360px up; a fixed 32px wrapped
+   them to four and five. */
 .website-hero-display {
-  font-size: clamp(2.25rem, 4.2vw + 0.6rem, 4.25rem);
+  font-size: clamp(1.75rem, 8.6vw, 2rem);
   line-height: 1.04;
   letter-spacing: -0.032em;
 }
 
 .website-page-title {
-  font-size: 2rem;
-  line-height: 2.25rem;
+  font-size: clamp(1.375rem, 6.4vw, 2rem);
+  line-height: 1.15;
   letter-spacing: -0.028em;
+}
+
+.website-page-title.website-article-title {
+  font-size: clamp(1.25rem, 5.6vw, 2rem);
 }
 
 .website-section-heading {
@@ -638,36 +645,90 @@
   line-height: 2rem;
 }
 
-/* The review step's two columns: what we found on the left, what you tell us on
-   the right. One column below the breakpoint. */
+/* The review step is one grid in reading order: the two business questions
+   share the first row (equal height, so neither leaves a hole beside the
+   other), then websites and competitors run the full width. One column below
+   the breakpoint, in the same order. */
 .flow-review {
   display: grid;
-  align-items: start;
-  gap: var(--flow-block);
+  gap: var(--flow-card-gap);
+}
+
+.flow-review > * {
+  min-width: 0;
 }
 
 @media (min-width: 64rem) {
   .flow-review {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+
+  .flow-review > .flow-review-wide,
+  .flow-review > .flow-review-hint {
+    grid-column: 1 / -1;
+  }
+
+  .flow-review .flow-competitor-chips {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* One or two auto-verified domains do not need a card's worth of height:
+     the heading and its toggles share a line. */
+  .flow-review-sites {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     column-gap: var(--flow-block);
+  }
+
+  .flow-review-sites > .flow-answer {
+    grid-row: 1;
+    grid-column: 2;
+    margin-top: 0;
+  }
+
+  .flow-review-sites .flow-website-chips {
+    justify-content: flex-end;
   }
 }
 
-.flow-review-column {
+/* A cell that pairs a card with its hint; the card fills the row height. */
+.flow-review-cell {
   display: grid;
-  min-width: 0;
-  gap: var(--flow-card-gap);
+  grid-template-rows: 1fr;
+  gap: var(--flow-stack);
 }
 
-.flow-review-eyebrow {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  font-weight: 600;
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  color: var(--color-muted);
+/* Who buys it and where: two short questions in one card. */
+.flow-review-audience {
+  display: grid;
+  align-content: start;
+  gap: var(--flow-block);
+}
+
+.flow-review-audience > .flow-group {
+  padding: 0;
+  border: 0;
+}
+
+/* Websites are auto-verified and usually one or two, so they are a row of
+   toggles rather than a ruled list. */
+.flow-entity-list.flow-website-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.flow-review-card .flow-website-chips > li,
+.flow-website-chips > li {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+}
+
+.flow-website-chips > li:has([aria-pressed='true']) {
+  border-color: var(--color-border-strong);
 }
 
 /* One decision per card. The card, not a rule, is what separates questions. */
@@ -707,6 +768,12 @@
   gap: var(--flow-stack);
   margin-bottom: var(--flow-block);
   scroll-margin-top: var(--flow-block);
+}
+
+/* Stated here, not left to the layered `empty:hidden` utility this unlayered
+   rule outranks: an empty region still spent its margin above the cards. */
+.flow-review-notices:empty {
+  display: none;
 }
 
 .flow-review-hint {
@@ -1011,6 +1078,27 @@
     grid-template-columns: 1.5rem minmax(0, 1fr);
   }
 
+  /* On a phone the review sheet is already the card: its questions become
+     ruled sections instead of boxes inset twice from the screen edge. */
+  .flow-review .flow-review-card {
+    padding: var(--flow-block) 0 0;
+    border: 0;
+    border-top: 1px solid var(--color-border-subtle);
+    border-radius: 0;
+    background: none;
+  }
+
+  .flow-review > :first-child .flow-review-card,
+  .flow-review > .flow-review-card:first-child,
+  .flow-review-audience > .flow-review-card:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .flow-review {
+    gap: var(--flow-block);
+  }
+
   .flow-activity-row .flow-meta {
     grid-column: 2;
   }
@@ -1129,7 +1217,12 @@
     --text-4xl--line-height: 3rem;
   }
 
-  .website-page-title {
+  .website-hero-display {
+    font-size: clamp(2rem, 4.2vw + 0.6rem, 4rem);
+  }
+
+  .website-page-title,
+  .website-page-title.website-article-title {
     font-size: 3rem;
     line-height: 3.25rem;
   }

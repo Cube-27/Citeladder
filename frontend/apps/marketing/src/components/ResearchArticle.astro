@@ -26,7 +26,7 @@ const more = [1, 2]
           <li><a href="/blog" class="focus-ring rounded-xs">Guides</a></li>
         </ol>
       </nav>
-      <h1 class="website-page-title">{frontmatter.title}</h1>
+      <h1 class="website-page-title website-article-title">{frontmatter.title}</h1>
       <p class="website-lead text-muted max-w-[62ch]">{frontmatter.meta_description}</p>
       <p class="cp-meta cp-byline">
         <span>Research reviewed <time datetime={frontmatter.reviewed_at}>{formatBlogDate(frontmatter.reviewed_at)}</time></span>

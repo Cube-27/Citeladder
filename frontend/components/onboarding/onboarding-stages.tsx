@@ -247,44 +247,46 @@ export function ReviewStage({
         ) : null}
         <CompletionStateAlert failed={completionFailed} />
       </ReviewNotices>
-      {/* Two columns: what we found on the left, what only you can tell us on
-          the right. Every question is its own card, so the sections read as
-          separate decisions instead of one long run of ruled rows. */}
+      {/* Decisions first: what you sell and who buys it share the top row, then
+          the auto-verified websites and the competitor picks run full width.
+          Two independent columns left one of them half empty beside the
+          competitor list, and on a phone put the category — the answer every
+          later score depends on — a screen and a half down. */}
       <div className="flow-review">
-        <div className="flow-review-column">
-          <p className="flow-review-eyebrow">What we found</p>
-          <ReviewStep
-            domains={domains}
-            competitors={competitors}
-            onToggleDomain={toggle(flow.setDomains)}
-            onToggleCompetitor={(index) =>
-              toggleCompetitor(index, setCompetitors, maximumCompetitors)
-            }
-            onEditCompetitor={(index, name, domain) =>
-              editCompetitor(index, name, domain, setCompetitors)
-            }
-            onRemoveCompetitor={(index) =>
-              setCompetitors((current) => current.filter((_, itemIndex) => itemIndex !== index))
-            }
-            onAddCompetitor={() => addCompetitor(setCompetitors, maximumCompetitors)}
-            maximumCompetitors={maximumCompetitors}
-          />
-          {!hasSelectedDomain ? (
-            <p className="flow-review-hint">Keep at least one website address selected.</p>
-          ) : null}
-          {flow.hasIncompleteCompetitor ? (
-            <p className="flow-review-hint">Add a name and website for each selected competitor.</p>
-          ) : null}
-        </div>
         {profile ? (
-          <div className="flow-review-column">
-            <p className="flow-review-eyebrow">About your business</p>
-            <IcpCategory profile={profile} onChange={setProfile} />
-            <IcpAudience profile={profile} onChange={setProfile} />
-            {!hasConfirmedIcp(profile) ? (
-              <p className="flow-review-hint">Choose or describe what you sell.</p>
-            ) : null}
-          </div>
+          <>
+            <div className="flow-review-cell">
+              <IcpCategory profile={profile} onChange={setProfile} />
+              {!hasConfirmedIcp(profile) ? (
+                <p className="flow-review-hint">Choose or describe what you sell.</p>
+              ) : null}
+            </div>
+            <div className="flow-review-card flow-review-audience">
+              <IcpAudience profile={profile} onChange={setProfile} />
+            </div>
+          </>
+        ) : null}
+        <ReviewStep
+          domains={domains}
+          competitors={competitors}
+          onToggleDomain={toggle(flow.setDomains)}
+          onToggleCompetitor={(index) =>
+            toggleCompetitor(index, setCompetitors, maximumCompetitors)
+          }
+          onEditCompetitor={(index, name, domain) =>
+            editCompetitor(index, name, domain, setCompetitors)
+          }
+          onRemoveCompetitor={(index) =>
+            setCompetitors((current) => current.filter((_, itemIndex) => itemIndex !== index))
+          }
+          onAddCompetitor={() => addCompetitor(setCompetitors, maximumCompetitors)}
+          maximumCompetitors={maximumCompetitors}
+        />
+        {!hasSelectedDomain ? (
+          <p className="flow-review-hint">Keep at least one website address selected.</p>
+        ) : null}
+        {flow.hasIncompleteCompetitor ? (
+          <p className="flow-review-hint">Add a name and website for each selected competitor.</p>
         ) : null}
       </div>
     </div>
