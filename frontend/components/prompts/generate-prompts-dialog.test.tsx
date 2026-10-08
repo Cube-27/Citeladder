@@ -83,6 +83,7 @@ describe('GeneratePromptsDialog', () => {
       quality_gate: 'gate',
       quality_rejected: 3,
       admission_drops: { off_topic: 2, duplicate: 1 },
+      shortfall_reason: null,
     };
     render(
       <GeneratePromptsDialog
@@ -98,5 +99,30 @@ describe('GeneratePromptsDialog', () => {
     expect(alert).toHaveTextContent('3 weak suggestions removed by quality checks');
     expect(alert.textContent).toMatch(/Not admitted: 2 unrelated/);
     expect(alert.textContent).not.toMatch(/add topics|already tracked/i);
+  });
+
+  it('says when drafting stopped at the time limit', () => {
+    const result: PromptGenerateResponse = {
+      candidates: [],
+      topics: [],
+      requested_count: 20,
+      dropped_duplicates: 0,
+      candidates_generated: 0,
+      quality_gate: 'off',
+      quality_rejected: 0,
+      admission_drops: {},
+      shortfall_reason: 'deadline',
+    };
+    render(
+      <GeneratePromptsDialog
+        open
+        onOpenChange={vi.fn()}
+        topics={TOPICS}
+        onGenerate={vi.fn()}
+        result={result}
+      />,
+    );
+
+    expect(screen.getByRole('alert').textContent).toMatch(/stopped at the time limit/i);
   });
 });

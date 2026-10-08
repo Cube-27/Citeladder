@@ -1,5 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 
+import { promptGenerateResponseSchema } from '@citeladder/contracts/project';
+import { sql } from 'kysely';
+
 import { agentCallLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -23,6 +26,7 @@ import {
   type Drops,
 } from './generation-drafts.ts';
 import {
+  generationInput,
   generationSetting,
   validateSelection,
   wantedTopics,
@@ -34,8 +38,15 @@ import { scopedPromptSet } from './prompt-sets.ts';
 import { listTopics } from './topics.ts';
 import { candidateView } from './views.ts';
 
-type Dependencies = { gateway: () => ModelGateway; judge: () => JevClient | null };
+type Dependencies = {
+  gateway: () => ModelGateway;
+  judge: () => JevClient | null;
+  /** Drafting stops starting batches, and cuts in-flight ones, when this aborts. */
+  deadline?: () => AbortSignal;
+};
 const defaults: Dependencies = { gateway: createModelGateway, judge: createJevClient };
+const draftDeadline = () =>
+  AbortSignal.timeout(generationSetting('generation_deadline_seconds') * 1000);
 type Staging = {
   workspaceId: string;
   setId: string;
@@ -126,6 +137,7 @@ function stage(
   workspaceId: string,
   context: GenerationContext,
   input: GenerationInput,
+  idempotencyKey: string | null,
   output: Awaited<ReturnType<typeof generateDrafts>>,
   gate: Awaited<ReturnType<typeof judgeDrafts>>,
 ) {
@@ -133,6 +145,11 @@ function stage(
     await acquireProjectLock(trx, context.project.id);
     await acquirePromptSetLock(trx, context.set.id);
     const set = await scopedPromptSet(trx, workspaceId, context.set.id);
+    // A concurrent repeat of the same key stages once; the loser replays it.
+    const prior = idempotencyKey
+      ? await replay(trx, workspaceId, set.id, input, idempotencyKey)
+      : null;
+    if (prior) return prior;
     const topics = await trx
       .selectFrom('topics')
       .select('id')
@@ -193,7 +210,6 @@ function stage(
       generation_mode: revision ? 'agent_proposal' : 'model',
       requested_count: input.count,
       requested_topic_ids: wantedTopics(input),
-      requested_intents: input.intents.filter(Boolean),
       cohort: input.cohort,
       business_map_suggested_offerings: output.maps.map((map) => map.offering),
       model_results: output.models,
@@ -201,6 +217,7 @@ function stage(
       candidates_generated: output.drafts.length,
       admission_drops: drops,
       admission_drop_records: dropRecords,
+      stop_reason: output.stop,
       brand_context_hash: createHash('sha256')
         .update(JSON.stringify(context.context))
         .digest('hex'),
@@ -225,7 +242,10 @@ function stage(
         project_id: set.project_id,
         prompt_set_id: set.id,
         generator_version: policy.prompts.generation.version,
-        request: JSON.stringify(input),
+        request: JSON.stringify({
+          ...input,
+          ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
+        }),
         provenance: JSON.stringify(evidence),
         created_at: now,
       })
@@ -249,8 +269,76 @@ function stage(
       quality_gate: gate,
       quality_rejected: rejected.length,
       admission_drops: drops,
+      shortfall_reason: candidates.length < input.count ? output.stop : null,
     };
   });
+}
+
+/** Persisted run fields read back with the response contract's own schemas. */
+const recorded = promptGenerateResponseSchema.shape;
+const sameRequest = (a: GenerationInput, b: GenerationInput) =>
+  a.count === b.count &&
+  a.cohort === b.cohort &&
+  (a.agent_revision_id ?? null) === (b.agent_revision_id ?? null) &&
+  wantedTopics(a).toSorted().join() === wantedTopics(b).toSorted().join();
+
+/**
+ * The response of an earlier run with this key, from persisted rows only: its
+ * still-pending candidates and recorded counts. A key reused for a different
+ * request is a conflict; a run past candidate retention is not replayed.
+ */
+async function replay(
+  db: Database,
+  workspaceId: string,
+  setId: string,
+  input: GenerationInput,
+  key: string,
+) {
+  const retention = generationSetting('candidate_retention_hours') * 3_600_000;
+  const run = await db
+    .selectFrom('prompt_generation_runs')
+    .select(['id', 'project_id', 'request', 'provenance'])
+    .where('workspace_id', '=', workspaceId)
+    .where('prompt_set_id', '=', setId)
+    .where(sql<string>`request->>'idempotency_key'`, '=', key)
+    .where('created_at', '>', new Date(Date.now() - retention))
+    .orderBy('created_at', 'desc')
+    .executeTakeFirst();
+  if (!run) return null;
+  const stored = generationInput.safeParse(run.request);
+  if (!stored.success || !sameRequest(stored.data, input))
+    throw new ApiError(409, 'Idempotency-Key was used for another generation request', {
+      code: 'generation_idempotency_conflict',
+    });
+  const provenance = record(run.provenance);
+  const gate = recorded.quality_gate.catch('off').parse(provenance.quality_gate);
+  const rows = await db
+    .selectFrom('prompt_candidates')
+    .selectAll()
+    .where('workspace_id', '=', workspaceId)
+    .where('run_id', '=', run.id)
+    .where('disposition', 'in', ['pending', 'gate_rejected'])
+    .where('expires_at', '>', new Date())
+    .execute();
+  const candidates = rows.filter((row) => row.disposition === 'pending');
+  const touched = new Set(candidates.map((row) => row.topic_id));
+  const drops = recorded.admission_drops.catch({}).parse(provenance.admission_drops);
+  return {
+    candidates: candidates.map((row) => candidateView(row, gate)),
+    topics: (await listTopics(db, workspaceId, run.project_id)).filter((topic) =>
+      touched.has(topic.id),
+    ),
+    requested_count: input.count,
+    dropped_duplicates: drops.duplicate ?? 0,
+    candidates_generated: Number(provenance.candidates_generated) || 0,
+    quality_gate: gate,
+    quality_rejected: rows.length - candidates.length,
+    admission_drops: drops,
+    shortfall_reason:
+      candidates.length < input.count
+        ? recorded.shortfall_reason.catch(null).parse(provenance.stop_reason)
+        : null,
+  };
 }
 
 export async function generatePrompts(
@@ -259,7 +347,14 @@ export async function generatePrompts(
   setId: string,
   input: GenerationInput,
   dependencies: Dependencies = defaults,
+  idempotencyKey: string | null = null,
 ) {
+  if (idempotencyKey) {
+    // Authorize the set before revealing whether the key was used.
+    await scopedPromptSet(db, workspaceId, setId);
+    const prior = await replay(db, workspaceId, setId, input, idempotencyKey);
+    if (prior) return prior;
+  }
   const context = await generationContext(db, workspaceId, setId, input);
   try {
     const gateway = context.revision ? null : dependencies.gateway();
@@ -269,13 +364,16 @@ export async function generatePrompts(
         workspaceId,
         agentCallLimit(draftCallLimit(input.count) + policy.prompts.generation.map_calls),
       );
-    const output = await generateDrafts(context, input, gateway);
+    const deadline = (dependencies.deadline ?? draftDeadline)();
+    const output = await generateDrafts(context, input, gateway, deadline);
     const gate = await judgeDrafts(context, output.drafts, dependencies.judge());
-    return await stage(db, workspaceId, context, input, output, gate);
+    return await stage(db, workspaceId, context, input, idempotencyKey, output, gate);
   } catch (error) {
     if (!(error instanceof ModelError)) throw error;
     if (error.code === 'not_configured')
-      throw new ApiError(503, 'Default model is not configured', { code: 'agent_not_configured' });
+      throw new ApiError(503, "Prompt generation isn't available on this deployment yet", {
+        code: 'agent_not_configured',
+      });
     if (error.status === 429)
       throw new ApiError(429, 'Model provider is rate limited', {
         code: 'rate_limited',

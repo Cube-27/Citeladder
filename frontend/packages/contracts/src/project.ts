@@ -150,6 +150,11 @@ export const promptGenerateResponseSchema = responseObject({
   admission_drops: z
     .partialRecord(promptAdmissionDropReasonSchema, z.number().int().nonnegative())
     .default({}),
+  // Why drafting stopped before every planned question was tried: the request
+  // deadline, or a provider failure after some questions were admitted. Null
+  // when drafting finished; a short set without a reason was limited by
+  // admission or the selected topics.
+  shortfall_reason: z.enum(['deadline', 'model_error']).nullable().default(null),
 });
 
 // `POST /prompt-sets/{id}/candidates/review` result.

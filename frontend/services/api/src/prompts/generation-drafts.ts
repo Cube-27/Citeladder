@@ -7,7 +7,7 @@ import { policy } from '../config.ts';
 import { generationSystemPrompt } from '../config/prompt-generation.ts';
 import { record, strings } from '../db/json.ts';
 import { getLogger } from '../logging.ts';
-import { ModelError } from '../models/http.ts';
+import { ModelError, providerErrorCode } from '../models/http.ts';
 import type { ModelGateway } from '../models/gateway.ts';
 import { bindingFailure } from './binding.ts';
 import type { GenerationContext, OfferingMap } from './generation-context.ts';
@@ -109,17 +109,9 @@ export function planSlots(
   input: GenerationInput,
   suggestions: OfferingMap[],
 ): Slot[] {
-  const allowed = Object.entries(G.intent_legacy)
-    .filter(([intent, legacy]) =>
-      input.cohort === 'comparison'
-        ? intent === 'compare'
-        : input.cohort !== 'core' ||
-          !input.intents.some(Boolean) ||
-          input.intents.includes(legacy as GenerationInput['intents'][number]) ||
-          (input.intents.includes('local') && G.local_intents.includes(intent)),
-    )
-    .map(([intent]) => intent);
-  if (!allowed.length) throw generationInvalid('No labels support this request');
+  const allowed = Object.keys(G.intent_legacy).filter(
+    (intent) => input.cohort !== 'comparison' || intent === 'compare',
+  );
   const maps = [...context.maps, ...suggestions];
   const markets = ['', ...new Set(strings(record(context.context.business_context).service_areas))];
   const planners = context.selected.map((topic) => {
@@ -305,6 +297,7 @@ export function admitDrafts(
 async function suggestMaps(
   gateway: ModelGateway,
   context: GenerationContext,
+  deadline: AbortSignal,
 ): Promise<OfferingMap[]> {
   const wanted = context.offerings.filter(
     (name) =>
@@ -331,6 +324,7 @@ async function suggestMaps(
         offerings: wanted,
       }),
       schema,
+      deadline,
     );
     const banned = [
       context.context.brand_name,
@@ -377,9 +371,9 @@ async function suggestMaps(
       ];
     });
   } catch (error) {
-    if (!(error instanceof ModelError)) throw error;
+    if (!(error instanceof ModelError) && !deadline.aborted) throw error;
     getLogger('app.domain.prompts.map_suggestions').info('business map suggestion skipped', {
-      error_type: error.code,
+      error_type: error instanceof ModelError ? error.code : 'deadline',
     });
     return [];
   }
@@ -438,40 +432,45 @@ export const draftCallLimit = (count: number) =>
     (count * generationSetting('overgenerate_factor')) / generationSetting('model_batch_size'),
   ) + 1;
 
-export async function generateDrafts(
+/** Why a run stopped before every planned slot had a chance at admission. */
+export type Stop = 'deadline' | 'model_error' | null;
+const errorCode = (error: ModelError) =>
+  error.status ? providerErrorCode(error.status) : error.code;
+
+/**
+ * Draft batches with bounded concurrency until every slot is admitted, the call
+ * limit is spent, the deadline passes or the provider fails. Admission state is
+ * merged in completion order; a failed batch never discards admitted drafts.
+ */
+async function draftBatches(
   context: GenerationContext,
   input: GenerationInput,
-  gateway: ModelGateway | null,
+  gateway: ModelGateway,
+  slots: Slot[],
+  deadline: AbortSignal,
 ) {
-  if (context.revision) {
-    const { slots, rows, drops, dropRecords } = proposal(context);
-    const admitted = admitDrafts(rows, slots, context, input, []);
-    mergeDrops(drops, admitted.drops);
-    return {
-      drafts: admitted.admitted,
-      drops,
-      dropRecords: [...dropRecords, ...admitted.dropRecords],
-      maps: [] as OfferingMap[],
-      models: [] as unknown[],
-    };
-  }
-  if (!gateway) throw new ModelError('not_configured');
-  const maps = await suggestMaps(gateway, context);
-  const slots = planSlots(context, input, maps),
-    drafts: Draft[] = [],
-    models: unknown[] = [];
-  const batchSize = generationSetting('model_batch_size');
-  const drops: Drops = {};
-  const dropRecords: AdmissionDrop[] = [];
-  let parseError = false;
+  const batchSize = generationSetting('model_batch_size'),
+    limit = draftCallLimit(input.count);
   const system = generationSystemPrompt(
     String(record(context.context.business_context).business_model),
     input.cohort,
   );
-  for (let call = 0; call < draftCallLimit(input.count); call++) {
+  const drafts: Draft[] = [],
+    models: unknown[] = [],
+    drops: Drops = {},
+    dropRecords: AdmissionDrop[] = [];
+  const inFlight = new Set<string>();
+  let calls = 0,
+    parseError = false,
+    failure: ModelError | null = null,
+    cut = false;
+  const nextBatch = () => {
     const accepted = new Set(drafts.map((row) => row.slot.slot_id));
-    const batch = slots.filter((slot) => !accepted.has(slot.slot_id)).slice(0, batchSize);
-    if (!batch.length) break;
+    return slots
+      .filter((slot) => !accepted.has(slot.slot_id) && !inFlight.has(slot.slot_id))
+      .slice(0, batchSize);
+  };
+  const draftOne = async (call: number, batch: Slot[]) => {
     try {
       const response = await gateway.structured(
         system,
@@ -484,18 +483,66 @@ export async function generateDrafts(
           ].slice(-generationSetting('existing_prompt_context_limit')),
         }),
         generated,
+        deadline,
       );
       const { content: _content, ...identity } = response.result;
-      models.push(identity);
+      models.push({ ...identity, batch: call });
       const result = admitDrafts(response.value.prompts, batch, context, input, drafts, call);
       drafts.push(...result.admitted);
       mergeDrops(drops, result.drops);
       dropRecords.push(...result.dropRecords);
     } catch (error) {
-      if (!(error instanceof ModelError) || error.code !== 'parse') throw error;
-      parseError = true;
+      // A batch cut at the deadline is a shortfall, not a provider failure.
+      if (deadline.aborted) cut = true;
+      else if (!(error instanceof ModelError)) throw error;
+      else if (error.code === 'parse') parseError = true;
+      else {
+        failure ??= error;
+        models.push({ batch: call, error_code: errorCode(error) });
+      }
     }
+  };
+  const worker = async () => {
+    while (!failure && calls < limit) {
+      const batch = nextBatch();
+      if (!batch.length) return;
+      if (deadline.aborted) {
+        cut = true;
+        return;
+      }
+      for (const slot of batch) inFlight.add(slot.slot_id);
+      await draftOne(calls++, batch);
+      for (const slot of batch) inFlight.delete(slot.slot_id);
+    }
+  };
+  await Promise.all(Array.from({ length: generationSetting('draft_concurrency') }, worker));
+  if (!drafts.length && failure) throw failure;
+  if (!drafts.length && parseError && !cut) throw new ModelError('parse');
+  const stop: Stop = failure ? 'model_error' : cut ? 'deadline' : null;
+  return { drafts, drops, dropRecords, models, stop };
+}
+
+export async function generateDrafts(
+  context: GenerationContext,
+  input: GenerationInput,
+  gateway: ModelGateway | null,
+  deadline: AbortSignal,
+) {
+  if (context.revision) {
+    const { slots, rows, drops, dropRecords } = proposal(context);
+    const admitted = admitDrafts(rows, slots, context, input, []);
+    mergeDrops(drops, admitted.drops);
+    return {
+      drafts: admitted.admitted,
+      drops,
+      dropRecords: [...dropRecords, ...admitted.dropRecords],
+      maps: [] as OfferingMap[],
+      models: [] as unknown[],
+      stop: null as Stop,
+    };
   }
-  if (!drafts.length && parseError) throw new ModelError('parse');
-  return { drafts, drops, dropRecords, maps, models };
+  if (!gateway) throw new ModelError('not_configured');
+  const maps = await suggestMaps(gateway, context, deadline);
+  const slots = planSlots(context, input, maps);
+  return { ...(await draftBatches(context, input, gateway, slots, deadline)), maps };
 }

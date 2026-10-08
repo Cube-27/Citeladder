@@ -61,8 +61,6 @@ export type PromptGenerateInput = {
   count?: number;
   // Scope generation to existing topics; omitted or empty = every topic.
   topic_ids?: string[];
-  intents?: Prompt['intent'][];
-  cohort?: Prompt['cohort'];
 };
 
 export const promptsApi = {
@@ -131,8 +129,9 @@ export const promptsApi = {
   /**
    * AI prompt generation via the app-level default agent. Validated
    * suggestions are staged as candidates for review; nothing is tracked until
-   * accepted. Errors: 422 invalid, 502 agent/output failure, 503 when no
-   * default agent is configured in the backend environment.
+   * accepted. Errors: 409 key reused for another request, 422 invalid, 502
+   * agent/output failure, 503 when no default agent is configured. Pass an
+   * `idempotencyKey` so a retry replays a run the server already staged.
    */
   generate: async (
     promptSetId: string,

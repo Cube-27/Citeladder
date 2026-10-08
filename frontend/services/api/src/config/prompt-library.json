@@ -40,7 +40,7 @@
       "max_count": {
         "env": ["GENERATION_MAX_COUNT"],
         "type": "int",
-        "default": 100,
+        "default": 50,
         "minimum": 1
       },
       "model_batch_size": {
@@ -61,6 +61,20 @@
         "default": 2,
         "minimum": 1,
         "maximum": 4
+      },
+      "draft_concurrency": {
+        "env": ["GENERATION_DRAFT_CONCURRENCY"],
+        "type": "int",
+        "default": 3,
+        "minimum": 1,
+        "maximum": 6
+      },
+      "generation_deadline_seconds": {
+        "env": ["GENERATION_DEADLINE_SECONDS"],
+        "type": "int",
+        "default": 70,
+        "minimum": 10,
+        "maximum": 240
       },
       "max_topic_ids": {
         "env": ["GENERATION_MAX_TOPIC_IDS"],

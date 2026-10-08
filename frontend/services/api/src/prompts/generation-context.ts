@@ -23,6 +23,11 @@ const businessMap = z.object({ offerings: z.array(offeringMapSchema).default([])
 export const offeringMaps = (business: Record<string, unknown>): OfferingMap[] =>
   businessMap.parse(business.business_map ?? {}).offerings;
 
+/** Columns generation reads; widening one is a reviewed change, not a `selectAll`. */
+const topicColumns = ['id', 'name', 'description', 'parent_id'] as const;
+export const promptColumns = ['id', 'topic_id', 'text', 'normalized_text_hash'] as const;
+export const candidateColumns = ['normalized_text_hash', 'disposition', 'jev_decision'] as const;
+
 /** A project without topics gets one generated topic per confirmed offering. */
 function recoverTopics(trx: Database, projectId: string, offerings: string[]) {
   const names = new Map<string, string>();
@@ -51,7 +56,7 @@ function recoverTopics(trx: Database, projectId: string, offerings: string[]) {
         updated_at: now,
       })),
     )
-    .returningAll()
+    .returning(topicColumns)
     .execute();
 }
 
@@ -79,19 +84,27 @@ export function generationContext(
     await scopedPromptSet(trx, workspaceId, setId);
     const project = await trx
       .selectFrom('projects')
-      .selectAll()
+      .select(['id', 'brand_name', 'country_code', 'primary_market', 'language_code'])
       .where('id', '=', set.project_id)
       .where('workspace_id', '=', workspaceId)
       .executeTakeFirstOrThrow();
     const profile = await trx
       .selectFrom('brand_profiles')
-      .selectAll()
+      .select([
+        'products_services',
+        'business_context',
+        'description',
+        'positioning',
+        'target_audience',
+        'sources',
+        'source_artifact_ids',
+      ])
       .where('project_id', '=', project.id)
       .where('workspace_id', '=', workspaceId)
       .executeTakeFirst();
     let topics = await trx
       .selectFrom('topics')
-      .selectAll()
+      .select(topicColumns)
       .where('project_id', '=', project.id)
       .orderBy('created_at')
       .orderBy('id')
@@ -105,7 +118,7 @@ export function generationContext(
       : topics;
     const brand = await trx
       .selectFrom('brands')
-      .selectAll()
+      .select(['id', 'name'])
       .where('project_id', '=', project.id)
       .executeTakeFirst();
     const aliases = brand
@@ -117,12 +130,12 @@ export function generationContext(
       : [];
     const competitors = await trx
       .selectFrom('competitors')
-      .selectAll()
+      .select(['name', 'aliases'])
       .where('project_id', '=', project.id)
       .execute();
     const prompts = await trx
       .selectFrom('prompts')
-      .selectAll()
+      .select(promptColumns)
       .where('prompt_set_id', '=', setId)
       // Oldest first: model and judge context keep the most recent texts.
       .orderBy('created_at')
@@ -130,7 +143,7 @@ export function generationContext(
       .execute();
     const candidates = await trx
       .selectFrom('prompt_candidates')
-      .selectAll()
+      .select(candidateColumns)
       .where('workspace_id', '=', workspaceId)
       .where('prompt_set_id', '=', setId)
       .where('expires_at', '>', new Date())
@@ -139,7 +152,7 @@ export function generationContext(
     const snapshot = snapshotRef
       ? await trx
           .selectFrom('demand_snapshots')
-          .selectAll()
+          .select(['id', 'coverage', 'window_start', 'window_end'])
           .where('id', '=', snapshotRef.id)
           .where('workspace_id', '=', workspaceId)
           .executeTakeFirstOrThrow()
@@ -147,7 +160,16 @@ export function generationContext(
     const demand = snapshot
       ? await trx
           .selectFrom('demand_signals')
-          .selectAll()
+          .select([
+            'id',
+            'signal_type',
+            'topic_cluster',
+            'page_url',
+            'priority_score',
+            'limitations',
+            'evidence',
+            'metrics',
+          ])
           .where('workspace_id', '=', workspaceId)
           .where('project_id', '=', project.id)
           .where('snapshot_id', '=', snapshot.id)
@@ -204,7 +226,13 @@ export function generationContext(
       ? await trx
           .selectFrom('agent_output_revisions as revision')
           .innerJoin('agent_outputs as output', 'output.id', 'revision.output_id')
-          .selectAll('revision')
+          .select([
+            'revision.id',
+            'revision.output_id',
+            'revision.run_id',
+            'revision.source_refs',
+            'revision.body',
+          ])
           .where('revision.id', '=', input.agent_revision_id)
           .where('revision.workspace_id', '=', workspaceId)
           .where('revision.project_id', '=', project.id)
@@ -218,7 +246,6 @@ export function generationContext(
     return {
       set,
       project,
-      profile,
       topics,
       selected,
       offerings,

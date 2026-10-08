@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -195,16 +195,26 @@ export function PromptLibrary({
     },
   });
 
+  // A retry of the same request after a failure reuses its key, so a run the
+  // server already staged is replayed instead of drafted (and paid for) again.
+  const generateKey = useRef<{ request: string; key: string } | null>(null);
   const generateMutation = useMutation({
     mutationFn: async (input: PromptGenerateInput) => {
       const options = requestOptions();
       const set = await ensurePromptSet();
-      return promptsApi.generate(set.id, input, options);
+      const request = JSON.stringify([set.id, input]);
+      if (generateKey.current?.request !== request)
+        generateKey.current = { request, key: crypto.randomUUID() };
+      return promptsApi.generate(set.id, input, {
+        ...options,
+        idempotencyKey: generateKey.current.key,
+      });
     },
     // Clear any prior success summary before a new attempt so a stale result
     // can never render alongside a later retry's error.
     onMutate: () => setGenerateResult(null),
     onSuccess: async (result) => {
+      generateKey.current = null;
       setGenerateResult(result);
       review.clearNotice();
       // Candidates are reviewed in the dialog; topics may have been created.

@@ -51,6 +51,7 @@ const API_ERROR_CODES = [
   'funding_unavailable',
   'ga4_dimension_incompatible',
   'gateway_timeout',
+  'generation_idempotency_conflict',
   'generation_invalid',
   'generation_unparseable',
   'gone',

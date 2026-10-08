@@ -52,6 +52,10 @@ const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const setPath = { prompt_set_id: uuid } as const;
 const setRoot = `${api}/prompt-sets/{prompt_set_id}`;
 const noQuery = {} as const;
+/** A retried request with the same key replays the staged run without provider I/O. */
+const generationHeaders = z.object({
+  'Idempotency-Key': z.string().max(policy.prompts.generation.idempotency_key_max_chars).nullish(),
+});
 
 /** CSV import's own budget under the native `bulk_import` request window. */
 function bulkImportLimit() {
@@ -70,13 +74,19 @@ export const promptRoutes = [
     status: 201,
     params: { path: setPath, query: noQuery },
     body: generationInput,
+    headers: generationHeaders,
     response: promptGenerateResponseSchema,
     async handle({ c, db }, { path }) {
+      const key = c.req.header('Idempotency-Key')?.trim() ?? '';
+      if (key.length > policy.prompts.generation.idempotency_key_max_chars)
+        throw new ApiError(422, 'Idempotency-Key is too long', { code: 'generation_invalid' });
       return generatePrompts(
         db,
         c.get('workspace').workspaceId,
         path.prompt_set_id,
         await readBody(c, generationInput),
+        undefined,
+        key || null,
       );
     },
   }),

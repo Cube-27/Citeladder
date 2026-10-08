@@ -14,10 +14,7 @@ export const generationInput = z.object({
   topic_ids: z.array(z.uuid()).default([]),
   topic_id: z.uuid().nullish(),
   agent_revision_id: z.uuid().nullish(),
-  intents: z
-    .array(z.enum(['', 'discovery', 'comparison', 'purchase', 'service', 'local']))
-    .default([]),
-  cohort: z.enum(['core', 'comparison', 'brand_diagnostic', 'commerce']).default('core'),
+  cohort: z.enum(['core', 'comparison', 'brand_diagnostic']).default('core'),
 });
 export type GenerationInput = z.infer<typeof generationInput>;
 export const generationInvalid = (message: string) =>
@@ -33,7 +30,6 @@ export function validateSelection(input: GenerationInput, topics: readonly { id:
     throw generationInvalid('Too many topics selected');
   if (wanted.some((id) => !topics.some((topic) => topic.id === id)))
     throw generationInvalid('Selected topic is unavailable in this project');
-  if (input.cohort === 'commerce') throw generationInvalid('Use Commerce buyer-prompt generation');
   if (input.agent_revision_id && input.cohort !== 'core')
     throw generationInvalid('Agent portfolios require the core cohort');
 }
