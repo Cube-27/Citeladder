@@ -83,7 +83,7 @@ requires.
 cd frontend
 echo "API_SERVICE_ORIGIN=http://localhost:8100" > .env.local
 pnpm install
-pnpm fonts:pull             # Inter Variable from the private font repo
+pnpm fonts:pull             # Satoshi and Sentient from the private font repo
 pnpm dev                    # Local marketing Worker: http://127.0.0.1:3000
 pnpm dev:vite               # Vite authenticated SPA: http://127.0.0.1:3001/login
 ```
