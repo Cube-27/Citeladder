@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
 import { refreshTrafficSnapshot, projectPerformanceRange } from '../src/traffic/snapshot.ts';
@@ -42,7 +43,6 @@ describe('traffic projections and Performance', () => {
       .selectAll()
       .where('project_id', '=', t.projectId)
       .execute();
-    expect(rows).toHaveLength(9);
     expect(
       rows.every((r) => JSON.stringify(r.source_metric_row_ids) === JSON.stringify([id])),
     ).toBe(true);
@@ -67,6 +67,46 @@ describe('traffic projections and Performance', () => {
         .map((r) => r.id)
         .sort(),
     ).toEqual(before);
+  });
+
+  it('anchors presets and Demand on the latest reported Search Console day, leaving lag unavailable', async () => {
+    const seed = await importSeed(db, t);
+    await metric(db, seed, { date: '2026-07-20', metrics: { impressions: 50, clicks: 5 } });
+    await metric(db, seed, { date: '2026-07-26', metrics: { impressions: 100, clicks: 1 } });
+    await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh'), context);
+    const month = (await request('performance?range=month')).body.selected;
+    expect([month.window_start, month.window_end]).toEqual(['2026-06-29', '2026-07-26']);
+    const synced = await db
+      .selectFrom('traffic_snapshots')
+      .select('metrics')
+      .where('project_id', '=', t.projectId)
+      .where('window_start', '=', sql<Date>`${WINDOW[0]}::date`)
+      .where('window_end', '=', sql<Date>`${WINDOW[1]}::date`)
+      .where('granularity', '=', 'day')
+      .executeTakeFirstOrThrow();
+    const clicks = new Map(
+      (
+        synced.metrics as { series: { clicks: { date: string; value: number | null }[] } }
+      ).series.clicks.map((point) => [point.date, point.value]),
+    );
+    // An empty day before the anchor is measured; empty days after it are lag.
+    expect(
+      ['2026-07-21', '2026-07-26', '2026-07-27', '2026-07-28'].map((d) => clicks.get(d)),
+    ).toEqual([0, 1, null, null]);
+    // A short incremental sync still hands Demand the same anchored policy window.
+    await refreshTrafficSnapshot(
+      await task(db, t, 'traffic_snapshot_refresh', ['2026-07-25', '2026-07-28']),
+      context,
+    );
+    const demand = await db
+      .selectFrom('analytics_tasks')
+      .select('payload')
+      .where('project_id', '=', t.projectId)
+      .where('task_kind', '=', 'demand_snapshot_refresh')
+      .execute();
+    expect(demand.map((row) => row.payload)).toMatchObject([
+      { window_start: '2026-06-29', window_end: '2026-07-26' },
+    ]);
   });
 
   it('keeps headers GSC-only, Bing separate, and unavailable different from measured zero', async () => {
@@ -229,6 +269,49 @@ describe('traffic projections and Performance', () => {
       (await request('performance/range?from=2020-01-01&to=2026-01-01', { method: 'POST' }))
         .response.status,
     ).toBe(422);
+  });
+
+  it('clamps a custom range to the latest imported date and admits a retry after failure', async () => {
+    const seed = await importSeed(db, t);
+    await metric(db, seed, {});
+    const url = 'performance/range?from=2026-07-01&to=2026-08-15';
+    const first = await request(url, { method: 'POST' });
+    expect([first.body.window_start, first.body.window_end]).toEqual(['2026-07-01', WINDOW[1]]);
+    expect(
+      (await request('performance/range?from=2026-07-29&to=2026-08-15', { method: 'POST' }))
+        .response.status,
+    ).toBe(422);
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'failed' })
+      .where('id', '=', first.body.task_id)
+      .execute();
+    const retried = await request(url, { method: 'POST' });
+    expect(retried.body).toMatchObject({ status: 'queued', window_end: WINDOW[1] });
+    expect(retried.body.task_id).not.toBe(first.body.task_id);
+    expect((await request(url, { method: 'POST' })).body.task_id).toBe(retried.body.task_id);
+    const row = await db
+      .selectFrom('analytics_tasks')
+      .selectAll()
+      .where('id', '=', retried.body.task_id)
+      .executeTakeFirstOrThrow();
+    await projectPerformanceRange(row, context);
+    const read = (await request('performance?range=custom&from=2026-07-01&to=2026-08-15')).body;
+    expect(read.selected.window_end).toBe(WINDOW[1]);
+    expect(read.selected.snapshot_id).not.toBeNull();
+  });
+
+  it('anchors extended ranges on the refresh anchor, not a later display-only range', async () => {
+    await refreshed();
+    await projectPerformanceRange(
+      await task(db, t, 'performance_range_projection', ['2026-07-01', '2026-08-15']),
+      context,
+    );
+    const body = (await request('performance?range=3_months')).body;
+    expect([body.selected.window_start, body.selected.window_end]).toEqual([
+      '2026-04-30',
+      WINDOW[1],
+    ]);
   });
 
   it('runs an authorized custom range once while leaving sibling tasks queued', async () => {

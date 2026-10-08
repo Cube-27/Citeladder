@@ -1,7 +1,20 @@
 /** Referral redaction and repeatable event identity. */
 import { describe, expect, it } from 'vitest';
 
+import { classifyReferralSignals } from '../src/referrals/classification.ts';
 import { referralEventFields, sanitizeReferralUrl } from '../src/referrals/events.ts';
+
+describe('classifyReferralSignals', () => {
+  it('matches a host-like UTM source on its subdomains but not on a lookalike host', () => {
+    expect(classifyReferralSignals({ utm_source: 'www.perplexity.ai' })).toMatchObject({
+      ai_source: 'perplexity',
+      matched_rule_id: 'utm-source-perplexity-ai',
+    });
+    expect(classifyReferralSignals({ utm_source: 'notperplexity.ai' })).toBeNull();
+    // Bare tokens stay exact: a dotted source is not a subdomain of a token.
+    expect(classifyReferralSignals({ utm_source: 'news.perplexity' })).toBeNull();
+  });
+});
 
 describe('referralEventFields', () => {
   it('removes credentials and private parameters while retaining allowed attribution', () => {

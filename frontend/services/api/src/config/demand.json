@@ -67,7 +67,6 @@
   "DEMAND_FORMULA_VERSION": "demand-priority-1",
   "DEMAND_RULE_VERSION": "demand-rules-1",
   "DEMAND_MANUAL_ACTIVE_PER_PROJECT": 1,
-  "ERROR_DEMAND_WINDOW_NOT_SAVED": "demand_window_not_saved",
   "DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR": "high_impression_low_ctr",
   "DEMAND_SIGNAL_BRANDED_QUERY": "branded_query_performance",
   "DEMAND_SIGNAL_STRIKING_DISTANCE": "striking_distance",
@@ -76,16 +75,6 @@
   "DEMAND_SIGNAL_QUERY_PAGE_RELEVANCE": "query_page_relevance",
   "DEMAND_SIGNAL_EMERGING_QUERY": "emerging_query",
   "DEMAND_SIGNAL_DECLINING_QUERY": "declining_query",
-  "DEMAND_SIGNAL_TYPES": [
-    "branded_query_performance",
-    "declining_query",
-    "emerging_query",
-    "high_impression_low_ctr",
-    "property_relative_ctr_gap",
-    "query_cannibalization",
-    "query_page_relevance",
-    "striking_distance"
-  ],
   "DEMAND_OPPORTUNITY_SIGNAL_TYPES": [
     "declining_query",
     "emerging_query",
@@ -96,9 +85,10 @@
     "striking_distance"
   ],
   "DEMAND_SIGNAL_STATE_ACTIVE": "active",
-  "DEMAND_SIGNAL_STATE_RESOLVED": "resolved",
+  "DEMAND_WINDOW_DAYS": 28,
   "DEMAND_MIN_IMPRESSIONS": 10,
   "DEMAND_LOW_CTR_THRESHOLD": 0.02,
+  "DEMAND_LOW_CTR_MAX_SIGNALS": 50,
   "DEMAND_SEARCH_GAP_WEIGHT": 1.0,
   "DEMAND_STRIKING_DISTANCE_MIN_IMPRESSIONS": 50,
   "DEMAND_STRIKING_DISTANCE_MIN_POSITION": 4.0,
@@ -127,7 +117,6 @@
   "DEMAND_TREND_GAP_WEIGHT": 1.1,
   "DEMAND_LIST_MAX_LIMIT": 200,
   "QUERY_EVIDENCE_ANALYZER_VERSION": "query-evidence-1",
-  "ERROR_QUERY_EVIDENCE_CURSOR_INVALID": "query_evidence_cursor_invalid",
   "QUERY_EVIDENCE_DEFAULT_LIMIT": 100,
   "QUERY_EVIDENCE_MAX_LIMIT": 500,
   "QUERY_EVIDENCE_MAX_ROWS": 5000,
@@ -140,7 +129,6 @@
   "PAGE_EQUIVALENCE_MAX_ARTIFACTS": 1000,
   "PAGE_EQUIVALENCE_QUERY_CHUNK_SIZE": 500,
   "BRANDED_QUERY_CLASSIFIER_VERSION": "branded-query-1",
-  "BRANDED_QUERY_CLASSES": ["ambiguous", "branded", "non_branded"],
   "active_task_statuses": [
     "awaiting_provider_result",
     "capacity_wait",

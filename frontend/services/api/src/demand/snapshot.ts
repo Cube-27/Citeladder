@@ -14,6 +14,7 @@ import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { record, strings } from '../db/json.ts';
 import { buildQueryEvidence } from './query-evidence.ts';
+import { classifyProjectQueries, normalizeQuery } from './classification.ts';
 import { queryDetectorInputs, sourceMaterial, trafficSource } from './source.ts';
 import {
   detectSearchSignals,
@@ -57,8 +58,14 @@ export const recomputeDemand: Executor = async (task, { db, maxAttempts, checkCa
       property_relative_ctr_gap: detectCtrGap(inputs),
       query_trends: detectTrends(inputs, scope.windowEnd),
     };
+    const searchClasses = await classifyProjectQueries(
+      trx,
+      scope.workspaceId,
+      scope.projectId,
+      traffic.inputs.filter((r) => r.target_kind === 'query').map((r) => r.target),
+    );
     const candidates = [
-      ...detectSearchSignals(traffic.inputs),
+      ...detectSearchSignals(traffic.inputs, (query) => searchClasses.get(normalizeQuery(query))),
       ...Object.values(evaluations).flatMap((e) => e.candidates),
     ];
     const sourceHash = stableHash(
@@ -79,6 +86,7 @@ export const recomputeDemand: Executor = async (task, { db, maxAttempts, checkCa
       .selectFrom(trx, 'demand_snapshots')
       .select(['id', 'summary'])
       .where('project_id', '=', scope.projectId)
+      .orderBy('window_end', 'desc')
       .orderBy('created_at', 'desc')
       .orderBy('id', 'desc')
       .executeTakeFirst();

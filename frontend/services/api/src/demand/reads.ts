@@ -51,6 +51,8 @@ export async function latestDemand(db: Database, workspaceId: string, projectId:
     .selectAll()
     .select(timestampColumns())
     .where('project_id', '=', projectId)
+    // The most recent observed period, as Opportunities selects it.
+    .orderBy('window_end', 'desc')
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .executeTakeFirst();

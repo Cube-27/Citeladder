@@ -98,12 +98,14 @@ export async function queryDetectorInputs(
         .where('a.status', '=', 'completed')
         .where('a.created_at', '>=', new Date(`${scope.windowStart}T00:00:00Z`))
         .where('a.created_at', '<', new Date(`${addDays(scope.windowEnd, 1)}T00:00:00Z`))
+        // Only each page's newest analysis; its facts carry the full page text.
+        .distinctOn('a.site_url_id')
         .orderBy('a.site_url_id')
         .orderBy('a.created_at', 'desc')
+        .orderBy('a.id', 'desc')
         .execute()
     : [];
-  const byPage = new Map<string, (typeof facts)[number]>();
-  for (const fact of facts) if (!byPage.has(fact.site_url_id)) byPage.set(fact.site_url_id, fact);
+  const byPage = new Map(facts.map((fact) => [fact.site_url_id, fact]));
   const classifications = await classifyProjectQueries(
     db,
     scope.workspaceId,

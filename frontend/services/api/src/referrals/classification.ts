@@ -58,9 +58,13 @@ function matchUtm(
   const source = normalize(utmSource);
   const medium = normalize(utmMedium);
   if (!source && !medium) return null;
+  // A host-like rule source also matches its subdomains ("www.perplexity.ai"),
+  // boundary-safe like the referrer tier; bare tokens stay exact.
+  const sourceMatches = (expected: string) =>
+    expected === source || (expected.includes('.') && domainMatches(source, expected));
   const rule = referrals.utm_rules.find(
     (candidate: { utm_source: string | null; utm_medium: string | null }) =>
-      (candidate.utm_source === null || candidate.utm_source === source) &&
+      (candidate.utm_source === null || sourceMatches(candidate.utm_source)) &&
       (candidate.utm_medium === null || candidate.utm_medium === medium),
   );
   return rule ? match(rule, referrals.match_signals.utm) : null;
