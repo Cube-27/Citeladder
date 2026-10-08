@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
+import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,6 @@ import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import { agentHandoffHref } from '@/lib/agent/handoff';
-import { nextStepsFor, refinementsFor } from '@/lib/agent/next-steps';
 import { runErrorCopy, runStepLabel } from '@/lib/agent/vocabulary';
 import { runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage, AgentRun } from '@/lib/api/agent';
@@ -304,7 +304,8 @@ function omissionLabel(omission: unknown) {
 
 /**
  * After a deliverable: refinements revise it in this chat; next steps start a
- * new chat with the skill that takes the work forward.
+ * new chat with the workflow that takes the work forward, carrying the exact
+ * revision as its brief. Both come from the server catalog for the kind.
  */
 function FollowUps({
   kind,
@@ -321,12 +322,18 @@ function FollowUps({
   revisionId: string;
   onRefine: (instruction: string) => void;
 }>) {
-  const next = nextStepsFor(kind, title);
+  const catalog = useAgentCatalog();
+  const presentation = catalog.outputKind(kind);
+  const next = (presentation?.next ?? []).flatMap((step) => {
+    const workflow = catalog.workflow(step.workflow_id);
+    return workflow ? [{ workflow, prompt: `${step.prompt} "${title}".` }] : [];
+  });
+  if (!presentation) return null;
   return (
     <div className="grid gap-3">
       <fieldset aria-label="Suggested follow-ups" className="flex flex-wrap gap-2">
         <legend className={textRole('caption')}>Add a suggestion to your message:</legend>
-        {refinementsFor(kind).map((instruction) => (
+        {presentation.refinements.map((instruction) => (
           <Button
             key={instruction}
             variant="secondary"
@@ -340,17 +347,17 @@ function FollowUps({
       {next.length > 0 ? (
         <nav aria-label="Next steps" className="flex flex-wrap items-center gap-2">
           <span className={textRole('caption')}>Next, in a new chat:</span>
-          {next.map((step) => (
-            <Button key={step.label} asChild variant="ghost" size="sm">
+          {next.map(({ workflow, prompt }) => (
+            <Button key={workflow.id} asChild variant="ghost" size="sm">
               <ProjectLink
                 href={agentHandoffHref({
                   actionId,
-                  prompt: step.prompt,
-                  skillId: step.skillId,
+                  prompt,
+                  workflowId: workflow.id,
                   outputRevision: { outputId, revisionId },
                 })}
               >
-                {step.label}
+                {workflow.label}
               </ProjectLink>
             </Button>
           ))}

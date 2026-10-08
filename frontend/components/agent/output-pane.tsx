@@ -5,6 +5,7 @@ import { Download, Pencil } from 'lucide-react';
 import { useState } from 'react';
 
 import { OutputDeclaration } from '@/components/agent/action-declaration';
+import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { OutputCanvas } from '@/components/agent/output-canvas';
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { OutputEditor, type OutputDraft } from '@/components/agent/output-editor';
@@ -22,7 +23,7 @@ import { textRole } from '@/components/ui/typography';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { downloadOutputMarkdown, outputMarkdown } from '@/lib/agent/export';
 import { newIdempotencyKey } from '@/lib/agent/idempotency';
-import { OUTPUT_PHASE_LABEL, outputKindLabel } from '@/lib/agent/vocabulary';
+import { OUTPUT_PHASE_LABEL } from '@/lib/agent/vocabulary';
 import { agentMutations, type AgentOutput, type AgentRevision } from '@/lib/api/agent';
 import { queryKeys } from '@/lib/api/query-keys';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
@@ -52,6 +53,7 @@ export function OutputPane({
   /** Sends a follow-up turn asking the agent to revise part of the output. */
   onRevise: (message: string) => void;
 }>) {
+  const { kindLabel } = useAgentCatalog();
   const revision = output.latest_revision;
   const [tab, setTab] = useState<PaneTab>('output');
   // Held here, not in the editor, so switching tabs cannot discard it.
@@ -79,7 +81,7 @@ export function OutputPane({
           {revision.title}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge>{outputKindLabel(output.kind)}</Badge>
+          <Badge>{kindLabel(output.kind)}</Badge>
           <Badge>{OUTPUT_PHASE_LABEL[output.phase]}</Badge>
           <span className={textRole('caption')}>Revision {revision.number}</span>
           {output.target_label ? (

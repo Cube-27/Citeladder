@@ -1,6 +1,5 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { ChevronDown } from 'lucide-react';
 import { Fragment } from 'react';
 
@@ -15,17 +14,15 @@ import {
   DropdownTrigger,
 } from '@/components/ui/dropdown';
 import { skillGroupLabel } from '@/lib/agent/vocabulary';
-import { agentQueries, type AgentSkill } from '@/lib/api/agent';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { type AgentSkill } from '@/lib/api/agent';
+import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 
 const AUTOMATIC = '';
 const INHERIT = '__inherit';
 
-/** The catalog, shared by the picker and the message skill labels. */
+/** The skills, shared by the picker and the message skill labels. */
 export function useSkillCatalog(): AgentSkill[] {
-  const workspaceId = useActiveWorkspaceId() ?? '';
-  const query = useQuery({ ...agentQueries.skills(workspaceId), enabled: Boolean(workspaceId) });
-  return query.data?.skills ?? [];
+  return useAgentCatalog().skills;
 }
 
 export function skillLabel(skills: AgentSkill[], skillId: string | null): string | null {

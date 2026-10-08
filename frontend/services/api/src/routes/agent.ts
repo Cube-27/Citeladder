@@ -73,6 +73,7 @@ async function mapped<T>(action: () => Promise<T>) {
     if (error.code === 'access_revoked' || error.code === 'capability_unavailable')
       throw new ApiError(403, 'Agent run permission is unavailable');
     if (error.code === 'agent_context_unavailable') throw notFound('Agent context');
+    if (error.code === 'agent_workflow_unavailable') throw notFound('Agent workflow');
     if (error.code === 'agent_legacy_replay')
       throw new ApiError(
         409,
@@ -143,6 +144,8 @@ export const agentRoutes = [
     response: agentSkillCatalogSchema,
     async handle({ db }) {
       const { catalog } = await agentBindings(db);
+      const { workflows } = catalog;
+      // Explicit projection: skill bodies and format guidance are model input only.
       return {
         skills: [...catalog.skills.values()].map((skill) => ({
           id: skill.id,
@@ -150,6 +153,20 @@ export const agentRoutes = [
           group: skill.group,
           output_kind: skill.outputKind,
           description: skill.description,
+        })),
+        workflow_groups: workflows.groups,
+        workflows: workflows.workflows.map((workflow) => ({
+          ...workflow,
+          format_id: workflow.format_id ?? null,
+        })),
+        output_kinds: Object.entries(workflows.kinds).map(([kind, presentation]) => ({
+          kind,
+          label: presentation.label,
+          refinements: presentation.refinements,
+          next: presentation.next.map((step) => ({
+            workflow_id: step.workflow,
+            prompt: step.prompt,
+          })),
         })),
       };
     },
@@ -203,6 +220,7 @@ export const agentRoutes = [
         store.enqueue(scope(c, path.project_id), {
           message: input.message,
           skillId: input.skill_id,
+          workflowId: input.workflow_id ?? undefined,
           actionId: input.action_id ?? undefined,
           refs: z
             .record(z.string(), z.json())

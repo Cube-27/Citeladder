@@ -164,23 +164,6 @@ export function movementStateLabel(state: string): string {
   return MOVEMENT_STATE_LABEL[state] ?? 'state not recognized';
 }
 
-const OUTPUT_KIND_LABEL: Record<string, string> = {
-  plan: 'Growth plan',
-  measurement: 'Measurement plan',
-  research: 'Research brief',
-  prompt_portfolio: 'Prompt portfolio',
-  page_edits: 'Page edits',
-  link_plan: 'Internal-link plan',
-  technical_fix: 'Technical fix',
-  diagnosis: 'Diagnosis',
-  earned_brief: 'Earned-placement brief',
-  content: 'Content',
-};
-
-export function outputKindLabel(kind: string | null | undefined): string {
-  return (kind && OUTPUT_KIND_LABEL[kind]) || 'Output';
-}
-
 export const OUTPUT_PHASE_LABEL: Record<'outline' | 'draft' | 'final', string> = {
   outline: 'Outline',
   draft: 'Draft',

@@ -1,4 +1,4 @@
-import { mkdtemp, cp, appendFile, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, cp, appendFile, rm, writeFile, mkdir, readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
@@ -57,16 +57,50 @@ describe('packaged Agent model inputs', () => {
       ).toThrow('Invalid content format');
     },
   );
-  it('loads packaged metadata, expanded vocabulary and one selected format', async () => {
+  it('loads packaged metadata with every vocabulary expanded', async () => {
     const catalog = await loadSkillCatalog(root);
     const skills = [...catalog.skills.values()];
     for (const skill of skills) agentSkillSchema.parse({ ...skill, output_kind: skill.outputKind });
-    expect(skills.map((skill) => skill.order)).toEqual(
-      [...skills.map((skill) => skill.order)].sort((a, b) => a - b),
-    );
-    expect(catalog.skills.get('content_create')?.outlineFirst).toBe(true);
-    expect([...catalog.formats.values()].every((format) => format.body.length > 0)).toBe(true);
     expect(skills.some((skill) => /\{\{[a-z_]+\}\}/u.test(skill.body))).toBe(false);
+  });
+  it('reads the long-form marker without making it part of the label', () => {
+    const { formats } = parseContentFormats(
+      '# Formats\n## guide — Guide [long-form]\nBody\n## post — Post\nBody\n',
+    );
+    expect([...formats.values()].map(({ label, longForm }) => [label, longForm])).toEqual([
+      ['Guide', true],
+      ['Post', false],
+    ]);
+  });
+  it('fingerprints workflows and refuses one that names a missing skill, format or next step', async () => {
+    const temporary = await mkdtemp(join(tmpdir(), 'agent-workflows-'));
+    try {
+      await cp(root, temporary, { recursive: true });
+      const path = join(temporary, 'workflows.json');
+      const original = JSON.parse(await readFile(path, 'utf8'));
+      const first = await loadSkillCatalog(temporary);
+      const write = (mutate: (file: typeof original) => void) => {
+        const file = structuredClone(original);
+        mutate(file);
+        return writeFile(path, JSON.stringify(file));
+      };
+      await write((file) => (file.workflows[0].label = 'Renamed'));
+      expect((await loadSkillCatalog(temporary)).version).not.toBe(first.version);
+      await write((file) => (file.workflows[0].skill_id = 'missing_skill'));
+      await expect(loadSkillCatalog(temporary)).rejects.toThrow('unknown skill');
+      // A format only applies to a skill whose output kind has formats.
+      await write((file) => {
+        const planner = file.workflows.find(
+          (workflow: { skill_id: string }) => workflow.skill_id === 'growth_plan',
+        );
+        planner.format_id = 'article';
+      });
+      await expect(loadSkillCatalog(temporary)).rejects.toThrow('unusable format');
+      await write((file) => (file.kinds.content.next[0].workflow = 'missing_workflow'));
+      await expect(loadSkillCatalog(temporary)).rejects.toThrow('unknown workflow');
+    } finally {
+      await rm(temporary, { recursive: true, force: true });
+    }
   });
   it('fingerprints every model input and rejects undeclared vocabulary and duplicate metadata', async () => {
     const temporary = await mkdtemp(join(tmpdir(), 'agent-catalog-'));

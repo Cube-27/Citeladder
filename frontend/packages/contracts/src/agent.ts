@@ -160,8 +160,30 @@ export const agentSkillSchema = responseObject({
   description: z.string(),
 });
 
+export const agentWorkflowSchema = responseObject({
+  id: z.string(),
+  group: z.string(),
+  label: z.string(),
+  description: z.string(),
+  skill_id: z.string(),
+  format_id: z.string().nullable(),
+  prompt: z.string(),
+  inputs: z.array(responseObject({ key: z.string(), label: z.string(), required: z.boolean() })),
+});
+
+// What a finished deliverable of one kind is called and offers next.
+export const agentOutputKindSchema = responseObject({
+  kind: z.string(),
+  label: z.string(),
+  refinements: z.array(z.string()),
+  next: z.array(responseObject({ workflow_id: z.string(), prompt: z.string() })),
+});
+
 export const agentSkillCatalogSchema = responseObject({
   skills: z.array(agentSkillSchema),
+  workflow_groups: z.array(responseObject({ id: z.string(), label: z.string() })).default([]),
+  workflows: z.array(agentWorkflowSchema).default([]),
+  output_kinds: z.array(agentOutputKindSchema).default([]),
 });
 
 export const agentInstructionsSchema = responseObject({
@@ -225,6 +247,7 @@ export function agentRequestSchemas(bounds: {
 }) {
   const message = z.string().max(bounds.message_max_chars).trim().min(1);
   const skill = z.string().max(64).nullish();
+  const workflow = z.string().max(64).nullish();
   const mentions = z
     .array(uuid())
     .max(bounds.mentions_max)
@@ -235,6 +258,7 @@ export function agentRequestSchemas(bounds: {
       .object({
         message,
         skill_id: skill,
+        workflow_id: workflow,
         action_id: uuid().nullish(),
         context: agentContextRefsSchema.default({}),
         mentions,

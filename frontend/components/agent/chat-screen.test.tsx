@@ -247,7 +247,7 @@ describe('ChatScreen', () => {
     });
   });
 
-  it('links cited evidence and offers the next skill in a new chat', async () => {
+  it('links cited evidence and offers the next workflow in a new chat with this revision', async () => {
     const ACTION = '88888888-8888-4888-8888-888888888888';
     const base = detail(revision(REV1, 1, 'agent', 'Body.'));
     const withEvidence = {
@@ -269,11 +269,13 @@ describe('ChatScreen', () => {
       'href',
       expect.stringContaining(`/agent/actions/${ACTION}`),
     );
-    const next = within(screen.getByRole('navigation', { name: 'Next steps' }));
-    expect(next.getByRole('link', { name: 'Plan internal links' })).toHaveAttribute(
-      'href',
-      expect.stringContaining('skill=internal_links'),
+    const next = within(await screen.findByRole('navigation', { name: 'Next steps' }));
+    const href = new URL(
+      next.getByRole('link', { name: 'Internal links' }).getAttribute('href')!,
+      'https://app.test',
     );
+    expect(href.searchParams.get('workflow')).toBe('internal_links');
+    expect(href.searchParams.get('revision_id')).toBe(REV1);
   });
 
   it('links the Actions a message mentioned', async () => {

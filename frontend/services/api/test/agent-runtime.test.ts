@@ -24,6 +24,7 @@ import { ToolRegistry } from '../src/agent/tools.ts';
 import { contextCitations, manifestSchema, suppliedManifest } from '../src/agent/context.ts';
 import { bounded } from '../src/agent/runtime.ts';
 import { scrubRecordRefs } from '../src/agent/sources.ts';
+import { parseWorkflows } from '../src/agent/workflows.ts';
 import { fingerprint } from '../src/agent/store.ts';
 import { readAgentContext } from '../src/agent/context-adapter.ts';
 import { runAgentOnce } from '../src/agent/worker.ts';
@@ -1348,5 +1349,59 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       source_refs: [uri],
     });
     expect(detail.messages.at(-1)?.evidence_refs).toEqual([]);
+  });
+  it('pins a workflow’s skill and format, and keeps them through a clarifying first turn', async () => {
+    const scope = await fixtures.scope();
+    const formats = new Map([
+      ['post', { id: 'post', label: 'Post', body: 'Write one short post.', longForm: false }],
+    ]);
+    const workflows = parseWorkflows(
+      JSON.stringify({
+        groups: [{ id: 'social', label: 'Social' }],
+        workflows: [
+          {
+            id: 'post',
+            group: 'social',
+            label: 'Post',
+            description: 'A short post.',
+            skill_id: 'content',
+            format_id: 'post',
+            prompt: 'Write a post.',
+            inputs: [],
+          },
+        ],
+        kinds: {},
+      }),
+      catalog.skills,
+      formats,
+    );
+    const pinned = { ...catalog, formats, workflows };
+    const store = fixtures.store({ catalog: pinned });
+    await expect(
+      store.enqueue(scope, { key: randomUUID(), message: 'Write', workflowId: 'missing' }),
+    ).rejects.toMatchObject({ code: 'agent_workflow_unavailable' });
+    const queue = new AgentQueue(db, 30);
+    const execute = async (steps: unknown[], onCall?: Parameters<typeof scripted>[1]) => {
+      const claimed = await queue.claim('workflow-worker', [scope.workspaceId]);
+      const lease = await queue.start(claimed!, 'workflow-worker');
+      await fixtures.runtime(scope, scripted(steps, onCall), { catalog: pinned }).execute(lease);
+    };
+    const first = await store.enqueue(scope, {
+      key: randomUUID(),
+      message: 'Write a post.',
+      workflowId: 'post',
+    });
+    expect(first.requested_skill_id).toBe('content');
+    const sawFormat = async (request: { system: string }) => {
+      expect(request.system).toContain('Write one short post.');
+    };
+    await execute([reply('Which topic should it cover?')], sawFormat);
+    await store.enqueue(scope, { key: randomUUID(), chatId: first.chat_id, message: 'Pricing' });
+    await execute([deliverable('draft')], sawFormat);
+    // The pinned short format is saved without an outline.
+    expect((await readChat(db, scope, first.chat_id)).output).toMatchObject({
+      format_id: 'post',
+      phase: 'draft',
+    });
   });
 });

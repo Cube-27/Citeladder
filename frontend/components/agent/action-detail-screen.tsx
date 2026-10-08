@@ -10,6 +10,7 @@ import {
   ContextualLinkDeclarationRoute,
 } from '@/components/agent/action-declaration';
 import { DeclarationStatus } from '@/components/agent/declaration-status';
+import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
@@ -33,7 +34,6 @@ import {
   FAMILY_STATE_LABEL,
   measurementLegLabel,
   OUTPUT_PHASE_LABEL,
-  outputKindLabel,
   targetKindLabel,
 } from '@/lib/agent/vocabulary';
 import { actionsMutations, actionsQueries, type ActionDetail } from '@/lib/api/actions';
@@ -328,6 +328,7 @@ function LinkedChats({
   action,
   workspaceId,
 }: Readonly<{ action: ActionDetail; workspaceId: string }>) {
+  const { kindLabel } = useAgentCatalog();
   const chats = useInfiniteQuery(
     agentQueries.chats(workspaceId, action.project_id, { actionId: action.id }),
   );
@@ -358,7 +359,7 @@ function LinkedChats({
               </ProjectLink>
               {chat.output_kind && chat.output_phase ? (
                 <span className={textRole('caption')}>
-                  {outputKindLabel(chat.output_kind)} · {OUTPUT_PHASE_LABEL[chat.output_phase]}
+                  {kindLabel(chat.output_kind)} · {OUTPUT_PHASE_LABEL[chat.output_phase]}
                 </span>
               ) : null}
             </li>

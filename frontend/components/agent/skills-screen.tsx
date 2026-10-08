@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { PageLoading } from '@/components/layout/page-loading';
+import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,7 @@ import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
-import { outputKindLabel, skillGroupLabel } from '@/lib/agent/vocabulary';
+import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
@@ -54,6 +55,7 @@ export function SkillsScreen() {
 }
 
 function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
+  const { kindLabel } = useAgentCatalog();
   const groups = new Map<string, AgentSkill[]>();
   for (const skill of skills) {
     const label = skillGroupLabel(skill.group);
@@ -75,7 +77,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
                   <p className={textRole('body')}>{skill.description}</p>
                 </Stack>
                 <div className="flex flex-wrap items-center justify-between gap-2 self-end">
-                  <Badge>Produces {outputKindLabel(skill.output_kind).toLowerCase()}</Badge>
+                  <Badge>Produces {kindLabel(skill.output_kind).toLowerCase()}</Badge>
                   <Button asChild variant="ghost" size="sm">
                     <ProjectLink
                       href={agentHandoffHref({ skillId: skill.id })}

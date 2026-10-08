@@ -33,6 +33,8 @@ export function useChatDetail(workspaceId: string, chatId: string) {
 export type NewChatInput = {
   message: string;
   skillId: string | null | undefined;
+  /** A defined workflow; the server pins its skill and format. */
+  workflowId?: string;
   actionId?: string;
   context: AgentContextRefs;
   mentions?: string[];
@@ -57,10 +59,18 @@ export function useCreateChat(
       onCreated(accepted.chat_id);
     },
   });
-  const start = ({ message, skillId, actionId, context, mentions = [] }: NewChatInput) => {
+  const start = ({
+    message,
+    skillId,
+    workflowId,
+    actionId,
+    context,
+    mentions = [],
+  }: NewChatInput) => {
     const input = {
       message: message.trim(),
       skill_id: skillId,
+      ...(workflowId ? { workflow_id: workflowId } : {}),
       action_id: actionId,
       context,
       ...(mentions.length > 0 ? { mentions } : {}),

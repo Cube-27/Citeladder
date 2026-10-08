@@ -3,6 +3,7 @@ import type { Selectable } from 'kysely';
 import type { AgentChats, AgentRuns, AgentModelAttempts } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
 import type { ContentFormat } from '../config/skill-inputs.ts';
+import type { WorkflowCatalog } from './workflows.ts';
 
 export const agentPolicy = policy.agent;
 export type Chat = Selectable<AgentChats>;
@@ -142,6 +143,7 @@ export type SkillCatalog = {
   skills: ReadonlyMap<string, Skill>;
   formatPreamble?: string;
   formats?: ReadonlyMap<string, ContentFormat>;
+  workflows?: WorkflowCatalog;
 };
 function wireSchema(bounds: OutputBounds) {
   return wireStep.extend({ output: outputSchema(bounds).nullish() });
