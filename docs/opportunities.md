@@ -12,16 +12,31 @@ both from subsequent observed evidence. It cannot establish causation.
 ## Evidence to action
 
 The [TypeScript routes](../frontend/services/api/src/routes/opportunities.ts)
-serve the workspace-authorized catalog, detail, summary, history, manual order,
-exports and on-demand recompute. The
-[refresh](../frontend/services/api/src/opportunities/refresh.ts) is the one
-writer of Opportunities and snapshots: the TypeScript analytics worker claims
-`opportunity_refresh` tasks admitted through the
-[TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts). Detectors
-consume persisted source snapshots; recomputation writes ranked Opportunities
-and immutable snapshots with rule/formula versions and exact source identities,
-under the project advisory lock shared by TypeScript prompt writes.
+serve the workspace-authorized catalog, the row detail and the shared manual
+order. There is no on-demand recompute: refreshes run only from evidence
+triggers. The [refresh](../frontend/services/api/src/opportunities/refresh.ts)
+is the one writer of Opportunities and snapshots: the TypeScript analytics
+worker claims `opportunity_refresh` tasks admitted through the
+[TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts),
+and the runner lane wakes for a retry when it falls due. Detectors consume
+persisted source snapshots; recomputation writes ranked Opportunities and
+immutable snapshots with rule/formula versions and exact source identities.
 An ordinary list/detail read never refreshes a source or recomputes a ranking.
+
+A refresh first resolves its source identity: the audit, crawl, demand
+snapshot and revision, internal-link run and newest inspected source-page
+reading. When the latest snapshot already records that identity under the
+current versions, the refresh loads no evidence. Otherwise it loads evidence
+outside the lock, then takes the project advisory lock shared by TypeScript
+prompt writes and resolves the identity again; if a source moved during the
+load, it writes nothing and fails for a retry over the newer state, so an
+older reading never supersedes a newer set. A load that hits its analysis or
+Site Health finding cap drops the partial prompt whole and records the cut as
+a snapshot limitation, so a missing engine never reads as an absent brand.
+
+A confirmed prompt decline already passed the audit's materiality and
+agreement gates, so it always surfaces: confidence ranks it between a floor
+and one, and size counts in multiples of the materiality floor, capped.
 
 Site Health owns acquisition and deterministic findings. Demand owns imported
 query/page evidence and signals. Visibility owns answer artifacts and measured
@@ -86,7 +101,10 @@ attaches a targeted chat to the existing Action, or creates one only for a page
 or planned-page target. `/api/v1/projects/{project_id}/actions` and
 `/api/v1/actions/{action_id}` are workspace-authorized persisted reads; the list
 filters by status and target kind and returns project-wide status counts, and
-the detail names the chats linked to the Action.
+the detail names the chats linked to the Action, carries each live finding with
+its remediation, the reading that would measure each finding once declared
+(`member_measurement`), and the earliest go-live time a declaration accepts
+(`declarable_since`).
 
 The Action, not the Opportunity, owns workflow status. A user stores only `open`
 or `dismissed` through `PATCH /api/v1/actions/{action_id}`, and each change
@@ -98,9 +116,11 @@ the verifier's observations of that declaration — the latest observation
 decides: one that verified every expected check reads as done, any other reads
 as measuring, so a later contradiction reopens measurement — and the verifier
 never writes Action status. A user cannot overwrite a declared state.
-Recompute stamps each Opportunity's `action_id`; the Opportunity list, export
-and MCP `status` filter resolve through that Action, and the command center
-counts an Action resolved at its first verified observation. Each promoted
+Recompute stamps each Opportunity's `action_id`; the Opportunity list and MCP
+`status` filter resolve through that Action, and the command center counts an
+Action resolved at its first verified observation. Action sync restamps live
+Actions on every refresh, inserts new groups in batches, and clears an Action
+whose evidence vanished once, leaving already-cleared rows untouched. Each promoted
 Search Demand signal's read carries the Action its live Opportunity joined, for
 the Search Demand "Act on this" band.
 
@@ -111,19 +131,40 @@ implemented ([implementation events](../frontend/services/api/src/opportunities/
 It is anchored on the Action and, when the work came from the Agent, on the
 exact output revision the user shipped; a revision from another Action's output
 or an outline is refused, and null means work done outside CiteLadder. The
-caller names that revision and the implementation time. For contextual-link
-findings, the caller also selects saved recommendation IDs in Website's Internal links tab;
-the server validates them against the current crawl and Action membership. The server
-locks the project before the Action row and freezes its live member rows and
-targets (the publisher page for an
+caller names that revision and the go-live time, which may be neither in the
+future (beyond clock skew) nor earlier than the verification window. For
+contextual-link findings, the caller also selects saved recommendation IDs in
+Website's Internal links tab; the server validates them against the current
+crawl and Action membership. The server locks the project before the Action
+row and freezes its live member rows and targets (the publisher page for an
 earned Action, otherwise the members' resolved pages or the Action's own page)
-and the expected checks: the union of the member rules' checks. Caller-supplied
-checks or targets are rejected, because a declaration that chose its own
-expectation could declare itself verified. The Action row is locked and one
-Action carries at most one declaration; a same-key replay returns it, and
-same-key conflicting input is rejected. The user must reopen a dismissed Action first,
-and an Action with no current finding is refused: with no checks it could never
-be measured.
+and the expected checks. Caller-supplied checks or targets are rejected,
+because a declaration that chose its own expectation could declare itself
+verified. The Action row is locked and one Action carries at most one
+declaration; a same-key replay returns it, and same-key conflicting input is
+rejected. The user must reopen a dismissed Action first, and an Action with no
+current finding is refused.
+
+[Declaration checks](../frontend/services/api/src/opportunities/declaration-checks.ts)
+freeze one check per distinct expectation, each scoped to what the Action
+changed:
+
+| Finding | Check | Read by |
+|---|---|---|
+| Site Health rule | the rule passes on the page | the next crawl that analyzes the page after go-live |
+| Contextual link | the selected link is in main content | the next compatible crawl |
+| Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts after the go-live day (that day is partly before the change) |
+| Prompt-targeted visibility | the prompt's composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
+| Earned page | the declared placement change | the placement recheck |
+
+A finding nothing can isolate — a product, category or theme, or a visibility
+finding with no prompt — gets no check: the project-wide score moves for
+reasons the Action never touched, and site-wide clicks include every other
+page. The declaration still records the work, and the Action reads as
+implemented with nothing to measure. An earned declaration whose publisher page
+was never read is refused, because its placement could never be rechecked.
+When the go-live time is earlier than evidence that already exists, the latest
+crawl, audit and Search Console window are queued for this declaration at once.
 Replay checks both the persisted project/Action identity and the original
 request values after workspace-scoped Action authorization, including unique-key
 insert-conflict recovery. A valid retry returns the original declaration without
@@ -151,13 +192,25 @@ opportunity's stable key travels alongside for navigation across recompute and
 is never the anchor: the same page and action can be attempted more than once,
 and a check has to know which attempt it verifies.
 
-Later crawl, audit, traffic or source-page-inspection completion can enqueue
-bounded [TypeScript verification](../frontend/services/api/src/opportunities/verification.ts)
+Later crawl, audit, traffic or source-page-inspection completion enqueues
+[TypeScript verification](../frontend/services/api/src/opportunities/verification.ts)
 through the [TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts)
-over persisted evidence. Verification appends observations against eligible
-declarations; it does not perform an external change or infer one from metrics.
-Repeated processing is idempotent. New evidence can change the observed
-verification result without rewriting the original declaration.
+only for a project with a declaration inside the verification window (30 days
+from go-live). A task reads only declarations declared before the source was
+observed, inside the window, and holding a check of a kind that source reads;
+after the window a declaration's last observation stands.
+
+Each source reads only its own check kinds and gives each a `met`, `unmet`,
+`waiting` or `unavailable` reading with a reason. Under a lock on the
+declaration row, those readings fold into the per-check states of the latest
+observation: an answer is never replaced by a reading that could not answer,
+and between two answers the later observed one wins, whichever order they
+arrive in. The folded states decide the observation: any unmet check
+contradicts, every check met verifies, anything else is observed. An
+observation is appended only when the source read a check or changed what a
+reader is told, so repeated unchanged readings add nothing. Verification does
+not perform an external change or infer one from metrics. Repeated processing
+is idempotent, and new evidence never rewrites the declaration.
 
 ## Placement observation
 
@@ -190,18 +243,25 @@ Visibility comparison checks frozen audit context, prompt/cohort identity,
 engines, repetitions, locale and retrieval policy. Missing or incompatible
 evidence remains not-run, unavailable or non-comparable.
 
-The Action detail returns the declaration with its observations and what each
+The Action detail returns the declaration with its observations, each expected
+check with its latest folded state, reason and subject (`checks`), the end of
+its verification window (`measured_until`), and what each
 [loop leg](../frontend/services/api/src/opportunities/measurement-legs.ts) is waiting
 for, read from persisted rows: the next scheduled visibility run, the next
-complete Search Console window after the declaration — a synced window that
-starts on or after the declaration day — (or a sync once it has closed), the next crawl (none is scheduled until someone runs one) and the
-earned-page placement recheck, each with the row it read. Nothing is
-triggered. **Mark implemented** in
-the Agent output pane declares the revision on screen; the Action detail
-declares work done outside CiteLadder. Both show observation status separately
-from workflow status and preserve the causality notice. A positive movement
-does not prove that this action caused it; another action or changed
-measurement scope may overlap.
+Search Console window — a synced window that starts after the
+declaration day, due a few days later, or a sync once that has passed — the
+next crawl (none is scheduled until someone runs one) and the earned-page
+placement recheck, each with the row it read. Nothing is triggered by a read.
+
+**Mark implemented** in the Agent output pane declares the revision on screen;
+the Action detail declares work done outside CiteLadder. The dialog asks when
+the change went live and lists what each finding will be measured by. After
+declaring, focus moves to the measurement checklist: each check with its state
+and the reason it could not be read, and **Run crawl now** while a page check
+lacks a met reading. Observation state stays separate from workflow status, and
+the causality notice is shown: a met check shows the change is live and
+measured; it does not prove this Action caused any movement, and other changes
+can overlap.
 
 The Actions list keeps its `status` and `target` filters in shareable URL state
 and pages with a cursor. Overview and Top Insights link to the owning Action at
@@ -219,14 +279,17 @@ expected-change vocabulary, the check states and the recheck schedule.
 [Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
 [Visibility](visibility-prompt.md) remain the source authorities.
 [Refresh PostgreSQL tests](../frontend/services/api/test/opportunity-refresh.test.ts)
-exercise admission, TypeScript claim and persisted reads, replay, concurrent
-claims and recomputes, supersession, the Agent handoff and non-member 404s.
+exercise admission, TypeScript claim and persisted reads, replay, the
+source-identity skip, concurrent claims and recomputes, supersession, the Agent
+handoff and non-member 404s.
 [Verification PostgreSQL tests](../frontend/services/api/test/opportunity-verification.test.ts)
-exercise comparison, unavailable-state behavior, workspace isolation and the
+exercise per-source folding, scoped traffic and prompt checks, the window,
+unavailable-state behavior, workspace isolation, the enqueue gate and the
 producer, worker and persisted-reader boundary;
 [Action PostgreSQL tests](../frontend/services/api/test/actions.test.ts) cover
-declaration admission, concurrent replay, workspace isolation, frozen checks and
-the TypeScript declaration and inspection boundary. The
+declaration admission, go-live bounds, unmeasurable findings, refused
+placements, concurrent replay, workspace isolation, frozen checks and the
+TypeScript declaration and inspection boundary. The
 [source-inspection tests](../frontend/services/api/test/source-inspection.test.ts)
 exercise placement settlement and recheck admission against seeded declarations. The pending integrations
 follow-up may improve these read surfaces; it is not a second action store.

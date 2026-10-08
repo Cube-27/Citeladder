@@ -5,14 +5,19 @@
  * A missing source is not an error. With a prior snapshot and no resolvable
  * audit, crawl or demand snapshot, the prior snapshot is returned unchanged,
  * so an in-flight crawl never empties the live set; zero hits WITH a source
- * still supersedes. Writers on one project serialize on the prompt writers'
- * project lock, and the second recomputes on the latest state. No provider
- * or network I/O happens anywhere in the refresh.
+ * still supersedes. A refresh whose source identity the latest snapshot
+ * already describes loads no evidence. Evidence loads outside the project
+ * lock; under it the identity is resolved again, and a refresh whose sources
+ * moved meanwhile writes nothing and fails for a retry over the newer state.
+ * No provider or network I/O happens anywhere in the refresh.
  */
 import { randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
 import { record } from '../db/json.ts';
+import { policy } from '../config.ts';
+
+const o = policy.opportunity.opportunities;
 
 import {
   detectSiteIssueOpportunities,
@@ -34,8 +39,10 @@ import {
   emptyProjection,
   newOpportunity,
   projectSnapshot,
+  sameIdentity,
   scoreHits,
   snapshotIsCurrent,
+  type SourceIdentity,
   stampSourceProjections,
   type NewOpportunity,
   type Scored,
@@ -46,11 +53,9 @@ import {
   loadVisibilityEvidence,
 } from './refresh-evidence.ts';
 import { changeHits, commerceHits, demandHits } from './refresh-hits.ts';
-import { internalLinkHits } from './internal-link-hits.ts';
+import { internalLinkHits, internalLinkRunId } from './internal-link-hits.ts';
 import {
   currentDemandSnapshot,
-  DASHBOARD_AUDIT_STATUSES,
-  EVIDENCE_CRAWL_STATUSES,
   latestSnapshot,
   resolveAudit,
   resolveCrawl,
@@ -62,11 +67,18 @@ import {
 
 type Projections = [Record<string, unknown>, Record<string, unknown>, Record<string, unknown>[]];
 type Collected = {
-  internalLinkRunId: string | null;
+  /** Evidence a load cap left out, carried onto the snapshot. */
+  limitations: string[];
   audit: AuditSource | null;
   demand: DemandSource | null;
   hits: DetectorHit[];
   projections: Projections;
+};
+type Sources = {
+  audit: AuditSource | null;
+  crawl: CrawlSource | null;
+  demand: DemandSource | null;
+  identity: SourceIdentity;
 };
 
 const INSERT_BATCH = 500;
@@ -75,11 +87,19 @@ async function auditHits(
   db: Database,
   scope: Scope,
   audit: AuditSource,
-  explicit: boolean,
-): Promise<{ audit: AuditSource | null; hits: DetectorHit[]; projections: Projections }> {
-  const [visibility, metricId] = await loadVisibilityEvidence(db, scope.workspaceId, audit);
-  if (metricId === null && !explicit)
-    return { audit: null, hits: [], projections: emptyProjection() };
+): Promise<{
+  audit: AuditSource | null;
+  hits: DetectorHit[];
+  projections: Projections;
+  limitations: string[];
+}> {
+  const [visibility, metricId, limitations] = await loadVisibilityEvidence(
+    db,
+    scope.workspaceId,
+    audit,
+  );
+  if (metricId === null)
+    return { audit: null, hits: [], projections: emptyProjection(), limitations: [] };
   let hits = [
     ...detectBrandAbsentHighValuePrompt(visibility),
     ...detectOwnedPageNotCited(visibility),
@@ -104,37 +124,76 @@ async function auditHits(
   );
   // Page-keyed, over the FULL eligible answer set rather than the gap prompts.
   hits.push(...(await earnedPageHits(db, scope, audit, visibility)));
-  if (metricId !== null) hits = hits.map((hit) => ({ ...hit, source_metric_ids: [metricId] }));
+  hits = hits.map((hit) => ({ ...hit, source_metric_ids: [metricId] }));
   hits.push(...(await commerceHits(db, scope, audit.id)));
   hits.push(...(await confirmedDeclineHits(db, scope.workspaceId, audit.id)));
-  return { audit, hits, projections };
+  return { audit, hits, projections, limitations };
 }
 
-async function collectHits(
-  db: Database,
-  scope: Scope,
-  sources: { audit: AuditSource | null; crawl: CrawlSource | null; explicitAudit: boolean },
-): Promise<Collected> {
+/**
+ * The source-page state earned-page hits read: the newest inspected reading
+ * (older readings are immutable) and the latest change to any page's state,
+ * which a failed or blocked inspection moves without a new reading.
+ */
+async function sourcePagesRevision(db: Database, scope: Scope) {
+  const { rows } = await sql<{ reading: string | null; pages: string | null }>`
+    select
+      (select id from source_page_snapshots
+        where workspace_id = ${scope.workspaceId} and project_id = ${scope.projectId}
+          and outcome = ${policy.opportunity.refresh.source_page_outcome_inspected}
+        order by fetched_at desc, id desc limit 1)::text as reading,
+      (select max(updated_at) from source_pages
+        where workspace_id = ${scope.workspaceId} and project_id = ${scope.projectId})::text as pages
+  `.execute(db);
+  const { reading = null, pages = null } = rows[0] ?? {};
+  return reading === null && pages === null ? null : `${reading ?? ''}@${pages ?? ''}`;
+}
+
+/** The sources a refresh would read now, without loading their evidence. */
+async function resolveSources(db: Database, scope: Scope): Promise<Sources> {
+  const audit = await resolveAudit(db, scope);
+  const crawl = await resolveCrawl(db, scope);
   const demand = await currentDemandSnapshot(db, scope);
-  const collected: Collected = {
-    internalLinkRunId: null,
-    audit: sources.audit,
+  return {
+    audit,
+    crawl,
     demand,
-    hits: await demandHits(db, scope, demand),
+    identity: {
+      audit_id: audit?.id ?? null,
+      site_crawl_id: crawl?.id ?? null,
+      demand_snapshot_id: demand?.id ?? null,
+      demand_source_revision: demand?.source_hash ?? null,
+      internal_link_run_id: crawl ? await internalLinkRunId(db, scope, crawl.id) : null,
+      source_pages_revision: await sourcePagesRevision(db, scope),
+    },
+  };
+}
+
+async function collectHits(db: Database, scope: Scope, sources: Sources): Promise<Collected> {
+  const collected: Collected = {
+    limitations: [],
+    audit: sources.audit,
+    demand: sources.demand,
+    hits: await demandHits(db, scope, sources.demand),
     projections: emptyProjection(),
   };
   if (sources.audit !== null) {
-    const found = await auditHits(db, scope, sources.audit, sources.explicitAudit);
+    const found = await auditHits(db, scope, sources.audit);
     collected.audit = found.audit;
     collected.hits.push(...found.hits);
     collected.projections = found.projections;
+    collected.limitations.push(...found.limitations);
   }
   if (sources.crawl !== null) {
     const site = await loadSiteEvidence(db, scope.workspaceId, sources.crawl);
     collected.hits.push(...detectSiteIssueOpportunities(site));
-    const links = await internalLinkHits(db, scope, site.crawl_id);
-    collected.internalLinkRunId = links.runId;
-    collected.hits.push(...links.hits);
+    if (site.truncated)
+      collected.limitations.push(
+        `Only the first ${o.RECOMPUTE_MAX_ISSUES} Site Health findings were ranked; later ones are not shown.`,
+      );
+    collected.hits.push(
+      ...(await internalLinkHits(db, scope, sources.identity.internal_link_run_id)),
+    );
     collected.hits.push(...(await changeHits(db, scope.workspaceId, sources.crawl)));
   }
   return collected;
@@ -175,24 +234,10 @@ async function writeRefresh(
   trx: Database,
   scope: Scope,
   collected: Collected,
-  crawl: CrawlSource | null,
+  sources: Sources,
   scored: Scored[],
-  skipIfCurrent: boolean,
 ) {
-  await acquireProjectLock(trx, scope.projectId);
-  const current = await latestSnapshot(trx, scope);
-  const sources = {
-    auditId: collected.audit?.id ?? null,
-    crawlId: crawl?.id ?? null,
-    demand: collected.demand,
-  };
-  if (
-    skipIfCurrent &&
-    current !== null &&
-    snapshotIsCurrent(current, sources) &&
-    (record(current.coverage).internal_link_run_id ?? null) === collected.internalLinkRunId
-  )
-    return projectSnapshot(current);
+  const crawl = sources.crawl;
   const workspace = new WorkspaceScope(scope.workspaceId);
   const live = await workspace
     .selectFrom(trx, 'opportunities')
@@ -227,7 +272,7 @@ async function writeRefresh(
   const snapshot = {
     id: randomUUID(),
     ...buildSnapshot(
-      { auditId: sources.auditId, crawl, demand: collected.demand },
+      { auditId: collected.audit?.id ?? null, crawl, demand: collected.demand },
       rows,
       scored,
       collected.projections,
@@ -241,9 +286,9 @@ async function writeRefresh(
       project_id: scope.projectId,
       coverage: JSON.stringify({
         ...record(snapshot.coverage),
-        internal_link_run_id: collected.internalLinkRunId,
+        source_identity: sources.identity,
       }),
-      limitations: JSON.stringify(snapshot.limitations),
+      limitations: JSON.stringify([...snapshot.limitations, ...collected.limitations]),
       source_mix: JSON.stringify(snapshot.source_mix),
       action_path_mix: JSON.stringify(snapshot.action_path_mix),
       domain_rollups: JSON.stringify(snapshot.domain_rollups),
@@ -260,7 +305,7 @@ async function writeRefresh(
     rows,
     snapshot.id,
     availableFamilies({
-      audit: sources.auditId !== null,
+      audit: collected.audit !== null,
       demand: collected.demand !== null,
       crawl: crawl !== null,
     }),
@@ -282,48 +327,41 @@ async function writeRefresh(
 }
 
 /**
- * Recompute a project's Opportunities and return the snapshot that describes
- * them. `auditId`/`siteCrawlId` pin a source (404 when foreign); otherwise the
- * latest usable ones are read. `skipIfCurrent` returns the latest snapshot
- * when it already describes these exact sources and versions.
+ * Recompute a project's Opportunities from its latest usable sources and
+ * return the snapshot that describes them. `skipIfCurrent` returns the latest
+ * snapshot, without loading evidence, when it already describes these exact
+ * sources and versions.
  */
-export function recomputeOpportunities(
+export async function recomputeOpportunities(
   db: Database,
   scope: Scope,
-  options: { auditId?: string | null; siteCrawlId?: string | null; skipIfCurrent?: boolean } = {},
+  options: { skipIfCurrent?: boolean } = {},
 ) {
+  const project = await new WorkspaceScope(scope.workspaceId)
+    .selectFrom(db, 'projects')
+    .select('id')
+    .where('id', '=', scope.projectId)
+    .executeTakeFirst();
+  if (!project) throw notFound('Project');
+  const sources = await resolveSources(db, scope);
+  const prior = await latestSnapshot(db, scope);
+  if (options.skipIfCurrent && snapshotIsCurrent(prior, sources.identity))
+    return projectSnapshot(prior!);
+  const collected = await collectHits(db, scope, sources);
+  const scored = scoreHits(collected.hits);
   return db.transaction().execute(async (trx) => {
-    const project = await new WorkspaceScope(scope.workspaceId)
-      .selectFrom(trx, 'projects')
-      .select('id')
-      .where('id', '=', scope.projectId)
-      .executeTakeFirst();
-    if (!project) throw notFound('Project');
-    const audit = await resolveAudit(trx, scope, {
-      sourceId: options.auditId ?? null,
-      statuses: DASHBOARD_AUDIT_STATUSES,
-    });
-    const crawl = await resolveCrawl(trx, scope, {
-      sourceId: options.siteCrawlId ?? null,
-      statuses: EVIDENCE_CRAWL_STATUSES,
-    });
-    const collected = await collectHits(trx, scope, {
-      audit,
-      crawl,
-      explicitAudit: Boolean(options.auditId),
-    });
-    if (collected.audit === null && crawl === null && collected.demand === null) {
-      const unchanged = await latestSnapshot(trx, scope);
-      if (unchanged !== null) return projectSnapshot(unchanged);
-    }
-    return writeRefresh(
-      trx,
-      scope,
-      collected,
-      crawl,
-      scoreHits(collected.hits),
-      options.skipIfCurrent ?? false,
-    );
+    await acquireProjectLock(trx, scope.projectId);
+    const current = await latestSnapshot(trx, scope);
+    const latest = await resolveSources(trx, scope);
+    // Writing a reading older than a source committed during the load would
+    // supersede what that source says; the retry reads the newer state.
+    if (!sameIdentity(latest.identity, sources.identity))
+      throw new Error('Opportunity sources changed during the refresh; retry');
+    const empty = collected.audit === null && sources.crawl === null && sources.demand === null;
+    if (current !== null && empty) return projectSnapshot(current);
+    if (options.skipIfCurrent && snapshotIsCurrent(current, sources.identity))
+      return projectSnapshot(current!);
+    return writeRefresh(trx, scope, collected, sources, scored);
   });
 }
 

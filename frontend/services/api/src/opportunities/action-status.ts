@@ -6,7 +6,8 @@
  * `implemented`; the rest is derived: an open Action reads as in progress
  * while a linked chat has an output, and an implemented one reads as
  * measuring once the verifier observed its declaration and as done while the
- * latest observation verified every check.
+ * latest observation, which folds every check's own latest reading, verified
+ * every check.
  */
 import { sql, type RawBuilder, type SqlBool } from 'kysely';
 
@@ -18,8 +19,10 @@ const a = policy.opportunity.actions;
 
 /** The effective status of the `actions` row visible as `actions`. */
 export function effectiveStatus(): RawBuilder<string> {
-  const latest = sql`(
-    select ve.observation_kind
+  // One lookup of the latest observation, read only for a declared Action.
+  const measured = sql`(
+    select case when ve.observation_kind = 'verified'
+      then ${a.ACTION_STATUS_DONE}::varchar else ${a.ACTION_STATUS_MEASURING}::varchar end
     from opportunity_verification_events ve
     join opportunity_implementation_events ie on ie.id = ve.implementation_event_id
     where ie.action_id = actions.id
@@ -36,10 +39,8 @@ export function effectiveStatus(): RawBuilder<string> {
         and agent_outputs.workspace_id = actions.workspace_id
         and agent_outputs.project_id = actions.project_id)
       then ${a.ACTION_STATUS_IN_PROGRESS}::varchar
-    when actions.status = ${a.ACTION_STATUS_IMPLEMENTED} and ${latest} = 'verified'
-      then ${a.ACTION_STATUS_DONE}::varchar
-    when actions.status = ${a.ACTION_STATUS_IMPLEMENTED} and ${latest} is not null
-      then ${a.ACTION_STATUS_MEASURING}::varchar
+    when actions.status = ${a.ACTION_STATUS_IMPLEMENTED}
+      then coalesce(${measured}, ${a.ACTION_STATUS_IMPLEMENTED}::varchar)
     else actions.status
   end`;
 }

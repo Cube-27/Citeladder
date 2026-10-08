@@ -4,11 +4,11 @@
  * project lock, so members, priority and diagnosis always describe the
  * snapshot that superseded the old rows.
  *
- * Native refresh derives evidence Actions and restamps every row's members; the Agent only
- * inserts its own `agent`-origin rows (`attach_or_create_action`, insert on
- * conflict do nothing on `(project_id, group_key)`), and this insert adopts
- * such a row on the same key. Identity and origin never change here, and an Action no member targets any more keeps its row with
- * its evidence cleared.
+ * The refresh derives evidence Actions and restamps every live row's members;
+ * the Agent only inserts its own `agent`-origin rows under the same project
+ * lock, so the locked read below sees them and the refresh adopts the row on
+ * that key. Identity and origin never change here. An Action no member
+ * targets any more keeps its row with its evidence cleared, written once.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -87,6 +87,8 @@ const GROUP_COLUMNS = Object.keys(GROUP_FIELD_TYPES) as (keyof typeof GROUP_FIEL
 // id plus every group column; the statement adds updated_at and workspace_id.
 const MAX_BIND_PARAMETERS = 65_535;
 const UPDATE_BATCH_ROWS = Math.floor((MAX_BIND_PARAMETERS - 2) / (GROUP_COLUMNS.length + 1));
+// An insert row binds every group column plus ten identity and audit columns.
+const INSERT_BATCH = Math.floor(MAX_BIND_PARAMETERS / (GROUP_COLUMNS.length + 10));
 
 /** Restamp every existing Action, one bounded statement per batch in the caller's transaction. */
 async function updateActions(
@@ -138,7 +140,11 @@ export async function syncActions(
     (
       await trx
         .selectFrom('actions')
-        .select(['id', 'group_key', 'origin', 'evidence_cleared_at'])
+        .select([
+          'id',
+          'group_key',
+          sql<number>`jsonb_array_length(member_opportunity_ids)`.as('members'),
+        ])
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .forUpdate()
@@ -148,17 +154,22 @@ export async function syncActions(
   const now = new Date();
   const actionFor = new Map<string, string>();
   const updates: { id: string; fields: ReturnType<typeof groupFields> }[] = [];
+  const created: typeof groups = [];
   for (const group of groups) {
-    const found = existing.get(group.target.group_key);
-    let id = found?.id;
-    if (id) {
+    const id = existing.get(group.target.group_key)?.id;
+    if (!id) created.push(group);
+    else {
       updates.push({ id, fields: groupFields(group, snapshotId) });
-    } else {
-      // An Agent attach may insert this key after the locked read above; the
-      // refresh then adopts that row instead of failing on the unique key.
-      ({ id } = await trx
-        .insertInto('actions')
-        .values({
+      for (const member of group.members) actionFor.set(member.opportunity_id, id);
+    }
+  }
+  for (let start = 0; start < created.length; start += INSERT_BATCH) {
+    const batch = created.slice(start, start + INSERT_BATCH);
+    // One transaction connection runs one statement at a time.
+    const inserted = await trx // NOSONAR -- Batches share the refresh transaction.
+      .insertInto('actions')
+      .values(
+        batch.map((group) => ({
           id: randomUUID(),
           workspace_id: scope.workspaceId,
           project_id: scope.projectId,
@@ -170,20 +181,21 @@ export async function syncActions(
           created_by_user_id: null,
           created_at: now,
           updated_at: now,
-        })
-        .onConflict((conflict) =>
-          conflict
-            .constraint('uq_actions_project_group')
-            .doUpdateSet({ ...groupFields(group, snapshotId), updated_at: now }),
-        )
-        .returning('id')
-        .executeTakeFirstOrThrow());
-    }
-    for (const member of group.members) actionFor.set(member.opportunity_id, id);
+        })),
+      )
+      .returning(['id', 'group_key'])
+      .execute();
+    const ids = new Map(inserted.map((row) => [row.group_key, row.id]));
+    for (const group of batch)
+      for (const member of group.members)
+        actionFor.set(member.opportunity_id, ids.get(group.target.group_key)!);
   }
   await updateActions(trx, scope, updates, now);
   const seen = new Set(groups.map((group) => group.target.group_key));
-  const cleared = [...existing.values()].filter((action) => !seen.has(action.group_key));
+  // An Action already cleared keeps its row untouched; only the transition writes.
+  const cleared = [...existing.values()].filter(
+    (action) => !seen.has(action.group_key) && Number(action.members) > 0,
+  );
   if (cleared.length) {
     await trx
       .updateTable('actions')

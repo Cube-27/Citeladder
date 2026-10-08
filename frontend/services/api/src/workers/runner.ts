@@ -203,7 +203,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
   const dispatcher = new IntegrationDispatcher(db);
   return {
     lanes: [
-      { name: 'analytics', run: () => analytics.runOnce() },
+      { name: 'analytics', run: () => analytics.runOnce(), nextDue: () => analytics.nextDue() },
       {
         name: 'discovery',
         run: () => discovery.runOnce(owner),

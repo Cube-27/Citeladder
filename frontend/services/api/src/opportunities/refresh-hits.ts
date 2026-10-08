@@ -16,10 +16,6 @@ const o = policy.opportunity.opportunities;
 const r = policy.opportunity.refresh;
 type Json = Record<string, unknown>;
 
-function hit(fields: Omit<DetectorHit, 'title_override' | 'remediation_override'>): DetectorHit {
-  return { ...fields, title_override: null, remediation_override: null };
-}
-
 // ---------------------------------------------------------------------------
 // Change Intelligence
 // ---------------------------------------------------------------------------
@@ -129,7 +125,7 @@ function changeHit(pair: ChangePair, row: ChangeRow): DetectorHit | null {
     after: row.after_value,
   });
   if (rule === null) return null;
-  return hit({
+  return {
     rule_id: rule,
     target_key: `site-change:${row.site_url_id}:${row.field}`,
     target_prompt_id: null,
@@ -154,7 +150,7 @@ function changeHit(pair: ChangePair, row: ChangeRow): DetectorHit | null {
     source_metric_ids: [pair.id, row.id],
     value_factor: o.SITE_VALUE_FACTOR,
     gap_factor: o.SITE_GAP_FACTOR,
-  });
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -197,7 +193,7 @@ function demandHit(snapshotId: string, signal: DemandSignal): DetectorHit | null
   );
   const ruleIds: Record<string, string> = o.DEMAND_SIGNAL_RULE_IDS;
   const metricIds = evidence.source_metric_row_ids;
-  return hit({
+  return {
     rule_id: ruleIds[signal.signal_type]!,
     target_key: demandTargetKey(signal.identity_hash),
     target_prompt_id: null,
@@ -217,7 +213,7 @@ function demandHit(snapshotId: string, signal: DemandSignal): DetectorHit | null
     source_metric_ids: Array.isArray(metricIds) ? [...metricIds] : [],
     value_factor: Math.max(0.01, Math.min(1, (signal.priority_score || 0) / 100)),
     gap_factor: o.DEMAND_SIGNAL_GAP_FACTOR,
-  });
+  };
 }
 
 /** The current demand snapshot's active promoted signals, as hits. */
@@ -251,7 +247,7 @@ function commerceHit(
   metricIds: string[],
   analysisIds: string[] = [],
 ): DetectorHit {
-  return hit({
+  return {
     rule_id: rule,
     target_key: targetKey,
     target_prompt_id: null,
@@ -263,7 +259,7 @@ function commerceHit(
     source_metric_ids: metricIds,
     value_factor: o.COMMERCE_VALUE_FACTOR,
     gap_factor: o.COMMERCE_GAP_FACTOR,
-  });
+  };
 }
 
 type ShelfSnapshot = {

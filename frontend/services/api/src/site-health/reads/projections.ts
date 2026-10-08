@@ -27,6 +27,7 @@ import { parseUuid } from '../../http/uuid.ts';
 import { scalarText } from '../../text-order.ts';
 import type { SiteChangeSnapshots } from '../../generated/db-schema.ts';
 import { loadCrawl, loadProject, resolveUsableCrawl, type Crawl } from './crawl.ts';
+import { pageRerunSql } from '../page-rerun.ts';
 import { issueImpact, remediationRoute, ruleScoreRoles } from './rules.ts';
 
 const reads = policy.site_health.reads;
@@ -356,7 +357,16 @@ async function changeSnapshot(
   let query = new WorkspaceScope(workspaceId)
     .selectFrom(db, 'site_change_snapshots')
     .selectAll()
-    .where('project_id', '=', projectId);
+    .where('project_id', '=', projectId)
+    // Snapshots written for page reruns before they stopped writing any.
+    .where('crawl_b_id', 'not in', (eb) =>
+      eb
+        .selectFrom('site_crawls')
+        .select('id')
+        .where('workspace_id', '=', workspaceId)
+        .where('project_id', '=', projectId)
+        .where(pageRerunSql),
+    );
   if (pair.a !== null && pair.b !== null) {
     const crawls = await Promise.all([pair.a, pair.b].map((id) => loadCrawl(db, workspaceId, id)));
     if (crawls.some((crawl) => crawl.project_id !== projectId)) throw notFound('Crawl');

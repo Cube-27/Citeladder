@@ -6,11 +6,44 @@ import { policy } from '../config.ts';
 import { pydanticUtc, utcTextOf } from '../db/timestamps.ts';
 import { record, strings } from '../db/json.ts';
 import { measurementLegs } from './measurement-legs.ts';
-import { measurementLegSchema } from '@citeladder/contracts/actions';
+import { declarationCheckSchema, measurementLegSchema } from '@citeladder/contracts/actions';
 import { expectedCheckSchema } from '@citeladder/contracts/opportunities';
 import { z } from 'zod';
+import { storedOutcomes } from './verification-decisions.ts';
+import { scalarText } from '../text-order.ts';
+import { ruleTitle } from '../site-health/reads/rules.ts';
 
 const observationKind = z.enum(['observed', 'verified', 'contradicted']);
+const o = policy.opportunity.opportunities;
+const legOf: Record<string, string> = policy.opportunity.actions.CHECK_KIND_MEASUREMENT_LEG;
+
+/** What a check names, for a reader: its rule, prompt, page or query, link or publisher page. */
+function subject(check: Record<string, unknown>): string | null {
+  const text = (value: unknown) => scalarText(value) || null;
+  if (check.kind === 'site_rule') return ruleTitle(scalarText(check.rule_id));
+  if (check.kind === 'visibility_metric') return text(check.target_prompt_id);
+  if (check.kind === 'traffic_metric') return text(check.scope_key);
+  return text(check.target_url);
+}
+
+/** Each expected check with the state the latest observation folded for it. */
+function checkStates(checks: Record<string, unknown>[], result: unknown) {
+  const outcomes = storedOutcomes(result);
+  return checks.map((check, index) => {
+    const found = outcomes.get(index);
+    return {
+      index,
+      kind: String(check.kind),
+      leg: legOf[String(check.kind)],
+      state: found?.state ?? ('waiting' as const),
+      reason: found?.reason ?? null,
+      observed_at: found?.observed_at ?? null,
+      source_kind: found?.source_kind ?? null,
+      source_id: found?.source_id ?? null,
+      subject: subject(check),
+    };
+  });
+}
 
 export async function declarationView(
   db: Database,
@@ -34,6 +67,9 @@ export async function declarationView(
     .where('workspace_id', '=', row.workspace_id)
     .where('id', '=', row.id)
     .executeTakeFirstOrThrow();
+  const checks = z.array(expectedCheckSchema).parse(row.expected_checks ?? []);
+  const measuredUntil = new Date(row.declared_implemented_at);
+  measuredUntil.setUTCDate(measuredUntil.getUTCDate() + o.VERIFICATION_WINDOW_DAYS);
   return {
     id: row.id,
     action_id: row.action_id,
@@ -43,7 +79,7 @@ export async function declarationView(
     target_site_url_ids: strings(row.target_site_url_ids),
     target_external_url: row.target_external_url,
     declared_implemented_at: pydanticUtc(timestamp.at),
-    expected_checks: z.array(expectedCheckSchema).parse(row.expected_checks ?? []),
+    expected_checks: checks,
     state: latest ? observationKind.parse(latest.observation_kind) : ('declared' as const),
     limitations: strings(latest?.limitations),
     verification_events: observations.map((item) => ({
@@ -67,6 +103,8 @@ export async function declarationView(
         last_evidence_at: leg.last_evidence_at?.toISOString() ?? null,
       }),
     ),
+    checks: z.array(declarationCheckSchema).parse(checkStates(checks, latest?.result)),
+    measured_until: measuredUntil.toISOString(),
     created_at: row.created_at.toISOString(),
   };
 }

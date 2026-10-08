@@ -12,6 +12,8 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   ([Visibility plan](visibility-prompt-improvement.md)); its prompt-generation
   follow-up, [Prompt generation v3](prompt-generation-v3.md), is implemented
   with the recommended decisions; its live calibration round is outstanding.
+  Feature 4 Opportunities is done ([Opportunities plan](opportunities-improvement.md));
+  traffic impact measurement is queued as its own PR in the backlog.
 
 ## Queued
 

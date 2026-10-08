@@ -6,6 +6,7 @@ import { opportunitiesQueries } from '@/lib/api/opportunities';
 
 import { Insight } from './insight';
 import { insightFromOpportunity } from './opportunity-insight';
+import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 
 /**
@@ -38,7 +39,17 @@ export function TopInsights({
     enabled: Boolean(projectId),
   });
 
-  if (query.isLoading || query.isError || !query.data) return null;
+  // A failed read says so; silence would read as "nothing to act on".
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Top insights could not be loaded."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
+  if (!query.data) return null;
 
   const insights = query.data.items
     .map(insightFromOpportunity)

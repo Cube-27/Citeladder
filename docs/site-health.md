@@ -36,13 +36,16 @@ profile, and allows one active crawl per project. In order, it:
    acquisition bounds and versions into `site_crawls.configuration`;
 4. reserves the fetch budget;
 5. enqueues `discover` for the root and seeds (seeds only in `exact_urls`),
-   one `site_setup`, and `analyze` for already-monitored URLs; in `auto` mode
+   one `site_setup`, and `analyze` for already-monitored URLs, pages named by
+   a declaration still inside its verification window first; in `auto` mode
    it also selects the root.
 
 Input modes other than `auto`, seeds and page-kind filters are advanced
 controls (`advanced_controls_enabled`, or the development operator's
 workspace). A page rerun (`selection.ts`) creates a one-page crawl from a
-terminal crawl, or the next task generation of an active one.
+terminal crawl, or the next task generation of an active one. Its
+configuration carries `page_rerun`; it hands its page to verification and
+Opportunities but is never compared as a site crawl.
 
 | Task kind (`site_crawl_tasks`) | Does |
 |---|---|
@@ -492,9 +495,13 @@ JEV judges pairs through the analytics queue. Limits are in
 ## Change intelligence
 
 `change_intel` compares a terminal crawl with the newest earlier crawl that has
-the same origin, scope and analyzer/extractor versions. With no match, it
-records a non-comparable boundary against the newest earlier crawl with
-analyses. Snapshots are immutable, carry their source IDs, supersede the
+the same origin, scope and analyzer/extractor versions. Scope excludes the
+page limit, which is the fetch budget left at admission; the comparison reads
+only pages both crawls analyzed. Page reruns write no snapshot and are never a
+predecessor, and Changes never shows a snapshot an older rerun wrote. With no
+match, it records a non-comparable boundary against the newest earlier crawl
+with analyses. A declared Site Health fix that the later crawl shows met is
+marked as an expected change. Snapshots are immutable, carry their source IDs, supersede the
 previous snapshot, and are reused when inputs are unchanged. Content change and
 date consistency are separate outputs. Only `complete` comparison coverage can
 promote metadata or cosmetic-refresh actions (`config/site-health/change-intel.ts`).

@@ -138,6 +138,18 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
     this.#table = table;
   }
 
+  /** When the earliest claimable row of `kinds` becomes due; null when none is pending. */
+  async nextDue(kinds: readonly string[]): Promise<Date | null> {
+    if (kinds.length === 0) return null;
+    const row = await queueDatabase(this.#db)
+      .selectFrom(this.#table)
+      .select((eb) => eb.fn.min('available_at').as('due'))
+      .where('status', 'in', claimable)
+      .where('task_kind', 'in', kinds)
+      .executeTakeFirst();
+    return row?.due ? new Date(row.due) : null;
+  }
+
   /** Claim up to `limit` eligible rows of `kinds` for `owner`, committed. */
   claim(options: {
     owner: string;

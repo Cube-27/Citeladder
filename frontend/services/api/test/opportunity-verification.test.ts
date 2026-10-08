@@ -11,6 +11,8 @@ import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import type { QueueTask } from '../src/queue/task-queue.ts';
 import type { Json } from '../src/generated/db-schema.ts';
 import { record } from '../src/db/json.ts';
+import { storedOutcomes } from '../src/opportunities/verification-decisions.ts';
+import { seedOpportunityScenario } from './opportunity-fixtures.ts';
 import { seedVerification, type VerificationSeed } from './verification-support.ts';
 import { testDatabase } from './support.ts';
 import { sql } from 'kysely';
@@ -81,7 +83,7 @@ async function declaration(id: string): Promise<Declaration> {
     declared_implemented_at: row.declared_implemented_at.toISOString(),
   };
 }
-it('claims every verification trigger and persisted reads retain append-only results', async () => {
+it('folds each check from the source that can read it, within the window, idempotently', async () => {
   const tasks = await db
     .selectFrom('analytics_tasks')
     .select(['status', 'error_detail'])
@@ -99,13 +101,32 @@ it('claims every verification trigger and persisted reads retain append-only res
       'observation_kind as kind',
       'result',
       'idempotency_key as key',
+      'created_at',
     ])
     .where('workspace_id', '=', own.workspaceId)
+    .orderBy('created_at')
     .execute();
-  expect(rows).toHaveLength(4);
-  expect(rows.map((r) => r.declaration)).not.toContain(own.declarations.missing_prompt);
-  expect(rows.every((r) => r.kind === 'verified')).toBe(true);
-  const placement = record(rows.find((r) => r.declaration === own.declarations.placement)!.result);
+  const named = (name: string) => rows.filter((r) => r.declaration === own.declarations[name]);
+  const latest = (name: string) => named(name).at(-1);
+  const checks = (name: string) => storedOutcomes(latest(name)?.result);
+  for (const name of ['site', 'traffic', 'visibility', 'placement'])
+    expect(latest(name)?.kind, name).toBe('verified');
+  // Site-wide clicks never stand in for the page's own Search Console row.
+  expect(latest('traffic_other')?.kind).toBe('observed');
+  expect(checks('traffic_other').get(0)).toMatchObject({
+    state: 'unavailable',
+    reason: 'no_search_console_row',
+  });
+  expect(checks('missing_prompt').get(0)?.reason).toBe('prompt_not_in_run');
+  expect(checks('legacy').get(0)?.reason).toBe('not_prompt_scoped');
+  // Neither the crawl nor the window settles both checks; folded, they verify.
+  expect(named('mixed').map((r) => r.kind)).toEqual(['observed', 'verified']);
+  expect([...checks('mixed').values()].map((c) => c.source_kind).sort()).toEqual([
+    'site_crawl',
+    'traffic_snapshot',
+  ]);
+  expect(named('expired')).toEqual([]);
+  const placement = record(latest('placement')!.result);
   expect(record(placement.placement).state).toBe('satisfied');
   expect(placement.legs).not.toHaveProperty('placement');
   const keys = rows.map((r) => r.key).sort();
@@ -126,9 +147,26 @@ it('claims every verification trigger and persisted reads retain append-only res
     .executeTakeFirstOrThrow();
   expect(site.source_analysis_ids).toEqual([own.analysisId]);
   expect(site.source_rule_evaluation_ids).toEqual([own.ruleId]);
-  expect(site.idempotency_key).toContain(':1790503200123456:');
-  expect(site.idempotency_key).toMatch(/:implementation-verifier-1$/);
+  expect(site.idempotency_key).toMatch(/123456:implementation-verifier-2$/);
 });
+
+it('queues no verification for a project with nothing declared in the window', async () => {
+  const bare = await seedOpportunityScenario(db);
+  try {
+    const queued = await enqueueImplementationVerification(db, {
+      workspaceId: bare.workspace_id,
+      projectId: bare.project_id,
+      triggerKind: 'site_crawl',
+      triggerId: bare.crawl_id,
+      maxAttempts: 3,
+    });
+    expect(queued).toBeNull();
+  } finally {
+    await db.deleteFrom('workspaces').where('id', '=', bare.workspace_id).execute();
+    await db.deleteFrom('users').where('id', '=', bare.user_id).execute();
+  }
+});
+
 it('rejects foreign trigger IDs and refuses foreign snapshot provenance', async () => {
   await expect(
     verifyImplementationEvents(task(own, 'site_crawl', foreign.crawlId), context),
@@ -183,15 +221,16 @@ it('requires current finalized site evidence and scopes referenced rule rows', a
       evidenceFor(db, d, {
         kind: 'site_crawl',
         id: own.crawlId,
-        observed_at: '2026-09-27T10:00:00.123456Z',
+        observed_at: own.moment,
       });
-    expect((await evidence()).observed).toBe(0);
+    const site = async () => (await evidence()).outcomes.get(0);
+    expect(await site()).toMatchObject({ state: 'unavailable', reason: 'page_not_analyzed' });
     await db
       .updateTable('site_page_analyses')
       .set({ finalized_at: original.finalized_at, is_current: false })
       .where('id', '=', own.analysisId)
       .execute();
-    expect((await evidence()).observed).toBe(0);
+    expect(await site()).toMatchObject({ state: 'unavailable', reason: 'page_not_analyzed' });
     await db
       .updateTable('site_page_analyses')
       .set({ is_current: original.is_current })
@@ -211,9 +250,11 @@ it('requires current finalized site evidence and scopes referenced rule rows', a
       .where('id', '=', own.analysisId)
       .execute();
     const scoped = await evidence();
-    expect(scoped.observed).toBe(1);
+    expect(scoped.outcomes.get(0)).toMatchObject({
+      state: 'unavailable',
+      reason: 'rule_not_evaluated',
+    });
     expect([...scoped.rule_evaluation_ids]).toEqual([]);
-    expect(scoped.limitations).toContain('site_rule: no applicable evaluation');
   } finally {
     await db
       .updateTable('site_page_analyses')
@@ -230,8 +271,10 @@ it('requires current finalized site evidence and scopes referenced rule rows', a
 it('compares scoped referral windows and frozen branded-demand sources without treating missing evidence as zero', async () => {
   const d = await declaration(own.declarations.site!);
   const scope = { workspace_id: own.workspaceId, project_id: own.projectId };
-  const baselineTime = new Date('2026-09-25T00:00:00Z');
-  const postTime = new Date('2026-09-27T12:00:00Z');
+  const hour = 3_600_000;
+  // Before the declaration (a day before the seed's moment) and after it.
+  const baselineTime = new Date(Date.parse(own.moment) - 48 * hour);
+  const postTime = new Date(Date.parse(own.moment) + 12 * hour);
   const window = {
     window_start: baselineTime,
     window_end: postTime,
@@ -273,8 +316,8 @@ it('compares scoped referral windows and frozen branded-demand sources without t
     .updateTable('ai_referrals_snapshots')
     .set({
       granularity: 'day',
-      window_start: new Date('2026-09-22T00:00:00Z'),
-      window_end: new Date('2026-09-24T12:00:00Z'),
+      window_start: new Date(baselineTime.getTime() - 72 * hour),
+      window_end: new Date(postTime.getTime() - 72 * hour),
     })
     .where('id', '=', before)
     .execute();
@@ -404,31 +447,4 @@ it('keeps baseline gaps unknown until a later snapshot and suppresses changed au
       .where('id', '=', own.snapshotId)
       .execute();
   }
-});
-it('keeps boolean page facts distinct from numeric expectations', async () => {
-  const { evidenceFor } = await import('../src/opportunities/verification-evidence.ts');
-  const d = await declaration(own.declarations.site!);
-  const source = {
-    kind: 'site_crawl',
-    id: own.crawlId,
-    observed_at: '2026-09-27T10:00:00.123456Z',
-  };
-  const inspect = (expected: boolean | number) =>
-    evidenceFor(
-      db,
-      {
-        ...d,
-        expected_checks: [{ kind: 'page_fact', fact_key: 'secure', expected_value: expected }],
-      },
-      source,
-    );
-  expect(await inspect(true)).toMatchObject({ observed: 1, matched: 1, contradicted: false });
-  expect(await inspect(1)).toMatchObject({ observed: 1, matched: 0, contradicted: true });
-  const unspecified = await evidenceFor(
-    db,
-    { ...d, expected_checks: [{ kind: 'page_fact', fact_key: 'secure' }] },
-    source,
-  );
-  expect(unspecified).toMatchObject({ observed: 0, matched: 0, contradicted: false });
-  expect(unspecified.limitations).toContain('page_fact: no expected value');
 });

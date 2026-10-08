@@ -1,4 +1,4 @@
-import { tableCsv, tableMarkdown } from '../../http/table-export.ts';
+import { tableCsv } from '../../http/table-export.ts';
 
 const columns = [
   'id',
@@ -16,6 +16,3 @@ const columns = [
 
 export const rowsToCsv = (items: Record<string, unknown>[], selectedColumns = columns) =>
   tableCsv(selectedColumns, items);
-
-export const rowsToMarkdown = (items: Record<string, unknown>[]) =>
-  tableMarkdown('CiteLadder — Opportunities', columns, items);

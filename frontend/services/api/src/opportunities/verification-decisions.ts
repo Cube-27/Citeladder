@@ -1,27 +1,109 @@
+import { z } from 'zod';
 import { policy } from '../config.ts';
 import { round } from '../demand/projection.ts';
 import { record } from '../db/json.ts';
 import { epochMicros, parseDatetime } from '../http/datetimes.ts';
 import { compareText } from '../text-order.ts';
 const p = policy.opportunity.placement;
+
+/**
+ * One expected check's reading from one source. `met` and `unmet` answer the
+ * check; `waiting` was read but is not final (a placement due a recheck);
+ * `unavailable` could not answer and says why.
+ */
+export type CheckOutcome = {
+  state: 'met' | 'unmet' | 'waiting' | 'unavailable';
+  reason: string | null;
+  observed_at: string;
+  source_kind: string;
+  source_id: string;
+};
 export type Evaluation = {
-  observed: number;
-  matched: number;
-  contradicted: boolean;
+  /** Outcomes by expected-check index, for the checks this source can read. */
+  outcomes: Map<number, CheckOutcome>;
   analysis_ids: Set<string>;
   rule_evaluation_ids: Set<string>;
   metric_ids: Set<string>;
-  limitations: string[];
 };
 export const evaluation = (): Evaluation => ({
-  observed: 0,
-  matched: 0,
-  contradicted: false,
+  outcomes: new Map(),
   analysis_ids: new Set(),
   rule_evaluation_ids: new Set(),
   metric_ids: new Set(),
-  limitations: [],
 });
+export type Reading = Pick<CheckOutcome, 'observed_at' | 'source_kind' | 'source_id'>;
+export const outcome = (
+  reading: Reading,
+  state: CheckOutcome['state'],
+  reason: string | null = null,
+): CheckOutcome => ({ ...reading, state, reason });
+
+const checkOutcome = z.object({
+  index: z.number().int(),
+  state: z.enum(['met', 'unmet', 'waiting', 'unavailable']),
+  reason: z.string().nullable(),
+  observed_at: z.string(),
+  source_kind: z.string(),
+  source_id: z.string(),
+});
+
+/** Per-check states recorded by the declaration's latest observation. */
+export function storedOutcomes(result: unknown): Map<number, CheckOutcome> {
+  const parsed = z.array(checkOutcome).safeParse(record(result).checks);
+  return new Map((parsed.success ? parsed.data : []).map(({ index, ...item }) => [index, item]));
+}
+
+const answered = (item: CheckOutcome | undefined) =>
+  item?.state === 'met' || item?.state === 'unmet';
+
+/**
+ * Fold a source's outcomes into the previous per-check states. An answer is
+ * never replaced by a reading that could not answer, and between two answers
+ * (or two non-answers) the later reading wins, whichever order they arrive in.
+ */
+export function mergeOutcomes(
+  previous: ReadonlyMap<number, CheckOutcome>,
+  current: ReadonlyMap<number, CheckOutcome>,
+): Map<number, CheckOutcome> {
+  const merged = new Map(previous);
+  for (const [index, next] of current) {
+    const prior = merged.get(index);
+    const replaces =
+      !prior ||
+      (answered(next) && !answered(prior)) ||
+      (answered(next) === answered(prior) && next.observed_at >= prior.observed_at);
+    if (replaces) merged.set(index, next);
+  }
+  return merged;
+}
+
+/** The observation over merged states: any unmet check contradicts; all met verifies. */
+export function observationKind(
+  merged: ReadonlyMap<number, CheckOutcome>,
+  total: number,
+): 'observed' | 'verified' | 'contradicted' {
+  const states = [...merged.values()].map((item) => item.state);
+  if (states.includes('unmet')) return 'contradicted';
+  const met = states.filter((state) => state === 'met').length;
+  return total > 0 && met === total ? 'verified' : 'observed';
+}
+
+/**
+ * Whether a source's reading is worth an appended observation: it read the
+ * check (even if not finally), or it changed what a reader is told.
+ */
+export function worthRecording(
+  previous: ReadonlyMap<number, CheckOutcome>,
+  current: ReadonlyMap<number, CheckOutcome>,
+  merged: ReadonlyMap<number, CheckOutcome>,
+): boolean {
+  if ([...current.values()].some((item) => item.state !== 'unavailable')) return true;
+  return [...merged].some(([index, item]) => {
+    const prior = previous.get(index);
+    return prior?.state !== item.state || prior?.reason !== item.reason;
+  });
+}
+
 function metricMatches(
   direction: unknown,
   value: number,
@@ -34,101 +116,56 @@ function metricMatches(
 }
 const numeric = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
-function metricValue(
-  snapshot: { visibility_score: unknown; metrics: unknown },
-  index: number | null,
-): number | null {
-  let value = snapshot.visibility_score;
-  if (index !== null) {
-    const rows = record(snapshot.metrics).per_prompt;
-    value = Array.isArray(rows)
-      ? rows.map(record).find((r) => r.prompt_index === index)?.composite_score
-      : null;
-  }
-  return numeric(value) ? Number(value) : null;
+
+/** A declared rule expectation in the evaluation vocabulary it is compared with. */
+export function expectedRuleOutcome(expected: unknown) {
+  if (expected === 'pass') return 'satisfied';
+  if (expected === 'fail') return 'missing';
+  return expected;
 }
-export function evaluateVisibilityMetric(
-  snapshot: { id: string; visibility_score: unknown; metrics: unknown } | undefined,
+
+/** A per-prompt composite score in a metric snapshot, or null. */
+export function promptScore(metrics: unknown, index: number): number | null {
+  const rows = record(metrics).per_prompt;
+  const value = Array.isArray(rows)
+    ? rows.map(record).find((row) => row.prompt_index === index)?.composite_score
+    : null;
+  return numeric(value) ? value : null;
+}
+
+/** A frozen baseline against a later reading, under the check's direction. */
+export function compareMetric(
   check: Record<string, unknown>,
-  index: number | null,
-  result: Evaluation,
-): void {
-  if (!snapshot) {
-    result.limitations.push('visibility_metric: no metric snapshot');
-    return;
-  }
-  const name = String(check.metric || '');
-  const baseline = check.baseline_value;
-  if (!numeric(baseline)) {
-    result.limitations.push(`visibility_metric: ${name} has no frozen baseline`);
-    return;
-  }
-  const value = metricValue(snapshot, index);
-  if (value === null) {
-    result.limitations.push(`visibility_metric: ${name} unavailable`);
-    return;
-  }
-  result.observed++;
-  result.metric_ids.add(snapshot.id);
-  if (
-    metricMatches(
-      check.direction,
-      value - Number(baseline),
-      Number(check.min_delta || 0),
-      Number(check.tolerance || 0),
-    )
-  )
-    result.matched++;
-  else result.contradicted = true;
+  baseline: unknown,
+  value: number | null,
+  reading: Reading,
+  missing: string,
+): CheckOutcome {
+  if (!numeric(baseline)) return outcome(reading, 'unavailable', 'no_frozen_baseline');
+  if (value === null) return outcome(reading, 'unavailable', missing);
+  if (!['increase', 'decrease', 'equal'].includes(String(check.direction)))
+    return outcome(reading, 'unavailable', 'unsupported_direction');
+  const matched = metricMatches(
+    check.direction,
+    value - baseline,
+    Number(check.min_delta || 0),
+    Number(check.tolerance || 0),
+  );
+  return outcome(reading, matched ? 'met' : 'unmet');
 }
-export function evaluateTrafficMetric(
-  snapshot: { id: string; metrics: unknown } | undefined,
-  check: Record<string, unknown>,
-  result: Evaluation,
-): void {
-  const name = String(check.metric || '');
-  const value = record(record(snapshot?.metrics).totals)[name];
-  if (!snapshot || !numeric(value) || !numeric(check.expected_value)) {
-    result.limitations.push(`traffic_metric: ${name} unavailable`);
-    return;
-  }
-  result.observed++;
-  result.metric_ids.add(snapshot.id);
-  if (
-    metricMatches(
-      check.direction,
-      Number(value),
-      Number(check.expected_value),
-      Number(check.tolerance || 0),
-    )
-  )
-    result.matched++;
-  else result.contradicted = true;
-}
+
 export function evaluatePlacementCheck(
   check: { state: string; state_reason: string | null; due_at: unknown } | undefined,
-  result: Evaluation,
-): void {
-  if (!check) {
-    result.limitations.push('placement: no check was opened for this page');
-    return;
-  }
-  if (check.state === p.PLACEMENT_STATE_PENDING) {
-    result.limitations.push('placement: the page has not been read since');
-    return;
-  }
-  if (![p.PLACEMENT_STATE_SATISFIED, p.PLACEMENT_STATE_UNMET].includes(check.state)) {
-    result.limitations.push(`placement: ${check.state_reason || check.state}`);
-    return;
-  }
-  result.observed++;
-  if (check.state === p.PLACEMENT_STATE_SATISFIED) result.matched++;
-  else if (check.due_at === null) result.contradicted = true;
-}
-export function observationKind(result: Evaluation, total: number): string | null {
-  if (!result.observed) return null;
-  if (result.contradicted) return 'contradicted';
-  return result.observed === total && result.matched === total ? 'verified' : 'observed';
+  reading: Reading,
+): CheckOutcome | null {
+  if (!check) return outcome(reading, 'unavailable', 'no_placement_check');
+  if (check.state === p.PLACEMENT_STATE_PENDING) return null;
+  if (check.state === p.PLACEMENT_STATE_SATISFIED) return outcome(reading, 'met');
+  if (check.state === p.PLACEMENT_STATE_UNMET)
+    return check.due_at === null
+      ? outcome(reading, 'unmet')
+      : outcome(reading, 'waiting', 'recheck_scheduled');
+  return outcome(reading, 'unavailable', check.state_reason || check.state);
 }
 export function valueState(value: number | null): string {
   return value === null ? 'unavailable' : value === 0 ? 'observed_zero' : 'available';

@@ -570,6 +570,7 @@ export type WorkerSettings = {
   taskMaxAttempts: number;
   pollIntervalSeconds: number;
   retryDelaySeconds: number;
+  accessCheckTtlSeconds: number;
 };
 
 /** Resolve one native policy setting with its environment override. */
@@ -604,6 +605,7 @@ export function loadWorkerSettings(
     taskMaxAttempts: setting('task_max_attempts'),
     pollIntervalSeconds: setting('poll_interval_seconds'),
     retryDelaySeconds: setting('retry_delay_seconds'),
+    accessCheckTtlSeconds: setting('access_check_ttl_seconds'),
   };
   // A heartbeat slower than the lease guarantees expiry during healthy work.
   if (settings.heartbeatIntervalSeconds >= settings.leaseTtlSeconds) {

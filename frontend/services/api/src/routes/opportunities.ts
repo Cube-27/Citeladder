@@ -1,35 +1,20 @@
 /**
- * The `opportunities` family: the persisted catalog, its summary and history,
- * the shared order, the manual recompute and the exports. Every lookup is
- * filtered by the active workspace, so a foreign id is a 404.
+ * The `opportunities` family: the persisted catalog, the row detail and the
+ * shared order. Every lookup is filtered by the active workspace, so a foreign
+ * id is a 404. Refreshes run only from evidence triggers.
  */
 import { policy } from '../config.ts';
-import { rowsToCsv, rowsToMarkdown } from '../analysis/opportunities/exports.ts';
-import { readBody, readOptionalBody } from '../http/body.ts';
+import { readBody } from '../http/body.ts';
 import { parseUuid } from '../http/uuid.ts';
-import {
-  getOpportunity,
-  groupedHistory,
-  listOpportunities,
-  loadExportRows,
-} from '../opportunities/reads.ts';
+import { getOpportunity, listOpportunities } from '../opportunities/reads.ts';
 import { updateOrder } from '../opportunities/order.ts';
-import { recomputeOpportunities } from '../opportunities/refresh.ts';
-import { opportunitySummary } from '../opportunities/summary.ts';
-import { defineGetRoute, definePostRoute, definePutRoute } from './define.ts';
+import { defineGetRoute, definePutRoute } from './define.ts';
 import {
   opportunitiesPageSchema,
   opportunityDetailSchema,
   opportunityOrderResponseSchema,
-  opportunitySummarySchema,
 } from '@citeladder/contracts/opportunities';
-import {
-  fileResponse,
-  historyResponse,
-  orderUpdate,
-  recomputeRequest,
-  recomputeResponse,
-} from './opportunity-contracts.ts';
+import { orderUpdate } from './opportunity-contracts.ts';
 
 const family = 'opportunities';
 const root = '/api/v1/projects/{project_id}/opportunities';
@@ -59,28 +44,6 @@ const filters = (query: FilterValues) => ({
   min_priority: query.min_priority,
 });
 
-function exportRoute(extension: 'csv' | 'md') {
-  const [render, mediaType] =
-    extension === 'csv' ? [rowsToCsv, 'text/csv'] : [rowsToMarkdown, 'text/markdown'];
-  return defineGetRoute({
-    family,
-    path: `${root}/export.${extension}`,
-    params: { path: projectPath, query: filterQuery },
-    response: fileResponse,
-    raw: true,
-    async handle({ c, db }, { path, query }) {
-      const scope = { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id };
-      const rows = await loadExportRows(db, scope, filters(query));
-      return new Response(render(rows), {
-        headers: {
-          'content-type': `${mediaType}; charset=utf-8`,
-          'content-disposition': `attachment; filename="opportunities-${path.project_id}.${extension}"`,
-        },
-      });
-    },
-  });
-}
-
 export const opportunityRoutes = [
   defineGetRoute({
     family,
@@ -89,7 +52,6 @@ export const opportunityRoutes = [
       path: projectPath,
       query: {
         ...filterQuery,
-        action_path: { scalar: { kind: 'str' } },
         limit: {
           scalar: { kind: 'int', ge: 1, le: o.LIST_MAX_LIMIT },
           default: o.LIST_DEFAULT_LIMIT,
@@ -100,50 +62,9 @@ export const opportunityRoutes = [
     response: opportunitiesPageSchema,
     async handle({ c, db }, { path, query }) {
       const scope = { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id };
-      return listOpportunities(
-        db,
-        scope,
-        { ...filters(query), action_path: query.action_path },
-        { limit: query.limit, cursor: query.cursor },
-      );
-    },
-  }),
-  defineGetRoute({
-    family,
-    path: `${root}/summary`,
-    params: { path: projectPath, query: {} },
-    response: opportunitySummarySchema,
-    async handle({ c, db }, { path }) {
-      return opportunitySummary(db, {
-        workspaceId: c.get('workspace').workspaceId,
-        projectId: path.project_id,
-      });
-    },
-  }),
-  definePostRoute({
-    family,
-    path: `${root}/recompute`,
-    params: { path: projectPath, query: {} },
-    body: recomputeRequest,
-    response: recomputeResponse,
-    async handle({ c, db }, { path }) {
-      const body = await readOptionalBody(c, recomputeRequest);
-      return recomputeOpportunities(
-        db,
-        { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id },
-        { auditId: body?.audit_id ?? null, siteCrawlId: body?.site_crawl_id ?? null },
-      );
-    },
-  }),
-  defineGetRoute({
-    family,
-    path: `${root}/history`,
-    params: { path: projectPath, query: {} },
-    response: historyResponse,
-    async handle({ c, db }, { path }) {
-      return groupedHistory(db, {
-        workspaceId: c.get('workspace').workspaceId,
-        projectId: path.project_id,
+      return listOpportunities(db, scope, filters(query), {
+        limit: query.limit,
+        cursor: query.cursor,
       });
     },
   }),
@@ -179,6 +100,4 @@ export const opportunityRoutes = [
       );
     },
   }),
-  exportRoute('csv'),
-  exportRoute('md'),
 ];

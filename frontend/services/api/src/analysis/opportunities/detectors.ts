@@ -1,5 +1,4 @@
 import { policy } from '../../config.ts';
-import { record } from '../../db/json.ts';
 import type {
   AnalysisEvidence,
   DetectorHit,
@@ -13,7 +12,7 @@ import {
   valueFactorForPrompt,
 } from './scoring.ts';
 import { summarizeSourcePattern } from './source-patterns.ts';
-import { compareText, scalarText } from '../../text-order.ts';
+import { compareText } from '../../text-order.ts';
 const p = policy.opportunity.opportunities;
 export const rules = p.OPPORTUNITY_RULES_BY_ID as Record<
   string,
@@ -74,8 +73,6 @@ function gapHit(
     source_metric_ids: [],
     value_factor: value,
     gap_factor: gapFactorVisibility(competitors.length, 0, strength),
-    title_override: null,
-    remediation_override: null,
   };
 }
 function visibilityGaps(e: VisibilityEvidence, rule: string, absent: boolean): DetectorHit[] {
@@ -103,20 +100,6 @@ export const detectBrandAbsentHighValuePrompt = (e: VisibilityEvidence) =>
   visibilityGaps(e, 'brand_absent_high_value_prompt', true);
 export const detectOwnedPageNotCited = (e: VisibilityEvidence) =>
   visibilityGaps(e, 'owned_page_not_cited', false);
-function presentation(issue: SiteEvidence['issues'][number]): [string | null, string | null] {
-  const entries = (p.SITE_ISSUE_ATOM_PRESENTATION as Record<string, string[][][]>)[issue.rule_id];
-  const atoms = issue.evidence?.atoms;
-  if (!entries || !Array.isArray(atoms)) return [null, null];
-  const missing = atoms
-    .map(record)
-    .filter((a) => a.outcome === 'missing')
-    .map((a) => scalarText(a.name))
-    .sort(compareText);
-  const selected = entries.find(
-    ([names]) => JSON.stringify(names) === JSON.stringify(missing),
-  )?.[1];
-  return [selected?.[0] ?? null, selected?.[1] ?? null];
-}
 export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
   const urls = new Map(e.urls.map((u) => [u.site_url_id, u.normalized_url]));
   const mapping: Record<string, string> = p.SITE_ISSUE_TO_OPPORTUNITY_RULE_ID;
@@ -131,7 +114,6 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
       !url
     )
       continue;
-    const [title_override, remediation_override] = presentation(issue);
     hits.push({
       rule_id: rule,
       target_key: `url:${url}`,
@@ -154,8 +136,6 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
       source_metric_ids: [],
       value_factor: p.SITE_VALUE_FACTOR,
       gap_factor: p.SITE_GAP_FACTOR,
-      title_override,
-      remediation_override,
     });
   }
   return hits.sort(

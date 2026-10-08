@@ -2,8 +2,7 @@
  * Opportunities domain endpoints + query/mutation options.
  *
  * Owns transport for the Opportunities slice: the priority-sorted keyset
- * catalog, the latest recompute summary, the row detail and the shared queue
- * order. Workflow status and implementation declarations belong to Actions
+ * catalog, the row detail and the shared queue order. Workflow status and implementation declarations belong to Actions
  * (`lib/api/actions.ts`). Every JSON response passes through `strictValidate`
  * (fail loud on any drift — the backend is the source of truth). All paths are relative
  * `/api/v1` (same-origin proxy, invariant 12) and every read accepts an
@@ -17,11 +16,10 @@ import {
   opportunitiesPageSchema,
   opportunityDetailSchema,
   opportunityOrderResponseSchema,
-  opportunitySummarySchema,
 } from '@citeladder/contracts/opportunities';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
-import type { OpportunitiesPage, OpportunityDetail, OpportunitySummary } from './types';
+import type { OpportunitiesPage, OpportunityDetail } from './types';
 
 /** Keyset catalog params. Ordering is server-owned (priority desc, id desc). */
 export type OpportunitiesParams = {
@@ -32,7 +30,6 @@ export type OpportunitiesParams = {
   status?: string;
   rule_id?: string;
   min_priority?: number;
-  action_path?: 'owned' | 'earned';
 };
 
 export type OpportunityOrderUpdate = {
@@ -58,18 +55,11 @@ export const opportunitiesApi = {
     const res = await apiClient.put(`/projects/${projectId}/opportunities/order`, input, options);
     return strictValidate(opportunityOrderResponseSchema, res, 'opportunities.updateOrder');
   },
-  summary: async (projectId: string, options?: ApiRequestOptions) => {
-    const res = await apiClient.get<OpportunitySummary>(
-      `/projects/${projectId}/opportunities/summary`,
-      options,
-    );
-    return strictValidate(opportunitySummarySchema, res, 'opportunities.summary');
-  },
 };
 
 function extractProjectId(queryKey: readonly unknown[] | undefined): string | undefined {
   if (queryKey?.[0] !== 'opportunities') return undefined;
-  if (queryKey[1] === 'list' || queryKey[1] === 'summary') {
+  if (queryKey[1] === 'list') {
     return typeof queryKey[2] === 'string' ? queryKey[2] : undefined;
   }
   return undefined;
@@ -98,7 +88,6 @@ export const opportunitiesQueries = {
         status: params?.status ?? null,
         rule_id: params?.rule_id ?? null,
         min_priority: params?.min_priority ?? null,
-        action_path: params?.action_path ?? null,
       }),
       queryFn: ({ signal }) => opportunitiesApi.list(projectId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
@@ -108,12 +97,5 @@ export const opportunitiesQueries = {
     queryOptions({
       queryKey: queryKeys.opportunities.detail(opportunityId),
       queryFn: ({ signal }) => opportunitiesApi.get(opportunityId, { signal, workspaceId }),
-    }),
-  summary: (workspaceId: string, projectId: string) =>
-    queryOptions({
-      queryKey: queryKeys.opportunities.summary(projectId),
-      queryFn: ({ signal }) => opportunitiesApi.summary(projectId, { signal, workspaceId }),
-      placeholderData: (previousData, previousQuery) =>
-        isSameProjectQuery(previousQuery, projectId) ? previousData : undefined,
     }),
 };

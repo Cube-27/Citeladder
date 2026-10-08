@@ -268,7 +268,8 @@ it('runs recorded acquisition through persisted admission, robots refusal and ba
       .where('project_id', '=', own.projectId)
       .where('task_kind', 'in', ['opportunity_refresh', 'opportunity_verification'])
       .execute(),
-  ).toHaveLength(2);
+    // Nothing is declared on this project, so only the refresh is queued.
+  ).toHaveLength(1);
 });
 it('keeps terminal handoff idempotent and rejects a task whose project belongs to another workspace', async () => {
   const own = await seed();

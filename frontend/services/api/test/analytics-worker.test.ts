@@ -64,6 +64,24 @@ const tasks = (kind: string) =>
 const worker = (executors?: Record<string, Executor>) =>
   new AnalyticsWorker(db, settings, { owner: 'worker-test', executors });
 
+it('reports a retry as the runner lane next due time, so the drain waits for it', async () => {
+  const id = await enqueue(db, {
+    workspaceId,
+    projectId,
+    kind: 'opportunity_refresh',
+    payload: {},
+  });
+  const soon = new Date(Date.now() + 5000);
+  await db
+    .updateTable('analytics_tasks')
+    .set({ status: 'retry_wait', available_at: soon })
+    .where('id', '=', id)
+    .execute();
+  const due = await worker().nextDue();
+  // Other tenants may hold earlier work; none of it may hide this retry.
+  expect(due!.getTime()).toBeLessThanOrEqual(soon.getTime());
+});
+
 it('stops at the next I/O boundary after sustained heartbeat errors', async () => {
   const id = await enqueue(db, {
     workspaceId,

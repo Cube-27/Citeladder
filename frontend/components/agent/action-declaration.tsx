@@ -4,69 +4,65 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { VerificationObservations } from '@/components/opportunities/verification-observations';
 import { Button } from '@/components/ui/button';
+import { DateField } from '@/components/ui/date-field';
 import { Dialog } from '@/components/ui/dialog';
-import { DisplayTime } from '@/components/ui/display-time';
+import { Field } from '@/components/ui/field';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import { newIdempotencyKey } from '@/lib/agent/idempotency';
 import { measurementLegLabel } from '@/lib/agent/vocabulary';
-import {
-  actionsMutations,
-  actionsQueries,
-  type ActionDeclaration,
-  type MeasurementLeg,
-} from '@/lib/api/actions';
+import { actionsMutations, actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import type { AgentOutput } from '@/lib/api/agent';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { queryKeys } from '@/lib/api/query-keys';
+import {
+  declarationDays,
+  declaredInstant,
+  isDeclarableDay,
+  localDay,
+} from '@/lib/opportunities/declaration-date';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-/**
- * Where a user starts the reading a leg is waiting for; nothing runs by
- * itself. The placement recheck is due-dated by its own check, so it has none.
- */
-const LEG_OWNER: Record<MeasurementLeg['leg'], { href: string; label: string } | null> = {
-  next_visibility_run: { href: '/runs', label: 'Open Runs' },
-  next_search_console_window: { href: '/performance', label: 'Open Performance' },
-  next_crawl: { href: '/site', label: 'Open Site Health' },
-  placement_recheck: null,
-};
+type Declarable = Pick<ActionDetail, 'id' | 'members' | 'member_measurement' | 'declarable_since'>;
 
 /**
- * "Mark implemented": the user's explicit declaration (plan §9). The server
- * freezes the targets and expected checks; the user names only the revision
- * they shipped, or none for work done outside CiteLadder.
+ * "Mark implemented": the user's explicit declaration. The server freezes the
+ * targets and expected checks; the user names only the revision they shipped
+ * (or none, for work done outside CiteLadder) and the day it went live.
  */
 export function MarkImplementedButton({
   workspaceId,
-  actionId,
+  action,
   revision,
   disabled = false,
   recommendationIds,
   selectionDescription,
+  onDeclared,
 }: Readonly<{
   workspaceId: string;
-  actionId: string;
+  action: Declarable;
   /** The output revision shipped; null declares work done outside CiteLadder. */
   revision: { id: string; number: number } | null;
   disabled?: boolean;
   recommendationIds?: string[];
   selectionDescription?: string;
+  onDeclared?: () => void;
 }>) {
   const [open, setOpen] = useState(false);
-  // One key and one timestamp per dialog opening, so a retry after an
-  // ambiguous failure replays the identical declaration instead of sending a
-  // request the server would refuse as a reused key with changed input.
+  // One key per dialog opening and chosen day, so a retry after an ambiguous
+  // failure replays the identical declaration instead of sending a request the
+  // server would refuse as a reused key with changed input.
   const [attempt, setAttempt] = useState(newAttempt);
   const queryClient = useQueryClient();
   const declare = useMutation({
     ...actionsMutations.declare(workspaceId),
     onSuccess: () => {
       setOpen(false);
+      onDeclared?.();
       void queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
       if (recommendationIds)
         void queryClient.invalidateQueries({
@@ -74,13 +70,15 @@ export function MarkImplementedButton({
         });
     },
   });
+  const range = declarationDays(action.declarable_since, attempt.openedAt);
+  const valid = isDeclarableDay(attempt.day, range);
   const submit = () =>
     declare.mutate({
-      actionId,
+      actionId: action.id,
       idempotencyKey: attempt.idempotencyKey,
       input: {
         output_revision_id: revision?.id ?? null,
-        declared_implemented_at: attempt.declaredAt,
+        declared_implemented_at: declaredInstant(attempt.day, attempt.openedAt),
         ...(recommendationIds ? { recommendation_ids: recommendationIds } : {}),
       },
     });
@@ -112,18 +110,42 @@ export function MarkImplementedButton({
             <Button variant="secondary" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button pending={declare.isPending} pendingLabel="Declaring…" onClick={submit}>
+            <Button
+              pending={declare.isPending}
+              pendingLabel="Declaring…"
+              disabled={!valid}
+              onClick={submit}
+            >
               Declare implemented
             </Button>
           </div>
         }
       >
-        <div className="grid gap-3">
-          <p className={textRole('body')}>
-            CiteLadder then measures this Action with the evidence each of its findings needs: the
-            next visibility run, Search Console window, crawl or placement recheck. Nothing runs
-            automatically, and an Action can be declared once.
-          </p>
+        <div className="grid gap-4">
+          <Field
+            label="When did it go live?"
+            hint={`Any day from ${range.min} to today. Readings before this day are not counted.`}
+            error={valid ? undefined : `Choose a day from ${range.min} to ${range.max}.`}
+          >
+            {(field) => (
+              <DateField
+                {...field}
+                ariaLabel="Go-live date"
+                value={attempt.day}
+                min={range.min}
+                max={range.max}
+                onChange={(day) => {
+                  declare.reset();
+                  setAttempt((current) => ({
+                    ...current,
+                    day,
+                    idempotencyKey: newIdempotencyKey(),
+                  }));
+                }}
+              />
+            )}
+          </Field>
+          <MeasurementPreview action={action} />
           {recommendationIds ? (
             <p className={textRole('body')}>
               Only these {recommendationIds.length} selected links will be measured, together with
@@ -145,17 +167,65 @@ export function MarkImplementedButton({
   );
 }
 
+/** `MarkImplementedButton` for a surface that holds only the Action's id. */
+export function MarkActionImplemented({
+  workspaceId,
+  actionId,
+  ...props
+}: Readonly<Omit<Parameters<typeof MarkImplementedButton>[0], 'action'> & { actionId: string }>) {
+  const action = useQuery(actionsQueries.detail(workspaceId, actionId));
+  if (action.isError)
+    return (
+      <ReadError
+        error={action.error}
+        fallback="The Action could not be loaded to declare it."
+        onRetry={() => void action.refetch()}
+        pending={action.isFetching}
+      />
+    );
+  if (!action.data) return null;
+  return <MarkImplementedButton workspaceId={workspaceId} action={action.data} {...props} />;
+}
+
+/** What each current finding will be measured by, before the user commits. */
+function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
+  if (action.members.length === 0) return null;
+  return (
+    <div className="grid gap-2">
+      <p className={textRole('label')}>What CiteLadder will check</p>
+      <ul className="grid gap-2">
+        {action.members.map((member) => {
+          const leg = action.member_measurement[member.id] ?? null;
+          return (
+            <li key={member.id} className="grid gap-0.5">
+              <span className={textRole('itemTitle')}>{member.title}</span>
+              <span className={textRole('caption')}>
+                {leg
+                  ? `Measured by ${measurementLegLabel(leg)?.toLowerCase() ?? 'the next reading'}.`
+                  : 'Not measured automatically: no reading isolates this change.'}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className={textRole('caption')}>
+        Nothing runs on its own, and an Action can be declared once.
+      </p>
+    </div>
+  );
+}
+
 /**
- * Whether an Action can be declared now: still open, with a current finding
- * whose next reading can measure it. Without one there is nothing to verify,
- * and the server refuses the declaration.
+ * Whether an Action can be declared now: still open, with a current finding.
+ * Without one there is nothing to declare, and the server refuses.
  */
 export function isDeclarable(action: { status: string; member_count: number }): boolean {
   return (action.status === 'open' || action.status === 'in_progress') && action.member_count > 0;
 }
 
 function newAttempt() {
-  return { idempotencyKey: newIdempotencyKey(), declaredAt: new Date().toISOString() };
+  const openedAt = new Date();
+  return { idempotencyKey: newIdempotencyKey(), openedAt, day: localDay(openedAt) };
 }
 
 /**
@@ -198,6 +268,7 @@ function AttachedDeclaration({
   runActive: boolean;
 }>) {
   const mayWrite = useWorkspaceCapability('write');
+  const [declared, setDeclared] = useState(false);
   const action = useQuery(actionsQueries.detail(workspaceId, actionId));
   if (action.isError)
     return (
@@ -211,7 +282,14 @@ function AttachedDeclaration({
   if (!action.data) return null;
   const declaration = action.data.declaration;
   if (declaration) {
-    return <DeclarationStatus declaration={declaration} shownRevision={revision} />;
+    return (
+      <DeclarationStatus
+        declaration={declaration}
+        shownRevision={revision}
+        workspaceId={workspaceId}
+        focusOnMount={declared}
+      />
+    );
   }
   if (!isDeclarable(action.data) || !mayWrite) return null;
   if (action.data.members.some((member) => member.rule_id === 'site_contextual_links')) {
@@ -221,9 +299,10 @@ function AttachedDeclaration({
     <div>
       <MarkImplementedButton
         workspaceId={workspaceId}
-        actionId={actionId}
+        action={action.data}
         revision={{ id: revision.id, number: revision.number }}
         disabled={runActive}
+        onDeclared={() => setDeclared(true)}
       />
     </div>
   );
@@ -236,97 +315,3 @@ export function ContextualLinkDeclarationRoute() {
     </Button>
   );
 }
-
-/** A declared Action: when, which revision, and what each loop leg awaits. */
-export function DeclarationStatus({
-  declaration,
-  shownRevision,
-}: Readonly<{
-  declaration: ActionDeclaration;
-  /** The revision on screen, when shown beside an output. */
-  shownRevision?: { id: string; number: number };
-}>) {
-  return (
-    <div className="grid gap-3">
-      <p className={textRole('body')}>
-        Declared implemented on <DisplayTime value={declaration.declared_implemented_at} dateOnly />
-        {revisionNote(declaration.output_revision_id, shownRevision)}
-      </p>
-      {declaration.legs.length > 0 ? (
-        <ul className="grid gap-2" aria-label="Measurement">
-          {declaration.legs.map((leg) => (
-            <LegRow key={leg.leg} leg={leg} />
-          ))}
-        </ul>
-      ) : (
-        <p className={textRole('caption')}>
-          No current finding targets this Action, so there is nothing to measure automatically.
-        </p>
-      )}
-      <VerificationObservations implementation={declaration} />
-    </div>
-  );
-}
-
-function revisionNote(
-  declaredId: string | null,
-  shown: { id: string; number: number } | undefined,
-): string {
-  if (!declaredId) return ' · done outside CiteLadder';
-  if (!shown) return '';
-  // Later edits are not what was shipped; say so rather than imply they were.
-  return declaredId === shown.id
-    ? ` · revision ${shown.number}`
-    : ' · an earlier revision; this one was not declared';
-}
-
-function LegRow({ leg }: Readonly<{ leg: MeasurementLeg }>) {
-  const owner = LEG_OWNER[leg.leg];
-  return (
-    <li className="grid gap-0.5">
-      <span className={textRole('itemTitle')}>{measurementLegLabel(leg.leg)}</span>
-      <span className={textRole('caption')}>
-        <LegWait leg={leg} />
-        {leg.state === 'observed' || !owner ? null : (
-          <>
-            {' '}
-            <ProjectLink href={owner.href} className="underline underline-offset-2">
-              {owner.label}
-            </ProjectLink>
-          </>
-        )}
-      </span>
-    </li>
-  );
-}
-
-function LegWait({ leg }: Readonly<{ leg: MeasurementLeg }>) {
-  if (leg.state === 'observed') {
-    return leg.last_evidence_at ? (
-      <>
-        Observed · <DisplayTime value={leg.last_evidence_at} dateOnly />
-      </>
-    ) : (
-      <>Observed</>
-    );
-  }
-  if (leg.state === 'sync_needed')
-    return <>The window has closed. Sync Search Console to measure it.</>;
-  if (leg.state === 'waiting') {
-    return leg.due_at ? (
-      <>
-        Waiting · expected <DisplayTime value={leg.due_at} dateOnly />.
-      </>
-    ) : (
-      <>Waiting for the next reading; its date is not known.</>
-    );
-  }
-  return <>{NOT_SCHEDULED[leg.leg]}</>;
-}
-
-const NOT_SCHEDULED: Record<MeasurementLeg['leg'], string> = {
-  next_visibility_run: 'No visibility run is scheduled. Run or schedule one to measure.',
-  next_search_console_window: 'Waiting for the next complete window.',
-  next_crawl: 'Crawls run when you start one. Run a Site Health crawl to measure.',
-  placement_recheck: 'No recheck of the publisher page is scheduled.',
-};

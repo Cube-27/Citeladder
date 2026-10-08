@@ -2,7 +2,6 @@
 export const earnedActions = {
   ACTION_PATH_OWNED: 'owned',
   ACTION_PATH_EARNED: 'earned',
-  ACTION_PATHS: ['earned', 'owned'],
   SOURCE_ROLLUP_MAX_DOMAINS: 100,
   SOURCE_ROLLUP_MAX_URLS: 6,
   SOURCE_ROLLUP_MAX_PROMPTS: 12,

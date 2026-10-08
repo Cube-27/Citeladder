@@ -17,14 +17,22 @@ export type VerificationSeed = {
   analysisId: string;
   artifactId: string;
   ruleId: string;
+  /** When every source was observed, with PostgreSQL microseconds. */
+  moment: string;
   declarations: Record<string, string>;
 };
 
-// Keep PostgreSQL microseconds: Date would truncate the verifier's evidence key.
-const moment = sql<Date>`'2026-09-27T10:00:00.123456Z'::timestamptz`;
-const declared = sql<Date>`${moment} - interval '1 day'`;
-
 export async function seedVerification(db: Database): Promise<VerificationSeed> {
+  // Relative to now, so the verification window always contains the seed;
+  // the text keeps microseconds a Date would truncate from the evidence key.
+  const { rows } = await sql<{ at: string; day: string }>`
+    select to_char(t at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as at,
+      (t at time zone 'UTC')::date::text as day
+    from (select date_trunc('second', now() - interval '2 days') + interval '0.123456 seconds' as t) m
+  `.execute(db);
+  const clock = rows[0]!;
+  const moment = sql<Date>`${clock.at}::timestamptz`;
+  const declared = sql<Date>`${moment} - interval '1 day'`;
   const scn = await seedOpportunityScenario(db, false, {
     facts: { secure: true },
     fetchedAt: moment,
@@ -61,7 +69,11 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
       .execute();
     await trx
       .updateTable('metric_snapshots')
-      .set({ created_at: moment, visibility_score: 80 })
+      .set({
+        created_at: moment,
+        visibility_score: 80,
+        metrics: JSON.stringify({ per_prompt: [{ prompt_index: 0, composite_score: 80 }] }),
+      })
       .where('id', '=', scn.metric_snapshot_id)
       .execute();
     const trafficId = randomUUID();
@@ -70,25 +82,65 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
       .values({
         ...scope,
         id: trafficId,
-        window_start: new Date('2026-09-01'),
-        window_end: new Date('2026-09-25'),
+        // Starts after the go-live day, which is partly before the change.
+        window_start: new Date(`${clock.day}T00:00:00Z`),
+        window_end: new Date(`${clock.day}T00:00:00Z`),
         granularity: 'day',
-        metrics: JSON.stringify({ totals: { clicks: 5 } }),
+        // Site-wide clicks are high; only the declared page's own row may count.
+        metrics: JSON.stringify({ totals: { clicks: 500 } }),
         normalization_version: policy.traffic.TRAFFIC_NORMALIZATION_VERSION,
         formula_version: policy.traffic.TRAFFIC_FORMULA_VERSION,
         created_at: moment,
       })
       .execute();
+    await trx
+      .insertInto('traffic_page_stats')
+      .values({
+        ...scope,
+        id: randomUUID(),
+        snapshot_id: trafficId,
+        canonical_url: 'https://acme.test/b',
+        site_url_id: null,
+        metrics: JSON.stringify({ clicks: 5 }),
+        source_metric_row_ids: '[]',
+        source_artifact_ids: '[]',
+        created_at: new Date(),
+      })
+      .execute();
     const page = await sourcePage(trx, scope, 'https://publisher.test/list');
-    const checks = {
-      site: [
-        { kind: 'site_rule', rule_id: issue.rule_id, expected_outcome: 'partial' },
-        { kind: 'page_fact', fact_key: 'secure', expected_value: true },
-      ],
-      traffic: [
-        { kind: 'traffic_metric', metric: 'clicks', expected_value: 4, direction: 'increase' },
-      ],
+    const pageClicks = (url: string) => ({
+      kind: 'traffic_metric',
+      metric: 'clicks',
+      direction: 'increase',
+      scope: 'page',
+      scope_key: url,
+      min_delta: 0.1,
+      baseline_value: 1,
+      baseline_window_days: 7,
+    });
+    const siteRule = {
+      kind: 'site_rule',
+      rule_id: issue.rule_id,
+      expected_outcome: 'partial',
+      target_site_url_id: issue.site_url_id,
+    };
+    const checks: Record<string, Record<string, unknown>[]> = {
+      site: [siteRule],
+      traffic: [pageClicks('https://acme.test/b')],
+      // Search Console has no row for this page, whatever the site total says.
+      traffic_other: [pageClicks('https://acme.test/elsewhere')],
       visibility: [
+        {
+          kind: 'visibility_metric',
+          metric: 'prompt_score',
+          target_prompt_id: scn.prompt0_id,
+          baseline_value: 40,
+          min_delta: 1,
+          direction: 'increase',
+        },
+      ],
+      // Declared before checks were prompt-scoped: the project score moved.
+      legacy: [
         {
           kind: 'visibility_metric',
           metric: 'visibility_score',
@@ -97,6 +149,10 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
           direction: 'increase',
         },
       ],
+      // A crawl and a Search Console window each settle one of its checks.
+      mixed: [siteRule, pageClicks('https://acme.test/b')],
+      // Went live before the verification window; no new source re-reads it.
+      expired: [siteRule],
       missing_prompt: [
         {
           kind: 'visibility_metric',
@@ -126,8 +182,11 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
           action_id: action.id,
           opportunity_snapshot_id: snapshot.id,
           actor_user_id: scn.user_id,
-          declared_implemented_at: declared,
-          target_site_url_ids: JSON.stringify(name === 'site' ? [issue.site_url_id] : []),
+          declared_implemented_at:
+            name === 'expired' ? sql<Date>`${moment} - interval '40 days'` : declared,
+          target_site_url_ids: JSON.stringify(
+            ['site', 'mixed', 'expired'].includes(name) ? [issue.site_url_id] : [],
+          ),
           target_external_url: name === 'placement' ? 'https://publisher.test/list' : null,
           expected_checks: JSON.stringify(expected),
           member_opportunity_ids: '[]',
@@ -175,6 +234,7 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
       analysisId: issue.analysis_id,
       artifactId: issue.source_artifact_id,
       ruleId: issue.evaluation_id,
+      moment: clock.at,
       declarations,
     };
   });

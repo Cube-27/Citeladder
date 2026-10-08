@@ -7,7 +7,7 @@ import {
   type ChangePage,
   type RuleState,
 } from '../src/site-health/change-compare.ts';
-import { contentRecord } from '../src/site-health/change-snapshot.ts';
+import { contentRecord, declaredCheckField } from '../src/site-health/change-snapshot.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
@@ -238,6 +238,14 @@ const analyticsTasks = (seed: SiteSeed) =>
     .orderBy('task_kind')
     .execute();
 
+it('reads a declared rule fix in the outcome vocabulary crawl evidence uses', () => {
+  const rule = policy.site_health.change_intel.field_rules.title;
+  expect(
+    declaredCheckField({ kind: 'site_rule', rule_id: rule, expected_outcome: 'pass' }),
+  ).toEqual(['title', 'satisfied']);
+  expect(declaredCheckField({ kind: 'traffic_metric' })).toEqual([null, null]);
+});
+
 describe('change_intel task', () => {
   it('persists one provenance-exact snapshot and its handoff with the task, idempotently', async () => {
     const { a, b } = await pair();
@@ -258,10 +266,7 @@ describe('change_intel task', () => {
         task_kind: 'opportunity_refresh',
         payload: { trigger_kind: 'site_change', trigger_id: snapshot!.id },
       },
-      {
-        task_kind: 'opportunity_verification',
-        payload: { trigger_kind: 'site_crawl', trigger_id: b.crawlId },
-      },
+      // No declaration is in its window, so no verification is queued.
     ]);
     const statuses = await db
       .selectFrom('site_crawl_tasks')
@@ -306,7 +311,9 @@ describe('change_intel task', () => {
     const b = await fixtures.crawl();
     await db
       .updateTable('site_crawls')
-      .set({ configuration: JSON.stringify({ discovery_mode: 'automatic' }) })
+      .set({
+        configuration: JSON.stringify({ discovery_mode: 'automatic', requested_page_limit: 20 }),
+      })
       .where('id', '=', b.crawlId)
       .execute();
     const earlier = (days: number, configuration: unknown) =>
@@ -315,8 +322,11 @@ describe('change_intel task', () => {
         configuration: JSON.stringify(configuration),
         created_at: new Date(Date.now() - days * 24 * hour),
       });
-    const compatible = await earlier(2, { discovery_mode: 'automatic' });
+    // The page limit is the fetch budget left, not scope: it never breaks a pair.
+    const compatible = await earlier(2, { discovery_mode: 'automatic', requested_page_limit: 50 });
     await earlier(1, { discovery_mode: 'manual' });
+    // A newer page rerun re-read one page; it is never the site baseline.
+    await earlier(0.5, { discovery_mode: 'automatic', page_rerun: true });
     const other = await fixtures.crawl();
     await fixtures.sibling(other, { analyzed_url_count: 1, created_at: new Date(0) });
     await run(b);
@@ -332,6 +342,20 @@ describe('change_intel task', () => {
       state: 'non_comparable',
       reason_code: 'crawl_scope_mismatch',
     });
+  });
+
+  it('writes no comparison for a page rerun but still hands its page to Opportunities', async () => {
+    const { b } = await pair();
+    await db
+      .updateTable('site_crawls')
+      .set({ configuration: JSON.stringify({ page_rerun: true }) })
+      .where('id', '=', b.crawlId)
+      .execute();
+    await run(b);
+    expect(await snapshots(b)).toEqual([]);
+    expect((await analyticsTasks(b)).map((task) => task.task_kind)).toContain(
+      'opportunity_refresh',
+    );
   });
 
   it('a page cap keeps the snapshot partial and says so', async () => {

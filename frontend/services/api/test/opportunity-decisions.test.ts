@@ -1,6 +1,7 @@
 /**
  * Opportunity decisions the seeded PostgreSQL scenario never reaches: earned
- * page selection and scoring, and which site changes promote to a rule.
+ * page selection and scoring, which site changes promote to a rule, how a
+ * confirmed decline ranks, and how verification folds per-check readings.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -8,6 +9,13 @@ import { policy } from '../src/config.ts';
 import type { SourcePageEvidence } from '../src/analysis/opportunities/evidence.ts';
 import { detectEarnedPageOpportunities } from '../src/analysis/opportunities/earned-pages.ts';
 import { changeRule } from '../src/opportunities/refresh-hits.ts';
+import { declineGap, declineValue } from '../src/opportunities/refresh-evidence.ts';
+import { priorityScore } from '../src/analysis/opportunities/scoring.ts';
+import {
+  mergeOutcomes,
+  observationKind,
+  type CheckOutcome,
+} from '../src/opportunities/verification-decisions.ts';
 
 const e = policy.opportunity.earned_actions;
 const s = policy.opportunity.source_pages;
@@ -118,5 +126,63 @@ describe('site change promotion', () => {
     );
     expect(content({ ...complete, comparison_coverage: 'partial' })).toBeNull();
     expect(content(null)).toBeNull();
+  });
+});
+
+describe('confirmed decline ranking', () => {
+  const o = policy.opportunity.opportunities;
+  const floor = policy.audits.analysis.prompt_decline_materiality_points;
+  const score = (confidence: number, delta: number | null) =>
+    priorityScore('high', declineValue(confidence), declineGap(delta));
+
+  it('surfaces every decline the audit confirmed, however weak the agreement', () => {
+    expect(score(0, -floor)).toBeGreaterThanOrEqual(o.MIN_PRIORITY_TO_SURFACE);
+    expect(score(0.3, null)).toBeGreaterThanOrEqual(o.MIN_PRIORITY_TO_SURFACE);
+  });
+
+  it('ranks a larger, more agreed decline above a marginal one, up to the cap', () => {
+    expect(score(0.9, -2 * floor)).toBeGreaterThan(score(0.4, -floor));
+    expect(score(1, -100 * floor)).toBe(score(1, -o.CONFIRMED_DECLINE_GAP_CAP * floor));
+  });
+});
+
+describe('verification folding', () => {
+  const read = (
+    state: CheckOutcome['state'],
+    at: string,
+    source_kind = 'site_crawl',
+  ): CheckOutcome => ({
+    state,
+    reason: state === 'unavailable' ? 'page_not_analyzed' : null,
+    observed_at: at,
+    source_kind,
+    source_id: `${source_kind}-${at}`,
+  });
+  const fold = (...readings: Map<number, CheckOutcome>[]) =>
+    readings.reduce((merged, next) => mergeOutcomes(merged, next), new Map());
+
+  it('never lets a reading that could not answer replace an answer', () => {
+    const merged = fold(
+      new Map([[0, read('met', '2026-10-01')]]),
+      new Map([[0, read('unavailable', '2026-10-05')]]),
+    );
+    expect(merged.get(0)?.state).toBe('met');
+  });
+
+  it('keeps the newer answer whichever order the sources arrive in', () => {
+    const older = new Map([[0, read('met', '2026-10-01')]]);
+    const newer = new Map([[0, read('unmet', '2026-10-05')]]);
+    expect(fold(older, newer).get(0)?.state).toBe('unmet');
+    expect(fold(newer, older).get(0)?.state).toBe('unmet');
+  });
+
+  it('verifies only once every check has its own met reading', () => {
+    const crawl = new Map([[0, read('met', '2026-10-01')]]);
+    const traffic = new Map([[1, read('met', '2026-10-02', 'traffic_snapshot')]]);
+    expect(observationKind(fold(crawl), 2)).toBe('observed');
+    expect(observationKind(fold(crawl, traffic), 2)).toBe('verified');
+    expect(observationKind(fold(crawl, new Map([[1, read('unmet', '2026-10-03')]])), 2)).toBe(
+      'contradicted',
+    );
   });
 });

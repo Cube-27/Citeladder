@@ -5,11 +5,11 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import {
-  DeclarationStatus,
   isDeclarable,
   MarkImplementedButton,
   ContextualLinkDeclarationRoute,
 } from '@/components/agent/action-declaration';
+import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
@@ -60,6 +60,12 @@ export function ActionDetailScreen() {
           onRetry={() => void query.refetch()}
           pending={query.isFetching}
         />
+      </PageShell>
+    );
+  if (!activeWorkspaceId)
+    return (
+      <PageShell>
+        <Alert tone="info">Choose a workspace to open this Action.</Alert>
       </PageShell>
     );
   if (!query.data)
@@ -226,7 +232,10 @@ function Diagnosis({
           <ul className={ledgerClasses()}>
             {action.members.map((member) => (
               <li key={member.id} className="flex flex-wrap items-start gap-3 py-3">
-                <span className={textRole('itemTitle', 'min-w-0 flex-1')}>{member.title}</span>
+                <span className="grid min-w-0 flex-1 gap-1">
+                  <span className={textRole('itemTitle')}>{member.title}</span>
+                  <span className={textRole('caption')}>{member.remediation}</span>
+                </span>
                 <Button variant="ghost" size="sm" onClick={() => onOpenEvidence(member.id)}>
                   View evidence
                 </Button>
@@ -251,6 +260,7 @@ function Implementation({
   workspaceId,
 }: Readonly<{ action: ActionDetail; workspaceId: string }>) {
   const mayWrite = useWorkspaceCapability('write');
+  const [declared, setDeclared] = useState(false);
   const approach = approachLabel(action.diagnosis.approach ?? action.approach);
   const canDeclare = isDeclarable(action) && mayWrite;
   if (!action.declaration && !canDeclare && !approach) return null;
@@ -263,7 +273,11 @@ function Implementation({
         <Stack>
           {approach ? <p className={textRole('itemTitle')}>{approach}</p> : null}
           {action.declaration ? (
-            <DeclarationStatus declaration={action.declaration} />
+            <DeclarationStatus
+              declaration={action.declaration}
+              workspaceId={workspaceId}
+              focusOnMount={declared}
+            />
           ) : canDeclare ? (
             <Stack>
               <p className={textRole('body')}>
@@ -276,8 +290,9 @@ function Implementation({
                 ) : (
                   <MarkImplementedButton
                     workspaceId={workspaceId}
-                    actionId={action.id}
+                    action={action}
                     revision={null}
+                    onDeclared={() => setDeclared(true)}
                   />
                 )}
               </div>

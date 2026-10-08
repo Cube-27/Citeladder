@@ -1,18 +1,20 @@
 /** One atomic declaration per Action. Replays never resolve evidence again. */
 import { createHash, randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { policy } from '../config.ts';
+import { loadWorkerSettings, policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { resolveOwnedPages } from '../demand/page-equivalence.ts';
 import { ApiError } from '../errors.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
-import { isoformat, parseDatetime, toUtc } from '../http/datetimes.ts';
+import { epochMicros, isoformat, parseDatetime, toUtc } from '../http/datetimes.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { record } from '../db/json.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { actionMembers, recordStatus, requireAction, type ActionRow } from './actions.ts';
 import { declarationChecks } from './declaration-checks.ts';
 import { openPlacementCheck } from './placement-declaration.ts';
+import { enqueueImplementationVerification } from './enqueue.ts';
+import { DASHBOARD_AUDIT_STATUSES } from './sources.ts';
 import type { OpportunityRow } from './projection.ts';
 
 const o = policy.opportunity.opportunities;
@@ -137,6 +139,86 @@ async function targets(
   return { target_site_url_ids: selected, target_external_url: null };
 }
 
+/**
+ * When the work went live: not in the future beyond clock skew, and not
+ * earlier than new evidence would still measure it.
+ */
+function boundDeclaredAt(declaredAt: string, now: Date): void {
+  const declared = Number(epochMicros(parseDatetime(declaredAt)!) / 1000n);
+  if (declared > now.getTime() + o.DECLARATION_FUTURE_SKEW_SECONDS * 1000)
+    throw new ApiError(422, 'The implementation time cannot be in the future');
+  if (declared < now.getTime() - o.VERIFICATION_WINDOW_DAYS * 86_400_000)
+    throw new ApiError(
+      422,
+      `The implementation time must be within the last ${o.VERIFICATION_WINDOW_DAYS} days`,
+    );
+}
+
+/**
+ * Evidence already observed after a backdated go-live: the latest crawl,
+ * audit and Search Console window are read for this declaration now rather
+ * than at their next settlement.
+ */
+async function verifyExistingEvidence(
+  trx: Database,
+  row: { id: string; workspace_id: string; project_id: string },
+  declaredAt: string,
+) {
+  const after = sql<Date>`${declaredAt}::timestamptz`;
+  const crawl = await trx
+    .selectFrom('site_crawls')
+    .select('id')
+    .where('workspace_id', '=', row.workspace_id)
+    .where('project_id', '=', row.project_id)
+    .where('status', '=', policy.opportunity.refresh.crawl_status_completed)
+    .where('completed_at', '>', after)
+    .orderBy('completed_at', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  const audit = await trx
+    .selectFrom('audits')
+    .select('id')
+    .where('workspace_id', '=', row.workspace_id)
+    .where('project_id', '=', row.project_id)
+    .where('status', 'in', DASHBOARD_AUDIT_STATUSES)
+    .where('completed_at', '>', after)
+    .orderBy('completed_at', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  const traffic = await trx
+    .selectFrom('traffic_snapshots')
+    .select('id')
+    .where('workspace_id', '=', row.workspace_id)
+    .where('project_id', '=', row.project_id)
+    .where('granularity', '=', policy.traffic.TRAFFIC_DEFAULT_GRANULARITY)
+    .where(sql<boolean>`window_start::date > ${declaredAt}::timestamptz::date`)
+    .orderBy('window_end', 'desc')
+    .orderBy('created_at', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  const sources: [string, { id: string } | undefined][] = [
+    ['site_crawl', crawl],
+    ['audit', audit],
+    ['traffic_snapshot', traffic],
+  ];
+  const triggers = sources.flatMap(([triggerKind, source]) =>
+    source
+      ? [
+          {
+            workspaceId: row.workspace_id,
+            projectId: row.project_id,
+            triggerKind,
+            triggerId: source.id,
+            revision: `declaration-${row.id}`,
+            maxAttempts: loadWorkerSettings().taskMaxAttempts,
+          },
+        ]
+      : [],
+  );
+  // The declaration transaction runs one statement at a time.
+  for (const trigger of triggers) await enqueueImplementationVerification(trx, trigger); // NOSONAR
+}
+
 export function declareAction(
   db: Database,
   workspaceId: string,
@@ -146,6 +228,7 @@ export function declareAction(
   input: DeclarationInput,
 ) {
   const declaredAt = isoformat(toUtc(parseDatetime(input.declared_implemented_at)!));
+  const now = new Date();
   const fingerprint = createHash('sha256')
     .update(
       JSON.stringify([
@@ -164,6 +247,7 @@ export function declareAction(
     const action = await requireAction(trx, workspaceId, actionId, true);
     const existing = await replay(trx, action, key, input, declaredAt);
     if (existing) return { row: existing, created: false };
+    boundDeclaredAt(declaredAt, now);
     if (action.status !== a.ACTION_STATUS_OPEN)
       throw declarationConflict('Only an open Action can be declared implemented');
     await checkedRevision(trx, action, input.output_revision_id);
@@ -190,11 +274,18 @@ export function declareAction(
       trx,
       scope,
       members,
-      snapshot.audit_id,
-      project.brand_name,
+      {
+        auditId: snapshot.audit_id,
+        brandName: project.brand_name,
+        declaredDay: declaredAt.slice(0, 10),
+      },
       input.recommendation_ids ?? [],
     );
-    const declaredMembers = [...new Map(checks.map(({ member }) => [member.id, member])).values()];
+    // Every finding is declared; contextual links only as far as selected.
+    const linked = new Set(checks.map(({ member }) => member.id));
+    const declaredMembers = members.filter(
+      (member) => member.rule_id !== 'site_contextual_links' || linked.has(member.id),
+    );
     const resolved = await targets(trx, action, declaredMembers, project.website_url);
     const row = await trx
       .insertInto('opportunity_implementation_events')
@@ -229,7 +320,9 @@ export function declareAction(
     const placement = checks.find(
       ({ check }) => check.kind === policy.opportunity.placement.PLACEMENT_CHECK_KIND,
     );
-    if (placement) await openPlacementCheck(trx, row, placement, project.website_url);
+    if (placement && !(await openPlacementCheck(trx, row, placement, project.website_url)))
+      throw declarationConflict('The publisher page has not been read, so it cannot be rechecked');
+    await verifyExistingEvidence(trx, row, declaredAt);
     return { row, created: true };
   });
 }

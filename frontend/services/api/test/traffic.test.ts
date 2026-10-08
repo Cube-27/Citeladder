@@ -35,7 +35,7 @@ async function refreshed() {
 }
 
 describe('traffic projections and Performance', () => {
-  it('refreshes every preset/granularity atomically, preserves provenance and enqueues one demand and verification handoff', async () => {
+  it('refreshes every preset/granularity atomically, preserves provenance and enqueues one demand handoff', async () => {
     const { id } = await refreshed();
     const rows = await db
       .selectFrom('traffic_snapshots')
@@ -52,10 +52,8 @@ describe('traffic projections and Performance', () => {
       .where('project_id', '=', t.projectId)
       .where('task_kind', '!=', 'traffic_snapshot_refresh')
       .execute();
-    expect(successors.map((r) => r.task_kind).sort()).toEqual([
-      'demand_snapshot_refresh',
-      'opportunity_verification',
-    ]);
+    // Nothing is declared on this project, so no verification is queued.
+    expect(successors.map((r) => r.task_kind).sort()).toEqual(['demand_snapshot_refresh']);
     const before = rows.map((r) => r.id).sort();
     await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh'), context);
     expect(

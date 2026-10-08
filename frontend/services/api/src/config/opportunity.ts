@@ -4,15 +4,17 @@ export const opportunityDeclaration = { output_phase_outline: 'outline' };
 export const opportunities = {
   ANALYZER_VERSION: 'opp-analyzer-1',
   RULE_VERSION: 'opp-rules-2',
-  FORMULA_VERSION: 'opp-formula-1',
+  FORMULA_VERSION: 'opp-formula-2',
   CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: 'implementation_idempotency_conflict',
   CODE_IMPLEMENTATION_TARGET_CONFLICT: 'implementation_target_conflict',
   CODE_OPPORTUNITY_ORDER_CONFLICT: 'opportunity_order_conflict',
   RULE_PRODUCT_NOT_MENTIONED: 'product_not_mentioned',
   RULE_CITED_ALTERNATIVES: 'cited_alternatives_without_uploaded_presence',
   RULE_CATALOG_FIELDS_MISSING: 'catalog_fields_missing',
-  CONFIRMED_DECLINE_MIN_FACTOR: 0.1,
-  CONFIRMED_DECLINE_GAP_NORMALIZER: 10,
+  // A confirmed decline already passed the audit's materiality and agreement
+  // gates, so confidence and size rank it and never drop it below the floor.
+  CONFIRMED_DECLINE_CONFIDENCE_FLOOR: 0.5,
+  CONFIRMED_DECLINE_GAP_CAP: 2,
   DEMAND_SIGNAL_GAP_FACTOR: 2,
   OPPORTUNITY_TYPE_VISIBILITY: 'visibility',
   OPPORTUNITY_TYPE_COMMERCE: 'commerce',
@@ -20,19 +22,22 @@ export const opportunities = {
   OPPORTUNITY_TYPE_TRAFFIC: 'traffic',
   OPPORTUNITY_TYPE_TOPIC: 'topic',
   OPPORTUNITY_TYPES: ['commerce', 'site', 'topic', 'traffic', 'visibility'],
-  SEVERITY_CRITICAL: 'critical',
-  SEVERITY_HIGH: 'high',
-  SEVERITY_MEDIUM: 'medium',
-  SEVERITY_LOW: 'low',
-  SEVERITY_INFO: 'info',
   OPPORTUNITY_SEVERITIES: ['critical', 'high', 'info', 'low', 'medium'],
   IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN: 160,
   IMPLEMENTATION_TARGETS_MAX: 64,
-  IMPLEMENTATION_VERIFIER_VERSION: 'implementation-verifier-1',
+  IMPLEMENTATION_VERIFIER_VERSION: 'implementation-verifier-2',
   IMPLEMENTATION_VERIFICATION_BATCH_MAX: 100,
   IMPLEMENTATION_VERIFICATION_HISTORY_MAX: 50,
-  VISIBILITY_METRIC_PROJECT_SCORE: 'visibility_score',
+  // New evidence re-checks a declaration only this long after it went live;
+  // after that its last observation stands. Declarations may be backdated by
+  // at most the same span, and never placed in the future beyond the skew.
+  VERIFICATION_WINDOW_DAYS: 30,
+  DECLARATION_FUTURE_SKEW_SECONDS: 300,
+  VISIBILITY_METRIC_PROMPT_SCORE: 'prompt_score',
   VISIBILITY_CHECK_MIN_DELTA: 1,
+  TRAFFIC_METRIC_CLICKS: 'clicks',
+  // Clicks per day: sync windows differ in length, so windows compare as rates.
+  TRAFFIC_CHECK_MIN_DAILY_GAIN: 0.1,
   OPPORTUNITY_RULES_BY_ID: {
     brand_absent_high_value_prompt: {
       action_path: 'owned',
@@ -83,26 +88,6 @@ export const opportunities = {
       rule_id: 'missing_structured_data',
       severity: 'medium',
       title: 'Missing structured data on owned page',
-    },
-    thin_content: {
-      action_path: 'owned',
-      enabled: true,
-      opportunity_type: 'site',
-      remediation:
-        'Add substantive, answer-oriented body content to the page so answer engines have enough text to quote and cite.',
-      rule_id: 'thin_content',
-      severity: 'low',
-      title: 'Thin content on owned page',
-    },
-    schema_type_mismatch: {
-      action_path: 'owned',
-      enabled: true,
-      opportunity_type: 'site',
-      remediation:
-        'The page already ships structured data, but not the schema.org type expected for its page type (e.g. Product on a product page, FAQPage on an FAQ page). Add the expected type to the existing JSON-LD so answer engines can classify and cite the page correctly.',
-      rule_id: 'schema_type_mismatch',
-      severity: 'high',
-      title: 'Structured data missing the expected schema type',
     },
     schema_properties_incomplete: {
       action_path: 'owned',
@@ -381,72 +366,25 @@ export const opportunities = {
     emerging_query: 'emerging_query',
     declining_query: 'declining_query',
   },
-  SITE_STRUCTURED_DATA_RULE_IDS: ['aeo.structured_data_present'],
-  SITE_SCHEMA_TYPE_RULE_IDS: ['aeo.schema_expected_for_type'],
-  SITE_THIN_CONTENT_RULE_IDS: ['technical.thin_content'],
   SITE_ISSUE_TO_OPPORTUNITY_RULE_ID: {
     'aeo.structured_data_present': 'missing_structured_data',
-    'aeo.schema_expected_for_type': 'schema_type_mismatch',
     'aeo.schema_required_valid': 'schema_properties_incomplete',
     'aeo.schema_recommended_present': 'schema_properties_incomplete',
     'aeo.product_evidence_facts': 'schema_properties_incomplete',
     'aeo.listing_item_facts': 'schema_properties_incomplete',
     'aeo.schema_matches_content': 'schema_visible_content_conflict',
-    'technical.thin_content': 'thin_content',
     'aeo.answer_first': 'content_structure_incomplete',
     'aeo.question_headings': 'content_structure_incomplete',
     'aeo.heading_hierarchy': 'content_structure_incomplete',
-    'aeo.editorial_lead_present': 'content_structure_incomplete',
-    'aeo.entity_value_proposition': 'content_structure_incomplete',
     'aeo.product_answer_facts': 'content_structure_incomplete',
     'aeo.listing_answer_set': 'content_structure_incomplete',
     'aeo.visible_attribution': 'citability_trust_incomplete',
     'aeo.content_date_present': 'citability_trust_incomplete',
     'aeo.offer_freshness_signal': 'citability_trust_incomplete',
-    'aeo.assortment_freshness_signal': 'citability_trust_incomplete',
     'aeo.source_support_present': 'citability_trust_incomplete',
     'aeo.organization_identity': 'citability_trust_incomplete',
     'aeo.trust_path_present': 'citability_trust_incomplete',
     'aeo.product_brand_identity': 'citability_trust_incomplete',
-  },
-  SITE_ISSUE_ATOM_PRESENTATION: {
-    'aeo.entity_value_proposition': [
-      [
-        ['entity_identity'],
-        [
-          'Name the organization in the page introduction',
-          "Add a clear, reader-visible organization identity to the page's primary content; keep the existing value proposition intact.",
-        ],
-      ],
-      [
-        ['value_proposition'],
-        [
-          'State what the organization provides',
-          'Add a substantive, reader-visible explanation of what the identified organization provides or helps visitors accomplish.',
-        ],
-      ],
-      [
-        ['entity_identity', 'value_proposition'],
-        [
-          'Identify the organization and what it provides',
-          "Add a clear organization identity and a substantive explanation of what it provides in the page's primary content.",
-        ],
-      ],
-      [
-        ['contact_path'],
-        [
-          'Provide a usable contact path',
-          'Add a reader-visible contact method or a clearly labelled contact form.',
-        ],
-      ],
-      [
-        ['contact_path', 'entity_identity'],
-        [
-          'Identify the organization and provide a contact path',
-          'Name the organization in primary content and add a reader-visible contact method or clearly labelled contact form.',
-        ],
-      ],
-    ],
   },
   SEVERITY_WEIGHTS: {
     critical: 4,
@@ -502,7 +440,6 @@ export const opportunities = {
   RECOMPUTE_MAX_ISSUES: 5000,
   LIST_DEFAULT_LIMIT: 50,
   LIST_MAX_LIMIT: 200,
-  MAX_EXPORT_ITEMS: 20000,
 };
 
 export const opportunityDefaults = {

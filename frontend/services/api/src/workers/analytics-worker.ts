@@ -123,6 +123,7 @@ export class AnalyticsWorker {
   readonly #executors: Readonly<Record<string, Executor>>;
   readonly #scope?: ClaimScope;
   readonly #signal?: AbortSignal;
+  readonly #access: (workspaceId: string) => Promise<unknown>;
 
   constructor(
     db: Database,
@@ -140,6 +141,7 @@ export class AnalyticsWorker {
     this.#executors = options.executors ?? EXECUTORS;
     this.#scope = options.taskScope;
     this.#signal = options.signal;
+    this.#access = cachedWorkspaceAccess(db, settings.accessCheckTtlSeconds * 1000);
     this.owner = options.owner ?? `analytics-worker-ts-${randomBytes(6).toString('hex')}`;
   }
 
@@ -154,11 +156,20 @@ export class AnalyticsWorker {
     if (this.#signal?.aborted) return 0;
     const rows = await this.#queue.claim({
       owner: this.owner,
-      kinds: this.#scope ? Object.keys(this.#executors) : policy.analytics.ts_owned_task_kinds,
+      kinds: this.#kinds(),
       scope: this.#scope,
     });
     for (const row of rows) await this.#execute(row);
     return rows.length;
+  }
+
+  /** When the earliest claimable task this worker owns becomes due, for the runner lane. */
+  nextDue(): Promise<Date | null> {
+    return this.#queue.nextDue(this.#kinds());
+  }
+
+  #kinds(): readonly string[] {
+    return this.#scope ? Object.keys(this.#executors) : policy.analytics.ts_owned_task_kinds;
   }
 
   /** Drain until a claim returns nothing (tests and one-shot runs). */
@@ -208,13 +219,13 @@ export class AnalyticsWorker {
           `analytics task kind '${claimed.task_kind}' has no registered executor`,
         );
       }
-      await requireWorkspaceAccess(this.#db, claimed.workspace_id);
+      await this.#access(claimed.workspace_id);
       this.#signal?.throwIfAborted();
       const settlement = await executor(claimed, {
         db: this.#db,
         maxAttempts: this.#settings.taskMaxAttempts,
         checkCancelled: async (boundary) => {
-          await requireWorkspaceAccess(this.#db, claimed.workspace_id);
+          await this.#access(claimed.workspace_id);
           if (heartbeat.signal.aborted || (await this.#queue.isTerminal(claimed.id))) {
             throw new TaskCancelledError(
               `analytics task ${claimed.id} reached a terminal status; stopping at the ${boundary} boundary`,
@@ -274,4 +285,4 @@ export class AnalyticsWorker {
     });
   }
 }
-import { requireWorkspaceAccess } from '../entitlements/access.ts';
+import { cachedWorkspaceAccess } from '../entitlements/access.ts';
