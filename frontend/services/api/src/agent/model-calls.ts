@@ -14,7 +14,12 @@ export type AgentModel = {
   endpointHost: string;
   model: string;
   retryableError: (error: unknown) => boolean;
-  complete: (request: ModelRequest, signal: AbortSignal) => Promise<ModelResult>;
+  /** `onText` receives the growing response when the destination can stream it. */
+  complete: (
+    request: ModelRequest,
+    signal: AbortSignal,
+    onText?: (content: string) => void,
+  ) => Promise<ModelResult>;
 };
 type Hold = { reservationId: string | null; credits: number; pricingRevision: string };
 /** Funding owner validates the exact frozen destination/capability per dispatch;
@@ -203,6 +208,7 @@ export class ModelCalls {
     model: AgentModel,
     request: ModelRequest,
     executionSignal?: AbortSignal,
+    onText?: (content: string) => void,
   ) {
     executionSignal?.throwIfAborted();
     const attempt = await this.dispatch(lease, ordinal, model, request);
@@ -212,7 +218,7 @@ export class ModelCalls {
       if (remaining <= 0) throw new AgentError('provider_error');
       const deadline = AbortSignal.timeout(remaining);
       const signal = executionSignal ? AbortSignal.any([deadline, executionSignal]) : deadline;
-      result = await abortable(() => model.complete(request, signal), signal);
+      result = await abortable(() => model.complete(request, signal, onText), signal);
     } catch (error) {
       await this.receipt(lease.workspaceId, attempt.id, null);
       throw new AgentError('provider_error', model.retryableError(error));

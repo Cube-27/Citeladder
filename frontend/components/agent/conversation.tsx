@@ -1,6 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Pencil, RotateCcw } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
@@ -16,6 +17,7 @@ import { textRole } from '@/components/ui/typography';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { runErrorCopy, runStepLabel } from '@/lib/agent/vocabulary';
 import { runOutcome } from '@/lib/agent/run-state';
+import { useLiveTurn, type LiveTurn } from '@/lib/agent/live-turns';
 import type { AgentChatDetail, AgentMessage, AgentRun } from '@/lib/api/agent';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
@@ -29,24 +31,26 @@ export function Conversation({
   output: outputView,
   onRefine,
   onRecover,
+  onRetry,
   hasDraft = false,
-  onStop,
-  stopping,
   canSend,
-  sending = false,
+  pendingMessage = null,
 }: Readonly<{
   detail: AgentChatDetail;
   output?: ReactNode;
   onRefine: (instruction: string) => void;
+  /** Puts a request back in the composer to edit. */
   onRecover: (message: AgentMessage) => void;
+  /** Sends a request again as a new turn. */
+  onRetry: (message: AgentMessage) => void;
   hasDraft?: boolean;
-  onStop: () => void;
-  stopping: boolean;
   canSend: boolean;
-  sending?: boolean;
+  /** A message whose send is in flight, shown before the server accepts it. */
+  pendingMessage?: string | null;
 }>) {
   const skills = useSkillCatalog();
   const outcome = runOutcome(detail.latest_run);
+  const live = useLiveTurn(outcome.kind === 'running' ? detail.latest_run?.id : null);
   const output = detail.output;
   const outputMessageId = output?.message_id ?? legacyOutputMessage(detail);
   return (
@@ -65,22 +69,16 @@ export function Conversation({
       {outputView && !outputMessageId ? (
         <div className={panelClasses({}, 'min-w-0')}>{outputView}</div>
       ) : null}
-      <RunState
-        outcome={outcome}
-        progress={detail.latest_run?.progress ?? []}
-        attemptCount={detail.latest_run?.attempt_count}
-        onStop={onStop}
-        stopping={stopping}
+      {pendingMessage ? <PendingMessage text={pendingMessage} /> : null}
+      {live?.text ? <LiveReply text={live.text} /> : null}
+      <RunState detail={detail} live={live} />
+      <TurnActions
+        detail={detail}
+        canSend={canSend}
+        onRetry={onRetry}
+        onEdit={onRecover}
+        hasDraft={hasDraft}
       />
-      {(detail.latest_run?.progress.length ?? 0) > 0 ? (
-        <RunActivity progress={detail.latest_run!.progress} />
-      ) : null}
-      {sending ? (
-        <output aria-live="polite" className={textRole('caption')}>
-          Sending message…
-        </output>
-      ) : null}
-      <TurnRecovery detail={detail} canSend={canSend} onReview={onRecover} hasDraft={hasDraft} />
       {output?.latest_revision && canSend && hasFreshDeliverable(detail) ? (
         <FollowUps
           kind={output.kind}
@@ -121,28 +119,73 @@ function hasFreshDeliverable(detail: AgentChatDetail): boolean {
   );
 }
 
-function TurnRecovery({
+/**
+ * What the reader can do with the latest turn: try a failed or stopped request
+ * again or edit it first, or regenerate a finished reply. Each sends a new
+ * turn; nothing earlier in the chat is rewritten.
+ */
+function TurnActions({
   detail,
   canSend,
-  onReview,
+  onRetry,
+  onEdit,
   hasDraft,
 }: Readonly<{
   detail: AgentChatDetail;
   canSend: boolean;
-  onReview: (message: AgentMessage) => void;
+  onRetry: (message: AgentMessage) => void;
+  onEdit: (message: AgentMessage) => void;
   hasDraft: boolean;
 }>) {
   const request = [...detail.messages].reverse().find((message) => message.role === 'user');
-  if (
-    !canSend ||
-    !request ||
-    !['failed', 'cancelled', 'stopped_at_limit'].includes(runOutcome(detail.latest_run).kind)
-  )
-    return null;
+  const kind = runOutcome(detail.latest_run).kind;
+  if (!canSend || !request || request.event?.kind === 'outline_approved') return null;
+  const ended = ['failed', 'cancelled', 'stopped_at_limit'].includes(kind);
+  if (!ended && kind !== 'succeeded') return null;
   return (
-    <Button variant="secondary" size="sm" onClick={() => onReview(request)}>
-      {hasDraft ? 'Replace draft with failed request' : 'Review request to try again'}
-    </Button>
+    <div className="flex flex-wrap items-center gap-2">
+      <Button variant="secondary" size="sm" onClick={() => onRetry(request)}>
+        <RotateCcw aria-hidden className="size-4" />
+        {ended ? 'Try again' : 'Regenerate'}
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => onEdit(request)}>
+        <Pencil aria-hidden className="size-4" />
+        {hasDraft ? 'Replace draft with last request' : 'Edit last request'}
+      </Button>
+    </div>
+  );
+}
+
+function PendingMessage({ text }: Readonly<{ text: string }>) {
+  return (
+    <div className="flex justify-end">
+      <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid max-w-[85%] gap-1')}>
+        <p className={textRole('body', 'whitespace-pre-wrap')}>{text}</p>
+        <output aria-live="polite" className={textRole('caption')}>
+          Sending…
+        </output>
+      </div>
+    </div>
+  );
+}
+
+/** The reply and document as they are written; the saved versions replace them. */
+function LiveReply({ text }: Readonly<{ text: NonNullable<LiveTurn['text']> }>) {
+  return (
+    <article aria-label="Agent reply in progress" aria-busy="true" className="grid gap-2">
+      <span className={textRole('label')}>Agent</span>
+      {text.reply ? <ContentMarkdown markdown={text.reply} density="compact" /> : null}
+      {text.body ? (
+        <section
+          aria-label={text.title ? `Writing ${text.title}` : 'Writing the document'}
+          className={panelClasses({}, 'grid min-w-0 gap-2')}
+        >
+          <span className={textRole('caption')}>Writing…</span>
+          {text.title ? <h2 className={textRole('sectionTitle')}>{text.title}</h2> : null}
+          <ContentMarkdown markdown={text.body} />
+        </section>
+      ) : null}
+    </article>
   );
 }
 
@@ -236,9 +279,9 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
     <Disclosure title="Context used">
       <div className="grid gap-2">
         <p className={textRole('caption')}>
-          {included.length
-            ? included.map((section) => labels[String(section)] ?? String(section)).join(' · ')
-            : 'No supplied context sections are recorded.'}
+          {included.some((section) => labels[String(section)])
+            ? included.flatMap((section) => labels[String(section)] ?? []).join(' · ')
+            : 'Business context and the chat so far.'}
         </p>
         {context.instructions ? (
           <p className={textRole('caption')}>
@@ -248,26 +291,10 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
         {context.action ? (
           <p className={textRole('caption')}>Action: {context.action.label}</p>
         ) : null}
-        {(context.sources?.length ?? 0) > 0 ? (
-          <p className={textRole('caption')}>
-            {context.sources!.length} persisted page source references
-          </p>
-        ) : null}
-        <ContextSources context={context} />
-        {typeof prompt.serialized_chars === 'number' ? (
-          <p className={textRole('caption')}>
-            Working context: {prompt.serialized_chars.toLocaleString()} of{' '}
-            {Number(prompt.max_chars).toLocaleString()} characters
-          </p>
-        ) : null}
         {omissions.length > 0 ? (
-          <ul aria-label="Context limitations" className="grid gap-1">
-            {omissions.map((omission, index) => (
-              <li key={index} className={textRole('caption')}>
-                {omissionLabel(omission)}
-              </li>
-            ))}
-          </ul>
+          <p className={textRole('caption')}>
+            Some older messages or context were left out to fit this turn.
+          </p>
         ) : null}
       </div>
     </Disclosure>
@@ -277,31 +304,6 @@ function promptItems(prompt: NonNullable<AgentChatDetail['context']['prompt']>, 
   const value = prompt[key];
   return Array.isArray(value) ? value : [];
 }
-function ContextSources({ context }: Readonly<{ context: AgentChatDetail['context'] }>) {
-  const references = Object.entries(context.refs ?? {});
-  if (!references.length && !context.sources?.length) return null;
-  return (
-    <details>
-      <summary className={textRole('caption', 'cursor-pointer')}>Source identities</summary>
-      <ul aria-label="Context source identities" className="grid gap-2 pt-2">
-        {references.map(([key, value]) => (
-          <li key={key} className={textRole('caption', 'break-all')}>
-            {key.replaceAll('_', ' ')}: {JSON.stringify(value)}
-          </li>
-        ))}
-        {(context.sources ?? []).map((source, index) => (
-          <li key={index} className={textRole('caption', 'break-all')}>
-            Persisted page source: {JSON.stringify(source)}
-          </li>
-        ))}
-      </ul>
-    </details>
-  );
-}
-function omissionLabel(omission: unknown) {
-  return typeof omission === 'string' ? omission.replaceAll('_', ' ') : JSON.stringify(omission);
-}
-
 /**
  * After a deliverable: refinements revise it in this chat; next steps start a
  * new chat with the workflow that takes the work forward, carrying the exact
@@ -375,42 +377,54 @@ function stepLabel(step: AgentMessage['steps'][number]): string {
 }
 
 function RunState({
-  outcome,
-  progress,
-  attemptCount,
-  onStop,
-  stopping,
-}: Readonly<{
-  outcome: ReturnType<typeof runOutcome>;
-  progress: AgentRun['progress'];
-  attemptCount: number | undefined;
-  onStop: () => void;
-  stopping: boolean;
-}>) {
+  detail,
+  live,
+}: Readonly<{ detail: AgentChatDetail; live: LiveTurn | undefined }>) {
+  const outcome = runOutcome(detail.latest_run);
+  const progress = detail.latest_run?.progress ?? [];
+  const answered = detail.messages.at(-1)?.role === 'agent';
   switch (outcome.kind) {
     case 'running':
       return (
-        <div className={cn('grid gap-2', textRole('body'))}>
-          <span className="flex items-center gap-3">
+        <div className="grid gap-2">
+          <span className={cn('flex items-center gap-3', textRole('caption'))}>
             <Spinner className="text-muted" />
             <output aria-live="polite" className="flex-1">
-              {outcome.queued ? 'Waiting to start…' : activeStepLabel(progress, attemptCount)}
+              {outcome.queued && !live?.steps.length
+                ? 'Waiting to start…'
+                : (liveStepLabel(live) ??
+                  activeStepLabel(progress, detail.latest_run?.attempt_count))}
+              <Elapsed since={live?.startedAt ?? Date.parse(detail.latest_run!.created_at)} />
             </output>
-            <Button variant="ghost" size="sm" disabled={stopping} onClick={onStop}>
-              Stop
-            </Button>
           </span>
+          {progress.length > 0 ? <RunActivity progress={progress} /> : null}
         </div>
       );
+    // Every ended turn now answers with its own reply; older ones may not have.
     case 'stopped_at_limit':
-      return <Alert tone="warning">{runErrorCopy('stopped_at_limit')}</Alert>;
+      return answered ? null : <Alert tone="warning">{runErrorCopy('stopped_at_limit')}</Alert>;
     case 'failed':
-      return <Alert tone="danger">{runErrorCopy(outcome.code)}</Alert>;
-    case 'cancelled':
-      return <p className={textRole('caption')}>Stopped. Nothing from this turn was saved.</p>;
+      return answered ? null : <Alert tone="danger">{runErrorCopy(outcome.code)}</Alert>;
     default:
       return null;
   }
+}
+function liveStepLabel(live: LiveTurn | undefined) {
+  const step = live?.steps.at(-1);
+  return step ? runStepLabel(step) : null;
+}
+function Elapsed({ since }: Readonly<{ since: number }>) {
+  const now = useNow(1000);
+  const seconds = Math.max(0, Math.round((now - since) / 1000));
+  return seconds >= 3 ? <span className="text-muted"> · {seconds}s</span> : null;
+}
+function useNow(intervalMs: number) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(timer);
+  }, [intervalMs]);
+  return now;
 }
 function activeStepLabel(progress: AgentRun['progress'], attemptCount: number | undefined) {
   const currentAttempt = attemptCount ?? progress.at(-1)?.run_attempt;
@@ -424,7 +438,7 @@ function RunActivity({ progress }: Readonly<{ progress: AgentRun['progress'] }>)
       <ol aria-label="Agent progress" className="grid gap-1 ps-4 pt-2">
         {progress.map((step) => (
           <li key={`${step.run_attempt}:${step.ordinal}`} className={textRole('caption')}>
-            Attempt {step.run_attempt} · Step {step.ordinal} · {runStepLabel(step)}
+            {runStepLabel(step)}
           </li>
         ))}
       </ol>

@@ -84,6 +84,32 @@ describe('configured model gateway', () => {
     ).rejects.toMatchObject({ code: 'connection' });
     expect(cancelled.fetch).toHaveBeenCalledTimes(1);
   });
+  it('streams text to a listener and settles the same result as a buffered call', async () => {
+    const frames = [
+      { model: 'returned-model', choices: [{ delta: { content: '{"answer":' } }] },
+      { choices: [{ delta: { content: '42}' }, finish_reason: 'stop' }] },
+      { choices: [], usage: { prompt_tokens: 12, completion_tokens: 5 } },
+    ];
+    const sse = `${frames.map((frame) => `data: ${JSON.stringify(frame)}\n\n`).join('')}data: [DONE]\n\n`;
+    const io = transport([
+      new Response(sse, { headers: { 'content-type': 'text/event-stream' } }),
+      reply(),
+    ]);
+    const gateway = createModelGateway({ ...settings, streaming: true }, io);
+    const seen: string[] = [];
+    const streamed = await gateway.complete('s', 'u', undefined, (text) => seen.push(text));
+    expect(seen.at(-1)).toBe('{"answer":42}');
+    expect(streamed).toMatchObject({
+      content: '{"answer":42}',
+      finish_status: 'stop',
+      returned_model: 'returned-model',
+      usage: { input_tokens: 12, output_tokens: 5 },
+    });
+    expect(JSON.parse(String(io.fetch.mock.calls[0]![1]!.body))).toMatchObject({ stream: true });
+    // Without a listener the request stays buffered.
+    await gateway.complete('s', 'u');
+    expect(JSON.parse(String(io.fetch.mock.calls[1]![1]!.body)).stream).toBeUndefined();
+  });
   it('validates structured JSON and records actual model and usage', async () => {
     const io = transport([reply()]);
     const gateway = createModelGateway(settings, io);

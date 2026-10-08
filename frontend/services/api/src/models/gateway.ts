@@ -24,6 +24,8 @@ export type GatewaySettings = {
   attempts: number;
   baseDelaySeconds: number;
   maxDelaySeconds: number;
+  /** Request token streaming when a caller listens; only for transports that pass streams through. */
+  streaming?: boolean;
 };
 
 export function gatewaySettings(
@@ -55,6 +57,67 @@ const completion = z.object({
     .min(1),
   usage: z.record(z.string(), z.unknown()).optional(),
 });
+const streamChunk = z.object({
+  model: z.string().optional(),
+  choices: z
+    .array(
+      z.object({
+        delta: z.object({ content: z.string().nullish() }).nullish(),
+        finish_reason: z.string().nullish(),
+      }),
+    )
+    .optional(),
+  usage: z.record(z.string(), z.unknown()).nullish(),
+});
+type Completion = z.infer<typeof completion>;
+
+/**
+ * An OpenAI-compatible event stream folded into the buffered completion shape,
+ * so settlement and parsing never depend on how the text arrived.
+ */
+async function streamedCompletion(
+  response: Response,
+  onText: (content: string) => void,
+): Promise<Completion> {
+  if (!response.body) throw new ModelError('parse');
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = '';
+  let content = '';
+  let model: string | undefined;
+  let finish: string | null = null;
+  let usage: Record<string, unknown> | undefined;
+  const line = (raw: string) => {
+    const data = raw.startsWith('data:') ? raw.slice(5).trim() : '';
+    if (!data || data === '[DONE]') return;
+    let chunk;
+    try {
+      chunk = streamChunk.parse(JSON.parse(data));
+    } catch {
+      throw new ModelError('parse');
+    }
+    model = chunk.model ?? model;
+    usage = chunk.usage ?? usage;
+    const choice = chunk.choices?.[0];
+    content += choice?.delta?.content ?? '';
+    finish = choice?.finish_reason ?? finish;
+  };
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += value;
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+    for (const raw of lines) line(raw.trim());
+    onText(content);
+  }
+  line(buffer.trim());
+  return completion.parse({
+    model,
+    choices: [{ message: { content }, finish_reason: finish }],
+    usage,
+  });
+}
+
 const logger = getLogger('app.connectors.agent.client');
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
@@ -114,7 +177,13 @@ export function createModelGateway(
   const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
   const base = stripTrailing(endpoint.href, '/');
   const url = base.endsWith('/chat/completions') ? base : endpointUrl(base, '/chat/completions');
-  async function complete(system: string, user: string, signal?: AbortSignal) {
+  async function complete(
+    system: string,
+    user: string,
+    signal?: AbortSignal,
+    onText?: (content: string) => void,
+  ) {
+    const stream = Boolean(onText && settings.streaming);
     const started = performance.now();
     // Retries share one call's timeout, the envelope of a single provider call.
     const deadline = AbortSignal.any([
@@ -132,6 +201,7 @@ export function createModelGateway(
             { role: 'user', content: user },
           ],
           [legacy ? 'max_tokens' : 'max_completion_tokens']: settings.maxOutputTokens,
+          ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
         },
         retry,
         transport,
@@ -152,9 +222,21 @@ export function createModelGateway(
         model: settings.model,
         error_code: providerErrorCode(response.status),
       });
-    const parsed = completion.safeParse(await modelJson(response));
-    if (!parsed.success) throw new ModelError('parse');
-    const body = parsed.data;
+    let body: Completion;
+    // A provider may ignore the stream request; its JSON answer is read as usual.
+    if (stream && response.ok && response.headers.get('content-type')?.includes('event-stream')) {
+      try {
+        body = await streamedCompletion(response, onText!);
+      } catch (error) {
+        if (error instanceof ModelError) throw error;
+        // A dropped stream is a connection failure, which the caller may retry.
+        throw new ModelError('connection');
+      }
+    } else {
+      const parsed = completion.safeParse(await modelJson(response));
+      if (!parsed.success) throw new ModelError('parse');
+      body = parsed.data;
+    }
     const usage = normalizedUsage(body.usage);
     const latency = Math.round(performance.now() - started);
     logger.info('default agent call ok', { latency_ms: latency, model: settings.model });
@@ -178,11 +260,13 @@ export function createModelGateway(
       user: string,
       schema: Record<string, unknown>,
       signal?: AbortSignal,
+      onText?: (content: string) => void,
     ) {
       const result = await complete(
         system,
         `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`,
         signal,
+        onText,
       );
       return { ...result, content: unfenced(result.content) };
     },

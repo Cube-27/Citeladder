@@ -30,5 +30,6 @@
   "differentiation_report_limit": 10,
   "recovery_batch_size": 100,
   "heartbeat_seconds": 20.0,
+  "stream_heartbeat_seconds": 15.0,
   "run_max_attempts": 3
 }

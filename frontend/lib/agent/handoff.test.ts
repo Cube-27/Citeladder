@@ -36,16 +36,20 @@ describe('agent handoff', () => {
     for (const chip of chips)
       expect(withoutContext(full.context, chip.key)[chip.key]).toBeUndefined();
   });
-  it.each(['prompt_discovery', 'ai_visibility', 'earned_authority', 'content_create'])(
-    'carries the selected %s skill without sending a chat',
-    (skillId) => {
-      expect(parse(agentHandoffHref({ skillId, prompt: 'Investigate this' }))).toMatchObject({
-        skillId,
-        prompt: 'Investigate this',
-        context: {},
-      });
-    },
-  );
+  it('carries a selected skill and workflow without sending a chat, dropping a malformed id', () => {
+    const href = agentHandoffHref({
+      skillId: 'earned_authority',
+      workflowId: 'linkedin_post',
+      prompt: 'Investigate this',
+    });
+    expect(parse(href)).toMatchObject({
+      skillId: 'earned_authority',
+      workflowId: 'linkedin_post',
+      prompt: 'Investigate this',
+      context: {},
+    });
+    expect(parse('/agent?workflow=Not%20an%20id')).not.toHaveProperty('workflowId');
+  });
   it('round-trips typed references and a prefilled question', () => {
     const handoff = parse(
       agentHandoffHref({

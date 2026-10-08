@@ -29,6 +29,7 @@ import { lockRun, terminalize } from './queue.ts';
 import { appendMessage, appendRecoveryReply, getChat } from './messages.ts';
 import { outlineRequired, usesFormats } from './skills.ts';
 import { boundedSources, readSources, scrubRecordRefs } from './sources.ts';
+import { textEmitter, type TurnEvents } from './stream.ts';
 import { leaseSignal } from '../queue/heartbeat.ts';
 import { refused, ToolRegistry, type ToolOutcome } from './tools.ts';
 
@@ -179,10 +180,11 @@ export class AgentRuntime {
       };
     });
   }
-  async execute(lease: Lease, signal?: AbortSignal) {
+  /** `events` listens to this execution only; persisted state never depends on it. */
+  async execute(lease: Lease, signal?: AbortSignal, events?: TurnEvents) {
     const latest: { summary?: PromptSummary } = {};
     try {
-      await this.turn(lease, latest, signal);
+      await this.turn(lease, latest, signal, events);
     } catch (error) {
       if (signal?.aborted) return;
       if (error instanceof AgentError && error.code === 'lease') return;
@@ -190,7 +192,12 @@ export class AgentRuntime {
       await this.fail(lease, failureCode(error), latest.summary);
     }
   }
-  private async turn(lease: Lease, latest: { summary?: PromptSummary }, signal?: AbortSignal) {
+  private async turn(
+    lease: Lease,
+    latest: { summary?: PromptSummary },
+    signal?: AbortSignal,
+    events?: TurnEvents,
+  ) {
     signal?.throwIfAborted();
     const turn = await this.load(lease);
     const budget = turn.budget;
@@ -207,7 +214,15 @@ export class AgentRuntime {
       );
       latest.summary = assembled.summary;
       await requireWorkspaceAccess(this.db, lease.workspaceId);
-      const result = await this.deps.models.call(lease, ordinal, model, assembled.request, signal);
+      events?.step?.({ ordinal, tool: null, status: 'working' });
+      const result = await this.deps.models.call(
+        lease,
+        ordinal,
+        model,
+        assembled.request,
+        signal,
+        events?.text ? textEmitter(ordinal, events.text) : undefined,
+      );
       signal?.throwIfAborted();
       // A cut-off step cannot be repaired by asking again: the same request is cut again.
       if (result.finish_status === 'length') throw new AgentError('output_too_long');
@@ -251,7 +266,8 @@ export class AgentRuntime {
         return;
       }
       // Sequential by design: each step's prompt depends on the previous committed result.
-      await this.callTool(lease, turn.scope, ordinal, step, budget, state, signal); // NOSONAR
+      const status = await this.callTool(lease, turn.scope, ordinal, step, budget, state, signal); // NOSONAR
+      events?.step?.({ ordinal, tool: step.tool, status });
     }
     throw new AgentError('stopped_at_limit');
   }
@@ -333,6 +349,7 @@ export class AgentRuntime {
     state.steps.push({ kind: 'tool', tool: step.tool, status: outcome.status });
     state.read.push(...readSources(outcome.refs));
     state.transcript.push({ text: `Tool ${step.tool}: ${outcome.status}\n${outcome.text}` });
+    return outcome.status;
   }
   private prompt(
     turn: Turn,

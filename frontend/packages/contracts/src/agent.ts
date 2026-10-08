@@ -47,6 +47,29 @@ export const agentRunSchema = responseObject({
   progress: z.array(agentRunStepSchema).default([]),
 });
 
+/**
+ * Live events of one interactive turn, streamed by `POST …/run` when the
+ * browser accepts `text/event-stream`. Display only: `text` is the reply and
+ * document as they are written, and the persisted chat read stays the record.
+ */
+export const agentTurnEventSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('step'),
+    ordinal: z.number().int(),
+    tool: z.string().nullable(),
+    status: z.string(),
+  }),
+  z.object({
+    type: z.literal('text'),
+    ordinal: z.number().int(),
+    reply: z.string(),
+    title: z.string().nullable(),
+    body: z.string().nullable(),
+  }),
+  z.object({ type: z.literal('done'), run: agentRunSchema }),
+  z.object({ type: z.literal('error'), code: z.string() }),
+]);
+
 export const agentOutputPhaseSchema = z.enum(['outline', 'draft', 'final']);
 
 export const agentRevisionSchema = responseObject({
