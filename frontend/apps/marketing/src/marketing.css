@@ -215,9 +215,11 @@
 /* A product view keeps its desktop layout at every width. Below its design
    width the view lays out at that width and `zoom` shrinks it to fit, so a
    phone sees the same picture as a laptop rather than a reflowed column that
-   ran several screens tall. tan(atan2(a, b)) is the unitless ratio a / b. */
+   ran several screens tall. tan(atan2(a, b)) is the unitless ratio a / b.
+   Design widths are in px, not rem: a larger root font size then enlarges the
+   text inside the frame instead of widening the frame and zooming it back. */
 .product-fit {
-  --product-fit-width: 27rem;
+  --product-fit-width: 432px;
   container-type: inline-size;
 }
 
