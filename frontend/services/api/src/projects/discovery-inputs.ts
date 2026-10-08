@@ -53,7 +53,9 @@ export const discoveryProfile = brandDiscoverySchema.shape.profile.extend({
 });
 export const discoveryComplete = z.object({
   name: z.string().trim().min(1).max(255).optional(),
-  profile: discoveryProfile.extend({ category: z.string().trim().min(1).max(160) }),
+  profile: discoveryProfile.extend({
+    category: z.string().trim().min(1).max(profile.category_max_chars),
+  }),
   domains: z
     .array(z.string().trim().min(1).max(constants.discovery_confirm_domain_max_chars))
     .min(1)

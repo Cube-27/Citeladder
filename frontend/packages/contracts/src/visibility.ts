@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { auditStatusSchema, modelProvenanceSchema } from './audits.ts';
-import { promptCohortSchema } from './project.ts';
+import { buyerTypeSchema, marketScopeSchema, promptCohortSchema } from './project.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -190,7 +190,7 @@ const discoveryProfileSchema = responseObject({
   products_services: z.array(z.string()),
   target_audience: z.string(),
   industry: z.string(),
-  business_type: z.enum(['b2b', 'b2c', 'both']).nullable(),
+  business_type: buyerTypeSchema.nullable(),
   price_tier: z.string(),
   field_confidence: z.record(z.string(), z.number()),
   // Resolved business context. `category` and `category_terms` are open
@@ -204,29 +204,11 @@ const discoveryProfileSchema = responseObject({
   sector: z.string().nullable().default(null),
   business_model: z.string().nullable().default(null),
   secondary_business_models: z.array(z.string()).default([]),
-  market_scope: z.enum(['global', 'national', 'regional', 'local']).nullable().default(null),
+  market_scope: marketScopeSchema.nullable().default(null),
   buyer_register: z.string().nullable().default(null),
   buyer_roles: z.array(z.string()).default([]),
   service_areas: z.array(z.string()).default([]),
   knowledge_strength: z.enum(['strong', 'weak', 'none']).default('none'),
-});
-
-const discoveryPromptSuggestionSchema = responseObject({
-  // Brand diagnostics measure the brand as a whole and are intentionally not
-  // filed under one organic topic.
-  topic_id: uuid().nullable(),
-  text: z.string(),
-  intent: z.enum(['discovery', 'comparison', 'purchase', 'service', 'local']),
-  cohort: promptCohortSchema,
-});
-
-const discoveryTopicSchema = responseObject({
-  topic_id: uuid(),
-  name: z.string(),
-  description: z.string(),
-  // `source_refs` on the wire: the offering entries or fetched pages that
-  // supported this topic. Renamed from `evidence_refs` alongside the backend.
-  source_refs: z.array(z.string()),
 });
 
 const discoveryEvidenceSchema = responseObject({
@@ -244,10 +226,7 @@ export const brandDiscoverySchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   project_id: uuid().nullable(),
-  // `completing` is legacy: a discovery accepted before onboarding stopped
-  // generating prompts, until the worker drain finalizes it. Keep it while the
-  // backend retains LEGACY_DISCOVERY_STATUS_COMPLETING.
-  status: z.enum(['queued', 'running', 'failed', 'ready', 'completing', 'project_created']),
+  status: z.enum(['queued', 'running', 'failed', 'ready', 'project_created']),
   progress: responseObject({
     phase: z.enum([
       'opening_website',
@@ -260,7 +239,6 @@ export const brandDiscoverySchema = responseObject({
     total_steps: z.number().int().positive(),
     pages_read: z.number().int().nonnegative(),
     competitors_found: z.number().int().nonnegative(),
-    prompts_prepared: z.number().int().nonnegative(),
   }),
   input_data: z.record(z.string(), z.unknown()),
   profile: discoveryProfileSchema,
@@ -272,37 +250,23 @@ export const brandDiscoverySchema = responseObject({
       domains: z.array(z.string()),
     }),
   ),
-  topics: z.array(discoveryTopicSchema),
-  prompt_suggestions: z.array(discoveryPromptSuggestionSchema),
   evidence: z.array(discoveryEvidenceSchema),
   warnings: z.array(z.string()),
-  gaps: z.array(z.string()),
   error_code: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
 });
 
 export const brandDiscoveryCatalogSchema = responseObject({
-  business_types: z.array(z.enum(['b2b', 'b2c', 'both'])),
-  price_tiers: z.array(z.string()),
-  required_fields: z.array(z.string()),
-  optional_fields: z.array(z.string()),
-  capture_methods: z.array(z.string()),
   maximum_competitors: z.number().int().positive(),
   industries: z.array(z.string()),
   subindustries: z.record(z.string(), z.array(z.string())),
-  prompt_cohorts: z.array(z.string()),
 });
 
-// Completion creates the project in the request. Onboarding generates no
-// prompts, so the project starts with an empty prompt set. `failed` is only
-// reported when replaying a completion that failed before that change.
+// Completion creates the project in the request, with an empty prompt set.
+// A replay after the project was deleted reports no project.
 export const brandDiscoveryCompleteSchema = responseObject({
   discovery_id: uuid(),
-  status: z.enum(['project_created', 'failed']),
   project_id: uuid().nullable(),
-  crawl_id: uuid().nullable(),
-  activation_state: z.enum(['queued']),
-  page_limit: z.number().int().positive().nullable(),
   warnings: z.array(z.string()),
 });

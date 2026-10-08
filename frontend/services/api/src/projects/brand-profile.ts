@@ -3,7 +3,8 @@
  *
  * Native onboarding creates the profile and prompt generation records
  * business-map suggestions in its `business_context`; people edit the four
- * knowledge fields here. Every TypeScript writer takes the project advisory
+ * knowledge fields and the identity facets (category, buyer type, market scope)
+ * here. Every TypeScript writer takes the project advisory
  * lock before the profile row, shared with native generation.
  */
 import { randomUUID } from 'node:crypto';
@@ -12,6 +13,8 @@ import {
   brandProfileReviewStateSchema,
   brandProfileSchema,
   brandProfileSourceSchema,
+  buyerTypeSchema,
+  marketScopeSchema,
 } from '@citeladder/contracts/project';
 import type { Selectable } from 'kysely';
 import { z } from 'zod';
@@ -51,7 +54,11 @@ export const brandProfileUpdate = z.object({
   positioning: text,
   products_services: z.array(z.string().max(PRODUCT_MAX)).max(PRODUCTS_MAX).nullish(),
   target_audience: text,
+  category: z.string().trim().min(1).max(policy.brand_identity.category_max_chars).nullish(),
+  buyer_type: buyerTypeSchema.nullish(),
+  market_scope: marketScopeSchema.nullish(),
 });
+const IDENTITY_FACETS = ['category', 'buyer_type', 'market_scope'] as const;
 export type BrandProfileUpdate = z.infer<typeof brandProfileUpdate>;
 
 const contractProvenance = brandProfileSchema.shape.sources.shape.description.unwrap();
@@ -222,10 +229,29 @@ export function updateBrandProfile(
       };
       delete artifacts[field];
     }
+    const context = jsonObject(row.business_context, 'brand_profiles.business_context');
+    const facets = IDENTITY_FACETS.filter((facet) => update[facet] != null);
+    if (facets.length) {
+      const fieldSources: Record<string, unknown> = {
+        ...jsonObject(context.field_sources ?? {}, 'business_context.field_sources'),
+      };
+      for (const facet of facets) {
+        context[facet] = update[facet];
+        fieldSources[facet] = 'reviewed';
+      }
+      // Older contexts named the buyer facet `business_type`; a reviewed
+      // buyer type supersedes it.
+      if (facets.includes('buyer_type')) {
+        delete context.business_type;
+        delete fieldSources.business_type;
+      }
+      context.field_sources = fieldSources;
+    }
     const updated = await trx
       .updateTable('brand_profiles')
       .set({
         ...values,
+        ...(facets.length ? { business_context: JSON.stringify(context) } : {}),
         sources: JSON.stringify(sources),
         source_artifact_ids: JSON.stringify(artifacts),
         updated_at: now,

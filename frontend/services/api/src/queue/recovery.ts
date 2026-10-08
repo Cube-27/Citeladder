@@ -95,11 +95,7 @@ export async function recoverDiscoveryLeases(db: Database, batchSize = queueReco
         .executeTakeFirst();
       if (
         !parent ||
-        [
-          cfg.discovery_status_ready,
-          cfg.legacy_discovery_status_completing,
-          cfg.discovery_status_project_created,
-        ].includes(parent.status)
+        [cfg.discovery_status_ready, cfg.discovery_status_project_created].includes(parent.status)
       )
         continue;
       const warnings = Array.isArray(parent.warnings) ? parent.warnings : [];

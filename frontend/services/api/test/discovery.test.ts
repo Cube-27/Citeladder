@@ -329,12 +329,48 @@ describe('durable onboarding', () => {
       .where('discovery_id', '=', rows[0]!.id)
       .execute();
     expect(tasks).toHaveLength(1);
-    await expect(discoveryRow(db, randomUUID(), rows[0]!.id)).rejects.toMatchObject({
-      status: 404,
+  });
+  it('scopes discovery routes to the workspace and its writers over HTTP', async () => {
+    const a = await tenant(),
+      b = await tenant();
+    const app = createApp(testConfig(), db, { startRunner: vi.fn(async () => {}) });
+    const as = async (userId: string) => ({
+      cookie: `${testConfig().session.cookieName}=${await sessionToken({ sub: userId, ver: 0 })}`,
+      'content-type': 'application/json',
+      'idempotency-key': randomUUID(),
     });
+    const queued = await createDiscovery(db, a.workspaceId, input, randomUUID());
+    const reviewed = await ready(a.workspaceId);
+    const read = (id: string, userId: string) =>
+      as(userId).then((headers) => app.request(`/api/v1/brand-discoveries/${id}`, { headers }));
+    const complete = (id: string, userId: string, body: unknown) =>
+      as(userId).then((headers) =>
+        app.request(`/api/v1/brand-discoveries/${id}/complete`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        }),
+      );
+    expect((await read(queued.id, a.userId)).status).toBe(200);
+    expect((await read(queued.id, b.userId)).status).toBe(404);
+    const viewer = await fixtures.user();
+    await fixtures.member(a.workspaceId, viewer, 'viewer');
+    const create = await app.request('/api/v1/brand-discoveries', {
+      method: 'POST',
+      headers: await as(viewer),
+      body: JSON.stringify(input),
+    });
+    expect(create.status).toBe(403);
+    expect((await complete(reviewed.id, viewer, completion)).status).toBe(403);
+    const six = Array.from({ length: 6 }, (_, index) => ({
+      name: `Peer ${index}`,
+      domains: [`peer-${index}.example`],
+    }));
     expect(
-      (await createApp(testConfig(), db).request('/api/v1/brand-discovery-catalog')).status,
-    ).toBe(200);
+      (await complete(reviewed.id, a.userId, { ...completion, competitors: six })).status,
+    ).toBe(422);
+    expect((await complete(queued.id, a.userId, completion)).status).toBe(409);
+    expect((await discoveryRow(db, a.workspaceId, reviewed.id)).project_id).toBeNull();
   });
   it('completes once atomically without prompts or a crawl and freezes reviewed input', async () => {
     const t = await tenant();
@@ -425,12 +461,7 @@ describe('durable onboarding', () => {
     const worker = new DiscoveryWorker(db, { fetcher, gateway: null, env: {} });
     await worker.runOnce('test-worker');
     const after = await discoveryRow(db, t.workspaceId, row.id);
-    expect(after).toMatchObject({
-      status: 'ready',
-      topics: [],
-      prompt_suggestions: [],
-      project_id: null,
-    });
+    expect(after).toMatchObject({ status: 'ready', project_id: null });
     expect(after.warnings).toContain('research_degraded');
     const snapshot = await db
       .selectFrom('brand_research_snapshots')
@@ -490,63 +521,36 @@ describe('durable onboarding', () => {
       ).status,
     ).toBe('running');
   });
-  it('retries transport failures with redacted errors and drains legacy completion without another research call', async () => {
+  it('retries transport failures without exposing provider errors and keeps the runner for the retry', async () => {
     const t = await tenant();
     const row = await createDiscovery(db, t.workspaceId, input, randomUUID());
     const worker = new DiscoveryWorker(db, { fetcher, gateway: null, env: {} });
-    const task = (await worker.queue.claim('retry-worker'))!;
+    const task = (await worker.queue.claim('retry-worker', {
+      workspaceId: t.workspaceId,
+      discoveryId: row.id,
+    }))!;
     await worker.finish(task, 'retry-worker', null, new Error('secret provider response'));
     const retry = await db
       .selectFrom('brand_discovery_tasks')
       .selectAll()
       .where('id', '=', task.id)
       .executeTakeFirstOrThrow();
-    expect(retry).toMatchObject({
-      status: 'retry_wait',
-      attempt_count: 1,
-      lease_owner: null,
-      error_detail: 'Brand research could not complete',
-    });
+    expect(retry).toMatchObject({ status: 'retry_wait', attempt_count: 1, lease_owner: null });
+    // The runner lane waits for a retry due soon instead of idling until the tick.
+    const due = await worker.queue.nextDue();
+    expect(due!.getTime()).toBeLessThanOrEqual(retry.available_at.getTime());
     await db
       .updateTable('brand_discovery_tasks')
       .set({ available_at: new Date(), max_attempts: 2 })
       .where('id', '=', task.id)
       .execute();
-    const final = (await worker.queue.claim('final-worker'))!;
-    await worker.finish(final, 'final-worker', null, new Error('another sensitive failure'));
-    expect(await discoveryRow(db, t.workspaceId, row.id)).toMatchObject({
-      status: 'failed',
-      error_detail: 'Brand research could not complete',
-    });
-    const legacy = await ready(t.workspaceId);
-    const accepted = await completeDiscovery(
-      db,
-      t.workspaceId,
-      t.userId,
-      legacy.id,
-      completion,
-      randomUUID(),
-    );
-    await db
-      .updateTable('brand_discoveries')
-      .set({ status: 'completing' })
-      .where('id', '=', legacy.id)
-      .execute();
-    await db
-      .updateTable('brand_discovery_tasks')
-      .set({ task_kind: 'brand_completion', status: 'queued', available_at: new Date() })
-      .where('discovery_id', '=', legacy.id)
-      .execute();
-    const network = vi.fn<WebsiteFetcher>(async () => {
-      throw new Error('must not fetch');
-    });
-    await new DiscoveryWorker(db, { fetcher: network, gateway: null, env: {} }).runOnce(
-      'legacy-worker',
-    );
-    expect(await discoveryRow(db, t.workspaceId, legacy.id)).toMatchObject({
-      status: 'project_created',
-      project_id: accepted.project_id,
-    });
-    expect(network).not.toHaveBeenCalled();
+    const final = (await worker.queue.claim('final-worker', {
+      workspaceId: t.workspaceId,
+      discoveryId: row.id,
+    }))!;
+    await worker.finish(final, 'final-worker', null, new Error('another secret failure'));
+    const failed = await discoveryRow(db, t.workspaceId, row.id);
+    expect(failed.status).toBe('failed');
+    expect(JSON.stringify([failed, retry])).not.toMatch(/secret/);
   });
 });

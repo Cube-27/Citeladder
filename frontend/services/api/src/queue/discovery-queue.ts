@@ -39,10 +39,7 @@ export class DiscoveryQueue {
             .where('brand_discovery_tasks.workspace_id', '=', target!.workspaceId)
             .where('brand_discovery_tasks.discovery_id', '=', target!.discoveryId),
         )
-        .where('task_kind', 'in', [
-          policy.discovery.constants.task_kind_brand_discovery,
-          policy.discovery.constants.legacy_task_kind_brand_completion,
-        ])
+        .where('task_kind', '=', policy.discovery.constants.task_kind_brand_discovery)
         .orderBy(sql`turns.last_claimed_at asc nulls first`)
         .orderBy('priority', 'desc')
         .orderBy('available_at')
@@ -81,6 +78,17 @@ export class DiscoveryQueue {
         .execute();
       return task;
     });
+  }
+  /** Earliest claimable time, so an idle runner stays for a retry due soon. */
+  async nextDue(): Promise<Date | null> {
+    const row = await this.db
+      .selectFrom(table)
+      .select((eb) => eb.fn.min('available_at').as('due'))
+      .where('status', 'in', claimable)
+      .whereRef('attempt_count', '<', 'max_attempts')
+      .where('task_kind', '=', policy.discovery.constants.task_kind_brand_discovery)
+      .executeTakeFirst();
+    return row?.due ? new Date(row.due) : null;
   }
   async heartbeat(task: DiscoveryTask, owner: string) {
     const now = this.now();

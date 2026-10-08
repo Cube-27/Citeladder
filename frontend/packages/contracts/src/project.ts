@@ -217,6 +217,10 @@ const brandProfileSourceArtifactsSchema = responseObject({
   target_audience: uuid().nullable(),
 });
 
+// Closed identity facets confirmed at onboarding and editable on the brand profile.
+export const buyerTypeSchema = z.enum(['b2b', 'b2c', 'both']);
+export const marketScopeSchema = z.enum(['global', 'national', 'regional', 'local']);
+
 export const brandProfileDraftSchema = responseObject({
   description: z.string(),
   positioning: z.string(),
