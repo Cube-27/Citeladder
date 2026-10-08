@@ -2,7 +2,8 @@
 
 Feature 6 of the [feature review tracker](feature-review-tracker.md): integrations
 (Search Console, GA4, Bing), sync, Performance, AI Referrals and Search Demand.
-This is its audit-derived plan. Shipped behaviour is owned by
+This is its audit-derived plan. **Status: implemented (2026-10-08) in one PR**; every
+phase item shipped, with the deferrals below. Shipped behaviour is owned by
 [Connected data](../integrations-traffic-analytics.md), not by this plan.
 Constraints: [invariants](../invariants.md), especially workspace authorization,
 persisted-projection reads, commit-before-network-I/O and distinct unknown /
