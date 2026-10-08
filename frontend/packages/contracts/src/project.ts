@@ -7,12 +7,25 @@ const uuid = () => z.uuid();
 // Brand / project / prompts
 // ---------------------------------------------------------------------------
 
+// When a brand or competitor name counts as a mention. `context_required`
+// counts an occurrence only with a context term nearby; an exclusion phrase
+// ("target audience") never counts. `common_word` marks a name that is an
+// ordinary word, which defaults to needing context.
+export const entityMatchingModeSchema = z.enum(['always', 'context_required']);
+export const entityMatchingSchema = responseObject({
+  mode: entityMatchingModeSchema,
+  context_terms: z.array(z.string()).default([]),
+  exclusion_phrases: z.array(z.string()).default([]),
+  common_word: z.boolean().default(false),
+});
+
 export const competitorSchema = responseObject({
   id: uuid(),
   name: z.string(),
   aliases: z.array(z.string()),
   domains: z.array(z.string()),
   logo_url: z.string().nullable().optional(),
+  matching: entityMatchingSchema.optional(),
 });
 
 // Intent enum. The B3 backend `normalize_intent` casefolds a free-text intent
@@ -280,6 +293,7 @@ export const projectSchema = responseObject({
   brand: responseObject({
     aliases: z.array(z.string()),
     logo_url: z.string().nullable().optional(),
+    matching: entityMatchingSchema.optional(),
   }),
   owned_domains: z.array(z.string()),
   unintended_domains: z.array(z.string()),

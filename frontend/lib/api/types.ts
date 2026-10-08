@@ -20,6 +20,7 @@ import type {
   authResponseSchema,
   registrationResponseSchema,
   competitorSchema,
+  entityMatchingSchema,
   modelProvenanceSchema,
   providerConnectionStateEntrySchema,
   providerConnectionStateSchema,
@@ -132,6 +133,7 @@ export type BusinessMap = z.infer<typeof businessMapSchema>;
 export type BusinessMapEntry = z.infer<typeof businessMapEntrySchema>;
 export type Project = z.infer<typeof projectSchema>;
 export type Competitor = z.infer<typeof competitorSchema>;
+export type EntityMatching = z.infer<typeof entityMatchingSchema>;
 export type TransportProvider = z.infer<typeof transportProviderSchema>;
 export type LogicalEngine = z.infer<typeof logicalEngineSchema>;
 export type SurfaceKind = z.infer<typeof surfaceKindSchema>;

@@ -149,6 +149,52 @@ describe('project owner', () => {
     await deleteProject(db, scope);
     await expect(readProject(db, scope)).rejects.toMatchObject({ status: 404 });
   });
+  it('defaults common-word names to needing context and saves only touched, tracked rules', async () => {
+    const t = await tenant();
+    const created = await createProject(
+      db,
+      t.workspaceId,
+      t.userId,
+      projectCreate.parse({
+        name: 'Target',
+        brand_name: 'Target',
+        products_services: ['Home goods'],
+        competitors: [{ name: 'Globex', domains: ['globex.com'] }],
+      }),
+    );
+    expect(created.brand.matching).toMatchObject({
+      mode: 'context_required',
+      common_word: true,
+      context_terms: ['Home goods'],
+    });
+    expect(created.competitors[0]!.matching).toMatchObject({ mode: 'always', common_word: false });
+    const scope = { workspaceId: t.workspaceId, projectId: created.id };
+    const changed = await updateProject(
+      db,
+      scope,
+      projectUpdate.parse({
+        entity_matching: [
+          { name: 'Globex', mode: 'context_required', context_terms: ['retail'] },
+          { name: 'Untracked Co', mode: 'context_required' },
+        ],
+      }),
+    );
+    expect(changed.competitors[0]!.matching).toMatchObject({
+      mode: 'context_required',
+      context_terms: ['retail'],
+    });
+    const profile = await db
+      .selectFrom('brand_profiles')
+      .select('business_context')
+      .where('project_id', '=', created.id)
+      .executeTakeFirstOrThrow();
+    expect(
+      Object.keys(
+        (profile.business_context as { entity_matching: { entities: object } }).entity_matching
+          .entities,
+      ),
+    ).toEqual(['globex']);
+  });
   it('resolves project links through membership and keeps viewers read only', async () => {
     const t = await tenant();
     const project = await createProject(

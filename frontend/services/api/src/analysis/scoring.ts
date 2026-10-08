@@ -1,13 +1,25 @@
 /** Classify citation ownership from the audit's frozen scoring configuration. */
 import { compareText, scalarText } from '../text-order.ts';
 import { domainMatches, isGroundingRedirect, normalizeDomain } from './domains.ts';
-import { normalizeAlias, namesAlias, firstAliasOffset } from './aliases.ts';
+import {
+  firstAliasOffset,
+  namesAlias,
+  namesEntity,
+  normalizeText,
+  type EntityPolicy,
+} from './aliases.ts';
+import { entityKey, storedEntityMatching } from './entity-matching.ts';
 import { brandPosition } from './position.ts';
 import { policy } from '../config.ts';
 
 type JsonObject = Record<string, unknown>;
 
-type CompetitorConfig = { name: string; domains: string[]; aliases: string[] };
+type CompetitorConfig = {
+  name: string;
+  domains: string[];
+  aliases: string[];
+  matching?: EntityPolicy;
+};
 
 export type ScoringConfig = {
   brandName: string;
@@ -18,6 +30,8 @@ export type ScoringConfig = {
   ownedDomains: unknown[];
   unintendedDomains: unknown[];
   competitors: CompetitorConfig[];
+  /** The brand's frozen matching policy; absent means every occurrence counts. */
+  brandMatching?: EntityPolicy;
 };
 
 function isObject(value: unknown): value is JsonObject {
@@ -34,14 +48,19 @@ function truthyStrings(values: unknown[]): string[] {
   return values.filter(Boolean).map(String);
 }
 
-function competitorConfigs(config: JsonObject): CompetitorConfig[] {
+function competitorConfigs(
+  config: JsonObject,
+  matching: Record<string, EntityPolicy>,
+): CompetitorConfig[] {
   return listOf(config.competitors).map((item) => {
     // The stored list holds objects; anything else fails as `.get` would.
     if (!isObject(item)) throw new TypeError('competitor entry is not an object');
+    const name = scalarText(item.name);
     return {
-      name: scalarText(item.name),
+      name,
       aliases: truthyStrings([item.name, ...listOf(item.aliases)]),
       domains: truthyStrings(listOf(item.domains)),
+      matching: matching[entityKey(name)],
     };
   });
 }
@@ -52,7 +71,9 @@ function competitorConfigs(config: JsonObject): CompetitorConfig[] {
  */
 export function scoringConfig(configuration: unknown): ScoringConfig {
   const config = isObject(configuration) ? configuration : {};
+  const matching = storedEntityMatching(config);
   return {
+    brandMatching: matching[entityKey(scalarText(config.brand_name))],
     brandName: scalarText(config.brand_name),
     brandAliases: truthyStrings([config.brand_name, ...listOf(config.brand_aliases)]),
     productsServices: truthyStrings(listOf(config.products_services)),
@@ -60,7 +81,7 @@ export function scoringConfig(configuration: unknown): ScoringConfig {
     model: scalarText(config.model),
     ownedDomains: listOf(config.owned_domains),
     unintendedDomains: listOf(config.unintended_domains),
-    competitors: competitorConfigs(config),
+    competitors: competitorConfigs(config, matching),
   };
 }
 
@@ -109,20 +130,9 @@ export function classifyCitation(citation: JsonObject, config: ScoringConfig): C
 }
 
 const rules = policy.audits.analysis;
-const escapeRegex = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-function entityPresent(aliases: readonly string[], text: string): boolean {
-  return aliases.some((alias) => {
-    if (!rules.ambiguous_aliases.includes(normalizeAlias(alias))) return namesAlias(text, alias);
-    const literal = escapeRegex(alias);
-    return (
-      new RegExp(`\\b${literal}\\s+Australia\\b`, 'iu').test(text) ||
-      new RegExp(`\\b${literal}\\b(?!\\s+(?:audience|price|market|demographic))`, 'u').test(text)
-    );
-  });
-}
-function firstOffset(aliases: readonly string[], normalized: string) {
+function firstOffset(aliases: readonly string[], normalized: string, matching?: EntityPolicy) {
   const offsets = aliases
-    .map((alias) => firstAliasOffset(alias, normalized))
+    .map((alias) => firstAliasOffset(alias, normalized, matching))
     .filter((offset): offset is number => offset !== null);
   return offsets.length ? Math.min(...offsets) : null;
 }
@@ -149,35 +159,33 @@ export function scoreExecution(input: {
   config: ScoringConfig;
 }) {
   const { config, answerText, promptText, queryTextAvailable } = input;
-  const normalized = normalizeAlias(answerText);
+  const normalized = normalizeText(answerText);
   const queryText = input.searchEvents.map((event) => scalarText(event.query)).join(' ');
-  const promptBrand = entityPresent(config.brandAliases, promptText);
+  const brandIn = (text: string) => namesEntity(text, config.brandAliases, config.brandMatching);
+  const competitorIn = (c: CompetitorConfig, text: string) =>
+    namesEntity(text, c.aliases, c.matching);
+  const promptBrand = brandIn(promptText);
   const promptCompetitors = config.competitors
-    .filter((c) => entityPresent(c.aliases, promptText))
+    .filter((c) => competitorIn(c, promptText))
     .map((c) => c.name);
-  const mentioned = config.competitors.filter((c) => entityPresent(c.aliases, answerText));
+  const mentioned = config.competitors.filter((c) => competitorIn(c, answerText));
   const offsets = Object.fromEntries(
-    mentioned.map((c) => [c.name, firstOffset(c.aliases, normalized)]),
+    mentioned.map((c) => [c.name, firstOffset(c.aliases, normalized, c.matching)]),
   );
   const citations = input.citations.map((c) => classifyCitation(c, config));
   const owned = citations.filter((c) => c.is_owned);
   const qualified = owned.filter((c) => {
     const text = `${scalarText(c.title)} ${scalarText(c.cited_text)}`;
-    return (
-      entityPresent(config.brandAliases, text) ||
-      config.productsServices.some((term) => namesAlias(text, term))
-    );
+    return brandIn(text) || config.productsServices.some((term) => namesAlias(text, term));
   });
-  const brandOffset = firstOffset(config.brandAliases, normalized);
+  const brandOffset = firstOffset(config.brandAliases, normalized, config.brandMatching);
   return {
     search_used: input.searchUsed,
     search_query_count: input.searchEvents.length,
     search_query_text_available: queryTextAvailable,
-    brand_mentioned: entityPresent(config.brandAliases, answerText),
+    brand_mentioned: brandIn(answerText),
     brand_first_offset: brandOffset,
-    brand_injected_in_search: queryTextAvailable
-      ? !promptBrand && entityPresent(config.brandAliases, queryText)
-      : null,
+    brand_injected_in_search: queryTextAvailable ? !promptBrand && brandIn(queryText) : null,
     prompt_contains_brand: promptBrand,
     prompt_contains_competitor: Boolean(promptCompetitors.length),
     prompt_competitors: promptCompetitors,
@@ -202,7 +210,7 @@ export function scoreExecution(input: {
     competitors_mentioned: mentioned.map((c) => c.name),
     competitors_injected_in_search: queryTextAvailable
       ? config.competitors
-          .filter((c) => !promptCompetitors.includes(c.name) && entityPresent(c.aliases, queryText))
+          .filter((c) => !promptCompetitors.includes(c.name) && competitorIn(c, queryText))
           .map((c) => c.name)
       : [],
     competitor_first_offsets: offsets,

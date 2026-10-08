@@ -18,6 +18,7 @@ const context = {
   prompts: [],
   candidates: [],
   maps: [],
+  matching: {},
   selected: [{ id: 'topic', name: 'Dresses', description: '', parent_id: null }],
   topics: [{ id: 'topic', name: 'Dresses', description: '', parent_id: null }],
   context: {

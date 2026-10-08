@@ -19,6 +19,8 @@ import type { Project } from '@/lib/api/types';
 import { humanizeApiError } from '@/lib/api/errors';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
 
+import { MentionRuleFields, mentionRuleDraft, type MentionRuleDraft } from './mention-rule-fields';
+
 /**
  * Edit an existing project's configuration.
  *
@@ -54,7 +56,29 @@ let competitorKeySeq = 0;
 const nextCompetitorKey = () => `competitor-${(competitorKeySeq += 1)}`;
 
 // Aliases are not edited here; each row carries its own so a rename keeps them.
-type CompetitorDraft = { key: string; name: string; aliases: string[]; domains: string };
+type CompetitorDraft = {
+  key: string;
+  name: string;
+  aliases: string[];
+  domains: string;
+  rule: MentionRuleDraft;
+};
+
+/** Only rules a person changed are saved; the rest keep following their defaults. */
+function touchedRules(entities: readonly { name: string; rule: MentionRuleDraft }[]) {
+  return entities.flatMap(({ name, rule }) =>
+    name.trim() && rule.touched
+      ? [
+          {
+            name: name.trim(),
+            mode: rule.mode,
+            context_terms: splitList(rule.contextTerms),
+            exclusion_phrases: splitList(rule.exclusionPhrases),
+          },
+        ]
+      : [],
+  );
+}
 
 /** An unnamed competitor row still needs something for a screen reader to say. */
 function competitorName(name: string, index: number): string {
@@ -83,6 +107,7 @@ export function ProjectEditPanel({
   // `useState(expr)` re-runs `expr` on every keystroke in this panel only to
   // throw the result away.
   const [aliases, setAliases] = useState(() => project.brand.aliases.join(', '));
+  const [brandRule, setBrandRule] = useState(() => mentionRuleDraft(project.brand.matching));
   const [ownedDomains, setOwnedDomains] = useState(() => project.owned_domains.join(', '));
   const [unintendedDomains, setUnintendedDomains] = useState(() =>
     project.unintended_domains.join(', '),
@@ -93,6 +118,7 @@ export function ProjectEditPanel({
       name: competitor.name,
       aliases: competitor.aliases,
       domains: competitor.domains.join(', '),
+      rule: mentionRuleDraft(competitor.matching),
     })),
   );
   const maximumCompetitors = discoveryCatalog.data?.maximum_competitors;
@@ -123,6 +149,7 @@ export function ProjectEditPanel({
                 ]
               : [];
           }),
+          entity_matching: touchedRules([{ name: brandName, rule: brandRule }, ...competitors]),
         },
         { workspaceId: project.workspace_id },
       ),
@@ -190,6 +217,7 @@ export function ProjectEditPanel({
               />
             )}
           </Field>
+          <MentionRuleFields name={brandName} rule={brandRule} onChange={setBrandRule} />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Country">
               {(props) => (
@@ -254,7 +282,13 @@ export function ProjectEditPanel({
               onClick={() =>
                 setCompetitors((prev) => [
                   ...prev,
-                  { key: nextCompetitorKey(), name: '', aliases: [], domains: '' },
+                  {
+                    key: nextCompetitorKey(),
+                    name: '',
+                    aliases: [],
+                    domains: '',
+                    rule: mentionRuleDraft(undefined),
+                  },
                 ])
               }
             >
@@ -267,27 +301,34 @@ export function ProjectEditPanel({
           ) : (
             <ul className="grid list-none gap-2 p-0">
               {competitors.map((competitor, index) => (
-                <li key={competitor.key} className="flex items-center gap-2">
-                  <Input
-                    value={competitor.name}
-                    onChange={(event) => updateCompetitor(index, { name: event.target.value })}
-                    aria-label={`Competitor ${index + 1} name`}
-                    placeholder="Name"
+                <li key={competitor.key} className="grid gap-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={competitor.name}
+                      onChange={(event) => updateCompetitor(index, { name: event.target.value })}
+                      aria-label={`Competitor ${index + 1} name`}
+                      placeholder="Name"
+                    />
+                    <Input
+                      value={competitor.domains}
+                      onChange={(event) => updateCompetitor(index, { domains: event.target.value })}
+                      aria-label={`Competitor ${index + 1} domains`}
+                      placeholder="Domains"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Remove ${competitorName(competitor.name, index)}`}
+                      onClick={() => setCompetitors((prev) => prev.filter((_, i) => i !== index))}
+                    >
+                      <X className="size-4" aria-hidden />
+                    </Button>
+                  </div>
+                  <MentionRuleFields
+                    name={competitor.name}
+                    rule={competitor.rule}
+                    onChange={(rule) => updateCompetitor(index, { rule })}
                   />
-                  <Input
-                    value={competitor.domains}
-                    onChange={(event) => updateCompetitor(index, { domains: event.target.value })}
-                    aria-label={`Competitor ${index + 1} domains`}
-                    placeholder="Domains"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Remove ${competitorName(competitor.name, index)}`}
-                    onClick={() => setCompetitors((prev) => prev.filter((_, i) => i !== index))}
-                  >
-                    <X className="size-4" aria-hidden />
-                  </Button>
                 </li>
               ))}
             </ul>

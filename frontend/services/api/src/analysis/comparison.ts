@@ -75,6 +75,9 @@ export function frozenComparisonKey(
     ...Object.fromEntries(
       required.filter((k) => k !== 'engine_routes' && k !== policyKey).map((k) => [k, config[k]]),
     ),
+    // A matching-policy change changes what a mention is. Audits frozen before
+    // policies existed keep their original key.
+    ...(config.entity_matching ? { entity_matching: config.entity_matching } : {}),
     panel: includePanel ? (config.panel_hash ?? null) : null,
     routes: includeEngines
       ? Object.fromEntries(

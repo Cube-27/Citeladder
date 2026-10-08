@@ -2,7 +2,8 @@ import type { PromptAdmissionDropReason } from '@citeladder/contracts/project';
 import { parsePromptProposal } from '@citeladder/contracts/prompt-proposal';
 import { z } from 'zod';
 
-import { namesAlias } from '../analysis/aliases.ts';
+import { namesAlias, namesEntity } from '../analysis/aliases.ts';
+import { entityKey } from '../analysis/entity-matching.ts';
 import { policy } from '../config.ts';
 import { generationSystemPrompt } from '../config/prompt-generation.ts';
 import { record, strings } from '../db/json.ts';
@@ -125,7 +126,13 @@ export function admitDrafts(
   // Agent rows are targeted on purpose; only quick-generate cells plan places.
   const quick = !context.revision;
   const geo = quick ? geoTerms(context) : [];
-  const competitors = context.context.competitors.flatMap((row) => [row.name, ...row.aliases]);
+  // Names count under the project's matching policy, so a common-word brand
+  // in ordinary language ("target audience") is not a branded draft.
+  const brandRule = context.matching[entityKey(context.context.brand_name)];
+  const namesCompetitor = (text: string) =>
+    context.context.competitors.some((row) =>
+      namesEntity(text, [row.name, ...row.aliases], context.matching[entityKey(row.name)]),
+    );
   const reason = (
     row: z.infer<typeof generatedRow>,
     slot: Slot | undefined,
@@ -155,11 +162,11 @@ export function admitDrafts(
     if (bindingFailure(text, context.vocabulary)) return 'off_topic';
     if (!slot.buyer_need.market && namesPlace(text, geo)) return 'location_unplanned';
     if (input.cohort === 'core')
-      return containsName(text, [...brands, ...competitors]) ? 'branded_core' : null;
-    if (!containsName(text, [context.context.brand_name])) return 'brand_missing';
+      return namesEntity(text, brands, brandRule) || namesCompetitor(text) ? 'branded_core' : null;
+    if (!namesEntity(text, [context.context.brand_name], brandRule)) return 'brand_missing';
     if (
       input.cohort === 'comparison' &&
-      (!containsName(text, competitors) || row.prompt_intent !== 'compare')
+      (!namesCompetitor(text) || row.prompt_intent !== 'compare')
     )
       return 'competitor_missing';
     return null;

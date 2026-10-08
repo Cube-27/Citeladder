@@ -1,4 +1,4 @@
-import { benchmarkModeSchema } from '@citeladder/contracts/project';
+import { benchmarkModeSchema, entityMatchingModeSchema } from '@citeladder/contracts/project';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
@@ -77,6 +77,25 @@ export const projectUpdate = z.object({
   owned_domains: list.optional(),
   unintended_domains: list.optional(),
   competitors: collections.competitors.unwrap().optional(),
+  // Matching policies to save, by brand or competitor name; names the
+  // project no longer tracks are dropped on save.
+  entity_matching: z
+    .array(
+      z.object({
+        name: text(255).min(1),
+        mode: entityMatchingModeSchema,
+        context_terms: z
+          .array(text(80).min(1))
+          .max(policy.audits.analysis.entity_terms_max)
+          .default([]),
+        exclusion_phrases: z
+          .array(text(80).min(1))
+          .max(policy.audits.analysis.entity_terms_max)
+          .default([]),
+      }),
+    )
+    .max(profile.max_project_competitors + 1)
+    .optional(),
 });
 export type ProjectCreate = z.output<typeof projectCreate>;
 export type ProjectUpdate = z.output<typeof projectUpdate>;

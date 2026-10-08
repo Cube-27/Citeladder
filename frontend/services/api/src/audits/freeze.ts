@@ -9,6 +9,13 @@ import { auditPolicy, auditSettings } from './config.ts';
 import type { AuditInput } from './inputs.ts';
 import { freezeCommerceContext } from '../commerce/audit-context.ts';
 import {
+  contextSeeds,
+  effectiveEntityMatching,
+  frozenEntityMatching,
+  storedEntityMatching,
+} from '../analysis/entity-matching.ts';
+import { strings } from '../db/json.ts';
+import {
   searchPayload,
   searchPolicy,
   searchSettings,
@@ -196,7 +203,7 @@ export async function prepareAudit(
       .execute(),
     db
       .selectFrom('brand_profiles')
-      .select('products_services')
+      .select(['products_services', 'business_context'])
       .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', project.id)
       .executeTakeFirst(),
@@ -257,6 +264,20 @@ export async function prepareAudit(
     unintended_domains: unintended.map((row) => row.domain),
     competitors,
     products_services: profile?.products_services ?? [],
+    // Analysis matches names under this frozen policy, never the live one.
+    entity_matching: frozenEntityMatching(
+      effectiveEntityMatching(
+        storedEntityMatching(profile?.business_context),
+        [
+          {
+            name: brand?.name ?? project.brand_name,
+            aliases: aliases.map((row) => row.alias),
+          },
+          ...competitors.map((row) => ({ name: row.name, aliases: strings(row.aliases) })),
+        ],
+        contextSeeds(profile?.business_context, strings(profile?.products_services)),
+      ),
+    ),
     country_code: project.country_code,
     language_code: project.language_code,
     audit_scope: input.audit_scope,

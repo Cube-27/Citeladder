@@ -24,6 +24,7 @@ export function fixtureContext(
     selected: topics,
     topics,
     maps,
+    matching: {},
     offerings: fixture.offerings,
     prompts: [],
     candidates: [],
