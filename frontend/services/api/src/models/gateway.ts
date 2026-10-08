@@ -122,6 +122,25 @@ const logger = getLogger('app.connectors.agent.client');
 export function truncatedFinish(finishStatus: string) {
   return finishStatus === 'length' || finishStatus === 'max_tokens';
 }
+/** The provider's answer, folded from its stream when a listener asked for one. */
+async function readCompletion(
+  response: Response,
+  onText?: (content: string) => void,
+): Promise<Completion> {
+  // A provider may ignore the stream request; its JSON answer is read as usual.
+  if (onText && response.ok && response.headers.get('content-type')?.includes('event-stream')) {
+    try {
+      return await streamedCompletion(response, onText);
+    } catch (error) {
+      if (error instanceof ModelError) throw error;
+      // A dropped stream is a connection failure, which the caller may retry.
+      throw new ModelError('connection');
+    }
+  }
+  const parsed = completion.safeParse(await modelJson(response));
+  if (!parsed.success) throw new ModelError('parse');
+  return parsed.data;
+}
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /** Model text without a leading ``` / ```json fence or a trailing ``` fence. */
@@ -226,21 +245,7 @@ export function createModelGateway(
         model: settings.model,
         error_code: providerErrorCode(response.status),
       });
-    let body: Completion;
-    // A provider may ignore the stream request; its JSON answer is read as usual.
-    if (stream && response.ok && response.headers.get('content-type')?.includes('event-stream')) {
-      try {
-        body = await streamedCompletion(response, onText!);
-      } catch (error) {
-        if (error instanceof ModelError) throw error;
-        // A dropped stream is a connection failure, which the caller may retry.
-        throw new ModelError('connection');
-      }
-    } else {
-      const parsed = completion.safeParse(await modelJson(response));
-      if (!parsed.success) throw new ModelError('parse');
-      body = parsed.data;
-    }
+    const body = await readCompletion(response, stream ? onText : undefined);
     const usage = normalizedUsage(body.usage);
     const latency = Math.round(performance.now() - started);
     logger.info('default agent call ok', { latency_ms: latency, model: settings.model });

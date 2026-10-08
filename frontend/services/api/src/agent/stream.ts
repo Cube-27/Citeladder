@@ -54,7 +54,9 @@ function readString(text: string, start: number) {
     if (code === 'u') {
       const hex = text.slice(index + 2, index + 6);
       if (hex.length < 4) break;
-      value += String.fromCharCode(Number.parseInt(hex, 16));
+      const point = Number.parseInt(hex, 16);
+      // An invalid escape shows nothing; the validated reply replaces this text anyway.
+      if (!Number.isNaN(point)) value += String.fromCodePoint(point);
       index += 6;
       continue;
     }
@@ -67,42 +69,61 @@ function readString(text: string, start: number) {
 
 /** The known string fields of a possibly incomplete step object. */
 export function partialResponse(text: string): PartialResponse {
-  const out: PartialResponse = {};
-  const containers: ('object' | 'array')[] = [];
-  const keys: string[] = [];
-  let pending: string | null = null;
+  const state: ParseState = { out: {}, containers: [], keys: [], pending: null };
   let index = 0;
   while (index < text.length) {
     const char = text[index]!;
-    if (char === '{' || char === '[') {
-      containers.push(char === '{' ? 'object' : 'array');
-      keys.push(pending ?? '');
-      pending = null;
+    if (char === '"') {
+      const string = readString(text, index + 1);
+      if (!takeString(state, string)) break;
+      index = string.end;
+    } else if (char === '{' || char === '[') {
+      state.containers.push(char === '{' ? 'object' : 'array');
+      state.keys.push(state.pending ?? '');
+      state.pending = null;
       index++;
     } else if (char === '}' || char === ']') {
-      containers.pop();
-      keys.pop();
+      state.containers.pop();
+      state.keys.pop();
       index++;
-    } else if (char === '"') {
-      const string = readString(text, index + 1);
-      if (containers.at(-1) === 'object' && pending === null) {
-        if (!string.complete) break;
-        pending = string.value;
-      } else {
-        const field = pending === null ? undefined : FIELDS[[...keys.slice(1), pending].join('.')];
-        if (field) out[field] = string.value;
-        pending = null;
-      }
-      index = string.end;
     } else if (/[\s,:]/u.test(char)) {
       index++;
     } else {
-      // A number, boolean or null value.
-      while (index < text.length && !/[\s,}\]]/u.test(text[index]!)) index++;
-      pending = null;
+      index = scalarEnd(text, index);
+      state.pending = null;
     }
   }
-  return out;
+  return state.out;
+}
+
+type ParseState = {
+  out: PartialResponse;
+  containers: ('object' | 'array')[];
+  keys: string[];
+  /** The key awaiting its value, inside an object. */
+  pending: string | null;
+};
+
+/** Records a key or a known field's value; false stops at a key that has not finished arriving. */
+function takeString(state: ParseState, string: { value: string; complete: boolean }) {
+  if (state.containers.at(-1) === 'object' && state.pending === null) {
+    if (!string.complete) return false;
+    state.pending = string.value;
+    return true;
+  }
+  if (state.pending !== null) {
+    const field = FIELDS[[...state.keys.slice(1), state.pending].join('.')];
+    if (field) state.out[field] = string.value;
+  }
+  state.pending = null;
+  return true;
+}
+
+/** The end of a number, boolean or null value. */
+function scalarEnd(text: string, start: number) {
+  let index = start;
+  while (index < text.length && !/[\s,}\]]/u.test(text[index]!)) index++;
+  return index;
 }
 
 /**
