@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { newIdempotencyKey, useRequestKey } from '@/lib/agent/idempotency';
-import { isLiveTurnConnected, useLiveTurn } from '@/lib/agent/live-turns';
+import { isLiveTurnConnected, useLiveTurnConnected } from '@/lib/agent/live-turns';
 import { isRunActive } from '@/lib/agent/run-state';
 import {
   agentMutations,
@@ -33,8 +33,7 @@ export function useChatDetail(workspaceId: string, chatId: string) {
       return isRunActive(run) && !isLiveTurnConnected(run?.id) ? AGENT_RUN_POLL_MS : false;
     },
   });
-  const live = useLiveTurn(query.data?.latest_run?.id);
-  const closed = live ? !live.connected : false;
+  const closed = useLiveTurnConnected(query.data?.latest_run?.id) === false;
   const { refetch } = query;
   useEffect(() => {
     if (closed) void refetch();
@@ -136,18 +135,22 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     if (message.skill_source === 'user') return message.skill_id;
     return message.skill_source === 'automatic' ? null : undefined;
   };
+  const request = (message: string, skill: string | null | undefined, mentions: string[]) => ({
+    chatId,
+    message,
+    skillId: skill,
+    ...(mentions.length > 0 ? { mentions } : {}),
+  });
   const send = (message: string) => {
     const text = message.trim();
     if (!text) return;
     setLastMessage(text);
-    const mentions = commands.mentions.map((mention) => mention.id);
-    const request = {
-      chatId,
-      message: text,
+    const typed = request(
+      text,
       skillId,
-      ...(mentions.length > 0 ? { mentions } : {}),
-    };
-    mutation.mutate({ ...request, idempotencyKey: requestKey.keyFor(request) });
+      commands.mentions.map((mention) => mention.id),
+    );
+    mutation.mutate({ ...typed, idempotencyKey: requestKey.keyFor(typed) });
   };
   return {
     draft,
@@ -160,16 +163,15 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
       commands.restore(message.mentions);
     },
     /** Sends a recorded request again as a new turn, leaving the draft alone. */
-    resend: (message: AgentMessage) => {
-      const mentions = message.mentions.map((mention) => mention.id);
-      const request = {
-        chatId,
-        message: message.content,
-        skillId: skillFor(message),
-        ...(mentions.length > 0 ? { mentions } : {}),
-      };
-      mutation.mutate({ ...request, idempotencyKey: newIdempotencyKey() });
-    },
+    resend: (message: AgentMessage) =>
+      mutation.mutate({
+        ...request(
+          message.content,
+          skillFor(message),
+          message.mentions.map((mention) => mention.id),
+        ),
+        idempotencyKey: newIdempotencyKey(),
+      }),
     /** The message being sent, shown in the thread before the server accepts it. */
     pendingMessage: mutation.isPending ? (mutation.variables?.message ?? null) : null,
     skillId,

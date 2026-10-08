@@ -1,7 +1,7 @@
 'use client';
 
 import { Pencil, RotateCcw } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useDeferredValue, useEffect, useState, type ReactNode } from 'react';
 
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
@@ -170,7 +170,8 @@ function PendingMessage({ text }: Readonly<{ text: string }>) {
 }
 
 /** The reply and document as they are written; the saved versions replace them. */
-function LiveReply({ text }: Readonly<{ text: NonNullable<LiveTurn['text']> }>) {
+function LiveReply({ text: latest }: Readonly<{ text: NonNullable<LiveTurn['text']> }>) {
+  const text = useDeferredValue(latest);
   return (
     <article aria-label="Agent reply in progress" aria-busy="true" className="grid gap-2">
       <span className={textRole('label')}>Agent</span>
@@ -400,7 +401,7 @@ function RunningState({
   live,
 }: Readonly<{ run: AgentRun; queued: boolean; live: LiveTurn | undefined }>) {
   const label =
-    queued && !live?.steps.length
+    queued && !live?.step
       ? 'Waiting to start…'
       : (liveStepLabel(live) ?? activeStepLabel(run.progress, run.attempt_count));
   return (
@@ -417,8 +418,7 @@ function RunningState({
   );
 }
 function liveStepLabel(live: LiveTurn | undefined) {
-  const step = live?.steps.at(-1);
-  return step ? runStepLabel(step) : null;
+  return live?.step ? runStepLabel(live.step) : null;
 }
 function Elapsed({ since }: Readonly<{ since: number }>) {
   const now = useNow(1000);

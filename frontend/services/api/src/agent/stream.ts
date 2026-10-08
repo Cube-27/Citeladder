@@ -113,7 +113,9 @@ export function textEmitter(ordinal: number, emit: (event: TurnText) => void, ev
   let decodedAt = 0;
   let last = '';
   return (content: string) => {
-    if (content.length - decodedAt < every) return;
+    // Each event re-decodes and resends the text so far, so a long document
+    // is sampled less often: about every 5% once it passes a few thousand characters.
+    if (content.length - decodedAt < Math.max(every, content.length / 20)) return;
     decodedAt = content.length;
     const partial = partialResponse(content);
     if (partial.action !== 'respond' || partial.reply === undefined) return;
@@ -123,7 +125,8 @@ export function textEmitter(ordinal: number, emit: (event: TurnText) => void, ev
       title: partial.title ?? null,
       body: partial.body ?? null,
     };
-    const key = JSON.stringify(event);
+    // Fields only grow while a step streams, so their lengths show any change.
+    const key = `${event.reply.length}:${event.title?.length ?? -1}:${event.body?.length ?? -1}`;
     if (key === last) return;
     last = key;
     emit(event);

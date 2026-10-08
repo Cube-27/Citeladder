@@ -24,8 +24,6 @@ export type GatewaySettings = {
   attempts: number;
   baseDelaySeconds: number;
   maxDelaySeconds: number;
-  /** Request token streaming when a caller listens; only for transports that pass streams through. */
-  streaming?: boolean;
 };
 
 export function gatewaySettings(
@@ -188,7 +186,8 @@ export function createModelGateway(
     signal?: AbortSignal,
     onText?: (content: string) => void,
   ) {
-    const stream = Boolean(onText && settings.streaming);
+    // A listener asks for a stream; the caller gives one only to transports that pass it through.
+    const stream = Boolean(onText);
     const started = performance.now();
     // Retries share one call's timeout, the envelope of a single provider call.
     const deadline = AbortSignal.any([

@@ -54,7 +54,7 @@ export function agentModels(
       // The platform transport passes response streams through; the customer
       // probe transport buffers, so customer routes answer in one piece.
       gateway = createModelGateway(
-        { ...platform, attempts: policy.agent.provider_max_attempts, streaming: true },
+        { ...platform, attempts: policy.agent.provider_max_attempts },
         transports.platform,
       );
     }
@@ -64,7 +64,13 @@ export function agentModels(
       adapter: customer ? 'openai_compatible_byok' : 'openai_compatible',
       retryableError: retryableModelError,
       complete: (request, signal, onText) =>
-        gateway.completeStructured(request.system, request.user, request.schema, signal, onText),
+        gateway.completeStructured(
+          request.system,
+          request.user,
+          request.schema,
+          signal,
+          customer ? undefined : onText,
+        ),
     };
   };
 }

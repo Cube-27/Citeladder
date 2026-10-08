@@ -174,6 +174,13 @@ for (const width of [1280, 390]) {
       );
       await page.route(`**/api/v1/agent/chats/${CHAT}/runs/${RUN}/cancel`, (route) => {
         current.latest_run!.status = 'cancelled';
+        // The server answers a stopped turn with a saved reply.
+        current.messages.push({
+          ...current.messages.at(-1)!,
+          id: '77777777-7777-4777-8777-999999999997',
+          sequence: 27,
+          content: 'Stopped. Nothing from this turn was saved.',
+        });
         return route.fulfill({ json: current.latest_run });
       });
       await page.route(`**/api/v1/agent/chats/${CHAT}/messages`, (route) => {
@@ -199,16 +206,15 @@ for (const width of [1280, 390]) {
       await expect(reply).toBeVisible();
       await page.getByText('Context used', { exact: true }).click();
       await expect(page.getByText('Selected crawl robots policy', { exact: true })).toBeVisible();
-      await page.getByText('Source identities', { exact: true }).click();
-      await expect(page.getByRole('list', { name: 'Context source identities' })).toContainText(
-        RUN,
-      );
+      // Context is described in plain words; record identities never reach the reader.
+      await expect(page.getByText(RUN)).toHaveCount(0);
       await page.screenshot({ path: test.info().outputPath(`context-${surface}-${width}.png`) });
       await expect(
         page.getByRole('button', { name: 'Skill: Continue with Growth plan' }),
       ).toBeVisible();
       await reply.fill('Draft kept while working');
-      await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
+      // While the turn runs, Stop takes Send's place and drafting continues.
+      await expect(page.getByRole('button', { name: 'Send', exact: true })).toHaveCount(0);
       if (surface === 'panel')
         await page
           .getByRole('region', { name: 'Agent conversation' })

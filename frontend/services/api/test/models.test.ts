@@ -95,7 +95,7 @@ describe('configured model gateway', () => {
       new Response(sse, { headers: { 'content-type': 'text/event-stream' } }),
       reply(),
     ]);
-    const gateway = createModelGateway({ ...settings, streaming: true }, io);
+    const gateway = createModelGateway(settings, io);
     const seen: string[] = [];
     const streamed = await gateway.complete('s', 'u', undefined, (text) => seen.push(text));
     expect(seen.at(-1)).toBe('{"answer":42}');

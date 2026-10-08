@@ -11,18 +11,18 @@ import type { z } from 'zod';
 
 import { agentTurnEventSchema } from '@citeladder/contracts/agent';
 import { API_BASE_URL, INTERACTIVE_EXECUTION_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
-import { parseSseFrame, splitSseFrames } from '@/lib/sse/frames';
+import { readSseResponse, streamHeaders } from '@/lib/sse/use-event-stream';
 
 type TurnEvent = z.infer<typeof agentTurnEventSchema>;
 type Step = Extract<TurnEvent, { type: 'step' }>;
 type Text = Extract<TurnEvent, { type: 'text' }>;
 
 export type LiveTurn = {
-  runId: string;
   startedAt: number;
   /** True while the stream is open; polling resumes when it closes. */
   connected: boolean;
-  steps: Step[];
+  /** The newest step event. */
+  step: Step | null;
   /** The newest respond step's text; cleared when a later step starts. */
   text: Text | null;
 };
@@ -43,7 +43,7 @@ function apply(turn: LiveTurn, event: TurnEvent): LiveTurn {
   if (event.type === 'step')
     return {
       ...turn,
-      steps: [...turn.steps, event],
+      step: event,
       // Text belongs to the step that wrote it; a new step supersedes it.
       text: turn.text && turn.text.ordinal < event.ordinal ? null : turn.text,
     };
@@ -53,40 +53,32 @@ function apply(turn: LiveTurn, event: TurnEvent): LiveTurn {
 
 async function read(response: Response, onEvent: (event: TurnEvent) => void) {
   if (!response.body) return;
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) return;
-    const { frames, rest } = splitSseFrames(buffer + decoder.decode(value, { stream: true }));
-    buffer = rest;
-    for (const frame of frames) {
-      const data = parseSseFrame(frame).data;
-      if (!data) continue;
+  await readSseResponse(
+    response.body,
+    () => false,
+    ({ data }) => {
+      if (!data) return;
       try {
         const parsed = agentTurnEventSchema.safeParse(JSON.parse(data));
         if (parsed.success) onEvent(parsed.data);
       } catch {
         // An unreadable frame is skipped; the persisted read still arrives.
       }
-    }
-  }
+    },
+  );
 }
 
 /** Opens the run's interactive stream; execution never depends on it staying open. */
 export function startLiveTurn(chatId: string, runId: string, workspaceId: string | null) {
   if (turns.has(runId)) return;
-  turns.set(runId, { runId, startedAt: Date.now(), connected: true, steps: [], text: null });
+  turns.set(runId, { startedAt: Date.now(), connected: true, step: null, text: null });
   for (const stale of [...turns.keys()].slice(0, Math.max(0, turns.size - KEEP)))
     turns.delete(stale);
-  const headers: Record<string, string> = { Accept: 'text/event-stream' };
-  if (workspaceId) headers['X-Workspace-Id'] = workspaceId;
   void fetch(`${API_BASE_URL}/agent/chats/${chatId}/runs/${runId}/run`, {
     method: 'POST',
     credentials: 'include',
     cache: 'no-store',
-    headers,
+    headers: streamHeaders(workspaceId, null),
     signal: AbortSignal.timeout(INTERACTIVE_EXECUTION_REQUEST_TIMEOUT_MS),
   })
     .then((response) => read(response, (event) => update(runId, (turn) => apply(turn, event))))
@@ -105,6 +97,15 @@ function subscribe(listener: () => void) {
   return () => {
     listeners.delete(listener);
   };
+}
+
+/** Re-renders only when the run's stream opens or closes, not on every event. */
+export function useLiveTurnConnected(runId: string | null | undefined): boolean | undefined {
+  return useSyncExternalStore(
+    subscribe,
+    () => (runId ? turns.get(runId)?.connected : undefined),
+    () => undefined,
+  );
 }
 
 export function useLiveTurn(runId: string | null | undefined): LiveTurn | undefined {
