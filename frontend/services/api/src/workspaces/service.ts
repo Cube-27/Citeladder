@@ -189,19 +189,41 @@ export function mutateMember(
     .execute((trx) => mutateMemberInTransaction(trx, workspaceId, actorId, target));
 }
 
+/** Lock a customer (non-system) workspace row; callers authorize the actor themselves. */
+export async function lockWorkspace(trx: Database, workspaceId: string) {
+  const workspace = await trx
+    .selectFrom('workspaces')
+    .select('id')
+    .where('id', '=', workspaceId)
+    .where('is_system', '=', false)
+    .forUpdate()
+    .executeTakeFirst();
+  if (!workspace) throw new Error('workspace_not_found');
+}
+
 export async function mutateMemberInTransaction(
   trx: Database,
   workspaceId: string,
   actorId: string,
   target: MemberMutation,
 ) {
-  if ('role' in target) assignableRoleSchema.parse(target.role);
   await lockAuthorizedWorkspace(
     trx,
     workspaceId,
     actorId,
     'leave' in target ? 'read' : 'manage_members',
   );
+  return applyMemberMutation(trx, workspaceId, actorId, target);
+}
+
+/** The member change itself, for a caller that already authorized and locked the workspace. */
+export async function applyMemberMutation(
+  trx: Database,
+  workspaceId: string,
+  actorId: string,
+  target: MemberMutation,
+) {
+  if ('role' in target) assignableRoleSchema.parse(target.role);
   const query = trx
     .selectFrom('workspace_members')
     .selectAll()

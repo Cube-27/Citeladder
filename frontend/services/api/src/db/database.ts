@@ -15,13 +15,16 @@ import type { DB } from '../generated/db-schema.ts';
 import { observeConnection } from './committed-work.ts';
 
 export type Database = Kysely<DB>;
+export type DatabaseConfig = Pick<ServiceConfig, 'database' | 'databaseUrl' | 'appName'> & {
+  execution?: Pick<ServiceConfig['execution'], 'runnerJob' | 'poolSize'>;
+};
 
 /** Accept the backend's SQLAlchemy URL (`postgresql+asyncpg://`) unchanged. */
 export function libpqUrl(databaseUrl: string): string {
   return databaseUrl.replace(/^postgres(?:ql)?\+[a-z0-9_]+:\/\//iu, 'postgresql://');
 }
 
-export function poolOptions(config: ServiceConfig): pg.PoolConfig {
+export function poolOptions(config: DatabaseConfig): pg.PoolConfig {
   const db = config.database;
   return {
     connectionString: libpqUrl(config.databaseUrl),
@@ -42,15 +45,15 @@ export function poolOptions(config: ServiceConfig): pg.PoolConfig {
 }
 
 export function createDatabase(
-  config: ServiceConfig,
+  config: DatabaseConfig,
   options: { execution?: boolean } = {},
 ): Database {
   return new Kysely<DB>({
     dialect: new PostgresDialect({
       pool: new pg.Pool({
         ...poolOptions(config),
-        ...(options.execution || config.execution.runnerJob
-          ? { max: config.execution.poolSize }
+        ...(options.execution || config.execution?.runnerJob
+          ? { max: config.execution?.poolSize }
           : {}),
       }),
       onCreateConnection: (connection) => {

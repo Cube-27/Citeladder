@@ -116,7 +116,7 @@ export async function ensureWorkspaceBilling(
   if (!['legacy', 'operator'].includes(locked.registration_origin))
     throw new Error('registration_origin_unresolved');
   const cfg = policy.entitlements.baseline;
-  const idempotencyKey = `${cfg.revision}:system:public-signup`;
+  const idempotencyKey = baselineGrantKey();
   const existing = await db
     .selectFrom('account_grants')
     .select(['key', 'value'])
@@ -164,18 +164,25 @@ export async function ensureWorkspaceBilling(
   await projectRuntime(db, workspaceId, account.id, locked.entitlement_lifecycle_version + 1, now);
 }
 
-function developmentAccessGrants(allowance: number) {
+/** Every issuable flag, the highest level of each leveled capability and a finite counter allowance. */
+export function fullAccessSpecs(allowance: number) {
   if (!Number.isSafeInteger(allowance) || allowance < 1)
     throw new Error('invalid_development_allowance');
   return Object.entries(policy.entitlements.capabilities)
-    .filter(([, def]) => def.issuable)
-    .map(([key, def]) => {
+    .filter(([, definition]) => definition.issuable)
+    .map(([key, definition]) => {
       let value = allowance;
-      if (def.type === 'flag') value = 1;
-      else if (def.type === 'level') value = def.levels - 1;
+      if (definition.type === 'flag') value = 1;
+      else if (definition.type === 'level') value = definition.levels - 1;
       return { key, value };
     });
 }
+
+/** The idempotency key (and bundle id) of an operator/legacy account's baseline grants. */
+export function baselineGrantKey() {
+  return `${policy.entitlements.baseline.revision}:system:public-signup`;
+}
+
 /** Preserve family/source keys for idempotent replay of existing baseline grants. */
 export async function issueDevelopmentAccess(
   db: Database,
@@ -198,7 +205,7 @@ export async function issueDevelopmentAccess(
     .execute();
   const family = existing.filter((row) => row.idempotency_key.startsWith(input.keyFamily));
   const transitions: string[] = [];
-  const specs = developmentAccessGrants(input.allowance).flatMap((spec) => {
+  const specs = fullAccessSpecs(input.allowance).flatMap((spec) => {
     const def =
       policy.entitlements.capabilities[spec.key as keyof typeof policy.entitlements.capabilities];
     const values = family.filter((row) => row.key === spec.key).map((row) => row.value);
