@@ -45,8 +45,9 @@ export type PropertyMappingInput = {
   project_id: string;
 };
 
-/** Optional window body for `POST /integrations/{id}/sync` (ISO dates). */
+/** Optional body for `POST /integrations/{id}/sync`: the project and window (ISO dates). */
 export type SyncWindowInput = {
+  project_id?: string;
   window_start?: string;
   window_end?: string;
 };
@@ -106,10 +107,15 @@ export const integrationsApi = {
    * options. A live provider call, so it is slower than the other reads and
    * can fail with a 502 when the upstream is down.
    */
-  discoverProperties: async (connectionId: string, options?: ApiRequestOptions) => {
+  discoverProperties: async (
+    connectionId: string,
+    projectId?: string,
+    options?: ApiRequestOptions,
+  ) => {
+    // Naming the project marks the properties that belong to its site.
     const res = await apiClient.post<IntegrationProperty[]>(
       `/integrations/${connectionId}/properties`,
-      undefined,
+      projectId ? { project_id: projectId } : undefined,
       options,
     );
     return strictValidate(integrationPropertyListSchema, res, 'integrations.discoverProperties');
@@ -147,6 +153,9 @@ export const integrationsApi = {
    * follows the redirect to the provider consent screen through the
    * same-origin proxy (invariant 12).
    */
-  oauthStartUrl: (provider: IntegrationProvider, workspaceId: string) =>
-    `${API_BASE_URL}/integrations/workspaces/${workspaceId}/oauth/${provider}/start`,
+  oauthStartUrl: (provider: IntegrationProvider, workspaceId: string, returnTo?: string) => {
+    const start = `${API_BASE_URL}/integrations/workspaces/${workspaceId}/oauth/${provider}/start`;
+    // The callback lands back on `returnTo` (an allowed app path) instead of Settings.
+    return returnTo ? `${start}?${new URLSearchParams({ return_to: returnTo })}` : start;
+  },
 };

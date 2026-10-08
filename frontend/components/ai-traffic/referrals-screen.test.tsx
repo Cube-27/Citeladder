@@ -13,6 +13,9 @@ const activeProject = makeProject({
   workspace_id: '11111111-1111-4111-8111-111111111111',
 });
 
+vi.mock('@/components/integrations/data-source-setup', () => ({
+  DataSourceSetup: ({ title }: { title: string }) => <section aria-label={title} />,
+}));
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
@@ -67,10 +70,8 @@ describe('AiReferralsScreen', () => {
     renderWithProviders(<AiReferralsScreen />);
 
     expect(await screen.findByText('No AI-referral data yet')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open integration settings' })).toHaveAttribute(
-      'href',
-      '/settings?tab=integrations&workspace=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    );
+    // GA4 is connected in place rather than through Settings.
+    expect(screen.getByRole('region', { name: 'Connect Google Analytics 4' })).toBeInTheDocument();
     expect(screen.getByTestId('ai-traffic-toolbar')).toBeVisible();
   });
 

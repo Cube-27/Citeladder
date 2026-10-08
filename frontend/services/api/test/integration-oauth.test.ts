@@ -1,7 +1,8 @@
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { policy } from '../src/config.ts';
 import { IntegrationClient } from '../src/integrations/client.ts';
-import { startOAuth, completeOAuth } from '../src/integrations/oauth.ts';
+import { completeOAuth, startOAuth, stateReturnPath } from '../src/integrations/oauth.ts';
+import { seedProject } from './referral-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
 
 const db = testDatabase();
@@ -193,5 +194,70 @@ describe('integration OAuth state and persistence', () => {
       }),
     ).rejects.toMatchObject({ code: 'oauth_state_invalid' });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('carries only an allowed app path through the signed state', async () => {
+    configureOAuth();
+    const userId = await fixtures.user();
+    const workspaceId = await fixtures.ownedWorkspace(userId);
+    const stateFor = async (returnTo: string) =>
+      new URL(
+        (await startOAuth(db, { userId, workspaceId, provider: 'gsc', returnTo })).url,
+      ).searchParams.get('state')!;
+    expect(await stateReturnPath(await stateFor('/demand?connected=gsc&tab=all'))).toBe(
+      '/demand?tab=all',
+    );
+    for (const hostile of ['//evil.test', 'https://evil.test/demand', '/admin', 'demand'])
+      expect(await stateReturnPath(await stateFor(hostile))).toBeNull();
+    expect(await stateReturnPath('forged.state.value')).toBeNull();
+  });
+
+  it('queues a catch-up sync for mapped properties when a grant is reconnected', async () => {
+    configureOAuth();
+    const userId = await fixtures.user();
+    const workspaceId = await fixtures.ownedWorkspace(userId);
+    const projectId = await seedProject(db, workspaceId);
+    const consent = async () => {
+      const start = await startOAuth(db, { userId, workspaceId, provider: 'gsc' });
+      await completeOAuth(db, {
+        provider: 'gsc',
+        code: 'recorded-code',
+        nonce: start.nonce,
+        state: new URL(start.url).searchParams.get('state')!,
+      });
+    };
+    await consent();
+    const gsc = await db
+      .selectFrom('integration_connections')
+      .select(['id', 'grant_id'])
+      .where('workspace_id', '=', workspaceId)
+      .where('provider', '=', 'gsc')
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto('integration_property_mappings')
+      .values({
+        id: crypto.randomUUID(),
+        workspace_id: workspaceId,
+        connection_id: gsc.id,
+        provider: 'gsc',
+        property_ref: 'https://example.test',
+        project_id: projectId,
+        status: 'active',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    await db
+      .updateTable('integration_oauth_grants')
+      .set({ status: 'needs_reauth' })
+      .where('id', '=', gsc.grant_id)
+      .execute();
+    await consent();
+    const runs = await db
+      .selectFrom('integration_sync_runs')
+      .select(['sync_kind', 'status'])
+      .where('connection_id', '=', gsc.id)
+      .execute();
+    expect(runs).toEqual([{ sync_kind: 'scheduled', status: 'queued' }]);
   });
 });

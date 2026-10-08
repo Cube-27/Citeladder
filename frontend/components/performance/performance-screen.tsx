@@ -14,6 +14,7 @@ import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
 import { PerformanceChart, type ChartSeries } from './performance-chart';
 import { ReadinessLadder, useProjectReadiness } from './readiness-ladder';
+import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { usePerformanceSelection } from './use-performance-selection';
 import { usePerformanceSync } from './use-performance-sync';
 import { useRangeProjection } from './use-range-projection';
@@ -149,7 +150,7 @@ function PerformanceEmptyState({
       heading={firstUse ? 'No search performance evidence yet' : 'No performance evidence here'}
       description={
         firstUse
-          ? 'Connect and import a supported traffic source to measure this project’s performance.'
+          ? 'Your numbers appear here as soon as the first import lands.'
           : 'Choose a range inside the imported history, or sync the missing dates.'
       }
     />
@@ -350,12 +351,18 @@ export function PerformanceScreen() {
       }
     >
       <Stack gap="workspace">
+        <DataSourceSetup
+          required={['gsc']}
+          optional={['ga4', 'bing']}
+          title="Connect Search Console"
+          description="Performance reads this project's own search data. Connect Google and use the property for this site; Analytics and Bing are optional."
+        />
         {readiness.isError ? (
           <Alert tone="warning">
             Could not load data readiness. Check your connection and try again.
           </Alert>
         ) : (
-          <ReadinessLadder data={readiness.data} hideDisconnected={coverage.firstUse} />
+          <ReadinessLadder data={readiness.data} />
         )}
 
         <PerformanceNotices

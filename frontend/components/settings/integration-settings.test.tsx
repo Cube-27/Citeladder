@@ -203,10 +203,6 @@ describe('IntegrationSettings — grant cards', () => {
     renderSettings();
 
     const googleCard = await screen.findByTestId('grant-card-google');
-    // Both Google connections ride one shared grant.
-    expect(
-      within(googleCard).getByText('One OAuth grant shared by 2 connections.'),
-    ).toBeInTheDocument();
     expect(within(googleCard).getByText('Google Search Console')).toBeInTheDocument();
     expect(within(googleCard).getByText('Google Analytics 4')).toBeInTheDocument();
     // The selected property comes from the connection's active MAPPING, which
@@ -218,33 +214,16 @@ describe('IntegrationSettings — grant cards', () => {
 
     const msCard = screen.getByTestId('grant-card-microsoft');
     expect(within(msCard).getByText('Bing Webmaster Tools')).toBeInTheDocument();
-    expect(within(msCard).getByText('One OAuth grant shared by 1 connection.')).toBeInTheDocument();
     // Needs reauth → warning alert + Sync now disabled (grant not connected).
     expect(within(msCard).getByText(/requires renewed consent/i)).toBeInTheDocument();
-    expect(within(msCard).getByRole('button', { name: 'Sync now' })).toBeDisabled();
+    expect(
+      within(msCard).getByRole('button', { name: 'Sync Bing Webmaster Tools now' }),
+    ).toBeDisabled();
     expect(
       within(screen.getByTestId('connection-row-gsc')).getByRole('button', {
-        name: 'Sync now',
+        name: 'Sync Google Search Console now',
       }),
     ).toBeEnabled();
-  });
-
-  it('maps grant statuses to badge labels', async () => {
-    const cases = [
-      { status: 'connected', label: 'Connected' },
-      { status: 'needs_reauth', label: 'Needs reauth' },
-      { status: 'pending_revocation', label: 'Pending revocation' },
-      { status: 'error', label: 'Error' },
-      { status: 'revoked', label: 'Revoked' },
-    ] as const;
-
-    for (const { status, label } of cases) {
-      mockList([connection({ grant_status: status })]);
-      const { unmount } = renderWithProviders(<IntegrationSettings />);
-      const badge = await screen.findByTestId('grant-status-google');
-      expect(badge).toHaveTextContent(label);
-      unmount();
-    }
   });
 
   it('renders a not-connected card for a grant family with no grant', async () => {
@@ -296,92 +275,63 @@ describe('IntegrationSettings — grant cards', () => {
     renderSettings();
 
     const row = await screen.findByTestId('connection-row-gsc');
-    await ue.click(within(row).getByRole('button', { name: 'Test' }));
+    await ue.click(within(row).getByRole('button', { name: 'Test Google Search Console' }));
     expect(await within(row).findByText('Connection succeeded.')).toBeInTheDocument();
   });
 });
 
-describe('IntegrationSettings — disconnect dialog (shared-grant semantics)', () => {
+describe('IntegrationSettings — disconnect and remove', () => {
   beforeEach(() => {
     search = '';
     assignMock.mockClear();
     replaceState.mockClear();
   });
 
-  it('disconnecting one of two Google connections keeps the shared grant alive', async () => {
+  it('disconnects the whole grant after confirmation, keeping imported data', async () => {
     const ue = userEvent.setup();
     let deleted = '';
     mockList([gscConnection, ga4Connection]);
     mswServer.use(
-      http.delete(`/api/v1/integrations/${CONN_GSC}`, () => {
-        deleted = CONN_GSC;
+      http.delete('/api/v1/integrations/:id', ({ params }) => {
+        deleted = String(params.id);
         return new HttpResponse(null, { status: 204 });
       }),
     );
     renderSettings();
 
-    const row = await screen.findByTestId('connection-row-gsc');
-    await ue.click(within(row).getByRole('button', { name: 'Disconnect' }));
-
+    const card = await screen.findByTestId('grant-card-google');
+    await ue.click(within(card).getByRole('button', { name: 'Disconnect Google' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/stays connected/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/grant remains active/i)).toBeInTheDocument();
+    await ue.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(deleted).toBe('');
 
-    await ue.click(within(dialog).getByRole('button', { name: 'Disconnect' }));
+    await ue.click(within(card).getByRole('button', { name: 'Disconnect Google' }));
+    await ue.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Disconnect' }),
+    );
     await waitFor(() => expect(deleted).toBe(CONN_GSC));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it('disconnecting the last connection on a grant warns that the whole grant is revoked', async () => {
+  it("removes only this project's property from a row", async () => {
     const ue = userEvent.setup();
-    let deleted = '';
-    mockList([
-      connection({
-        grant_status: 'connected',
-        id: CONN_BING,
-        grant_id: GRANT_MS,
-        provider: 'bing',
-        account_ref: 'https://example.com/',
-      }),
-    ]);
-    mswServer.use(
-      http.delete(`/api/v1/integrations/${CONN_BING}`, () => {
-        deleted = CONN_BING;
-        return new HttpResponse(null, { status: 204 });
-      }),
-    );
-    renderSettings();
-
-    const row = await screen.findByTestId('connection-row-bing');
-    await ue.click(within(row).getByRole('button', { name: 'Disconnect' }));
-
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/last connection/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/revokes the grant/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/pending revocation/i)).toBeInTheDocument();
-
-    await ue.click(within(dialog).getByRole('button', { name: 'Disconnect & revoke' }));
-    await waitFor(() => expect(deleted).toBe(CONN_BING));
-  });
-
-  it('cancelling the dialog does not delete the connection', async () => {
-    const ue = userEvent.setup();
-    let deleteCalled = false;
+    let removed = '';
     mockList([gscConnection, ga4Connection]);
     mswServer.use(
-      http.delete('/api/v1/integrations/:id', () => {
-        deleteCalled = true;
+      http.delete('/api/v1/integrations/mappings/:id', ({ params }) => {
+        removed = String(params.id);
         return new HttpResponse(null, { status: 204 });
       }),
     );
     renderSettings();
 
     const row = await screen.findByTestId('connection-row-gsc');
-    await ue.click(within(row).getByRole('button', { name: 'Disconnect' }));
-    const dialog = await screen.findByRole('dialog');
-    await ue.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-
-    expect(deleteCalled).toBe(false);
+    await ue.click(
+      await within(row).findByRole('button', {
+        name: 'Remove Google Search Console property from this project',
+      }),
+    );
+    await waitFor(() => expect(removed).toBe(MAPPING_ID));
   });
 });
 
@@ -396,17 +346,19 @@ describe('IntegrationSettings — sync polling', () => {
     const ue = userEvent.setup();
     let runStatus = 'running';
     let listCalls = 0;
+    let syncBody: unknown = null;
     mswServer.use(
       http.get('/api/v1/integrations', () => {
         listCalls += 1;
         return HttpResponse.json([gscConnection, ga4Connection]);
       }),
-      http.post(`/api/v1/integrations/${CONN_GSC}/sync`, () =>
-        HttpResponse.json(
+      http.post(`/api/v1/integrations/${CONN_GSC}/sync`, async ({ request }) => {
+        syncBody = await request.json();
+        return HttpResponse.json(
           { sync_run_id: SYNC, connection_id: CONN_GSC, status: 'queued' },
           { status: 202 },
-        ),
-      ),
+        );
+      }),
       http.get(`/api/v1/integrations/${CONN_GSC}/syncs/${SYNC}`, () =>
         HttpResponse.json(
           syncRun({
@@ -420,26 +372,29 @@ describe('IntegrationSettings — sync polling', () => {
     const { queryClient } = renderWithProviders(<IntegrationSettings />);
 
     const row = await screen.findByTestId('connection-row-gsc');
-    const syncButton = within(row).getByRole('button', { name: 'Sync now' });
+    const syncName = 'Sync Google Search Console now';
+    const syncButton = within(row).getByRole('button', { name: syncName });
     await waitFor(() => expect(listCalls).toBe(1));
     // Sync is gated on the connection having an active property mapping, so
     // it only enables once that fetch lands.
     await waitFor(() => expect(syncButton).toBeEnabled());
     await ue.click(syncButton);
+    // A connection can serve several projects, so the sync names this one.
+    await waitFor(() => expect(syncBody).toEqual({ project_id: activeProject.id }));
 
     // The enqueued run is polled and surfaced as a run-status badge; Sync now
     // stays disabled while the run is non-terminal.
-    expect(await within(row).findByText('running')).toBeInTheDocument();
+    expect(await within(row).findByText('Running')).toBeInTheDocument();
     expect(within(row).getByText(/2,148 rows · window Jul 16–Jul 22/)).toBeInTheDocument();
-    expect(within(row).getByRole('button', { name: 'Sync now' })).toBeDisabled();
+    expect(within(row).getByRole('button', { name: syncName })).toBeDisabled();
 
     // The run finishes server-side; the next poll lands the terminal status,
     // hides the badge, and refreshes the connections list (last_synced_at).
     runStatus = 'succeeded';
     await queryClient.invalidateQueries();
-    await waitFor(() => expect(within(row).queryByText('running')).not.toBeInTheDocument());
+    await waitFor(() => expect(within(row).queryByText('Running')).not.toBeInTheDocument());
     await waitFor(() => expect(listCalls).toBeGreaterThan(1));
-    expect(within(row).getByRole('button', { name: 'Sync now' })).toBeEnabled();
+    expect(within(row).getByRole('button', { name: syncName })).toBeEnabled();
   });
 });
 
@@ -462,27 +417,14 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
     );
   });
 
-  it('does not attribute AI Referrals to a Microsoft connection', async () => {
-    search = 'tab=integrations&connected=bing';
-    mockList([]);
-    renderSettings();
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Bing connected.');
-    // Connecting queues nothing — the import starts when a property is
-    // picked — so the notice says what the reader must do next.
-    expect(alert.textContent).toMatch(/select a property/i);
-    expect(alert).not.toHaveTextContent('AI Referrals');
-  });
-
-  it('shows the failure notice for ?error= with the provider code in mono', async () => {
+  it('explains a failed callback in words, never the raw code', async () => {
     search = 'tab=integrations&error=oauth_exchange_failed';
     mockList([]);
     renderSettings();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Connection failed.');
-    expect(alert).toHaveTextContent('oauth_exchange_failed');
+    expect(alert).not.toHaveTextContent('oauth_exchange_failed');
     // The empty state still renders beneath the notice.
     expect(await screen.findByText('No integrations connected')).toBeInTheDocument();
     await waitFor(() =>

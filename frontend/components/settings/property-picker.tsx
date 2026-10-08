@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Check } from 'lucide-react';
 import { useState } from 'react';
 
@@ -21,6 +21,7 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { tagClasses } from '@/components/ui/filter-chip-variants';
+import { useRefreshAfterMapping } from '@/components/integrations/data-sources';
 
 const PROVIDER_NOUN: Record<IntegrationConnection['provider'], string> = {
   gsc: 'Search Console property',
@@ -71,6 +72,30 @@ function PropertyOption({
 }
 
 /**
+ * The connection's ACTIVE property mapping for `projectId`, or `null`.
+ *
+ * The mapping — not `connection.account_ref` — is what decides whether a sync
+ * produces anything, and one connection can serve several projects, so only
+ * the active project's mapping describes this row.
+ */
+export function useActiveMapping(
+  workspaceId: string,
+  connectionId: string,
+  projectId: string | null,
+) {
+  const query = useQuery({
+    queryKey: queryKeys.integrations.mappings(connectionId),
+    queryFn: ({ signal }) => integrationsApi.listMappings(connectionId, { signal, workspaceId }),
+    staleTime: 60 * 1000,
+  });
+  return (
+    query.data?.find(
+      (mapping) => mapping.status === 'active' && mapping.project_id === projectId,
+    ) ?? null
+  );
+}
+
+/**
  * Property picker for one integration connection.
  *
  * A connected OAuth grant does not by itself tell a sync WHAT to pull: the
@@ -84,44 +109,24 @@ function PropertyOption({
  * text, so a ref can't be typed wrong. That call is live and lazy: it runs
  * only once the dialog opens.
  */
-/**
- * The connection's ACTIVE property mapping, or `null`.
- *
- * The mapping — not `connection.account_ref` — is what decides whether a sync
- * produces anything: the worker fetches from `account_ref`, but derivation
- * then has to resolve that ref back to a project through an active mapping,
- * and a run whose mapping is missing fails `unmapped_property` after the
- * fetch. The two drift apart for real: mappings cascade away when their
- * project is deleted, while `account_ref` lives on the connection and
- * survives. Reading `account_ref` alone therefore renders a confidently
- * "selected" property whose every sync is failing.
- *
- * Shared with `integration-card` so the row's Sync button and the picker
- * agree; react-query dedupes the two subscribers onto one request.
- */
-export function useActiveMapping(workspaceId: string, connectionId: string) {
-  const query = useQuery({
-    queryKey: queryKeys.integrations.mappings(connectionId),
-    queryFn: ({ signal }) => integrationsApi.listMappings(connectionId, { signal, workspaceId }),
-    staleTime: 60 * 1000,
-  });
-  return query.data?.find((mapping) => mapping.status === 'active') ?? null;
-}
-
 export function PropertyPicker({
   connection,
   disabled = false,
 }: Readonly<{ connection: IntegrationConnection; disabled?: boolean }>) {
-  const queryClient = useQueryClient();
+  const refreshAfterMapping = useRefreshAfterMapping();
   const { activeProject } = useProjectContext();
   const mayDiscover = useWorkspaceCapability('manage_credentials');
-  const activeMapping = useActiveMapping(connection.workspace_id, connection.id);
+  const activeMapping = useActiveMapping(
+    connection.workspace_id,
+    connection.id,
+    activeProject?.id ?? null,
+  );
   const [open, setOpen] = useState(false);
   const [pendingRef, setPendingRef] = useState<string | null>(null);
 
   const discovery = useMutation({
     mutationFn: () =>
-      integrationsApi.discoverProperties(connection.id, {
+      integrationsApi.discoverProperties(connection.id, activeProject?.id, {
         workspaceId: connection.workspace_id,
       }),
     retry: false,
@@ -144,7 +149,7 @@ export function PropertyPicker({
       setOpen(false);
       setPendingRef(null);
       // account_ref moved with the mapping — refresh the connection list.
-      await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
+      await refreshAfterMapping();
     },
     onError: () => setPendingRef(null),
   });
@@ -184,6 +189,7 @@ export function PropertyPicker({
             }}
             disabled={disabled || discovery.isPending}
             data-testid={`select-property-${connection.provider}`}
+            aria-label={`${selected ? 'Change' : 'Select'} ${noun}`}
           >
             {selected ? 'Change' : 'Select'}
           </Button>
@@ -234,19 +240,23 @@ export function PropertyPicker({
             </Alert>
           ) : null}
 
-          {discovery.data?.map((property) => (
-            <PropertyOption
-              key={property.property_ref}
-              property={property}
-              selected={property.property_ref === selected}
-              disabled={!activeProject || selectMutation.isPending}
-              pending={pendingRef === property.property_ref}
-              onSelect={() => {
-                setPendingRef(property.property_ref);
-                selectMutation.mutate(property.property_ref);
-              }}
-            />
-          ))}
+          {[...(discovery.data ?? [])]
+            .sort((a, b) => Number(b.matches_project === true) - Number(a.matches_project === true))
+            .map((property) => (
+              <PropertyOption
+                key={property.property_ref}
+                property={property}
+                selected={property.property_ref === selected}
+                disabled={
+                  !activeProject || selectMutation.isPending || property.matches_project === false
+                }
+                pending={pendingRef === property.property_ref}
+                onSelect={() => {
+                  setPendingRef(property.property_ref);
+                  selectMutation.mutate(property.property_ref);
+                }}
+              />
+            ))}
 
           {selectMutation.isError ? (
             <Alert tone="danger">{humanizeApiError(selectMutation.error).message}</Alert>

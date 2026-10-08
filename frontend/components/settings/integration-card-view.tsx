@@ -1,6 +1,11 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Info } from 'lucide-react';
+import { useState } from 'react';
 
-import { ConnectionRow } from '@/components/settings/integration-connection-row';
+import { ConnectionRow, PROVIDER_META } from '@/components/settings/integration-connection-row';
+import { Dialog } from '@/components/ui/dialog';
+import { humanizeApiError } from '@/lib/api/errors';
+import { queryKeys } from '@/lib/api/query-keys';
 import { FAMILY_META, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -62,7 +67,9 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
   }
   if (status === 'revoked') {
     return (
-      <Alert tone="neutral">This grant was revoked at {title}. Reconnect to resume syncing.</Alert>
+      <Alert tone="neutral">
+        {title} is disconnected. Imported data is kept; reconnect to resume syncing.
+      </Alert>
     );
   }
 
@@ -130,6 +137,71 @@ function ConnectCard({
   );
 }
 
+/**
+ * Disconnect the whole grant: access is revoked at the provider and every
+ * property it serves stops importing. Imported data is kept, so reconnecting
+ * resumes the same history.
+ */
+function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const title = FAMILY_META[grant.family].title;
+  const connection = grant.connections[0]!;
+  const disconnect = useMutation({
+    mutationFn: () =>
+      integrationsApi.delete(connection.id, { workspaceId: connection.workspace_id }),
+    onSuccess: async () => {
+      setOpen(false);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
+    },
+  });
+  const sources = grant.connections.map((item) => PROVIDER_META[item.provider].label).join(' and ');
+  return (
+    <>
+      <Button variant="destructiveGhost" size="sm" onClick={() => setOpen(true)}>
+        Disconnect {title}
+      </Button>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!disconnect.isPending) setOpen(next);
+        }}
+        title={`Disconnect ${title}`}
+        description={`CiteLadder's access to ${sources} is revoked and their properties stop importing.`}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setOpen(false)}
+              disabled={disconnect.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => disconnect.mutate()}
+              pending={disconnect.isPending}
+              pendingLabel="Disconnecting…"
+            >
+              Disconnect
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-2">
+          <p className={textRole('body')}>
+            Previously imported data is kept. Reconnecting resumes from it; to stop importing just
+            one property, use Remove on its row instead.
+          </p>
+          {disconnect.isError ? (
+            <Alert tone="danger">{humanizeApiError(disconnect.error).message}</Alert>
+          ) : null}
+        </div>
+      </Dialog>
+    </>
+  );
+}
+
 function ConnectedCard({
   workspaceId,
   family,
@@ -164,15 +236,20 @@ function ConnectedCard({
       </div>
       <CardContent className="pt-0">
         <div className="border-border-subtle flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-          <Button
-            variant={grant.status === 'connected' ? 'secondary' : 'primary'}
-            size="sm"
-            onClick={() =>
-              hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
-            }
-          >
-            Reconnect
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant={grant.status === 'connected' ? 'secondary' : 'primary'}
+              size="sm"
+              onClick={() =>
+                hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
+              }
+            >
+              {grant.status === 'revoked' ? `Connect ${meta.title}` : 'Reconnect'}
+            </Button>
+            {grant.status === 'revoked' || grant.status === 'pending_revocation' ? null : (
+              <DisconnectGrant grant={grant} />
+            )}
+          </div>
           <span className="type-caption text-right">
             Reconnecting renews consent for the whole grant.
           </span>

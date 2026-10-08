@@ -1,0 +1,122 @@
+'use client';
+
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+
+import {
+  integrationsApi,
+  type IntegrationConnection,
+  type IntegrationPropertyMapping,
+  type IntegrationProvider,
+} from '@/lib/api/integrations';
+import { queryKeys } from '@/lib/api/query-keys';
+
+/**
+ * Where one data source stands for the active project, and so what the user
+ * does next. Distinct states, never a percentage:
+ *
+ * - `connect`: no usable grant (none yet, or one that was disconnected).
+ * - `reconnect`: a grant exists but the provider refused it.
+ * - `choose`: connected, but no property imports into this project.
+ * - `ready`: a property imports into this project.
+ */
+export type SourceStep =
+  | { kind: 'connect' }
+  | { kind: 'reconnect'; connection: IntegrationConnection }
+  | { kind: 'choose'; connection: IntegrationConnection }
+  | { kind: 'ready'; connection: IntegrationConnection; mapping: IntegrationPropertyMapping };
+
+export function sourceStep(
+  provider: IntegrationProvider,
+  connections: readonly IntegrationConnection[],
+  mappings: ReadonlyMap<string, readonly IntegrationPropertyMapping[]>,
+  projectId: string,
+): SourceStep {
+  const connection = connections.find((item) => item.provider === provider);
+  if (
+    !connection ||
+    connection.grant_status === 'revoked' ||
+    connection.grant_status === 'pending_revocation'
+  )
+    return { kind: 'connect' };
+  if (connection.grant_status !== 'connected') return { kind: 'reconnect', connection };
+  // A connection can serve several projects; only this project's mapping counts.
+  const mapping = mappings
+    .get(connection.id)
+    ?.find((item) => item.status === 'active' && item.project_id === projectId);
+  return mapping ? { kind: 'ready', connection, mapping } : { kind: 'choose', connection };
+}
+
+/** The steps for `providers` in the active project, from the connection and mapping reads. */
+export function useDataSources(
+  workspaceId: string | null,
+  projectId: string | null,
+  providers: readonly IntegrationProvider[],
+) {
+  const connections = useQuery({
+    queryKey: queryKeys.integrations.connections(workspaceId),
+    queryFn: ({ signal }) => integrationsApi.list({ signal, workspaceId }),
+    enabled: Boolean(workspaceId),
+  });
+  const relevant = (connections.data ?? []).filter((item) => providers.includes(item.provider));
+  const mappingQueries = useQueries({
+    queries: relevant.map((connection) => ({
+      queryKey: queryKeys.integrations.mappings(connection.id),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        integrationsApi.listMappings(connection.id, { signal, workspaceId }),
+      staleTime: 60 * 1000,
+    })),
+  });
+  const mappings = new Map(
+    relevant.map((connection, index) => [connection.id, mappingQueries[index]?.data ?? []]),
+  );
+  const loading =
+    connections.isLoading || mappingQueries.some((query) => query.isLoading && !query.data);
+  const steps = new Map(
+    providers.map((provider) => [
+      provider,
+      projectId
+        ? sourceStep(provider, connections.data ?? [], mappings, projectId)
+        : ({ kind: 'connect' } as SourceStep),
+    ]),
+  );
+  return {
+    loading,
+    error: connections.isError ? connections.error : null,
+    retry: () => void connections.refetch(),
+    steps,
+  };
+}
+
+/**
+ * Everything a new property changes: its own mapping, readiness and the
+ * projections it feeds. Refreshed at once rather than after the stale time, so
+ * the page shows the import starting instead of the old empty state.
+ */
+export function useRefreshAfterMapping() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    () =>
+      Promise.all(
+        [
+          queryKeys.integrations.all,
+          queryKeys.performance.all,
+          queryKeys.demand.all,
+          queryKeys.aiTraffic.all,
+        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+      ),
+    [queryClient],
+  );
+}
+
+/** Messages for the OAuth callback's `error=` codes; never the raw code. */
+const OAUTH_ERRORS: Record<string, string> = {
+  oauth_exchange_failed: 'The consent screen was cancelled or did not finish. Try again.',
+  oauth_state_invalid:
+    'The connect link expired or was opened in a different browser. Start again from here.',
+  oauth_not_configured: 'This connection is not available right now. Contact support.',
+};
+
+export function oauthErrorMessage(code: string): string {
+  return OAUTH_ERRORS[code] ?? 'The connection could not be completed. Try again.';
+}

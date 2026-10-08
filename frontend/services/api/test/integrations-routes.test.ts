@@ -98,11 +98,16 @@ async function get(path: string, selectedWorkspace = workspaceId, authenticated 
   return { status: response.status, body: (await response.json()) as unknown };
 }
 
-async function discover(id: string, userId = ownerId) {
+async function discover(id: string, userId = ownerId, body?: { project_id: string }) {
   const token = await sessionToken({ sub: userId, ver: 0 });
   return app.request(`/api/v1/integrations/${id}/properties`, {
     method: 'POST',
-    headers: { cookie: `${config.session.cookieName}=${token}`, 'x-workspace-id': workspaceId },
+    headers: {
+      cookie: `${config.session.cookieName}=${token}`,
+      'x-workspace-id': workspaceId,
+      ...(body ? { 'content-type': 'application/json' } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
 }
 
@@ -174,8 +179,145 @@ describe('integration connection routes', () => {
     },
   );
 
-  it('rejects GET property discovery', async () => {
-    expect((await get(`/api/v1/integrations/${connectionId}/properties`)).status).toBe(405);
+  it('marks the properties that belong to the named project, and leaves GA4 unknown', async () => {
+    const token = vi
+      .spyOn(await import('../src/integrations/tokens.ts'), 'freshAccessToken')
+      .mockResolvedValue('recorded-token');
+    const provider = vi.spyOn(IntegrationClient.prototype, 'properties').mockResolvedValue([
+      { property_ref: 'sc-domain:example.test', label: 'Domain' },
+      { property_ref: 'https://www.example.test/', label: 'Prefix' },
+      { property_ref: 'https://other.test/', label: 'Other site' },
+    ]);
+    try {
+      const response = await discover(connectionId, ownerId, { project_id: projectId });
+      expect(response.status).toBe(200);
+      const properties = (await response.json()) as Array<{ matches_project: boolean | null }>;
+      expect(properties.map((property) => property.matches_project)).toEqual([true, true, false]);
+      const ga4 = await discover(projectConnections[1]!, ownerId, { project_id: projectId });
+      const ga4Properties = (await ga4.json()) as Array<{ matches_project: boolean | null }>;
+      expect(ga4Properties.every((property) => property.matches_project === null)).toBe(true);
+      expect((await discover(connectionId, ownerId, { project_id: randomUUID() })).status).toBe(
+        404,
+      );
+    } finally {
+      token.mockRestore();
+      provider.mockRestore();
+    }
+  });
+
+  it('returns a failed OAuth start to the screen that began it, never off-site', async () => {
+    const token = await sessionToken({ sub: ownerId, ver: 0 });
+    const start = (returnTo: string) =>
+      app.request(
+        `/api/v1/integrations/workspaces/${workspaceId}/oauth/gsc/start?return_to=${encodeURIComponent(returnTo)}`,
+        { headers: { cookie: `${config.session.cookieName}=${token}` } },
+      );
+    // Test configuration has no OAuth client, so the start fails before consent.
+    const local = await start('/performance?range=28d&error=stale');
+    expect(local.status).toBe(302);
+    const location = new URL(local.headers.get('location')!);
+    expect(location.pathname).toBe('/performance');
+    expect(location.searchParams.get('range')).toBe('28d');
+    expect(location.searchParams.getAll('error')).toEqual(['oauth_not_configured']);
+    for (const hostile of ['//evil.test/performance', 'https://evil.test/performance', '/admin']) {
+      const response = await start(hostile);
+      const landed = new URL(response.headers.get('location')!);
+      expect(landed.pathname).toBe('/settings');
+      expect(landed.host).not.toBe('evil.test');
+    }
+  });
+
+  it('disconnects a grant without deleting its imported evidence', async () => {
+    const workspace = await fixtures.ownedWorkspace(ownerId);
+    const project = await seedProject(db, workspace);
+    const grantId = await grant(workspace, 'google_oauth');
+    const gsc = await connection(workspace, grantId, 'gsc');
+    const ga4 = await connection(workspace, grantId, 'ga4');
+    const mappingIds = [randomUUID(), randomUUID()];
+    for (const [index, [id, provider]] of [
+      [gsc, 'gsc'],
+      [ga4, 'ga4'],
+    ].entries())
+      await db
+        .insertInto('integration_property_mappings')
+        .values({
+          id: mappingIds[index]!,
+          workspace_id: workspace,
+          connection_id: id!,
+          provider: provider!,
+          property_ref: provider === 'ga4' ? '123456789' : 'https://example.test',
+          project_id: project,
+          status: 'active',
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .execute();
+    const run = await integrationSync.enqueueSyncRun(db, {
+      workspaceId: workspace,
+      connectionId: gsc,
+      mappingId: mappingIds[0]!,
+      projectId: project,
+      windowStart: '2026-07-01',
+      windowEnd: '2026-07-01',
+      syncKind: 'backfill',
+    });
+    const artifactId = randomUUID();
+    await db
+      .insertInto('integration_import_artifacts')
+      .values({
+        id: artifactId,
+        sync_run_id: run.sync_run_id,
+        connection_id: gsc,
+        workspace_id: workspace,
+        provider: 'gsc',
+        dataset: 'gsc_day_daily',
+        query_snapshot: JSON.stringify({ startRow: 0 }),
+        payload_hash: 'a'.repeat(64),
+        row_count: 0,
+        payload: JSON.stringify({ rows: [] }),
+        fetched_at: new Date(),
+        created_at: new Date(),
+      })
+      .execute();
+    const token = await sessionToken({ sub: ownerId, ver: 0 });
+    const response = await app.request(`/api/v1/integrations/${ga4}`, {
+      method: 'DELETE',
+      headers: { cookie: `${config.session.cookieName}=${token}`, 'x-workspace-id': workspace },
+    });
+    expect(response.status).toBe(204);
+    // The whole grant is disconnected: both mappings retire, nothing is deleted.
+    expect(
+      (
+        await db
+          .selectFrom('integration_property_mappings')
+          .select('status')
+          .where('id', 'in', mappingIds)
+          .execute()
+      ).map((row) => row.status),
+    ).toEqual(['disabled', 'disabled']);
+    expect(
+      await db
+        .selectFrom('integration_import_artifacts')
+        .select('id')
+        .where('id', '=', artifactId)
+        .execute(),
+    ).toHaveLength(1);
+    expect(
+      await db
+        .selectFrom('integration_connections')
+        .select('id')
+        .where('grant_id', '=', grantId)
+        .execute(),
+    ).toHaveLength(2);
+    expect(
+      (
+        await db
+          .selectFrom('integration_oauth_grants')
+          .select('status')
+          .where('id', '=', grantId)
+          .executeTakeFirstOrThrow()
+      ).status,
+    ).toBe('pending_revocation');
   });
 
   it('reports a saved mapping whose history enqueue failed and allows retry without duplication', async () => {

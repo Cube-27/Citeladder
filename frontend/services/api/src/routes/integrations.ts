@@ -5,7 +5,7 @@ import {
   integrationPropertyListSchema,
   integrationPropertyMappingListSchema,
   integrationSyncEnqueueSchema,
-  integrationSyncRunListSchema,
+  integrationSyncRunSchema,
   integrationTestResultSchema,
 } from '@citeladder/contracts/integrations';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
@@ -19,9 +19,12 @@ import { integrationPolicy } from '../integrations/config.ts';
 import {
   completeOAuth,
   oauthCookieOptions,
+  oauthReturnPath,
   providerKnown,
   startOAuth,
+  stateReturnPath,
 } from '../integrations/oauth.ts';
+import { projectSiteDomains, propertyMatchesSite } from '../integrations/host-scope.ts';
 import {
   enqueueHistoryBackfill,
   enqueueSyncRun,
@@ -46,6 +49,7 @@ const windowRequest = z
     window_end: z.iso.date().optional(),
   })
   .strict();
+const discoveryRequest = z.object({ project_id: z.uuid().optional() }).strict();
 const mappingRequest = z
   .object({
     provider: z.enum(['gsc', 'ga4', 'bing']),
@@ -57,10 +61,15 @@ const providerPath = { provider: { scalar: { kind: 'str' }, required: true } } a
 const oauthCookie = integrationPolicy.transport.INTEGRATION_OAUTH_TRANSACTION_COOKIE;
 const logger = getLogger('api.integrations');
 
-function oauthLanding(params: Record<string, string>, clearCookie = false): Response {
+/** Land on the screen that started the flow (a validated app path), else Settings. */
+function oauthLanding(
+  params: Record<string, string>,
+  clearCookie = false,
+  returnTo: string | null = null,
+): Response {
   const client = new IntegrationClient();
   const target = new URL(
-    integrationPolicy.transport.INTEGRATION_OAUTH_LANDING_PATH,
+    returnTo ?? integrationPolicy.transport.INTEGRATION_OAUTH_LANDING_PATH,
     `${client.secrets.frontendUrl}/`,
   );
   for (const [key, value] of Object.entries(params)) target.searchParams.set(key, value);
@@ -75,16 +84,6 @@ function cookieValue(header: string | undefined, name: string): string {
     .map((value) => value.trim())
     .find((value) => value.startsWith(`${name}=`));
   return pair?.slice(name.length + 1) ?? '';
-}
-
-function domain(value: string): string {
-  let host = '';
-  try {
-    host = new URL(value.includes('://') ? value : `https://${value}`).hostname.toLowerCase();
-  } catch {
-    return '';
-  }
-  return host.replace(/^www\./u, '');
 }
 
 function integrationFailure(error: unknown): never {
@@ -125,32 +124,6 @@ export const integrationRoutes = [
         mappingId: query.mapping_id ?? undefined,
       });
       return null;
-    },
-  }),
-  defineGetRoute({
-    family,
-    path: '/api/v1/integrations/oauth/{provider}/start',
-    capability: 'manage_credentials',
-    raw: true,
-    params: { path: providerPath, query: {} },
-    response: z.null(),
-    async handle({ c, db }, { path }) {
-      if (!providerKnown(path.provider)) throw notFound('Integration provider');
-      try {
-        const started = await startOAuth(db, {
-          workspaceId: c.get('workspace').workspaceId,
-          userId: c.get('user').id,
-          provider: path.provider,
-        });
-        const headers = new Headers({ location: started.url });
-        headers.append(
-          'set-cookie',
-          `${oauthCookie}=${started.nonce}; ${oauthCookieOptions(started.maxAge)}`,
-        );
-        return new Response(null, { status: 302, headers });
-      } catch (error) {
-        return integrationFailure(error);
-      }
     },
   }),
   definePostRoute({
@@ -223,15 +196,20 @@ export const integrationRoutes = [
     authorize: 'workspace-path',
     capability: 'manage_credentials',
     raw: true,
-    params: { path: { workspace_id: uuid, ...providerPath }, query: {} },
+    params: {
+      path: { workspace_id: uuid, ...providerPath },
+      query: { return_to: { scalar: { kind: 'str' }, required: false } },
+    },
     response: z.null(),
-    async handle({ c, db }, { path }) {
+    async handle({ c, db }, { path, query }) {
       if (!providerKnown(path.provider)) throw notFound('Integration provider');
+      const returnTo = oauthReturnPath(query.return_to);
       try {
         const started = await startOAuth(db, {
           workspaceId: c.get('workspace').workspaceId,
           userId: c.get('user').id,
           provider: path.provider,
+          returnTo,
         });
         const headers = new Headers({ location: started.url });
         headers.append(
@@ -240,7 +218,11 @@ export const integrationRoutes = [
         );
         return new Response(null, { status: 302, headers });
       } catch (error) {
-        return integrationFailure(error);
+        // A full-page navigation: land back on the screen with the reason
+        // rather than a JSON body the browser would render as the page.
+        if (error instanceof IntegrationError)
+          return oauthLanding({ error: error.code }, false, returnTo);
+        throw error;
       }
     },
   }),
@@ -261,8 +243,9 @@ export const integrationRoutes = [
     async handle({ c, db }, { path, query }) {
       if (!providerKnown(path.provider)) throw notFound('Integration provider');
       const invalid = { error: 'oauth_state_invalid' };
-      if (query.error) return oauthLanding({ error: 'oauth_exchange_failed' }, true);
-      if (!query.code || !query.state) return oauthLanding(invalid, true);
+      const returnTo = await stateReturnPath(query.state);
+      if (query.error) return oauthLanding({ error: 'oauth_exchange_failed' }, true, returnTo);
+      if (!query.code || !query.state) return oauthLanding(invalid, true, returnTo);
       const nonce = cookieValue(c.req.header('cookie'), oauthCookie);
       try {
         await completeOAuth(db, {
@@ -271,10 +254,10 @@ export const integrationRoutes = [
           state: query.state,
           nonce,
         });
-        return oauthLanding({ connected: path.provider }, true);
+        return oauthLanding({ connected: path.provider }, true, returnTo);
       } catch (error) {
         const code = error instanceof IntegrationError ? error.code : 'oauth_exchange_failed';
-        return oauthLanding({ error: code }, true);
+        return oauthLanding({ error: code }, true, returnTo);
       }
     },
   }),
@@ -342,7 +325,7 @@ export const integrationRoutes = [
     family,
     path: '/api/v1/integrations/{connection_id}/syncs/{sync_run_id}',
     params: { path: syncPath, query: {} },
-    response: integrationSyncRunListSchema.element,
+    response: integrationSyncRunSchema,
     async handle({ c, db }, { path }) {
       const row = await getSyncRun(
         db,
@@ -351,7 +334,7 @@ export const integrationRoutes = [
         path.sync_run_id,
       );
       if (row === undefined) throw notFound('Integration sync run');
-      return integrationSyncRunListSchema.element.parse(row);
+      return integrationSyncRunSchema.parse(row);
     },
   }),
   defineGetRoute({
@@ -370,9 +353,11 @@ export const integrationRoutes = [
     path: '/api/v1/integrations/{connection_id}/properties',
     capability: 'manage_credentials',
     params: { path: connectionPath, query: {} },
+    body: discoveryRequest.nullable().optional(),
     response: integrationPropertyListSchema,
     async handle({ c, db }, { path }) {
       const workspaceId = c.get('workspace').workspaceId;
+      const body = await readOptionalBody(c, discoveryRequest);
       const row = await db
         .selectFrom('integration_connections as connection')
         .innerJoin('integration_oauth_grants as grant', (join) =>
@@ -390,15 +375,30 @@ export const integrationRoutes = [
         limit: resolveSettingSpec(policy.abuse.property_discovery_limit) as number,
         windowSeconds: resolveSettingSpec(policy.abuse.property_discovery_window_seconds) as number,
       });
+      // Resolve the project before provider I/O; an unknown project is a 404.
+      const sites = body?.project_id
+        ? await projectSiteDomains(db, workspaceId, body.project_id).catch(() => {
+            throw notFound('Project');
+          })
+        : null;
+      let properties;
       try {
         const token = await freshAccessToken(db, row.grant_id, workspaceId);
-        return await new IntegrationClient().properties(
+        properties = await new IntegrationClient().properties(
           row.provider as 'gsc' | 'ga4' | 'bing',
           token,
         );
       } catch (error) {
         return integrationFailure(error);
       }
+      // GA4 summaries carry no site URL, so a GA4 match stays unknown (null).
+      return properties.map((property) => ({
+        ...property,
+        matches_project:
+          sites === null || row.provider === 'ga4'
+            ? null
+            : propertyMatchesSite(property.property_ref, sites),
+      }));
     },
   }),
   definePostRoute({
@@ -434,6 +434,11 @@ export const integrationRoutes = [
     path: '/api/v1/integrations/{connection_id}',
     capability: 'manage_credentials',
     params: { path: connectionPath, query: {} },
+    /**
+     * Disconnect the connection's OAuth grant: revoke it and retire every
+     * property mapping it serves. Connections and their imported evidence stay
+     * (raw evidence is append-only), so a reconnect resumes the same history.
+     */
     async handle({ c, db }, { path }) {
       const workspaceId = c.get('workspace').workspaceId;
       await db.transaction().execute(async (trx) => {
@@ -453,14 +458,8 @@ export const integrationRoutes = [
           .forUpdate()
           .executeTakeFirst();
         if (!grant) throw notFound('Integration connection');
-        const others = await trx
-          .selectFrom('integration_connections')
-          .select('id')
-          .where('grant_id', '=', grant.id)
-          .where('id', '!=', connection.id)
-          .executeTakeFirst();
         const now = new Date();
-        if (!others) {
+        if (grant.status !== 'pending_revocation' && grant.status !== 'revoked') {
           await trx
             .updateTable('integration_oauth_grants')
             .set({
@@ -474,6 +473,22 @@ export const integrationRoutes = [
             .where('workspace_id', '=', workspaceId)
             .execute();
         }
+        const retired = await trx
+          .updateTable('integration_property_mappings')
+          .set({ status: 'disabled', updated_at: now })
+          .where('workspace_id', '=', workspaceId)
+          .where('status', '=', 'active')
+          .where('connection_id', 'in', (eb) =>
+            eb
+              .selectFrom('integration_connections')
+              .select('id')
+              .where('workspace_id', '=', workspaceId)
+              .where('grant_id', '=', grant.id),
+          )
+          .returning('project_id')
+          .execute();
+        for (const projectId of new Set(retired.map((row) => row.project_id)))
+          await enqueueTrafficInsights(trx, { workspaceId, projectId });
         await trx
           .insertInto('integration_events')
           .values({
@@ -483,14 +498,12 @@ export const integrationRoutes = [
             grant_id: grant.id,
             event_type: 'integration.disconnected',
             message: 'Integration disconnected',
-            payload: JSON.stringify({ provider: connection.provider, pending_revocation: !others }),
+            payload: JSON.stringify({
+              provider: connection.provider,
+              retired_mappings: retired.length,
+            }),
             created_at: now,
           })
-          .execute();
-        await trx
-          .deleteFrom('integration_connections')
-          .where('id', '=', connection.id)
-          .where('workspace_id', '=', workspaceId)
           .execute();
       });
     },
@@ -548,7 +561,7 @@ export const integrationRoutes = [
           });
         const project = await trx
           .selectFrom('projects')
-          .select(['id', 'website_url'])
+          .select('id')
           .where('id', '=', input.project_id)
           .where('workspace_id', '=', workspaceId)
           .executeTakeFirst();
@@ -560,22 +573,12 @@ export const integrationRoutes = [
             throw new ApiError(422, 'The property does not belong to the selected project', {
               code: 'mapping_property_not_owned',
             });
-        } else {
-          const host = domain(ref.replace(/^sc-domain:/iu, ''));
-          const owned = await trx
-            .selectFrom('owned_domains')
-            .select('domain')
-            .where('project_id', '=', project.id)
-            .execute();
-          const hosts = new Set(
-            [domain(project.website_url), ...owned.map((item) => domain(item.domain))].filter(
-              Boolean,
-            ),
-          );
-          if (!host || !hosts.has(host))
-            throw new ApiError(422, 'The property does not belong to the selected project', {
-              code: 'mapping_property_not_owned',
-            });
+        } else if (
+          !propertyMatchesSite(ref, await projectSiteDomains(trx, workspaceId, project.id))
+        ) {
+          throw new ApiError(422, 'The property does not belong to the selected project', {
+            code: 'mapping_property_not_owned',
+          });
         }
         await trx
           .updateTable('integration_property_mappings')

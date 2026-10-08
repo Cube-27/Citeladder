@@ -59,7 +59,7 @@ export function TrafficOverview({
         <InsightStrip projectId={projectId} workspaceId={workspaceId} range={range} />
         <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-3">
           <CrawlSignalPanel data={data.crawl} onConnect={() => setConnectOpen(true)} />
-          <ReferralSignal data={data.referrals} workspaceId={workspaceId} />
+          <ReferralSignal data={data.referrals} />
           <CitationSignal data={data.citations} projectId={projectId} />
         </div>
         {data.crawl.series.length ? <RequestsByPurpose series={data.crawl.series} /> : null}

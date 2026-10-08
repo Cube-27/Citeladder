@@ -132,6 +132,9 @@ export const integrationBackfillProgressSchema = responseObject({
 export const integrationPropertySchema = responseObject({
   property_ref: z.string(),
   label: z.string(),
+  // Whether the property belongs to the project named in the discovery request;
+  // null when no project was named or the provider exposes no site (GA4).
+  matches_project: z.boolean().nullable(),
 });
 
 export const integrationPropertyListSchema = z.array(integrationPropertySchema);

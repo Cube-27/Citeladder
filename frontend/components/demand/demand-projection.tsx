@@ -13,7 +13,6 @@ import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageShell } from '@/components/layout/page-shell';
 import { ReadError } from '@/components/ui/read-error';
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { DemandActBand } from '@/components/demand/demand-act-band';
 import { DemandDetectorBar } from '@/components/demand/demand-detector-bar';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
@@ -37,6 +36,7 @@ import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navig
 import { EmptyState } from '@/components/ui/empty-state';
 import { Card, CardContent } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
+import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 
 const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
@@ -402,24 +402,41 @@ function demandFallback({
   if (!hasProject) return <Alert tone="info">Select a project to inspect search demand.</Alert>;
   if (latest.data === null) {
     return (
-      <EmptyState
-        icon={Search}
-        heading="No Search Demand snapshot yet"
-        description="Connect and sync traffic evidence before Search Demand can identify opportunities."
-        action={
-          <Button asChild size="md">
-            <ProjectLink href="/performance">Open Performance</ProjectLink>
-          </Button>
-        }
-      />
+      <Stack gap="workspace">
+        <DataSourceSetup
+          required={['gsc']}
+          title="Connect Search Console"
+          description="Search Demand finds opportunities in this project's own search queries. Connect Google and use the property for this site."
+        />
+        <EmptyState
+          icon={Search}
+          heading="No Search Demand snapshot yet"
+          description="Search Demand appears here once Search Console data has been imported and analysed."
+        />
+      </Stack>
     );
   }
-  if (latest.isError) return <Alert tone="danger">Search demand could not be loaded.</Alert>;
+  if (latest.isError)
+    return (
+      <ReadError
+        error={latest.error}
+        fallback="Search demand could not be loaded. Check your connection and try again."
+        onRetry={() => void latest.refetch()}
+        pending={latest.isFetching}
+      />
+    );
   if (latest.data === undefined) return null;
   return (
-    <Alert tone="info">
-      Search Console evidence is unavailable for this snapshot. Sync Search Console to measure
-      search demand.
-    </Alert>
+    <Stack gap="workspace">
+      <DataSourceSetup
+        required={['gsc']}
+        title="Connect Search Console"
+        description="This snapshot has no Search Console evidence. Connect Google and use the property for this site."
+      />
+      <Alert tone="info">
+        Search Console evidence is unavailable for this snapshot. Search Demand refreshes after the
+        next Search Console import.
+      </Alert>
+    </Stack>
   );
 }
