@@ -7,7 +7,7 @@
  * hold no state, so server-rendered pages can show them without an island.
  */
 
-export { AppShellFrame, ProductShot, type ShellSection } from './product-view-parts';
+export { AppShellFrame, ProductShot, type ShellFilters } from './product-view-parts';
 export {
   AnswerView,
   CitedUrlView,
@@ -16,8 +16,8 @@ export {
   ReferralView,
   ShelfSetupView,
   SourcesView,
-  VisibilityView,
 } from './views-measure';
+export { VisibilityView } from './views-visibility';
 export {
   AcquisitionView,
   DemandView,

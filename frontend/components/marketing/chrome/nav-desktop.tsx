@@ -9,7 +9,7 @@ import {
 } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
-import type { OpenSource } from './nav';
+import type { OpenSource, SlideFrom } from './nav';
 import { NavItemLink, NavigationPath } from './nav-items';
 
 const NAV_LINK =
@@ -23,10 +23,13 @@ type DesktopNavigationProps = {
   panelLeft: number;
   openDrop: NavDropKey | null;
   openSource: OpenSource | null;
-  /** The panel playing its exit animation, if any. */
+  /** The panel playing its exit animation, if any, and where it sits. */
   closingDrop: NavDropKey | null;
+  closingLeft: number;
   /** The open panel arrived from a closed bar, so it animates in. */
   entering: boolean;
+  /** Set while panels hand over between neighbouring triggers. */
+  slideFrom: SlideFrom | null;
   linksRef: RefObject<HTMLDivElement | null>;
   clearDropClose: () => void;
   scheduleDropClose: () => void;
@@ -44,7 +47,9 @@ export function DesktopNavigation({
   openDrop,
   openSource,
   closingDrop,
+  closingLeft,
   entering,
+  slideFrom,
   linksRef,
   clearDropClose,
   scheduleDropClose,
@@ -99,8 +104,9 @@ export function DesktopNavigation({
             <DesktopDropPanel
               dropKey={key}
               state={panelState(open, closingDrop === key, entering)}
+              slideFrom={slideFrom}
               layout={layout}
-              panelLeft={panelLeft}
+              panelLeft={closingDrop === key ? closingLeft : panelLeft}
               clearDropClose={clearDropClose}
               selectDrop={selectDrop}
             />
@@ -138,9 +144,19 @@ function panelState(open: boolean, closing: boolean, entering: boolean): PanelSt
   return closing ? 'closing' : 'hidden';
 }
 
+/** The animation a panel plays: unfold from a closed bar, or slide on handover. */
+function panelAnimation(state: PanelState, slideFrom: SlideFrom | null): string | undefined {
+  if (state === 'entering') return 'marketing-nav-panel';
+  if (state === 'closing') {
+    return slideFrom ? 'marketing-nav-panel-slide-out' : 'marketing-nav-panel-out';
+  }
+  return state === 'open' && slideFrom ? 'marketing-nav-panel-slide' : undefined;
+}
+
 function DesktopDropPanel({
   dropKey,
   state,
+  slideFrom,
   layout,
   panelLeft,
   clearDropClose,
@@ -148,6 +164,7 @@ function DesktopDropPanel({
 }: Readonly<{
   dropKey: NavDropKey;
   state: PanelState;
+  slideFrom: SlideFrom | null;
   layout: DropLayout;
   panelLeft: number;
   clearDropClose: () => void;
@@ -171,10 +188,10 @@ function DesktopDropPanel({
         maxWidth: 'calc(100vw - 2rem)',
         maxHeight: 'calc(100dvh - var(--marketing-nav-offset) - 2rem)',
       }}
+      data-slide-from={slideFrom ?? undefined}
       className={cn(
         'nav-panel absolute top-full mt-1.5 overflow-auto',
-        state === 'entering' && 'marketing-nav-panel',
-        state === 'closing' && 'marketing-nav-panel-out',
+        panelAnimation(state, slideFrom),
       )}
     >
       <div

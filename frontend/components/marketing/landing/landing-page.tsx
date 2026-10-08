@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import { Check } from 'lucide-react';
 
 import { appHref } from '@/lib/config/app-link';
@@ -19,7 +19,7 @@ import {
   SiteHealthView,
   SourcesView,
   VisibilityView,
-  type ShellSection,
+  type ShellFilters,
 } from '../scenes/product-views';
 
 import { FAQS } from './landing-data';
@@ -43,45 +43,65 @@ function PrimaryActions({ size = 'marketing' }: Readonly<{ size?: 'lg' | 'market
 
 /* ── Hero and product tour ──────────────────────────────────────────────── */
 
+/* The real AI Visibility page's tabs and filter bar. */
+const VISIBILITY_TABS = ['Trends', 'Sources', 'Query fanouts'] as const;
+const VISIBILITY_FILTERS: ShellFilters = [
+  ['Latest run', 'Last 90 days', 'Per run'],
+  ['Visibility prompts', 'All surfaces'],
+];
+
 const TOUR = [
   {
     id: 'visibility',
     label: 'Visibility',
-    section: 'AI Visibility',
-    title: 'AI Visibility',
-    subtitle: 'Brand performance across 42 tracked buyer prompts',
+    shell: {
+      active: 'AI Visibility',
+      title: 'AI Visibility',
+      action: 'Launch audit',
+      tabs: VISIBILITY_TABS,
+      activeTab: 'Trends',
+      filters: VISIBILITY_FILTERS,
+    },
     View: VisibilityView,
   },
   {
     id: 'citations',
     label: 'Citations',
-    section: 'Sources',
-    title: 'Sources',
-    subtitle: 'Domains and pages cited in completed answers',
+    shell: {
+      active: 'AI Visibility',
+      title: 'AI Visibility',
+      action: 'Launch audit',
+      tabs: VISIBILITY_TABS,
+      activeTab: 'Sources',
+      filters: VISIBILITY_FILTERS,
+    },
     View: SourcesView,
   },
   {
     id: 'health',
     label: 'Site Health',
-    section: 'Site Health',
-    title: 'Site Health',
-    subtitle: 'Latest crawl of zernovelle.example',
+    shell: {
+      active: 'Website',
+      title: 'Website',
+      tabs: ['Overview', 'Pages', 'Architecture', 'AEO Readiness', 'Internal links', 'Changes'],
+      activeTab: 'Overview',
+    },
     View: SiteHealthView,
   },
   {
     id: 'agent',
     label: 'Agent',
-    section: 'Agent',
-    title: 'Agent',
-    subtitle: 'Technical fix brief · attached to an Action',
+    shell: {
+      mode: 'agent',
+      active: 'Technical fix brief for /platform',
+      title: 'Agent',
+    },
     View: AgentView,
   },
 ] as const satisfies readonly {
   id: string;
   label: string;
-  section: ShellSection;
-  title: string;
-  subtitle: string;
+  shell: Omit<ComponentProps<typeof AppShellFrame>, 'children'>;
   View: () => ReactNode;
 }[];
 
@@ -123,7 +143,7 @@ function HeroTour() {
           aria-labelledby={`tour-tab-${step.id}`}
           className="lp-hero-frame product-fit"
         >
-          <AppShellFrame active={step.section} title={step.title} subtitle={step.subtitle}>
+          <AppShellFrame {...step.shell}>
             <step.View />
           </AppShellFrame>
         </div>
@@ -142,8 +162,8 @@ function Hero() {
         <h1 className="website-hero-display">Know what AI tells your buyers about you.</h1>
         <p className="website-lead lp-hero-lead">
           CiteLadder tracks how ChatGPT, Gemini, Claude and Google AI Overviews answer the questions
-          your buyers ask — which brands they recommend, which pages they cite — and shows what to
-          fix to earn a place in the answer.
+          your buyers ask: which brands they recommend and which pages they cite. Then it shows what
+          to fix to earn a place in the answer.
         </p>
         <PrimaryActions />
         {selfServeSignupOpen() && (

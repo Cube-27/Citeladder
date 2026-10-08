@@ -302,7 +302,7 @@
   padding-block: 1rem;
   border-bottom-color: var(--color-border);
   color: var(--color-foreground);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .cm-table thead th:first-child {
@@ -454,7 +454,7 @@
   color: var(--color-foreground);
   font-size: 0.9375rem;
   line-height: 1.5rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .cm-spec-unit {

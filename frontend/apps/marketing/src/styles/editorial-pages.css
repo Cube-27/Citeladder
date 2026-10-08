@@ -397,7 +397,7 @@
   color: var(--color-foreground);
   font-size: 0.9375rem;
   line-height: 1.375rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .ed-compare th,
@@ -454,7 +454,7 @@
     color: var(--color-foreground);
     font-size: 0.8125rem;
     line-height: 1.25rem;
-    font-weight: 600;
+    font-weight: 500;
   }
 }
 

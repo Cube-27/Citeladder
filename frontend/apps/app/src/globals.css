@@ -506,19 +506,20 @@ body {
 /* The product type roles. Eleven styles and one modifier are the whole
    product ladder: every product text element takes exactly one, and the role
    owns size, leading, weight, tracking and ink together. Weights are 400
-   (sentences), 500 (labels, controls) and 600 (titles, figures).
+   (sentences) and 500 (labels, controls, titles, figures); titles separate
+   from labels by size, not by a heavier weight.
 
    They sit in the components layer so a status utility (`text-success-text`,
    `text-danger-text`) still overrides the ink where the value's meaning is its
    colour. Edit a role here and every screen moves with it. */
 @layer components {
-  /* Titles take the public display treatment at product scale: 600 with
+  /* Titles take the public display treatment at product scale: 500 with
      tracking that tightens as size grows. */
   .type-page-title {
     font-family: var(--font-display);
     font-size: 1.25rem;
     line-height: 1.75rem;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: -0.016em;
     color: var(--color-foreground);
   }
@@ -526,7 +527,7 @@ body {
     font-family: var(--font-sans);
     font-size: 1rem;
     line-height: 1.5rem;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: -0.011em;
     color: var(--color-foreground);
   }
@@ -534,7 +535,7 @@ body {
     font-family: var(--font-sans);
     font-size: 0.875rem;
     line-height: 1.25rem;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: -0.006em;
     color: var(--color-foreground);
   }
@@ -580,7 +581,7 @@ body {
     font-family: var(--font-sans);
     font-size: 1.5rem;
     line-height: 2rem;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     color: var(--color-foreground);
@@ -589,7 +590,7 @@ body {
     font-family: var(--font-sans);
     font-size: 1rem;
     line-height: 1.5rem;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0;
     font-variant-numeric: tabular-nums;
     color: var(--color-foreground);
@@ -614,7 +615,7 @@ body {
   }
   /* Rendered Markdown (Agent output, evidence answers). Built from the same
      rungs as the roles above: reading text 16/24 (14/20 compact), headings
-     24 / 16 / 14 at 600. Code and quotes are filled, never outlined; tables
+     24 / 16 / 14 at 500. Code and quotes are filled, never outlined; tables
      draw row dividers only. Generated headings start at h2 (see markdown.tsx). */
   .prose-content {
     font-family: var(--font-sans);
@@ -626,7 +627,7 @@ body {
   .prose-content > :last-child { margin-bottom: 0; }
   .prose-content :where(h2, h3, h4, h5, h6) {
     font-family: var(--font-sans);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0;
     color: var(--color-foreground);
     margin: 1.5rem 0 0.75rem;
@@ -645,7 +646,7 @@ body {
   .prose-content ul { list-style: disc; }
   .prose-content ol { list-style: decimal; }
   .prose-content li + li { margin-top: 0.5rem; }
-  .prose-content strong { font-weight: 600; color: var(--color-foreground); }
+  .prose-content strong { font-weight: 500; color: var(--color-foreground); }
   .prose-content a {
     color: var(--color-accent-text);
     text-decoration: underline;
@@ -766,7 +767,7 @@ body {
      rendered size: a flat 2 paints a 1px stem at 12px and a 2px stem at
      24px, which is why large icons currently read heavier than small ones.
      These rungs compensate so every glyph lands near a 1.3px stem, in step
-     with Inter Variable at body sizes. Compensation is partial on purpose: an
+     with Satoshi at body sizes. Compensation is partial on purpose: an
      identical absolute stem at 12px closes up the counters and muddies the
      glyph.
 
@@ -1746,6 +1747,41 @@ samp {
   transform-origin: top center;
   pointer-events: none;
   animation: marketing-nav-panel-out 170ms var(--ease-exit) both;
+}
+
+/* Moving between open menus hands over sideways: both panels travel in the
+   pointer's direction, the old one fading out as the new one settles. */
+@keyframes marketing-nav-panel-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--nav-slide-offset));
+  }
+}
+
+@keyframes marketing-nav-panel-slide-out {
+  to {
+    opacity: 0;
+    transform: translateX(calc(var(--nav-slide-offset) * -1));
+  }
+}
+
+.marketing-nav-panel-slide,
+.marketing-nav-panel-slide-out {
+  --nav-slide-offset: -24px;
+}
+
+.marketing-nav-panel-slide[data-slide-from='right'],
+.marketing-nav-panel-slide-out[data-slide-from='right'] {
+  --nav-slide-offset: 24px;
+}
+
+.marketing-nav-panel-slide {
+  animation: marketing-nav-panel-slide-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.marketing-nav-panel-slide-out {
+  pointer-events: none;
+  animation: marketing-nav-panel-slide-out 170ms var(--ease-exit) both;
 }
 
 

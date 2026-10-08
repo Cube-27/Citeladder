@@ -41,11 +41,11 @@
   align-content: start;
   justify-items: start;
   gap: 1rem;
-  max-width: 60rem;
 }
 
-.lp-head .website-section-heading {
-  max-width: 30ch;
+/* Headings run the full wrap; only the lead keeps a reading measure. */
+.lp-head .website-lead {
+  max-width: 60rem;
 }
 
 .lp-head-split {
@@ -80,8 +80,16 @@
   text-align: center;
 }
 
+/* The landing tagline sits 4px under the shared hero rung. */
 .lp-hero-copy .website-hero-display {
   max-width: 22ch;
+  font-size: calc(clamp(1.75rem, 8.6vw, 2rem) - 4px);
+}
+
+@media (min-width: 48rem) {
+  .lp-hero-copy .website-hero-display {
+    font-size: calc(clamp(2rem, 4.2vw + 0.6rem, 4rem) - 4px);
+  }
 }
 
 .lp-hero-lead {
@@ -219,7 +227,7 @@
   color: var(--color-foreground);
   font-size: 1.0625rem;
   line-height: 1.5rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.015em;
 }
 
@@ -230,12 +238,11 @@
 }
 
 .lp-statement-text {
-  max-width: 70rem;
   color: var(--color-foreground);
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 2.6vw + 0.5rem, 2.375rem);
   line-height: 1.25;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.025em;
   text-wrap: pretty;
 }
@@ -369,7 +376,7 @@
   color: var(--color-foreground);
   font-size: 0.75rem;
   line-height: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   box-shadow: inset 0 0 0 1px var(--color-border-subtle);
 }

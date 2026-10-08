@@ -3,7 +3,8 @@
    this scope changes type scale only. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Inter Variable carries body, UI, data and display type. */
+     Satoshi carries body, UI and data type; Sentient carries display type. */
+  --font-display: var(--font-editorial), serif;
   /* One ladder, one ratio. Each rung is ~1.2x its neighbour (the minor third
      the display rungs already used), so the steps are even instead of the old
      mix of 1.14x at the bottom and 1.27x at the top. The bottom three rungs are
@@ -60,7 +61,7 @@
   font-family: var(--font-display);
   font-size: 1.875rem;
   line-height: 2.25rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.024em;
   color: var(--color-foreground);
 }
@@ -98,7 +99,7 @@
 :where([data-public-surface], [data-flow-surface])
   :where(h1, h2, h3, h4, h5, h6):not(.app-type-scale *) {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.015em;
 }
 
@@ -118,9 +119,8 @@
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs are set tight: Inter Variable's optical-size axis switches to
-   its display cut at these sizes, and tracking closes as size grows. Body
-   rungs render in Inter Variable at 400/500/600. */
+   Display rungs render in Sentient and tracking closes as size grows. Body
+   rungs render in Satoshi at 400/500. */
 .website-hero-display,
 .website-page-title,
 .website-section-heading,
@@ -134,12 +134,12 @@
 .website-hero-display,
 .website-page-title,
 .website-section-heading {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .website-feature-heading,
 .website-small-heading {
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.011em;
 }
 
@@ -372,7 +372,7 @@
 .auth-form-heading .flow-title {
   font-size: 1.75rem;
   line-height: 2.125rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.026em;
 }
 
@@ -388,7 +388,7 @@
 
 .auth-form-shell [data-button-size='lg'] {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .auth-recovery-links {
@@ -1160,6 +1160,8 @@
   --text-4xl: 2rem;
   --text-heading-sm: 1.125rem;
   --leading-relaxed: 1.625;
+  /* Product headings stay in the text face, not the public serif. */
+  --font-display: var(--font-heading), sans-serif;
   font-size: 0.875rem;
   line-height: 1.5;
 }

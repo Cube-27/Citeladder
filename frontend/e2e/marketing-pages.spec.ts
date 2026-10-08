@@ -137,9 +137,11 @@ test.describe('marketing routes', () => {
         // Builds without the private font files settle on the fallback faces.
         await page.evaluate(() =>
           Promise.allSettled(
-            ['400 16px "Inter Variable"', '600 16px "Inter Variable"'].map((font) =>
-              document.fonts.load(font),
-            ),
+            [
+              '400 16px "Satoshi Variable"',
+              '500 16px "Satoshi Variable"',
+              '500 16px "Sentient Variable"',
+            ].map((font) => document.fonts.load(font)),
           ),
         );
         const boxes = () =>

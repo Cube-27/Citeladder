@@ -25,9 +25,16 @@ const DROP_LAYOUT: Record<NavDropKey, { width: number }> = {
 /**
  * Hover intent: a pointer must rest this long on a trigger before the first
  * panel opens, so sweeping across the bar does not flash menus. Once a panel
- * is open, moving to a neighbouring trigger switches immediately.
+ * is open, moving to a neighbouring trigger switches immediately, and the
+ * panels slide across in the pointer's direction instead of closing and
+ * reopening.
  */
-const HOVER_OPEN_DELAY_MS = 110;
+const HOVER_OPEN_DELAY_MS = 200;
+
+/** Which side a switching panel arrives from: the side of the previous trigger. */
+export type SlideFrom = 'left' | 'right';
+
+const DROP_ORDER = Object.keys(DROP_LAYOUT) as NavDropKey[];
 /** Matches the exit animation in globals.css (`marketing-nav-panel-out`). */
 const PANEL_EXIT_MS = 170;
 
@@ -82,10 +89,15 @@ function useDesktopDropdown() {
   };
   const [openSource, setOpenSource] = useState<OpenSource | null>(null);
   const [panelLeft, setPanelLeft] = useState(0);
+  const panelLeftRef = useRef(0);
+  /** Where the handed-over panel was, so it slides out from its own place. */
+  const [closingLeft, setClosingLeft] = useState(0);
   /** The panel playing its exit animation; it is inert while it does. */
   const [closingDrop, setClosingDrop] = useState<NavDropKey | null>(null);
   /** Whether the open panel arrived from a closed bar (and so animates in). */
   const [entering, setEntering] = useState(false);
+  /** Set while one open panel hands over to a neighbour's. */
+  const [slideFrom, setSlideFrom] = useState<SlideFrom | null>(null);
   const closeTimer = useRef<number | null>(null);
   const openTimer = useRef<number | null>(null);
   const exitTimer = useRef<number | null>(null);
@@ -117,6 +129,8 @@ function useDesktopDropdown() {
   };
   const closeDrop = () => {
     cancelPendingOpen();
+    setSlideFrom(null);
+    setClosingLeft(panelLeftRef.current);
     playExit(openDropRef.current);
     setOpenDrop(null);
     setOpenSource(null);
@@ -170,8 +184,20 @@ function useDesktopDropdown() {
     const nav = navRef.current;
     if (!container || !nav) return;
     openTimer.current = null;
-    setEntering(openDropRef.current === null);
-    playExit(null);
+    const previous = openDropRef.current;
+    const switching = previous !== null && previous !== key;
+    setEntering(previous === null);
+    setSlideFrom(
+      switching
+        ? DROP_ORDER.indexOf(previous) < DROP_ORDER.indexOf(key)
+          ? 'left'
+          : 'right'
+        : null,
+    );
+    // A handed-over panel slides out from its own place while its neighbour
+    // slides in; closing from the bar folds up where the panel already is.
+    setClosingLeft(panelLeftRef.current);
+    playExit(switching ? previous : null);
     setOpenDrop(key);
     setOpenSource(source);
     const triggerBox = trigger.getBoundingClientRect();
@@ -183,7 +209,8 @@ function useDesktopDropdown() {
       Math.max(desired, navBox.left),
       Math.max(navBox.right - width, navBox.left),
     );
-    setPanelLeft(left - containerBox.left);
+    panelLeftRef.current = left - containerBox.left;
+    setPanelLeft(panelLeftRef.current);
   };
 
   useEffect(
@@ -210,7 +237,9 @@ function useDesktopDropdown() {
     openDrop,
     openSource,
     closingDrop,
+    closingLeft,
     entering,
+    slideFrom,
     panelLeft,
     linksRef,
     navRef,
@@ -235,7 +264,9 @@ export function MarketingNav() {
     openDrop,
     openSource,
     closingDrop,
+    closingLeft,
     entering,
+    slideFrom,
     panelLeft,
     clearDropClose,
     closeDrop,
@@ -315,7 +346,9 @@ export function MarketingNav() {
           openDrop={openDrop}
           openSource={openSource}
           closingDrop={closingDrop}
+          closingLeft={closingLeft}
           entering={entering}
+          slideFrom={slideFrom}
           linksRef={linksRef}
           clearDropClose={clearDropClose}
           scheduleDropClose={scheduleDropClose}

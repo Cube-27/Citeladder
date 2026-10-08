@@ -12,14 +12,15 @@
     <link rel="icon" href="/citeladder-favicon.ico" sizes="any" />
     <link rel="manifest" href="/site.webmanifest" />
     <title>CiteLadder · AI visibility with evidence you can open</title>
-    <!-- Discover the fonts at first paint instead of after the stylesheet
-        loads. Inter Variable (text and headings) is not in this
-        repository: `pnpm fonts:pull` copies it into public/fonts from the
-        private Cube27 font repo, and delivery does the same. A build without
-        it renders in the fallbacks below. -->
+    <!-- Discover the text face at first paint instead of after the stylesheet
+        loads. Satoshi (text and product headings) and Sentient (focused-flow
+        headings) are not in this repository: `pnpm fonts:pull` copies them
+        into public/fonts from the private Cube27 font repo, and delivery does
+        the same. A build without them renders in the fallbacks below. Only
+        Satoshi is preloaded: Sentient loads when a flow heading uses it. -->
     <link
       rel="preload"
-      href="/fonts/InterVariable.woff2"
+      href="/fonts/Satoshi-Variable.woff2"
       as="font"
       type="font/woff2"
       crossorigin="anonymous"
@@ -40,40 +41,56 @@
          long after the reader started reading. `fallback` bounds that to ~3s
          — enough for a preloaded, same-origin file on any connection that
          was going to succeed at all. */
+      /* 500 is the design ceiling for both faces: a heavier request, including
+         the browser's own bold for strong, b and th, clamps to it, and
+         `font-synthesis-weight: none` below stops a faux bold on top. */
       @font-face {
-        font-family: 'Inter Variable';
-        src: url('/fonts/InterVariable.woff2') format('woff2');
-        /* 600 is the design ceiling: a heavier request clamps to it. */
-        font-weight: 100 600;
+        font-family: 'Satoshi Variable';
+        src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
+        font-weight: 300 500;
+        font-style: normal;
+        font-display: fallback;
+      }
+      @font-face {
+        font-family: 'Sentient Variable';
+        src: url('/fonts/Sentient-Variable.woff2') format('woff2');
+        font-weight: 200 500;
         font-style: normal;
         font-display: fallback;
       }
 
-      /* Match Arial's x-height to Inter at its default optical size.
-         Vertical overrides use Inter's 1984/-494/0 hhea metrics (2048 UPM),
-         divided by size-adjust. Use the native bold face at weight 600. */
+      /* Match Arial's x-height to Satoshi's (0.500em vs 0.519em). Vertical
+         overrides use Satoshi's 1010/-240/100 hhea metrics (1000 UPM),
+         divided by size-adjust. */
       @font-face {
-        font-family: 'Inter Fallback';
+        font-family: 'Satoshi Fallback';
         src: local('Arial');
         font-weight: 100 500;
-        size-adjust: 105.273%;
-        ascent-override: 92.023%;
-        descent-override: 22.913%;
-        line-gap-override: 0%;
+        size-adjust: 96.42%;
+        ascent-override: 104.75%;
+        descent-override: 24.89%;
+        line-gap-override: 10.37%;
       }
+
+      /* Match Georgia's x-height to Sentient's (0.504em vs 0.481em). Vertical
+         overrides use Sentient's 960/-320/80 hhea metrics (1000 UPM), divided
+         by size-adjust. */
       @font-face {
-        font-family: 'Inter Fallback';
-        src: local('Arial Bold'), local('Arial-BoldMT');
-        font-weight: 600;
-        size-adjust: 105.273%;
-        ascent-override: 92.023%;
-        descent-override: 22.913%;
-        line-gap-override: 0%;
+        font-family: 'Sentient Fallback';
+        src: local('Georgia');
+        font-weight: 100 500;
+        size-adjust: 104.69%;
+        ascent-override: 91.7%;
+        descent-override: 30.57%;
+        line-gap-override: 7.64%;
       }
 
       :root {
-        --font-text: 'Inter Variable', 'Inter Fallback', Arial;
+        font-synthesis-weight: none;
+        --font-text: 'Satoshi Variable', 'Satoshi Fallback', Arial;
         --font-heading: var(--font-text);
+        /* Public and focused-flow headings only (website-type.css). */
+        --font-editorial: 'Sentient Variable', 'Sentient Fallback', Georgia;
       }
     </style>
   </head>
