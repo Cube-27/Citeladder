@@ -2,6 +2,10 @@ import { randomUUID } from 'node:crypto';
 import type { Database } from '../db/database.ts';
 
 type SecurityEvent =
+  | 'account.create'
+  | 'account.disable'
+  | 'account.enable'
+  | 'account.delete'
   | 'auth.challenge_issued'
   | 'auth.email_verified'
   | 'auth.password_reset'

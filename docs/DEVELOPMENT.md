@@ -494,9 +494,10 @@ Provision a local development login, or grant a Site Health allowance:
 From the repository root in PowerShell:
 
 ```powershell
-./scripts/provision-dev-login.ps1 -Email <email> -CounterAllowance <allowance>
-# Enter the password at the secure prompt; the child command receives it on stdin.
-# Native login admission and catalog initialization; an existing login must authenticate.
+# The PowerShell provision-dev-login wrapper manages production only.
+# Local provisioning remains available through the native CLI, with the password on stdin:
+pnpm --dir frontend --filter @citeladder/api provision:dev --email <email> --password-stdin --counter-allowance <allowance>
+# Native local-only login admission and catalog initialization; an existing login must authenticate.
 # Run the following native commands from frontend/:
 pnpm --filter @citeladder/api entitlement:site-health --actor <admin-email> --workspace-id <workspace-uuid> --account-id <account-uuid> --reason "local allowance" --idempotency-key <key> --monitored-urls <allowance> --valid-from <ISO-date> # add --apply after preview
 ```

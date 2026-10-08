@@ -222,6 +222,11 @@ Routine releases use section 4. Manual acceptance remains evidence-dependent.
   ```
 
 - **Operator account tool:** forward the database over the same SSH session.
+  For the complete interactive platform account manager, run
+  `./scripts/provision-dev-login.ps1` from the repository root. It opens and
+  closes its own tunnel; [Workspace access](../workspace-access.md#operator-account-management)
+  owns the menu, previews and deletion rules. The manual workspace-scoped tool
+  below remains available.
   Then run `pnpm --filter @citeladder/api account:manage --actor <email>
   --workspace-id <uuid>` from `frontend/` against `127.0.0.1:15432`
   with the production secrets exported in that shell only:

@@ -285,6 +285,23 @@ function resolveSpec(
   return raw === undefined ? spec.default : parseSetting(name, spec, raw);
 }
 
+/** Pool, timeout and TLS settings shared by the service and terminal operators. */
+export function databaseSettings(env: Record<string, string | undefined>) {
+  const setting = (name: keyof typeof policy.settings) => resolveSetting(name, env);
+  return {
+    poolSize: setting('db_pool_size') as number,
+    maxOverflow: setting('db_max_overflow') as number,
+    poolRecycleSeconds: setting('db_pool_recycle_seconds') as number,
+    poolTimeoutSeconds: setting('db_pool_timeout_seconds') as number,
+    connectTimeoutSeconds: setting('db_connect_timeout_seconds') as number,
+    commandTimeoutSeconds: setting('db_command_timeout_seconds') as number,
+    statementTimeoutMs: setting('db_statement_timeout_ms') as number,
+    lockTimeoutMs: setting('db_lock_timeout_ms') as number,
+    idleTransactionTimeoutMs: setting('db_idle_transaction_timeout_ms') as number,
+    sslMode: setting('db_ssl_mode') as 'disable' | 'require',
+  };
+}
+
 function resolveSetting(name: string, env: Record<string, string | undefined>): unknown {
   return resolveSpec(name, policy.settings[name as keyof typeof policy.settings], env);
 }
@@ -498,18 +515,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     host: env.HOST?.trim() || '0.0.0.0',
     port: parsePort(env.PORT),
     databaseUrl: setting('database_url') as string,
-    database: {
-      poolSize: setting('db_pool_size') as number,
-      maxOverflow: setting('db_max_overflow') as number,
-      poolRecycleSeconds: setting('db_pool_recycle_seconds') as number,
-      poolTimeoutSeconds: setting('db_pool_timeout_seconds') as number,
-      connectTimeoutSeconds: setting('db_connect_timeout_seconds') as number,
-      commandTimeoutSeconds: setting('db_command_timeout_seconds') as number,
-      statementTimeoutMs: setting('db_statement_timeout_ms') as number,
-      lockTimeoutMs: setting('db_lock_timeout_ms') as number,
-      idleTransactionTimeoutMs: setting('db_idle_transaction_timeout_ms') as number,
-      sslMode: setting('db_ssl_mode') as 'disable' | 'require',
-    },
+    database: databaseSettings(env),
     requestIdHeader: setting('request_id_header') as string,
     session: {
       secretKey: setting('jwt_secret_key') as string,

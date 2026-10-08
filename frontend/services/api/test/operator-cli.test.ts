@@ -92,19 +92,14 @@ it.each(['invalid', '0', '1.5'])(
   },
 );
 
-it('native local configuration preserves dotenv precedence/disable and the wrapper keeps passwords on stdin', async () => {
+it('native local configuration preserves dotenv precedence and disable admission', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'provision-config-'));
   const cli = join(directory, 'frontend/services/api/src/cli');
   await mkdir(cli, { recursive: true });
-  await mkdir(join(directory, 'scripts'));
   await mkdir(join(directory, 'backend'));
   await copyFile(
     join(root, 'frontend/services/api/src/cli/local-environment.ts'),
     join(cli, 'local-environment.ts'),
-  );
-  await copyFile(
-    join(root, 'scripts/provision-dev-login.ps1'),
-    join(directory, 'scripts/provision-dev-login.ps1'),
   );
   await writeFile(join(directory, '.env'), 'DATABASE_URL=postgresql://root-fixture/one\n');
   await writeFile(
@@ -119,17 +114,6 @@ it('native local configuration preserves dotenv precedence/disable and the wrapp
     (
       await execute(process.execPath, [join(cli, 'probe.ts')], { env: { ...systemEnv, ...env } })
     ).stdout.trim();
-  const psQuote = (value: string) => "'" + value.replaceAll("'", "''") + "'";
-  const script = `
-function node {
-  if ($args -notcontains '--password-stdin' -or $args -contains 'fixture-local') { throw 'Unsafe password arguments' }
-  if (@($input)[0] -ne 'fixture-local') { throw 'Missing password stdin' }
-  Write-Output 'native-provision'
-  $global:LASTEXITCODE = 0
-}
-$password = ConvertTo-SecureString 'fixture-local' -AsPlainText -Force
-& ${psQuote(join(directory, 'scripts/provision-dev-login.ps1'))} -Email fixture@example.test -Password $password -CounterAllowance 100
-`;
   try {
     expect(await probe()).toBe('postgresql://backend-fixture/two');
     expect(await probe({ DATABASE_URL: 'postgresql://process-fixture/three' })).toBe(
@@ -142,18 +126,46 @@ $password = ConvertTo-SecureString 'fixture-local' -AsPlainText -Force
         DATABASE_URL: 'postgresql://isolated-fixture/four',
       }),
     ).toBe('postgresql://isolated-fixture/four');
-    expect(
-      (
-        await execute('pwsh', ['-NoProfile', '-Command', script], {
-          env: systemEnv,
-          timeout: 30000,
-        })
-      ).stdout.trim(),
-    ).toBe('native-provision');
   } finally {
     await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 }, 90000);
+
+it.each([false, true])(
+  'production wrapper keeps secrets off argv and restores the environment after child failure=%s',
+  async (failure) => {
+    const psQuote = (value: string) => "'" + value.replaceAll("'", "''") + "'";
+    const script = `
+$env:DATABASE_URL = 'original-database'
+$env:DB_SSL_MODE = 'original-tls'
+$env:ACCOUNT_MANAGER_OPERATOR_PASSWORD = 'original-operator'
+function gcloud {
+  $global:LASTEXITCODE = 0
+  if ($args -contains 'describe') { return '{"networkInterfaces":[{"networkIP":"10.28.0.10"}]}' }
+  if ($args -contains '--secret=citeladder-database-url') { return 'postgresql://fixture-user:fixture-database-password@10.28.0.10:5432/fixture' }
+  if ($args -contains '--secret=citeladder-demo-password') { return 'fixture-private-operator' }
+  throw 'Unexpected GCP operation'
+}
+function node {
+  if ($args -contains 'fixture-private-operator' -or $args -notcontains '--platform') { throw 'Unsafe arguments' }
+  if ($env:ACCOUNT_MANAGER_OPERATOR_PASSWORD -ne 'fixture-private-operator') { throw 'Missing operator secret' }
+  if (([Uri]$env:DATABASE_URL).Host -ne '127.0.0.1') { throw 'Missing tunnel target' }
+  $global:LASTEXITCODE = ${failure ? '1' : '0'}
+}
+try { & ${psQuote(join(root, 'scripts/provision-dev-login.ps1'))} -UseExistingTunnel }
+catch { if (${failure ? '$false' : '$true'}) { throw }; Write-Output 'expected-child-failure' }
+if ($env:DATABASE_URL -ne 'original-database' -or $env:DB_SSL_MODE -ne 'original-tls' -or $env:ACCOUNT_MANAGER_OPERATOR_PASSWORD -ne 'original-operator') { throw 'Environment not restored' }
+Write-Output 'environment-restored'
+`;
+    const result = await execute('pwsh', ['-NoProfile', '-Command', script], {
+      env: systemEnv,
+      timeout: 30000,
+    });
+    expect(result.stdout).toContain('environment-restored');
+    expect(result.stdout + result.stderr).not.toContain('fixture-private-operator');
+    if (failure) expect(result.stdout).toContain('expected-child-failure');
+  },
+);
 
 it('reset passes one explicit target to both bounded stages and stops on a reset failure', async () => {
   const env = {

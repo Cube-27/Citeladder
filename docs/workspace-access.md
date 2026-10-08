@@ -182,6 +182,48 @@ cover the central boundaries. Accepted rationale is in
 
 ## Operator account management
 
+The existing `scripts/provision-dev-login.ps1` is the interactive **production**
+entry point (its historical filename is retained). Run it from the repository root:
+
+```powershell
+./scripts/provision-dev-login.ps1
+```
+
+It uses the active `gcloud` login to verify the database instance against the
+database secret, authenticate SSH, open a loopback IAP tunnel, and load the
+configured development operator password into process memory. It restores the
+calling shell's environment and closes only its own tunnel on exit. A first
+connection may ask gcloud's SSH host-key trust question. With a tunnel already
+open, use `-UseExistingTunnel -LocalPort 15432`. Project, instance, zone, secret
+names and actor can be selected explicitly; a custom actor is prompted for a
+password without echo. No password is passed on argv or saved to disk.
+
+The platform menu lists identities/workspaces, creates batches of customer
+accounts with owned workspaces or immediate assignable memberships in an
+existing workspace, changes roles, resets passwords, grants/revokes evaluation
+access, removes members, and enables/disables or permanently deletes accounts.
+Customer identities retain platform role `user`; workspace Owner/Admin never
+becomes platform administration. Existing identities are not overwritten by
+batch creation. Each mutation previews the real transaction and rolls back,
+then rechecks authenticated platform authority after explicit confirmation.
+Batch identity, membership and access writes commit atomically.
+
+Every new owned workspace receives the operator baseline grant. Full
+evaluation access is an optional extra bundle that grants all issuable capabilities, highest feature levels,
+and a prompted finite counter allowance (defaulting to configured development
+allowance), with optional expiry. It uses one append-only bundle per target
+workspace, not one transaction per capability or duplicate bundles per member.
+The configured dev-only rollout/funding restrictions still apply. Reasons and
+stable request keys accompany operator changes. Grants can be revoked by exact ID.
+
+Deletion is a terminal choice: disable login and revoke sessions while retaining
+records, or permanently delete an unused operator-created customer account.
+Permanent deletion refuses retained FK dependencies, any grant beyond the
+operator baseline, consumption, product data and shared owned workspaces; it
+removes only the identity and its empty personal workspace, account and baseline
+rows. Security receipts remain. Platform administrators and the current operator
+cannot have their password reset, or be disabled or deleted, by this menu.
+
 Trusted workspace operators can run the interactive
 [account manager](../frontend/services/api/src/cli/account-manager.ts) from a terminal
 with Node 26 and installed frontend dependencies (or the native API image).
