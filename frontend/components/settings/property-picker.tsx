@@ -96,6 +96,86 @@ export function useActiveMapping(
 }
 
 /**
+ * The discovered properties, the project's own first. A property of another
+ * site is shown but cannot be chosen: mapping it would be refused.
+ */
+function PropertyOptions({
+  properties,
+  selected,
+  blocked,
+  pendingRef,
+  onSelect,
+}: Readonly<{
+  properties: IntegrationProperty[];
+  selected: string;
+  blocked: boolean;
+  pendingRef: string | null;
+  onSelect: (propertyRef: string) => void;
+}>) {
+  return [...properties]
+    .sort((a, b) => Number(b.matches_project === true) - Number(a.matches_project === true))
+    .map((property) => (
+      <PropertyOption
+        key={property.property_ref}
+        property={property}
+        selected={property.property_ref === selected}
+        disabled={blocked || property.matches_project === false}
+        pending={pendingRef === property.property_ref}
+        onSelect={() => onSelect(property.property_ref)}
+      />
+    ));
+}
+
+/** The chosen property, or a visible "none selected", and the control to choose one. */
+function SelectedProperty({
+  selected,
+  noun,
+  provider,
+  canChoose,
+  disabled,
+  onChoose,
+}: Readonly<{
+  selected: string;
+  noun: string;
+  provider: IntegrationConnection['provider'];
+  canChoose: boolean;
+  disabled: boolean;
+  onChoose: () => void;
+}>) {
+  const verb = selected ? 'Change' : 'Select';
+  return (
+    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+      {selected ? (
+        <span className={tagClasses('outline', 'max-w-full truncate tabular-nums')}>
+          {selected}
+        </span>
+      ) : (
+        <span
+          className={textRole(
+            'label',
+            'text-warning-text bg-warning-bg/50 max-w-full truncate rounded-xs px-2 py-0.5',
+          )}
+        >
+          No {noun} selected
+        </span>
+      )}
+      {canChoose ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onChoose}
+          disabled={disabled}
+          data-testid={`select-property-${provider}`}
+          aria-label={`${verb} ${noun}`}
+        >
+          {verb}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * Property picker for one integration connection.
  *
  * A connected OAuth grant does not by itself tell a sync WHAT to pull: the
@@ -162,39 +242,19 @@ export function PropertyPicker({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 pt-0.5">
-        {selected ? (
-          <span className={tagClasses('outline', 'max-w-full truncate tabular-nums')}>
-            {selected}
-          </span>
-        ) : (
-          <span
-            className={textRole(
-              'label',
-              'text-warning-text bg-warning-bg/50 max-w-full truncate rounded-xs px-2 py-0.5',
-            )}
-          >
-            No {noun} selected
-          </span>
-        )}
-        {mayDiscover ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (discovery.isPending) return;
-              discovery.reset();
-              setOpen(true);
-              discovery.mutate();
-            }}
-            disabled={disabled || discovery.isPending}
-            data-testid={`select-property-${connection.provider}`}
-            aria-label={`${selected ? 'Change' : 'Select'} ${noun}`}
-          >
-            {selected ? 'Change' : 'Select'}
-          </Button>
-        ) : null}
-      </div>
+      <SelectedProperty
+        selected={selected}
+        noun={noun}
+        provider={connection.provider}
+        canChoose={mayDiscover}
+        disabled={disabled || discovery.isPending}
+        onChoose={() => {
+          if (discovery.isPending) return;
+          discovery.reset();
+          setOpen(true);
+          discovery.mutate();
+        }}
+      />
 
       <Dialog
         open={open}
@@ -240,23 +300,16 @@ export function PropertyPicker({
             </Alert>
           ) : null}
 
-          {[...(discovery.data ?? [])]
-            .sort((a, b) => Number(b.matches_project === true) - Number(a.matches_project === true))
-            .map((property) => (
-              <PropertyOption
-                key={property.property_ref}
-                property={property}
-                selected={property.property_ref === selected}
-                disabled={
-                  !activeProject || selectMutation.isPending || property.matches_project === false
-                }
-                pending={pendingRef === property.property_ref}
-                onSelect={() => {
-                  setPendingRef(property.property_ref);
-                  selectMutation.mutate(property.property_ref);
-                }}
-              />
-            ))}
+          <PropertyOptions
+            properties={discovery.data ?? []}
+            selected={selected}
+            blocked={!activeProject || selectMutation.isPending}
+            pendingRef={pendingRef}
+            onSelect={(propertyRef) => {
+              setPendingRef(propertyRef);
+              selectMutation.mutate(propertyRef);
+            }}
+          />
 
           {selectMutation.isError ? (
             <Alert tone="danger">{humanizeApiError(selectMutation.error).message}</Alert>

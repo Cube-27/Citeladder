@@ -184,7 +184,7 @@ export function exclusiveDrain(
  * sync yields at the deadline instead of holding every later lane until the
  * job timeout. Committed pages resume on the next claim.
  */
-export async function untilAdmissionEnds<T>(
+async function untilAdmissionEnds<T>(
   canAdmit: () => boolean,
   work: (signal: AbortSignal) => Promise<T>,
   pollMs = 1_000,

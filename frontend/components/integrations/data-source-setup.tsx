@@ -1,8 +1,7 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
 import { BarChart3, Globe, Search, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
 import { BackfillProgress } from '@/components/settings/backfill-progress';
@@ -11,19 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
-import { humanizeApiError } from '@/lib/api/errors';
-import {
-  integrationsApi,
-  type IntegrationConnection,
-  type IntegrationProperty,
-  type IntegrationProvider,
-} from '@/lib/api/integrations';
+import { integrationsApi, type IntegrationProvider } from '@/lib/api/integrations';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
+import { PropertyChoice } from './property-choice';
 import {
   oauthErrorMessage,
   useDataSources,
@@ -165,146 +158,6 @@ function RowFrame({
   );
 }
 
-/** Properties that belong to the project first; the provider's order otherwise. */
-function suggestedProperty(provider: IntegrationProvider, properties: IntegrationProperty[]) {
-  const matching = properties.filter((property) => property.matches_project === true);
-  if (matching.length === 1) return matching[0]!;
-  // GA4 exposes no site to match, so a single property is the only safe suggestion.
-  if (provider === 'ga4' && properties.length === 1) return properties[0]!;
-  return null;
-}
-
-function PropertyChoice({
-  provider,
-  connection,
-  projectId,
-  autoStart,
-}: Readonly<{
-  provider: IntegrationProvider;
-  connection: IntegrationConnection;
-  projectId: string;
-  autoStart: boolean;
-}>) {
-  const source = SOURCE[provider];
-  const refresh = useRefreshAfterMapping();
-  const [showAll, setShowAll] = useState(false);
-  const discovery = useMutation({
-    mutationFn: () =>
-      integrationsApi.discoverProperties(connection.id, projectId, {
-        workspaceId: connection.workspace_id,
-      }),
-    retry: false,
-  });
-  const select = useMutation({
-    mutationFn: (propertyRef: string) =>
-      integrationsApi.createMapping(
-        connection.id,
-        { provider, property_ref: propertyRef, project_id: projectId },
-        { workspaceId: connection.workspace_id },
-      ),
-    onSuccess: () => refresh(),
-  });
-  // Returning from consent, the list is what the user came back for.
-  const started = useRef(false);
-  useEffect(() => {
-    if (!autoStart || started.current) return;
-    started.current = true;
-    discovery.mutate();
-  }, [autoStart, discovery]);
-
-  if (discovery.isIdle)
-    return (
-      <div>
-        <Button variant="secondary" size="sm" onClick={() => discovery.mutate()}>
-          Choose {source.noun}
-        </Button>
-      </div>
-    );
-  if (discovery.isPending)
-    return (
-      <output className="type-caption flex items-center gap-2">
-        <Spinner size="sm" /> Loading your {source.noun}s…
-      </output>
-    );
-  if (discovery.isError)
-    return (
-      <Alert tone="danger">
-        Could not load your {source.noun}s. {humanizeApiError(discovery.error).message}{' '}
-        <Button variant="ghost" size="sm" onClick={() => discovery.mutate()}>
-          Try again
-        </Button>
-      </Alert>
-    );
-  const properties = [...(discovery.data ?? [])].sort(
-    (a, b) => Number(b.matches_project === true) - Number(a.matches_project === true),
-  );
-  if (properties.length === 0)
-    return (
-      <Alert tone="neutral">
-        This account has no {source.noun}. Add and verify the site in {source.console}, then{' '}
-        <Button variant="ghost" size="sm" onClick={() => discovery.mutate()}>
-          check again
-        </Button>
-      </Alert>
-    );
-  const suggested = suggestedProperty(provider, properties);
-  const listed = suggested && !showAll ? [] : properties;
-  return (
-    <div className="grid gap-2">
-      {suggested ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            onClick={() => select.mutate(suggested.property_ref)}
-            pending={select.isPending && select.variables === suggested.property_ref}
-            pendingLabel="Importing…"
-            disabled={select.isPending}
-            aria-label={`Use ${suggested.label} for ${source.label}`}
-          >
-            Use {suggested.label}
-          </Button>
-          {properties.length > 1 && !showAll ? (
-            <Button variant="ghost" size="sm" onClick={() => setShowAll(true)}>
-              Choose another
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-      {listed.length ? (
-        <ul className="grid gap-1" aria-label={`${source.noun}s`}>
-          {listed.map((property) => {
-            const foreign = property.matches_project === false;
-            return (
-              <li key={property.property_ref} className="flex items-center gap-3">
-                <span className="min-w-0 flex-1">
-                  <span className={textRole('label', 'block truncate')}>{property.label}</span>
-                  <span className="type-caption block truncate">
-                    {foreign ? 'Belongs to a different site' : property.property_ref}
-                  </span>
-                </span>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={foreign || select.isPending}
-                  pending={select.isPending && select.variables === property.property_ref}
-                  pendingLabel="Importing…"
-                  onClick={() => select.mutate(property.property_ref)}
-                  aria-label={`Use ${property.label} for ${source.label}`}
-                >
-                  Use
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-      {select.isError ? (
-        <Alert tone="danger">{humanizeApiError(select.error).message}</Alert>
-      ) : null}
-    </div>
-  );
-}
-
 function SourceRow({
   provider,
   step,
@@ -361,6 +214,7 @@ function SourceRow({
       {canManage ? (
         <PropertyChoice
           provider={provider}
+          source={source}
           connection={step.connection}
           projectId={projectId}
           autoStart={autoStart}

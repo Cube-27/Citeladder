@@ -6,7 +6,7 @@ import { pathIdentity } from '../crawl-logs/identity.ts';
  * The registrable site of a URL, property or bare host: lower-cased, with
  * `sc-domain:` and a leading `www.` removed. Empty when unparseable.
  */
-export function siteDomain(value: string): string {
+function siteDomain(value: string): string {
   const bare = value.trim().replace(/^sc-domain:/iu, '');
   try {
     return new URL(bare.includes('://') ? bare : `https://${bare}`).hostname

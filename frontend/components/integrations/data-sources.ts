@@ -26,7 +26,7 @@ export type SourceStep =
   | { kind: 'choose'; connection: IntegrationConnection }
   | { kind: 'ready'; connection: IntegrationConnection; mapping: IntegrationPropertyMapping };
 
-export function sourceStep(
+function sourceStep(
   provider: IntegrationProvider,
   connections: readonly IntegrationConnection[],
   mappings: ReadonlyMap<string, readonly IntegrationPropertyMapping[]>,
