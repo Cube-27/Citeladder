@@ -3,9 +3,7 @@
  * model repeats. Record references are working values for later reads; they
  * never belong in text written for the user.
  */
-import { agentPolicy } from './contracts.ts';
-
-const FENCE = /^ {0,3}(`{3,}|~{3,})/u;
+const FENCE = /^ {0,3}(`{3,}|~{3,})(.*)$/u;
 const LINKED_REF = /\[([^\]\n]+)\]\(\s*citeladder:\/\/[^)\s]*\s*\)/gu;
 // Trailing sentence punctuation belongs to the prose, not the reference.
 const BARE_REF = /\(?citeladder:\/\/[^\s<>()[\]"']*[^\s<>()[\]"'.,;:!?]\)?/gu;
@@ -33,7 +31,12 @@ export function scrubRecordRefs(text: string) {
       const marker = FENCE.exec(line);
       if (marker) {
         if (!fence) fence = marker[1]!;
-        else if (marker[1]![0] === fence[0] && marker[1]!.length >= fence.length) fence = null;
+        else if (
+          marker[1]![0] === fence[0] &&
+          marker[1]!.length >= fence.length &&
+          !marker[2]!.trim()
+        )
+          fence = null;
         return line;
       }
       return fence ? line : scrubLine(line);
@@ -46,13 +49,10 @@ export function readSources(refs: readonly { record_uri?: string | null }[]) {
   return refs.flatMap((ref) => (ref.record_uri ? [ref.record_uri] : []));
 }
 
-/** Unique, first-read order, bounded so one broad list read cannot grow a message without limit. */
-export function boundedSources(...groups: Iterable<string>[]) {
-  const unique = new Set<string>();
-  for (const group of groups)
-    for (const ref of group) {
-      if (unique.size >= agentPolicy.sources_max_refs) return [...unique];
-      unique.add(ref);
-    }
-  return [...unique];
+/**
+ * Unique, in first-read order. Never truncated: derived work keeps its full
+ * provenance, which the turn's read budget and the chat's turn limit bound.
+ */
+export function uniqueSources(...groups: Iterable<string>[]) {
+  return [...new Set(groups.flatMap((group) => [...group]))];
 }

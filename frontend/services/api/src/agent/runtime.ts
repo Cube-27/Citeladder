@@ -28,11 +28,13 @@ import { record } from '../db/json.ts';
 import { lockRun, terminalize } from './queue.ts';
 import { appendMessage, appendRecoveryReply, getChat } from './messages.ts';
 import { outlineRequired, usesFormats } from './skills.ts';
-import { boundedSources, readSources, scrubRecordRefs } from './sources.ts';
+import { readSources, scrubRecordRefs, uniqueSources } from './sources.ts';
 import { leaseSignal } from '../queue/heartbeat.ts';
 import { refused, ToolRegistry, type ToolOutcome } from './tools.ts';
 
 const ACCESS_CODES = new Set(['trial_expired', 'access_unresolved']);
+// OpenAI-compatible providers report an output-cap stop as either name.
+const TRUNCATED = new Set(['length', 'max_tokens']);
 function failureCode(error: unknown) {
   if (error instanceof AgentError) return error.code;
   if (error instanceof ApiError) {
@@ -206,7 +208,7 @@ export class AgentRuntime {
       const result = await this.deps.models.call(lease, ordinal, model, assembled.request, signal);
       signal?.throwIfAborted();
       // A cut-off step cannot be repaired by asking again: the same request is cut again.
-      if (result.finish_status === 'length') throw new AgentError('output_too_long');
+      if (TRUNCATED.has(result.finish_status)) throw new AgentError('output_too_long');
       const step = this.parse(result.content, state);
       if (!step) continue;
       if (step.skillId && state.skill && step.skillId !== state.skill.id) {
@@ -462,7 +464,7 @@ export class AgentRuntime {
       const run = await lockRun(trx, lease);
       await authorize(trx, turn.scope);
       const chat = await getChat(trx, turn.scope, run.chat_id, true);
-      const sources = boundedSources(contextCitations(turn.manifest), read);
+      const sources = uniqueSources(contextCitations(turn.manifest), read);
       const formatId = response.output?.format_id ?? turn.current.output?.format_id ?? null;
       const outline = skill ? outlineRequired(this.deps.catalog, skill, formatId) : false;
       const phase = outline && !turn.current.outlineApproved ? 'outline' : response.output?.phase;
@@ -501,7 +503,7 @@ export class AgentRuntime {
             runId: run.id,
             messageId: message.id,
             userId: turn.scope.userId,
-            refs: boundedSources(turn.carried, sources),
+            refs: uniqueSources(turn.carried, sources),
             outlineRequired: outline,
           },
           this.deps.attachTarget,
@@ -531,24 +533,24 @@ export class AgentRuntime {
       await this.db.transaction().execute(async (trx) => {
         const run = await lockRun(trx, lease);
         await this.deps.models.reconcile(trx, run);
-        if (summary)
-          await trx
-            .updateTable('agent_runs')
-            .set({
-              context_manifest: {
-                ...manifestSchema.parse(run.context_manifest),
-                prompt_summary: summary,
-              },
-            })
-            .where('id', '=', run.id)
-            .where('workspace_id', '=', run.workspace_id)
-            .execute();
         if (run.user_id && code !== 'access_revoked') {
           await authorize(trx, {
             workspaceId: run.workspace_id,
             projectId: run.project_id,
             userId: run.user_id,
           });
+          if (summary)
+            await trx
+              .updateTable('agent_runs')
+              .set({
+                context_manifest: {
+                  ...manifestSchema.parse(run.context_manifest),
+                  prompt_summary: summary,
+                },
+              })
+              .where('id', '=', run.id)
+              .where('workspace_id', '=', run.workspace_id)
+              .execute();
           await appendRecoveryReply(trx, run, code);
         }
         await terminalize(trx, lease, 'failed', code);

@@ -765,7 +765,8 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       evidence_refs: [],
     });
     // A skill's fenced submission block keeps the IDs its schema needs.
-    const block = ['```json', `{"topic_id":"${sourceId}"}`, '```'].join('\n');
+    // A fence line with an info string does not close the block.
+    const block = ['```json', '```not-a-close', `{"topic_id":"${sourceId}"}`, '```'].join('\n');
     expect(scrubRecordRefs(`See [the run](citeladder://audit/${sourceId}).\n\n${block}`)).toBe(
       `See the run.\n\n${block}`,
     );
@@ -1294,17 +1295,20 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     });
     expect(detail.output?.latest_revision?.body).toBe('Requested document');
   });
-  it('ends a cut-off response as too long after one call, without a repair call', async () => {
-    const scope = await fixtures.scope();
-    const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });
-    const complete = vi.fn(async () => ({ ...result(deliverable()), finish_status: 'length' }));
-    await fixtures.runtime(scope, { ...scripted([]), complete }).execute(lease);
-    expect(complete).toHaveBeenCalledTimes(1);
-    const detail = await readChat(db, scope, run.chat_id);
-    expect(detail.latest_run).toMatchObject({ status: 'failed', error_code: 'output_too_long' });
-    expect(detail.messages.at(-1)?.content).toBe(recoveryReply('output_too_long'));
-    expect(detail.output).toBeNull();
-  });
+  it.each(['length', 'max_tokens'])(
+    'ends a response cut off by %s as too long after one call, without a repair call',
+    async (finish_status) => {
+      const scope = await fixtures.scope();
+      const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });
+      const complete = vi.fn(async () => ({ ...result(deliverable()), finish_status }));
+      await fixtures.runtime(scope, { ...scripted([]), complete }).execute(lease);
+      expect(complete).toHaveBeenCalledTimes(1);
+      const detail = await readChat(db, scope, run.chat_id);
+      expect(detail.latest_run).toMatchObject({ status: 'failed', error_code: 'output_too_long' });
+      expect(detail.messages.at(-1)?.content).toBe(recoveryReply('output_too_long'));
+      expect(detail.output).toBeNull();
+    },
+  );
   it('drafts short formats directly and starts long-form formats from an outline', async () => {
     const scope = await fixtures.scope();
     const formats = new Map([
