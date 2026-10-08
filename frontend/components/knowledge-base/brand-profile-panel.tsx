@@ -49,13 +49,20 @@ function profileDraft(profile: BrandProfile): BrandProfileDraft {
   };
 }
 
-/** Only answered facets are sent; a blank category keeps the stored one. */
-function identityUpdate(identity: IdentityFacets) {
+/**
+ * Only facets the reader changed are sent, because the API marks every sent
+ * facet reviewed; a blank category keeps the stored one.
+ */
+function identityUpdate(identity: IdentityFacets, saved: IdentityFacets) {
   const category = identity.category.trim();
   return {
-    ...(category ? { category } : {}),
-    ...(identity.buyer_type ? { buyer_type: identity.buyer_type } : {}),
-    ...(identity.market_scope ? { market_scope: identity.market_scope } : {}),
+    ...(category && category !== saved.category ? { category } : {}),
+    ...(identity.buyer_type && identity.buyer_type !== saved.buyer_type
+      ? { buyer_type: identity.buyer_type }
+      : {}),
+    ...(identity.market_scope && identity.market_scope !== saved.market_scope
+      ? { market_scope: identity.market_scope }
+      : {}),
   };
 }
 
@@ -82,7 +89,10 @@ export function BrandProfilePanel({
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
   const [draft, setDraft] = useState(() => profileDraft(profile));
-  const [identity, setIdentity] = useState(() => identityFacets(profile.business_context));
+  const [savedIdentity, setSavedIdentity] = useState(() =>
+    identityFacets(profile.business_context),
+  );
+  const [identity, setIdentity] = useState(savedIdentity);
   const [productsInput, setProductsInput] = useState(() => profile.products_services.join(', '));
   const [notice, setNotice] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('facts');
@@ -94,7 +104,7 @@ export function BrandProfilePanel({
         projectId,
         {
           ...draft,
-          ...identityUpdate(identity),
+          ...identityUpdate(identity, savedIdentity),
           products_services: parseProductsInput(productsInput),
         },
         { workspaceId },
@@ -104,7 +114,9 @@ export function BrandProfilePanel({
       queryClient.setQueryData(queryKeys.projects.brandProfile(projectId), next);
       onSaved?.();
       setDraft(profileDraft(next));
-      setIdentity(identityFacets(next.business_context));
+      const nextIdentity = identityFacets(next.business_context);
+      setSavedIdentity(nextIdentity);
+      setIdentity(nextIdentity);
       setProductsInput(next.products_services.join(', '));
       setNotice('Brand knowledge saved. These details now inform assisted features.');
     },

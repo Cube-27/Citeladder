@@ -118,10 +118,11 @@ describe('BrandProfilePanel', () => {
     await waitFor(() =>
       expect(requestBody).toMatchObject({
         category: 'product feed management platform',
-        buyer_type: 'b2b',
         market_scope: 'global',
       }),
     );
+    // An untouched facet is not resubmitted, so it is not marked reviewed.
+    expect(requestBody).not.toHaveProperty('buyer_type');
   });
 
   it('locks profile fields while a save is pending', async () => {

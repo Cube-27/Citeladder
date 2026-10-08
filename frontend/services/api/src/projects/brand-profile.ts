@@ -60,6 +60,8 @@ export const brandProfileUpdate = z.object({
   market_scope: marketScopeSchema.nullish(),
 });
 const IDENTITY_FACETS = ['category', 'buyer_type', 'market_scope'] as const;
+// Inferred from the onboarding category; they describe a replaced category.
+const CATEGORY_DERIVED = ['category_terms', 'category_aliases', 'category_options'] as const;
 export type BrandProfileUpdate = z.infer<typeof brandProfileUpdate>;
 
 const contractProvenance = brandProfileSchema.shape.sources.shape.description.unwrap();
@@ -250,6 +252,11 @@ export function updateBrandProfile(
       const fieldSources: Record<string, unknown> = {
         ...jsonObject(context.field_sources ?? {}, 'business_context.field_sources'),
       };
+      if (update.category != null && update.category !== context.category)
+        for (const derived of CATEGORY_DERIVED) {
+          delete context[derived];
+          delete fieldSources[derived];
+        }
       for (const facet of facets) {
         context[facet] = update[facet];
         fieldSources[facet] = 'reviewed';

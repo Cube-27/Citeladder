@@ -236,10 +236,15 @@ describe('brand profile', () => {
     await profile({
       businessContext: {
         category: 'footwear',
+        category_terms: ['shoes'],
         business_type: 'b2c',
         market_scope: 'local',
         business_map: { offerings: [] },
-        field_sources: { category: 'inferred', business_type: 'inferred' },
+        field_sources: {
+          category: 'inferred',
+          category_terms: 'inferred',
+          business_type: 'inferred',
+        },
       },
     });
     const edited = await call<BrandProfile>('/brand-profile', {
@@ -247,8 +252,8 @@ describe('brand profile', () => {
       body: { category: '  trail running shoes ', buyer_type: 'both' },
     });
     expect(edited.status).toBe(200);
-    // Unsupplied facets and other context stay as they were; the legacy buyer
-    // key gives way to the reviewed one.
+    // Unsupplied facets and other context stay as they were; terms inferred
+    // from the replaced category go, and the legacy buyer key gives way.
     expect(edited.body.business_context).toEqual({
       category: 'trail running shoes',
       buyer_type: 'both',
