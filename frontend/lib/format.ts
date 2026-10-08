@@ -143,3 +143,8 @@ const numberFormat = new Intl.NumberFormat('en-US');
 export function formatCount(value: number): string {
   return numberFormat.format(value);
 }
+
+/** A grouped count with its noun, pluralized with a trailing `s` (`1 answer`, `1,200 answers`). */
+export function pluralCount(count: number, noun: string): string {
+  return `${formatCount(count)} ${noun}${count === 1 ? '' : 's'}`;
+}

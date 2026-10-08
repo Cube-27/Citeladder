@@ -1,5 +1,5 @@
 import type { Visibility } from '@/lib/api/types';
-import { formatCount } from '@/lib/format';
+import { formatCount, pluralCount as plural } from '@/lib/format';
 
 /**
  * What stands behind the headline tiles: how many answers they count, what
@@ -7,9 +7,6 @@ import { formatCount } from '@/lib/format';
  * and baseline are stated once here rather than guessed by the reader.
  */
 export type CoverageSummary = { answers: string; change: string };
-
-const plural = (count: number, word: string) =>
-  `${formatCount(count)} ${word}${count === 1 ? '' : 's'}`;
 
 function answersLine(selected: Visibility): string {
   const counts = selected.counts;
@@ -27,9 +24,10 @@ function answersLine(selected: Visibility): string {
 }
 
 /** Statuses whose change line is fixed: no change is shown, for this reason. */
+const INCOMPLETE = 'the earlier or current measurement did not complete every answer.';
 const NO_CHANGE: Record<string, string> = {
-  partial_coverage: 'the earlier or current measurement did not complete every answer.',
-  coverage_unavailable: 'the earlier or current measurement did not complete every answer.',
+  partial_coverage: INCOMPLETE,
+  coverage_unavailable: INCOMPLETE,
   no_observations: 'one of the measurements recorded no answers.',
   changed_context: 'the chosen earlier run used different settings.',
   identity_unavailable: "this run's settings could not be identified.",
@@ -38,8 +36,8 @@ const NO_CHANGE: Record<string, string> = {
 type Comparison = NonNullable<Visibility['comparison']>;
 
 function matchedLine(comparison: Comparison, since: string | null): string {
-  const shared = comparison.current_counts?.responses ?? null;
-  const scope = shared === null ? 'the answers' : `the ${plural(shared, 'answer')}`;
+  const shared = comparison.current_counts?.responses;
+  const scope = shared == null ? 'the answers' : `the ${plural(shared, 'answer')}`;
   return `Change compares only ${scope} whose prompt and engine also ran on ${since ?? 'the earlier run'}; the settings differed.`;
 }
 
