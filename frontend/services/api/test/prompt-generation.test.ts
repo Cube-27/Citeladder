@@ -254,7 +254,11 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       .select('provenance')
       .where('id', '=', result.candidates[0]!.run_id)
       .executeTakeFirstOrThrow();
-    expect(run.provenance).toMatchObject({ generation_mode: 'model', quality_gate: 'off' });
+    expect(run.provenance).toMatchObject({
+      generation_mode: 'quick',
+      quality_gate: 'off',
+      distribution: { selected: { total: 2, located: 0 } },
+    });
     const account = await billingAccount(db, tenant.workspaceId);
     await grant(db, account, { value: 1 });
     await expect(

@@ -11,6 +11,7 @@ const DROP_REASON_COPY: Record<PromptAdmissionDropReason, string> = {
   placeholder: 'with an unfilled placeholder',
   observed_copy: 'copying an observed search query',
   off_topic: "unrelated to this project's brand, topics or profile",
+  location_unplanned: 'naming a place the plan did not ask for',
   branded_core: 'naming your brand or a competitor',
   brand_missing: 'not naming your brand',
   competitor_missing: 'not comparing with a competitor',

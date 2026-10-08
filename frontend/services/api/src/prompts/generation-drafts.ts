@@ -12,11 +12,17 @@ import type { ModelGateway } from '../models/gateway.ts';
 import { bindingFailure } from './binding.ts';
 import type { GenerationContext, OfferingMap } from './generation-context.ts';
 import { generationInvalid, generationSetting, type GenerationInput } from './generation-input.ts';
+import {
+  dimensions,
+  generationBrief,
+  geoTerms,
+  namesPlace,
+  planSlots,
+  type Slot,
+} from './generation-plan.ts';
 import { promptTextHash } from './normalization.ts';
 
 const G = policy.prompts.generation;
-export const dimensions = ['attributes', 'situations', 'audiences'] as const;
-const facets = ['attribute', 'situation_or_constraint', 'audience'] as const;
 const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
 const containsName = (text: string, names: readonly string[]) =>
   names.some((name) => namesAlias(text, name));
@@ -49,16 +55,7 @@ function brandTerms(context: GenerationContext): string[] {
   ];
 }
 
-export type Slot = {
-  slot_id: string;
-  topic_id: string;
-  topic_name: string;
-  topic_description: string;
-  buyer_need: Record<string, string>;
-  target_buyer_stage: string;
-  allowed_prompt_intents: string[];
-  evidence_ref: Record<string, unknown>;
-};
+export type { Slot } from './generation-plan.ts';
 export type Draft = {
   slot: Slot;
   text: string;
@@ -66,123 +63,17 @@ export type Draft = {
   intent: string;
   buyer_stage: string;
   prompt_intent: string;
+  /** The model's own place label: recorded beside the deterministic check, never used to drop. */
+  names_place?: boolean;
   decision?: Record<string, unknown>;
 };
-type Facet = { dimension: number; value: string; suggested: boolean };
-function combinations(map: OfferingMap | undefined): Facet[][] {
-  const options = dimensions.flatMap((dimension, index) =>
-    (map?.[dimension] ?? []).map((entry) => ({
-      dimension: index,
-      value: entry.value,
-      suggested: entry.review_state !== 'confirmed',
-    })),
-  );
-  const result: Facet[][] = [[]];
-  for (const option of options) {
-    // Extend only the combinations that existed before this option.
-    const size = result.length;
-    for (let index = 0; index < size; index++) {
-      const prior = result[index]!;
-      if (
-        prior.length >= G.cell_max_facets ||
-        prior.some((item) => item.dimension === option.dimension)
-      )
-        continue;
-      const values = new Set([
-        ...prior.map((item) => item.value.toLowerCase()),
-        option.value.toLowerCase(),
-      ]);
-      if (
-        map?.exclusions.some(
-          (pair) => values.has(pair.first.toLowerCase()) && values.has(pair.second.toLowerCase()),
-        )
-      )
-        continue;
-      result.push([...prior, option]);
-    }
-  }
-  return result;
-}
-
-export function planSlots(
-  context: GenerationContext,
-  input: GenerationInput,
-  suggestions: OfferingMap[],
-): Slot[] {
-  const allowed = Object.keys(G.intent_legacy).filter(
-    (intent) => input.cohort !== 'comparison' || intent === 'compare',
-  );
-  const maps = [...context.maps, ...suggestions];
-  const markets = ['', ...new Set(strings(record(context.context.business_context).service_areas))];
-  const planners = context.selected.map((topic) => {
-    const parent = context.topics.find((item) => item.id === topic.parent_id);
-    const match = (name: string) =>
-      maps.find(
-        (map) =>
-          map.offering.toLowerCase() === name.toLowerCase() &&
-          dimensions.some((dimension) => map[dimension].length),
-      );
-    const map = match(topic.name) ?? (parent ? match(parent.name) : undefined);
-    return {
-      topic,
-      map,
-      combos: combinations(map),
-      remaining: [] as Facet[][],
-      usage: new Map<string, number>(),
-    };
-  });
-  return Array.from(
-    { length: input.count * generationSetting('overgenerate_factor') },
-    (_, index) => {
-      const plan = planners[index % planners.length]!;
-      if (!plan.remaining.length) plan.remaining = [...plan.combos];
-      const used = (key: string) => plan.usage.get(key) ?? 0;
-      plan.remaining.sort(
-        (a, b) =>
-          Number(!a.length) - Number(!b.length) ||
-          Number(a.some((v) => v.suggested)) - Number(b.some((v) => v.suggested)) ||
-          a.reduce((sum, v) => sum + used(`${v.dimension}:${v.value}`), 0) -
-            b.reduce((sum, v) => sum + used(`${v.dimension}:${v.value}`), 0),
-      );
-      const combo = plan.remaining.shift()!;
-      const least = (key: string, options: readonly string[]) =>
-        [...options].sort((a, b) => used(`${key}:${a}`) - used(`${key}:${b}`))[0]!;
-      const stage = least('stage', G.stages),
-        market = least('market', markets);
-      for (const key of [
-        ...combo.map((v) => `${v.dimension}:${v.value}`),
-        `stage:${stage}`,
-        `market:${market}`,
-      ])
-        plan.usage.set(key, used(key) + 1);
-      const need: Record<string, string> = { offering: plan.map?.offering ?? plan.topic.name };
-      for (const item of combo) need[facets[item.dimension]!] = item.value;
-      if (market) need.market = market;
-      return {
-        slot_id: `q${index + 1}`,
-        topic_id: plan.topic.id,
-        topic_name: plan.topic.name,
-        topic_description: plan.topic.description,
-        buyer_need: need,
-        target_buyer_stage: stage,
-        allowed_prompt_intents: allowed,
-        evidence_ref: {
-          kind: 'business_map_cell',
-          ...need,
-          target_buyer_stage: stage,
-          review_state: combo.some((v) => v.suggested) ? 'suggested' : 'confirmed',
-          evidence_type: 'hypothesis',
-        },
-      };
-    },
-  );
-}
 
 const generatedRow = z.object({
   slot_id: z.string(),
   text: z.string(),
   buyer_stage: z.string(),
   prompt_intent: z.string(),
+  names_place: z.boolean().optional(),
 });
 const generated = z.object({ prompts: z.array(generatedRow) });
 
@@ -194,6 +85,7 @@ type AdmissionDrop = {
   phase: 'admission' | 'staging';
   batch: number;
   row_index: number;
+  names_place?: boolean | null;
 };
 export function countDrop(drops: Drops, reason: PromptAdmissionDropReason, count = 1) {
   if (count) drops[reason] = (drops[reason] ?? 0) + count;
@@ -230,6 +122,8 @@ export function admitDrafts(
     ),
   );
   const brands = brandTerms(context);
+  // Agent rows are targeted on purpose; only quick-generate cells plan places.
+  const geo = context.revision ? [] : geoTerms(context);
   const competitors = context.context.competitors.flatMap((row) => [row.name, ...row.aliases]);
   const reason = (
     row: z.infer<typeof generatedRow>,
@@ -240,6 +134,9 @@ export function admitDrafts(
     if (!slot || usedSlots.has(slot.slot_id)) return 'unplanned_slot';
     if (!slot.allowed_prompt_intents.includes(row.prompt_intent)) return 'intent';
     if (!G.stages.includes(row.buyer_stage)) return 'stage';
+    // A core row's intent must suit the stage the model labelled it with.
+    if (input.cohort === 'core' && !G.stage_intents[row.buyer_stage]?.includes(row.prompt_intent))
+      return 'intent';
     if (seen.has(hash)) return 'duplicate';
     if (
       !text ||
@@ -250,6 +147,7 @@ export function admitDrafts(
     if (/[[{<][^[\]{}<>]*[\]}>]/u.test(text)) return 'placeholder';
     if (observed.has(hash)) return 'observed_copy';
     if (bindingFailure(text, context.vocabulary)) return 'off_topic';
+    if (!slot.buyer_need.market && namesPlace(text, geo)) return 'location_unplanned';
     if (input.cohort === 'core')
       return containsName(text, [...brands, ...competitors]) ? 'branded_core' : null;
     if (!containsName(text, [context.context.brand_name])) return 'brand_missing';
@@ -277,6 +175,7 @@ export function admitDrafts(
         phase: 'admission',
         batch,
         row_index,
+        ...(dropped === 'location_unplanned' ? { names_place: row.names_place ?? null } : {}),
       });
       continue;
     }
@@ -289,6 +188,7 @@ export function admitDrafts(
       intent: G.intent_legacy[row.prompt_intent as keyof typeof G.intent_legacy],
       buyer_stage: row.buyer_stage,
       prompt_intent: row.prompt_intent,
+      ...(row.names_place === undefined ? {} : { names_place: row.names_place }),
     });
   }
   return { admitted, drops, dropRecords };
@@ -326,6 +226,7 @@ async function suggestMaps(
       schema,
       deadline,
     );
+    const places = geoTerms(context);
     const banned = [
       context.context.brand_name,
       ...context.context.brand_aliases,
@@ -347,7 +248,7 @@ async function suggestMaps(
               ),
           ),
         ]
-          .filter((value) => value && !containsName(value, banned))
+          .filter((value) => value && !containsName(value, banned) && !namesPlace(value, places))
           .map((value) => ({
             value,
             origin: 'model' as const,
@@ -460,6 +361,12 @@ async function draftBatches(
     drops: Drops = {},
     dropRecords: AdmissionDrop[] = [];
   const inFlight = new Set<string>();
+  // The brief and tracked texts are fixed for the run: earlier drafts are not
+  // fed back, so a first batch's register cannot set the whole run's.
+  const brief = generationBrief(context);
+  const tracked = context.prompts
+    .map((row) => row.text)
+    .slice(-generationSetting('existing_prompt_context_limit'));
   let calls = 0,
     parseError = false,
     failure: ModelError | null = null,
@@ -475,12 +382,9 @@ async function draftBatches(
       const response = await gateway.structured(
         system,
         JSON.stringify({
-          reference_evidence: context.context,
+          reference_evidence: brief,
           slots: batch,
-          existing_prompts: [
-            ...context.prompts.map((row) => row.text),
-            ...drafts.map((row) => row.text),
-          ].slice(-generationSetting('existing_prompt_context_limit')),
+          existing_prompts: tracked,
         }),
         generated,
         deadline,

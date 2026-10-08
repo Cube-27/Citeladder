@@ -121,6 +121,7 @@ const promptAdmissionDropReasons = [
   'placeholder',
   'observed_copy',
   'off_topic',
+  'location_unplanned',
   'branded_core',
   'brand_missing',
   'competitor_missing',

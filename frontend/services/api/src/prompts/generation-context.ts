@@ -256,7 +256,11 @@ export function generationContext(
       snapshot,
       demand,
       revision,
-      vocabulary: await loadVocabulary(trx, project.id),
+      vocabulary: await loadVocabulary(
+        trx,
+        project.id,
+        policy.prompts.generation.generated_binding_excluded_fields,
+      ),
     };
   });
 }

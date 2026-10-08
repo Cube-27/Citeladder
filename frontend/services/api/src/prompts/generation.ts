@@ -19,7 +19,6 @@ import {
 } from './generation-context.ts';
 import {
   countDrop,
-  dimensions,
   draftCallLimit,
   generateDrafts,
   type Draft,
@@ -32,6 +31,8 @@ import {
   wantedTopics,
   type GenerationInput,
 } from './generation-input.ts';
+import { distribution } from './generation-metrics.ts';
+import { dimensions, generationBrief, geoTerms } from './generation-plan.ts';
 import { gatedOut, judgeDrafts, selectDrafts } from './generation-quality.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
@@ -202,12 +203,13 @@ function stage(
       return false;
     });
     const selected = selectDrafts(eligible, input.count),
-      rejected = eligible.filter(gatedOut);
+      rejected = eligible.filter(gatedOut),
+      geo = geoTerms(context);
     const revision = context.revision;
     const evidence = {
       generator_version: policy.prompts.generation.version,
       buyer_query_policy_version: policy.prompts.generation.policy_version,
-      generation_mode: revision ? 'agent_proposal' : 'model',
+      generation_mode: revision ? 'agent_proposal' : 'quick',
       requested_count: input.count,
       requested_topic_ids: wantedTopics(input),
       cohort: input.cohort,
@@ -218,8 +220,14 @@ function stage(
       admission_drops: drops,
       admission_drop_records: dropRecords,
       stop_reason: output.stop,
+      distribution: {
+        admitted: distribution(output.drafts, geo),
+        selected: distribution(selected, geo),
+      },
+      // What the drafting model received: the narrow brief for quick
+      // generation, the saved revision for an Agent portfolio.
       brand_context_hash: createHash('sha256')
-        .update(JSON.stringify(context.context))
+        .update(JSON.stringify(revision ? context.context : generationBrief(context)))
         .digest('hex'),
       source_artifact_ids: context.context.knowledge_base.source_artifact_ids,
       demand_snapshot_id: context.snapshot?.id ?? null,
