@@ -121,8 +121,34 @@ describe('BrandProfilePanel', () => {
         market_scope: 'global',
       }),
     );
-    // An untouched facet is not resubmitted, so it is not marked reviewed.
-    expect(requestBody).not.toHaveProperty('buyer_type');
+    // Untouched facets and fields are not resubmitted, so they are not marked reviewed.
+    expect(requestBody).toEqual({
+      category: 'product feed management platform',
+      market_scope: 'global',
+    });
+  });
+
+  it('sends a cleared category so the save fails instead of silently reverting', async () => {
+    const user = userEvent.setup({ delay: null });
+    let requestBody: unknown;
+    mswServer.use(
+      http.put(`/api/v1/projects/${projectId}/brand-profile`, async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json({ detail: 'category is required' }, { status: 422 });
+      }),
+    );
+    renderWithProviders(
+      <BrandProfilePanel
+        projectId={projectId}
+        profile={{ ...profile, business_context: { category: 'feed software' } }}
+      />,
+    );
+    await user.clear(screen.getByLabelText(/what you sell/i));
+    await user.click(screen.getByRole('button', { name: /save brand knowledge/i }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(requestBody).toEqual({ category: '' });
+    expect(screen.getByLabelText(/what you sell/i)).toHaveValue('');
   });
 
   it('locks profile fields while a save is pending', async () => {

@@ -50,13 +50,21 @@ function profileDraft(profile: BrandProfile): BrandProfileDraft {
 }
 
 /**
- * Only facets the reader changed are sent, because the API marks every sent
- * facet reviewed; a blank category keeps the stored one.
+ * Only what the reader changed is sent, because the API marks every sent field
+ * and facet reviewed. A cleared category is sent so the API can reject it.
  */
+function profileUpdate(draft: BrandProfileDraft, saved: BrandProfileDraft) {
+  return Object.fromEntries(
+    (Object.keys(draft) as (keyof BrandProfileDraft)[]).flatMap((field) =>
+      JSON.stringify(draft[field]) === JSON.stringify(saved[field]) ? [] : [[field, draft[field]]],
+    ),
+  ) as Partial<BrandProfileDraft>;
+}
+
 function identityUpdate(identity: IdentityFacets, saved: IdentityFacets) {
   const category = identity.category.trim();
   return {
-    ...(category && category !== saved.category ? { category } : {}),
+    ...(category !== saved.category ? { category } : {}),
     ...(identity.buyer_type && identity.buyer_type !== saved.buyer_type
       ? { buyer_type: identity.buyer_type }
       : {}),
@@ -88,7 +96,8 @@ export function BrandProfilePanel({
 }>) {
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
-  const [draft, setDraft] = useState(() => profileDraft(profile));
+  const [savedDraft, setSavedDraft] = useState(() => profileDraft(profile));
+  const [draft, setDraft] = useState(savedDraft);
   const [savedIdentity, setSavedIdentity] = useState(() =>
     identityFacets(profile.business_context),
   );
@@ -103,9 +112,11 @@ export function BrandProfilePanel({
       return projectsApi.updateBrandProfile(
         projectId,
         {
-          ...draft,
+          ...profileUpdate(
+            { ...draft, products_services: parseProductsInput(productsInput) },
+            savedDraft,
+          ),
           ...identityUpdate(identity, savedIdentity),
-          products_services: parseProductsInput(productsInput),
         },
         { workspaceId },
       );
@@ -113,7 +124,9 @@ export function BrandProfilePanel({
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.projects.brandProfile(projectId), next);
       onSaved?.();
-      setDraft(profileDraft(next));
+      const nextDraft = profileDraft(next);
+      setSavedDraft(nextDraft);
+      setDraft(nextDraft);
       const nextIdentity = identityFacets(next.business_context);
       setSavedIdentity(nextIdentity);
       setIdentity(nextIdentity);
