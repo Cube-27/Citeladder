@@ -5,8 +5,9 @@
  */
 import { fenceTracker } from '../config/skill-inputs.ts';
 
-// Linear: `[^)]*` takes the URI and any padding before `)` in one pass.
-const LINKED_REF = /\[([^\]\n]+)\]\(\s*citeladder:\/\/[^)]*\)/giu;
+// Linear: a label never spans another `[`, so no start position rescans the
+// same text, and `[^)]*` takes the URI and any padding before `)` in one pass.
+const LINKED_REF = /\[([^[\]\n]+)\]\(\s*citeladder:\/\/[^)]*\)/giu;
 // Trailing sentence punctuation belongs to the prose, not the reference.
 const BARE_REF = /\(?citeladder:\/\/[^\s<>()[\]"']*[^\s<>()[\]"'.,;:!?]\)?/giu;
 const UUID = /\(?\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b\)?/giu;
