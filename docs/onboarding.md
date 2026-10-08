@@ -2,131 +2,119 @@
 
 ## Responsibility
 
-Onboarding establishes the owned website, market, reviewed company profile and
-accepted competitors. Discovery output is evidence-backed suggestion, not
-confirmed business truth. It creates the project, with an empty prompt set,
-only after the user confirms the visible category, buyer type and market scope
-choices where known. Generated positioning, audience and offerings remain
-unreviewed until edited in the project.
+Onboarding turns a brand name, website and market into a project with a
+reviewed identity and accepted competitors. Discovery output is
+evidence-backed suggestion, not confirmed business truth. The project is created,
+with an empty prompt set, only after the user confirms the category, buyer type
+and market scope. Generated positioning, description, audience and offerings
+are stored as unreviewed suggestions.
 [Workspace access](workspace-access.md) owns identity and project selection;
 [prompts and Visibility](visibility-prompt.md) owns the prompts the user then
 chooses to track.
 
-## Action to persisted result
+## Research
 
-The [discovery API](../frontend/services/api/src/routes/brand-discoveries.ts) accepts a
-workspace-authorized, idempotent discovery request and returns persisted
-progress. The [onboarding owner](../frontend/services/api/src/projects/discovery.ts) and
-[research owner](../frontend/services/api/src/projects/research.ts) coordinate
-bounded first-party acquisition, identity research and provisional competitor
-suggestions.
-The [worker](../frontend/services/api/src/workers/discovery-worker.ts) claims PostgreSQL
-tasks with leases and commits before provider I/O. After creation returns the
-discovery ID, the browser posts to `/brand-discoveries/{id}/run` while polling
-persisted progress independently. This workspace-authorized request runs one
-targeted task through the same worker on the API, with a maximum 180-second
-research deadline, so interactive onboarding does not wait for a Cloud Run Job
-to start. Duplicate requests and the background runner compete for the same
-lease; none bypasses retry backoff or attempt limits. The background wake-up and
-periodic lease recovery remain the fallback for interrupted or abandoned requests.
-The HTTP handler awaits execution; it never detaches work after its response.
-Identity makes one model request with a 20-second timeout. Competitor suggestions
-make at most three independent requests, each capped at 20 seconds. Failures
-degrade to reviewable evidence. Onboarding makes no prompt-generation request.
+The [discovery API](../frontend/services/api/src/routes/brand-discoveries.ts)
+accepts a workspace-authorized, idempotent request, commits the discovery and
+one queued task, and returns persisted progress. The browser then posts to
+`/brand-discoveries/{id}/run` while polling progress. That request runs this one
+task through the [worker](../frontend/services/api/src/workers/discovery-worker.ts)
+on the API, bounded by a 180-second deadline, so onboarding does not wait for a
+Cloud Run Job to start. The request, a duplicate tab and the background runner
+compete for the same PostgreSQL lease; none bypasses retry backoff or the
+attempt limit (3 by default, frozen on the task at creation). The handler awaits
+execution and never detaches work after its response.
 
-The resolved homepage is reused. First-party pages and independent research
-are separate bounded evidence sources. Identity keeps supported field citations
-when a model adds an unsupported citation; a field citing only unknown sources
-still rejects the identity result. One optional company, category, and market
-search supplies snippets to the configured model for up to ten provisional
-competitor names and domains. Search failure warns but does not block model
-suggestions. Name/domain cleanup excludes owned and reference sites; it does
-not prove commercial equivalence. The review screen starts with none selected,
-permits up to five tracked choices and manual name/domain additions, and keeps
-selected choices removable at capacity. Only selected domains are resolved
-before completion acceptance, outside the discovery lock; failures leave the
-choice editable. Invalid model output may be retried with the original request;
-warnings preserve degraded research states.
+If an attempt fails transiently, the task waits about 30 seconds and the runner
+stays alive for it: the discovery lane reports its next due task, so the retry
+does not wait for the periodic tick. Site failures (invalid URL, blocked or
+unknown site, out-of-scope redirect) fail at once.
 
-[BrandResearchSnapshot](../backend/app/models/discovery.py) and
-[discovery records](../backend/app/models/discovery.py) retain the research
-manifest, model provenance and progress.
-Each first-party capture uses a content-derived source ID and extraction version;
-external research retains provider source IDs (or a content-derived ID when
-absent), including the parent search source for fetched pages. Suggested profile
-and competitor values remain explicitly unreviewed in the research snapshot.
-BrandProfile field provenance records
-origin, review state, reviewer and review time. The Projects-owned
-`BusinessContext` serializes confirmed and inferred facets into that profile;
-unknown facets remain absent, and its field sources distinguish visible choices
-from inferred values. Reads never repeat discovery.
-The research screen distinguishes queued work from opening the website. Retrying
-a failed progress read reloads that discovery, without starting duplicate research.
+The [research owner](../frontend/services/api/src/projects/research.ts) reads the
+resolved homepage and a bounded set of first-party pages, and runs independent
+Keenable search and fetch research in parallel when a key is configured. One
+identity model request (20-second timeout) proposes the profile; a field citing
+only unknown evidence rejects the identity, while unsupported extra citations
+are dropped. One optional search then feeds at most three sequential competitor
+suggestion requests (20 seconds each) for up to ten provisional names and
+domains. Cleanup excludes owned, duplicate and reference sites; it does not prove
+commercial equivalence. Without an identity there is no category to search on,
+so competitor suggestion is skipped and the review warns. Every failure degrades
+to a reviewable result with warnings rather than blocking the user. Onboarding
+makes no prompt-generation request.
 
-## Confirmation and completion
+Workspace access is checked before each network request through a short-lived
+per-worker cache (30 seconds by default), so revocation takes effect within that
+window without four queries per fetch. Progress reports the phase, whether the
+homepage was read, and, once research finishes, the pages read and competitors
+found.
 
-[Completion](../frontend/services/api/src/projects/discovery.ts) locks the
-authorized discovery, validates the confirmation and idempotency key, freezes
-the reviewed input, persists the project/profile and its empty prompt set, and
-marks the discovery `project_created` in one transaction. A rollback leaves no
-partial shell. Completion makes no model call, creates no topics or prompts,
-queues no worker task and starts no initial Site Health crawl. Same-key replays
-return the same project; a different key conflicts. The user chooses what to
-track next, from Overview or the Prompts page.
+[BrandResearchSnapshot](../backend/app/models/discovery.py) retains the evidence
+manifest, model calls with prompt versions, field citations and research
+metrics. First-party captures carry a content-derived source ID and extraction
+version; external research keeps the provider source ID (or a content-derived
+one) and the parent search for fetched pages. Reads never repeat discovery.
 
-A discovery left `completing` by the retired completion worker, or its queued
-`brand_completion` task, only finalizes its already committed shell; it never
-generates prompts.
+## Review and completion
 
-Reviewed category and market choices stay separate from provisional research
-prose. The project market is a confirmed locale fact, while language may use
-its default. BrandProfile remains the
-store for offerings, positioning and audience, while Project owns locale.
-The Projects-owned BusinessContext composes those facts for later prompt
-generation without duplicating their storage.
+The review step shows the discovered websites (selected) and competitors. The
+first suggestions up to the five-competitor cap start selected; the user can
+deselect, edit or add competitors by name and domain. Editing a suggestion
+changes its name and primary domain and keeps its other domains. The user
+confirms the category from up to three suggested phrasings or types one, then
+picks the buyer type and market scope.
+
+[Completion](../frontend/services/api/src/projects/discovery.ts) validates the
+idempotency key and the confirmation (at most five competitors, each with a
+distinct public domain), locks the authorized discovery, requires it to be
+`ready` with persisted research, and in one transaction creates the project,
+brand profile and empty prompt set and marks the discovery `project_created`.
+A rollback leaves no partial project. Competitor websites are not fetched again.
+Completion makes no model call, creates no topics or prompts, queues no task and
+starts no Site Health crawl. A same-key replay returns the same project; a
+different key conflicts; a replay after the project was deleted reports no
+project.
+
+The Projects-owned `BusinessContext` stores the confirmed category, buyer type,
+market scope, market and language as `reviewed` and the remaining identity
+facets as `inferred`; unknown facets stay absent. BrandProfile field provenance
+records the AI-suggested origin of description, positioning, audience and
+offerings, unreviewed, linked to the research snapshot.
 
 The [onboarding screen](../frontend/components/onboarding/onboarding-screen.tsx)
-enters the project as soon as a committed project ID is available, through the
-shared project destination owner. It invalidates the old list without waiting
-for another detail request; the destination owns its bounded read and retry UI.
-A successful completion missing its project ID returns a recoverable error.
-After confirmation, the review controls are replaced immediately by page-level
-creation progress. A retryable completion failure returns to the recoverable
-review surface; a persisted terminal failure remains visible rather than
-spinning. The completion request and route handoff expose separate timing
-boundaries without delaying entry to the committed project.
-Draft URL updates replace the router history entry while retaining its transaction
-identity, so persisting the discovery ID or step does not remount the flow. These
-updates stop during completion and the committed-project handoff. Leaving
-onboarding discards retained transaction state; a fresh
-Add project URL starts at Basics, while a discovery URL resumes that draft.
-A shell-less terminal failure remains an error, not an endless progress state.
-Overview and the Prompts page ask a project with no active prompts to choose
-the questions it tracks; explicit generation can recover starting topics from
-confirmed offerings.
+keeps the discovery ID and step in the URL, so a reload resumes research or
+review; review edits themselves are held in the page until creation. It enters
+the project as soon as completion returns its ID, through the shared project
+destination owner, and shows page-level creation progress meanwhile. A
+retryable completion failure returns to the review; a failed discovery stays
+visible as an error. Leaving onboarding discards the draft; a fresh Add project
+URL starts at the first step, while a discovery URL resumes that draft.
+
+## After onboarding
+
+Company facts are edited in Agent → Context
+([brand profile panel](../frontend/components/knowledge-base/brand-profile-panel.tsx)):
+category, buyer type and market scope (saved into the business context as
+`reviewed`), description, positioning, audience, offerings and the business
+map. Competitors, domains and market are edited in the
+[project editor](../frontend/components/projects/project-edit-panel.tsx), which
+keeps each competitor's aliases across renames. Overview shows a read-only
+summary. Prompt generation and Site Health archetypes read the stored category
+and facets, so a correction there changes what later generation asks.
 
 ## Dependencies and limits
 
 - [Native discovery configuration](../frontend/services/api/src/config/discovery.ts)
-  owns research budgets, templates and worker policy. Python retains the queued
-  status, task kind and fixed maximum-attempt schema defaults. Native discovery
-  writes freeze the configured attempt limit on each queued task.
-  Model/provider routing and encrypted
-  credential custody stay in their existing owners.
-- Project creation checks workspace role and occupancy. Discovery IDs and
-  target projects are always workspace-authorized.
-- Company facts and competitors also appear in Overview's Facts editor.
-  [Command Center](../frontend/services/api/src/projects/command-center.ts) composes
-  persisted evidence and chooses the next action; it does not acquire evidence.
-  Its measurement names the metric snapshot and processing versions, and its
-  resolved-action summary retains implementation and verification event IDs.
-  Selecting an older measurement marks the view stale; evidence with no
-  freshness guarantee reports unknown freshness.
+  owns research budgets, timeouts, attempts, the access-check TTL, prompts and
+  excluded reference domains. The brand-identity policy owns the competitor cap
+  and field limits. Model routing and credential custody stay in their owners.
+- Project creation checks workspace role and occupancy. Discovery IDs are always
+  workspace-authorized; viewers cannot create, run or complete a discovery.
 - Offering harvest is bounded HTML evidence, not a sitemap or JavaScript
   rendering service. Missing evidence must not be padded with generic topics.
-- Confirmation authorizes completion, not publishing, an external mutation or
-  an automatic crawl. The Agent does not maintain a second company memory.
+- Confirmation authorizes completion, not publishing, an external mutation or a
+  crawl. The Agent does not keep a second company memory.
 
-The [completion tests](../frontend/services/api/test/discovery.test.ts)
-cover atomicity, idempotency, isolation, recovery and the no-crawl boundary.
-Historical evaluation results describe their recorded corpus/model only.
+The [completion and worker tests](../frontend/services/api/test/discovery.test.ts)
+cover atomicity, idempotency, workspace and role isolation, lease contention,
+retry and the no-crawl boundary.
