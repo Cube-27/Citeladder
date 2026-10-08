@@ -185,7 +185,7 @@ export async function declarationChecks(
   const checks = new Map<string, MemberCheck>();
   for (const member of members) {
     if (member.rule_id === 'site_contextual_links') continue;
-    const check = await memberCheck(db, scope, member, context);
+    const check = await memberCheck(db, scope, member, context); // NOSONAR -- One transaction connection.
     if (!check) continue;
     const key = JSON.stringify(check);
     if (!checks.has(key)) checks.set(key, { check, member });

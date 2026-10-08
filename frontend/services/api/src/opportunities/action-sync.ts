@@ -165,7 +165,8 @@ export async function syncActions(
   }
   for (let start = 0; start < created.length; start += INSERT_BATCH) {
     const batch = created.slice(start, start + INSERT_BATCH);
-    const inserted = await trx
+    // One transaction connection runs one statement at a time.
+    const inserted = await trx // NOSONAR -- Batches share the refresh transaction.
       .insertInto('actions')
       .values(
         batch.map((group) => ({

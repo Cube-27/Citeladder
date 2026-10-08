@@ -201,16 +201,22 @@ async function verifyExistingEvidence(
     ['audit', audit],
     ['traffic_snapshot', traffic],
   ];
-  for (const [triggerKind, source] of sources)
-    if (source)
-      await enqueueImplementationVerification(trx, {
-        workspaceId: row.workspace_id,
-        projectId: row.project_id,
-        triggerKind,
-        triggerId: source.id,
-        revision: `declaration-${row.id}`,
-        maxAttempts: loadWorkerSettings().taskMaxAttempts,
-      });
+  const triggers = sources.flatMap(([triggerKind, source]) =>
+    source
+      ? [
+          {
+            workspaceId: row.workspace_id,
+            projectId: row.project_id,
+            triggerKind,
+            triggerId: source.id,
+            revision: `declaration-${row.id}`,
+            maxAttempts: loadWorkerSettings().taskMaxAttempts,
+          },
+        ]
+      : [],
+  );
+  // The declaration transaction runs one statement at a time.
+  for (const trigger of triggers) await enqueueImplementationVerification(trx, trigger); // NOSONAR
 }
 
 export function declareAction(

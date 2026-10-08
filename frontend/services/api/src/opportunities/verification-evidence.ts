@@ -189,7 +189,7 @@ async function trafficCheck(ctx: Context, snapshotId: string, check: Check) {
     ctx.db,
     { workspaceId: d.workspace_id, projectId: d.project_id },
     snapshot,
-    { scope, key, metric: String(check.metric || '') },
+    { scope, key, metric: scalarText(check.metric) },
   );
   if (rowId) ctx.result.metric_ids.add(rowId);
   return compareMetric(check, check.baseline_value, rate, ctx.reading, 'no_search_console_row');

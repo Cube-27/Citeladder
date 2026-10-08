@@ -20,7 +20,7 @@ const legOf: Record<string, string> = policy.opportunity.actions.CHECK_KIND_MEAS
 /** What a check names, for a reader: its rule, prompt, page or query, link or publisher page. */
 function subject(check: Record<string, unknown>): string | null {
   const text = (value: unknown) => scalarText(value) || null;
-  if (check.kind === 'site_rule') return ruleTitle(String(check.rule_id ?? ''));
+  if (check.kind === 'site_rule') return ruleTitle(scalarText(check.rule_id));
   if (check.kind === 'visibility_metric') return text(check.target_prompt_id);
   if (check.kind === 'traffic_metric') return text(check.scope_key);
   return text(check.target_url);

@@ -216,6 +216,6 @@ export const verifyImplementationEvents: Executor = async (task, context) => {
       await recordVerification(context.db, task, project, source, declaration); // NOSONAR -- One declaration at a time bounds the pool.
     if (rows.length < p.IMPLEMENTATION_VERIFICATION_BATCH_MAX) break;
     after = rows.at(-1);
-    await context.checkCancelled('implementation verification');
+    await context.checkCancelled('implementation verification'); // NOSONAR -- Between pages, in order.
   }
 };

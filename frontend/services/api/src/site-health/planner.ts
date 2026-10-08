@@ -163,8 +163,10 @@ async function seedMonitored(db: Database, crawl: Crawl) {
     await measuredTargetPages(db, { workspaceId: crawl.workspace_id, projectId: crawl.project_id }),
   );
   // The root keeps its slot: site checks read its facts.
-  const rank = (url: { id: string; normalized_url: string }) =>
-    url.normalized_url === crawl.root_url ? 0 : declared.has(url.id) ? 1 : 2;
+  const rank = (url: { id: string; normalized_url: string }) => {
+    if (url.normalized_url === crawl.root_url) return 0;
+    return declared.has(url.id) ? 1 : 2;
+  };
   rows.sort((left, right) => rank(left) - rank(right));
   const current = await db
     .selectFrom('site_crawl_tasks')
