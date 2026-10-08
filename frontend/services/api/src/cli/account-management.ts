@@ -54,6 +54,18 @@ async function selectWorkspace(db: Database, session: PlatformSession) {
   return { workspaceId: selected.id, accountId: selected.account_id };
 }
 
+/** A real calendar instant: `new Date` would roll 2026-02-30 over into March. */
+function calendarDate(value: string) {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})/u.exec(value);
+  const date = new Date(value);
+  if (!parts || !Number.isFinite(date.getTime())) throw new Error('invalid_grant_validity');
+  const [, year, month, day] = parts.map(Number);
+  const calendar = new Date(Date.UTC(year!, month! - 1, day!));
+  if (calendar.getUTCMonth() !== month! - 1 || calendar.getUTCDate() !== day!)
+    throw new Error('invalid_grant_validity');
+  return date;
+}
+
 async function accessSettings() {
   console.log('All issuable feature flags and highest feature levels; finite counter allowances.');
   console.log(
@@ -68,7 +80,7 @@ async function accessSettings() {
   const expiry = await accountPrompt(
     'Extra entitlements expiry (ISO timestamp; blank means no expiry)',
   );
-  return { allowance, until: expiry ? new Date(expiry) : null };
+  return { allowance, until: expiry ? calendarDate(expiry) : null };
 }
 
 async function collectPlatformAction(

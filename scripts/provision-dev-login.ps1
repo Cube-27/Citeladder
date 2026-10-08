@@ -57,7 +57,9 @@ try {
         $start.CreateNoWindow = $true
         $start.RedirectStandardOutput = $true
         $start.RedirectStandardError = $true
-        foreach ($argument in @('-NoProfile', '-File', (Get-Command gcloud).Source,
+        # pwsh -File needs the SDK's PowerShell launcher, not gcloud.cmd.
+        $gcloudScript = Join-Path (Split-Path (Get-Command gcloud).Source) 'gcloud.ps1'
+        foreach ($argument in @('-NoProfile', '-File', $gcloudScript,
             'compute', 'ssh', $DatabaseInstance, "--project=$ProjectId", "--zone=$Zone", '--tunnel-through-iap',
             '--quiet', '--command=sleep 86400', '--ssh-flag=-batch', '--ssh-flag=-L', '--ssh-flag',
             "127.0.0.1:${LocalPort}:127.0.0.1:$($databaseUri.Port)")) {
