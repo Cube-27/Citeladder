@@ -1748,6 +1748,41 @@ samp {
   animation: marketing-nav-panel-out 170ms var(--ease-exit) both;
 }
 
+/* Moving between open menus hands over sideways: both panels travel in the
+   pointer's direction, the old one fading out as the new one settles. */
+@keyframes marketing-nav-panel-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--nav-slide-offset));
+  }
+}
+
+@keyframes marketing-nav-panel-slide-out {
+  to {
+    opacity: 0;
+    transform: translateX(calc(var(--nav-slide-offset) * -1));
+  }
+}
+
+.marketing-nav-panel-slide,
+.marketing-nav-panel-slide-out {
+  --nav-slide-offset: -24px;
+}
+
+.marketing-nav-panel-slide[data-slide-from='right'],
+.marketing-nav-panel-slide-out[data-slide-from='right'] {
+  --nav-slide-offset: 24px;
+}
+
+.marketing-nav-panel-slide {
+  animation: marketing-nav-panel-slide-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.marketing-nav-panel-slide-out {
+  pointer-events: none;
+  animation: marketing-nav-panel-slide-out 170ms var(--ease-exit) both;
+}
+
 
 
 

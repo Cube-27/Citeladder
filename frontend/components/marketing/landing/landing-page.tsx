@@ -162,8 +162,8 @@ function Hero() {
         <h1 className="website-hero-display">Know what AI tells your buyers about you.</h1>
         <p className="website-lead lp-hero-lead">
           CiteLadder tracks how ChatGPT, Gemini, Claude and Google AI Overviews answer the questions
-          your buyers ask — which brands they recommend, which pages they cite — and shows what to
-          fix to earn a place in the answer.
+          your buyers ask: which brands they recommend and which pages they cite. Then it shows what
+          to fix to earn a place in the answer.
         </p>
         <PrimaryActions />
         {selfServeSignupOpen() && (

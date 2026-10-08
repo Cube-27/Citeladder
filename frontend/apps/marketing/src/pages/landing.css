@@ -80,8 +80,16 @@
   text-align: center;
 }
 
+/* The landing tagline sits 4px under the shared hero rung. */
 .lp-hero-copy .website-hero-display {
   max-width: 22ch;
+  font-size: calc(clamp(1.75rem, 8.6vw, 2rem) - 4px);
+}
+
+@media (min-width: 48rem) {
+  .lp-hero-copy .website-hero-display {
+    font-size: calc(clamp(2rem, 4.2vw + 0.6rem, 4rem) - 4px);
+  }
 }
 
 .lp-hero-lead {
