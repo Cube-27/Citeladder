@@ -3,6 +3,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { AgentError, type Lease, type Run } from './contracts.ts';
+import { appendRecoveryReply } from './messages.ts';
 
 const { statuses, claimable, active, terminal } = policy.task_queue;
 export async function lockRun(db: Database, lease: Lease): Promise<Run> {
@@ -166,6 +167,7 @@ export class AgentQueue {
         .where('id', '=', run.id)
         .where('workspace_id', '=', run.workspace_id)
         .execute();
+      if (exhausted) await appendRecoveryReply(trx, run, 'provider_error');
     });
   }
   /** Caller supplies accounting; recovery cannot abandon an open credit hold. */
@@ -208,6 +210,7 @@ export class AgentQueue {
           .where('id', '=', run.id)
           .where('workspace_id', '=', run.workspace_id)
           .execute();
+        if (exhausted) await appendRecoveryReply(trx, run, 'max_attempts_exceeded'); // NOSONAR
       }
       return rows.length;
     });

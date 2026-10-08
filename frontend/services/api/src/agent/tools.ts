@@ -15,8 +15,6 @@ export type ToolOutcome = {
   status: 'completed' | 'unavailable' | 'failed' | 'refused';
   text: string;
   refs: ToolResult['artifactRefs'];
-  /** Citation grants cover only evidence actually supplied to the model. */
-  citationRefs?: ToolResult['artifactRefs'];
   omissions: Json[];
   hash: string;
   error: string;
@@ -78,7 +76,6 @@ export class ToolRegistry {
         status: result.state === 'unavailable' ? 'unavailable' : 'completed',
         text: bounded.text,
         refs: result.artifactRefs,
-        citationRefs: serialized.length <= maxChars ? result.artifactRefs : [],
         omissions: [...result.omissions, ...bounded.omissions],
         hash: createHash('sha256').update(serialized).digest('hex'),
         error: '',

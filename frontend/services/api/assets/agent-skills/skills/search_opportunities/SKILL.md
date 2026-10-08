@@ -3,53 +3,51 @@ id: search_opportunities
 label: Search opportunities
 group: demand
 order: 3
-version: 1
+version: 2
 output_kind: research
 description: Find commercially relevant keyword, topic and competitor gaps using CiteLadder demand, GSC, SERP and visibility evidence. Use for research and content planning, not automatic page generation.
 ---
 
-# Search demand and competitor gaps
+# Search opportunities
 
-Follow the operating contract. Bind only advertised read tools and use evidence actually supplied in this call. Earlier reads and upstream source references may need exact re-fetching. Another skill is explicit next-step advice, not an automatic invocation.
+## Goal
 
-## Outcome and inputs
+Decide which buyer needs to serve, on which existing or new pages, and why.
 
-Choose which buyer needs to serve, on which existing or new pages, and why. Required: project business context and either useful demand observations or an explicitly hypothetical research scope. Optional: GSC page/query records, DataForSEO keyword/SERP snapshots, visibility prompts/sources, page inventory, backlink evidence and conversions. No data source is mandatory for every branch, but a quantitative gap claim requires that dataset.
+## Inputs
 
-## Select the research mode
+- `get_project_business_context` for offers, audience, markets and conversion pages.
+- `read_demand` for demand clusters.
+- `read_performance_table` for Search Console queries and pages (separate tables; they do not say which query belongs to which page).
+- `read_search_intelligence` to list keyword, SERP and competitor datasets, then `read_search_dataset` to page through one.
+- `read_visibility_results` and `read_visibility_sources` for AI answer gaps.
+- `read_site_pages` for existing pages.
 
-For a named competitor, study that domain first; do not automatically expand into a market survey. For a landscape request, use a representative query basket, classify recurring domains, and label a small basket directional. For clustering, deliver a page map, not a list of semantic groups: primary query, related intents, existing/proposed destination, required evidence, and keep/refresh/create/defer decision. A small coherent set needs a simple map, not invented cluster hierarchies.
+A quantitative gap claim needs the dataset behind it. Without demand data, label the work a hypothesis.
 
-Keep the user's GSC observations separate from provider estimates of competitor traffic. Multiple URLs receiving one query establish overlap, not harmful cannibalization on their own. Verify unwanted page switching, competing intent or a documented business problem before recommending consolidation. Mark a destination “proposed” when no owned inventory was inspected.
+## Pick the mode
 
-## Workflow
+- **Named competitor:** study that domain first; do not turn it into a market survey.
+- **Landscape:** a representative set of queries; classify recurring domains; call a small set directional.
+- **Clustering:** deliver a page map (primary query, related intents, existing or proposed page, evidence needed, decision), not a list of keyword groups.
 
-1. **Choose the market and task.** Resolve offer, audience, served geography/language and conversion destinations. Start with audience → offer → buyer task → topic. Do not expand an industry into a generic keyword universe or default every business to commerce/SaaS.
-2. **Inventory what already works.** Read current pages, demand clusters, commercially relevant GSC queries and measured visibility gaps. Preserve established useful pages. Inspect canonical and intent relationships before recommending a new route. Classify current pages by their actual job, not URL substring alone.
-3. **Build a typed competitor set.** Separate direct business alternatives, search-result competitors, AI-answer competitors and cited publishers. Confirm a direct competitor serves overlapping needs/markets. A directory can compete for SERP attention without selling the same offer. Do not pad the list to a fixed count. Preserve the user-selected competition while adding other types as clearly labelled observations.
-4. **Ground the opportunity.** For each relevant topic, inspect available query metrics and any market/device/date-matched Search Intelligence dataset. For high-priority decisions, note that the actual result pages need review; do not describe pages you have not read. Note result format, intent, specific buyer questions, useful evidence, date sensitivity and conversion expectations. Do not invent provider ranks, difficulty or volumes.
-5. **Cluster by the same job and compatible result intent.** Similar words alone are insufficient. SERP overlap is supporting evidence, not a universal threshold. A shared page may serve related queries when the buyer task and needed answer are coherent. Split a topic when it needs a genuinely different decision, offer or format. Do not force a page for every keyword or treat a zero-volume estimate as proof that no buyer need exists.
-6. **Compare observed coverage.** Look for absent buyer questions, outdated facts, weak proof, missing practical utility, poor information hierarchy or the wrong page format. Count gaps against the inspected sample only. “Absent from five inspected competitor pages” does not mean “unique on the internet.” A competitor's additional headings are not automatically required sections.
-7. **Choose one action per opportunity.** `keep`, `refresh`, `expand`, `create`, `merge-review`, `reposition` or `defer`. New pages require distinct intent, truthful data and a useful conversion path. Potential cannibalization requires evidence of competing intent/performance, not merely two URLs sharing words. Merges/redirects require technical and business review; never prescribe automatic deletion.
-8. **Prioritize and brief.** Compare business relevance, existing demand, achievable differentiation, competitor strength as observed, effort and dependency. Low-volume high-fit decisions can lead. Difficulty metrics are provider estimates, not a verdict that a smaller brand cannot compete. Use first-party outcome data where available and label fit-based proxies otherwise.
+## Method
 
-## Outputs
+1. **Start from the business:** audience → offer → buyer task → topic. Do not expand into a generic keyword universe.
+2. **Inventory what works.** Existing useful pages, current queries and visibility gaps. Check existing pages before proposing a new one; mark a page "proposed" if you did not inspect the inventory.
+3. **Type the competitors:** direct business alternatives, search-result competitors, AI-answer competitors, cited publishers. A directory can compete for attention without selling the same thing. Keep the user's chosen competitors and label any additions.
+4. **Ground each opportunity** in the query data and any matching dataset, with its market, device and date. Do not describe search result pages you have not read, and never invent ranks, volumes or difficulty.
+5. **Cluster by the same buyer job**, not just similar words. Split when the decision, offer or format differs. Zero estimated volume does not prove no need.
+6. **Compare coverage** against what was inspected only: missing questions, outdated facts, weak proof, wrong format. "Absent from five inspected pages" is not "unique on the internet".
+7. **One action per opportunity:** keep, refresh, expand, create, merge-review, reposition or defer. Two pages sharing a query is not cannibalization unless intent or performance shows harm. Never recommend automatic deletion.
+8. **Prioritize** by business fit, existing demand, achievable differentiation, effort and dependencies. A low-volume, high-fit topic can lead. Difficulty scores are provider estimates, not a verdict.
 
-Produce `search-opportunities.md` and `opportunity-map.csv`.
+## Deliver
 
-```text
-opportunity_id, audience, offer, buyer_task, topic, query_cluster,
-market, language, search_intent, evidence_refs, provider_metrics_and_dates,
-competitor_type, inspected_result_urls, existing_destination,
-recommended_action, proposed_destination, format,
-differentiated_value, required_proof, conversion_path,
-priority_reason, effort, dependency, acceptance_check
-```
+One document with:
 
-Use a concise competitor map plus a prioritized content opportunity table. Each accepted topic includes a brief with intended reader, precise question to answer, relevant product facts, existing page decision, evidence to add, appropriate format, internal-link targets and primary conversion. Do not create a calendar of filler topics merely to fill weeks.
+- A short competitor map.
+- A prioritized opportunity table: buyer task, topic, query group, market and language, intent, provider metrics with source and date, existing page, recommended action, proposed page, format, what makes it different, proof needed, effort, how to check success.
+- A brief for each accepted topic: reader, the exact question to answer, relevant product facts, page decision, evidence to add, format, internal link targets and conversion.
 
-When asked to close gaps, include both a content/format opportunity and any discovered authority/access dependency. Hand off accepted briefs to the Create content skill; named comparisons to the Comparison content skill; repeatable data-backed patterns to the Programmatic SEO pilot skill; earned-source gaps to the Earned authority skill.
-
-## Questions, validation and stop rules
-
-Ask only when buyer/offer/market ambiguity changes recommendations. A lack of direct revenue data does not block a clearly labelled fit-based plan. No page is recommended solely because a competitor ranks for it. No volume/difficulty/rank may appear without provider, date and relevant scope. Deduplicate overlapping recommendations and verify that existing pages were inspected before proposing replacements. Missing current SERP evidence blocks claims about today's result composition, not a provisional business-topic map. Stop research when further breadth would not change the priority decision; show unresolved evidence needs.
+No filler content calendars. Suggest Create content for accepted briefs, Comparison content for named comparisons, Programmatic SEO pilot for repeatable patterns, and Earned authority for source gaps.

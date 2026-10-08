@@ -3,55 +3,49 @@ id: content_create
 label: Create content
 group: content
 order: 10
-version: 3
+version: 4
 output_kind: content
 description: Write or refresh complete articles, buyer guides, homepages, landing pages, YouTube scripts and community/social drafts using CiteLadder business and search evidence. Use for actual content delivery, not generic recommendations.
 ---
 
-# Evidence-led content creation and refresh
+# Create or refresh content
 
-Follow the operating contract. Bind only advertised read tools and use evidence actually supplied in this call. Earlier reads and upstream source references may need exact re-fetching. Another skill is explicit next-step advice, not an automatic invocation.
+## Goal
 
-## Outcome
+Write the complete piece the user asked for, grounded in the business's real facts and the buyer questions CiteLadder has measured. You do the writing; the tools supply facts and demand, not prose.
 
-For a question about content or the saved draft, answer directly with no output; a clarification or audience correction can also remain reply-only. Apply the workflow below only to requested creation or revision. First produce an outline for explicit user approval; after approval deliver the complete content. You do the synthesis, drafting and editorial revision; the CiteLadder tools supply business and evidence context, not the prose.
+## How the work flows
 
-This skill owns writing and editorial review. Use the Comparison content skill for named competitive claims, and the Programmatic SEO pilot skill for repeated page systems. Follow the format guidance supplied for the chosen format. Do not trigger a full strategic audit for a narrow writing task.
+- Answer questions about the content or the draft directly, without a new output.
+- Choose the format and set `format_id`. Long-form formats start with an outline (audience, angle, sections, key facts, call to action) for the user to approve; then write the full piece. Short formats (X, LinkedIn, Instagram, TikTok, Reddit, glossary definition) are drafted directly.
+- Follow the guidance for the chosen format.
+- Use Comparison content for named competitor comparisons and Programmatic SEO pilot for repeated page families.
+- When the chat starts from an earlier result (a brief or plan), reuse its decisions; do not restart research.
 
-## Inputs and scope
+## Inputs
 
-Required: confirmed audience/offer, requested topic or target page, content purpose and available facts. Resolve brand voice, CTA/destination, market/language, current page and evidence from project context, approved documents and actual reads. Optional: GSC-linked queries, keyword/SERP data, relevant visibility prompts/answers, observed sources, competitor pages, original data, expert input and existing native skill instructions.
+You need the audience, the offer, the topic or target page, and the purpose. Get them from the context and `get_project_business_context`; ask one grouped question only if a missing fact would change the piece. Useful extras:
 
-Read the native CiteLadder content catalog when relevant to the requested format and use compatible requirements, but do not treat it as a publishing tool or import vendor-specific builder commands. Inspect both what's known and what's approved for public use. Internal analytics may support choosing a topic without belonging in the article.
+- Real search queries for the target page: `read_query_evidence` (needs the page's `site_url_id` from `read_site_pages`).
+- Buyer questions and AI answers: `read_prompt_portfolio`, `read_visibility_results`.
+- Existing pages: `read_site_pages` for saved page facts (open a returned analysis with `fetch` for detail), or page text the user supplied.
 
-## Accept the upstream brief; preserve the evidence
+Internal analytics can guide the topic but do not belong in the published copy.
 
-When arriving from a research skill, reuse its accepted page decision, audience, conversion goal and evidence manifest. Re-open only claims requiring freshness or missing context; do not restart discovery or ask for facts already confirmed. Read existing content before replacing it and record what must survive. Deliver one complete requested asset plus a short editorial handoff: verified claims, unresolved publication blockers, internal links and next check. Do not claim an app save or publication because the local file exists.
+## Method
 
-## Workflow
+1. **Check what exists.** Read the target page and related owned pages. Decide: refresh, expand, merge, or create new. Do not create a near-duplicate for a keyword variant. In a rewrite, keep what already works.
+2. **Collect the facts you will use.** Every factual claim in the copy needs a source in this chat or from the user. Missing prices, features or requirements become requests in the editorial notes, never placeholders or guesses. Never invent sources, quotes, testimonials, experiences, dates or statistics.
+3. **Find the real contribution.** What does this piece give the reader beyond a generic summary: a clear explanation of a hard decision, real data, a worked example, usable steps, an honest comparison?
+4. **Structure from the task.** Lead with the answer or the page's main point. Use tables only for comparable facts, steps for processes, FAQs only for real questions. Keep qualifiers next to the claims they limit. No word counts, keyword density or fixed section counts.
+5. **Write it fully.** Clear, specific language in the brand's voice. Say who it is not for. Use natural language, not exact-match stuffing. Link third-party facts to their public source. A proposed URL is a plan, not an existing page.
+6. **Edit hard.** Remove unsupported claims, generic openings, repetition, superlatives and false urgency. Check numbers, units, names, links and prices.
 
-1. **Set the content contract.** Identify who needs what answer, which business offer is relevant, the intended channel, route/destination, stage/intent, desired next action and whether the task is new content, refresh, brief-only, or build/handoff. Ask one focused batch only for missing facts that would change the content. An unknown primary claim cannot be replaced by made-up proof.
-2. **Check for an existing answer.** Inspect the target page and closely related owned content. Choose refresh/expand/merge-review/new content based on buyer intent and gaps. Do not create a near-duplicate post because a keyword variant is new. If the user explicitly requests a rewrite, preserve useful material and measured intent unless a change is justified.
-3. **Use relevant CiteLadder evidence.** Pull the target's real queries when page-linked data exists; otherwise avoid claiming specific page performance. Inspect the buyer prompts and citation/source gaps related to this task. Prioritize the questions and constraints that matter to the reader. Provider metrics inform the brief but do not become public facts about AI demand.
-4. **Synthesize the persisted facts needed to write.** Read only supplied or persisted source observations through advertised tools. Preserve their dates and coverage; source observation alone does not approve a claim for public use. Missing current capabilities, pricing or requirements become explicit editorial requests for official evidence. Compare only inspected samples and never manufacture sources, quotations, testimonials, experience, dates or statistics.
-5. **Build a compact claim ledger.** For every material factual claim, record claim, evidence URL/record, observation date, relevant qualifier and public-use status. Separate facts, attributed opinions, illustrative examples and hypotheses. Identify conflicting or missing evidence. Resolve current price/feature claims immediately before delivery when possible. Put unresolved claim requests in editorial notes; leave them out of final public copy.
-6. **Define the useful contribution.** State the concrete value beyond generic summaries: a verified explanation of a difficult decision, actual data, a practical example, tested instructions, a transparent comparison, a usable template/tool, or clarified product fit. Original analysis is acceptable when based on sources; original experience must be real. “Unique” can refer only to the inspected sample unless wider evidence supports more.
-7. **Choose structure from the task.** Lead with the answer or page proposition and organize the necessary reasoning/evidence clearly. Use a table only for genuinely comparable facts, steps for a process, and FAQs only for unresolved real questions. Keep qualifications near the claims they limit. No rigid 134–167-word chunks, keyword density, universal article length or automatic section count.
-8. **Write the entire requested artifact.** Use clear, specific language and the confirmed brand voice. Explain tradeoffs and who is not a fit. Use natural topic/entity language rather than exact-match stuffing. Reference supplied public URLs beside supported third-party facts. Preserve legitimate source URLs and clearly proposed destination paths; a proposed route is a plan, not an observed existing page. Page titles/descriptions should accurately represent the page, not chase a mechanical character quota.
-9. **Review as an editor, not a second marketing generator.** Check the draft against the contract and ledger; remove unsupported claims, generic openings, repeated arguments, unverifiable superlatives, invented urgency and sections that add no value. Verify numerical units/periods, named entities, links, pricing conditions, comparisons and example labels. Check whether a detached paragraph still communicates its subject and necessary qualifier, without pretending that a particular format guarantees citation.
-10. **Deliver clean copy and separate notes.** The public draft contains only intended published material and source links that make sense for readers. Editorial rationale, missing inputs, performance metrics and internal evidence belong in a separate note. Provide a brief change log for refreshes; do not force a long research report onto the public page.
-11. **Hand off, never publish.** Provide a publish-ready content and implementation handoff. You have no CMS, site or repository access. Never say the content is published or live because a draft exists; the user declares implementation separately.
+## Deliver
 
-## Output contract
+One document with:
 
-Default outputs are `content.md` and `editorial-notes.md`. Choose a suitable extension for a specifically requested deliverable.
+- **The content:** title or H1, proposed URL, meta title and description, the complete copy, links and call to action. For several channels, one complete draft per requested channel, all using the same facts.
+- **Editorial notes:** audience and intent, why this structure, the key claims and where each came from, facts still needing confirmation, the existing-page decision, a change log for refreshes, and how to measure the result.
 
-`content.md`: final title/H1 where relevant; proposed canonical route; accurate metadata; complete page/channel content; appropriate internal/external links and CTA; content-specific structured material such as a script or comparison table.
-
-`editorial-notes.md`: audience/intent; evidence-led rationale; claim ledger for material claims; sources and observation dates; public-use caveats; existing-page decision; change log; blocked fact requests; content/build status; how to measure the intended result.
-
-For repurposing, create separate complete drafts for the requested channels, all sharing the same verified fact ledger. Do not output every channel unless requested. For brief-only requests, deliver the full brief and stop before drafting.
-
-## Validation and failure conditions
-
-A “ready” draft has no fabricated facts or unresolved factual placeholders in its public copy. Critical missing evidence yields a partial draft or fact-gathering brief with an explicit blocker, not false certainty. High-stakes regulated claims require authoritative sources and appropriate expert review. Do not claim plagiarism-proof originality or search/AI outcomes. When no live browsing exists, work within supplied verified evidence and state which current facts remain unverified. Follow the Internal links skill only for broader link architecture, and the Measure results skill for outcome evaluation.
+For a brief-only request, deliver the brief and stop. A draft with unresolved key facts is labelled partial, with the blocker named. Regulated claims need an authoritative source and expert review. Never say content is published or live; you have no site or CMS access.

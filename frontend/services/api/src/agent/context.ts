@@ -196,13 +196,9 @@ export function suppliedManifest(
   if (size() > limit) throw new AgentError('context_size_limit');
   return {
     text: JSON.stringify(supplied),
-    citations: contextCitations(supplied),
     omissions,
     included: Object.keys(supplied.package.sections),
   };
-}
-export function renderManifest(manifest: Manifest) {
-  return suppliedManifest(manifest).text;
 }
 export function contextCitations(manifest: Pick<Manifest, 'action' | 'mentions'>): Set<string> {
   // Other context blocks are working context, not a record citation grant.

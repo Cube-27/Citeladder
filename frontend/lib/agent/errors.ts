@@ -8,6 +8,10 @@ const CODED: Record<string, AgentWriteFailure> = {
     message: 'There are not enough AI credits and no connected model to run the agent.',
     startNewChat: false,
   },
+  agent_model_unavailable: {
+    message: 'The connected AI model is unavailable. Check Providers in Settings, then try again.',
+    startNewChat: false,
+  },
   agent_run_active: {
     message: 'Wait for the agent to finish its current turn, then try again.',
     startNewChat: false,

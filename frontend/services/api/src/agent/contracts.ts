@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Selectable } from 'kysely';
 import type { AgentChats, AgentRuns, AgentModelAttempts } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
+import type { ContentFormat } from '../config/skill-inputs.ts';
 
 export const agentPolicy = policy.agent;
 export type Chat = Selectable<AgentChats>;
@@ -69,23 +70,22 @@ export function outputSchema(bounds: OutputBounds = agentPolicy) {
 // Wire fields are nullable for structured providers; decisions narrow to a union.
 const wireStep = z
   .object({
-    action: z.enum(['call_tool', 'respond']),
+    action: z.enum(['use_skill', 'call_tool', 'respond']),
     skill_id: z.string().nullish(),
     tool: z.string().nullish(),
     arguments: z.record(z.string(), z.json()).nullish(),
     reply: z.string().nullish(),
-    evidence: z.array(z.string()).nullish(),
     output: outputPayloadSchema.nullish(),
   })
   .strict();
 export type OutputPayload = z.infer<typeof outputPayloadSchema>;
 export type Step =
+  | { action: 'use_skill'; skillId: string }
   | { action: 'call_tool'; skillId?: string; tool: string; arguments: Record<string, Json> }
   | {
       action: 'respond';
       skillId?: string;
       reply: string;
-      evidence: string[];
       output: OutputPayload | null;
     };
 export function parseStep(
@@ -105,7 +105,7 @@ export function parseStep(
   // Repair hints contain only server-owned instructions, never provider values.
   if (!parsed.success)
     throw new AgentProtocolError(
-      'Match the supplied schema exactly. Use only action, skill_id, tool, arguments, reply, evidence and output. Put deliverable fields inside output.',
+      'Match the supplied schema exactly. Use only action, skill_id, tool, arguments, reply and output. Put deliverable fields inside output.',
     );
   const value = parsed.data;
   if (value.skill_id && skills && !skills.has(value.skill_id))
@@ -113,6 +113,8 @@ export function parseStep(
       'Use an exact skill_id from the supplied catalog, or null for no new selection. Do not use a label or output kind as skill_id.',
     );
   const skill = value.skill_id ? { skillId: value.skill_id } : {};
+  if (value.action === 'use_skill' && value.skill_id)
+    return { action: value.action, skillId: value.skill_id };
   if (value.action === 'call_tool' && value.tool)
     return { action: value.action, ...skill, tool: value.tool, arguments: value.arguments ?? {} };
   if (value.action === 'respond' && value.reply?.trim())
@@ -120,11 +122,10 @@ export function parseStep(
       action: value.action,
       ...skill,
       reply: value.reply,
-      evidence: value.evidence ?? [],
       output: value.output ?? null,
     };
   throw new AgentProtocolError(
-    'For call_tool, provide a nonblank tool name and arguments. For respond, provide a nonblank reply.',
+    'For use_skill, provide skill_id. For call_tool, provide a nonblank tool name and arguments. For respond, provide a nonblank reply.',
   );
 }
 export type Skill = {
@@ -140,7 +141,7 @@ export type SkillCatalog = {
   operatingContract: string;
   skills: ReadonlyMap<string, Skill>;
   formatPreamble?: string;
-  formats?: ReadonlyMap<string, { id: string; label: string; body: string }>;
+  formats?: ReadonlyMap<string, ContentFormat>;
 };
 function wireSchema(bounds: OutputBounds) {
   return wireStep.extend({ output: outputSchema(bounds).nullish() });
@@ -150,10 +151,13 @@ export function stepJsonSchemaFor(
   actions?: Step['action'][],
   replyOnly = false,
   skillIds?: readonly string[],
+  outputAllowed = true,
 ) {
   const schema = wireSchema(bounds).extend({
     ...(actions ? { action: z.enum(actions) } : {}),
     ...(skillIds ? { skill_id: z.enum(skillIds).nullish() } : {}),
+    // A deliverable is written only after its methodology is supplied.
+    ...(outputAllowed ? {} : { output: z.null().optional() }),
     ...(replyOnly ? { skill_id: z.null().optional(), output: z.null().optional() } : {}),
   });
   return z.toJSONSchema(schema);

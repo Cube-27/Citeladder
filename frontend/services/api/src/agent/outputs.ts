@@ -15,7 +15,8 @@ import {
   type Scope,
   type Skill,
 } from './contracts.ts';
-import { getChat, requireIdle } from './store.ts';
+import { getChat } from './messages.ts';
+import { requireIdle } from './store.ts';
 
 type Output = Selectable<OutputTable>;
 type Revision = Selectable<AgentOutputRevisions>;
@@ -70,6 +71,8 @@ export async function saveAgentOutput(
     messageId: string;
     userId: string;
     refs: string[];
+    /** The runtime's format-aware outline rule (long-form content, prompt portfolios). */
+    outlineRequired: boolean;
     bounds?: Parameters<typeof outputSchema>[0];
   },
   attach: AttachTarget,
@@ -80,7 +83,7 @@ export async function saveAgentOutput(
     throw new AgentError('output_conflict');
   if (current.output && current.output.kind !== input.skill.outputKind)
     throw new AgentError('output_conflict');
-  const phase = input.skill.outlineFirst && !current.outlineApproved ? 'outline' : payload.phase;
+  const phase = input.outlineRequired && !current.outlineApproved ? 'outline' : payload.phase;
   const now = new Date();
   const output =
     current.output ??

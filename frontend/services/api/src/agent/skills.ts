@@ -4,7 +4,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { z } from 'zod';
 import { policy } from '../config.ts';
-import { parseContentFormats } from '../config/skill-inputs.ts';
+import { parseContentFormats, type ContentFormat } from '../config/skill-inputs.ts';
 import { compareText } from '../text-order.ts';
 import type { Skill, SkillCatalog } from './contracts.ts';
 
@@ -24,7 +24,7 @@ type CatalogSkill = Skill & z.infer<typeof metadata>;
 export type PackagedCatalog = Omit<SkillCatalog, 'skills'> & {
   skills: ReadonlyMap<string, CatalogSkill>;
   formatPreamble: string;
-  formats: ReadonlyMap<string, { id: string; label: string; body: string }>;
+  formats: ReadonlyMap<string, ContentFormat>;
 };
 function expand(body: string) {
   return body.replace(/\{\{([a-z_]+)\}\}/gu, (_match, name: string) => {
@@ -100,4 +100,18 @@ export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
     formatPreamble,
     formats,
   };
+}
+/** Kinds with content formats choose a format; only long-form formats start from an outline. */
+export function usesFormats(skill: Pick<Skill, 'outputKind'>) {
+  return (p.format_kinds as readonly string[]).includes(skill.outputKind);
+}
+export function outlineRequired(
+  catalog: Pick<SkillCatalog, 'formats'>,
+  skill: Skill,
+  formatId: string | null | undefined,
+) {
+  if (!skill.outlineFirst) return false;
+  if (!usesFormats(skill)) return true;
+  // An unknown format cannot be shown to be short, so it keeps the outline.
+  return catalog.formats?.get(formatId ?? '')?.longForm ?? true;
 }

@@ -22,15 +22,23 @@ function formatSections(body: string): string[] {
   return sections;
 }
 
+export type ContentFormat = { id: string; label: string; body: string; longForm: boolean };
+
 export function parseContentFormats(body: string) {
   const [preamble = '', ...sections] = formatSections(body);
-  const formats = new Map<string, { id: string; label: string; body: string }>();
+  const formats = new Map<string, ContentFormat>();
   for (const section of sections) {
-    const heading = /^## ([a-z_]+) — (.+)\n/u.exec(section);
+    // `[long-form]` marks formats whose drafts start from an approved outline.
+    const heading = /^## ([a-z_]+) — (.+?)( \[long-form\])?\n/u.exec(section);
     if (!heading || formats.has(heading[1]!)) throw new TypeError('Invalid content format');
     const text = section.slice(heading[0].length).trim();
     if (!text) throw new TypeError('Empty content format');
-    formats.set(heading[1]!, { id: heading[1]!, label: heading[2]!.trim(), body: text });
+    formats.set(heading[1]!, {
+      id: heading[1]!,
+      label: heading[2]!.trim(),
+      body: text,
+      longForm: Boolean(heading[3]),
+    });
   }
   return { formatPreamble: preamble.slice(preamble.indexOf('\n') + 1).trim(), formats };
 }
