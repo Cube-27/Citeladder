@@ -406,8 +406,18 @@ describe('project owner', () => {
         answer_instruction: '',
       },
     };
-    async function measured(at: string, count: number, score: number, config = configuration) {
-      const id = await measurements.audit(t, { completedAt: new Date(at), configuration: config });
+    async function measured(
+      at: string,
+      count: number,
+      score: number,
+      config = configuration,
+      status = 'completed',
+    ) {
+      const id = await measurements.audit(t, {
+        completedAt: new Date(at),
+        configuration: config,
+        status,
+      });
       const aggregate = {
         total_completed: 2,
         brand_mention_count: count,
@@ -436,7 +446,14 @@ describe('project owner', () => {
       ...configuration,
       panel_hash: 'different-panel',
     });
-    const current = await measured('2026-03-03T00:00:00Z', 2, 40);
+    // A partially completed run is read like a completed one, as on the Visibility page.
+    const current = await measured(
+      '2026-03-03T00:00:00Z',
+      2,
+      40,
+      configuration,
+      'partially_completed',
+    );
     const view = await commandCenter(db, t, null);
     expect(view).toMatchObject({
       measurement: {
@@ -445,7 +462,8 @@ describe('project owner', () => {
         analyzer_version: 'test',
         scoring_rule_version: 'test',
       },
-      state: { visibility: { value: 40, delta: 40 } },
+      // Visibility is the mention rate (2 of 2 answers), not the weighted score (40).
+      state: { visibility: { value: 100, delta: 100 } },
       track: { citation_share: { value: 0, delta: 0 } },
       report_available: true,
       stale: false,

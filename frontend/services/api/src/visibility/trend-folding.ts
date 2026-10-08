@@ -13,6 +13,7 @@ import { buildModelProvenance } from '../analysis/provenance.ts';
 import { pydanticUtc } from '../db/timestamps.ts';
 import { compareText } from '../text-order.ts';
 import {
+  brandMentionSov,
   brandName,
   measurementCounts,
   mentionSov,
@@ -20,7 +21,6 @@ import {
   metricObject,
   observedRate,
   rankingRows,
-  responseSov,
   round2,
   sortRankings,
   storedMentionCounts,
@@ -72,10 +72,7 @@ export function rawPoint(source: TrendSource): TrendPoint {
     source_audit_ids: [source.auditId],
     brand_mention_rate: visibilityRate,
     owned_citation_rate: observedRate(metrics, 'owned_citation_rate'),
-    sov: {
-      response: responseSov(metrics),
-      mention: mentionSov(storedMentionCounts(metrics), new Set([brandName(metrics)])),
-    },
+    sov: { mention: brandMentionSov(metrics) },
     rankings: rankingRows(metrics).map(trendRow),
     sentiment: null,
     avg_position: metricNumber(metrics.avg_position),
@@ -217,7 +214,6 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
   if (first === undefined) throw new Error('an empty bucket has no point');
   const brandRate = new WeightedRate();
   const ownedRate = new WeightedRate();
-  const sovRate = new WeightedRate();
   const mentionTotals: Record<string, number> = {};
   const entities = new Map<string, EntityFold>();
   const brandKeys = new Set<string>();
@@ -248,7 +244,6 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
     const completions = source.totalCompleted;
     brandRate.add(observedRate(metrics, 'brand_mention_rate'), completions);
     ownedRate.add(observedRate(metrics, 'owned_citation_rate'), completions);
-    sovRate.add(responseSov(metrics), completions);
     const counts = storedMentionCounts(metrics);
     const positions = metricObject(metrics.average_positions);
     const brand = brandName(metrics);
@@ -318,8 +313,7 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
     },
     brand_mention_rate: brandRate.value(),
     owned_citation_rate: ownedRate.value(),
-    // Each source's own response share, weighted like every other rate here.
-    sov: { response: sovRate.value(), mention: mentionSov(mentionTotals, brandKeys) },
+    sov: { mention: mentionSov(mentionTotals, brandKeys) },
     rankings,
     sentiment: null,
     avg_position: foldedPosition(bucket),

@@ -115,6 +115,8 @@ export function updateSchedule(
         ...fields,
         ...(engines === undefined ? {} : { engines: JSON.stringify(engines) }),
         ...nextRunPatch(input, current, now),
+        // Resuming a schedule paused by failures starts its failure count afresh.
+        ...(input.enabled === true && !current.enabled ? { failure_count: 0, last_error: '' } : {}),
         updated_at: now,
       })
       .where('id', '=', id)

@@ -133,4 +133,30 @@ describe('audit queue leases against PostgreSQL', () => {
       attempt_count: 0,
     });
   });
+  it('reports the earliest claimable time so an idle runner waits for a due retry, not terminal tasks', async () => {
+    const t = await seed();
+    const scoped = (status: string, availableAt: Date) =>
+      db
+        .updateTable('audit_tasks')
+        .set({ status, available_at: availableAt })
+        .where('audit_id', '=', t.auditId)
+        .execute();
+    await scoped('succeeded', new Date(0));
+    const none = await queue.nextDue();
+    if (none) expect(none.getTime()).toBeGreaterThan(0); // other tenants may hold work
+    const [task] = await db
+      .selectFrom('audit_tasks')
+      .select('id')
+      .where('audit_id', '=', t.auditId)
+      .execute();
+    const soon = new Date(Date.now() + 5000);
+    await db
+      .updateTable('audit_tasks')
+      .set({ status: 'retry_wait', available_at: soon })
+      .where('id', '=', task!.id)
+      .execute();
+    const due = await queue.nextDue();
+    expect(due!.getTime()).toBeLessThanOrEqual(soon.getTime());
+    expect(due!.getTime()).toBeGreaterThan(0);
+  });
 });

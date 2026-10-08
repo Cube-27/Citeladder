@@ -11,7 +11,7 @@ function point(
     completed_at: at,
     brand_mention_rate: rate,
     owned_citation_rate: rate,
-    sov: { mention: rate, response: rate },
+    sov: { mention: rate },
     comparison_key: identity,
     analyzer_versions: ['v1'],
     scoring_rule_versions: ['v1'],

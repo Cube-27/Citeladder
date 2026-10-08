@@ -184,6 +184,21 @@ describe('prompt edits', () => {
     expect((await patch(`/prompts/${stray}`, { status: 'active' })).status).toBe(422);
   });
 
+  it('requires topical binding when an active prompt is moved to another topic', async () => {
+    const topicId = await topic(db, t.projectId, 'Trail gear', 'hydration packs');
+    const fits = await prompt(db, t.setId, 'lightest hydration packs');
+    const stray = await prompt(db, t.setId, 'cheapest flights to lisbon');
+    expect((await patch(`/prompts/${stray}`, { topic_id: topicId })).status).toBe(422);
+    const moved = await patch<Prompt>(`/prompts/${fits}`, { topic_id: topicId });
+    expect([moved.status, moved.body.topic_id]).toEqual([200, topicId]);
+    const unchanged = await db
+      .selectFrom('prompts')
+      .select('topic_id')
+      .where('id', '=', stray)
+      .executeTakeFirstOrThrow();
+    expect(unchanged.topic_id).toBeNull();
+  });
+
   it('transitions a whole selection or none of it', async () => {
     const one = await prompt(db, t.setId, 'acme trail shoes', { status: 'archived' });
     const stray = await prompt(db, t.setId, 'cheapest flights to lisbon', { status: 'archived' });
@@ -345,7 +360,18 @@ describe('candidate review', () => {
       theme: 'Road',
       origin: 'generated',
       branded: true,
-      generation_evidence: { model: 'm', candidate_id: accept, generation_run_id: runId },
+    });
+    // Views omit the evidence; the provenance stays on the stored prompt.
+    expect(review.body.accepted[0]).not.toHaveProperty('generation_evidence');
+    const stored = await db
+      .selectFrom('prompts')
+      .select('generation_evidence')
+      .where('id', '=', review.body.accepted[0]!.id)
+      .executeTakeFirstOrThrow();
+    expect(stored.generation_evidence).toMatchObject({
+      model: 'm',
+      candidate_id: accept,
+      generation_run_id: runId,
     });
     const rows = await db
       .selectFrom('prompt_candidates')

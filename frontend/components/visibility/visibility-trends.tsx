@@ -32,6 +32,8 @@ import {
   toNamedChartPoints,
 } from '@/lib/visibility/trends';
 import { changeLabel, observationLabel } from '@/lib/visibility/vocabulary';
+import { coverageSummary } from '@/lib/visibility/coverage';
+import { formatDisplayDate } from '@/lib/format';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 
@@ -86,6 +88,7 @@ export function VisibilityTrends({
     <Stack gap="workspace" aria-busy={visibilityQuery.isFetching}>
       <PooledSelectionNote selected={selected} />
       <HeadlineMetrics selected={selected} />
+      <CoverageStrip selected={selected} />
       {/* Only when the reader has narrowed to the observed surface. These
           rates divide by observations, not by answers, so showing them beside
           an unfiltered cross-surface view would invite reading them as the
@@ -163,6 +166,17 @@ function PooledSelectionNote({ selected }: { selected: Visibility }) {
   );
 }
 
+/** The answers behind the tiles and what their change line compares against. */
+function CoverageStrip({ selected }: { selected: Visibility }) {
+  const timeZone = useDisplayTimeZone();
+  const summary = coverageSummary(selected, (iso) => formatDisplayDate(iso, timeZone));
+  return (
+    <p className={textRole('caption')}>
+      {summary.answers} {summary.change}
+    </p>
+  );
+}
+
 function HeadlineMetrics({ selected }: { selected: Visibility }) {
   const brand = selected.rankings.find((row) => row.is_brand);
   const count = selected.counts;
@@ -208,9 +222,8 @@ function HeadlineMetrics({ selected }: { selected: Visibility }) {
               </span>
             }
             value={unmeasured ?? formatRate(item.value)}
-            // No comparable run means no change line at all. The reason is the
-            // one sentence above these metrics, not a placeholder repeated
-            // three times.
+            // No comparable run means no change line at all. The coverage strip
+            // below states the reason once, not a placeholder repeated three times.
             detail={change ? <span aria-label={`Change: ${change}`}>{change}</span> : null}
           />
         );

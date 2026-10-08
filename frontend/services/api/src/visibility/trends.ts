@@ -52,12 +52,13 @@ export async function getVisibilityTrends(
       (source) =>
         (query.transportModel === null || source.transportModel === query.transportModel) &&
         (query.retrievalEnabled === null || source.retrievalEnabled === query.retrievalEnabled),
-    )
-    // The newest points, still in chronological order.
-    .slice(-visibility.trend_max_points);
+    );
   if (sources.length === 0) return [];
-  const points =
-    query.granularity === 'run' ? sources.map(rawPoint) : bucketPoints(sources, query.granularity);
+  // Cap points, not runs: capping runs first would silently drop whole
+  // weeks or months from a bucketed view. The newest points stay, in order.
+  const points = (
+    query.granularity === 'run' ? sources.map(rawPoint) : bucketPoints(sources, query.granularity)
+  ).slice(-visibility.trend_max_points);
   const marks = await rankingMarks(db, scope.projectId);
   for (const point of points) applyMarks(point.rankings, marks);
   return points;

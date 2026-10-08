@@ -83,6 +83,30 @@ export async function finalizeAudit(
       .executeTakeFirst();
     if (!audit || policy.audits.constants.audit_terminal_statuses.includes(audit.status))
       return null;
+    // Every settled task calls this; count by status so progress costs one aggregate, not a row load.
+    const statusCounts = await trx
+      .selectFrom('audit_tasks')
+      .select((eb) => ['status', eb.fn.countAll<string>().as('count')])
+      .where('workspace_id', '=', workspaceId)
+      .where('audit_id', '=', audit.id)
+      .groupBy('status')
+      .execute();
+    let completed = 0,
+      failed = 0,
+      open = 0;
+    for (const { status, count } of statusCounts) {
+      if (status === 'succeeded') completed += Number(count);
+      else if (policy.task_queue.terminal.includes(status)) failed += Number(count);
+      else open += Number(count);
+    }
+    if (audit.completed_count !== completed || audit.failed_count !== failed)
+      await trx
+        .updateTable('audits')
+        .set({ completed_count: completed, failed_count: failed, updated_at: at })
+        .where('workspace_id', '=', workspaceId)
+        .where('id', '=', audit.id)
+        .execute();
+    if (open) return null;
     const tasks = await trx
       .selectFrom('audit_tasks as t')
       .innerJoin('audit_prompt_snapshots as p', (join) =>
@@ -94,18 +118,6 @@ export async function finalizeAudit(
       .where('t.audit_id', '=', audit.id)
       .orderBy('t.randomized_position')
       .execute();
-    const completed = tasks.filter((t) => t.status === 'succeeded').length;
-    const failed = tasks.filter(
-      (t) => policy.task_queue.terminal.includes(t.status) && t.status !== 'succeeded',
-    ).length;
-    if (audit.completed_count !== completed || audit.failed_count !== failed)
-      await trx
-        .updateTable('audits')
-        .set({ completed_count: completed, failed_count: failed, updated_at: at })
-        .where('workspace_id', '=', workspaceId)
-        .where('id', '=', audit.id)
-        .execute();
-    if (tasks.some((t) => !policy.task_queue.terminal.includes(t.status))) return null;
     if (audit.status === 'queued') await transitionAudit(trx, workspaceId, auditId, 'running', at);
     if (!completed) {
       await transitionAudit(

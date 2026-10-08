@@ -211,7 +211,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       },
       { name: 'integrations', run: () => integration.runOnce() },
       { name: 'agent', run: () => agent.runOnce() },
-      { name: 'audits', run: () => audit.runOnce() },
+      { name: 'audits', run: () => audit.runOnce(), nextDue: () => audit.nextDue() },
       {
         name: 'site-health',
         run: (canAdmit) =>

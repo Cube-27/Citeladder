@@ -2,10 +2,7 @@
  * The selection reads moved in PR 9b over HTTP: the dashboard, prompt
  * scores, trends, query fanout, the Sources table and per-answer evidence.
  *
- * Ported from the Python suites these routes left
- * (`test_analysis_api_trends.py`, `test_visibility_fanout_projection.py`,
- * `test_analysis_api_evidence.py`, `test_analysis_http.py`), against the
- * real PostgreSQL schema, with workspace isolation on every route.
+ * Runs against the real PostgreSQL schema, with workspace isolation on every route.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -262,6 +259,19 @@ describe('GET /visibility', () => {
     expect((engine.body.per_engine as Row[]).map((row) => row.logical_engine)).toEqual(['chatgpt']);
   });
 
+  it('compares share of voice at the mention level, as the tile shows it', async () => {
+    const tenant = await fixtures.tenant();
+    const withMentions = (brand: number, globex: number) => ({
+      ...aggregate({ completed: 4, brand: 2, globex: 2 }),
+      share_of_voice: { mention_counts: { 'Acme Corp': brand, Globex: globex } },
+    });
+    await measuredRun(tenant, '2026-03-02T09:00:00Z', withMentions(1, 1));
+    await measuredRun(tenant, '2026-03-09T09:00:00Z', withMentions(3, 1));
+    const { body } = await get(tenant, route(tenant));
+    // Response-level rates are identical in both runs; only the mention share moved.
+    expect(body.comparison).toMatchObject({ status: 'comparable', deltas: { sov: 25 } });
+  });
+
   it('is a 404 with nothing measured, and a run selection needs its run', async () => {
     const empty = await fixtures.tenant();
     const missing = await get(empty, route(empty));
@@ -307,6 +317,8 @@ describe('GET /visibility', () => {
       visibility_score: null,
       coverage: { requested: 8, completed: 8, rate: 1 },
     });
+    // Citation totals describe one run, so a pooled period omits them.
+    expect(body).not.toHaveProperty('citation_totals');
     expect(body.comparison).toMatchObject({
       status: 'comparable',
       baseline_audit_ids: [before],
@@ -350,6 +362,27 @@ describe('GET /visibility/trends', () => {
     const invalid = await get(tenant, route(tenant, '/trends'), { granularity: 'hour' });
     expect([invalid.status, invalid.body.detail]).toEqual([422, 'Unsupported granularity: hour']);
   });
+
+  it('caps points after bucketing, so every week survives a run-heavy period', async () => {
+    const tenant = await fixtures.tenant();
+    const runs = 105; // above trend_max_points, all in one UTC week
+    for (let index = 0; index < runs; index++)
+      await measuredRun(
+        tenant,
+        new Date(Date.UTC(2026, 2, 2, 0, 0) + index * 60_000).toISOString(),
+        aggregate({ completed: 2, brand: 1 }),
+      );
+    const early = await measuredRun(
+      tenant,
+      '2026-02-16T09:00:00Z',
+      aggregate({ completed: 2, brand: 1 }),
+    );
+    const weekly = await get(tenant, route(tenant, '/trends'), { granularity: 'week' });
+    expect(weekly.body.map((point) => point.run_count)).toEqual([1, runs]);
+    expect(weekly.body[0]!.source_audit_ids).toEqual([early]);
+    expect(weekly.body[1]!.sov).not.toHaveProperty('response');
+    expect(weekly.body[1]!.sov).toHaveProperty('mention');
+  }, 60_000);
 
   it('folds each analyzer version into its own point, never one blend', async () => {
     const tenant = await fixtures.tenant();

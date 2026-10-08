@@ -171,6 +171,15 @@ export class AuditQueue {
       return locked.map((task) => byId.get(task.id)!);
     });
   }
+  /** Earliest claimable time, so an idle runner stays for a retry or provider poll due soon. */
+  async nextDue(): Promise<Date | null> {
+    const row = await this.db
+      .selectFrom(table)
+      .select((eb) => eb.fn.min('available_at').as('due'))
+      .where('status', 'in', claimable)
+      .executeTakeFirst();
+    return row?.due ? new Date(row.due) : null;
+  }
   markRunning(claimed: AuditTask, owner: string, startTask = true) {
     const at = this.now();
     return this.db.transaction().execute(async (trx) => {

@@ -9,7 +9,7 @@ import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import type { Audits } from '../generated/db-schema.ts';
 import { listOpportunities } from '../opportunities/reads.ts';
-import { getVisibility, type VisibilityResponse } from '../visibility/dashboard.ts';
+import { getRunVisibility, type VisibilityResponse } from '../visibility/dashboard.ts';
 import { compareText } from '../text-order.ts';
 import type { ProjectScope } from './brand-profile.ts';
 import { readProject } from './service.ts';
@@ -44,7 +44,7 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    .where('status', '=', 'completed')
+    .where('status', 'in', policy.visibility.dashboard_audit_statuses)
     .where('audit_scope', '=', policy.visibility.brand_audit_scope)
     .orderBy('completed_at', 'desc')
     .orderBy('id', 'desc');
@@ -117,16 +117,7 @@ async function visibility(
   audit: Audit | null,
 ): Promise<VisibilityResponse | null> {
   if (!audit) return null;
-  return getVisibility(db, scope, {
-    auditId: audit.id,
-    logicalEngine: null,
-    baselineId: null,
-    selectionMode: 'run',
-    fromAt: null,
-    toAt: null,
-    configurationKey: null,
-    cohort: policy.visibility.core_cohort,
-  });
+  return getRunVisibility(db, scope, audit.id, policy.visibility.core_cohort);
 }
 function metrics(
   current: VisibilityResponse | null,
@@ -134,12 +125,16 @@ function metrics(
 ): View['state'] {
   const brand = current?.rankings.find((row) => row.is_brand);
   const prior = previous?.rankings.find((row) => row.is_brand);
-  const rank = brand && current ? current.rankings.indexOf(brand) + 1 : null;
-  const priorRank = prior && previous ? previous.rankings.indexOf(prior) + 1 : null;
+  // With no share of voice (nobody named) the sort order is alphabetical, not a rank.
+  const rankOf = (view: VisibilityResponse | null, row: typeof brand) =>
+    view && row && row.share_of_voice != null ? view.rankings.indexOf(row) + 1 : null;
+  const rank = rankOf(current, brand);
+  const priorRank = rankOf(previous, prior);
   return {
+    // Visibility is the share of answers naming the brand, as on the Visibility page.
     visibility: {
-      value: current?.visibility_score ?? null,
-      delta: delta(current?.visibility_score, previous?.visibility_score),
+      value: percent(current?.visibility_rate),
+      delta: delta(percent(current?.visibility_rate), percent(previous?.visibility_rate)),
     },
     share_of_voice: {
       value: percent(brand?.share_of_voice),

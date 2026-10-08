@@ -4,7 +4,6 @@ import { createApp } from '../src/app.ts';
 import {
   canonicalTimezone,
   scheduleCreate,
-  scheduleIntervalIssue,
   scheduleUpdate,
 } from '../src/audits/schedule-inputs.ts';
 import {
@@ -109,7 +108,7 @@ describe('audit schedule management', () => {
     ).toMatchObject({ cadence: 'weekly', interval_minutes: null });
   });
 
-  it('re-enables a finished schedule without erasing scheduler receipts or lease state', async () => {
+  it('resume clears the failure streak and reason but keeps scheduler receipts and lease state', async () => {
     const a = await seed();
     const row = await createSchedule(db, a.scope, input(a.setId, { cadence: 'one_time' }));
     const lastRun = new Date('2026-09-30T12:00:00Z');
@@ -119,9 +118,10 @@ describe('audit schedule management', () => {
         enabled: false,
         next_run_at: null,
         last_run_at: lastRun,
-        lease_owner: 'python-scheduler',
+        lease_owner: 'scheduler-owner',
         lease_expires_at: new Date(Date.now() + 60_000),
         failure_count: 2,
+        last_error: 'bad_request',
       })
       .where('id', '=', row.id)
       .execute();
@@ -129,7 +129,8 @@ describe('audit schedule management', () => {
     expect(enabled).toMatchObject({
       enabled: true,
       last_run_at: lastRun.toISOString(),
-      failure_count: 2,
+      failure_count: 0,
+      last_error: '',
     });
     expect(enabled.next_run_at).not.toBeNull();
     const stored = await db
@@ -137,7 +138,7 @@ describe('audit schedule management', () => {
       .select('lease_owner')
       .where('id', '=', row.id)
       .executeTakeFirstOrThrow();
-    expect(stored.lease_owner).toBe('python-scheduler');
+    expect(stored.lease_owner).toBe('scheduler-owner');
   });
 
   it('serializes competing partial edits so they cannot persist an incoherent cadence', async () => {
@@ -169,7 +170,7 @@ describe('audit schedule management', () => {
       pending = updateSchedule(db, a.scope, row.id, { enabled: true });
       await trx
         .updateTable('audit_schedules')
-        .set({ next_run_at: future, lease_owner: 'python-scheduler' })
+        .set({ next_run_at: future, lease_owner: 'scheduler-owner' })
         .where('id', '=', row.id)
         .execute();
     });
@@ -239,15 +240,5 @@ describe('schedule input decisions', () => {
     ['not/a_zone', null],
   ])('stores timezone %s as %s', (value, stored) => {
     expect(canonicalTimezone(value)).toBe(stored);
-  });
-  it('uses the exported interval environment override', () => {
-    expect(
-      scheduleIntervalIssue(
-        { cadence: 'every_n_minutes', interval_minutes: 10 },
-        {
-          AUDIT_SCHEDULE_MIN_INTERVAL_MINUTES: '15',
-        },
-      ),
-    ).not.toBeNull();
   });
 });

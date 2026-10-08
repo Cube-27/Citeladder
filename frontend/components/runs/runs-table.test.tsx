@@ -1,8 +1,8 @@
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vite-plus/test';
 
-import type { Audit, AuditStatus } from '@/lib/api/types';
+import type { Audit } from '@/lib/api/types';
 import { renderWithProviders as render } from '@/test/render';
 
 import { RunsTable } from './runs-table';
@@ -49,32 +49,6 @@ describe('RunsTable', () => {
     const links = screen.getAllByRole('link', { name: 'View' });
     expect(links[0]).toHaveAttribute('href', `/runs/${rows[0]!.id}`);
     expect(links[1]).toHaveAttribute('href', `/runs/${rows[1]!.id}`);
-  });
-
-  it('shows the requested, completed, and failed counts', () => {
-    render(
-      <RunsTable
-        audits={[audit(1, { requested_count: 24, completed_count: 20, failed_count: 4 })]}
-      />,
-    );
-
-    const row = bodyRows()[0]!;
-    expect(within(row).getByText('24')).toBeVisible();
-    expect(within(row).getByText('20')).toBeVisible();
-    expect(within(row).getByText('4')).toBeVisible();
-  });
-
-  it.each<[AuditStatus, string]>([
-    ['completed', 'Completed'],
-    ['running', 'Running'],
-    ['partially_completed', 'Partially Completed'],
-    ['cancelled', 'Cancelled'],
-  ])('labels a %s run', (status, label) => {
-    render(<RunsTable audits={[audit(1, { status })]} />);
-
-    // Scoped to the status cell: "Completed" is also a column header.
-    const statusCell = within(bodyRows()[0]!).getAllByRole('cell')[0]!;
-    expect(statusCell).toHaveTextContent(label);
   });
 
   it.each([

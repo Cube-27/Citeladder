@@ -138,7 +138,9 @@ export async function prepareAudit(
       }
     });
     if (input.credential_mode === 'byok' && !selected)
-      throw invalid(`No active provider route configured for ${engine}`);
+      throw new ApiError(400, `No active provider route configured for ${engine}`, {
+        code: 'execution_credentials_unavailable',
+      });
     routes.push({
       logical_engine: engine,
       transport_provider: catalog.transport_provider,

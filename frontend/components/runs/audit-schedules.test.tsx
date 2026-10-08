@@ -11,11 +11,13 @@ vi.mock('@/lib/api/runs', () => ({
   runsApi: {
     listSchedules: vi.fn(),
     createSchedule: vi.fn(),
+    updateSchedule: vi.fn(),
   },
 }));
 
 const createSchedule = vi.mocked(runsApi.createSchedule);
 const listSchedules = vi.mocked(runsApi.listSchedules);
+const updateSchedule = vi.mocked(runsApi.updateSchedule);
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 let workspaceId = WORKSPACE_ID;
 
@@ -28,6 +30,7 @@ describe('AuditSchedules', () => {
     workspaceId = WORKSPACE_ID;
     createSchedule.mockReset();
     listSchedules.mockReset();
+    updateSchedule.mockReset();
     listSchedules.mockResolvedValue([]);
     createSchedule.mockResolvedValue(null as never);
   });
@@ -62,6 +65,57 @@ describe('AuditSchedules', () => {
       ),
     );
     await waitFor(() => expect(listSchedules).toHaveBeenCalledTimes(2));
+  });
+
+  it('offers no Resume for a one-time schedule that already ran', async () => {
+    listSchedules.mockResolvedValue([
+      {
+        id: '55555555-5555-4555-8555-555555555555',
+        cadence: 'one_time',
+        engines: ['chatgpt'],
+        enabled: false,
+        failure_count: 0,
+        last_error: '',
+        audit_scope: 'brand',
+        next_run_at: null,
+      } as never,
+    ]);
+    renderWithProviders(
+      <AuditSchedules projectId="11111111-1111-4111-8111-111111111111" promptSets={[]} />,
+    );
+    expect(await screen.findByText(/Ran once/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Resume' })).toBeNull();
+  });
+
+  it('resumes a paused schedule by enabling it, after saying why it paused', async () => {
+    const user = userEvent.setup();
+    const projectId = '11111111-1111-4111-8111-111111111111';
+    listSchedules.mockResolvedValue([
+      {
+        id: '44444444-4444-4444-8444-444444444444',
+        cadence: 'weekly',
+        engines: ['chatgpt'],
+        enabled: false,
+        failure_count: 3,
+        last_error: 'funded_budget_exhausted',
+        audit_scope: 'brand',
+        next_run_at: null,
+      } as never,
+    ]);
+    updateSchedule.mockResolvedValue(null as never);
+    renderWithProviders(<AuditSchedules projectId={projectId} promptSets={[]} />);
+
+    expect(await screen.findByText(/Paused/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Resume' }));
+
+    await waitFor(() =>
+      expect(updateSchedule).toHaveBeenCalledWith(
+        projectId,
+        '44444444-4444-4444-8444-444444444444',
+        { enabled: true },
+        { workspaceId: WORKSPACE_ID },
+      ),
+    );
   });
 
   it('does not reuse a fresh schedules cache entry after a workspace transition', async () => {

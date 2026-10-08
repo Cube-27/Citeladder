@@ -110,7 +110,7 @@ describe('atomic audit admission', () => {
     try {
       const fundedRuntime = {
         ...runtime,
-        fundedBudgetMinor: 2,
+        fundedBudgetMinor: 1,
         audits: { ...runtime.audits, audit_prompt_count: 10 },
       };
       const request = { ...input(t), credential_mode: 'funded' as const };

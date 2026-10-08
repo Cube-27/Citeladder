@@ -242,7 +242,7 @@ describe('durable audit occurrence planning', () => {
     ).toEqual({
       failure_count: 1,
       enabled: false,
-      last_error: 'audit_planning_failed',
+      last_error: 'execution_credentials_unavailable', // the admission code the owner can act on
       lease_owner: null,
       next_run_at: new Date(at.getTime() + settings.failure_retry_seconds * 1000),
     });

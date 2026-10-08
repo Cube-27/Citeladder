@@ -2,9 +2,7 @@
  * The persisted visibility reads over HTTP: executions, the Sources series
  * and URL detail, and the AI Overview rates.
  *
- * Ported from the Python component suites these routes left
- * (`test_aio_evidence.py`, `test_analysis_api_evidence.py`,
- * `test_analysis_http.py`), with workspace isolation on every route.
+ * Includes workspace isolation on every route.
  */
 import { randomUUID } from 'node:crypto';
 

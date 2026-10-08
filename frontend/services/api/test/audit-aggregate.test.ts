@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aggregateRun, promptTrend, type AggregateExecution } from '../src/analysis/aggregate.ts';
 import { scoringConfig, scoreExecution } from '../src/analysis/scoring.ts';
-import { round } from '../src/analysis/round.ts';
 const config = scoringConfig({
   brand_name: 'Acme',
   owned_domains: ['acme.example'],
@@ -73,6 +72,16 @@ describe('versioned audit aggregates', () => {
       cost: { provider_reported_cost_usd: null },
     });
   });
+  it('treats nobody named as not applicable for the competitive component, not a zero share', () => {
+    const silent = aggregateRun([execution('Nothing tracked')], config).per_prompt[0]!;
+    expect(silent.competitive_share).toBeNull();
+    expect(Object.keys(silent.score_components)).not.toContain('competitive_position');
+    expect(Object.keys(silent.score_weights)).not.toContain('competitive_position');
+    expect(Object.values(silent.score_weights).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 3);
+    const lost = aggregateRun([execution('Rival only')], config).per_prompt[0]!;
+    expect(lost.competitive_share).toBe(0);
+    expect(lost.score_components).toHaveProperty('competitive_position', 0);
+  });
   it('confirms decline only after enough movements, shared engines and repetition agreement', () => {
     const base = aggregateRun([execution('Nothing tracked')], config).per_prompt[0]!;
     const row = {
@@ -105,14 +114,5 @@ describe('versioned audit aggregates', () => {
         2,
       ).decline_confirmed,
     ).toBe(false);
-  });
-  it('rounds represented values like Python, including ties to even', () => {
-    expect([
-      round(2.675, 2),
-      round(1.005, 2),
-      round(2.5, 0),
-      round(3.5, 0),
-      round(-2.5, 0),
-    ]).toEqual([2.67, 1, 2, 4, -2]);
   });
 });

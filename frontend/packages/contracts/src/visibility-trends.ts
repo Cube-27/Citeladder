@@ -9,14 +9,9 @@ const uuid = () => z.uuid();
 // Cross-run Visibility trend history (projection over persisted snapshots)
 // ---------------------------------------------------------------------------
 
-// Both Share-of-Voice definitions for one trend point (B backend
-// `VisibilityTrendSov`). `response` is the response-level SOV (brand
-// response-presence share vs competitors); `mention` is the mention-level SOV
-// derived from the persisted `share_of_voice.mention_counts`. Both are
-// deterministic reprojections of persisted metrics (invariant 7) and are
-// nullable when the source metric is absent.
+// Mention-level share of voice for one trend point, derived from the persisted
+// `share_of_voice.mention_counts`; null when nobody was named.
 const visibilityTrendSovSchema = responseObject({
-  response: z.number().nullable(),
   mention: z.number().nullable(),
 });
 

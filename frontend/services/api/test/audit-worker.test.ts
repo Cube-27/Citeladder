@@ -345,6 +345,25 @@ describe('leased audit worker phases', () => {
         .execute(),
     ).toHaveLength(0);
   });
+  it('does not write off a paid submission at the run cap; the poll ceiling and recovery deadline bound it', async () => {
+    const t = await seed(true);
+    await db
+      .updateTable('audits')
+      .set({ status: 'running', started_at: new Date(Date.now() - 7200000) })
+      .where('id', '=', t.auditId)
+      .execute();
+    await db
+      .updateTable('audit_tasks')
+      .set({
+        provider_submission_ref: 'paid-intent',
+        provider_task_submitted_at: new Date(Date.now() - 60000),
+        provider_connection_id: record(t.task.provider_route_snapshot).connection_id as string,
+      })
+      .where('id', '=', t.task.id)
+      .execute();
+    await worker(t, async () => Response.json({ status_code: 20000, tasks: [] })).runOnce();
+    expect((await stored(t.task.id)).error_code).not.toBe('poll_ceiling_exceeded');
+  });
   it('closes expired scraper recovery with retained charge and no provider or analysis call', async () => {
     const t = await seed(true);
     let calls = 0;

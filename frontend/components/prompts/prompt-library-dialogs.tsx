@@ -6,6 +6,7 @@ import type { PromptFormValues } from '@/lib/prompts/forms';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 
 import { CandidateReviewPanel } from './candidate-review';
+import { ConfirmDeleteDialog, type PendingDelete } from './confirm-delete-dialog';
 import { CsvImportDialog } from './csv-import-dialog';
 import { GeneratePromptsDialog } from './generate-prompts-dialog';
 import { PromptFormDialog } from './prompt-form-dialog';
@@ -36,6 +37,9 @@ type PromptLibraryDialogsProps = {
   setsLoading?: boolean;
   setsError?: boolean;
   retrySets?: () => void;
+  pendingDelete: PendingDelete | null;
+  setPendingDelete: (pending: PendingDelete | null) => void;
+  confirmDelete: (pending: PendingDelete) => void;
 };
 
 export function PromptLibraryDialogs({
@@ -64,6 +68,9 @@ export function PromptLibraryDialogs({
   setsLoading,
   setsError,
   retrySets,
+  pendingDelete,
+  setPendingDelete,
+  confirmDelete,
 }: Readonly<PromptLibraryDialogsProps>) {
   const reviewing =
     reviewOnly ||
@@ -75,6 +82,14 @@ export function PromptLibraryDialogs({
     Boolean(review.notice);
   return (
     <>
+      <ConfirmDeleteDialog
+        pending={pendingDelete}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) confirmDelete(pendingDelete);
+          setPendingDelete(null);
+        }}
+      />
       <PromptFormDialog
         open={formOpen}
         onOpenChange={(open) => {

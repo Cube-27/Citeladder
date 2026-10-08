@@ -112,20 +112,59 @@ export function executionBadgeValue(
 /**
  * Human-readable label for an execution status.
  *
- * The two provider-wait states are named explicitly rather than title-cased.
- * "Awaiting Provider Result" describes our plumbing; "Waiting for Google"
- * describes what is actually happening, which is what someone watching a run
- * needs to know.
+ * The provider-wait state names the engine being waited on ("Waiting for
+ * ChatGPT search"), not our plumbing; someone watching a run needs to know
+ * what is actually happening.
  */
-export function executionStatusLabel(status: ExecutionStatus): string {
+export function executionStatusLabel(status: ExecutionStatus, engine?: string): string {
   switch (status) {
     case 'awaiting_provider_result':
-      return 'Waiting for Google';
+      return engine ? `Waiting for ${engine}` : 'Waiting for the provider';
     case 'submission_uncertain':
       return 'Reconciling';
     default:
       return titleCaseStatus(status);
   }
+}
+
+/**
+ * Why an execution failed, in the reader's terms, with what to do next.
+ * Unknown codes fall back to a generic reason rather than leaking the token.
+ */
+const FAILURE_REASONS: Record<string, string> = {
+  provider_connection_missing: 'No provider key is connected for this engine. Add one in Settings.',
+  credential_unavailable_for_retrieval:
+    'The provider key used for this answer was removed or changed. Reconnect it in Settings.',
+  auth_failure: 'The provider rejected the key. Check it in Settings.',
+  connection_changed: 'The provider key changed during the run. Run it again.',
+  rate_limit: 'The provider kept rate-limiting requests. Try again later.',
+  timeout: 'The provider did not answer in time. Try again later.',
+  connection: 'The provider could not be reached. Try again later.',
+  server_error: 'The provider had an error. Try again later.',
+  content_filter: "The engine's safety filter declined to answer this prompt.",
+  run_deadline_exceeded: 'The run reached its time limit before this answer finished.',
+  poll_ceiling_exceeded: 'Google did not return a result within the polling limit.',
+  submission_unreconciled: 'The provider result could not be matched to this answer.',
+  keyword_too_long: 'The prompt is too long for this search surface. Shorten it.',
+  cancelled: 'The run was cancelled.',
+};
+const GENERIC_FAILURE = 'The answer could not be collected. Try running it again.';
+
+export function executionFailureReason(errorCode: string): string {
+  return FAILURE_REASONS[errorCode] ?? GENERIC_FAILURE;
+}
+
+/** Why the scheduler paused a schedule after repeated failures to start a run. */
+const SCHEDULE_PAUSE_REASONS: Record<string, string> = {
+  activation_expired: 'your plan or trial has ended',
+  execution_credentials_unavailable: 'no provider key is connected for its engines',
+  funded_budget_exhausted: "this month's included budget is used up",
+  funded_credits_exhausted: 'the included answer credits are used up',
+  manual_run_rate_exceeded: 'the daily run allowance was reached',
+};
+
+export function schedulePauseReason(lastError: string): string {
+  return SCHEDULE_PAUSE_REASONS[lastError] ?? 'runs could not be started';
 }
 
 /**

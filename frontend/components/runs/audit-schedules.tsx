@@ -13,13 +13,19 @@ import { Select } from '@/components/ui/select';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
-import type { AuditScheduleCadence, LogicalEngine, PromptSet } from '@/lib/api/types';
+import type {
+  AuditSchedule,
+  AuditScheduleCadence,
+  LogicalEngine,
+  PromptSet,
+} from '@/lib/api/types';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { DisplayTime } from '@/components/ui/display-time';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { ENGINE_ORDER, ENGINE_LABELS } from '@/lib/providers/catalog';
+import { schedulePauseReason } from '@/lib/runs/status';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -93,6 +99,15 @@ function WorkspaceSchedules({
     },
   });
   const canCreate = Boolean(promptSetId) && engines.length > 0 && !createMutation.isPending;
+  const resumeMutation = useMutation({
+    mutationFn: (scheduleId: string) =>
+      runsApi.updateSchedule(projectId, scheduleId, { enabled: true }, { workspaceId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.runs.schedules(workspaceId, projectId),
+      });
+    },
+  });
 
   return (
     <Card>
@@ -111,24 +126,12 @@ function WorkspaceSchedules({
         {schedulesQuery.data?.length ? (
           <ul className={ledgerClasses('boxed')}>
             {schedulesQuery.data.map((schedule) => (
-              <li
+              <ScheduleRow
                 key={schedule.id}
-                className="type-body flex flex-wrap items-center justify-between gap-2 px-3 py-2"
-              >
-                <span className={textRole('emphasis', 'text-foreground')}>
-                  {CADENCE_LABELS[schedule.cadence]}
-                </span>
-                <span className="text-secondary">
-                  {schedule.engines.join(', ')} · next{' '}
-                  {schedule.next_run_at ? (
-                    <DisplayTime value={schedule.next_run_at} />
-                  ) : (
-                    <UnavailableValue state="not_set" />
-                  )}
-                  {' · '}
-                  {schedule.audit_scope === 'commerce' ? 'Commerce' : 'Brand'}
-                </span>
-              </li>
+                schedule={schedule}
+                resuming={resumeMutation.isPending}
+                onResume={() => resumeMutation.mutate(schedule.id)}
+              />
             ))}
           </ul>
         ) : null}
@@ -216,7 +219,67 @@ function WorkspaceSchedules({
             onRetry={() => createMutation.mutate()}
           />
         ) : null}
+        <ResumeNotice
+          error={resumeMutation.error}
+          onRetry={() => resumeMutation.mutate(resumeMutation.variables!)}
+        />
       </CardContent>
     </Card>
+  );
+}
+
+const finishedOnce = (schedule: AuditSchedule) =>
+  schedule.cadence === 'one_time' && !schedule.next_run_at && !schedule.failure_count;
+
+function pauseLabel(schedule: AuditSchedule) {
+  if (finishedOnce(schedule)) return 'Ran once.';
+  return schedule.failure_count
+    ? `Paused: ${schedulePauseReason(schedule.last_error)}.`
+    : 'Paused.';
+}
+
+function ScheduleRow({
+  schedule,
+  resuming,
+  onResume,
+}: Readonly<{ schedule: AuditSchedule; resuming: boolean; onResume: () => void }>) {
+  return (
+    <li className="type-body flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+      <span className={textRole('emphasis', 'text-foreground')}>
+        {CADENCE_LABELS[schedule.cadence]}
+      </span>
+      {schedule.enabled ? (
+        <span className="text-secondary">
+          {schedule.engines.join(', ')} · next{' '}
+          {schedule.next_run_at ? (
+            <DisplayTime value={schedule.next_run_at} />
+          ) : (
+            <UnavailableValue state="not_set" />
+          )}
+          {' · '}
+          {schedule.audit_scope === 'commerce' ? 'Commerce' : 'Brand'}
+        </span>
+      ) : (
+        <span className="text-secondary flex flex-wrap items-center gap-2">
+          {pauseLabel(schedule)}
+          {/* A one-time schedule that ran is finished, not paused; resuming would run it again. */}
+          {finishedOnce(schedule) ? null : (
+            <Button size="sm" variant="secondary" disabled={resuming} onClick={onResume}>
+              Resume
+            </Button>
+          )}
+        </span>
+      )}
+    </li>
+  );
+}
+
+function ResumeNotice({ error, onRetry }: Readonly<{ error: Error | null; onRetry: () => void }>) {
+  if (!error) return null;
+  return (
+    <MutationNotice
+      notice={mutationNoticeForError(error, { action: 'resume the schedule' })}
+      onRetry={onRetry}
+    />
   );
 }

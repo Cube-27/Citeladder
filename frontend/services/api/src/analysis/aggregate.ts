@@ -171,14 +171,16 @@ function composite(group: AggregateExecution[], config: ScoringConfig) {
   const competitors = sum(scores.map((s) => strings(s.competitors_mentioned).length));
   const visibility = n ? round(mentioned / n, 4) : 0,
     ownedRate = n ? round(owned / n, 4) : 0;
-  const competitive = mentioned + competitors ? round(mentioned / (mentioned + competitors), 4) : 0;
+  // Nobody named is not applicable, not a loss to every rival: it leaves the composite.
+  const competitive =
+    mentioned + competitors ? round(mentioned / (mentioned + competitors), 4) : null;
   const components: Record<string, number> = { visibility, owned_citations: ownedRate },
     rules = policy.audits.analysis;
   const weights: Record<string, number> = {
     visibility: rules.prompt_score_visibility_weight,
     owned_citations: rules.prompt_score_owned_citation_weight,
   };
-  if (config.competitors.length) {
+  if (config.competitors.length && competitive !== null) {
     components.competitive_position = competitive;
     weights.competitive_position = rules.prompt_score_competitive_weight;
   }

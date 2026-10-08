@@ -21,7 +21,8 @@ an audit.
 
 Generated prompts are **candidates**, not prompts. Each Generate request records
 a `PromptGenerationRun` (request, generator version, provenance) and pending
-`PromptCandidate` rows in [their own tables](../backend/app/models/prompt_candidate.py),
+`PromptCandidate` rows in [their own tables](../backend/app/models/prompt_candidate.py)
+(the backend holds only the SQLAlchemy schema and migrations),
 so no audit, capacity/occupancy or visibility query can see a proposal. The
 [staging owner](../frontend/services/api/src/prompts/generation.ts) drops texts already
 tracked or already pending. The TypeScript API owns the prompt library: prompt
@@ -29,8 +30,10 @@ sets, prompts, topics, import, generation and candidate review
 ([`src/prompts/`](../frontend/services/api/src/prompts/)).
 Native `config/prompt-library.json` owns library bounds, cohorts, write locks,
 binding and generation settings; `config/api.json` owns HTTP admission limits.
-Native prompt normalization owns persisted identity; Python retains fixed schema
-defaults. Generation defaults resolve at use time.
+Native prompt normalization owns persisted identity. Generation defaults
+resolve at use time. Prompt generation and brand disambiguation are being
+redesigned in a [follow-up](plans/visibility-prompt-improvement.md#follow-up-prompt-generation-and-brand-matching);
+this section describes the current code.
 `POST /prompt-sets/{id}/candidates/review` takes `accept_ids`/`reject_ids`:
 accept runs prompt-slot occupancy
 ([`src/entitlements/`](../frontend/services/api/src/entitlements/)) and the
@@ -205,7 +208,8 @@ CSV import reads `topic,prompt` (aliases `category`; `text`, `query`,
 `question`) in any order; a file without a recognized header is a list of
 prompts. Optional `theme`, `intent`, `cohort` and `enabled` columns are clipped
 or defaulted rather than rejected; the upload's column, row and cell-size bounds
-still reject a file before parsing. The
+still reject a file before parsing, and the browser rejects a file over the row
+limit before it previews as ready (`import_max_rows` in `config/prompt-library.json`). The
 [browser parser](../frontend/lib/prompts/csv.ts) is the one CSV reader: it
 previews and posts parsed rows (the endpoint accepts only rows), and the
 dialog's sample file is generated from its column contract. Under the project
@@ -213,23 +217,26 @@ lock, [import](../frontend/services/api/src/prompts/prompts.ts) matches topic
 names case-insensitively, creates unknown names as manual topics only for rows
 that insert, and imports a blank topic unassigned. A binding or capacity failure
 rejects the whole import; duplicate rows are skipped while the rest import.
+Deleting a prompt or a topic asks for confirmation that states the effect; a
+topic delete unassigns its prompts and promotes its subtopics.
 
-Manual create, text edits, activation and import pass
+Manual create, text edits, activation, moving an active prompt to another topic
+and import pass
 [topical binding](../frontend/services/api/src/prompts/binding.ts): the text
 must share a non-stopword token or exact phrase with the project's identity
 (brand and aliases, owned domains, topics, brand profile) or with the prompt's
-own topic; an empty vocabulary fails closed. Tokens keep every script's letters
+own topic; an empty vocabulary fails closed. Create binds under the project lock. Tokens keep every script's letters
 (Latin diacritics fold) and scripts written without spaces are split at ICU
 word boundaries; stopwords are English-only. Generation admission applies the
 same rule to drafted and proposed text.
 
 ## Audit admission and execution
 
-[Audit config](../frontend/services/api/src/config/audits.ts) owns lifecycle,
-scoring and read policy; [provider config](../frontend/services/api/src/config/providers.ts)
+[Audit config](../frontend/services/api/src/config/audits.ts) (values in
+`config/audits.json`) owns lifecycle, retry and attempt limits, scoring and read
+policy; [provider config](../frontend/services/api/src/config/providers.ts)
 owns transport/capacity policy and [cost config](../frontend/services/api/src/config/costs.json)
-owns versioned pricing and measured envelopes. Python retains only schema
-defaults and structural provenance vocabulary.
+owns versioned pricing and measured envelopes.
 Provider error bodies do not become public failure details.
 
 The [audit API](../frontend/services/api/src/routes/audits.ts),
@@ -245,9 +252,9 @@ the approved citation-capable policy.
 Manual launches and failure reruns start a separate, workspace-authorized
 `POST /audits/{audit_id}/run` after admission. It claims only that audit's tasks
 through the existing worker, starts due work immediately, and retains provider
-capacity limits, due times, cancellation and queue recovery. The request admits
-work for 30 seconds and bounds provider execution to 240 seconds; remaining
-tasks and future provider polls continue through the runner.
+capacity limits, due times, cancellation and queue recovery. The request has
+config-bounded admission and execution budgets; remaining tasks and future
+provider polls continue through the runner.
 
 Admission freezes prompt text/cohorts, roster, model/retrieval identity, request
 configuration and relevant versions. benchmark_mode is prompt framing, not a
@@ -265,7 +272,20 @@ the existing audit/task state owners; failed answers remain failures, not
 negative brand observations. Provider costs and successful-answer billing are
 different projections.
 
-Schedule patches validate cadence and interval against the current locked row;
+The audit runner lane wakes for the earliest due retry, capacity wait or
+provider poll (`AuditQueue.nextDue`), not only on its idle tick. A task with a
+submitted paid search-surface request is bounded by its poll ceiling or recovery
+deadline, never the run cap, since retrieval is free and the query is already
+paid. The worker caches the workspace access check for a short TTL
+(`access_check_ttl_seconds`); the per-task ownership lock is never cached. It
+finalizes an audit only once no task is open. Lease recovery and stuck-audit
+repair run in the periodic `audit-maintenance` lane, not in the worker.
+Attempts per task default to the `max_attempts` setting.
+
+A schedule disabled by repeated failures stores the real admission error (for
+example an ended trial or exhausted budget); the schedules list shows it as
+the pause reason and offers Resume, which re-enables the schedule and resets
+its failure count. Schedule patches validate cadence and interval against the current locked row;
 omitted values retain the persisted scope and configuration. Nullable scheduling
 fields may be cleared, while required fields reject null. Reads do not advance
 or repair schedules. The [native scheduler](../frontend/services/api/src/workers/audit-scheduler.ts)
@@ -288,14 +308,12 @@ routes without reactivating disabled routes or acquiring provider data.
 The scrapers submit the literal tracked prompt using normal-priority Standard
 tasks and collect Advanced results. ChatGPT requests web search; Gemini receives
 no ChatGPT-only settings. The initial scraper context allowlist is US/English;
-unsupported contexts and prompts exceeding 2,000 escaped characters fail before
-submission. API engine IDs and Google AI Overview presence semantics remain separate.
+unsupported contexts and over-long prompts fail before submission. API engine IDs and Google AI Overview presence semantics remain separate.
 Scraper model reports are supplementary provenance, distinct from the frozen product.
 
 Paid provider tasks retain their committed submission/account identity across
 restarts. Uncertain scraper submissions use exact-tag, product-checked, bounded
-paginated reconciliation. The config-owned recovery deadline defaults to 72 hours
-from committed intent and must be less than 28 days. Recovery never resubmits a
+paginated reconciliation. The config-owned recovery deadline runs from committed intent. Recovery never resubmits a
 paid task; unrecovered tasks fail without negative brand observations. Known
 submission charges remain recorded even when retrieval fails.
 
@@ -321,6 +339,14 @@ rank remain distinct observations. Unsupported entity assessments are
 unavailable, not absent. Source-pattern and Opportunity mapping stay in
 [Opportunities](opportunities.md).
 
+**Visibility** means the brand mention rate everywhere: the share of answers
+naming the brand. The weighted composite is the per-prompt **prompt score**
+(weights and scoring version in `config/audits.json`). When nobody is named in a
+prompt's answers, its competitive component is not applicable and its weight is
+redistributed, rather than scoring as a loss to every rival. Share of voice has
+one definition, mention-level, used by the tile, its change line and trends.
+Brand rank is null when share of voice is null.
+
 Rates use their specified eligible evidence denominators. Pagination cannot
 change totals, and the browser does not recompute aggregate share of voice.
 Frozen model/retrieval, prompt/cohort and scope identity determine comparison
@@ -329,7 +355,17 @@ Unknown, not-run, failed, partial and observed-zero states remain distinct.
 
 ## Read and UI surface
 
-Visibility has Trends, Sources and Query Fanout; Trends is default.
+Visibility has Trends, Sources and Query Fanout; Trends is default. Trends
+bucket runs first and then cap the number of points (`trend_max_points`), so a
+long window is not silently truncated to its latest runs. A range selection pools
+counts, average position and model provenance across its runs and omits citation
+totals. Overview reads one run's persisted projection without a baseline
+comparison, from completed and partially completed runs, like the Visibility page.
+
+A coverage strip under the headline tiles states the answers and engines behind
+the numbers, failed and not-run counts, the comparison baseline and, when a
+change is missing, why. Each failed execution shows a plain reason and next step
+for its error code, and a provider wait names the engine.
 Typed URL state retains run/period, engine, cohort, baseline, history, metric and
 evidence filters. The server resolves Latest to a concrete run or compatible
 run set, reused by dependent requests. An invalid explicit run never falls back

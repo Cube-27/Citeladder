@@ -40,7 +40,8 @@ import {
 import { persistOverview, persistSurfaceExchange } from '../audits/surface-persistence.ts';
 import { auditPolicy, type AuditRuntime } from '../audits/config.ts';
 import { auditEvent } from '../audits/state.ts';
-import { AuditMaintenance, repairOwnedCompletion } from '../audits/maintenance.ts';
+import { repairOwnedCompletion } from '../audits/maintenance.ts';
+import { cachedWorkspaceAccess } from '../entitlements/access.ts';
 
 const logger = getLogger('workers.audit');
 const reconciliationState = z.object({
@@ -69,8 +70,7 @@ export class AuditWorker {
   readonly #taskScope: { workspaceId: string; auditId: string } | undefined;
   readonly #now: () => Date;
   readonly #env: Record<string, string | undefined>;
-  readonly #maintenance: AuditMaintenance;
-  #lastSweep = -Infinity;
+  readonly #access: (workspaceId: string) => Promise<unknown>;
   constructor(
     db: Database,
     runtime: AuditRuntime,
@@ -96,17 +96,15 @@ export class AuditWorker {
     this.#env = options.env ?? process.env;
     this.owner = options.owner ?? `audit-worker-ts-${randomBytes(6).toString('hex')}`;
     this.#queue = new AuditQueue(db, runtime.audits.lease_ttl_seconds, this.#now);
-    this.#maintenance = new AuditMaintenance(db, projections.finalize);
+    // Revocation still lands within the TTL; the per-task ownership lock is never cached.
+    this.#access = cachedWorkspaceAccess(db, runtime.audits.access_check_ttl_seconds * 1000);
   }
+  /** Earliest due retry, capacity wait or provider poll, so an idle runner stays for it. */
+  nextDue() {
+    return this.#queue.nextDue();
+  }
+  /** Lease recovery and stuck-audit repair belong to the periodic audit-maintenance lane. */
   async runOnce(signal?: AbortSignal) {
-    const at = this.#now();
-    if (
-      !this.#taskScope &&
-      at.getTime() - this.#lastSweep >= this.#runtime.audits.poll_interval_seconds * 1000
-    ) {
-      this.#lastSweep = at.getTime();
-      await this.#maintenance.runOnce(at);
-    }
     if (signal?.aborted) return 0;
     const tasks = await this.#queue.claim(
       this.owner,
@@ -247,6 +245,7 @@ export class AuditWorker {
         this.#key,
         this.#now(),
         this.#env,
+        this.#access,
       );
     } catch (error) {
       const safe =
@@ -277,8 +276,11 @@ export class AuditWorker {
       return { expired: true, recovery };
     }
     const audit = context?.audit;
+    // Once a paid submission may exist, retrieval is free and bounded by the poll ceiling
+    // (Google AI Overview) or the recovery deadline (scrapers), never by the run cap.
     const runExpired =
       !recovery &&
+      !task.provider_submission_ref &&
       audit?.started_at &&
       this.#now().getTime() - audit.started_at.getTime() >=
         Number(
