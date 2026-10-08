@@ -140,7 +140,11 @@ export async function syncActions(
     (
       await trx
         .selectFrom('actions')
-        .select(['id', 'group_key', 'member_opportunity_ids'])
+        .select([
+          'id',
+          'group_key',
+          sql<number>`jsonb_array_length(member_opportunity_ids)`.as('members'),
+        ])
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .forUpdate()
@@ -189,10 +193,7 @@ export async function syncActions(
   const seen = new Set(groups.map((group) => group.target.group_key));
   // An Action already cleared keeps its row untouched; only the transition writes.
   const cleared = [...existing.values()].filter(
-    (action) =>
-      !seen.has(action.group_key) &&
-      Array.isArray(action.member_opportunity_ids) &&
-      action.member_opportunity_ids.length > 0,
+    (action) => !seen.has(action.group_key) && Number(action.members) > 0,
   );
   if (cleared.length) {
     await trx

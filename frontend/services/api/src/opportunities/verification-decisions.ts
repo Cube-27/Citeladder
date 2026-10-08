@@ -31,7 +31,7 @@ export const evaluation = (): Evaluation => ({
   rule_evaluation_ids: new Set(),
   metric_ids: new Set(),
 });
-type Reading = Pick<CheckOutcome, 'observed_at' | 'source_kind' | 'source_id'>;
+export type Reading = Pick<CheckOutcome, 'observed_at' | 'source_kind' | 'source_id'>;
 export const outcome = (
   reading: Reading,
   state: CheckOutcome['state'],
@@ -116,6 +116,13 @@ function metricMatches(
 }
 const numeric = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
+
+/** A declared rule expectation in the evaluation vocabulary it is compared with. */
+export function expectedRuleOutcome(expected: unknown) {
+  if (expected === 'pass') return 'satisfied';
+  if (expected === 'fail') return 'missing';
+  return expected;
+}
 
 /** A per-prompt composite score in a metric snapshot, or null. */
 export function promptScore(metrics: unknown, index: number): number | null {

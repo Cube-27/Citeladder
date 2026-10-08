@@ -56,8 +56,6 @@ import { changeHits, commerceHits, demandHits } from './refresh-hits.ts';
 import { internalLinkHits, internalLinkRunId } from './internal-link-hits.ts';
 import {
   currentDemandSnapshot,
-  DASHBOARD_AUDIT_STATUSES,
-  EVIDENCE_CRAWL_STATUSES,
   latestSnapshot,
   resolveAudit,
   resolveCrawl,
@@ -126,7 +124,7 @@ async function auditHits(
   );
   // Page-keyed, over the FULL eligible answer set rather than the gap prompts.
   hits.push(...(await earnedPageHits(db, scope, audit, visibility)));
-  if (metricId !== null) hits = hits.map((hit) => ({ ...hit, source_metric_ids: [metricId] }));
+  hits = hits.map((hit) => ({ ...hit, source_metric_ids: [metricId] }));
   hits.push(...(await commerceHits(db, scope, audit.id)));
   hits.push(...(await confirmedDeclineHits(db, scope.workspaceId, audit.id)));
   return { audit, hits, projections, limitations };
@@ -148,14 +146,8 @@ async function latestSourcePageReading(db: Database, scope: Scope) {
 
 /** The sources a refresh would read now, without loading their evidence. */
 async function resolveSources(db: Database, scope: Scope): Promise<Sources> {
-  const audit = await resolveAudit(db, scope, {
-    sourceId: null,
-    statuses: DASHBOARD_AUDIT_STATUSES,
-  });
-  const crawl = await resolveCrawl(db, scope, {
-    sourceId: null,
-    statuses: EVIDENCE_CRAWL_STATUSES,
-  });
+  const audit = await resolveAudit(db, scope);
+  const crawl = await resolveCrawl(db, scope);
   const demand = await currentDemandSnapshot(db, scope);
   return {
     audit,
@@ -289,7 +281,6 @@ async function writeRefresh(
       project_id: scope.projectId,
       coverage: JSON.stringify({
         ...record(snapshot.coverage),
-        internal_link_run_id: sources.identity.internal_link_run_id,
         source_identity: sources.identity,
       }),
       limitations: JSON.stringify([...snapshot.limitations, ...collected.limitations]),
@@ -359,7 +350,7 @@ export async function recomputeOpportunities(
     const latest = await resolveSources(trx, scope);
     // Writing a reading older than a source committed during the load would
     // supersede what that source says; the retry reads the newer state.
-    if (!sameIdentity({ ...latest.identity }, sources.identity))
+    if (!sameIdentity(latest.identity, sources.identity))
       throw new Error('Opportunity sources changed during the refresh; retry');
     const empty = collected.audit === null && sources.crawl === null && sources.demand === null;
     if (current !== null && empty) return projectSnapshot(current);

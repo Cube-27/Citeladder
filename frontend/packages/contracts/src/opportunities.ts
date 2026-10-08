@@ -282,8 +282,6 @@ const metricExpectedCheckSchema = responseObject({
   direction: z.enum(['increase', 'decrease', 'equal']),
   scope: z.enum(['page', 'query']).optional(),
   scope_key: z.string().optional(),
-  // Baseline and readings are clicks per day.
-  per_day: z.boolean().optional(),
   min_delta: z.number().optional(),
   baseline_traffic_snapshot_id: uuid().optional(),
   baseline_value: z.number().optional(),

@@ -21,6 +21,7 @@ import {
 import type { Crawl } from './task-fence.ts';
 import { enqueueTerminalAnalyticsRefresh } from './terminal-handoff.ts';
 import { isPageRerun, pageRerunSql } from './page-rerun.ts';
+import { expectedRuleOutcome } from '../opportunities/verification-decisions.ts';
 
 const p = policy.site_health.change_intel;
 // The page limit is left out: it is the fetch budget left at admission, so it
@@ -252,13 +253,12 @@ async function pages(db: Database, crawl: Crawl) {
   return { pages: rows.map((row) => changePage(row, rules.get(row.analysisId))), capped };
 }
 
-/** A declared rule expectation in the evaluation vocabulary it is compared with. */
-const RULE_OUTCOME: Record<string, string> = { pass: 'satisfied', fail: 'missing' };
-
 export function declaredCheckField(check: Record<string, unknown>): [string | null, unknown] {
   if (check.kind !== 'site_rule') return [null, null];
-  const expected = scalarText(check.expected_outcome);
-  return [RULE_FIELDS.get(scalarText(check.rule_id)) ?? null, RULE_OUTCOME[expected] ?? expected];
+  return [
+    RULE_FIELDS.get(scalarText(check.rule_id)) ?? null,
+    expectedRuleOutcome(check.expected_outcome),
+  ];
 }
 const uuidText = (value: unknown) => scalarText(value).toLowerCase();
 /** A check's target page; an untargeted check applies to a single-target event's page. */

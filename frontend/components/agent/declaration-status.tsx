@@ -31,7 +31,8 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 const LEG_OWNER: Record<MeasurementLeg['leg'], { href: string; label: string } | null> = {
   next_visibility_run: { href: '/runs', label: 'Open Runs' },
   next_search_console_window: { href: '/performance', label: 'Open Performance' },
-  next_crawl: { href: '/site', label: 'Open Site Health' },
+  // A crawl starts from here: Run crawl now.
+  next_crawl: null,
   placement_recheck: null,
 };
 
@@ -170,7 +171,7 @@ function LegRow({
       <span className={textRole('itemTitle')}>{measurementLegLabel(leg.leg)}</span>
       <span className={textRole('caption')}>
         <LegWait leg={leg} />
-        {waiting && owner && leg.leg !== 'next_crawl' ? (
+        {waiting && owner ? (
           <>
             {' '}
             <ProjectLink href={owner.href} className="underline underline-offset-2">

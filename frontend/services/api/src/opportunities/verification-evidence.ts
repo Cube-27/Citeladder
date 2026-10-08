@@ -11,25 +11,29 @@ import { parseUuid } from '../http/uuid.ts';
 import { record } from '../db/json.ts';
 import {
   compareMetric,
+  expectedRuleOutcome,
   evaluation,
   evaluatePlacementCheck,
   outcome,
   promptScore,
   type CheckOutcome,
   type Evaluation,
+  type Reading,
 } from './verification-decisions.ts';
+import { scopedDailyRate, windowDays } from './traffic-scope.ts';
 import type { Declaration } from './verification-result.ts';
 import { scalarText } from '../text-order.ts';
 import { contextualLinkObserved } from './internal-link-verification.ts';
 
 export type Source = { kind: string; id: string; observed_at: string };
-type Reading = Pick<CheckOutcome, 'observed_at' | 'source_kind' | 'source_id'>;
 type Context = {
   db: Database;
   scope: WorkspaceScope;
   declaration: Declaration;
   result: Evaluation;
   reading: Reading;
+  /** One read per page, snapshot or row a declaration's checks share. */
+  reads: Map<string, Promise<unknown>>;
 };
 type Check = Record<string, unknown>;
 
@@ -44,15 +48,13 @@ export const SOURCE_CHECK_KINDS: Record<string, readonly string[]> = {
 const checksOf = (d: Declaration) =>
   Array.isArray(d.expected_checks) ? d.expected_checks.map(record) : [];
 const dayOf = (iso: string) => iso.slice(0, 10);
+function once<T>(ctx: Context, key: string, read: () => Promise<T>): Promise<T> {
+  if (!ctx.reads.has(key)) ctx.reads.set(key, read());
+  return ctx.reads.get(key) as Promise<T>;
+}
 const set = (ctx: Context, index: number, item: CheckOutcome | null) => {
   if (item) ctx.result.outcomes.set(index, item);
 };
-
-function expectedRuleOutcome(expected: unknown) {
-  if (expected === 'pass') return 'satisfied';
-  if (expected === 'fail') return 'missing';
-  return expected;
-}
 
 type SiteAnalysis = { id: string; normalized_facts: unknown; source_evaluation_ids: unknown };
 
@@ -90,29 +92,35 @@ async function siteCheck(ctx: Context, crawlId: string, check: Check) {
   const targets = Array.isArray(d.target_site_url_ids) ? d.target_site_url_ids : [];
   const target = parseUuid(check.target_site_url_id ?? (targets.length === 1 ? targets[0] : null));
   if (!target) return outcome(ctx.reading, 'unavailable', 'no_resolved_target');
-  const analysis = await ctx.scope
-    .selectFrom(ctx.db, 'site_page_analyses')
-    .innerJoin('site_fetch_artifacts', 'site_fetch_artifacts.id', 'site_page_analyses.artifact_id')
-    .select([
-      'site_page_analyses.id',
-      'site_page_analyses.source_evaluation_ids',
-      'site_fetch_artifacts.normalized_facts',
-    ])
-    .where('site_fetch_artifacts.workspace_id', '=', d.workspace_id)
-    .where('site_page_analyses.project_id', '=', d.project_id)
-    .where('site_page_analyses.crawl_id', '=', crawlId)
-    .where('site_page_analyses.site_url_id', '=', target)
-    .where('site_page_analyses.is_current', '=', true)
-    .where('site_page_analyses.finalized_at', 'is not', null)
-    .where(
-      'site_fetch_artifacts.fetched_at',
-      '>',
-      sql<Date>`${d.declared_implemented_at}::timestamptz`,
-    )
-    .orderBy('site_page_analyses.created_at', 'desc')
-    .orderBy('site_page_analyses.id', 'desc')
-    .limit(1)
-    .executeTakeFirst();
+  const analysis = await once(ctx, `analysis:${target}`, () =>
+    ctx.scope
+      .selectFrom(ctx.db, 'site_page_analyses')
+      .innerJoin(
+        'site_fetch_artifacts',
+        'site_fetch_artifacts.id',
+        'site_page_analyses.artifact_id',
+      )
+      .select([
+        'site_page_analyses.id',
+        'site_page_analyses.source_evaluation_ids',
+        'site_fetch_artifacts.normalized_facts',
+      ])
+      .where('site_fetch_artifacts.workspace_id', '=', d.workspace_id)
+      .where('site_page_analyses.project_id', '=', d.project_id)
+      .where('site_page_analyses.crawl_id', '=', crawlId)
+      .where('site_page_analyses.site_url_id', '=', target)
+      .where('site_page_analyses.is_current', '=', true)
+      .where('site_page_analyses.finalized_at', 'is not', null)
+      .where(
+        'site_fetch_artifacts.fetched_at',
+        '>',
+        sql<Date>`${d.declared_implemented_at}::timestamptz`,
+      )
+      .orderBy('site_page_analyses.created_at', 'desc')
+      .orderBy('site_page_analyses.id', 'desc')
+      .limit(1)
+      .executeTakeFirst(),
+  );
   if (!analysis) return outcome(ctx.reading, 'unavailable', 'page_not_analyzed');
   return check.kind === 'site_rule'
     ? siteRuleOutcome(ctx, analysis, check)
@@ -126,13 +134,15 @@ async function visibilityCheck(ctx: Context, auditId: string, check: Check) {
   // Checks declared against the project-wide score measured nothing the
   // Action changed; they stay unmeasurable rather than verify by drift.
   if (!prompt) return outcome(ctx.reading, 'unavailable', 'not_prompt_scoped');
-  const snapshot = await ctx.scope
-    .selectFrom(ctx.db, 'metric_snapshots')
-    .select(['id', 'metrics'])
-    .where('project_id', '=', d.project_id)
-    .where('audit_id', '=', auditId)
-    .where('created_at', '>', sql<Date>`${d.declared_implemented_at}::timestamptz`)
-    .executeTakeFirst();
+  const snapshot = await once(ctx, 'metric_snapshot', () =>
+    ctx.scope
+      .selectFrom(ctx.db, 'metric_snapshots')
+      .select(['id', 'metrics'])
+      .where('project_id', '=', d.project_id)
+      .where('audit_id', '=', auditId)
+      .where('created_at', '>', sql<Date>`${d.declared_implemented_at}::timestamptz`)
+      .executeTakeFirst(),
+  );
   if (!snapshot) return outcome(ctx.reading, 'unavailable', 'no_metric_snapshot');
   const row = await ctx.scope
     .selectFrom(ctx.db, 'audits')
@@ -163,46 +173,25 @@ async function trafficCheck(ctx: Context, snapshotId: string, check: Check) {
   const key = scalarText(check.scope_key);
   if ((scope !== 'page' && scope !== 'query') || !key)
     return outcome(ctx.reading, 'unavailable', 'not_page_scoped');
-  const snapshot = await ctx.scope
-    .selectFrom(ctx.db, 'traffic_snapshots')
-    .select([
-      'id',
-      sql<string>`window_start::date::text`.as('start'),
-      sql<number>`(window_end::date - window_start::date + 1)`.as('days'),
-    ])
-    .where('project_id', '=', d.project_id)
-    .where('id', '=', snapshotId)
-    .executeTakeFirst();
+  const snapshot = await once(ctx, 'traffic_snapshot', () =>
+    ctx.scope
+      .selectFrom(ctx.db, 'traffic_snapshots')
+      .select(['id', sql<string>`window_start::date::text`.as('start'), windowDays.as('days')])
+      .where('project_id', '=', d.project_id)
+      .where('id', '=', snapshotId)
+      .executeTakeFirst(),
+  );
   if (!snapshot) return outcome(ctx.reading, 'unavailable', 'no_traffic_snapshot');
   if (snapshot.start < dayOf(d.declared_implemented_at))
     return outcome(ctx.reading, 'unavailable', 'window_overlaps_declaration');
-  const row =
-    scope === 'page'
-      ? await ctx.scope
-          .selectFrom(ctx.db, 'traffic_page_stats')
-          .select(['id', 'metrics'])
-          .where('project_id', '=', d.project_id)
-          .where('snapshot_id', '=', snapshot.id)
-          .where('canonical_url', '=', key)
-          .executeTakeFirst()
-      : await ctx.scope
-          .selectFrom(ctx.db, 'traffic_query_stats')
-          .select(['id', 'metrics'])
-          .where('project_id', '=', d.project_id)
-          .where('snapshot_id', '=', snapshot.id)
-          .where('normalized_query', '=', key)
-          .executeTakeFirst();
-  const value = record(row?.metrics)[String(check.metric || '')];
-  if (row) ctx.result.metric_ids.add(row.id);
-  // Checks declared before rates froze a window total; those compare as totals.
-  const days = check.per_day === true ? Number(snapshot.days) : 1;
-  return compareMetric(
-    check,
-    check.baseline_value,
-    typeof value === 'number' && Number.isFinite(value) ? value / days : null,
-    ctx.reading,
-    'no_search_console_row',
+  const { rowId, rate } = await scopedDailyRate(
+    ctx.db,
+    { workspaceId: d.workspace_id, projectId: d.project_id },
+    snapshot,
+    { scope, key, metric: String(check.metric || '') },
   );
+  if (rowId) ctx.result.metric_ids.add(rowId);
+  return compareMetric(check, check.baseline_value, rate, ctx.reading, 'no_search_console_row');
 }
 
 async function placementCheck(ctx: Context) {
@@ -225,6 +214,7 @@ export async function evidenceFor(
     declaration,
     scope: new WorkspaceScope(declaration.workspace_id),
     result: evaluation(),
+    reads: new Map(),
     reading: { observed_at: source.observed_at, source_kind: source.kind, source_id: source.id },
   };
   const readable = SOURCE_CHECK_KINDS[source.kind] ?? [];

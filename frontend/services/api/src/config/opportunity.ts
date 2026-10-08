@@ -440,7 +440,6 @@ export const opportunities = {
   RECOMPUTE_MAX_ISSUES: 5000,
   LIST_DEFAULT_LIMIT: 50,
   LIST_MAX_LIMIT: 200,
-  MAX_EXPORT_ITEMS: 20000,
 };
 
 export const opportunityDefaults = {

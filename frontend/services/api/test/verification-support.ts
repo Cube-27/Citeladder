@@ -114,7 +114,6 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
       direction: 'increase',
       scope: 'page',
       scope_key: url,
-      per_day: true,
       min_delta: 0.1,
       baseline_value: 1,
       baseline_window_days: 7,

@@ -10,6 +10,7 @@ import type { OpportunityRow } from './projection.ts';
 import type { Scope } from './sources.ts';
 import { internalLinkDeclarationChecks } from './internal-link-declaration.ts';
 import { promptScore } from './verification-decisions.ts';
+import { scopedDailyRate, windowDays } from './traffic-scope.ts';
 
 const o = policy.opportunity.opportunities;
 const p = policy.opportunity.placement;
@@ -100,14 +101,12 @@ async function trafficCheck(
     direction: 'increase',
     scope: kind,
     scope_key: key,
-    per_day: true,
     min_delta: o.TRAFFIC_CHECK_MIN_DAILY_GAIN,
     tolerance: 0,
   };
-  const workspace = new WorkspaceScope(scope.workspaceId);
-  const snapshot = await workspace
+  const snapshot = await new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'traffic_snapshots')
-    .select(['id', sql<number>`(window_end::date - window_start::date + 1)`.as('days')])
+    .select(['id', windowDays.as('days')])
     .where('project_id', '=', scope.projectId)
     .where('granularity', '=', policy.traffic.TRAFFIC_DEFAULT_GRANULARITY)
     .where(sql<boolean>`window_end::date < ${declaredDay}::date`)
@@ -119,25 +118,12 @@ async function trafficCheck(
   if (!snapshot) return check;
   check.baseline_traffic_snapshot_id = snapshot.id;
   check.baseline_window_days = Number(snapshot.days);
-  const row =
-    kind === 'page'
-      ? await workspace
-          .selectFrom(db, 'traffic_page_stats')
-          .select('metrics')
-          .where('project_id', '=', scope.projectId)
-          .where('snapshot_id', '=', snapshot.id)
-          .where('canonical_url', '=', key)
-          .executeTakeFirst()
-      : await workspace
-          .selectFrom(db, 'traffic_query_stats')
-          .select('metrics')
-          .where('project_id', '=', scope.projectId)
-          .where('snapshot_id', '=', snapshot.id)
-          .where('normalized_query', '=', key)
-          .executeTakeFirst();
-  const clicks = record(row?.metrics)[o.TRAFFIC_METRIC_CLICKS];
-  if (typeof clicks === 'number' && Number.isFinite(clicks))
-    check.baseline_value = round(clicks / Number(snapshot.days), 4);
+  const { rate } = await scopedDailyRate(db, scope, snapshot, {
+    scope: kind,
+    key,
+    metric: o.TRAFFIC_METRIC_CLICKS,
+  });
+  if (rate !== null) check.baseline_value = round(rate, 4);
   return check;
 }
 
@@ -166,7 +152,6 @@ async function memberCheck(
   member: OpportunityRow,
   context: { auditId: string | null; brandName: string; declaredDay: string },
 ): Promise<ExpectedCheck | null> {
-  if (memberMeasurementLeg(member) === null) return null;
   if (o.EARNED_RULE_IDS.includes(member.rule_id)) return placementCheck(member, context.brandName);
   const evidence = record(member.evidence);
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_SITE) {
