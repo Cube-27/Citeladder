@@ -27,6 +27,7 @@ import {
   agentSkillCatalogSchema,
   agentSkillSchema,
   agentTurnAcceptedSchema,
+  agentWorkflowSchema,
 } from '@citeladder/contracts/agent';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
@@ -39,6 +40,8 @@ export type AgentMessage = z.infer<typeof agentMessageSchema>;
 export type AgentChatSummary = z.infer<typeof agentChatSummarySchema>;
 export type AgentChatDetail = z.infer<typeof agentChatDetailSchema>;
 export type AgentSkill = z.infer<typeof agentSkillSchema>;
+export type AgentWorkflow = z.infer<typeof agentWorkflowSchema>;
+export type AgentCatalog = z.infer<typeof agentSkillCatalogSchema>;
 
 /**
  * Typed evidence a new chat starts from. The server resolves and authorizes
@@ -66,6 +69,8 @@ export type AgentContextRefs = {
 export type NewChatInput = {
   message: string;
   skill_id?: string | null;
+  /** A defined workflow pins its skill and format on the server. */
+  workflow_id?: string;
   action_id?: string;
   context?: AgentContextRefs;
   /** Actions the message @-mentions; authorized server-side. */

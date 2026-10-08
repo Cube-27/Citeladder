@@ -7,6 +7,7 @@ import { policy } from '../config.ts';
 import { parseContentFormats, type ContentFormat } from '../config/skill-inputs.ts';
 import { compareText } from '../text-order.ts';
 import type { Skill, SkillCatalog } from './contracts.ts';
+import { parseWorkflows, type WorkflowCatalog } from './workflows.ts';
 
 const p = policy.agent_skills;
 const metadata = z
@@ -25,6 +26,7 @@ export type PackagedCatalog = Omit<SkillCatalog, 'skills'> & {
   skills: ReadonlyMap<string, CatalogSkill>;
   formatPreamble: string;
   formats: ReadonlyMap<string, ContentFormat>;
+  workflows: WorkflowCatalog;
 };
 function expand(body: string) {
   return body.replace(/\{\{([a-z_]+)\}\}/gu, (_match, name: string) => {
@@ -88,17 +90,28 @@ export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
   }
   if (!skills.length || !operatingContract.trim() || !formats.size)
     throw new TypeError('Incomplete skill catalog');
+  // Workflows are presentation and routing, but they change what a run is
+  // started with, so they share the catalog fingerprint.
+  const workflowFile = (await readFile(join(root, 'workflows.json'), 'utf8')).replaceAll(
+    '\r\n',
+    '\n',
+  );
+  digest.update('workflows.json').update('\0').update(workflowFile).update('\0');
   if (
     new Set(skills.map((skill) => skill.id)).size !== skills.length ||
     new Set(skills.map((skill) => skill.order)).size !== skills.length
   )
     throw new TypeError('Duplicate skill id/order');
+  const catalogSkills = new Map(
+    skills.toSorted((a, b) => a.order - b.order).map((skill) => [skill.id, skill]),
+  );
   return {
     version: `agent-skills-${digest.digest('hex').slice(0, 16)}`,
     operatingContract,
-    skills: new Map(skills.toSorted((a, b) => a.order - b.order).map((skill) => [skill.id, skill])),
+    skills: catalogSkills,
     formatPreamble,
     formats,
+    workflows: parseWorkflows(workflowFile, catalogSkills, formats),
   };
 }
 /** Kinds with content formats choose a format; only long-form formats start from an outline. */

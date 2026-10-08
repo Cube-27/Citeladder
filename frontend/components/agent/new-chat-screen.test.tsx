@@ -97,6 +97,27 @@ const GROWTH_SKILL = {
   description: 'Prioritize work.',
 };
 
+const WORKFLOW_CATALOG = {
+  skills: [GROWTH_SKILL],
+  workflow_groups: [{ id: 'social', label: 'Social and video' }],
+  workflows: [
+    {
+      id: 'linkedin_post',
+      group: 'social',
+      label: 'LinkedIn post',
+      description: 'A short professional post.',
+      skill_id: 'content_create',
+      format_id: 'linkedin',
+      prompt: 'Write a LinkedIn post.',
+      inputs: [
+        { key: 'topic', label: 'Topic', required: true },
+        { key: 'tone', label: 'Tone', required: false },
+      ],
+    },
+  ],
+  output_kinds: [],
+};
+
 function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
   return [
     http.get(`/api/v1/agent/chats/${CHAT}`, () =>
@@ -184,7 +205,7 @@ describe('NewChatScreen', () => {
     expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument();
   });
 
-  it('submits the earned-source skill selected by a next-step link', async () => {
+  it('submits the skill a handoff link selects', async () => {
     const bodies = captureChats();
     const user = userEvent.setup();
     renderNewChat('?skill=earned_authority&prompt=Find+source+opportunities');
@@ -194,6 +215,40 @@ describe('NewChatScreen', () => {
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
     expect(bodies).toEqual([
       { message: 'Find source opportunities', skill_id: 'earned_authority', context: {} },
+    ]);
+  });
+
+  it('starts a workflow from its form only once its required inputs are filled', async () => {
+    const bodies = captureChats();
+    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(WORKFLOW_CATALOG)));
+    const user = userEvent.setup();
+    renderNewChat('');
+    await user.click(await screen.findByRole('button', { name: /LinkedIn post/ }));
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(screen.getByRole('textbox', { name: /Topic/ })).toHaveAttribute('aria-invalid', 'true');
+    expect(bodies).toEqual([]);
+
+    await user.type(screen.getByRole('textbox', { name: /Topic/ }), 'Pricing changes');
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      expect.objectContaining({
+        message: 'Write a LinkedIn post.\n\nTopic: Pricing changes',
+        workflow_id: 'linkedin_post',
+      }),
+    ]);
+  });
+
+  it('sends a next step with its workflow pinned until the reader removes it', async () => {
+    const bodies = captureChats();
+    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(WORKFLOW_CATALOG)));
+    const user = userEvent.setup();
+    renderNewChat('?workflow=linkedin_post&prompt=Promote+the+guide');
+    await screen.findByRole('button', { name: 'Remove workflow LinkedIn post' });
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      expect.objectContaining({ message: 'Promote the guide', workflow_id: 'linkedin_post' }),
     ]);
   });
 

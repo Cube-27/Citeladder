@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -8,8 +9,10 @@ import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { BriefingCard } from '@/components/agent/briefing-card';
 import { Composer } from '@/components/agent/composer';
 import { SkillPicker } from '@/components/agent/skill-picker';
+import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
+import { WorkflowGallery, WorkflowStart } from '@/components/agent/workflow-gallery';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
@@ -28,23 +31,13 @@ import {
 } from '@/lib/agent/handoff';
 import { approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action } from '@/lib/api/actions';
+import type { AgentWorkflow } from '@/lib/api/agent';
 import { AGENT_TOP_ACTIONS } from '@/lib/config/agent';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
-/** Questions use ordinary chat; only explicit deliverables select a methodology. */
-const STARTERS = [
-  { text: 'What should I focus on this week?', skillId: undefined },
-  { text: 'Why are we missing from AI answers?', skillId: undefined },
-  { text: 'Create content for our highest-demand topic.', skillId: 'content_create' },
-  {
-    text: 'Analyze our most important technical issue and plan the work.',
-    skillId: 'technical_health',
-  },
-] as const;
-
 /**
- * New chat: ask a question, request a deliverable, or pick up an Action.
+ * New chat: ask a question, start a defined workflow, or pick up an Action.
  * An evidence-screen handoff arrives as typed references in the URL and is
  * shown as removable context before the first message is sent.
  */
@@ -75,6 +68,11 @@ function NewChat({
   const [message, setMessage] = useState(handoff.prompt ?? '');
   const [context, setContext] = useState(handoff.context);
   const [skillId, setSkillId] = useState<string | null | undefined>(handoff.skillId ?? undefined);
+  // A next step arrives with its workflow pinned; a gallery pick opens its form.
+  const [pinnedId, setPinnedId] = useState(handoff.workflowId);
+  const [picked, setPicked] = useState<AgentWorkflow | null>(null);
+  const catalog = useAgentCatalog();
+  const pinned = catalog.workflow(pinnedId);
   const access = useAgentAccess();
   const navigate = useNavigate();
   const projectHref = useProjectHref();
@@ -90,15 +88,17 @@ function NewChat({
     enabled: Boolean(handoff.actionId),
   });
 
-  const submit = () => {
+  const actionId = attached.isError ? undefined : handoff.actionId;
+  // A workflow is sent by id; the server validates it and pins its skill.
+  const start = (text: string, workflowId: string | undefined) =>
     create.start({
-      message,
-      skillId,
-      actionId: attached.isError ? undefined : handoff.actionId,
+      message: text,
+      skillId: workflowId ? undefined : skillId,
+      workflowId,
+      actionId,
       context,
       mentions: commands.mentions.map((mention) => mention.id),
     });
-  };
 
   return (
     <PageShell
@@ -121,7 +121,7 @@ function NewChat({
           label="Message the agent"
           value={message}
           onChange={setMessage}
-          onSubmit={submit}
+          onSubmit={() => start(message, pinnedId)}
           pending={create.pending}
           disabled={!access.canSend}
           placeholder="Ask a question or describe the work you need. / picks a skill, @ mentions an Action."
@@ -129,35 +129,30 @@ function NewChat({
           commands={commands}
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
           tools={
-            <SkillPicker
-              {...commands.skillPicker}
-              value={skillId}
-              onChange={setSkillId}
-              hasAction={Boolean(handoff.actionId && !attached.isError)}
-              disabled={!access.canSend}
-            />
+            pinnedId ? (
+              <PinnedWorkflow label={pinned?.label} onRemove={() => setPinnedId(undefined)} />
+            ) : (
+              <SkillPicker
+                {...commands.skillPicker}
+                value={skillId}
+                onChange={setSkillId}
+                hasAction={Boolean(actionId)}
+                disabled={!access.canSend}
+              />
+            )
           }
         />
-        <fieldset
-          className="flex min-w-0 flex-wrap justify-center gap-2"
-          aria-label="Starter prompts"
-        >
-          {STARTERS.map((starter) => (
-            <Button
-              key={starter.text}
-              variant="secondary"
-              size="sm"
-              className="h-auto max-w-full py-2 whitespace-normal"
-              disabled={!access.canSend || create.pending}
-              onClick={() => {
-                setMessage(starter.text);
-                setSkillId(starter.skillId);
-              }}
-            >
-              {starter.text}
-            </Button>
-          ))}
-        </fieldset>
+        {picked ? (
+          <WorkflowStart
+            workflow={picked}
+            onStart={(text) => start(text, picked.id)}
+            onBack={() => setPicked(null)}
+            pending={create.pending}
+            disabled={!access.canSend}
+          />
+        ) : (
+          <WorkflowGallery onPick={setPicked} disabled={!access.canSend || create.pending} />
+        )}
         {handoff.actionId ? null : (
           <Disclosure title="Work on an Action">
             <Stack gap="section">
@@ -174,6 +169,24 @@ function NewChat({
         )}
       </Stack>
     </PageShell>
+  );
+}
+
+/** The workflow a next step pinned; removing it returns to the skill picker. */
+function PinnedWorkflow({
+  label,
+  onRemove,
+}: Readonly<{ label: string | undefined; onRemove: () => void }>) {
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      aria-label={`Remove workflow ${label ?? ''}`.trim()}
+      onClick={onRemove}
+    >
+      {label ?? 'Workflow'}
+      <X aria-hidden className="size-4" />
+    </Button>
   );
 }
 

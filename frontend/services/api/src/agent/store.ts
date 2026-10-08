@@ -42,6 +42,8 @@ export type TurnInput = {
   message: string;
   key: string;
   skillId?: string | null;
+  /** A defined workflow pins its skill and format; follow-ups inherit it. */
+  workflowId?: string;
   actionId?: string;
   refs?: Record<string, Json>;
   mentionIds?: string[];
@@ -84,6 +86,7 @@ function requestIdentity(scope: Scope, input: TurnInput, mode: string, approvalR
       content: input.message,
       mode,
       skill: input.skillId === undefined ? { mode: 'inherit' } : input.skillId,
+      workflow: input.workflowId ?? null,
       mentions: input.mentionIds ?? [],
     };
   return {
@@ -92,6 +95,7 @@ function requestIdentity(scope: Scope, input: TurnInput, mode: string, approvalR
     content: input.message,
     mode,
     skill: input.skillId === undefined ? { mode: 'inherit' } : input.skillId,
+    workflow: input.workflowId ?? null,
     action: input.actionId ?? null,
     context: input.refs ?? {},
     mentions: input.mentionIds ?? [],
@@ -131,7 +135,17 @@ export class AgentStore {
     );
   }
   private submit(scope: Scope, raw: TurnInput, approvalRevision?: string): Promise<Run> {
-    const input = { ...raw, message: messageSchema.parse(raw.message) };
+    const chosen = raw.workflowId
+      ? this.dependencies.catalog.workflows?.byId.get(raw.workflowId)
+      : undefined;
+    if (raw.workflowId && !chosen)
+      return Promise.reject(new AgentError('agent_workflow_unavailable'));
+    const input = {
+      ...raw,
+      message: messageSchema.parse(raw.message),
+      // A workflow is an explicit choice of its skill.
+      ...(chosen ? { skillId: chosen.skill_id } : {}),
+    };
     z.string().trim().min(1).max(agentPolicy.idempotency_key_max_chars).parse(input.key);
     const mode = approvalRevision ? 'draft_from_outline' : 'turn';
     const hash = fingerprint(requestIdentity(scope, input, mode, approvalRevision));
@@ -185,6 +199,8 @@ export class AgentStore {
         input.skillId,
         manifest.action?.skill_id ?? null,
       );
+      const workflow =
+        chosen ?? (input.chatId ? await this.inheritedWorkflow(trx, chat, skill.id) : undefined);
       if (approvalRevision) await this.approveRevision(trx, scope, chat, approvalRevision);
       const message = await appendMessage(trx, chat, {
         role: 'user',
@@ -215,6 +231,9 @@ export class AgentStore {
           requested_skill_source: skill.source,
           context_manifest: {
             ...manifest,
+            ...(workflow
+              ? { workflow: { id: workflow.id, format_id: workflow.format_id ?? null } }
+              : {}),
             ...(approvalRevision ? { approval: { revision_id: approvalRevision } } : {}),
           },
           budget: admittedBudget(this.dependencies.timeoutSeconds),
@@ -319,6 +338,21 @@ export class AgentStore {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+  }
+  /** A follow-up keeps its chat's workflow while it still runs that workflow's skill. */
+  private async inheritedWorkflow(db: Database, chat: Chat, skillId: string | null) {
+    const latest = await db
+      .selectFrom('agent_runs')
+      .select(sql<string | null>`context_manifest -> 'workflow' ->> 'id'`.as('workflow_id'))
+      .where('workspace_id', '=', chat.workspace_id)
+      .where('chat_id', '=', chat.id)
+      .orderBy('created_at', 'desc')
+      .limit(1)
+      .executeTakeFirst();
+    const workflow = latest?.workflow_id
+      ? this.dependencies.catalog.workflows?.byId.get(latest.workflow_id)
+      : undefined;
+    return workflow?.skill_id === skillId ? workflow : undefined;
   }
   private async turnSkill(
     db: Database,

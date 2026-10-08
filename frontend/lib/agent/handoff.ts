@@ -21,6 +21,7 @@ const PARAM = {
   rows: 'si_row_id',
   prompt: 'prompt',
   skill: 'skill',
+  workflow: 'workflow',
   issueCrawl: 'issue_crawl_id',
   issueGroup: 'issue_group_id',
   issuePage: 'issue_page_id',
@@ -34,6 +35,7 @@ export type AgentHandoff = {
   context: AgentContextRefs;
   prompt?: string;
   skillId?: string;
+  workflowId?: string;
 };
 
 export type HandoffInput = {
@@ -48,6 +50,7 @@ export type HandoffInput = {
   outputRevision?: { outputId: string; revisionId: string };
   prompt?: string | null;
   skillId?: string | null;
+  workflowId?: string | null;
 };
 
 /** `/agent` with the typed references a new chat should start from. */
@@ -73,6 +76,7 @@ export function agentHandoffHref(input: HandoffInput): string {
   }
   set(PARAM.prompt, input.prompt?.trim());
   set(PARAM.skill, input.skillId);
+  set(PARAM.workflow, input.workflowId);
   const query = params.toString();
   return query ? `/agent?${query}` : '/agent';
 }
@@ -99,6 +103,7 @@ export function agentHandoff(input: HandoffInput): AgentHandoff {
     context,
     prompt: input.prompt?.trim() || undefined,
     ...(input.skillId ? { skillId: input.skillId } : {}),
+    ...(input.workflowId ? { workflowId: input.workflowId } : {}),
   };
 }
 
@@ -153,6 +158,12 @@ function httpUrlParam(params: URLSearchParams, key: string): string | undefined 
   }
 }
 
+/** A skill or workflow id; the server catalog validates membership. */
+function catalogIdParam(params: URLSearchParams, key: string) {
+  const value = params.get(key);
+  return value && /^[a-z][a-z0-9_]{0,63}$/.test(value) ? value : undefined;
+}
+
 /** The handoff a New chat URL carries, with malformed values dropped. */
 export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
   const context = parsedOriginContext(params);
@@ -171,13 +182,14 @@ export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
   }
   const prompt = params.get(PARAM.prompt)?.trim() || undefined;
   // The server catalog validates membership; preserve explicit skill selections.
-  const skill = params.get(PARAM.skill);
-  const skillId = skill && /^[a-z][a-z0-9_]{0,63}$/.test(skill) ? skill : undefined;
+  const skillId = catalogIdParam(params, PARAM.skill);
+  const workflowId = catalogIdParam(params, PARAM.workflow);
   return {
     actionId: uuidParam(params, PARAM.action),
     context,
     prompt,
     ...(skillId ? { skillId } : {}),
+    ...(workflowId ? { workflowId } : {}),
   };
 }
 

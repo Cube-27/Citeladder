@@ -5,10 +5,11 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { SearchField } from '@/components/ui/search-field';
 import { textRole } from '@/components/ui/typography';
-import { OUTPUT_PHASE_LABEL, outputKindLabel } from '@/lib/agent/vocabulary';
+import { OUTPUT_PHASE_LABEL } from '@/lib/agent/vocabulary';
 import { actionsQueries } from '@/lib/api/actions';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
 import { AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
@@ -199,9 +200,10 @@ function ChatRows({
 }
 
 function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
+  const { kindLabel } = useAgentCatalog();
   const marker =
     chat.output_kind && chat.output_phase
-      ? `${outputKindLabel(chat.output_kind)} · ${OUTPUT_PHASE_LABEL[chat.output_phase]}`
+      ? `${kindLabel(chat.output_kind)} · ${OUTPUT_PHASE_LABEL[chat.output_phase]}`
       : null;
   if (!chat.target_label && !marker) return null;
   return (
