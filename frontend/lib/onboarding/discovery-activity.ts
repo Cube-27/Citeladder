@@ -53,7 +53,7 @@ export function discoveryActivity(discovery: BrandDiscovery | undefined): Activi
           : 'Opening your website',
     'Reading what you offer',
     current > 2 ? 'Found comparable brands' : 'Finding comparable brands',
-    current > 3 ? 'Prepared your questions' : 'Preparing your questions',
+    current > 3 ? 'Prepared your review' : 'Preparing your review',
   ] as const;
   const details = [
     countDetail(progress?.pages_read, 'page', 'pages', 'read'),

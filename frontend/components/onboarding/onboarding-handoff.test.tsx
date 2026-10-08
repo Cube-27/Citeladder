@@ -47,7 +47,6 @@ function discovery() {
       total_steps: 4,
       pages_read: 3,
       competitors_found: 0,
-      prompts_prepared: 0,
     },
     input_data: {
       brand_name: 'Acme',
@@ -80,11 +79,8 @@ function discovery() {
     },
     domains: ['acme.example'],
     competitors: [],
-    topics: [],
-    prompt_suggestions: [],
     evidence: [],
     warnings: [],
-    gaps: [],
     error_code: '',
     created_at: '2026-08-04T00:00:00Z',
     updated_at: '2026-08-04T00:00:00Z',
@@ -168,15 +164,9 @@ beforeEach(() => {
     ),
     http.get('/api/v1/brand-discovery-catalog', () =>
       HttpResponse.json({
-        business_types: ['b2b', 'b2c', 'both'],
-        price_tiers: [],
-        required_fields: [],
-        optional_fields: [],
-        capture_methods: [],
         maximum_competitors: 5,
         industries: [],
         subindustries: {},
-        prompt_cohorts: [],
       }),
     ),
     http.get(`/api/v1/brand-discoveries/${DISCOVERY}`, () => HttpResponse.json(discovery())),
@@ -184,11 +174,7 @@ beforeEach(() => {
       projectExists = true;
       return HttpResponse.json({
         discovery_id: DISCOVERY,
-        status: 'project_created',
         project_id: PROJECT,
-        crawl_id: null,
-        activation_state: 'queued',
-        page_limit: null,
         warnings: [],
       });
     }),

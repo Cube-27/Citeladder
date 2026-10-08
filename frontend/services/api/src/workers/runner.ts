@@ -204,7 +204,11 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
   return {
     lanes: [
       { name: 'analytics', run: () => analytics.runOnce() },
-      { name: 'discovery', run: () => discovery.runOnce(owner) },
+      {
+        name: 'discovery',
+        run: () => discovery.runOnce(owner),
+        nextDue: () => discovery.queue.nextDue(),
+      },
       { name: 'integrations', run: () => integration.runOnce() },
       { name: 'agent', run: () => agent.runOnce() },
       { name: 'audits', run: () => audit.runOnce() },

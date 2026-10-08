@@ -2,7 +2,7 @@ import { brandDiscoverySchema } from '@citeladder/contracts/visibility';
 import { z } from 'zod';
 
 import { policy, resolveSettingSpec } from '../config.ts';
-import { competitorInput, marketInput } from './inputs.ts';
+import { categoryInput, competitorInput, marketInput } from './inputs.ts';
 
 export function discoverySettings(env: Record<string, string | undefined> = process.env) {
   const spec = policy.discovery.settings;
@@ -53,7 +53,7 @@ export const discoveryProfile = brandDiscoverySchema.shape.profile.extend({
 });
 export const discoveryComplete = z.object({
   name: z.string().trim().min(1).max(255).optional(),
-  profile: discoveryProfile.extend({ category: z.string().trim().min(1).max(160) }),
+  profile: discoveryProfile.extend({ category: categoryInput }),
   domains: z
     .array(z.string().trim().min(1).max(constants.discovery_confirm_domain_max_chars))
     .min(1)

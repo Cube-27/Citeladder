@@ -30,7 +30,6 @@ export function discoveryProgress(phase: string, completed: number, pages = 0, c
     total_steps: cfg.discovery_progress_total_steps,
     pages_read: pages,
     competitors_found: competitors,
-    prompts_prepared: 0,
     updated_at: new Date().toISOString(),
   };
 }
@@ -66,15 +65,6 @@ export async function discoveryRow(db: Database, workspaceId: string, id: string
 export function discoveryCatalog() {
   const industries = policy.discovery.industry_library.industries;
   return {
-    business_types: z.array(z.enum(['b2b', 'b2c', 'both'])).parse(cfg.business_types),
-    price_tiers: cfg.price_tiers,
-    required_fields: ['brand_name', 'website_url', 'primary_market'],
-    optional_fields: ['industry', 'subindustry', 'language_code'],
-    capture_methods: [
-      cfg.capture_method_crawler,
-      cfg.capture_method_application_model,
-      cfg.capture_method_user,
-    ],
     maximum_competitors: discoverySettings().maximum_competitors,
     industries: Object.keys(industries),
     subindustries: Object.fromEntries(
@@ -83,7 +73,6 @@ export function discoveryCatalog() {
         'subindustries' in context ? context.subindustries : [],
       ]),
     ),
-    prompt_cohorts: ['core', 'brand_diagnostic', 'comparison'],
   };
 }
 export function createDiscovery(
@@ -234,11 +223,7 @@ function businessContext(input: DiscoveryCompletion, data: Record<string, unknow
 function completionView(row: DiscoveryRow) {
   return brandDiscoveryCompleteSchema.parse({
     discovery_id: row.id,
-    status: row.status === cfg.discovery_status_failed ? 'failed' : 'project_created',
     project_id: row.project_id,
-    crawl_id: row.initial_crawl_id,
-    activation_state: 'queued',
-    page_limit: null,
     warnings: row.warnings,
   });
 }
@@ -280,8 +265,7 @@ export async function completeDiscovery(
   key: string,
 ) {
   const before = await discoveryRow(db, workspaceId, id);
-  if (replay(before, key) && before.status !== cfg.legacy_discovery_status_completing)
-    return completionView(before);
+  if (replay(before, key)) return completionView(before);
   const data = jsonObject(before.input_data, 'discovery.input_data');
   let domains: string[];
   let competitors;
@@ -297,33 +281,7 @@ export async function completeDiscovery(
   // project creation. Domains are still validated as public domains above.
   return db.transaction().execute(async (trx) => {
     const row = await discoveryRow(trx, workspaceId, id, true);
-    if (replay(row, key)) {
-      if (row.status === cfg.legacy_discovery_status_completing && row.project_id) {
-        const updated = await trx
-          .updateTable('brand_discoveries')
-          .set({
-            status: cfg.discovery_status_project_created,
-            stage: 'complete',
-            topics: '[]',
-            prompt_suggestions: '[]',
-            progress: JSON.stringify(
-              discoveryProgress(
-                'complete',
-                cfg.discovery_progress_total_steps,
-                0,
-                competitors.length,
-              ),
-            ),
-            updated_at: new Date(),
-          })
-          .where('id', '=', id)
-          .where('workspace_id', '=', workspaceId)
-          .returningAll()
-          .executeTakeFirstOrThrow();
-        return completionView(updated);
-      }
-      return completionView(row);
-    }
+    if (replay(row, key)) return completionView(row);
     if (row.status !== cfg.discovery_status_ready)
       throw new ApiError(409, 'Discovery is not ready for completion');
     const now = new Date();
@@ -395,8 +353,6 @@ export async function completeDiscovery(
         domains: JSON.stringify(domains),
         competitors: JSON.stringify(competitors),
         profile: JSON.stringify(input.profile),
-        topics: '[]',
-        prompt_suggestions: '[]',
         input_data: JSON.stringify({
           ...data,
           completion_idempotency_key: key,

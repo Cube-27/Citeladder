@@ -86,9 +86,8 @@ class BrandDiscoveryTask(QueueLeaseStateMixin, Base):
 
     __tablename__ = "brand_discovery_tasks"
     __table_args__ = (
-        # Scoped by kind: one discovery carries a research task AND, once its
-        # review is confirmed, a completion task. Keyed on discovery_id alone
-        # the second could never be inserted.
+        # Scoped by kind. Only the research kind is written now; the retired
+        # completion kind once shared a discovery with it.
         UniqueConstraint(
             "discovery_id", "task_kind", name="uq_brand_discovery_task_discovery"
         ),

@@ -35,10 +35,7 @@ it('resolves model aliases and rejects an unusable output budget', () => {
   expect(() => agentSettings({ DEFAULT_AGENT_LEASE_MARGIN_SECONDS: '0' })).toThrow();
 });
 
-it('preserves the legacy research credential alias and bounded retries', () => {
-  expect(discoverySettings({ KEEBNABLE_API_KEY: 'fixture-only' }).keenable_api_key).toBe(
-    'fixture-only',
-  );
+it('bounds research retries', () => {
   expect(() =>
     discoverySettings({ BRAND_DISCOVERY_COMPETITOR_MODEL_MAXIMUM_ATTEMPTS: '4' }),
   ).toThrow();

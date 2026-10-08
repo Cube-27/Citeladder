@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { requireWorkspaceAccess } from '../entitlements/access.ts';
+import { cachedWorkspaceAccess } from '../entitlements/access.ts';
 
 import { sql } from 'kysely';
 
@@ -42,10 +42,12 @@ export class DiscoveryWorker {
   readonly settings: ReturnType<typeof discoverySettings>;
   readonly db: Database;
   readonly dependencies: ResearchDependencies;
+  readonly #access: (workspaceId: string) => Promise<unknown>;
   constructor(db: Database, dependencies: ResearchDependencies = {}) {
     this.db = db;
     this.dependencies = dependencies;
     this.settings = discoverySettings(dependencies.env);
+    this.#access = cachedWorkspaceAccess(db, this.settings.access_check_ttl_seconds * 1000);
     if (this.settings.heartbeat_interval_seconds >= this.settings.lease_seconds)
       throw new Error('Discovery heartbeat must be shorter than the lease');
     this.queue = new DiscoveryQueue(db, this.settings.lease_seconds);
@@ -65,7 +67,7 @@ export class DiscoveryWorker {
     const executionSignal = leaseSignal(heartbeat.signal, signal);
     const checkCancelled = () => executionSignal.throwIfAborted();
     const fetcher: typeof fetchWebsite = async (url, options) => {
-      await requireWorkspaceAccess(this.db, task.workspace_id);
+      await this.#access(task.workspace_id);
       checkCancelled();
       return (this.dependencies.fetcher ?? fetchWebsite)(url, {
         ...options,
@@ -78,22 +80,19 @@ export class DiscoveryWorker {
         await this.finish(task, owner, null, null);
         return true;
       }
-      if (task.task_kind === cfg.legacy_task_kind_brand_completion) {
-        await this.finish(task, owner, null, null);
-        return true;
-      }
       const input = discoveryCreate.parse(row.input_data);
       await this.progress(task, owner, 'opening_website', 0);
       const site = await resolveSite(input.website_url, fetcher);
       checkCancelled();
-      await this.progress(task, owner, 'understanding_business', 1, site.url, site.domain);
+      const homepageRead = site.page ? 1 : 0;
+      await this.progress(task, owner, 'understanding_business', 1, homepageRead, site);
       const result = await researchBrand(input, site, {
         ...this.dependencies,
         fetcher,
         signal: executionSignal,
         checkCancelled,
         transport: async (url, options) => {
-          await requireWorkspaceAccess(this.db, task.workspace_id);
+          await this.#access(task.workspace_id);
           checkCancelled();
           return (this.dependencies.transport ?? fetch)(url, {
             ...options,
@@ -102,7 +101,7 @@ export class DiscoveryWorker {
         },
         onCompetitors: async () => {
           checkCancelled();
-          await this.progress(task, owner, 'finding_competitors', 2);
+          await this.progress(task, owner, 'finding_competitors', 2, homepageRead);
         },
       });
       checkCancelled();
@@ -125,8 +124,8 @@ export class DiscoveryWorker {
     owner: string,
     phase: string,
     steps: number,
-    url?: string,
-    domain?: string,
+    pages = 0,
+    site?: { url: string; domain: string },
   ) {
     await this.db.transaction().execute(async (trx) => {
       if (!(await this.queue.lockedTask(trx, task, owner))) throw new Error('lease_lost');
@@ -137,16 +136,16 @@ export class DiscoveryWorker {
         .set({
           status: cfg.discovery_status_running,
           stage: phase,
-          progress: JSON.stringify(discoveryProgress(phase, steps, steps ? 1 : 0)),
-          ...(url
+          progress: JSON.stringify(discoveryProgress(phase, steps, pages)),
+          ...(site
             ? {
                 input_data: JSON.stringify({
                   ...jsonObject(row.input_data, 'discovery.input_data'),
-                  website_url: url,
+                  website_url: site.url,
                 }),
+                domains: JSON.stringify([site.domain]),
               }
             : {}),
-          ...(domain ? { domains: JSON.stringify([domain]) } : {}),
           updated_at: new Date(),
         })
         .where('id', '=', row.id)
@@ -190,9 +189,6 @@ export class DiscoveryWorker {
             competitors: JSON.stringify(result.competitors),
             evidence: JSON.stringify(result.evidence),
             warnings: JSON.stringify(result.warnings),
-            topics: '[]',
-            prompt_suggestions: '[]',
-            gaps: '[]',
             error_code: '',
             error_detail: '',
             progress: JSON.stringify(
@@ -202,26 +198,6 @@ export class DiscoveryWorker {
                 result.pagesRead,
                 result.competitors.length,
               ),
-            ),
-            updated_at: now,
-          })
-          .where('id', '=', row.id)
-          .where('workspace_id', '=', task.workspace_id)
-          .execute();
-      } else if (
-        task.task_kind === cfg.legacy_task_kind_brand_completion &&
-        row.project_id &&
-        row.status === cfg.legacy_discovery_status_completing
-      ) {
-        await trx
-          .updateTable('brand_discoveries')
-          .set({
-            status: cfg.discovery_status_project_created,
-            stage: 'complete',
-            topics: '[]',
-            prompt_suggestions: '[]',
-            progress: JSON.stringify(
-              discoveryProgress('complete', cfg.discovery_progress_total_steps),
             ),
             updated_at: now,
           })

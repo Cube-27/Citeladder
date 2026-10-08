@@ -78,9 +78,7 @@ function isOrphanedCompletion(
   discovery: BrandDiscovery | undefined,
 ): boolean {
   if (!discoveryId || discovery?.project_id) return false;
-  // `completing` is a legacy discovery accepted before onboarding stopped
-  // generating prompts; without its project it is orphaned the same way.
-  return discovery?.status === 'project_created' || discovery?.status === 'completing';
+  return discovery?.status === 'project_created';
 }
 
 export function useOnboardingFlow(transactionKey: string) {
@@ -182,7 +180,9 @@ export function useOnboardingFlow(transactionKey: string) {
   }, [discoveryState]);
 
   useEffect(() => {
-    if (discoveryState?.status !== 'ready') return;
+    if (discoveryState?.status !== 'ready' || maximumCompetitors === undefined) return;
+    // Suggestions arrive ranked; the first ones up to the cap start selected
+    // and the reader deselects any that are wrong before creation.
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setCompetitors((current) =>
       current.length
@@ -190,10 +190,10 @@ export function useOnboardingFlow(transactionKey: string) {
         : discoveryState.competitors.map((competitor, index) => ({
             ...competitor,
             id: `competitor:${index}:${competitor.name}`,
-            selected: false,
+            selected: index < maximumCompetitors,
           })),
     );
-  }, [discoveryState]);
+  }, [discoveryState, maximumCompetitors]);
 
   // The completion response is the committed write receipt. Do not hold the
   // user here for another detail request: the destination owns that bounded
@@ -239,7 +239,7 @@ export function useOnboardingFlow(transactionKey: string) {
           `complete:${discoveryState.id}`,
           { workspaceId: activeWorkspaceId, timeoutMs: ONBOARDING_COMPLETION_REQUEST_TIMEOUT_MS },
         );
-        if (result.status !== 'failed' && !result.project_id) {
+        if (!result.project_id) {
           throw new Error(
             'Project creation did not return a project. Try Create project again; your reviewed details are preserved.',
           );
@@ -251,7 +251,7 @@ export function useOnboardingFlow(transactionKey: string) {
     },
     // Completion creates the project, with no prompts yet, in the request.
     onSuccess: async (result) => {
-      if (result.status === 'failed' || !result.project_id) return;
+      if (!result.project_id) return;
       await openProject(result.project_id);
     },
     // A request the browser abandoned may still have committed. Re-read the
@@ -266,8 +266,7 @@ export function useOnboardingFlow(transactionKey: string) {
   });
 
   const completedProjectId = complete.data?.project_id ?? discoveryState?.project_id ?? null;
-  const completionFailed =
-    complete.data?.status === 'failed' || discoveryState?.status === 'failed';
+  const completionFailed = discoveryState?.status === 'failed';
   const isCompleting = !completionFailed && (complete.isPending || complete.isSuccess);
   useEffect(() => {
     // Completion owns navigation from acceptance through the project handoff.

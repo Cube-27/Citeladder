@@ -16,7 +16,6 @@ function discovery(phase: BrandDiscovery['progress']['phase']): BrandDiscovery {
       total_steps: 4,
       pages_read: 3,
       competitors_found: 2,
-      prompts_prepared: 0,
     },
     input_data: {},
     profile: {
@@ -44,11 +43,8 @@ function discovery(phase: BrandDiscovery['progress']['phase']): BrandDiscovery {
     },
     domains: [],
     competitors: [],
-    topics: [],
-    prompt_suggestions: [],
     evidence: [],
     warnings: [],
-    gaps: [],
     error_code: '',
     created_at: '2026-08-04T10:00:00Z',
     updated_at: '2026-08-04T10:00:00Z',
@@ -56,15 +52,9 @@ function discovery(phase: BrandDiscovery['progress']['phase']): BrandDiscovery {
 }
 
 describe('discoveryActivity', () => {
-  it('maps persisted phases to a fixed customer-facing vocabulary', () => {
+  it('maps the persisted phase to step states without leaking backend tokens', () => {
     const steps = discoveryActivity(discovery('finding_competitors'));
 
-    expect(steps.map((step) => step.label)).toEqual([
-      'Opened your website',
-      'Reading what you offer',
-      'Finding comparable brands',
-      'Preparing your questions',
-    ]);
     expect(steps.map((step) => step.state)).toEqual(['complete', 'complete', 'active', 'pending']);
     expect(JSON.stringify(steps)).not.toMatch(/finding_competitors|queue|provider/);
   });

@@ -19,24 +19,6 @@
       "default": 30.0,
       "exclusive_minimum": 0
     },
-    "poll_seconds": {
-      "env": ["BRAND_DISCOVERY_POLL_SECONDS"],
-      "type": "float",
-      "default": 1.0,
-      "exclusive_minimum": 0
-    },
-    "reaper_interval_seconds": {
-      "env": ["BRAND_DISCOVERY_REAPER_INTERVAL_SECONDS"],
-      "type": "float",
-      "default": 30.0,
-      "exclusive_minimum": 0
-    },
-    "reaper_batch_size": {
-      "env": ["BRAND_DISCOVERY_REAPER_BATCH_SIZE"],
-      "type": "int",
-      "default": 100,
-      "minimum": 1
-    },
     "failure_backoff_max_seconds": {
       "env": ["BRAND_DISCOVERY_FAILURE_BACKOFF_MAX_SECONDS"],
       "type": "float",
@@ -84,7 +66,7 @@
       "maximum": 20.0
     },
     "keenable_api_key": {
-      "env": ["KEENABLE_API_KEY", "KEEBNABLE_API_KEY"],
+      "env": ["KEENABLE_API_KEY"],
       "type": "str",
       "default": ""
     },
@@ -165,8 +147,14 @@
     "maximum_attempts": {
       "env": ["BRAND_DISCOVERY_MAXIMUM_ATTEMPTS"],
       "type": "int",
-      "default": 5,
+      "default": 3,
       "minimum": 1
+    },
+    "access_check_ttl_seconds": {
+      "env": ["BRAND_DISCOVERY_ACCESS_CHECK_TTL_SECONDS"],
+      "type": "float",
+      "default": 30.0,
+      "minimum": 0
     }
   },
   "constants": {
@@ -175,12 +163,8 @@
     "discovery_status_ready": "ready",
     "discovery_status_project_created": "project_created",
     "error_brand_discovery": "brand_discovery_failed",
-    "discovery_statuses": ["failed", "project_created", "queued", "ready", "running"],
-    "legacy_discovery_status_completing": "completing",
-    "legacy_task_kind_brand_completion": "brand_completion",
     "discovery_idempotency_key_min_chars": 1,
     "discovery_idempotency_key_max_chars": 128,
-    "business_types": ["b2b", "b2c", "both"],
     "price_tiers": ["budget", "mid_market", "premium", "luxury", "unknown"],
     "business_models": [
       "b2b_saas",
@@ -218,18 +202,10 @@
       "Nonprofit and Public Sector",
       "Other"
     ],
-    "service_business_models": [
-      "education_provider",
-      "healthcare_provider",
-      "local_service",
-      "professional_service"
-    ],
     "commerce_business_models": ["d2c_product", "marketplace", "retail"],
     "capture_method_crawler": "secure_crawler",
-    "capture_method_application_model": "application_model",
     "capture_method_external_search": "external_search",
     "capture_method_external_fetch": "external_fetch",
-    "capture_method_user": "user_input",
     "brand_discovery_version": "brand-discovery-v1",
     "brand_identity_prompt_version": "brand-identity-v1",
     "identity_conflict_fields": [
@@ -242,8 +218,6 @@
     "identity_conflict_confidence_ceiling": 0.75,
     "brand_competitor_suggestion_version": "brand-competitor-suggestion-v1",
     "keenable_research_version": "keenable-research-v1",
-    "brand_discovery_prompt_generator_version": "brand-discovery-prompts-v2",
-    "brand_discovery_prompt_validation_version": "initial-portfolio-validation-v1",
     "discovery_progress_total_steps": 4,
     "discovery_confirm_max_domains": 50,
     "discovery_confirm_domain_max_chars": 1024,

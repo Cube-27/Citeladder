@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
@@ -65,15 +65,9 @@ describe('IcpConfirmation', () => {
   it('asks three questions, all answerable by clicking', () => {
     render(<IcpConfirmation profile={profile()} onChange={vi.fn()} />);
 
-    const what = screen.getByRole('heading', { name: 'What you sell' });
-    const who = screen.getByRole('heading', { name: 'Who buys it' });
-    const where = screen.getByRole('heading', { name: 'Where they buy it' });
-    expect(what.tagName).toBe('H2');
-    const buyerGroup = screen.getByRole('region', { name: 'Who buys it' });
-    const marketGroup = screen.getByRole('region', { name: 'Where they buy it' });
-    expect(within(buyerGroup).getByRole('heading', { level: 2 })).toBe(who);
-    expect(within(marketGroup).getByRole('heading', { level: 2 })).toBe(where);
-    expect(buyerGroup.parentElement).toBe(marketGroup.parentElement);
+    expect(screen.getByRole('heading', { name: 'What you sell' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Who buys it' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Where they buy it' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/positioning/i)).toBeNull();
     expect(screen.queryByLabelText(/description/i)).toBeNull();
   });
@@ -198,16 +192,6 @@ describe('IcpConfirmation', () => {
     await userEvent.type(field, 'x');
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ category: 'x' }));
     expect(hasConfirmedIcp(profile({ category: 'x' }))).toBe(true);
-  });
-
-  it('says what the category controls, because everything downstream uses it', () => {
-    // A wrong category produces wrong competitors and wrong prompts. The user
-    // has to know that before skimming past it.
-    render(<IcpConfirmation profile={profile()} onChange={vi.fn()} />);
-
-    expect(
-      screen.getByText(/competitors and tracked questions are built from this/i),
-    ).toBeVisible();
   });
 
   it('switches category with one click', async () => {

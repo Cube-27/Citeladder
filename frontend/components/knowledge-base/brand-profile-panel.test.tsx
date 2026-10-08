@@ -88,6 +88,69 @@ describe('BrandProfilePanel', () => {
     expect(onSaved).toHaveBeenCalledOnce();
   });
 
+  it('edits the confirmed category, buyer and market after onboarding', async () => {
+    const user = userEvent.setup({ delay: null });
+    let requestBody: unknown;
+    mswServer.use(
+      http.put(`/api/v1/projects/${projectId}/brand-profile`, async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json(profile);
+      }),
+    );
+    renderWithProviders(
+      <BrandProfilePanel
+        projectId={projectId}
+        profile={{
+          ...profile,
+          business_context: { category: 'feed software', buyer_type: 'b2b' },
+        }}
+      />,
+    );
+
+    const category = screen.getByLabelText(/what you sell/i);
+    expect(category).toHaveValue('feed software');
+    expect(screen.getByRole('radio', { name: 'Businesses' })).toBeChecked();
+    await user.clear(category);
+    await user.type(category, 'product feed management platform');
+    await user.click(screen.getByRole('radio', { name: 'Worldwide' }));
+    await user.click(screen.getByRole('button', { name: /save brand knowledge/i }));
+
+    await waitFor(() =>
+      expect(requestBody).toMatchObject({
+        category: 'product feed management platform',
+        market_scope: 'global',
+      }),
+    );
+    // Untouched facets and fields are not resubmitted, so they are not marked reviewed.
+    expect(requestBody).toEqual({
+      category: 'product feed management platform',
+      market_scope: 'global',
+    });
+  });
+
+  it('sends a cleared category so the save fails instead of silently reverting', async () => {
+    const user = userEvent.setup({ delay: null });
+    let requestBody: unknown;
+    mswServer.use(
+      http.put(`/api/v1/projects/${projectId}/brand-profile`, async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json({ detail: 'category is required' }, { status: 422 });
+      }),
+    );
+    renderWithProviders(
+      <BrandProfilePanel
+        projectId={projectId}
+        profile={{ ...profile, business_context: { category: 'feed software' } }}
+      />,
+    );
+    await user.clear(screen.getByLabelText(/what you sell/i));
+    await user.click(screen.getByRole('button', { name: /save brand knowledge/i }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(requestBody).toEqual({ category: '' });
+    expect(screen.getByLabelText(/what you sell/i)).toHaveValue('');
+  });
+
   it('locks profile fields while a save is pending', async () => {
     const user = userEvent.setup({ delay: null });
     let finishSave: (() => void) | undefined;

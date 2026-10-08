@@ -8,8 +8,10 @@ import { Alert } from '@/components/ui/alert';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
+import { RadioGroup } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
@@ -18,6 +20,12 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { BrandProfile, BrandProfileDraft, Project } from '@/lib/api/types';
 import { humanizeApiError } from '@/lib/api/errors';
 import { textRole } from '@/components/ui/typography';
+import {
+  BUYER_TYPE_CHOICES,
+  MARKET_SCOPE_CHOICES,
+  identityFacets,
+  type IdentityFacets,
+} from '@/lib/project/identity-facets';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 import { BusinessMapEditor } from './business-map-editor';
@@ -38,6 +46,31 @@ function profileDraft(profile: BrandProfile): BrandProfileDraft {
     positioning: profile.positioning,
     products_services: profile.products_services,
     target_audience: profile.target_audience,
+  };
+}
+
+/**
+ * Only what the reader changed is sent, because the API marks every sent field
+ * and facet reviewed. A cleared category is sent so the API can reject it.
+ */
+function profileUpdate(draft: BrandProfileDraft, saved: BrandProfileDraft) {
+  return Object.fromEntries(
+    (Object.keys(draft) as (keyof BrandProfileDraft)[]).flatMap((field) =>
+      JSON.stringify(draft[field]) === JSON.stringify(saved[field]) ? [] : [[field, draft[field]]],
+    ),
+  ) as Partial<BrandProfileDraft>;
+}
+
+function identityUpdate(identity: IdentityFacets, saved: IdentityFacets) {
+  const category = identity.category.trim();
+  return {
+    ...(category !== saved.category ? { category } : {}),
+    ...(identity.buyer_type && identity.buyer_type !== saved.buyer_type
+      ? { buyer_type: identity.buyer_type }
+      : {}),
+    ...(identity.market_scope && identity.market_scope !== saved.market_scope
+      ? { market_scope: identity.market_scope }
+      : {}),
   };
 }
 
@@ -63,7 +96,12 @@ export function BrandProfilePanel({
 }>) {
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
-  const [draft, setDraft] = useState(() => profileDraft(profile));
+  const [savedDraft, setSavedDraft] = useState(() => profileDraft(profile));
+  const [draft, setDraft] = useState(savedDraft);
+  const [savedIdentity, setSavedIdentity] = useState(() =>
+    identityFacets(profile.business_context),
+  );
+  const [identity, setIdentity] = useState(savedIdentity);
   const [productsInput, setProductsInput] = useState(() => profile.products_services.join(', '));
   const [notice, setNotice] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('facts');
@@ -73,14 +111,25 @@ export function BrandProfilePanel({
       if (!workspaceId) throw new Error('Workspace is not available.');
       return projectsApi.updateBrandProfile(
         projectId,
-        { ...draft, products_services: parseProductsInput(productsInput) },
+        {
+          ...profileUpdate(
+            { ...draft, products_services: parseProductsInput(productsInput) },
+            savedDraft,
+          ),
+          ...identityUpdate(identity, savedIdentity),
+        },
         { workspaceId },
       );
     },
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.projects.brandProfile(projectId), next);
       onSaved?.();
-      setDraft(profileDraft(next));
+      const nextDraft = profileDraft(next);
+      setSavedDraft(nextDraft);
+      setDraft(nextDraft);
+      const nextIdentity = identityFacets(next.business_context);
+      setSavedIdentity(nextIdentity);
+      setIdentity(nextIdentity);
       setProductsInput(next.products_services.join(', '));
       setNotice('Brand knowledge saved. These details now inform assisted features.');
     },
@@ -118,11 +167,13 @@ export function BrandProfilePanel({
             <ProfileTabPanel
               activeTab={activeTab}
               draft={draft}
+              identity={identity}
               productsInput={productsInput}
               disabled={saveMutation.isPending}
               competitors={competitors}
               competitorSuggestions={competitorSuggestions}
               onDraftChange={setDraft}
+              onIdentityChange={setIdentity}
               onProductsChange={setProductsInput}
             />
           )}
@@ -135,25 +186,30 @@ export function BrandProfilePanel({
 function ProfileTabPanel({
   activeTab,
   draft,
+  identity,
   productsInput,
   disabled,
   competitors,
   competitorSuggestions,
   onDraftChange,
+  onIdentityChange,
   onProductsChange,
 }: Readonly<{
   activeTab: ProfileTab;
   draft: BrandProfileDraft;
+  identity: IdentityFacets;
   productsInput: string;
   disabled: boolean;
   competitors: readonly TrackedCompetitor[];
   competitorSuggestions?: ReactNode;
   onDraftChange: (draft: BrandProfileDraft) => void;
+  onIdentityChange: (identity: IdentityFacets) => void;
   onProductsChange: (value: string) => void;
 }>) {
   if (activeTab === 'facts') {
     return (
       <Stack gap="workspace">
+        <IdentityFields identity={identity} disabled={disabled} onChange={onIdentityChange} />
         <Field label="Description" hint="Core mission, value proposition, and brand summary.">
           {(field) => (
             <Textarea
@@ -247,6 +303,85 @@ function ProfileTabPanel({
       </section>
       {competitorSuggestions}
     </Stack>
+  );
+}
+
+/**
+ * Category, buyer type and market scope decide which questions prompt
+ * generation asks, so a wrong onboarding answer must stay correctable here.
+ */
+function IdentityFields({
+  identity,
+  disabled,
+  onChange,
+}: Readonly<{
+  identity: IdentityFacets;
+  disabled: boolean;
+  onChange: (identity: IdentityFacets) => void;
+}>) {
+  return (
+    <>
+      <Field
+        label="What you sell"
+        hint="The category buyers would search for. Generated questions are built from it."
+      >
+        {(field) => (
+          <Input
+            {...field}
+            disabled={disabled}
+            value={identity.category}
+            onChange={(event) => onChange({ ...identity, category: event.target.value })}
+          />
+        )}
+      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FacetChoice
+          label="Who buys it"
+          value={identity.buyer_type}
+          options={BUYER_TYPE_CHOICES}
+          disabled={disabled}
+          onPick={(buyer_type) => onChange({ ...identity, buyer_type })}
+        />
+        <FacetChoice
+          label="Where they buy it"
+          value={identity.market_scope}
+          options={MARKET_SCOPE_CHOICES}
+          disabled={disabled}
+          onPick={(market_scope) => onChange({ ...identity, market_scope })}
+        />
+      </div>
+    </>
+  );
+}
+
+function FacetChoice<T extends string>({
+  label,
+  value,
+  options,
+  disabled,
+  onPick,
+}: Readonly<{
+  label: string;
+  value: T | null;
+  options: readonly { value: T; label: string }[];
+  disabled: boolean;
+  onPick: (value: T) => void;
+}>) {
+  return (
+    <div className="grid gap-2">
+      <span className={textRole('label')} aria-hidden>
+        {label}
+      </span>
+      <RadioGroup<T | ''>
+        variant="chip"
+        ariaLabel={label}
+        value={value ?? ''}
+        options={options}
+        onValueChange={(next) => {
+          if (next && !disabled) onPick(next);
+        }}
+      />
+    </div>
   );
 }
 
