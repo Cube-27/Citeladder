@@ -21,7 +21,7 @@ const COMMON_WORDS = new Set([
   ...policy.prompts.binding.stopwords,
 ]);
 
-export const entityPolicy = z.object({
+const entityPolicy = z.object({
   mode: z.enum(['always', 'context_required']),
   context_terms: z.array(z.string()).default([]),
   exclusion_phrases: z.array(z.string()).default([]),
@@ -37,7 +37,7 @@ export type EffectivePolicy = EntityPolicy & { common_word: boolean };
 export const entityKey = (name: string) => normalizeAlias(name);
 
 /** Whether any of the entity's names is a single common word. */
-export function commonWordName(entity: MatchedEntity): boolean {
+function commonWordName(entity: MatchedEntity): boolean {
   return [entity.name, ...entity.aliases].some((name) => {
     const tokens = normalizeAlias(name).split(' ').filter(Boolean);
     return tokens.length === 1 && COMMON_WORDS.has(tokens[0]!);

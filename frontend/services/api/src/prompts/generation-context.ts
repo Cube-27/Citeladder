@@ -30,8 +30,8 @@ export const offeringMaps = (business: Record<string, unknown>): OfferingMap[] =
 
 /** Columns generation reads; widening one is a reviewed change, not a `selectAll`. */
 const topicColumns = ['id', 'name', 'description', 'parent_id'] as const;
-export const promptColumns = ['id', 'topic_id', 'text', 'normalized_text_hash'] as const;
-export const candidateColumns = ['normalized_text_hash', 'disposition', 'jev_decision'] as const;
+const promptColumns = ['id', 'topic_id', 'text', 'normalized_text_hash'] as const;
+const candidateColumns = ['normalized_text_hash', 'disposition', 'jev_decision'] as const;
 
 /** A project without topics gets one generated topic per confirmed offering. */
 function recoverTopics(trx: Database, projectId: string, offerings: string[]) {

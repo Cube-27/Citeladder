@@ -35,12 +35,12 @@ const CURRENCIES = new Set(Intl.supportedValuesOf('currency'));
 const business = (context: PlanContext) => record(context.context.business_context);
 
 /** The reviewed market scope's share of cells that may name a market. */
-export function locationShare(context: PlanContext): number {
+function locationShare(context: PlanContext): number {
   return G.location_policy[String(business(context).market_scope)] ?? 0;
 }
 
 /** Service areas a cell may name; none when the market scope forbids places. */
-export function plannedMarkets(context: PlanContext): string[] {
+function plannedMarkets(context: PlanContext): string[] {
   return locationShare(context) > 0 ? [...new Set(strings(business(context).service_areas))] : [];
 }
 

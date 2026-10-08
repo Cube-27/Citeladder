@@ -365,7 +365,7 @@ export const draftCallLimit = (count: number) =>
   ) + 1;
 
 /** Why a run stopped before every planned slot had a chance at admission. */
-export type Stop = 'deadline' | 'model_error' | null;
+type Stop = 'deadline' | 'model_error' | null;
 const errorCode = (error: ModelError) =>
   error.status ? providerErrorCode(error.status) : error.code;
 

@@ -1,7 +1,9 @@
 # Prompts, audits and AI Visibility improvement plan
 
 Feature 3 of the [feature review tracker](feature-review-tracker.md); this is its
-audit-derived plan. **Status: implementing (2026-10-08).** Shipped behaviour is
+audit-derived plan. **Status: done (2026-10-08).** Phases 1-5 merged in #309;
+deferred items are in the [backlog](backlog.md). The follow-up below is
+implemented by [Prompt generation v3](prompt-generation-v3.md). Shipped behaviour is
 owned by [Visibility](../visibility-prompt.md), not by this plan. Constraints:
 [invariants](../invariants.md), especially workspace authorization,
 persisted-projection reads, commit-before-network-I/O and distinct
