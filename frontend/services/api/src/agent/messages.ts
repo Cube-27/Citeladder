@@ -80,8 +80,6 @@ const RECOVERY: Record<string, string> = {
   capability_unavailable: 'Your plan does not include the agent. Nothing was saved.',
   provider_error:
     'The AI model did not respond after several attempts. Nothing was saved; try again in a moment.',
-  max_attempts_exceeded:
-    'The AI model did not respond after several attempts. Nothing was saved; try again in a moment.',
   cancelled: 'Stopped. Nothing from this turn was saved.',
   trial_expired: 'This workspace’s trial has ended, so the agent cannot run. Nothing was saved.',
   access_unresolved:
@@ -93,27 +91,28 @@ const RECOVERY: Record<string, string> = {
 };
 const GENERIC_RECOVERY =
   'I couldn’t complete this request. Nothing was saved; your messages and existing work are still here. Try again in this chat.';
+// A lost lease and a provider failure look the same to the reader.
+RECOVERY.max_attempts_exceeded = RECOVERY.provider_error!;
 export function recoveryReply(code: string) {
   return RECOVERY[code] ?? GENERIC_RECOVERY;
 }
+/** Marks chat activity; returning the row also takes its lock for the caller's transaction. */
+export function touchChat(db: Database, workspaceId: string, chatId: string) {
+  const now = new Date();
+  return db
+    .updateTable('agent_chats')
+    .set({ last_activity_at: now, updated_at: now })
+    .where('workspace_id', '=', workspaceId)
+    .where('id', '=', chatId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
 /** Every terminal turn answers its request, so no message is left unanswered. */
 export async function appendRecoveryReply(db: Database, run: Run, code: string) {
-  const chat = await db
-    .selectFrom('agent_chats')
-    .selectAll()
-    .where('workspace_id', '=', run.workspace_id)
-    .where('id', '=', run.chat_id)
-    .forUpdate()
-    .executeTakeFirstOrThrow();
+  const chat = await touchChat(db, run.workspace_id, run.chat_id);
   await appendMessage(db, chat, {
     role: 'agent',
     replyTo: run.user_message_id,
     content: recoveryReply(code),
   });
-  await db
-    .updateTable('agent_chats')
-    .set({ last_activity_at: new Date(), updated_at: new Date() })
-    .where('id', '=', chat.id)
-    .where('workspace_id', '=', run.workspace_id)
-    .execute();
 }

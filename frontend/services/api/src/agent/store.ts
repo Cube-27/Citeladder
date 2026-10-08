@@ -31,7 +31,7 @@ export type FundingIdentity = Pick<
 /** Admission owns capability, route selection and abuse capacity, in this transaction.
  * Required injection deliberately has no unmetered/platform fallback. */
 export type Admission = (db: Database, scope: Scope) => Promise<FundingIdentity>;
-const TS_RUNTIME_PREFIX = 'agent-runtime-ts-';
+const TS_RUNTIME_PREFIX = agentPolicy.runtime_version.replace(/[0-9]+$/u, '');
 const messageSchema = z.string().trim().min(1).max(agentPolicy.message_max_chars);
 export type TurnInput = {
   chatId?: string;
