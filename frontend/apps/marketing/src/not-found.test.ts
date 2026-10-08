@@ -30,6 +30,7 @@ describe('404 content negotiation', () => {
       'text/html,application/xhtml+xml,*/*;q=0.8',
       'text/html, text/markdown;q=0.5',
       'text/markdown;q=0',
+      'text/markdown;q=0.5, */*',
       undefined,
     ]) {
       const response = negotiateNotFound(get(accept), page());

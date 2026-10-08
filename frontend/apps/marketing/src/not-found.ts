@@ -28,7 +28,8 @@ function prefersMarkdown(accept: string | null): boolean {
   if (!accept) return false;
   const markdown = quality(accept, 'text/markdown');
   if (!markdown) return false;
-  const html = quality(accept, 'text/html');
+  // HTML inherits a wildcard's quality when it is not listed itself.
+  const html = quality(accept, 'text/html') ?? quality(accept, 'text/*') ?? quality(accept, '*/*');
   return html === null || markdown > html;
 }
 
@@ -50,6 +51,14 @@ function notFoundMarkdown(requestUrl: string): string {
   ].join('\n');
 }
 
+function markdownNotFound(request: Request): Response {
+  const body = request.method === 'HEAD' ? null : notFoundMarkdown(request.url);
+  return new Response(body, {
+    status: 404,
+    headers: { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
 /**
  * A 404 answers `Accept: text/markdown` with a Markdown body for agents and
  * otherwise keeps the HTML page; either way it varies on Accept.
@@ -59,12 +68,7 @@ export function negotiateNotFound(request: Request, response: Response): Respons
   const markdown =
     (request.method === 'GET' || request.method === 'HEAD') &&
     prefersMarkdown(request.headers.get('accept'));
-  const negotiated = markdown
-    ? new Response(request.method === 'HEAD' ? null : notFoundMarkdown(request.url), {
-        status: 404,
-        headers: { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' },
-      })
-    : new Response(response.body, response);
+  const negotiated = markdown ? markdownNotFound(request) : new Response(response.body, response);
   negotiated.headers.append('Vary', 'Accept');
   return negotiated;
 }

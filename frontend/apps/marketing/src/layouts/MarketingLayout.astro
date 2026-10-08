@@ -52,11 +52,12 @@ const {
   jsonLd = [],
 } = Astro.props;
 const canonicalUrl = canonical ? (absoluteUrl(canonical) ?? canonical) : undefined;
-const socialImage = image ? { path: image, alt: imageAlt } : DEFAULT_SOCIAL_IMAGE;
-const imageUrl = absoluteUrl(socialImage.path) ?? undefined;
 const socialTitle = title.endsWith(` · ${SITE_NAME}`)
   ? title.slice(0, -` · ${SITE_NAME}`.length)
   : title;
+// A page image without its own alt text is described by the page title.
+const socialImage = image ? { path: image, alt: imageAlt || socialTitle } : DEFAULT_SOCIAL_IMAGE;
+const imageUrl = absoluteUrl(socialImage.path) ?? undefined;
 const resolvedTwitterCard = twitterCard ?? (imageUrl ? 'summary_large_image' : 'summary');
 const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplicationJsonLd()].filter(
