@@ -165,7 +165,7 @@
   letter-spacing: -0.028em;
 }
 
-.website-page-title.website-article-title {
+.website-article-title {
   font-size: clamp(1.25rem, 5.6vw, 2rem);
 }
 
@@ -706,11 +706,6 @@
   gap: var(--flow-block);
 }
 
-.flow-review-audience > .flow-group {
-  padding: 0;
-  border: 0;
-}
-
 /* Websites are auto-verified and usually one or two, so they are a row of
    toggles rather than a ruled list. */
 .flow-entity-list.flow-website-chips {
@@ -719,16 +714,8 @@
   gap: 0.5rem;
 }
 
-.flow-review-card .flow-website-chips > li,
 .flow-website-chips > li {
-  min-width: 0;
   max-width: 100%;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-control);
-}
-
-.flow-website-chips > li:has([aria-pressed='true']) {
-  border-color: var(--color-border-strong);
 }
 
 /* One decision per card. The card, not a rule, is what separates questions. */
@@ -879,10 +866,14 @@
   border: 0;
 }
 
-.flow-competitor-chips > li {
+.flow-competitor-chips > li,
+.flow-website-chips > li {
   min-width: 0;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-control);
+}
+
+.flow-competitor-chips > li {
   padding-right: 0.25rem;
 }
 
@@ -890,7 +881,8 @@
   border-top: 1px solid var(--color-border-subtle);
 }
 
-.flow-competitor-chips > li:has([aria-pressed='true']) {
+.flow-competitor-chips > li:has([aria-pressed='true']),
+.flow-website-chips > li:has([aria-pressed='true']) {
   border-color: var(--color-border-strong);
 }
 
@@ -1089,10 +1081,14 @@
   }
 
   .flow-review > :first-child .flow-review-card,
-  .flow-review > .flow-review-card:first-child,
-  .flow-review-audience > .flow-review-card:first-child {
+  .flow-review > .flow-review-card:first-child {
     padding-top: 0;
     border-top: 0;
+  }
+
+  .flow-review-audience > * + * {
+    padding-top: var(--flow-block);
+    border-top: 1px solid var(--color-border-subtle);
   }
 
   .flow-review {
@@ -1221,8 +1217,7 @@
     font-size: clamp(2rem, 4.2vw + 0.6rem, 4rem);
   }
 
-  .website-page-title,
-  .website-page-title.website-article-title {
+  .website-page-title {
     font-size: 3rem;
     line-height: 3.25rem;
   }

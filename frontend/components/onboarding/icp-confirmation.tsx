@@ -150,7 +150,7 @@ export function IcpAudience({ profile, onChange }: IcpPart) {
 
   return (
     <>
-      <FlowGroup className="flow-review-card" title="Who buys it">
+      <FlowGroup title="Who buys it">
         <RadioGroup
           variant="chip"
           ariaLabel="Who buys it"
@@ -162,7 +162,7 @@ export function IcpAudience({ profile, onChange }: IcpPart) {
         />
       </FlowGroup>
 
-      <FlowGroup className="flow-review-card" title="Where they buy it">
+      <FlowGroup title="Where they buy it">
         <RadioGroup
           variant="chip"
           ariaLabel="Where they buy it"

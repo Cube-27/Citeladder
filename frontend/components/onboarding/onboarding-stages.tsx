@@ -306,7 +306,7 @@ function ReviewNotices({ failed, children }: Readonly<{ failed: boolean; childre
     if (failed) region.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   }, [failed]);
   return (
-    <div ref={region} aria-live="polite" className="flow-review-notices empty:hidden">
+    <div ref={region} aria-live="polite" className="flow-review-notices">
       {children}
     </div>
   );
