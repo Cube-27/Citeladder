@@ -6,6 +6,7 @@ import { FlowGroup } from '@/components/auth/flow-shell';
 import { Input } from '@/components/ui/input';
 import { RadioGroup } from '@/components/ui/radio-group';
 import type { DiscoveryProfile } from '@/lib/api/brand-discoveries';
+import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity-facets';
 import { titleCaseStatus } from '@/lib/utils';
 
 /**
@@ -30,19 +31,6 @@ export function hasConfirmedIcp(profile: DiscoveryProfile | null): profile is Di
   // block the user on something they were never shown.
   return Boolean(profile?.category.trim());
 }
-
-const MARKET_SCOPE_CHOICES = [
-  { value: 'local', label: 'Locally' },
-  { value: 'national', label: 'Nationwide' },
-  { value: 'regional', label: 'Regional' },
-  { value: 'global', label: 'Worldwide' },
-] as const;
-
-const BUYER_TYPE_CHOICES = [
-  { value: 'b2c', label: 'Consumers' },
-  { value: 'b2b', label: 'Businesses' },
-  { value: 'both', label: 'Both' },
-] as const;
 
 const MAX_CATEGORY_CHOICES = 3;
 const OTHER_CATEGORY = '__other__';

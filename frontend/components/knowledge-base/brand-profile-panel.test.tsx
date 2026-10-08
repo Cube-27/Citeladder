@@ -88,6 +88,43 @@ describe('BrandProfilePanel', () => {
     expect(onSaved).toHaveBeenCalledOnce();
   });
 
+  it('edits the confirmed category, buyer and market after onboarding', async () => {
+    const user = userEvent.setup({ delay: null });
+    let requestBody: unknown;
+    mswServer.use(
+      http.put(`/api/v1/projects/${projectId}/brand-profile`, async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json(profile);
+      }),
+    );
+    renderWithProviders(
+      <BrandProfilePanel
+        projectId={projectId}
+        profile={{
+          ...profile,
+          // Older contexts name the buyer facet `business_type`.
+          business_context: { category: 'feed software', business_type: 'b2b' },
+        }}
+      />,
+    );
+
+    const category = screen.getByLabelText(/what you sell/i);
+    expect(category).toHaveValue('feed software');
+    expect(screen.getByRole('radio', { name: 'Businesses' })).toBeChecked();
+    await user.clear(category);
+    await user.type(category, 'product feed management platform');
+    await user.click(screen.getByRole('radio', { name: 'Worldwide' }));
+    await user.click(screen.getByRole('button', { name: /save brand knowledge/i }));
+
+    await waitFor(() =>
+      expect(requestBody).toMatchObject({
+        category: 'product feed management platform',
+        buyer_type: 'b2b',
+        market_scope: 'global',
+      }),
+    );
+  });
+
   it('locks profile fields while a save is pending', async () => {
     const user = userEvent.setup({ delay: null });
     let finishSave: (() => void) | undefined;

@@ -383,7 +383,9 @@ function editCompetitor(
 ) {
   setCompetitors((items) =>
     items.map((item, itemIndex) =>
-      itemIndex === index ? { ...item, domains: [domain], name } : item,
+      itemIndex === index
+        ? { ...item, domains: [domain, ...item.domains.slice(1).filter((d) => d !== domain)], name }
+        : item,
     ),
   );
 }

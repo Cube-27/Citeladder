@@ -16,7 +16,7 @@ import { brandDiscoveriesApi } from '@/lib/api/brand-discoveries';
 import { queryKeys } from '@/lib/api/query-keys';
 import { brandDiscoveryKeys } from '@/lib/api/query-keys/brand-discovery';
 import type { Project } from '@/lib/api/types';
-import { onboardingErrorMessage } from '@/lib/onboarding/forms';
+import { humanizeApiError } from '@/lib/api/errors';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
 
 /**
@@ -53,7 +53,8 @@ const splitList = (value: string): string[] =>
 let competitorKeySeq = 0;
 const nextCompetitorKey = () => `competitor-${(competitorKeySeq += 1)}`;
 
-type CompetitorDraft = { key: string; name: string; domains: string };
+// Aliases are not edited here; each row carries its own so a rename keeps them.
+type CompetitorDraft = { key: string; name: string; aliases: string[]; domains: string };
 
 /** An unnamed competitor row still needs something for a screen reader to say. */
 function competitorName(name: string, index: number): string {
@@ -90,6 +91,7 @@ export function ProjectEditPanel({
     project.competitors.map((competitor) => ({
       key: nextCompetitorKey(),
       name: competitor.name,
+      aliases: competitor.aliases,
       domains: competitor.domains.join(', '),
     })),
   );
@@ -115,11 +117,7 @@ export function ProjectEditPanel({
               ? [
                   {
                     name,
-                    // Aliases are not edited here — preserve whatever the project
-                    // already had rather than silently clearing them on every save.
-                    aliases:
-                      project.competitors.find((existing) => existing.name === competitor.name)
-                        ?.aliases ?? [],
+                    aliases: competitor.aliases,
                     domains: splitList(competitor.domains),
                   },
                 ]
@@ -158,7 +156,7 @@ export function ProjectEditPanel({
       }
     >
       <div className="grid gap-[var(--workspace-gap)]">
-        {save.isError ? <Alert tone="danger">{onboardingErrorMessage(save.error)}</Alert> : null}
+        {save.isError ? <Alert tone="danger">{humanizeApiError(save.error).message}</Alert> : null}
 
         <div className="grid gap-4">
           <Field label="Brand name">
@@ -256,7 +254,7 @@ export function ProjectEditPanel({
               onClick={() =>
                 setCompetitors((prev) => [
                   ...prev,
-                  { key: nextCompetitorKey(), name: '', domains: '' },
+                  { key: nextCompetitorKey(), name: '', aliases: [], domains: '' },
                 ])
               }
             >

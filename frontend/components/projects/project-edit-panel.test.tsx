@@ -23,15 +23,9 @@ beforeEach(() => {
   mswServer.use(
     http.get('/api/v1/brand-discovery-catalog', () =>
       HttpResponse.json({
-        business_types: ['b2b', 'b2c', 'both'],
-        price_tiers: ['unknown'],
-        required_fields: [],
-        optional_fields: [],
-        capture_methods: [],
         maximum_competitors: 5,
         industries: ['General'],
         subindustries: { General: [] },
-        prompt_cohorts: ['core', 'brand_diagnostic'],
       }),
     ),
   );
@@ -59,7 +53,7 @@ const project = makeProject({
 });
 
 describe('ProjectEditPanel', () => {
-  it('sends the edited fields and preserves competitor aliases it does not edit', async () => {
+  it('sends the edited fields and keeps the aliases of a renamed competitor', async () => {
     const user = userEvent.setup();
     let body: Record<string, unknown> | undefined;
     mswServer.use(
@@ -74,14 +68,17 @@ describe('ProjectEditPanel', () => {
     const aliases = screen.getByLabelText('Brand aliases');
     await user.clear(aliases);
     await user.type(aliases, 'Acme Inc, Acme Co');
+    const competitorName = screen.getByLabelText('Competitor 1 name');
+    await user.clear(competitorName);
+    await user.type(competitorName, 'Globex Group');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() => expect(body).toBeDefined());
     expect(body?.brand).toEqual({ aliases: ['Acme Inc', 'Acme Co'] });
-    // The panel does not edit per-competitor aliases, so it must send back what
-    // the project already had rather than clearing them on every save.
+    // The panel does not edit per-competitor aliases, so a rename must keep
+    // the ones the project already had.
     expect(body?.competitors).toEqual([
-      { name: 'Globex', aliases: ['Globex Corp'], domains: ['globex.com'] },
+      { name: 'Globex Group', aliases: ['Globex Corp'], domains: ['globex.com'] },
     ]);
   });
 

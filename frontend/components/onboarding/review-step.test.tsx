@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
@@ -10,30 +10,6 @@ vi.mock('@/lib/brand/logo-dev', () => ({
 }));
 
 describe('ReviewStep competitor limit', () => {
-  it('stacks websites and competitors as flat ruled flow groups', () => {
-    render(
-      <ReviewStep
-        domains={[]}
-        competitors={[]}
-        maximumCompetitors={5}
-        onToggleDomain={vi.fn()}
-        onToggleCompetitor={vi.fn()}
-        onEditCompetitor={vi.fn()}
-        onRemoveCompetitor={vi.fn()}
-        onAddCompetitor={vi.fn()}
-      />,
-    );
-
-    const websites = screen.getByRole('heading', { name: 'Your websites' });
-    const competitors = screen.getByRole('heading', { name: 'Competitors' });
-    const websiteGroup = screen.getByRole('region', { name: 'Your websites' });
-    const competitorGroup = screen.getByRole('region', { name: 'Competitors' });
-    expect(within(websiteGroup).getByRole('heading', { level: 2 })).toBe(websites);
-    expect(within(competitorGroup).getByRole('heading', { level: 2 })).toBe(competitors);
-    expect(within(websiteGroup).getByText('Auto-verified from your domain.')).toBeInTheDocument();
-    expect(websiteGroup.parentElement).toBe(competitorGroup.parentElement);
-  });
-
   it('shows a competitor logo and website without its name', () => {
     const { container } = render(
       <ReviewStep

@@ -96,8 +96,8 @@ export function onboardingErrorMessage(error: unknown): string {
   if (status === 422) {
     return 'Check the website and required details, then try again.';
   }
-  // A client-side timeout is not a failure: the request is bounded at 30s
-  // while the work behind it is not, and the server carries on regardless.
+  // A client-side timeout is not a failure: the browser stops waiting but the
+  // server carries on regardless.
   // Reporting it as "we couldn't finish" told people their project had failed
   // when it was usually about to appear.
   if (code === 'request_timeout') {

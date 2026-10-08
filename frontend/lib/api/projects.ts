@@ -9,6 +9,8 @@ import { workspaceSchema } from '@citeladder/contracts/auth';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import {
   brandProfileSchema,
+  buyerTypeSchema,
+  marketScopeSchema,
   businessMapSchema,
   projectSchema,
 } from '@citeladder/contracts/project';
@@ -40,7 +42,13 @@ export type ProjectInput = {
   competitors: Array<{ name: string; aliases: string[]; domains: string[] }>;
 };
 
-export type BrandProfileUpdateInput = Partial<BrandProfileDraft>;
+export type BrandProfileUpdateInput = Partial<
+  BrandProfileDraft & {
+    category: string;
+    buyer_type: z.infer<typeof buyerTypeSchema>;
+    market_scope: z.infer<typeof marketScopeSchema>;
+  }
+>;
 
 type BusinessMapEntryInput = Pick<BusinessMapEntry, 'value' | 'review_state'>;
 

@@ -5,15 +5,9 @@ import { FIXTURE_PROJECT, FIXTURE_WORKSPACE_ID, stubAuthedShell } from './helper
 const DISCOVERY_ID = '33333333-3333-4333-8333-333333333333';
 
 const catalog = {
-  business_types: ['b2b', 'b2c', 'both'],
-  price_tiers: ['unknown'],
-  required_fields: [],
-  optional_fields: [],
-  capture_methods: [],
   maximum_competitors: 5,
   industries: ['General', 'Education', 'Professional Services'],
   subindustries: { General: [], Education: [], 'Professional Services': [] },
-  prompt_cohorts: ['core', 'brand_diagnostic'],
 };
 
 const readyDiscovery = {
@@ -27,7 +21,6 @@ const readyDiscovery = {
     total_steps: 4,
     pages_read: 1,
     competitors_found: 2,
-    prompts_prepared: 0,
   },
   input_data: {
     brand_name: 'The Asian School',
@@ -60,30 +53,8 @@ const readyDiscovery = {
       domains: ['welhamgirls.com'],
     },
   ],
-  topics: [
-    {
-      topic_id: '77777777-7777-4777-8777-777777777771',
-      name: 'Day Schools',
-      description: '',
-      source_refs: ['page-1'],
-    },
-    {
-      topic_id: '77777777-7777-4777-8777-777777777772',
-      name: 'Boarding Schools',
-      description: '',
-      source_refs: ['page-1'],
-    },
-    {
-      topic_id: '77777777-7777-4777-8777-777777777773',
-      name: 'School Admissions',
-      description: '',
-      source_refs: ['page-1'],
-    },
-  ],
-  prompt_suggestions: [],
   evidence: [],
   warnings: [],
-  gaps: [],
   error_code: '',
   created_at: '2026-08-09T00:00:00Z',
   updated_at: '2026-08-09T00:00:01Z',
@@ -166,11 +137,7 @@ for (const additionalAllowed of [false, true]) {
       return route.fulfill({
         json: {
           discovery_id: DISCOVERY_ID,
-          status: 'project_created',
           project_id: FIXTURE_PROJECT.id,
-          crawl_id: null,
-          activation_state: 'queued',
-          page_limit: null,
           warnings: [],
         },
       });

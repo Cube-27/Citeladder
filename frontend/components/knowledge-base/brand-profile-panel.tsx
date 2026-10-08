@@ -8,8 +8,10 @@ import { Alert } from '@/components/ui/alert';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
+import { RadioGroup } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
@@ -18,6 +20,12 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { BrandProfile, BrandProfileDraft, Project } from '@/lib/api/types';
 import { humanizeApiError } from '@/lib/api/errors';
 import { textRole } from '@/components/ui/typography';
+import {
+  BUYER_TYPE_CHOICES,
+  MARKET_SCOPE_CHOICES,
+  identityFacets,
+  type IdentityFacets,
+} from '@/lib/project/identity-facets';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 import { BusinessMapEditor } from './business-map-editor';
@@ -38,6 +46,16 @@ function profileDraft(profile: BrandProfile): BrandProfileDraft {
     positioning: profile.positioning,
     products_services: profile.products_services,
     target_audience: profile.target_audience,
+  };
+}
+
+/** Only answered facets are sent; a blank category keeps the stored one. */
+function identityUpdate(identity: IdentityFacets) {
+  const category = identity.category.trim();
+  return {
+    ...(category ? { category } : {}),
+    ...(identity.buyer_type ? { buyer_type: identity.buyer_type } : {}),
+    ...(identity.market_scope ? { market_scope: identity.market_scope } : {}),
   };
 }
 
@@ -64,6 +82,7 @@ export function BrandProfilePanel({
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
   const [draft, setDraft] = useState(() => profileDraft(profile));
+  const [identity, setIdentity] = useState(() => identityFacets(profile.business_context));
   const [productsInput, setProductsInput] = useState(() => profile.products_services.join(', '));
   const [notice, setNotice] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('facts');
@@ -73,7 +92,11 @@ export function BrandProfilePanel({
       if (!workspaceId) throw new Error('Workspace is not available.');
       return projectsApi.updateBrandProfile(
         projectId,
-        { ...draft, products_services: parseProductsInput(productsInput) },
+        {
+          ...draft,
+          ...identityUpdate(identity),
+          products_services: parseProductsInput(productsInput),
+        },
         { workspaceId },
       );
     },
@@ -81,6 +104,7 @@ export function BrandProfilePanel({
       queryClient.setQueryData(queryKeys.projects.brandProfile(projectId), next);
       onSaved?.();
       setDraft(profileDraft(next));
+      setIdentity(identityFacets(next.business_context));
       setProductsInput(next.products_services.join(', '));
       setNotice('Brand knowledge saved. These details now inform assisted features.');
     },
@@ -118,11 +142,13 @@ export function BrandProfilePanel({
             <ProfileTabPanel
               activeTab={activeTab}
               draft={draft}
+              identity={identity}
               productsInput={productsInput}
               disabled={saveMutation.isPending}
               competitors={competitors}
               competitorSuggestions={competitorSuggestions}
               onDraftChange={setDraft}
+              onIdentityChange={setIdentity}
               onProductsChange={setProductsInput}
             />
           )}
@@ -135,25 +161,30 @@ export function BrandProfilePanel({
 function ProfileTabPanel({
   activeTab,
   draft,
+  identity,
   productsInput,
   disabled,
   competitors,
   competitorSuggestions,
   onDraftChange,
+  onIdentityChange,
   onProductsChange,
 }: Readonly<{
   activeTab: ProfileTab;
   draft: BrandProfileDraft;
+  identity: IdentityFacets;
   productsInput: string;
   disabled: boolean;
   competitors: readonly TrackedCompetitor[];
   competitorSuggestions?: ReactNode;
   onDraftChange: (draft: BrandProfileDraft) => void;
+  onIdentityChange: (identity: IdentityFacets) => void;
   onProductsChange: (value: string) => void;
 }>) {
   if (activeTab === 'facts') {
     return (
       <Stack gap="workspace">
+        <IdentityFields identity={identity} disabled={disabled} onChange={onIdentityChange} />
         <Field label="Description" hint="Core mission, value proposition, and brand summary.">
           {(field) => (
             <Textarea
@@ -247,6 +278,68 @@ function ProfileTabPanel({
       </section>
       {competitorSuggestions}
     </Stack>
+  );
+}
+
+/**
+ * Category, buyer type and market scope decide which questions prompt
+ * generation asks, so a wrong onboarding answer must stay correctable here.
+ */
+function IdentityFields({
+  identity,
+  disabled,
+  onChange,
+}: Readonly<{
+  identity: IdentityFacets;
+  disabled: boolean;
+  onChange: (identity: IdentityFacets) => void;
+}>) {
+  return (
+    <>
+      <Field
+        label="What you sell"
+        hint="The category buyers would search for. Generated questions are built from it."
+      >
+        {(field) => (
+          <Input
+            {...field}
+            disabled={disabled}
+            value={identity.category}
+            onChange={(event) => onChange({ ...identity, category: event.target.value })}
+          />
+        )}
+      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <span className={textRole('label')} aria-hidden>
+            Who buys it
+          </span>
+          <RadioGroup
+            variant="chip"
+            ariaLabel="Who buys it"
+            value={identity.buyer_type ?? ''}
+            options={BUYER_TYPE_CHOICES}
+            onValueChange={(value) => {
+              if (value && !disabled) onChange({ ...identity, buyer_type: value });
+            }}
+          />
+        </div>
+        <div className="grid gap-2">
+          <span className={textRole('label')} aria-hidden>
+            Where they buy it
+          </span>
+          <RadioGroup
+            variant="chip"
+            ariaLabel="Where they buy it"
+            value={identity.market_scope ?? ''}
+            options={MARKET_SCOPE_CHOICES}
+            onValueChange={(value) => {
+              if (value && !disabled) onChange({ ...identity, market_scope: value });
+            }}
+          />
+        </div>
+      </div>
+    </>
   );
 }
 

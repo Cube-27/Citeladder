@@ -6,7 +6,6 @@ import { mswServer } from '@/test/msw-server';
 import { brandDiscoveriesApi, type BrandDiscoveryCompletion } from './brand-discoveries';
 
 const DISCOVERY_ID = '11111111-1111-4111-8111-111111111111';
-const CRAWL_ID = '33333333-3333-4333-8333-333333333333';
 const PROJECT_ID = '44444444-4444-4444-8444-444444444444';
 
 const completion: BrandDiscoveryCompletion = {
@@ -43,7 +42,7 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('brand discovery completion contract', () => {
-  it('sends confirmed ICP once with an idempotency key and validates activation identity', async () => {
+  it('sends the confirmed review once with its idempotency key', async () => {
     let body: unknown;
     let idempotencyKey: string | null = null;
     mswServer.use(
@@ -52,11 +51,7 @@ describe('brand discovery completion contract', () => {
         idempotencyKey = request.headers.get('Idempotency-Key');
         return HttpResponse.json({
           discovery_id: DISCOVERY_ID,
-          status: 'project_created',
           project_id: PROJECT_ID,
-          crawl_id: CRAWL_ID,
-          activation_state: 'queued',
-          page_limit: 10,
           warnings: [],
         });
       }),
@@ -66,15 +61,10 @@ describe('brand discovery completion contract', () => {
       brandDiscoveriesApi.complete(DISCOVERY_ID, completion, 'complete-once'),
     ).resolves.toEqual({
       discovery_id: DISCOVERY_ID,
-      status: 'project_created',
       project_id: PROJECT_ID,
-      crawl_id: CRAWL_ID,
-      activation_state: 'queued',
-      page_limit: 10,
       warnings: [],
     });
     expect(idempotencyKey).toBe('complete-once');
     expect(body).toEqual(completion);
-    expect(JSON.stringify(body)).not.toContain('prompt_groups');
   });
 });

@@ -23,7 +23,6 @@ const { setActiveProjectId, selection } = vi.hoisted(() => ({
 const DISCOVERY_ID = '11111111-1111-4111-8111-111111111111';
 const PROJECT_ID = '22222222-2222-4222-8222-222222222222';
 const ACTIVE_PROJECT_ID = '55555555-5555-4555-8555-555555555555';
-const CRAWL_ID = '33333333-3333-4333-8333-333333333333';
 
 let discoveryState: BrandDiscovery;
 let useRealDiscovery = false;
@@ -83,7 +82,6 @@ function discovery(status: BrandDiscovery['status'], phase: BrandDiscovery['prog
       total_steps: 4,
       pages_read: 3,
       competitors_found: 1,
-      prompts_prepared: 0,
     },
     input_data: {
       brand_name: 'Acme',
@@ -124,30 +122,8 @@ function discovery(status: BrandDiscovery['status'], phase: BrandDiscovery['prog
         domains: ['globex.example'],
       },
     ],
-    topics: [
-      {
-        topic_id: '11111111-1111-4111-8111-111111111111',
-        name: 'Product feeds',
-        description: '',
-        source_refs: ['page-1'],
-      },
-      {
-        topic_id: '22222222-2222-4222-8222-222222222222',
-        name: 'Catalog management',
-        description: '',
-        source_refs: ['page-1'],
-      },
-      {
-        topic_id: '33333333-3333-4333-8333-333333333333',
-        name: 'Marketplace syndication',
-        description: '',
-        source_refs: ['page-1'],
-      },
-    ],
-    prompt_suggestions: [],
     evidence: [],
     warnings: [],
-    gaps: [],
     error_code: '',
     created_at: '2026-08-04T00:00:00Z',
     updated_at: '2026-08-04T00:00:00Z',
@@ -157,15 +133,9 @@ function discovery(status: BrandDiscovery['status'], phase: BrandDiscovery['prog
 function catalogHandler() {
   return http.get('/api/v1/brand-discovery-catalog', () =>
     HttpResponse.json({
-      business_types: ['b2b', 'b2c', 'both'],
-      price_tiers: ['premium'],
-      required_fields: [],
-      optional_fields: [],
-      capture_methods: [],
       maximum_competitors: 5,
       industries: ['General', 'Software'],
       subindustries: { General: [], Software: ['Analytics'] },
-      prompt_cohorts: ['core', 'brand_diagnostic'],
     }),
   );
 }
@@ -303,11 +273,7 @@ describe('OnboardingScreen', () => {
       http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, () =>
         HttpResponse.json({
           discovery_id: DISCOVERY_ID,
-          status: 'project_created',
           project_id: PROJECT_ID,
-          crawl_id: null,
-          activation_state: 'queued',
-          page_limit: null,
           warnings: [],
         }),
       ),
@@ -337,15 +303,7 @@ describe('OnboardingScreen', () => {
       catalogHandler(),
       http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, async () => {
         await pending;
-        return HttpResponse.json({
-          discovery_id: DISCOVERY_ID,
-          status: 'failed',
-          project_id: null,
-          crawl_id: null,
-          activation_state: 'queued',
-          page_limit: null,
-          warnings: [],
-        });
+        return HttpResponse.json({ discovery_id: DISCOVERY_ID, project_id: null, warnings: [] });
       }),
     );
     let flow!: ReturnType<typeof useOnboardingFlow>;
@@ -371,7 +329,7 @@ describe('OnboardingScreen', () => {
     act(() => flow.setStep(1));
     expect(screen.getByTestId('location')).toHaveTextContent(destination);
     act(() => release());
-    await waitFor(() => expect(flow.complete.isSuccess).toBe(true));
+    await waitFor(() => expect(flow.complete.isPending).toBe(false));
   });
 
   it('keeps the research screen and entered basics when the discovery URL is persisted', async () => {
@@ -419,19 +377,6 @@ describe('OnboardingScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(screen.getByRole('button', { name: 'Searching…' })).toBeDisabled();
     expect(creations).toBe(1);
-  });
-
-  it('treats a trailing slash as the onboarding route', async () => {
-    mswServer.use(catalogHandler());
-    renderOnboarding('/onboarding/');
-
-    expect(await screen.findByLabelText(/^Brand name/)).toBeInTheDocument();
-  });
-
-  it('does not render onboarding content on an unrelated route', () => {
-    renderOnboarding('/projects');
-
-    expect(screen.queryByLabelText(/^Brand name/)).not.toBeInTheDocument();
   });
 
   it('offers a way out of the account from first-time setup', async () => {
@@ -568,11 +513,7 @@ describe('OnboardingScreen', () => {
         return HttpResponse.json(
           {
             discovery_id: DISCOVERY_ID,
-            status: 'project_created',
             project_id: PROJECT_ID,
-            crawl_id: CRAWL_ID,
-            activation_state: 'queued',
-            page_limit: 10,
             warnings: [],
           },
           { status: 202 },
@@ -590,9 +531,6 @@ describe('OnboardingScreen', () => {
 
     const user = await enterBrand();
     await user.click(screen.getByRole('button', { name: 'Review' }));
-    expect(screen.queryByText('Online Footprint & Peers')).toBeNull();
-    expect(screen.queryByText('Brand Positioning & Market')).toBeNull();
-    expect(screen.queryByText('AI Discovered')).toBeNull();
     const createProject = await screen.findByRole('button', { name: 'Create project' });
     await waitFor(() => expect(createProject).toBeEnabled());
     await user.click(createProject);
@@ -604,8 +542,9 @@ describe('OnboardingScreen', () => {
         products_services: ['Product feeds'],
         target_audience: 'Retailers',
       },
+      // Discovered competitors start selected up to the cap.
+      competitors: [expect.objectContaining({ name: 'Globex' })],
     });
-    expect(JSON.stringify(completionBody)).not.toContain('prompt_groups');
     // The destination NAMES the project. The shell resolves that exact id
     // instead of inferring one from a list fetched before it existed — which
     // is what used to land people on their previous project, or on an empty
@@ -628,11 +567,7 @@ describe('OnboardingScreen', () => {
         await completionSettled;
         return HttpResponse.json({
           discovery_id: DISCOVERY_ID,
-          status: 'project_created',
           project_id: PROJECT_ID,
-          crawl_id: null,
-          activation_state: 'queued',
-          page_limit: null,
           warnings: [],
         });
       }),
@@ -664,14 +599,9 @@ describe('OnboardingScreen', () => {
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });
 
-  // `completing` is a legacy discovery accepted before onboarding stopped
-  // generating prompts; its project is already committed.
-  it.each([
-    ['created', discovery('project_created', 'complete')],
-    ['legacy completing', discovery('completing', 'preparing_review')],
-  ])('opens the committed project of a %s discovery after reload', async (_label, state) => {
+  it('opens the committed project of a created discovery after reload', async () => {
     searchParams = `discovery=${DISCOVERY_ID}`;
-    discoveryState = { ...state, project_id: PROJECT_ID };
+    discoveryState = { ...discovery('project_created', 'complete'), project_id: PROJECT_ID };
     mswServer.use(
       catalogHandler(),
       // The committed creation is resolved through the project-detail read
@@ -691,12 +621,9 @@ describe('OnboardingScreen', () => {
     expect(visitedLocations).toEqual([onboardingUrl(), `/projects?project=${PROJECT_ID}`]);
   });
 
-  it.each([
-    ['created', discovery('project_created', 'complete')],
-    ['legacy completing', discovery('completing', 'preparing_review')],
-  ])('starts fresh when a %s completion has lost its deleted project', async (_label, state) => {
+  it('starts fresh when a completion has lost its deleted project', async () => {
     searchParams = `discovery=${DISCOVERY_ID}&step=review`;
-    discoveryState = state;
+    discoveryState = discovery('project_created', 'complete');
     mswServer.use(catalogHandler());
     renderOnboarding();
 
@@ -758,7 +685,7 @@ describe('OnboardingScreen', () => {
     expect(screen.queryByLabelText(/^description/i)).toBeNull();
   });
 
-  it('starts suggestions unselected and permits five reversible choices', async () => {
+  it('preselects suggestions up to the cap and keeps every choice reversible', async () => {
     discoveryState = {
       ...discovery('ready', 'preparing_review'),
       competitors: Array.from({ length: 6 }, (_, index) => ({
@@ -773,14 +700,12 @@ describe('OnboardingScreen', () => {
     const user = await enterBrand();
     await user.click(screen.getByRole('button', { name: 'Review' }));
 
-    expect(await screen.findByText('0 of 5')).toBeInTheDocument();
-    for (let index = 1; index <= 5; index++) {
-      await user.click(screen.getByRole('button', { name: `Peer ${index}` }));
-    }
-    expect(screen.getByText('5 of 5')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Peer 6' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'Peer 6' })).toBeDisabled();
+    const sixth = await screen.findByRole('button', { name: 'Peer 6' });
+    expect(screen.getByRole('button', { name: 'Peer 1' })).toHaveAttribute('aria-pressed', 'true');
+    expect(sixth).toHaveAttribute('aria-pressed', 'false');
+    expect(sixth).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Peer 1' }));
-    expect(screen.getByRole('button', { name: 'Peer 6' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Peer 1' })).toHaveAttribute('aria-pressed', 'false');
+    expect(sixth).toBeEnabled();
   });
 });

@@ -54,15 +54,9 @@ const overview = {
   stale: false,
 };
 const catalog = {
-  business_types: ['b2b', 'b2c', 'both'],
-  price_tiers: ['unknown'],
-  required_fields: [],
-  optional_fields: [],
-  capture_methods: [],
   maximum_competitors: 5,
   industries: ['General'],
   subindustries: { General: [] },
-  prompt_cohorts: ['core', 'brand_diagnostic'],
 };
 
 test('working surfaces preserve their actions without viewport overflow', async ({ page }) => {
