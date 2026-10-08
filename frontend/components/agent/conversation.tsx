@@ -381,25 +381,10 @@ function RunState({
   live,
 }: Readonly<{ detail: AgentChatDetail; live: LiveTurn | undefined }>) {
   const outcome = runOutcome(detail.latest_run);
-  const progress = detail.latest_run?.progress ?? [];
   const answered = detail.messages.at(-1)?.role === 'agent';
   switch (outcome.kind) {
     case 'running':
-      return (
-        <div className="grid gap-2">
-          <span className={cn('flex items-center gap-3', textRole('caption'))}>
-            <Spinner className="text-muted" />
-            <output aria-live="polite" className="flex-1">
-              {outcome.queued && !live?.steps.length
-                ? 'Waiting to start…'
-                : (liveStepLabel(live) ??
-                  activeStepLabel(progress, detail.latest_run?.attempt_count))}
-              <Elapsed since={live?.startedAt ?? Date.parse(detail.latest_run!.created_at)} />
-            </output>
-          </span>
-          {progress.length > 0 ? <RunActivity progress={progress} /> : null}
-        </div>
-      );
+      return <RunningState run={detail.latest_run!} queued={outcome.queued} live={live} />;
     // Every ended turn now answers with its own reply; older ones may not have.
     case 'stopped_at_limit':
       return answered ? null : <Alert tone="warning">{runErrorCopy('stopped_at_limit')}</Alert>;
@@ -408,6 +393,28 @@ function RunState({
     default:
       return null;
   }
+}
+function RunningState({
+  run,
+  queued,
+  live,
+}: Readonly<{ run: AgentRun; queued: boolean; live: LiveTurn | undefined }>) {
+  const label =
+    queued && !live?.steps.length
+      ? 'Waiting to start…'
+      : (liveStepLabel(live) ?? activeStepLabel(run.progress, run.attempt_count));
+  return (
+    <div className="grid gap-2">
+      <span className={cn('flex items-center gap-3', textRole('caption'))}>
+        <Spinner className="text-muted" />
+        <output aria-live="polite" className="flex-1">
+          {label}
+          <Elapsed since={live?.startedAt ?? Date.parse(run.created_at)} />
+        </output>
+      </span>
+      {run.progress.length > 0 ? <RunActivity progress={run.progress} /> : null}
+    </div>
+  );
 }
 function liveStepLabel(live: LiveTurn | undefined) {
   const step = live?.steps.at(-1);

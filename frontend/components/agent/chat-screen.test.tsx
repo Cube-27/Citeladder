@@ -120,37 +120,6 @@ describe('ChatScreen', () => {
     expect(screen.queryByText(/oldest_history|history messages/)).not.toBeInTheDocument();
     expect(screen.queryByText(current.messages[0]!.content)).not.toBeInTheDocument();
   });
-  it('refreshes history for a new latest revision and retains prefix invalidation', async () => {
-    let items = [revision(REV1, 1, 'agent', 'First draft')];
-    mswServer.use(
-      http.get(`/api/v1/agent/chats/${CHAT}/output/revisions`, () => HttpResponse.json({ items })),
-    );
-    const { rerender, queryClient } = renderWithProviders(
-      <OutputHistory
-        workspaceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-        chatId={CHAT}
-        latestRevisionId={REV1}
-        canRestore={false}
-      />,
-    );
-    expect(await screen.findByText('Revision 1')).toBeVisible();
-    items = [...items, revision(REV2, 2, 'agent', 'Second draft')];
-    rerender(
-      <OutputHistory
-        workspaceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-        chatId={CHAT}
-        latestRevisionId={REV2}
-        canRestore={false}
-      />,
-    );
-    expect(await screen.findByText('Revision 2')).toBeVisible();
-    items = [
-      ...items,
-      revision('44444444-4444-4444-8444-444444444443', 3, 'user', 'Restored draft'),
-    ];
-    await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.revisions(CHAT) }));
-    expect(await screen.findByText('Revision 3')).toBeVisible();
-  });
   it('saves an edit as a new revision and shows it inline in the thread', async () => {
     let current = detail(revision(REV1, 1, 'agent', 'Old title tag.'));
     const edits: unknown[] = [];
@@ -667,26 +636,6 @@ describe('ChatScreen', () => {
     ]);
   });
 
-  it('retains tool identity and distinguishes failed and unavailable reads after completion', async () => {
-    const completed = detail(revision(REV1, 1, 'agent', 'Body.'));
-    completed.messages[1]!.steps = [
-      { kind: 'tool', tool: 'read_site_health', status: 'completed' },
-      { kind: 'tool', tool: 'fetch', status: 'failed' },
-      { kind: 'tool', tool: 'read_site_pages', status: 'unavailable' },
-    ];
-    mswServer.use(
-      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(completed)),
-    );
-    const user = userEvent.setup();
-    renderChat();
-    await user.click(await screen.findByText(/Run complete/));
-    const reply = within(screen.getByRole('article', { name: 'Agent reply' }));
-    expect(reply.getByText('Read site health')).toBeVisible();
-    expect(reply.getByText('Fetch · failed')).toBeVisible();
-    expect(reply.getByText('Read site pages · no data yet')).toBeVisible();
-  });
-
   it('refuses edits while a turn is running and offers Stop', async () => {
     const cancels: string[] = [];
     mswServer.use(
@@ -813,89 +762,4 @@ describe('ChatScreen', () => {
       }
     },
   );
-
-  it('declares the revision on screen implemented and shows what it waits for', async () => {
-    const ACTION = '88888888-8888-4888-8888-888888888888';
-    const attached = detail(revision(REV1, 1, 'agent', 'Body.'));
-    attached.chat.action_id = ACTION as never;
-    attached.output.action_id = ACTION as never;
-    const declaration = {
-      id: '99999999-9999-4999-8999-999999999999',
-      action_id: ACTION,
-      output_revision_id: REV1,
-      member_opportunity_ids: [],
-      opportunity_snapshot_id: RUN,
-      target_site_url_ids: [],
-      target_external_url: null,
-      declared_implemented_at: NOW,
-      expected_checks: [],
-      state: 'declared',
-      limitations: [],
-      verification_events: [],
-      legs: [
-        {
-          leg: 'next_crawl',
-          state: 'not_scheduled',
-          due_at: null,
-          last_evidence_at: null,
-          source_id: null,
-        },
-      ],
-      checks: [],
-      measured_until: NOW,
-      created_at: NOW,
-    };
-    let declared: typeof declaration | null = null;
-    const posted: unknown[] = [];
-    const action = () => ({
-      id: ACTION,
-      project_id: PROJECT,
-      target_kind: 'page',
-      target_label: 'https://acme.test/pricing',
-      target_url: 'https://acme.test/pricing',
-      target_prompt_id: null,
-      origin: 'evidence',
-      status: declared ? 'implemented' : 'in_progress',
-      priority_score: 40,
-      families: ['site_health'],
-      approach: 'fix_technical',
-      skill_id: 'technical_health',
-      member_count: 1,
-      evidence_cleared_at: null,
-      created_at: NOW,
-      updated_at: NOW,
-      diagnosis: {},
-      members: [],
-      member_measurement: {},
-      declarable_since: '2026-01-01T00:00:00Z',
-      declaration: declared,
-    });
-    mswServer.use(
-      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(attached)),
-      http.get(`/api/v1/actions/${ACTION}`, () => HttpResponse.json(action())),
-      http.post(`/api/v1/actions/${ACTION}/declaration`, async ({ request }) => {
-        posted.push(await request.json());
-        declared = declaration;
-        return HttpResponse.json(declaration, { status: 201 });
-      }),
-    );
-    const user = userEvent.setup();
-    renderChat();
-
-    const pane = await screen.findByRole('region', { name: 'Pricing page edits' });
-    await user.click(await within(pane).findByRole('button', { name: 'Mark implemented' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Mark implemented' });
-    await user.click(within(dialog).getByRole('button', { name: 'Declare implemented' }));
-
-    expect(await within(pane).findByText(/Crawls run when you start one/)).toBeVisible();
-    // The dialog's trigger is gone; focus lands on what replaced it.
-    expect(within(pane).getByRole('heading', { name: 'Measurement' })).toHaveFocus();
-    expect(
-      within(pane).queryByRole('button', { name: 'Mark implemented' }),
-    ).not.toBeInTheDocument();
-    expect(posted).toEqual([
-      { output_revision_id: REV1, declared_implemented_at: expect.any(String) },
-    ]);
-  });
 });

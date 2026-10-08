@@ -97,7 +97,7 @@ export function ReplyComposer({
   );
 }
 
-export function FollowUpFailure({
+function FollowUpFailure({
   turn,
   actionId,
   canSend,

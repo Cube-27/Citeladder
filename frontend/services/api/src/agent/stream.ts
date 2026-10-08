@@ -13,7 +13,7 @@ export type TurnText = {
   title: string | null;
   body: string | null;
 };
-export type TurnStep = { ordinal: number; tool: string | null; status: string };
+type TurnStep = { ordinal: number; tool: string | null; status: string };
 /** Optional listeners for one execution; the worker passes none. */
 export type TurnEvents = {
   step?: (event: TurnStep) => void;
