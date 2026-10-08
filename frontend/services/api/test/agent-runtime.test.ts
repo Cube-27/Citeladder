@@ -770,6 +770,10 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     expect(scrubRecordRefs(`See [the run](citeladder://audit/${sourceId}).\n\n${block}`)).toBe(
       `See the run.\n\n${block}`,
     );
+    // URI schemes are case-insensitive, and padding inside a link's parentheses is removed too.
+    expect(
+      scrubRecordRefs('Read CITELADDER://Audit/x and [the run]( citeladder://audit/y ).'),
+    ).toBe('Read and the run.');
     const id = randomUUID();
     const manifest = {
       version: 'agent-context-1',
