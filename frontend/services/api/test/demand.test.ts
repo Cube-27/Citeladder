@@ -461,27 +461,26 @@ describe('demand projections and admission', () => {
     expect(result.response.status).toBe(202);
   });
 
-  it('caps latest row identities before projection and reports truncation', async () => {
+  it('caps rows before projection, keeping the highest-impression and newest rows', async () => {
     const seed = await importSeed(db, t, 'gsc_query_page_daily');
-    for (let offset = 0; offset <= policy.demand.QUERY_EVIDENCE_MAX_ROWS; offset += 500) {
-      const rows = Array.from(
-        { length: Math.min(500, policy.demand.QUERY_EVIDENCE_MAX_ROWS + 1 - offset) },
-        (_, i) => ({
-          id: randomUUID(),
-          workspace_id: t.workspaceId,
-          project_id: t.projectId,
-          property_ref: 'properties/123456789',
-          provider: 'gsc',
-          dataset: seed.dataset,
-          date: WINDOW[1],
-          dimension_key: `q${String(offset + i).padStart(5, '0')} | https://example.test/page | ${WINDOW[1]}`,
-          metrics: JSON.stringify({ impressions: 10, clicks: 0 }),
-          source_artifact_id: seed.artifactId,
-          resync_seq: 0,
-          importer_version: 'test',
-          created_at: new Date(),
-        }),
-      );
+    const last = policy.demand.QUERY_EVIDENCE_MAX_ROWS;
+    for (let offset = 0; offset <= last; offset += 500) {
+      const rows = Array.from({ length: Math.min(500, last + 1 - offset) }, (_, i) => ({
+        id: randomUUID(),
+        workspace_id: t.workspaceId,
+        project_id: t.projectId,
+        property_ref: 'properties/123456789',
+        provider: 'gsc',
+        dataset: seed.dataset,
+        // The alphabetically first row is the oldest; the last has most impressions.
+        date: offset + i === 0 ? WINDOW[0] : WINDOW[1],
+        dimension_key: `q${String(offset + i).padStart(5, '0')} | https://example.test/page | ${WINDOW[1]}`,
+        metrics: JSON.stringify({ impressions: offset + i === last ? 1000 : 10, clicks: 0 }),
+        source_artifact_id: seed.artifactId,
+        resync_seq: 0,
+        importer_version: 'test',
+        created_at: new Date(),
+      }));
       await db.insertInto('integration_metric_rows').values(rows).execute();
     }
     const snapshot = await db.transaction().execute((trx) => buildQueryEvidence(trx, scope()));
@@ -490,6 +489,13 @@ describe('demand projections and admission', () => {
       truncated: true,
     });
     expect(snapshot.limitations).toContain('query_evidence_row_limit');
+    const kept = await db
+      .selectFrom('query_evidence_rows')
+      .select('normalized_query')
+      .where('snapshot_id', '=', snapshot.id)
+      .where('normalized_query', 'in', ['q00000', `q${String(last).padStart(5, '0')}`])
+      .execute();
+    expect(kept.map((r) => r.normalized_query)).toEqual([`q${String(last).padStart(5, '0')}`]);
     // Seeds the full row cap; parallel suites need more than the default budget.
   }, 30_000);
 });

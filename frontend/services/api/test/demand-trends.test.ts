@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
 import { detectTrends } from '../src/demand/detectors.ts';
-import type { QueryInput } from '../src/demand/projection.ts';
+import { aggregate, detectSearchSignals, type QueryInput } from '../src/demand/projection.ts';
 import { addDays } from '../src/referrals/projection.ts';
 
 const p = policy.demand;
@@ -94,6 +94,22 @@ describe('query trend detection', () => {
     ]);
   });
 
+  it('anchors on the latest observed day, so trailing Search Console lag is not a gap', () => {
+    const lagged = (r: QueryInput) => ({ ...r, observed_date: addDays(r.observed_date, -2) });
+    const result = detectTrends(
+      [
+        ...coverage.map(lagged),
+        lagged(row('rising widgets', priorDay, 20)),
+        lagged(row('rising widgets', recentDay, 60)),
+      ],
+      windowEnd,
+    );
+    expect(result.state).toBe('available');
+    expect(result.candidates.map((c) => c.metrics)).toMatchObject([
+      { prior_impressions: 20, recent_impressions: 60 },
+    ]);
+  });
+
   it('abstains when any required day lacks coverage', () => {
     const result = detectTrends(
       [
@@ -104,5 +120,56 @@ describe('query trend detection', () => {
       windowEnd,
     );
     expect(result).toMatchObject({ state: 'insufficient_history', candidates: [] });
+  });
+});
+
+describe('search signal detection', () => {
+  const search = (target_kind: string, target: string, impressions: number) => ({
+    source_metric_row_ids: [`${target}-row`],
+    source_artifact_ids: ['artifact'],
+    target_kind,
+    target,
+    impressions,
+    clicks: 0,
+  });
+  const classes: Record<string, string> = { 'acme pricing': 'branded', acme: 'ambiguous' };
+  const queryClass = (query: string) => ({
+    classification: classes[query] ?? 'non_branded',
+    classifier_version: 'v1',
+    override_id: null,
+  });
+
+  it('flags only non-branded low-CTR queries and keeps the highest-impression targets', () => {
+    const cap = p.DEMAND_LOW_CTR_MAX_SIGNALS;
+    const generic = Array.from({ length: cap }, (_, i) =>
+      search('query', `widget ${i}`, p.DEMAND_MIN_IMPRESSIONS + i + 1),
+    );
+    const signals = detectSearchSignals(
+      [
+        search('query', 'acme pricing', 100_000),
+        search('query', 'acme', 100_000),
+        search('page', 'https://example.com/widgets', 50_000),
+        ...generic,
+      ],
+      queryClass,
+    );
+    expect(signals).toHaveLength(cap);
+    const targets = signals.map((s) => s.evidence.target);
+    expect(targets).not.toContain('acme pricing');
+    expect(targets).not.toContain('acme');
+    expect(targets[0]).toBe('https://example.com/widgets');
+    // The lowest-impression generic query is the one the cap drops.
+    expect(targets).not.toContain('widget 0');
+    expect(targets).toContain(`widget ${cap - 1}`);
+  });
+});
+
+describe('query aggregation', () => {
+  it('weights position by the impressions that report one', () => {
+    const positioned = row('widgets', windowEnd, 30);
+    const unpositioned = { ...row('widgets', windowEnd, 70), position: null };
+    const a = aggregate([{ ...positioned, position: 4 }, unpositioned]);
+    expect(a.impressions).toBe(100);
+    expect(a.position).toBe(4);
   });
 });

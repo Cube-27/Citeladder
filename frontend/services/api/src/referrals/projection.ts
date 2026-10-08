@@ -1,8 +1,7 @@
 /**
  * The AI Referrals snapshot projection: pure folds over referral facts.
  *
- * Ports the builder of the retired `domain/analytics/ai_referrals_snapshot.py`
- * and the calendar buckets it shared with the traffic projection.
+ * It shares its calendar buckets with the traffic projection.
  * PostgreSQL worker tests cover the persisted projection. Every formula:
  *
  * - One fact per canonical source/medium metric row, keeping the highest
@@ -52,7 +51,7 @@ export function addDays(day: string, days: number): string {
 }
 
 /** The calendar bucket holding `day`: itself, its ISO Monday, or the 1st. */
-function bucketStart(day: string, granularity: string): string {
+export function bucketStart(day: string, granularity: string): string {
   if (granularity === 'day') return day;
   if (granularity === 'week') return addDays(day, -((toDate(day).getUTCDay() + 6) % 7));
   if (granularity === 'month') return `${day.slice(0, 7)}-01`;

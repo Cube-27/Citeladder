@@ -81,9 +81,21 @@ function priority(impressions: number, ctr: number | null, gap: number) {
     },
   };
 }
-export function detectSearchSignals(rows: SearchInput[]): Candidate[] {
-  return [...rows]
-    .sort((a, b) => compareText(a.target_kind, b.target_kind) || compareText(a.target, b.target))
+export type QueryClass = {
+  classification: string;
+  classifier_version: string;
+  override_id: string | null;
+};
+/**
+ * Low-CTR targets with enough impressions. A query must classify as
+ * non-branded (branded and ambiguous cohorts are never actionable); pages
+ * carry no brand class. The highest-impression targets fill a bounded set.
+ */
+export function detectSearchSignals(
+  rows: SearchInput[],
+  queryClass: (query: string) => QueryClass | undefined,
+): Candidate[] {
+  return rows
     .flatMap((row) => {
       const ctr = row.impressions ? row.clicks / row.impressions : null;
       if (
@@ -91,45 +103,60 @@ export function detectSearchSignals(rows: SearchInput[]): Candidate[] {
         (ctr !== null && ctr > p.DEMAND_LOW_CTR_THRESHOLD)
       )
         return [];
-      return [
-        {
-          identity_hash: stableHash({
-            type: p.DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR,
-            target_kind: row.target_kind,
-            target: row.target,
-            rule_version: p.DEMAND_RULE_VERSION,
-          }),
-          signal_type: p.DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR,
-          state: p.DEMAND_SIGNAL_STATE_ACTIVE,
-          topic_cluster: row.target_kind === 'query' ? row.target : '',
-          page_url: row.target_kind === 'page' ? row.target : '',
-          evidence: {
-            target_kind: row.target_kind,
-            target: row.target,
-            source_metric_row_ids: row.source_metric_row_ids,
-            source_artifact_ids: row.source_artifact_ids,
-          },
-          metrics: { impressions: row.impressions, clicks: row.clicks, ctr },
-          coverage: { search_demand: 'observed' },
-          limitations: ['GSC detail rows may omit privacy-filtered queries.'],
-          ...priority(row.impressions, ctr, p.DEMAND_SEARCH_GAP_WEIGHT),
-        },
-      ];
-    });
+      const classified = row.target_kind === 'query' ? queryClass(row.target) : undefined;
+      if (row.target_kind === 'query' && classified?.classification !== 'non_branded') return [];
+      return [{ row, ctr, classified }];
+    })
+    .sort(
+      (a, b) =>
+        b.row.impressions - a.row.impressions ||
+        compareText(a.row.target_kind, b.row.target_kind) ||
+        compareText(a.row.target, b.row.target),
+    )
+    .slice(0, p.DEMAND_LOW_CTR_MAX_SIGNALS)
+    .map(({ row, ctr, classified }) => ({
+      identity_hash: stableHash({
+        type: p.DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR,
+        target_kind: row.target_kind,
+        target: row.target,
+        rule_version: p.DEMAND_RULE_VERSION,
+      }),
+      signal_type: p.DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR,
+      state: p.DEMAND_SIGNAL_STATE_ACTIVE,
+      topic_cluster: row.target_kind === 'query' ? row.target : '',
+      page_url: row.target_kind === 'page' ? row.target : '',
+      evidence: {
+        target_kind: row.target_kind,
+        target: row.target,
+        source_metric_row_ids: row.source_metric_row_ids,
+        source_artifact_ids: row.source_artifact_ids,
+        ...(classified
+          ? {
+              classifier_versions: [classified.classifier_version],
+              classification_override_ids: classified.override_id ? [classified.override_id] : [],
+            }
+          : {}),
+      },
+      metrics: { impressions: row.impressions, clicks: row.clicks, ctr },
+      coverage: { search_demand: 'observed' },
+      limitations: ['GSC detail rows may omit privacy-filtered queries.'],
+      ...priority(row.impressions, ctr, p.DEMAND_SEARCH_GAP_WEIGHT),
+    }));
 }
 export function aggregate(rows: QueryInput[]) {
   const impressions = rows.reduce((n, r) => n + r.impressions, 0);
   const clicks = rows.reduce((n, r) => n + r.clicks, 0);
   const positioned = rows.filter((r) => r.position !== null && r.impressions > 0);
+  // Weighted over the impressions that report a position, not all impressions.
+  const positionedImpressions = positioned.reduce((n, r) => n + r.impressions, 0);
   const page = rows.find((r) => r.page_content_usable) ?? rows[0];
   return {
     impressions,
     clicks,
     ctr: impressions ? clicks / impressions : null,
-    position:
-      impressions && positioned.length
-        ? positioned.reduce((n, r) => n + r.position! * r.impressions, 0) / impressions
-        : null,
+    position: positionedImpressions
+      ? positioned.reduce((n, r) => n + r.position! * r.impressions, 0) / positionedImpressions
+      : null,
     source_metric_row_ids: unique(rows.map((r) => r.source_metric_row_id)),
     source_artifact_ids: unique(rows.map((r) => r.source_artifact_id)),
     classifier_versions: unique(rows.map((r) => r.classifier_version)),

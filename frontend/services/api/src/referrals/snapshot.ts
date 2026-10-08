@@ -17,7 +17,12 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { payloadWindow, requireProject, type Executor } from '../workers/executor.ts';
-import { addDays, buildAiReferralsProjection, type ReferralFact } from './projection.ts';
+import {
+  addDays,
+  bucketStart,
+  buildAiReferralsProjection,
+  type ReferralFact,
+} from './projection.ts';
 import { compareText } from '../text-order.ts';
 import { selectedPartition, partitionAnchor, partitionEpoch } from '../integrations/partitions.ts';
 import { referralEvidence, referralExtras, replaceReferralLandings } from './landing.ts';
@@ -160,12 +165,13 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
         windowEnd: window.end,
         granularity: window.granularity,
       });
-      const classificationPending = facts.some(
-        (f) =>
-          f.is_ai_referral === null &&
-          f.occurred_date >= window.start &&
-          f.occurred_date <= window.end,
-      );
+      // A series point covers only its own calendar bucket inside the window.
+      const inBucket = (day: string, point: string) =>
+        day >= window.start &&
+        day <= window.end &&
+        bucketStart(day, window.granularity) === bucketStart(point, window.granularity);
+      const classificationPending = (point: string) =>
+        facts.some((f) => f.is_ai_referral === null && inBucket(f.occurred_date, point));
       const extras = referralExtras(evidence, window.start, window.end);
       const content = {
         preset_window_days: window.presetDays,
@@ -180,11 +186,8 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
             ['referral_volume', 'referral_share'].map((series) => [
               series,
               projection.metrics[series as 'referral_volume' | 'referral_share'].map((point) => {
-                const days = evidence.quality[SOURCE_MEDIUM]!.filter(
-                  (q) =>
-                    q.day >= window.start &&
-                    q.day <= window.end &&
-                    (window.granularity !== 'day' || q.day === point.date),
+                const days = evidence.quality[SOURCE_MEDIUM]!.filter((q) =>
+                  inBucket(q.day, point.date),
                 );
                 const bad = days.some((q) => q.flags.length > 0 || q.revision === null);
                 let value = point.value;
@@ -193,7 +196,7 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
                   series === 'referral_volume' &&
                   value === null &&
                   !bad &&
-                  !classificationPending
+                  !classificationPending(point.date)
                 )
                   value = 0;
                 return {

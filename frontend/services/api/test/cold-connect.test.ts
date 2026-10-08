@@ -16,6 +16,45 @@ afterAll(async () => {
   await db.destroy();
 });
 
+it('refreshes AI Referrals after classification, not also before it, for referral runs', async () => {
+  // One GA4 connection per workspace: each run gets its own tenant.
+  const extrasOnly = await importSeed(db, await tenant(db, fixtures), 'ga4_channel_daily');
+  const referral = await importSeed(db, await tenant(db, fixtures), 'ga4_source_medium_daily');
+  // The referral run also carries an extras dataset.
+  await metric(db, referral, {
+    dataset: 'ga4_channel_daily',
+    values: ['Organic Search', '20260728'],
+  });
+  await db.transaction().execute(async (trx) => {
+    for (const seed of [extrasOnly, referral]) {
+      const run = await trx
+        .selectFrom('integration_sync_runs')
+        .selectAll()
+        .select([
+          sql<string>`window_start::text`.as('window_start'),
+          sql<string>`window_end::text`.as('window_end'),
+        ])
+        .where('id', '=', seed.syncRunId)
+        .executeTakeFirstOrThrow();
+      await enqueuePostSyncProjections(trx, run);
+    }
+  });
+  const queued = await db
+    .selectFrom('analytics_tasks')
+    .select(['task_kind', 'idempotency_key'])
+    .where('workspace_id', 'in', [extrasOnly.workspaceId, referral.workspaceId])
+    .where('task_kind', 'in', ['ai_referrals_snapshot_refresh', 'ingest_referrals'])
+    .execute();
+  const runOf = (key: string) =>
+    [extrasOnly, referral].find((seed) => key.includes(seed.syncRunId))?.syncRunId;
+  expect(
+    queued
+      .filter((row) => row.task_kind === 'ai_referrals_snapshot_refresh')
+      .map((row) => runOf(row.idempotency_key)),
+  ).toEqual([extrasOnly.syncRunId]);
+  expect(queued.filter((row) => row.task_kind === 'ingest_referrals')).toHaveLength(1);
+});
+
 it('takes a first connect through both workers to analysis_ready without provider I/O', async () => {
   const t = await tenant(db, fixtures);
   const gsc = await seedImport(db, {

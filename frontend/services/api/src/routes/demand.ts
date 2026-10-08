@@ -122,7 +122,7 @@ export const demandRoutes = [
         w = c.get('workspace');
       await requireProject(db, w, path.project_id);
       const normalized = normalizeQuery(body.query);
-      // Deliberate departure: Python let non-searchable text reach a ValueError/500.
+      // Text with no searchable characters is a validation error, never a 500.
       if (!normalized)
         throw new RequestValidationError([
           {
