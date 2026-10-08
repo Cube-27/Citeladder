@@ -195,7 +195,7 @@ export const agentWorkflowSchema = responseObject({
 });
 
 // What a finished deliverable of one kind is called and offers next.
-export const agentOutputKindSchema = responseObject({
+const agentOutputKindSchema = responseObject({
   kind: z.string(),
   label: z.string(),
   refinements: z.array(z.string()),

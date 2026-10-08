@@ -89,21 +89,12 @@ function NewChat({
   });
 
   const actionId = attached.isError ? undefined : handoff.actionId;
-  const submit = () => {
-    create.start({
-      message,
-      skillId: pinnedId ? undefined : skillId,
-      workflowId: pinnedId,
-      actionId,
-      context,
-      mentions: commands.mentions.map((mention) => mention.id),
-    });
-  };
-  const startWorkflow = (workflow: AgentWorkflow, text: string) =>
+  // A workflow is sent by id; the server validates it and pins its skill.
+  const start = (text: string, workflowId: string | undefined) =>
     create.start({
       message: text,
-      skillId: undefined,
-      workflowId: workflow.id,
+      skillId: workflowId ? undefined : skillId,
+      workflowId,
       actionId,
       context,
       mentions: commands.mentions.map((mention) => mention.id),
@@ -130,7 +121,7 @@ function NewChat({
           label="Message the agent"
           value={message}
           onChange={setMessage}
-          onSubmit={submit}
+          onSubmit={() => start(message, pinnedId)}
           pending={create.pending}
           disabled={!access.canSend}
           placeholder="Ask a question or describe the work you need. / picks a skill, @ mentions an Action."
@@ -139,15 +130,7 @@ function NewChat({
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
           tools={
             pinnedId ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                aria-label={`Remove workflow ${pinned?.label ?? ''}`.trim()}
-                onClick={() => setPinnedId(undefined)}
-              >
-                {pinned?.label ?? 'Workflow'}
-                <X aria-hidden className="size-4" />
-              </Button>
+              <PinnedWorkflow label={pinned?.label} onRemove={() => setPinnedId(undefined)} />
             ) : (
               <SkillPicker
                 {...commands.skillPicker}
@@ -162,7 +145,7 @@ function NewChat({
         {picked ? (
           <WorkflowStart
             workflow={picked}
-            onStart={(text) => startWorkflow(picked, text)}
+            onStart={(text) => start(text, picked.id)}
             onBack={() => setPicked(null)}
             pending={create.pending}
             disabled={!access.canSend}
@@ -186,6 +169,24 @@ function NewChat({
         )}
       </Stack>
     </PageShell>
+  );
+}
+
+/** The workflow a next step pinned; removing it returns to the skill picker. */
+function PinnedWorkflow({
+  label,
+  onRemove,
+}: Readonly<{ label: string | undefined; onRemove: () => void }>) {
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      aria-label={`Remove workflow ${label ?? ''}`.trim()}
+      onClick={onRemove}
+    >
+      {label ?? 'Workflow'}
+      <X aria-hidden className="size-4" />
+    </Button>
   );
 }
 
