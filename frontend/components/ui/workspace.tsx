@@ -39,6 +39,7 @@ export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:la
  *
  *   `list-detail` — a selectable list beside the selected item's evidence.
  *   `main-aside`  — the primary surface beside supporting context.
+ *   `peers`       — two equal surfaces read side by side (e.g. two tables).
  *
  * Both stack below `lg`, with the first child first, and share the workspace
  * gap. Columns align to the top so a short aside never stretches.
@@ -46,6 +47,7 @@ export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:la
 const SPLIT_PANE = {
   'list-detail': 'lg:grid-cols-[var(--pane-list-detail)]',
   'main-aside': 'lg:grid-cols-[var(--pane-main-aside)]',
+  peers: 'lg:grid-cols-2',
 } as const;
 
 export type SplitPaneRole = keyof typeof SPLIT_PANE;

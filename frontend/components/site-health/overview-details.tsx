@@ -37,7 +37,7 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
   return (
     <>
       {data.limitations.length > 0 ? <Alert tone="info">{data.limitations.join(' ')}</Alert> : null}
-      <div className={splitPaneClasses('main-aside')}>
+      <div className={splitPaneClasses('peers')}>
         <DimensionLedger dimensions={data.aeo_dimensions} />
         <TopIssues issues={data.top_issues} />
       </div>
@@ -61,7 +61,7 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
 export function OverviewDetailsSkeleton() {
   return (
     <Stack gap="workspace" aria-busy="true" aria-label="Loading Overview details">
-      <div className={splitPaneClasses('main-aside')} aria-hidden>
+      <div className={splitPaneClasses('peers')} aria-hidden>
         {[0, 1].map((key) => (
           <Card key={key}>
             <CardContent className="grid gap-3">
