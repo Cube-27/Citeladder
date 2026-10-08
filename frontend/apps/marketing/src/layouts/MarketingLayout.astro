@@ -5,7 +5,13 @@ import { CookieBanner } from '@/components/marketing/chrome/cookie-banner';
 import { MarketingFooter } from '@/components/marketing/chrome/footer';
 import { MarketingNavIsland } from '../components/MarketingNavIsland';
 import { organizationJsonLd, softwareApplicationJsonLd, websiteJsonLd, type JsonLdObject } from '@/lib/seo/json-ld';
-import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
+import {
+  absoluteUrl,
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TAGLINE,
+} from '@/lib/seo/site';
 import '@/apps/marketing/src/marketing.css';
 import '@/apps/marketing/src/product-views.css';
 import '@/apps/marketing/src/styles/commerce-pages.css';
@@ -46,7 +52,8 @@ const {
   jsonLd = [],
 } = Astro.props;
 const canonicalUrl = canonical ? (absoluteUrl(canonical) ?? canonical) : undefined;
-const imageUrl = image ? absoluteUrl(image) ?? undefined : undefined;
+const socialImage = image ? { path: image, alt: imageAlt } : DEFAULT_SOCIAL_IMAGE;
+const imageUrl = absoluteUrl(socialImage.path) ?? undefined;
 const socialTitle = title.endsWith(` · ${SITE_NAME}`)
   ? title.slice(0, -` · ${SITE_NAME}`.length)
   : title;
@@ -80,7 +87,7 @@ const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</
     {imageUrl && <meta property="og:image" content={imageUrl} />}
     {imageUrl && <meta property="og:image:width" content="1080" />}
     {imageUrl && <meta property="og:image:height" content="630" />}
-    {imageUrl && <meta property="og:image:alt" content={imageAlt} />}
+    {imageUrl && <meta property="og:image:alt" content={socialImage.alt} />}
     {publishedTime && <meta property="article:published_time" content={publishedTime} />}
     {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
     {author && <meta property="article:author" content={author} />}

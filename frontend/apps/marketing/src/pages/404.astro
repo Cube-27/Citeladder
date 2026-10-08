@@ -1,0 +1,33 @@
+---
+import { PageHero } from '@/components/marketing/primitives/page-hero';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import { NOT_FOUND_LINKS } from '../not-found';
+---
+
+<MarketingLayout
+  title="Page not found · CiteLadder"
+  description="This CiteLadder page does not exist. Find the platform overview, pricing, documentation or contact details instead."
+  robots="noindex"
+>
+  <main id="main">
+    <PageHero
+      centered
+      title="We couldn’t find that page."
+      lead="It may have moved, or the link may be wrong. These pages are a good place to pick up."
+    >
+      <nav aria-label="Suggested pages" class="mt-8">
+        <ul class="website-body flex flex-wrap justify-center gap-x-6 gap-y-3">
+          {
+            NOT_FOUND_LINKS.map((link) => (
+              <li>
+                <a class="mk-text-link" href={link.href}>
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </PageHero>
+  </main>
+</MarketingLayout>

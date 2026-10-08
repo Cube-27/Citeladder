@@ -2,6 +2,7 @@ import type { MiddlewareHandler } from 'astro';
 import { routeApexRequest } from './apex-route';
 import { workerApexEnv } from './worker-env';
 import { FALLBACK_CONTENT_SECURITY_POLICY } from '@/lib/config/content-security-policy';
+import { negotiateNotFound } from './not-found';
 import { researchArticle, RESEARCH_REDIRECTS } from './research-articles';
 
 export const onRequest: MiddlewareHandler = async ({ request }, next) => {
@@ -15,7 +16,7 @@ export const onRequest: MiddlewareHandler = async ({ request }, next) => {
     url.pathname = destination;
     redirect = Response.redirect(url, 301);
   }
-  const response = routed ?? redirect ?? (await next());
+  const response = negotiateNotFound(request, routed ?? redirect ?? (await next()));
   const headers = new Headers(response.headers);
   if (!headers.has('Content-Security-Policy')) {
     headers.set('Content-Security-Policy', FALLBACK_CONTENT_SECURITY_POLICY);

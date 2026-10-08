@@ -22,7 +22,8 @@ import { NAV_DROPS, NAV_LINKS, PUBLISHED_PLATFORM, type NavDropItem } from './na
 import { PLATFORM_PAGES } from './platform-pages';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { PLAN_PRESENTATION, capabilityLabel } from './pricing';
-import { CITELADDER_LINKEDIN, CONTACT_EMAIL } from './social';
+import { CITELADDER_LINKEDIN } from './social';
+import { CONTACT_EMAIL } from '@/lib/config/contact';
 import { SOLUTION_SEGMENTS } from './solutions';
 
 /**
@@ -430,8 +431,7 @@ describe('commercial positioning', () => {
 });
 
 describe('entity and llms.txt', () => {
-  it('exposes a public contact email and LinkedIn profiles', () => {
-    expect(CONTACT_EMAIL).toBe('abhineet.jain@cube27.com');
+  it('exposes LinkedIn profiles', () => {
     expect(PRODUCT_HEAD.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
     expect(FOUNDER.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
     expect(CITELADDER_LINKEDIN).toMatch(/^https:\/\/www\.linkedin\.com\/company\//);
@@ -443,6 +443,13 @@ describe('entity and llms.txt', () => {
     expect(LLMS_TXT).toContain('Arpan Jain');
     expect(LLMS_TXT).toContain('https://citeladder.com/faq');
     expect(LLMS_TXT.toLowerCase()).toContain('not an open-source');
+  });
+
+  it('tells agents when to use CiteLadder and where its MCP authorization metadata lives', () => {
+    const urls = LLMS_TXT.match(/https:\/\/\S+/g) ?? [];
+    expect(urls).toContain('https://citeladder.com/.well-known/oauth-protected-resource/mcp');
+    expect(LLMS_TXT).toContain('## When to use CiteLadder');
+    expect(LLMS_TXT).toContain(`Contact: ${CONTACT_EMAIL}`);
   });
 });
 
