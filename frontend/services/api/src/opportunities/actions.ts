@@ -4,6 +4,7 @@ import {
   actionDetailSchema,
   actionItemSchema,
   actionStatusSchema,
+  measurementLegSchema,
 } from '@citeladder/contracts/actions';
 import { sql, type Selectable } from 'kysely';
 
@@ -22,6 +23,7 @@ import { OPPORTUNITY_COLUMNS, projectItem } from './projection.ts';
 import { requireProject } from './reads.ts';
 import type { Scope } from './sources.ts';
 import { declarationView } from './declaration-view.ts';
+import { memberMeasurementLeg } from './declaration-checks.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
 import { pageGroupKey, selectApproach } from '../analysis/opportunities/actions.ts';
@@ -268,6 +270,8 @@ export async function actionMembers(db: Database, action: ActionRow) {
   return ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
 }
 
+const measuredBy = measurementLegSchema.shape.leg.nullable();
+
 export async function getAction(db: Database, workspaceId: string, actionId: string) {
   const action = await readAction(db, workspaceId, actionId);
   const declaration = await db
@@ -277,10 +281,19 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
     .where('project_id', '=', action.project_id)
     .where('action_id', '=', actionId)
     .executeTakeFirst();
+  const members = await actionMembers(db, action);
   return {
     ...actionItem(action, action.current),
     diagnosis: actionDetailSchema.shape.diagnosis.parse(action.diagnosis),
-    members: (await actionMembers(db, action)).map((row) => projectItem(row)),
+    members: members.map((row) => ({ ...projectItem(row), remediation: row.remediation || '' })),
+    // The earliest go-live a declaration accepts; new evidence measures it from there.
+    declarable_since: new Date(
+      Date.now() - policy.opportunity.opportunities.VERIFICATION_WINDOW_DAYS * 86_400_000,
+    ).toISOString(),
+    // Before a declaration: which reading would measure each finding.
+    member_measurement: Object.fromEntries(
+      members.map((row) => [row.id, measuredBy.parse(memberMeasurementLeg(row))]),
+    ),
     declaration: declaration ? await declarationView(db, declaration) : null,
   };
 }

@@ -16,8 +16,8 @@ const o = policy.opportunity.opportunities;
 const r = policy.opportunity.refresh;
 type Json = Record<string, unknown>;
 
-function hit(fields: Omit<DetectorHit, 'title_override' | 'remediation_override'>): DetectorHit {
-  return { ...fields, title_override: null, remediation_override: null };
+function hit(fields: DetectorHit): DetectorHit {
+  return fields;
 }
 
 // ---------------------------------------------------------------------------

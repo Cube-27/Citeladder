@@ -104,7 +104,6 @@ import type {
   opportunitiesPageSchema,
   opportunityDetailSchema,
   opportunitySchema,
-  opportunitySummarySchema,
   opportunityTypeSchema,
 } from '@citeladder/contracts';
 
@@ -211,4 +210,3 @@ export type OpportunityType = z.infer<typeof opportunityTypeSchema>;
 export type Opportunity = z.infer<typeof opportunitySchema>;
 export type OpportunityDetail = z.infer<typeof opportunityDetailSchema>;
 export type OpportunitiesPage = z.infer<typeof opportunitiesPageSchema>;
-export type OpportunitySummary = z.infer<typeof opportunitySummarySchema>;

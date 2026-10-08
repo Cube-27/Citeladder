@@ -20,8 +20,12 @@ import {
 } from './change-compare.ts';
 import type { Crawl } from './task-fence.ts';
 import { enqueueTerminalAnalyticsRefresh } from './terminal-handoff.ts';
+import { isPageRerun, pageRerunSql } from './page-rerun.ts';
 
 const p = policy.site_health.change_intel;
+// The page limit is left out: it is the fetch budget left at admission, so it
+// varies between otherwise identical crawls, and the comparison already reads
+// only the pages both crawls analyzed.
 const SCOPE_KEYS = [
   'discovery_mode',
   'sample_mode',
@@ -29,17 +33,10 @@ const SCOPE_KEYS = [
   'include_globs',
   'exclude_globs',
   'input_mode',
-  'requested_page_limit',
   'seed_urls',
   'page_kinds',
   'automatic_monitor_limit',
 ] as const;
-const FACT_FIELDS = new Set([
-  ...Object.keys(p.field_rules),
-  'internal_link_count',
-  'http_status',
-  'redirect_target',
-]);
 const RULE_FIELDS = new Map(Object.entries(p.field_rules).map(([field, rule]) => [rule, field]));
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex');
@@ -85,6 +82,7 @@ async function previousComparableCrawl(db: Database, crawlB: Crawl) {
     .where('id', '!=', crawlB.id)
     .where('status', 'in', policy.site_health.reads.terminal_crawl_statuses)
     .where('analyzed_url_count', '>', 0)
+    .where(sql<boolean>`not ${pageRerunSql}`)
     .where('created_at', '<', crawlB.created_at)
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
@@ -254,14 +252,13 @@ async function pages(db: Database, crawl: Crawl) {
   return { pages: rows.map((row) => changePage(row, rules.get(row.analysisId))), capped };
 }
 
-function checkField(check: Record<string, unknown>): [string | null, unknown] {
-  if (check.kind === 'page_fact') {
-    const field = scalarText(check.fact_key);
-    return [FACT_FIELDS.has(field) ? field : null, check.expected_value];
-  }
-  if (check.kind === 'site_rule')
-    return [RULE_FIELDS.get(scalarText(check.rule_id)) ?? null, check.expected_outcome];
-  return [null, null];
+/** A declared rule expectation in the evaluation vocabulary it is compared with. */
+const RULE_OUTCOME: Record<string, string> = { pass: 'satisfied', fail: 'missing' };
+
+export function declaredCheckField(check: Record<string, unknown>): [string | null, unknown] {
+  if (check.kind !== 'site_rule') return [null, null];
+  const expected = scalarText(check.expected_outcome);
+  return [RULE_FIELDS.get(scalarText(check.rule_id)) ?? null, RULE_OUTCOME[expected] ?? expected];
 }
 const uuidText = (value: unknown) => scalarText(value).toLowerCase();
 /** A check's target page; an untargeted check applies to a single-target event's page. */
@@ -274,7 +271,7 @@ function satisfiedCheck(raw: unknown, targets: Set<string>, byUrl: Map<string, C
   const check = record(raw);
   const target = checkTarget(check, targets);
   const page = target && targets.has(target) ? byUrl.get(target) : undefined;
-  const [field, value] = checkField(check);
+  const [field, value] = declaredCheckField(check);
   if (!page || !field) return null;
   const rule = page.rules[field];
   const actual = check.kind === 'site_rule' && rule ? rule.outcome : page.fields[field];
@@ -438,5 +435,9 @@ async function persistChangeSnapshot(db: Database, crawlB: Crawl): Promise<strin
 
 /** The `change_intel` task: the snapshot and its analytics handoff commit with the task. */
 export async function runChangeIntel(db: Database, crawl: Crawl) {
-  await enqueueTerminalAnalyticsRefresh(db, crawl, await persistChangeSnapshot(db, crawl));
+  // A rerun still hands its page to verification and Opportunities, but it
+  // writes no comparison: against a full crawl it would read as every other
+  // page removed, and it would replace the comparison Changes shows.
+  const snapshot = isPageRerun(crawl) ? null : await persistChangeSnapshot(db, crawl);
+  await enqueueTerminalAnalyticsRefresh(db, crawl, snapshot);
 }

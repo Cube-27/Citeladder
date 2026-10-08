@@ -122,8 +122,6 @@ export function detectEarnedPageOpportunities(evidence: EarnedPageEvidence): Det
           source_metric_ids: [],
           value_factor: value,
           gap_factor: gap,
-          title_override: null,
-          remediation_override: null,
         },
       ];
     });

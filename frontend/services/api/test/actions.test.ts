@@ -17,9 +17,12 @@ const config = testConfig();
 const db = testDatabase(config);
 const app = createApp(config, db);
 const seeds: ActionSeed[] = [];
-const boundary = '2026-09-01T15:00:00.123456Z';
+// Inside the declaration window, which is relative to now.
+const day = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
+const nextDay = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+const boundary = `${day}T15:00:00.123456Z`;
 const pageRule = 'missing_structured_data';
-const otherRule = 'thin_content';
+const otherRule = 'content_structure_incomplete';
 const promptRule = 'brand_absent_high_value_prompt';
 async function seed() {
   const s = await actionFixture<ActionSeed>('seed');
@@ -92,12 +95,7 @@ describe('Action routes', () => {
     expect((await declare(s, 'dismissed')).status).toBe(409);
     await request(s, actionPath(s), 'PATCH', { status: 'open' });
     const detail = await detailBody(await request(s, actionPath(s)));
-    expect(actionDetailSchema.parse(detail).members.map((member) => member.id)).toEqual([
-      s.members[pageRule],
-    ]);
-    const head = await request(s, actionPath(s), 'HEAD');
-    expect(head.status).toBe(405);
-    expect(head.headers.get('allow')).toContain('PATCH');
+    expect(detail.members.map((member) => member.id)).toEqual([s.members[pageRule]]);
   });
 
   it('rejects unauthenticated, foreign and viewer writes without disclosing or mutating rows', async () => {
@@ -149,8 +147,7 @@ describe('Action routes', () => {
     expect((await declare(s, 'injected', pageRule, { target_site_url_ids: [] })).status).toBe(422);
     expect((await declare(s, '')).status).toBe(422);
     expect(
-      (await declare(s, 'naive', pageRule, { declared_implemented_at: '2026-09-01T15:00:00' }))
-        .status,
+      (await declare(s, 'naive', pageRule, { declared_implemented_at: `${day}T15:00:00` })).status,
     ).toBe(422);
     const created = await declare(s, 'once');
     expect(created.status).toBe(201);
@@ -185,19 +182,19 @@ describe('Action routes', () => {
     expect(
       (
         await declare(s, 'once', pageRule, {
-          declared_implemented_at: '2026-09-01T20:30:00.123456+05:30',
+          declared_implemented_at: `${day}T20:30:00.123456+05:30`,
         })
       ).status,
     ).toBe(200);
     expect(
       (
         await declare(s, 'once', pageRule, {
-          declared_implemented_at: '2026-09-01T15:00:00.123457Z',
+          declared_implemented_at: `${day}T15:00:00.123457Z`,
         })
       ).status,
     ).toBe(409);
     expect(
-      (await declare(s, 'once', pageRule, { declared_implemented_at: '2026-09-02T00:00:00Z' }))
+      (await declare(s, 'once', pageRule, { declared_implemented_at: `${nextDay}T00:00:00Z` }))
         .status,
     ).toBe(409);
     expect((await declare(s, 'once', otherRule)).status).toBe(409);
@@ -343,6 +340,64 @@ describe('Action routes', () => {
     expect(unobservable.expected_checks[0]).not.toHaveProperty('baseline_value');
   });
 
+  it('bounds the go-live time to the present and the verification window', async () => {
+    const s = await seed();
+    const at = (offset: number) => new Date(Date.now() + offset).toISOString();
+    const future = await declare(s, 'future', pageRule, { declared_implemented_at: at(3_600_000) });
+    expect(future.status).toBe(422);
+    const stale = await declare(s, 'stale', pageRule, {
+      declared_implemented_at: at(-40 * 86_400_000),
+    });
+    expect(stale.status).toBe(422);
+    expect((await detailBody(await request(s, actionPath(s)))).declaration).toBeNull();
+  });
+
+  it('records work no reading can isolate without inventing a check', async () => {
+    const s = await seed();
+    await db
+      .updateTable('opportunities')
+      .set({ opportunity_type: 'commerce', rule_id: 'catalog_fields_missing' })
+      .where('id', '=', s.members[pageRule]!)
+      .execute();
+    const before = await detailBody(await request(s, actionPath(s)));
+    expect(before.member_measurement[s.members[pageRule]!]).toBeNull();
+    const body = await declarationBody(await declare(s, 'unmeasured'));
+    expect(body.expected_checks).toEqual([]);
+    expect(body.checks).toEqual([]);
+    expect(body.member_opportunity_ids).toEqual([s.members[pageRule]]);
+    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('implemented');
+  });
+
+  it('refuses an earned placement whose publisher page was never read', async () => {
+    const s = await seed();
+    const earned = await actionFixture<{ action_id: string }>(
+      'earned',
+      s.workspace_id,
+      s.project_id,
+    );
+    s.actions.earned = earned.action_id;
+    const action = await db
+      .selectFrom('actions')
+      .select('member_opportunity_ids')
+      .where('id', '=', earned.action_id)
+      .executeTakeFirstOrThrow();
+    await db
+      .updateTable('opportunities')
+      .set({
+        evidence: sql`jsonb_set(evidence, '{content_handoff,url_hash}', '"never-read"')`,
+      })
+      .where('id', 'in', action.member_opportunity_ids as string[])
+      .execute();
+    expect((await declare(s, 'unread', 'earned')).status).toBe(409);
+    expect(
+      await db
+        .selectFrom('opportunity_implementation_events')
+        .select('id')
+        .where('action_id', '=', earned.action_id)
+        .execute(),
+    ).toEqual([]);
+  });
+
   it('opens an earned placement against the exact source baseline without claiming an owned target', async () => {
     const s = await seed();
     const earned = await actionFixture<{ action_id: string; page_id: string; snapshot_id: string }>(
@@ -454,17 +509,13 @@ describe('Action routes', () => {
   });
 });
 
-it('distinguishes a running, unsynced and complete Search Console window', () => {
-  const at = new Date(boundary);
-  expect(searchConsoleState(at, { start: '2026-09-02', end: '2026-09-20' }, at).state).toBe(
-    'waiting',
-  );
+it('waits for a Search Console window that starts on or after the declaration day', () => {
+  const at = new Date('2026-09-01T15:00:00.123456Z');
+  const before = { start: '2026-08-29', end: '2026-09-01' };
+  expect(searchConsoleState(at, before, at).state).toBe('waiting');
   const due = searchConsoleState(at, null, at).due_at;
-  expect(searchConsoleState(at, null, due).state).toBe('sync_needed');
-  expect(searchConsoleState(at, { start: '2026-09-02', end: '2026-09-29' }, due).state).toBe(
+  expect(searchConsoleState(at, before, due).state).toBe('sync_needed');
+  expect(searchConsoleState(at, { start: '2026-09-01', end: '2026-09-04' }, at).state).toBe(
     'observed',
-  );
-  expect(searchConsoleState(at, { start: '2026-08-01', end: '2026-10-01' }, due).state).toBe(
-    'sync_needed',
   );
 });

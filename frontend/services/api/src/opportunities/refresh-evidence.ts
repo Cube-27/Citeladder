@@ -30,15 +30,16 @@ export async function loadSiteEvidence(
   crawl: CoverageCrawl & { id: string; project_id: string },
 ): Promise<SiteEvidence> {
   const scope = new WorkspaceScope(workspaceId);
-  const issues = await scope
+  const loaded = await scope
     .selectFrom(db, 'site_issues')
     .select(['id', 'rule_id', 'severity', 'category', 'finding_class', 'site_url_id', 'evidence'])
     .where('crawl_id', '=', crawl.id)
     .where('finding_class', '=', r.finding_class_defect)
     .orderBy('created_at')
     .orderBy('id')
-    .limit(o.RECOMPUTE_MAX_ISSUES)
+    .limit(o.RECOMPUTE_MAX_ISSUES + 1)
     .execute();
+  const issues = loaded.slice(0, o.RECOMPUTE_MAX_ISSUES);
   const urlIds = [...new Set(issues.map((issue) => issue.site_url_id))];
   const urls = urlIds.length
     ? await scope
@@ -52,6 +53,7 @@ export async function loadSiteEvidence(
   const [coverage, limitations] = siteCoverage(crawl);
   return {
     crawl_id: crawl.id,
+    truncated: loaded.length > issues.length,
     issues: issues.map((issue) => ({
       issue_id: issue.id,
       rule_id: issue.rule_id,
@@ -111,6 +113,18 @@ type DeclineRow = {
   source_analysis_ids: unknown;
 };
 
+/** Confidence ranks a confirmed decline between the floor and 1. */
+export function declineValue(confidence: number): number {
+  const floor = o.CONFIRMED_DECLINE_CONFIDENCE_FLOOR;
+  return floor + (1 - floor) * Math.min(1, Math.max(0, confidence));
+}
+
+/** Size in multiples of the materiality the audit confirmed; at least one, capped. */
+export function declineGap(delta: number | null): number {
+  const multiple = Math.abs(delta ?? 0) / policy.audits.analysis.prompt_decline_materiality_points;
+  return Math.min(o.CONFIRMED_DECLINE_GAP_CAP, Math.max(1, multiple));
+}
+
 /** One confirmed prompt decline as an Opportunity hit. */
 function declineHit(row: DeclineRow, auditId: string): DetectorHit {
   return {
@@ -136,13 +150,8 @@ function declineHit(row: DeclineRow, auditId: string): DetectorHit {
     source_analysis_ids: strings(row.source_analysis_ids),
     source_issue_ids: [],
     source_metric_ids: [row.id],
-    value_factor: Math.max(o.CONFIRMED_DECLINE_MIN_FACTOR, row.trend_confidence),
-    gap_factor: Math.max(
-      o.CONFIRMED_DECLINE_MIN_FACTOR,
-      Math.min(1, Math.abs(row.immediate_delta ?? 0) / o.CONFIRMED_DECLINE_GAP_NORMALIZER),
-    ),
-    title_override: null,
-    remediation_override: null,
+    value_factor: declineValue(row.trend_confidence),
+    gap_factor: declineGap(row.immediate_delta),
   };
 }
 
@@ -213,9 +222,9 @@ export async function loadVisibilityEvidence(
   db: Database,
   workspaceId: string,
   audit: { id: string; project_id: string },
-): Promise<[VisibilityEvidence, string | null]> {
+): Promise<[VisibilityEvidence, string | null, string[]]> {
   const scope = new WorkspaceScope(workspaceId);
-  const analyses = await scope
+  const loaded = await scope
     .selectFrom(db, 'response_analyses')
     .select([
       'id',
@@ -228,8 +237,16 @@ export async function loadVisibilityEvidence(
     .where('audit_id', '=', audit.id)
     .orderBy('prompt_index')
     .orderBy('id')
-    .limit(o.RECOMPUTE_MAX_ANALYSES)
+    .limit(o.RECOMPUTE_MAX_ANALYSES + 1)
     .execute();
+  // A prompt cut at the cap would keep only some engines' answers and read as
+  // absent where a dropped engine mentioned the brand, so it is dropped whole.
+  const cut = loaded.length > o.RECOMPUTE_MAX_ANALYSES ? loaded.at(-1)!.prompt_index : null;
+  const analyses = cut === null ? loaded : loaded.filter((row) => row.prompt_index < cut);
+  const limitations =
+    cut === null
+      ? []
+      : [`Answers from prompt ${cut + 1} onward exceeded the analysis cap and were not ranked.`];
   const { credits, citations } = await answerCredits(
     db,
     scope,
@@ -283,5 +300,5 @@ export async function loadVisibilityEvidence(
     })),
     owned_domains: [...owned].sort(compareText),
   };
-  return [evidence, metric?.id ?? null];
+  return [evidence, metric?.id ?? null, limitations];
 }

@@ -81,11 +81,86 @@ const MEASUREMENT_LEG_LABEL: Record<string, string> = {
   next_search_console_window: 'The next complete Search Console window',
   next_crawl: 'The next crawl of this page',
   placement_recheck: 'The earned-page recheck',
-  next_commerce_audit: 'The next commerce audit',
 };
 
 export function measurementLegLabel(leg: string): string | null {
   return MEASUREMENT_LEG_LABEL[leg] ?? null;
+}
+
+/** What one expected check asks, before its subject. */
+const CHECK_KIND_LABEL: Record<string, string> = {
+  site_rule: 'Site Health check passes',
+  contextual_link: 'Internal link is on the page',
+  visibility_metric: 'Prompt score rises',
+  traffic_metric: 'Search Console clicks rise',
+  placement: 'Change is live on the publisher page',
+};
+
+export function checkKindLabel(kind: string): string {
+  return CHECK_KIND_LABEL[kind] ?? 'Check';
+}
+
+export const CHECK_STATE_LABEL: Record<'waiting' | 'met' | 'unmet' | 'unavailable', string> = {
+  waiting: 'Waiting',
+  met: 'Met',
+  unmet: 'Not met',
+  unavailable: 'Not measurable yet',
+};
+
+/** Why a reading could not answer a check, and what changes that. */
+const CHECK_REASON: Record<string, string> = {
+  page_not_analyzed: 'The page was not read in that crawl. Run a crawl that includes it.',
+  rule_not_evaluated: 'The check does not apply to the page as it was read.',
+  no_resolved_target: 'The page could not be matched to a crawled URL.',
+  link_capture_incomplete: "The crawl did not capture the page's links fully.",
+  not_prompt_scoped: 'Declared against the project score, which cannot verify one Action.',
+  no_metric_snapshot: 'That run produced no scores.',
+  prompt_not_in_run: 'The prompt was not part of that run.',
+  prompt_score_unavailable: 'The prompt has no score in that run.',
+  no_frozen_baseline: 'There was no reading before the change to compare with.',
+  not_page_scoped: 'Declared against site-wide clicks, which cannot verify one Action.',
+  no_traffic_snapshot: 'The Search Console window is no longer stored.',
+  window_overlaps_declaration: 'That window includes days before the change went live.',
+  no_search_console_row: 'Search Console reported no row for this page or query.',
+  no_placement_check: 'The publisher page was never read, so it cannot be rechecked.',
+  recheck_scheduled: 'Not on the page yet. It will be read again.',
+};
+
+export function checkReasonLabel(reason: string | null): string | null {
+  return reason ? (CHECK_REASON[reason] ?? null) : null;
+}
+
+/** The declaration's overall reading, never the raw observation kind. */
+export const IMPLEMENTATION_STATE_LABEL: Record<
+  'declared' | 'observed' | 'verified' | 'contradicted',
+  string
+> = {
+  declared: 'Declared. Waiting for the first reading.',
+  observed: 'Measuring. Some checks are still waiting.',
+  verified: 'Every check is met.',
+  contradicted: 'At least one check is not met.',
+};
+
+const MOVEMENT_LEG_LABEL: Record<string, string> = {
+  visibility: 'Visibility',
+  ai_referral_traffic: 'AI referral traffic',
+  branded_search_demand: 'Branded search demand',
+};
+
+export function movementLegLabel(leg: string): string | null {
+  return MOVEMENT_LEG_LABEL[leg] ?? null;
+}
+
+const MOVEMENT_STATE_LABEL: Record<string, string> = {
+  available: 'compared',
+  observed_zero: 'compared (zero after)',
+  unavailable: 'not available',
+  non_comparable: 'not comparable',
+  not_run: 'not measured yet',
+};
+
+export function movementStateLabel(state: string): string {
+  return MOVEMENT_STATE_LABEL[state] ?? 'not available';
 }
 
 const OUTPUT_KIND_LABEL: Record<string, string> = {

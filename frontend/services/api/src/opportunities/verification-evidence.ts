@@ -1,4 +1,8 @@
-import { isDeepStrictEqual } from 'node:util';
+/**
+ * One source's reading of a declaration's expected checks. Each source reads
+ * only the check kinds it can measure and leaves the others untouched, so
+ * their earlier states carry forward in the merged observation.
+ */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -6,98 +10,94 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { record } from '../db/json.ts';
 import {
+  compareMetric,
   evaluation,
   evaluatePlacementCheck,
-  evaluateTrafficMetric,
-  evaluateVisibilityMetric,
+  outcome,
+  promptScore,
+  type CheckOutcome,
   type Evaluation,
 } from './verification-decisions.ts';
 import type { Declaration } from './verification-result.ts';
 import { scalarText } from '../text-order.ts';
 import { contextualLinkObserved } from './internal-link-verification.ts';
+
 export type Source = { kind: string; id: string; observed_at: string };
+type Reading = Pick<CheckOutcome, 'observed_at' | 'source_kind' | 'source_id'>;
 type Context = {
   db: Database;
   scope: WorkspaceScope;
   declaration: Declaration;
   result: Evaluation;
+  reading: Reading;
 };
+type Check = Record<string, unknown>;
+
+/** The check kinds each source kind can read. */
+export const SOURCE_CHECK_KINDS: Record<string, readonly string[]> = {
+  site_crawl: ['site_rule', 'contextual_link'],
+  audit: ['visibility_metric'],
+  traffic_snapshot: ['traffic_metric'],
+  source_page_inspection: [policy.opportunity.placement.PLACEMENT_CHECK_KIND],
+};
+
 const checksOf = (d: Declaration) =>
   Array.isArray(d.expected_checks) ? d.expected_checks.map(record) : [];
-const kindName = (check: Record<string, unknown>) =>
-  check.kind === null || check.kind === undefined ? 'unknown' : scalarText(check.kind);
-type SiteAnalysis = { normalized_facts: unknown; source_evaluation_ids: unknown };
-type SiteCheckKind = 'site_rule' | 'page_fact' | 'contextual_link';
-/** Whether the analyzed page matches the check, or null once a limitation is recorded. */
-type SiteEvaluator = (
-  ctx: Context,
-  analysis: SiteAnalysis,
-  check: Record<string, unknown>,
-) => Promise<boolean | null> | boolean | null;
-
-const siteEvaluators: Record<SiteCheckKind, SiteEvaluator> = {
-  contextual_link(ctx, analysis, check) {
-    const observed = contextualLinkObserved(analysis.normalized_facts, check);
-    if (observed === null)
-      ctx.result.limitations.push('contextual_link: insufficient or incompatible link capture');
-    return observed;
-  },
-  async site_rule(ctx, analysis, check) {
-    const ids = Array.isArray(analysis.source_evaluation_ids)
-      ? analysis.source_evaluation_ids.map(String)
-      : [];
-    const rule = ids.length
-      ? await ctx.scope
-          .selectFrom(ctx.db, 'site_rule_evaluations')
-          .selectAll()
-          .where('id', 'in', ids)
-          .where('rule_id', '=', String(check.rule_id ?? ''))
-          .executeTakeFirst()
-      : undefined;
-    if (!rule || !['satisfied', 'missing', 'partial'].includes(rule.outcome)) {
-      ctx.result.limitations.push('site_rule: no applicable evaluation');
-      return null;
-    }
-    ctx.result.rule_evaluation_ids.add(rule.id);
-    return rule.outcome === expectedRuleOutcome(check.expected_outcome);
-  },
-  page_fact(ctx, analysis, check) {
-    const facts = record(analysis.normalized_facts);
-    const key = String(check.fact_key || '');
-    if (!Object.hasOwn(check, 'expected_value')) {
-      ctx.result.limitations.push('page_fact: no expected value');
-      return null;
-    }
-    if (!Object.hasOwn(facts, key)) {
-      ctx.result.limitations.push(`page_fact: ${key} unavailable`);
-      return null;
-    }
-    return isDeepStrictEqual(facts[key], check.expected_value);
-  },
+const dayOf = (iso: string) => iso.slice(0, 10);
+const set = (ctx: Context, index: number, item: CheckOutcome | null) => {
+  if (item) ctx.result.outcomes.set(index, item);
 };
+
 function expectedRuleOutcome(expected: unknown) {
   if (expected === 'pass') return 'satisfied';
   if (expected === 'fail') return 'missing';
   return expected;
 }
-async function siteCheck(ctx: Context, crawlId: string, check: Record<string, unknown>) {
-  const kind = kindName(check);
+
+type SiteAnalysis = { id: string; normalized_facts: unknown; source_evaluation_ids: unknown };
+
+async function siteRuleOutcome(ctx: Context, analysis: SiteAnalysis, check: Check) {
+  const ids = Array.isArray(analysis.source_evaluation_ids)
+    ? analysis.source_evaluation_ids.map(String)
+    : [];
+  const rule = ids.length
+    ? await ctx.scope
+        .selectFrom(ctx.db, 'site_rule_evaluations')
+        .select(['id', 'outcome'])
+        .where('id', 'in', ids)
+        .where('rule_id', '=', String(check.rule_id ?? ''))
+        .executeTakeFirst()
+    : undefined;
+  if (!rule || !['satisfied', 'missing', 'partial'].includes(rule.outcome))
+    return outcome(ctx.reading, 'unavailable', 'rule_not_evaluated');
+  ctx.result.rule_evaluation_ids.add(rule.id);
+  ctx.result.analysis_ids.add(analysis.id);
+  return outcome(
+    ctx.reading,
+    rule.outcome === expectedRuleOutcome(check.expected_outcome) ? 'met' : 'unmet',
+  );
+}
+
+function contextualLinkOutcome(ctx: Context, analysis: SiteAnalysis, check: Check) {
+  const observed = contextualLinkObserved(analysis.normalized_facts, check);
+  if (observed === null) return outcome(ctx.reading, 'unavailable', 'link_capture_incomplete');
+  ctx.result.analysis_ids.add(analysis.id);
+  return outcome(ctx.reading, observed ? 'met' : 'unmet');
+}
+
+async function siteCheck(ctx: Context, crawlId: string, check: Check) {
   const d = ctx.declaration;
-  if (!Object.hasOwn(siteEvaluators, kind)) {
-    ctx.result.limitations.push(`${kind}: unavailable from a site crawl`);
-    return;
-  }
   const targets = Array.isArray(d.target_site_url_ids) ? d.target_site_url_ids : [];
   const target = parseUuid(check.target_site_url_id ?? (targets.length === 1 ? targets[0] : null));
-  if (!target) {
-    ctx.result.limitations.push(`${kind}: no resolved target`);
-    return;
-  }
+  if (!target) return outcome(ctx.reading, 'unavailable', 'no_resolved_target');
   const analysis = await ctx.scope
     .selectFrom(ctx.db, 'site_page_analyses')
     .innerJoin('site_fetch_artifacts', 'site_fetch_artifacts.id', 'site_page_analyses.artifact_id')
-    .selectAll('site_page_analyses')
-    .select('site_fetch_artifacts.normalized_facts')
+    .select([
+      'site_page_analyses.id',
+      'site_page_analyses.source_evaluation_ids',
+      'site_fetch_artifacts.normalized_facts',
+    ])
     .where('site_fetch_artifacts.workspace_id', '=', d.workspace_id)
     .where('site_page_analyses.project_id', '=', d.project_id)
     .where('site_page_analyses.crawl_id', '=', crawlId)
@@ -113,93 +113,129 @@ async function siteCheck(ctx: Context, crawlId: string, check: Record<string, un
     .orderBy('site_page_analyses.id', 'desc')
     .limit(1)
     .executeTakeFirst();
-  if (!analysis) {
-    ctx.result.limitations.push(`${kind}: target was not analyzed`);
-    return;
-  }
-  const evaluate = siteEvaluators[kind as SiteCheckKind];
-  const matched = await evaluate(ctx, analysis, check);
-  if (matched === null) return;
-  ctx.result.observed++;
-  ctx.result.analysis_ids.add(analysis.id);
-  if (matched) ctx.result.matched++;
-  else ctx.result.contradicted = true;
+  if (!analysis) return outcome(ctx.reading, 'unavailable', 'page_not_analyzed');
+  return check.kind === 'site_rule'
+    ? siteRuleOutcome(ctx, analysis, check)
+    : contextualLinkOutcome(ctx, analysis, check);
 }
-async function auditEvidence(ctx: Context, id: string) {
+
+/** A prompt's score in this audit against the score frozen at declaration. */
+async function visibilityCheck(ctx: Context, auditId: string, check: Check) {
   const d = ctx.declaration;
+  const prompt = parseUuid(check.target_prompt_id);
+  // Checks declared against the project-wide score measured nothing the
+  // Action changed; they stay unmeasurable rather than verify by drift.
+  if (!prompt) return outcome(ctx.reading, 'unavailable', 'not_prompt_scoped');
   const snapshot = await ctx.scope
     .selectFrom(ctx.db, 'metric_snapshots')
-    .selectAll()
+    .select(['id', 'metrics'])
     .where('project_id', '=', d.project_id)
-    .where('audit_id', '=', id)
+    .where('audit_id', '=', auditId)
     .where('created_at', '>', sql<Date>`${d.declared_implemented_at}::timestamptz`)
     .executeTakeFirst();
-  for (const check of checksOf(d)) {
-    if (check.kind !== 'visibility_metric') {
-      ctx.result.limitations.push(`${kindName(check)}: unavailable from an AI audit`);
-      continue;
-    }
-    const prompt = parseUuid(check.target_prompt_id);
-    const row = prompt
-      ? await ctx.scope
-          .selectFrom(ctx.db, 'audits')
-          .innerJoin('audit_prompt_snapshots', 'audit_prompt_snapshots.audit_id', 'audits.id')
-          .select('prompt_index')
-          .where('audits.id', '=', id)
-          .where('prompt_id', '=', prompt)
-          .executeTakeFirst()
-      : undefined;
-    const index = row?.prompt_index ?? null;
-    if (check.target_prompt_id !== undefined && check.target_prompt_id !== null && index === null) {
-      ctx.result.limitations.push('visibility_metric: target prompt unavailable');
-      continue;
-    }
-    evaluateVisibilityMetric(snapshot, check, index, ctx.result);
-  }
+  if (!snapshot) return outcome(ctx.reading, 'unavailable', 'no_metric_snapshot');
+  const row = await ctx.scope
+    .selectFrom(ctx.db, 'audits')
+    .innerJoin('audit_prompt_snapshots', 'audit_prompt_snapshots.audit_id', 'audits.id')
+    .select('prompt_index')
+    .where('audits.id', '=', auditId)
+    .where('prompt_id', '=', prompt)
+    .executeTakeFirst();
+  if (!row) return outcome(ctx.reading, 'unavailable', 'prompt_not_in_run');
+  ctx.result.metric_ids.add(snapshot.id);
+  return compareMetric(
+    check,
+    check.baseline_value,
+    promptScore(snapshot.metrics, row.prompt_index),
+    ctx.reading,
+    'prompt_score_unavailable',
+  );
 }
-async function trafficEvidence(ctx: Context, id: string) {
+
+/**
+ * Clicks per day on the declared page or query, in a window that starts on
+ * or after the declaration day, against the frozen pre-declaration rate.
+ * Sync windows differ in length, so windows compare as daily rates.
+ */
+async function trafficCheck(ctx: Context, snapshotId: string, check: Check) {
   const d = ctx.declaration;
+  const scope = check.scope;
+  const key = scalarText(check.scope_key);
+  if ((scope !== 'page' && scope !== 'query') || !key)
+    return outcome(ctx.reading, 'unavailable', 'not_page_scoped');
   const snapshot = await ctx.scope
     .selectFrom(ctx.db, 'traffic_snapshots')
-    .selectAll()
+    .select([
+      'id',
+      sql<string>`window_start::date::text`.as('start'),
+      sql<number>`(window_end::date - window_start::date + 1)`.as('days'),
+    ])
     .where('project_id', '=', d.project_id)
-    .where('id', '=', id)
-    .where('created_at', '>', sql<Date>`${d.declared_implemented_at}::timestamptz`)
+    .where('id', '=', snapshotId)
     .executeTakeFirst();
-  for (const check of checksOf(d)) {
-    if (check.kind !== 'traffic_metric')
-      ctx.result.limitations.push(`${kindName(check)}: unavailable from a traffic snapshot`);
-    else evaluateTrafficMetric(snapshot, check, ctx.result);
-  }
+  if (!snapshot) return outcome(ctx.reading, 'unavailable', 'no_traffic_snapshot');
+  if (snapshot.start < dayOf(d.declared_implemented_at))
+    return outcome(ctx.reading, 'unavailable', 'window_overlaps_declaration');
+  const row =
+    scope === 'page'
+      ? await ctx.scope
+          .selectFrom(ctx.db, 'traffic_page_stats')
+          .select(['id', 'metrics'])
+          .where('project_id', '=', d.project_id)
+          .where('snapshot_id', '=', snapshot.id)
+          .where('canonical_url', '=', key)
+          .executeTakeFirst()
+      : await ctx.scope
+          .selectFrom(ctx.db, 'traffic_query_stats')
+          .select(['id', 'metrics'])
+          .where('project_id', '=', d.project_id)
+          .where('snapshot_id', '=', snapshot.id)
+          .where('normalized_query', '=', key)
+          .executeTakeFirst();
+  const value = record(row?.metrics)[String(check.metric || '')];
+  if (row) ctx.result.metric_ids.add(row.id);
+  // Checks declared before rates froze a window total; those compare as totals.
+  const days = check.per_day === true ? Number(snapshot.days) : 1;
+  return compareMetric(
+    check,
+    check.baseline_value,
+    typeof value === 'number' && Number.isFinite(value) ? value / days : null,
+    ctx.reading,
+    'no_search_console_row',
+  );
 }
-async function placementEvidence(ctx: Context) {
-  const kinds = checksOf(ctx.declaration).map(kindName);
-  const kind = policy.opportunity.placement.PLACEMENT_CHECK_KIND;
-  for (const item of kinds)
-    if (item !== kind) ctx.result.limitations.push(`${item}: unavailable from a page inspection`);
-  if (!kinds.includes(kind)) return;
+
+async function placementCheck(ctx: Context) {
   const check = await ctx.scope
     .selectFrom(ctx.db, 'placement_checks')
-    .selectAll()
+    .select(['state', 'state_reason', 'due_at'])
     .where('implementation_event_id', '=', ctx.declaration.id)
     .executeTakeFirst();
-  evaluatePlacementCheck(check, ctx.result);
+  return evaluatePlacementCheck(check, ctx.reading);
 }
+
+/** This source's outcomes for the declaration's checks it can read. */
 export async function evidenceFor(
   db: Database,
   declaration: Declaration,
   source: Source,
 ): Promise<Evaluation> {
-  const ctx = {
+  const ctx: Context = {
     db,
     declaration,
     scope: new WorkspaceScope(declaration.workspace_id),
     result: evaluation(),
+    reading: { observed_at: source.observed_at, source_kind: source.kind, source_id: source.id },
   };
-  if (source.kind === 'site_crawl')
-    for (const check of checksOf(declaration)) await siteCheck(ctx, source.id, check);
-  else if (source.kind === 'audit') await auditEvidence(ctx, source.id);
-  else if (source.kind === 'source_page_inspection') await placementEvidence(ctx);
-  else await trafficEvidence(ctx, source.id);
+  const readable = SOURCE_CHECK_KINDS[source.kind] ?? [];
+  for (const [index, check] of checksOf(declaration).entries()) {
+    if (!readable.includes(String(check.kind))) continue;
+    // One source reads its checks in order on the caller's connection.
+    if (source.kind === 'site_crawl') set(ctx, index, await siteCheck(ctx, source.id, check)); // NOSONAR
+    else if (source.kind === 'audit') set(ctx, index, await visibilityCheck(ctx, source.id, check)); // NOSONAR
+    else if (source.kind === 'traffic_snapshot')
+      set(ctx, index, await trafficCheck(ctx, source.id, check)); // NOSONAR
+    else set(ctx, index, await placementCheck(ctx)); // NOSONAR
+  }
   return ctx.result;
 }

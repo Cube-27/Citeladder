@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
+import { measuredTargetPages } from '../opportunities/enqueue.ts';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { record, strings } from '../db/json.ts';
@@ -156,6 +157,12 @@ async function seedMonitored(db: Database, crawl: Crawl) {
     .where('m.active', '=', true)
     .orderBy('u.normalized_url')
     .execute();
+  // Pages with a declared change still being measured go first, so a budget
+  // smaller than the monitored set never drops the page a verification awaits.
+  const declared = new Set(
+    await measuredTargetPages(db, { workspaceId: crawl.workspace_id, projectId: crawl.project_id }),
+  );
+  rows.sort((left, right) => Number(declared.has(right.id)) - Number(declared.has(left.id)));
   const current = await db
     .selectFrom('site_crawl_tasks')
     .select(sql<number>`count(*)::int`.as('count'))
@@ -413,12 +420,16 @@ export async function createPageRerunCrawl(
     crawlError('page is not admissible for rerun', decision.reason ?? 'invalid_crawl_request');
   const now = new Date();
   const budget = await budgetedPageLimit(db, workspaceId, 1, now);
-  const configuration = frozenConfiguration(scope, runtime, {
-    mode: 'auto',
-    limit: budget.limit,
-    seeds: [],
-    kinds: [],
-  });
+  const configuration = {
+    ...frozenConfiguration(scope, runtime, {
+      mode: 'auto',
+      limit: budget.limit,
+      seeds: [],
+      kinds: [],
+    }),
+    // Marks a page re-read, which Changes never compares as a site crawl.
+    page_rerun: true,
+  };
   const crawl = await insertCrawl(db, {
     workspaceId,
     projectId,

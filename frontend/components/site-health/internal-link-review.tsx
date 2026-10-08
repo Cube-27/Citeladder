@@ -8,7 +8,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
-import { MarkImplementedButton } from '@/components/agent/action-declaration';
+import { MarkActionImplemented } from '@/components/agent/action-declaration';
 import { formatCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
@@ -161,7 +161,7 @@ function LinkDeclaration({
           label={`${item.anchor} → ${item.target.title || item.target.url}`}
         />
       ))}
-      <MarkImplementedButton
+      <MarkActionImplemented
         workspaceId={workspaceId}
         actionId={link.action_id}
         revision={null}

@@ -6,7 +6,7 @@
  *
  * Pure functions over loaded evidence.
  */
-import { opportunitySummarySchema } from '@citeladder/contracts/opportunities';
+import { sourceMixSchema as sourceMix } from '@citeladder/contracts/opportunities';
 
 import { randomUUID } from 'node:crypto';
 
@@ -20,8 +20,6 @@ import { isoUtc } from '../db/timestamps.ts';
 import { promptTextHash } from '../prompts/normalization.ts';
 import { numberRecord, record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
-
-const sourceMix = opportunitySummarySchema.shape.source_mix;
 
 const o = policy.opportunity.opportunities;
 const a = policy.opportunity.actions;
@@ -72,23 +70,8 @@ export function siteCoverage(crawl: CoverageCrawl | null): [Json, string[]] {
 const mergedIds = (left: string[], right: string[]) =>
   [...new Set([...left, ...right])].sort(compareText);
 
-/** Compare the tie-break fields; positive when `left` wins. */
-function preference(left: Scored, right: Scored): number {
-  const [lh, ls] = left;
-  const [rh, rs] = right;
-  const flags = (hit: DetectorHit) =>
-    Number(Boolean(hit.title_override)) + Number(Boolean(hit.remediation_override));
-  return (
-    ls - rs ||
-    flags(lh) - flags(rh) ||
-    ((lh.title_override ?? '') < (rh.title_override ?? '')
-      ? -1
-      : (lh.title_override ?? '') > (rh.title_override ?? '')
-        ? 1
-        : 0) ||
-    compareText(lh.remediation_override ?? '', rh.remediation_override ?? '')
-  );
-}
+/** Positive when `left` is the higher-scored hit. */
+const preference = (left: Scored, right: Scored) => left[1] - right[1];
 
 /** Score, drop sub-threshold hits and fold one row per (rule, target). */
 export function scoreHits(hits: DetectorHit[]): Scored[] {
@@ -131,8 +114,8 @@ export function newOpportunity(hit: DetectorHit, score: number) {
     opportunity_type: rule.opportunity_type,
     severity: rule.severity,
     priority_score: score,
-    title: hit.title_override ?? rule.title,
-    remediation: hit.remediation_override ?? rule.remediation,
+    title: rule.title,
+    remediation: rule.remediation,
     target_key: hit.target_key,
     target_prompt_id: hit.target_prompt_id,
     target_url: hit.target_url,
@@ -229,27 +212,37 @@ export function emptyProjection(): [Json, Json, Json[]] {
   return [empty, { ...empty }, []];
 }
 
-export type CurrentSnapshot = {
-  audit_id: string | null;
-  site_crawl_id: string | null;
-  demand_snapshot_id: string | null;
-  demand_source_revision: string | null;
+type CurrentSnapshot = {
+  coverage: unknown;
   analyzer_version: string;
   rule_version: string;
   formula_version: string;
 };
 
-/** Whether the latest snapshot already describes these exact sources. */
-export function snapshotIsCurrent(
-  current: CurrentSnapshot | null,
-  sources: { auditId: string | null; crawlId: string | null; demand: SnapshotSources['demand'] },
-): boolean {
+/**
+ * Every persisted input a refresh reads, by identity: the audit, crawl, demand
+ * revision, internal-link run and newest source-page reading. Two refreshes
+ * over equal identities compute the same set.
+ */
+export type SourceIdentity = {
+  audit_id: string | null;
+  site_crawl_id: string | null;
+  demand_snapshot_id: string | null;
+  demand_source_revision: string | null;
+  internal_link_run_id: string | null;
+  source_page_reading_id: string | null;
+};
+
+/** Equal identities; a stored one missing a field (an older snapshot) never matches. */
+export function sameIdentity(left: Record<string, unknown>, right: SourceIdentity): boolean {
+  return Object.entries(right).every(([key, value]) => left[key] === value);
+}
+
+/** Whether the latest snapshot already describes these exact sources and versions. */
+export function snapshotIsCurrent(current: CurrentSnapshot | null, identity: SourceIdentity) {
   return (
     current !== null &&
-    current.audit_id === sources.auditId &&
-    current.site_crawl_id === sources.crawlId &&
-    current.demand_snapshot_id === (sources.demand?.id ?? null) &&
-    current.demand_source_revision === (sources.demand?.source_hash ?? null) &&
+    sameIdentity(record(record(current.coverage).source_identity), identity) &&
     current.analyzer_version === o.ANALYZER_VERSION &&
     current.rule_version === o.RULE_VERSION &&
     current.formula_version === o.FORMULA_VERSION
@@ -270,7 +263,11 @@ export function availableFamilies(has: { audit: boolean; demand: boolean; crawl:
 }
 
 /** A persisted snapshot row, as its read projects it. */
-export type StoredSnapshot = CurrentSnapshot & {
+type StoredSnapshot = CurrentSnapshot & {
+  audit_id: string | null;
+  site_crawl_id: string | null;
+  demand_snapshot_id: string | null;
+  demand_source_revision: string | null;
   id: string;
   run_id: string;
   coverage: unknown;

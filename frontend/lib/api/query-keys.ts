@@ -10,7 +10,7 @@
  *   - performance.ts   — performance (dashboard, dimension tables, range task)
  *   - demand.ts        — search-demand projections
  *   - ai-traffic.ts  — AI-referral measurements
- *   - opportunities.ts — opportunities (catalog, detail, summary)
+ *   - opportunities.ts — opportunities (catalog, detail)
  *   - actions.ts       — actions (work queue, detail)
  *   - agent.ts         — agent chats, outputs, skills, instructions
  *   - commerce.ts      — commerce (catalog feed health, agentic product visibility)

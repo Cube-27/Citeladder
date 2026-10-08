@@ -76,6 +76,22 @@ export const measurementLegSchema = responseObject({
   source_id: uuid().nullable(),
 });
 
+// One expected check's latest reading. Each check keeps the state its own
+// evidence last gave it, so a crawl and a Search Console window together can
+// settle a page Action that neither settles alone.
+export const declarationCheckSchema = responseObject({
+  index: z.number().int(),
+  kind: z.string(),
+  leg: measurementLegSchema.shape.leg,
+  // `waiting`: no comparable reading yet. `unavailable`: the reading could not
+  // answer, with `reason`. `met` / `unmet`: the reading answered.
+  state: z.enum(['waiting', 'met', 'unmet', 'unavailable']),
+  reason: z.string().nullable(),
+  observed_at: z.string().nullable(),
+  // What the check names: a rule, a prompt, a page or query, a link or a placement.
+  subject: z.string().nullable(),
+});
+
 // The user's declaration, frozen server-side: members, targets and checks.
 export const actionDeclarationSchema = responseObject({
   id: uuid(),
@@ -93,12 +109,21 @@ export const actionDeclarationSchema = responseObject({
   limitations: z.array(z.string()),
   verification_events: z.array(verificationEventSchema),
   legs: z.array(measurementLegSchema),
+  checks: z.array(declarationCheckSchema),
+  // When new evidence stops re-checking this declaration.
+  measured_until: z.string(),
   created_at: z.string(),
 });
 
 export const actionDetailSchema = actionItemSchema.extend({
+  // Per member opportunity id: the reading that would measure it once
+  // declared, or null when no automatic check applies.
+  member_measurement: z.record(z.string(), measurementLegSchema.shape.leg.nullable()),
+  // The earliest implementation time a declaration accepts.
+  declarable_since: z.string(),
   diagnosis: actionDiagnosisSchema,
-  members: z.array(opportunitySchema),
+  // Each live finding with what to do about it.
+  members: z.array(opportunitySchema.extend({ remediation: z.string() })),
   declaration: actionDeclarationSchema.nullable(),
 });
 

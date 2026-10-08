@@ -18,6 +18,7 @@ import { recomputeOpportunities, refreshOpportunities } from '../src/opportuniti
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { enqueueOpportunityRefresh } from '../src/opportunities/enqueue.ts';
 import { seedOpportunityScenario, type OpportunitySeed } from './opportunity-fixtures.ts';
+import { sourcePage } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
@@ -151,7 +152,7 @@ describe('opportunity_refresh', () => {
       site_crawl_id: own.crawl_id,
       total_count: 4,
       source_analysis_ids: [own.analysis0_id],
-      source_issue_ids: [own.issue_structured_id, own.issue_thin_id].sort(),
+      source_issue_ids: [own.issue_structured_id, own.issue_content_id].sort(),
       analyzer_version: o.ANALYZER_VERSION,
       formula_version: o.FORMULA_VERSION,
     });
@@ -161,7 +162,7 @@ describe('opportunity_refresh', () => {
       ['brand_absent_high_value_prompt', 120],
       ['owned_page_not_cited', 80],
       ['missing_structured_data', 20],
-      ['thin_content', 10],
+      ['content_structure_incomplete', 10],
     ]);
     const absent = byRule(rows, 'brand_absent_high_value_prompt');
     expect(absent).toMatchObject({
@@ -172,9 +173,9 @@ describe('opportunity_refresh', () => {
       source_issue_ids: [],
       source_traffic_ids: null,
     });
-    expect(byRule(rows, 'thin_content')).toMatchObject({
+    expect(byRule(rows, 'content_structure_incomplete')).toMatchObject({
       target_url: URL_B,
-      source_issue_ids: [own.issue_thin_id],
+      source_issue_ids: [own.issue_content_id],
     });
     expect(rows.every((row) => row.action_id !== null)).toBe(true);
   });
@@ -192,6 +193,38 @@ describe('opportunity_refresh', () => {
 
     expect(await snapshotCount(own)).toBe(snapshots);
     expect((await live(own)).map((row) => row.id)).toEqual(before.map((row) => row.id));
+  });
+
+  it('refreshes once a source page is read, although audit, crawl and demand are unchanged', async () => {
+    const s = await seed();
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    const before = await snapshotCount(s);
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    expect(await snapshotCount(s)).toBe(before);
+    const page = await sourcePage(
+      db,
+      { workspace_id: s.workspace_id, project_id: s.project_id },
+      'https://publisher.test/list',
+      true,
+    );
+    await db
+      .insertInto('source_page_snapshots')
+      .values({
+        workspace_id: s.workspace_id,
+        project_id: s.project_id,
+        id: randomUUID(),
+        source_page_id: page.id,
+        requested_url: 'https://publisher.test/list',
+        final_url: 'https://publisher.test/list',
+        outcome: 'inspected',
+        body_bytes: 0,
+        extracted_chars: 5000,
+        fetched_at: new Date(),
+        created_at: new Date(),
+      })
+      .execute();
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    expect(await snapshotCount(s)).toBe(before + 1);
   });
 
   it('lets exactly one of two concurrent workers claim a queued refresh', async () => {
@@ -294,8 +327,8 @@ describe('opportunity_refresh', () => {
     expect(snapshot.total_count).toBe(2);
     const second = await live(s);
     expect(second.map((row) => row.rule_id).sort()).toEqual([
+      'content_structure_incomplete',
       'missing_structured_data',
-      'thin_content',
     ]);
     const closed = new Map(
       (
@@ -310,14 +343,14 @@ describe('opportunity_refresh', () => {
           .execute()
       ).map((row) => [row.id, row]),
     );
-    const firstThin = byRule(first, 'thin_content');
-    const secondThin = byRule(second, 'thin_content');
-    expect(secondThin.id).not.toBe(firstThin.id);
-    expect(secondThin.action_id).toBe(firstThin.action_id);
+    const firstContent = byRule(first, 'content_structure_incomplete');
+    const secondContent = byRule(second, 'content_structure_incomplete');
+    expect(secondContent.id).not.toBe(firstContent.id);
+    expect(secondContent.action_id).toBe(firstContent.action_id);
     expect(byRule(second, 'missing_structured_data').evidence).toEqual(
       byRule(first, 'missing_structured_data').evidence,
     );
-    expect(closed.get(firstThin.id)?.superseded_by_id).toBe(secondThin.id);
+    expect(closed.get(firstContent.id)?.superseded_by_id).toBe(secondContent.id);
     const absent = closed.get(byRule(first, 'brand_absent_high_value_prompt').id);
     expect(absent?.superseded_at).not.toBeNull();
     expect(absent?.superseded_by_id).toBeNull();
@@ -335,7 +368,7 @@ describe('opportunity_refresh', () => {
   it('keeps a dismissed status across a refresh', async () => {
     const s = await seed();
     await recomputeOpportunities(db, scope(s));
-    const thin = byRule(await live(s), 'thin_content');
+    const thin = byRule(await live(s), 'content_structure_incomplete');
     await updateActionStatus(db, s.workspace_id, thin.action_id!, 'dismissed', s.user_id);
 
     await recomputeOpportunities(db, scope(s));
@@ -346,7 +379,9 @@ describe('opportunity_refresh', () => {
       .where('id', '=', thin.action_id!)
       .executeTakeFirstOrThrow();
     expect(action.status).toBe('dismissed');
-    expect(action.member_opportunity_ids).toEqual([byRule(await live(s), 'thin_content').id]);
+    expect(action.member_opportunity_ids).toEqual([
+      byRule(await live(s), 'content_structure_incomplete').id,
+    ]);
   });
 
   it('adopts an Agent-created page Action instead of opening a second one', async () => {
@@ -359,7 +394,7 @@ describe('opportunity_refresh', () => {
 
     await recomputeOpportunities(db, scope(s));
 
-    const thin = byRule(await live(s), 'thin_content');
+    const thin = byRule(await live(s), 'content_structure_incomplete');
     expect(thin.action_id).toBe(agent.id);
     const action = await db
       .selectFrom('actions')
@@ -373,7 +408,7 @@ describe('opportunity_refresh', () => {
 describe('Opportunity routes', () => {
   const base = (s: Seed) => `/api/v1/projects/${s.project_id}/opportunities`;
 
-  it('lists, orders with a version and exports the persisted rows', async () => {
+  it('lists and orders the persisted rows with a version', async () => {
     const rows = await live(own);
     const listed = await request(own, base(own));
     expect(listed.status).toBe(200);
@@ -395,24 +430,6 @@ describe('Opportunity routes', () => {
     expect(((await stale.response.json()) as { error: { code: string } }).error.code).toBe(
       'opportunity_order_conflict',
     );
-
-    const csv = await request(own, `${base(own)}/export.csv`);
-    expect(csv.status).toBe(200);
-    expect(csv.response.headers.get('content-type')).toBe('text/csv; charset=utf-8');
-    expect((await csv.response.text()).trim().split('\n')).toHaveLength(rows.length + 1);
-  });
-
-  it('recomputes on request and rejects a foreign audit as not found', async () => {
-    const snapshots = await snapshotCount(own);
-    const done = await request(own, `${base(own)}/recompute`, { method: 'POST' });
-    expect(done.status).toBe(200);
-    expect(await snapshotCount(own)).toBe(snapshots + 1);
-
-    const foreignAudit = await request(own, `${base(own)}/recompute`, {
-      method: 'POST',
-      body: { audit_id: foreign.audit_id },
-    });
-    expect(foreignAudit.status).toBe(404);
   });
 
   it('pages by keyset, filters, and rejects a foreign cursor or unknown token', async () => {
@@ -430,76 +447,40 @@ describe('Opportunity routes', () => {
       'brand_absent_high_value_prompt',
       'owned_page_not_cited',
       'missing_structured_data',
-      'thin_content',
+      'content_structure_incomplete',
     ]);
     expect(rest.body.next_cursor).toBeNull();
-    expect((await read('rule_id=thin_content')).body.items.map((item) => item.rule_id)).toEqual([
-      'thin_content',
-    ]);
+    expect(
+      (await read('rule_id=content_structure_incomplete')).body.items.map((item) => item.rule_id),
+    ).toEqual(['content_structure_incomplete']);
     expect((await read('min_priority=80')).body.items).toHaveLength(2);
 
-    const replayed = await read(`limit=3&rule_id=thin_content&cursor=${first.body.next_cursor}`);
+    const replayed = await read(
+      `limit=3&rule_id=content_structure_incomplete&cursor=${first.body.next_cursor}`,
+    );
     expect([replayed.status, replayed.body.error.code]).toEqual([400, 'invalid_cursor']);
     const malformed = await read('cursor=not*a*cursor');
     expect([malformed.status, malformed.body.error.code]).toEqual([400, 'invalid_cursor']);
     for (const query of ['type=bogus', 'severity=bogus', 'status=bogus', 'min_priority=0x10'])
       expect([query, (await read(query)).status]).toEqual([query, 422]);
 
-    const thin = byRule(await live(s), 'thin_content');
+    const thin = byRule(await live(s), 'content_structure_incomplete');
     await updateActionStatus(db, s.workspace_id, thin.action_id!, 'dismissed', s.user_id);
     expect((await read('status=dismissed')).body.items.map((item) => item.rule_id)).toEqual([
-      'thin_content',
+      'content_structure_incomplete',
     ]);
   });
 
-  it('serves summary, history, detail and Markdown export to the owner', async () => {
+  it('serves an Opportunity detail with its exact source issues to the owner', async () => {
     const s = await seed();
     await recomputeOpportunities(db, scope(s));
-    const json = async <T>(path: string) => {
-      const { status, response } = await request(s, path);
-      expect([path, status]).toEqual([path, 200]);
-      return (await response.json()) as T;
-    };
-    type Summary = { computed: boolean; stale: boolean; total_count: number; source_mix: unknown };
-    const summary = await json<Summary>(`${base(s)}/summary`);
-    expect(summary).toMatchObject({ computed: true, stale: false, total_count: 4 });
-    // The persisted source projection, with its exact audit provenance.
-    expect(summary.source_mix).toMatchObject({
-      state: 'available',
-      audit_id: s.audit_id,
-      counts: { competitive_evidence: 1 },
-      eligible_analyzed_answers: 1,
-      answers_with_sources: 1,
+    const row = byRule(await live(s), 'content_structure_incomplete');
+    const { status, response } = await request(s, `/api/v1/opportunities/${row.id}`);
+    expect(status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      id: row.id,
+      source_issue_ids: [s.issue_content_id],
     });
-
-    const history = await json<{ items: { rule_id: string; occurrence_count: number }[] }>(
-      `${base(s)}/history`,
-    );
-    expect(history.items.map((item) => [item.rule_id, item.occurrence_count]).sort()).toEqual([
-      ['brand_absent_high_value_prompt', 1],
-      ['missing_structured_data', 1],
-      ['owned_page_not_cited', 1],
-      ['thin_content', 1],
-    ]);
-    const thin = byRule(await live(s), 'thin_content');
-    const detail = await json<{ id: string; source_issue_ids: string[] }>(
-      `/api/v1/opportunities/${thin.id}`,
-    );
-    expect(detail).toMatchObject({ id: thin.id, source_issue_ids: [s.issue_thin_id] });
-
-    const markdown = await request(s, `${base(s)}/export.md`);
-    expect(markdown.status).toBe(200);
-    expect(markdown.response.headers.get('content-disposition')).toBe(
-      `attachment; filename="opportunities-${s.project_id}.md"`,
-    );
-
-    // Newer scored evidence than the snapshot makes the summary stale.
-    await db
-      .updateTable('audits')
-      .set({ completed_at: new Date(Date.now() + 3_600_000) })
-      .where('id', '=', s.audit_id)
-      .execute();
-    expect((await json<Summary>(`${base(s)}/summary`)).stale).toBe(true);
   });
 
   it('requires a session', async () => {
@@ -511,12 +492,7 @@ describe('Opportunity routes', () => {
     const [row] = await live(own);
     const paths: [string, string, unknown?][] = [
       ['GET', base(own)],
-      ['GET', `${base(own)}/summary`],
-      ['GET', `${base(own)}/history`],
-      ['GET', `${base(own)}/export.md`],
-      ['GET', `${base(own)}/export.csv`],
       ['GET', `/api/v1/opportunities/${row!.id}`],
-      ['POST', `${base(own)}/recompute`],
       ['PUT', `${base(own)}/order`, { ordered_opportunity_ids: [], expected_version: 0 }],
     ];
     const snapshots = await snapshotCount(own);

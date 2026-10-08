@@ -25,7 +25,7 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
       total_count: 4,
       source_analysis_ids: JSON.stringify([scn.analysis0_id]),
       source_issue_ids: JSON.stringify(
-        [scn.issue_structured_id, scn.issue_thin_id].sort((left, right) =>
+        [scn.issue_structured_id, scn.issue_content_id].sort((left, right) =>
           left.localeCompare(right),
         ),
       ),
@@ -68,15 +68,15 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
         source_issue_ids: JSON.stringify([scn.issue_structured_id]),
       }),
       opportunityRow(scope, {
-        rule_id: 'thin_content',
-        title: 'thin_content',
+        rule_id: 'content_structure_incomplete',
+        title: 'content_structure_incomplete',
         severity: 'low',
         priority_score: 10,
         opportunity_type: 'site',
         target_key: 'url:https://acme.test/b',
         target_url: 'https://acme.test/b',
-        evidence: JSON.stringify({ issue_rule_id: 'technical.thin_content' }),
-        source_issue_ids: JSON.stringify([scn.issue_thin_id]),
+        evidence: JSON.stringify({ issue_rule_id: 'aeo.answer_first' }),
+        source_issue_ids: JSON.stringify([scn.issue_content_id]),
       }),
     ];
     await trx.insertInto('opportunities').values(specs).execute();
@@ -91,7 +91,14 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
         ['missing_structured_data'],
         'site_health',
       ],
-      ['page', 'page:acme.test/b', 'https://acme.test/b', null, ['thin_content'], 'site_health'],
+      [
+        'page',
+        'page:acme.test/b',
+        'https://acme.test/b',
+        null,
+        ['content_structure_incomplete'],
+        'site_health',
+      ],
       [
         'prompt',
         `prompt:${scn.prompt0_id}`,

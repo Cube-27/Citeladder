@@ -20,7 +20,7 @@ export const implementationStateSchema = z.enum([
   'contradicted',
 ]);
 const sourceProjectionStateSchema = z.enum(['available', 'unavailable', 'not_applicable']);
-const sourceMixSchema = responseObject({
+export const sourceMixSchema = responseObject({
   state: sourceProjectionStateSchema,
   projection_version: z.string(),
   taxonomy_version: z.string(),
@@ -35,7 +35,6 @@ const sourceMixSchema = responseObject({
   prompt_snapshot_ids: z.array(z.string().nullable()).optional(),
   gap_keys: z.array(z.string()).optional(),
 });
-const domainRollupSchema = z.record(z.string(), z.unknown());
 /**
  * One entity's verdict on the publisher page an earned action targets, as the
  * brief carries it.
@@ -266,58 +265,31 @@ export const opportunityDetailSchema = opportunitySchema.extend({
 
 export const opportunitiesPageSchema = cursorPageSchema(opportunitySchema);
 
-const snapshotFields = {
-  run_id: uuid(),
-  audit_id: uuid().nullable(),
-  site_crawl_id: uuid().nullable(),
-  demand_snapshot_id: uuid().nullable(),
-  demand_source_revision: z.string().nullable(),
-  coverage: z.record(z.string(), z.unknown()),
-  limitations: z.array(z.string()),
-  source_mix: sourceMixSchema,
-  action_path_mix: sourceMixSchema,
-  domain_rollups: z.array(domainRollupSchema),
-  counts_by_type: z.record(z.string(), z.number().int()),
-  counts_by_severity: z.record(z.string(), z.number().int()),
-  total_count: z.number().int(),
-  median_priority: z.number().nullable(),
-  analyzer_version: z.string(),
-  rule_version: z.string(),
-  formula_version: z.string(),
-};
-
-// Latest recompute snapshot projection. `computed=false` (with empty counts +
-// null ids) before the first recompute — a 200, never a 404.
-export const opportunitySummarySchema = responseObject({
-  activation_state: z.enum(['waiting_for_evidence', 'queued', 'refreshing', 'ready', 'delayed']),
-  computed: z.boolean(),
-  ...snapshotFields,
-  run_id: uuid().nullable(),
-  computed_at: z.string().nullable(),
-  // Read-time freshness: newest usable audit/crawl evidence timestamp, and
-  // whether it post-dates the latest snapshot (drives the stale badge).
-  evidence_updated_at: z.string().nullable(),
-  stale: z.boolean(),
-});
-
 const siteRuleExpectedCheckSchema = responseObject({
   kind: z.literal('site_rule'),
   target_site_url_id: uuid().optional(),
   rule_id: z.string(),
   expected_outcome: z.enum(['pass', 'fail', 'partial']),
 });
-const pageFactExpectedCheckSchema = responseObject({
-  kind: z.literal('page_fact'),
-  target_site_url_id: uuid().optional(),
-  fact_key: z.string(),
-  expected_value: z.unknown(),
-});
+/**
+ * Search Console clicks on the declared page or query, against a baseline
+ * window frozen at declaration. Rows declared before scoping carry only
+ * `expected_value` over the project total; they read as unmeasurable.
+ */
 const metricExpectedCheckSchema = responseObject({
   kind: z.literal('traffic_metric'),
   metric: z.string(),
   direction: z.enum(['increase', 'decrease', 'equal']),
-  expected_value: z.number(),
-  tolerance: z.number(),
+  scope: z.enum(['page', 'query']).optional(),
+  scope_key: z.string().optional(),
+  // Baseline and readings are clicks per day.
+  per_day: z.boolean().optional(),
+  min_delta: z.number().optional(),
+  baseline_traffic_snapshot_id: uuid().optional(),
+  baseline_value: z.number().optional(),
+  baseline_window_days: z.number().int().optional(),
+  expected_value: z.number().optional(),
+  tolerance: z.number().optional(),
 });
 const visibilityExpectedCheckSchema = responseObject({
   kind: z.literal('visibility_metric'),
@@ -368,7 +340,6 @@ export const expectedCheckSchema = z.discriminatedUnion('kind', [
     extractor_version: z.string(),
   }),
   siteRuleExpectedCheckSchema,
-  pageFactExpectedCheckSchema,
   metricExpectedCheckSchema,
   visibilityExpectedCheckSchema,
   placementExpectedCheckSchema,

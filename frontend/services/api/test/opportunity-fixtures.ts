@@ -21,7 +21,7 @@ export type OpportunitySeed = {
   metric_snapshot_id: string;
   crawl_id: string;
   issue_structured_id: string;
-  issue_thin_id: string;
+  issue_content_id: string;
 };
 
 type SiteEvidence = {
@@ -252,7 +252,7 @@ export function seedOpportunityScenario(
       'medium',
       { content, evidence: siteEvidence },
     );
-    const thinId = await issue(trx, fixtures, seed, '/b', 'technical.thin_content', 'low', {
+    const contentId = await issue(trx, fixtures, seed, '/b', 'aeo.answer_first', 'low', {
       content,
     });
     await issue(trx, fixtures, seed, '/c', 'technical.title_missing', 'high', { content });
@@ -268,7 +268,7 @@ export function seedOpportunityScenario(
       metric_snapshot_id: metricId,
       crawl_id: seed.crawlId,
       issue_structured_id: structuredId,
-      issue_thin_id: thinId,
+      issue_content_id: contentId,
     };
   });
 }

@@ -250,20 +250,3 @@ export function projectDetail(row: OpportunityRow) {
     superseded_at: isoUtcOrNull(row.superseded_text),
   };
 }
-
-export function projectExportRow(row: OpportunityRow): Record<string, unknown> {
-  const evidence = record(row.evidence);
-  return {
-    id: row.id,
-    rule_id: row.rule_id,
-    opportunity_type: row.opportunity_type,
-    severity: row.severity,
-    priority_score: row.priority_score,
-    title: row.title || '',
-    target: row.target_url || evidence.prompt_text || row.target_key,
-    remediation: row.remediation || '',
-    rule_version: row.rule_version,
-    formula_version: row.formula_version,
-    created_at: isoUtc(row.created_text),
-  };
-}

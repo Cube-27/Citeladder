@@ -731,6 +731,8 @@ describe('ChatScreen', () => {
           source_id: null,
         },
       ],
+      checks: [],
+      measured_until: NOW,
       created_at: NOW,
     };
     let declared: typeof declaration | null = null;
@@ -754,6 +756,8 @@ describe('ChatScreen', () => {
       updated_at: NOW,
       diagnosis: {},
       members: [],
+      member_measurement: {},
+      declarable_since: '2026-01-01T00:00:00Z',
       declaration: declared,
     });
     mswServer.use(
@@ -775,6 +779,8 @@ describe('ChatScreen', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Declare implemented' }));
 
     expect(await within(pane).findByText(/Crawls run when you start one/)).toBeVisible();
+    // The dialog's trigger is gone; focus lands on what replaced it.
+    expect(within(pane).getByRole('heading', { name: 'Measurement' })).toHaveFocus();
     expect(
       within(pane).queryByRole('button', { name: 'Mark implemented' }),
     ).not.toBeInTheDocument();

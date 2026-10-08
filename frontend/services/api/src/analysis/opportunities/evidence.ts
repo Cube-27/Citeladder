@@ -35,6 +35,8 @@ export type VisibilityEvidence = {
 };
 export type SiteEvidence = {
   crawl_id: string;
+  /** Whether the issue load hit its cap. */
+  truncated: boolean;
   issues: {
     issue_id: string;
     rule_id: string;
@@ -60,8 +62,6 @@ export type DetectorHit = {
   source_metric_ids: string[];
   value_factor: number;
   gap_factor: number;
-  title_override: string | null;
-  remediation_override: string | null;
 };
 type PageEntityEvidence = {
   entity_kind: string;

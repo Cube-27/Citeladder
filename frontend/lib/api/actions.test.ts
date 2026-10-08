@@ -40,6 +40,8 @@ const declaration = {
       source_id: null,
     },
   ],
+  checks: [],
+  measured_until: NOW,
   created_at: NOW,
 };
 

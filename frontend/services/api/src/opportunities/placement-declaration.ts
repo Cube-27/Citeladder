@@ -17,9 +17,9 @@ export async function openPlacementCheck(
   declaration: Selectable<OpportunityImplementationEvents>,
   { check, member }: MemberCheck,
   website: string,
-) {
+): Promise<boolean> {
   const hash = scalarText(check.url_hash);
-  if (!hash) return;
+  if (!hash) return false;
   const page = await db
     .selectFrom('source_pages')
     .select('id')
@@ -27,7 +27,7 @@ export async function openPlacementCheck(
     .where('project_id', '=', declaration.project_id)
     .where('url_hash', '=', hash)
     .executeTakeFirst();
-  if (!page) return;
+  if (!page) return false;
   const requestedBaseline =
     typeof check.baseline_snapshot_id === 'string' ? parseUuid(check.baseline_snapshot_id) : null;
   const baseline = requestedBaseline
@@ -101,4 +101,5 @@ export async function openPlacementCheck(
       updated_at: now,
     })
     .execute();
+  return true;
 }

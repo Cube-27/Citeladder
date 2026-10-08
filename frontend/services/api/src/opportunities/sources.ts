@@ -97,8 +97,6 @@ export async function latestSnapshot(db: Database, scope: Scope) {
   return snapshot ?? null;
 }
 
-export type SnapshotRow = NonNullable<Awaited<ReturnType<typeof latestSnapshot>>>;
-
 /** The demand snapshot of the most recent observed period (window-first). */
 export async function currentDemandSnapshot(db: Database, scope: Scope) {
   const snapshot = await new WorkspaceScope(scope.workspaceId)

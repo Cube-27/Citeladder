@@ -1,11 +1,15 @@
 /** Freeze server-owned expectations from the live findings and their snapshot. */
+import { sql } from 'kysely';
+import { round } from '../demand/projection.ts';
 import type { Database } from '../db/database.ts';
+import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import type { OpportunityRow } from './projection.ts';
 import type { Scope } from './sources.ts';
 import { internalLinkDeclarationChecks } from './internal-link-declaration.ts';
+import { promptScore } from './verification-decisions.ts';
 
 const o = policy.opportunity.opportunities;
 const p = policy.opportunity.placement;
@@ -38,15 +42,21 @@ function placementCheck(member: OpportunityRow, brandName: string): ExpectedChec
   };
 }
 
+/**
+ * The member's prompt score, frozen from the snapshot's audit. Members with
+ * no prompt get no visibility check: the project-wide score moves for reasons
+ * the Action never touched, so it cannot verify one.
+ */
 async function visibilityCheck(
   db: Database,
   scope: Scope,
   member: OpportunityRow,
   auditId: string | null,
-): Promise<ExpectedCheck> {
+): Promise<ExpectedCheck | null> {
+  if (member.target_prompt_id === null) return null;
   const check: ExpectedCheck = {
     kind: 'visibility_metric',
-    metric: o.VISIBILITY_METRIC_PROJECT_SCORE,
+    metric: o.VISIBILITY_METRIC_PROMPT_SCORE,
     direction: 'increase',
     min_delta: o.VISIBILITY_CHECK_MIN_DELTA,
     tolerance: 0,
@@ -54,46 +64,110 @@ async function visibilityCheck(
   };
   if (!auditId) return check;
   const baseline = await db
-    .selectFrom('metric_snapshots')
-    .selectAll()
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('audit_id', '=', auditId)
+    .selectFrom('metric_snapshots as metric')
+    .innerJoin('audit_prompt_snapshots as prompt', 'prompt.audit_id', 'metric.audit_id')
+    .select(['metric.id', 'metric.metrics', 'prompt.prompt_index'])
+    .where('metric.workspace_id', '=', scope.workspaceId)
+    .where('metric.project_id', '=', scope.projectId)
+    .where('metric.audit_id', '=', auditId)
+    .where('prompt.prompt_id', '=', member.target_prompt_id)
     .executeTakeFirst();
-  if (!baseline) return check;
-  let value: unknown = baseline.visibility_score;
-  if (member.target_prompt_id !== null) {
-    const prompt = await db
-      .selectFrom('audit_prompt_snapshots as prompt')
-      .innerJoin('audits as audit', 'audit.id', 'prompt.audit_id')
-      .select('prompt.prompt_index')
-      .where('audit.workspace_id', '=', scope.workspaceId)
-      .where('audit.project_id', '=', scope.projectId)
-      .where('prompt.audit_id', '=', auditId)
-      .where('prompt.prompt_id', '=', member.target_prompt_id)
-      .executeTakeFirst();
-    if (!prompt) return check;
-    const perPrompt = record(baseline.metrics).per_prompt;
-    value = Array.isArray(perPrompt)
-      ? perPrompt.map(record).find((row) => row.prompt_index === prompt.prompt_index)
-          ?.composite_score
-      : null;
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  const value = baseline ? promptScore(baseline.metrics, baseline.prompt_index) : null;
+  if (baseline && value !== null) {
     check.baseline_metric_snapshot_id = baseline.id;
     check.baseline_value = value;
   }
   return check;
 }
 
+/**
+ * Search Console clicks on the member's query or page, with the baseline
+ * frozen from the latest daily window that ended before the declaration day.
+ */
+async function trafficCheck(
+  db: Database,
+  scope: Scope,
+  member: OpportunityRow,
+  declaredDay: string,
+): Promise<ExpectedCheck | null> {
+  const [kind, key] = member.target_theme
+    ? (['query', member.target_theme] as const)
+    : (['page', member.target_url] as const);
+  if (!key) return null;
+  const check: ExpectedCheck = {
+    kind: 'traffic_metric',
+    metric: o.TRAFFIC_METRIC_CLICKS,
+    direction: 'increase',
+    scope: kind,
+    scope_key: key,
+    per_day: true,
+    min_delta: o.TRAFFIC_CHECK_MIN_DAILY_GAIN,
+    tolerance: 0,
+  };
+  const workspace = new WorkspaceScope(scope.workspaceId);
+  const snapshot = await workspace
+    .selectFrom(db, 'traffic_snapshots')
+    .select(['id', sql<number>`(window_end::date - window_start::date + 1)`.as('days')])
+    .where('project_id', '=', scope.projectId)
+    .where('granularity', '=', policy.traffic.TRAFFIC_DEFAULT_GRANULARITY)
+    .where(sql<boolean>`window_end::date < ${declaredDay}::date`)
+    .orderBy('window_end', 'desc')
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  if (!snapshot) return check;
+  check.baseline_traffic_snapshot_id = snapshot.id;
+  check.baseline_window_days = Number(snapshot.days);
+  const row =
+    kind === 'page'
+      ? await workspace
+          .selectFrom(db, 'traffic_page_stats')
+          .select('metrics')
+          .where('project_id', '=', scope.projectId)
+          .where('snapshot_id', '=', snapshot.id)
+          .where('canonical_url', '=', key)
+          .executeTakeFirst()
+      : await workspace
+          .selectFrom(db, 'traffic_query_stats')
+          .select('metrics')
+          .where('project_id', '=', scope.projectId)
+          .where('snapshot_id', '=', snapshot.id)
+          .where('normalized_query', '=', key)
+          .executeTakeFirst();
+  const clicks = record(row?.metrics)[o.TRAFFIC_METRIC_CLICKS];
+  if (typeof clicks === 'number' && Number.isFinite(clicks))
+    check.baseline_value = round(clicks / Number(snapshot.days), 4);
+  return check;
+}
+
+const legs = policy.opportunity.actions;
+
+/**
+ * The reading that would measure a member once declared, or null when nothing
+ * can: the same branching `memberCheck` freezes, without its baselines.
+ */
+export function memberMeasurementLeg(
+  member: Pick<
+    OpportunityRow,
+    'rule_id' | 'opportunity_type' | 'target_prompt_id' | 'target_theme' | 'target_url'
+  >,
+): string | null {
+  if (o.EARNED_RULE_IDS.includes(member.rule_id)) return legs.LEG_PLACEMENT_RECHECK;
+  if (member.opportunity_type === o.OPPORTUNITY_TYPE_SITE) return legs.LEG_CRAWL;
+  if (member.opportunity_type === o.OPPORTUNITY_TYPE_TRAFFIC)
+    return member.target_theme || member.target_url ? legs.LEG_SEARCH_CONSOLE_WINDOW : null;
+  return member.target_prompt_id === null ? null : legs.LEG_VISIBILITY_RUN;
+}
+
 async function memberCheck(
   db: Database,
   scope: Scope,
   member: OpportunityRow,
-  auditId: string | null,
-  brandName: string,
-): Promise<ExpectedCheck> {
-  if (o.EARNED_RULE_IDS.includes(member.rule_id)) return placementCheck(member, brandName);
+  context: { auditId: string | null; brandName: string; declaredDay: string },
+): Promise<ExpectedCheck | null> {
+  if (memberMeasurementLeg(member) === null) return null;
+  if (o.EARNED_RULE_IDS.includes(member.rule_id)) return placementCheck(member, context.brandName);
   const evidence = record(member.evidence);
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_SITE) {
     const siteUrlId = scalarText(evidence.site_url_id);
@@ -105,22 +179,19 @@ async function memberCheck(
     };
   }
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_TRAFFIC)
-    return {
-      kind: 'traffic_metric',
-      metric: 'clicks',
-      direction: 'increase',
-      expected_value: 1,
-      tolerance: 0,
-    };
-  return visibilityCheck(db, scope, member, auditId);
+    return trafficCheck(db, scope, member, context.declaredDay);
+  return visibilityCheck(db, scope, member, context.auditId);
 }
 
+/**
+ * The checks a declaration freezes, one per distinct expectation. A member
+ * nothing can measure contributes none; the Action still records the work.
+ */
 export async function declarationChecks(
   db: Database,
   scope: Scope,
   members: OpportunityRow[],
-  auditId: string | null,
-  brandName: string,
+  context: { auditId: string | null; brandName: string; declaredDay: string },
   recommendationIds: string[] = [],
 ): Promise<MemberCheck[]> {
   // Contextual links are declared per selected link; the page's other
@@ -129,7 +200,8 @@ export async function declarationChecks(
   const checks = new Map<string, MemberCheck>();
   for (const member of members) {
     if (member.rule_id === 'site_contextual_links') continue;
-    const check = await memberCheck(db, scope, member, auditId, brandName);
+    const check = await memberCheck(db, scope, member, context);
+    if (!check) continue;
     const key = JSON.stringify(check);
     if (!checks.has(key)) checks.set(key, { check, member });
   }

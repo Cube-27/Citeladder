@@ -93,6 +93,8 @@ describe('Actions', () => {
             measure_with: ['next_crawl'],
           },
           members: [],
+          member_measurement: {},
+          declarable_since: '2026-01-01T00:00:00Z',
           declaration: null,
         }),
       ),
