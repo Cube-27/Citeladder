@@ -163,17 +163,19 @@ truth or authorization.
 ## 12. Generated content cannot fabricate facts
 
 Generative paths constrain factual claims to the context actually supplied. A
-provider cannot cite an absent artifact, and generated content never becomes a
-fact automatically.
+provider does not choose its citations: the sources shown are the records the
+run actually read, and generated content never becomes a fact automatically.
 
 Each Agent run freezes one versioned context manifest from authorized durable
 brand memory, optional target/origin evidence, and bounded persisted crawl
 fragments before its first model call. Crawl text stays untrusted observation.
 One shared operating contract forbids invented company, product, customer,
 price, policy, statistic, and competitor facts; there is no second model call or
-deterministic claim-validator layer. Only evidence references the frozen context
-or an executed tool returned may be cited. The output remains a reviewable
-deliverable, and the UI labels the context actually used.
+deterministic claim-validator layer. A turn's sources are the records its
+executed reads returned plus the attached or mentioned Actions' findings; the
+model does not repeat record references, which are removed from user-facing
+text. The output remains a reviewable deliverable, and the UI labels the
+context actually used.
 
 Where structured data mirrors visible content, such as `FAQPage`, markup is
 generated from reviewed visible content rather than substituted for it.

@@ -1,7 +1,7 @@
 # Agent chats, workflows and deliverables improvement plan
 
 Feature 5 of the [feature review tracker](feature-review-tracker.md); this is its
-audit-derived plan. **Status: implementing (2026-10-08).** Shipped behaviour is owned by
+audit-derived plan. **Status: complete (2026-10-08), shipped as three stacked PRs (#312, #313, and the phase 3 PR).** Shipped behaviour is owned by
 the [Agent](../agents.md), not by this plan. Constraints:
 [invariants](../invariants.md) 10-13 (explicit decisions, inspectable context,
 no fabricated facts, bounded orchestration), commit-before-network-I/O and
@@ -152,6 +152,10 @@ section and/or a `SKILL.md`, plus workflow entries.
 ## Deferred
 
 Multi-channel repurposing in one chat (one output carries one format), durable
-partial-text resume (unless decision 1 chooses it), per-project skill
+partial-text resume (decision 1 chose ephemeral SSE), per-project skill
 enablement, memory promotion and plan execution stay in the
 [backlog](backlog.md) deferred proposals.
+
+As shipped: item 1.8 kept the per-step `requireWorkspaceAccess` check, so a
+trial or plan change still stops a turn between steps. The panel does not yet
+offer screen-specific workflows (2.3), and Stop has no Esc shortcut (3.5).

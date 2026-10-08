@@ -141,7 +141,7 @@ Optional later assignments, not prerequisites for completed features:
 
 | Area | Retained proposal and boundary |
 |---|---|
-| Agent streaming | Authorized persisted progress delivery first; reconnect must not replay execution. Provider text needs a separate safe transport/publication contract; incomplete text cannot become a saved/approved artifact. Polling remains the baseline. |
+| Agent partial-text resume | Display-only SSE streaming is implemented; a dropped stream falls back to polling and the saved reply. Durable partial-text resume (reconnecting mid-reply to text already written) was declined for now; it would need persisted partial text that can never become a saved or approved artifact, and reconnect must not replay execution. |
 | Agent memory promotion | Reviewed Save to Context with expected-base revision, idempotency and source-message provenance. Preferences use instruction revisions; company facts use the reviewed brand-profile owner. |
 | Agent plan execution | Durable user-approved steps/child-chat links, fresh authorization/funding and retry semantics; no autonomous execution chain. |
 | Agent skill policy | Server-enforced per-project enablement/order and frozen run policy; user-authored skills remain out of scope. |
