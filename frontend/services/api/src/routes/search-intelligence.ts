@@ -1,7 +1,6 @@
 /**
  * Search Intelligence: readiness, run confirmation and cancellation, saved
- * preferences, published dataset rows and citation matches. The Agent resolves
- * row handoffs server-side through `contentHandoff`.
+ * preferences, published dataset rows and citation matches.
  * Authorized by the project in the path; native review creation resolves
  * competitor websites before freezing the bounded acquisition plan.
  */

@@ -10,6 +10,7 @@ import { SearchIntelligenceCitationMatcher } from '@/components/search-intellige
 import { SearchIntelligenceCollection } from './search-intelligence-collection';
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
+import { referringLists } from './search-intelligence-format';
 import { CostDetails, RunNotice } from './search-intelligence-runs';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -371,10 +372,7 @@ function CollectionAction({
         Research a keyword
       </Button>
     );
-  if (
-    tab === 'backlinks' &&
-    datasets.some((item) => item.dataset_kind === 'referring_domains' && item.unique_rows_saved > 0)
-  )
+  if (tab === 'backlinks' && referringLists(datasets).length)
     return (
       <Button variant="secondary" size="sm" onClick={onMatch}>
         Match with Visibility citations

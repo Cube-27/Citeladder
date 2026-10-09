@@ -12,7 +12,8 @@ import { StatGrid } from '@/components/ui/stat-grid';
 import { textRole } from '@/components/ui/typography';
 import type { SearchIntelligenceRun } from '@/lib/api/search-intelligence';
 import { formatCount } from '@/lib/format';
-import { estimateUsd, reportedCost, sentenceCase } from './search-intelligence-format';
+import { words } from '@/lib/ai-traffic/vocabulary';
+import { estimateUsd, reportedCost } from './search-intelligence-format';
 
 const RUN_STATUS_LABELS: Readonly<Record<string, string>> = {
   succeeded: 'Complete',
@@ -113,7 +114,7 @@ export function CostDetails({
           <li key={run.id} className={panelClasses({ tone: 'well' }, 'grid gap-3')}>
             <div className="grid gap-1">
               <p className={textRole('itemTitle')}>
-                {sentenceCase(run.action)} · {RUN_STATUS_LABELS[run.status] ?? run.status}
+                {words(run.action)} · {RUN_STATUS_LABELS[run.status] ?? run.status}
               </p>
               <p className={textRole('caption')}>
                 <DisplayTime value={run.created_at} />

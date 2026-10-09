@@ -23,8 +23,10 @@ import type {
   SearchIntelligenceReadiness,
   SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
+import { useMemo } from 'react';
 import {
   availableSelections,
+  historyScopeConflict,
   reviewCompetitors,
   selectionKey,
 } from './search-intelligence-review-selection';
@@ -65,13 +67,16 @@ export function DatasetChoices({
   depthOf: (option: DatasetSelection) => string;
   onDepth: (option: DatasetSelection, text: string) => void;
 }>) {
-  const groups = new Map<string, DatasetSelection[]>();
-  for (const selection of availableSelections(readiness)) {
-    const key = selection.competitor_id ?? 'owned';
-    groups.set(key, [...(groups.get(key) ?? []), selection]);
-  }
-  const [firstCompetitor] = reviewCompetitors(readiness);
-  const entries = [...groups.entries()];
+  const { entries, firstCompetitor } = useMemo(() => {
+    const groups = new Map<string, DatasetSelection[]>();
+    for (const selection of availableSelections(readiness)) {
+      const key = selection.competitor_id ?? 'owned';
+      const group = groups.get(key);
+      if (group) group.push(selection);
+      else groups.set(key, [selection]);
+    }
+    return { entries: [...groups.entries()], firstCompetitor: reviewCompetitors(readiness)[0] };
+  }, [readiness]);
   const group = ([owner, options]: [string, DatasetSelection[]]) => (
     <DatasetGroup
       key={owner}
@@ -296,8 +301,7 @@ export function HistoryScopeNotice({
   scope,
   selections,
 }: Readonly<{ scope: string; selections: DatasetSelection[] }>) {
-  if (scope !== 'exact_host' || !selections.some(({ kind }) => kind === 'backlink_history'))
-    return null;
+  if (!historyScopeConflict(selections, scope)) return null;
   return (
     <Alert>
       Backlink history covers the whole domain. Deselect it or set the research scope to Domain +

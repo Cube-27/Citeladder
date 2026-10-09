@@ -20,6 +20,7 @@ import {
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
 import { useProjectContext } from '@/lib/project/project-context';
+import { referringLists } from './search-intelligence-format';
 
 export function SearchIntelligenceCitationMatcher({
   datasets,
@@ -29,10 +30,8 @@ export function SearchIntelligenceCitationMatcher({
   const timeZone = useDisplayTimeZone();
   const { notify } = useToast();
   const [selectedAudits, setSelectedAudits] = useState<string[]>([]);
-  // One referring-domain list per researched website; the reader picks which.
-  const lists = datasets.filter(
-    (dataset) => dataset.dataset_kind === 'referring_domains' && dataset.unique_rows_saved > 0,
-  );
+  // The reader picks which website's list to match.
+  const lists = referringLists(datasets);
   const [listId, setListId] = useState('');
   const referring = lists.find((dataset) => dataset.id === listId) ?? lists[0];
   const audits = useQuery({

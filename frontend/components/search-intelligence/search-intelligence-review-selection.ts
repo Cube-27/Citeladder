@@ -1,10 +1,10 @@
 import type { DatasetSelection, SearchIntelligenceReadiness } from '@/lib/api/search-intelligence';
 import {
   BACKLINK_DATASET_KINDS,
+  COMPARISON_DATASET_KINDS,
   COMPETITOR_DATASET_KINDS,
   KEYWORD_DATASET_KINDS,
   OWNED_DATASET_KINDS,
-  PRESET_COMPETITOR_KINDS,
   PRESET_OWNED_KINDS,
   SEARCH_DEFAULT_DEPTHS,
 } from '@/lib/config/search-intelligence';
@@ -58,7 +58,7 @@ function saved(data: SearchIntelligenceReadiness, selection: DatasetSelection) {
   return data.datasets.some((dataset) => {
     if (dataset.dataset_kind !== selection.kind) return false;
     if (!competitor) return dataset.target_origin === owned && !dataset.comparison_origin;
-    const origin = ['missing_keywords', 'shared_keywords'].includes(selection.kind)
+    const origin = COMPARISON_DATASET_KINDS.includes(selection.kind)
       ? dataset.comparison_origin
       : dataset.target_origin;
     return matchesCompetitor(origin, competitor.registrable_domain);
@@ -88,7 +88,7 @@ export function defaultSelections(
   const [first] = reviewCompetitors(data);
   return available.filter(({ kind, competitor_id }) =>
     competitor_id
-      ? competitor_id === first && PRESET_COMPETITOR_KINDS.includes(kind)
+      ? competitor_id === first && COMPARISON_DATASET_KINDS.includes(kind)
       : PRESET_OWNED_KINDS.includes(kind),
   );
 }
@@ -102,7 +102,14 @@ export function comparisonOrderConflict(
   return (
     researchScope === 'exact_host' &&
     (order === 'traffic' || order === 'position') &&
-    selections.some(({ kind }) => kind === 'missing_keywords' || kind === 'shared_keywords')
+    selections.some(({ kind }) => COMPARISON_DATASET_KINDS.includes(kind))
+  );
+}
+
+/** Backlink history covers the whole domain; the API refuses it for an exact host. */
+export function historyScopeConflict(selections: DatasetSelection[], researchScope: string) {
+  return (
+    researchScope === 'exact_host' && selections.some(({ kind }) => kind === 'backlink_history')
   );
 }
 
@@ -122,10 +129,7 @@ export function reviewInputsValid(
     selections.length &&
     form.ownedTarget &&
     (!marketNeeded || (Number.isInteger(location) && location > 0)) &&
-    !(
-      form.researchScope === 'exact_host' &&
-      selections.some(({ kind }) => kind === 'backlink_history')
-    ) &&
+    !historyScopeConflict(selections, form.researchScope) &&
     !comparisonOrderConflict(selections, form.researchScope, form.order) &&
     selections.every((item) => item.kind !== 'keyword_suggestions' || form.seed.trim()),
   );

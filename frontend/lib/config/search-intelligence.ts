@@ -134,9 +134,10 @@ export const KEYWORD_DATASET_KINDS: readonly string[] = [
   'missing_keywords',
   'shared_keywords',
 ];
-/** A first analysis starts small: the owned site plus one competitor's keyword gaps. */
+/** Keyword comparisons: read for the owned site against one competitor's domain. */
+export const COMPARISON_DATASET_KINDS: readonly string[] = ['missing_keywords', 'shared_keywords'];
+/** A first analysis starts small: the owned site plus one competitor's keyword comparisons. */
 export const PRESET_OWNED_KINDS: readonly string[] = ['footprint', 'ranking_keywords'];
-export const PRESET_COMPETITOR_KINDS: readonly string[] = ['missing_keywords', 'shared_keywords'];
 
 export const SEARCH_DEFAULT_DEPTHS = {
   footprint: 1,

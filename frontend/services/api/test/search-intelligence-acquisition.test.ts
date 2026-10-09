@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ProviderError } from '../src/answer-engines/contracts.ts';
-import { executeLive, resolveLive } from '../src/search-intelligence/live.ts';
+import { resolveLive, sendLive } from '../src/search-intelligence/live.ts';
 import { INT4_MAX, normalizeResponse } from '../src/search-intelligence/normalization.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 
@@ -15,6 +15,9 @@ const input = {
   payload: { target: 'example.com' },
   baseUrl: '',
 };
+/** The executor's dispatch path: local checks first, then one send. */
+const executeLive = async (live: typeof input, options: Parameters<typeof sendLive>[2]) =>
+  sendLive(resolveLive(live), live.payload, options);
 const body = (result: unknown, cost: unknown = 0.012) => ({
   status_code: 20000,
   cost: 99,

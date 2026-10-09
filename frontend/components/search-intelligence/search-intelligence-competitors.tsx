@@ -15,7 +15,7 @@ import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
-import { SEARCH_DATASET_LABELS } from '@/lib/config/search-intelligence';
+import { COMPARISON_DATASET_KINDS, SEARCH_DATASET_LABELS } from '@/lib/config/search-intelligence';
 import { datasetCount } from './search-intelligence-format';
 import { SearchValue } from './search-intelligence-value';
 
@@ -88,7 +88,7 @@ export function SearchIntelligenceCompetitors({
                       fetched={Boolean(footprint)}
                     />
                   </TableCell>
-                  {['missing_keywords', 'shared_keywords'].map((kind) => {
+                  {COMPARISON_DATASET_KINDS.map((kind) => {
                     const dataset = comparison(kind);
                     return (
                       <TableCell numeric key={kind}>

@@ -1,3 +1,4 @@
+import { words } from '@/lib/ai-traffic/vocabulary';
 import { formatDisplayDate } from '@/lib/format';
 
 /** A provider figure, or null when the provider did not report one. */
@@ -42,6 +43,14 @@ export function datasetCount(
     : 'No results';
 }
 
+/** The referring-domain lists citations can be matched against: one per researched website. */
+export const referringLists = <T extends { dataset_kind: string; unique_rows_saved: number }>(
+  datasets: readonly T[],
+) =>
+  datasets.filter(
+    (dataset) => dataset.dataset_kind === 'referring_domains' && dataset.unique_rows_saved > 0,
+  );
+
 /** Internal identities and nested provider metadata never reach the evidence list. */
 const HIDDEN_FIELDS = new Set([
   'id',
@@ -68,7 +77,7 @@ export function evidenceFields(
   return Object.entries(row).flatMap(([key, value]) => {
     if (HIDDEN_FIELDS.has(key)) return [];
     if (value !== null && typeof value === 'object' && !Array.isArray(value)) return [];
-    const label = labels[key] ?? sentenceCase(key);
+    const label = labels[key] ?? words(key);
     return [{ key, label, value: evidenceValue(value, timeZone) }];
   });
 }
@@ -86,9 +95,4 @@ function evidenceValue(value: unknown, timeZone: string): string | null {
   return DATE_TIME.test(value) && !Number.isNaN(Date.parse(value))
     ? formatDisplayDate(value, timeZone)
     : value;
-}
-
-export function sentenceCase(key: string): string {
-  const words = key.replaceAll('_', ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
 }

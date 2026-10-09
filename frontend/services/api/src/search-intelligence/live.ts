@@ -30,7 +30,6 @@ type LiveInput = {
 };
 type LiveOptions = {
   send?: typeof fetch;
-  env?: Record<string, string | undefined>;
   signal?: AbortSignal;
 };
 export type LiveTarget = { url: string; authorization: string };
@@ -65,13 +64,6 @@ export function resolveLive(
 }
 
 /** One paid Live POST; classification and bounded retries belong to persisted dispatch evidence. */
-export async function executeLive(
-  input: LiveInput & { payload: Record<string, unknown> },
-  options: LiveOptions = {},
-): Promise<ResearchResponse> {
-  return sendLive(resolveLive(input, options.env), input.payload, options);
-}
-
 export async function sendLive(
   target: LiveTarget,
   payload: Record<string, unknown>,
