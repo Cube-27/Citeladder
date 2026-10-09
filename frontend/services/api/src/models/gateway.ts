@@ -203,6 +203,8 @@ function normalizedUsage(raw: Record<string, unknown> | undefined) {
 export function createModelGateway(
   settings = gatewaySettings(),
   transport: Transport = defaultTransport,
+  // Customer routes are validated as OpenAI-compatible whatever their host.
+  { api = 'detect' }: { api?: 'detect' | 'openai_compatible' } = {},
 ) {
   if (![settings.apiKey, settings.baseUrl, settings.model].every((part) => part.trim())) {
     throw new ModelError('not_configured');
@@ -215,8 +217,8 @@ export function createModelGateway(
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !secure) {
     throw new ModelError('not_configured');
   }
-  // The configured base URL alone chooses the API, so switching provider is configuration.
-  const anthropic = isAnthropicEndpoint(endpoint);
+  // The platform's base URL alone chooses the API, so switching provider is configuration.
+  const anthropic = api === 'detect' && isAnthropicEndpoint(endpoint);
   const complete = anthropic
     ? anthropicCompletion(settings, transport, endpoint)
     : openAICompletion(settings, transport, endpoint);

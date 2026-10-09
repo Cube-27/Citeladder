@@ -64,7 +64,13 @@ export function anthropicCompletion(
           messages: [{ role: 'user', content: user }],
           ...(schema ? { output_config: { format: { type: 'json_schema', schema } } } : {}),
         },
-        { signal },
+        // One deadline across the SDK's retries, as the OpenAI-compatible path keeps.
+        {
+          signal: AbortSignal.any([
+            AbortSignal.timeout(settings.timeoutSeconds * 1000),
+            ...(signal ? [signal] : []),
+          ]),
+        },
       );
       if (onText)
         stream.on('text', (delta) => {
@@ -83,7 +89,9 @@ export function anthropicCompletion(
     const latency = Math.round(performance.now() - started);
     logger.info('default agent call ok', { latency_ms: latency, model: settings.model });
     const { usage } = message;
-    const cached = usage.cache_read_input_tokens ?? 0;
+    // An omitted cache count is unknown, not zero; so is any total built from it.
+    const cached = usage.cache_read_input_tokens ?? null;
+    const written = usage.cache_creation_input_tokens ?? null;
     return {
       content,
       provider_adapter: 'anthropic',
@@ -93,7 +101,8 @@ export function anthropicCompletion(
       finish_status: message.stop_reason ?? 'unknown',
       // Input counts every prompt token, cached or not, as OpenAI-compatible usage does.
       usage: {
-        input_tokens: usage.input_tokens + cached + (usage.cache_creation_input_tokens ?? 0),
+        input_tokens:
+          cached === null || written === null ? null : usage.input_tokens + cached + written,
         output_tokens: usage.output_tokens,
         cached_input_tokens: cached,
       },

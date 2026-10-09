@@ -283,7 +283,8 @@ consumer, not only the Agent:
 Both produce one completion result, so settlement and parsing never depend on
 the provider. Other model consumers' `structured` calls keep their schema in
 the prompt, because their schemas may hold optional fields that strict outputs
-refuse. Customer (BYOK) routes buffer and answer in one piece.
+refuse. Customer (BYOK) routes are validated as OpenAI-compatible and always
+use that API, whatever their host; they buffer and answer in one piece.
 
 The runtime emits `step` events, and for a respond step `text` events carrying
 the reply and the document's title and body decoded from the incomplete JSON

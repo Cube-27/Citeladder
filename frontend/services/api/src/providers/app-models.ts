@@ -98,6 +98,7 @@ export function createAppModelGateway(
         return Response.json(body.body, { status: body.status });
       },
     },
+    { api: 'openai_compatible' },
   );
   return gateway;
 }
