@@ -1,5 +1,8 @@
 # Search Intelligence improvement plan
 
+**Status:** PR 1 (phases 1 and 2) implemented 2026-10-09; PR 2 is designed and
+waits on the owner decisions below.
+
 Feature 7 of the [feature review tracker](feature-review-tracker.md): the
 DataForSEO Search Intelligence module (reviewed paid acquisition of keyword,
 competitor and backlink datasets, the `/search-intelligence` screen and its
@@ -69,7 +72,7 @@ File references are to `frontend/services/api/src/` or `frontend/` as noted.
 | # | Finding | Change | Where |
 |---|---|---|---|
 | 1.1 | A receipt that cannot be published blocks the project forever. | An unpublishable receipt fails its call and dataset (`normalization_failed`) in its own transaction, its reported cost still counts, and the run continues or closes. Maintenance closes the run even when a receipt fails. | `search-intelligence/acquisition-state.ts`, `executor.ts`, `maintenance.ts` |
-| 1.2 | Provider values that do not fit their columns abort publication. | Normalization keeps typed integer columns inside the 32-bit range (an out-of-range value is unknown in the column and kept exactly in the row's auxiliary data or the dataset summary) and bounds a joined intent list to whole values within the column. | `search-intelligence/normalization.ts`, `acquisition-state.ts` |
+| 1.2 | Provider values that do not fit their columns abort publication. | A provider total beyond the 32-bit column is kept in the dataset summary; a joined intent list keeps whole values within its column. Any other value the schema refuses falls to 1.1. | `search-intelligence/normalization.ts`, `acquisition-state.ts`, `views.ts` |
 | 1.3 | Local failures before I/O are recorded as dispatched or uncertain. | Endpoint, credential and base-URL checks run before the dispatch commit; a failure there fails the call as not sent, with no dispatch attempt. | `search-intelligence/live.ts`, `executor.ts`, `acquisition-state.ts` |
 | 1.4 | The estimate is not a ceiling. | Before dispatch, a call whose estimate would take reported spend past the confirmed estimate is not sent; the run ends `partial` with `cost_ceiling_reached`. The post-response check remains for a provider charge above its estimate. | `search-intelligence/acquisition-state.ts` |
 | 1.5 | Cancel overwrites `uncertain`. | `uncertain` is a finished status for cancellation. | `search-intelligence/runs.ts` |
@@ -94,21 +97,42 @@ File references are to `frontend/services/api/src/` or `frontend/` as noted.
 
 ## PR 2: keyword gaps become Actions
 
-Designed separately once PR 1 is open. Constraints already fixed: gaps promote
-only from published, reviewed datasets; a query Search Console already shows is
-not a second Action; wording stays correlational; measurement comes from later
-evidence and is unknown without it.
+A new Opportunity hit source, owned by Opportunities, reads Search Intelligence
+datasets; Search Intelligence gains no write into Opportunities beyond enqueuing
+a refresh when a keyword dataset publishes. No schema change.
+
+- **Source.** Per saved competitor, the latest published `missing_keywords`
+  dataset for the current owned website and market, within a maximum age.
+  `failed` or `unknown` coverage never qualifies; `empty` supersedes older gaps;
+  `partial` or truncated data adds a limitation.
+- **Row gates** (unknown abstains and is counted, never treated as zero): a
+  minimum search volume, a competitor rank threshold, no navigational intent, not
+  branded for the project, not naming a competitor, and not contradicted by an
+  owned ranking or shared-keyword row in the same market.
+- **Dedup with Demand.** A keyword already active as a Demand query signal, or
+  with Search Console impressions in the Demand window, is dropped. Without
+  Search Console the gap still promotes with that limitation.
+- **Target.** One crawled page whose title and H1 cover every term is the
+  target; none or several gives a planned page (shared slug with Agent-created
+  planned pages, so they converge). Gaps merge across competitors and collapse
+  identical term sets, sorted and capped per refresh.
+- **Measurement.** A `keyword_presence` check, not a clicks check: met by
+  Search Console impressions after go-live or an owned ranking in a later
+  Search Intelligence dataset whose provider SERP postdates go-live; a still
+  missing keyword is `waiting`; no later data is unknown. The next dataset is a
+  paid, user-started run, so that measurement leg is `not_scheduled`.
+- **UI.** The Action's evidence shows volume, each competitor's rank and URL,
+  the dataset date and "DataForSEO estimate"; missing-keyword rows that became
+  an Action link to it.
+- **Versions.** Rule, grouping, diagnosis and verifier versions bump.
+
+Owner decisions for PR 2 are listed in the tracker log once answered.
 
 ## Deferred to the backlog
 
-- **Per-workspace acquisition limits** (feature 11): an entitlement-owned depth
-  and spend limit so enterprise workspaces can run exhaustive research.
-- **Bounded readiness and dataset paging indexes.** Readiness loads every
-  published dataset and dataset pages count with `ilike` on every page; neither
-  is slow at current volumes. Revisit with production row counts.
-- **Raw response retention.** Receipts (up to 8 MB each) are append-only
-  provenance; retention needs the same reference inventory as the snapshot
-  retention item from feature 6.
+Per-workspace acquisition limits, bounded readiness and paging indexes, and raw
+response retention are in the [backlog](backlog.md#search-intelligence-remainder)
+with their reasons.
 
 ## Tests and documents
 
