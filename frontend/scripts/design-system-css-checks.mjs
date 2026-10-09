@@ -48,7 +48,9 @@ const WIDE_KEYWORDS = new Set(['inherit', 'initial', 'unset', 'revert', 'revert-
  * their literal sizes are the scale itself, not a deviation from it.
  */
 const TYPE_ROLE_PART = /^\.(?:website-[\w-]+|flow-(?:title|group-title|help|meta))$/;
-const PUBLIC_SCALE_SELECTOR = ':where([data-public-surface], [data-flow-surface])';
+// The public attribute sits on <html>, so only the flow surface may own a
+// base size: a font-size on the public root rebases every rem on the site.
+const FLOW_SCALE_SELECTOR = ':where([data-flow-surface])';
 
 const RULE_MESSAGES = {
   'css-radius': 'radius must be var(--radius-*) or 0',
@@ -194,7 +196,7 @@ function outlineAllowed(property, value) {
 /** True when every selector of the rule is a website ladder owner. */
 function ownsTypeLadder(rule, label) {
   if (label !== WEBSITE_CSS || !rule?.selector) return false;
-  if (rule.selector.replace(/\s+/g, ' ').trim() === PUBLIC_SCALE_SELECTOR) return true;
+  if (rule.selector.replace(/\s+/g, ' ').trim() === FLOW_SCALE_SELECTOR) return true;
   const unwrapped = rule.selector.replace(/^:where\(([\s\S]*)\)$/, '$1');
   return unwrapped
     .split(',')

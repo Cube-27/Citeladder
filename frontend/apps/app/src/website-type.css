@@ -16,6 +16,11 @@
   --tracking-wide: 0.02em;
   --tracking-wider: 0.06em;
   --leading-relaxed: 1.5;
+}
+
+/* Public pages set no font-size here: their attribute sits on <html>, where
+   any value rebases every rem on the site and rescales all type and widths. */
+:where([data-flow-surface]) {
   font-size: 0.875rem;
   line-height: 1.375rem;
 }

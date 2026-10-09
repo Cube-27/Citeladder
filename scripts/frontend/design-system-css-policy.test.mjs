@@ -30,9 +30,11 @@ test('type metrics must consume a text role outside the ladder owners', () => {
   assert.deepEqual(rules('.a { line-height: 1; } .b { font-size: inherit; }'), []);
   const website = 'apps/app/src/website-type.css';
   assert.deepEqual(rules('.website-lead, .flow-help { font-size: 1.125rem; }', website), []);
+  assert.deepEqual(rules(':where([data-flow-surface]) { font-size: 0.875rem; }', website), []);
+  // The public attribute is on <html>: a size there rescales every rem on the site.
   assert.deepEqual(
-    rules(':where([data-public-surface], [data-flow-surface]) { font-size: 1rem; }', website),
-    [],
+    rules(':where([data-public-surface], [data-flow-surface]) { font-size: 0.875rem; }', website),
+    ['css-type'],
   );
   // A role owner elsewhere, or a descendant of one, is not the ladder.
   assert.deepEqual(rules('.website-lead { font-size: 1.125rem; }'), ['css-type']);
