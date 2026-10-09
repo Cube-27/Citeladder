@@ -57,15 +57,17 @@ describe('where you stand on a cited page', () => {
     source_class: 'editorial_third_party',
     entities: [
       {
-        kind: 'brand' as const,
-        name: 'Acme',
+        entity_kind: 'brand',
+        entity_name: 'Acme',
         presence: 'not_detected',
         match_method: 'none',
+        match_count: 0,
         passages: [],
       },
       {
-        kind: 'competitor' as const,
-        name: 'Globex',
+        entity_kind: 'competitor',
+        entity_name: 'Globex',
+        match_count: 1,
         presence: 'present',
         match_method: 'exact_alias',
         passages: ['Globex leads.'],
@@ -91,7 +93,7 @@ describe('where you stand on a cited page', () => {
 
   it('reports you listed once your name is on the page', () => {
     const listed = page().entities.map((entity) =>
-      entity.kind === 'brand' ? { ...entity, presence: 'present' } : entity,
+      entity.entity_kind === 'brand' ? { ...entity, presence: 'present' } : entity,
     );
     expect(pageStanding(page({ entities: listed }))).toBe('listed');
   });

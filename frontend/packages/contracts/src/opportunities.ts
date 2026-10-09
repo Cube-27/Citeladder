@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { cursorPageSchema } from './site-health.ts';
-import { pageEntityFields } from './source-pages.ts';
+import { pageEntitySchema } from './source-pages.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -35,21 +35,6 @@ export const sourceMixSchema = responseObject({
   prompt_snapshot_ids: z.array(z.string().nullable()).optional(),
   gap_keys: z.array(z.string()).optional(),
 });
-/**
- * One entity's verdict on the publisher page an earned action targets, as the
- * brief carries it.
- *
- * `passages` is the quoted window behind a positive finding and is empty for
- * anything else — `match_method` and the brief's `extracted_chars` are what a
- * non-detection is reported with, because no passage can demonstrate one.
- */
-const handoffPageEntitySchema = responseObject({
-  ...pageEntityFields,
-  // The raw verdict, where the page projection publishes the RESOLVED
-  // `state`. Same vocabulary, different question, so the field names differ
-  // and the shared fields are declared once.
-  presence: z.string(),
-});
 
 /**
  * The earned half of the handoff.
@@ -77,7 +62,7 @@ const earnedHandoffFields = {
   ask: z.string().optional(),
   // The tracked prompts whose answers cited the page; a declaration measures these.
   affected_prompts: z.array(z.object({ prompt_id: z.string(), text: z.string() })).optional(),
-  page_entities: z.array(handoffPageEntitySchema).optional(),
+  page_entities: z.array(pageEntitySchema).optional(),
   answer_competitors: z.array(z.string()).optional(),
   observed_citation_frequency: z
     .object({
@@ -102,7 +87,6 @@ const contentHandoffSchema = responseObject({
   target_url: z.string().nullable(),
   target_theme: z.string().nullable(),
   representative_citations: z.array(z.record(z.string(), z.unknown())),
-  affected_prompt_indices: z.array(z.number().int()),
   affected_themes: z.array(z.string()),
   observed_competitors: z.array(z.string()),
   coverage: z.record(z.string(), z.unknown()),

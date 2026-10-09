@@ -59,7 +59,6 @@ const detail = {
     target_url: null,
     target_theme: 'crm',
     representative_citations: [],
-    affected_prompt_indices: [],
     affected_themes: ['crm'],
     observed_competitors: ['Globex'],
     coverage: {},

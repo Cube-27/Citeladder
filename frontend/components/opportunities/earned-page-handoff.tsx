@@ -4,17 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { OnPageEntities } from '@/components/ui/on-page-entities';
 import { panelClasses } from '@/components/ui/panel';
-import { Limitations, Passage } from '@/components/ui/passage';
+import { Limitations } from '@/components/ui/passage';
 import { Label, textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@/lib/api/types';
-import {
-  brandVerdict,
-  coverageSentence,
-  onPageCompetitors,
-  type HandoffPageEntity,
-} from '@/lib/opportunities/earned-page';
-import { absenceBasis, presenceLabel } from '@/lib/visibility/source-pages';
-import { sinceLabel } from '@/lib/visibility/sources';
+import { BrandOnPage } from '@/components/visibility/brand-on-page';
+import { brandVerdict, onPageCompetitors, readingSentence } from '@/lib/visibility/source-pages';
 import { urlTypeLabel } from '@/lib/visibility/vocabulary';
 
 type Handoff = OpportunityDetail['content_handoff'];
@@ -66,41 +60,15 @@ export function EarnedPageHandoff({ detail }: Readonly<{ detail: OpportunityDeta
   );
 }
 
-/**
- * Where the brand stands on the page.
- *
- * A presence carries its passage. A non-detection carries the matching method
- * and the extraction coverage instead, because no passage can demonstrate an
- * absence.
- */
 function Brand({ handoff }: Readonly<{ handoff: Handoff }>) {
   const brand = brandVerdict(handoff.page_entities);
   if (!brand) return null;
   return (
-    <div className="grid gap-2">
-      <p className={eyebrowClasses}>You on this page</p>
-      <BrandLine brand={brand} extractedChars={handoff.extracted_chars ?? 0} />
-    </div>
-  );
-}
-
-function BrandLine({
-  brand,
-  extractedChars,
-}: Readonly<{ brand: HandoffPageEntity; extractedChars: number }>) {
-  const verdict = presenceLabel(brand.presence);
-  const basis = absenceBasis(brand.presence, brand.match_method, extractedChars);
-  return (
-    <>
-      <p className={textRole('itemTitle')}>
-        {brand.entity_name}
-        {verdict ? ` — ${verdict.toLowerCase()}` : ''}
-      </p>
-      {brand.passages.map((passage) => (
-        <Passage key={passage}>{passage}</Passage>
-      ))}
-      {basis ? <p className="type-caption">{basis}</p> : null}
-    </>
+    <BrandOnPage
+      heading="You on this page"
+      brand={brand}
+      extractedChars={handoff.extracted_chars ?? 0}
+    />
   );
 }
 
@@ -152,19 +120,13 @@ function NamedInAnswers({ names }: Readonly<{ names?: string[] }>) {
 }
 
 function Coverage({ handoff }: Readonly<{ handoff: Handoff }>) {
-  const sentence = coverageSentence(handoff.extracted_chars);
-  const read = sinceLabel(handoff.read_at);
+  const sentence = readingSentence(handoff.read_at, handoff.extracted_chars);
   const frequency = handoff.observed_citation_frequency;
   if (!sentence && !frequency) return null;
   return (
     <div className="grid gap-1">
       <p className={eyebrowClasses}>Coverage</p>
-      {sentence ? (
-        <p className={textRole('caption')}>
-          {read ? `Read ${read.toLowerCase()}. ` : ''}
-          {sentence}
-        </p>
-      ) : null}
+      {sentence ? <p className={textRole('caption')}>{sentence}</p> : null}
       {frequency ? (
         <p className={textRole('caption')}>
           Cited by {frequency.answers_citing_page} of {frequency.eligible_answers} analyzed answers.

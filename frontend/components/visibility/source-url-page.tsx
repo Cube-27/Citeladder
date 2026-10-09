@@ -5,25 +5,21 @@ import type { z } from 'zod';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { OnPageEntities } from '@/components/ui/on-page-entities';
-import { Passage } from '@/components/ui/passage';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
+import { BrandOnPage } from '@/components/visibility/brand-on-page';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { agentHandoffHref } from '@/lib/agent/handoff';
-import { formatCount } from '@/lib/format';
 import {
-  absenceBasis,
+  brandVerdict,
+  onPageCompetitors,
   pageStanding,
-  presenceLabel,
+  readingSentence,
   standingSentence,
 } from '@/lib/visibility/source-pages';
-import { sinceLabel } from '@/lib/visibility/sources';
 import { pageFormatBasis, urlTypeLabel } from '@/lib/visibility/vocabulary';
 
 type Page = z.infer<typeof visibilitySourceUrlSchema>['page'];
-type Entity = NonNullable<Page>['entities'][number];
 
 /**
  * What the business can do about one cited page, and what the page says.
@@ -41,10 +37,7 @@ export function SourceUrlPageCard({
   if (loading) return <Skeleton className="h-32 w-full" />;
   if (page === undefined) return null;
   const standing = pageStanding(page);
-  const competitors = (page?.entities ?? []).filter(
-    (entity) => entity.kind === 'competitor' && entity.presence === 'present',
-  );
-  const brand = page?.entities.find((entity) => entity.kind === 'brand') ?? null;
+  const brand = brandVerdict(page?.entities);
   return (
     <Card>
       <CardHeader>
@@ -55,13 +48,10 @@ export function SourceUrlPageCard({
         {standing === 'gap' ? <GetListed url={url} actionId={page?.action_id ?? null} /> : null}
         <OnPageEntities
           heading={standing === 'gap' ? 'Listed here' : 'Competitors on this page'}
-          entities={competitors.map((entity) => ({
-            entity_name: entity.name,
-            passages: entity.passages,
-          }))}
+          entities={onPageCompetitors(page?.entities)}
         />
         {brand && page?.read_at ? (
-          <BrandVerdict brand={brand} extractedChars={page.extracted_chars ?? 0} />
+          <BrandOnPage heading="You" brand={brand} extractedChars={page.extracted_chars ?? 0} />
         ) : null}
         {page ? <PageFacts page={page} /> : null}
       </CardContent>
@@ -103,41 +93,12 @@ function GetListed({ url, actionId }: Readonly<{ url: string; actionId: string |
   );
 }
 
-/**
- * Where the business stands on the page. A presence carries its passage; an
- * absence carries how much was searched and how, because no passage can show
- * that something is missing.
- */
-function BrandVerdict({
-  brand,
-  extractedChars,
-}: Readonly<{ brand: Entity; extractedChars: number }>) {
-  const verdict = presenceLabel(brand.presence);
-  const basis = absenceBasis(brand.presence, brand.match_method, extractedChars);
-  return (
-    <div className="grid gap-2">
-      <p className={eyebrowClasses}>You</p>
-      <p className={textRole('itemTitle')}>
-        {brand.name}
-        {verdict ? ` — ${verdict.toLowerCase()}` : ''}
-      </p>
-      {brand.passages.map((passage) => (
-        <Passage key={passage}>{passage}</Passage>
-      ))}
-      {basis ? <p className="type-caption">{basis}</p> : null}
-    </div>
-  );
-}
-
 /** When it was read, how much of it, and what kind of page it is by what evidence. */
 function PageFacts({ page }: Readonly<{ page: NonNullable<Page> }>) {
-  const read = sinceLabel(page.read_at);
   const type = urlTypeLabel(page.page_format);
   const basis = pageFormatBasis(page.page_format_method);
   const facts = [
-    read
-      ? `Read ${read.toLowerCase()}${page.extracted_chars ? `, ${formatCount(page.extracted_chars)} characters readable` : ''}.`
-      : null,
+    readingSentence(page.read_at, page.extracted_chars),
     type && page.page_format !== 'unresolved'
       ? `Page type: ${type}${basis ? ` (${basis.charAt(0).toLowerCase()}${basis.slice(1)})` : ''}.`
       : 'What kind of page this is could not be established.',

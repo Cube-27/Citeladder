@@ -39,6 +39,9 @@ export function earnedPageBrief(page: SourcePageEvidence, evidence: EarnedPageEv
     page_format_method: page.page_format_method,
     page_title: page.title,
     target_theme: page.themes[0] ?? null,
+    // Outreach to a publisher, not owned content.
+    suggested_skill_id: 'earned_authority',
+    suggested_role: 'PR',
     ask: `Be included on this page alongside ${names.join(', ')}, with an entry comparable to theirs that links to your site.`,
     snapshot_id: page.snapshot_id,
     read_at: page.read_at,

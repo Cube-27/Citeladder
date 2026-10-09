@@ -18,32 +18,20 @@ import type {
 } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
-import { passageTexts, projectRoster } from '../source-pages/reading.ts';
+import {
+  latestReadings,
+  pageEntities,
+  projectRoster,
+  readAt,
+  readingPresences,
+  type Reading,
+  type ReadingPresence,
+} from '../source-pages/reading.ts';
 import { record } from '../db/json.ts';
-import { pydanticUtc, utcText } from '../db/timestamps.ts';
 import { compareText, scalarText } from '../text-order.ts';
 
 const e = policy.opportunity.earned_actions;
 const s = policy.opportunity.source_pages;
-type Snapshot = {
-  id: string;
-  source_page_id: string;
-  fetched_text: string;
-  extracted_chars: number;
-  page_facts: unknown;
-  evidence_passages: unknown;
-};
-type Presence = {
-  snapshot_id: string;
-  entity_kind: string;
-  entity_name: string;
-  presence: string;
-  match_method: string;
-  match_count: number;
-  roster_version: string;
-  passage_refs: unknown;
-};
-
 /** Which analyses in this audit cited each identified third-party page. */
 async function citedByHash(db: Database, workspaceId: string, auditId: string) {
   const rows = await new WorkspaceScope(workspaceId)
@@ -61,66 +49,6 @@ async function citedByHash(db: Database, workspaceId: string, auditId: string) {
   }
   return grouped;
 }
-
-/** The most recent successful reading of each page. */
-async function readings(db: Database, workspaceId: string, projectId: string, pageIds: string[]) {
-  const latest = new Map<string, Snapshot>();
-  if (!pageIds.length) return latest;
-  const rows = await sql<Snapshot>`
-    select distinct on (source_page_id)
-      id, source_page_id, ${utcText(sql.ref('fetched_at'))} as fetched_text,
-      extracted_chars, page_facts, evidence_passages
-    from source_page_snapshots
-    where workspace_id = ${workspaceId}
-      and project_id = ${projectId}
-      and source_page_id in (${sql.join(pageIds)})
-      and outcome = ${policy.opportunity.refresh.source_page_outcome_inspected}
-    order by source_page_id asc, fetched_at desc, id desc
-  `.execute(db);
-  for (const row of rows.rows) latest.set(row.source_page_id, row);
-  return latest;
-}
-
-async function presences(
-  db: Database,
-  workspaceId: string,
-  projectId: string,
-  snapshotIds: string[],
-) {
-  const grouped = new Map<string, Presence[]>();
-  if (!snapshotIds.length) return grouped;
-  const rows = await new WorkspaceScope(workspaceId)
-    .selectFrom(db, 'source_page_entity_presences')
-    .select([
-      'snapshot_id',
-      'entity_kind',
-      'entity_name',
-      'presence',
-      'match_method',
-      'match_count',
-      'roster_version',
-      'passage_refs',
-    ])
-    .where('project_id', '=', projectId)
-    .where('snapshot_id', 'in', snapshotIds)
-    .orderBy(sql`entity_kind <> ${s.ENTITY_KIND_BRAND}`)
-    .orderBy('entity_name')
-    .execute();
-  for (const row of rows) {
-    grouped.set(row.snapshot_id, [...(grouped.get(row.snapshot_id) ?? []), row]);
-  }
-  return grouped;
-}
-
-const entities = (snapshot: Snapshot, rows: Presence[]) =>
-  rows.map((row) => ({
-    entity_kind: row.entity_kind,
-    entity_name: row.entity_name,
-    presence: row.presence,
-    match_method: row.match_method,
-    match_count: row.match_count,
-    passages: passageTexts(snapshot.evidence_passages, row.passage_refs),
-  }));
 
 /** The audit's answers, indexed once for every page that cites them. */
 function answerIndex(visibility: VisibilityEvidence) {
@@ -159,8 +87,8 @@ type Page = {
 function pageEvidence(
   page: Page,
   context: {
-    snapshot: Snapshot | undefined;
-    presences: Map<string, Presence[]>;
+    snapshot: Reading | undefined;
+    presences: Map<string, ReadingPresence[]>;
     answers: ReturnType<typeof answerIndex>;
     analysisIds: Set<string>;
     roster: string;
@@ -177,11 +105,11 @@ function pageEvidence(
     page_format_method: page.page_format_method,
     source_class: page.source_class,
     snapshot_id: latest?.id ?? null,
-    read_at: latest ? pydanticUtc(latest.fetched_text) : null,
+    read_at: latest ? readAt(latest) : null,
     extracted_chars: extracted,
     sufficient_coverage: extracted >= s.SOURCE_PAGE_MIN_COVERAGE_CHARS,
     title: scalarText(record(latest?.page_facts).title),
-    entities: latest ? entities(latest, rows) : [],
+    entities: latest ? pageEntities(latest, rows) : [],
     roster_current: rows.length > 0 && rows.every((row) => row.roster_version === context.roster),
     recurrence_count: page.recurrence_count,
     answer_count: context.analysisIds.size,
@@ -219,16 +147,14 @@ export async function earnedPageHits(
     .limit(e.EARNED_PAGE_DETECTOR_MAX_PAGES)
     .execute();
   if (!pages.length) return [];
-  const snapshots = await readings(
+  const snapshots = await latestReadings(
     db,
-    scope.workspaceId,
-    scope.projectId,
+    scope,
     pages.map((page) => page.id),
   );
-  const verdicts = await presences(
+  const verdicts = await readingPresences(
     db,
-    scope.workspaceId,
-    scope.projectId,
+    scope,
     [...snapshots.values()].map((row) => row.id),
   );
   const coverage = await workspace

@@ -65,11 +65,8 @@ export async function spendRedirect(
     return (await spend(trx, scope, 'redirect', key, null, now)) ? 'charged' : 'duplicate';
   });
 }
-/** Your own pages and a competitor's own pages can never list you; reading them buys nothing. */
-const NOT_EARNABLE = [
-  policy.opportunity.source_patterns.SOURCE_CLASS_BRAND_OWNED,
-  policy.opportunity.source_patterns.SOURCE_CLASS_COMPETITOR_OWNED,
-];
+const NOT_EARNABLE = policy.opportunity.earned_actions.EARNED_EXCLUDED_SOURCE_CLASSES;
+const v = policy.opportunity.source_pages;
 const hoursAgo = (now: Date, hours: number) => new Date(now.getTime() - hours * 3_600_000);
 
 /**
@@ -106,15 +103,18 @@ export async function claimPages(
       )
       .where((eb) =>
         eb.or([
-          eb('inspection_state', 'in', ['not_inspected', 'stale']),
-          eb.and([eb('inspection_state', '=', 'queued'), eb('claim_expires_at', '<', now)]),
-          retryAfter('failed', p.budget_window_hours),
-          retryAfter('blocked', p.stale_after_hours),
+          eb('inspection_state', 'in', [v.INSPECTION_NOT_INSPECTED, v.INSPECTION_STALE]),
+          eb.and([
+            eb('inspection_state', '=', v.INSPECTION_QUEUED),
+            eb('claim_expires_at', '<', now),
+          ]),
+          retryAfter(v.INSPECTION_FAILED, p.budget_window_hours),
+          retryAfter(v.INSPECTION_BLOCKED, p.stale_after_hours),
         ]),
       )
       .orderBy(sql`last_cited_at is null`)
       .orderBy(
-        sql`case inspection_state when 'not_inspected' then 0 when 'stale' then 1 else 2 end`,
+        sql`case inspection_state when ${v.INSPECTION_NOT_INSPECTED} then 0 when ${v.INSPECTION_STALE} then 1 else 2 end`,
       )
       .orderBy('recurrence_count', 'desc')
       .orderBy(sql`last_cited_at desc nulls last`)
@@ -123,7 +123,9 @@ export async function claimPages(
     const lease = new Date(now.getTime() + p.claim_lease_minutes * 60_000);
     const claims = [];
     for (const page of await query.execute()) {
-      const kind = ['inspected', 'stale'].includes(page.inspection_state) ? 'recheck' : 'page';
+      const kind = [v.INSPECTION_INSPECTED, v.INSPECTION_STALE].includes(page.inspection_state)
+        ? 'recheck'
+        : 'page';
       if (
         !(await spend(
           trx,
@@ -137,7 +139,7 @@ export async function claimPages(
         continue;
       await trx
         .updateTable('source_pages')
-        .set({ inspection_state: 'queued', claim_expires_at: lease, updated_at: now })
+        .set({ inspection_state: v.INSPECTION_QUEUED, claim_expires_at: lease, updated_at: now })
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('id', '=', page.id)

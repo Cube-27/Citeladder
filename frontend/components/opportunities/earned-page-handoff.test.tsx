@@ -27,7 +27,6 @@ function detailWith(handoff: Partial<OpportunityDetail['content_handoff']>): Opp
       target_url: 'https://publisher.example/best-crm',
       target_theme: 'crm',
       representative_citations: [],
-      affected_prompt_indices: [],
       affected_themes: [],
       observed_competitors: ['Globex'],
       coverage: {},

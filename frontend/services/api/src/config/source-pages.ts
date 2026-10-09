@@ -34,10 +34,9 @@ export const sourcePages = {
     ['videoobject', 'video'],
     ['itemlist', 'listicle'],
     ['faqpage', 'reference'],
-    ['newsarticle', 'article'],
-    ['blogposting', 'article'],
-    ['article', 'article'],
   ],
+  /** Generic article markup: weaker than a list or comparison heading, since most CMSs emit it. */
+  generic_schema_types: ['newsarticle', 'blogposting', 'article'],
   heading_formats: [
     [String.raw`\bvs\.?\b|\bversus\b|\bcompared?\s+to\b`, 'comparison'],
     [String.raw`\balternatives?\b|\bcompetitors?\b`, 'comparison'],

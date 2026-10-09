@@ -20,15 +20,17 @@ function page(overrides: Partial<Page> = {}): Page {
     source_class: 'editorial_third_party',
     entities: [
       {
-        kind: 'brand',
-        name: 'Acme Corp',
+        entity_kind: 'brand',
+        entity_name: 'Acme Corp',
+        match_count: 0,
         presence: 'not_detected',
         match_method: 'none',
         passages: [],
       },
       {
-        kind: 'competitor',
-        name: 'Globex',
+        entity_kind: 'competitor',
+        entity_name: 'Globex',
+        match_count: 2,
         presence: 'present',
         match_method: 'exact_alias',
         passages: ['Globex leads the list for small teams.'],

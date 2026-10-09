@@ -115,8 +115,14 @@ async function upsertPages(
     .execute();
   return new Map(rows.map((row) => [row.url_hash, row.id]));
 }
-async function syncCited(db: Database, scope: SourceScope, auditId: string, now: Date) {
-  const rows = await db
+async function syncCited(
+  db: Database,
+  scope: SourceScope,
+  auditId: string,
+  now: Date,
+  hashes?: string[],
+) {
+  let query = db
     .selectFrom('citations')
     .select([
       'url_hash',
@@ -131,8 +137,9 @@ async function syncCited(db: Database, scope: SourceScope, auditId: string, now:
     .where('url_hash', 'is not', null)
     .where('is_owned', '=', false)
     .groupBy('url_hash')
-    .orderBy('url_hash')
-    .execute();
+    .orderBy('url_hash');
+  if (hashes) query = query.where('url_hash', 'in', hashes);
+  const rows = await query.execute();
   await upsertPages(
     db,
     scope,
@@ -159,17 +166,19 @@ async function auditInTransaction(
   if (!audit) throw new Error('Source-page audit is outside its project');
   await acquireProjectLock(trx, scope.projectId);
 }
-/** Admit the pages behind redirects this run resolved. */
+/** Admit the pages behind redirects this run resolved, and only those. */
 export async function syncCitedPages(
   db: Database,
   scope: SourceScope,
   auditId: string,
+  hashes: string[],
   now = new Date(),
   task?: QueueTask,
 ) {
+  if (!hashes.length) return;
   await db.transaction().execute(async (trx) => {
     await auditInTransaction(trx, scope, auditId, task);
-    await syncCited(trx, scope, auditId, now);
+    await syncCited(trx, scope, auditId, now, hashes);
   });
 }
 /**
@@ -316,8 +325,11 @@ export async function resolveCitation(
 ) {
   const identity = citationIdentity(finalUrl);
   if (!identity) return null;
+  // The audit was checked when this run synced its pages; the update is
+  // scoped to it, so only the fence and the lock are needed here.
   await db.transaction().execute(async (trx) => {
-    await auditInTransaction(trx, scope, auditId, task);
+    await fenceInspectionTask(trx, task);
+    await acquireProjectLock(trx, scope.projectId);
     await trx
       .updateTable('citations')
       .set({

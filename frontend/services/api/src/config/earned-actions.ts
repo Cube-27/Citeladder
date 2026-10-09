@@ -5,6 +5,8 @@ export const earnedActions = {
   /** Competitors are on a cited page and the brand is not: the one earned decision. */
   RULE_EARNED_PAGE_ACQUIRE: 'earned_page_acquire_listing',
   EARNED_PAGE_TARGET_PREFIX: 'earned-page:',
+  /** Your own pages and competitors' own pages can never list you: never read, never acted on. */
+  EARNED_EXCLUDED_SOURCE_CLASSES: ['brand_owned', 'competitor_owned'],
   /** Page formats that can take another entry: lists, comparisons, directories, reviews. */
   EARNED_PAGE_INCLUDABLE_FORMATS: [
     'alternative',

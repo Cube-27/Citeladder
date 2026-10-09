@@ -135,7 +135,7 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
     }
     if (prefetched.size) {
       await checkCancelled('resolved source synchronization');
-      await syncCitedPages(db, scope, audit.id, new Date(), task);
+      await syncCitedPages(db, scope, audit.id, [...prefetched.keys()], new Date(), task);
     }
     const inspected: string[] = [];
     const persist = async (

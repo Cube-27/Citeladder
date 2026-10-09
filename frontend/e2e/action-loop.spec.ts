@@ -49,7 +49,6 @@ const handoff = {
   target_url: null,
   target_theme: 'analytics',
   representative_citations: [{ url: 'https://example.org/tools', title: 'Analytics tools' }],
-  affected_prompt_indices: [0, 1],
   affected_themes: ['analytics'],
   observed_competitors: ['Rival'],
   coverage: { eligible_answers: 4, observed_answers: 2 },

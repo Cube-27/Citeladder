@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { citationSchema } from './audits.ts';
+import { pageEntitySchema } from './source-pages.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -232,15 +233,7 @@ export const visibilitySourceUrlSchema = responseObject({
     page_format: z.string(),
     page_format_method: z.string().nullable(),
     source_class: z.string().nullable(),
-    entities: z.array(
-      responseObject({
-        kind: z.enum(['brand', 'competitor']),
-        name: z.string(),
-        presence: z.string(),
-        match_method: z.string(),
-        passages: z.array(z.string()),
-      }),
-    ),
+    entities: z.array(pageEntitySchema),
     // The open Action to get listed here, when competitors are on the page and you are not.
     action_id: uuid().nullable(),
   }).nullable(),

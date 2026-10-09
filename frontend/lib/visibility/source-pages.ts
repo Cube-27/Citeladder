@@ -14,8 +14,10 @@
  */
 import type { z } from 'zod';
 
+import type { pageEntitySchema } from '@citeladder/contracts/source-pages';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { formatCount } from '@/lib/format';
+import { sinceLabel } from '@/lib/visibility/sources';
 
 /** The one sentence for "we could not read enough of this page to judge it". */
 const COVERAGE_TOO_THIN = 'Too little of the page was readable to judge it.';
@@ -113,12 +115,11 @@ export function pageStanding(page: PageSection | null): PageStanding {
     if (page.state === 'blocked') return 'blocked';
     return page.state === 'failed' ? 'unreadable' : 'not_read';
   }
-  const brand = page.entities.find((entity) => entity.kind === 'brand');
+  const brand = brandVerdict(page.entities);
   if (brand?.presence === 'present') return 'listed';
-  const rivals = page.entities.some(
-    (entity) => entity.kind === 'competitor' && entity.presence === 'present',
-  );
-  return rivals && brand?.presence === 'not_detected' ? 'gap' : 'read';
+  return onPageCompetitors(page.entities).length && brand?.presence === 'not_detected'
+    ? 'gap'
+    : 'read';
 }
 
 const STANDING_SENTENCES: Record<PageStanding, string> = {
@@ -135,4 +136,36 @@ const STANDING_SENTENCES: Record<PageStanding, string> = {
 
 export function standingSentence(standing: PageStanding): string {
   return STANDING_SENTENCES[standing];
+}
+
+export type PageEntity = z.infer<typeof pageEntitySchema>;
+
+/**
+ * The rivals found ON a page, read from the presence verdicts so each one
+ * carries the quoted line behind it.
+ */
+export function onPageCompetitors(entities: readonly PageEntity[] | undefined) {
+  return (entities ?? []).filter(
+    (entity) => entity.entity_kind !== 'brand' && entity.presence === 'present',
+  );
+}
+
+/** The brand's own verdict on a page, when one was taken. */
+export function brandVerdict(entities: readonly PageEntity[] | undefined): PageEntity | null {
+  return (entities ?? []).find((entity) => entity.entity_kind === 'brand') ?? null;
+}
+
+/**
+ * When a page was last read and how much of it was readable, or null when
+ * nothing was read: printing "0 characters" would imply a reading that never
+ * happened.
+ */
+export function readingSentence(
+  readAt: string | null | undefined,
+  extractedChars: number | null | undefined,
+): string | null {
+  if (!extractedChars) return null;
+  const read = sinceLabel(readAt);
+  const chars = `${formatCount(extractedChars)} characters were readable.`;
+  return read ? `Read ${read.toLowerCase()}; ${chars}` : chars;
 }

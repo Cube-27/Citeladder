@@ -143,6 +143,22 @@ export function memberMeasurementLeg(
   return member.target_prompt_id === null ? null : legs.LEG_VISIBILITY_RUN;
 }
 
+type CheckContext = {
+  auditId: string | null;
+  declaredDay: string;
+  /** One baseline read per prompt, however many members name it. */
+  prompts: Map<string, Promise<ExpectedCheck>>;
+};
+
+function promptCheck(db: Database, scope: Scope, promptId: string, context: CheckContext) {
+  let check = context.prompts.get(promptId);
+  if (!check) {
+    check = visibilityCheck(db, scope, promptId, context.auditId);
+    context.prompts.set(promptId, check);
+  }
+  return check;
+}
+
 /**
  * The checks one member freezes. An earned listing has no reading of its own:
  * it is measured on every tracked prompt whose answers cited the page.
@@ -151,40 +167,37 @@ async function memberChecks(
   db: Database,
   scope: Scope,
   member: OpportunityRow,
-  context: { auditId: string | null; declaredDay: string },
+  context: CheckContext,
 ): Promise<ExpectedCheck[]> {
   if (o.EARNED_RULE_IDS.includes(member.rule_id)) {
     const checks = [];
     for (const promptId of earnedPromptIds(member))
-      checks.push(await visibilityCheck(db, scope, promptId, context.auditId)); // NOSONAR -- One transaction connection.
+      checks.push(await promptCheck(db, scope, promptId, context)); // NOSONAR -- One transaction connection.
     return checks;
   }
-  const check = await memberCheck(db, scope, member, context);
-  return check ? [check] : [];
-}
-
-async function memberCheck(
-  db: Database,
-  scope: Scope,
-  member: OpportunityRow,
-  context: { auditId: string | null; declaredDay: string },
-): Promise<ExpectedCheck | null> {
-  if (member.rule_id === KEYWORD_GAP_RULE) return keywordCheck(member);
+  if (member.rule_id === KEYWORD_GAP_RULE) {
+    const check = keywordCheck(member);
+    return check ? [check] : [];
+  }
   const evidence = record(member.evidence);
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_SITE) {
     const siteUrlId = scalarText(evidence.site_url_id);
-    return {
-      kind: 'site_rule',
-      rule_id: scalarText(evidence.issue_rule_id) || member.rule_id,
-      expected_outcome: 'pass',
-      ...(siteUrlId ? { target_site_url_id: siteUrlId } : {}),
-    };
+    return [
+      {
+        kind: 'site_rule',
+        rule_id: scalarText(evidence.issue_rule_id) || member.rule_id,
+        expected_outcome: 'pass',
+        ...(siteUrlId ? { target_site_url_id: siteUrlId } : {}),
+      },
+    ];
   }
-  if (member.opportunity_type === o.OPPORTUNITY_TYPE_TRAFFIC)
-    return trafficCheck(db, scope, member, context.declaredDay);
+  if (member.opportunity_type === o.OPPORTUNITY_TYPE_TRAFFIC) {
+    const check = await trafficCheck(db, scope, member, context.declaredDay);
+    return check ? [check] : [];
+  }
   return member.target_prompt_id === null
-    ? null
-    : visibilityCheck(db, scope, member.target_prompt_id, context.auditId);
+    ? []
+    : [await promptCheck(db, scope, member.target_prompt_id, context)];
 }
 
 /**
@@ -202,9 +215,10 @@ export async function declarationChecks(
   // findings keep their own checks in the same declaration.
   const contextual = members.filter((member) => member.rule_id === 'site_contextual_links');
   const checks = new Map<string, MemberCheck>();
+  const shared: CheckContext = { ...context, prompts: new Map() };
   for (const member of members) {
     if (member.rule_id === 'site_contextual_links') continue;
-    const found = await memberChecks(db, scope, member, context); // NOSONAR -- One transaction connection.
+    const found = await memberChecks(db, scope, member, shared); // NOSONAR -- One transaction connection.
     for (const check of found) {
       const key = JSON.stringify(check);
       if (!checks.has(key)) checks.set(key, { check, member });

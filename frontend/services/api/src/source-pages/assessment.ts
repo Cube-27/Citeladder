@@ -43,9 +43,6 @@ export function urlFormat(value: string): { format: string; method: string } {
     ? { format: 'article', method: 'url_pattern' }
     : { format: 'unresolved', method: 'none' };
 }
-/** Schema types that name the generic article shape and nothing more specific. */
-const GENERIC_SCHEMA = new Set(['article', 'blogposting', 'newsarticle']);
-
 /**
  * The page's own account of its shape. A specific schema type wins; a list or
  * comparison heading beats generic Article markup, because most CMSs mark
@@ -57,15 +54,14 @@ function pageFormat(page: ExtractedPage) {
     page.facts.structured_types.map((s) => s.replace(/\/$/u, '').split('/').at(-1)!.toLowerCase()),
   );
   for (const [token, format] of p.schema_formats)
-    if (types.has(token!) && !GENERIC_SCHEMA.has(token!))
-      return { format: format!, method: 'structured_data' };
+    if (types.has(token!)) return { format: format!, method: 'structured_data' };
   const title = [page.facts.title, ...page.facts.headings].join(' ');
   for (const [pattern, format] of p.heading_formats)
     if (new RegExp(pattern!, 'iu').test(title))
       return { format: format!, method: 'heading_evidence' };
-  for (const [token, format] of p.schema_formats)
-    if (types.has(token!)) return { format: format!, method: 'structured_data' };
-  return { format: 'unresolved', method: 'none' };
+  return p.generic_schema_types.some((token) => types.has(token))
+    ? { format: 'article', method: 'structured_data' }
+    : { format: 'unresolved', method: 'none' };
 }
 const escape = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
 const WORD = String.raw`[\p{L}\p{N}_]`;
@@ -107,35 +103,29 @@ type Entity = { kind: string; name: string; aliases: string[]; matching?: Entity
  * rules that judge answers, so a name counts on a page exactly when it would
  * count in an answer. Every positive verdict carries a quoted passage.
  */
-function entity(page: ExtractedPage, item: Entity, passages: Passage[]): Presence {
-  const text = [page.facts.title, page.facts.meta_description, page.text].filter(Boolean).join(' ');
+function entity(page: PageText, item: Entity, passages: Passage[]): Presence {
+  const { text } = page;
   const aliases = [...new Set([item.name, ...item.aliases].map((a) => a.trim()))].filter(
     (a) => a.length >= p.min_alias_chars,
   );
-  const offset = entityOffset(normalizeText(text), aliases, item.matching);
-  if (offset === null) {
-    const sufficient =
-      page.facts.parsed &&
-      !page.facts.text_truncated &&
-      page.extracted_chars >= p.min_coverage_chars;
+  const named = { entity_kind: item.kind, entity_name: item.name };
+  const offset = entityOffset(page.normalized, aliases, item.matching);
+  if (offset === null)
     return {
-      entity_kind: item.kind,
-      entity_name: item.name,
-      presence: sufficient ? 'not_detected' : 'partial',
+      ...named,
+      presence: page.sufficient ? 'not_detected' : 'partial',
       match_method: 'none',
       match_count: 0,
       first_offset: null,
       passage_refs: [],
     };
-  }
   for (const pattern of aliases.flatMap(spellings)) {
     const matches = [...text.matchAll(pattern)];
     const [first] = matches;
     if (!first) continue;
     const found = first[0].toLowerCase();
     return {
-      entity_kind: item.kind,
-      entity_name: item.name,
+      ...named,
       presence: 'present',
       match_method: aliases.some((alias) => alias.toLowerCase() === found)
         ? 'exact_alias'
@@ -147,8 +137,7 @@ function entity(page: ExtractedPage, item: Entity, passages: Passage[]): Presenc
   }
   // Named, but in a spelling no raw window reproduces ("and" for "&"): nothing to quote.
   return {
-    entity_kind: item.kind,
-    entity_name: item.name,
+    ...named,
     presence: 'ambiguous',
     match_method: 'normalized_alias',
     match_count: 1,
@@ -156,14 +145,25 @@ function entity(page: ExtractedPage, item: Entity, passages: Passage[]): Presenc
     passage_refs: [],
   };
 }
+/** The page's text, normalized once for every entity matched against it. */
+type PageText = { text: string; normalized: string; sufficient: boolean };
 export function assessPage(page: ExtractedPage, configuration: unknown) {
   const config = scoringConfig(configuration);
   const passages: Passage[] = [];
+  const text = [page.facts.title, page.facts.meta_description, page.text].filter(Boolean).join(' ');
+  const read: PageText = {
+    text,
+    normalized: normalizeText(text),
+    sufficient:
+      page.facts.parsed &&
+      !page.facts.text_truncated &&
+      page.extracted_chars >= p.min_coverage_chars,
+  };
   const brand = config.brandName.trim();
   const presences: Presence[] = brand
     ? [
         entity(
-          page,
+          read,
           {
             kind: 'brand',
             name: brand,
@@ -179,7 +179,7 @@ export function assessPage(page: ExtractedPage, configuration: unknown) {
     if (name)
       presences.push(
         entity(
-          page,
+          read,
           { kind: 'competitor', name, aliases: competitor.aliases, matching: competitor.matching },
           passages,
         ),

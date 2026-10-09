@@ -591,17 +591,19 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       source_class: 'editorial_third_party',
       entities: [
         {
-          kind: 'brand',
-          name: 'Acme Corp',
+          entity_kind: 'brand',
+          entity_name: 'Acme Corp',
           presence: 'not_detected',
           match_method: 'none',
+          match_count: 0,
           passages: [],
         },
         {
-          kind: 'competitor',
-          name: 'Globex',
+          entity_kind: 'competitor',
+          entity_name: 'Globex',
           presence: 'present',
           match_method: 'exact_alias',
+          match_count: 1,
           passages: ['Globex leads the list.'],
         },
       ],
