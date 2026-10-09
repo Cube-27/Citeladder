@@ -8,7 +8,7 @@ export const MCP_SERVER_URL = 'https://citeladder.com/mcp';
 
 const CONNECTOR_NAME = 'CiteLadder';
 
-export type McpClientId = 'claude' | 'chatgpt' | 'gemini' | 'cursor' | 'grok';
+type McpClientId = 'claude' | 'chatgpt' | 'gemini' | 'cursor' | 'grok';
 
 /**
  * How the assistant receives the URL. `prefilled` pages and install links carry
