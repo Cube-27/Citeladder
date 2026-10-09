@@ -128,6 +128,26 @@ async function trafficCheck(
 }
 
 const legs = policy.opportunity.actions;
+const KEYWORD_GAP_RULE = 'search_keyword_gap';
+
+/**
+ * A keyword gap is measured by appearing for the search, not by clicks: a
+ * query with no Search Console row has no baseline to compare a rate with.
+ */
+function keywordCheck(member: OpportunityRow): ExpectedCheck | null {
+  const evidence = record(member.evidence);
+  const market = record(evidence.market);
+  const keyword = scalarText(evidence.keyword);
+  if (!keyword) return null;
+  return {
+    kind: 'keyword_presence',
+    keyword,
+    query_key: scalarText(evidence.query_key),
+    owned_origin: scalarText(evidence.owned_origin),
+    location_code: typeof market.location_code === 'number' ? market.location_code : null,
+    language_code: scalarText(market.language_code),
+  };
+}
 
 /**
  * The reading that would measure a member once declared, or null when nothing
@@ -140,6 +160,7 @@ export function memberMeasurementLeg(
   >,
 ): string | null {
   if (o.EARNED_RULE_IDS.includes(member.rule_id)) return legs.LEG_PLACEMENT_RECHECK;
+  if (member.rule_id === KEYWORD_GAP_RULE) return legs.LEG_SEARCH_CONSOLE_WINDOW;
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_SITE) return legs.LEG_CRAWL;
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_TRAFFIC)
     return member.target_theme || member.target_url ? legs.LEG_SEARCH_CONSOLE_WINDOW : null;
@@ -153,6 +174,7 @@ async function memberCheck(
   context: { auditId: string | null; brandName: string; declaredDay: string },
 ): Promise<ExpectedCheck | null> {
   if (o.EARNED_RULE_IDS.includes(member.rule_id)) return placementCheck(member, context.brandName);
+  if (member.rule_id === KEYWORD_GAP_RULE) return keywordCheck(member);
   const evidence = record(member.evidence);
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_SITE) {
     const siteUrlId = scalarText(evidence.site_url_id);

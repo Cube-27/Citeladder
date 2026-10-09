@@ -53,6 +53,29 @@ and only with complete, extractor-compatible text coverage. Query relevance may 
 gap action over the same scope; it never creates a duplicate action or asserts
 causation. Anchor diagnostics do not promote.
 
+Keyword gaps come from the [Search Intelligence](integrations-traffic-analytics.md#search-intelligence-acquisition)
+datasets a user reviewed and paid for, read by
+[`search-gap-hits.ts`](../frontend/services/api/src/opportunities/search-gap-hits.ts)
+as rule `search_keyword_gap` (family `search_intelligence`). Per saved
+competitor, the latest published missing-keywords dataset for an owned website
+in the project's Search Intelligence market, at most 90 days old, qualifies;
+failed or unknown coverage never does, an empty dataset supersedes older gaps,
+and partial data adds a limitation. A row promotes only with search volume ≥ 50
+and the competitor ranking in the top 10; unknown volume or rank abstains and is
+counted, never read as zero. Navigational searches, searches branded for the
+project or naming a competitor, searches the project already ranks for in the
+same market, and searches Search Console already shows (a promoted Demand query
+signal or any query with impressions in the Demand window) are left out. One
+search across competitors and word orders is one finding, ranked by competitor
+count then volume, at most 25 per refresh. A crawled page whose title and H1
+hold every term is the target; otherwise the finding is a planned page keyed
+like an Agent-planned page, so both converge on one Action. Publishing a
+missing, ranking or shared-keyword dataset enqueues a refresh and verification;
+the gap datasets' identity is part of the refresh's source identity, so an
+unchanged set is not recomputed. Wording stays an estimate: DataForSEO rankings
+are not measured traffic. Thresholds live in `SEARCH_GAP` in the
+[opportunity config](../frontend/services/api/src/config/opportunity.ts).
+
 Source routing distinguishes owned and earned actions and exposes the persisted
 source mix. The [content handoff](../frontend/services/api/src/opportunities/projection.ts)
 projects target IDs, citations, limitations, coverage and a suggested content
@@ -156,6 +179,7 @@ changed:
 | Site Health rule | the rule passes on the page | the next crawl that analyzes the page after go-live |
 | Contextual link | the selected link is in main content | the next compatible crawl |
 | Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts after the go-live day (that day is partly before the change) |
+| Keyword gap | the project appears for the search: Search Console impressions, or an owned ranking in a later Search Intelligence dataset whose provider check postdates go-live; still missing or not ranking yet reads `waiting`, never `unmet` | each synced window that starts after go-live, and each later published ranking, shared or missing-keyword dataset for the same website and market |
 | Prompt-targeted visibility | the prompt's composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
 | Earned page | the declared placement change | the placement recheck |
 
@@ -194,13 +218,17 @@ opportunity's stable key travels alongside for navigation across recompute and
 is never the anchor: the same page and action can be attempted more than once,
 and a check has to know which attempt it verifies.
 
-Later crawl, audit, traffic or source-page-inspection completion enqueues
+Later crawl, audit, traffic, source-page-inspection or Search Intelligence
+keyword-dataset completion enqueues
 [TypeScript verification](../frontend/services/api/src/opportunities/verification.ts)
 through the [TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts)
-only for a project with a declaration inside the verification window (30 days
-from go-live). A task reads only declarations declared before the source was
-observed, inside the window, and holding a check of a kind that source reads;
-after the window a declaration's last observation stands.
+only for a project with a declaration inside the verification window. The
+window is 30 days from go-live, except a keyword-presence check, which runs 90
+days because a new page takes longer to rank than an edited one takes to
+recrawl. A task reads only declarations declared before the source was
+observed, and only the checks of a kind that source reads that are still
+inside their own window; after it a check's last reading stands. Crawl seeding
+of declared pages keeps the 30-day window.
 
 Each source reads only its own check kinds and gives each a `met`, `unmet`,
 `waiting` or `unavailable` reading with a reason. Under a lock on the

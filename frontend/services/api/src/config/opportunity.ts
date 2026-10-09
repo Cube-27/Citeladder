@@ -3,7 +3,7 @@ export const opportunityDeclaration = { output_phase_outline: 'outline' };
 
 export const opportunities = {
   ANALYZER_VERSION: 'opp-analyzer-1',
-  RULE_VERSION: 'opp-rules-2',
+  RULE_VERSION: 'opp-rules-3',
   FORMULA_VERSION: 'opp-formula-2',
   CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: 'implementation_idempotency_conflict',
   CODE_IMPLEMENTATION_TARGET_CONFLICT: 'implementation_target_conflict',
@@ -25,13 +25,15 @@ export const opportunities = {
   OPPORTUNITY_SEVERITIES: ['critical', 'high', 'info', 'low', 'medium'],
   IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN: 160,
   IMPLEMENTATION_TARGETS_MAX: 64,
-  IMPLEMENTATION_VERIFIER_VERSION: 'implementation-verifier-2',
+  IMPLEMENTATION_VERIFIER_VERSION: 'implementation-verifier-3',
   IMPLEMENTATION_VERIFICATION_BATCH_MAX: 100,
   IMPLEMENTATION_VERIFICATION_HISTORY_MAX: 50,
   // New evidence re-checks a declaration only this long after it went live;
   // after that its last observation stands. Declarations may be backdated by
   // at most the same span, and never placed in the future beyond the skew.
   VERIFICATION_WINDOW_DAYS: 30,
+  // A new page takes longer to rank than an edited one takes to recrawl.
+  CHECK_KIND_WINDOW_DAYS: { keyword_presence: 90 } as Record<string, number>,
   DECLARATION_FUTURE_SKEW_SECONDS: 300,
   VISIBILITY_METRIC_PROMPT_SCORE: 'prompt_score',
   VISIBILITY_CHECK_MIN_DELTA: 1,
@@ -289,6 +291,16 @@ export const opportunities = {
       severity: 'low',
       title: 'Modification date moved without inspected text change',
     },
+    search_keyword_gap: {
+      action_path: 'owned',
+      enabled: true,
+      opportunity_type: 'topic',
+      remediation:
+        'Competitors rank for this search and you have no ranking page for it. Improve the page that already covers it or publish one that answers it directly, then confirm in Search Console or a later Search Intelligence analysis. DataForSEO rankings are provider estimates.',
+      rule_id: 'search_keyword_gap',
+      severity: 'medium',
+      title: 'Competitors rank for a search you do not',
+    },
     low_share_of_voice_theme: {
       action_path: 'owned',
       enabled: false,
@@ -425,6 +437,21 @@ export const opportunities = {
     absent: 1,
     not_assessed: 1,
     unavailable: 1,
+  },
+  // Keyword gaps from published Search Intelligence datasets (owner, 2026-10-09).
+  SEARCH_GAP: {
+    MIN_SEARCH_VOLUME: 50,
+    MAX_COMPETITOR_RANK: 10,
+    MAX_HITS_PER_REFRESH: 25,
+    MAX_DATASET_AGE_DAYS: 90,
+    MAX_ROWS_READ: 5000,
+    EXCLUDED_INTENTS: ['navigational'],
+    // log10(volume) / this, clamped: 100 → 0.5, 10,000 → 1.
+    VALUE_LOG_DIVISOR: 4,
+    MIN_VALUE_FACTOR: 0.25,
+    GAP_FACTOR_BASE: 2,
+    GAP_FACTOR_PER_EXTRA_COMPETITOR: 0.5,
+    GAP_FACTOR_CAP: 3,
   },
   GAP_COMPETITOR_WEIGHT: 1,
   GAP_COMPETITOR_CAP: 3,

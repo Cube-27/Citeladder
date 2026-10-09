@@ -95,6 +95,8 @@ export const searchRowSchema = responseObject({
   referring_main_domains: z.number().int().nullable(),
   dataforseo_rank: z.number().int().nullable(),
   auxiliary: z.record(z.string(), z.unknown()),
+  // The Action a missing-keyword row became, when it passed the keyword-gap gates.
+  action_id: z.uuid().nullable().optional(),
 }).catchall(z.unknown());
 export const searchDatasetPageSchema = responseObject({
   dataset: searchDatasetSchema,

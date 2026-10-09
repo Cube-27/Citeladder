@@ -10,6 +10,7 @@ import { z } from 'zod';
 
 import type { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Database } from '../db/database.ts';
+import { record } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
 import {
   decodeKeysetCursor,
@@ -266,14 +267,35 @@ export async function datasetPage(
       .executeTakeFirstOrThrow(),
   ]);
   const page = rows.slice(0, request.limit);
+  const actions =
+    dataset.dataset_kind === 'missing_keywords' ? await gapActions(db, scope) : new Map();
   return {
     dataset: { ...datasetView(dataset), filtered_saved_count: Number(counted.count) },
-    rows: page.map(rowView),
+    rows: page.map((row) => ({ ...rowView(row), action_id: actions.get(row.id) ?? null })),
     next_cursor:
       rows.length > request.limit
         ? encodeKeysetCursor(cursorScope, filters, [page.at(-1)!.id])
         : null,
   };
+}
+
+/** The Action each live keyword-gap finding names a row of, by row; a read, never a refresh. */
+async function gapActions(db: Database, scope: Scope) {
+  const live = await scope.workspace
+    .selectFrom(db, 'opportunities')
+    .select(['action_id', 'evidence'])
+    .where('project_id', '=', scope.projectId)
+    .where('rule_id', '=', 'search_keyword_gap')
+    .where('superseded_at', 'is', null)
+    .where('action_id', 'is not', null)
+    .execute();
+  const byRow = new Map<string, string>();
+  for (const finding of live) {
+    const competitors = record(finding.evidence).competitors;
+    for (const item of Array.isArray(competitors) ? competitors.map(record) : [])
+      if (typeof item.row_id === 'string') byRow.set(item.row_id, finding.action_id!);
+  }
+  return byRow;
 }
 
 /** Selected rows of one published dataset, each with its dataset, for content work. */

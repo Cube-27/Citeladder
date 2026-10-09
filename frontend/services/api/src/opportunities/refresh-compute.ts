@@ -221,8 +221,8 @@ type CurrentSnapshot = {
 
 /**
  * Every persisted input a refresh reads, by identity: the audit, crawl, demand
- * revision, internal-link run and source-page revision. Two refreshes
- * over equal identities compute the same set.
+ * revision, internal-link run, source-page revision and keyword-gap datasets.
+ * Two refreshes over equal identities compute the same set.
  */
 export type SourceIdentity = {
   audit_id: string | null;
@@ -231,6 +231,7 @@ export type SourceIdentity = {
   demand_source_revision: string | null;
   internal_link_run_id: string | null;
   source_pages_revision: string | null;
+  search_gap_revision: string | null;
 };
 
 /** Equal identities; a stored one missing a field (an older snapshot) never matches. */
@@ -250,11 +251,17 @@ export function snapshotIsCurrent(current: CurrentSnapshot | null, identity: Sou
 }
 
 /** Which evidence families one refresh actually had a source for. */
-export function availableFamilies(has: { audit: boolean; demand: boolean; crawl: boolean }) {
+export function availableFamilies(has: {
+  audit: boolean;
+  demand: boolean;
+  crawl: boolean;
+  searchIntelligence: boolean;
+}) {
   const families = new Set<string>();
   if (has.audit)
     [a.FAMILY_AI_VISIBILITY, a.FAMILY_SOURCES, a.FAMILY_COMMERCE].forEach((f) => families.add(f));
   if (has.demand) families.add(a.FAMILY_SEARCH_CONSOLE);
+  if (has.searchIntelligence) families.add(a.FAMILY_SEARCH_INTELLIGENCE);
   if (has.crawl)
     [a.FAMILY_SITE_HEALTH, a.FAMILY_LINK_GRAPH, a.FAMILY_SITE_CHANGES].forEach((f) =>
       families.add(f),

@@ -102,6 +102,14 @@ describe('native research acquisition worker', () => {
         .where('run_id', '=', t.runId)
         .executeTakeFirst(),
     ).toEqual({ status: 'published', coverage: 'empty' });
+    // A published keyword dataset can open or close keyword-gap Actions.
+    const refresh = await db
+      .selectFrom('analytics_tasks')
+      .select('payload')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('task_kind', '=', 'opportunity_refresh')
+      .executeTakeFirstOrThrow();
+    expect(refresh.payload).toMatchObject({ trigger_kind: 'search_intelligence_dataset' });
   });
   it('parks explicit rate limits without spending the queue retry budget', async () => {
     const t = await run();
@@ -131,7 +139,8 @@ describe('native research acquisition worker', () => {
       .set(({ ref }) => ({ tokens: ref('capacity'), blocked_until: null }))
       .where('account_pool_identity', '=', account.account_identity)
       .execute();
-    await w.runOnce();
+    // A published keyword dataset queues Opportunity work too; drain, don't take one task.
+    await w.runUntilIdle();
     expect(sent).toBe(2);
     expect(
       await db
@@ -148,8 +157,8 @@ describe('native research acquisition worker', () => {
       sent++;
       throw new Error('connection lost');
     });
-    await w.runOnce();
-    await w.runOnce();
+    await w.runUntilIdle();
+    await w.runUntilIdle();
     expect(sent).toBe(1);
     expect(
       await db

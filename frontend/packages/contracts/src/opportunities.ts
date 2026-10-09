@@ -323,7 +323,21 @@ const placementExpectedCheckSchema = responseObject({
   deterioration: z.array(z.string()),
   baseline_snapshot_id: z.string().nullable(),
 });
+/**
+ * A keyword gap closes when you appear for the search: Search Console
+ * impressions after go-live, or your ranking in a later Search Intelligence
+ * dataset whose provider check postdates go-live. Absence is never a failure.
+ */
+const keywordPresenceExpectedCheckSchema = responseObject({
+  kind: z.literal('keyword_presence'),
+  keyword: z.string(),
+  query_key: z.string(),
+  owned_origin: z.string(),
+  location_code: z.number().int().nullable(),
+  language_code: z.string(),
+});
 export const expectedCheckSchema = z.discriminatedUnion('kind', [
+  keywordPresenceExpectedCheckSchema,
   responseObject({
     kind: z.literal('contextual_link'),
     recommendation_id: uuid(),

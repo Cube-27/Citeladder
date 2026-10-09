@@ -1,7 +1,9 @@
 # Search Intelligence improvement plan
 
-**Status:** PR 1 (phases 1 and 2) implemented 2026-10-09; PR 2 is designed and
-waits on the owner decisions below.
+**Status:** implemented 2026-10-09 as two stacked PRs: #322 (runtime fixes and
+the guided first run) and PR 2 (keyword gaps become Actions). Shipped behaviour
+is owned by [Connected data](../integrations-traffic-analytics.md#search-intelligence-acquisition)
+and [Opportunities](../opportunities.md).
 
 Feature 7 of the [feature review tracker](feature-review-tracker.md): the
 DataForSEO Search Intelligence module (reviewed paid acquisition of keyword,

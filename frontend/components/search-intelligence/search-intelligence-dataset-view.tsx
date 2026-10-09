@@ -245,11 +245,18 @@ function EvidenceDrawer({
       description="What the provider reported for this result when it was saved."
     >
       {selected ? (
-        <Button size="sm" variant="secondary" asChild className="w-fit">
-          <ProjectLink href={agentHandoffHref(rowsHandoff(selected.dataset_id, [selected]))}>
-            Ask agent about this row
-          </ProjectLink>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {selected.action_id ? (
+            <Button size="sm" asChild className="w-fit">
+              <ProjectLink href={`/agent/actions/${selected.action_id}`}>Open Action</ProjectLink>
+            </Button>
+          ) : null}
+          <Button size="sm" variant="secondary" asChild className="w-fit">
+            <ProjectLink href={agentHandoffHref(rowsHandoff(selected.dataset_id, [selected]))}>
+              Ask agent about this row
+            </ProjectLink>
+          </Button>
+        </div>
       ) : null}
       {selected?.row_kind === 'citation_match' &&
       typeof selected.auxiliary.audit_id === 'string' ? (
@@ -387,6 +394,12 @@ function DatasetHeader({
         {searchScopeLabel(dataset.research_scope)}
         {dataset.truncated ? ' · truncated' : ''}
       </p>
+      {dataset.dataset_kind === 'missing_keywords' ? (
+        <p className={textRole('caption')}>
+          Gaps with real search volume where a competitor ranks in the top 10 become{' '}
+          <TextLink href="/agent/actions">Actions</TextLink>. Open a row to see its Action.
+        </p>
+      ) : null}
     </CardHeader>
   );
 }
