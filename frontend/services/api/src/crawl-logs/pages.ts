@@ -26,6 +26,7 @@ import {
 import { ApiError } from '../errors.ts';
 import { inventoryCrawlIds } from '../site-health/reads/crawl.ts';
 import { compareText } from '../text-order.ts';
+import { firstOf } from '../lists.ts';
 
 type Leg = z.infer<typeof trafficLegSchema>;
 export async function pageContext(db: Database, scope: CrawlScope, options: CrawlReadOptions = {}) {
@@ -202,7 +203,7 @@ async function observedCoverage(
       and b.verification=any(${verificationFilter(options.verification)}::text[]) and b.bot_id=any(${aiBots()}::text[])))::integer as observed from known`.execute(
     db,
   );
-  const counts = result.rows[0]!;
+  const counts = firstOf(result.rows, 'the Pages coverage counts');
   let state = 'unavailable';
   if (crawl && complete) state = counts.known ? 'value' : 'unknown';
   return {

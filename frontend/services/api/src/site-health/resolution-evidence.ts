@@ -10,6 +10,7 @@ import {
 } from './analysis/finalize.ts';
 import type { RuleEvaluation } from './analysis/rules.ts';
 import { compareText } from '../text-order.ts';
+import { onlyOf } from '../lists.ts';
 
 export type Resolution = {
   status: number | null;
@@ -86,7 +87,8 @@ export function canonicalResolution(
   // The same unique, trimmed set canonicalIntegrity judges: a repeated identical
   // declaration is one canonical, so its target still resolves.
   const unique = [...new Set(declarations.map((value) => value.trim()).filter(Boolean))];
-  const target = unique.length === 1 ? (canonicalUrl(unique[0]!, finalUrl) ?? '') : '';
+  const only = onlyOf(unique);
+  const target = only === undefined ? '' : (canonicalUrl(only, finalUrl) ?? '');
   const resolution = resolutions.get(target);
   const limited = resolution?.status === 429;
   const evaluation = canonicalIntegrity({

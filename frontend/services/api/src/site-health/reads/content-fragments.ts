@@ -259,8 +259,9 @@ export async function selectContentFragments(
       omitted++;
       return false;
     });
-    if (batch.length < p.content_context_read_batch_size) break;
-    after = batch.at(-1)!.site_url_id;
+    const last = batch.at(-1);
+    if (batch.length < p.content_context_read_batch_size || last === undefined) break;
+    after = last.site_url_id;
   }
   const result = projection(candidates.map(({ row }) => row));
   if (omitted)

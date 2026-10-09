@@ -6,6 +6,7 @@
  * page's claim about itself and never decides alone.
  */
 import { compareText } from '../../text-order.ts';
+import { firstOf } from '../../lists.ts';
 import { documentUrl, isHomepagePath, normalizedPath, routeSignal } from '../routes.ts';
 import { analysisPolicy, limits } from './policy.ts';
 import { observedQuestionCount } from './questions.ts';
@@ -54,8 +55,12 @@ const tierIndex = (tier: string) => c.tiers.indexOf(tier);
 /** The page kind structured data alone suggests, most specific type first. */
 function schemaSuggestion(facts: Facts): [string, string] | null {
   const types = new Set(textList(record(facts.structured_data).types));
-  const match = c.schema_type_map.find(([type]) => types.has(type!));
-  return match ? [match[1]!, match[0]!] : null;
+  for (const [type, kind] of c.schema_type_map) {
+    if (type === undefined || !types.has(type)) continue;
+    if (kind === undefined) throw new Error(`Expected a page kind for schema type ${type}`);
+    return [kind, type];
+  }
+  return null;
 }
 
 /** A real buy box with a corroborator, or an own price under a product-detail heading. */
@@ -260,7 +265,7 @@ function winningSignal(matched: Signal[]) {
   return top.reduce(
     (winner, item) =>
       SIGNAL_ORDER.indexOf(item.signal) < SIGNAL_ORDER.indexOf(winner.signal) ? item : winner,
-    top[0]!,
+    firstOf(top, 'a top-tier page-kind signal'),
   );
 }
 

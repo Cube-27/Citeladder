@@ -344,12 +344,14 @@ function isEmptyState(node: HtmlElement, blob: string) {
   const parts = stripTrailing(squash(textContent(node).toLowerCase()), '.!')
     .split(' ')
     .filter(Boolean);
-  const counted = parts.length === 2 && parts[0] === '0' && EMPTY_NOUNS.has(parts[1]!);
+  const [first, second, third] = parts;
+  const emptyNoun = second !== undefined && EMPTY_NOUNS.has(second);
+  const counted = parts.length === 2 && first === '0' && emptyNoun;
   const none =
-    (parts.length === 2 || (parts.length === 3 && ['available', 'found'].includes(parts[2]!))) &&
-    parts[0] === 'no' &&
-    EMPTY_NOUNS.has(parts[1]!);
-  const nothing = parts.length === 2 && parts[0] === 'nothing' && parts[1] === 'found';
+    (parts.length === 2 || (parts.length === 3 && (third === 'available' || third === 'found'))) &&
+    first === 'no' &&
+    emptyNoun;
+  const nothing = parts.length === 2 && first === 'nothing' && second === 'found';
   return blobHas(blob, EMPTY_STATE_TOKENS) || counted || none || nothing;
 }
 

@@ -12,6 +12,7 @@ import { record, strings } from '../../db/json.ts';
 import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import { notFound } from '../../errors.ts';
 import { parseUuid } from '../../http/uuid.ts';
+import { firstOf } from '../../lists.ts';
 import type { Crawl } from '../task-fence.ts';
 
 const reads = policy.site_health.reads;
@@ -361,7 +362,7 @@ export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counter
       count(*) filter (where status in ('leased','running') and lease_expires_at <= now())::int as expired,
       min(available_at) filter (where status in ('queued','retry_wait','capacity_wait') and available_at > now()) as next_available_at
     from latest`.execute(db);
-  const c = counts.rows[0]!;
+  const c = firstOf(counts.rows, 'the crawl task counters');
   const [selected, kinds, excluded] = await Promise.all([
     db
       .selectFrom('monitored_site_urls')
@@ -394,7 +395,10 @@ export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counter
     [state, reason] = ['waiting', 'retry_backoff'];
   return {
     discovered: countDisclosure(crawl)
-      ? Math.max(crawl.admitted_url_count - excluded.rows[0]!.count, 0)
+      ? Math.max(
+          crawl.admitted_url_count - firstOf(excluded.rows, 'the excluded URL count').count,
+          0,
+        )
       : null,
     selected: Number(selected.count),
     queued: c.queued,

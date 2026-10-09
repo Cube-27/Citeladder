@@ -5,6 +5,7 @@ import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
+import { firstOf } from '../lists.ts';
 import type { SiteRuleEvaluations } from '../generated/db-schema.ts';
 import type { RuleEvaluation } from './analysis/rules.ts';
 import { appliedSiteChecks, crawlSiteChecks, scoreAnalysis } from './analysis/scoring.ts';
@@ -96,7 +97,9 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
     };
   });
   // Chunked only to stay under PostgreSQL's 65535 bind-parameter limit.
-  const chunk = Math.floor(65_535 / Object.keys(revisions[0]!).length);
+  const chunk = Math.floor(
+    65_535 / Object.keys(firstOf(revisions, 'a revision of an unfinalized analysis')).length,
+  );
   for (let offset = 0; offset < revisions.length; offset += chunk)
     await db // NOSONAR: in order in the caller's one publication transaction.
       .insertInto('site_page_analyses')

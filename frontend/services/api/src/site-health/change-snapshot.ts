@@ -10,6 +10,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { compareText, scalarText } from '../text-order.ts';
+import { onlyOf } from '../lists.ts';
 import {
   compareCrawls,
   expectedKey,
@@ -263,7 +264,7 @@ const uuidText = (value: unknown) => scalarText(value).toLowerCase();
 /** A check's target page; an untargeted check applies to a single-target event's page. */
 function checkTarget(check: Record<string, unknown>, targets: Set<string>) {
   if (check.target_site_url_id != null) return uuidText(check.target_site_url_id);
-  return targets.size === 1 ? [...targets][0]! : null;
+  return onlyOf([...targets]) ?? null;
 }
 /** The field a check now satisfies on its target page, keyed for linkage. */
 function satisfiedCheck(raw: unknown, targets: Set<string>, byUrl: Map<string, ChangePage>) {
@@ -342,7 +343,8 @@ async function insertObservations(
     created_at: now,
   }));
   // Chunked only to stay under PostgreSQL's 65535 bind-parameter limit.
-  const chunk = rows.length ? Math.floor(65_535 / Object.keys(rows[0]!).length) : 1;
+  const [first] = rows;
+  const chunk = first ? Math.floor(65_535 / Object.keys(first).length) : 1;
   for (let start = 0; start < rows.length; start += chunk) {
     const batch = rows.slice(start, start + chunk);
     // One transaction connection runs one statement at a time.

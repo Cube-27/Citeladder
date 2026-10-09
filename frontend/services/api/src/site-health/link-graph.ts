@@ -2,6 +2,7 @@
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
+import { onlyOf } from '../lists.ts';
 import { canonicalUrl as canonical } from './url-identity.ts';
 import { anchorDestinations, anchorDiagnostics } from './link-anchors.ts';
 
@@ -42,7 +43,10 @@ function aliasesFor(pages: LinkPage[]) {
       owners.add(page.id);
       claims.set(url, owners);
     }
-  for (const [url, owners] of claims) if (owners.size === 1) result.set(url, [...owners][0]!);
+  for (const [url, owners] of claims) {
+    const owner = onlyOf([...owners]);
+    if (owner !== undefined) result.set(url, owner);
+  }
   return result;
 }
 function relTokens(raw: unknown) {
@@ -117,10 +121,9 @@ function depths(home: string | undefined, outgoing: Map<string, LinkEdge[]>) {
   return result;
 }
 function weight(edge: LinkEdge) {
-  const weights = [...edge.weights].sort((a, b) => b - a);
-  return (
-    weights[0]! + p.repeated_anchor_factor * weights.slice(1).reduce((sum, value) => sum + value, 0)
-  );
+  const [strongest, ...repeated] = [...edge.weights].sort((a, b) => b - a);
+  if (strongest === undefined) throw new Error('Expected a link edge with at least one anchor');
+  return strongest + p.repeated_anchor_factor * repeated.reduce((sum, value) => sum + value, 0);
 }
 function authorityStep(
   ids: string[],
