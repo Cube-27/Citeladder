@@ -99,6 +99,23 @@ it('keeps distant paid deadlines active until expiry without overflowing the bro
   }
 });
 
+it('reuses a fresh access answer when the gate remounts', async () => {
+  access.mockResolvedValue({ status: 'active', expires_at: null });
+  const { rerender } = renderWithProviders(
+    <WorkspaceAccessGate key="first">Private report</WorkspaceAccessGate>,
+  );
+  expect(await screen.findByText('Private report')).toBeInTheDocument();
+  access.mockResolvedValue({ status: 'trial_expired', expires_at: null });
+  rerender(<WorkspaceAccessGate key="second">Private report</WorkspaceAccessGate>);
+  await act(async () => {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+  });
+  expect(screen.getByText('Private report')).toBeInTheDocument();
+  expect(screen.queryByText('Your trial has ended')).not.toBeInTheDocument();
+});
+
 it('rechecks current authority instead of copying another workspace denial', async () => {
   access.mockResolvedValue({ status: 'active', expires_at: null });
   const { queryClient } = renderWithProviders(

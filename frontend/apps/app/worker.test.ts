@@ -95,6 +95,17 @@ describe('product Worker routing', () => {
     );
   });
 
+  it('answers HEAD probes for app routes without an HTML Accept header', async () => {
+    expect(
+      await handleAppRequest(request('/login', 'HEAD', '*/*'), env).then((r) => r.status),
+    ).toBe(200);
+    expect(
+      await handleAppRequest(request('/app-assets/missing.js', 'HEAD', '*/*'), env).then(
+        (r) => r.status,
+      ),
+    ).toBe(404);
+  });
+
   it('accepts the documented local HTTPS port for app navigation', async () => {
     const result = await handleAppRequest(
       new Request('https://app.citeladder.com:8787/projects', {

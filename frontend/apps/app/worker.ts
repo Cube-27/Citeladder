@@ -139,7 +139,10 @@ async function staticOrNavigation(
     const html = asset.headers.get('content-type')?.includes('text/html') ?? false;
     return decorate(asset, html, !html && isFingerprinted(path));
   }
-  if (isResource(path) || !request.headers.get('accept')?.includes('text/html')) {
+  // HEAD probes (uptime checks, `curl -I`) rarely send an HTML Accept header.
+  const document =
+    request.method === 'HEAD' || request.headers.get('accept')?.includes('text/html');
+  if (isResource(path) || !document) {
     return decorate(response('Not found.', 404));
   }
   const entry = new Request(new URL('/index.html', url), { method: request.method });
