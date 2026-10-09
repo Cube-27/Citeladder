@@ -95,7 +95,7 @@ owner as required reviewer.
 | `GCP_BILLING_ACCOUNT` | keep | billing-account ID |
 | `GCP_BUDGET_CURRENCY_CODE` | keep | `INR` (default) |
 | `GCP_BUDGET_UNITS` | **change** | `500` (default) |
-| `DEFAULT_AGENT_BASE_URL` | keep, required | HTTPS base URL of the platform Agent provider |
+| `DEFAULT_AGENT_BASE_URL` | keep, required | HTTPS base URL of the platform Agent provider; `https://api.anthropic.com` selects the Anthropic Messages API, anything else is OpenAI-compatible |
 | `DEFAULT_AGENT_MODEL` | keep, required | exact provider model ID |
 | `DOMAIN_NAME` | optional | `citeladder.com` (default) |
 | `APP_DOMAIN_NAME` | optional | `app.citeladder.com` (default) |

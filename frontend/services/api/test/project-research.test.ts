@@ -357,6 +357,7 @@ it('bounds model attempts and records failed research without fabricating identi
   const gateway = {
     model: 'test-model',
     baseUrlHost: 'model.example',
+    adapter: 'openai_compatible' as const,
     complete: vi.fn(),
     completeStructured: vi.fn(),
     structured,

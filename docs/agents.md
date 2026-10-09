@@ -262,15 +262,28 @@ browser change is needed. Validate with the
 
 ## Streaming and the chat
 
-The platform model streams. When the runtime attaches a listener, the
-[gateway](../frontend/services/api/src/models/gateway.ts) requests `stream: true`
-with usage on the final chunk and folds the event stream into the same
-completion result, so settlement and parsing are unchanged; a provider that
-answers with JSON is read as usual. Structured calls send the step schema as a
-strict `json_schema` response format; a destination that rejects it (some
-customer routes) is asked again with the schema in the prompt, and the gateway
-remembers that for the destination. Customer (BYOK) routes buffer and answer in
-one piece.
+The platform model streams. `DEFAULT_AGENT_BASE_URL` alone chooses the API, so
+switching provider or model is configuration (`DEFAULT_AGENT_BASE_URL`,
+`DEFAULT_AGENT_MODEL`, `DEFAULT_AGENT_API_KEY`) for every platform model
+consumer, not only the Agent:
+
+- `api.anthropic.com` uses the native Messages API through the official SDK
+  ([`anthropic.ts`](../frontend/services/api/src/models/anthropic.ts)). It
+  always streams, enforces a step schema as a structured output, and reports
+  usage with cached prompt tokens counted as input.
+- Any other endpoint is OpenAI-compatible chat completions. With a listener the
+  [gateway](../frontend/services/api/src/models/gateway.ts) requests
+  `stream: true` with usage on the final chunk and folds the event stream into
+  the same completion result; a provider that answers with JSON is read as
+  usual. Structured calls send the step schema as a strict `json_schema`
+  response format; a destination that rejects it (some customer routes) is
+  asked again with the schema in the prompt, and the gateway remembers that for
+  the destination.
+
+Both produce one completion result, so settlement and parsing never depend on
+the provider. Other model consumers' `structured` calls keep their schema in
+the prompt, because their schemas may hold optional fields that strict outputs
+refuse. Customer (BYOK) routes buffer and answer in one piece.
 
 The runtime emits `step` events, and for a respond step `text` events carrying
 the reply and the document's title and body decoded from the incomplete JSON

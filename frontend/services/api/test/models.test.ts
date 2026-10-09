@@ -164,6 +164,78 @@ describe('configured model gateway', () => {
     );
   });
 
+  it('speaks the Messages API when the base URL is Anthropic, with the schema enforced', async () => {
+    const frames = [
+      {
+        type: 'message_start',
+        message: {
+          id: 'msg_1',
+          type: 'message',
+          role: 'assistant',
+          model: 'claude-haiku-5-5',
+          content: [],
+          stop_reason: null,
+          stop_sequence: null,
+          usage: { input_tokens: 10, output_tokens: 1, cache_read_input_tokens: 4 },
+        },
+      },
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: '{"answer":' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: '42}' } },
+      { type: 'content_block_stop', index: 0 },
+      {
+        type: 'message_delta',
+        delta: { stop_reason: 'end_turn', stop_sequence: null },
+        usage: { output_tokens: 5 },
+      },
+      { type: 'message_stop' },
+    ];
+    const sse = frames
+      .map((frame) => `event: ${frame.type}\ndata: ${JSON.stringify(frame)}\n\n`)
+      .join('');
+    const io = transport([
+      new Response(sse, { headers: { 'content-type': 'text/event-stream' } }),
+      Response.json(
+        { type: 'error', error: { type: 'rate_limit_error', message: 'slow down' } },
+        { status: 429, headers: { 'retry-after': '7' } },
+      ),
+    ]);
+    const anthropic = { ...settings, baseUrl: 'https://api.anthropic.com/v1', attempts: 1 };
+    const gateway = createModelGateway(anthropic, io);
+    const schema = { type: 'object', properties: {}, required: [], additionalProperties: false };
+    const seen: string[] = [];
+    const result = await gateway.completeStructured(
+      'system',
+      'question',
+      schema,
+      undefined,
+      (text) => seen.push(text),
+    );
+    expect(result).toMatchObject({
+      content: '{"answer":42}',
+      provider_adapter: 'anthropic',
+      returned_model: 'claude-haiku-5-5',
+      finish_status: 'end_turn',
+      usage: { input_tokens: 14, output_tokens: 5, cached_input_tokens: 4 },
+    });
+    expect(seen.at(-1)).toBe('{"answer":42}');
+    const [url, init] = io.fetch.mock.calls[0]!;
+    expect(String(url)).toBe('https://api.anthropic.com/v1/messages');
+    expect(new Headers(init!.headers).get('x-api-key')).toBe('test-only');
+    expect(JSON.parse(String(init!.body))).toMatchObject({
+      model: 'test',
+      system: 'system',
+      messages: [{ role: 'user', content: 'question' }],
+      output_config: { format: { type: 'json_schema', schema } },
+    });
+    // Provider failures keep the gateway's codes, so retry decisions stay the same.
+    await expect(gateway.complete('system', 'next')).rejects.toMatchObject({
+      code: 'http',
+      status: 429,
+      retryAfter: '7',
+    });
+  });
+
   it('retries rate limits with Retry-After and transient server errors', async () => {
     const io = transport([
       new Response(null, { status: 429, headers: { 'retry-after': '7' } }),

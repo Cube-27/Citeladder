@@ -12,8 +12,10 @@ import {
   postModel,
   providerErrorCode,
   transientStatus,
+  type Complete,
   type Transport,
 } from './http.ts';
+import { anthropicCompletion, isAnthropicEndpoint } from './anthropic.ts';
 
 export type GatewaySettings = {
   apiKey: string;
@@ -213,19 +215,52 @@ export function createModelGateway(
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !secure) {
     throw new ModelError('not_configured');
   }
+  // The configured base URL alone chooses the API, so switching provider is configuration.
+  const anthropic = isAnthropicEndpoint(endpoint);
+  const complete = anthropic
+    ? anthropicCompletion(settings, transport, endpoint)
+    : openAICompletion(settings, transport, endpoint);
+  return {
+    model: settings.model,
+    baseUrlHost: endpoint.hostname,
+    adapter: anthropic ? ('anthropic' as const) : ('openai_compatible' as const),
+    complete,
+    async completeStructured(
+      system: string,
+      user: string,
+      schema: Record<string, unknown>,
+      signal?: AbortSignal,
+      onText?: (content: string) => void,
+    ) {
+      const result = await complete(system, user, signal, onText, schema);
+      return { ...result, content: unfenced(result.content) };
+    },
+    async structured<T>(system: string, user: string, schema: z.ZodType<T>, signal?: AbortSignal) {
+      // Callers' schemas may hold optional fields, which strict outputs refuse: the prompt carries them.
+      const result = await complete(system, withSchema(user, z.toJSONSchema(schema)), signal);
+      try {
+        return { value: schema.parse(JSON.parse(unfenced(result.content))), result };
+      } catch {
+        throw new ModelError('parse');
+      }
+    },
+  };
+}
+export type ModelGateway = ReturnType<typeof createModelGateway>;
+
+/** OpenAI-compatible chat completions, learning per destination what it refuses. */
+function openAICompletion(
+  settings: GatewaySettings,
+  transport: Transport,
+  endpoint: URL,
+): Complete {
   // Learned per destination: an older output-cap name, and no strict structured outputs.
   let legacyCap = false;
   let promptSchema = false;
   const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
   const base = stripTrailing(endpoint.href, '/');
   const url = base.endsWith('/chat/completions') ? base : endpointUrl(base, '/chat/completions');
-  async function complete(
-    system: string,
-    user: string,
-    signal?: AbortSignal,
-    onText?: (content: string) => void,
-    schema?: Record<string, unknown>,
-  ) {
+  return async (system, user, signal, onText, schema) => {
     // A listener asks for a stream; the caller gives one only to transports that pass it through.
     const stream = Boolean(onText);
     const started = performance.now();
@@ -295,29 +330,5 @@ export function createModelGateway(
       usage,
       latency_ms: latency,
     };
-  }
-  return {
-    model: settings.model,
-    baseUrlHost: endpoint.hostname,
-    complete,
-    async completeStructured(
-      system: string,
-      user: string,
-      schema: Record<string, unknown>,
-      signal?: AbortSignal,
-      onText?: (content: string) => void,
-    ) {
-      const result = await complete(system, user, signal, onText, schema);
-      return { ...result, content: unfenced(result.content) };
-    },
-    async structured<T>(system: string, user: string, schema: z.ZodType<T>, signal?: AbortSignal) {
-      const result = await complete(system, withSchema(user, z.toJSONSchema(schema)), signal);
-      try {
-        return { value: schema.parse(JSON.parse(unfenced(result.content))), result };
-      } catch {
-        throw new ModelError('parse');
-      }
-    },
   };
 }
-export type ModelGateway = ReturnType<typeof createModelGateway>;
