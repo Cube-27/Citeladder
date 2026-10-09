@@ -7,10 +7,10 @@ import { CohortCompositionContext } from './cohort-composition-context';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Delta } from '@/components/ui/delta';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Drawer } from '@/components/ui/drawer';
 import { ScoreBar } from '@/components/ui/score-bar';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -20,6 +20,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TrendChart } from '@/components/ui/trend-chart';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { SiteHealthOverview } from '@/lib/api/types';
 import { formatScore, PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
@@ -58,50 +60,20 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
   );
 }
 
-export function OverviewDetailsSkeleton() {
-  return (
-    <Stack gap="workspace" aria-busy="true" aria-label="Loading Overview details">
-      <div className={splitPaneClasses('peers')} aria-hidden>
-        {[0, 1].map((key) => (
-          <Card key={key}>
-            <CardContent className="grid gap-3">
-              <Skeleton className="h-5 w-40" />
-              {Array.from({ length: 5 }, (_, index) => (
-                <Skeleton key={index} className="h-10 w-full" />
-              ))}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-3" aria-hidden>
-        {[0, 1, 2].map((key) => (
-          <Card key={key}>
-            <CardContent className="grid gap-3">
-              <Skeleton className="h-5 w-36" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </Stack>
-  );
-}
-
 function DimensionLedger({
   dimensions,
 }: Readonly<{ dimensions: SiteHealthOverview['aeo_dimensions'] }>) {
   return (
     <Card id="site-readiness-pillars">
-      <CardHeader bordered>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>AEO Readiness by pillar</CardTitle>
-          </div>
+      <CardHeader
+        bordered
+        actions={
           <Button asChild variant="secondary" size="sm">
             <ProjectLink href="/site?tab=aeo-readiness">View details</ProjectLink>
           </Button>
-        </div>
+        }
+      >
+        <CardTitle>AEO Readiness by pillar</CardTitle>
       </CardHeader>
       <CardContent flush>
         <Table>
@@ -163,15 +135,15 @@ function DimensionLedger({
 function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues'] }>) {
   return (
     <Card>
-      <CardHeader bordered>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>Top issues</CardTitle>
-          </div>
+      <CardHeader
+        bordered
+        actions={
           <Button asChild variant="secondary" size="sm">
             <ProjectLink href="/issues">View all issues</ProjectLink>
           </Button>
-        </div>
+        }
+      >
+        <CardTitle>Top issues</CardTitle>
       </CardHeader>
       <CardContent flush>
         <Table>
@@ -200,12 +172,11 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <ProjectLink
-                      className="underline decoration-transparent hover:decoration-current"
-                      href={issueHref(issue.rule_id, issue.finding_class)}
-                    >
-                      {issue.description || issue.rule_id}
-                    </ProjectLink>
+                    <TextLink asChild text="inherit">
+                      <ProjectLink href={issueHref(issue.rule_id, issue.finding_class)}>
+                        {issue.description || issue.rule_id}
+                      </ProjectLink>
+                    </TextLink>
                   </TableCell>
                   <TableCell>{statusLabel(issue.finding_class)}</TableCell>
                   <TableCell numeric>{issue.affected_pages}</TableCell>
@@ -301,18 +272,11 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
             <span className="text-secondary">
               {CHANGE_METRIC_LABELS[metric.key] ?? metric.label}
             </span>
-            <span className={textRole('emphasis', 'text-foreground tabular-nums')}>
-              {directionIndicator(metric.direction)}{' '}
-              {metric.delta === null ? (
-                <UnavailableValue state="not_measured" />
-              ) : (
-                formatDelta(metric.delta, metric.key)
-              )}
-            </span>
+            <ChangeDelta metricKey={metric.key} delta={metric.delta} />
           </div>
         ))}
         {data.state === 'unavailable' ? (
-          <p className="type-caption">No comparable snapshot yet.</p>
+          <InlineEmpty>No comparable snapshot yet.</InlineEmpty>
         ) : null}
         <CohortCompositionContext reason={data.reason} composition={data.cohort_composition} />
       </CardContent>
@@ -320,11 +284,19 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
   );
 }
 
-function directionIndicator(direction: string): string {
-  if (direction === 'increased') return '↑';
-  if (direction === 'decreased') return '↓';
-  if (direction === 'unchanged') return '→';
-  return '·';
+/**
+ * Every change-summary metric is a score or a coverage share, so a rise is an
+ * improvement. Coverage is a 0–1 share; its change reads in percentage points.
+ */
+function ChangeDelta({ metricKey, delta }: Readonly<{ metricKey: string; delta: number | null }>) {
+  const coverage = metricKey.endsWith('_coverage');
+  return (
+    <Delta
+      value={delta === null ? null : delta * (coverage ? 100 : 1)}
+      precision={0}
+      unit={coverage ? ' pp' : ''}
+    />
+  );
 }
 
 /**
@@ -375,12 +347,6 @@ function issueHref(ruleId: string, findingClass: string): string {
   return `/issues?${params.toString()}`;
 }
 
-function formatDelta(delta: number | null, key: string): string {
-  if (delta === null) return PLACEHOLDER;
-  const value = key.endsWith('_coverage') ? delta * 100 : delta;
-  return `${value > 0 ? '+' : ''}${Math.round(value)}${key.endsWith('_coverage') ? ' pp' : ''}`;
-}
-
 function WebFundamentalsDrawer({
   data,
   open,
@@ -416,7 +382,7 @@ function WebFundamentalsDrawer({
             />
             <Stack>
               {area.top_findings.length === 0 ? (
-                <p className={textRole('body')}>No missing HTTP-evidence checks.</p>
+                <InlineEmpty>No missing HTTP-evidence checks.</InlineEmpty>
               ) : (
                 area.top_findings.map((finding) => (
                   <div key={finding.rule_id} className="grid gap-1">

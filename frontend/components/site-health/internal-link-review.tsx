@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
-import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
+import { TextLink } from '@/components/ui/text-link';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { MarkActionImplemented } from '@/components/agent/action-declaration';
 import { formatCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -21,10 +22,10 @@ function PageSummary({
 }: Readonly<{ heading: string; page: InternalLink['source'] }>) {
   return (
     <Stack as="section" className="justify-items-start">
-      <h3 className="type-section-title">{heading}</h3>
-      <ExternalHttpLink className="type-body text-accent-text break-all" href={page.url}>
+      <EditorialSectionHeader title={heading} />
+      <TextLink variant="external" text="body" className="break-all" href={page.url}>
         {page.title || page.url}
-      </ExternalHttpLink>
+      </TextLink>
       {page.description || page.excerpt ? (
         <p className="type-body">{page.description || page.excerpt}</p>
       ) : null}
@@ -60,7 +61,7 @@ export function InternalLinkReview({
         <Stack gap="section">
           <PageSummary heading="Source page" page={link.source} />
           <Stack as="section">
-            <h3 className="type-section-title">Source passage</h3>
+            <EditorialSectionHeader title="Source passage" />
             {link.placement ? (
               <p className="type-body">
                 {link.placement.text.slice(0, link.placement.anchor_start)}
@@ -75,7 +76,7 @@ export function InternalLinkReview({
           </Stack>
           <PageSummary heading="Add a link to" page={link.target} />
           <Stack as="section">
-            <h3 className="type-section-title">Suggested anchor text</h3>
+            <EditorialSectionHeader title="Suggested anchor text" />
             <p className="type-body">{link.anchor}</p>
             <p className="type-caption">
               {link.target.contextual_inbound === null
@@ -145,10 +146,10 @@ function LinkDeclaration({
   const selectedIds = new Set(selected);
   return (
     <Stack as="section">
-      <h3 className="type-section-title">Which links are live on this page?</h3>
-      <p className="type-body">
-        Select every link you have added before declaring this page Action.
-      </p>
+      <EditorialSectionHeader
+        title="Which links are live on this page?"
+        description="Select every link you have added before declaring this page Action."
+      />
       {related.map((item) => (
         <Checkbox
           key={item.id}

@@ -1,5 +1,6 @@
 'use client';
 
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { textRole } from '@/components/ui/typography';
 
 /** What the fanout projection answers about the whole selection. */
@@ -106,8 +107,8 @@ export function NoSearchMatch({
   const verb = matched === 1 ? 'match sits' : 'matches sit';
   const elsewhere = matched ? ` — ${matched} ${verb} elsewhere in the run set.` : '.';
   return (
-    <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
+    <InlineEmpty className="p-[var(--card-padding)]">
       {`No search matches “${search}” on this page${elsewhere}`}
-    </p>
+    </InlineEmpty>
   );
 }

@@ -7,7 +7,11 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MetricValue } from '@/components/ui/metric-value';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Delta } from '@/components/ui/delta';
+import type { DataTone } from '@/components/ui/data-tone';
+import { Meter } from '@/components/ui/meter';
+import { TextLink } from '@/components/ui/text-link';
+import { MissingValue } from '@/components/ui/unavailable-value';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Opportunity } from '@/lib/api/types';
 import { availabilityLabel } from '@/lib/format';
@@ -18,18 +22,6 @@ export function metricValue(value: number | null, suffix = '') {
   if (value === null) return availabilityLabel('not_measured');
   const figure = Number.isInteger(value) ? value : value.toFixed(1);
   return `${figure}${suffix}`;
-}
-
-/** No comparable run is not a bad one, so it stays muted rather than red. */
-function deltaToneClass(delta: number | null): string {
-  if (delta === null) return 'text-muted';
-  return 'text-secondary';
-}
-
-export function deltaLabel(delta: number | null, inverse = false) {
-  if (delta === null) return 'No comparable run';
-  const display = inverse ? -delta : delta;
-  return `${display > 0 ? '+' : ''}${display.toFixed(1)} vs previous`;
 }
 
 export function StateMetric({
@@ -55,13 +47,27 @@ export function StateMetric({
         />
       </dd>
       {/* A missing value has no change to report; the section states why once. */}
-      <dd className={cn(textRole('delta'), deltaToneClass(delta))}>
-        {value === null ? '\u00a0' : deltaLabel(delta, inverse)}
+      <dd>
+        {value === null ? (
+          '\u00a0'
+        ) : (
+          <Delta
+            value={delta}
+            policy={inverse ? 'lower-is-better' : 'higher-is-better'}
+            context="vs previous"
+            missingReason="No comparable run"
+          />
+        )}
       </dd>
     </div>
   );
 }
 
+/**
+ * Each engine's brand mention rate in the previous and the current comparable
+ * run. Both are shares of answers on the same 0–100 scale, so they are drawn as
+ * meters against that scale rather than against the largest bar on screen.
+ */
 export function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movements'] }>) {
   if (movements.length === 0)
     return (
@@ -72,37 +78,51 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
         description="Needs a second run with the same prompts and engines."
       />
     );
-  const ceiling = Math.max(...movements.flatMap((row) => [row.current ?? 0, row.previous ?? 0]), 1);
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
       {movements.map((row) => (
-        <div key={row.label} className="grid min-w-0 gap-2">
+        <div key={row.label} className="grid min-w-0 content-start gap-2">
           <div className="flex items-center justify-between gap-2">
             <span className={textRole('label', 'capitalize')}>{row.label}</span>
-            <span className={cn(textRole('delta'), 'text-secondary')}>
-              {row.delta !== null ? (
-                <>
-                  {row.delta > 0 ? '+' : ''}
-                  {row.delta}
-                </>
-              ) : (
-                <UnavailableValue state="not_measured" />
-              )}
-            </span>
+            <Delta value={row.delta} context="vs previous" missingReason="No comparable run" />
           </div>
-          <div className="flex h-14 items-end gap-2" aria-hidden>
-            <span
-              className="bg-border-strong w-6 rounded-t-xs transition-[height]"
-              style={{ height: `${Math.max(6, ((row.previous ?? 0) / ceiling) * 56)}px` }}
-            />
-            <span
-              className="bg-chart-1 w-6 rounded-t-xs transition-[height]"
-              style={{ height: `${Math.max(6, ((row.current ?? 0) / ceiling) * 56)}px` }}
-            />
-          </div>
-          <p className={textRole('caption', 'text-center')}>Previous · Current</p>
+          <MovementMeter engine={row.label} period="Previous" value={row.previous} tone="neutral" />
+          <MovementMeter
+            engine={row.label}
+            period="Current"
+            value={row.current}
+            tone={{ series: 1 }}
+          />
         </div>
       ))}
+    </div>
+  );
+}
+
+function MovementMeter({
+  engine,
+  period,
+  value,
+  tone,
+}: Readonly<{
+  engine: string;
+  period: 'Previous' | 'Current';
+  value: number | null;
+  tone: DataTone;
+}>) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <span className={textRole('caption', 'w-16 shrink-0')}>{period}</span>
+      <Meter
+        value={value ?? 0}
+        label={`${engine} ${period.toLowerCase()} mention rate`}
+        valueText={value === null ? availabilityLabel('not_measured') : undefined}
+        tone={tone}
+        className="min-w-0 flex-1"
+      />
+      <span className={textRole('caption', 'w-12 shrink-0 text-end tabular-nums')}>
+        {value === null ? <MissingValue /> : metricValue(value, '%')}
+      </span>
     </div>
   );
 }
@@ -148,12 +168,13 @@ export function ActionRow({
       </div>
       <div className="grid min-w-0 gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          <ProjectLink
-            href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
-            className={textRole('itemTitle', 'hover:text-accent-text transition-colors')}
-          >
-            {action.title}
-          </ProjectLink>
+          <TextLink asChild text="itemTitle">
+            <ProjectLink
+              href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
+            >
+              {action.title}
+            </ProjectLink>
+          </TextLink>
           {action.severity === 'critical' ? (
             <Badge variant="status" value="danger">
               {action.severity}

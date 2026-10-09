@@ -6,11 +6,13 @@ import { useSearchParams } from 'react-router-dom';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { DisplayTime } from '@/components/ui/display-time';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterRow } from '@/components/ui/filter-row';
+import { Pager, useTablePage } from '@/components/ui/pager';
 import { ReadError } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { Select } from '@/components/ui/select';
@@ -22,7 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useTablePage } from '@/components/ui/table-pagination';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import type { ActionStatus } from '@/lib/api/actions';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
@@ -248,7 +249,7 @@ function Notices({ read }: Readonly<{ read: LinksRead }>) {
       {mutationError ? (
         <Alert>{humanizeApiError(mutationError, 'Analysis could not be started.').message}</Alert>
       ) : null}
-      {read.query.isPending ? <output className="type-body">Loading internal links…</output> : null}
+      {read.query.isPending ? <PageLoading label="Loading internal links…" /> : null}
     </>
   );
 }
@@ -349,8 +350,9 @@ function LinksBody({
         </output>
       ) : null}
       {analysis.recommendations.length ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="max-w-sm min-w-55 flex-1">
+        <FilterRow
+          searchWidth="lg"
+          search={
             <SearchField
               size="compact"
               value={params.get('links_q') ?? ''}
@@ -358,7 +360,8 @@ function LinksBody({
               placeholder="Search pages and anchors"
               aria-label="Search pages and anchors"
             />
-          </div>
+          }
+        >
           <Select
             ariaLabel="Action status"
             value={params.get('links_status') ?? ''}
@@ -368,7 +371,7 @@ function LinksBody({
               ...Object.entries(ACTION_STATUS_LABEL).map(([value, label]) => ({ value, label })),
             ]}
           />
-        </div>
+        </FilterRow>
       ) : null}
       <LinksTable
         links={links}
@@ -444,15 +447,20 @@ function LinksTable({
           ))}
         </TableBody>
       </Table>
-      <CursorTableFooter
-        from={pagination.from}
-        to={pagination.to}
-        total={links.length}
-        noun="suggestions"
-        pageSize={pageSize}
-        onPageSizeChange={(size) => {
-          setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE);
-          pagination.setPage(1);
+      <Pager
+        frame="table"
+        range={{
+          from: pagination.from,
+          to: pagination.to,
+          total: links.length,
+          noun: 'suggestions',
+        }}
+        pageSize={{
+          value: pageSize,
+          onChange: (size) => {
+            setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE);
+            pagination.setPage(1);
+          },
         }}
         canPrev={pagination.page > 1}
         canNext={pagination.page < pagination.pageCount}
@@ -466,7 +474,7 @@ function LinksTable({
 function PageCell({ title, url }: Readonly<{ title: string; url: string }>) {
   const path = new URL(url).pathname;
   return (
-    <span className="grid max-w-[24rem] min-w-0 gap-0.5">
+    <span className="grid max-w-sm min-w-0 gap-0.5">
       <span className="truncate" title={title || url}>
         {title || path}
       </span>

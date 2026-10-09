@@ -1,15 +1,16 @@
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
-import { cn } from '@/lib/utils';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
+import { PageLoading } from '@/components/layout/page-loading';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { Pager } from '@/components/ui/pager';
+import { StatGrid } from '@/components/ui/stat-grid';
 import {
   Table,
   TableBody,
@@ -18,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { TextLink } from '@/components/ui/text-link';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { ChangeObservation, ChangesPage, ChangeSummary } from '@/lib/api/types';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
@@ -245,8 +247,7 @@ function changesState(
   pairAvailable: boolean,
 ) {
   const loading = summary.isLoading || (pairAvailable && changes.isLoading);
-  if (loading)
-    return <output className="type-body block">Loading persisted website changes…</output>;
+  if (loading) return <PageLoading label="Loading persisted website changes…" />;
   const failedRead = summary.isError ? summary : changes;
   if (failedRead.isError)
     return (
@@ -310,14 +311,14 @@ function ChangesTable({
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 pt-0">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {Object.entries(CLASS_LABELS).map(([key, label]) => (
-              <div key={key}>
-                <span className={cn(eyebrowClasses, 'block')}>{label}</span>
-                <span className={textRole('figureSm', 'mt-0.5 block')}>{counts?.[key] ?? 0}</span>
-              </div>
-            ))}
-          </div>
+          <StatGrid
+            columns={4}
+            items={Object.entries(CLASS_LABELS).map(([key, label]) => ({
+              key,
+              label,
+              value: counts?.[key] ?? 0,
+            }))}
+          />
           {rows.length ? (
             <Table>
               <TableHeader>
@@ -332,12 +333,13 @@ function ChangesTable({
                 {rows.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>
-                      <ProjectLink
-                        className={textRole('emphasis', 'text-accent-text hover:underline')}
-                        href={`/site/crawls/${summary.crawl_b_id}/pages/${row.site_url_id}`}
-                      >
-                        {displayPath(row.normalized_url)}
-                      </ProjectLink>
+                      <TextLink asChild text="emphasis">
+                        <ProjectLink
+                          href={`/site/crawls/${summary.crawl_b_id}/pages/${row.site_url_id}`}
+                        >
+                          {displayPath(row.normalized_url)}
+                        </ProjectLink>
+                      </TextLink>
                     </TableCell>
                     <TableCell>{row.field.replaceAll('_', ' ')}</TableCell>
                     <TableCell>
@@ -352,16 +354,15 @@ function ChangesTable({
               </TableBody>
             </Table>
           ) : (
-            <p className={textRole('body')}>No changes were observed in this comparable pair.</p>
+            <InlineEmpty>No changes were observed in this comparable pair.</InlineEmpty>
           )}
-          <CursorTableFooter
-            {...pageRange(pager.page, pager.pageSize, rows.length)}
+          <Pager
+            frame="table"
+            range={{ ...pageRange(pager.page, pager.pageSize, rows.length), noun: 'changes' }}
             // No exact total: a change set is scoped to one compared crawl
             // pair and no persisted count describes it, so the range stands
             // alone rather than paying for a COUNT(*) per navigation.
-            noun="changes"
-            pageSize={pager.pageSize}
-            onPageSizeChange={pager.setPageSize}
+            pageSize={{ value: pager.pageSize, onChange: pager.setPageSize }}
             canPrev={pager.canPrev}
             canNext={Boolean(changes.next_cursor)}
             onPrev={pager.pop}

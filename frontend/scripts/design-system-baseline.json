@@ -37,26 +37,8 @@
     "components/settings/integration-connection-row.tsx": {
       "tsx-size": 1
     },
-    "components/site-health/internal-links-panel.tsx": {
-      "tsx-size": 1
-    },
     "components/site-health/inventory-section.tsx": {
       "tsx-size": 1
-    },
-    "components/site-health/issues-catalog.tsx": {
-      "tsx-size": 1
-    },
-    "components/site-health/issues-loading.tsx": {
-      "tsx-size": 1
-    },
-    "components/site-health/pages-table.tsx": {
-      "tsx-size": 2
-    },
-    "components/site-health/site-facts-panel.tsx": {
-      "tsx-size": 1
-    },
-    "components/visibility/source-charts.tsx": {
-      "tsx-size": 2
     },
     "components/visibility/source-prompts.tsx": {
       "tsx-size": 1

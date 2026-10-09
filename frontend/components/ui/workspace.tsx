@@ -52,9 +52,37 @@ const SPLIT_PANE = {
 
 export type SplitPaneRole = keyof typeof SPLIT_PANE;
 
-export function splitPaneClasses(role: SplitPaneRole, className?: string) {
-  return cn('grid min-w-0 items-start gap-[var(--workspace-gap)]', SPLIT_PANE[role], className);
+/**
+ * `resizable` (list-detail only) makes the list track the reader's to size:
+ * three tracks — the list at `--split-pane-list-width`, the separator, the
+ * detail — with the gap carried by the separator itself. `ResizableSplitPane`
+ * in `split-pane.tsx` owns the width and the separator; use that rather than
+ * these classes alone.
+ */
+export type SplitPaneOptions = Readonly<{ resizable?: boolean; className?: string }>;
+
+const RESIZABLE_LIST_DETAIL =
+  'lg:grid-cols-[var(--split-pane-list-width)_auto_minmax(0,1fr)] lg:gap-0';
+
+export function splitPaneClasses(role: SplitPaneRole, options?: string | SplitPaneOptions) {
+  const { resizable = false, className } =
+    typeof options === 'string' || options === undefined ? { className: options } : options;
+  return cn(
+    'grid min-w-0 items-start gap-[var(--workspace-gap)]',
+    resizable && role === 'list-detail' ? RESIZABLE_LIST_DETAIL : SPLIT_PANE[role],
+    className,
+  );
 }
+
+/**
+ * The one sticky offset for a pane that stays in view while its neighbour
+ * scrolls (the list beside a long detail). It clears the compact topbar on
+ * narrow screens and is 0 on desktop, where the sheet scrolls under nothing.
+ * The pane scrolls inside itself once it is taller than the viewport, so a
+ * long list never pins its own end out of reach.
+ */
+export const stickyPaneClasses =
+  'lg:sticky lg:top-[var(--sticky-header-offset)] lg:max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] lg:overflow-y-auto';
 
 /**
  * The ledger: a vertical list of peers separated by rules rather than boxed

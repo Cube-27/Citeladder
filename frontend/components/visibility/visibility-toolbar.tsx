@@ -1,10 +1,10 @@
 'use client';
 
-import { CalendarRange, ChevronDown, CircleHelp, Download } from 'lucide-react';
-import { forwardRef } from 'react';
+import { CalendarRange, CircleHelp, Download } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
+import { FilterTrigger } from '@/components/ui/filter-row';
 import {
   Dropdown,
   DropdownContent,
@@ -36,7 +36,6 @@ import {
   type TrendGranularity,
   type TrendRange,
 } from '@/lib/visibility/trends';
-import { textRole } from '@/components/ui/typography';
 
 type EngineFilter = LogicalEngine | 'all';
 const METRICS_HELP_URL = '/faq';
@@ -113,39 +112,17 @@ export function VisibilityToolbar(props: ToolbarProps) {
   );
 }
 
-const FilterButton = forwardRef<
-  HTMLButtonElement,
-  Readonly<
-    Omit<React.ComponentPropsWithoutRef<typeof Button>, 'aria-label' | 'children'> & {
-      active: boolean;
-      label: string;
-      children: React.ReactNode;
-    }
-  >
->(function FilterButton({ active, label, children, className, ...buttonProps }, ref) {
-  return (
-    <Button
-      ref={ref}
-      variant={active ? 'tonal' : 'secondary'}
-      size="sm"
-      aria-label={label}
-      className={className}
-      {...buttonProps}
-    >
-      {children}
-      <ChevronDown className="text-muted size-3" aria-hidden />
-    </Button>
-  );
-});
-
 function CohortFilter({ cohort, onChangeCohort }: ToolbarProps) {
   return (
     <Dropdown>
       <DropdownTrigger asChild>
-        <FilterButton active={cohort !== 'core'} label="Filter by prompt type">
-          <ICONS.prompts className="text-muted size-3" aria-hidden />
-          <span>{COHORT_LABELS[cohort]}</span>
-        </FilterButton>
+        <FilterTrigger
+          label="Filter by prompt type"
+          hideLabel
+          value={COHORT_LABELS[cohort]}
+          active={cohort !== 'core'}
+          icon={ICONS.prompts}
+        />
       </DropdownTrigger>
       <DropdownContent>
         <DropdownLabel>Prompt type</DropdownLabel>
@@ -185,10 +162,13 @@ function MeasurementFilter({
   return (
     <Dropdown>
       <DropdownTrigger asChild>
-        <FilterButton active={pooled || Boolean(selectedRunId)} label="Select measurement">
-          <ICONS.runs className="text-muted size-3" aria-hidden />
-          <span>{current}</span>
-        </FilterButton>
+        <FilterTrigger
+          label="Select measurement"
+          hideLabel
+          value={current}
+          active={pooled || Boolean(selectedRunId)}
+          icon={ICONS.runs}
+        />
       </DropdownTrigger>
       <DropdownContent>
         <DropdownLabel>Measurement</DropdownLabel>
@@ -235,10 +215,13 @@ function EngineFilterControl({ engine, onChangeEngine }: ToolbarProps) {
   return (
     <Dropdown>
       <DropdownTrigger asChild>
-        <FilterButton active={engine !== 'all'} label="Filter by surface">
-          <ICONS.analytics className="size-3" aria-hidden />
-          <span>{engine === 'all' ? 'All surfaces' : engineLabel(engine)}</span>
-        </FilterButton>
+        <FilterTrigger
+          label="Filter by surface"
+          hideLabel
+          value={engine === 'all' ? 'All surfaces' : engineLabel(engine)}
+          active={engine !== 'all'}
+          icon={ICONS.analytics}
+        />
       </DropdownTrigger>
       <DropdownContent>
         <DropdownLabel>Surface</DropdownLabel>
@@ -274,10 +257,13 @@ function RangeFilter({ range, onChangeRange }: ToolbarProps) {
   return (
     <Dropdown>
       <DropdownTrigger asChild>
-        <FilterButton active={range !== '90d'} label="Select date range">
-          <CalendarRange className="size-3" aria-hidden />
-          <span>{rangeLabel(range)}</span>
-        </FilterButton>
+        <FilterTrigger
+          label="Select date range"
+          hideLabel
+          value={rangeLabel(range)}
+          active={range !== '90d'}
+          icon={CalendarRange}
+        />
       </DropdownTrigger>
       <DropdownContent>
         <DropdownLabel>Period</DropdownLabel>
@@ -301,9 +287,12 @@ function GranularityFilter({ granularity, onChangeGranularity }: ToolbarProps) {
   return (
     <Dropdown>
       <DropdownTrigger asChild>
-        <FilterButton active={granularity !== 'run'} label="Select granularity">
-          <span>{granularityLabel(granularity)}</span>
-        </FilterButton>
+        <FilterTrigger
+          label="Select granularity"
+          hideLabel
+          value={granularityLabel(granularity)}
+          active={granularity !== 'run'}
+        />
       </DropdownTrigger>
       <DropdownContent>
         <DropdownLabel>Group history by</DropdownLabel>
@@ -328,12 +317,14 @@ function PromptFilter({ promptOptions, promptId, onChangePrompt }: ToolbarProps)
   return (
     <Dropdown>
       <DropdownTrigger asChild>
-        <FilterButton active={promptId !== null} label="Filter by prompt">
-          <ICONS.prompts className="size-3" aria-hidden />
-          <span className={textRole('emphasis', 'max-w-[16ch] truncate')}>
-            {prompt?.label ?? 'Every prompt'}
-          </span>
-        </FilterButton>
+        <FilterTrigger
+          label="Filter by prompt"
+          hideLabel
+          value={prompt?.label ?? 'Every prompt'}
+          active={promptId !== null}
+          icon={ICONS.prompts}
+          className="max-w-64"
+        />
       </DropdownTrigger>
       <DropdownContent>
         <DropdownLabel>Prompt</DropdownLabel>
@@ -362,16 +353,16 @@ export function VisibilityActions() {
     <>
       <LaunchAuditButton size="sm" />
       <Tooltip content="How these metrics are calculated">
-        <Button variant="secondary" size="icon" asChild>
+        <Button variant="secondary" size="iconSm" asChild>
           <a href={METRICS_HELP_URL} aria-label="About these metrics">
-            <CircleHelp className="size-3" aria-hidden />
+            <CircleHelp className="size-3.5" aria-hidden />
           </a>
         </Button>
       </Tooltip>
       <Tooltip content="Export is available from a run (coming with reports)">
         <span>
           <Button variant="secondary" size="sm" disabled aria-disabled="true">
-            <Download className="size-3" aria-hidden />
+            <Download className="size-3.5" aria-hidden />
             Export
           </Button>
         </span>

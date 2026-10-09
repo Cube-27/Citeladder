@@ -17,11 +17,11 @@ import {
   useSelectProject,
   useSelectWorkspace,
 } from '@/lib/navigation/project-destination';
-import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
+import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
-import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
-import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
+
+import { useProjectCreation } from '@/components/layout/use-create-project-href';
 
 /**
  * ProjectSwitcher (F5) — brand avatar + active project name with a dropdown of
@@ -52,14 +52,8 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     activeProjectId,
     activeWorkspaceId,
     isLoading,
-    isError,
   } = useProjectContext();
-  const { entitlement } = useEntitlement();
-  const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
-  // Both must permit it: the role, and the workspace's remaining allowance.
-  const mayCreate = useWorkspaceCapability('write');
-  const canAddProject =
-    !isError && mayCreate && remainingProjectSlots !== undefined && remainingProjectSlots > 0;
+  const { mayCreate, canAddProject, remainingProjectSlots } = useProjectCreation();
 
   const label = activeProject?.brand_name ?? activeProject?.name ?? 'No project';
 

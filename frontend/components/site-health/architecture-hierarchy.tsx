@@ -5,7 +5,8 @@ import { useMemo } from 'react';
 
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { textRole } from '@/components/ui/typography';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { TextLink } from '@/components/ui/text-link';
 import type { ArchitectureNode } from '@/lib/api/types';
 
 const PARENT_SOURCE_LABELS: Record<ArchitectureNode['parent_source'], string> = {
@@ -50,7 +51,7 @@ export function HierarchyCard({
   const roots = grouped.get(null) ?? [];
   return (
     <Card>
-      <CardHeader className="gap-1">
+      <CardHeader>
         <CardTitle>Observed hierarchy</CardTitle>
         <CardDescription>
           Persisted parent relationships from breadcrumbs, explicit structure, or a safe URL parent.
@@ -59,7 +60,7 @@ export function HierarchyCard({
       </CardHeader>
       <CardContent className="pt-0">
         {roots.length === 0 ? (
-          <p className={textRole('body')}>No hierarchy nodes were measured.</p>
+          <InlineEmpty>No hierarchy nodes were measured.</InlineEmpty>
         ) : (
           <section
             className="content-scroll max-h-96 overflow-y-auto overscroll-contain pr-2"
@@ -90,12 +91,11 @@ function HierarchyList({
           <li key={node.site_url_id} className="grid min-w-0 gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               {crawlId ? (
-                <ProjectLink
-                  href={`/site/crawls/${crawlId}/pages/${node.site_url_id}`}
-                  className="type-body text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline"
-                >
-                  {node.url}
-                </ProjectLink>
+                <TextLink asChild text="body" className="min-w-0 [overflow-wrap:anywhere]">
+                  <ProjectLink href={`/site/crawls/${crawlId}/pages/${node.site_url_id}`}>
+                    {node.url}
+                  </ProjectLink>
+                </TextLink>
               ) : (
                 <span className="type-body text-foreground min-w-0 [overflow-wrap:anywhere]">
                   {node.url}

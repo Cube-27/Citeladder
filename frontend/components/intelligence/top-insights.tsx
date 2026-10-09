@@ -7,7 +7,7 @@ import { opportunitiesQueries } from '@/lib/api/opportunities';
 import { Insight } from './insight';
 import { insightFromOpportunity } from './opportunity-insight';
 import { ReadError } from '@/components/ui/read-error';
-import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 
 /**
  * Top insights across all layers, for Overview (§7.1).
@@ -59,8 +59,8 @@ export function TopInsights({
   if (insights.length === 0) return null;
 
   return (
-    <section aria-label="Top insights" className="flex flex-col gap-3">
-      <h2 className={textRole('sectionTitle')}>Top insights</h2>
+    <section aria-labelledby="top-insights" className="flex flex-col gap-3">
+      <EditorialSectionHeader title="Top insights" headingId="top-insights" />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {insights.map((insight) => (
           <Insight key={insight.id} insight={insight} hideWhyThisMatters />

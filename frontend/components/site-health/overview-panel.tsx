@@ -4,9 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import { CoverageByKind } from './coverage-by-kind';
-import { OverviewDetails, OverviewDetailsSkeleton } from './overview-details';
+import { OverviewDetails } from './overview-details';
 import { OverviewMetricCards } from './overview-metrics';
+import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { httpErrorStatus } from '@/lib/api/client';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
@@ -44,11 +46,18 @@ export function OverviewPanel({
   // `enabled` went false. Report only a failure this query is actually making
   // now, and never the expected absence.
   if (terminal && overview.isError && httpErrorStatus(overview.error) !== 404) {
-    overviewBody = <Alert tone="danger">Could not load the persisted Site Health Overview.</Alert>;
+    overviewBody = (
+      <ReadError
+        error={overview.error}
+        fallback="Could not load the persisted Site Health Overview."
+        onRetry={() => void overview.refetch()}
+        pending={overview.isFetching}
+      />
+    );
   } else if (data) {
     overviewBody = <OverviewDetails data={data} />;
   } else if (terminal && overview.isLoading) {
-    overviewBody = <OverviewDetailsSkeleton />;
+    overviewBody = <PageLoading label="Loading Overview details" />;
   }
 
   return (

@@ -1,6 +1,8 @@
 import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Badge } from '@/components/ui/badge';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageDetail } from '@/lib/api/types';
@@ -108,7 +110,7 @@ function NeighbourList({
     <section className="grid min-w-0 content-start gap-2 overflow-hidden">
       <Label>{heading}</Label>
       {neighbours.length === 0 ? (
-        <p className={textRole('body')}>{emptyMessage}</p>
+        <InlineEmpty>{emptyMessage}</InlineEmpty>
       ) : (
         <ul className={ledgerClasses()}>
           {neighbours.map((neighbour) => (
@@ -119,13 +121,18 @@ function NeighbourList({
               {/* An off-crawl target is counted but was never a node, so it has
                   no detail route to link to. */}
               {neighbour.site_url_id ? (
-                <ProjectLink
-                  href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
-                  className="type-caption text-accent-text min-w-0 [overflow-wrap:anywhere] tabular-nums hover:underline"
-                  title={neighbour.url}
+                <TextLink
+                  asChild
+                  text="caption"
+                  className="min-w-0 [overflow-wrap:anywhere] tabular-nums"
                 >
-                  {neighbour.url}
-                </ProjectLink>
+                  <ProjectLink
+                    href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
+                    title={neighbour.url}
+                  >
+                    {neighbour.url}
+                  </ProjectLink>
+                </TextLink>
               ) : (
                 <span
                   className="type-caption min-w-0 [overflow-wrap:anywhere] tabular-nums"

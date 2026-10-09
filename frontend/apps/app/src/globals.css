@@ -305,6 +305,11 @@
   --badge-height-sm: 20px;
   --badge-height-md: 24px;
   --textarea-min-height: 112px;
+  /* Chart plot heights: a sparkline-scale summary, the default analytical
+     chart and a page's primary history. */
+  --chart-height-sm: 160px;
+  --chart-height-md: 240px;
+  --chart-height-lg: 320px;
   --tab-height: var(--control-height-md);
   --tab-gap: 24px;
   /* The page grammar's rows. Every route draws the same bands in the same
@@ -320,6 +325,12 @@
   --table-header-height: var(--control-height-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 0px;
+  /* A wide table keeps readable columns and scrolls inside its frame below
+     its minimum width. A table picks the rung its columns need. */
+  --table-min-width-sm: 36rem;
+  --table-min-width-md: 48rem;
+  --table-min-width-lg: 64rem;
+  --table-min-width-xl: 76rem;
   /* Geometry roles, shared by every surface. Components consume the role,
      never a route-local radius: control 8 (buttons, fields, rows, chips),
      card 12 (cards, menus, dialogs, popovers), large 16 (the workspace and

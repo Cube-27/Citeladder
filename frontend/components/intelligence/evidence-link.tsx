@@ -1,6 +1,5 @@
-import { ArrowUpRight } from 'lucide-react';
-
 import { ProjectLink } from '@/components/layout/scoped-link';
+import { TextLink } from '@/components/ui/text-link';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import type { AppRoute } from '@/lib/navigation/app-route';
@@ -31,21 +30,13 @@ export type EvidenceLinkProps = {
 
 export function EvidenceLink({ evidence, className }: Readonly<EvidenceLinkProps>) {
   return (
-    <ProjectLink
-      href={evidence.href}
-      className={cn(
-        textRole(
-          'label',
-          'text-accent-text flex min-w-0 items-start gap-1 underline-offset-2 hover:underline',
-        ),
-        className,
-      )}
-    >
-      <span className="min-w-0 [overflow-wrap:anywhere]">{evidence.label}</span>
-      {evidence.observedAt ? (
-        <span className={textRole('caption', 'shrink-0')}>· {evidence.observedAt}</span>
-      ) : null}
-      <ArrowUpRight aria-hidden className="mt-0.5 size-3 shrink-0" />
-    </ProjectLink>
+    <TextLink asChild text="label" className={cn('flex min-w-0 items-start gap-1', className)}>
+      <ProjectLink href={evidence.href}>
+        <span className="min-w-0 [overflow-wrap:anywhere]">{evidence.label}</span>
+        {evidence.observedAt ? (
+          <span className={textRole('caption', 'shrink-0')}>· {evidence.observedAt}</span>
+        ) : null}
+      </ProjectLink>
+    </TextLink>
   );
 }

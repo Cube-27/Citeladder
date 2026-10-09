@@ -18,8 +18,9 @@ import {
   formatRate,
   measured,
 } from '@/lib/visibility/dashboard';
-import { changeLabel } from '@/lib/visibility/vocabulary';
-import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
+import { Delta } from '@/components/ui/delta';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { Pager, pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { textRole } from '@/components/ui/typography';
 import { tagClasses } from '@/components/ui/filter-chip-variants';
 
@@ -185,7 +186,7 @@ export function RankingRowsTable({
     (a, b) => (b.mention_rate ?? -1) - (a.mention_rate ?? -1) || a.name.localeCompare(b.name),
   );
   const { page, setPage, pageCount, from, to } = useTablePage(ordered.length, PAGE_SIZE);
-  if (!ordered.length) return <p>No measured responses in this selection.</p>;
+  if (!ordered.length) return <InlineEmpty>No measured responses in this selection.</InlineEmpty>;
   const paged = ordered.slice(from - 1, to);
   // With no prior run there is no change for ANY brand, and a column of
   // "No comparable change" told the reader nothing seven times over. The reason
@@ -220,7 +221,7 @@ export function RankingRowsTable({
             // A matched-subset delta is the same measurement taken over the cells
             // both runs share. Which one it is belongs to the note above the
             // table, not to a disclosure inside every cell.
-            const change = changeLabel(row.matched_visibility_delta ?? row.visibility_delta);
+            const change = row.matched_visibility_delta ?? row.visibility_delta;
             const selected = selectedName === row.name;
             return (
               <TableRow
@@ -261,7 +262,11 @@ export function RankingRowsTable({
                     />
                   </TableCell>
                 ) : null}
-                {anyChange ? <TableCell numeric>{change ?? <MissingValue />}</TableCell> : null}
+                {anyChange ? (
+                  <TableCell numeric>
+                    <Delta value={change} unit=" pp" />
+                  </TableCell>
+                ) : null}
                 <TableCell numeric className="hidden md:table-cell">
                   {measured(formatRate(row.share_of_voice)) ?? <MissingValue />}
                 </TableCell>
@@ -273,14 +278,10 @@ export function RankingRowsTable({
           })}
         </TableBody>
       </Table>
-      <TablePagination
-        page={page}
-        pageCount={pageCount}
-        from={from}
-        to={to}
-        total={ordered.length}
-        noun="brands"
-        onPageChange={setPage}
+      <Pager
+        frame="table"
+        range={{ from, to, total: ordered.length, noun: 'brands' }}
+        {...pageNumberControls(page, pageCount, setPage)}
       />
     </>
   );

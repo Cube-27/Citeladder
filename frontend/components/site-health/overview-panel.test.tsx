@@ -398,6 +398,9 @@ describe('OverviewPanel', () => {
 
     renderTerminal();
 
-    expect(await screen.findByText(ALERT)).toBeInTheDocument();
+    // The shared read error names the failure and, for 403, the one recovery.
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Check your workspace access, then try again.',
+    );
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { FilterTrigger } from '@/components/ui/filter-row';
 import {
   Dropdown,
   DropdownContent,
@@ -24,9 +24,11 @@ export function AnalysisChoice<T extends string>({
   return (
     <Dropdown>
       <DropdownTrigger asChild>
-        <Button variant="secondary" size="sm" aria-label={label}>
-          {options.find((option) => option.value === value)?.label ?? label}
-        </Button>
+        <FilterTrigger
+          label={label}
+          hideLabel
+          value={options.find((option) => option.value === value)?.label ?? label}
+        />
       </DropdownTrigger>
       <DropdownContent>
         <DropdownLabel>{label}</DropdownLabel>

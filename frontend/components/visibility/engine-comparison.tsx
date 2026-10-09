@@ -18,6 +18,7 @@ import {
   visibleEngines,
   type VisibilityFilters,
 } from '@/lib/visibility/dashboard';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import { textRole } from '@/components/ui/typography';
 
@@ -39,7 +40,7 @@ export function EngineComparison({
       </CardHeader>
       <CardContent className="p-0">
         {!engines.length ? (
-          <p className="text-secondary p-[var(--card-padding)]">No model observations.</p>
+          <InlineEmpty className="p-[var(--card-padding)]">No model observations.</InlineEmpty>
         ) : (
           <Table>
             <TableHeader>

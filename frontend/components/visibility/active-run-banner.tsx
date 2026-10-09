@@ -3,7 +3,7 @@ import { Alert } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
 import { auditStatusLabel } from '@/lib/runs/status';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
-import { textRole } from '@/components/ui/typography';
+import { TextLink } from '@/components/ui/text-link';
 
 /**
  * In-progress run banner for the Visibility workspace. An active run has no
@@ -20,12 +20,9 @@ export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
           A run is in progress ({auditStatusLabel(run.status)}). Results appear here when it
           completes.
         </span>
-        <ProjectLink
-          href={`/runs/${run.id}`}
-          className={textRole('emphasis', 'text-accent-text whitespace-nowrap hover:underline')}
-        >
-          Watch live progress →
-        </ProjectLink>
+        <TextLink asChild text="emphasis" className="whitespace-nowrap">
+          <ProjectLink href={`/runs/${run.id}`}>Watch live progress →</ProjectLink>
+        </TextLink>
       </div>
     </Alert>
   );

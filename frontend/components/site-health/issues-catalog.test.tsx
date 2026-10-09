@@ -278,8 +278,8 @@ describe('IssuesCatalog', () => {
     await screen.findByRole('link', { name: /Homepage/ });
 
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Previous' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
   });
 
   it('seeds the server query from an Overview rule deep link', async () => {
@@ -553,16 +553,17 @@ describe('IssuesCatalog', () => {
 
     await screen.findByRole('link', { name: /Homepage/ });
 
-    const innerPrev = screen.getByRole('button', { name: 'Previous' });
-    const [innerNext] = screen.getAllByRole('button', { name: 'Next' });
+    // The rail's pager renders before the catalog's, so index 0 is the rail.
+    const innerPrev = screen.getAllByRole('button', { name: 'Previous page' })[0]!;
+    const [innerNext] = screen.getAllByRole('button', { name: 'Next page' });
     expect(innerPrev).toBeDisabled();
     expect(innerNext).not.toBeDisabled();
 
     await user.click(innerNext);
     await screen.findByRole('link', { name: /Page Two/ });
     expect(seenCursors).toEqual([null, 'cursor-page-2']);
-    const innerPrevAfterNext = screen.getByRole('button', { name: 'Previous' });
-    const [innerNextAfterNext] = screen.getAllByRole('button', { name: 'Next' });
+    const innerPrevAfterNext = screen.getAllByRole('button', { name: 'Previous page' })[0]!;
+    const [innerNextAfterNext] = screen.getAllByRole('button', { name: 'Next page' });
     expect(innerPrevAfterNext).not.toBeDisabled();
     expect(innerNextAfterNext).toBeDisabled();
 
@@ -573,17 +574,23 @@ describe('IssuesCatalog', () => {
     // stays at the two requests already made.
     expect(seenCursors).toEqual([null, 'cursor-page-2']);
 
-    await user.click(screen.getAllByRole('button', { name: 'Next' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Next page' })[0]!);
     await screen.findByRole('link', { name: /Page Two/ });
-    await user.click(screen.getAllByRole('button', { name: 'Next' })[1]!);
+    await user.click(screen.getAllByRole('button', { name: 'Next page' })[1]!);
     await waitFor(() => expect(currentUrl()).toContain('cursor=catalog-page-2'));
-    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Previous page' })[0]!).toBeDisabled();
 
-    await user.click(screen.getAllByRole('button', { name: 'Next' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Next page' })[0]!);
     await screen.findByRole('link', { name: /Page Two/ });
     await user.click(screen.getByRole('button', { name: 'First page' }));
     await waitFor(() => expect(currentUrl()).not.toContain('cursor='));
-    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Previous page' })[0]!).toBeDisabled();
+
+    // The catalog steps back along the cursors it followed.
+    await user.click(screen.getAllByRole('button', { name: 'Next page' })[1]!);
+    await waitFor(() => expect(currentUrl()).toContain('cursor=catalog-page-2'));
+    await user.click(screen.getAllByRole('button', { name: 'Previous page' })[1]!);
+    await waitFor(() => expect(currentUrl()).not.toContain('cursor='));
   });
 
   it('shows which page types an issue affects, and says nothing when it spans none', async () => {

@@ -176,7 +176,15 @@ describe('DashboardScreen', () => {
     );
     expect(screen.getByRole('heading', { name: 'Acme' })).toBeInTheDocument();
     // Visibility is a mention rate, so the tile carries a percent unit.
-    expect(screen.getByText('72.5%')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Project state' })).getByText('72.5%'),
+    ).toBeInTheDocument();
+    // Rank is better when it falls, so climbing one place reads as an improvement.
+    expect(
+      within(screen.getByRole('region', { name: 'Project state' }))
+        .getByText('−1.0 vs previous')
+        .closest('[data-outcome]'),
+    ).toHaveAttribute('data-outcome', 'improved');
     expect(screen.getByRole('heading', { name: 'Project state' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Movement' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Ranked actions' })).toBeInTheDocument();

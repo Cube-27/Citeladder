@@ -29,7 +29,7 @@ export function ProjectControls({
   return (
     <Dropdown>
       <DropdownTrigger asChild>
-        <Button variant="secondary" size="md" className="gap-2">
+        <Button variant="secondary" size="sm" className="gap-2">
           Manage project <ChevronDown className="size-3.5 opacity-80" aria-hidden />
         </Button>
       </DropdownTrigger>

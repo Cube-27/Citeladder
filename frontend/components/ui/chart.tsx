@@ -3,6 +3,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import { ResponsiveContainer } from 'recharts';
 
+import { dataFillClass, type DataTone } from '@/components/ui/data-tone';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,23 @@ import { cn } from '@/lib/utils';
  */
 export type ChartConfig = Record<string, { label: string; color: string }>;
 
+/**
+ * The plot heights a chart may take, as roles rather than pixel values:
+ * charts had settled at 200, 220, 240, 280 and 304px, so two trend charts side
+ * by side never shared a baseline.
+ *
+ *   - `sm` (160px) — a compact chart inside a card beside other content.
+ *   - `md` (240px) — the default trend or bar chart.
+ *   - `lg` (320px) — the page's primary chart.
+ */
+const chartHeightClasses = {
+  sm: 'h-[var(--chart-height-sm)]',
+  md: 'h-[var(--chart-height-md)]',
+  lg: 'h-[var(--chart-height-lg)]',
+} as const;
+
+export type ChartHeight = keyof typeof chartHeightClasses;
+
 /** `--color-<key>` for every series, so Recharts props can name the token. */
 function seriesVariables(config: ChartConfig): Record<string, string> {
   return Object.fromEntries(
@@ -35,13 +53,17 @@ export function ChartContainer({
   children,
   className,
   height = 280,
+  size,
   description,
 }: Readonly<{
   config: ChartConfig;
   /** One Recharts chart element. */
   children: ReactElement;
   className?: string;
+  /** @deprecated Pass `size`; a pixel height is kept only for unmigrated charts. */
   height?: number;
+  /** The plot's height role. Takes precedence over `height`. */
+  size?: ChartHeight;
   /**
    * What the chart says to a reader who cannot see it.
    *
@@ -54,12 +76,49 @@ export function ChartContainer({
   return (
     <div className={cn('w-full', className)} style={seriesVariables(config)}>
       <p className="sr-only">{description}</p>
-      <div aria-hidden style={{ height }}>
+      <div
+        aria-hidden
+        className={size ? chartHeightClasses[size] : undefined}
+        style={size ? undefined : { height }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           {children}
         </ResponsiveContainer>
       </div>
     </div>
+  );
+}
+
+/**
+ * The key beside a legend entry: a dot (a series or point) or a short rule (a
+ * line). Its colour is a `DataTone` — a series index for categorical identity
+ * or an outcome family for a state — or, inside a Recharts frame, the
+ * series' token `color` from `ChartConfig`. Decorative: the entry's text is
+ * what names the series.
+ */
+export function LegendSwatch({
+  tone,
+  color,
+  shape = 'dot',
+  className,
+}: Readonly<{
+  tone?: DataTone;
+  /** A token value such as `var(--color-chart-2)`, for `ChartConfig` series. */
+  color?: string;
+  shape?: 'dot' | 'line';
+  className?: string;
+}>) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'inline-block shrink-0 rounded-full',
+        shape === 'dot' ? 'size-2' : 'h-0.5 w-4',
+        tone ? dataFillClass(tone) : undefined,
+        className,
+      )}
+      style={color ? { background: color } : undefined}
+    />
   );
 }
 
@@ -104,11 +163,7 @@ export function ChartLegend({
               active && active !== key ? 'opacity-45' : 'opacity-100',
             )}
           >
-            <span
-              className="size-2 shrink-0 rounded-full"
-              style={{ background: entry.color }}
-              aria-hidden
-            />
+            <LegendSwatch color={entry.color} />
             <span className={textRole('caption', 'max-w-[18ch] truncate')}>{entry.label}</span>
           </button>
         </li>
@@ -143,11 +198,7 @@ export function ChartTooltipContent({
             key={entry.dataKey ?? entry.name}
             className="type-caption text-on-inverse flex items-center gap-2"
           >
-            <span
-              className="size-2 shrink-0 rounded-full"
-              style={{ background: entry.color }}
-              aria-hidden
-            />
+            <LegendSwatch color={entry.color} />
             <span className="max-w-[16ch] truncate">{entry.name}</span>
             <span className="ml-auto tabular-nums">{formatValue(entry.value as number)}</span>
           </li>

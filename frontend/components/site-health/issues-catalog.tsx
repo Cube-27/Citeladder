@@ -3,17 +3,19 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
-import { IssuesLoading } from '@/components/site-health/issues-loading';
 import { IssueDetailRail } from '@/components/site-health/issue-detail-rail';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
-import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterRow } from '@/components/ui/filter-row';
+import { listRowClasses } from '@/components/ui/list-row';
+import { Pager } from '@/components/ui/pager';
 import { Pressable } from '@/components/ui/pressable';
+import { ReadError } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { splitPaneClasses } from '@/components/ui/workspace';
@@ -105,6 +107,60 @@ export function IssuesCatalog({
     catalog.occurrenceCursor,
   );
 
+  const controls = (
+    <FilterRow
+      searchWidth="md"
+      search={
+        <IssueSearch
+          key={filters.query}
+          query={filters.query}
+          onApply={(query) => updateFilters({ query })}
+        />
+      }
+    >
+      <div className="min-w-0 max-[700px]:w-full [&>button]:max-[700px]:w-full">
+        <PageKindSelect
+          value={filters.page_kind}
+          onChange={(page_kind) => updateFilters({ page_kind })}
+        />
+      </div>
+      <div className="max-w-full min-w-0 max-[700px]:w-full">
+        <FindingClassFilter
+          value={findingView}
+          summary={summary}
+          onChange={(value) => updateFilters(findingClassChange(value))}
+        />
+      </div>
+      <div className="max-w-full min-w-0 max-[700px]:w-full">
+        <div className="flex flex-wrap items-end gap-4">
+          {(['All issues', 'Severity', 'Category'] as const).map((group) => {
+            const keys =
+              group === 'Severity'
+                ? ['high', 'medium', 'low']
+                : group === 'Category'
+                  ? ['technical', 'aeo']
+                  : ['all'];
+            const options = issueFilterClasses(findingView).filter((item) =>
+              keys.includes(item.key),
+            );
+            return options.length > 0 ? (
+              <SegmentedControl
+                key={group}
+                value={issueFilterClass(filters)}
+                onChange={(value) => updateFilters(issueFilterClassChange(value))}
+                ariaLabel={group}
+                options={options.map((item) => ({
+                  value: item.key,
+                  label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
+                }))}
+              />
+            ) : null;
+          })}
+        </div>
+      </div>
+    </FilterRow>
+  );
+
   // Wait for the issues page, and only for that.
   //
   // This used to wait for the first issue's OCCURRENCES as well — a third
@@ -114,25 +170,23 @@ export function IssuesCatalog({
   //
   // The reason given for waiting was layout: painting the list alone shoved
   // everything down when the summary arrived and left the rail short until the
-  // occurrences did. That is an argument for reserving the space, which the
-  // grid below now does, not for showing nothing.
+  // occurrences did. That is an argument for reserving the space, not for
+  // showing nothing — and the filters stay in place while it loads.
   if (issuesQuery.isPending && !issuesQuery.data)
     return (
-      <PageShell>
-        <Stack gap="section" className="min-w-0">
+      <PageShell controls={controls}>
+        <Stack gap="section" className="min-w-0" aria-busy="true">
           {notice}
-          <IssuesLoading />
+          <PageLoading label="Loading issues…" />
         </Stack>
       </PageShell>
     );
 
   let issuesBody: ReactNode = (
     <Card
-      // `min-h` matches the loading placeholder's, so the pane keeps its height
-      // while the rail's own read lands rather than growing under the reader.
       // `overflow-clip` (not `hidden`) rounds the corners without becoming a
       // scroll container, so the detail rail stays sticky against the page.
-      className={splitPaneClasses('list-detail', 'min-h-[32rem] gap-0 overflow-clip')}
+      className={splitPaneClasses('list-detail', 'gap-0 overflow-clip')}
       aria-busy={issuesQuery.isFetching}
     >
       <IssueGroupList
@@ -156,7 +210,14 @@ export function IssuesCatalog({
     </Card>
   );
   if (issuesQuery.isError) {
-    issuesBody = <Alert tone="danger">Could not load issues for this crawl. Please refresh.</Alert>;
+    issuesBody = (
+      <ReadError
+        error={issuesQuery.error}
+        fallback="Could not load issues for this crawl."
+        onRetry={() => void issuesQuery.refetch()}
+        pending={issuesQuery.isFetching}
+      />
+    );
   } else if (rows.length === 0) {
     issuesBody = (
       <EmptyState variant="compact" icon={ICONS.issues} heading="No issues match this view." />
@@ -164,57 +225,7 @@ export function IssuesCatalog({
   }
 
   return (
-    <PageShell
-      controls={
-        <>
-          <IssueSearch
-            key={filters.query}
-            query={filters.query}
-            onApply={(query) => updateFilters({ query })}
-          />
-          <div className="min-w-0 max-[700px]:w-full [&>button]:max-[700px]:w-full">
-            <PageKindSelect
-              value={filters.page_kind}
-              onChange={(page_kind) => updateFilters({ page_kind })}
-            />
-          </div>
-          <div className="max-w-full min-w-0 max-[700px]:w-full">
-            <FindingClassFilter
-              value={findingView}
-              summary={summary}
-              onChange={(value) => updateFilters(findingClassChange(value))}
-            />
-          </div>
-          <div className="max-w-full min-w-0 max-[700px]:w-full">
-            <div className="flex flex-wrap items-end gap-4">
-              {(['All issues', 'Severity', 'Category'] as const).map((group) => {
-                const keys =
-                  group === 'Severity'
-                    ? ['high', 'medium', 'low']
-                    : group === 'Category'
-                      ? ['technical', 'aeo']
-                      : ['all'];
-                const options = issueFilterClasses(findingView).filter((item) =>
-                  keys.includes(item.key),
-                );
-                return options.length > 0 ? (
-                  <SegmentedControl
-                    key={group}
-                    value={issueFilterClass(filters)}
-                    onChange={(value) => updateFilters(issueFilterClassChange(value))}
-                    ariaLabel={group}
-                    options={options.map((item) => ({
-                      value: item.key,
-                      label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
-                    }))}
-                  />
-                ) : null;
-              })}
-            </div>
-          </div>
-        </>
-      }
-    >
+    <PageShell controls={controls}>
       <Stack gap="section" className="min-w-0">
         {notice}
         {summary ? <IssueSummary summary={summary} findingView={findingView} /> : null}
@@ -236,7 +247,6 @@ function IssueSearch({
   const [draft, setDraft] = useState(query);
   return (
     <form
-      className="min-w-0 max-[700px]:w-full"
       onSubmit={(event) => {
         event.preventDefault();
         onApply(draft);
@@ -248,7 +258,6 @@ function IssueSearch({
         onValueChange={setDraft}
         placeholder="Search issues…"
         aria-label="Search issues"
-        className="w-full max-w-xs max-[700px]:max-w-none"
       />
     </form>
   );
@@ -261,6 +270,10 @@ function IssueSearch({
  * whenever there were rows and then disable both buttons, so a crawl whose
  * issues all fit on one page showed two permanently dead controls — the same
  * noise the one-point trend chart rule exists to prevent.
+ *
+ * The cursor lives in the URL and the API pages forward only, so the way back
+ * is the trail of cursors this view followed; a deep-linked page has none and
+ * steps back to the first page.
  */
 function CatalogPager({
   cursor,
@@ -271,22 +284,29 @@ function CatalogPager({
   page: { next_cursor?: string | null } | undefined;
   onGo: (cursor: string | null) => void;
 }>) {
+  const [trail, setTrail] = useState<(string | null)[]>([]);
   const nextCursor = page?.next_cursor ?? null;
-  if (!cursor && !nextCursor) return null;
+  // A filter change drops the cursor, which starts a new trail.
+  const followed = cursor ? trail : [];
   return (
-    <div className="flex items-center justify-end gap-2">
-      <Button variant="secondary" size="sm" onClick={() => onGo(null)} disabled={!cursor}>
-        First page
-      </Button>
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => nextCursor && onGo(nextCursor)}
-        disabled={!nextCursor}
-      >
-        Next
-      </Button>
-    </div>
+    <Pager
+      hideWhenSinglePage
+      canPrev={Boolean(cursor)}
+      canNext={Boolean(nextCursor)}
+      onFirst={() => {
+        setTrail([]);
+        onGo(null);
+      }}
+      onPrev={() => {
+        setTrail(followed.slice(0, -1));
+        onGo(followed.at(-1) ?? null);
+      }}
+      onNext={() => {
+        if (!nextCursor) return;
+        setTrail([...followed, cursor]);
+        onGo(nextCursor);
+      }}
+    />
   );
 }
 
@@ -356,10 +376,8 @@ function IssueGroupList({
             onClick={() => onSelect(issue.group_id)}
             aria-pressed={selected}
             className={cn(
-              'focus-ring border-l grid w-72 shrink-0 gap-2 px-4 py-3 text-left transition-colors lg:w-full',
-              selected
-                ? 'border-accent bg-selected text-foreground'
-                : 'border-transparent bg-panel hover:bg-hover active:bg-active',
+              'focus-ring grid w-72 shrink-0 gap-2 px-4 py-3 text-left lg:w-full',
+              listRowClasses({ selected }),
             )}
           >
             <span className={textRole('itemTitle')}>{issueTitle(issue)}</span>

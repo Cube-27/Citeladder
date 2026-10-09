@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { PageLoading } from '@/components/layout/page-loading';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
@@ -12,6 +11,7 @@ import { VisibilityActions, VisibilityToolbar } from '@/components/visibility/vi
 import { VisibilityTrends } from '@/components/visibility/visibility-trends';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { PageShell } from '@/components/layout/page-shell';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { ReadError } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -61,8 +61,7 @@ function DashboardState({
   auditsQuery: ReturnType<typeof useVisibilityQueries>['auditsQuery'];
 }>) {
   if (state === 'loading') return <PageLoading label="Loading visibility…" />;
-  if (state === 'missing-project')
-    return <Alert tone="info">Select or create a project to see its AI-visibility results.</Alert>;
+  if (state === 'missing-project') return <ProjectRequiredState />;
   if (state === 'error')
     return (
       <ReadError

@@ -10,9 +10,10 @@ import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ExternalHttpLink } from '@/components/ui/external-http-link';
-import { Label, textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { StatGrid } from '@/components/ui/stat-grid';
+import { TextLink } from '@/components/ui/text-link';
+import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { ledgerClasses } from '@/components/ui/workspace';
 import type { DeliveryFacts, IssueOccurrence, PageDetail } from '@/lib/api/types';
@@ -119,7 +120,7 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
             {detail.internal_links ? (
               <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
             ) : (
-              <p className={textRole('body')}>Internal links not measured for this page.</p>
+              <InlineEmpty>Internal links not measured for this page.</InlineEmpty>
             )}
           </CardContent>
         </Card>
@@ -145,7 +146,7 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
             {detail.internal_links ? (
               <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
             ) : (
-              <p className={textRole('body')}>Internal links not measured for this page.</p>
+              <InlineEmpty>Internal links not measured for this page.</InlineEmpty>
             )}
           </TabPanel>
         </Tabs>
@@ -161,15 +162,14 @@ function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
       <CardContent>
         <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
           <DetailFact label="URL" className="min-[701px]:col-span-2 xl:col-span-1">
-            <ExternalHttpLink
+            <TextLink
+              variant="external"
+              text="itemTitle"
               href={detail.display_url}
-              className={textRole(
-                'itemTitle',
-                'tabular-nums text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline',
-              )}
+              className="min-w-0 [overflow-wrap:anywhere] tabular-nums"
             >
               {detail.display_url}
-            </ExternalHttpLink>
+            </TextLink>
           </DetailFact>
           <DetailFact label="Page Kind">
             <PageKindBadge pageKind={detail.page_kind} />
@@ -229,16 +229,14 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
   return (
     <Stack>
       <p className={textRole('caption', 'max-[980px]:hidden')}>Static HTTP-level measurements</p>
-      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {items.map((item) => (
-          <div key={item.label} className="grid gap-0.5">
-            <Label>{item.label}</Label>
-            <dd className={textRole('itemTitle', 'tabular-nums [overflow-wrap:anywhere]')}>
-              {item.value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : item.value}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <StatGrid
+        columns={4}
+        items={items.map((item) => ({
+          key: item.label,
+          label: item.label,
+          value: item.value === PLACEHOLDER ? null : item.value,
+        }))}
+      />
     </Stack>
   );
 }
@@ -247,13 +245,12 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
   const ordered = [...issues].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
   return (
     <Card>
-      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
+      <CardHeader actions={<span className="type-caption">Sorted by severity</span>}>
         <CardTitle>All Issues ({issues.length})</CardTitle>
-        <span className="type-caption">Sorted by severity</span>
       </CardHeader>
       <CardContent>
         {ordered.length === 0 ? (
-          <p className={textRole('body')}>No issues detected on this page.</p>
+          <InlineEmpty>No issues detected on this page.</InlineEmpty>
         ) : (
           <ol className={ledgerClasses()}>
             {ordered.map((issue) => (

@@ -5,6 +5,7 @@ import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
@@ -296,12 +297,12 @@ export function ProjectEditPanel({
                 ])
               }
             >
-              <Plus className="size-4" aria-hidden />
+              <Plus className="size-3.5" aria-hidden />
               Add
             </Button>
           </div>
           {competitors.length === 0 ? (
-            <p className="type-body">None tracked.</p>
+            <InlineEmpty>None tracked.</InlineEmpty>
           ) : (
             <ul className="grid list-none gap-2 p-0">
               {competitors.map((competitor, index) => (

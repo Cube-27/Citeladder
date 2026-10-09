@@ -64,7 +64,7 @@ export function EvidenceError({
             description="The request failed or timed out. Your filters are unchanged."
             action={
               <Button variant="primary" size="sm" onClick={onRetry}>
-                <RefreshCw className="size-4" aria-hidden />
+                <RefreshCw className="size-3.5" aria-hidden />
                 Retry
               </Button>
             }

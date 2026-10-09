@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent } from '@/components/ui/card';
+import { ReadError } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { splitPaneClasses } from '@/components/ui/workspace';
@@ -441,9 +441,13 @@ function SourceTable({
   // presents a fault as a finding.
   if (query.isError) {
     return (
-      <Alert tone="danger" className="m-[var(--card-padding)]">
-        Could not load sources. Check your connection and try again.
-      </Alert>
+      <ReadError
+        error={query.error}
+        fallback="Could not load sources. Check your connection and try again."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+        className="m-[var(--card-padding)]"
+      />
     );
   }
   const state = tableState({ query, rows, pageSize, narrowed, searching });

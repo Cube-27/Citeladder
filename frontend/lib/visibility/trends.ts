@@ -12,7 +12,7 @@ import type { TrendPoint } from '@/components/ui/trend-chart';
 import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 import { formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
-import { TREND_COMPARISON_STROKES } from '@/lib/visibility/chart-tokens';
+import { TREND_COMPARISON_SERIES, TREND_COMPARISON_STROKES } from '@/lib/visibility/chart-tokens';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
 export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
@@ -202,7 +202,13 @@ export function toCompetitorSeries(
   points: readonly VisibilityTrendPoint[],
   metric: TrendMetric,
   limit = TREND_SERIES_LIMIT,
-): { label: string; values: (number | null)[]; strokeClass: string }[] {
+): {
+  label: string;
+  values: (number | null)[];
+  strokeClass: string;
+  /** The chart series the line is drawn in, for its legend key. */
+  series: (typeof TREND_COMPARISON_SERIES)[number];
+}[] {
   const latest = points.at(-1);
   const names = (latest?.rankings ?? [])
     .filter((row) => !row.is_brand)
@@ -212,6 +218,7 @@ export function toCompetitorSeries(
   return names.map((name, index) => ({
     label: name,
     strokeClass: TREND_COMPARISON_STROKES[index % TREND_COMPARISON_STROKES.length],
+    series: TREND_COMPARISON_SERIES[index % TREND_COMPARISON_SERIES.length],
     values: points.map((point) => {
       const row = point.rankings.find((entry) => entry.name === name);
       return row ? rankingMetricValue(row, metric) : null;

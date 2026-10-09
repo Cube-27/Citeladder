@@ -5,6 +5,8 @@ import { useMutation, useQueryClient, type UseQueryResult } from '@tanstack/reac
 import { Alert } from '@/components/ui/alert';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { ReadError } from '@/components/ui/read-error';
 import type { ObservedCompetitor } from '@/lib/api/types';
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -52,7 +54,12 @@ export function CompetitorSuggestions({
         </p>
       </div>
       {suggestionsQuery.isError ? (
-        <Alert tone="danger">Could not load competitor suggestions.</Alert>
+        <ReadError
+          error={suggestionsQuery.error}
+          fallback="Could not load competitor suggestions."
+          onRetry={() => void suggestionsQuery.refetch()}
+          pending={suggestionsQuery.isFetching}
+        />
       ) : null}
       {suggestionsQuery.data?.length ? (
         <ul className={ledgerClasses('boxed')}>
@@ -81,7 +88,7 @@ export function CompetitorSuggestions({
         </ul>
       ) : null}
       {!suggestionsQuery.data?.length && !suggestionsQuery.isLoading ? (
-        <p className="type-caption">No repeated citation candidates yet.</p>
+        <InlineEmpty>No repeated citation candidates yet.</InlineEmpty>
       ) : null}
       {acceptMutation.isError ? (
         <Alert tone="danger">Could not add that competitor. Try again.</Alert>

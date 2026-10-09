@@ -14,5 +14,12 @@ export const CHART_TOKENS: readonly {
   { strokeClass: 'stroke-chart-8', swatchClass: 'bg-chart-8', color: 'var(--color-chart-8)' },
 ];
 
-/** Trend comparisons intentionally start at token 2 and use six colours. */
-export const TREND_COMPARISON_STROKES = CHART_TOKENS.slice(1, 7).map((token) => token.strokeClass);
+/**
+ * Trend comparisons intentionally start at series 2 (series 1 is the tracked
+ * brand) and use six colours.
+ */
+export const TREND_COMPARISON_SERIES = [2, 3, 4, 5, 6, 7] as const;
+
+export const TREND_COMPARISON_STROKES = TREND_COMPARISON_SERIES.map(
+  (series) => CHART_TOKENS[series - 1].strokeClass,
+);

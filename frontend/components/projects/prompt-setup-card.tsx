@@ -2,8 +2,7 @@
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Stack } from '@/components/ui/layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { PROMPTS_GENERATE_HREF, PROMPTS_HREF } from '@/lib/prompts/routes';
 
@@ -14,27 +13,21 @@ import { PROMPTS_GENERATE_HREF, PROMPTS_HREF } from '@/lib/prompts/routes';
  */
 export function PromptSetupCard() {
   return (
-    <Card
-      tone="recommendation"
-      className="grid gap-4 p-[var(--card-padding)]"
-      aria-labelledby="prompt-setup-heading"
-    >
-      <Stack gap="tight">
-        <h2 id="prompt-setup-heading" className={textRole('sectionTitle')}>
-          Choose the questions you want to track
-        </h2>
+    <Card tone="recommendation" aria-labelledby="prompt-setup-heading">
+      <CardHeader>
+        <CardTitle id="prompt-setup-heading">Choose the questions you want to track</CardTitle>
         <p className={textRole('caption')}>
           Generate buyer questions from your confirmed offerings, or add your own.
         </p>
-      </Stack>
-      <div className="flex flex-wrap gap-2">
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
         <Button asChild variant="primary" size="md">
           <ProjectLink href={PROMPTS_GENERATE_HREF}>Generate prompts</ProjectLink>
         </Button>
         <Button asChild variant="secondary" size="md">
           <ProjectLink href={PROMPTS_HREF}>Add or import prompts</ProjectLink>
         </Button>
-      </div>
+      </CardContent>
     </Card>
   );
 }

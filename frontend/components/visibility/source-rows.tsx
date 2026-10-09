@@ -1,10 +1,18 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Pressable } from '@/components/ui/pressable';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrandLogo } from '@/components/ui/brand-logo';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  SortableTableHead,
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import { textRole } from '@/components/ui/typography';
@@ -20,7 +28,7 @@ import {
   type SortState,
   type SourceItem,
 } from '@/lib/visibility/sources';
-import { HintedHead, SortableHead } from '@/components/visibility/source-heads';
+import { HintedHead } from '@/components/visibility/source-heads';
 import { pageFormatBasis } from '@/lib/visibility/vocabulary';
 import type { useVisibilityFilters } from '@/lib/visibility/use-visibility-dashboard';
 
@@ -129,10 +137,19 @@ function StateRows({
   return (
     <TableRow>
       <TableCell colSpan={columns.length}>
-        <span className={textRole('body', 'text-secondary')}>{state.message}</span>
+        <InlineEmpty>{state.message}</InlineEmpty>
       </TableCell>
     </TableRow>
   );
+}
+
+/** One sortable column's header state, from the table's single sort. */
+function sortProps(sort: SortState, onSort: (column: string) => void, column: string) {
+  return {
+    active: sort?.column === column,
+    descending: sort?.direction === 'desc',
+    onSort: () => onSort(column),
+  };
 }
 
 /** A source's type, with the basis for the claim behind a tooltip. */
@@ -181,11 +198,9 @@ export function DomainTable({
     <Table className="table-dense table-fixed">
       <TableHeader>
         <TableRow>
-          <SortableHead
-            column="key"
+          <SortableTableHead
             label="Source"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'key')}
             className={DOMAIN_COLUMNS[0]}
           />
           <HintedHead
@@ -193,45 +208,35 @@ export function DomainTable({
             hint="How this publisher is classified. A domain nobody has classified yet has no type."
             className={DOMAIN_COLUMNS[1]}
           />
-          <SortableHead
-            column="response_rate"
+          <SortableTableHead
             label="Retrieved"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'response_rate')}
             numeric
             hint="Answers that retrieved at least one page from this domain, as a share of all answers in the selection."
           />
-          <SortableHead
-            column="retrieval_rate"
+          <SortableTableHead
             label="Retrieval rate"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'retrieval_rate')}
             numeric
             className={DOMAIN_COLUMNS[3]}
             hint="Unique pages retrieved from this domain per answer in the selection."
           />
-          <SortableHead
-            column="annotations"
+          <SortableTableHead
             label="Citations"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'annotations')}
             numeric
             hint="Every inline citation belonging to this domain."
           />
-          <SortableHead
-            column="citation_share"
+          <SortableTableHead
             label="Citation share"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'citation_share')}
             numeric
             className={DOMAIN_COLUMNS[5]}
             hint="This domain's citations as a share of every citation in the current filtered view."
           />
-          <SortableHead
-            column="citation_rate"
+          <SortableTableHead
             label="Citation rate"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'citation_rate')}
             numeric
             hint="Citations per answer that actually retrieved this domain — not per answer in the selection."
           />
@@ -329,11 +334,9 @@ export function UrlTable({
     <Table className="table-dense table-fixed">
       <TableHeader>
         <TableRow>
-          <SortableHead
-            column="key"
+          <SortableTableHead
             label="URL"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'key')}
             className={URL_COLUMNS[0]}
           />
           <HintedHead
@@ -341,27 +344,21 @@ export function UrlTable({
             hint="What kind of page this is. Pages nobody has read yet, and pages on your own domain, carry no type."
             className={URL_COLUMNS[1]}
           />
-          <SortableHead
-            column="responses"
+          <SortableTableHead
             label="Retrievals"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'responses')}
             numeric
             hint="Answers that used this URL as a source."
           />
-          <SortableHead
-            column="citation_rate"
+          <SortableTableHead
             label="Citation rate"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'citation_rate')}
             numeric
             hint="Citations of this URL per answer that used it as a source."
           />
-          <SortableHead
-            column="mentions"
+          <SortableTableHead
             label="Mentions"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'mentions')}
             numeric
             className={URL_COLUMNS[4]}
             hint="Distinct brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page."
@@ -371,11 +368,9 @@ export function UrlTable({
             hint="The brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page."
             className={URL_COLUMNS[5]}
           />
-          <SortableHead
-            column="last_cited_at"
+          <SortableTableHead
             label="Last seen"
-            sort={sort}
-            onSort={onSort}
+            {...sortProps(sort, onSort, 'last_cited_at')}
             numeric
             className={URL_COLUMNS[6]}
             hint="The most recent run in this selection whose answer used this URL as a source."

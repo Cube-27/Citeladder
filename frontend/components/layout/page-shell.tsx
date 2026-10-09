@@ -3,6 +3,7 @@
 import { useContext, useLayoutEffect, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { pageToolbarClasses } from '@/components/ui/workspace';
 import { cn } from '@/lib/utils';
@@ -10,6 +11,21 @@ import { cn } from '@/lib/utils';
 import { CompactPageTitleContext } from './compact-page-title-context';
 import { navigationMode } from './nav-items';
 import { resolveTitle } from './page-titles';
+import { ProjectLink } from './scoped-link';
+
+/**
+ * A detail route's way back to the collection it was opened from. Rendered
+ * above the H1 in the identity band — the one place every detail route puts
+ * it, instead of a breadcrumb line at the top of the content.
+ */
+export type PageBack = Readonly<{
+  /** The collection route, e.g. `/runs`; scoped to the project like any app link. */
+  href: string;
+  /** The link text, e.g. "Back to runs". */
+  label: string;
+  /** Scope to this project rather than the active one. */
+  projectId?: string | null;
+}>;
 
 /**
  * PageShell — the grammar every authenticated route is written in.
@@ -46,6 +62,7 @@ import { resolveTitle } from './page-titles';
  */
 export function PageShell({
   title,
+  back,
   actions,
   tabs,
   controls,
@@ -55,6 +72,8 @@ export function PageShell({
 }: Readonly<{
   /** Overrides the route-derived title (rare — prefer `page-titles.ts`). */
   title?: string;
+  /** A detail route's link back to its collection, above the title. */
+  back?: PageBack;
   /** Route-owned controls; their state and outcomes stay with the route owner. */
   actions?: ReactNode;
   /** The route's tab strip. Pass `<Tabs variant="band">`. */
@@ -68,7 +87,7 @@ export function PageShell({
 }>) {
   return (
     <>
-      <IdentityBand title={title} actions={actions} />
+      <IdentityBand title={title} back={back} actions={actions} />
       {tabs ? <PageBand kind="navigation">{tabs}</PageBand> : null}
       {controls ? (
         <PageBand kind="control" className={pageToolbarClasses}>
@@ -127,7 +146,11 @@ function PageBand({
   );
 }
 
-function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: ReactNode }>) {
+function IdentityBand({
+  title,
+  back,
+  actions,
+}: Readonly<{ title?: string; back?: PageBack; actions?: ReactNode }>) {
   const pathname = useLocation().pathname ?? '';
   const resolved = title ?? resolveTitle(pathname);
   const setCompactTitle = useContext(CompactPageTitleContext);
@@ -146,8 +169,9 @@ function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: R
       className={cn(
         'bg-panel border-border-subtle border-b',
         // Below 701px the compact topbar already names the page, so a band
-        // holding only a screen-reader title would be an empty ruled row.
-        !actions && 'max-[700px]:hidden',
+        // holding only a screen-reader title would be an empty ruled row. A
+        // back link is visible content, so it keeps the band.
+        !actions && !back && 'max-[700px]:hidden',
       )}
     >
       <div
@@ -160,11 +184,20 @@ function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: R
           'min-[981px]:min-h-[var(--page-band-identity)] min-[981px]:py-0',
         )}
       >
-        <div className="min-w-0 flex-1 max-[700px]:sr-only">
+        <div className={cn('grid min-w-0 flex-1 gap-1', !back && 'max-[700px]:sr-only')}>
+          {back ? (
+            <TextLink variant="back" text="label" asChild className="justify-self-start">
+              <ProjectLink href={back.href} projectId={back.projectId}>
+                {back.label}
+              </ProjectLink>
+            </TextLink>
+          ) : null}
           {/* The route H1 is the top of the type ladder: nothing on the page
               out-ranks it except a figure. It stays the one H1 per route. */}
           {/* One row, always: a long title truncates rather than wrapping. */}
-          <h1 className={textRole('pageTitle', 'min-w-0 truncate')}>{resolved}</h1>
+          <h1 className={textRole('pageTitle', 'min-w-0 truncate max-[700px]:sr-only')}>
+            {resolved}
+          </h1>
         </div>
         {actions ? (
           // The shell paints the theme toggle, the account glyph and, on

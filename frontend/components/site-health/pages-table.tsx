@@ -2,10 +2,10 @@
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { useNavigate } from 'react-router-dom';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import {
+  SortableTableHead,
   Table,
   TableBody,
   TableCell,
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/table';
 import { scoreTextClass } from '@/components/ui/score-band';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import { cn } from '@/lib/utils';
 import type { PagesSort } from '@/lib/api/site-health';
 import type { PageSummary } from '@/lib/api/types';
@@ -30,7 +30,6 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
-import { sortIndicator } from '@/components/ui/sort-indicator';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 
@@ -67,41 +66,6 @@ const LINK_COLUMNS: ReadonlyArray<{
   },
 ];
 
-function SortableHead({
-  label,
-  active,
-  descending,
-  numeric = true,
-  onSort,
-}: Readonly<{
-  label: string;
-  active: boolean;
-  descending: boolean;
-  numeric?: boolean;
-  onSort: () => void;
-}>) {
-  const { ariaSort, icon: Icon } = sortIndicator(active, descending, {
-    ascending: ArrowUp,
-    descending: ArrowDown,
-    inactive: ArrowUpDown,
-  });
-  return (
-    <TableHead numeric={numeric} aria-sort={ariaSort}>
-      <Pressable
-        type="button"
-        onClick={onSort}
-        className={cn(
-          'inline-flex w-auto items-center gap-1',
-          active ? 'text-accent-text' : 'hover:text-foreground',
-        )}
-      >
-        {label}
-        <Icon className={cn('size-3', !active && 'text-muted')} aria-hidden />
-      </Pressable>
-    </TableHead>
-  );
-}
-
 export function PagesTable({
   pages,
   crawlId,
@@ -122,14 +86,14 @@ export function PagesTable({
     router(projectHref(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`));
   };
   return (
-    <Table className="min-w-[72rem]">
+    <Table minWidth="xl">
       <TableHeader>
         <TableRow>
           <TableHead numeric className="w-10">
             #
           </TableHead>
           {onSortChange ? (
-            <SortableHead
+            <SortableTableHead
               label="Page URL"
               active={sort === 'url'}
               descending={false}
@@ -141,7 +105,7 @@ export function PagesTable({
           )}
           <TableHead>Type</TableHead>
           {onSortChange ? (
-            <SortableHead
+            <SortableTableHead
               label="Status"
               active={sort === 'status'}
               descending={false}
@@ -157,11 +121,12 @@ export function PagesTable({
           <TableHead numeric>AEO Coverage</TableHead>
           {LINK_COLUMNS.map((column) =>
             onSortChange ? (
-              <SortableHead
+              <SortableTableHead
                 key={column.sort}
                 label={column.label}
                 active={sort === column.sort}
                 descending={column.descending}
+                numeric
                 onSort={() => onSortChange(sort === column.sort ? 'status' : column.sort)}
               />
             ) : (
@@ -203,7 +168,7 @@ export function PagesTable({
                 default `table-layout: auto` browsers treat `max-width` on a
                 cell as advisory and size the column to content anyway. */}
             <TableCell>
-              <span className="flex w-72 max-w-[26rem] min-w-0 flex-col gap-1">
+              <span className="flex w-72 min-w-0 flex-col gap-1">
                 <span
                   className={textRole('emphasis', 'text-foreground truncate')}
                   title={pageDisplayTitle(page.title, page.display_url)}
@@ -274,14 +239,15 @@ export function PagesTable({
               <Measured value={formatAudited(page.last_audited, timeZone)} />
             </TableCell>
             <TableCell>
-              <ProjectLink
-                href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
-                onClick={(event) => event.stopPropagation()}
-                aria-label={`View ${pageDisplayTitle(page.title, page.display_url)} — ${page.display_url}`}
-                className={textRole('label', 'text-accent-text hover:underline')}
-              >
-                View
-              </ProjectLink>
+              <TextLink asChild text="label">
+                <ProjectLink
+                  href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
+                  onClick={(event) => event.stopPropagation()}
+                  aria-label={`View ${pageDisplayTitle(page.title, page.display_url)} — ${page.display_url}`}
+                >
+                  View
+                </ProjectLink>
+              </TextLink>
             </TableCell>
           </TableRow>
         ))}
