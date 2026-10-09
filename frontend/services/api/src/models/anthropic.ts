@@ -1,6 +1,7 @@
 import Anthropic, { APIConnectionError, APIError, APIUserAbortError } from '@anthropic-ai/sdk';
 
 import { getLogger } from '../logging.ts';
+import type { GatewaySettings } from './gateway.ts';
 import { ModelError, providerErrorCode, type Complete, type Transport } from './http.ts';
 
 const logger = getLogger('app.connectors.agent.client');
@@ -10,13 +11,10 @@ export function isAnthropicEndpoint(endpoint: URL) {
   return endpoint.hostname === 'api.anthropic.com';
 }
 
-type Settings = {
-  apiKey: string;
-  model: string;
-  timeoutSeconds: number;
-  maxOutputTokens: number;
-  attempts: number;
-};
+type Settings = Pick<
+  GatewaySettings,
+  'apiKey' | 'model' | 'timeoutSeconds' | 'maxOutputTokens' | 'attempts'
+>;
 
 /** The SDK's failures as the gateway's own codes: no provider body or credential enters them. */
 function modelError(error: unknown) {
@@ -77,15 +75,17 @@ export function anthropicCompletion(
     } catch (error) {
       throw modelError(error);
     }
-    const content = message.content.flatMap((block) => (block.type === 'text' ? [block.text] : []));
+    const content = message.content
+      .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+      .join('');
     // A refusal or an empty turn carries no answer to read.
-    if (!content.join('').trim()) throw new ModelError('parse');
+    if (!content.trim()) throw new ModelError('parse');
     const latency = Math.round(performance.now() - started);
     logger.info('default agent call ok', { latency_ms: latency, model: settings.model });
     const { usage } = message;
     const cached = usage.cache_read_input_tokens ?? 0;
     return {
-      content: content.join(''),
+      content,
       provider_adapter: 'anthropic',
       endpoint_host: endpoint.hostname,
       requested_model: settings.model,
