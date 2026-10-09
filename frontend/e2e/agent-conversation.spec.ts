@@ -69,7 +69,8 @@ function chatDetail(): AgentChatDetail {
       steps_used: 1,
       error_code: '',
       error_detail: '',
-      created_at: NOW,
+      // A turn that has just started, so the page reads it at its quickest cadence.
+      created_at: new Date().toISOString(),
       completed_at: null,
       progress: [],
     },

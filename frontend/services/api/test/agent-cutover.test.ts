@@ -55,13 +55,11 @@ describe('served Agent cutover on PostgreSQL', () => {
       worker: new AgentWorker(db, bindings, scope.workspaceId),
     };
   }
-  it('streams one interactive turn as step, text and done events, saving the same reply', async () => {
-    const { scope, bindings, headers } = await setup();
-    const long = `Here is the answer. ${'Detail. '.repeat(40)}`.trim();
-    bindings.runtime.deps.modelFor = () => scripted([{ action: 'respond', reply: long }]);
+  /** Accepts one message and opens the browser's stream for its turn. */
+  async function startTurn(projectId: string, headers: Record<string, string>) {
     const accepted = agentTurnAcceptedSchema.parse(
       await (
-        await app.request(`/api/v1/projects/${scope.projectId}/agent/chats`, {
+        await app.request(`/api/v1/projects/${projectId}/agent/chats`, {
           method: 'POST',
           headers: { ...headers, 'Idempotency-Key': randomUUID() },
           body: JSON.stringify({ message: 'Explain our visibility' }),
@@ -72,6 +70,13 @@ describe('served Agent cutover on PostgreSQL', () => {
       `/api/v1/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`,
       { method: 'POST', headers: { ...headers, Accept: 'text/event-stream' } },
     );
+    return { accepted, response };
+  }
+  it('streams one interactive turn as step, text and done events, saving the same reply', async () => {
+    const { scope, bindings, headers } = await setup();
+    const long = `Here is the answer. ${'Detail. '.repeat(40)}`.trim();
+    bindings.runtime.deps.modelFor = () => scripted([{ action: 'respond', reply: long }]);
+    const { accepted, response } = await startTurn(scope.projectId, headers);
     expect(response.headers.get('content-type')).toContain('text/event-stream');
     const events = (await response.text())
       .split('\n\n')
@@ -106,19 +111,7 @@ describe('served Agent cutover on PostgreSQL', () => {
           signal?.addEventListener('abort', () => reject(signal.reason));
         }),
     });
-    const accepted = agentTurnAcceptedSchema.parse(
-      await (
-        await app.request(`/api/v1/projects/${scope.projectId}/agent/chats`, {
-          method: 'POST',
-          headers: { ...headers, 'Idempotency-Key': randomUUID() },
-          body: JSON.stringify({ message: 'Explain our visibility' }),
-        })
-      ).json(),
-    );
-    const response = await app.request(
-      `/api/v1/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`,
-      { method: 'POST', headers: { ...headers, Accept: 'text/event-stream' } },
-    );
+    const { accepted, response } = await startTurn(scope.projectId, headers);
     await calling;
     await response.body?.cancel();
     await vi.waitFor(async () =>

@@ -34,6 +34,22 @@ import { agentSettings } from '../src/agent/config.ts';
 describe('inactive Agent runtime foundation on PostgreSQL', () => {
   const db = testDatabase();
   const fixtures = new AgentFixtures(db);
+  /** Lets the run's lease lapse, then lets recovery end it. */
+  async function expireAndRecover(
+    queue: AgentQueue,
+    workspaceId: string,
+    runId: string,
+    models: ModelCalls,
+  ) {
+    await db
+      .updateTable('agent_runs')
+      .set({ lease_expires_at: new Date(0) })
+      .where('id', '=', runId)
+      .execute();
+    await queue.recover([workspaceId], 1, agentPolicy.unclaimed_grace_seconds, (trx, row) =>
+      models.reconcile(trx, row),
+    );
+  }
   afterAll(async () => {
     await fixtures.cleanup();
     await db.destroy();
@@ -505,14 +521,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       user: 'test',
       schema: {},
     });
-    await db
-      .updateTable('agent_runs')
-      .set({ lease_expires_at: new Date(0) })
-      .where('id', '=', run.id)
-      .execute();
-    await queue.recover([scope.workspaceId], 1, agentPolicy.unclaimed_grace_seconds, (trx, row) =>
-      models.reconcile(trx, row),
-    );
+    await expireAndRecover(queue, scope.workspaceId, run.id, models);
     // A late answer after recovery settles nothing twice.
     await models.receipt(scope.workspaceId, attempt.id, result(reply()));
     expect(settle).toHaveBeenCalledTimes(1);
@@ -1103,14 +1112,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       user: 'test',
       schema: {},
     });
-    await db
-      .updateTable('agent_runs')
-      .set({ lease_expires_at: new Date(0) })
-      .where('id', '=', run.id)
-      .execute();
-    await queue.recover([scope.workspaceId], 1, agentPolicy.unclaimed_grace_seconds, (trx, row) =>
-      models.reconcile(trx, row),
-    );
+    await expireAndRecover(queue, scope.workspaceId, run.id, models);
     await models.receipt(scope.workspaceId, attempt.id, result(reply()));
     expect(settlement).toHaveBeenCalledTimes(1);
     expect(
@@ -1190,15 +1192,8 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
         .where('run_id', '=', run.id)
         .executeTakeFirst(),
     ).toMatchObject({ outcome: 'dispatched' });
-    await db
-      .updateTable('agent_runs')
-      .set({ lease_expires_at: new Date(0) })
-      .where('id', '=', run.id)
-      .execute();
     const restored = new ModelCalls(db, zeroFunding);
-    await queue.recover([scope.workspaceId], 1, agentPolicy.unclaimed_grace_seconds, (trx, row) =>
-      restored.reconcile(trx, row),
-    );
+    await expireAndRecover(queue, scope.workspaceId, run.id, restored);
     expect((await fixtures.run(run.id)).status).toBe('failed');
     expect(
       await db
