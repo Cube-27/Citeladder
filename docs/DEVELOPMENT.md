@@ -243,7 +243,7 @@ cd frontend
 pnpm exec vp test run "<test-path>" # targeted Vitest via Vite+; network mocked with MSW
 pnpm lint             # Oxlint via Vite+ (`vp lint`; React/TypeScript/a11y rules)
 pnpm check            # vp check: format + lint; warnings and unused-disable directives fail
-pnpm check:policy     # architecture, design-token, CSS/TSX/SVG and contrast guards
+pnpm check:policy     # architecture, design-token, CSS/TSX/SVG, contrast and type-discipline guards
 pnpm check:dead-code  # Knip module-graph/dependency gate
 pnpm exec tsc --noEmit # type check (Vite+ type-aware lint stays off; see vp-shared-config.ts)
 pnpm build            # Astro marketing SSR build
@@ -363,6 +363,16 @@ lower the baseline with `node scripts/check-design-system.mjs --write-baseline`
 from `frontend/`; never raise it to make a change pass. The generated value
 tables in `docs/design.md` are refreshed with
 `node scripts/audit-design-tokens.mjs --write` (quality fix mode runs it).
+
+The type-discipline policy (`frontend/scripts/check-type-discipline.mjs`, part of
+`check:policy`) ratchets the same way against
+`frontend/scripts/type-discipline-baseline.json`, over browser, package and API
+service source. It counts the casts and assertions reviews kept finding:
+`Object.keys(...)`/`Object.entries(...)` cast to a key type, a non-null
+assertion on an indexed element (`list[0]!`, `list.at(-1)!`; a `split` part is
+exempt), and a cast inside an `onValueChange` handler outside `components/ui`,
+whose generic controls already hand the handler the option type. Lower the
+baseline with `node scripts/check-type-discipline.mjs --write-baseline`.
 
 ```powershell
 .\scripts\check.ps1            # affected owners, affected builds, with fixes

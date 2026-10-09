@@ -67,6 +67,7 @@ const HIDDEN_FIELDS = new Set([
   'action_id',
 ]);
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?/u;
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
 
 export type EvidenceField = { key: string; label: string; value: string | null };
 
@@ -94,7 +95,8 @@ function evidenceValue(value: unknown, timeZone: string): string | null {
   if (Array.isArray(value)) return listText(value);
   // Nested provider objects are summarised elsewhere, never printed as text.
   if (typeof value !== 'string' || !value) return null;
-  return DATE_TIME.test(value) && !Number.isNaN(Date.parse(value))
-    ? formatDisplayDate(value, timeZone)
-    : value;
+  if (!DATE_TIME.test(value) || Number.isNaN(Date.parse(value))) return value;
+  // A bare date parses as UTC midnight; shown in a zone west of UTC it would
+  // read as the day before, so a calendar date keeps its own day.
+  return formatDisplayDate(value, DATE_ONLY.test(value) ? 'UTC' : timeZone);
 }

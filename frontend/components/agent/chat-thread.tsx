@@ -26,10 +26,9 @@ export function useChatThread(workspaceId: string, detail: AgentChatDetail) {
   const runActive = isRunActive(detail.latest_run);
   const turn = useFollowUp(workspaceId, detail);
   const cancel = useCancelRun(workspaceId, chatId);
-  const stop =
-    runActive && detail.latest_run
-      ? () => cancel.mutate({ chatId, runId: detail.latest_run!.id })
-      : undefined;
+  // Capture the run: a closure does not keep the narrowing of `detail.latest_run`.
+  const activeRun = runActive ? detail.latest_run : null;
+  const stop = activeRun ? () => cancel.mutate({ chatId, runId: activeRun.id }) : undefined;
   return { access, runActive, turn, stop, stopping: cancel.isPending };
 }
 type ChatThread = ReturnType<typeof useChatThread>;

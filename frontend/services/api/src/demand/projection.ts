@@ -2,6 +2,7 @@
 import { policy } from '../config.ts';
 import { hash } from '../traffic/normalization.ts';
 import { compareText } from '../text-order.ts';
+import type { Classification } from './classification.ts';
 
 const p = policy.demand;
 function stableJson(value: unknown): string {
@@ -81,11 +82,10 @@ function priority(impressions: number, ctr: number | null, gap: number) {
     },
   };
 }
-export type QueryClass = {
-  classification: string;
-  classifier_version: string;
-  override_id: string | null;
-};
+export type QueryClass = Pick<
+  Classification,
+  'classification' | 'classifier_version' | 'override_id'
+>;
 /**
  * Low-CTR targets with enough impressions. A query must classify as
  * non-branded (branded and ambiguous cohorts are never actionable); pages

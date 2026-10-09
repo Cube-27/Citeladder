@@ -186,7 +186,7 @@ export function DonutChart({
                 active && active !== slice.key ? 'opacity-45' : 'opacity-100',
               )}
             >
-              <LegendSwatch className={slice.swatchClass} />
+              <LegendSwatch fillClass={slice.swatchClass} />
               <span className={textRole('caption', 'truncate')}>{slice.label}</span>
               <span className={textRole('caption', 'text-secondary ml-auto shrink-0 tabular-nums')}>
                 {shareText(slice.value, whole)}

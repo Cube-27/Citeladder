@@ -5,7 +5,7 @@ export const opportunityDeclaration = { output_phase_outline: 'outline' };
 
 export const opportunities = {
   ANALYZER_VERSION: 'opp-analyzer-1',
-  RULE_VERSION: 'opp-rules-3',
+  RULE_VERSION: 'opp-rules-4',
   FORMULA_VERSION: 'opp-formula-2',
   CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: 'implementation_idempotency_conflict',
   CODE_IMPLEMENTATION_TARGET_CONFLICT: 'implementation_target_conflict',

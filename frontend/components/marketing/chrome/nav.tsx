@@ -4,7 +4,7 @@ import { LogoMark } from '@/components/ui/logo-mark';
 import { Menu, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { type NavDropKey } from '@/lib/marketing-content/nav';
+import { NAV_DROPS, type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
@@ -34,7 +34,8 @@ const HOVER_OPEN_DELAY_MS = 200;
 /** Which side a switching panel arrives from: the side of the previous trigger. */
 export type SlideFrom = 'left' | 'right';
 
-const DROP_ORDER = Object.keys(DROP_LAYOUT) as NavDropKey[];
+// The triggers' rendered order, so the slide direction follows what the reader sees.
+const DROP_ORDER = NAV_DROPS.map((drop) => drop.key);
 /** Matches the exit animation in globals.css (`marketing-nav-panel-out`). */
 const PANEL_EXIT_MS = 170;
 

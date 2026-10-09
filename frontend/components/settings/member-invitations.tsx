@@ -100,7 +100,7 @@ export function InviteDialog({
           <Select
             id="invite-role"
             value={role}
-            onValueChange={(next) => setRole(next as AssignableWorkspaceRole)}
+            onValueChange={setRole}
             options={ROLE_OPTIONS}
             ariaLabel="Invitation role"
           />

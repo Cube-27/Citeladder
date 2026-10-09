@@ -39,7 +39,7 @@
     "check:complexity": "node scripts/check-frontend-complexity.mjs",
     "check:duplicates": "node scripts/check-jscpd.mjs",
     "report:duplicates:tests": "node scripts/check-jscpd.mjs --tests",
-    "check:policy": "node scripts/check-design-system.mjs && node scripts/check-frontend-architecture.mjs",
+    "check:policy": "node scripts/check-design-system.mjs && node scripts/check-frontend-architecture.mjs && node scripts/check-type-discipline.mjs",
     "check:contract": "pnpm --filter @citeladder/api check:routes",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:dead-code": "knip",

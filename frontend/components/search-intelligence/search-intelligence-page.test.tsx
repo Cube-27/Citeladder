@@ -124,6 +124,64 @@ it('says when saved results can no longer be refreshed', async () => {
   expect(screen.getByRole('link', { name: 'Open provider settings' })).toBeInTheDocument();
 });
 
+it('offers citation matching only for the website whose list is on screen', async () => {
+  const backlinkDataset = (id: string, kind: string, hostname: string, rows: number) => ({
+    id,
+    run_id: run.id,
+    dataset_kind: kind,
+    target_domain: hostname.replace(/^www\./u, ''),
+    target_hostname: hostname,
+    target_origin: `https://${hostname}`,
+    research_scope: 'domain_subdomains' as const,
+    acquisition: {},
+    comparison_origin: '',
+    location_code: null,
+    language_code: '',
+    status: 'published',
+    coverage: 'complete',
+    requested_rows: rows,
+    raw_rows_received: rows,
+    unique_rows_saved: rows,
+    provider_total: rows,
+    truncated: false,
+    summary: {},
+    collection_started_at: null,
+    collection_ended_at: '2026-10-08T10:00:00Z',
+    published_at: '2026-10-08T10:00:00Z',
+  });
+  // Reads behind the tab's views are not under test; an empty error keeps them quiet.
+  mswServer.use(http.get(`${root}/*`, () => HttpResponse.json({}, { status: 404 })));
+  renderPage({
+    ...readiness,
+    datasets: [
+      backlinkDataset(
+        '11111111-1111-4111-8111-111111111111',
+        'backlink_summary',
+        'www.example.com',
+        1,
+      ),
+      backlinkDataset(
+        '22222222-2222-4222-8222-222222222222',
+        'referring_domains',
+        'blog.example.com',
+        40,
+      ),
+    ],
+  });
+  await userEvent.click(await screen.findByRole('tab', { name: 'Backlinks' }));
+  expect(await screen.findByRole('combobox', { name: 'Saved target' })).toHaveTextContent(
+    'www.example.com',
+  );
+  expect(
+    screen.queryByRole('button', { name: 'Match with Visibility citations' }),
+  ).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('combobox', { name: 'Saved target' }));
+  await userEvent.click(screen.getByRole('option', { name: 'blog.example.com' }));
+  expect(
+    await screen.findByRole('button', { name: 'Match with Visibility citations' }),
+  ).toBeInTheDocument();
+});
+
 it('cancels an analysis in progress', async () => {
   let cancelled = false;
   mswServer.use(

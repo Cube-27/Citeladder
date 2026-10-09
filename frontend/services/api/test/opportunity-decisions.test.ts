@@ -121,9 +121,13 @@ describe('site change promotion', () => {
     expect(content({ ...complete, content_change_classification: 'unchanged' })).toBe(
       'site_change_cosmetic_refresh',
     );
-    expect(content({ ...complete, content_change_classification: 'rewritten' })).toBe(
+    expect(content({ ...complete, content_change_classification: 'minor_change' })).toBe(
       'site_change_metadata_inconsistency',
     );
+    // A substantial rewrite stays in change history instead of becoming an action.
+    expect(
+      content({ ...complete, content_change_classification: 'substantial_change' }),
+    ).toBeNull();
     expect(content({ ...complete, comparison_coverage: 'partial' })).toBeNull();
     expect(content(null)).toBeNull();
   });

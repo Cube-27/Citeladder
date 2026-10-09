@@ -1,16 +1,22 @@
+import type { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { policy } from '../config.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
 import { normalizeQuery as foldQuery } from '../traffic/normalization.ts';
 import { compareText } from '../text-order.ts';
+import { overrideBody } from '../routes/demand-contracts.ts';
+
+/** The three cohorts a query can belong to; an override row is parsed into one. */
+const queryClassification = overrideBody.shape.classification;
+export type QueryClassification = z.infer<typeof queryClassification>;
 
 export function normalizeQuery(value: string): string {
   return (foldQuery(value).match(/[\p{L}\p{N}_]+/gu) ?? []).join(' ');
 }
 export type Classification = {
   normalized_query: string;
-  classification: string;
+  classification: QueryClassification;
   matched_terms: string[];
   classifier_version: string;
   override_id: string | null;
@@ -103,7 +109,7 @@ export async function classifyProjectQueries(
       override
         ? {
             normalized_query: query,
-            classification: override.classification,
+            classification: queryClassification.parse(override.classification),
             matched_terms: [],
             classifier_version: override.classifier_version,
             override_id: override.id,

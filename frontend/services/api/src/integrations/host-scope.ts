@@ -11,18 +11,22 @@ function siteDomain(value: string): string {
   return normalizeDomain(value.trim().replace(/^sc-domain:/iu, ''));
 }
 
-/** The project's sites (website plus owned domains), as `siteDomain` values. */
+/**
+ * The project's sites (website plus owned domains), as `siteDomain` values;
+ * null when the workspace has no such project. A failed read still throws.
+ */
 export async function projectSiteDomains(
   db: Database,
   workspaceId: string,
   projectId: string,
-): Promise<Set<string>> {
+): Promise<Set<string> | null> {
   const project = await db
     .selectFrom('projects')
     .select('website_url')
     .where('workspace_id', '=', workspaceId)
     .where('id', '=', projectId)
-    .executeTakeFirstOrThrow();
+    .executeTakeFirst();
+  if (!project) return null;
   // The project read above already scoped it to the workspace.
   const domains = await db
     .selectFrom('owned_domains')
@@ -43,6 +47,8 @@ export function propertyMatchesSite(propertyRef: string, sites: ReadonlySet<stri
 /** Hostnames that count as the project's own: each site with and without `www.`. */
 export async function projectHosts(db: Database, workspaceId: string, projectId: string) {
   const sites = await projectSiteDomains(db, workspaceId, projectId);
+  // Callers hold a run or task for this project; its loss fails that work.
+  if (!sites) throw new Error('The project no longer exists in this workspace');
   return new Set([...sites].flatMap((site) => [site, `www.${site}`]));
 }
 export function landingPage(path: string, host: string, hosts: ReadonlySet<string>) {

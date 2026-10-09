@@ -40,15 +40,26 @@ function update(runId: string, change: (turn: LiveTurn) => LiveTurn) {
 }
 
 function apply(turn: LiveTurn, event: TurnEvent): LiveTurn {
-  if (event.type === 'step')
-    return {
-      ...turn,
-      step: event,
-      // Text belongs to the step that wrote it; a new step supersedes it.
-      text: turn.text && turn.text.ordinal < event.ordinal ? null : turn.text,
-    };
-  if (event.type === 'text') return { ...turn, text: event };
-  return turn;
+  switch (event.type) {
+    case 'step':
+      return {
+        ...turn,
+        step: event,
+        // Text belongs to the step that wrote it; a new step supersedes it.
+        text: turn.text && turn.text.ordinal < event.ordinal ? null : turn.text,
+      };
+    case 'text':
+      return { ...turn, text: event };
+    // The stream closes after either; the persisted run read then shows how
+    // the turn ended, including a failure, so neither changes the live view.
+    case 'done':
+    case 'error':
+      return turn;
+    default: {
+      const _exhaustive: never = event;
+      return _exhaustive;
+    }
+  }
 }
 
 async function read(response: Response, onEvent: (event: TurnEvent) => void) {

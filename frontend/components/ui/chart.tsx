@@ -89,25 +89,35 @@ export function ChartContainer({
  * series' token `color` from `ChartConfig`. Decorative: the entry's text is
  * what names the series.
  */
+/** Exactly one paint: two would stack, and none renders an invisible swatch. */
+type SwatchPaint =
+  | { tone: DataTone; color?: never; fillClass?: never }
+  | {
+      /** A token value such as `var(--color-chart-2)`, for `ChartConfig` series. */
+      color: string;
+      tone?: never;
+      fillClass?: never;
+    }
+  | {
+      /** A fill utility the caller already resolved. */ fillClass: string;
+      tone?: never;
+      color?: never;
+    };
+
 export function LegendSwatch({
   tone,
   color,
+  fillClass,
   shape = 'dot',
   className,
-}: Readonly<{
-  tone?: DataTone;
-  /** A token value such as `var(--color-chart-2)`, for `ChartConfig` series. */
-  color?: string;
-  shape?: 'dot' | 'line';
-  className?: string;
-}>) {
+}: Readonly<SwatchPaint & { shape?: 'dot' | 'line'; className?: string }>) {
   return (
     <span
       aria-hidden
       className={cn(
         'inline-block shrink-0 rounded-full',
         shape === 'dot' ? 'size-2' : 'h-0.5 w-4',
-        tone ? dataFillClass(tone) : undefined,
+        tone ? dataFillClass(tone) : fillClass,
         className,
       )}
       style={color ? { background: color } : undefined}
@@ -211,7 +221,7 @@ export function ChartTooltipContent({
             key={entry.dataKey ?? entry.name}
             className="type-caption text-on-inverse flex items-center gap-2"
           >
-            <LegendSwatch color={entry.color} />
+            {entry.color ? <LegendSwatch color={entry.color} /> : null}
             <span className="max-w-[16ch] truncate">{entry.name}</span>
             <span className="ml-auto tabular-nums">{formatValue(entry.value as number)}</span>
           </li>

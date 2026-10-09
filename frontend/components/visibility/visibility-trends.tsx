@@ -24,10 +24,10 @@ import { EngineComparison } from '@/components/visibility/engine-comparison';
 import { SurfaceRatesPanel } from '@/components/visibility/surface-rates';
 import type { SurfaceRates, Visibility, VisibilityTrendPoint } from '@/lib/api/types';
 import {
-  formatPercent,
   formatPosition,
   formatPositionExact,
   formatRate,
+  formatWholePercent,
   type VisibilityFilters,
 } from '@/lib/visibility/dashboard';
 import {
@@ -277,7 +277,7 @@ function MeasurementHistory({
     ...point,
     // The plotted values are already whole percent, so `formatRate` — which
     // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
-    label: `${formatPointDate(points[index].completed_at, timeZone)} · ${formatPercent(point.value)}`,
+    label: `${formatPointDate(points[index].completed_at, timeZone)} · ${formatWholePercent(point.value)}`,
     // The full date is the hover; the axis tick gets the short form the
     // series was built with, so the ticks stay readable at three across.
     axisLabel: point.label,
