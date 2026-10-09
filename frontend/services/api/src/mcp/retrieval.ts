@@ -276,7 +276,9 @@ const records = {
     'created_at',
   ]),
 } as const;
-type Kind = keyof typeof records | 'project' | 'prompt' | 'action';
+// Kinds resolved by their owners rather than the column allowlist.
+const OWNED_KINDS = ['project', 'prompt', 'action'] as const;
+type Kind = keyof typeof records | (typeof OWNED_KINDS)[number];
 
 const NOT_A_RECORD = 'id must be an allowlisted citeladder:// record URI';
 export function parseRecordId(value: string): { kind: Kind; id: string; part: number } {
@@ -291,7 +293,7 @@ export function parseRecordId(value: string): { kind: Kind; id: string; part: nu
     uri.port ||
     uri.hash ||
     !id ||
-    (!['project', 'prompt', 'action'].includes(kind) && !Object.hasOwn(records, kind))
+    (!OWNED_KINDS.some((owned) => owned === kind) && !Object.hasOwn(records, kind))
   ) {
     throw new McpInputError(NOT_A_RECORD);
   }
@@ -399,8 +401,7 @@ async function resolveRecord(
   const projectId = text(row.project_id);
   const project = await authorizeProject(db, principal, projectId);
   if (project.workspace_id !== row.workspace_id) throw missing();
-  const observedAt =
-    row.fetched_at ?? row.completed_at ?? row.published_at ?? row.created_at ?? null;
+  const observedAt = row.completed_at ?? row.published_at ?? row.created_at ?? null;
   let title = text(row.title) || text(row.description) || spec.title;
   delete row.workspace_id;
   if (kind === 'visibility_result') {
@@ -559,9 +560,9 @@ async function resolveRecord(
     }));
   }
   if (kind === 'search_dataset') {
-    row.acquisition = jsonObject(row.provider_filters, 'provider_filters');
-    row.research_scope =
-      jsonObject(row.provider_filters, 'provider_filters').research_scope ?? 'exact_host';
+    const filters = jsonObject(row.provider_filters, 'provider_filters');
+    row.acquisition = filters;
+    row.research_scope = filters.research_scope ?? 'exact_host';
     delete row.provider_filters;
   }
   if (kind === 'search_row') {

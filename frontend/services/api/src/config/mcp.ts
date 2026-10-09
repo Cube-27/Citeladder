@@ -64,7 +64,7 @@ export const mcp = {
     max_search_results: 20,
     search_snippet_chars: 500,
     default_list_limit: 50,
-    default_roadmap_limit: 10,
+    overview_action_limit: 10,
     default_search_limit: 10,
     max_list_limit: 200,
     max_document_bytes: 256000,

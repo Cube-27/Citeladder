@@ -15,7 +15,7 @@ const availability = z.enum([
   policy.demand.QUERY_EVIDENCE_STATE_OBSERVED_ZERO,
 ]);
 function outcome(value: unknown) {
-  const data = z.record(z.string(), z.json()).parse(JSON.parse(JSON.stringify(value)));
+  const data = z.record(z.string(), z.json()).parse(value);
   const refs = z.array(reference).parse(data.artifact_refs ?? []);
   const unavailable = availability.parse(data.state ?? 'available') === 'unavailable';
   // The reason an absent read gives is the omission the turn records.

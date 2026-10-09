@@ -15,7 +15,8 @@ import { queryEvidencePage } from '../demand/reads.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import { getPerformance, getPerformanceTable } from '../traffic/performance.ts';
-import { canonicalPage, hash } from '../traffic/normalization.ts';
+import { canonicalPage } from '../traffic/normalization.ts';
+import { pathIdentity } from '../crawl-logs/identity.ts';
 import { mcpPolicy } from './config.ts';
 import { pagination, reference, unavailable } from './data.ts';
 import { McpInputError, type Evidence, type ProjectRead } from './types.ts';
@@ -228,7 +229,9 @@ export async function aiTrafficUrl(
   const canonical = canonicalPage(args.url, project.website_url);
   if (!canonical || new URL(canonical).origin !== new URL(project.website_url).origin)
     throw new McpInputError('URL must be on the project origin');
-  const url = canonicalPage(canonical.split('?')[0]!, project.website_url)!;
-  const result = await urlRead(db, scope, hash(url), crawlOptions(args));
+  // The ingestion owner's identity: a redacted secret path never joins.
+  const identity = pathIdentity(args.url, project.website_url);
+  if (!identity?.url_hash) return unavailable('url_not_joinable');
+  const result = await urlRead(db, scope, identity.url_hash, crawlOptions(args));
   return { state: result.page ? 'available' : 'unavailable', ...result };
 }

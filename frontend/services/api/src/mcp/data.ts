@@ -10,6 +10,7 @@ import { workspaceAccess } from '../entitlements/access.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
 import { effectiveStatus } from '../opportunities/action-status.ts';
 import { appLink, recordPath } from './links.ts';
+import { containsPattern } from '../db/like.ts';
 
 /** Roles whose capabilities include reading workspace evidence. */
 export const READ_ROLES = Object.entries(policy.workspaces.roles)
@@ -196,29 +197,15 @@ export async function searchBusinessContext(
   limit: number,
   origin: string,
 ) {
-  if ('kind' in principal) {
-    if (projectId && projectId !== principal.projectId)
-      throw new McpInputError('Project is fixed by the caller');
-    projectId = principal.projectId;
-  }
+  // A pinned caller searches its own project.
+  if ('kind' in principal) projectId ??= principal.projectId;
   const normalized = query.trim();
   if (!normalized) throw new McpInputError('query must not be empty');
+  if (projectId) await authorizeProject(db, principal, projectId);
   const workspaces = await authorizedWorkspaceIds(db, principal);
   const results: Record<string, string>[] = [];
   if (!workspaces.length) return { query: normalized, results };
-  if (projectId) {
-    const owned = await db
-      .selectFrom('projects')
-      .select('id')
-      .where('id', '=', projectId)
-      .where('workspace_id', 'in', workspaces)
-      .executeTakeFirst();
-    if (!owned) throw new McpInputError('Project was not found in this account');
-  }
-  const pattern = `%${normalized
-    .replaceAll('\\', String.raw`\\`)
-    .replaceAll('%', String.raw`\%`)
-    .replaceAll('_', String.raw`\_`)}%`;
+  const pattern = containsPattern(normalized);
   const like = (column: string) => sql<boolean>`${sql.ref(column)} ilike ${pattern} escape '\\'`;
   const append = (kind: string, id: string, project: string, title: string, text: string) =>
     results.push({

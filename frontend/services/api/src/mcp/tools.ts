@@ -1,6 +1,8 @@
 /** The one read catalogue shared by hosted MCP and the in-app Agent. */
 import { z } from 'zod';
+import { verificationSchema } from '@citeladder/contracts/ai-traffic';
 import { analyticsSelectionSchema } from '@citeladder/contracts/mcp-app';
+import { performanceDimensionSchema } from '@citeladder/contracts/performance';
 import { policy } from '../config.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import type { Database } from '../db/database.ts';
@@ -39,7 +41,7 @@ import {
   queryEvidence,
   referrals,
 } from './evidence-traffic.ts';
-import { businessContext } from './context.ts';
+import { businessContext, overviewSections } from './context.ts';
 import { fetchRecord } from './retrieval.ts';
 import { McpInputError, type Evidence, type EvidencePrincipal, type ProjectRead } from './types.ts';
 
@@ -56,21 +58,7 @@ const crawlPage = {
   cursor: optional(z.string()),
   limit: optional(z.number().int().min(1).max(crawlLogs.max_page_size)),
 };
-const verification = optional(z.enum(['verified', 'unverifiable', 'failed_verification']));
-const contextSections = [
-  'profile',
-  'prompts',
-  'visibility',
-  'actions',
-  'site_health',
-  'crawlability',
-  'demand',
-  'performance',
-  'referrals',
-  'crawl_logs',
-  'integrations',
-  'search_intelligence',
-] as const;
+const verification = optional(verificationSchema);
 
 type Context = {
   db: Database;
@@ -85,27 +73,39 @@ type Definition<S extends z.ZodObject> = {
   read: (context: Context, args: z.output<S>) => Promise<Evidence>;
 };
 const tool = <S extends z.ZodObject>(definition: Definition<S>) => definition;
-/** A project read: the project is authorized on every call, never by its ID alone. */
-function projectTool<S extends z.ZodObject<{ project_id: typeof uuid }>>(definition: {
+type ProjectDefinition<S extends z.ZodObject<{ project_id: typeof uuid }>> = {
   title: string;
   description: string;
   schema: S;
   read: (read: ProjectRead, args: z.output<S>) => Promise<Evidence>;
-}): Definition<S> {
+};
+/** The project is authorized on every call, never by its ID alone. */
+function projectScoped<S extends z.ZodObject<{ project_id: typeof uuid }>>(
+  definition: ProjectDefinition<S>,
+): Definition<S> {
   return {
     ...definition,
     read: async ({ db, principal, origin }, args) => {
       const row = await authorizeProject(db, principal, args.project_id);
-      const evidence = await definition.read(
+      return definition.read(
         { db, origin, scope: { workspaceId: row.workspace_id, projectId: row.id } },
         args,
       );
-      // Unknown availability is a defect, never a silent "available".
-      if (typeof evidence.state !== 'string' && !('surface' in evidence))
-        throw new Error('Project read returned no state');
-      return evidence;
     },
   };
+}
+/** A project evidence read: unknown availability is a defect, never a silent "available". */
+function projectTool<S extends z.ZodObject<{ project_id: typeof uuid }>>(
+  definition: ProjectDefinition<S>,
+): Definition<S> {
+  return projectScoped({
+    ...definition,
+    read: async (read, args) => {
+      const evidence = await definition.read(read, args);
+      if (typeof evidence.state !== 'string') throw new Error('Project read returned no state');
+      return evidence;
+    },
+  });
 }
 
 export const definitions = {
@@ -125,7 +125,7 @@ export const definitions = {
     title: 'Get project overview',
     description:
       'One overview of a project: business profile, competitors, active prompts, latest visibility, top Actions, Site Health and connected data. Pass sections to read fewer.',
-    schema: z.strictObject({ ...project, sections: optional(z.array(z.enum(contextSections))) }),
+    schema: z.strictObject({ ...project, sections: optional(z.array(z.enum(overviewSections))) }),
     read: ({ db, principal, origin }, args) =>
       businessContext(db, principal, args.project_id, origin, args.sections ?? undefined),
   }),
@@ -378,18 +378,7 @@ export const definitions = {
       compare: optional(z.enum(policy.traffic.PERFORMANCE_COMPARE_MODES)),
       compare_start_date: optional(z.iso.date()),
       compare_end_date: optional(z.iso.date()),
-      dimension: optional(
-        z.enum([
-          'query',
-          'page',
-          'country',
-          'device',
-          'search_appearance',
-          'day',
-          'bing_query',
-          'bing_page',
-        ]),
-      ),
+      dimension: optional(performanceDimensionSchema),
       sort: optional(z.string()),
       cursor: optional(z.string()),
       limit: optional(z.literal(policy.traffic.PERFORMANCE_PAGE_SIZE_OPTIONS)),
@@ -442,7 +431,7 @@ export const definitions = {
     }),
     read: searchDataset,
   }),
-  render_visibility: projectTool({
+  render_visibility: projectScoped({
     title: 'Show AI visibility',
     description:
       'Show an interactive visibility view: overview, trends over a window, or cited sources for one run.',
@@ -451,7 +440,7 @@ export const definitions = {
     }),
     read: ({ db, scope, origin }, args) => renderAnalytics(db, scope, args, origin),
   }),
-  render_site_health: projectTool({
+  render_site_health: projectScoped({
     title: 'Show Site Health',
     description: 'Show an interactive Site Health view for the latest or a chosen snapshot.',
     schema: z.strictObject({ ...project, snapshot_id: optional(uuid) }),

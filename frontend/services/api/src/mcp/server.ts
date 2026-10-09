@@ -40,6 +40,9 @@ const INSTRUCTIONS = [
   'IDs and citeladder:// references are for your tool calls only: never show them to the user. Name the page, prompt, competitor or Action instead, and give app links as links.',
 ].join(' ');
 const toolNames = new Set(tools.map((tool) => tool.name));
+const listedTools = tools.map((tool) =>
+  presentationTools.has(tool.name) ? { ...tool, _meta: appToolMetadata(tool.name) } : tool,
+);
 const CAPABILITIES = { tools: {}, resources: {}, prompts: {} };
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -231,11 +234,7 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           break;
         case 'tools/list':
           result = {
-            tools: tools.map((tool) =>
-              presentationTools.has(tool.name)
-                ? { ...tool, _meta: appToolMetadata(tool.name) }
-                : tool,
-            ),
+            tools: listedTools,
           };
           break;
         case 'tools/call': {

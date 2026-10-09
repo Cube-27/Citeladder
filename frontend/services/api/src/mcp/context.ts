@@ -17,10 +17,9 @@ import { appLink } from './links.ts';
 import { mcpPolicy } from './config.ts';
 import type { Evidence, EvidencePrincipal, ProjectRead } from './types.ts';
 
-const OVERVIEW_ACTIONS = 10;
 const sections: Record<string, (read: ProjectRead) => Promise<Evidence>> = {
   visibility: (read) => visibilityOverview(read, { cohort: 'core' }),
-  actions: (read) => actionsRead(read, { limit: OVERVIEW_ACTIONS }),
+  actions: (read) => actionsRead(read, { limit: mcpPolicy.overview_action_limit }),
   prompts: (read) =>
     promptPortfolio(read, { active_only: true, limit: mcpPolicy.default_list_limit }),
   site_health: (read) => siteSnapshot(read, {}),
@@ -33,12 +32,15 @@ const sections: Record<string, (read: ProjectRead) => Promise<Evidence>> = {
   search_intelligence: searchIntelligence,
 };
 
+/** Every section the overview can return; the tool's `sections` argument selects among them. */
+export const overviewSections: [string, ...string[]] = ['profile', ...Object.keys(sections)];
+
 export async function businessContext(
   db: Database,
   principal: EvidencePrincipal,
   projectId: string,
   origin: string,
-  selected: readonly string[] = ['profile', ...Object.keys(sections)],
+  selected: readonly string[] = overviewSections,
 ): Promise<Evidence> {
   const project = await authorizeProject(db, principal, projectId);
   const read = { db, origin, scope: { workspaceId: project.workspace_id, projectId: project.id } };

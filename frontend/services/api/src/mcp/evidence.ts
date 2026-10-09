@@ -6,7 +6,7 @@ import { strings } from '../db/json.ts';
 import { isoDateText, utcText } from '../db/timestamps.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { readProjectReadiness } from '../integrations/readiness.ts';
-import { getAction, listActions, requireAction } from '../opportunities/actions.ts';
+import { getAction, listActions } from '../opportunities/actions.ts';
 import { listDifferentiationReports } from '../source-pages/differentiation-reads.ts';
 import { catalog, shelf } from '../commerce/reads.ts';
 import { readiness, datasetPage } from '../search-intelligence/reads.ts';
@@ -48,14 +48,13 @@ export async function actionsRead(
   args: Page & { action_id?: string | null; status?: string | null },
 ): Promise<Evidence> {
   if (args.action_id) {
-    const row = await requireAction(db, scope.workspaceId, args.action_id);
-    if (row.project_id !== scope.projectId)
+    const action = await getAction(db, scope.workspaceId, args.action_id);
+    if (action.project_id !== scope.projectId)
       throw new McpInputError('Action was not found in this project');
-    const action = await getAction(db, scope.workspaceId, row.id);
     return {
       state: 'available',
-      action: { ...action, link: appLink(origin, `/agent/actions/${row.id}`, scope.projectId) },
-      artifact_refs: [reference('action', row.id)],
+      action: { ...action, link: appLink(origin, `/agent/actions/${action.id}`, scope.projectId) },
+      artifact_refs: [reference('action', action.id)],
     };
   }
   const page = await listActions(db, scope, {
