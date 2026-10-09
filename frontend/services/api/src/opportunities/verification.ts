@@ -10,6 +10,7 @@ import type { QueueTask } from '../queue/task-queue.ts';
 import { record } from '../db/json.ts';
 import { taskProject, type Executor } from '../workers/executor.ts';
 import {
+  MAX_WINDOW_DAYS,
   mergeOutcomes,
   observationKind,
   storedOutcomes,
@@ -52,6 +53,16 @@ async function verificationSource(db: Database, task: QueueTask, project: string
         .where('id', '=', id)
         .executeTakeFirst()
     )?.time;
+  else if (kind === 'search_intelligence_dataset')
+    observed = (
+      await scope
+        .selectFrom(db, 'search_intelligence_datasets')
+        .select(utcText(sql.ref('published_at')).as('time'))
+        .where('project_id', '=', project)
+        .where('id', '=', id)
+        .where('status', '=', 'published')
+        .executeTakeFirst()
+    )?.time;
   else if (kind === 'source_page_inspection') {
     let query = scope
       .selectFrom(db, 'placement_checks')
@@ -78,8 +89,9 @@ function sourceRevision(text: string): string {
 }
 /**
  * The declarations this source can still measure: declared before it was
- * observed, within the verification window, and holding a check of a kind
- * this source reads. Everything else keeps its last observation untouched.
+ * observed, within the longest verification window, and holding a check of a
+ * kind this source reads. Each check is then read only inside its own kind's
+ * window. Everything else keeps its last observation untouched.
  */
 async function declarations(
   db: Database,
@@ -102,7 +114,7 @@ async function declarations(
     .where(
       'declared_implemented_at',
       '>=',
-      sql<Date>`${source.observed_at}::timestamptz - ${p.VERIFICATION_WINDOW_DAYS} * interval '1 day'`,
+      sql<Date>`${source.observed_at}::timestamptz - ${MAX_WINDOW_DAYS} * interval '1 day'`,
     )
     .where((eb) =>
       eb.or(

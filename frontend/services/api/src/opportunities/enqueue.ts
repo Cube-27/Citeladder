@@ -8,6 +8,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { DB } from '../generated/db-schema.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
+import { MAX_WINDOW_DAYS } from './verification-decisions.ts';
 
 const versions = policy.opportunity.opportunities;
 type Trigger = {
@@ -41,22 +42,19 @@ export function enqueueOpportunityRefresh(db: Database | Transaction<DB>, trigge
 
 type ProjectScope = { workspaceId: string; projectId: string };
 
-/** Declarations new evidence still measures: those inside the verification window. */
-function measuredDeclarations(db: Database | Transaction<DB>, scope: ProjectScope) {
+/** Declarations new evidence still measures: those inside the given window. */
+function measuredDeclarations(db: Database | Transaction<DB>, scope: ProjectScope, days: number) {
   return db
     .selectFrom('opportunity_implementation_events')
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    .where(
-      'declared_implemented_at',
-      '>=',
-      sql<Date>`now() - ${versions.VERIFICATION_WINDOW_DAYS} * interval '1 day'`,
-    );
+    .where('declared_implemented_at', '>=', sql<Date>`now() - ${days} * interval '1 day'`);
 }
 
 /** Owned pages a declaration still being measured names, for crawl seeding. */
 export async function measuredTargetPages(db: Database | Transaction<DB>, scope: ProjectScope) {
-  const rows = await measuredDeclarations(db, scope)
+  // Crawl checks keep the base window; only keyword checks run longer.
+  const rows = await measuredDeclarations(db, scope, versions.VERIFICATION_WINDOW_DAYS)
     .select(sql<string>`jsonb_array_elements_text(target_site_url_ids)`.as('id'))
     .execute();
   return rows.map((row) => row.id);
@@ -72,7 +70,7 @@ export async function enqueueImplementationVerification(
   db: Database | Transaction<DB>,
   trigger: Trigger & { revision?: string; payload?: Record<string, unknown> },
 ) {
-  const measurable = await measuredDeclarations(db, trigger)
+  const measurable = await measuredDeclarations(db, trigger, MAX_WINDOW_DAYS)
     .select('id')
     .limit(1)
     .executeTakeFirst();

@@ -60,6 +60,17 @@ export function ownedTargets(
   return [...byOrigin.values()];
 }
 
+/** The research market: the saved preference, else the project's SERP market. */
+export function searchMarket(
+  project: { language_code: string; serp_language_code: string; serp_location_code: number },
+  saved: { location_code?: number | null; language_code?: string | null },
+) {
+  return {
+    location_code: saved.location_code ?? (project.serp_location_code || null),
+    language_code: saved.language_code || project.serp_language_code || project.language_code,
+  };
+}
+
 /** A competitor's target when it has exactly one valid saved domain. */
 export function competitorTarget(
   competitor: { id: string; name: string },

@@ -19,6 +19,16 @@ export type ActionMember = {
   source_metric_ids: string[];
 };
 export const pageGroupKey = (url: string) => `page:${normalizedUrlForCompare(url)}`;
+/** One planned page per topic, whether the Agent or evidence names it first; null without one. */
+export function plannedPageKey(topic: string): string | null {
+  // Letters in any script, so a keyword in Hindi or Japanese still names a page.
+  const slug = topic
+    .normalize('NFKC')
+    .toLowerCase()
+    .replaceAll(/[^\p{L}\p{M}\p{N}]+/gu, '-')
+    .replace(/^-|-$/gu, '');
+  return slug ? `planned:${[...slug].slice(0, p.PLANNED_PAGE_TOPIC_MAX_CHARS).join('')}` : null;
+}
 function target(
   key: string,
   kind: string,
@@ -53,6 +63,9 @@ export function targetFor(member: ActionMember) {
       member.target_prompt_id,
     );
   if (key.startsWith('prompt')) return target(key, p.TARGET_PROMPT, member);
+  // A keyword gap no existing page covers is a page to create.
+  const planned = key.startsWith('search-gap:') ? plannedPageKey(member.target_theme ?? '') : null;
+  if (planned) return target(planned, p.TARGET_PLANNED_PAGE, member);
   if (key.startsWith('demand:') && member.target_theme)
     return target(`query:${member.target_theme.toLowerCase().trim()}`, p.TARGET_QUERY, member);
   return target(key, p.TARGET_QUERY, member);

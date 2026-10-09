@@ -13,6 +13,14 @@ import { INT4_MAX, normalizeResponse } from './normalization.ts';
 import type { ResearchResponse } from './live.ts';
 import type { ProviderError } from '../answer-engines/contracts.ts';
 import { isDataError } from '../db/errors.ts';
+import { loadWorkerSettings } from '../config.ts';
+import {
+  enqueueImplementationVerification,
+  enqueueOpportunityRefresh,
+} from '../opportunities/enqueue.ts';
+
+/** Datasets whose rows say whether the project ranks for a search. */
+const KEYWORD_EVIDENCE_KINDS = ['missing_keywords', 'ranking_keywords', 'shared_keywords'];
 
 type Run = Selectable<SearchIntelligenceRuns>;
 type Call = Selectable<SearchIntelligenceCalls>;
@@ -639,6 +647,8 @@ export class AcquisitionState {
         .where('id', '=', dataset.id)
         .where('workspace_id', '=', run.workspace_id)
         .execute();
+      if (finished && KEYWORD_EVIDENCE_KINDS.includes(dataset.dataset_kind))
+        await this.announce(trx, dataset.id);
       await trx
         .updateTable('search_intelligence_runs')
         .set({
@@ -731,6 +741,18 @@ export class AcquisitionState {
         .where('workspace_id', '=', run.workspace_id)
         .execute();
     });
+  }
+  /** A published keyword dataset can open or close keyword-gap Actions. */
+  private async announce(trx: Database, datasetId: string) {
+    const trigger = {
+      workspaceId: this.task.workspace_id,
+      projectId: this.projectId,
+      triggerKind: 'search_intelligence_dataset',
+      triggerId: datasetId,
+      maxAttempts: loadWorkerSettings().taskMaxAttempts,
+    };
+    await enqueueOpportunityRefresh(trx, trigger);
+    await enqueueImplementationVerification(trx, trigger);
   }
   /** Publish a saved receipt; one the schema refuses fails its dataset instead of blocking the run. */
   async settle(

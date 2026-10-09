@@ -5,11 +5,12 @@
  */
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { searchReadinessSchema } from '@citeladder/contracts/search-intelligence';
-import { sql, type RawBuilder, type SqlBool } from 'kysely';
+import { sql, type NotNull, type RawBuilder, type SqlBool } from 'kysely';
 import { z } from 'zod';
 
 import type { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Database } from '../db/database.ts';
+import { strings } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
 import {
   decodeKeysetCursor,
@@ -20,7 +21,7 @@ import { containsPattern } from '../db/like.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { policy } from '../config.ts';
 import { preferencesBody } from '../routes/search-intelligence-contracts.ts';
-import { competitorTarget, ownedTargets } from './targets.ts';
+import { competitorTarget, ownedTargets, searchMarket } from './targets.ts';
 import { datasetView, rowView, runView } from './views.ts';
 
 const si = policy.search_intelligence;
@@ -123,12 +124,7 @@ export async function readiness(
     competitors: competitors.flatMap(
       (row) => competitorTarget(row, savedDomains.parse(row.domains)) ?? [],
     ),
-    // An unset market falls back to the project's SERP market.
-    preferences: {
-      ...saved,
-      location_code: saved.location_code ?? (project.serp_location_code || null),
-      language_code: saved.language_code || project.serp_language_code || project.language_code,
-    },
+    preferences: { ...saved, ...searchMarket(project, saved) },
     latest_run: latest ? runView(latest) : null,
     datasets: datasets.map(datasetView),
   };
@@ -266,14 +262,33 @@ export async function datasetPage(
       .executeTakeFirstOrThrow(),
   ]);
   const page = rows.slice(0, request.limit);
+  const actions =
+    dataset.dataset_kind === 'missing_keywords' ? await gapActions(db, scope) : new Map();
   return {
     dataset: { ...datasetView(dataset), filtered_saved_count: Number(counted.count) },
-    rows: page.map(rowView),
+    rows: page.map((row) => ({ ...rowView(row), action_id: actions.get(row.id) ?? null })),
     next_cursor:
       rows.length > request.limit
         ? encodeKeysetCursor(cursorScope, filters, [page.at(-1)!.id])
         : null,
   };
+}
+
+/** The Action each live keyword-gap finding cites a row of, by row; a read, never a refresh. */
+async function gapActions(db: Database, scope: Scope) {
+  const live = await scope.workspace
+    .selectFrom(db, 'opportunities')
+    .select(['action_id', 'source_metric_ids'])
+    .where('project_id', '=', scope.projectId)
+    .where('rule_id', '=', policy.opportunity.opportunities.SEARCH_GAP.RULE_ID)
+    .where('superseded_at', 'is', null)
+    .where('action_id', 'is not', null)
+    .$narrowType<{ action_id: NotNull }>()
+    .execute();
+  const byRow = new Map<string, string>();
+  for (const finding of live)
+    for (const id of strings(finding.source_metric_ids)) byRow.set(id, finding.action_id);
+  return byRow;
 }
 
 /** Selected rows of one published dataset, each with its dataset, for content work. */

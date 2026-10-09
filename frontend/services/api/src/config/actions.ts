@@ -3,8 +3,8 @@ import { opportunities } from './opportunity.ts';
 
 export const actions = {
   ACTION_STATUS_OPEN: 'open',
-  ACTION_GROUPING_VERSION: 'action-grouping-1',
-  ACTION_DIAGNOSIS_VERSION: 'action-diagnosis-1',
+  ACTION_GROUPING_VERSION: 'action-grouping-2',
+  ACTION_DIAGNOSIS_VERSION: 'action-diagnosis-2',
   ACTION_PRIORITY_VERSION: 'action-priority-1',
   TARGET_PAGE: 'page',
   TARGET_EARNED_PAGE: 'earned_page',
@@ -40,10 +40,12 @@ export const actions = {
   FAMILY_LINK_GRAPH: 'link_graph',
   FAMILY_SITE_CHANGES: 'site_changes',
   FAMILY_COMMERCE: 'commerce',
+  FAMILY_SEARCH_INTELLIGENCE: 'search_intelligence',
   EVIDENCE_FAMILIES: [
     'ai_visibility',
     'sources',
     'search_console',
+    'search_intelligence',
     'site_health',
     'link_graph',
     'site_changes',
@@ -76,6 +78,7 @@ export const actions = {
     property_relative_ctr_gap: 'search_console',
     emerging_query: 'search_console',
     declining_query: 'search_console',
+    search_keyword_gap: 'search_intelligence',
     low_share_of_voice_theme: 'ai_visibility',
     high_traffic_low_visibility: 'search_console',
     product_not_mentioned: 'commerce',
@@ -140,6 +143,16 @@ export const actions = {
       target_kinds: ['prompt'],
     },
     {
+      approach: 'create_new',
+      rule_ids: ['search_keyword_gap'],
+      skill_id: 'content_create',
+      donts: [
+        'Do not create a new URL if an existing page already answers this search; improve that page instead.',
+        'Do not present provider ranking estimates as measured traffic.',
+      ],
+      target_kinds: ['planned_page'],
+    },
+    {
       approach: 'improve_links',
       rule_ids: ['site_contextual_links', 'site_link_near_orphan', 'site_link_weak_authority'],
       skill_id: 'internal_links',
@@ -176,6 +189,8 @@ export const actions = {
     ai_visibility: 'next_visibility_run',
     sources: 'placement_recheck',
     search_console: 'next_search_console_window',
+    // A later paid analysis may also read it, but the scheduled reading is Search Console.
+    search_intelligence: 'next_search_console_window',
     site_health: 'next_crawl',
     link_graph: 'next_crawl',
     site_changes: 'next_crawl',
@@ -186,6 +201,7 @@ export const actions = {
     contextual_link: 'next_crawl',
     visibility_metric: 'next_visibility_run',
     traffic_metric: 'next_search_console_window',
+    keyword_presence: 'next_search_console_window',
     placement: 'placement_recheck',
   },
   LEG_STATE_WAITING: 'waiting',

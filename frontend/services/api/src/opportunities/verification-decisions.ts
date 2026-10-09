@@ -1,10 +1,25 @@
 import { z } from 'zod';
+import type { ExpectedCheck } from '@citeladder/contracts/opportunities';
 import { policy } from '../config.ts';
 import { round } from '../demand/projection.ts';
 import { record } from '../db/json.ts';
 import { epochMicros, parseDatetime } from '../http/datetimes.ts';
 import { compareText } from '../text-order.ts';
 const p = policy.opportunity.placement;
+const o = policy.opportunity.opportunities;
+
+const windowDays: Partial<Record<ExpectedCheck['kind'], number>> = o.CHECK_KIND_WINDOW_DAYS;
+
+/** How long after go-live new evidence still answers a check of this kind. */
+export function checkWindowDays(kind: ExpectedCheck['kind']): number {
+  return windowDays[kind] ?? o.VERIFICATION_WINDOW_DAYS;
+}
+
+/** The longest window any check kind has; a source never looks further back. */
+export const MAX_WINDOW_DAYS = Math.max(
+  o.VERIFICATION_WINDOW_DAYS,
+  ...Object.values(o.CHECK_KIND_WINDOW_DAYS),
+);
 
 /**
  * One expected check's reading from one source. `met` and `unmet` answer the

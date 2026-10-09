@@ -9,7 +9,7 @@ import { measurementLegs } from './measurement-legs.ts';
 import { declarationCheckSchema, measurementLegSchema } from '@citeladder/contracts/actions';
 import { expectedCheckSchema } from '@citeladder/contracts/opportunities';
 import { z } from 'zod';
-import { storedOutcomes } from './verification-decisions.ts';
+import { checkWindowDays, storedOutcomes } from './verification-decisions.ts';
 import { scalarText } from '../text-order.ts';
 import { ruleTitle } from '../site-health/reads/rules.ts';
 
@@ -23,6 +23,7 @@ function subject(check: Record<string, unknown>): string | null {
   if (check.kind === 'site_rule') return ruleTitle(scalarText(check.rule_id));
   if (check.kind === 'visibility_metric') return text(check.target_prompt_id);
   if (check.kind === 'traffic_metric') return text(check.scope_key);
+  if (check.kind === 'keyword_presence') return text(check.keyword);
   return text(check.target_url);
 }
 
@@ -69,7 +70,10 @@ export async function declarationView(
     .executeTakeFirstOrThrow();
   const checks = z.array(expectedCheckSchema).parse(row.expected_checks ?? []);
   const measuredUntil = new Date(row.declared_implemented_at);
-  measuredUntil.setUTCDate(measuredUntil.getUTCDate() + o.VERIFICATION_WINDOW_DAYS);
+  measuredUntil.setUTCDate(
+    measuredUntil.getUTCDate() +
+      Math.max(o.VERIFICATION_WINDOW_DAYS, ...checks.map((check) => checkWindowDays(check.kind))),
+  );
   return {
     id: row.id,
     action_id: row.action_id,

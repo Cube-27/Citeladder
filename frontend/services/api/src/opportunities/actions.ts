@@ -26,7 +26,7 @@ import { declarationView } from './declaration-view.ts';
 import { memberMeasurementLeg } from './declaration-checks.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
-import { pageGroupKey, selectApproach } from '../analysis/opportunities/actions.ts';
+import { pageGroupKey, plannedPageKey, selectApproach } from '../analysis/opportunities/actions.ts';
 
 const a = policy.opportunity.actions;
 export class ActionTargetError extends Error {}
@@ -40,12 +40,9 @@ async function targetIdentity(db: Database, scope: Scope, kind: string, target: 
     .executeTakeFirst();
   if (!project) throw notFound('Project');
   if (kind === a.TARGET_PLANNED_PAGE) {
-    const slug = target
-      .toLowerCase()
-      .replaceAll(/[^a-z0-9]+/gu, '-')
-      .replace(/^-|-$/gu, '');
-    if (!slug) throw new ActionTargetError('A planned page needs a topic');
-    return { key: `planned:${slug.slice(0, a.PLANNED_PAGE_TOPIC_MAX_CHARS)}`, url: null };
+    const key = plannedPageKey(target);
+    if (!key) throw new ActionTargetError('A planned page needs a topic');
+    return { key, url: null };
   }
   let url: URL;
   try {

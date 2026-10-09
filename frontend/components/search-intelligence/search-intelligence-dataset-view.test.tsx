@@ -203,6 +203,37 @@ it('rounds estimated traffic in the table and opens readable details from the ke
   expect(details).not.toHaveTextContent(dataset.id);
 });
 
+it('links a missing keyword that became an Action', async () => {
+  const actionId = '66666666-6666-4666-8666-666666666666';
+  const missing = { ...dataset, dataset_kind: 'missing_keywords' };
+  const tracked = {
+    ...row('77777777-7777-4777-8777-777777777777', 'running shoes'),
+    row_kind: 'missing_keywords',
+    action_id: actionId,
+  };
+  mswServer.use(
+    http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
+      HttpResponse.json({ dataset: missing, rows: [tracked], next_cursor: null }),
+    ),
+  );
+  renderWithProviders(
+    <SearchIntelligenceDatasetView dataset={missing} title="Missing keywords" />,
+    {
+      projectSelection: testProjectSelection({
+        activeProject: project,
+        activeProjectId: project.id,
+      }),
+    },
+  );
+  await userEvent.click(
+    await screen.findByRole('button', { name: 'View evidence for running shoes' }),
+  );
+  expect(screen.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
+    'href',
+    expect.stringContaining(`/agent/actions/${actionId}`),
+  );
+});
+
 it('explains a paid empty scope', async () => {
   const empty = {
     ...dataset,

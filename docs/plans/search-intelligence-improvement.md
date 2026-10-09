@@ -1,7 +1,9 @@
 # Search Intelligence improvement plan
 
-**Status:** PR 1 (phases 1 and 2) implemented 2026-10-09; PR 2 is designed and
-waits on the owner decisions below.
+**Status:** implemented 2026-10-09 as two stacked PRs: #322 (runtime fixes and
+the guided first run) and PR 2 (keyword gaps become Actions). Shipped behaviour
+is owned by [Connected data](../integrations-traffic-analytics.md#search-intelligence-acquisition)
+and [Opportunities](../opportunities.md).
 
 Feature 7 of the [feature review tracker](feature-review-tracker.md): the
 DataForSEO Search Intelligence module (reviewed paid acquisition of keyword,
@@ -126,7 +128,16 @@ a refresh when a keyword dataset publishes. No schema change.
   an Action link to it.
 - **Versions.** Rule, grouping, diagnosis and verifier versions bump.
 
-Owner decisions for PR 2 are listed in the tracker log once answered.
+Owner decisions for PR 2 (2026-10-09):
+
+1. **Automatic, gated promotion**, like Demand signals; rows that do not qualify
+   keep Ask agent.
+2. **Competitor-named keywords are excluded** from promotion by default.
+3. **Balanced gates**, all configuration: search volume ≥ 50, competitor rank ≤
+   10, at most 25 new gaps per refresh, datasets up to 90 days old, partial
+   datasets allowed with a limitation.
+4. **A 90-day measurement window** for the keyword-presence check only; other
+   Actions keep 30 days.
 
 ## Deferred to the backlog
 

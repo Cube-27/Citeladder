@@ -5,7 +5,7 @@
  * A missing source is not an error. With a prior snapshot and no resolvable
  * audit, crawl or demand snapshot, the prior snapshot is returned unchanged,
  * so an in-flight crawl never empties the live set; zero hits WITH a source
- * still supersedes. A refresh whose source identity the latest snapshot
+ * still supersedes, and so does a snapshot whose keyword gaps have aged out. A refresh whose source identity the latest snapshot
  * already describes loads no evidence. Evidence loads outside the project
  * lock; under it the identity is resolved again, and a refresh whose sources
  * moved meanwhile writes nothing and fails for a retry over the newer state.
@@ -54,6 +54,7 @@ import {
 } from './refresh-evidence.ts';
 import { changeHits, commerceHits, demandHits } from './refresh-hits.ts';
 import { internalLinkHits, internalLinkRunId } from './internal-link-hits.ts';
+import { searchGapHits, searchGapSource, type SearchGapSource } from './search-gap-hits.ts';
 import {
   currentDemandSnapshot,
   latestSnapshot,
@@ -78,6 +79,7 @@ type Sources = {
   audit: AuditSource | null;
   crawl: CrawlSource | null;
   demand: DemandSource | null;
+  gaps: SearchGapSource | null;
   identity: SourceIdentity;
 };
 
@@ -149,15 +151,20 @@ async function sourcePagesRevision(db: Database, scope: Scope) {
   return reading === null && pages === null ? null : `${reading ?? ''}@${pages ?? ''}`;
 }
 
-/** The sources a refresh would read now, without loading their evidence. */
-async function resolveSources(db: Database, scope: Scope): Promise<Sources> {
+/**
+ * The sources a refresh would read now, without loading their evidence. `at`
+ * is the one instant a refresh judges dataset age by, so both resolutions agree.
+ */
+async function resolveSources(db: Database, scope: Scope, at: Date): Promise<Sources> {
   const audit = await resolveAudit(db, scope);
   const crawl = await resolveCrawl(db, scope);
   const demand = await currentDemandSnapshot(db, scope);
+  const gaps = await searchGapSource(db, scope, at);
   return {
     audit,
     crawl,
     demand,
+    gaps,
     identity: {
       audit_id: audit?.id ?? null,
       site_crawl_id: crawl?.id ?? null,
@@ -165,6 +172,7 @@ async function resolveSources(db: Database, scope: Scope): Promise<Sources> {
       demand_source_revision: demand?.source_hash ?? null,
       internal_link_run_id: crawl ? await internalLinkRunId(db, scope, crawl.id) : null,
       source_pages_revision: await sourcePagesRevision(db, scope),
+      search_gap_revision: gaps?.revision ?? null,
     },
   };
 }
@@ -196,6 +204,9 @@ async function collectHits(db: Database, scope: Scope, sources: Sources): Promis
     );
     collected.hits.push(...(await changeHits(db, scope.workspaceId, sources.crawl)));
   }
+  const gaps = await searchGapHits(db, scope, sources.gaps, sources.demand, sources.crawl);
+  collected.hits.push(...gaps.hits);
+  collected.limitations.push(...gaps.limitations);
   return collected;
 }
 
@@ -308,6 +319,7 @@ async function writeRefresh(
       audit: collected.audit !== null,
       demand: collected.demand !== null,
       crawl: crawl !== null,
+      searchIntelligence: sources.gaps !== null,
     }),
   );
   await insertOpportunities(trx, scope, rows, actions, now);
@@ -343,7 +355,8 @@ export async function recomputeOpportunities(
     .where('id', '=', scope.projectId)
     .executeTakeFirst();
   if (!project) throw notFound('Project');
-  const sources = await resolveSources(db, scope);
+  const at = new Date();
+  const sources = await resolveSources(db, scope, at);
   const prior = await latestSnapshot(db, scope);
   if (options.skipIfCurrent && snapshotIsCurrent(prior, sources.identity))
     return projectSnapshot(prior!);
@@ -352,12 +365,20 @@ export async function recomputeOpportunities(
   return db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     const current = await latestSnapshot(trx, scope);
-    const latest = await resolveSources(trx, scope);
+    const latest = await resolveSources(trx, scope, at);
     // Writing a reading older than a source committed during the load would
     // supersede what that source says; the retry reads the newer state.
     if (!sameIdentity(latest.identity, sources.identity))
       throw new Error('Opportunity sources changed during the refresh; retry');
-    const empty = collected.audit === null && sources.crawl === null && sources.demand === null;
+    // Gap datasets age out by design, so a snapshot that read them is superseded
+    // when they do; an in-flight crawl alone never empties the live set.
+    const readGaps = Boolean(record(record(current?.coverage).source_identity).search_gap_revision);
+    const empty =
+      collected.audit === null &&
+      sources.crawl === null &&
+      sources.demand === null &&
+      sources.gaps === null &&
+      !readGaps;
     if (current !== null && empty) return projectSnapshot(current);
     if (options.skipIfCurrent && snapshotIsCurrent(current, sources.identity))
       return projectSnapshot(current!);

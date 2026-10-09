@@ -4,12 +4,17 @@
  * their earlier states carry forward in the merged observation.
  */
 import { sql } from 'kysely';
-import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { record } from '../db/json.ts';
 import {
+  keywordPresenceExpectedCheckSchema,
+  type ExpectedCheck,
+} from '@citeladder/contracts/opportunities';
+import { keywordDatasetOutcome, keywordTrafficOutcome } from './keyword-verification.ts';
+import {
+  checkWindowDays,
   compareMetric,
   expectedRuleOutcome,
   evaluation,
@@ -38,11 +43,12 @@ type Context = {
 type Check = Record<string, unknown>;
 
 /** The check kinds each source kind can read. */
-export const SOURCE_CHECK_KINDS: Record<string, readonly string[]> = {
+export const SOURCE_CHECK_KINDS: Record<string, readonly ExpectedCheck['kind'][]> = {
   site_crawl: ['site_rule', 'contextual_link'],
   audit: ['visibility_metric'],
-  traffic_snapshot: ['traffic_metric'],
-  source_page_inspection: [policy.opportunity.placement.PLACEMENT_CHECK_KIND],
+  traffic_snapshot: ['traffic_metric', 'keyword_presence'],
+  search_intelligence_dataset: ['keyword_presence'],
+  source_page_inspection: ['placement'],
 };
 
 const checksOf = (d: Declaration) =>
@@ -219,14 +225,31 @@ export async function evidenceFor(
     reading: { observed_at: source.observed_at, source_kind: source.kind, source_id: source.id },
   };
   const readable = SOURCE_CHECK_KINDS[source.kind] ?? [];
+  const age = Date.parse(source.observed_at) - Date.parse(declaration.declared_implemented_at);
   for (const [index, check] of checksOf(declaration).entries()) {
-    if (!readable.includes(String(check.kind))) continue;
+    const kind = readable.find((item) => item === check.kind);
+    if (!kind) continue;
+    // Past its own window a check keeps its last reading.
+    if (age > checkWindowDays(kind) * DAY_MS) continue;
     // One source reads its checks in order on the caller's connection.
-    if (source.kind === 'site_crawl') set(ctx, index, await siteCheck(ctx, source.id, check)); // NOSONAR
-    else if (source.kind === 'audit') set(ctx, index, await visibilityCheck(ctx, source.id, check)); // NOSONAR
-    else if (source.kind === 'traffic_snapshot')
-      set(ctx, index, await trafficCheck(ctx, source.id, check)); // NOSONAR
-    else set(ctx, index, await placementCheck(ctx)); // NOSONAR
+    set(ctx, index, await readCheck(ctx, source, check)); // NOSONAR
   }
   return ctx.result;
+}
+
+const DAY_MS = 86_400_000;
+
+function readCheck(ctx: Context, source: Source, check: Check) {
+  if (check.kind === 'keyword_presence') {
+    // A frozen check that no longer parses cannot be read; say so rather than wait.
+    const parsed = keywordPresenceExpectedCheckSchema.safeParse(check);
+    if (!parsed.success) return outcome(ctx.reading, 'unavailable', 'malformed_check');
+    return source.kind === 'traffic_snapshot'
+      ? keywordTrafficOutcome(ctx, source.id, parsed.data)
+      : keywordDatasetOutcome(ctx, source.id, parsed.data);
+  }
+  if (source.kind === 'site_crawl') return siteCheck(ctx, source.id, check);
+  if (source.kind === 'audit') return visibilityCheck(ctx, source.id, check);
+  if (source.kind === 'traffic_snapshot') return trafficCheck(ctx, source.id, check);
+  return placementCheck(ctx);
 }

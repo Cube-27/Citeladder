@@ -147,7 +147,9 @@ it('folds each check from the source that can read it, within the window, idempo
     .executeTakeFirstOrThrow();
   expect(site.source_analysis_ids).toEqual([own.analysisId]);
   expect(site.source_rule_evaluation_ids).toEqual([own.ruleId]);
-  expect(site.idempotency_key).toMatch(/123456:implementation-verifier-2$/);
+  expect(site.idempotency_key).toMatch(
+    new RegExp(`123456:${policy.opportunity.opportunities.IMPLEMENTATION_VERIFIER_VERSION}$`),
+  );
 });
 
 it('queues no verification for a project with nothing declared in the window', async () => {

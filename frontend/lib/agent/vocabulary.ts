@@ -46,6 +46,7 @@ const FAMILY_LABEL: Record<string, string> = {
   ai_visibility: 'AI Visibility',
   sources: 'Sources',
   search_console: 'Search Console',
+  search_intelligence: 'Search Intelligence',
   site_health: 'Site Health',
   link_graph: 'Link graph',
   site_changes: 'Site changes',
@@ -93,6 +94,7 @@ const CHECK_KIND_LABEL: Record<string, string> = {
   contextual_link: 'Internal link is on the page',
   visibility_metric: 'Prompt score rises',
   traffic_metric: 'Search Console clicks rise',
+  keyword_presence: 'You appear for the search',
   placement: 'Change is live on the publisher page',
 };
 
@@ -125,6 +127,10 @@ const CHECK_REASON: Record<string, string> = {
   no_search_console_row: 'Search Console reported no row for this page or query.',
   no_placement_check: 'The publisher page was never read, so it cannot be rechecked.',
   recheck_scheduled: 'Not on the page yet. It will be read again.',
+  not_ranking_yet: 'A later Search Intelligence analysis does not show you ranking yet.',
+  still_missing: 'A later Search Intelligence analysis still lists this as a gap.',
+  provider_serp_predates_change:
+    'DataForSEO last checked this search before the go-live date. A later analysis can answer it.',
 };
 
 export function checkReasonLabel(reason: string | null): string | null {

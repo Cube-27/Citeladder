@@ -323,7 +323,56 @@ const placementExpectedCheckSchema = responseObject({
   deterioration: z.array(z.string()),
   baseline_snapshot_id: z.string().nullable(),
 });
+/**
+ * What a `search_keyword_gap` finding stores as evidence: written by the gap
+ * detector, read by the declaration check and the evidence view.
+ */
+export const keywordGapEvidenceSchema = z.object({
+  keyword: z.string().min(1),
+  normalized_keyword: z.string(),
+  query_key: z.string(),
+  search_volume: z.number().nullable(),
+  intent: z.string().nullable(),
+  market: z.object({ location_code: z.number().int().nullable(), language_code: z.string() }),
+  owned_origin: z.string().min(1),
+  competitors: z.array(
+    z.object({
+      competitor_id: uuid(),
+      name: z.string(),
+      keyword: z.string(),
+      rank_group: z.number().nullable(),
+      url: z.string().nullable(),
+      dataset_id: uuid(),
+      row_id: uuid(),
+      published_at: z.string(),
+      coverage: z.string(),
+    }),
+  ),
+  competitor_names: z.array(z.string()),
+  target_resolution: z.object({
+    state: z.enum(['resolved', 'ambiguous', 'no_covering_page', 'no_usable_terms']),
+    candidates: z.array(z.string()),
+  }),
+  site_url_id: uuid().optional(),
+  provider: z.literal('dataforseo'),
+  statement: z.string(),
+});
+export type KeywordGapEvidence = z.infer<typeof keywordGapEvidenceSchema>;
+/**
+ * A keyword gap closes when you appear for the search: Search Console
+ * impressions after go-live, or your ranking in a later Search Intelligence
+ * dataset whose provider check postdates go-live. Absence is never a failure.
+ */
+export const keywordPresenceExpectedCheckSchema = responseObject({
+  kind: z.literal('keyword_presence'),
+  keyword: z.string(),
+  query_key: z.string(),
+  owned_origin: z.string(),
+  location_code: z.number().int().nullable(),
+  language_code: z.string(),
+});
 export const expectedCheckSchema = z.discriminatedUnion('kind', [
+  keywordPresenceExpectedCheckSchema,
   responseObject({
     kind: z.literal('contextual_link'),
     recommendation_id: uuid(),
@@ -342,6 +391,8 @@ export const expectedCheckSchema = z.discriminatedUnion('kind', [
   visibilityExpectedCheckSchema,
   placementExpectedCheckSchema,
 ]);
+export type ExpectedCheck = z.infer<typeof expectedCheckSchema>;
+export type KeywordPresenceCheck = z.infer<typeof keywordPresenceExpectedCheckSchema>;
 
 export const verificationEventSchema = responseObject({
   id: uuid(),
