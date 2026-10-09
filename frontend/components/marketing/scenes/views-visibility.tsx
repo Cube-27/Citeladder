@@ -56,8 +56,9 @@ const CHART_W = 520;
 const CHART_H = 160;
 const chartX = (index: number) => (index * CHART_W) / (RUN_DATES.length - 1);
 const chartY = (value: number) => CHART_H - (value / 100) * CHART_H;
-/** The latest run's point; every series is a fixed, non-empty tuple. */
-const latest = (brand: (typeof BRANDS)[number]) => brand.points[brand.points.length - 1];
+/** The point for the latest run: each series holds one point per run date. */
+const LATEST_RUN = RUN_DATES.length - 1;
+const latest = (brand: (typeof BRANDS)[number]) => brand.points[LATEST_RUN];
 
 const KPIS = [
   ['Visibility', '64%', '+26 pp'],
