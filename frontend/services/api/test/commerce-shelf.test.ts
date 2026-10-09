@@ -91,7 +91,7 @@ describe('frozen Commerce shelf projections', () => {
   it('sends one resolver call per answer, for unmatched spans with a product signal only', async () => {
     const calls: string[][] = [];
     await prepareRecommendations(
-      'Shoes matter. Try the Rival Runner at $90. Comfort is key.',
+      'Shoes matter. Consider the Rival Runner. Try one at $90. Comfort is key.',
       emptyTarget,
       {
         model: 'fixture',
@@ -101,10 +101,11 @@ describe('frozen Commerce shelf projections', () => {
         },
       },
     );
-    expect(calls).toEqual([['Try the Rival Runner at $90.']]);
+    expect(calls).toEqual([['Consider the Rival Runner.', 'Try one at $90.']]);
   });
   it("accepts an AI-observed PDP only when the answer carries it and it is not the business's own", () => {
-    const answer = 'Try https://rival.example/p/1 or https://www.shop.example/p/2';
+    // The sentence's full stop is not part of the URL.
+    const answer = 'Try https://rival.example/p/1. Or https://www.shop.example/p/2';
     const evidence = { answer, citations: [], ownedHosts: ['shop.example'] };
     expect(resolvedCompetitorUrl('https://rival.example/p/1', evidence)).toBe(
       'https://rival.example/p/1',

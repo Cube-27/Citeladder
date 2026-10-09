@@ -181,7 +181,10 @@ export type PreparedRecommendation = {
 
 /** A span worth a resolver call: a list item, or prose carrying a link or a price. */
 const hasProductSignal = (span: RecommendationSpan) =>
-  span.listed || /https?:\/\/|[$£€₹]\s*\d|\b(?:AUD|USD|CAD|NZD|GBP|EUR|INR)\s*\d/iu.test(span.text);
+  span.listed ||
+  /https?:\/\/|[$£€₹]\s*\d|\b(?:AUD|USD|CAD|NZD|GBP|EUR|INR)\s*\d/iu.test(span.text) ||
+  // A capitalized word after the first names something ("Consider the Rival Runner").
+  /\s\p{Lu}\p{L}/u.test(span.text);
 
 /**
  * Deterministic matches first; the unmatched spans with a product signal go to
@@ -267,8 +270,9 @@ export function resolvedCompetitorUrl(
   const canonical = canonicalPage(url);
   if (!canonical || evidence.citations.some((value) => canonicalPage(value) === canonical))
     return null;
+  // Sentence punctuation after a URL is not part of it.
   const inAnswer = (evidence.answer.match(/https?:\/\/[^\s)\]}>,"']+/giu) ?? []).some(
-    (value) => canonicalPage(value) === canonical,
+    (value) => canonicalPage(value.replace(/[.;:!?]+$/u, '')) === canonical,
   );
   if (!inAnswer) return null;
   const parsed = new URL(canonical);

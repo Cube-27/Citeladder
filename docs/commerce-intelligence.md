@@ -112,7 +112,8 @@ a textual attribute no other same-brand product on the shelf shares; when a
 span names both an owned product and a competitor, the one named first holds
 the slot.
 
-Unmatched spans that carry a product signal (a list item, a URL or a price) go
+Unmatched spans that carry a product signal (a list item, a URL, a price or a
+capitalized name after the first word) go
 to the configured structured-model resolver in one call per answer, charged to
 the workspace model quota before the call. Unavailable, malformed or
 quota-refused output preserves unresolved evidence. An AI-observed competitor is

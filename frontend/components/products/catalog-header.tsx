@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
@@ -128,6 +128,13 @@ export function useCatalogHeader({
       return crawl ? crawlPollInterval(crawl) : false;
     },
   });
+  // A running crawl enqueues projections as pages are analyzed; re-read the
+  // catalog as that count moves, so its own polling starts with the first task.
+  const analyzed = dashboard.data?.crawl?.analyzed_count;
+  useEffect(() => {
+    if (analyzed !== undefined)
+      void client.invalidateQueries({ queryKey: queryKeys.commerce.catalog(projectId) });
+  }, [analyzed, client, projectId]);
   const invalidateCatalog = () =>
     client.invalidateQueries({
       queryKey: queryKeys.commerce.catalog(projectId),
