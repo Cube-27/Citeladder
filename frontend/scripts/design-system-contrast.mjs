@@ -130,11 +130,9 @@ function topLevelRules(clean) {
  */
 function customProperties(body) {
   // A nested block becomes a separator, leaving its prelude as a segment
-  // that is not a declaration. The text after the last `;` is unterminated.
-  const segments = body
-    .replace(/\{[^{}]*\}/g, ';')
-    .split(';')
-    .slice(0, -1);
+  // that is not a declaration. CSS may omit the final `;`, so the last
+  // segment counts when it is a complete declaration.
+  const segments = body.replace(/\{[^{}]*\}/g, ';').split(';');
   return segments.flatMap((segment) => {
     const colon = segment.indexOf(':');
     const token = segment.slice(0, colon).trim();

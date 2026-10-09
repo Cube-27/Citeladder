@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { paletteViolations } from '../frontend/scripts/design-system-contrast.mjs';
+import {
+  paletteDeclarations,
+  paletteViolations,
+} from '../frontend/scripts/design-system-contrast.mjs';
 
 const STATUSES = ['success', 'warning', 'danger', 'info'];
 const TAGS = [
@@ -86,6 +89,16 @@ function css({ light = {}, dark = {}, extra = '' } = {}) {
     extra,
   ].join('\n');
 }
+
+test('a scope keeps an unterminated last declaration and skips nested blocks', () => {
+  const declarations = paletteDeclarations(
+    ':root { --color-panel: #ffffff; @media (min-width: 1px) { --color-nested: #000000; } --color-muted: #555555 }',
+    ':root',
+  );
+  assert.equal(declarations.get('--color-panel'), '#ffffff');
+  assert.equal(declarations.get('--color-muted'), '#555555');
+  assert.equal(declarations.has('--color-nested'), false);
+});
 
 test('a palette that meets every pair in every scope passes', () => {
   assert.deepEqual(paletteViolations(css()), []);
