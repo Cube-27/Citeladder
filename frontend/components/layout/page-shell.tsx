@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 import { CompactPageTitleContext } from './compact-page-title-context';
 import { navigationMode } from './nav-items';
 import { resolveTitle } from './page-titles';
-import { ProjectLink } from './scoped-link';
 
 /**
  * A detail route's way back to the collection it was opened from. Rendered
@@ -186,10 +185,14 @@ function IdentityBand({
       >
         <div className={cn('grid min-w-0 flex-1 gap-1', !back && 'max-[700px]:sr-only')}>
           {back ? (
-            <TextLink variant="back" text="label" asChild className="justify-self-start">
-              <ProjectLink href={back.href} projectId={back.projectId}>
-                {back.label}
-              </ProjectLink>
+            <TextLink
+              variant="back"
+              text="label"
+              className="justify-self-start"
+              href={back.href}
+              projectId={back.projectId}
+            >
+              {back.label}
             </TextLink>
           ) : null}
           {/* The route H1 is the top of the type ladder: nothing on the page

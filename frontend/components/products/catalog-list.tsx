@@ -106,7 +106,7 @@ function CatalogRow({
       <div
         className={cn(
           'group flex min-w-0 items-center gap-1 px-1',
-          listRowClasses({ selected, interactive: true }),
+          listRowClasses({ selected }),
           nested && 'border-border-subtle ml-6 border-l pl-3',
         )}
       >

@@ -1,6 +1,14 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 
 import { splitPaneClasses, stickyPaneClasses } from '@/components/ui/workspace';
 import { usePaneResizeInteraction } from '@/lib/use-pane-resize-interaction';
@@ -9,10 +17,7 @@ import { cn } from '@/lib/utils';
 /**
  * ResizableSplitPane — the `list-detail` split with a list the reader sizes.
  *
- * Commerce and Prompts each built a resizable pane with its own separator: a
- * 12px button with a 1px rule in one, a 2px rounded bar in a div in the other,
- * different hover inks, different Home-key behaviour and different sticky
- * offsets. This is the one recipe:
+ * The one resizable-pane recipe:
  *
  *   - `role="separator"`, focusable, `aria-orientation="vertical"`,
  *     `aria-valuenow/min/max` in pixels and `aria-controls` → the list.
@@ -94,15 +99,19 @@ export function ResizableSplitPane({
     onBoundsChange: ({ max }) => setEffectiveMax(max),
   });
 
-  // Re-clamp when the container narrows, so the detail keeps its minimum.
-  const refreshRef = useRef(resize.refreshBounds);
-  useEffect(() => {
-    refreshRef.current = resize.refreshBounds;
-  }, [resize.refreshBounds]);
+  // Re-clamp when the container narrows, so the detail keeps its minimum. A
+  // resize that moves neither the clamped width nor the maximum is a no-op, so
+  // the observer never echoes the current width back through `onWidthChange`.
+  const refreshOnResize = useEffectEvent(() => {
+    const { min, max } = bounds();
+    const clamped = Math.min(max, Math.max(min, width));
+    if (clamped === width && max === effectiveMax) return;
+    resize.refreshBounds();
+  });
   useEffect(() => {
     const container = containerRef.current;
     if (!container || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => refreshRef.current());
+    const observer = new ResizeObserver(() => refreshOnResize());
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
@@ -111,10 +120,10 @@ export function ResizableSplitPane({
     <div
       ref={containerRef}
       style={{ '--split-pane-list-width': `${width}px` } as CSSProperties}
-      className={splitPaneClasses('list-detail', {
-        resizable: true,
-        className: cn(resize.dragging && 'cursor-col-resize select-none', className),
-      })}
+      className={splitPaneClasses(
+        'list-detail-resizable',
+        cn(resize.dragging && 'cursor-col-resize select-none', className),
+      )}
     >
       <div id={listId} className={cn('min-w-0', stickyList && stickyPaneClasses)}>
         {list}

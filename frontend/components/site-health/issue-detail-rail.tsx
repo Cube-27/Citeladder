@@ -200,21 +200,23 @@ function OccurrenceList({
     <ul className={ledgerClasses('open')}>
       {detail.occurrences.map((occurrence) => (
         <li key={occurrence.occurrence_id} className="grid gap-3 p-3">
-          <TextLink asChild text="inherit" className="flex min-w-0 flex-col gap-0.5">
-            <ProjectLink href={`/site/crawls/${crawlId}/pages/${occurrence.site_url_id}`}>
-              <span className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
-                  {pageDisplayTitle(occurrence.title, occurrence.display_url)}
-                </span>
-                {occurrence.page_kind ? <Badge>{pageKindLabel(occurrence.page_kind)}</Badge> : null}
+          <TextLink
+            text="inherit"
+            className="flex min-w-0 flex-col gap-0.5"
+            href={`/site/crawls/${crawlId}/pages/${occurrence.site_url_id}`}
+          >
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
+                {pageDisplayTitle(occurrence.title, occurrence.display_url)}
               </span>
-              <span
-                className="type-caption [overflow-wrap:anywhere] tabular-nums"
-                title={occurrence.display_url}
-              >
-                {occurrence.display_url}
-              </span>
-            </ProjectLink>
+              {occurrence.page_kind ? <Badge>{pageKindLabel(occurrence.page_kind)}</Badge> : null}
+            </span>
+            <span
+              className="type-caption [overflow-wrap:anywhere] tabular-nums"
+              title={occurrence.display_url}
+            >
+              {occurrence.display_url}
+            </span>
           </TextLink>
           <IssueEvidence occurrence={occurrence} />
           <Button variant="ghost" size="sm" asChild className="w-fit">

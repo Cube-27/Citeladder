@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FilterRow } from '@/components/ui/filter-row';
-import { Pager, useTablePage } from '@/components/ui/pager';
+import { Pager, pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { ReadError } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { Select } from '@/components/ui/select';
@@ -462,10 +462,7 @@ function LinksTable({
             pagination.setPage(1);
           },
         }}
-        canPrev={pagination.page > 1}
-        canNext={pagination.page < pagination.pageCount}
-        onPrev={() => pagination.setPage(pagination.page - 1)}
-        onNext={() => pagination.setPage(pagination.page + 1)}
+        {...pageNumberControls(pagination.page, pagination.pageCount, pagination.setPage)}
       />
     </div>
   );

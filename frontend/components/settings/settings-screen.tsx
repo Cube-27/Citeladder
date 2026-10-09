@@ -247,7 +247,7 @@ export function SettingsScreen() {
             <div className={splitPaneClasses('peers')}>
               <Stack as="section" gap="workspace">
                 <div className="flex items-center gap-4">
-                  <Avatar name={user.email} size="md" decorative />
+                  <Avatar name={user.email} size="md" />
                   <div className="grid min-w-0 flex-1 gap-0.5">
                     <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
                     <div className="type-body capitalize">{user.role}</div>

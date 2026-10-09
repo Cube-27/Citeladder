@@ -38,8 +38,7 @@ export function Card({
  * group. The title column (eyebrow, title, description — the children) takes
  * the free width on the left and the actions sit on the same row at the right;
  * when the row is too narrow the actions wrap below the title rather than
- * squeezing it. Seventeen call sites used to rebuild this row with their own
- * `flex-row … justify-between` override, each at a different alignment.
+ * squeezing it.
  */
 export function CardHeader({
   children,

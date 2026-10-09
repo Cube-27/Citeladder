@@ -12,11 +12,7 @@ import { cn } from '@/lib/utils';
 /**
  * Pager — the one footer for a paged list or table.
  *
- * Five pagers had grown: `CursorPager` (two secondary buttons and "Page N"),
- * `CursorTableFooter` (rows-per-page, range, icon-only arrows),
- * `TablePagination` (range, "Prev"/"Next"), and the hand-rolled
- * `CatalogPager` and `TrafficPager`. One layout now: what is shown on the
- * left, the controls on the right.
+ * What is shown on the left, the controls on the right.
  *
  * Two modes, one component — the difference is what the caller knows:
  *
@@ -66,15 +62,8 @@ type PagerProps = Readonly<{
   /** `table`: the footer of a table card (top rule, cell inset). */
   frame?: 'table' | 'none';
   hideWhenSinglePage?: boolean;
-  /**
-   * Accessible names of the step buttons. Defaults to "Previous page" /
-   * "Next page"; legacy wrappers keep their historical names.
-   */
-  stepLabels?: Readonly<{ previous: string; next: string }>;
   className?: string;
 }>;
-
-const DEFAULT_STEP_LABELS = { previous: 'Previous page', next: 'Next page' } as const;
 
 /** The four handlers for a page-number list. */
 export function pageNumberControls(
@@ -151,12 +140,8 @@ function PagerSteps({
   onNext,
   onFirst,
   busy,
-  stepLabels,
 }: Readonly<
-  Pick<PagerProps, 'canPrev' | 'canNext' | 'onPrev' | 'onNext' | 'onFirst'> & {
-    busy: boolean;
-    stepLabels: NonNullable<PagerProps['stepLabels']>;
-  }
+  Pick<PagerProps, 'canPrev' | 'canNext' | 'onPrev' | 'onNext' | 'onFirst'> & { busy: boolean }
 >) {
   return (
     <div className="flex items-center gap-1">
@@ -168,7 +153,7 @@ function PagerSteps({
       <Button
         variant="ghost"
         size="sm"
-        aria-label={stepLabels.previous}
+        aria-label="Previous page"
         disabled={!canPrev || busy}
         onClick={onPrev}
       >
@@ -178,7 +163,7 @@ function PagerSteps({
       <Button
         variant="ghost"
         size="sm"
-        aria-label={stepLabels.next}
+        aria-label="Next page"
         disabled={!canNext || busy}
         onClick={onNext}
       >
@@ -197,7 +182,6 @@ export function Pager({
   busy = false,
   frame = 'none',
   hideWhenSinglePage = false,
-  stepLabels = DEFAULT_STEP_LABELS,
   className,
   ...steps
 }: PagerProps) {
@@ -213,7 +197,7 @@ export function Pager({
       <PagerSummary range={range} page={page} pageCount={pageCount} />
       <div className="flex flex-wrap items-center gap-3">
         {pageSize ? <PageSizeSelect pageSize={pageSize} noun={range?.noun ?? 'rows'} /> : null}
-        <PagerSteps {...steps} busy={busy} stepLabels={stepLabels} />
+        <PagerSteps {...steps} busy={busy} />
       </div>
     </div>
   );

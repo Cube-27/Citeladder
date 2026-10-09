@@ -1,6 +1,5 @@
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -324,10 +323,12 @@ function FailingPages({
       <ul className={ledgerClasses()}>
         {dimension.evidence_pages.map((page) => (
           <li key={page.site_url_id} className="grid gap-2 py-3 first:pt-0">
-            <TextLink asChild text="itemTitle" className="truncate">
-              <ProjectLink href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}>
-                {pageLabel(page.normalized_url)}
-              </ProjectLink>
+            <TextLink
+              text="itemTitle"
+              className="truncate"
+              href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
+            >
+              {pageLabel(page.normalized_url)}
             </TextLink>
             <ul className="grid gap-1">
               {page.failed_checks.map((check) => (

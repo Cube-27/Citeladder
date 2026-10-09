@@ -130,39 +130,46 @@ const sameAsAllowed = (sameAs, theme, first, second) =>
       group.theme === theme && group.tokens.includes(first) && group.tokens.includes(second),
   );
 
+/** The finding for two colour tokens sharing a value, or null when allowed. */
+function pairFinding({ theme, declarations, sameAs, value }, first, second) {
+  const series = [first, second].find((token) => token.startsWith('--color-chart-'));
+  const other = series === first ? second : first;
+  if (series && NON_SERIES.test(other)) {
+    return `${TOKEN_CSS}: ${theme} ${series} equals ${other} (${value}); chart series never wear a status or action value`;
+  }
+  const firstChain = aliasChain(declarations, first);
+  if ([...aliasChain(declarations, second)].some((token) => firstChain.has(token))) return null;
+  if (sameAsAllowed(sameAs, theme, first, second)) return null;
+  return `${TOKEN_CSS}: ${theme} ${first} and ${second} both resolve to ${value}; alias one with var() or record it in SAME_AS`;
+}
+
+function themeDuplicateFindings(source, theme, selector, sameAs) {
+  const declarations = paletteDeclarations(source, selector);
+  const palette = resolvePalette(source, selector);
+  const tokens = [...palette.keys()].filter((token) => token.startsWith('--color-')).sort(byName);
+  const valueOf = (token) => palette.get(token)?.replace(/\s+/g, ' ').toLowerCase();
+  const findings = [];
+  for (const [index, first] of tokens.entries()) {
+    const value = valueOf(first);
+    if (!value) continue;
+    for (const second of tokens.slice(index + 1)) {
+      if (value !== valueOf(second)) continue;
+      const finding = pairFinding({ theme, declarations, sameAs, value }, first, second);
+      if (finding) findings.push(finding);
+    }
+  }
+  return findings;
+}
+
 /**
  * Colour tokens that resolve to one value in a theme without saying so.
  * Chart series may never equal a status or action value, with no exception.
  * @public — also imported by the scripts/frontend fixture tests.
  */
 export function duplicateTokenFindings(source, sameAs = SAME_AS) {
-  const findings = [];
-  for (const [theme, selector] of THEMES) {
-    const declarations = paletteDeclarations(source, selector);
-    const palette = resolvePalette(source, selector);
-    const tokens = [...palette.keys()].filter((token) => token.startsWith('--color-')).sort(byName);
-    const valueOf = (token) => palette.get(token)?.replace(/\s+/g, ' ').toLowerCase();
-    for (const [index, first] of tokens.entries()) {
-      for (const second of tokens.slice(index + 1)) {
-        if (!valueOf(first) || valueOf(first) !== valueOf(second)) continue;
-        const series = [first, second].find((token) => token.startsWith('--color-chart-'));
-        const other = series === first ? second : first;
-        if (series && NON_SERIES.test(other)) {
-          findings.push(
-            `${TOKEN_CSS}: ${theme} ${series} equals ${other} (${valueOf(first)}); chart series never wear a status or action value`,
-          );
-          continue;
-        }
-        const firstChain = aliasChain(declarations, first);
-        if ([...aliasChain(declarations, second)].some((token) => firstChain.has(token))) continue;
-        if (sameAsAllowed(sameAs, theme, first, second)) continue;
-        findings.push(
-          `${TOKEN_CSS}: ${theme} ${first} and ${second} both resolve to ${valueOf(first)}; alias one with var() or record it in SAME_AS`,
-        );
-      }
-    }
-  }
-  return findings;
+  return THEMES.flatMap(([theme, selector]) =>
+    themeDuplicateFindings(source, theme, selector, sameAs),
+  );
 }
 
 /** Every custom property globals.css declares in an audited family. */
@@ -174,8 +181,30 @@ function declaredTokens(source) {
   return tokens;
 }
 
-const COLOUR_UTILITY =
-  /^(?:bg|text|border(?:-[xytrblse])?|ring(?:-offset)?|outline|fill|stroke|divide|decoration|caret|placeholder|accent|shadow|inset-shadow|inset-ring|from|via|to)-(.+)$/;
+// Longer prefixes precede their stems so `border-x-…` names the x side's colour.
+const COLOUR_PREFIXES = [
+  'bg',
+  'text',
+  ...['x', 'y', 't', 'r', 'b', 'l', 's', 'e'].map((side) => `border-${side}`),
+  'border',
+  'ring-offset',
+  'ring',
+  'outline',
+  'fill',
+  'stroke',
+  'divide',
+  'decoration',
+  'caret',
+  'placeholder',
+  'accent',
+  'shadow',
+  'inset-shadow',
+  'inset-ring',
+  'from',
+  'via',
+  'to',
+];
+const COLOUR_UTILITY = new RegExp(`^(?:${COLOUR_PREFIXES.join('|')})-(.+)$`);
 
 /** Theme tokens a single Tailwind class can generate from. */
 function utilityTokens(className) {
@@ -220,6 +249,16 @@ function consumedTokens({ path, text }) {
   return consumed;
 }
 
+/** The `--text-*` token a `--text-…--modifier` companion travels with. */
+function textCompanion(token) {
+  if (!token.startsWith('--text-')) return undefined;
+  const split = token.indexOf('--', '--text-'.length);
+  if (split < 0) return undefined;
+  const base = token.slice(0, split);
+  const modifier = token.slice(split + 2);
+  return /^--text-\w+(?:-[a-z\d]+)*$/.test(base) && /^[\w-]+$/.test(modifier) ? base : undefined;
+}
+
 /**
  * Declared tokens that no source file consumes.
  * @public — also imported by the scripts/frontend fixture tests.
@@ -231,7 +270,7 @@ export function zeroConsumerTokens(source, files) {
     .filter((token) => {
       if (consumed.has(token)) return false;
       // `--text-sm--line-height` travels with the `text-sm` utility.
-      const companion = /^(--text-[\w]+(?:-[a-z\d]+)*?)--[\w-]+$/.exec(token)?.[1];
+      const companion = textCompanion(token);
       return !(companion && consumed.has(companion));
     })
     .sort(byName);
@@ -255,6 +294,12 @@ function resolveLength(value, declarations, seen = new Set()) {
   return value.replace(/(-?[\d.]+)rem\b/g, (_, number) => `${Number(number) * 16}px`);
 }
 
+/** Which table column a rule's media query feeds: base, wide, or none. */
+function typeColumn(media, wideMedia) {
+  if (!media) return 'base';
+  return wideMedia?.test(media) ? 'wide' : null;
+}
+
 function typeRoles(css, selectorPart, declarations, wideMedia = null) {
   const roles = new Map();
   postcss.parse(css).walkRules((rule) => {
@@ -266,7 +311,7 @@ function typeRoles(css, selectorPart, declarations, wideMedia = null) {
     if (!parts.length) return;
     const media =
       rule.parent?.type === 'atrule' && rule.parent.name === 'media' ? rule.parent.params : null;
-    const column = media && wideMedia?.test(media) ? 'wide' : media ? null : 'base';
+    const column = typeColumn(media, wideMedia);
     if (!column) return;
     rule.walkDecls(/^(?:font-size|line-height)$/, (decl) => {
       for (const part of parts) {
@@ -377,7 +422,7 @@ export function refreshGeneratedBlocks(document, blocks) {
   const missing = [];
   for (const [name, block] of blocks) {
     const pattern = new RegExp(
-      `(<!-- generated:${escaped(name)}:start -->)([\\s\\S]*?)(<!-- generated:${escaped(name)}:end -->)`,
+      String.raw`(<!-- generated:${escaped(name)}:start -->)([\s\S]*?)(<!-- generated:${escaped(name)}:end -->)`,
     );
     const match = pattern.exec(text);
     if (!match) {

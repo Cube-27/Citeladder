@@ -146,11 +146,8 @@ function rawTiming(value) {
     }
     if (node.type !== 'word') return undefined;
     const unit = valueParser.unit(node.value);
-    if (unit && (unit.unit === 'ms' || unit.unit === 's') && Number(unit.number) !== 0) {
-      found.push(node.value);
-    } else if (EASING_KEYWORDS.has(node.value)) {
-      found.push(node.value);
-    }
+    const duration = unit && (unit.unit === 'ms' || unit.unit === 's') && Number(unit.number) !== 0;
+    if (duration || EASING_KEYWORDS.has(node.value)) found.push(node.value);
     return undefined;
   });
   return found;
@@ -211,6 +208,45 @@ function enclosingRule(node) {
   return current;
 }
 
+/** Every literal of a value that breaks its rule, as a finding detail. */
+const listedFinding = (rule, property, found) =>
+  found.length ? [rule, `${property}: ${found.join(' ')}`] : null;
+
+/**
+ * Per-property-family policy, first match wins: `finding(property, value,
+ * decl, label)` returns `[rule, detail]` or null when the value is allowed.
+ */
+const PROPERTY_FAMILIES = [
+  {
+    matches: (property) => RADIUS_PROPERTY.test(property),
+    finding: (property, value) => (radiusAllowed(value) ? null : ['css-radius', value]),
+  },
+  {
+    matches: (property) => property === 'font-size' || property === 'line-height',
+    finding: (property, value, decl, label) =>
+      typeAllowed(property, value) || ownsTypeLadder(enclosingRule(decl), label)
+        ? null
+        : ['css-type', `${property}: ${value}`],
+  },
+  {
+    matches: (property) => SPACING_PROPERTY.test(property),
+    finding: (property, value) => listedFinding('css-spacing', property, offGridSteps(value)),
+  },
+  {
+    matches: (property) => MOTION_PROPERTY.test(property),
+    finding: (property, value) => listedFinding('css-motion', property, rawTiming(value)),
+  },
+  {
+    matches: (property) => OUTLINE_PROPERTY.test(property),
+    finding: (property, value) =>
+      outlineAllowed(property, value) ? null : ['css-outline', `${property}: ${value}`],
+  },
+  {
+    matches: (property) => property === 'box-shadow',
+    finding: (property, value) => (shadowAllowed(value) ? null : ['css-shadow', value]),
+  },
+];
+
 function declarationFinding(decl, label) {
   const property = decl.prop.toLowerCase();
   // A custom property that reads itself is a cycle: the browser drops it and
@@ -220,29 +256,8 @@ function declarationFinding(decl, label) {
       ? ['css-cycle', `${decl.prop}: ${decl.value}`]
       : null;
   }
-  const value = decl.value;
-  if (RADIUS_PROPERTY.test(property)) {
-    return radiusAllowed(value) ? null : ['css-radius', value];
-  }
-  if (property === 'font-size' || property === 'line-height') {
-    if (typeAllowed(property, value) || ownsTypeLadder(enclosingRule(decl), label)) return null;
-    return ['css-type', `${property}: ${value}`];
-  }
-  if (SPACING_PROPERTY.test(property)) {
-    const steps = offGridSteps(value);
-    return steps.length ? ['css-spacing', `${property}: ${steps.join(' ')}`] : null;
-  }
-  if (MOTION_PROPERTY.test(property)) {
-    const raw = rawTiming(value);
-    return raw.length ? ['css-motion', `${property}: ${raw.join(' ')}`] : null;
-  }
-  if (OUTLINE_PROPERTY.test(property)) {
-    return outlineAllowed(property, value) ? null : ['css-outline', `${property}: ${value}`];
-  }
-  if (property === 'box-shadow') {
-    return shadowAllowed(value) ? null : ['css-shadow', value];
-  }
-  return null;
+  const family = PROPERTY_FAMILIES.find(({ matches }) => matches(property));
+  return family ? family.finding(property, decl.value, decl, label) : null;
 }
 
 /**

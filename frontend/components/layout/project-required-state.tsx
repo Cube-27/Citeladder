@@ -1,6 +1,6 @@
 'use client';
 
-import { useCreateProjectHref } from '@/components/layout/use-create-project-href';
+import { useCreateProjectHref } from '@/components/layout/use-project-creation';
 import { NoProjectState } from '@/components/ui/no-project-state';
 
 /**

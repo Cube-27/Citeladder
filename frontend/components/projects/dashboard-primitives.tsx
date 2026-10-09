@@ -1,7 +1,6 @@
 import { ArrowDown, ArrowUp, GripVertical, TrendingUp } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { metricItemClasses } from '@/components/ui/workspace';
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +16,12 @@ import type { CommandCenter, Opportunity } from '@/lib/api/types';
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
+
+/** A change against the previous comparable run, as every Command Center delta reads it. */
+export const VS_PREVIOUS_RUN = {
+  context: 'vs previous',
+  missingReason: 'No comparable run',
+} as const;
 
 export function metricValue(value: number | null, suffix = '') {
   if (value === null) return availabilityLabel('not_measured');
@@ -54,8 +59,7 @@ export function StateMetric({
           <Delta
             value={delta}
             policy={inverse ? 'lower-is-better' : 'higher-is-better'}
-            context="vs previous"
-            missingReason="No comparable run"
+            {...VS_PREVIOUS_RUN}
           />
         )}
       </dd>
@@ -84,7 +88,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
         <div key={row.label} className="grid min-w-0 content-start gap-2">
           <div className="flex items-center justify-between gap-2">
             <span className={textRole('label', 'capitalize')}>{row.label}</span>
-            <Delta value={row.delta} context="vs previous" missingReason="No comparable run" />
+            <Delta value={row.delta} {...VS_PREVIOUS_RUN} />
           </div>
           <MovementMeter engine={row.label} period="Previous" value={row.previous} tone="neutral" />
           <MovementMeter
@@ -114,9 +118,8 @@ function MovementMeter({
     <div className="flex min-w-0 items-center gap-2">
       <span className={textRole('caption', 'w-16 shrink-0')}>{period}</span>
       <Meter
-        value={value ?? 0}
+        value={value}
         label={`${engine} ${period.toLowerCase()} mention rate`}
-        valueText={value === null ? availabilityLabel('not_measured') : undefined}
         tone={tone}
         className="min-w-0 flex-1"
       />
@@ -168,12 +171,11 @@ export function ActionRow({
       </div>
       <div className="grid min-w-0 gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          <TextLink asChild text="itemTitle">
-            <ProjectLink
-              href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
-            >
-              {action.title}
-            </ProjectLink>
+          <TextLink
+            text="itemTitle"
+            href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
+          >
+            {action.title}
           </TextLink>
           {action.severity === 'critical' ? (
             <Badge variant="status" value="danger">

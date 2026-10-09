@@ -790,13 +790,39 @@ export function rawRadiusViolations(source, label) {
   return violations;
 }
 
-const ARBITRARY_RADIUS =
-  /^(?:[\w-]+:)*!?rounded(?:-(?:t|b|l|r|s|e|tl|tr|bl|br|ss|se|es|ee))?-\[([^\]]+)\]$/;
-const ARBITRARY_SIZE = /^(?:[\w-]+:)*!?-?(?:w|h|min-w|min-h|max-w|max-h|size)-\[([^\]]+)\]$/;
-const ARBITRARY_STROKE = /^(?:[\w-]+:)*!?stroke-\[([^\]]+)\]$/;
-const LITERAL_LENGTH = /(?<![\w-])\d*\.?\d+(?:px|rem)(?![\w-])/;
-const STYLE_LENGTH_KEYS =
-  /^(?:width|height|(?:min|max)(?:Width|Height)|top|right|bottom|left|inset\w*|margin\w*|padding\w*|gap|rowGap|columnGap|fontSize|lineHeight|borderRadius|border\w*Radius|borderWidth|outlineWidth|outlineOffset)$/;
+const RADIUS_SIDES = ['t', 'b', 'l', 'r', 's', 'e', 'tl', 'tr', 'bl', 'br', 'ss', 'se', 'es', 'ee'];
+const SIZE_UTILITIES = ['w', 'h', 'min-w', 'min-h', 'max-w', 'max-h', 'size'];
+/** A whole class token: variant prefixes, an optional `!`, then `utility-[value]`. */
+const arbitraryToken = (utility) =>
+  new RegExp(String.raw`^(?:[\w-]+:)*!?` + utility + String.raw`-\[([^\]]+)\]$`);
+const ARBITRARY_RADIUS = arbitraryToken(`rounded(?:-${oneOf(RADIUS_SIDES)})?`);
+const ARBITRARY_SIZE = arbitraryToken(`-?${oneOf(SIZE_UTILITIES)}`);
+const ARBITRARY_STROKE = arbitraryToken('stroke');
+const LITERAL_LENGTH = /(?<![\w-])(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem)(?![\w-])/;
+const STYLE_LENGTH_KEYS = new Set([
+  'width',
+  'height',
+  'minWidth',
+  'minHeight',
+  'maxWidth',
+  'maxHeight',
+  'top',
+  'right',
+  'bottom',
+  'left',
+  'gap',
+  'rowGap',
+  'columnGap',
+  'fontSize',
+  'lineHeight',
+  'borderRadius',
+  'borderWidth',
+  'outlineWidth',
+  'outlineOffset',
+]);
+const STYLE_LENGTH_FAMILIES = [/^(?:inset|margin|padding)\w*$/, /^border\w*Radius$/];
+const isStyleLengthKey = (key) =>
+  STYLE_LENGTH_KEYS.has(key) || STYLE_LENGTH_FAMILIES.some((family) => family.test(key));
 const STYLE_COLOUR = /#[\da-f]{3,8}\b|\b(?:rgba?|hsla?|oklch|lab)\(/i;
 
 /** Every class-like token in a module's string and template text. */
@@ -825,7 +851,7 @@ function styleObjectFindings(node, label, lineOf) {
       (literal?.type === 'Literal' &&
         typeof literal.value === 'number' &&
         literal.value !== 0 &&
-        STYLE_LENGTH_KEYS.test(key));
+        isStyleLengthKey(key));
     if (!raw) return [];
     return [
       {

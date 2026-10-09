@@ -172,10 +172,8 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <TextLink asChild text="inherit">
-                      <ProjectLink href={issueHref(issue.rule_id, issue.finding_class)}>
-                        {issue.description || issue.rule_id}
-                      </ProjectLink>
+                    <TextLink text="inherit" href={issueHref(issue.rule_id, issue.finding_class)}>
+                      {issue.description || issue.rule_id}
                     </TextLink>
                   </TableCell>
                   <TableCell>{statusLabel(issue.finding_class)}</TableCell>

@@ -118,45 +118,37 @@ export function IssuesCatalog({
         />
       }
     >
-      <div className="min-w-0 max-[700px]:w-full [&>button]:max-[700px]:w-full">
-        <PageKindSelect
-          value={filters.page_kind}
-          onChange={(page_kind) => updateFilters({ page_kind })}
-        />
-      </div>
-      <div className="max-w-full min-w-0 max-[700px]:w-full">
-        <FindingClassFilter
-          value={findingView}
-          summary={summary}
-          onChange={(value) => updateFilters(findingClassChange(value))}
-        />
-      </div>
-      <div className="max-w-full min-w-0 max-[700px]:w-full">
-        <div className="flex flex-wrap items-end gap-4">
-          {(['All issues', 'Severity', 'Category'] as const).map((group) => {
-            const keys =
-              group === 'Severity'
-                ? ['high', 'medium', 'low']
-                : group === 'Category'
-                  ? ['technical', 'aeo']
-                  : ['all'];
-            const options = issueFilterClasses(findingView).filter((item) =>
-              keys.includes(item.key),
-            );
-            return options.length > 0 ? (
-              <SegmentedControl
-                key={group}
-                value={issueFilterClass(filters)}
-                onChange={(value) => updateFilters(issueFilterClassChange(value))}
-                ariaLabel={group}
-                options={options.map((item) => ({
-                  value: item.key,
-                  label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
-                }))}
-              />
-            ) : null;
-          })}
-        </div>
+      <PageKindSelect
+        value={filters.page_kind}
+        onChange={(page_kind) => updateFilters({ page_kind })}
+      />
+      <FindingClassFilter
+        value={findingView}
+        summary={summary}
+        onChange={(value) => updateFilters(findingClassChange(value))}
+      />
+      <div className="flex max-w-full min-w-0 flex-wrap items-end gap-4">
+        {(['All issues', 'Severity', 'Category'] as const).map((group) => {
+          const keys =
+            group === 'Severity'
+              ? ['high', 'medium', 'low']
+              : group === 'Category'
+                ? ['technical', 'aeo']
+                : ['all'];
+          const options = issueFilterClasses(findingView).filter((item) => keys.includes(item.key));
+          return options.length > 0 ? (
+            <SegmentedControl
+              key={group}
+              value={issueFilterClass(filters)}
+              onChange={(value) => updateFilters(issueFilterClassChange(value))}
+              ariaLabel={group}
+              options={options.map((item) => ({
+                value: item.key,
+                label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
+              }))}
+            />
+          ) : null;
+        })}
       </div>
     </FilterRow>
   );

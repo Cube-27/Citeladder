@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
-import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
+import { useProjectCreation } from '@/components/layout/use-project-creation';
 import type { Project } from '@/lib/api/types';
-import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
-import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { newProjectDestination } from '@/lib/navigation/project-destination';
 
 export function ProjectControls({
@@ -17,15 +15,10 @@ export function ProjectControls({
   onEditProject?: (project: Project) => void;
 }>) {
   const router = useNavigate();
-  const { activeWorkspaceId } = useProjectContext();
-  const { entitlement } = useEntitlement();
-  const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
-  // Both must permit it: the caller's ROLE, and the workspace's remaining
-  // allowance. A Viewer is never offered the creation affordance, matching
-  // the switcher — and the backend refuses it either way.
-  const mayCreate = useWorkspaceCapability('write');
-  const canAddProject =
-    mayCreate && remainingProjectSlots !== undefined && remainingProjectSlots > 0;
+  // A Viewer is never offered the creation affordance, matching the switcher —
+  // and the backend refuses it either way.
+  const { activeWorkspaceId, mayCreate, canAddProject, remainingProjectSlots } =
+    useProjectCreation();
   return (
     <Dropdown>
       <DropdownTrigger asChild>

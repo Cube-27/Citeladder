@@ -21,7 +21,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
-import { useProjectCreation } from '@/components/layout/use-create-project-href';
+import { useProjectCreation } from '@/components/layout/use-project-creation';
 
 /**
  * ProjectSwitcher (F5) — brand avatar + active project name with a dropdown of

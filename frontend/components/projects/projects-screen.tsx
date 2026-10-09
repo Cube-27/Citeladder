@@ -9,9 +9,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import type { Project } from '@/lib/api/types';
-import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
-import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
-import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
+import { useProjectCreation } from '@/components/layout/use-project-creation';
+import { useProjectContext } from '@/lib/project/project-context';
 import { finishOnboardingNavigationHandoff } from '@/lib/onboarding/timing';
 import { newProjectDestination } from '@/lib/navigation/project-destination';
 
@@ -32,17 +31,12 @@ import { DashboardScreen } from './dashboard-screen';
  * just as much as the first did.
  */
 export function ProjectsScreen() {
-  const { projects, projectsSettled, activeWorkspaceId, activeProject, status } =
-    useProjectContext();
+  const { projects, projectsSettled, activeProject, status } = useProjectContext();
   const searchParams = useSearchParams()[0];
   const requestedProjectId = searchParams?.get('project') ?? null;
   const [editing, setEditing] = useState<Project | null>(null);
   const navigate = useNavigate();
-  const { entitlement } = useEntitlement();
-  const mayCreate = useWorkspaceCapability('write');
-  const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
-  const canAddProject =
-    mayCreate && remainingProjectSlots !== undefined && remainingProjectSlots > 0;
+  const { activeWorkspaceId, canAddProject } = useProjectCreation();
 
   // The source mark carries the committed UUID. Close it after this route has
   // committed with that same authorized project, never for a fallback project.

@@ -24,7 +24,7 @@ import { siteHealthQueries } from '@/lib/api/site-health';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 import { crawlerPolicyLabels, robotsStatusLabels } from '@/lib/site-health/site-facts';
-import { useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, useCursorTable } from '@/lib/table/use-cursor-table';
 
 type RobotsHistoryPage = z.infer<typeof robotsHistoryPageSchema>;
 
@@ -81,12 +81,7 @@ export function RobotsHistory({
           </TableBody>
         </Table>
       )}
-      <Pager
-        canPrev={pager.canPrev}
-        canNext={Boolean(page.next_cursor)}
-        onPrev={pager.pop}
-        onNext={() => pager.push(page.next_cursor)}
-      />
+      <Pager {...cursorControls(pager, page.next_cursor)} />
       {/* A new page offers different observations, so the comparison starts over. */}
       <RobotsCompare key={pager.cursor ?? 'first'} page={page} />
     </>

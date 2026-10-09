@@ -99,7 +99,7 @@ function MemberRow({
     <TableRow>
       <TableCell>
         <div className="flex min-w-0 items-center gap-2">
-          <Avatar name={member.email} size="sm" decorative />
+          <Avatar name={member.email} size="sm" />
           <span className="min-w-0 truncate">{member.email}</span>
           {member.is_self ? <Badge variant="neutral">You</Badge> : null}
         </div>

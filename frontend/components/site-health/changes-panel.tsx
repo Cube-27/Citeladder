@@ -3,7 +3,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { PageLoading } from '@/components/layout/page-loading';
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +21,7 @@ import {
 import { TextLink } from '@/components/ui/text-link';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { ChangeObservation, ChangesPage, ChangeSummary } from '@/lib/api/types';
-import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { textRole } from '@/components/ui/typography';
 import {
   CHANGE_EVIDENCE_DEPTH_LIMIT,
@@ -333,12 +332,11 @@ function ChangesTable({
                 {rows.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>
-                      <TextLink asChild text="emphasis">
-                        <ProjectLink
-                          href={`/site/crawls/${summary.crawl_b_id}/pages/${row.site_url_id}`}
-                        >
-                          {displayPath(row.normalized_url)}
-                        </ProjectLink>
+                      <TextLink
+                        text="emphasis"
+                        href={`/site/crawls/${summary.crawl_b_id}/pages/${row.site_url_id}`}
+                      >
+                        {displayPath(row.normalized_url)}
                       </TextLink>
                     </TableCell>
                     <TableCell>{row.field.replaceAll('_', ' ')}</TableCell>
@@ -363,10 +361,7 @@ function ChangesTable({
             // pair and no persisted count describes it, so the range stands
             // alone rather than paying for a COUNT(*) per navigation.
             pageSize={{ value: pager.pageSize, onChange: pager.setPageSize }}
-            canPrev={pager.canPrev}
-            canNext={Boolean(changes.next_cursor)}
-            onPrev={pager.pop}
-            onNext={() => pager.push(changes.next_cursor)}
+            {...cursorControls(pager, changes.next_cursor)}
             busy={isFetching}
           />
         </CardContent>

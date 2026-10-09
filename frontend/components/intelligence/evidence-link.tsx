@@ -1,4 +1,3 @@
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { TextLink } from '@/components/ui/text-link';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
@@ -30,13 +29,15 @@ export type EvidenceLinkProps = {
 
 export function EvidenceLink({ evidence, className }: Readonly<EvidenceLinkProps>) {
   return (
-    <TextLink asChild text="label" className={cn('flex min-w-0 items-start gap-1', className)}>
-      <ProjectLink href={evidence.href}>
-        <span className="min-w-0 [overflow-wrap:anywhere]">{evidence.label}</span>
-        {evidence.observedAt ? (
-          <span className={textRole('caption', 'shrink-0')}>· {evidence.observedAt}</span>
-        ) : null}
-      </ProjectLink>
+    <TextLink
+      text="label"
+      className={cn('flex min-w-0 items-start gap-1', className)}
+      href={evidence.href}
+    >
+      <span className="min-w-0 [overflow-wrap:anywhere]">{evidence.label}</span>
+      {evidence.observedAt ? (
+        <span className={textRole('caption', 'shrink-0')}>· {evidence.observedAt}</span>
+      ) : null}
     </TextLink>
   );
 }

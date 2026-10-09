@@ -1,4 +1,3 @@
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
 import { auditStatusLabel } from '@/lib/runs/status';
@@ -20,8 +19,8 @@ export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
           A run is in progress ({auditStatusLabel(run.status)}). Results appear here when it
           completes.
         </span>
-        <TextLink asChild text="emphasis" className="whitespace-nowrap">
-          <ProjectLink href={`/runs/${run.id}`}>Watch live progress →</ProjectLink>
+        <TextLink text="emphasis" className="whitespace-nowrap" href={`/runs/${run.id}`}>
+          Watch live progress →
         </TextLink>
       </div>
     </Alert>

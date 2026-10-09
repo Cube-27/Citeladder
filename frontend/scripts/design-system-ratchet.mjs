@@ -11,6 +11,12 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const FORMAT_VERSION = 1;
 
+/** Code-unit order, as a bare sort() gives, so existing baselines keep their key order. */
+const byCodeUnit = (left, right) => {
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+};
+
 /** `{ file: { rule: count } }` with sorted keys, so the JSON diffs cleanly. */
 function countFindings(findings) {
   const counts = {};
@@ -20,28 +26,21 @@ function countFindings(findings) {
   }
   return Object.fromEntries(
     Object.keys(counts)
-      .sort()
+      .sort(byCodeUnit)
       .map((file) => [
         file,
         Object.fromEntries(
           Object.keys(counts[file])
-            .sort()
+            .sort(byCodeUnit)
             .map((rule) => [rule, counts[file][rule]]),
         ),
       ]),
   );
 }
 
-/**
- * Compare findings with a baseline. `violations` lists every finding of a
- * file/rule that grew (any of them may be the new one); `lowered` names the
- * counts that fell and should be written back.
- */
-export function ratchetVerdict(findings, baseline) {
-  const counts = countFindings(findings);
-  const accepted = baseline?.files ?? {};
+/** A grown file/rule's headline followed by every finding it now holds. */
+function growthViolations(findings, counts, accepted) {
   const violations = [];
-  const lowered = [];
   for (const [file, rules] of Object.entries(counts)) {
     for (const [rule, count] of Object.entries(rules)) {
       const allowed = accepted[file]?.[rule] ?? 0;
@@ -54,13 +53,32 @@ export function ratchetVerdict(findings, baseline) {
       }
     }
   }
+  return violations;
+}
+
+function loweredCounts(counts, accepted) {
+  const lowered = [];
   for (const [file, rules] of Object.entries(accepted)) {
     for (const [rule, allowed] of Object.entries(rules)) {
       const count = counts[file]?.[rule] ?? 0;
       if (count < allowed) lowered.push(`${file}: ${rule} fell from ${allowed} to ${count}`);
     }
   }
-  return { violations, lowered };
+  return lowered;
+}
+
+/**
+ * Compare findings with a baseline. `violations` lists every finding of a
+ * file/rule that grew (any of them may be the new one); `lowered` names the
+ * counts that fell and should be written back.
+ */
+export function ratchetVerdict(findings, baseline) {
+  const counts = countFindings(findings);
+  const accepted = baseline?.files ?? {};
+  return {
+    violations: growthViolations(findings, counts, accepted),
+    lowered: loweredCounts(counts, accepted),
+  };
 }
 
 export function readBaseline(path) {

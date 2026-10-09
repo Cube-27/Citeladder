@@ -4,7 +4,6 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
 import { ReadError } from '@/components/ui/read-error';
 import { StatGrid } from '@/components/ui/stat-grid';
 import { TextLink } from '@/components/ui/text-link';
@@ -14,7 +13,6 @@ import { SourcePrompts } from '@/components/visibility/source-prompts';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import { BrandsCard, EnginesCard } from '@/components/visibility/source-url-cards';
 import { count, hostOf, pathOf, ratio, sinceLabel } from '@/lib/visibility/sources';
-import { safeExternalUrl } from '@/lib/visibility/urls';
 import { useSourceUrl, type SourceQueries } from '@/lib/visibility/use-source-analysis';
 
 /**
@@ -88,7 +86,6 @@ export function SourceUrlDetail({
 
 /** The page's mark, its title and the live link to it. */
 function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) {
-  const href = safeExternalUrl(url);
   const host = hostOf(url);
   return (
     <CardHeader>
@@ -96,13 +93,10 @@ function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) 
         <BrandLogo name={host ?? url} websiteUrl={host ? `https://${host}` : null} size="lg" />
         <div className="grid min-w-0 gap-1">
           <CardTitle className="truncate">{title}</CardTitle>
-          {href ? (
-            <TextLink variant="external" text="caption" href={href} className="min-w-0">
-              <span className="truncate">{url}</span>
-            </TextLink>
-          ) : (
-            <span className={textRole('caption', 'text-secondary truncate')}>{url}</span>
-          )}
+          {/* An unsafe cited URL renders as plain text rather than a link. */}
+          <TextLink variant="external" text="caption" href={url} className="min-w-0">
+            <span className="truncate">{url}</span>
+          </TextLink>
         </div>
       </div>
     </CardHeader>

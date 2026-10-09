@@ -8,13 +8,9 @@ import { EmptyState } from '@/components/ui/empty-state';
  * NoProjectState — what a project-scoped route shows when no project is
  * selected.
  *
- * Twelve routes had written their own sentence ("Select a project to inspect
- * AI Traffic.", "Select or create a project to launch runs.", …) in an info
- * `Alert`, so the same condition read as a notice on one page and a hint on
- * the next. One state now: the shared `EmptyState` with the one heading and,
- * when the viewer may create a project, the one "Create project" action;
- * otherwise the one line "Select a project first." Both sentences are the
- * product's existing copy (Settings, the property picker), not new wording.
+ * The shared `EmptyState` with the one heading and, when the viewer may create
+ * a project, the one "Create project" action; otherwise the one line "Select a
+ * project first."
  *
  * The caller decides `createProjectHref` (`newProjectDestination(workspaceId)`)
  * and omits it for a role that may not create projects or a workspace with no

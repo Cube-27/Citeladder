@@ -1,6 +1,5 @@
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { useNavigate } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
@@ -97,7 +96,6 @@ export function PagesTable({
               label="Page URL"
               active={sort === 'url'}
               descending={false}
-              numeric={false}
               onSort={() => onSortChange(sort === 'url' ? 'status' : 'url')}
             />
           ) : (
@@ -109,7 +107,6 @@ export function PagesTable({
               label="Status"
               active={sort === 'status'}
               descending={false}
-              numeric={false}
               onSort={() => onSortChange('status')}
             />
           ) : (
@@ -239,14 +236,13 @@ export function PagesTable({
               <Measured value={formatAudited(page.last_audited, timeZone)} />
             </TableCell>
             <TableCell>
-              <TextLink asChild text="label">
-                <ProjectLink
-                  href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
-                  onClick={(event) => event.stopPropagation()}
-                  aria-label={`View ${pageDisplayTitle(page.title, page.display_url)} — ${page.display_url}`}
-                >
-                  View
-                </ProjectLink>
+              <TextLink
+                text="label"
+                href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
+                onClick={(event) => event.stopPropagation()}
+                aria-label={`View ${pageDisplayTitle(page.title, page.display_url)} — ${page.display_url}`}
+              >
+                View
               </TextLink>
             </TableCell>
           </TableRow>
