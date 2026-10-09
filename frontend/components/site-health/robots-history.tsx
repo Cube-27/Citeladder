@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { PageLoading } from '@/components/layout/page-loading';
 import { useQuery } from '@tanstack/react-query';
 import type { robotsHistoryPageSchema } from '@citeladder/contracts/site-health';
 import type { z } from 'zod';
 import { Alert } from '@/components/ui/alert';
-import { CursorPager } from '@/components/ui/cursor-pager';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { Pager } from '@/components/ui/pager';
 import { DisplayTime } from '@/components/ui/display-time';
 import { LineDiff } from '@/components/ui/line-diff';
 import { ReadError } from '@/components/ui/read-error';
@@ -22,7 +24,7 @@ import { siteHealthQueries } from '@/lib/api/site-health';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 import { crawlerPolicyLabels, robotsStatusLabels } from '@/lib/site-health/site-facts';
-import { useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, useCursorTable } from '@/lib/table/use-cursor-table';
 
 type RobotsHistoryPage = z.infer<typeof robotsHistoryPageSchema>;
 
@@ -35,7 +37,7 @@ export function RobotsHistory({
 }>) {
   const pager = useCursorTable(projectId);
   const query = useQuery(siteHealthQueries.robotsHistory(workspaceId, projectId, pager.cursor));
-  if (query.isPending) return <output>Loading robots.txt observations…</output>;
+  if (query.isPending) return <PageLoading label="Loading robots.txt observations…" />;
   if (query.isError)
     return (
       <ReadError
@@ -49,7 +51,7 @@ export function RobotsHistory({
   return (
     <>
       {page.items.length === 0 ? (
-        <p>No robots.txt observations are available.</p>
+        <InlineEmpty>No robots.txt observations are available.</InlineEmpty>
       ) : (
         <Table>
           <caption className="sr-only">robots.txt observation sequence</caption>
@@ -79,14 +81,7 @@ export function RobotsHistory({
           </TableBody>
         </Table>
       )}
-      <div className="flex flex-wrap gap-2">
-        <CursorPager
-          canPrev={pager.canPrev}
-          canNext={Boolean(page.next_cursor)}
-          onPrev={pager.pop}
-          onNext={() => pager.push(page.next_cursor)}
-        />
-      </div>
+      <Pager {...cursorControls(pager, page.next_cursor)} />
       {/* A new page offers different observations, so the comparison starts over. */}
       <RobotsCompare key={pager.cursor ?? 'first'} page={page} />
     </>

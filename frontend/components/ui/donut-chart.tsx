@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react';
 
+import { LegendSwatch } from '@/components/ui/chart';
 import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -185,7 +186,7 @@ export function DonutChart({
                 active && active !== slice.key ? 'opacity-45' : 'opacity-100',
               )}
             >
-              <span className={cn('size-2 shrink-0 rounded-full', slice.swatchClass)} aria-hidden />
+              <LegendSwatch className={slice.swatchClass} />
               <span className={textRole('caption', 'truncate')}>{slice.label}</span>
               <span className={textRole('caption', 'text-secondary ml-auto shrink-0 tabular-nums')}>
                 {shareText(slice.value, whole)}

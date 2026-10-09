@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { Badge } from '@/components/ui/badge';
+import type { StatusValue } from '@/components/ui/badge-variants';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
@@ -44,10 +46,10 @@ const PRIORITY_COPY: Record<InsightPriority, string> = {
 };
 
 /** Paired with the text label, never the sole signal (design.md, WCAG 1.4.1). */
-const PRIORITY_TONE: Record<InsightPriority, string> = {
-  high: 'bg-danger-bg text-danger-text',
-  medium: 'bg-warning-bg text-warning-text',
-  low: 'bg-neutral-bg text-secondary',
+const PRIORITY_BADGE: Record<InsightPriority, StatusValue | null> = {
+  high: 'danger',
+  medium: 'warning',
+  low: null,
 };
 
 const IMPACT_COPY: Record<InsightPriority, string> = {
@@ -99,14 +101,7 @@ export function Insight({
     >
       {/* 1. Priority and source layer */}
       <div className="flex items-center justify-between gap-3">
-        <span
-          className={cn(
-            textRole('label', 'inline-flex items-center rounded-xs px-2 py-0.5'),
-            PRIORITY_TONE[insight.priority],
-          )}
-        >
-          {PRIORITY_COPY[insight.priority]}
-        </span>
+        <PriorityBadge priority={insight.priority} />
         <span className={eyebrowClasses}>{LAYER_LABEL[insight.layer]}</span>
       </div>
 
@@ -141,5 +136,15 @@ export function Insight({
         </div>
       ) : null}
     </article>
+  );
+}
+
+function PriorityBadge({ priority }: Readonly<{ priority: InsightPriority }>) {
+  const status = PRIORITY_BADGE[priority];
+  if (!status) return <Badge>{PRIORITY_COPY[priority]}</Badge>;
+  return (
+    <Badge variant="status" value={status}>
+      {PRIORITY_COPY[priority]}
+    </Badge>
   );
 }

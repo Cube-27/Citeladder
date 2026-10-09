@@ -1,3 +1,5 @@
+import type { DataTone } from './data-tone';
+
 /**
  * Score-band mapping (§ score bands): low 0–24, mid 25–49, good 50–74,
  * high 75–100. Returns the bridged token utility classes for stroke/text
@@ -34,12 +36,12 @@ export const scoreBandText: Record<ScoreBand, string> = {
   high: 'text-success-text',
 };
 
-/** Horizontal meter fill per band, using the same visualization tokens as rings. */
-export const scoreBandFill: Record<ScoreBand, string> = {
-  low: 'bg-danger',
-  mid: 'bg-warning',
-  good: 'bg-success/55',
-  high: 'bg-success',
+/** Horizontal meter tone per band, on the same outcome steps as the ring. */
+export const scoreBandTone: Record<ScoreBand, DataTone> = {
+  low: 'danger',
+  mid: 'warning',
+  good: 'success-soft',
+  high: 'success',
 };
 
 /**

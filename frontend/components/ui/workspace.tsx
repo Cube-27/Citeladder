@@ -41,11 +41,19 @@ export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:la
  *   `main-aside`  — the primary surface beside supporting context.
  *   `peers`       — two equal surfaces read side by side (e.g. two tables).
  *
- * Both stack below `lg`, with the first child first, and share the workspace
+ * All stack below `lg`, with the first child first, and share the workspace
  * gap. Columns align to the top so a short aside never stretches.
  */
 const SPLIT_PANE = {
   'list-detail': 'lg:grid-cols-[var(--pane-list-detail)]',
+  /**
+   * The list at the reader's width: three tracks — the list at
+   * `--split-pane-list-width`, the separator, the detail — with the gap carried
+   * by the separator itself. `ResizableSplitPane` owns the width and the
+   * separator; use it rather than this role alone.
+   */
+  'list-detail-resizable':
+    'lg:grid-cols-[var(--split-pane-list-width)_auto_minmax(0,1fr)] lg:gap-0',
   'main-aside': 'lg:grid-cols-[var(--pane-main-aside)]',
   peers: 'lg:grid-cols-2',
 } as const;
@@ -55,6 +63,16 @@ export type SplitPaneRole = keyof typeof SPLIT_PANE;
 export function splitPaneClasses(role: SplitPaneRole, className?: string) {
   return cn('grid min-w-0 items-start gap-[var(--workspace-gap)]', SPLIT_PANE[role], className);
 }
+
+/**
+ * The one sticky offset for a pane that stays in view while its neighbour
+ * scrolls (the list beside a long detail). It clears the compact topbar on
+ * narrow screens and is 0 on desktop, where the sheet scrolls under nothing.
+ * The pane scrolls inside itself once it is taller than the viewport, so a
+ * long list never pins its own end out of reach.
+ */
+export const stickyPaneClasses =
+  'lg:sticky lg:top-[var(--sticky-header-offset)] lg:max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] lg:overflow-y-auto';
 
 /**
  * The ledger: a vertical list of peers separated by rules rather than boxed

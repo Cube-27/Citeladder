@@ -200,7 +200,8 @@ describe('ScoreBar', () => {
   it('renders a clamped accessible meter', () => {
     render(<ScoreBar value={140} label="Readiness score" />);
     const meter = screen.getByRole('meter', { name: 'Readiness score' });
-    expect(meter).toHaveAttribute('value', '100');
+    expect(meter).toHaveAttribute('aria-valuenow', '100');
+    expect(meter).toHaveAttribute('aria-valuetext', '100 out of 100');
   });
 });
 

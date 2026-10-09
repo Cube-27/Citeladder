@@ -1,12 +1,12 @@
 'use client';
 
-import { Alert } from '@/components/ui/alert';
 import { BusyBar } from '@/components/ui/busy-bar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DonutChart } from '@/components/ui/donut-chart';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { ReadError } from '@/components/ui/read-error';
 import { SeriesChart } from '@/components/ui/series-chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
 import { seriesCeiling, toChartSeries, type typeSlices } from '@/lib/visibility/sources';
 import type { useSourceAnalysis, useSourceSeries } from '@/lib/visibility/use-source-analysis';
 import { cn } from '@/lib/utils';
@@ -35,9 +35,9 @@ export function UsageCard({
       <BusyBar active={query.isFetching} label="Updating usage" />
       <CardHeader>
         <CardTitle>{urls ? 'Source usage by URL' : 'Source usage by domain'}</CardTitle>
-        <p className={textRole('caption', 'text-secondary')}>
+        <CardDescription>
           {`How often each of the leading ${urls ? 'pages' : 'domains'} was used as a source, as a share of the answers in each period.`}
-        </p>
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <UsagePlot query={query} series={series} />
@@ -46,8 +46,11 @@ export function UsageCard({
   );
 }
 
-/** Legend (up to two wrapped lines) plus the 260px plot. */
-const USAGE_PLOT_BOX = 'h-[304px]';
+/**
+ * The box every state of the usage card occupies: the page-chart height role,
+ * which holds the legend (up to two wrapped lines) above the 260px plot.
+ */
+const USAGE_PLOT_BOX = 'min-h-[var(--chart-height-lg)]';
 
 /** The plot, or the one state standing in for it. */
 function UsagePlot({
@@ -63,7 +66,12 @@ function UsagePlot({
   if (query.isError) {
     return (
       <div className={USAGE_PLOT_BOX}>
-        <Alert tone="danger">Could not load source usage.</Alert>
+        <ReadError
+          error={query.error}
+          fallback="Could not load source usage."
+          onRetry={() => void query.refetch()}
+          pending={query.isFetching}
+        />
       </div>
     );
   }
@@ -71,9 +79,7 @@ function UsagePlot({
   if (!series.length) {
     return (
       <div className={cn(USAGE_PLOT_BOX, 'grid place-items-center')}>
-        <p className={textRole('caption', 'text-secondary')}>
-          No sources were used in this period.
-        </p>
+        <InlineEmpty>No sources were used in this period.</InlineEmpty>
       </div>
     );
   }
@@ -83,12 +89,13 @@ function UsagePlot({
       labels={(query.data?.buckets ?? []).map(bucketLabel)}
       domainMax={seriesCeiling(series)}
       yAxisLabel="Share of answers"
+      className={USAGE_PLOT_BOX}
     />
   );
 }
 
-/** The ring, its centre total and its legend. Every state occupies it. */
-const TYPES_RING_BOX = 'h-[240px]';
+/** The ring, its centre total and its legend: the default chart height role. */
+const TYPES_RING_BOX = 'h-[var(--chart-height-md)]';
 
 /** The citation mix, counted server-side over the whole selection. */
 export function TypesCard({
@@ -128,7 +135,12 @@ function TypesRing({
   if (query.isError) {
     return (
       <div className={TYPES_RING_BOX}>
-        <Alert tone="danger">Could not load source types.</Alert>
+        <ReadError
+          error={query.error}
+          fallback="Could not load source types."
+          onRetry={() => void query.refetch()}
+          pending={query.isFetching}
+        />
       </div>
     );
   }

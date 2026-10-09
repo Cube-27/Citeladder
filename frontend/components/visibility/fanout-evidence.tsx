@@ -6,7 +6,9 @@ import { Search } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BusyBar } from '@/components/ui/busy-bar';
-import { Input } from '@/components/ui/input';
+import { FilterRow } from '@/components/ui/filter-row';
+import { Pager, pageNumberControls, useTablePage } from '@/components/ui/pager';
+import { SearchField } from '@/components/ui/search-field';
 import {
   Table,
   TableBody,
@@ -24,7 +26,6 @@ import {
   type EvidenceTabProps,
 } from '@/components/visibility/evidence-states';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
-import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityApi } from '@/lib/api/visibility';
@@ -94,6 +95,26 @@ const groupCodec = stringUrlCodec(
  * wording was withheld, and an answer that searched nothing at all, are counted
  * under the group rather than invented as rows.
  */
+/** No searches at all, or none under the current filters. */
+function FanoutEmpty({
+  isFiltered,
+  onClearFilters,
+}: Readonly<Pick<EvidenceTabProps, 'isFiltered' | 'onClearFilters'>>) {
+  return isFiltered ? (
+    <EvidenceFilteredEmpty
+      title={TITLE}
+      body="No answers match the selected run, model, prompt and period. Widen the period or clear a filter."
+      onClear={onClearFilters}
+    />
+  ) : (
+    <EvidenceEmpty
+      title={TITLE}
+      heading="No searches recorded yet"
+      body="Once a run answers your prompts, the searches each engine ran first appear here."
+    />
+  );
+}
+
 export function FanoutEvidence({
   query,
   isFiltered,
@@ -140,50 +161,44 @@ export function FanoutEvidence({
   if (query.isLoading) return <EvidenceSkeleton title={TITLE} />;
   if (query.isError) return <EvidenceError title={TITLE} onRetry={() => query.refetch()} />;
   if (items.length === 0) {
-    return isFiltered ? (
-      <EvidenceFilteredEmpty
-        title={TITLE}
-        body="No answers match the selected run, model, prompt and period. Widen the period or clear a filter."
-        onClear={onClearFilters}
-      />
-    ) : (
-      <EvidenceEmpty
-        title={TITLE}
-        heading="No searches recorded yet"
-        body="Once a run answers your prompts, the searches each engine ran first appear here."
-      />
-    );
+    return <FanoutEmpty isFiltered={isFiltered} onClearFilters={onClearFilters} />;
   }
 
   return (
     <Card className="relative" aria-busy={query.isFetching}>
       <BusyBar active={query.isFetching} label="Updating evidence" />
-      <CardHeader className="grid gap-1">
+      <CardHeader>
         <CardTitle>{TITLE}</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-0 p-0">
-        <div className="border-border-subtle flex flex-wrap items-center gap-2 border-t px-[var(--card-padding)] py-3">
-          <Input
-            type="search"
-            value={search ?? ''}
-            onChange={(event) => setSearch(event.target.value || null)}
-            placeholder="Search queries…"
-            aria-label="Filter searches by text"
-            maxLength={SEARCH_MAX_LENGTH}
-            className="max-w-xs"
-          />
-          <SearchScopeNote search={needle} matched={matched} />
-          <span className="grow" />
-          <span aria-busy={!summaryMatchesInput}>
-            <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
-          </span>
-          <AnalysisChoice
-            label="Group searches by"
-            value={grouping}
-            options={GROUP_OPTIONS}
-            onChange={setGrouping}
-          />
-        </div>
+      <CardContent flush className="grid gap-0">
+        <FilterRow
+          className="border-border-subtle border-t px-[var(--card-padding)] py-3"
+          search={
+            <SearchField
+              value={search ?? ''}
+              onValueChange={(value) => setSearch(value || null)}
+              placeholder="Search queries…"
+              aria-label="Filter searches by text"
+              maxLength={SEARCH_MAX_LENGTH}
+            />
+          }
+          status={
+            needle && matched != null ? <SearchScopeNote search={needle} matched={matched} /> : null
+          }
+          actions={
+            <>
+              <span aria-busy={!summaryMatchesInput}>
+                <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
+              </span>
+              <AnalysisChoice
+                label="Group searches by"
+                value={grouping}
+                options={GROUP_OPTIONS}
+                onChange={setGrouping}
+              />
+            </>
+          }
+        />
         {visible.length === 0 ? (
           <NoSearchMatch search={needle} matched={matched} />
         ) : (
@@ -205,14 +220,10 @@ export function FanoutEvidence({
           </Table>
         )}
         {unit > PAGE_SIZE ? (
-          <TablePagination
-            page={page}
-            pageCount={pageCount}
-            from={from}
-            to={to}
-            total={unit}
-            noun={GROUP_NOUNS[grouping]}
-            onPageChange={setPage}
+          <Pager
+            frame="table"
+            range={{ from, to, total: unit, noun: GROUP_NOUNS[grouping] }}
+            {...pageNumberControls(page, pageCount, setPage)}
           />
         ) : null}
         {query.data?.truncated ? <TruncationNotice limit={limit} /> : null}

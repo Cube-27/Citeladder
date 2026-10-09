@@ -1,9 +1,9 @@
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { ScoreBar } from '@/components/ui/score-bar';
+import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import {
   Table,
@@ -27,7 +29,7 @@ import type { ReadinessCheck, ReadinessDimension } from '@/lib/api/types';
 import { formatScore, PLACEHOLDER } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 import { Stack } from '@/components/ui/layout';
-import { ledgerClasses } from '@/components/ui/workspace';
+import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
 
 function pageLabel(url: string) {
   try {
@@ -103,7 +105,7 @@ export function AeoReadinessPanel({
   const [detailKey, setDetailKey] = useState<string | null>(null);
 
   if (readiness.isLoading) {
-    return <output className="type-body block">Loading persisted AEO evaluations…</output>;
+    return <PageLoading label="Loading persisted AEO evaluations…" />;
   }
   if (readiness.isError)
     return (
@@ -140,7 +142,7 @@ function ReadinessLedger({
 }: Readonly<{ dimensions: ReadinessDimension[]; onOpen: (key: string) => void }>) {
   return (
     <Card>
-      <CardHeader bordered className="gap-1">
+      <CardHeader bordered>
         <CardTitle>Readiness dimensions</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
@@ -237,9 +239,9 @@ function DimensionDrawer({
 function CheckLedger({ checks }: Readonly<{ checks: ReadinessCheck[] }>) {
   return (
     <section className="grid gap-2">
-      <h3 className={textRole('sectionTitle')}>Checks</h3>
+      <EditorialSectionHeader title="Checks" />
       {checks.length === 0 ? (
-        <p className={textRole('body')}>No determinate checks were recorded.</p>
+        <InlineEmpty>No determinate checks were recorded.</InlineEmpty>
       ) : (
         <ul className={ledgerClasses()}>
           {checks.map((check) => (
@@ -314,19 +316,20 @@ function FailingPages({
   const total = dimension.failing_page_count;
   return (
     <section className="grid gap-2">
-      <div className="grid gap-0.5">
-        <h3 className={textRole('sectionTitle')}>Pages to fix</h3>
-        <p className="type-caption">{failingPagesCaption(shown, total)}</p>
-      </div>
+      <EditorialSectionHeader
+        title="Pages to fix"
+        description={failingPagesCaption(shown, total)}
+      />
       <ul className={ledgerClasses()}>
         {dimension.evidence_pages.map((page) => (
           <li key={page.site_url_id} className="grid gap-2 py-3 first:pt-0">
-            <ProjectLink
-              className={textRole('itemTitle', 'text-accent-text truncate hover:underline')}
+            <TextLink
+              text="itemTitle"
+              className="truncate"
               href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
             >
               {pageLabel(page.normalized_url)}
-            </ProjectLink>
+            </TextLink>
             <ul className="grid gap-1">
               {page.failed_checks.map((check) => (
                 <li key={check.rule_id} className="type-caption flex items-start gap-2">

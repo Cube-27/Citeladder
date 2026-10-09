@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { Button } from '@/components/ui/button';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { TabsBar, TabsRoot } from '@/components/ui/tabs';
@@ -138,8 +139,7 @@ function projectBlockingState(
   screen: ReturnType<typeof useSiteHealthScreen>,
 ) {
   if (projectLoading) return <PageLoading label="Loading your Site Health project…" />;
-  if (!projectId)
-    return <Alert tone="info">Select or create a project to analyze its site health.</Alert>;
+  if (!projectId) return <ProjectRequiredState />;
   return screenBlockingState({
     entitlement: screen.entitlementQuery,
     dashboard: screen.dashboardQuery,
@@ -388,15 +388,15 @@ function CrawlActions({
 }>) {
   return (
     <div className="flex items-center gap-2">
-      <Button variant="secondary" size="md" onClick={onExport} disabled={exporting}>
+      <Button variant="secondary" size="sm" onClick={onExport} disabled={exporting}>
         {exporting ? 'Exporting…' : 'Export'}
       </Button>
       {active ? (
-        <Button variant="destructive" size="md" onClick={onCancel} disabled={cancelPending}>
+        <Button variant="destructive" size="sm" onClick={onCancel} disabled={cancelPending}>
           {cancelPending ? 'Stopping…' : 'Stop crawl'}
         </Button>
       ) : (
-        <Button size="md" onClick={() => onStart()} disabled={startPending}>
+        <Button size="sm" onClick={() => onStart()} disabled={startPending}>
           {startPending ? 'Starting…' : 'Run new crawl'}
         </Button>
       )}

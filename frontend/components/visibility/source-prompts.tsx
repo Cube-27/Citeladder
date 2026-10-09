@@ -1,9 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +11,8 @@ import {
 } from '@/components/runs/execution-evidence-drawer';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -26,7 +27,7 @@ import { textRole } from '@/components/ui/typography';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import { TruncationNotice } from '@/components/visibility/evidence-states';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { VisibilityExecutionEvidence } from '@/lib/api/types';
+import type { VisibilityEvidenceResponse, VisibilityExecutionEvidence } from '@/lib/api/types';
 import { visibilityApi } from '@/lib/api/visibility';
 import { engineLabel, productModelLabel } from '@/lib/providers/catalog';
 import type { SourceFilters } from '@/components/visibility/source-rows';
@@ -97,12 +98,7 @@ export function SourcePrompts({
         <CardTitle>Prompts</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <PromptsBody
-          items={query.data?.items ?? []}
-          loading={query.isLoading}
-          errored={query.isError}
-          onOpenAnswer={setOpened}
-        />
+        <PromptsBody query={query} onOpenAnswer={setOpened} />
         {/* The endpoint returns a bounded newest-first window. Without this a
             source cited by more answers than fit simply looked like it had
             fewer. */}
@@ -120,23 +116,29 @@ export function SourcePrompts({
 }
 
 function PromptsBody({
-  items,
-  loading,
-  errored,
+  query,
   onOpenAnswer,
 }: Readonly<{
-  items: readonly VisibilityExecutionEvidence[];
-  loading: boolean;
-  errored: boolean;
+  query: UseQueryResult<VisibilityEvidenceResponse, unknown>;
   onOpenAnswer: (subject: EvidenceSubject) => void;
 }>) {
-  if (errored) return <Alert tone="danger">Could not load the tracked answers.</Alert>;
-  if (loading) return <Skeleton className="m-[var(--card-padding)] h-40" />;
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Could not load the tracked answers."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+        className="m-[var(--card-padding)]"
+      />
+    );
+  if (query.isLoading) return <Skeleton className="m-[var(--card-padding)] h-40" />;
+  const items = query.data?.items ?? [];
   if (items.length === 0) {
     return (
-      <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
+      <InlineEmpty className="p-[var(--card-padding)]">
         No tracked answers in this selection used this source.
-      </p>
+      </InlineEmpty>
     );
   }
   return (

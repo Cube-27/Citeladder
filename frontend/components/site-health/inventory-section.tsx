@@ -5,11 +5,11 @@ import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-q
 import { useSearchParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 
+import { PageLoading } from '@/components/layout/page-loading';
 import { ReadError } from '@/components/ui/read-error';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Label, textRole } from '@/components/ui/typography';
-import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Pager } from '@/components/ui/pager';
 import {
   Table,
   TableBody,
@@ -26,7 +26,7 @@ import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries, type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import type { PagesPage, SiteCrawl } from '@/lib/api/types';
 import { Tabs } from '@/components/ui/tabs';
-import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { statusLabel, type InventoryMode } from '@/lib/site-health/status';
 
 /**
@@ -154,20 +154,16 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
       {crawl.status === 'running' || crawl.status === 'queued' ? (
         <p className="type-caption">More URLs appear as discovery continues.</p>
       ) : null}
-      <CursorTableFooter
-        {...pageRange(pager.page, pager.pageSize, rows.length)}
+      <Pager
+        frame="table"
+        range={{ ...pageRange(pager.page, pager.pageSize, rows.length), noun: 'pages' }}
         // No exact total: `visible_url_count` counts what THIS crawl
         // admitted, which a recrawl inheriting monitored URLs need not match
         // row-for-row. The caption already says the list is still growing,
         // so the range alone is the honest reading — a total that can drift
         // from the rows beneath it is worse than no total.
-        noun="pages"
-        pageSize={pager.pageSize}
-        onPageSizeChange={pager.setPageSize}
-        canPrev={pager.canPrev}
-        canNext={Boolean(nextCursor)}
-        onPrev={pager.pop}
-        onNext={() => pager.push(nextCursor)}
+        pageSize={{ value: pager.pageSize, onChange: pager.setPageSize }}
+        {...cursorControls(pager, nextCursor)}
         busy={inventoryQuery.isFetching}
       />
     </div>
@@ -219,14 +215,7 @@ function ScoredInventoryBody({
         pending={query.isFetching}
       />
     );
-  if (query.isLoading)
-    return (
-      <div className="grid min-h-40 gap-2 py-[var(--card-padding)]">
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-8 w-full" />
-      </div>
-    );
+  if (query.isLoading) return <PageLoading />;
   if (rows.length === 0 && rootErrors.length === 0)
     return (
       <EmptyState
@@ -393,20 +382,16 @@ function ScoredInventoryState({
 
       {body}
 
-      <CursorTableFooter
-        {...pageRange(pager.page, pager.pageSize, rows.length)}
+      <Pager
+        frame="table"
+        range={{ ...pageRange(pager.page, pager.pageSize, rows.length), noun: 'pages' }}
         // Deliberately no exact total: these tabs are FILTERED views (status,
         // page kind), and no persisted count describes a filtered set. An
         // unbounded live COUNT(*) per navigation is the thing this footer
         // exists to avoid, so the range stands alone rather than carrying an
         // invented or expensive total.
-        noun="pages"
-        pageSize={pager.pageSize}
-        onPageSizeChange={pager.setPageSize}
-        canPrev={pager.canPrev}
-        canNext={Boolean(nextCursor)}
-        onPrev={pager.pop}
-        onNext={() => pager.push(nextCursor)}
+        pageSize={{ value: pager.pageSize, onChange: pager.setPageSize }}
+        {...cursorControls(pager, nextCursor)}
         busy={pagesQuery.isFetching}
       />
     </div>

@@ -1,24 +1,19 @@
 'use client';
 
-import { ExternalLink } from 'lucide-react';
-
-import { Alert } from '@/components/ui/alert';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
-import { MetricGroup, MetricItem } from '@/components/ui/workspace';
+import { ReadError } from '@/components/ui/read-error';
+import { StatGrid } from '@/components/ui/stat-grid';
+import { TextLink } from '@/components/ui/text-link';
+import { splitPaneClasses } from '@/components/ui/workspace';
 import { SourceBreadcrumb } from '@/components/visibility/source-breadcrumb';
 import { SourcePrompts } from '@/components/visibility/source-prompts';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import { BrandsCard, EnginesCard } from '@/components/visibility/source-url-cards';
-import { availabilityLabel } from '@/lib/format';
 import { count, hostOf, pathOf, ratio, sinceLabel } from '@/lib/visibility/sources';
-import { safeExternalUrl } from '@/lib/visibility/urls';
 import { useSourceUrl, type SourceQueries } from '@/lib/visibility/use-source-analysis';
-
-const NOT_MEASURED = availabilityLabel('not_measured');
 
 /**
  * One cited URL: what it is, how it performs, and the answers that used it.
@@ -66,13 +61,20 @@ export function SourceUrlDetail({
         <BusyBar active={query.isFetching} label="Updating source" />
         <PageIdentity title={title} url={url} />
         <CardContent>
-          {query.isError ? <Alert tone="danger">Could not load this source.</Alert> : null}
+          {query.isError ? (
+            <ReadError
+              error={query.error}
+              fallback="Could not load this source."
+              onRetry={() => void query.refetch()}
+              pending={query.isFetching}
+            />
+          ) : null}
           {query.isLoading ? <Skeleton className="h-20 w-full" /> : null}
           {data ? <Overview data={data} /> : null}
         </CardContent>
       </Card>
 
-      <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
+      <div className={splitPaneClasses('peers')}>
         <EnginesCard engines={data?.engines} loading={query.isLoading} errored={query.isError} />
         <BrandsCard brands={data?.brands} loading={query.isLoading} errored={query.isError} />
       </div>
@@ -84,29 +86,18 @@ export function SourceUrlDetail({
 
 /** The page's mark, its title and the live link to it. */
 function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) {
-  const href = safeExternalUrl(url);
   const host = hostOf(url);
   return (
-    <CardHeader className="flex-row items-start gap-3">
-      <BrandLogo name={host ?? url} websiteUrl={host ? `https://${host}` : null} size="lg" />
-      <div className="grid min-w-0 gap-1">
-        <CardTitle className="truncate">{title}</CardTitle>
-        {href ? (
-          <a
-            href={href}
-            target="_blank"
-            rel="noreferrer"
-            className={textRole(
-              'caption',
-              'text-secondary hover:text-accent-text inline-flex min-w-0 items-center gap-2 transition-colors hover:underline',
-            )}
-          >
+    <CardHeader>
+      <div className="flex min-w-0 items-start gap-3">
+        <BrandLogo name={host ?? url} websiteUrl={host ? `https://${host}` : null} size="lg" />
+        <div className="grid min-w-0 gap-1">
+          <CardTitle className="truncate">{title}</CardTitle>
+          {/* An unsafe cited URL renders as plain text rather than a link. */}
+          <TextLink variant="external" text="caption" href={url} className="min-w-0">
             <span className="truncate">{url}</span>
-            <ExternalLink className="size-3 shrink-0" aria-hidden />
-          </a>
-        ) : (
-          <span className={textRole('caption', 'text-secondary truncate')}>{url}</span>
-        )}
+          </TextLink>
+        </div>
       </div>
     </CardHeader>
   );
@@ -116,16 +107,21 @@ function Overview({
   data,
 }: Readonly<{ data: NonNullable<ReturnType<typeof useSourceUrl>['data']> }>) {
   return (
-    <MetricGroup>
-      <MetricItem label="Citation rate" value={ratio(data.citation_rate) ?? NOT_MEASURED} />
-      <MetricItem label="Retrievals" value={count(data.retrievals) ?? NOT_MEASURED} />
-      <MetricItem label="Citations" value={count(data.citations) ?? NOT_MEASURED} />
-      <MetricItem label="Prompts using it" value={count(data.prompts) ?? NOT_MEASURED} />
-      <MetricItem
-        label="First seen in this period"
-        value={sinceLabel(data.first_seen) ?? NOT_MEASURED}
-      />
-      <MetricItem label="Last seen" value={sinceLabel(data.last_seen) ?? NOT_MEASURED} />
-    </MetricGroup>
+    <StatGrid
+      columns={3}
+      size="figure"
+      items={[
+        { key: 'citation-rate', label: 'Citation rate', value: ratio(data.citation_rate) },
+        { key: 'retrievals', label: 'Retrievals', value: count(data.retrievals) },
+        { key: 'citations', label: 'Citations', value: count(data.citations) },
+        { key: 'prompts', label: 'Prompts using it', value: count(data.prompts) },
+        {
+          key: 'first-seen',
+          label: 'First seen in this period',
+          value: sinceLabel(data.first_seen),
+        },
+        { key: 'last-seen', label: 'Last seen', value: sinceLabel(data.last_seen) },
+      ]}
+    />
   );
 }

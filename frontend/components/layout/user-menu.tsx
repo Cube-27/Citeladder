@@ -19,8 +19,8 @@ import { useSession } from '@/lib/auth/session-guard';
 import { ICONS } from '@/lib/icons';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
-import { cn, emailInitials } from '@/lib/utils';
-import { textRole } from '@/components/ui/typography';
+import { cn } from '@/lib/utils';
+import { Avatar } from '@/components/ui/avatar';
 
 const SettingsIcon = ICONS.settings;
 const BillingIcon = ICONS.billing;
@@ -115,21 +115,7 @@ export function UserMenuTrigger({
             compact ? 'min-h-11' : 'py-1',
           )}
         >
-          {/* A solid filled accent disc, not a tinted box. At 24px with two
-              letters in it the glyphs reached the edges and the shape read as
-              a square with rounded corners; 28px with the smaller numeral size
-              leaves the initials inside the circle. Accent fill with its own
-              foreground keeps one contrast pair rather than dark ink on a
-              near-neutral tint. */}
-          <span
-            aria-hidden
-            className={textRole(
-              'label',
-              'type-caption bg-well text-secondary flex size-7 shrink-0 items-center justify-center rounded-full uppercase',
-            )}
-          >
-            {emailInitials(email)}
-          </span>
+          <Avatar name={email} size="sm" />
           {compact ? null : <span className="type-body min-w-0 flex-1 truncate">{email}</span>}
         </DropdownTrigger>
         {open ? <UserMenuContent presenter={presenter} /> : null}

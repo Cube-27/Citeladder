@@ -10,6 +10,7 @@ import {
   ChartTooltipContent,
   axisProps,
   type ChartConfig,
+  type ChartHeight,
 } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 
@@ -91,7 +92,7 @@ function description(
 export function SeriesChart({
   series,
   labels,
-  height = 260,
+  size = 'md',
   domainMax = 100,
   formatTick = (value) => `${Math.round(value)}%`,
   xAxisLabel,
@@ -101,7 +102,8 @@ export function SeriesChart({
   series: readonly ChartSeries[];
   /** One axis label per bucket; every series shares these x positions. */
   labels: readonly string[];
-  height?: number;
+  /** The plot's height role. */
+  size?: ChartHeight;
   domainMax?: number;
   formatTick?: (value: number) => string;
   xAxisLabel?: string;
@@ -120,7 +122,7 @@ export function SeriesChart({
       <ChartLegend config={config} active={active} onActivate={setActive} />
       <ChartContainer
         config={config}
-        height={height}
+        size={size}
         description={description(series, formatTick, yAxisLabel)}
       >
         <LineChart data={rows} margin={CHART_MARGIN}>

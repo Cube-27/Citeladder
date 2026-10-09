@@ -351,6 +351,24 @@ Keep date ranges and comparisons in their owning page, not the global shell. Ali
 
 Search's Command Palette remains mounted once in the authenticated shell, not inside the drawer; its trigger lives in the sidebar and in the compact drawer. The account trigger is the topbar's at every width, and renders initials only. Escape closes overlays and focus returns to the visible trigger.
 
+#### Route recipe
+
+Every route assembles the same parts from `components/ui/` and `components/layout/`, so a pattern looks the same on every screen:
+
+| Need | Owner |
+| --- | --- |
+| Page frame, actions (`sm` buttons), detail back link | `PageShell` (`actions`, `back`, `measure="workflow"` for form pages) |
+| Section header | `EditorialSectionHeader` for open sections; `CardHeader` with `actions` for cards — never a raw heading or a re-laid-out header |
+| Headline figures; dense facts | `MetricGroup`/`MetricItem` (3–5 figures); `StatGrid`/`StatItem` (fact grids, wells, pressable metric cards) |
+| Change | `Delta`: sign, arrow and outcome tone, with `policy` for lower-is-better metrics |
+| Usage, progress, distribution | `Meter` |
+| Loading, read error, empty, no project | `PageLoading`, `ReadError`, `EmptyState` / `InlineEmpty`, `ProjectRequiredState` |
+| Two columns | `splitPaneClasses(role)`, `ResizableSplitPane`, `stickyPaneClasses` |
+| Filters, paging | one `FilterRow` (+ `FilterTrigger`) and one `Pager` per list |
+| Links; selected rows | `TextLink` (internal, external, back); `listRowClasses` (raised neutral, never an accent wash) |
+| Tables, charts | `Table minWidth`, `SortableTableHead`; `ChartContainer size`, `LegendSwatch` |
+| People | `Avatar` |
+
 #### Screen-specific contracts
 
 **Overview.** Keep the page useful before any audit. Preserve reading order: compact project identity; warnings; Project State with Track context; Movement; one Next action; ranked actions and report proof; Top Insights; Company facts. Use the same DOM order at desktop and compact widths. Company facts are edited in Agent → Context, not in an Overview drawer. Do not restore a Product loop station strip. Track uses explicit availability labels; report actions require a persisted audit/report. Citation share uses separate shared heading/value roles, not an oversized combined sentence.

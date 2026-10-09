@@ -33,23 +33,41 @@ export function Card({
  * header from content with spacing alone). Pass `bordered` for the few
  * surfaces that genuinely need the hairline, e.g. a header sitting directly
  * atop a full-bleed table.
+ *
+ * `actions` is the header's trailing slot: a badge, a button, a small control
+ * group. The title column (eyebrow, title, description — the children) takes
+ * the free width on the left and the actions sit on the same row at the right;
+ * when the row is too narrow the actions wrap below the title rather than
+ * squeezing it.
  */
 export function CardHeader({
   children,
   className,
   bordered,
+  actions,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'header'> & { bordered?: boolean }>) {
+}: Readonly<
+  ComponentPropsWithoutRef<'header'> & {
+    bordered?: boolean;
+    /** Trailing controls or status on the title row; wraps below when narrow. */
+    actions?: ReactNode;
+  }
+>) {
+  const edge = cn('p-[var(--card-padding)] pb-3', bordered && 'border-border-subtle border-b');
+  if (!actions) {
+    return (
+      <header {...props} className={cn('flex flex-col gap-1', edge, className)}>
+        {children}
+      </header>
+    );
+  }
   return (
     <header
       {...props}
-      className={cn(
-        'flex flex-col gap-1 p-[var(--card-padding)] pb-3',
-        bordered && 'border-border-subtle border-b',
-        className,
-      )}
+      className={cn('flex flex-wrap items-center justify-between gap-x-4 gap-y-2', edge, className)}
     >
-      {children}
+      <div className="grid min-w-0 flex-1 basis-60 gap-1">{children}</div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
     </header>
   );
 }

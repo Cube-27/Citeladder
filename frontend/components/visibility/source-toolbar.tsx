@@ -5,6 +5,7 @@ import { Download } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { CardHeader } from '@/components/ui/card';
+import { FilterRow } from '@/components/ui/filter-row';
 import { SearchField } from '@/components/ui/search-field';
 import { downloadCsv } from '@/lib/csv/download';
 import { typeLabel, type SourceItem } from '@/lib/visibility/sources';
@@ -94,23 +95,28 @@ export function SourceTableToolbar({
   };
 
   return (
-    <CardHeader className="flex-row flex-wrap items-center gap-2">
-      {domainControl}
-      {typeControl}
-      <div className="ml-auto flex items-center gap-2">
-        <SearchField
-          value={search}
-          onValueChange={onSearch}
-          onClear={() => onSearch('')}
-          placeholder="Search"
-          aria-label={dimension === 'url' ? 'Search URLs' : 'Search domains'}
-          className="w-full sm:w-56"
-        />
-        <Button variant="secondary" size="sm" onClick={onExport} disabled={rows.length === 0}>
-          <Download className="size-4" aria-hidden />
-          Export
-        </Button>
-      </div>
+    <CardHeader>
+      <FilterRow
+        search={
+          <SearchField
+            value={search}
+            onValueChange={onSearch}
+            onClear={() => onSearch('')}
+            placeholder="Search"
+            aria-label={dimension === 'url' ? 'Search URLs' : 'Search domains'}
+          />
+        }
+        searchWidth="sm"
+        actions={
+          <Button variant="secondary" size="sm" onClick={onExport} disabled={rows.length === 0}>
+            <Download className="size-3.5" aria-hidden />
+            Export
+          </Button>
+        }
+      >
+        {domainControl}
+        {typeControl}
+      </FilterRow>
     </CardHeader>
   );
 }

@@ -3,10 +3,10 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { ProjectLink } from '@/components/layout/scoped-link';
 
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { IssuesLoading } from '@/components/site-health/issues-loading';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
+import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { ReadError } from '@/components/ui/read-error';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
@@ -59,13 +59,13 @@ function IssuesDataRegion({
   if (!projectId && !projectLoading)
     return (
       <PageShell>
-        <Alert tone="info">Select or create a project to view its Site Health issues.</Alert>
+        <ProjectRequiredState />
       </PageShell>
     );
   if (projectLoading || dashboard.isLoading)
     return (
       <PageShell>
-        <IssuesLoading />
+        <PageLoading label="Loading issues…" />
       </PageShell>
     );
 

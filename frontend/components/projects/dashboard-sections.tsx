@@ -1,4 +1,4 @@
-import { ArrowRight, Download, ExternalLink } from 'lucide-react';
+import { ArrowRight, Download } from 'lucide-react';
 import {
   EditorialSectionHeader,
   hairlineBandClasses,
@@ -13,14 +13,15 @@ import { Badge } from '@/components/ui/badge';
 import { TagGroup } from '@/components/ui/tag';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import { Delta } from '@/components/ui/delta';
 import { EmptyState } from '@/components/ui/empty-state';
-import { ExternalHttpLink } from '@/components/ui/external-http-link';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { TextLink } from '@/components/ui/text-link';
+import { textRole } from '@/components/ui/typography';
 import { MetricValue } from '@/components/ui/metric-value';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { availabilityLabel } from '@/lib/format';
-import { AccentEyebrow, eyebrowClasses } from '@/components/ui/eyebrow';
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Project } from '@/lib/api/types';
 import { DisplayTime } from '@/components/ui/display-time';
 import { cn } from '@/lib/utils';
@@ -28,10 +29,10 @@ import { cn } from '@/lib/utils';
 import { ProjectControls } from './dashboard-controls';
 import {
   ActionRow,
-  deltaLabel,
   metricValue,
   MovementChart,
   StateMetric,
+  VS_PREVIOUS_RUN,
 } from './dashboard-primitives';
 import { Stack } from '@/components/ui/layout';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -61,18 +62,16 @@ export function DashboardHeader({
                 {data.project.brand_name || data.project.name}
               </h2>
               {website ? (
-                <ExternalHttpLink
+                <TextLink
+                  variant="external"
+                  text="label"
                   href={/^https?:\/\//i.test(website) ? website : `https://${website}`}
-                  className={textRole(
-                    'label',
-                    'hover:text-foreground border-border bg-background-alt inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 transition-colors',
-                  )}
+                  className="min-w-0"
                 >
                   <span className="truncate">
                     {website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
                   </span>
-                  <ExternalLink className="size-3 shrink-0" aria-hidden />
-                </ExternalHttpLink>
+                </TextLink>
               ) : null}
             </div>
             {data.measurement ? (
@@ -92,22 +91,22 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
   const facts = data.facts;
   const offerings = facts.products_services.filter((label) => label.trim());
   return (
-    <section className="grid gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <SectionTitle id="company-facts">Company facts</SectionTitle>
-        <div className="flex items-center gap-3">
-          <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
-          <Button asChild variant="ghost" size="sm">
-            <ProjectLink href="/agent/context">
-              Edit in Agent context <ArrowRight className="ms-1 size-3.5" aria-hidden />
-            </ProjectLink>
-          </Button>
-        </div>
-      </div>
-      <div
-        className={cn(hairlineBandClasses, 'border-y-0 sm:grid-cols-3')}
-        aria-labelledby="company-facts"
-      >
+    <section aria-labelledby="company-facts" className="grid gap-3">
+      <EditorialSectionHeader
+        title="Company facts"
+        headingId="company-facts"
+        actions={
+          <div className="flex items-center gap-3">
+            <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
+            <Button asChild variant="ghost" size="sm">
+              <ProjectLink href="/agent/context">
+                Edit in Agent context <ArrowRight className="ms-1 size-3.5" aria-hidden />
+              </ProjectLink>
+            </Button>
+          </div>
+        }
+      />
+      <div className={cn(hairlineBandClasses, 'border-y-0 sm:grid-cols-3')}>
         <FactSummary
           label="Positioning"
           value={facts.positioning || facts.description}
@@ -185,13 +184,13 @@ function PdfButton({
   return (
     <Button
       variant="secondary"
-      size="md"
+      size="sm"
       onClick={onDownload}
       pending={downloading}
       pendingLabel="Preparing…"
       className="gap-2"
     >
-      <Download className="size-4" aria-hidden />
+      <Download className="size-3.5" aria-hidden />
       Executive PDF
     </Button>
   );
@@ -201,19 +200,19 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <>
       <div className={splitPaneClasses('main-aside')}>
-        <Card
-          aria-labelledby="project-state"
-          className="grid content-start gap-3 p-[var(--card-padding)]"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <SectionTitle id="project-state">Project state</SectionTitle>
-            <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
-          </div>
-          <MetricGroup>
-            <StateMetric label="Visibility" {...data.state.visibility} suffix="%" />
-            <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
-            <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
-          </MetricGroup>
+        <Card aria-labelledby="project-state">
+          <CardHeader
+            actions={<Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>}
+          >
+            <CardTitle id="project-state">Project state</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MetricGroup>
+              <StateMetric label="Visibility" {...data.state.visibility} suffix="%" />
+              <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
+              <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
+            </MetricGroup>
+          </CardContent>
         </Card>
         <Track data={data} />
       </div>
@@ -225,77 +224,69 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
 
 function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card
-      tone="recommendation"
-      className="text-foreground flex flex-col justify-between gap-3 p-[var(--card-padding)]"
-    >
-      <Stack gap="compact">
-        <div className="flex items-center justify-between">
-          <AccentEyebrow>
-            <span className="bg-accent size-1.5 rounded-full" aria-hidden />
-            Next action
-          </AccentEyebrow>
+    <Card tone="recommendation" aria-labelledby="next-action" className="text-foreground">
+      <CardHeader
+        actions={
           <span className={textRole('label')}>
             {data.next_action.kind === 'monitor' ? 'Optimal state' : 'Action recommended'}
           </span>
-        </div>
-        <Stack gap="tight">
-          <p className={textRole('sectionTitle')}>{data.next_action.title}</p>
-          <p className={textRole('caption')}>
-            Prioritized from deterministic evidence and current visibility coverage.
-          </p>
-        </Stack>
-      </Stack>
-      <Button asChild variant="primary" size="md" className="self-start">
-        <ProjectLink href={data.next_action.href}>
-          {data.next_action.kind === 'monitor' ? 'View trends' : 'Continue'}
-          <ArrowRight className="size-4" aria-hidden />
-        </ProjectLink>
-      </Button>
+        }
+      >
+        <CardEyebrow>Next action</CardEyebrow>
+        <CardTitle id="next-action">{data.next_action.title}</CardTitle>
+      </CardHeader>
+      <CardContent className="grid justify-items-start gap-3">
+        <p className={textRole('caption')}>
+          Prioritized from deterministic evidence and current visibility coverage.
+        </p>
+        <Button asChild variant="primary" size="md">
+          <ProjectLink href={data.next_action.href}>
+            {data.next_action.kind === 'monitor' ? 'View trends' : 'Continue'}
+            <ArrowRight className="size-4" aria-hidden />
+          </ProjectLink>
+        </Button>
+      </CardContent>
     </Card>
   );
 }
 
 function Track({ data }: Readonly<{ data: CommandCenter }>) {
-  const delta = data.track.citation_share.delta;
-  let deltaTone = 'text-muted';
-  if (delta !== null) deltaTone = 'text-secondary';
   return (
-    <Card
-      aria-labelledby="citation-share-track"
-      className="flex flex-col justify-between gap-3 p-[var(--card-padding)]"
-    >
-      <Stack gap="compact">
-        <div className="flex items-center justify-between gap-3">
-          <SectionTitle id="citation-share-track">Citation share</SectionTitle>
-          {data.track.observed_at ? (
+    <Card aria-labelledby="citation-share-track" className="flex flex-col justify-between">
+      <CardHeader
+        actions={
+          data.track.observed_at ? (
             <span className={textRole('label')}>{data.track.engine_coverage} engine(s)</span>
-          ) : null}
-        </div>
-        <Stack gap="tight">
-          <span className={eyebrowClasses}>AI Visibility Track</span>
-          <MetricValue
-            value={
-              data.track.citation_share.value === null
-                ? null
-                : metricValue(data.track.citation_share.value, '%')
-            }
-            label={availabilityLabel(data.track.observed_at ? 'unavailable' : 'not_run')}
-          />
-          {data.track.observed_at ? (
-            <p className={textRole('delta', deltaTone)}>{deltaLabel(delta)}</p>
-          ) : (
-            <p className={textRole('caption')}>{data.track.limitations[0]}</p>
-          )}
-        </Stack>
-      </Stack>
-      <div className="flex justify-end">
+          ) : null
+        }
+      >
+        <CardTitle id="citation-share-track">Citation share</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-1">
+        <span className={eyebrowClasses}>AI Visibility Track</span>
+        <MetricValue
+          value={
+            data.track.citation_share.value === null
+              ? null
+              : metricValue(data.track.citation_share.value, '%')
+          }
+          label={availabilityLabel(data.track.observed_at ? 'unavailable' : 'not_run')}
+        />
+        {data.track.observed_at ? (
+          <div>
+            <Delta value={data.track.citation_share.delta} {...VS_PREVIOUS_RUN} />
+          </div>
+        ) : (
+          <p className={textRole('caption')}>{data.track.limitations[0]}</p>
+        )}
+      </CardContent>
+      <CardContent className="flex justify-end">
         <Button asChild variant="ghost" size="sm">
           <ProjectLink href="/visibility?tab=trends">
             Open Trends <ArrowRight className="ms-1 size-3.5" aria-hidden />
           </ProjectLink>
         </Button>
-      </div>
+      </CardContent>
     </Card>
   );
 }
@@ -362,17 +353,12 @@ export function ActionsAndProof({
           />
         )}
       </section>
-      <section
-        aria-labelledby="progress-proof"
-        className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
-      >
-        <div className="grid gap-1">
-          <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>
-          <p className="type-caption max-w-[72ch]">
-            {data.resolved_actions.count} action(s) resolved since the comparable run. Metric
-            movement is shown alongside completion without claiming causation.
-          </p>
-        </div>
+      <section aria-labelledby="progress-proof">
+        <EditorialSectionHeader
+          title="Progress and report proof"
+          headingId="progress-proof"
+          description={`${data.resolved_actions.count} action(s) resolved since the comparable run. Metric movement is shown alongside completion without claiming causation.`}
+        />
       </section>
     </Stack>
   );

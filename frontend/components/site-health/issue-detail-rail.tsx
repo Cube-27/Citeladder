@@ -10,9 +10,12 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { CopyButton } from '@/components/ui/copy-button';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Stack } from '@/components/ui/layout';
+import { Pager } from '@/components/ui/pager';
 import { panelClasses } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -100,23 +103,21 @@ export function IssueDetailRail({
             <OccurrenceList issue={issue} detail={detail} crawlId={crawlId} query={detailQuery} />
           </Stack>
         </div>
-        {detail && (canPrevious || detail.next_cursor) ? (
-          <footer className="border-border-subtle bg-panel flex shrink-0 items-center justify-end gap-2 border-t p-3">
-            <Button variant="secondary" size="sm" onClick={onPrevious} disabled={!canPrevious}>
-              Previous
-            </Button>
-            {/* The retained page keeps its `next_cursor` while the next one is
-                in flight, so a second click would push the SAME cursor onto
-                the stack and Previous would need two presses to undo one. */}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onNext}
-              disabled={!detail.next_cursor || detailQuery.isFetching}
-            >
-              Next
-            </Button>
-          </footer>
+        {detail ? (
+          // The retained page keeps its `next_cursor` while the next one is in
+          // flight, so a second click would push the SAME cursor onto the
+          // stack and Previous would need two presses to undo one: `busy`
+          // holds both steps until the page lands.
+          <Pager
+            frame="table"
+            hideWhenSinglePage
+            className="bg-panel shrink-0"
+            canPrev={canPrevious}
+            canNext={Boolean(detail.next_cursor)}
+            onPrev={onPrevious}
+            onNext={onNext}
+            busy={detailQuery.isFetching}
+          />
         ) : null}
       </div>
     </section>
@@ -194,15 +195,15 @@ function OccurrenceList({
       </ul>
     );
   }
-  if (detail.occurrences.length === 0)
-    return <p className={textRole('body')}>No affected URLs found.</p>;
+  if (detail.occurrences.length === 0) return <InlineEmpty>No affected URLs found.</InlineEmpty>;
   return (
     <ul className={ledgerClasses('open')}>
       {detail.occurrences.map((occurrence) => (
         <li key={occurrence.occurrence_id} className="grid gap-3 p-3">
-          <ProjectLink
+          <TextLink
+            text="inherit"
+            className="flex min-w-0 flex-col gap-0.5"
             href={`/site/crawls/${crawlId}/pages/${occurrence.site_url_id}`}
-            className="hover:text-accent flex min-w-0 flex-col gap-0.5"
           >
             <span className="flex min-w-0 flex-wrap items-center gap-2">
               <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
@@ -216,7 +217,7 @@ function OccurrenceList({
             >
               {occurrence.display_url}
             </span>
-          </ProjectLink>
+          </TextLink>
           <IssueEvidence occurrence={occurrence} />
           <Button variant="ghost" size="sm" asChild className="w-fit">
             <ProjectLink

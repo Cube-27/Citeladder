@@ -6,13 +6,18 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { httpErrorStatus } from '@/lib/api/errors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LegendSwatch } from '@/components/ui/chart';
+import type { DataTone } from '@/components/ui/data-tone';
+import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
 import { InfoHint } from '@/components/ui/info-hint';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { ReadError } from '@/components/ui/read-error';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { textRole } from '@/components/ui/typography';
-import { MetricGroup, MetricItem } from '@/components/ui/workspace';
+import { MetricGroup, MetricItem, splitPaneClasses } from '@/components/ui/workspace';
+import { PageLoading } from '@/components/layout/page-loading';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
@@ -31,7 +36,7 @@ import {
   toCompetitorSeries,
   toNamedChartPoints,
 } from '@/lib/visibility/trends';
-import { changeLabel, observationLabel } from '@/lib/visibility/vocabulary';
+import { observationLabel } from '@/lib/visibility/vocabulary';
 import { coverageSummary } from '@/lib/visibility/coverage';
 import { formatDisplayDate } from '@/lib/format';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
@@ -75,9 +80,16 @@ export function VisibilityTrends({
           Results for this run are still being prepared. They appear here as soon as they are ready.
         </Alert>
       );
-    return <Alert tone="danger">Could not load the selected measurement.</Alert>;
+    return (
+      <ReadError
+        error={visibilityQuery.error}
+        fallback="Could not load the selected measurement."
+        onRetry={() => void visibilityQuery.refetch()}
+        pending={visibilityQuery.isFetching}
+      />
+    );
   }
-  if (!selected) return <VisibilitySelectionLoading />;
+  if (!selected) return <PageLoading label="Loading selected measurement…" />;
   // A `brand` carried in from another run's URL may name nobody in THIS
   // selection. Plotting it anyway drew an empty chart captioned with a brand
   // the run never measured, which reads as "measured, scored zero". An
@@ -94,7 +106,7 @@ export function VisibilityTrends({
           an unfiltered cross-surface view would invite reading them as the
           whole product's numbers. */}
       {surfaceEngine ? <SurfaceRatesPanel query={surfaceRatesQuery} /> : null}
-      <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
+      <div className={splitPaneClasses('peers')}>
         <MeasurementHistory
           query={query}
           metric={metric}
@@ -106,10 +118,10 @@ export function VisibilityTrends({
         <Card>
           <CardHeader>
             <CardTitle>Brand and competitors</CardTitle>
-            <p className={textRole('caption')}>
+            <CardDescription>
               How often each brand is named, across the same answers. Select a row to plot it on its
               own.
-            </p>
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <RankingRowsTable
@@ -127,18 +139,6 @@ export function VisibilityTrends({
           onEvidence ? (engine) => onEvidence({ run: selected.audit_id, engine }) : undefined
         }
       />
-    </Stack>
-  );
-}
-
-function VisibilitySelectionLoading() {
-  return (
-    <Stack gap="workspace" aria-busy="true" aria-label="Loading selected measurement">
-      <Skeleton className="min-h-24 rounded-[var(--radius-card)]" />
-      <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
-        <Skeleton className="min-h-72 rounded-[var(--radius-card)]" />
-        <Skeleton className="min-h-72 rounded-[var(--radius-card)]" />
-      </div>
     </Stack>
   );
 }
@@ -211,7 +211,7 @@ function HeadlineMetrics({ selected }: { selected: Visibility }) {
   return (
     <MetricGroup>
       {definitions.map((item) => {
-        const change = changeLabel(comparison?.deltas[item.key]);
+        const change = comparison?.deltas[item.key];
         return (
           <MetricItem
             key={item.key}
@@ -224,7 +224,7 @@ function HeadlineMetrics({ selected }: { selected: Visibility }) {
             value={unmeasured ?? formatRate(item.value)}
             // No comparable run means no change line at all. The coverage strip
             // below states the reason once, not a placeholder repeated three times.
-            detail={change ? <span aria-label={`Change: ${change}`}>{change}</span> : null}
+            detail={change == null ? null : <Delta value={change} unit=" pp" />}
           />
         );
       })}
@@ -289,7 +289,14 @@ function MeasurementHistory({
 
   let body: ReactNode;
   if (query.isError) {
-    body = <Alert tone="danger">Could not load history.</Alert>;
+    body = (
+      <ReadError
+        error={query.error}
+        fallback="Could not load history."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
   } else if (query.isPending) {
     body = (
       <output className="bg-surface-2 grid min-h-48 place-items-center rounded-[var(--radius-control)]">
@@ -297,9 +304,7 @@ function MeasurementHistory({
       </output>
     );
   } else if (!points.length) {
-    body = (
-      <p className={textRole('body', 'text-secondary')}>No measurements in this period yet.</p>
-    );
+    body = <InlineEmpty>No measurements in this period yet.</InlineEmpty>;
   } else {
     body = (
       <Stack gap="compact" aria-busy={query.isFetching}>
@@ -315,13 +320,9 @@ function MeasurementHistory({
           className="h-auto w-full"
         />
         <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <SeriesKey label={primaryLabel} swatchClass="bg-chart-1" />
+          <SeriesKey label={primaryLabel} tone={{ series: 1 }} />
           {competitors.map((entry) => (
-            <SeriesKey
-              key={entry.label}
-              label={entry.label}
-              swatchClass={entry.strokeClass.replace('stroke-', 'bg-')}
-            />
+            <SeriesKey key={entry.label} label={entry.label} tone={{ series: entry.series }} />
           ))}
           {focused ? (
             <li>
@@ -336,14 +337,17 @@ function MeasurementHistory({
   }
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between gap-3">
+      <CardHeader
+        actions={
+          <AnalysisChoice
+            label="Plotted metric"
+            value={metric}
+            options={VISIBILITY_METRICS}
+            onChange={setMetric}
+          />
+        }
+      >
         <CardTitle>Over time</CardTitle>
-        <AnalysisChoice
-          label="Plotted metric"
-          value={metric}
-          options={VISIBILITY_METRICS}
-          onChange={setMetric}
-        />
       </CardHeader>
       <CardContent>{body}</CardContent>
     </Card>
@@ -351,10 +355,10 @@ function MeasurementHistory({
 }
 
 /** One entry in the chart key: the brand, then each comparison line. */
-function SeriesKey({ label, swatchClass }: Readonly<{ label: string; swatchClass: string }>) {
+function SeriesKey({ label, tone }: Readonly<{ label: string; tone: DataTone }>) {
   return (
     <li className="flex items-center gap-2">
-      <span className={`inline-block size-2 rounded-full ${swatchClass}`} aria-hidden />
+      <LegendSwatch tone={tone} />
       <span className={textRole('caption')}>{label}</span>
     </li>
   );

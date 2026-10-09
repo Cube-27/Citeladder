@@ -1,7 +1,3 @@
-import type { ComponentPropsWithoutRef } from 'react';
-
-import { cn } from '@/lib/utils';
-
 /**
  * Eyebrow (kicker) recipes — the `label` role (13/18, 500, muted, sentence
  * case).
@@ -11,22 +7,7 @@ import { cn } from '@/lib/utils';
  *
  * `eyebrowClasses` is the muted form, shared by page eyebrows, panel labels,
  * panel labels, sidebar group labels and <CardEyebrow>; apply it to whatever
- * element is semantic at the call site. <AccentEyebrow> is the accent-toned
- * variant used atop setup and status pages.
+ * element is semantic at the call site. There is no accent variant: accent
+ * marks actions, never a label.
  */
 export const eyebrowClasses = 'type-label';
-
-export function AccentEyebrow({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'span'>>) {
-  return (
-    <span
-      {...props}
-      className={cn(eyebrowClasses, 'text-accent-text inline-flex items-center gap-2', className)}
-    >
-      {children}
-    </span>
-  );
-}

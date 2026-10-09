@@ -4,7 +4,10 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
 import { BusyBar } from '@/components/ui/busy-bar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ReadError } from '@/components/ui/read-error';
+import { StatGrid } from '@/components/ui/stat-grid';
+import { MissingValue } from '@/components/ui/unavailable-value';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label, textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -31,35 +34,42 @@ const DENOMINATOR_COPY: Record<string, string> = {
   observations_with_ai_overview: 'searches that showed an overview',
 };
 
+/** A rate's value as a percentage to one decimal place. */
+function ratePercent(value: number): string {
+  return `${Math.round(value * 1000) / 10}%`;
+}
+
 function denominatorCopy(rate: AioRate): string {
   const scope = DENOMINATOR_COPY[rate.denominator_kind] ?? 'observations counted';
   return `${rate.numerator} of ${rate.denominator} ${scope}`;
 }
 
-function RateTile({
+/**
+ * One rate as a stat: the figure, what it divided by, and what it means. A rate
+ * with nothing to divide is the missing mark named "Unavailable", never 0%.
+ */
+function rateStat({
+  key,
   label,
   caption,
   rate,
-}: Readonly<{ label: string; caption: string; rate: AioRate }>) {
-  return (
-    <div className="grid min-w-0 gap-1 p-4">
-      <Label>{label}</Label>
-      {rate.value === null ? (
-        <>
-          <span className={textRole('itemTitle', 'text-muted')}>Unavailable</span>
-          <span className="type-caption">
-            Nothing to divide by yet — no observation has entered this denominator.
-          </span>
-        </>
-      ) : (
-        <>
-          <span className={textRole('figure')}>{Math.round(rate.value * 1000) / 10}%</span>
-          <span className="type-caption">{denominatorCopy(rate)}</span>
-        </>
-      )}
-      <p className="type-caption">{caption}</p>
-    </div>
-  );
+}: Readonly<{ key: string; label: string; caption: string; rate: AioRate }>) {
+  return {
+    key,
+    label,
+    value: rate.value === null ? null : ratePercent(rate.value),
+    missingLabel: 'Unavailable',
+    detail: (
+      <>
+        <span className="block">
+          {rate.value === null
+            ? 'Nothing to divide by yet — no observation has entered this denominator.'
+            : denominatorCopy(rate)}
+        </span>
+        <span className="block">{caption}</span>
+      </>
+    ),
+  };
 }
 
 function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_mention_rates'] }>) {
@@ -78,12 +88,10 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
             <span className={textRole('body', 'min-w-0 truncate')}>{entry.name}</span>
             <span className="shrink-0 text-right">
               {entry.rate.value === null ? (
-                <span className="type-body">Unavailable</span>
+                <MissingValue state="unavailable" className="type-body" />
               ) : (
                 <>
-                  <span className="type-body tabular-nums">
-                    {`${Math.round(entry.rate.value * 1000) / 10}%`}
-                  </span>
+                  <span className="type-body tabular-nums">{ratePercent(entry.rate.value)}</span>
                   {/* The denominator is stated once for the list above; the
                       numerator is not, and it is what separates one competitor
                       named in a single overview from one named in fifty. */}
@@ -121,7 +129,15 @@ export function SurfaceRatesPanel({
   query,
 }: Readonly<{ query: UseQueryResult<SurfaceRates, unknown> }>) {
   const data = query.data;
-  if (query.isError) return <Alert tone="danger">Could not load the AI Overview rates.</Alert>;
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Could not load the AI Overview rates."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
   if (!data) return <Skeleton className="min-h-48 rounded-[var(--radius-card)]" />;
   // These rates are RETAINED across a surface or run change, the same way
   // the sources and evidence panels retain theirs, so the reader is not
@@ -134,31 +150,46 @@ export function SurfaceRatesPanel({
       <BusyBar active={query.isFetching} label="Updating AI Overview rates" />
       <CardHeader>
         <CardTitle>Google AI Overview</CardTitle>
-        <p className={textRole('caption', 'text-secondary')}>
+        <CardDescription>
           {`${data.successful} successfully observed ${data.successful === 1 ? 'search' : 'searches'}, ${data.with_overview} of which showed an overview. Each rate below states what it divided by.`}
-        </p>
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-[var(--workspace-gap)] p-0">
-        <div className="border-border-subtle divide-border-subtle grid divide-y border-b sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:[&>*+*]:border-l">
-          <RateTile
-            label="Overview shown"
-            caption="A property of the QUERIES, not of your brand. It moves when Google changes what it answers with."
-            rate={data.trigger_rate}
-          />
-          <RateTile
-            label="Named, when shown"
-            caption="Conditional. It can rise while overall visibility falls, if Google shows fewer overviews but names you in more of them."
-            rate={data.brand_mention_rate_when_present}
-          />
-          <RateTile
-            label="Overall visibility"
-            caption="Unconditional, and the closest to 'how visible are we here'. A search with no overview counts against it."
-            rate={data.overall_brand_visibility}
-          />
-          <RateTile
-            label="Your site cited"
-            caption="Independent of being named: an overview can name you without citing you, and cite you without naming you."
-            rate={data.owned_citation_rate_when_present}
+        <div className="border-border-subtle border-b">
+          <StatGrid
+            surface="band"
+            columns={4}
+            size="figure"
+            items={[
+              rateStat({
+                key: 'trigger',
+                label: 'Overview shown',
+                caption:
+                  'A property of the QUERIES, not of your brand. It moves when Google changes what it answers with.',
+                rate: data.trigger_rate,
+              }),
+              rateStat({
+                key: 'named',
+                label: 'Named, when shown',
+                caption:
+                  'Conditional. It can rise while overall visibility falls, if Google shows fewer overviews but names you in more of them.',
+                rate: data.brand_mention_rate_when_present,
+              }),
+              rateStat({
+                key: 'overall',
+                label: 'Overall visibility',
+                caption:
+                  "Unconditional, and the closest to 'how visible are we here'. A search with no overview counts against it.",
+                rate: data.overall_brand_visibility,
+              }),
+              rateStat({
+                key: 'cited',
+                label: 'Your site cited',
+                caption:
+                  'Independent of being named: an overview can name you without citing you, and cite you without naming you.',
+                rate: data.owned_citation_rate_when_present,
+              }),
+            ]}
           />
         </div>
         <CompetitorRates rates={data.competitor_mention_rates} />

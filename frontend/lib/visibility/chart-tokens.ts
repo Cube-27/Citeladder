@@ -1,18 +1,36 @@
+import { dataFillClass } from '@/components/ui/data-tone';
+
+const SERIES = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+
 /** Literal classes stay visible to Tailwind's source scanner. */
+const STROKE: Record<(typeof SERIES)[number], string> = {
+  1: 'stroke-chart-1',
+  2: 'stroke-chart-2',
+  3: 'stroke-chart-3',
+  4: 'stroke-chart-4',
+  5: 'stroke-chart-5',
+  6: 'stroke-chart-6',
+  7: 'stroke-chart-7',
+  8: 'stroke-chart-8',
+};
+
+/** Per series: its line stroke, its swatch fill (the `DataTone` series fill) and its colour. */
 export const CHART_TOKENS: readonly {
   strokeClass: string;
   swatchClass: string;
   color: string;
-}[] = [
-  { strokeClass: 'stroke-chart-1', swatchClass: 'bg-chart-1', color: 'var(--color-chart-1)' },
-  { strokeClass: 'stroke-chart-2', swatchClass: 'bg-chart-2', color: 'var(--color-chart-2)' },
-  { strokeClass: 'stroke-chart-3', swatchClass: 'bg-chart-3', color: 'var(--color-chart-3)' },
-  { strokeClass: 'stroke-chart-4', swatchClass: 'bg-chart-4', color: 'var(--color-chart-4)' },
-  { strokeClass: 'stroke-chart-5', swatchClass: 'bg-chart-5', color: 'var(--color-chart-5)' },
-  { strokeClass: 'stroke-chart-6', swatchClass: 'bg-chart-6', color: 'var(--color-chart-6)' },
-  { strokeClass: 'stroke-chart-7', swatchClass: 'bg-chart-7', color: 'var(--color-chart-7)' },
-  { strokeClass: 'stroke-chart-8', swatchClass: 'bg-chart-8', color: 'var(--color-chart-8)' },
-];
+}[] = SERIES.map((series) => ({
+  strokeClass: STROKE[series],
+  swatchClass: dataFillClass({ series }),
+  color: `var(--color-chart-${series})`,
+}));
 
-/** Trend comparisons intentionally start at token 2 and use six colours. */
-export const TREND_COMPARISON_STROKES = CHART_TOKENS.slice(1, 7).map((token) => token.strokeClass);
+/**
+ * Trend comparisons intentionally start at series 2 (series 1 is the tracked
+ * brand) and use six colours.
+ */
+export const TREND_COMPARISON_SERIES = [2, 3, 4, 5, 6, 7] as const;
+
+export const TREND_COMPARISON_STROKES = TREND_COMPARISON_SERIES.map(
+  (series) => CHART_TOKENS[series - 1].strokeClass,
+);

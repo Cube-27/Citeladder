@@ -10,9 +10,10 @@ import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ExternalHttpLink } from '@/components/ui/external-http-link';
-import { Label, textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { StatGrid, StatItem } from '@/components/ui/stat-grid';
+import { TextLink } from '@/components/ui/text-link';
+import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { ledgerClasses } from '@/components/ui/workspace';
 import type { DeliveryFacts, IssueOccurrence, PageDetail } from '@/lib/api/types';
@@ -23,13 +24,11 @@ import {
   severityRank,
 } from '@/lib/site-health/issues';
 import {
-  PLACEHOLDER,
   formatAudited,
   pageDisplayTitle,
   pageStatusBadgeValue,
   statusLabel,
 } from '@/lib/site-health/status';
-import { cn } from '@/lib/utils';
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
 
 /** Queued is neither "running" nor "ready to ask again": it is its own state. */
@@ -119,7 +118,7 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
             {detail.internal_links ? (
               <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
             ) : (
-              <p className={textRole('body')}>Internal links not measured for this page.</p>
+              <InlineEmpty>Internal links not measured for this page.</InlineEmpty>
             )}
           </CardContent>
         </Card>
@@ -145,7 +144,7 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
             {detail.internal_links ? (
               <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
             ) : (
-              <p className={textRole('body')}>Internal links not measured for this page.</p>
+              <InlineEmpty>Internal links not measured for this page.</InlineEmpty>
             )}
           </TabPanel>
         </Tabs>
@@ -159,86 +158,75 @@ function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
   return (
     <Card className="min-w-0">
       <CardContent>
-        <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
-          <DetailFact label="URL" className="min-[701px]:col-span-2 xl:col-span-1">
-            <ExternalHttpLink
-              href={detail.display_url}
-              className={textRole(
-                'itemTitle',
-                'tabular-nums text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline',
-              )}
-            >
-              {detail.display_url}
-            </ExternalHttpLink>
-          </DetailFact>
-          <DetailFact label="Page Kind">
-            <PageKindBadge pageKind={detail.page_kind} />
-          </DetailFact>
-          <DetailFact label="Last Audit">
-            <span className={textRole('itemTitle')}>
-              {formatAudited(detail.last_audited, timeZone)}
-            </span>
-          </DetailFact>
-          <DetailFact label="Status">
-            <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
-              {statusLabel(detail.analysis_status)}
-            </Badge>
-          </DetailFact>
-        </dl>
+        <StatGrid
+          columns={2}
+          className="min-[701px]:grid-cols-2 sm:grid-cols-1 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]"
+        >
+          <StatItem
+            label="URL"
+            className="min-[701px]:col-span-2 xl:col-span-1"
+            value={
+              <TextLink
+                variant="external"
+                text="itemTitle"
+                href={detail.display_url}
+                className="min-w-0 [overflow-wrap:anywhere] tabular-nums"
+              >
+                {detail.display_url}
+              </TextLink>
+            }
+          />
+          <StatItem label="Page Kind" value={<PageKindBadge pageKind={detail.page_kind} />} />
+          <StatItem
+            label="Last Audit"
+            value={
+              <span className={textRole('itemTitle')}>
+                {formatAudited(detail.last_audited, timeZone)}
+              </span>
+            }
+          />
+          <StatItem
+            label="Status"
+            value={
+              <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
+                {statusLabel(detail.analysis_status)}
+              </Badge>
+            }
+          />
+        </StatGrid>
       </CardContent>
     </Card>
   );
 }
 
-function DetailFact({
-  label,
-  children,
-  className,
-}: Readonly<{ label: string; children: React.ReactNode; className?: string }>) {
-  return (
-    <div className={cn('grid min-w-0 content-start gap-1', className)}>
-      <dt className={textRole('caption')}>{label}</dt>
-      <dd className="min-w-0">{children}</dd>
-    </div>
-  );
-}
-
 function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
   const items = [
-    { label: 'TTFB', value: formatMeasuredMs(delivery.ttfb_ms) },
+    { key: 'ttfb', label: 'TTFB', value: formatMeasuredMs(delivery.ttfb_ms) },
     {
+      key: 'size',
       label: 'Response Size',
       value: formatBytes(delivery.decoded_bytes ?? delivery.html_bytes),
     },
     {
+      key: 'status',
       label: 'HTTP Status',
-      value: delivery.status_code === null ? PLACEHOLDER : `${delivery.status_code}`,
+      value: delivery.status_code === null ? null : `${delivery.status_code}`,
     },
-    { label: 'Compression', value: delivery.compression ?? 'none' },
-    { label: 'HTTP Version', value: delivery.http_version ?? PLACEHOLDER },
-    { label: 'Cache-Control', value: delivery.cache_control ?? PLACEHOLDER },
+    { key: 'compression', label: 'Compression', value: delivery.compression ?? 'none' },
+    { key: 'version', label: 'HTTP Version', value: delivery.http_version ?? null },
+    { key: 'cache', label: 'Cache-Control', value: delivery.cache_control ?? null },
     {
+      key: 'blocking',
       label: 'Blocking Resources',
       value:
-        delivery.blocking_resource_count === null
-          ? PLACEHOLDER
-          : `${delivery.blocking_resource_count}`,
+        delivery.blocking_resource_count === null ? null : `${delivery.blocking_resource_count}`,
     },
-    { label: 'Wire Size', value: formatBytes(delivery.wire_bytes) },
+    { key: 'wire', label: 'Wire Size', value: formatBytes(delivery.wire_bytes) },
   ];
   return (
     <Stack>
       <p className={textRole('caption', 'max-[980px]:hidden')}>Static HTTP-level measurements</p>
-      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {items.map((item) => (
-          <div key={item.label} className="grid gap-0.5">
-            <Label>{item.label}</Label>
-            <dd className={textRole('itemTitle', 'tabular-nums [overflow-wrap:anywhere]')}>
-              {item.value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : item.value}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <StatGrid columns={4} items={items} />
     </Stack>
   );
 }
@@ -247,13 +235,12 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
   const ordered = [...issues].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
   return (
     <Card>
-      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
+      <CardHeader actions={<span className="type-caption">Sorted by severity</span>}>
         <CardTitle>All Issues ({issues.length})</CardTitle>
-        <span className="type-caption">Sorted by severity</span>
       </CardHeader>
       <CardContent>
         {ordered.length === 0 ? (
-          <p className={textRole('body')}>No issues detected on this page.</p>
+          <InlineEmpty>No issues detected on this page.</InlineEmpty>
         ) : (
           <ol className={ledgerClasses()}>
             {ordered.map((issue) => (
@@ -280,12 +267,12 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
   );
 }
 
-function formatMeasuredMs(value: number | null): string {
-  return value === null || value <= 0 ? PLACEHOLDER : `${Math.round(value)}ms`;
+function formatMeasuredMs(value: number | null): string | null {
+  return value === null || value <= 0 ? null : `${Math.round(value)}ms`;
 }
 
-function formatBytes(bytes: number | null): string {
-  if (bytes === null) return PLACEHOLDER;
+function formatBytes(bytes: number | null): string | null {
+  if (bytes === null) return null;
   if (bytes < 1024) return `${bytes} B`;
   return `${Math.round((bytes / 1024) * 10) / 10} KB`;
 }

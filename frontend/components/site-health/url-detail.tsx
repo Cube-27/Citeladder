@@ -7,10 +7,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
-import { CursorPager } from '@/components/ui/cursor-pager';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { Pager } from '@/components/ui/pager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health';
 import type { IssueHistoryPage, PageDetail } from '@/lib/api/types';
@@ -24,9 +23,9 @@ import {
 } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { cursorControls, useCursorTable } from '@/lib/table/use-cursor-table';
 
 import { UrlDetailView } from './url-detail-view';
-import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
@@ -170,11 +169,10 @@ function IssueHistory({
   crawlId,
   siteUrlId,
 }: Readonly<{ workspaceId: string; crawlId: string; siteUrlId: string }>) {
-  const [cursorStack, setCursorStack] = useState<string[]>([]);
-  const cursor = cursorStack.at(-1);
+  const pager = useCursorTable(`${workspaceId}|${crawlId}|${siteUrlId}`);
   const historyQuery = useQuery(
     siteHealthQueries.issueHistory(workspaceId, crawlId, siteUrlId, {
-      cursor,
+      cursor: pager.cursor,
       limit: HISTORY_LIMIT,
     }),
   );
@@ -195,37 +193,14 @@ function IssueHistory({
             pending={historyQuery.isFetching}
           />
         ) : null}
-        {historyQuery.isLoading ? <HistorySkeleton /> : null}
+        {historyQuery.isLoading ? <PageLoading label="Loading issue history" /> : null}
         {!historyQuery.isLoading && !historyQuery.isError && rows.length === 0 ? (
-          <p className={textRole('body')}>No prior issue records for this page.</p>
+          <InlineEmpty>No prior issue records for this page.</InlineEmpty>
         ) : null}
         {rows.length > 0 ? <HistoryRows rows={rows} /> : null}
-        {rows.length > 0 ? (
-          <div className="flex justify-end">
-            <CursorPager
-              canPrev={cursorStack.length > 0}
-              canNext={Boolean(nextCursor)}
-              onPrev={() => setCursorStack((previous) => previous.slice(0, -1))}
-              onNext={() =>
-                nextCursor &&
-                setCursorStack((previous) =>
-                  previous.at(-1) === nextCursor ? previous : [...previous, nextCursor],
-                )
-              }
-            />
-          </div>
-        ) : null}
+        {rows.length > 0 ? <Pager {...cursorControls(pager, nextCursor)} /> : null}
       </CardContent>
     </Card>
-  );
-}
-
-function HistorySkeleton() {
-  return (
-    <Stack>
-      <Skeleton className="h-6 w-full" />
-      <Skeleton className="h-6 w-full" />
-    </Stack>
   );
 }
 

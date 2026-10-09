@@ -1,6 +1,6 @@
 'use client';
 
-import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
+import { Pager } from '@/components/ui/pager';
 import { setUrlParams } from '@/lib/navigation/url-state';
 import type { SourcesData } from '@/lib/visibility/sources';
 
@@ -33,13 +33,15 @@ export function SourcePaging({
   const from = !data || total === 0 ? 0 : offset + 1;
   const to = data ? Math.min(total, offset + data.items.length) : 0;
   return (
-    <CursorTableFooter
-      from={from}
-      to={to}
-      total={data ? total : undefined}
-      noun={dimension === 'url' || domain ? 'URLs' : 'domains'}
-      pageSize={pageSize}
-      onPageSizeChange={onPageSizeChange}
+    <Pager
+      frame="table"
+      range={{
+        from,
+        to,
+        total: data ? total : undefined,
+        noun: dimension === 'url' || domain ? 'URLs' : 'domains',
+      }}
+      pageSize={{ value: pageSize, onChange: onPageSizeChange }}
       canPrev={data?.previous_cursor != null}
       canNext={data?.next_cursor != null}
       busy={busy}

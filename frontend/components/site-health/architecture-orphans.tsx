@@ -8,17 +8,12 @@
  */
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
-
 import { Drawer } from '@/components/ui/drawer';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Stack } from '@/components/ui/layout';
-import { Pressable } from '@/components/ui/pressable';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { MetricItem, metricItemClasses } from '@/components/ui/workspace';
-import { textRole } from '@/components/ui/typography';
+import { StatItem } from '@/components/ui/stat-grid';
+import { TextLink } from '@/components/ui/text-link';
 import type { SiteArchitecture } from '@/lib/api/types';
-import { PLACEHOLDER } from '@/lib/site-health/status';
+import { pluralCount } from '@/lib/format';
 
 // Scope, in the metric's own words. The count is a fact about the pages this
 // crawl fetched; it is not the stronger claim that nothing anywhere links to
@@ -34,35 +29,21 @@ export function OrphanMetric({
   total: number | null;
   onOpen: () => void;
 }>) {
-  if (total === null) {
-    return <EvidenceMetric label="Orphaned pages" value={PLACEHOLDER} />;
-  }
+  if (total === null) return <StatItem label="Orphaned pages" value={null} />;
   // The count opens the evidence rather than listing it in place. A list of
   // twenty URLs inside a three-metric summary card pushed Structure depth off
   // the fold to say something the number already said; the drawer is where
-  // every other Site Health surface puts its supporting rows.
-  return (
-    <div className={metricItemClasses}>
-      <dt className={eyebrowClasses}>Orphaned pages</dt>
-      <dd>
-        {pages.length > 0 ? (
-          // The visible label is the bare number, which as an accessible name
-          // says only "1" — a control a screen-reader user has no reason to
-          // press. Name the action instead.
-          <Pressable
-            onClick={onOpen}
-            aria-label={`View ${total} orphaned ${total === 1 ? 'page' : 'pages'}`}
-            className="text-accent-text justify-self-start hover:underline"
-          >
-            <span className={textRole('figure')}>{total}</span>
-          </Pressable>
-        ) : (
-          <span className={textRole('figure')}>{total}</span>
-        )}
-      </dd>
-      <dd className={textRole('caption')}>{ORPHAN_SCOPE_NOTE}</dd>
-    </div>
-  );
+  // every other Site Health surface puts its supporting rows. The visible
+  // label is the bare number, which as an accessible name says only "1", so
+  // the target is named by the action instead.
+  const action =
+    pages.length > 0
+      ? {
+          onSelect: onOpen,
+          actionLabel: `View ${pluralCount(total, 'orphaned page')}`,
+        }
+      : {};
+  return <StatItem label="Orphaned pages" value={total} detail={ORPHAN_SCOPE_NOTE} {...action} />;
 }
 
 export function OrphanPageDrawer({
@@ -94,12 +75,13 @@ export function OrphanPageDrawer({
               {/* Openable, like every other page reference in this tab. A count
                 nobody can act on is the failure this whole change is undoing. */}
               {crawlId ? (
-                <ProjectLink
+                <TextLink
+                  text="body"
+                  className="truncate"
                   href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
-                  className="type-body text-accent-text truncate hover:underline"
                 >
                   {page.title || page.url}
-                </ProjectLink>
+                </TextLink>
               ) : (
                 <span className="type-body truncate">{page.title || page.url}</span>
               )}
@@ -110,19 +92,5 @@ export function OrphanPageDrawer({
         {undisclosed > 0 ? <p className="type-caption">and {undisclosed} more</p> : null}
       </Stack>
     </Drawer>
-  );
-}
-
-export function EvidenceMetric({
-  label,
-  value,
-  supporting,
-}: Readonly<{ label: string; value: string; supporting?: string }>) {
-  return (
-    <MetricItem
-      label={label}
-      value={value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value}
-      detail={supporting}
-    />
   );
 }

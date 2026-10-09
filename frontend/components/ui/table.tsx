@@ -1,6 +1,11 @@
 import type { HTMLAttributes, ReactNode, Ref, TdHTMLAttributes, ThHTMLAttributes } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
+import { Tooltip } from '@/components/ui/tooltip';
+import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
+
+import { sortIndicator } from './sort-indicator';
 
 /**
  * Dense analytics table — the shared semantic ledger treatment:
@@ -22,18 +27,30 @@ import { cn } from '@/lib/utils';
  * (an outer shadow, so it never changes the box); inside a Card the ring drops
  * and the flush fill melts into the card.
  *
- * Column headers take the `label` role (13/18, 500, muted): a header names the
+ * Column headers take the `label` role (13/18, 500, ink-soft): a header names the
  * values beneath it, exactly as a metric label does.
  */
 const tableHeadClasses = 'type-label whitespace-nowrap';
+const TABLE_MIN_WIDTH = {
+  sm: 'min-w-[var(--table-min-width-sm)]',
+  md: 'min-w-[var(--table-min-width-md)]',
+  lg: 'min-w-[var(--table-min-width-lg)]',
+  xl: 'min-w-[var(--table-min-width-xl)]',
+} as const;
+
+export type TableMinWidth = keyof typeof TABLE_MIN_WIDTH;
+
 export function Table({
   children,
   className,
+  minWidth,
   wrapperClassName,
   wrapperRef,
 }: Readonly<{
   children: ReactNode;
   className?: string;
+  /** Below this width the table scrolls in its frame instead of squeezing. */
+  minWidth?: TableMinWidth;
   wrapperClassName?: string;
   wrapperRef?: Ref<HTMLDivElement>;
 }>) {
@@ -45,7 +62,15 @@ export function Table({
         wrapperClassName,
       )}
     >
-      <table className={cn('type-body w-full border-collapse', className)}>{children}</table>
+      <table
+        className={cn(
+          'type-body w-full border-collapse',
+          minWidth && TABLE_MIN_WIDTH[minWidth],
+          className,
+        )}
+      >
+        {children}
+      </table>
     </div>
   );
 }
@@ -164,5 +189,80 @@ export function TableRecordMetricCell({
     >
       {children}
     </TableCell>
+  );
+}
+
+/** The one glyph set for sortable columns: up, down, and the neutral pair. */
+const SORT_ICONS = { ascending: ArrowUp, descending: ArrowDown, inactive: ArrowUpDown } as const;
+
+/** The header aligns with its column's values, as `TableHead` does. */
+const SORT_ALIGN = {
+  start: { column: 'items-start', row: 'justify-start text-left' },
+  center: { column: 'items-center', row: 'justify-center text-center' },
+  end: { column: 'items-end', row: 'justify-end text-right' },
+} as const;
+
+/**
+ * A sortable column header: a real button inside the `th`, `aria-sort` on the
+ * `th` (it describes the column, and that is where a screen reader looks for
+ * it), the glyph after the label.
+ *
+ * The active column takes primary ink (the header row's own `aria-sort` rule)
+ * and the glyph is muted until active. The
+ * button's name is the visible label (plus the sublabel when present), so it
+ * is pressed with Enter or Space like any other button.
+ */
+export function SortableTableHead({
+  label,
+  active,
+  descending,
+  onSort,
+  numeric,
+  sublabel,
+  hint,
+  className,
+}: Readonly<{
+  label: string;
+  /** This column is the current sort key. */
+  active: boolean;
+  /** The current order; read only when `active`. */
+  descending: boolean;
+  onSort: () => void;
+  numeric?: boolean | 'end';
+  /** A qualifier under the label, e.g. the comparison window. */
+  sublabel?: string;
+  /** The column's shared caveat, behind a tooltip on the header. */
+  hint?: string;
+  className?: string;
+}>) {
+  const { ariaSort, icon: Icon } = sortIndicator(active, descending, SORT_ICONS);
+  let align: (typeof SORT_ALIGN)[keyof typeof SORT_ALIGN] = SORT_ALIGN.start;
+  if (numeric === 'end') align = SORT_ALIGN.end;
+  else if (numeric) align = SORT_ALIGN.center;
+  const button = (
+    <button
+      type="button"
+      onClick={onSort}
+      className={cn(
+        'focus-ring inline-flex w-full flex-col gap-0.5 rounded-xs transition-colors',
+        align.column,
+        !active && 'hover:text-foreground',
+      )}
+    >
+      <span className={cn('inline-flex w-full items-center gap-1', align.row)}>
+        <span className="truncate">{label}</span>
+        <Icon className={cn('size-3 shrink-0', !active && 'text-muted')} aria-hidden />
+      </span>
+      {sublabel ? (
+        <span className={textRole('caption', 'max-w-full truncate')} title={sublabel}>
+          {sublabel}
+        </span>
+      ) : null}
+    </button>
+  );
+  return (
+    <TableHead numeric={numeric} aria-sort={ariaSort} className={className}>
+      {hint ? <Tooltip content={hint}>{button}</Tooltip> : button}
+    </TableHead>
   );
 }

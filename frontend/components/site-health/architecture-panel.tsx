@@ -1,25 +1,27 @@
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { Fragment, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Link2, ListTree } from 'lucide-react';
 
 import { HierarchyCard } from '@/components/site-health/architecture-hierarchy';
 import {
-  EvidenceMetric,
   ORPHAN_SCOPE_NOTE,
   OrphanMetric,
   OrphanPageDrawer,
 } from '@/components/site-health/architecture-orphans';
+import { PageLoading } from '@/components/layout/page-loading';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Stack } from '@/components/ui/layout';
+import { Meter } from '@/components/ui/meter';
 import { Pressable } from '@/components/ui/pressable';
-import { Skeleton } from '@/components/ui/skeleton';
+import { StatGrid, StatItem } from '@/components/ui/stat-grid';
+import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import {
   Table,
@@ -30,7 +32,7 @@ import {
   TableRecordMetricCell,
   TableRow,
 } from '@/components/ui/table';
-import { MetricGroup, MetricItem } from '@/components/ui/workspace';
+import { MetricGroup, MetricItem, splitPaneClasses } from '@/components/ui/workspace';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type {
   ArchitectureNode,
@@ -88,12 +90,7 @@ export function ArchitecturePanel({
   const architecture = useQuery(siteHealthQueries.architecture(workspaceId, projectId, crawlId));
 
   if (architecture.isLoading) {
-    return (
-      <Stack as="output" gap="workspace" aria-label="Loading the observed architecture">
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-72 w-full" />
-      </Stack>
-    );
+    return <PageLoading label="Loading the observed architecture" />;
   }
   if (architecture.isError)
     return (
@@ -146,21 +143,20 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
     <Stack gap="workspace" className="min-w-0" data-testid="site-architecture">
       <ArchitectureEvidence data={data} />
       <Card>
-        <CardHeader className="gap-2">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="grid gap-1">
-              <CardTitle>Page kinds</CardTitle>
-              <CardDescription>
-                URLs grouped by their persisted structural purpose for this crawl.
-              </CardDescription>
-            </div>
+        <CardHeader
+          actions={
             <Badge
               variant="status"
               value={data.coverage_state === 'complete' ? 'success' : 'warning'}
             >
               {COVERAGE_LABELS[data.coverage_state]}
             </Badge>
-          </div>
+          }
+        >
+          <CardTitle>Page kinds</CardTitle>
+          <CardDescription>
+            URLs grouped by their persisted structural purpose for this crawl.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 pt-1">
           <ArchitectureMetrics
@@ -180,7 +176,7 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
               persisted reasons that nothing ever rendered. */}
           <CoverageReasons reasons={data.coverage_reasons} />
           {pageKinds.length === 0 ? (
-            <p className={textRole('body')}>No page kinds were measured.</p>
+            <InlineEmpty>No page kinds were measured.</InlineEmpty>
           ) : (
             <PageKindTable pageKinds={pageKinds} grouped={grouped} crawlId={data.crawl_id} />
           )}
@@ -311,19 +307,20 @@ function PageKindPages({
     <TableRow className="bg-background-alt hover:bg-background-alt block h-auto md:table-row md:h-[var(--table-row-height)]">
       <TableCell colSpan={6} className="block py-3 md:table-cell">
         {pages.length === 0 ? (
-          <p className={textRole('body')}>No projected URLs are available for this kind.</p>
+          <InlineEmpty>No projected URLs are available for this kind.</InlineEmpty>
         ) : (
           <ul className="content-scroll grid max-h-64 gap-2 overflow-y-auto overscroll-contain pr-2 pl-6">
             {pages.map((page) => (
               <li key={page.site_url_id} className="min-w-0">
                 {crawlId ? (
-                  <ProjectLink
+                  <TextLink
+                    text="body"
+                    className="min-w-0 truncate"
                     href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
-                    className="type-body text-accent-text min-w-0 truncate hover:underline"
                     title={page.url}
                   >
                     {page.url}
-                  </ProjectLink>
+                  </TextLink>
                 ) : (
                   <span className="type-body text-foreground min-w-0 truncate">{page.url}</span>
                 )}
@@ -339,66 +336,72 @@ function PageKindPages({
 function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
   const linking = data.internal_linking;
   const [orphansOpen, setOrphansOpen] = useState(false);
+  const linkedShare = linking.pages_with_incoming_percentage;
   return (
-    <div className="grid gap-[var(--workspace-gap)] md:grid-cols-2">
-      <Card>
-        <CardHeader className="flex-row items-center gap-2 pb-2">
-          <Link2 className="text-muted size-4" aria-hidden />
-          <CardTitle>Internal linking</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 pt-2">
-          <MetricGroup>
-            <EvidenceMetric label="Internal links" value={String(linking.internal_link_count)} />
-            <EvidenceMetric
-              label="Have incoming links"
-              value={formatPercentage(linking.pages_with_incoming_percentage)}
-              supporting={`${linking.pages_with_incoming_count} pages`}
-            />
-            <OrphanMetric
+    <>
+      <div className={splitPaneClasses('peers')}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link2 className="text-muted size-4" aria-hidden />
+              Internal linking
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 pt-2">
+            <StatGrid columns={3} size="figure">
+              <StatItem label="Internal links" value={linking.internal_link_count} />
+              <StatItem
+                label="Have incoming links"
+                value={linkedShare === null ? null : formatPercentage(linkedShare)}
+                detail={`${linking.pages_with_incoming_count} pages`}
+              />
+              <OrphanMetric
+                pages={linking.orphan_pages}
+                total={linking.orphan_page_count}
+                onOpen={() => setOrphansOpen(true)}
+              />
+            </StatGrid>
+            <OrphanPageDrawer
               pages={linking.orphan_pages}
               total={linking.orphan_page_count}
-              onOpen={() => setOrphansOpen(true)}
+              crawlId={data.crawl_id}
+              open={orphansOpen}
+              onOpenChange={setOrphansOpen}
             />
-          </MetricGroup>
-          <OrphanPageDrawer
-            pages={linking.orphan_pages}
-            total={linking.orphan_page_count}
-            crawlId={data.crawl_id}
-            open={orphansOpen}
-            onOpenChange={setOrphansOpen}
-          />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex-row items-center gap-2 pb-2">
-          <ListTree className="text-muted size-4" aria-hidden />
-          <CardTitle>Structure depth</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 pt-2">
-          {data.structure_depth.buckets.map((bucket) => (
-            <div key={bucket.key} className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-3">
-              <span className="type-caption">{DEPTH_LABELS[bucket.key]}</span>
-              <div className="bg-neutral-bg h-1.5 overflow-hidden rounded-full">
-                <div
-                  className="bg-chart-1 h-full rounded-full"
-                  style={{ width: `${Math.round((bucket.percentage ?? 0) * 100)}%` }}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ListTree className="text-muted size-4" aria-hidden />
+              Structure depth
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 pt-2">
+            {data.structure_depth.buckets.map((bucket) => (
+              <div key={bucket.key} className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-3">
+                <span className="type-caption">{DEPTH_LABELS[bucket.key]}</span>
+                <Meter
+                  value={bucket.percentage === null ? null : Math.round(bucket.percentage * 100)}
+                  label={`${DEPTH_LABELS[bucket.key]} share of pages`}
+                  tone={{ series: 1 }}
                 />
+                <span className={textRole('label', 'min-w-16 text-right tabular-nums')}>
+                  {bucket.page_count} ({formatPercentage(bucket.percentage)})
+                </span>
               </div>
-              <span className={textRole('label', 'min-w-16 text-right tabular-nums')}>
-                {bucket.page_count} ({formatPercentage(bucket.percentage)})
-              </span>
-            </div>
-          ))}
-          {data.structure_depth.unmeasured_page_count > 0 ? (
-            <p className="type-caption">
-              {data.structure_depth.unmeasured_page_count} pages have no measured depth.
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
-      <ProjectLink href="/site?tab=internal-links" className="type-control text-accent-text">
+            ))}
+            {data.structure_depth.unmeasured_page_count > 0 ? (
+              <p className="type-caption">
+                {data.structure_depth.unmeasured_page_count} pages have no measured depth.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+      <TextLink className="justify-self-start" href="/site?tab=internal-links">
         Review internal link suggestions
-      </ProjectLink>
-    </div>
+      </TextLink>
+    </>
   );
 }

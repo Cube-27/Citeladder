@@ -4,7 +4,8 @@ import type { z } from 'zod';
 
 import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -51,7 +52,7 @@ function SectionCard({
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
-        {caption ? <p className={textRole('caption', 'text-secondary')}>{caption}</p> : null}
+        {caption ? <CardDescription>{caption}</CardDescription> : null}
       </CardHeader>
       <CardContent className="p-0">
         <SectionBody loading={loading} errored={errored} empty={empty}>
@@ -83,7 +84,7 @@ function SectionBody({
   if (errored) return null;
   if (loading) return <Skeleton className="m-[var(--card-padding)] h-24" />;
   if (children) return <>{children}</>;
-  return <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>{empty}</p>;
+  return <InlineEmpty className="p-[var(--card-padding)]">{empty}</InlineEmpty>;
 }
 
 export function EnginesCard({

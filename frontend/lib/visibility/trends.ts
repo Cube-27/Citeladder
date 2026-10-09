@@ -12,7 +12,7 @@ import type { TrendPoint } from '@/components/ui/trend-chart';
 import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 import { formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
-import { TREND_COMPARISON_STROKES } from '@/lib/visibility/chart-tokens';
+import { TREND_COMPARISON_SERIES, TREND_COMPARISON_STROKES } from '@/lib/visibility/chart-tokens';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
 export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
@@ -24,10 +24,6 @@ export const GRANULARITY_OPTIONS: readonly { value: TrendGranularity; label: str
   { value: 'month', label: 'Monthly' },
 ] as const;
 
-export function granularityLabel(value: TrendGranularity): string {
-  return GRANULARITY_OPTIONS.find((option) => option.value === value)?.label ?? value;
-}
-
 /** Date-range presets. `all` sends no bounds; the rest send a UTC `from`. */
 export type TrendRange = 'all' | '30d' | '90d' | '1y';
 
@@ -37,10 +33,6 @@ export const RANGE_OPTIONS: readonly { value: TrendRange; label: string }[] = [
   { value: '1y', label: 'Last 12 months' },
   { value: 'all', label: 'All time' },
 ] as const;
-
-export function rangeLabel(value: TrendRange): string {
-  return RANGE_OPTIONS.find((option) => option.value === value)?.label ?? value;
-}
 
 /** Engines offered by the trend engine filter (canonical display order). */
 export const TREND_ENGINES: readonly LogicalEngine[] = ENGINE_ORDER;
@@ -202,7 +194,13 @@ export function toCompetitorSeries(
   points: readonly VisibilityTrendPoint[],
   metric: TrendMetric,
   limit = TREND_SERIES_LIMIT,
-): { label: string; values: (number | null)[]; strokeClass: string }[] {
+): {
+  label: string;
+  values: (number | null)[];
+  strokeClass: string;
+  /** The chart series the line is drawn in, for its legend key. */
+  series: (typeof TREND_COMPARISON_SERIES)[number];
+}[] {
   const latest = points.at(-1);
   const names = (latest?.rankings ?? [])
     .filter((row) => !row.is_brand)
@@ -212,6 +210,7 @@ export function toCompetitorSeries(
   return names.map((name, index) => ({
     label: name,
     strokeClass: TREND_COMPARISON_STROKES[index % TREND_COMPARISON_STROKES.length],
+    series: TREND_COMPARISON_SERIES[index % TREND_COMPARISON_SERIES.length],
     values: points.map((point) => {
       const row = point.rankings.find((entry) => entry.name === name);
       return row ? rankingMetricValue(row, metric) : null;
