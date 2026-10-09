@@ -19,5 +19,8 @@ const breadcrumb = breadcrumbJsonLd([
 const webPage = platformWebPageJsonLd(page);
 ---
 <MarketingLayout title={page.title} description={page.description} canonical={page.path} jsonLd={[...(breadcrumb ? [breadcrumb] : []), ...(webPage ? [webPage] : [])]}>
-  <main id="main"><PlatformPageContent page={page} /></main>
+  <main id="main">
+    {/* The MCP page's connect strip copies and opens menus, so that page hydrates. */}
+    {page.cta === 'mcp' ? <PlatformPageContent page={page} client:load /> : <PlatformPageContent page={page} />}
+  </main>
 </MarketingLayout>

@@ -10,7 +10,6 @@ it.each([
   ['trial', false, 'Book a demo', '/contact'],
   ['demo', true, 'Book a demo', '/contact'],
   ['setup', true, 'Discuss setup', '/contact'],
-  ['mcp', true, 'Read setup guide', 'https://docs.citeladder.com/mcp/'],
 ] as const)('leads %s pages with signup enabled=%s', (cta, enabled, label, href) => {
   vi.stubEnv('NEXT_PUBLIC_SELF_SERVE_SIGNUP', String(enabled));
   vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
@@ -19,4 +18,13 @@ it.each([
   if (label !== 'Start free trial') {
     expect(screen.queryByRole('link', { name: 'Start free trial' })).not.toBeInTheDocument();
   }
+});
+
+it('leads the MCP page with the connect strip instead of the guide and demo', () => {
+  render(<PlatformActions cta="mcp" />);
+  expect(screen.getByRole('link', { name: 'Connect to Claude' })).toHaveAttribute(
+    'href',
+    'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fciteladder.com%2Fmcp',
+  );
+  expect(screen.queryByRole('link', { name: 'Book a demo' })).not.toBeInTheDocument();
 });

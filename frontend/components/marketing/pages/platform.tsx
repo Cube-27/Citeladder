@@ -12,6 +12,8 @@ import type {
 } from '@/lib/marketing-content/platform-pages';
 import { cn } from '@/lib/utils';
 
+import { ConnectStrip } from '@/components/mcp/connect-strip';
+
 import { NavIcon, hasNavIcon } from '../chrome/nav-icons';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
@@ -116,6 +118,8 @@ export function PlatformActions({
   cta,
   size = 'marketing',
 }: Readonly<{ cta: PlatformCta; size?: 'lg' | 'marketing' }>) {
+  // Connecting an assistant is the MCP page's whole action, and it starts the trial.
+  if (cta === 'mcp') return <ConnectStrip className="w-full max-w-2xl text-left" />;
   const trial = cta === 'trial' && selfServeSignupOpen();
   return (
     <div className="flex flex-wrap justify-center gap-3">
@@ -124,12 +128,7 @@ export function PlatformActions({
           Start free trial
         </ButtonLink>
       )}
-      {cta === 'mcp' && (
-        <ButtonLink href={docsHref('/mcp/')} size={size}>
-          Read setup guide
-        </ButtonLink>
-      )}
-      <DemoButtonLink variant={trial || cta === 'mcp' ? 'soft' : 'primary'} size={size}>
+      <DemoButtonLink variant={trial ? 'soft' : 'primary'} size={size}>
         {cta === 'setup' ? 'Discuss setup' : 'Book a demo'}
       </DemoButtonLink>
       {(cta === 'demo' || cta === 'setup') && (

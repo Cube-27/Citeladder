@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Check } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
@@ -429,9 +429,22 @@ function Closing() {
   );
 }
 
+/** The homepage's one announcement: assistants connect from the MCP page. */
+function Announcement() {
+  return (
+    <div className="lp-announcement" data-cta-placement="announcement">
+      <a href="/platform/mcp" className="website-label" data-marketing-cta="">
+        New: connect CiteLadder to Claude, ChatGPT and more
+        <ArrowRight aria-hidden className="size-4" />
+      </a>
+    </div>
+  );
+}
+
 export function LandingPage() {
   return (
     <div className="lp">
+      <Announcement />
       <Hero />
       <EngineStrip />
       <Statement />

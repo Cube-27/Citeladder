@@ -17,6 +17,27 @@
   max-width: 84rem;
 }
 
+/* A thin band above the hero; the link is the whole message. */
+.lp-announcement {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem var(--site-gutter);
+  background: var(--color-accent-soft);
+  border-bottom: 1px solid var(--color-accent-border);
+}
+
+.lp-announcement a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-accent-text);
+  text-align: center;
+}
+
+.lp-announcement a:hover {
+  text-decoration: underline;
+}
+
 .lp-section {
   position: relative;
   padding-block: var(--section-y);
