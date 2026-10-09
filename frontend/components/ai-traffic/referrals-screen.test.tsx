@@ -72,7 +72,7 @@ describe('AiReferralsScreen', () => {
     expect(await screen.findByText('No AI-referral data yet')).toBeInTheDocument();
     // GA4 is connected in place rather than through Settings.
     expect(screen.getByRole('region', { name: 'Connect Google Analytics 4' })).toBeInTheDocument();
-    expect(screen.getByTestId('ai-traffic-toolbar')).toBeVisible();
+    expect(screen.getByRole('button', { name: /^Range:/ })).toBeVisible();
   });
 
   it('renders only persisted referral measurement, without visibility or event drill-downs', async () => {
@@ -114,7 +114,7 @@ describe('AiReferralsScreen', () => {
     expect(
       await screen.findByText(/no sessions matched a known AI source in this window/i),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('ai-traffic-toolbar')).toBeVisible();
+    expect(screen.getByRole('button', { name: /^Range:/ })).toBeVisible();
     expect(screen.queryByText('Other')).not.toBeInTheDocument();
   });
 

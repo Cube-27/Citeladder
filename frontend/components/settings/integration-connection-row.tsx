@@ -97,7 +97,7 @@ function ConnectionActions({
         <Button
           variant="secondary"
           size="sm"
-          className="min-w-[56px]"
+          className="min-w-14"
           onClick={onTest}
           disabled={busy}
           aria-label={`Test ${label}`}

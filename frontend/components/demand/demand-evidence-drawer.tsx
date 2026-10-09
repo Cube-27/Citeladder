@@ -1,14 +1,15 @@
 'use client';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { ArrowUpRight, ExternalLink, ShieldCheck, Split } from 'lucide-react';
+import { ArrowUpRight, ShieldCheck, Split } from 'lucide-react';
 
 import { SignalInsight } from '@/components/demand/demand-signal-insight';
 import { SignalChip } from '@/components/demand/demand-signal-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
-import { ExternalHttpLink } from '@/components/ui/external-http-link';
+import { StatGrid } from '@/components/ui/stat-grid';
+import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { DemandSignal } from '@/lib/api/demand';
 import {
@@ -20,7 +21,7 @@ import {
   signalTargetKind,
 } from '@/lib/demand/signals';
 import { DisplayTime } from '@/components/ui/display-time';
-import { formatCount } from '@/lib/format';
+import { formatCount, formatPercent } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -62,7 +63,7 @@ function DemandEvidenceContent({
               href={demandSignalHandoffHref(signal)}
               className="inline-flex items-center"
             >
-              <ArrowUpRight className="mr-2 size-3.5" />
+              <ArrowUpRight className="size-3.5" aria-hidden />
               Ask agent
             </ProjectLink>
           </Button>
@@ -80,13 +81,14 @@ function DemandEvidenceContent({
           {details.linkablePageUrl && (
             <div className="type-caption flex items-center gap-2">
               <span className={textRole('emphasis', 'shrink-0')}>Resolved URL:</span>
-              <ExternalHttpLink
+              <TextLink
+                variant="external"
+                text="inherit"
                 href={details.linkablePageUrl}
-                className="text-accent-text inline-flex items-center gap-1 truncate hover:underline"
+                className="min-w-0"
               >
-                {details.linkablePageUrl}
-                <ExternalLink className="size-3" />
-              </ExternalHttpLink>
+                <span className="truncate">{details.linkablePageUrl}</span>
+              </TextLink>
             </div>
           )}
         </div>
@@ -96,57 +98,51 @@ function DemandEvidenceContent({
         {/* Observed GSC Metrics */}
         <section className="grid gap-2">
           <h3 className={textRole('label')}>Observed GSC Performance</h3>
-          <div
-            className={panelClasses({ pad: 'compact' }, 'grid grid-cols-2 gap-2 sm:grid-cols-4')}
-          >
-            <div>
-              <span className="type-caption">Impressions</span>
-              <p className={textRole('figureSm')}>
-                {typeof details.metrics.impressions === 'number' ? (
-                  formatCount(details.metrics.impressions)
-                ) : (
-                  <UnavailableValue state="not_measured" />
-                )}
-              </p>
-            </div>
-            <div>
-              <span className="type-caption">Clicks</span>
-              <p className={textRole('figureSm')}>
-                {typeof details.metrics.clicks === 'number' ? (
-                  formatCount(details.metrics.clicks)
-                ) : (
-                  <UnavailableValue state="not_measured" />
-                )}
-              </p>
-            </div>
-            <div>
-              <span className="type-caption">CTR</span>
-              <p className={textRole('figureSm')}>
-                {typeof details.metrics.ctr === 'number' ? (
-                  `${(details.metrics.ctr * 100).toFixed(1)}%`
-                ) : (
-                  <UnavailableValue state="not_measured" />
-                )}
-              </p>
-            </div>
-            <div>
-              <span className="type-caption">Avg Position</span>
-              <p className={textRole('figureSm')}>
-                {typeof details.metrics.position === 'number' ? (
-                  details.metrics.position.toFixed(1)
-                ) : (
-                  <UnavailableValue state="not_measured" />
-                )}
-              </p>
-            </div>
-          </div>
+          <StatGrid
+            surface="well"
+            columns={4}
+            items={[
+              {
+                key: 'impressions',
+                label: 'Impressions',
+                value:
+                  typeof details.metrics.impressions === 'number'
+                    ? formatCount(details.metrics.impressions)
+                    : null,
+              },
+              {
+                key: 'clicks',
+                label: 'Clicks',
+                value:
+                  typeof details.metrics.clicks === 'number'
+                    ? formatCount(details.metrics.clicks)
+                    : null,
+              },
+              {
+                key: 'ctr',
+                label: 'CTR',
+                value:
+                  typeof details.metrics.ctr === 'number'
+                    ? formatPercent(details.metrics.ctr, 1)
+                    : null,
+              },
+              {
+                key: 'position',
+                label: 'Avg Position',
+                value:
+                  typeof details.metrics.position === 'number'
+                    ? details.metrics.position.toFixed(1)
+                    : null,
+              },
+            ]}
+          />
         </section>
 
         {/* Cannibalization Breakdown if applicable */}
         {details.pages.length > 0 && (
           <section className="grid gap-2">
             <div className={textRole('label', 'flex items-center gap-2')}>
-              <Split className="text-warning size-3.5" />
+              <Split className="text-muted size-3.5" aria-hidden />
               <span>Competing URL Breakdown ({details.pages.length} Pages)</span>
             </div>
             <div className={ledgerClasses('boxed')}>
@@ -185,14 +181,14 @@ function DemandEvidenceContent({
               <div className="flex justify-between">
                 <span className="text-muted">Cohort Median CTR:</span>
                 <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
-                  {(details.cohortMedianCtr * 100).toFixed(1)}%
+                  {formatPercent(details.cohortMedianCtr, 1)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Observed Actual CTR:</span>
                 {numericMetric(signal, 'ctr') !== null ? (
                   <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
-                    {(numericMetric(signal, 'ctr')! * 100).toFixed(1)}%
+                    {formatPercent(numericMetric(signal, 'ctr'), 1)}
                   </span>
                 ) : (
                   <UnavailableValue state="not_measured" />
@@ -205,7 +201,7 @@ function DemandEvidenceContent({
         {/* Provenance & Audit Info */}
         <section className="border-border-subtle grid gap-2 border-t pt-3">
           <div className={textRole('label', 'flex items-center gap-2')}>
-            <ShieldCheck className="text-accent size-3.5" />
+            <ShieldCheck className="text-muted size-3.5" aria-hidden />
             <span>Audit Trail & Provenance</span>
           </div>
           <div

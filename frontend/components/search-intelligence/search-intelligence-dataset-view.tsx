@@ -4,14 +4,15 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { Drawer } from '@/components/ui/drawer';
-import { ReadError } from '@/components/ui/read-error';
+import { FilterRow } from '@/components/ui/filter-row';
+import { Pager } from '@/components/ui/pager';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { agentHandoffHref, type HandoffInput } from '@/lib/agent/handoff';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
@@ -23,7 +24,7 @@ import {
 } from '@/lib/api/search-intelligence';
 import { searchIntelligenceKeys } from '@/lib/api/query-keys/search-intelligence';
 import { useProjectContext } from '@/lib/project/project-context';
-import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { formatEvidenceValue, formatSearchNumber } from './search-intelligence-format';
 import { searchScopeLabel } from '@/lib/config/search-intelligence';
 import { Input } from '@/components/ui/input';
@@ -106,13 +107,7 @@ export function SearchIntelligenceDatasetView({
   ].includes(dataset.dataset_kind);
   if (query.isPending && !page) return <Skeleton className="h-80 w-full" />;
   if (!page)
-    return (
-      <ReadError
-        error={query.error}
-        fallback="Dataset rows could not be loaded."
-        onRetry={() => void query.refetch()}
-      />
-    );
+    return <ReadError {...readErrorProps(query)} fallback="Dataset rows could not be loaded." />;
   if (!dataset.unique_rows_saved && !page.rows.length)
     return <EmptyDataset dataset={dataset} title={title} />;
   const rows = page.rows;
@@ -122,14 +117,30 @@ export function SearchIntelligenceDatasetView({
       <Card className="min-w-0">
         <DatasetHeader dataset={dataset} title={title} />
         <CardContent flush>
-          <div className="border-border-subtle flex min-h-14 flex-wrap items-center gap-2 border-b px-[var(--table-cell-padding-x)] py-2">
-            <SearchField
-              value={filter}
-              onValueChange={setFilter}
-              aria-label="Filter saved results"
-              placeholder="Filter saved results"
-              className="min-w-0 flex-1 basis-48"
-            />
+          <FilterRow
+            className="border-border-subtle min-h-14 border-b px-[var(--table-cell-padding-x)] py-2"
+            search={
+              <SearchField
+                value={filter}
+                onValueChange={setFilter}
+                aria-label="Filter saved results"
+                placeholder="Filter saved results"
+              />
+            }
+            actions={
+              <>
+                <SearchIntelligenceExport dataset={dataset} params={params} />
+                {rows.length > 0 ? (
+                  <Button size="sm" variant="secondary" asChild>
+                    <ProjectLink href={agentHandoffHref(rowsHandoff(dataset.id, rows, title))}>
+                      Ask agent
+                    </ProjectLink>
+                  </Button>
+                ) : null}
+                <DepthReviewAction onExpand={onExpand} />
+              </>
+            }
+          >
             <KeywordFilters
               enabled={keywordDataset}
               minVolume={minVolume}
@@ -137,23 +148,13 @@ export function SearchIntelligenceDatasetView({
               intent={intent}
               setIntent={setIntent}
             />
-            <SearchIntelligenceExport dataset={dataset} params={params} />
-            {rows.length > 0 ? (
-              <Button size="sm" variant="secondary" asChild>
-                <ProjectLink href={agentHandoffHref(rowsHandoff(dataset.id, rows, title))}>
-                  Ask agent
-                </ProjectLink>
-              </Button>
-            ) : null}
-            <DepthReviewAction onExpand={onExpand} />
-          </div>
+          </FilterRow>
           {query.isError ? (
-            <Alert>
-              Saved rows could not be updated.{' '}
-              <Button size="sm" variant="ghost" onClick={() => void query.refetch()}>
-                Retry read
-              </Button>
-            </Alert>
+            <ReadError
+              {...readErrorProps(query)}
+              fallback="Saved rows could not be updated."
+              className="px-[var(--table-cell-padding-x)] py-2"
+            />
           ) : null}
           <div
             aria-busy={query.isFetching}
@@ -184,16 +185,11 @@ export function SearchIntelligenceDatasetView({
           >
             {query.isFetching ? 'Updating saved rows…' : `${rows.length} rows shown`}
           </output>
-          <CursorTableFooter
-            {...range}
-            total={filteredSavedCount(page.dataset)}
-            noun="evidence rows"
-            pageSize={table.pageSize}
-            onPageSizeChange={table.setPageSize}
-            canPrev={table.canPrev}
-            canNext={Boolean(page.next_cursor)}
-            onPrev={table.pop}
-            onNext={() => table.push(page.next_cursor)}
+          <Pager
+            frame="table"
+            range={{ ...range, total: filteredSavedCount(page.dataset), noun: 'evidence rows' }}
+            pageSize={{ value: table.pageSize, onChange: table.setPageSize }}
+            {...cursorControls(table, page.next_cursor)}
             busy={query.isFetching}
           />
         </CardContent>
@@ -256,12 +252,12 @@ function EvidenceDrawer({
       ) : null}
       {selected?.row_kind === 'citation_match' &&
       typeof selected.auxiliary.audit_id === 'string' ? (
-        <ProjectLink
-          className="focus-ring text-accent-text inline-flex underline"
+        <TextLink
           href={`/visibility?tab=sources&audit=${selected.auxiliary.audit_id}`}
+          className="w-fit"
         >
           View in Sources
-        </ProjectLink>
+        </TextLink>
       ) : null}
       {selected ? (
         <dl className="type-body grid gap-3">
@@ -369,21 +365,19 @@ function DatasetHeader({
   title,
 }: Readonly<{ dataset: SearchIntelligenceDataset; title: string }>) {
   return (
-    <CardHeader bordered className="flex-row items-center justify-between">
-      <div>
-        <CardTitle>{title}</CardTitle>
-        <p className={textRole('caption')}>
-          {formatSearchNumber(dataset.unique_rows_saved)} saved rows
-          {dataset.provider_total !== null
-            ? ` of ${formatSearchNumber(dataset.provider_total)} available`
-            : ''}
-          {' · '}
-          {dataset.target_hostname}
-          {' · '}
-          {searchScopeLabel(dataset.research_scope)}
-          {dataset.truncated ? ' · truncated' : ''}
-        </p>
-      </div>
+    <CardHeader bordered>
+      <CardTitle>{title}</CardTitle>
+      <p className={textRole('caption')}>
+        {formatSearchNumber(dataset.unique_rows_saved)} saved rows
+        {dataset.provider_total !== null
+          ? ` of ${formatSearchNumber(dataset.provider_total)} available`
+          : ''}
+        {' · '}
+        {dataset.target_hostname}
+        {' · '}
+        {searchScopeLabel(dataset.research_scope)}
+        {dataset.truncated ? ' · truncated' : ''}
+      </p>
     </CardHeader>
   );
 }

@@ -1,9 +1,6 @@
 {
   "format_version": 1,
   "files": {
-    "components/ai-traffic/pages-view.tsx": {
-      "tsx-size": 1
-    },
     "components/layout/app-shell.tsx": {
       "tsx-size": 1
     },
@@ -17,25 +14,7 @@
       "tsx-size": 1
     },
     "components/performance/dimension-table.tsx": {
-      "tsx-size": 9
-    },
-    "components/performance/metric-cards.tsx": {
-      "tsx-stroke": 1
-    },
-    "components/performance/performance-chart.tsx": {
-      "tsx-size": 2
-    },
-    "components/runs/surface-evidence.tsx": {
-      "tsx-size": 1
-    },
-    "components/search-intelligence/search-intelligence-competitors.tsx": {
-      "tsx-size": 1
-    },
-    "components/search-intelligence/search-intelligence-rows-table.tsx": {
-      "tsx-size": 2
-    },
-    "components/settings/integration-connection-row.tsx": {
-      "tsx-size": 1
+      "tsx-size": 5
     },
     "components/site-health/inventory-section.tsx": {
       "tsx-size": 1

@@ -50,7 +50,7 @@ export function TrafficPages({
         />
       )}
       {data.items.length ? (
-        <Table className="min-w-[64rem]">
+        <Table minWidth="lg">
           <caption className="sr-only">Path-level AI Traffic with separate signal units</caption>
           <TableHeader>
             <TableRow>

@@ -5,6 +5,7 @@ import { Archive, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
+import { Delta } from '@/components/ui/delta';
 import { Pressable } from '@/components/ui/pressable';
 import {
   Dropdown,
@@ -21,14 +22,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
+import { Pager, pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { Prompt, PromptStatus, Topic } from '@/lib/api/types';
 import { buyerStageLabels, intentLabels } from '@/lib/prompts/forms';
 import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
-import { changeLabel } from '@/lib/visibility/vocabulary';
 
 /** What the latest run measured for one prompt, keyed by prompt id. */
 export type PromptMeasurement = {
@@ -174,14 +174,10 @@ export function PromptTable({
           ))}
         </TableBody>
       </Table>
-      <TablePagination
-        page={page}
-        pageCount={pageCount}
-        from={from}
-        to={to}
-        total={prompts.length}
-        noun="prompts"
-        onPageChange={setPage}
+      <Pager
+        frame="table"
+        range={{ from, to, total: prompts.length, noun: 'prompts' }}
+        {...pageNumberControls(page, pageCount, setPage)}
       />
     </>
   );
@@ -201,7 +197,6 @@ function TopicBadge({ name }: Readonly<{ name?: string }>) {
 
 /** A prompt's measured visibility, and its movement since the last run. */
 function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
-  const change = changeLabel(measurement?.change);
   return (
     <>
       <TableCell numeric>
@@ -222,7 +217,13 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
           </span>
         )}
       </TableCell>
-      <TableCell numeric>{change ?? <UnavailableValue state="not_measured" />}</TableCell>
+      <TableCell numeric>
+        {measurement?.change == null ? (
+          <UnavailableValue state="not_measured" />
+        ) : (
+          <Delta value={measurement.change} unit=" pp" />
+        )}
+      </TableCell>
     </>
   );
 }

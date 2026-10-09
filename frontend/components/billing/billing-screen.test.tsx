@@ -325,10 +325,9 @@ describe('BillingScreen', () => {
     const review = await screen.findByRole('region', { name: 'Review your subscription' });
     expect(within(review).getByText('Total')).toBeInTheDocument();
     expect(within(review).getByText(/recurring monthly charge/i)).toBeInTheDocument();
-    expect(within(review).getByRole('link', { name: 'Refund Policy' })).toHaveAttribute(
-      'href',
-      expect.stringMatching(/\/refund-policy$/),
-    );
+    expect(
+      within(review).getByRole('link', { name: 'Refund Policy (opens in a new tab)' }),
+    ).toHaveAttribute('href', expect.stringMatching(/\/refund-policy$/));
     expect(within(review).getByRole('button', { name: 'Confirm and pay' })).toBeEnabled();
   });
 

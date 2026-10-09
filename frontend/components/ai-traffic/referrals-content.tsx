@@ -2,7 +2,8 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import { AiReferralsEmptyState } from '@/components/ai-traffic/empty-state';
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { rangeLabel, type AiReferralsRange } from '@/lib/ai-traffic/options';
 import { isAiReferralsEmpty } from '@/lib/ai-traffic/series';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
@@ -52,27 +53,21 @@ function AiReferralsDataRegion({
 }: Omit<React.ComponentProps<typeof AiReferralsContent>, 'toolbar'>) {
   if (projectLoading || (Boolean(projectId) && query.isLoading))
     return <PageLoading label="Loading AI referrals…" />;
-  if (!projectId) return <Alert tone="info">Select or create a project to see AI referrals.</Alert>;
-  if (query.isError) return <AiReferralsError onRetry={() => query.refetch()} />;
+  if (!projectId) return <ProjectRequiredState />;
+  if (query.isError) {
+    return (
+      <ReadError
+        {...readErrorProps(query)}
+        fallback="AI referrals could not be loaded. Check your connection and try again."
+      />
+    );
+  }
 
   const data = query.data ?? null;
   if (!data || (isAiReferralsEmpty(data) && range === 'latest')) return <AiReferralsEmptyState />;
   if (isAiReferralsEmpty(data)) return <AiReferralsNoSnapshot range={range} />;
 
   return <AiReferralsDashboard data={data} fetching={query.isFetching} />;
-}
-
-function AiReferralsError({ onRetry }: Readonly<{ onRetry: () => void }>) {
-  return (
-    <Alert tone="danger">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span>AI referrals could not be loaded. Check your connection and try again.</span>
-        <Button variant="secondary" size="sm" onClick={onRetry}>
-          Retry
-        </Button>
-      </div>
-    </Alert>
-  );
 }
 
 /**

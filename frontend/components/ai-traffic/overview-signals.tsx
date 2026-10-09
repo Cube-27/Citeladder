@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { z } from 'zod';
 import type { aiTrafficOverviewSchema, crawlSummarySchema } from '@citeladder/contracts/ai-traffic';
-import { formatPercent } from '@/lib/ai-traffic/series';
+import { formatPercent } from '@/lib/format';
 import { connectionLabel, coverageLabel, words } from '@/lib/ai-traffic/vocabulary';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { Badge } from '@/components/ui/badge';
@@ -30,9 +30,8 @@ function SignalCard({
 }: Readonly<{ title: string; status?: string; action?: ReactNode; children: ReactNode }>) {
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
+      <CardHeader actions={status ? <Badge>{status}</Badge> : null}>
         <CardTitle>{title}</CardTitle>
-        {status ? <Badge>{status}</Badge> : null}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-3">
         {children}

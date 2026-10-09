@@ -1,49 +1,22 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CsvImportTrigger } from '@/components/ui/csv-import';
-import { Label, Metric, textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { StatGrid, type StatItemProps } from '@/components/ui/stat-grid';
+import { textRole } from '@/components/ui/typography';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthApi, siteHealthQueries } from '@/lib/api/site-health';
-import {
-  PLACEHOLDER,
-  crawlBadgeValue,
-  crawlPollInterval,
-  statusLabel,
-} from '@/lib/site-health/status';
+import { crawlBadgeValue, crawlPollInterval, statusLabel } from '@/lib/site-health/status';
 
 import type { SiteCrawl } from '@/lib/api/types';
 
 import type { CommerceQueries } from './commerce-queries';
-
-/**
- * One metric: micro-label above its value. Every value sits on the same
- * fixed-height line (the tabular metric's), so labels share a top edge and a
- * dash or badge centres where a number would stand.
- */
-function Stat({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
-  return (
-    <div className="flex flex-col items-start gap-0.5">
-      <Label>{label}</Label>
-      <div className="flex min-h-8 items-center">{children}</div>
-    </div>
-  );
-}
-
-function StatValue({ value }: Readonly<{ value: string }>) {
-  return value === PLACEHOLDER ? (
-    <UnavailableValue state="not_measured" />
-  ) : (
-    <Metric>{value}</Metric>
-  );
-}
 
 /**
  * Pages analyzed over the crawl's own inventory.
@@ -56,8 +29,8 @@ function StatValue({ value }: Readonly<{ value: string }>) {
 /** The dashboard's crawl, exactly as the query returns it (nullable). */
 type SiteHealthCrawl = SiteCrawl | null;
 
-function analyzedLabel(crawl: SiteHealthCrawl): string {
-  if (!crawl) return PLACEHOLDER;
+function analyzedLabel(crawl: SiteHealthCrawl): string | null {
+  if (!crawl) return null;
   const known = crawl.total_url_count ?? crawl.visible_url_count;
   return `${crawl.analyzed_count}/${Math.max(known, crawl.analyzed_count)}`;
 }
@@ -80,35 +53,42 @@ function CatalogStats({
   crawl: SiteHealthCrawl;
   projecting: string;
 }>) {
-  return (
-    <div className="border-border-subtle flex flex-wrap items-start gap-x-10 gap-y-4 border-b pb-[var(--workspace-gap)] min-[981px]:border-b-0 min-[981px]:pb-0">
-      <Stat label="Products">
-        <StatValue value={counts ? `${counts.products.length}` : PLACEHOLDER} />
-      </Stat>
-      <Stat label="Categories">
-        <StatValue value={counts ? `${counts.categories.length}` : PLACEHOLDER} />
-      </Stat>
-      <Stat label="Pages analyzed">
-        <StatValue value={analyzedLabel(crawl)} />
-      </Stat>
-      <Stat label="Site Health">
-        {crawl ? (
-          <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
-            {statusLabel(crawl.status)}
-          </Badge>
-        ) : (
-          <Badge>No crawl yet</Badge>
-        )}
-      </Stat>
-      {projecting ? (
-        <Stat label="Projection">
-          <Badge variant="status" value="info">
-            {projecting}
-          </Badge>
-        </Stat>
-      ) : null}
-    </div>
-  );
+  const items: (StatItemProps & { key: string })[] = [
+    {
+      key: 'products',
+      label: 'Products',
+      value: counts ? `${counts.products.length}` : null,
+    },
+    {
+      key: 'categories',
+      label: 'Categories',
+      value: counts ? `${counts.categories.length}` : null,
+    },
+    { key: 'analyzed', label: 'Pages analyzed', value: analyzedLabel(crawl) },
+    {
+      key: 'site-health',
+      label: 'Site Health',
+      value: crawl ? (
+        <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
+          {statusLabel(crawl.status)}
+        </Badge>
+      ) : (
+        <Badge>No crawl yet</Badge>
+      ),
+    },
+  ];
+  if (projecting) {
+    items.push({
+      key: 'projection',
+      label: 'Projection',
+      value: (
+        <Badge variant="status" value="info">
+          {projecting}
+        </Badge>
+      ),
+    });
+  }
+  return <StatGrid surface="open" size="figure" items={items} />;
 }
 
 /**

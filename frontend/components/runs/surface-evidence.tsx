@@ -1,11 +1,12 @@
 'use client';
 
-import { Check, ExternalLink, Link2, Minus, Users } from 'lucide-react';
+import { Check, Link2, Minus, Users } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { DisplayTime } from '@/components/ui/display-time';
 import { EmptyState } from '@/components/ui/empty-state';
 import { panelClasses } from '@/components/ui/panel';
+import { StatGrid, StatItem } from '@/components/ui/stat-grid';
 import {
   Table,
   TableBody,
@@ -14,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import type { SearchSurfaceEvidence, SurfaceEntity } from '@/lib/api/types';
@@ -43,20 +45,6 @@ function presenceLabel(evidence: SearchSurfaceEvidence): string {
   if (evidence.aio_present === true) return 'Shown';
   if (evidence.aio_present === false) return 'Not shown';
   return 'Not observed';
-}
-
-function SurfaceStat({
-  label,
-  value,
-  hint,
-}: Readonly<{ label: string; value: string; hint?: string }>) {
-  return (
-    <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid min-w-0 gap-0.5')}>
-      <span className="type-caption">{label}</span>
-      <span className={textRole('itemTitle', 'truncate')}>{value}</span>
-      {hint ? <span className="type-caption truncate">{hint}</span> : null}
-    </div>
-  );
 }
 
 /** One yes/no cell. Never colour alone: the icon carries a text label too. */
@@ -118,7 +106,7 @@ function PresenceTable({ entities }: Readonly<{ entities: readonly SurfaceEntity
     );
   }
   return (
-    <Table className="min-w-[34rem]">
+    <Table minWidth="sm">
       <TableHeader>
         <tr>
           <TableHead scope="col">Brand</TableHead>
@@ -179,18 +167,9 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
               // element it was drawn from is what separates them.
               <li key={`${link.element_index}-${link.url}`} className="grid gap-0.5 p-4">
                 {href ? (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={textRole(
-                      'itemTitle',
-                      'hover:text-accent-text inline-flex max-w-full items-center gap-2 transition-colors hover:underline',
-                    )}
-                  >
+                  <TextLink variant="external" text="itemTitle" href={href} className="max-w-full">
                     <span className="truncate">{title}</span>
-                    <ExternalLink className="size-3 shrink-0" aria-hidden />
-                  </a>
+                  </TextLink>
                 ) : (
                   <p className={textRole('itemTitle', 'truncate')}>{title}</p>
                 )}
@@ -234,18 +213,18 @@ export function SurfaceEvidence({ evidence }: Readonly<{ evidence: SearchSurface
         <Label>AI Overview details</Label>
         <p className="type-caption">{presenceCaption(evidence)}</p>
       </div>
-      <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4">
-        <SurfaceStat label="Overview" value={presenceLabel(evidence)} />
-        <SurfaceStat
+      <StatGrid surface="well" columns={4}>
+        <StatItem label="Overview" value={presenceLabel(evidence)} />
+        <StatItem
           label="Block position"
           value={
             evidence.aio_serp_position === null ? 'Not recorded' : `#${evidence.aio_serp_position}`
           }
-          hint="On the results page"
+          detail="On the results page"
         />
-        <SurfaceStat label="Elements" value={String(evidence.element_count)} />
-        <SurfaceStat label="References" value={String(evidence.reference_count)} />
-      </div>
+        <StatItem label="Elements" value={evidence.element_count} />
+        <StatItem label="References" value={evidence.reference_count} />
+      </StatGrid>
       {shown ? (
         <>
           <section className="grid gap-3">

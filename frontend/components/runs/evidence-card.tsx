@@ -1,11 +1,13 @@
 'use client';
 
-import { CheckCircle2, ExternalLink, Quote, Search, XCircle } from 'lucide-react';
+import { CheckCircle2, Quote, Search, XCircle } from 'lucide-react';
 
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { SurfaceEvidence } from '@/components/runs/surface-evidence';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
+import { StatGrid, StatItem } from '@/components/ui/stat-grid';
+import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
 import { engineLabel, productModelLabel, productTransportLabel } from '@/lib/providers/catalog';
 import type { ExecutionEvidence } from '@/lib/api/types';
@@ -94,24 +96,24 @@ function EvidencePromptHeader({
 
 function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   return (
-    <section className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4">
-      <EvidenceStat
+    <StatGrid surface="well" columns={4}>
+      <StatItem
         label="Brand"
         value={evidence.brand_mentioned ? 'Mentioned' : 'Not mentioned'}
-        positive={evidence.brand_mentioned}
+        tone={outcomeTone(evidence.brand_mentioned)}
       />
-      <EvidenceStat
+      <StatItem
         label="Owned sources"
-        value={String(evidence.owned_citation_count)}
-        positive={evidence.owned_citation_count > 0}
+        value={evidence.owned_citation_count}
+        tone={outcomeTone(evidence.owned_citation_count > 0)}
       />
-      <EvidenceStat label="Citations" value={String(evidence.citation_count)} />
-      <EvidenceStat
+      <StatItem label="Citations" value={evidence.citation_count} />
+      <StatItem
         label="Searches"
-        value={evidence.search_used ? String(evidence.search_query_count) : 'Not used'}
-        positive={evidence.search_used}
+        value={evidence.search_used ? evidence.search_query_count : 'Not used'}
+        tone={outcomeTone(evidence.search_used)}
       />
-    </section>
+    </StatGrid>
   );
 }
 
@@ -227,9 +229,9 @@ function EvidenceAnswerBody({
 }
 
 /** Present, absent and not-applicable are three tones, not a boolean. */
-function outcomeToneClass(positive: boolean | null | undefined): string {
-  if (positive === true) return 'text-success-text';
-  return positive === false ? 'text-muted' : 'text-foreground';
+function outcomeTone(positive: boolean | undefined): 'success' | 'muted' | 'default' {
+  if (positive === true) return 'success';
+  return positive === false ? 'muted' : 'default';
 }
 
 function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
@@ -289,18 +291,9 @@ function CitationItem({
         <div className="flex items-start justify-between gap-3">
           <div className="grid min-w-0 gap-0.5">
             {href ? (
-              <a
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                className={textRole(
-                  'itemTitle',
-                  'hover:text-accent-text inline-flex max-w-full items-center gap-2 transition-colors hover:underline',
-                )}
-              >
+              <TextLink variant="external" text="itemTitle" href={href} className="max-w-full">
                 <span className="truncate">{title}</span>
-                <ExternalLink className="size-3 shrink-0" aria-hidden />
-              </a>
+              </TextLink>
             ) : (
               <p className={textRole('itemTitle', 'truncate')}>{title || 'Untitled source'}</p>
             )}
@@ -395,21 +388,6 @@ export function EvidenceCard({
       <EvidenceOutcomes evidence={evidence} />
       <EvidenceCitationsList citations={evidence.citations} />
       <EvidenceFooter evidence={evidence} />
-    </div>
-  );
-}
-
-function EvidenceStat({
-  label,
-  value,
-  positive,
-}: Readonly<{ label: string; value: string; positive?: boolean }>) {
-  return (
-    <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid min-w-0 gap-0.5')}>
-      <span className="type-caption">{label}</span>
-      <span className={cn(textRole('itemTitle', 'truncate'), outcomeToneClass(positive))}>
-        {value}
-      </span>
     </div>
   );
 }

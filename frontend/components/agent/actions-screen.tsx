@@ -1,19 +1,17 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
-import { ProjectLink } from '@/components/layout/scoped-link';
-import { Alert } from '@/components/ui/alert';
-import { CursorPager } from '@/components/ui/cursor-pager';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterRow } from '@/components/ui/filter-row';
 import { Stack } from '@/components/ui/layout';
-import { ReadError } from '@/components/ui/read-error';
+import { Pager } from '@/components/ui/pager';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+import { TextLink } from '@/components/ui/text-link';
 import {
   Table,
   TableBody,
@@ -36,6 +34,7 @@ import { AGENT_ACTIONS_PAGE_SIZE } from '@/lib/config/agent';
 import { ICONS } from '@/lib/icons';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectContext } from '@/lib/project/project-context';
+import { cursorControls, useCursorTable } from '@/lib/table/use-cursor-table';
 
 const QUEUE = 'queue';
 type StatusFilter = typeof QUEUE | ActionStatus;
@@ -64,7 +63,7 @@ export function ActionsScreen() {
   return (
     <PageShell
       controls={
-        <>
+        <FilterRow>
           <Select
             ariaLabel="Status"
             value={status}
@@ -77,12 +76,11 @@ export function ActionsScreen() {
             options={TARGET_OPTIONS}
             onValueChange={(value) => setTarget(value, 'replace')}
           />
-        </>
+        </FilterRow>
       }
     >
       {activeProjectId && activeWorkspaceId ? (
         <ActionsList
-          key={`${activeProjectId}:${status}:${target}`}
           workspaceId={activeWorkspaceId}
           projectId={activeProjectId}
           status={status === QUEUE ? undefined : status}
@@ -97,7 +95,7 @@ export function ActionsScreen() {
 
 function ProjectRequired({ loading }: Readonly<{ loading: boolean }>) {
   if (loading) return <PageLoading />;
-  return <Alert tone="info">Select or create a project to see its Actions.</Alert>;
+  return <ProjectRequiredState />;
 }
 
 function ActionsList({
@@ -111,27 +109,19 @@ function ActionsList({
   status?: ActionStatus;
   targetKind?: string;
 }>) {
-  const [cursors, setCursors] = useState<string[]>([]);
-  const cursor = cursors.at(-1);
+  const pager = useCursorTable(JSON.stringify([workspaceId, projectId, status, targetKind]));
   const query = useQuery(
     actionsQueries.list(workspaceId, projectId, {
       status,
       target_kind: targetKind,
-      cursor,
+      cursor: pager.cursor,
       limit: AGENT_ACTIONS_PAGE_SIZE,
     }),
   );
 
-  if (query.isPending) return <Skeleton className="h-40 w-full" />;
+  if (query.isPending) return <PageLoading label="Loading Actions…" />;
   if (query.isError)
-    return (
-      <ReadError
-        error={query.error}
-        fallback="Actions could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
-    );
+    return <ReadError {...readErrorProps(query)} fallback="Actions could not be loaded." />;
   const page = query.data;
   if (page.items.length === 0) {
     const anyActions = Object.values(page.status_counts).some((count) => count > 0);
@@ -150,21 +140,10 @@ function ActionsList({
       />
     );
   }
-  const next = page.next_cursor;
   return (
     <Stack aria-busy={query.isFetching || undefined}>
       <ActionsTable actions={page.items} />
-      {cursors.length > 0 || next ? (
-        <div className="flex items-center justify-end gap-2">
-          <CursorPager
-            page={cursors.length + 1}
-            canPrev={cursors.length > 0}
-            canNext={Boolean(next)}
-            onPrev={() => setCursors((stack) => stack.slice(0, -1))}
-            onNext={() => next && setCursors((stack) => [...stack, next])}
-          />
-        </div>
-      ) : null}
+      <Pager hideWhenSinglePage page={pager.page} {...cursorControls(pager, page.next_cursor)} />
     </Stack>
   );
 }
@@ -186,12 +165,13 @@ function ActionsTable({ actions }: Readonly<{ actions: Action[] }>) {
           <TableRow key={action.id} density="multiline">
             <TableCell>
               <div className="grid max-w-96 min-w-0 gap-1">
-                <ProjectLink
+                <TextLink
                   href={`/agent/actions/${action.id}`}
-                  className={textRole('itemTitle', 'hover:text-accent-text truncate')}
+                  text="itemTitle"
+                  className="truncate"
                 >
                   {action.target_label}
-                </ProjectLink>
+                </TextLink>
                 <span className={textRole('caption')}>
                   {[
                     targetKindLabel(action.target_kind),

@@ -12,14 +12,12 @@ function KpiSegment({
   value,
   caption,
   icon: Icon,
-  iconClassName,
   className,
 }: Readonly<{
   label: string;
   value: ReactNode;
   caption: string;
   icon: LucideIcon;
-  iconClassName: string;
   className?: string;
 }>) {
   return (
@@ -27,7 +25,8 @@ function KpiSegment({
       label={label}
       value={value}
       detail={caption}
-      marker={<Icon className={`${iconClassName} size-4 shrink-0`} aria-hidden="true" />}
+      // Decorative category marks take neutral ink; the label names the metric.
+      marker={<Icon className="text-muted size-4 shrink-0" aria-hidden="true" />}
       className={className}
     />
   );
@@ -70,35 +69,30 @@ export function DemandSummaryCards({ snapshot }: Readonly<{ snapshot: DemandSnap
         value={formatCount(latentImpressions)}
         caption="Impressions in ranking gaps"
         icon={Zap}
-        iconClassName="text-muted"
       />
       <KpiSegment
         label="Striking Distance"
         value={String(countByTab(signals, 'striking_distance'))}
         caption="Positions 4–15 quick wins"
         icon={ArrowUpRight}
-        iconClassName="text-muted"
       />
       <KpiSegment
         label="Cannibalization"
         value={String(countByTab(signals, 'cannibalization'))}
         caption="Internal URL conflicts"
         icon={Split}
-        iconClassName="text-warning"
       />
       <KpiSegment
         label="CTR Underperformers"
         value={String(countByTab(signals, 'ctr_gap'))}
         caption="Below position benchmark"
         icon={AlertTriangle}
-        iconClassName="text-danger"
       />
       <KpiSegment
         label="Detector Health"
         value={health.value ?? <UnavailableValue state="unknown" />}
         caption={health.caption}
         icon={Activity}
-        iconClassName="text-muted"
         className="sm:col-span-2 lg:col-span-1"
       />
     </MetricGroup>

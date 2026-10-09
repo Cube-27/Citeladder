@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
@@ -25,12 +26,11 @@ import { useSessionUser } from '@/lib/auth/session-guard';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_DELETION_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
-import { emailInitials } from '@/lib/utils';
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 import { Stack } from '@/components/ui/layout';
-import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
+import { EditorialSectionHeader, ledgerClasses, splitPaneClasses } from '@/components/ui/workspace';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 
@@ -41,7 +41,7 @@ function DetailRow({
   numeric = false,
 }: Readonly<{ label: string; children: React.ReactNode; numeric?: boolean }>) {
   return (
-    <div className="grid min-h-12 grid-cols-[minmax(0,180px)_1fr] items-center gap-4 py-2">
+    <div className="grid grid-cols-[minmax(0,180px)_1fr] items-center gap-4 py-3">
       <dt className={textRole('label')}>{label}</dt>
       <dd className={numeric ? 'type-caption tabular-nums' : 'type-body text-foreground'}>
         {children}
@@ -230,6 +230,7 @@ export function SettingsScreen() {
   return (
     <TabsRoot value={activeTab} onValueChange={setActiveTab}>
       <PageShell
+        measure="workflow"
         tabs={
           <TabsBar
             variant="band"
@@ -243,22 +244,10 @@ export function SettingsScreen() {
             {/* Two columns from lg, not a narrow centred rail. These cards are
             short, so a max-w-2xl column left most of a wide screen empty and
             pushed everything below the fold for no reason. */}
-            <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-2 lg:items-start">
+            <div className={splitPaneClasses('peers')}>
               <Stack as="section" gap="workspace">
                 <div className="flex items-center gap-4">
-                  <span
-                    aria-hidden
-                    // The same solid accent disc as the topbar avatar, one size
-                    // up because this one identifies the account rather than
-                    // triggering a menu. A pale tint with accent ink read as a
-                    // disabled chip beside the address it belongs to.
-                    className={textRole(
-                      'itemTitle',
-                      'bg-well text-secondary flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
-                    )}
-                  >
-                    {emailInitials(user.email)}
-                  </span>
+                  <Avatar name={user.email} size="md" />
                   <div className="grid min-w-0 flex-1 gap-0.5">
                     <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
                     <div className="type-body capitalize">{user.role}</div>

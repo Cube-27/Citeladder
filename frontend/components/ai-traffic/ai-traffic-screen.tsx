@@ -7,11 +7,13 @@ import { PageLoading } from '@/components/layout/page-loading';
 import { Stack } from '@/components/ui/layout';
 import { TabsRoot, TabsBar, TabPanel } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
-import { ReadError } from '@/components/ui/read-error';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { AiReferralsScreen } from './referrals-screen';
 import { TrafficControls } from './traffic-controls';
 import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-views';
-import { TrafficPager } from './traffic-pager';
+import { Pager } from '@/components/ui/pager';
+import { cursorControls } from '@/lib/table/use-cursor-table';
 import { TrafficPages } from './pages-view';
 export { CrawlSignalPanel } from './traffic-views';
 const tabCodec = stringUrlCodec(
@@ -71,13 +73,7 @@ function TrafficDataView({ tab, tabs }: Readonly<{ tab: TrafficDataTab; tabs: Re
         ) : null}
         {tab === 'pages' ? <PagesPanel model={model} /> : null}
         {tab === 'overview' ? null : (
-          <TrafficPager
-            page={pager.page}
-            canPrev={pager.canPrev}
-            canNext={!!next}
-            onPrev={pager.pop}
-            onNext={() => pager.push(next ?? null)}
-          />
+          <Pager hideWhenSinglePage page={pager.page} {...cursorControls(pager, next)} />
         )}
       </Stack>
     </PageShell>
@@ -102,13 +98,9 @@ function TrafficStatus({ model }: Readonly<{ model: ReturnType<typeof useTraffic
   const { current, projectId, exporting } = model;
   return (
     <>
-      {projectId ? null : <Alert tone="info">Select a project to inspect AI Traffic.</Alert>}
+      {projectId ? null : <ProjectRequiredState />}
       {current.isError ? (
-        <ReadError
-          error={current.error}
-          fallback="Could not read AI Traffic"
-          onRetry={() => current.refetch()}
-        />
+        <ReadError {...readErrorProps(current)} fallback="Could not read AI Traffic" />
       ) : null}
       {exporting.isError ? <Alert tone="danger">{exporting.error.message}</Alert> : null}
     </>

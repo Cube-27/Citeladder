@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -49,7 +49,15 @@ export function ProviderList({
 
   if (catalogQuery.isError || connectionsQuery.isError) {
     return (
-      <Alert tone="danger">Could not load providers. Check your connection and try again.</Alert>
+      <ReadError
+        error={catalogQuery.error ?? connectionsQuery.error}
+        fallback="Could not load providers. Check your connection and try again."
+        onRetry={() => {
+          if (catalogQuery.isError) void catalogQuery.refetch();
+          if (connectionsQuery.isError) void connectionsQuery.refetch();
+        }}
+        pending={catalogQuery.isFetching || connectionsQuery.isFetching}
+      />
     );
   }
   if (catalogQuery.isLoading || connectionsQuery.isLoading) {

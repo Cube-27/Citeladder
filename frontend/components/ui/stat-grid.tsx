@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type HTMLAttributes, type ReactNode } from 'react';
 
 import { listRowClasses } from '@/components/ui/list-row';
 import { MetricValue } from '@/components/ui/metric-value';
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
  * rhythm the cell owns:
  *
  *   label (`label` role, optional marker at its end)
+ *   caption (optional, `caption` — names the value's period when two stack)
  *   value (`figureSm` by default; `figure` for a grid of headline-weight facts)
  *   delta (optional, a `Delta`)
  *   detail (optional, `caption`)
@@ -36,7 +37,8 @@ import { cn } from '@/lib/utils';
  * An item with `onSelect` is pressable: the whole cell is the target,
  * reached by Tab and named by `actionLabel` (the visible number alone, "3", is
  * not a name anyone can act on). `selected` makes a toggle (`aria-pressed`)
- * and paints the shared selected-row face.
+ * and paints the shared selected-row face. The marker is raised above that
+ * target, so a hint in it stays reachable by hover and Tab.
  */
 const COLUMNS = {
   2: 'grid-cols-1 sm:grid-cols-2',
@@ -76,6 +78,8 @@ export type StatItemProps = Readonly<
     tone?: StatTone;
     /** A small mark at the end of the label row (series key, info hint). */
     marker?: ReactNode;
+    /** A caption above the value, e.g. the period it covers. */
+    caption?: ReactNode;
     className?: string;
   } & StatAction
 >;
@@ -128,9 +132,16 @@ function StatAnatomy({ item, size }: Readonly<{ item: StatItemProps; size: StatV
     <>
       <dt className={textRole('label', 'flex min-w-0 items-center justify-between gap-2')}>
         <span className="min-w-0 truncate">{item.label}</span>
-        {item.marker}
+        {item.marker ? (
+          <span
+            className={cn('flex shrink-0 items-center gap-2', item.onSelect && 'relative z-10')}
+          >
+            {item.marker}
+          </span>
+        ) : null}
       </dt>
-      <dd className="min-w-0">
+      <dd className="grid min-w-0 gap-1">
+        {item.caption ? <span className={textRole('caption')}>{item.caption}</span> : null}
         <StatValue
           value={item.value}
           missingLabel={item.missingLabel ?? availabilityLabel('not_measured')}
@@ -190,23 +201,29 @@ export function StatGrid({
   size = 'figureSm',
   label,
   className,
-}: Readonly<{
-  /** The facts, in reading order. Or pass `StatItem` children. */
-  items?: readonly (StatItemProps & { key: string })[];
-  children?: ReactNode;
-  columns?: StatGridColumns;
-  surface?: StatGridSurface;
-  /** Value role for every item. */
-  size?: StatValueSize;
-  /** Accessible name for the group, when the section heading does not give one. */
-  label?: string;
-  className?: string;
-}>) {
+  ...props
+}: Readonly<
+  Omit<HTMLAttributes<HTMLElement>, 'children'> & {
+    /** The facts, in reading order. Or pass `StatItem` children. */
+    items?: readonly (StatItemProps & { key: string })[];
+    children?: ReactNode;
+    columns?: StatGridColumns;
+    surface?: StatGridSurface;
+    /** Value role for every item. */
+    size?: StatValueSize;
+    /** Accessible name for the group, when the section heading does not give one. */
+    label?: string;
+    /** On the grid's outermost element (the clip, for `band`), as are other props. */
+    className?: string;
+  }
+>) {
+  const band = surface === 'band';
   const grid = (
     <StatGridContext.Provider value={{ size, surface }}>
       <dl
+        {...(band ? {} : props)}
         aria-label={label}
-        className={cn('grid min-w-0', COLUMNS[columns], SURFACE_GRID[surface], className)}
+        className={cn('grid min-w-0', COLUMNS[columns], SURFACE_GRID[surface], !band && className)}
       >
         {items?.map(({ key, ...item }) => (
           <StatItem key={key} {...item} />
@@ -215,5 +232,11 @@ export function StatGrid({
       </dl>
     </StatGridContext.Provider>
   );
-  return surface === 'band' ? <div className="min-w-0 overflow-hidden">{grid}</div> : grid;
+  return band ? (
+    <div {...props} className={cn('min-w-0 overflow-hidden', className)}>
+      {grid}
+    </div>
+  ) : (
+    grid
+  );
 }

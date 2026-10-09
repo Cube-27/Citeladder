@@ -279,7 +279,7 @@ export function DataSourceSetup({
 
   return (
     <Card data-testid="data-source-setup">
-      <CardHeader className="grid gap-1">
+      <CardHeader>
         <CardTitle>{title}</CardTitle>
         <p className="type-body max-w-[60ch]">{description}</p>
       </CardHeader>

@@ -20,11 +20,12 @@ import { Alert } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Button } from '@/components/ui/button';
-import { ExternalHttpLink } from '@/components/ui/external-http-link';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { panelClasses } from '@/components/ui/panel';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader, ledgerClasses, splitPaneClasses } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -54,12 +55,7 @@ export function ActionDetailScreen() {
   if (query.isError)
     return (
       <PageShell>
-        <ReadError
-          error={query.error}
-          fallback="This Action could not be loaded."
-          onRetry={() => void query.refetch()}
-          pending={query.isFetching}
-        />
+        <ReadError {...readErrorProps(query)} fallback="This Action could not be loaded." />
       </PageShell>
     );
   if (!activeWorkspaceId)
@@ -103,6 +99,7 @@ function ActionDetailView({
   return (
     <PageShell
       title={action.target_label}
+      back={{ href: '/agent/actions', label: 'Back to Actions', projectId: action.project_id }}
       actions={<ActionControls action={action} update={update} />}
     >
       <Stack gap="section">
@@ -162,6 +159,7 @@ function ActionControls({
       {mayWrite ? (
         <Button
           variant="secondary"
+          size="sm"
           disabled={update.isPending}
           onClick={() =>
             update.mutate({ actionId: action.id, status: dismissed ? 'open' : 'dismissed' })
@@ -170,7 +168,7 @@ function ActionControls({
           {dismissed ? 'Reopen' : 'Dismiss'}
         </Button>
       ) : null}
-      <Button asChild>
+      <Button asChild size="sm">
         <ProjectLink href={agentHandoffHref({ actionId: action.id })}>Work on this</ProjectLink>
       </Button>
     </>
@@ -193,12 +191,14 @@ function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
   return (
     <Stack as="section" aria-label="Summary">
       {action.target_url ? (
-        <ExternalHttpLink
+        <TextLink
+          variant="external"
           href={action.target_url}
-          className={textRole('body', 'text-accent-text break-all underline')}
+          text="body"
+          className="justify-self-start break-all"
         >
           {action.target_url}
-        </ExternalHttpLink>
+        </TextLink>
       ) : null}
 
       <dl className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -227,7 +227,7 @@ function Diagnosis({
       </CardHeader>
       <CardContent>
         {action.members.length === 0 ? (
-          <p className={textRole('body')}>No current finding targets this Action.</p>
+          <InlineEmpty>No current finding targets this Action.</InlineEmpty>
         ) : (
           <ul className={ledgerClasses()}>
             {action.members.map((member) => (
@@ -337,26 +337,22 @@ function LinkedChats({
     <Stack as="section" aria-labelledby="action-chats">
       <EditorialSectionHeader title="Chats" headingId="action-chats" />
       {chats.isError ? (
-        <ReadError
-          error={chats.error}
-          fallback="Linked chats could not be loaded."
-          onRetry={() => void chats.refetch()}
-          pending={chats.isFetching}
-        />
+        <ReadError {...readErrorProps(chats)} fallback="Linked chats could not be loaded." />
       ) : null}
       {chats.isSuccess && rows.length === 0 ? (
-        <p className={textRole('body')}>No chats have worked on this Action yet.</p>
+        <InlineEmpty>No chats have worked on this Action yet.</InlineEmpty>
       ) : null}
       {rows.length > 0 ? (
         <ul className="grid gap-2">
           {rows.map((chat) => (
             <li key={chat.id} className={panelClasses({ pad: 'compact' }, 'grid gap-0.5')}>
-              <ProjectLink
+              <TextLink
                 href={`/agent/chats/${chat.id}`}
-                className={textRole('itemTitle', 'hover:text-accent-text')}
+                text="itemTitle"
+                className="justify-self-start"
               >
                 {chat.title}
-              </ProjectLink>
+              </TextLink>
               {chat.output_kind && chat.output_phase ? (
                 <span className={textRole('caption')}>
                   {kindLabel(chat.output_kind)} · {OUTPUT_PHASE_LABEL[chat.output_phase]}

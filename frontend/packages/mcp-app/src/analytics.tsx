@@ -17,7 +17,8 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { TrendChart } from '@/components/ui/trend-chart';
-import { SectionTitle, Label, Metric, textRole } from '@/components/ui/typography';
+import { Label, Metric, textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { appPolicy } from './config';
 import type { AppState, Controller } from './controller';
 import { SourcesView, SiteHealthView } from './evidence-views';
@@ -99,7 +100,7 @@ function Overview({
               .join(' · ')
           : 'Model and retrieval provenance unavailable'}
       </p>
-      <SectionTitle>Brand and competitors</SectionTitle>
+      <EditorialSectionHeader title="Brand and competitors" />
       <Table>
         <TableHeader>
           <TableRow>

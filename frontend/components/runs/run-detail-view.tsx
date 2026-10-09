@@ -1,12 +1,8 @@
-import { ProjectLink } from '@/components/layout/scoped-link';
-
-import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Stack } from '@/components/ui/layout';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps, type RetryableRead } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { ExecutionsTable } from '@/components/runs/executions-table';
 import { ProgressPanel } from '@/components/runs/progress-panel';
@@ -18,12 +14,11 @@ import type { Audit, Execution } from '@/lib/api/types';
 type RunDetailViewProps = {
   audit: Audit | undefined;
   auditLoading: boolean;
-  auditError: unknown;
-  auditRetrying: boolean;
-  onRetryAudit: () => void;
+  /** The audit read: its failure, and the retry of exactly that read. */
+  auditRead: RetryableRead;
   executions: Execution[] | undefined;
   executionsLoading: boolean;
-  executionsError: boolean;
+  executionsRead: RetryableRead;
   exportError: string | null;
   cancelNotice: MutationNotice | null;
   rerunNotice: MutationNotice | null;
@@ -35,22 +30,18 @@ type RunDetailViewProps = {
 function AuditSection({
   audit,
   auditLoading,
-  auditError,
-  auditRetrying,
-  onRetryAudit,
+  auditRead,
   exportError,
   cancelNotice,
   rerunNotice,
   onCancel,
   onRerunFailures,
 }: RunDetailViewProps) {
-  if (auditError && !audit) {
+  if (auditRead.error && !audit) {
     return (
       <ReadError
-        error={auditError}
+        {...readErrorProps(auditRead)}
         fallback="Something went wrong. Please try again."
-        onRetry={onRetryAudit}
-        pending={auditRetrying}
       />
     );
   }
@@ -72,14 +63,15 @@ function AuditSection({
 function ExecutionsSection({
   executions,
   executionsLoading,
-  executionsError,
+  executionsRead,
   onSelectEvidence,
 }: Pick<
   RunDetailViewProps,
-  'executions' | 'executionsLoading' | 'executionsError' | 'onSelectEvidence'
+  'executions' | 'executionsLoading' | 'executionsRead' | 'onSelectEvidence'
 >) {
-  if (executionsError && !executions)
-    return <Alert tone="danger">Could not load executions.</Alert>;
+  if (executionsRead.error && !executions) {
+    return <ReadError {...readErrorProps(executionsRead)} fallback="Could not load executions." />;
+  }
   if (executionsLoading || !executions) {
     return (
       <Card>
@@ -113,13 +105,6 @@ function ExecutionsSection({
 export function RunDetailView(props: RunDetailViewProps) {
   return (
     <Stack gap="workspace">
-      <ProjectLink
-        href="/runs"
-        projectId={props.audit?.project_id}
-        className={textRole('label', 'text-accent-text hover:underline')}
-      >
-        ← Back to runs
-      </ProjectLink>
       <AuditSection {...props} />
       <Stack gap="compact">
         <EditorialSectionHeader title="Executions" />

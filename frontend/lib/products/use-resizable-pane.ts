@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
-import { usePaneResizeInteraction } from '@/lib/use-pane-resize-interaction';
+import { useSyncExternalStore } from 'react';
 
 /**
  * Width state for a drag-resizable pane, in pixels.
@@ -15,7 +14,7 @@ import { usePaneResizeInteraction } from '@/lib/use-pane-resize-interaction';
  * `useSyncExternalStore`: it is an external store, and subscribing to it is
  * what keeps the server's markup (always the default) from being contradicted
  * by a client render, without an effect that re-renders on mount. The width
- * mid-drag is React state instead — it is not yet a decision worth storing.
+ * mid-drag is the split pane's state — it is not yet a decision worth storing.
  */
 
 const STORAGE_KEY = 'citeladder:commerce:catalog-pane-width';
@@ -26,8 +25,6 @@ export const MIN_PANE_WIDTH = 224;
 export const MAX_PANE_WIDTH = 560;
 /** 18rem — the fixed track this pane had before it could be resized. */
 export const DEFAULT_PANE_WIDTH = 288;
-/** One arrow press. Coarse enough to cross the range without holding a key. */
-const KEYBOARD_STEP = 16;
 
 function clampWidth(width: number): number {
   return Math.min(MAX_PANE_WIDTH, Math.max(MIN_PANE_WIDTH, Math.round(width)));
@@ -73,48 +70,18 @@ function storeWidth(width: number): void {
   for (const listener of listeners) listener();
 }
 
-export type ResizablePane = {
+type ResizablePane = {
+  /** The reader's stored width, clamped to the pane bounds. */
   width: number;
-  dragging: boolean;
-  /** Begin a pointer drag from this viewport x-coordinate. */
-  beginDrag: (clientX: number) => void;
-  /** Continue the drag. Width moves by the pointer's delta, not its position. */
-  dragTo: (clientX: number) => void;
-  /** End the drag and keep the width it landed on. */
-  endDrag: () => void;
-  /** Nudge the width, for keyboard control of the separator. */
-  nudge: (delta: number) => void;
-  reset: () => void;
-  keyboardStep: number;
-  interaction: ReturnType<typeof usePaneResizeInteraction>;
+  /** Keep a settled width (from a drag, a key press or a reset). */
+  commit: (width: number) => void;
 };
 
+/**
+ * The stored width only. The drag and keyboard interaction belongs to the
+ * shared `ResizableSplitPane`, which reports a settled width to `commit`.
+ */
 export function useResizablePane(): ResizablePane {
-  const storedWidth = useSyncExternalStore(subscribe, getStoredWidth, getServerWidth);
-  const [dragWidth, setDragWidth] = useState<number | null>(null);
-  const width = dragWidth ?? storedWidth;
-  const interaction = usePaneResizeInteraction({
-    width,
-    bounds: () => ({ min: MIN_PANE_WIDTH, max: MAX_PANE_WIDTH }),
-    onResize: setDragWidth,
-    onCancel: () => setDragWidth(null),
-    onCommit: (next) => {
-      setDragWidth(null);
-      storeWidth(next);
-    },
-    defaultWidth: DEFAULT_PANE_WIDTH,
-    homeWidth: DEFAULT_PANE_WIDTH,
-  });
-
-  return {
-    width,
-    dragging: interaction.dragging,
-    beginDrag: interaction.beginDrag,
-    dragTo: interaction.dragTo,
-    endDrag: interaction.endDrag,
-    nudge: interaction.nudge,
-    reset: interaction.reset,
-    keyboardStep: KEYBOARD_STEP,
-    interaction,
-  };
+  const width = useSyncExternalStore(subscribe, getStoredWidth, getServerWidth);
+  return { width, commit: (next) => storeWidth(clampWidth(next)) };
 }

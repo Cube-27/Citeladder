@@ -72,8 +72,10 @@ export function usePromptSet() {
     promptSet,
     prompts: promptSet?.prompts ?? [],
     isLoading: Boolean(projectId) && listQuery.isLoading,
-    isError: listQuery.isError,
-    retry: listQuery.refetch,
+    /** The list read's failure; null unless it failed. */
+    error: listQuery.error,
+    retry: () => void listQuery.refetch(),
+    retrying: listQuery.isFetching,
     ensurePromptSet,
     isEnsuring: createMutation.isPending,
   };

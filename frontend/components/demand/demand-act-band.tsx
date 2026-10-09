@@ -6,7 +6,8 @@ import { SignalChip } from '@/components/demand/demand-signal-table';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
 import { panelClasses } from '@/components/ui/panel';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { DemandSignal } from '@/lib/api/demand';
 import { actionGroups } from '@/lib/demand/signals';
 
@@ -19,7 +20,7 @@ export function DemandActBand({ signals }: Readonly<{ signals: readonly DemandSi
   if (groups.length === 0) return null;
   return (
     <section aria-labelledby="demand-act" className="grid gap-3">
-      <SectionTitle id="demand-act">Act on this</SectionTitle>
+      <EditorialSectionHeader headingId="demand-act" title="Act on this" />
       <ul className="grid gap-2">
         {groups.map((group) => (
           <li

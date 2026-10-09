@@ -118,7 +118,10 @@ describe('Actions', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'https://acme.test/pricing' }),
     ).toBeVisible();
-    expect(screen.getByRole('link', { name: 'https://acme.test/pricing' })).toBeVisible();
+    // The target opens in a new tab, and its accessible name says so.
+    expect(
+      screen.getByRole('link', { name: 'https://acme.test/pricing (opens in a new tab)' }),
+    ).toBeVisible();
     expect(screen.getByText('Observed')).toBeVisible();
     expect(screen.getByText('Unavailable')).not.toBeVisible();
     await user.click(screen.getByText('Other sources (2)'));

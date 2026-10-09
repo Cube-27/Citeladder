@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/button';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
+import { FilterRow } from '@/components/ui/filter-row';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
+import { PageLoading } from '@/components/layout/page-loading';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
-import { Skeleton } from '@/components/ui/skeleton';
 import { PageShell } from '@/components/layout/page-shell';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { DemandActBand } from '@/components/demand/demand-act-band';
 import { DemandDetectorBar } from '@/components/demand/demand-detector-bar';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
@@ -42,75 +44,6 @@ const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
   'all' as FilterTab,
 );
-
-const DEMAND_LOADING_METRICS = [
-  'latent-demand',
-  'striking-distance',
-  'cannibalization',
-  'ctr-gap',
-  'detector-health',
-] as const;
-const DEMAND_LOADING_SIGNALS = ['signal-a', 'signal-b', 'signal-c'] as const;
-
-function DemandLoading() {
-  return (
-    <Stack gap="workspace" aria-busy="true">
-      <output aria-label="Loading search demand…" className="sr-only">
-        Loading search demand…
-      </output>
-
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="grid flex-1 gap-2">
-          <Skeleton className="h-6 w-72 max-w-full" />
-          <Skeleton className="h-4 w-48 max-w-full" />
-        </div>
-        <Skeleton className="h-8 w-40 rounded-[var(--radius-control)]" />
-      </div>
-
-      <Card>
-        <CardContent>
-          <Stack gap="workspace">
-            <div className="divide-border-subtle grid divide-y sm:grid-cols-2 sm:divide-x-0 sm:divide-y-0 lg:grid-cols-5 lg:divide-x">
-              {DEMAND_LOADING_METRICS.map((placeholder) => (
-                <div
-                  key={placeholder}
-                  className="grid gap-2 px-0 py-3 sm:px-4 lg:first:ps-0 lg:last:pe-0"
-                >
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-9 w-20" />
-                  <Skeleton className="h-3 w-32 max-w-full" />
-                </div>
-              ))}
-            </div>
-            <div className="border-border-subtle grid gap-3 border-t pt-4">
-              <Skeleton className="h-4 w-36" />
-              <div className="flex flex-wrap gap-2">
-                <Skeleton className="h-7 w-28 rounded-full" />
-                <Skeleton className="h-7 w-32 rounded-full" />
-                <Skeleton className="h-7 w-24 rounded-full" />
-              </div>
-            </div>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-8 w-24 rounded-full" />
-          <Skeleton className="h-8 w-32 rounded-full" />
-          <Skeleton className="h-8 w-28 rounded-full" />
-        </div>
-        <Skeleton className="h-9 w-full rounded-[var(--radius-control)] sm:w-64" />
-      </div>
-
-      <div className="grid gap-2">
-        {DEMAND_LOADING_SIGNALS.map((placeholder) => (
-          <Skeleton key={placeholder} className="h-10 w-full" />
-        ))}
-      </div>
-    </Stack>
-  );
-}
 
 function SearchDemandView({
   snapshot,
@@ -238,12 +171,21 @@ function SearchDemandView({
           pending={recomputeMutation.isPending}
           pendingLabel="Queueing…"
         >
-          <RefreshCw className="size-3.5" />
+          <RefreshCw className="size-3.5" aria-hidden />
           Recompute signals
         </Button>
       }
       controls={
-        <>
+        <FilterRow
+          search={
+            <SearchField
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              placeholder="Filter queries or URLs..."
+              aria-label="Filter queries or URLs"
+            />
+          }
+        >
           {FILTER_TABS.map(({ tab, label }) => {
             const count = tabCounts.get(tab) ?? 0;
             // The optional cohorts stay hidden while empty, but a tab the user
@@ -261,15 +203,7 @@ function SearchDemandView({
               </FilterChip>
             );
           })}
-          <div className="ms-auto w-full sm:w-64">
-            <SearchField
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              placeholder="Filter queries or URLs..."
-              aria-label="Filter queries or URLs"
-            />
-          </div>
-        </>
+        </FilterRow>
       }
     >
       <Stack gap="workspace">
@@ -371,7 +305,7 @@ export function DemandProjection() {
     return (
       <SearchDemandView
         snapshot={snapshot}
-        refreshError={latest.isError ? latest.error : null}
+        refreshError={latest.error}
         onRetry={() => void latest.refetch()}
         retrying={latest.isFetching}
       />
@@ -398,8 +332,8 @@ function demandFallback({
   hasProject: boolean;
   latest: UseQueryResult<DemandSnapshot | null, Error>;
 }>) {
-  if (projectLoading || latest.isLoading) return <DemandLoading />;
-  if (!hasProject) return <Alert tone="info">Select a project to inspect search demand.</Alert>;
+  if (projectLoading || latest.isLoading) return <PageLoading label="Loading search demand…" />;
+  if (!hasProject) return <ProjectRequiredState />;
   if (latest.data === null) {
     return (
       <Stack gap="workspace">
@@ -419,10 +353,8 @@ function demandFallback({
   if (latest.isError)
     return (
       <ReadError
-        error={latest.error}
+        {...readErrorProps(latest)}
         fallback="Search demand could not be loaded. Check your connection and try again."
-        onRetry={() => void latest.refetch()}
-        pending={latest.isFetching}
       />
     );
   if (latest.data === undefined) return null;

@@ -7,8 +7,10 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Input } from '@/components/ui/input';
 import { MutationNotice } from '@/components/ui/mutation-notice';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -111,17 +113,16 @@ function WorkspaceSchedules({
 
   return (
     <Card>
-      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
-        <div className="grid gap-1">
-          <CardTitle>Scheduled audits</CardTitle>
-          <p className="type-caption">
-            Runs use the selected prompt set and your connected engines.
-          </p>
-        </div>
+      <CardHeader>
+        <CardTitle>Scheduled audits</CardTitle>
+        <p className="type-caption">Runs use the selected prompt set and your connected engines.</p>
       </CardHeader>
       <CardContent className="grid gap-3">
         {schedulesQuery.isError ? (
-          <Alert tone="danger">Could not load scheduled audits.</Alert>
+          <ReadError
+            {...readErrorProps(schedulesQuery)}
+            fallback="Could not load scheduled audits."
+          />
         ) : null}
         {schedulesQuery.data?.length ? (
           <ul className={ledgerClasses('boxed')}>
@@ -136,7 +137,7 @@ function WorkspaceSchedules({
           </ul>
         ) : null}
         {!schedulesQuery.data?.length && !schedulesQuery.isLoading ? (
-          <p className="type-body">No scheduled audits yet.</p>
+          <InlineEmpty>No scheduled audits yet.</InlineEmpty>
         ) : null}
         {promptSets.length === 0 ? (
           <Alert tone="info">Add prompts before scheduling an audit.</Alert>

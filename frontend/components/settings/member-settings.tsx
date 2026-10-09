@@ -6,6 +6,7 @@ import { UserPlus } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { FilterRow } from '@/components/ui/filter-row';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
@@ -154,24 +155,26 @@ export function MemberSettings() {
     <Stack gap="workspace">
       {/* The tab already names this section; the row states the scope and
           carries the roster's controls. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className={textRole('body')}>
-          Who can work in {activeWorkspace?.name ?? 'this workspace'}, and what each of them may do.
-        </p>
-        <div className="flex items-center gap-2">
+      <p className={textRole('body')}>
+        Who can work in {activeWorkspace?.name ?? 'this workspace'}, and what each of them may do.
+      </p>
+      <FilterRow
+        searchWidth="sm"
+        search={
           <SearchField
             value={search}
             onValueChange={setSearch}
             placeholder="Search members…"
             aria-label="Search members"
-            className="w-full sm:w-56"
           />
-          <Button type="button" onClick={() => setInviteOpen(true)}>
-            <UserPlus className="size-4" aria-hidden />
+        }
+        actions={
+          <Button type="button" size="sm" onClick={() => setInviteOpen(true)}>
+            <UserPlus className="size-3.5" aria-hidden />
             Invite
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {failure ? (
         <MutationNotice

@@ -52,17 +52,14 @@ export function ChartContainer({
   config,
   children,
   className,
-  height = 280,
-  size,
+  size = 'md',
   description,
 }: Readonly<{
   config: ChartConfig;
   /** One Recharts chart element. */
   children: ReactElement;
   className?: string;
-  /** @deprecated Pass `size`; a pixel height is kept only for unmigrated charts. */
-  height?: number;
-  /** The plot's height role. Takes precedence over `height`. */
+  /** The plot's height role. */
   size?: ChartHeight;
   /**
    * What the chart says to a reader who cannot see it.
@@ -76,11 +73,7 @@ export function ChartContainer({
   return (
     <div className={cn('w-full', className)} style={seriesVariables(config)}>
       <p className="sr-only">{description}</p>
-      <div
-        aria-hidden
-        className={size ? chartHeightClasses[size] : undefined}
-        style={size ? undefined : { height }}
-      >
+      <div aria-hidden className={chartHeightClasses[size]}>
         <ResponsiveContainer width="100%" height="100%">
           {children}
         </ResponsiveContainer>
@@ -172,6 +165,26 @@ export function ChartLegend({
   );
 }
 
+/**
+ * The one chart hover-card surface: inverse ink on the inverse fill, so every
+ * chart's tooltip reads as the same object. Its contents use `text-on-inverse`.
+ */
+export function ChartTooltipPanel({
+  children,
+  className,
+}: Readonly<{ children: ReactNode; className?: string }>) {
+  return (
+    <div
+      className={cn(
+        'tooltip-panel bg-surface-inverse text-on-inverse shadow-overlay rounded-[var(--radius-card)] px-3 py-2',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 /** The shared hover card: the bucket, then every series that has a value. */
 export function ChartTooltipContent({
   active,
@@ -190,7 +203,7 @@ export function ChartTooltipContent({
   const measured = payload.filter((entry) => typeof entry.value === 'number');
   if (!measured.length) return null;
   return (
-    <div className="tooltip-panel bg-surface-inverse text-on-inverse shadow-overlay rounded-[var(--radius-card)] px-3 py-2">
+    <ChartTooltipPanel>
       <p className="type-badge">{label}</p>
       <ul className="grid gap-0.5">
         {measured.map((entry) => (
@@ -204,6 +217,6 @@ export function ChartTooltipContent({
           </li>
         ))}
       </ul>
-    </div>
+    </ChartTooltipPanel>
   );
 }

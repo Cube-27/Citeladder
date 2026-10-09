@@ -1,9 +1,11 @@
 # Design system consistency plan
 
 A cross-surface audit and rebuild of the design system: tokens, brand marks,
-geometry, type, shared primitives and every product route. **Status: implementing
-(2026-10-09); owner decisions below are settled. Phases 1–3 and 6 ship in the
-first PR; Phases 4–5 (primitives and route migration) in the second.** Shipped visual rules are owned
+geometry, type, shared primitives and every product route. **Status: implemented
+(2026-10-09), pending owner review; owner decisions below are settled. Phases
+1–3 and 6 ship in the first PR; Phase 4 with the Site Health, Visibility and
+Overview migrations in the second; the remaining routes in the third (the
+second PR alone would have passed 100 files).** Shipped visual rules are owned
 by [Design](../design.md), not by this plan. Visual work does not change factual
 copy, data, claims, scripted preview content or workflows.
 
@@ -374,7 +376,7 @@ Also in this phase:
 
 ## Delivery
 
-Ship as few PRs as the churn allows (owner preference: split only past about 100 files). The first PR carries Phases 1–3 and 6, so the second runs under the new checks; the second carries Phases 4–5, since each primitive lands with the routes that adopt it. Phases 2 and 3 change how every surface looks; the owner reviews screenshots before merge. Marketing copy, claims and scripted preview content are out of scope throughout. Only CSS, tokens and class recipes on marketing files change.
+Ship as few PRs as the churn allows (owner preference: split only past about 100 files). The first PR carries Phases 1–3 and 6, so later PRs run under the new checks. Phases 4–5 came to about 180 files, so they ship as two PRs: the primitives with the Site Health, Visibility and Overview routes, then the remaining routes with the retirement of the replaced shared components. Phases 2 and 3 change how every surface looks; the owner reviews screenshots before merge. Marketing copy, claims and scripted preview content are out of scope throughout. Only CSS, tokens and class recipes on marketing files change.
 
 ## Measures
 
@@ -389,3 +391,13 @@ Record each measure before Phase 1 and after each phase:
 - route-matrix deviations
 
 The plan is done when every count is zero or a documented exception, and the owner has reviewed the screens.
+
+## Known remainder
+
+Left non-canonical after Phase 5, each with an owner to change first:
+
+- `TrendChart` and `chart-axes.tsx` remain hand-rolled SVG; moving them onto the chart frame needs the frame to hold version markers and per-point evidence links.
+- Section-level skeletons inside drawers, rails and tables keep their own placeholders; `PageLoading` is screen-level.
+- The compact app-shell drawer width (`w-[min(17rem,100vw)]`) and a few product-table column widths stay ratcheted until `Drawer` and `Table` grow width roles for them.
+- Selected-option check marks use accent in `ui/dropdown.tsx`, `project-switcher` and `property-picker`; the dropdown owner decides first.
+- The blog editorial illustrations carry their own palette (ratcheted `svg-color`).

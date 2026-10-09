@@ -637,6 +637,47 @@ export function nestedCardViolations(source, label, ownsProductUi) {
   return violations;
 }
 
+/**
+ * A card header lays out its actions through `CardHeader actions={…}`. The
+ * retired shape re-laid the header out at each call site (`flex-row`,
+ * `justify-between`), so every card's title row sat differently.
+ */
+const CARD_HEADER_LAYOUT = /(?:^|\s)(?:[\w-]+:)*(?:flex-row|justify-between|items-center)(?=\s|$)/;
+
+/** A row a direct child lays out inside the header, beside or instead of `actions`. */
+const CARD_HEADER_CHILD_ROW = /(?:^|\s)(?:[\w-]+:)*(?:flex-row|justify-between)(?=\s|$)/;
+
+function classNameMatches(opening, pattern) {
+  const className = opening.attributes.find(
+    (attribute) => attribute.type === 'JSXAttribute' && nameText(attribute.name) === 'className',
+  );
+  if (!className?.value) return false;
+  return stringFragments(className.value).some(({ text }) => pattern.test(text));
+}
+
+export function cardHeaderLayoutViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi || !label.endsWith('.tsx') || label.startsWith('components/ui/')) return [];
+  const program = parseSource(source, label);
+  const lineOf = lineIndex(source);
+  const violations = [];
+  const report = (node) =>
+    violations.push(
+      `${label}:${lineOf(node.start)}: CardHeader lays out its own row; pass the trailing controls as actions={…}`,
+    );
+  walk(program, (node) => {
+    if (node.type !== 'JSXElement' || nameText(node.openingElement.name) !== 'CardHeader') return;
+    if (classNameMatches(node.openingElement, CARD_HEADER_LAYOUT)) report(node.openingElement);
+    for (const child of node.children) {
+      if (
+        child.type === 'JSXElement' &&
+        classNameMatches(child.openingElement, CARD_HEADER_CHILD_ROW)
+      )
+        report(child.openingElement);
+    }
+  });
+  return violations;
+}
+
 const BUTTON_COLOR_ROLE =
   /^text-(?:foreground|secondary|muted|subtle|accent|danger|success|warning|info|on-|inverse)/;
 

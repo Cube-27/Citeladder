@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Alert } from '@/components/ui/alert';
-import { formatPercent } from '@/lib/ai-traffic/series';
+import { formatPercent } from '@/lib/format';
 import { TrafficUrlButton } from './url-panel';
 
 export function ReferralComparison({ data }: Readonly<{ data: AiReferrals }>) {

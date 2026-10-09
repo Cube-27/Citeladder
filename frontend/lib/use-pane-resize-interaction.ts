@@ -4,28 +4,29 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } fr
 
 type Bounds = { min: number; max: number };
 
-/** Pointer and keyboard mechanics shared by the Commerce and Prompts splitters. */
+const KEY_STEP = 16;
+const KEY_STEP_LARGE = 48;
+
+/**
+ * Pointer and keyboard mechanics for `ResizableSplitPane`'s separator.
+ *
+ * Keys: ← / → move 16px (Shift: 48px), Home → minimum, End → maximum.
+ * Double-click restores the default. A cancelled pointer restores the width
+ * the drag started from.
+ */
 export function usePaneResizeInteraction({
   width,
   bounds,
   onResize,
   onCommit,
-  onCancel,
   defaultWidth,
-  homeWidth,
-  endKey = false,
-  shiftStep = 16,
   onBoundsChange,
 }: {
   width: number;
   bounds: () => Bounds;
   onResize: (width: number) => void;
   onCommit: (width: number) => void;
-  onCancel?: () => void;
   defaultWidth: number;
-  homeWidth: number;
-  endKey?: boolean;
-  shiftStep?: number;
   onBoundsChange?: (bounds: Bounds) => void;
 }) {
   const widthRef = useRef(width);
@@ -53,6 +54,8 @@ export function usePaneResizeInteraction({
 
   const beginDrag = (clientX: number, pointerId?: number) => {
     dragRef.current = { pointerId, startX: clientX, startWidth: widthRef.current };
+    // The drag starts from the width on screen, whoever owned it until now.
+    onResize(widthRef.current);
     setDragging(true);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
@@ -75,13 +78,10 @@ export function usePaneResizeInteraction({
     dragRef.current = null;
     widthRef.current = drag.startWidth;
     onResize(drag.startWidth);
-    onCancel?.();
     setDragging(false);
     restoreDocument();
   };
-  const nudge = (delta: number) => onCommit(apply(widthRef.current + delta));
-  const reset = () => onCommit(apply(defaultWidth));
-  const refreshBounds = () => apply(widthRef.current);
+  const commitAt = (next: number) => onCommit(apply(next));
 
   const onPointerDown = (event: PointerEvent<HTMLElement>) => {
     if (event.button !== 0 || dragRef.current) return;
@@ -106,23 +106,19 @@ export function usePaneResizeInteraction({
       handle.releasePointerCapture?.(event.pointerId);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    const step = event.shiftKey ? shiftStep : 16;
-    if (event.key === 'ArrowLeft') nudge(-step);
-    else if (event.key === 'ArrowRight') nudge(step);
-    else if (event.key === 'Home') onCommit(apply(homeWidth));
-    else if (event.key === 'End' && endKey) onCommit(apply(bounds().max));
+    const step = event.shiftKey ? KEY_STEP_LARGE : KEY_STEP;
+    if (event.key === 'ArrowLeft') commitAt(widthRef.current - step);
+    else if (event.key === 'ArrowRight') commitAt(widthRef.current + step);
+    else if (event.key === 'Home') commitAt(bounds().min);
+    else if (event.key === 'End') commitAt(bounds().max);
     else return;
     event.preventDefault();
   };
 
   return {
     dragging,
-    beginDrag,
-    dragTo,
-    endDrag,
-    nudge,
-    reset,
-    refreshBounds,
+    /** Re-clamp the current width to fresh bounds (the container resized). */
+    refreshBounds: () => apply(widthRef.current),
     onPointerDown,
     onPointerMove,
     onPointerUp: finishPointer,
@@ -130,7 +126,7 @@ export function usePaneResizeInteraction({
     onLostPointerCapture: (event: PointerEvent<HTMLElement>) => {
       if (dragRef.current?.pointerId === event.pointerId) cancelDrag();
     },
-    onDoubleClick: reset,
+    onDoubleClick: () => commitAt(defaultWidth),
     onKeyDown,
   };
 }

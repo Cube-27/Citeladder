@@ -3,8 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
+import { ReadError } from '@/components/ui/read-error';
 import { PageLoading } from '@/components/layout/page-loading';
 import { ICONS } from '@/lib/icons';
 import {
@@ -42,9 +43,9 @@ import { PromptTable } from './prompt-table';
 import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { PageShell } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
+import { ResizableSplitPane } from '@/components/ui/split-pane';
 
 import { PromptActions, PromptFilterControls } from './prompt-toolbar';
-import { ResizablePromptWorkspace } from './resizable-prompt-workspace';
 import { TopicRail } from './topic-rail';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { resolveProjectRequestScope } from '@/lib/project/request-scope';
@@ -56,6 +57,13 @@ function mutationErrorMessage(
   if (create.isError) return humanizeApiError(create.error).message;
   return update.isError ? humanizeApiError(update.error).message : undefined;
 }
+
+/** The topic rail's widths, in px: the default, its bounds, and the room the library keeps. */
+const RAIL_DEFAULT_WIDTH = 240;
+const RAIL_MIN_WIDTH = 208;
+const RAIL_MAX_WIDTH = 400;
+const LIBRARY_MIN_WIDTH = 572;
+const RAIL_SEPARATOR_LABEL = 'Resize topics panel';
 
 const STATUS_TABS: { id: PromptStatus; label: string }[] = [
   { id: 'active', label: 'Active' },
@@ -81,7 +89,7 @@ export function PromptLibrary({
 }>) {
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
-  const { projectId, promptSet, prompts, isLoading, isError, ensurePromptSet, retry } =
+  const { projectId, promptSet, prompts, isLoading, error, ensurePromptSet, retry, retrying } =
     usePromptSet();
   const requestScope = resolveProjectRequestScope(workspaceId, projectId);
   const requestOptions = () => {
@@ -303,9 +311,7 @@ export function PromptLibrary({
   if (!requestScope.enabled) {
     return (
       <PageShell>
-        <Alert tone="info">
-          Select or create a project first — prompts belong to a project&apos;s prompt set.
-        </Alert>
+        <ProjectRequiredState />
       </PageShell>
     );
   }
@@ -385,8 +391,13 @@ export function PromptLibrary({
       }
     >
       <Stack gap="workspace">
-        {isError ? (
-          <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
+        {error ? (
+          <ReadError
+            error={error}
+            fallback="Could not load prompts. Check your connection and try again."
+            onRetry={retry}
+            pending={retrying}
+          />
         ) : null}
         <PendingReviewNotice
           count={review.candidates.length}
@@ -397,11 +408,16 @@ export function PromptLibrary({
           }}
         />
 
-        <ResizablePromptWorkspace
-          railId="prompt-topic-rail"
-          rail={
+        <ResizableSplitPane
+          listId="prompt-topic-rail"
+          separatorLabel={RAIL_SEPARATOR_LABEL}
+          defaultWidth={RAIL_DEFAULT_WIDTH}
+          minWidth={RAIL_MIN_WIDTH}
+          maxWidth={RAIL_MAX_WIDTH}
+          minDetailWidth={LIBRARY_MIN_WIDTH}
+          stickyList
+          list={
             <TopicRail
-              desktopId="prompt-topic-rail"
               topics={topics}
               selectedTopicId={selectedTopicId}
               onSelect={setSelectedTopicId}
@@ -435,7 +451,7 @@ export function PromptLibrary({
 
             {libraryBody}
           </Stack>
-        </ResizablePromptWorkspace>
+        </ResizableSplitPane>
 
         <PromptLibraryDialogs
           pendingDelete={pendingDelete}
@@ -470,10 +486,8 @@ export function PromptLibrary({
           review={review}
           reviewOnly={reviewOnly}
           setsLoading={isLoading}
-          setsError={isError}
-          retrySets={() => {
-            void retry();
-          }}
+          setsError={error !== null}
+          retrySets={retry}
         />
       </Stack>
     </PageShell>

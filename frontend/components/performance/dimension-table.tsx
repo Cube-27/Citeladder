@@ -1,16 +1,17 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
-import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
-import { Pressable } from '@/components/ui/pressable';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { Pager } from '@/components/ui/pager';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import {
+  SortableTableHead,
   Table,
   TableBody,
   TableCell,
@@ -19,12 +20,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { sortIndicator } from '@/components/ui/sort-indicator';
 import { performanceApi, type PerformanceDimension } from '@/lib/api/performance';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
-import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import {
   METRIC_CARDS,
   DIMENSION_SORT_KEY,
@@ -66,51 +66,6 @@ const TONE_CLASS: Record<'up' | 'down' | 'flat', string> = {
   flat: 'text-muted',
 };
 
-function SortableHead({
-  metric,
-  label,
-  sublabel,
-  sort,
-  onSort,
-}: Readonly<{
-  metric: PerformanceMetricKey;
-  label: string;
-  /** Omitted when the column needs no qualifier (no comparison active). */
-  sublabel?: string;
-  sort: string;
-  onSort: (key: PerformanceMetricKey) => void;
-}>) {
-  const active = sortKey(sort) === metric;
-  const descending = sortDirection(sort) === 'descending';
-  const { ariaSort, icon: Icon } = sortIndicator(active, descending, {
-    ascending: ArrowUp,
-    descending: ArrowDown,
-    inactive: ArrowUpDown,
-  });
-  return (
-    <TableHead numeric aria-sort={ariaSort} className={cn(sublabel ? 'min-w-[7.5rem]' : undefined)}>
-      <Pressable
-        type="button"
-        onClick={() => onSort(metric)}
-        className={cn(
-          'inline-flex w-full flex-col items-center gap-0.5 text-center',
-          active ? 'text-accent-text' : 'hover:text-foreground',
-        )}
-      >
-        <span className="inline-flex items-center gap-1">
-          <Icon className={cn('size-3', !active && 'text-muted')} aria-hidden />
-          {label}
-        </span>
-        {sublabel ? (
-          <span className={cn('max-w-[10rem] truncate', textRole('caption'))} title={sublabel}>
-            {sublabel}
-          </span>
-        ) : null}
-      </Pressable>
-    </TableHead>
-  );
-}
-
 /**
  * The sort ACTUALLY applied, given which columns are on screen.
  *
@@ -135,7 +90,7 @@ function StaticHead({ label, sublabel }: Readonly<{ label: string; sublabel: str
     <TableHead numeric className="min-w-[7.5rem]">
       <span className="inline-flex w-full flex-col items-center gap-0.5 text-center">
         <span>{label}</span>
-        <span className={cn('max-w-[10rem] truncate', textRole('caption'))} title={sublabel}>
+        <span className={textRole('caption', 'max-w-full truncate')} title={sublabel}>
           {sublabel}
         </span>
       </span>
@@ -217,7 +172,10 @@ export function DimensionTable({
   }
   if (query.isError) {
     return (
-      <Alert tone="danger">Could not load {tab.noun}. Check your connection and try again.</Alert>
+      <ReadError
+        {...readErrorProps(query)}
+        fallback={`Could not load ${tab.noun}. Check your connection and try again.`}
+      />
     );
   }
 
@@ -232,7 +190,8 @@ export function DimensionTable({
         // out identically, so switching QUERIES -> PAGES does not reflow
         // the metric columns under the pointer. Without it each tab sizes
         // to its own longest cell and the whole table jumps.
-        className={cn('w-full table-fixed', comparing ? 'min-w-[48rem]' : 'min-w-[32rem]')}
+        minWidth={comparing ? 'md' : 'sm'}
+        className="w-full table-fixed"
       >
         <colgroup>
           <col className="w-[32%] min-w-[14rem]" />
@@ -247,17 +206,19 @@ export function DimensionTable({
             {displayedMetrics.flatMap((metric) => {
               const label = metric.label.replace(/^(Total|Average) /, '');
               const head = (
-                <SortableHead
+                <SortableTableHead
                   key={metric.key}
-                  metric={metric.key}
                   label={label}
+                  numeric
+                  active={sortKey(activeSort) === metric.key}
+                  descending={sortDirection(activeSort) === 'descending'}
+                  onSort={() => onSort(metric.key)}
+                  className={comparing ? 'min-w-[7.5rem]' : undefined}
                   // The range is stated once, in the toolbar. Repeating it
                   // under every column adds no information — it only earns
                   // its place when a comparison makes the columns AMBIGUOUS
                   // (selected vs comparison vs difference).
                   sublabel={comparing ? selectedLabel : undefined}
-                  sort={activeSort}
-                  onSort={onSort}
                 />
               );
               // Search Console groups each metric with its own comparison
@@ -298,7 +259,7 @@ export function DimensionTable({
           {!query.isLoading && rows.length === 0 ? (
             <TableRow>
               <TableCell colSpan={columnCount}>
-                <span className="text-muted">No {tab.noun} measured for this range.</span>
+                <InlineEmpty>No {tab.noun} measured for this range.</InlineEmpty>
               </TableCell>
             </TableRow>
           ) : null}
@@ -355,17 +316,11 @@ export function DimensionTable({
           ))}
         </TableBody>
       </Table>
-      <CursorTableFooter
-        from={from}
-        to={to}
-        total={total}
-        noun={tab.noun}
-        pageSize={table.pageSize}
-        onPageSizeChange={table.setPageSize}
-        canPrev={table.canPrev}
-        canNext={Boolean(nextCursor)}
-        onPrev={table.pop}
-        onNext={() => table.push(nextCursor)}
+      <Pager
+        frame="table"
+        range={{ from, to, total, noun: tab.noun }}
+        pageSize={{ value: table.pageSize, onChange: table.setPageSize }}
+        {...cursorControls(table, nextCursor)}
         busy={query.isFetching}
       />
     </Card>

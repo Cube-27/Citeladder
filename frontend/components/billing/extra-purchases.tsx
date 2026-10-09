@@ -7,6 +7,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
   BillingCatalog,
   BillingEntitlement,
@@ -135,14 +136,11 @@ export function ExtraPurchases({
   if (addons.length === 0 && topups.length === 0) return null;
   return (
     <section className={panelClasses({}, 'grid gap-3')} aria-labelledby="extras-title">
-      <div className="grid gap-0.5">
-        <h2 id="extras-title" className={textRole('sectionTitle')}>
-          Add-ons and top-ups
-        </h2>
-        <p className="type-caption">
-          One-time purchases. They work only while your paid plan is active and never renew.
-        </p>
-      </div>
+      <EditorialSectionHeader
+        headingId="extras-title"
+        title="Add-ons and top-ups"
+        description="One-time purchases. They work only while your paid plan is active and never renew."
+      />
       <div className="grid gap-2">
         {addons.map((entry) => (
           <ExtraRow

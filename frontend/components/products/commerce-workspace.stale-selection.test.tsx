@@ -40,27 +40,10 @@ vi.mock('@/lib/products/competitor-discovery', () => ({
 }));
 
 vi.mock('@/lib/products/use-resizable-pane', () => ({
+  DEFAULT_PANE_WIDTH: 288,
   MAX_PANE_WIDTH: 520,
   MIN_PANE_WIDTH: 240,
-  useResizablePane: () => ({
-    width: 320,
-    dragging: false,
-    keyboardStep: 16,
-    beginDrag: vi.fn(),
-    dragTo: vi.fn(),
-    endDrag: vi.fn(),
-    nudge: vi.fn(),
-    reset: vi.fn(),
-    interaction: {
-      onPointerDown: vi.fn(),
-      onPointerMove: vi.fn(),
-      onPointerUp: vi.fn(),
-      onPointerCancel: vi.fn(),
-      onLostPointerCapture: vi.fn(),
-      onDoubleClick: vi.fn(),
-      onKeyDown: vi.fn(),
-    },
-  }),
+  useResizablePane: () => ({ width: 320, commit: vi.fn() }),
 }));
 
 import { CommerceWorkspace } from './commerce-workspace';

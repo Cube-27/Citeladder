@@ -2,8 +2,10 @@
 
 import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
 import type { UsageItem } from '@/lib/api/billing';
-import { textRole } from '@/components/ui/typography';
+import type { DataTone } from '@/components/ui/data-tone';
 import { DisplayTime } from '@/components/ui/display-time';
+import { Meter } from '@/components/ui/meter';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * One usage counter.
@@ -16,10 +18,10 @@ import { DisplayTime } from '@/components/ui/display-time';
  * left" when it means "we don't know".
  */
 /** Two thresholds, three bands — the bar's only colour decision. */
-function usageToneClass(ratio: number): string {
-  if (ratio >= USAGE_METER_CRITICAL_RATIO) return 'bg-danger-solid';
-  if (ratio >= USAGE_METER_WARNING_RATIO) return 'bg-warning-solid';
-  return 'bg-brand-solid';
+function usageTone(ratio: number): DataTone {
+  if (ratio >= USAGE_METER_CRITICAL_RATIO) return 'danger';
+  if (ratio >= USAGE_METER_WARNING_RATIO) return 'warning';
+  return 'neutral';
 }
 
 export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
@@ -59,7 +61,6 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   const consumed = item.consumed ?? 0;
   const remaining = item.remaining ?? 0;
   const ratio = allowance > 0 ? consumed / allowance : 0;
-  const tone = usageToneClass(ratio);
 
   return (
     <div className="border-border-subtle grid gap-2 border-b pb-4 last:border-b-0 last:pb-0">
@@ -69,20 +70,13 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
           {consumed} / {allowance} {item.unit}
         </span>
       </div>
-      <div
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Native progress cannot preserve the token-driven inner fill and reserved-credit presentation.
-        role="progressbar"
-        aria-label={`${label} usage`}
-        aria-valuemin={0}
-        aria-valuemax={allowance}
-        aria-valuenow={consumed}
-        className="bg-surface-sunken h-1.5 overflow-hidden rounded-full"
-      >
-        <div
-          className={`h-full rounded-full transition-all ${tone}`}
-          style={{ width: `${Math.min(100, Math.round(ratio * 100))}%` }}
-        />
-      </div>
+      <Meter
+        label={`${label} usage`}
+        value={consumed}
+        max={allowance}
+        tone={usageTone(ratio)}
+        valueText={`${consumed} of ${allowance} ${item.unit}`}
+      />
       <div className="flex items-center justify-between gap-2">
         <span className="type-caption">
           {remaining} remaining

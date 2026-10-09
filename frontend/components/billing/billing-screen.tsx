@@ -20,8 +20,7 @@ import { Alert } from '@/components/ui/alert';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
-import { splitPaneClasses } from '@/components/ui/workspace';
+import { EditorialSectionHeader, splitPaneClasses } from '@/components/ui/workspace';
 import {
   billingApi,
   createIdempotencyKey,
@@ -87,7 +86,7 @@ function useCancellation(workspaceId: string | null): BillingCancellation {
     open,
     setOpen,
     pending: mutation.isPending,
-    error: mutation.isError ? mutation.error : null,
+    error: mutation.error,
     confirm: () => mutation.mutate(),
   };
 }
@@ -106,7 +105,7 @@ function usePlanChangeControls(workspaceId: string | null, checkout: Checkout): 
         .catch(() => undefined),
     downgrade: (key) => downgrade.mutate(key),
     pending: downgrade.isPending || checkout.preparing,
-    downgradeError: downgrade.isError ? downgrade.error : null,
+    downgradeError: downgrade.error,
   };
 }
 
@@ -158,14 +157,14 @@ export function BillingScreen() {
 
   if (entitlementLoading || entitlementQuery.isLoading) {
     return (
-      <PageShell>
+      <PageShell measure="workflow">
         <PageLoading label="Loading billing…" />
       </PageShell>
     );
   }
   if (entitlementQuery.isError) {
     return (
-      <PageShell>
+      <PageShell measure="workflow">
         <Alert tone="danger">
           Your entitlement could not be resolved, so no billing change is offered. No paid
           capability is active until it does; reload the page or contact support.
@@ -178,7 +177,7 @@ export function BillingScreen() {
   const { buyExtra, subscribe } = purchaseActions(checkout, country);
 
   return (
-    <PageShell>
+    <PageShell measure="workflow">
       <Stack gap="section">
         <CheckoutStatus checkout={checkout} />
         {canManage ? null : (
@@ -318,15 +317,11 @@ function ChoosePlan({
   const [chosen, setChosen] = useState<SelfServePlanKey | null>(null);
   return (
     <section className={panelClasses({}, 'grid gap-4')} aria-labelledby="choose-plan-title">
-      <div className="grid gap-0.5">
-        <h2 id="choose-plan-title" className={textRole('sectionTitle')}>
-          Choose a plan
-        </h2>
-        <p className="type-caption">
-          Your billing country sets the currency and tax; you review the exact quote before paying.
-          Audits run on your own provider keys, billed by those providers directly.
-        </p>
-      </div>
+      <EditorialSectionHeader
+        headingId="choose-plan-title"
+        title="Choose a plan"
+        description="Your billing country sets the currency and tax; you review the exact quote before paying. Audits run on your own provider keys, billed by those providers directly."
+      />
       <BillingCountryInput country={country} setCountry={setCountry} />
       <BillingDetailsForm
         country={country}

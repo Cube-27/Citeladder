@@ -11,7 +11,8 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { SectionTitle, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { AppState, Controller } from './controller';
 import { rate, text } from './format';
 
@@ -115,9 +116,9 @@ export function SourcesView({ state, controller }: Props) {
       </p>
       {state.answers.map((answer, index) => (
         <article key={text(answer.id, `answer-${index}`)} className="space-y-2">
-          <SectionTitle>
+          <h3 className={textRole('itemTitle')}>
             {typeof answer.prompt_text === 'string' ? answer.prompt_text : 'Answer evidence'}
-          </SectionTitle>
+          </h3>
           <p className={textRole('body')}>
             {typeof answer.answer_text === 'string'
               ? answer.answer_text
@@ -187,7 +188,7 @@ export function SiteHealthView({ state, controller }: Props) {
   const site = parsed.data;
   return (
     <div className="space-y-4">
-      <SectionTitle>Persisted Site Health</SectionTitle>
+      <EditorialSectionHeader title="Persisted Site Health" />
       <p className={textRole('body')}>
         Web fundamentals: {site.scores.web_fundamentals ?? 'Unavailable'} · AEO readiness:{' '}
         {site.scores.aeo_readiness ?? 'Unavailable'} · measurement coverage:{' '}
@@ -290,15 +291,17 @@ export function SiteHealthView({ state, controller }: Props) {
       )}
       {(findings?.state === 'available' ? findings.items : []).map((finding, index) => (
         <article key={text(finding.id, `finding-${index}`)}>
-          <SectionTitle>{text(finding.title, text(finding.kind, 'Existing finding'))}</SectionTitle>
+          <h3 className={textRole('itemTitle')}>
+            {text(finding.title, text(finding.kind, 'Existing finding'))}
+          </h3>
           <p className={textRole('caption')}>{text(finding.record_uri)}</p>
         </article>
       ))}
       {pages.map((page, index) => (
         <article key={text(page.id, `page-${index}`)}>
-          <SectionTitle>
+          <h3 className={textRole('itemTitle')}>
             {text(page.display_url, text(page.normalized_url, text(page.title, 'Page evidence')))}
-          </SectionTitle>
+          </h3>
           <p className={textRole('caption')}>{text(page.record_uri)}</p>
         </article>
       ))}

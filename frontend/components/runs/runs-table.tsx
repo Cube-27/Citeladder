@@ -1,6 +1,5 @@
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -10,11 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
+import { Pager, pageNumberControls, useTablePage } from '@/components/ui/pager';
+import { TextLink } from '@/components/ui/text-link';
 import type { Audit } from '@/lib/api/types';
 import { auditBadgeValue, auditStatusLabel, formatDateTime } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { textRole } from '@/components/ui/typography';
 
 /** Rows per page on the runs table (client-side; the list arrives whole). */
 const PAGE_SIZE = 10;
@@ -75,25 +74,18 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
                 {formatDateTime(audit.created_at, timeZone)}
               </TableCell>
               <TableCell>
-                <ProjectLink
-                  href={`/runs/${audit.id}`}
-                  className={textRole('itemTitle', 'text-accent-text hover:underline')}
-                >
+                <TextLink href={`/runs/${audit.id}`} text="itemTitle">
                   View
-                </ProjectLink>
+                </TextLink>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      <TablePagination
-        page={page}
-        pageCount={pageCount}
-        from={from}
-        to={to}
-        total={audits.length}
-        noun="runs"
-        onPageChange={setPage}
+      <Pager
+        frame="table"
+        range={{ from, to, total: audits.length, noun: 'runs' }}
+        {...pageNumberControls(page, pageCount, setPage)}
       />
     </div>
   );

@@ -4,14 +4,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { AiReferralsContent } from '@/components/ai-traffic/referrals-content';
-import { AnalyticsToolbar } from '@/components/ui/analytics-toolbar';
+import { FilterChoice, FilterRow } from '@/components/ui/filter-row';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Spinner } from '@/components/ui/spinner';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import {
   GRANULARITY_OPTIONS,
   RANGE_OPTIONS,
-  rangeLabel,
   rangeToParams,
   type AiReferralsGranularity,
   type AiReferralsRange,
@@ -79,17 +80,30 @@ function AiReferralsToolbar({
   fetching: boolean;
 }>) {
   return (
-    <AnalyticsToolbar
-      range={range}
-      defaultRange="latest"
-      rangeLabel={rangeLabel(range)}
-      rangeOptions={RANGE_OPTIONS}
-      onChangeRange={onChangeRange}
-      granularity={granularity}
-      granularityOptions={GRANULARITY_OPTIONS}
-      onChangeGranularity={onChangeGranularity}
-      fetching={fetching}
-      testId="ai-traffic-toolbar"
-    />
+    <FilterRow
+      status={
+        fetching ? (
+          <>
+            <Spinner size="sm" />
+            Updating data… Previous data shown.
+          </>
+        ) : null
+      }
+    >
+      <FilterChoice
+        label="Range"
+        menuLabel="Date range"
+        value={range}
+        defaultValue="latest"
+        options={RANGE_OPTIONS}
+        onChange={onChangeRange}
+      />
+      <SegmentedControl
+        value={granularity}
+        onChange={onChangeGranularity}
+        options={GRANULARITY_OPTIONS}
+        ariaLabel="Chart interval"
+      />
+    </FilterRow>
   );
 }

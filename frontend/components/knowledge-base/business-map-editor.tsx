@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { Select } from '@/components/ui/select';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -67,7 +68,10 @@ export function BusinessMapEditor({
     queryFn: ({ signal }) => projectsApi.getBusinessMap(projectId, { signal, workspaceId }),
   });
   if (query.isPending) return <Skeleton className="h-64 w-full" />;
-  if (query.isError) return <Alert tone="danger">{humanizeApiError(query.error).message}</Alert>;
+  if (query.isError)
+    return (
+      <ReadError {...readErrorProps(query)} fallback="The business map could not be loaded." />
+    );
   return (
     <BusinessMapForm
       key={projectId}

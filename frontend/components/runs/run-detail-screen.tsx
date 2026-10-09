@@ -87,6 +87,7 @@ export function RunDetailScreen() {
 
   return (
     <PageShell
+      back={{ href: '/runs', label: 'Back to runs', projectId: audit?.project_id }}
       actions={
         audit ? (
           <RunActions
@@ -104,12 +105,10 @@ export function RunDetailScreen() {
       <RunDetailView
         audit={audit}
         auditLoading={auditQuery.isLoading}
-        auditError={auditQuery.isError ? auditQuery.error : null}
-        auditRetrying={auditQuery.isFetching}
-        onRetryAudit={() => void auditQuery.refetch()}
+        auditRead={auditQuery}
         executions={executionsQuery.data}
         executionsLoading={executionsQuery.isLoading}
-        executionsError={executionsQuery.isError}
+        executionsRead={executionsQuery}
         exportError={runExport.exportError}
         cancelNotice={
           cancelMutation.isError

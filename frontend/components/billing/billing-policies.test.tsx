@@ -9,7 +9,7 @@ it.each(['', 'http://127.0.0.1:3000', 'https://citeladder.com'])(
   (origin) => {
     vi.stubEnv('PUBLIC_WEBSITE_ORIGIN', origin);
     render(<BillingSupport contact={null} />);
-    expect(screen.getByRole('link', { name: 'contact form' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'contact form (opens in a new tab)' })).toHaveAttribute(
       'href',
       origin ? `${origin}/contact` : '/contact',
     );

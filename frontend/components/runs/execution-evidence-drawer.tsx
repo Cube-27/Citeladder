@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import { EvidenceCard } from '@/components/runs/evidence-card';
-import { Alert } from '@/components/ui/alert';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Drawer } from '@/components/ui/drawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -97,7 +97,12 @@ export function ExecutionEvidenceDrawer({
 
   let evidenceBody: ReactNode;
   if (evidenceQuery.isError) {
-    evidenceBody = <Alert tone="danger">Could not load this execution&apos;s evidence.</Alert>;
+    evidenceBody = (
+      <ReadError
+        {...readErrorProps(evidenceQuery)}
+        fallback="Could not load this execution's evidence."
+      />
+    );
   } else if (evidenceQuery.isLoading || !evidenceQuery.data || answer.loading) {
     evidenceBody = <EvidenceLoading />;
   } else {

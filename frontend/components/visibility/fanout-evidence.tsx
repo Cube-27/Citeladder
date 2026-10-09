@@ -6,7 +6,7 @@ import { Search } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BusyBar } from '@/components/ui/busy-bar';
-import { FilterRow } from '@/components/ui/filter-row';
+import { FilterChoice, FilterRow } from '@/components/ui/filter-row';
 import { Pager, pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { SearchField } from '@/components/ui/search-field';
 import {
@@ -25,7 +25,6 @@ import {
   TruncationNotice,
   type EvidenceTabProps,
 } from '@/components/visibility/evidence-states';
-import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityApi } from '@/lib/api/visibility';
@@ -190,7 +189,7 @@ export function FanoutEvidence({
               <span aria-busy={!summaryMatchesInput}>
                 <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
               </span>
-              <AnalysisChoice
+              <FilterChoice
                 label="Group searches by"
                 value={grouping}
                 options={GROUP_OPTIONS}

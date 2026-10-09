@@ -2,15 +2,16 @@
 
 import { useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { ResizableSplitPane } from '@/components/ui/split-pane';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 import {
+  DEFAULT_PANE_WIDTH,
   MAX_PANE_WIDTH,
   MIN_PANE_WIDTH,
-  type ResizablePane,
   useResizablePane,
 } from '@/lib/products/use-resizable-pane';
 import { targetKey, useCommerceTarget } from '@/lib/products/use-commerce-target';
@@ -69,51 +70,14 @@ export function BulkActions({
   );
 }
 
-/**
- * The drag handle between the catalog list and the target detail.
- *
- * A `separator` with `aria-valuenow` is the role a pane splitter has, so the
- * width is operable by keyboard (arrows nudge, Home restores the default) and
- * not only by pointer — a control that exists only under a mouse is not a
- * control. Hidden below `lg`, where the two panes stack and there is no
- * boundary to move.
- */
-function PaneResizer({ pane }: Readonly<{ pane: ResizablePane }>) {
-  return (
-    <div
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Native hr cannot expose value or support pointer and keyboard pane resizing.
-      role="separator"
-      tabIndex={0}
-      aria-orientation="vertical"
-      aria-label="Resize the catalog pane"
-      aria-valuemin={MIN_PANE_WIDTH}
-      aria-valuemax={MAX_PANE_WIDTH}
-      aria-valuenow={pane.width}
-      className="group focus-ring hidden min-h-24 cursor-col-resize touch-none items-stretch justify-center self-stretch rounded-full px-1 lg:flex"
-      onPointerDown={pane.interaction.onPointerDown}
-      onPointerMove={pane.interaction.onPointerMove}
-      onPointerUp={pane.interaction.onPointerUp}
-      onPointerCancel={pane.interaction.onPointerCancel}
-      onLostPointerCapture={pane.interaction.onLostPointerCapture}
-      onDoubleClick={pane.interaction.onDoubleClick}
-      onKeyDown={pane.interaction.onKeyDown}
-    >
-      <span
-        aria-hidden
-        className={`w-0.5 rounded-full transition-colors ${
-          pane.dragging ? 'bg-accent' : 'bg-border group-hover:bg-border-bold'
-        }`}
-      />
-    </div>
-  );
-}
-
 export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>) {
   const workspaceId = useActiveWorkspaceId();
   const { target, selectTarget } = useCommerceTarget();
   const queries = useCommerceQueries(projectId, target);
   const discovery = useCompetitorDiscovery(projectId);
   const [checked, setChecked] = useState<string[]>([]);
+  // The stored width is the reader's (`useResizablePane`, per browser); the
+  // width mid-drag stays inside the split pane until the separator settles.
   const pane = useResizablePane();
   const header = useCatalogHeader({
     workspaceId: workspaceId ?? '',
@@ -150,57 +114,47 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
             onClear={() => setChecked([])}
           />
         ) : null}
-        {/* `min-w-0` on BOTH columns is load-bearing: a grid item defaults to
-            `min-width: auto`, so a long product name ("TempPro TP920 Bluetooth
-            Meat Thermometer + TP620 Instant-Read + TP358 Hygrometer — Bundle")
-            forces the track wider than its track sizing and the list overflows
-            its own card, on top of the detail pane.
-
-            The first track is the reader's to size (see `useResizablePane`); the
-            gap is halved because the separator now carries the space between the
-            panes itself. `select-none` while dragging stops the pointer from
-            painting a text selection across both panes. */}
-        <div
-          style={{ '--catalog-pane': `${pane.width}px` } as React.CSSProperties}
-          className={`grid items-start gap-2 lg:grid-cols-[var(--catalog-pane)_auto_minmax(0,1fr)] ${
-            pane.dragging ? 'cursor-col-resize select-none' : ''
-          }`}
+        <ResizableSplitPane
+          listId="commerce-catalog-pane"
+          separatorLabel="Resize the catalog pane"
+          defaultWidth={DEFAULT_PANE_WIDTH}
+          minWidth={MIN_PANE_WIDTH}
+          maxWidth={MAX_PANE_WIDTH}
+          width={pane.width}
+          onWidthCommit={pane.commit}
+          stickyList
+          list={
+            <Card className="min-w-0">
+              <CardContent flush>
+                <CatalogList
+                  query={queries.catalog}
+                  selectedKey={selectedKey}
+                  checkedKeys={checkedSet}
+                  onSelect={(next: CommerceTarget) => selectTarget(next)}
+                  onToggle={toggle}
+                />
+              </CardContent>
+            </Card>
+          }
         >
-          <Card className="min-w-0 lg:sticky lg:top-[var(--workspace-gap)]">
-            <CardContent
-              flush
-              className="max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] overflow-y-auto"
-            >
-              <CatalogList
-                query={queries.catalog}
-                selectedKey={selectedKey}
-                checkedKeys={checkedSet}
-                onSelect={(next: CommerceTarget) => selectTarget(next)}
-                onToggle={toggle}
-              />
-            </CardContent>
-          </Card>
-          <PaneResizer pane={pane} />
-          <div className="min-w-0">
-            {target ? (
-              // Rendered as soon as a target exists, not once the catalog has
-              // loaded a label for it: a reload with `?target=` in the URL used
-              // to show "select a category" until the catalog landed.
-              <TargetDetail
-                projectId={projectId}
-                target={target}
-                label={label || `Selected ${target.kind}`}
-                queries={queries}
-                discovery={discovery}
-              />
-            ) : (
-              <Alert tone="info">
-                Select a category or product to see its shelf position, its competitors, and the
-                prompts that measure it.
-              </Alert>
-            )}
-          </div>
-        </div>
+          {target ? (
+            // Rendered as soon as a target exists, not once the catalog has
+            // loaded a label for it: a reload with `?target=` in the URL used
+            // to show "select a category" until the catalog landed.
+            <TargetDetail
+              projectId={projectId}
+              target={target}
+              label={label || `Selected ${target.kind}`}
+              queries={queries}
+              discovery={discovery}
+            />
+          ) : (
+            <InlineEmpty>
+              Select a category or product to see its shelf position, its competitors, and the
+              prompts that measure it.
+            </InlineEmpty>
+          )}
+        </ResizableSplitPane>
       </Stack>
     </PageShell>
   );

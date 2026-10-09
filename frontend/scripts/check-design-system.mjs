@@ -4,6 +4,7 @@ import { extname, join, relative, resolve } from 'node:path';
 
 import {
   editorialTypographyViolations,
+  cardHeaderLayoutViolations,
   nestedCardViolations,
   directRadixImportViolations,
   productContractViolations,
@@ -119,6 +120,7 @@ for (const path of files(root)) {
     ...shadowRoleViolations(source, label, ownsProductUi),
     ...densityRoleViolations(source, label, ownsProductUi),
     ...nestedCardViolations(source, label, ownsProductUi),
+    ...cardHeaderLayoutViolations(source, label, ownsProductUi),
     ...productControlViolations(source, label, ownsProductUi),
   );
   advisories.push(...radiusRoleAdvisories(source, label, ownsProductUi));

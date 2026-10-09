@@ -16,7 +16,14 @@ import { useRefreshAfterMapping } from '@/components/integrations/data-sources';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardEyebrow,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
@@ -91,14 +98,10 @@ function GrantHeader({
   const label = grant ? GRANT_STATUS_LABEL[grant.status] : 'Not connected';
 
   return (
-    <CardHeader className="border-border-subtle flex-row items-center justify-between gap-3 border-b pb-3">
-      <div className="grid min-w-0 gap-0.5">
-        <CardEyebrow>OAuth grant</CardEyebrow>
-        <CardTitle>{meta.title}</CardTitle>
-        <p className="type-caption truncate">{meta.blurb}</p>
-      </div>
-      <div className="shrink-0">
-        {badge.variant === 'status' ? (
+    <CardHeader
+      bordered
+      actions={
+        badge.variant === 'status' ? (
           <Badge variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
             {label}
           </Badge>
@@ -106,8 +109,12 @@ function GrantHeader({
           <Badge variant="neutral" data-testid={`grant-status-${family}`}>
             {label}
           </Badge>
-        )}
-      </div>
+        )
+      }
+    >
+      <CardEyebrow>OAuth grant</CardEyebrow>
+      <CardTitle>{meta.title}</CardTitle>
+      <CardDescription className="truncate">{meta.blurb}</CardDescription>
     </CardHeader>
   );
 }

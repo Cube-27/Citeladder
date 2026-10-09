@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Drawer } from '@/components/ui/drawer';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { PageLoading } from '@/components/layout/page-loading';
-import { TrafficPager } from './traffic-pager';
+import { Pager } from '@/components/ui/pager';
 import { aiTrafficApi, type TrafficFilters } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext } from '@/lib/project/project-context';
-import { useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, useCursorTable } from '@/lib/table/use-cursor-table';
 import { TrafficPages } from './pages-view';
 
 export function CrawlerPages({
@@ -35,21 +35,15 @@ export function CrawlerPages({
     >
       {query.isLoading ? <PageLoading label="Loading crawler paths…" /> : null}
       {query.isError ? (
-        <ReadError
-          error={query.error}
-          fallback="Could not read crawler pages"
-          onRetry={() => query.refetch()}
-        />
+        <ReadError {...readErrorProps(query)} fallback="Could not read crawler pages" />
       ) : null}
       {query.data && !query.isError ? (
         <>
           <TrafficPages data={query.data} filters={filters} />
-          <TrafficPager
+          <Pager
+            hideWhenSinglePage
             page={pager.page}
-            canPrev={pager.canPrev}
-            canNext={!!query.data.next_cursor}
-            onPrev={pager.pop}
-            onNext={() => pager.push(query.data?.next_cursor ?? null)}
+            {...cursorControls(pager, query.data.next_cursor)}
           />
         </>
       ) : null}

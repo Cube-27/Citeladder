@@ -1,7 +1,16 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 
+import {
+  CHART_MARGIN,
+  ChartContainer,
+  ChartTooltipPanel,
+  LegendSwatch,
+  axisProps,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import {
   axisDomainMax,
   computeTickIndices,
@@ -25,18 +34,15 @@ import { cn } from '@/lib/utils';
  *    covers different calendar dates than the selection, so position is the
  *    only honest shared axis; each point keeps its own real date for the
  *    tooltip.
- * 2. Each metric gets its OWN value domain. Clicks and impressions differ by
- *    orders of magnitude, and CTR is a fraction while position is a rank — a
- *    shared axis would flatten every series but the largest into a straight
- *    line. Position additionally inverts, because a smaller rank is better.
+ * 2. Each metric gets its OWN value domain — a hidden y-axis per series.
+ *    Clicks and impressions differ by orders of magnitude, and CTR is a
+ *    fraction while position is a rank — a shared axis would flatten every
+ *    series but the largest into a straight line. Position additionally
+ *    inverts, because a smaller rank is better.
  *
  * A null bucket is an unmeasured one: the line breaks there rather than
  * dropping to zero.
  */
-
-const PADDING = { top: 12, right: 12, bottom: 22, left: 12 };
-const VIEW_WIDTH = 720;
-const VIEW_HEIGHT = 220;
 
 export type ChartSeries = {
   key: PerformanceMetricKey;
@@ -47,58 +53,30 @@ export type ChartSeries = {
   comparison: PerformanceChartPoint[] | null;
 };
 
-type Projected = { x: number; y: number };
+const COMPARISON_SUFFIX = '__comparison';
 
-function domainFor(series: ChartSeries): { min: number; max: number } {
+function domainFor(series: ChartSeries): [number, number] {
   const max = seriesMax(series.selected, series.comparison ?? []);
-  if (isInvertedMetric(series.key)) {
-    // Rank charts read best from 1 at the top down to a nice ceiling.
-    return { min: 0, max: axisDomainMax(Math.max(max, 1)) };
-  }
-  return { min: 0, max: axisDomainMax(max) };
+  // Rank charts read best from 1 at the top down to a nice ceiling.
+  return [0, axisDomainMax(isInvertedMetric(series.key) ? Math.max(max, 1) : max)];
 }
 
-function project(
-  points: PerformanceChartPoint[],
-  domain: { min: number; max: number },
-  inverted: boolean,
-  columnCount: number,
-): (Projected | null)[] {
-  const innerWidth = VIEW_WIDTH - PADDING.left - PADDING.right;
-  const innerHeight = VIEW_HEIGHT - PADDING.top - PADDING.bottom;
-  const span = Math.max(1, columnCount - 1);
-  const range = domain.max - domain.min || 1;
-  return points.map((point, index) => {
-    if (point.value === null) return null;
-    const ratio = (point.value - domain.min) / range;
-    const clamped = Math.max(0, Math.min(1, ratio));
-    return {
-      x: PADDING.left + (columnCount > 1 ? (index / span) * innerWidth : innerWidth / 2),
-      // Inverted metrics (position) put the BEST value at the top.
-      y: PADDING.top + innerHeight * (inverted ? clamped : 1 - clamped),
-    };
-  });
-}
-
-function toPath(points: (Projected | null)[]): string[] {
-  const segments: string[] = [];
-  let current: Projected[] = [];
-  for (const point of points) {
-    if (point === null) {
-      if (current.length > 1) segments.push(toLine(current));
-      current = [];
-    } else {
-      current.push(point);
+/**
+ * One row per position, each series (and its comparison) a column. An
+ * unmeasured bucket is left OFF the row: the line breaks there and the hover
+ * card does not list it at zero.
+ */
+function toRows(series: readonly ChartSeries[], columnCount: number) {
+  return Array.from({ length: columnCount }, (_, index) => {
+    const row: Record<string, number> = { index };
+    for (const entry of series) {
+      const value = entry.selected[index]?.value;
+      if (typeof value === 'number') row[entry.key] = value;
+      const comparison = entry.comparison?.[index]?.value;
+      if (typeof comparison === 'number') row[entry.key + COMPARISON_SUFFIX] = comparison;
     }
-  }
-  if (current.length > 1) segments.push(toLine(current));
-  return segments;
-}
-
-function toLine(points: Projected[]): string {
-  return points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
-    .join(' ');
+    return row;
+  });
 }
 
 function chartSummary(series: readonly ChartSeries[], columnCount: number): string {
@@ -110,19 +88,10 @@ function chartSummary(series: readonly ChartSeries[], columnCount: number): stri
   }`;
 }
 
-/** The end ticks hug the plot edges; everything between them is centred. */
-function tickAlignClass(position: number, count: number): string {
-  if (position === 0) return 'translate-x-0 text-left';
-  if (position === count - 1) return '-translate-x-full text-right';
-  return '-translate-x-1/2 text-center';
-}
-
 export function PerformanceChart({
   series,
   className,
 }: Readonly<{ series: readonly ChartSeries[]; className?: string }>) {
-  const titleId = useId();
-  const [hover, setHover] = useState<number | null>(null);
   const columnCount = series.reduce(
     (max, entry) => Math.max(max, entry.selected.length, entry.comparison?.length ?? 0),
     0,
@@ -130,181 +99,98 @@ export function PerformanceChart({
   const summary = chartSummary(series, columnCount);
 
   if (!series.length || columnCount === 0) {
-    // Nothing is plotted, so the plot's height is not reserved. Holding the
-    // full 220px for a single line of text left a tall empty box in the middle
-    // of the screen that read as a broken chart rather than an absent one.
-    // The region still states which absence this is, using the summary that
-    // already distinguishes "no metrics selected" from "nothing measured".
-    return (
-      <div className={cn('type-body flex min-h-[72px] items-center', className)}>{summary}</div>
-    );
+    // Nothing is plotted, so the plot's height is not reserved. A tall empty
+    // box read as a broken chart rather than an absent one. The line still
+    // states which absence this is.
+    return <InlineEmpty className={cn('min-h-18', className)}>{summary}</InlineEmpty>;
   }
-
-  const innerWidth = VIEW_WIDTH - PADDING.left - PADDING.right;
-  // Hover bands share project()'s geometry: points sit at
-  // left + (i / (n - 1)) * innerWidth, so a band is centred on its point
-  // rather than tiling from the left edge. Without this the crosshair drifts
-  // off the line and the last band falls short of the chart's right edge.
-  const pointX = (index: number) =>
-    PADDING.left + (columnCount > 1 ? (index / (columnCount - 1)) * innerWidth : innerWidth / 2);
-  const bandWidth = columnCount > 1 ? innerWidth / (columnCount - 1) : innerWidth;
 
   // Axis dates come from the LONGEST selected series, never the first
   // non-empty one: columnCount spans comparisons too, so a shorter first
-  // series left the tail of the axis with no date for its index — and the
-  // fallback printed a bare position number beside real dates.
+  // series left the tail of the axis with no date for its index.
   const axisEntry = series.reduce<ChartSeries | null>(
     (longest, entry) =>
       longest === null || entry.selected.length > longest.selected.length ? entry : longest,
     null,
   );
   const axisPoints: readonly PerformanceChartPoint[] = axisEntry?.selected ?? [];
-  const tickIndices = computeTickIndices(columnCount, 6);
+  const config: ChartConfig = Object.fromEntries(
+    series.map((entry) => [entry.key, { label: entry.label, color: entry.color }]),
+  );
 
   return (
-    // The pointer handler lives on the wrapper, not the svg: the svg is a
-    // non-interactive graphic, and its <title> already names it for
-    // assistive technology.
-    <div className={cn('relative grid gap-2', className)} onMouseLeave={() => setHover(null)}>
-      <svg
-        viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
-        className="h-[220px] w-full"
-        aria-labelledby={titleId}
-        preserveAspectRatio="none"
-      >
-        <title id={titleId}>{summary}</title>
-        {/* No horizontal gridlines: the lines themselves carry the shape, and
-            banding the plot competes with them for attention. Only the
-            BASELINE is drawn, so a series still reads against a floor. */}
-        <line
-          x1={PADDING.left}
-          x2={VIEW_WIDTH - PADDING.right}
-          y1={VIEW_HEIGHT - PADDING.bottom}
-          y2={VIEW_HEIGHT - PADDING.bottom}
-          className="stroke-border-subtle"
-          strokeWidth={1}
-          vectorEffect="non-scaling-stroke"
-        />
-        {/* Horizontal axis tick marks */}
-        {tickIndices.map((idx) => (
-          <line
-            key={`tick-${idx}`}
-            x1={pointX(idx)}
-            x2={pointX(idx)}
-            y1={VIEW_HEIGHT - PADDING.bottom}
-            y2={VIEW_HEIGHT - PADDING.bottom + 4}
-            className="stroke-border"
-            strokeWidth={1}
-            vectorEffect="non-scaling-stroke"
+    <div className={cn('grid gap-2', className)}>
+      <ChartContainer config={config} size="md" description={summary}>
+        <LineChart data={toRows(series, columnCount)} margin={CHART_MARGIN}>
+          <XAxis
+            {...axisProps}
+            dataKey="index"
+            ticks={computeTickIndices(columnCount, 6)}
+            interval={0}
+            // No date for this bucket means the selected window does not reach
+            // it (a comparison runs longer). An unlabelled tick is honest; a
+            // position number pretending to be a date is not.
+            tickFormatter={(index: number) => {
+              const date = axisPoints[index]?.date;
+              return date ? formatShortDate(date) : '';
+            }}
           />
-        ))}
-        {series.map((entry) => {
-          const domain = domainFor(entry);
-          const inverted = isInvertedMetric(entry.key);
-          const selected = project(entry.selected, domain, inverted, columnCount);
-          const comparison = entry.comparison
-            ? project(entry.comparison, domain, inverted, columnCount)
-            : [];
-          return (
-            <g key={entry.key}>
-              {toPath(comparison).map((d, index) => (
-                <path
-                  key={`comparison-${index}`}
-                  d={d}
-                  fill="none"
-                  stroke={entry.color}
-                  strokeWidth={1.5}
-                  strokeDasharray="4 3"
-                  strokeOpacity={0.65}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
-              {toPath(selected).map((d, index) => (
-                <path
-                  key={`selected-${index}`}
-                  d={d}
-                  fill="none"
-                  stroke={entry.color}
-                  strokeWidth={2}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
-            </g>
-          );
-        })}
-        {hover !== null ? (
-          <line
-            x1={pointX(hover)}
-            x2={pointX(hover)}
-            y1={PADDING.top}
-            y2={VIEW_HEIGHT - PADDING.bottom}
-            className="stroke-border"
-            strokeWidth={1}
-            vectorEffect="non-scaling-stroke"
-          />
-        ) : null}
-        {Array.from({ length: columnCount }, (_, index) => (
-          <rect
-            key={index}
-            // Clamped at both ends so the first and last bands stop at the
-            // chart edges instead of overhanging the plot area.
-            x={Math.max(PADDING.left, pointX(index) - bandWidth / 2)}
-            y={PADDING.top}
-            width={
-              Math.min(VIEW_WIDTH - PADDING.right, pointX(index) + bandWidth / 2) -
-              Math.max(PADDING.left, pointX(index) - bandWidth / 2)
+          {series.map((entry) => (
+            <YAxis
+              key={entry.key}
+              yAxisId={entry.key}
+              hide
+              domain={domainFor(entry)}
+              reversed={isInvertedMetric(entry.key)}
+            />
+          ))}
+          <Tooltip
+            cursor={{ className: 'stroke-border' }}
+            content={({ active, label }) =>
+              active && typeof label === 'number' ? (
+                <ChartTooltip series={series} index={label} dateSource={axisEntry} />
+              ) : null
             }
-            height={VIEW_HEIGHT - PADDING.top - PADDING.bottom}
-            fill="transparent"
-            onMouseEnter={() => setHover(index)}
           />
+          {series.flatMap((entry) => [
+            <Line
+              key={entry.key + COMPARISON_SUFFIX}
+              yAxisId={entry.key}
+              dataKey={entry.key + COMPARISON_SUFFIX}
+              name={`${entry.label} (comparison)`}
+              stroke={entry.color}
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+              strokeOpacity={0.65}
+              connectNulls={false}
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+            />,
+            <Line
+              key={entry.key}
+              yAxisId={entry.key}
+              dataKey={entry.key}
+              name={entry.label}
+              stroke={entry.color}
+              strokeWidth={2}
+              connectNulls={false}
+              dot={false}
+              isAnimationActive={false}
+            />,
+          ])}
+        </LineChart>
+      </ChartContainer>
+
+      <ul className="flex flex-wrap gap-x-4 gap-y-1">
+        {series.map((entry) => (
+          <li key={entry.key} className="type-caption flex items-center gap-2">
+            <LegendSwatch color={entry.color} shape="line" />
+            {entry.label}
+            <span className="tabular-nums">0–{formatAxisTick(entry.key, domainFor(entry)[1])}</span>
+          </li>
         ))}
-      </svg>
-      {hover !== null ? (
-        <ChartTooltip series={series} index={hover} dateSource={axisEntry} />
-      ) : null}
-
-      {/* Horizontal axis date labels */}
-      <div className="text-muted relative h-5 w-full select-none" aria-hidden>
-        {tickIndices.map((idx, i) => {
-          const dateStr = axisPoints[idx]?.date;
-          // No date for this bucket means the selected window does not reach
-          // it (a comparison runs longer). An unlabelled tick is honest; a
-          // position number pretending to be a date is not.
-          if (!dateStr) return null;
-          const label = formatShortDate(dateStr);
-          const pct = (pointX(idx) / VIEW_WIDTH) * 100;
-          const alignClass = tickAlignClass(i, tickIndices.length);
-          return (
-            <span
-              key={`x-label-${idx}`}
-              className={cn('type-caption absolute tabular-nums', alignClass)}
-              style={{ left: `${pct}%` }}
-            >
-              {label}
-            </span>
-          );
-        })}
-      </div>
-
-      <div>
-        <ul className="flex flex-wrap gap-x-4 gap-y-1">
-          {series.map((entry) => {
-            const domain = domainFor(entry);
-            return (
-              <li key={entry.key} className="type-caption flex items-center gap-2">
-                <span
-                  aria-hidden
-                  className="inline-block h-0.5 w-4 rounded-full"
-                  style={{ backgroundColor: entry.color }}
-                />
-                {entry.label}
-                <span className="tabular-nums">0–{formatAxisTick(entry.key, domain.max)}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      </ul>
     </div>
   );
 }
@@ -322,43 +208,36 @@ function ChartTooltip({
   series: readonly ChartSeries[];
   index: number;
   /**
-   * The series the AXIS labels its dates from. Every series in one chart
-   * covers the same window, so any of them would date a bucket the same way
-   * — but a shorter one has no point at the far end, and reading dates from a
-   * different series than the axis does is how a tooltip ends up blank under
-   * a labelled tick.
+   * The series the AXIS labels its dates from, so the tooltip never reads a
+   * date from a shorter series than the axis does.
    */
   dateSource: ChartSeries | null;
 }>) {
   const selectedDate = dateSource?.selected[index]?.date ?? null;
   const comparisonDate = dateSource?.comparison?.[index]?.date ?? null;
   return (
-    <output className="type-caption bg-elevated border-border shadow-overlay pointer-events-none absolute top-2 right-2 grid gap-1 rounded-[var(--radius-card)] border px-3 py-2">
-      <p className="text-secondary">
+    <ChartTooltipPanel className="type-caption grid gap-1">
+      <p className="type-badge">
         Day <span className="tabular-nums">{index + 1}</span>
         {selectedDate ? ` · ${selectedDate}` : ''}
       </p>
       <ul className="grid gap-0.5">
         {series.map((entry) => (
           <li key={entry.key} className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="inline-block h-0.5 w-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-muted">{entry.label}</span>
+            <LegendSwatch color={entry.color} shape="line" />
+            <span>{entry.label}</span>
             <span className="tabular-nums">
               {formatMetric(entry.key, entry.selected[index]?.value ?? null)}
             </span>
             {entry.comparison ? (
-              <span className="text-muted tabular-nums">
+              <span className="tabular-nums">
                 vs {formatMetric(entry.key, entry.comparison[index]?.value ?? null)}
               </span>
             ) : null}
           </li>
         ))}
       </ul>
-      {comparisonDate ? <p className="text-muted">Comparison day · {comparisonDate}</p> : null}
-    </output>
+      {comparisonDate ? <p>Comparison day · {comparisonDate}</p> : null}
+    </ChartTooltipPanel>
   );
 }

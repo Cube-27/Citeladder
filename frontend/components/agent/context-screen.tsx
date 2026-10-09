@@ -5,13 +5,13 @@ import { useState } from 'react';
 
 import { BrandProfilePanel } from '@/components/knowledge-base/brand-profile-panel';
 import { PageShell } from '@/components/layout/page-shell';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
@@ -34,7 +34,7 @@ export function ContextScreen() {
   if (!activeProject || !activeWorkspaceId)
     return (
       <PageShell measure="workflow">
-        <Alert tone="info">Select or create a project to edit its context.</Alert>
+        <ProjectRequiredState />
       </PageShell>
     );
   return (
@@ -64,12 +64,7 @@ function AgentInstructions({
         description="Audience, voice and standing requirements the agent follows in every chat for this project."
       />
       {query.isError ? (
-        <ReadError
-          error={query.error}
-          fallback="Agent instructions could not be loaded."
-          onRetry={() => void query.refetch()}
-          pending={query.isFetching}
-        />
+        <ReadError {...readErrorProps(query)} fallback="Agent instructions could not be loaded." />
       ) : null}
       {query.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {query.data ? (
@@ -192,12 +187,7 @@ function CompanyFacts({
         description="The canonical facts and competitors used across CiteLadder, including by the agent."
       />
       {profile.isError ? (
-        <ReadError
-          error={profile.error}
-          fallback="Company facts could not be loaded."
-          onRetry={() => void profile.refetch()}
-          pending={profile.isFetching}
-        />
+        <ReadError {...readErrorProps(profile)} fallback="Company facts could not be loaded." />
       ) : null}
       {profile.isPending ? <Skeleton className="h-48 w-full" /> : null}
       {profile.data ? (
