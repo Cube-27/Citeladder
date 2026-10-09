@@ -30,11 +30,12 @@ describe('RootErrorsBlock (B3)', () => {
     const block = screen.getByTestId('root-errors-block');
     const rows = within(block).getAllByTestId('root-error-row');
     expect(rows).toHaveLength(2);
-    expect(within(rows[0]).getByText('GET')).toBeInTheDocument();
-    expect(within(rows[0]).getByText('https://acme.com/')).toBeInTheDocument();
-    expect(within(rows[0]).getByText('http_5xx')).toBeInTheDocument();
-    expect(within(rows[0]).getByText('HTTP 500')).toBeInTheDocument();
-    expect(within(rows[0]).getByText('812 ms')).toBeInTheDocument();
+    const first = within(rows[0]!);
+    expect(first.getByText('GET')).toBeInTheDocument();
+    expect(first.getByText('https://acme.com/')).toBeInTheDocument();
+    expect(first.getByText('http_5xx')).toBeInTheDocument();
+    expect(first.getByText('HTTP 500')).toBeInTheDocument();
+    expect(first.getByText('812 ms')).toBeInTheDocument();
     // No PageDetail exists for a URL the crawl never admitted: the rows must
     // not link anywhere.
     expect(within(block).queryByRole('link')).not.toBeInTheDocument();

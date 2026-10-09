@@ -34,27 +34,20 @@ function combined(line: string): Record<string, unknown> | null {
       line,
     );
   if (!match) return null;
-  const date = /^(\d{2})\/(\w{3})\/(\d{4}):(\d{2}:\d{2}:\d{2}) ([+-]\d{4})$/u.exec(match[2]!);
+  // Every group takes part in a match, so the defaults never apply.
+  const [, clientIp, stamp = '', method, path, status, userAgent] = match;
+  const date = /^(\d{2})\/(\w{3})\/(\d{4}):(\d{2}:\d{2}:\d{2}) ([+-]\d{4})$/u.exec(stamp);
   if (!date) return null;
-  const month = months.indexOf(date[2]!);
+  const [, day, monthName = '', year, time, offset = ''] = date;
+  const month = months.indexOf(monthName);
   if (month < 0) return null;
   return {
-    client_ip: match[1],
-    timestamp:
-      date[3] +
-      '-' +
-      String(month + 1).padStart(2, '0') +
-      '-' +
-      date[1] +
-      'T' +
-      date[4] +
-      date[5]!.slice(0, 3) +
-      ':' +
-      date[5]!.slice(3),
-    method: match[3],
-    path: match[4],
-    status: Number(match[5]),
-    user_agent: match[6],
+    client_ip: clientIp,
+    timestamp: `${year}-${String(month + 1).padStart(2, '0')}-${day}T${time}${offset.slice(0, 3)}:${offset.slice(3)}`,
+    method,
+    path,
+    status: Number(status),
+    user_agent: userAgent,
   };
 }
 function logValue(line: string, format: string): unknown {

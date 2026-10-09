@@ -97,7 +97,7 @@ function marketingRouteExists(href: string): boolean {
   if (PUBLISHED_PLATFORM.some((item) => item.href === href)) {
     return PLATFORM_PAGES.some((page) => page.path === href);
   }
-  const pathname = href.split('#', 1)[0].replace(/^\//, '');
+  const pathname = href.split('#', 1)[0]!.replace(/^\//, '');
   const pages = resolve(import.meta.dirname, '../../apps/marketing/src/pages');
   const candidates = pathname
     ? [resolve(pages, `${pathname}.astro`), resolve(pages, pathname, 'index.astro')]

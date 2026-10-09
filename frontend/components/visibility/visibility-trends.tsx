@@ -273,11 +273,11 @@ function MeasurementHistory({
     focused === null || focusedIsBrand
       ? toChartPoints(points, metric, timeZone)
       : toNamedChartPoints(points, metric, focused, timeZone);
-  const chartPoints = base.map((point, index) => ({
+  const chartPoints = base.map((point) => ({
     ...point,
     // The plotted values are already whole percent, so `formatRate` — which
     // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
-    label: `${formatPointDate(points[index].completed_at, timeZone)} · ${formatWholePercent(point.value)}`,
+    label: `${formatPointDate(point.completedAt, timeZone)} · ${formatWholePercent(point.value)}`,
     // The full date is the hover; the axis tick gets the short form the
     // series was built with, so the ticks stay readable at three across.
     axisLabel: point.label,

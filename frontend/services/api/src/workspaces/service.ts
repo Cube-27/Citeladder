@@ -18,8 +18,11 @@ import { ensureWorkspaceBilling } from '../entitlements/bootstrap.ts';
 export type User = Selectable<Users>;
 export type Member = Selectable<WorkspaceMembers>;
 type Role = keyof typeof policy.workspaces.roles;
+const isRole = (key: string): key is Role => Object.hasOwn(policy.workspaces.roles, key);
 // Native workspace policy names the roles used by the wire enum.
-const roleSchema = z.enum(Object.keys(policy.workspaces.roles) as [Role, ...Role[]]);
+const [firstRole, ...otherRoles] = Object.keys(policy.workspaces.roles).filter(isRole);
+if (!firstRole) throw new Error('Workspace policy names no roles.');
+const roleSchema = z.enum([firstRole, ...otherRoles]);
 export const assignableRoleSchema = roleSchema.exclude(['owner']);
 export type AssignableRole = z.infer<typeof assignableRoleSchema>;
 export type MemberMutation =

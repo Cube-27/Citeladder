@@ -35,8 +35,8 @@ describe('RankingRowsTable', () => {
       />,
     );
     const rows = screen.getAllByRole('row').slice(1);
-    expect(within(rows[0]).getByText('Leader')).toBeVisible();
-    expect(within(rows[1]).getByText('Acme')).toBeVisible();
+    expect(within(rows[0]!).getByText('Leader')).toBeVisible();
+    expect(within(rows[1]!).getByText('Acme')).toBeVisible();
     expect(screen.queryByRole('columnheader', { name: /rank/i })).toBeNull();
   });
   it('identifies the brand and shows actual citation measurements', () => {

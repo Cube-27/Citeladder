@@ -60,8 +60,11 @@ function useOAuthReturn() {
   return { connected, error: result.error };
 }
 
+/** A Connect row starts from the provider that opened it, so it is never empty. */
+type FamilyProviders = [IntegrationProvider, ...IntegrationProvider[]];
+
 type Row =
-  | { kind: 'connect'; family: GrantFamily; providers: IntegrationProvider[] }
+  | { kind: 'connect'; family: GrantFamily; providers: FamilyProviders }
   | {
       kind: 'source';
       provider: IntegrationProvider;
@@ -135,14 +138,14 @@ function ConnectRow({
   startConnect,
 }: Readonly<{
   family: GrantFamily;
-  providers: IntegrationProvider[];
+  providers: FamilyProviders;
   required: boolean;
   canManage: boolean;
   startConnect: (family: GrantFamily) => void;
 }>) {
   return (
     <RowFrame
-      Icon={PROVIDER_META[providers[0]!].Icon}
+      Icon={PROVIDER_META[providers[0]].Icon}
       title={joinProviderLabels(providers)}
       status={required ? 'Not connected' : 'Optional'}
       action={

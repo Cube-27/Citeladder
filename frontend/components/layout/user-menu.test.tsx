@@ -123,7 +123,8 @@ describe('UserMenu', () => {
 
     const triggers = screen.getAllByRole('button');
     expect(triggers).toHaveLength(2);
-    const [desktopTrigger, compactTrigger] = triggers;
+    const desktopTrigger = triggers[0]!;
+    const compactTrigger = triggers[1]!;
 
     await user.click(compactTrigger);
     expect(await screen.findByRole('menu')).toBeVisible();

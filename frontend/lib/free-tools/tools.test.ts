@@ -21,8 +21,8 @@ describe('browser tool transformations', () => {
       status: 'Allowed by supplied rules',
       evidence: 'Line 3: Allow: /private/guide$',
     });
-    expect(result[1].status).toBe('Blocked by supplied rules');
-    expect(testRobots(body, 'https://example.com/private/guide/more', bots)[0].status).toBe(
+    expect(result[1]?.status).toBe('Blocked by supplied rules');
+    expect(testRobots(body, 'https://example.com/private/guide/more', bots)[0]?.status).toBe(
       'Blocked by supplied rules',
     );
   });
@@ -32,13 +32,13 @@ describe('browser tool transformations', () => {
       'Allowed by supplied rules',
       'Blocked by supplied rules',
     ]);
-    expect(testRobots(body, 'https://example.com/private/x', bots)[0].status).toBe(
+    expect(testRobots(body, 'https://example.com/private/x', bots)[0]?.status).toBe(
       'Blocked by supplied rules',
     );
     expect(() => generateRobots(bots, [], 'User-agent: *', '')).toThrow();
     expect(() => testRobots('<html>Access denied</html>', 'https://example.com', bots)).toThrow();
     expect(
-      testRobots('# Crawl policy\n  # No restrictions', 'https://example.com', bots)[0].status,
+      testRobots('# Crawl policy\n  # No restrictions', 'https://example.com', bots)[0]?.status,
     ).toBe('Allowed by supplied rules');
   });
   it('preserves directive scope and reports absent headers as unknown', () => {

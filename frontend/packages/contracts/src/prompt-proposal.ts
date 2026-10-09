@@ -28,8 +28,8 @@ export function parsePromptProposal(body: string, maxCount: number) {
     } else open.lines.push(line);
     offset += line.length + 1;
   }
-  if (blocks.length !== 1) return null;
-  const block = blocks[0]!;
+  const [block, ...others] = blocks;
+  if (!block || others.length) return null;
   const schema = z.object({
     prompts: z
       .array(

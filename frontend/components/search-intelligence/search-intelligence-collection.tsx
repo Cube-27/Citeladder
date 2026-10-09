@@ -18,7 +18,10 @@ import { SearchMetrics, SearchSummaryEvidence } from './search-intelligence-over
 import { SearchIntelligenceHistory } from './search-intelligence-history';
 import { SearchValue } from './search-intelligence-value';
 
-const VIEWS = {
+type View = { value: string; label: string };
+
+// Each tab opens on its first view, so every tab has one.
+const VIEWS: Record<'keywords' | 'backlinks' | 'competitors', readonly [View, ...View[]]> = {
   keywords: [
     { value: 'ranking_keywords', label: 'Ranking keywords' },
     { value: 'organic_pages', label: 'Top pages' },

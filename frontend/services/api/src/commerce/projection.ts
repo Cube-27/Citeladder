@@ -21,6 +21,7 @@ import {
   categoryKey,
   categoryTitle,
   pageIdentity,
+  PRODUCT_FIELDS,
   productAlias,
   productCategories,
   productFacts,
@@ -142,7 +143,7 @@ async function projectProduct(
   const product = existing ?? (await newProduct(db, scope, url));
   const sources = jsonObject(product.field_sources, 'commerce_products.field_sources');
   const values: Partial<typeof projection.values> = { ...projection.values };
-  for (const field of Object.keys(projection.values) as (keyof typeof projection.values)[]) {
+  for (const field of PRODUCT_FIELDS) {
     const value = projection.values[field];
     const provenance =
       sources[field] === undefined ? {} : jsonObject(sources[field], `field_sources.${field}`);

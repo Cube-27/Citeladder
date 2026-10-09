@@ -73,6 +73,7 @@ function moveActions(
     return;
   const next = [...actions];
   const [item] = next.splice(from, 1);
+  if (!item) return;
   next.splice(to, 0, item);
   reorder.mutate(next);
 }

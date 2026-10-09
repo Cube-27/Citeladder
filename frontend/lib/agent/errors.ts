@@ -3,7 +3,10 @@ import { ApiError, humanizeApiError } from '@/lib/api/errors';
 /** What a refused Agent write means to the reader, and whether a new chat helps. */
 export type AgentWriteFailure = { message: string; startNewChat: boolean };
 
-const CODED: Record<string, AgentWriteFailure> = {
+const CODED: {
+  agent_funding_unavailable: AgentWriteFailure;
+  [code: string]: AgentWriteFailure;
+} = {
   agent_funding_unavailable: {
     message: 'There are not enough AI credits and no connected model to run the agent.',
     startNewChat: false,

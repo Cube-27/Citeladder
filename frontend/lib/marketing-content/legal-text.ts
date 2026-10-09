@@ -17,7 +17,9 @@ export function legalSections(text: string): LegalSection[] {
     if (line.startsWith('## ')) {
       const heading = HEADING.exec(line);
       if (!heading) throw new Error(`Malformed legal section heading: ${line}`);
-      sections.push({ id: heading[1], title: heading[2], paragraphs: [], bullets: [] });
+      // Both groups take part in every match.
+      const [, id = '', title = ''] = heading;
+      sections.push({ id, title, paragraphs: [], bullets: [] });
       continue;
     }
     const section = sections.at(-1);

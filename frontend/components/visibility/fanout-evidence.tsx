@@ -63,7 +63,7 @@ export type FanoutScope = Readonly<{
 const PAGE_SIZE = 10;
 
 /** What a page of this grouping is counting, for the shared table footer. */
-const GROUP_NOUNS: Record<string, string> = {
+const GROUP_NOUNS: Record<(typeof GROUP_OPTIONS)[number]['value'], string> = {
   none: 'searches',
   prompt: 'prompts',
   topic: 'topics',

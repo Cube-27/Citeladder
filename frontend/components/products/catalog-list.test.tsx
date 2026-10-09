@@ -197,9 +197,9 @@ describe('CatalogList', () => {
 describe('catalogEntries', () => {
   it('keys every entry the way the URL spells it', () => {
     const { categories, products } = catalogEntries(query());
-    expect(categories[0].key).toBe(`category:${CATEGORY_ID}`);
-    expect(products[0].key).toBe(`product:${PRODUCT_ID}`);
-    expect(categories[0].children?.[0].key).toBe(`product:${PRODUCT_ID}`);
+    expect(categories[0]?.key).toBe(`category:${CATEGORY_ID}`);
+    expect(products[0]?.key).toBe(`product:${PRODUCT_ID}`);
+    expect(categories[0]?.children?.[0]?.key).toBe(`product:${PRODUCT_ID}`);
   });
 
   it('is empty while the catalog has not loaded', () => {

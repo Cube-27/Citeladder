@@ -10,7 +10,7 @@ describe('SSE frame mechanics', () => {
     const second = splitSseFrames(`${first.rest}type":"crawl.status"}\n\n`);
     expect(second.rest).toBe('');
     expect(second.frames).toHaveLength(1);
-    expect(parseSseFrame(second.frames[0])).toEqual({
+    expect(parseSseFrame(second.frames[0]!)).toEqual({
       id: 'evt-1',
       event: null,
       data: '{"event_type":"crawl.status"}',

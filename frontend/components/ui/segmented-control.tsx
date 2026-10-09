@@ -60,9 +60,10 @@ export function SegmentedControl<T extends string>({
   const tabStop = selectedIndex === -1 ? 0 : selectedIndex;
 
   const move = (from: number, delta: number) => {
-    if (options.length === 0) return;
     const next = (from + delta + options.length) % options.length;
-    onChange(options[next].value);
+    const option = options[next];
+    if (!option) return;
+    onChange(option.value);
     buttonsRef.current[next]?.focus();
   };
 

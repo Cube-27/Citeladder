@@ -47,6 +47,22 @@ function shareText(value: number, total: number): string {
   return share < 0.1 ? '<0.1%' : `${share.toFixed(1)}%`;
 }
 
+/** Each segment starts where the ones before it ended, so the offsets are a running total. */
+function ringArcs(slices: readonly DonutSlice[], whole: number) {
+  let start = 0;
+  return slices.map((slice) => {
+    const length = (slice.value / whole) * CIRCUMFERENCE;
+    const arc = {
+      ...slice,
+      // A gap is only taken out of a segment long enough to give one up.
+      dash: Math.max(length - (length > GAP * 2 ? GAP : 0), 0.5),
+      offset: -start,
+    };
+    start += length;
+    return arc;
+  });
+}
+
 export function DonutChart({
   slices,
   total,
@@ -77,23 +93,7 @@ export function DonutChart({
     return <p className={textRole('caption', cn('text-secondary', className))}>{emptyLabel}</p>;
   }
 
-  // Each segment starts where the ones before it ended, so the offsets are a
-  // running total. The accumulator is local to this render: a linear scan
-  // avoids copying the growing array once for every slice.
-  const lengths = drawn.map((slice) => (slice.value / whole) * CIRCUMFERENCE);
-  const starts = lengths.reduce<number[]>(
-    (carry, length, index) => {
-      carry.push((carry[index] ?? 0) + length);
-      return carry;
-    },
-    [0],
-  );
-  const arcs = drawn.map((slice, index) => ({
-    ...slice,
-    // A gap is only taken out of a segment long enough to give one up.
-    dash: Math.max(lengths[index] - (lengths[index] > GAP * 2 ? GAP : 0), 0.5),
-    offset: -starts[index],
-  }));
+  const arcs = ringArcs(drawn, whole);
   // The remainder is drawn as a quiet arc rather than left as a gap: an
   // unclosed ring reads as a rendering fault, and a closed one that silently
   // rescaled its parts is worse.

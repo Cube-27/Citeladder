@@ -51,6 +51,26 @@ function actionMember(
 
 type Group = ReturnType<typeof groupMembers>[number];
 
+/**
+ * The columns one group writes onto its Action with their PostgreSQL types, in
+ * the batched update's VALUES order.
+ */
+const GROUP_COLUMN_TYPES = [
+  ['target_label', 'varchar'],
+  ['target_url', 'text'],
+  ['target_prompt_id', 'uuid'],
+  ['priority_score', 'float8'],
+  ['families', 'jsonb'],
+  ['approach', 'varchar'],
+  ['skill_id', 'varchar'],
+  ['diagnosis', 'jsonb'],
+  ['member_opportunity_ids', 'jsonb'],
+  ['opportunity_snapshot_id', 'uuid'],
+  ['evidence_cleared_at', 'timestamptz'],
+] as const;
+type GroupColumn = (typeof GROUP_COLUMN_TYPES)[number][0];
+const GROUP_COLUMNS = GROUP_COLUMN_TYPES.map(([column]) => column);
+
 /** The persisted fields one group writes onto its Action. */
 function groupFields(group: Group, snapshotId: string) {
   return {
@@ -65,24 +85,9 @@ function groupFields(group: Group, snapshotId: string) {
     member_opportunity_ids: JSON.stringify(group.members.map((member) => member.opportunity_id)),
     opportunity_snapshot_id: snapshotId,
     evidence_cleared_at: null,
-  };
+  } satisfies Record<GroupColumn, unknown>;
 }
 
-/** PostgreSQL type of each group field, for the batched update's VALUES list. */
-const GROUP_FIELD_TYPES: Record<keyof ReturnType<typeof groupFields>, string> = {
-  target_label: 'varchar',
-  target_url: 'text',
-  target_prompt_id: 'uuid',
-  priority_score: 'float8',
-  families: 'jsonb',
-  approach: 'varchar',
-  skill_id: 'varchar',
-  diagnosis: 'jsonb',
-  member_opportunity_ids: 'jsonb',
-  opportunity_snapshot_id: 'uuid',
-  evidence_cleared_at: 'timestamptz',
-};
-const GROUP_COLUMNS = Object.keys(GROUP_FIELD_TYPES) as (keyof typeof GROUP_FIELD_TYPES)[];
 // PostgreSQL binds at most 65,535 parameters per statement. Each row binds its
 // id plus every group column; the statement adds updated_at and workspace_id.
 const MAX_BIND_PARAMETERS = 65_535;
@@ -112,9 +117,7 @@ async function updateActionBatch(
     ({ id, fields }) =>
       sql`(${sql.join([
         sql`${id}::uuid`,
-        ...GROUP_COLUMNS.map(
-          (column) => sql`${fields[column]}::${sql.raw(GROUP_FIELD_TYPES[column])}`,
-        ),
+        ...GROUP_COLUMN_TYPES.map(([column, type]) => sql`${fields[column]}::${sql.raw(type)}`),
       ])})`,
   );
   await sql`update actions

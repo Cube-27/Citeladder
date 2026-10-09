@@ -372,7 +372,9 @@ service source. They count the casts and assertions reviews kept finding:
 assertion on an indexed element (`list[0]!`, `list.at(-1)!`; a `split` part is
 exempt), and a cast inside an `onValueChange` handler outside `components/ui`,
 whose generic controls already hand the handler the option type.
-`--write-baseline` lowers both baselines.
+`--write-baseline` lowers both baselines. Both `frontend/tsconfig.json` and the
+API service's set `noUncheckedIndexedAccess`, so an indexed read is
+`T | undefined` until it is checked.
 
 ```powershell
 .\scripts\check.ps1            # affected owners, affected builds, with fixes

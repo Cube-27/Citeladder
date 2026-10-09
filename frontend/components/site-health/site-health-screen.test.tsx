@@ -239,7 +239,7 @@ describe('SiteHealthScreen — before the first crawl', () => {
     expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
 
     await waitFor(() => expect(monitoredRequests).toBe(1));
-    await user.click(runButtons[0]);
+    await user.click(runButtons[0]!);
     await waitFor(() => expect(createBody).toEqual({ project_id: PROJECT }));
     await waitFor(() => expect(monitoredRequests).toBeGreaterThanOrEqual(2));
   });

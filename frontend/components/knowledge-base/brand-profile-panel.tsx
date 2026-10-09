@@ -17,6 +17,7 @@ import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
+import { brandProfileDraftSchema } from '@citeladder/contracts';
 import type { BrandProfile, BrandProfileDraft, Project } from '@/lib/api/types';
 import { humanizeApiError } from '@/lib/api/errors';
 import { textRole } from '@/components/ui/typography';
@@ -49,13 +50,16 @@ function profileDraft(profile: BrandProfile): BrandProfileDraft {
   };
 }
 
+/** The editable profile fields, from the contract that owns them. */
+const DRAFT_FIELDS = brandProfileDraftSchema.keyof().options;
+
 /**
  * Only what the reader changed is sent, because the API marks every sent field
  * and facet reviewed. A cleared category is sent so the API can reject it.
  */
 function profileUpdate(draft: BrandProfileDraft, saved: BrandProfileDraft) {
   return Object.fromEntries(
-    (Object.keys(draft) as (keyof BrandProfileDraft)[]).flatMap((field) =>
+    DRAFT_FIELDS.flatMap((field) =>
       JSON.stringify(draft[field]) === JSON.stringify(saved[field]) ? [] : [[field, draft[field]]],
     ),
   ) as Partial<BrandProfileDraft>;

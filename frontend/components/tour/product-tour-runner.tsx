@@ -161,8 +161,8 @@ export default function ProductTourRunner({
         persist(next ? 'in_progress' : 'completed', next?.id ?? null);
       },
       onPrevClick: () => {
-        const previous = PRODUCT_TOUR_STEPS[Math.max(0, stepIndex - 1)];
-        if (previous.id === step.id) return;
+        const previous = PRODUCT_TOUR_STEPS[stepIndex - 1];
+        if (!previous) return;
         transitioning.current = true;
         destroyInstance();
         persist('in_progress', previous.id);

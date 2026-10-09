@@ -13,7 +13,9 @@
 export function brandInitials(name: string) {
   const [first, second] = name.replace(/\([^)]*\)/g, ' ').match(/[\p{L}\p{N}]+/gu) ?? [];
   if (!first) return '?';
-  const head = [...first];
-  if (!second) return head.slice(0, 2).join('').toUpperCase();
-  return (head[0] + [...second][0]).toUpperCase();
+  if (!second) return [...first].slice(0, 2).join('').toUpperCase();
+  // Destructuring a string reads code points; a matched word is never empty.
+  const [firstInitial = ''] = first;
+  const [secondInitial = ''] = second;
+  return (firstInitial + secondInitial).toUpperCase();
 }

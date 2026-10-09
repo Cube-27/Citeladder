@@ -720,7 +720,7 @@ describe('AEO Readiness contract', () => {
       },
       'readiness',
     );
-    expect(parsed.dimensions[0].not_applicable_count).toBe(1);
+    expect(parsed.dimensions[0]?.not_applicable_count).toBe(1);
     expect(parsed.score).toBeNull();
   });
 });
@@ -729,6 +729,6 @@ describe('AEO Readiness contract', () => {
 describe('cursorPageSchema generics', () => {
   it('composes with a trivial item schema', () => {
     const page = cursorPageSchema(z.strictObject({ x: z.number() }));
-    expect(strictValidate(page, { items: [{ x: 1 }], next_cursor: null }, 'p').items[0].x).toBe(1);
+    expect(strictValidate(page, { items: [{ x: 1 }], next_cursor: null }, 'p').items[0]?.x).toBe(1);
   });
 });
