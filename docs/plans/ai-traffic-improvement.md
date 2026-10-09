@@ -1,6 +1,6 @@
 # AI Traffic improvement plan
 
-**Status:** implemented 2026-10-09 in one PR (three phases). Shipped behaviour is
+**Status:** implemented 2026-10-09 in #328 (three phases). Shipped behaviour is
 owned by [AI Traffic](../ai-traffic.md).
 
 Feature 8 of the [feature review tracker](feature-review-tracker.md): customer
