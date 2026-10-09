@@ -20,6 +20,7 @@ import { textRole } from '@/components/ui/typography';
 import { formatCount, pluralCount } from '@/lib/format';
 import type {
   DatasetSelection,
+  ResearchScope,
   SearchIntelligenceReadiness,
   SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
@@ -30,8 +31,6 @@ import {
   reviewCompetitors,
   selectionKey,
 } from './search-intelligence-review-selection';
-
-export type ResearchScope = 'exact_host' | 'domain_subdomains';
 
 export type Advanced = {
   researchScope: ResearchScope;
@@ -165,7 +164,7 @@ export function AdvancedOptions({
             {...field}
             ariaLabel="Research scope"
             value={values.researchScope}
-            onValueChange={(value) => set.researchScope(value as ResearchScope)}
+            onValueChange={set.researchScope}
             options={[
               { value: 'domain_subdomains', label: 'Domain + subdomains' },
               { value: 'exact_host', label: 'Exact host' },
@@ -204,7 +203,7 @@ export function AdvancedOptions({
             {...field}
             ariaLabel="Keyword order"
             value={values.rankingOrder}
-            onValueChange={(value) => set.rankingOrder(value as DatasetSelection['order'])}
+            onValueChange={set.rankingOrder}
             options={[
               { value: 'volume', label: 'Highest search volume' },
               { value: 'traffic', label: 'Most estimated traffic' },
@@ -237,7 +236,7 @@ export function AdvancedOptions({
             {...field}
             ariaLabel="Backlink grouping"
             value={values.grouping}
-            onValueChange={(value) => set.grouping(value as Advanced['grouping'])}
+            onValueChange={set.grouping}
             options={[
               { value: 'as_is', label: 'Every backlink' },
               { value: 'one_per_domain', label: 'One backlink per linking domain' },
@@ -300,7 +299,7 @@ export function ReviewFooter({
 export function HistoryScopeNotice({
   scope,
   selections,
-}: Readonly<{ scope: string; selections: DatasetSelection[] }>) {
+}: Readonly<{ scope: ResearchScope; selections: DatasetSelection[] }>) {
   if (!historyScopeConflict(selections, scope)) return null;
   return (
     <Alert>

@@ -11,6 +11,7 @@ import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import type {
   DatasetSelection,
+  ResearchScope,
   ReviewPayload,
   SearchIntelligenceReadiness,
   SearchIntelligenceRun,
@@ -30,7 +31,6 @@ import {
   ReviewFooter,
   ReviewSummary,
   marketOptions,
-  type ResearchScope,
 } from './search-intelligence-review-parts';
 
 /** Typed depths keep a draft per dataset, so a field can be cleared while typing. */

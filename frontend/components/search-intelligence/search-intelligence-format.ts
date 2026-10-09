@@ -26,8 +26,8 @@ export function estimateUsd(value: string): string {
     const number = Number(value);
     return Number.isFinite(number) ? (Math.ceil(number * 10000) / 10000).toFixed(4) : value;
   }
-  const [whole, fraction = ''] = value.split('.');
-  const units = BigInt(whole!) * 10000n + BigInt((fraction + '0000').slice(0, 4));
+  const [whole = '0', fraction = ''] = value.split('.');
+  const units = BigInt(whole) * 10000n + BigInt((fraction + '0000').slice(0, 4));
   const rounded = units + (/[1-9]/.test(fraction.slice(4)) ? 1n : 0n);
   return `${rounded / 10000n}.${String(rounded % 10000n).padStart(4, '0')}`;
 }
@@ -37,7 +37,8 @@ export function datasetCount(
   dataset: { provider_total: number | null; unique_rows_saved: number } | undefined,
 ): string {
   if (!dataset) return 'Not fetched';
-  if (dataset.provider_total !== null) return searchNumber(dataset.provider_total)!;
+  if (dataset.provider_total !== null)
+    return searchNumber(dataset.provider_total) ?? String(dataset.provider_total);
   return dataset.unique_rows_saved
     ? `${searchNumber(dataset.unique_rows_saved)} saved`
     : 'No results';

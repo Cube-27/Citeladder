@@ -1,4 +1,8 @@
-import type { DatasetSelection, SearchIntelligenceReadiness } from '@/lib/api/search-intelligence';
+import type {
+  DatasetSelection,
+  ResearchScope,
+  SearchIntelligenceReadiness,
+} from '@/lib/api/search-intelligence';
 import {
   BACKLINK_DATASET_KINDS,
   COMPARISON_DATASET_KINDS,
@@ -96,7 +100,7 @@ export function defaultSelections(
 /** Exact-host comparisons cannot be ordered by traffic or position; the API refuses them. */
 export function comparisonOrderConflict(
   selections: DatasetSelection[],
-  researchScope: string,
+  researchScope: ResearchScope,
   order: DatasetSelection['order'],
 ) {
   return (
@@ -107,7 +111,7 @@ export function comparisonOrderConflict(
 }
 
 /** Backlink history covers the whole domain; the API refuses it for an exact host. */
-export function historyScopeConflict(selections: DatasetSelection[], researchScope: string) {
+export function historyScopeConflict(selections: DatasetSelection[], researchScope: ResearchScope) {
   return (
     researchScope === 'exact_host' && selections.some(({ kind }) => kind === 'backlink_history')
   );
@@ -119,7 +123,7 @@ export function reviewInputsValid(
     ownedTarget: string;
     location: string;
     seed: string;
-    researchScope: string;
+    researchScope: ResearchScope;
     order: DatasetSelection['order'];
   },
 ) {

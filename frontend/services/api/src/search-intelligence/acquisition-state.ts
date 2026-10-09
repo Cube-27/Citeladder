@@ -8,7 +8,7 @@ import type {
   SearchIntelligenceCalls,
   SearchIntelligenceDatasets,
 } from '../generated/db-schema.ts';
-import { pageEstimateMicrousd, si, type DatasetKind } from './requests.ts';
+import { datasetKind, pageEstimateMicrousd, si } from './requests.ts';
 import { INT4_MAX, normalizeResponse } from './normalization.ts';
 import type { ResearchResponse } from './live.ts';
 import type { ProviderError } from '../answer-engines/contracts.ts';
@@ -63,17 +63,21 @@ export class AcquisitionState {
   readonly db: Database;
   readonly task: QueueTask;
   readonly runId: string;
+  readonly projectId: string;
   constructor(db: Database, task: QueueTask, runId: string) {
+    // A Search Intelligence run always belongs to a project; fail here, not in a later query.
+    if (!task.project_id) throw new Error('Search Intelligence task has no project');
     this.db = db;
     this.task = task;
     this.runId = runId;
+    this.projectId = task.project_id;
   }
   run(db = this.db) {
     return db
       .selectFrom('search_intelligence_runs')
       .selectAll()
       .where('workspace_id', '=', this.task.workspace_id)
-      .where('project_id', '=', this.task.project_id!)
+      .where('project_id', '=', this.projectId)
       .where('id', '=', this.runId);
   }
   calls(db = this.db) {
@@ -81,7 +85,7 @@ export class AcquisitionState {
       .selectFrom('search_intelligence_calls')
       .selectAll()
       .where('workspace_id', '=', this.task.workspace_id)
-      .where('project_id', '=', this.task.project_id!)
+      .where('project_id', '=', this.projectId)
       .where('run_id', '=', this.runId);
   }
   async owned(db: Database) {
@@ -183,7 +187,7 @@ export class AcquisitionState {
       const target = record(plan.target),
         comparison = record(plan.comparison),
         request = record(plan.request),
-        kind = String(plan.dataset_kind);
+        kind = datasetKind(plan.dataset_kind);
       let dataset = await trx
         .selectFrom('search_intelligence_datasets')
         .selectAll()
@@ -277,7 +281,7 @@ export class AcquisitionState {
         .executeTakeFirst();
       // The reviewed estimate is a ceiling: never send a call that could pass it.
       // The page's own price, not the stored average: a short last page costs less.
-      const pageCost = pageEstimateMicrousd(kind as DatasetKind, Number(request.limit)) * 100;
+      const pageCost = pageEstimateMicrousd(kind, Number(request.limit)) * 100;
       if (
         call.status === 'intent' &&
         money(run.provider_reported_cost_usd) + pageCost > money(run.estimated_cost_usd)
