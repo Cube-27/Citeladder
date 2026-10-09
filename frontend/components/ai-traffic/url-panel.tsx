@@ -17,6 +17,8 @@ import { aiTrafficApi, type TrafficFilters } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext } from '@/lib/project/project-context';
 import { projectDestination } from '@/lib/navigation/project-destination';
+import { aiSourceLabel } from '@/lib/ai-traffic/series';
+import { coverageLabel, legStateLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
 
 export function TrafficLeg({
   leg,
@@ -26,9 +28,9 @@ export function TrafficLeg({
   if (compact) return <CompactTrafficLeg leg={leg} unit={unit} />;
   return (
     <span>
-      {leg.value === null ? 'Unavailable' : leg.value} {unit} · {leg.state.replaceAll('_', ' ')}
-      {leg.coverage ? ' · ' + leg.coverage : ''}
-      {leg.reason ? ' · ' + leg.reason.replaceAll('_', ' ') : ''}
+      {leg.value === null ? 'Unavailable' : leg.value} {unit} · {legStateLabel(leg.state)}
+      {leg.coverage ? ' · ' + coverageLabel(leg.coverage) : ''}
+      {leg.reason ? ' · ' + reasonLabel(leg.reason) : ''}
     </span>
   );
 }
@@ -80,6 +82,13 @@ export function UrlPanel({
       aiTrafficApi.url(projectId, urlHash!, filters, { workspaceId, signal }),
     enabled: !!urlHash && !!workspaceId && !!projectId,
   });
+  const catalog = useQuery({
+    queryKey: queryKeys.aiTraffic.view(workspaceId, projectId, 'catalog'),
+    queryFn: ({ signal }) => aiTrafficApi.catalog(projectId, { workspaceId, signal }),
+    enabled: !!urlHash && !!workspaceId && !!projectId,
+  });
+  const botLabel = (botId: string) =>
+    catalog.data?.bots.find((bot) => bot.bot_id === botId)?.label ?? words(botId);
   const data = query.isError ? undefined : query.data,
     page = data?.page;
   return (
@@ -99,16 +108,18 @@ export function UrlPanel({
           onRetry={() => query.refetch()}
         />
       ) : null}
-      {data ? <UrlEvidence data={data} projectId={projectId} /> : null}
+      {data ? <UrlEvidence data={data} projectId={projectId} botLabel={botLabel} /> : null}
     </Drawer>
   );
 }
 function UrlEvidence({
   data,
   projectId,
+  botLabel,
 }: Readonly<{
   data: z.infer<typeof aiTrafficUrlSchema>;
   projectId: string;
+  botLabel: (botId: string) => string;
 }>) {
   const page = data.page;
   if (!page)
@@ -143,13 +154,13 @@ function UrlEvidence({
       <p className="type-caption">First and last observations in this window</p>
       {data.crawls.map((r) => (
         <p key={r.bot_id}>
-          {r.bot_id}: {r.requests} requests · <DisplayTime value={r.first_seen} /> –{' '}
+          {botLabel(r.bot_id)}: {r.requests} requests · <DisplayTime value={r.first_seen} /> –{' '}
           <DisplayTime value={r.last_seen} />
         </p>
       ))}
       {data.referrals.map((r) => (
         <p key={r.ai_source}>
-          {r.ai_source}: first referral {r.first_referral} · {r.sessions} sessions
+          {aiSourceLabel(r.ai_source)}: first referral {r.first_referral} · {r.sessions} sessions
         </p>
       ))}
       {data.citations.map((r) => (
@@ -172,23 +183,30 @@ function UrlEvidence({
 export function TrafficUrlButton({
   urlHash,
   filters = {},
+  label,
   children = 'View AI Traffic',
-}: Readonly<{ urlHash: string; filters?: TrafficFilters; children?: React.ReactNode }>) {
+}: Readonly<{
+  urlHash: string;
+  filters?: TrafficFilters;
+  /** An accessible name when the visible text alone does not identify the page. */
+  label?: string;
+  children?: React.ReactNode;
+}>) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)} aria-label={label}>
         {children}
       </Button>
       <UrlPanel urlHash={open ? urlHash : null} onClose={() => setOpen(false)} filters={filters} />
     </>
   );
 }
-function trafficLegExplanation(leg: z.infer<typeof trafficLegSchema>, unit: string) {
+export function trafficLegExplanation(leg: z.infer<typeof trafficLegSchema>, unit: string) {
   return [
-    `${unit}: ${leg.state.replaceAll('_', ' ')}`,
-    leg.coverage && `Coverage: ${leg.coverage}`,
-    leg.reason?.replaceAll('_', ' '),
+    `${unit}: ${legStateLabel(leg.state)}`,
+    leg.coverage && coverageLabel(leg.coverage),
+    leg.reason && reasonLabel(leg.reason),
   ]
     .filter(Boolean)
     .join(' · ');

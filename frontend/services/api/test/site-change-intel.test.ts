@@ -260,8 +260,8 @@ describe('change_intel task', () => {
       summary: { total: 0, counts_by_class: {} },
     });
     expect(snapshot!.source_analysis_ids).toHaveLength(4);
+    // Without GA4 the project derives no AI Traffic insights.
     expect(await analyticsTasks(b)).toEqual([
-      { task_kind: 'ai_traffic_insights_refresh', payload: {} },
       {
         task_kind: 'opportunity_refresh',
         payload: { trigger_kind: 'site_change', trigger_id: snapshot!.id },

@@ -10,7 +10,9 @@ import {
   crawlSummary,
   crawlWindow,
   pageLimit,
+  presetDays,
   verificationFilter,
+  withReportingTimezone,
   type CrawlReadOptions,
 } from './reads.ts';
 import type { CrawlScope } from './state.ts';
@@ -25,23 +27,52 @@ import {
 } from '../http/keyset-cursor.ts';
 import { ApiError } from '../errors.ts';
 import { inventoryCrawlIds } from '../site-health/reads/crawl.ts';
+import { isoDateText } from '../db/timestamps.ts';
 import { compareText } from '../text-order.ts';
 import { firstOf } from '../lists.ts';
 
 type Leg = z.infer<typeof trafficLegSchema>;
-export async function pageContext(db: Database, scope: CrawlScope, options: CrawlReadOptions = {}) {
+/** Every pattern needs referral evidence, so only GA4-mapped projects derive insights. */
+export async function ga4Mapped(db: Database, scope: CrawlScope) {
+  return !!(await db
+    .selectFrom('integration_property_mappings')
+    .select('id')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('provider', '=', 'ga4')
+    .where('status', '=', 'active')
+    .executeTakeFirst());
+}
+/** An exact window, or a preset's newest snapshot whichever day it ends on. */
+export async function insightSnapshot(db: Database, scope: CrawlScope, options: CrawlReadOptions) {
+  let query = db
+    .selectFrom('ai_traffic_insights')
+    .selectAll()
+    .select([
+      isoDateText(sql.ref('window_start')).as('start'),
+      isoDateText(sql.ref('window_end')).as('end'),
+    ])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('formula_version', '=', aiTraffic.formula_version);
+  if (options.start_date || options.end_date) {
+    const w = crawlWindow(options);
+    query = query
+      .where('window_start', '=', sql<Date>`${w.start}::date`)
+      .where('window_end', '=', sql<Date>`${w.end}::date`);
+  } else
+    query = query
+      .where(sql<boolean>`window_end - window_start = ${presetDays(options) - 1}`)
+      .orderBy('window_end', 'desc');
+  return query.executeTakeFirst();
+}
+export async function pageContext(db: Database, scope: CrawlScope, input: CrawlReadOptions = {}) {
+  const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options);
   const [crawl, partitions, mapping, audits, snapshot] = await Promise.all([
     crawlSummary(db, scope, options),
     partitionQuality(db, { ...scope, ...w }, 'ga4_landing_daily'),
-    db
-      .selectFrom('integration_property_mappings')
-      .select('id')
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('provider', '=', 'ga4')
-      .where('status', '=', 'active')
-      .executeTakeFirst(),
+    ga4Mapped(db, scope),
     db
       .selectFrom('audits')
       .select('id')
@@ -79,7 +110,7 @@ export async function pageContext(db: Database, scope: CrawlScope, options: Craw
   return {
     crawl,
     quality,
-    ga4Connected: !!mapping,
+    ga4Connected: mapping,
     citationsAvailable: !!audits,
     ga4Complete: quality.every(
       (q) => q.revision !== null && q.flags.length === 0 && q.reporting_timezone !== null,
@@ -217,7 +248,24 @@ async function observedCoverage(
     label: 'Observed crawl coverage' as const,
   };
 }
-export async function pagesRead(db: Database, scope: CrawlScope, options: PageOptions = {}) {
+export async function pagesRead(db: Database, scope: CrawlScope, input: PageOptions = {}) {
+  let options = await withReportingTimezone(db, scope, input);
+  let urlHashes: string[] | undefined;
+  if (options.pattern) {
+    // A pattern's pages are read over the window its snapshot was derived from.
+    const saved = await insightSnapshot(db, scope, options);
+    if (!saved && (await ga4Mapped(db, scope)))
+      throw new ApiError(409, 'Insights are awaiting a persisted refresh. Try again shortly.', {
+        retryable: true,
+      });
+    const patterns = Array.isArray(saved?.patterns) ? saved.patterns : [];
+    const match = patterns.find(
+      (r) => typeof r === 'object' && r !== null && 'pattern' in r && r.pattern === options.pattern,
+    );
+    urlHashes =
+      match && typeof match === 'object' && 'url_hashes' in match ? strings(match.url_hashes) : [];
+    if (saved) options = { ...options, range: null, start_date: saved.start, end_date: saved.end };
+  }
   const w = crawlWindow(options),
     limit = pageLimit(options);
   const { cursor, ...rest } = options,
@@ -229,28 +277,6 @@ export async function pagesRead(db: Database, scope: CrawlScope, options: PageOp
   } catch (e) {
     if (e instanceof InvalidCursorError) throw new ApiError(422, e.message);
     throw e;
-  }
-  let urlHashes: string[] | undefined;
-  if (options.pattern) {
-    const saved = await db
-      .selectFrom('ai_traffic_insights')
-      .select('patterns')
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('window_start', '=', sql<Date>`${w.start}::date`)
-      .where('window_end', '=', sql<Date>`${w.end}::date`)
-      .where('formula_version', '=', aiTraffic.formula_version)
-      .executeTakeFirst();
-    if (!saved)
-      throw new ApiError(409, 'Insights are awaiting a persisted refresh. Try again shortly.', {
-        retryable: true,
-      });
-    const patterns = Array.isArray(saved?.patterns) ? saved.patterns : [];
-    const match = patterns.find(
-      (r) => typeof r === 'object' && r !== null && 'pattern' in r && r.pattern === options.pattern,
-    );
-    urlHashes =
-      match && typeof match === 'object' && 'url_hashes' in match ? strings(match.url_hashes) : [];
   }
   const [data, context] = await Promise.all([
     pageDataset(db, scope, { ...options, after, url_hashes: urlHashes }),
@@ -283,9 +309,10 @@ export async function urlRead(
   db: Database,
   scope: CrawlScope,
   urlHash: string,
-  options: CrawlReadOptions = {},
+  input: CrawlReadOptions = {},
 ) {
   if (!/^[a-f0-9]{64}$/u.test(urlHash)) throw new ApiError(422, 'Invalid path hash');
+  const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options),
     cap = aiTraffic.max_timeline_items;
   const [data, context, crawls, referrals, citations] = await Promise.all([

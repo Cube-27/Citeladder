@@ -55,7 +55,7 @@
   "insert_rows_per_statement": 500,
   "max_line_bytes": 16384,
   "max_sources_per_project": 20,
-  "batches_per_source_per_hour": 120,
+  "batches_per_source_per_hour": 600,
   "accepted_lines_per_project_per_day": 1000000,
   "max_clock_skew_hours": 1,
   "max_backdate_days": 80,
@@ -82,5 +82,7 @@
   "ip_range_max_redirects": 3,
   "task_max_attempts": 3,
   "max_export_rows": 100000,
-  "worker_timeout_ms": 5000
+  "worker_timeout_ms": 5000,
+  "worker_flush_seconds": 60,
+  "worker_batch_lines": 300
 }

@@ -195,7 +195,9 @@ AI sources only. Formula changes require explicit derived rebuilds, never reads.
 A run that carries referral datasets refreshes AI Referrals once, at the end of
 its ingest and classification chain; quality and pending classification are
 judged per bucket. Host-like UTM sources match subdomains (`www.perplexity.ai`);
-bare tokens stay exact.
+bare tokens stay exact. Each refresh writes the sync window and the preset family
+(marked with its preset length, anchored on the latest complete day) at every
+snapshot granularity, so a preset read at any chart interval finds its snapshot.
 
 The same referral refresh replaces `ai_referral_landing_daily` over its selected
 window, with canonical path hash, property-local reporting day, AI source,

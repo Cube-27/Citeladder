@@ -8,6 +8,12 @@ import { TextLink } from '@/components/ui/text-link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { TrafficUrlButton } from './url-panel';
 
+const PATTERN_LABELS = {
+  crawled_without_referrals: 'crawled without AI referrals',
+  referrals_without_recent_crawl: 'AI referrals without recent crawls',
+  crawler_errors_on_valuable_pages: 'crawler errors on valuable pages',
+  key_event_concentration: 'key events concentrated here',
+} as const;
 export function InsightStrip({
   projectId,
   workspaceId,
@@ -46,6 +52,7 @@ export function InsightStrip({
                 <p className="type-body">{r.copy}</p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                   <TextLink
+                    aria-label={`Inspect pages: ${PATTERN_LABELS[r.pattern]}`}
                     href={projectDestination(
                       '/ai-traffic',
                       new URLSearchParams({
@@ -66,6 +73,7 @@ export function InsightStrip({
                     <TrafficUrlButton
                       key={hash}
                       urlHash={hash}
+                      label={`Inspect page ${index + 1}: ${PATTERN_LABELS[r.pattern]}`}
                       filters={{ start_date: data.window_start, end_date: data.window_end }}
                     >
                       Inspect page {index + 1}

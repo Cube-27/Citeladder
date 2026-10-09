@@ -4,14 +4,19 @@ import { aiTrafficInsightsSchema } from '@citeladder/contracts/ai-traffic';
 import type { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import type { CrawlScope } from './state.ts';
-import { crawlWindow, type CrawlReadOptions } from './reads.ts';
+import {
+  crawlWindow,
+  currentReportingDay,
+  withReportingTimezone,
+  type CrawlReadOptions,
+} from './reads.ts';
+import { partitionAnchor } from '../integrations/partitions.ts';
 import { pageDataset, type JoinedPage } from './pages-data.ts';
-import { pageContext, pageComparable } from './pages.ts';
+import { ga4Mapped, insightSnapshot, pageContext, pageComparable } from './pages.ts';
 import { aiTraffic } from '../config/ai-traffic.ts';
 import { policy } from '../config.ts';
 import { strings, record, numberRecord } from '../db/json.ts';
 import { taskProject, type Executor } from '../workers/executor.ts';
-import { isoDateText } from '../db/timestamps.ts';
 
 type Pattern = z.infer<typeof aiTrafficInsightsSchema>['patterns'][number];
 function verifiedErrorCounts(rows: JoinedPage[]) {
@@ -97,6 +102,20 @@ export function insightPatterns(
   }
   return patterns;
 }
+const shiftDay = (day: string, days: number) =>
+  new Date(Date.parse(day) + days * 86400000).toISOString().slice(0, 10);
+/** Each preset ends on the last closed reporting day that crawl logs and GA4 can both cover. */
+async function insightWindows(db: Database, scope: CrawlScope, now = new Date()) {
+  const options = await withReportingTimezone(db, scope, {});
+  const closed = shiftDay(currentReportingDay(options, now), -1);
+  const anchor = await partitionAnchor(db, scope.workspaceId, scope.projectId, 'ga4_landing_daily');
+  const end = anchor && anchor < closed ? anchor : closed;
+  return Object.values(policy.analytics.preset_range_days).map((days) => ({
+    ...options,
+    start_date: shiftDay(end, 1 - days),
+    end_date: end,
+  }));
+}
 export const refreshTrafficInsights: Executor = async (task, { db, checkCancelled }) => {
   const projectId = await taskProject(db, task),
     scope = { workspaceId: task.workspace_id, projectId };
@@ -104,10 +123,11 @@ export const refreshTrafficInsights: Executor = async (task, { db, checkCancelle
     await sql`select pg_advisory_xact_lock(hashtextextended(${scope.workspaceId + ':' + projectId + ':ai-traffic-insights-publication'},0))`.execute(
       trx,
     );
+    if (!(await ga4Mapped(trx, scope))) return;
     // Windows share one locked transaction; each checks cancellation first.
-    for (const range of Object.keys(policy.analytics.preset_range_days)) {
+    for (const window of await insightWindows(trx, scope)) {
       await checkCancelled('AI Traffic insight window'); // NOSONAR
-      await refreshInsightWindow(trx, scope, { range }); // NOSONAR
+      await refreshInsightWindow(trx, scope, window); // NOSONAR
     }
   });
 };
@@ -115,8 +135,9 @@ export const refreshTrafficInsights: Executor = async (task, { db, checkCancelle
 export async function refreshInsightWindow(
   db: Database,
   scope: CrawlScope,
-  options: CrawlReadOptions,
+  input: CrawlReadOptions,
 ) {
+  const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options);
   const [data, context] = await Promise.all([
     pageDataset(db, scope, { ...options, dataset_limit: aiTraffic.max_timeline_items + 1 }),
@@ -164,47 +185,37 @@ export async function refreshInsightWindow(
     })
     .onConflict((c) => c.constraint('uq_ai_traffic_insights_window').doUpdateSet(content))
     .execute();
-}
-export async function insightsRead(
-  db: Database,
-  scope: CrawlScope,
-  options: CrawlReadOptions = {},
-) {
-  const w = crawlWindow(options);
-  const row = await db
-    .selectFrom('ai_traffic_insights')
-    .selectAll()
-    .select([
-      isoDateText(sql.ref('window_start')).as('start'),
-      isoDateText(sql.ref('window_end')).as('end'),
-    ])
+  // A newer window of the same length replaces the older snapshot.
+  await db
+    .deleteFrom('ai_traffic_insights')
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    .where('window_start', '=', sql<Date>`${w.start}::date`)
-    .where('window_end', '=', sql<Date>`${w.end}::date`)
-    .where('formula_version', '=', aiTraffic.formula_version)
-    .executeTakeFirst();
-  return aiTrafficInsightsSchema.parse(
-    row
-      ? {
-          snapshot_id: row.id,
-          window_start: row.start,
-          window_end: row.end,
-          formula_version: row.formula_version,
-          patterns: row.patterns,
-          coverage: row.coverage,
-        }
-      : {
-          snapshot_id: null,
-          window_start: w.start,
-          window_end: w.end,
-          formula_version: aiTraffic.formula_version,
-          patterns: [],
-          coverage: {
-            crawl: 'unknown',
-            ga4_complete: false,
-            notice: 'Insights are awaiting a persisted refresh.',
-          },
-        },
-  );
+    .where(sql<boolean>`window_end - window_start = ${w.end}::date - ${w.start}::date`)
+    .where('window_end', '<', sql<Date>`${w.end}::date`)
+    .execute();
+}
+export async function insightsRead(db: Database, scope: CrawlScope, input: CrawlReadOptions = {}) {
+  const options = await withReportingTimezone(db, scope, input);
+  const w = crawlWindow(options);
+  const empty = (notice: string) =>
+    aiTrafficInsightsSchema.parse({
+      snapshot_id: null,
+      window_start: w.start,
+      window_end: w.end,
+      formula_version: aiTraffic.formula_version,
+      patterns: [],
+      coverage: { crawl: 'unknown', ga4_complete: false, notice },
+    });
+  if (!(await ga4Mapped(db, scope)))
+    return empty('Connect Google Analytics to compare crawler requests with AI referrals.');
+  const row = await insightSnapshot(db, scope, options);
+  if (!row) return empty('Insights are awaiting a persisted refresh.');
+  return aiTrafficInsightsSchema.parse({
+    snapshot_id: row.id,
+    window_start: row.start,
+    window_end: row.end,
+    formula_version: row.formula_version,
+    patterns: row.patterns,
+    coverage: row.coverage,
+  });
 }

@@ -8,7 +8,9 @@ import { record } from '../db/json.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import type { Database } from '../db/database.ts';
 import type { Executor } from '../workers/executor.ts';
-import { enqueueRollup, lockCrawlState } from './state.ts';
+import { sql } from 'kysely';
+import { enqueueRollup, lockCrawlState, type CrawlScope } from './state.ts';
+import { enqueueTrafficInsights } from './insights-enqueue.ts';
 import { ingestionAvailable } from './sources.ts';
 
 export function botIpRangeRefresh(fetcher: WebsiteFetcher = fetchWebsite): Executor {
@@ -130,6 +132,23 @@ export const crawlLogUploadAbandonSweep: Executor = async (task, { db, checkCanc
     if (!(await abandonUploads(db, task.workspace_id))) return;
   }
 };
+/** Insight windows end on a closed day, so each GA4-mapped project refreshes once a day. */
+async function refreshDailyInsights(db: Database, now: Date, canAdmit: () => boolean) {
+  const dayStart = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z');
+  const due =
+    await sql<CrawlScope>`select distinct m.workspace_id as "workspaceId",m.project_id as "projectId"
+    from integration_property_mappings m where m.provider='ga4' and m.status='active'
+      and not exists (select 1 from analytics_tasks t where t.workspace_id=m.workspace_id
+        and t.project_id=m.project_id and t.task_kind='ai_traffic_insights_refresh' and t.created_at>=${dayStart})
+      and not exists (select 1 from ai_traffic_insights i where i.workspace_id=m.workspace_id
+        and i.project_id=m.project_id and i.created_at>=${dayStart})
+    limit ${crawlLogs.sweep_batch_size}`.execute(db);
+  for (const scope of due.rows) {
+    if (!canAdmit()) return false;
+    await db.transaction().execute((trx) => enqueueTrafficInsights(trx, scope, now));
+  }
+  return true;
+}
 export async function crawlLogTick(
   db: Database,
   now = new Date(),
@@ -155,6 +174,7 @@ export async function crawlLogTick(
         maxAttempts: crawlLogs.task_max_attempts,
       });
     }
+  if (!(await refreshDailyInsights(db, now, canAdmit))) return;
   const workspaces = await db
     .selectFrom('crawl_log_sources')
     .select('workspace_id')

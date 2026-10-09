@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import {
   useCrawlConnections,
@@ -54,6 +55,7 @@ function Connections({
 }: CrawlConnectionInput & { headerWhenEmpty: boolean }) {
   const model = useCrawlConnections(input);
   const { sources, canManage, open, setOpen, setIssued, mutation } = model;
+  const [revoking, setRevoking] = useState<z.infer<typeof crawlSourceSchema> | null>(null);
   const showHeader = headerWhenEmpty || Boolean(sources.data?.items.length);
   const setupAvailable = !sources.isError && sources.data?.ingestion_enabled === true;
   return (
@@ -89,9 +91,10 @@ function Connections({
             setOpen(true);
             mutation.mutate({ kind: 'rotate', id });
           }}
-          onRevoke={(id) => mutation.mutate({ kind: 'revoke', id })}
+          onRevoke={(id) => setRevoking(sources.data?.items.find((s) => s.id === id) ?? null)}
         />
       ) : null}
+      <RevokeSourceDialog source={revoking} mutation={mutation} onClose={() => setRevoking(null)} />
       {mutation.isError && !open ? <Alert tone="danger">{mutation.error.message}</Alert> : null}
       <Dialog
         open={open}
@@ -201,7 +204,12 @@ function SourceDiagnostics({
                       Rotate token
                     </Button>
                   ) : null}
-                  <Button size="sm" variant="secondary" onClick={() => onRevoke(s.id)}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onRevoke(s.id)}
+                    aria-label={`Revoke ${s.host}`}
+                  >
                     Revoke
                   </Button>
                 </div>
@@ -211,5 +219,47 @@ function SourceDiagnostics({
         ))}
       </TableBody>
     </Table>
+  );
+}
+/** Revoking stops ingestion for a host, so it is confirmed by name. */
+function RevokeSourceDialog({
+  source,
+  mutation,
+  onClose,
+}: Readonly<{
+  source: z.infer<typeof crawlSourceSchema> | null;
+  mutation: ReturnType<typeof useCrawlConnections>['mutation'];
+  onClose: () => void;
+}>) {
+  return (
+    <Dialog
+      open={source !== null}
+      onOpenChange={(next) => {
+        if (!next && !mutation.isPending) onClose();
+      }}
+      title="Revoke crawl log source"
+      description={source ? `Stop accepting logs for ${source.host}?` : undefined}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={mutation.isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={mutation.isPending || !source}
+            onClick={() =>
+              source && mutation.mutate({ kind: 'revoke', id: source.id }, { onSettled: onClose })
+            }
+          >
+            {mutation.isPending ? 'Revoking…' : 'Revoke source'}
+          </Button>
+        </>
+      }
+    >
+      <p className="type-body">
+        New batches and uploads for this host are refused. Requests already received stay in your
+        reports.
+      </p>
+    </Dialog>
   );
 }

@@ -10,7 +10,10 @@ import { Button } from '@/components/ui/button';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
 /** Narrow screens give every field the band's full width instead of a ragged wrap. */
 const FIELD = 'max-[700px]:w-full';
-export function TrafficControls({ model }: ControlProps) {
+export function TrafficControls({
+  model,
+  crawlAvailable,
+}: Readonly<{ model: ReturnType<typeof useTrafficData>; crawlAvailable: boolean }>) {
   const { tab } = model;
   const { range, setRange, verification, setVerification } = model.selection;
   return (
@@ -22,13 +25,16 @@ export function TrafficControls({ model }: ControlProps) {
         options={TRAFFIC_RANGES}
         className={FIELD}
       />
-      <Select
-        ariaLabel="Verification"
-        value={verification}
-        onValueChange={setVerification}
-        options={VERIFICATION_OPTIONS}
-        className={FIELD}
-      />
+      {/* Verification filters crawler requests only. */}
+      {crawlAvailable ? (
+        <Select
+          ariaLabel="Verification"
+          value={verification}
+          onValueChange={setVerification}
+          options={VERIFICATION_OPTIONS}
+          className={FIELD}
+        />
+      ) : null}
       {tab === 'crawlers' ? <CrawlerPurposeControl model={model} /> : null}
       {tab === 'activity' ? <ActivityControls model={model} /> : null}
       {tab === 'overview' ? null : <ScopeControls model={model} />}

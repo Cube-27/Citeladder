@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { AiReferralsContent } from '@/components/ai-traffic/referrals-content';
 import { FilterChoice, FilterRow } from '@/components/ui/filter-row';
@@ -10,20 +10,28 @@ import { Spinner } from '@/components/ui/spinner';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
+import { GRANULARITY_OPTIONS } from '@/lib/format';
 import {
-  GRANULARITY_OPTIONS,
   RANGE_OPTIONS,
   rangeToParams,
   type AiReferralsGranularity,
   type AiReferralsRange,
 } from '@/lib/ai-traffic/options';
 import { useProjectContext } from '@/lib/project/project-context';
+import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+
+const rangeCodec = stringUrlCodec<AiReferralsRange>(
+  RANGE_OPTIONS.map((option) => option.value),
+  'latest',
+);
+const granularityCodec = stringUrlCodec<AiReferralsGranularity>(['day', 'week', 'month'], 'week');
 
 export function AiReferralsScreen({ tabs }: Readonly<{ tabs?: React.ReactNode }> = {}) {
   const { activeProject, isLoading: isProjectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
-  const [range, setRange] = useState<AiReferralsRange>('latest');
-  const [granularity, setGranularity] = useState<AiReferralsGranularity>('week');
+  // The range is the screen's shared `range` parameter, so a preset follows the reader across tabs.
+  const [range, setRange] = useUrlState('range', rangeCodec);
+  const [granularity, setGranularity] = useUrlState('granularity', granularityCodec);
   const rangeParams = useMemo(() => rangeToParams(range), [range]);
   const dashboardQuery = useQuery({
     queryKey: queryKeys.aiTraffic.dashboard(activeProject?.workspace_id ?? '', projectId ?? '', {

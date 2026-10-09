@@ -139,6 +139,27 @@ export function RequestsByPurpose({
 }
 export function CrawlSignalPanel({
   data,
+  available,
+  onConnect,
+}: Readonly<{
+  data: z.infer<typeof crawlSummarySchema>;
+  /** False when this workspace cannot collect crawl logs yet. */
+  available: boolean;
+  onConnect?: () => void;
+}>) {
+  if (!available)
+    return (
+      <SignalCard title="Crawlers" status="Not available yet">
+        <p className="type-body text-secondary">
+          Crawl log collection is not available for this workspace yet. AI referrals and tracked
+          citations are measured without it.
+        </p>
+      </SignalCard>
+    );
+  return <CrawlSignal data={data} onConnect={onConnect} />;
+}
+function CrawlSignal({
+  data,
   onConnect,
 }: Readonly<{ data: z.infer<typeof crawlSummarySchema>; onConnect?: () => void }>) {
   const emptyMessage = {

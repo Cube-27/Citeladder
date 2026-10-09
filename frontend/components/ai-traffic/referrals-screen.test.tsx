@@ -75,7 +75,7 @@ describe('AiReferralsScreen', () => {
     expect(screen.getByRole('button', { name: /^Range:/ })).toBeVisible();
   });
 
-  it('renders only persisted referral measurement, without visibility or event drill-downs', async () => {
+  it('renders persisted referral measurement by source', async () => {
     mswServer.use(http.get(endpoint, () => HttpResponse.json(dashboard)));
     renderWithProviders(<AiReferralsScreen />);
 
@@ -85,10 +85,6 @@ describe('AiReferralsScreen', () => {
     expect(screen.getByText('AI referral sources')).toBeInTheDocument();
     expect(screen.getByText('ChatGPT')).toBeInTheDocument();
     expect(screen.getByText('20.0%')).toBeInTheDocument();
-    expect(screen.queryByText(/Cross-engine visibility/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/correlation/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/AI-referral events/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/theme/i)).not.toBeInTheDocument();
   });
 
   it('shows the honest measured-zero state without fabricating a source', async () => {

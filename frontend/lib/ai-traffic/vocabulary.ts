@@ -40,3 +40,44 @@ function label<T extends Record<string, string>>(table: T, token: string): strin
 export const connectionLabel = (token: string) => label(CONNECTION, token);
 export const coverageLabel = (token: string) => label(COVERAGE, token);
 export const collectionPointLabel = (token: string) => label(COLLECTION_POINT, token);
+
+const LEG_STATE = {
+  value: 'Measured',
+  zero: 'Measured zero',
+  flagged: 'Flagged by a data-quality check',
+  non_comparable: 'Not comparable',
+  unavailable: 'Unavailable',
+  unknown: 'Coverage unknown',
+  not_connected: 'Not connected',
+} as const;
+
+/** Reasons from page legs, verification, coverage and GA4 quality checks. */
+const REASON = {
+  incomplete_coverage: 'Coverage is incomplete for this window',
+  timezone_mismatch: 'Sources report in different timezones',
+  currency_mismatch: 'GA4 reported more than one currency',
+  projection_pending: 'A newer GA4 import is still being processed',
+  partition_fallback: 'An older GA4 import is shown while a newer one is incomplete',
+  extract_contract_mismatch: 'The newest GA4 import used a different report shape',
+  unavailable: 'GA4 has not reported every day yet',
+  missing_ip: 'No client IP in the log line',
+  invalid_ip: 'The client IP could not be read',
+  no_published_ranges: 'The operator publishes no IP ranges',
+  no_snapshot: 'IP ranges have not been fetched yet',
+  stale_snapshot: 'No IP ranges from that time',
+  ip_outside_ranges: 'IP outside the published ranges',
+  later_snapshot_mismatch: 'IP outside ranges published later; ranges may have changed',
+  best_effort_worker: 'Best-effort Worker delivery',
+  unsampled_gap_free_declared_scope: 'Unsampled delivery without gaps',
+  client_reported: 'Declared complete by an uploaded file',
+  delivery_gaps_or_partial_scan: 'Delivery gaps or a partial file',
+  no_data: 'No data',
+} as const;
+
+export const legStateLabel = (token: string) => label(LEG_STATE, token);
+/** A reason may join several quality flags with commas. */
+export const reasonLabel = (token: string) =>
+  token
+    .split(', ')
+    .map((part) => label(REASON, part))
+    .join('; ');

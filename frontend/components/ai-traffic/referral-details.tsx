@@ -9,7 +9,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Alert } from '@/components/ui/alert';
-import { formatPercent } from '@/lib/format';
+import { formatCount, formatPercent } from '@/lib/format';
+import { aiSourceLabel } from '@/lib/ai-traffic/series';
+import { reasonLabel } from '@/lib/ai-traffic/vocabulary';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { TrafficUrlButton } from './url-panel';
 
 export function ReferralComparison({ data }: Readonly<{ data: AiReferrals }>) {
@@ -35,9 +38,15 @@ export function ReferralComparison({ data }: Readonly<{ data: AiReferrals }>) {
             {data.channel_comparison.map((r) => (
               <TableRow key={r.channel}>
                 <TableCell>{r.channel}</TableCell>
-                <TableCell numeric>{r.sessions ?? 'Unavailable'}</TableCell>
-                <TableCell numeric>{formatPercent(r.engagement_rate, 1)}</TableCell>
-                <TableCell numeric>{r.key_events ?? 'Unavailable'}</TableCell>
+                <TableCell numeric>
+                  <Measure value={r.sessions} format={formatCount} />
+                </TableCell>
+                <TableCell numeric>
+                  <Measure value={r.engagement_rate} format={(v) => formatPercent(v, 1)} />
+                </TableCell>
+                <TableCell numeric>
+                  <Measure value={r.key_events} format={formatCount} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -53,7 +62,9 @@ export function ReferralLandingPages({ data }: Readonly<{ data: AiReferrals }>) 
         <CardTitle>AI referral landing pages</CardTitle>
         <CardDescription>
           Host-scoped path identities · {data.reporting_timezone ?? 'Timezone unavailable'} ·{' '}
-          {data.unattributed_landing ?? 'Unavailable'} unattributed landing sessions.
+          {data.unattributed_landing === null
+            ? 'Unattributed landing sessions unavailable.'
+            : `${formatCount(data.unattributed_landing)} unattributed landing sessions.`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -62,36 +73,43 @@ export function ReferralLandingPages({ data }: Readonly<{ data: AiReferrals }>) 
             No identifiable AI referrals to joinable landing paths were observed in the saved
             report.
           </Alert>
-        ) : null}
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Landing path</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead numeric>Sessions</TableHead>
-              <TableHead numeric>Key events</TableHead>
-              <TableHead>Quality</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.landing_pages.map((r) => (
-              <TableRow key={r.url_hash + r.ai_source}>
-                <TableCell>
-                  <TrafficUrlButton
-                    urlHash={r.url_hash}
-                    filters={{ start_date: data.window_start, end_date: data.window_end }}
-                  >
-                    {new URL(r.canonical_url).pathname}
-                  </TrafficUrlButton>
-                </TableCell>
-                <TableCell>{r.ai_source}</TableCell>
-                <TableCell numeric>{r.sessions ?? 'Unavailable'}</TableCell>
-                <TableCell numeric>{r.key_events ?? 'Unavailable'}</TableCell>
-                <TableCell>{r.analytics_quality.join(', ') || 'Unflagged'}</TableCell>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Landing path</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead numeric>Sessions</TableHead>
+                <TableHead numeric>Key events</TableHead>
+                <TableHead>Quality</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {data.landing_pages.map((r) => (
+                <TableRow key={r.url_hash + r.ai_source}>
+                  <TableCell>
+                    <TrafficUrlButton
+                      urlHash={r.url_hash}
+                      filters={{ start_date: data.window_start, end_date: data.window_end }}
+                    >
+                      {new URL(r.canonical_url).pathname}
+                    </TrafficUrlButton>
+                  </TableCell>
+                  <TableCell>{aiSourceLabel(r.ai_source)}</TableCell>
+                  <TableCell numeric>
+                    <Measure value={r.sessions} format={formatCount} />
+                  </TableCell>
+                  <TableCell numeric>
+                    <Measure value={r.key_events} format={formatCount} />
+                  </TableCell>
+                  <TableCell>
+                    {r.analytics_quality.map(reasonLabel).join('; ') || 'No quality flags'}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
@@ -112,9 +130,23 @@ export function ReferralQuality({ data }: Readonly<{ data: AiReferrals }>) {
       </p>
       {flags.length ? (
         <Alert tone="info">
-          GA4 quality: {flags.join(', ')}. Missing or flagged observations are unavailable.
+          GA4 quality: {flags.map(reasonLabel).join('; ')}. Missing or flagged observations are
+          unavailable.
         </Alert>
       ) : null}
     </>
   );
+}
+/** One unavailable mark for every missing referral measure. */
+export function Measure({
+  value,
+  format,
+}: Readonly<{ value: number | null; format: (value: number) => string }>) {
+  if (value === null) return <UnavailableValue state="not_measured" />;
+  return <span className="tabular-nums">{format(value)}</span>;
+}
+export function formatRevenue(value: number, currency: string | null) {
+  return currency
+    ? new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value)
+    : formatCount(value);
 }

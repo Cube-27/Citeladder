@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
 import { uploadCrawlFile } from './upload';
+import type { z } from 'zod';
+import type { crawlSourceListSchema } from '@citeladder/contracts/ai-traffic';
 export type CrawlConnectionInput = Readonly<{
   projectId: string;
   workspaceId: string;
@@ -12,6 +14,34 @@ export type CrawlConnectionInput = Readonly<{
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }>;
+/** The project's crawl log sources; shared by the screen and the connections section. */
+export function useCrawlSources(
+  projectId: string,
+  workspaceId: string,
+  awaiting: Awaiting | null = null,
+) {
+  return useQuery({
+    queryKey: queryKeys.aiTraffic.view(workspaceId, projectId, 'sources'),
+    queryFn: ({ signal }) => aiTrafficApi.sources(projectId, { workspaceId, signal }),
+    enabled: !!projectId && !!workspaceId,
+    refetchInterval: (query) =>
+      awaiting && !uploadProcessed(query.state.data, awaiting) ? PROCESSING_POLL_MS : false,
+  });
+}
+const PROCESSING_POLL_MS = 15000;
+/** A completed upload is processed after a short delay, then its source reports it. */
+type Awaiting = { sourceId: string; since: string };
+function uploadProcessed(
+  data: z.infer<typeof crawlSourceListSchema> | undefined,
+  awaiting: Awaiting,
+) {
+  const at = data?.items.find((s) => s.id === awaiting.sourceId)?.last_processed_at;
+  return !!at && at >= awaiting.since;
+}
+/** Crawl views stay for a project that already has sources, even if collection is switched off. */
+export function crawlLogsAvailable(data: z.infer<typeof crawlSourceListSchema>) {
+  return data.ingestion_enabled || data.items.length > 0;
+}
 export function useCrawlConnections({
   projectId,
   workspaceId,
@@ -22,10 +52,14 @@ export function useCrawlConnections({
 }: CrawlConnectionInput) {
   const client = useQueryClient(),
     options = { workspaceId };
-  const sources = useQuery({
-    queryKey: queryKeys.aiTraffic.view(workspaceId, projectId, 'sources'),
-    queryFn: ({ signal }) => aiTrafficApi.sources(projectId, { workspaceId, signal }),
-  });
+  const [awaiting, setAwaiting] = useState<Awaiting | null>(null);
+  const sources = useCrawlSources(projectId, workspaceId, awaiting);
+  const processing = awaiting !== null && !uploadProcessed(sources.data, awaiting);
+  // Processing finished: refresh the reads that show the new rows.
+  useEffect(() => {
+    if (awaiting && !processing)
+      void client.invalidateQueries({ queryKey: queryKeys.aiTraffic.all });
+  }, [awaiting, processing, client]);
   const [localOpen, setLocalOpen] = useState(false),
     [setup, setSetup] = useState<(typeof CRAWL_LOG_SETUPS)[number]['value']>('cloudflare_worker');
   const open = controlledOpen ?? localOpen;
@@ -86,20 +120,25 @@ export function useCrawlConnections({
     },
   });
   const upload = useMutation({
-    mutationFn: async () => {
-      if (!file || !sourceId) throw new Error('Choose a source and a file');
+    mutationFn: async (resumeId?: string) => {
+      const source = sources.data?.items.find((s) => s.id === sourceId);
+      if (!file || !source) throw new Error('Choose a source and a file');
       const catalog = await aiTrafficApi.catalog(projectId, options);
+      const mapping = catalog.presets.custom_ndjson;
+      if (!mapping) throw new Error('The upload mapping is unavailable');
       const result = await uploadCrawlFile({
         file,
-        format,
-        mapping: catalog.presets.custom_ndjson!,
+        // The file is read in the format its source was created with.
+        format: source.format,
+        mapping,
         catalog,
         projectId,
         sourceId,
-        resumeId: resume || undefined,
+        resumeId,
         options,
         onProgress: setProgress,
       });
+      setAwaiting({ sourceId, since: new Date().toISOString() });
       await refresh();
       return result;
     },
@@ -133,6 +172,7 @@ export function useCrawlConnections({
     file,
     setFile,
     progress,
+    processing,
     mutation,
     upload,
   };

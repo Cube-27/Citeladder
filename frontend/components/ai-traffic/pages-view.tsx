@@ -15,7 +15,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { MISSING_MARK } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
-import { UrlPanel, TrafficLeg } from './url-panel';
+import { UrlPanel, TrafficLeg, trafficLegExplanation } from './url-panel';
 import { TrafficNoResults } from './empty-state';
 import type { TrafficFilters } from '@/lib/api/ai-traffic';
 
@@ -94,13 +94,7 @@ function UnavailableTrafficValue({
 function TrafficErrors({
   page,
 }: Readonly<{ page: z.infer<typeof aiTrafficPagesSchema>['items'][number] }>) {
-  const reason = [
-    page.crawl.state.replaceAll('_', ' '),
-    page.crawl.coverage,
-    page.crawl.reason?.replaceAll('_', ' '),
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const reason = trafficLegExplanation(page.crawl, 'Crawler requests');
   if (page.errors_4xx === null && page.errors_5xx === null)
     return (
       <UnavailableTrafficValue

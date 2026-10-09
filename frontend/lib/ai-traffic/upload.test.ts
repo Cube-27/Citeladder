@@ -94,6 +94,7 @@ beforeEach(() => {
     last_ack_seq: -1,
     scanned_lines: 0,
     missing_fields: [],
+    created_at: '2026-10-04T00:00:00Z',
   });
   vi.mocked(aiTrafficApi.uploadBatch).mockResolvedValue({
     id: 'batch',
@@ -109,7 +110,7 @@ beforeEach(() => {
   });
 });
 describe('local streaming upload privacy', () => {
-  it('uses the whole scan span to declare middle days complete', async () => {
+  it('reports every scanned day and leaves completeness to the server', async () => {
     const rows = ['2026-10-01', '2026-10-02', '2026-10-03'].map((day) => ({
       ...event('unmatched'),
       timestamp: day + 'T12:00:00Z',
@@ -120,11 +121,7 @@ describe('local streaming upload privacy', () => {
       'source',
       'upload',
       expect.objectContaining({
-        scanned_dates: [
-          { date: '2026-10-01', complete: false },
-          { date: '2026-10-02', complete: true },
-          { date: '2026-10-03', complete: false },
-        ],
+        scanned_dates: ['2026-10-01', '2026-10-02', '2026-10-03'],
       }),
       expect.anything(),
     );
@@ -156,12 +153,14 @@ describe('local streaming upload privacy', () => {
       'upload',
       expect.objectContaining({
         scanned_lines: 1,
-        scanned_dates: [{ date: '2026-10-02', complete: false }],
+        scanned_dates: ['2026-10-02'],
       }),
       expect.anything(),
     );
   });
-  it('resumes deterministic batches and streams gzip JSON arrays', async () => {
+  it('resumes deterministic batches on a later day and streams gzip JSON arrays', async () => {
+    // Resumed long after creation: the upload's own floor still admits these lines.
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-12-28T00:00:00Z'));
     const rows = [event('known-robot', '/one'), event('known-robot', '/two')];
     const original = file(gzipSync(Buffer.from(JSON.stringify(rows))), 'logs.json.gz');
     vi.mocked(aiTrafficApi.uploadStatus).mockResolvedValue({
@@ -172,6 +171,7 @@ describe('local streaming upload privacy', () => {
       last_ack_seq: 0,
       scanned_lines: 0,
       missing_fields: [],
+      created_at: '2026-10-04T00:00:00Z',
     });
     await run(original, 'json_array', 'upload');
     expect(aiTrafficApi.createUpload).not.toHaveBeenCalled();
@@ -199,11 +199,13 @@ describe('local streaming upload privacy', () => {
     expect(aiTrafficApi.uploadBatch).not.toHaveBeenCalled();
     expect(aiTrafficApi.completeUpload).not.toHaveBeenCalled();
   });
-  it('rejects unsupported or malformed UTF-8 headers before transmitting file evidence', async () => {
+  it('skips a line without identifying fields and refuses files where none has them', async () => {
+    await run(file(JSON.stringify(event('known-robot')) + '\n{"path":"/missing"}'));
+    expect(vi.mocked(aiTrafficApi.uploadBatch).mock.calls[0]![4]).toEqual([
+      expect.stringContaining('known-robot'),
+    ]);
+    vi.clearAllMocks();
     await expect(run(file('{"path":"/no-user-agent"}'))).rejects.toThrow(/crawler identification/);
-    await expect(
-      run(file(JSON.stringify(event('known-robot')) + '\n{"path":"/missing"}')),
-    ).rejects.toThrow(/crawler identification/);
     await expect(
       run(file('[' + JSON.stringify(event('known-robot')) + ',]'), 'json_array'),
     ).rejects.toThrow(/comma/);

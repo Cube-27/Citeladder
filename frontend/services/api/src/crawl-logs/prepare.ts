@@ -95,24 +95,26 @@ export function prepareBatch(input: Input) {
   let first: Date | null = null,
     last: Date | null = null,
     unsupported: UnsupportedLogFormat | null = null;
-  try {
-    for (const line of input.lines) {
-      const result = prepareLine(line, input);
-      if (result.at) {
-        counts.lines_parsed++;
-        if (first === null || result.at < first) first = result.at;
-        if (last === null || result.at > last) last = result.at;
-      }
-      if (result.kind === 'prepared') prepared.push(result.row);
-      else counts[result.kind]++;
+  for (const line of input.lines) {
+    let result: ReturnType<typeof prepareLine>;
+    try {
+      result = prepareLine(line, input);
+    } catch (error) {
+      // A line without the identifying fields is rejected on its own.
+      if (!(error instanceof UnsupportedLogFormat)) throw error;
+      unsupported ??= error;
+      counts.lines_rejected++;
+      continue;
     }
-  } catch (error) {
-    if (!(error instanceof UnsupportedLogFormat)) throw error;
-    unsupported = error;
-    prepared.length = 0;
-    counts.lines_parsed = counts.lines_unmatched = counts.lines_out_of_scope = 0;
-    counts.lines_rejected = input.lines.length;
-    first = last = null;
+    if (result.at) {
+      counts.lines_parsed++;
+      if (first === null || result.at < first) first = result.at;
+      if (last === null || result.at > last) last = result.at;
+    }
+    if (result.kind === 'prepared') prepared.push(result.row);
+    else counts[result.kind]++;
   }
+  // The batch is unsupported only when no line carried the fields at all.
+  if (counts.lines_parsed > 0 || counts.lines_rejected < input.lines.length) unsupported = null;
   return { counts, prepared, first, last, unsupported };
 }

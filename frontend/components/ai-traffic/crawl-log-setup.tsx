@@ -13,6 +13,12 @@ import { RadioGroup } from '@/components/ui/radio-group';
 import { Alert } from '@/components/ui/alert';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
+const FORMATS = [
+  { value: 'ndjson', label: 'NDJSON' },
+  { value: 'json_array', label: 'JSON array' },
+  { value: 'combined', label: 'Apache/Nginx Combined' },
+] as const;
+const formatLabel = (value: string) => FORMATS.find((f) => f.value === value)?.label ?? value;
 const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], string>> = {
   cloudflare_worker:
     'Deploy the downloadable template yourself. Store the token as a Worker secret, use a fail-open route, and expect partial coverage. Every routed request uses your Workers quota.',
@@ -87,11 +93,7 @@ export function CrawlLogSetup({
               ariaLabel="Log format"
               value={format}
               onValueChange={setFormat}
-              options={[
-                { value: 'ndjson', label: 'NDJSON' },
-                { value: 'json_array', label: 'JSON array' },
-                { value: 'combined', label: 'Apache/Nginx Combined' },
-              ]}
+              options={FORMATS}
             />
           )}
         </Field>
@@ -150,7 +152,6 @@ export function CrawlLogCredential({
   return issued ? (
     <Alert tone="info">
       <div className="grid gap-3">
-        <p>Source: {issued.id}</p>
         {issued.token ? (
           <>
             <p>Copy this token now. It is shown once.</p>
@@ -185,8 +186,18 @@ export function CrawlLogSetupSubmit({
 
 function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const formId = useId();
-  const { sources, sourceId, setSourceId, file, setFile, resume, setResume, upload, progress } =
-    model;
+  const {
+    sources,
+    sourceId,
+    setSourceId,
+    file,
+    setFile,
+    resume,
+    setResume,
+    upload,
+    progress,
+    processing,
+  } = model;
   const uploadSources = (sources.data?.items ?? []).filter(
     (s) => s.kind === 'upload' && s.status === 'active',
   );
@@ -207,7 +218,10 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
             ariaLabel="Upload source"
             value={sourceId}
             onValueChange={setSourceId}
-            options={uploadSources.map((s) => ({ value: s.id, label: s.host + ' · ' + s.id }))}
+            options={uploadSources.map((s) => ({
+              value: s.id,
+              label: s.host + ' · ' + formatLabel(s.format),
+            }))}
           />
         )}
       </Field>
@@ -229,22 +243,39 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
         className="w-fit"
         disabled={!file || !sourceId || !sources.data?.ingestion_enabled}
         pending={upload.isPending}
-        onClick={() => upload.mutate()}
+        onClick={() => upload.mutate(resume || undefined)}
       >
         Upload recognized requests
       </Button>
       {progress ? (
         <output className="type-body">
-          {progress.scanned} scanned · {progress.matched} recognized · batch {progress.ack}{' '}
-          acknowledged. Upload ID: {progress.uploadId}
+          {progress.scanned} lines scanned · {progress.matched} recognized crawler requests sent.
         </output>
       ) : null}
       {upload.isSuccess ? (
-        <Alert tone="success">
-          Upload completed. Scan coverage is client-reported; rollup processing is queued.
+        <Alert tone={processing ? 'info' : 'success'}>
+          {processing
+            ? 'Upload complete. Results appear here once processing finishes, usually within a few minutes.'
+            : 'Upload processed. Coverage for these days is declared by the file.'}
         </Alert>
       ) : null}
-      {upload.isError ? <Alert tone="danger">{upload.error.message}</Alert> : null}
+      {upload.isError ? (
+        <Alert tone="danger">
+          <div className="grid gap-2">
+            <p>{upload.error.message}</p>
+            {progress ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="w-fit"
+                onClick={() => upload.mutate(progress.uploadId)}
+              >
+                Resume upload
+              </Button>
+            ) : null}
+          </div>
+        </Alert>
+      ) : null}
     </div>
   );
 }

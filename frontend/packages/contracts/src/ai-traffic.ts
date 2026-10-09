@@ -250,6 +250,8 @@ export const crawlUploadSchema = z.object({
   last_ack_seq: z.number(),
   scanned_lines: z.number(),
   missing_fields: z.array(z.string()),
+  /** Fixes the upload's admission floor, so a resumed scan batches identically. */
+  created_at: z.iso.datetime({ offset: true }),
 });
 export const crawlCatalogSchema = z.object({
   catalog_version: z.string(),

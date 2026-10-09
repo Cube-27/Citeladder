@@ -74,15 +74,24 @@ export async function refreshCrawlLogs(
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .execute();
-    const batches = await trx
+    let batchQuery = trx
       .selectFrom('crawl_log_batches')
-      .selectAll()
+      .select(['source_id', 'received_at', 'first_line_at', 'last_line_at', 'heartbeat'])
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .where('status', '=', 'accepted')
       .where(sql<boolean>`(lines_matched>0 or lines_duplicate>0 or lines_unmatched>0 or heartbeat)`)
-      .where('received_at', '>=', sql<Date>`${floor}::timestamp at time zone ${tz}`)
-      .execute();
+      .where('received_at', '>=', sql<Date>`${floor}::timestamp at time zone ${tz}`);
+    // Only receipts received on, or carrying lines from, the refreshed days decide their coverage.
+    if (span.length) {
+      const from = sql<Date>`${span[0]}::date::timestamp at time zone ${tz}`,
+        to = sql<Date>`(${span.at(-1)}::date + 1)::timestamp at time zone ${tz}`;
+      batchQuery = batchQuery.where(
+        sql<boolean>`((received_at >= ${from} and received_at < ${to})
+          or (first_line_at < ${to} and last_line_at >= ${from}))`,
+      );
+    }
+    const batches = await batchQuery.execute();
     const uploads = await trx
       .selectFrom('crawl_log_uploads')
       .selectAll()
@@ -142,7 +151,10 @@ export const crawlLogRollupRefresh: Executor = async (task, { db, checkCancelled
 };
 type ReportingDay = { day: string; start: Date; end: Date };
 type Source = Selectable<CrawlLogSources>;
-type Batch = Selectable<CrawlLogBatches>;
+type Batch = Pick<
+  Selectable<CrawlLogBatches>,
+  'source_id' | 'received_at' | 'first_line_at' | 'last_line_at' | 'heartbeat'
+>;
 type Upload = Selectable<CrawlLogUploads>;
 function completeWebhook(source: Source, day: ReportingDay, now: Date, count: number, gap: number) {
   return (
