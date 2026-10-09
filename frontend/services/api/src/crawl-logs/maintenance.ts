@@ -132,9 +132,13 @@ export const crawlLogUploadAbandonSweep: Executor = async (task, { db, checkCanc
     if (!(await abandonUploads(db, task.workspace_id))) return;
   }
 };
+/** The UTC day whose insight sweep finished in this process; later ticks skip the query. */
+let insightsSweptDay: string | null = null;
 /** Insight windows end on a closed day, so each GA4-mapped project refreshes once a day. */
 async function refreshDailyInsights(db: Database, now: Date, canAdmit: () => boolean) {
-  const dayStart = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z');
+  const day = now.toISOString().slice(0, 10);
+  if (insightsSweptDay === day) return true;
+  const dayStart = new Date(day + 'T00:00:00Z');
   const due =
     await sql<CrawlScope>`select distinct m.workspace_id as "workspaceId",m.project_id as "projectId"
     from integration_property_mappings m where m.provider='ga4' and m.status='active'
@@ -145,8 +149,10 @@ async function refreshDailyInsights(db: Database, now: Date, canAdmit: () => boo
     limit ${crawlLogs.sweep_batch_size}`.execute(db);
   for (const scope of due.rows) {
     if (!canAdmit()) return false;
-    await db.transaction().execute((trx) => enqueueTrafficInsights(trx, scope, now));
+    // One project at a time keeps each enqueue inside the tick's admission budget.
+    await db.transaction().execute((trx) => enqueueTrafficInsights(trx, scope, now)); // NOSONAR
   }
+  if (due.rows.length < crawlLogs.sweep_batch_size) insightsSweptDay = day;
   return true;
 }
 export async function crawlLogTick(

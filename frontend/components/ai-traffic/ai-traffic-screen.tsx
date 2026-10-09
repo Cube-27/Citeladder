@@ -1,5 +1,5 @@
 'use client';
-import { TRAFFIC_TABS } from '@/lib/config/crawl-logs';
+import { CRAWL_ONLY_TABS, TRAFFIC_TABS } from '@/lib/config/crawl-logs';
 import { useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { useProjectContext } from '@/lib/project/project-context';
 import { crawlLogsAvailable, useCrawlSources } from '@/lib/ai-traffic/use-crawl-connections';
@@ -24,14 +24,13 @@ const tabCodec: UrlCodec<TrafficTab | null> = {
   parse: (raw) => TRAFFIC_TABS.find((t) => t.value === raw)?.value ?? null,
   serialize: (value) => value,
 };
-const CRAWL_ONLY_TABS: readonly TrafficTab[] = ['crawlers', 'activity'];
 /**
  * Without crawl log collection the screen leads with Referrals and drops the
  * crawl-only views instead of offering a setup the workspace cannot complete.
  */
 function resolveTab(requested: TrafficTab | null, crawlAvailable: boolean | null) {
   if (crawlAvailable === false)
-    return requested && !CRAWL_ONLY_TABS.includes(requested) ? requested : 'referrals';
+    return requested && !CRAWL_ONLY_TABS.has(requested) ? requested : 'referrals';
   return requested ?? (crawlAvailable === null ? null : 'overview');
 }
 export function AiTrafficScreen() {
@@ -47,11 +46,7 @@ export function AiTrafficScreen() {
     <TabsBar
       variant="band"
       ariaLabel="AI Traffic views"
-      items={
-        crawlAvailable === false
-          ? TRAFFIC_TABS.filter((t) => !CRAWL_ONLY_TABS.includes(t.value))
-          : TRAFFIC_TABS
-      }
+      items={crawlAvailable === false ? TRAFFIC_TABS.filter((t) => !t.crawlOnly) : TRAFFIC_TABS}
     />
   );
   // The default view waits for crawl availability; the tab band needs a selected tab.

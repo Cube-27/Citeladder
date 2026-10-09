@@ -91,7 +91,7 @@ function Connections({
             setOpen(true);
             mutation.mutate({ kind: 'rotate', id });
           }}
-          onRevoke={(id) => setRevoking(sources.data?.items.find((s) => s.id === id) ?? null)}
+          onRevoke={setRevoking}
         />
       ) : null}
       <RevokeSourceDialog source={revoking} mutation={mutation} onClose={() => setRevoking(null)} />
@@ -144,7 +144,7 @@ function SourceDiagnostics({
   items: z.infer<typeof crawlSourceSchema>[];
   canManage: boolean;
   onRotate: (id: string) => void;
-  onRevoke: (id: string) => void;
+  onRevoke: (source: z.infer<typeof crawlSourceSchema>) => void;
 }>) {
   return (
     <Table>
@@ -207,7 +207,7 @@ function SourceDiagnostics({
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => onRevoke(s.id)}
+                    onClick={() => onRevoke(s)}
                     aria-label={`Revoke ${s.host}`}
                   >
                     Revoke
@@ -246,12 +246,14 @@ function RevokeSourceDialog({
           </Button>
           <Button
             variant="destructive"
-            disabled={mutation.isPending || !source}
+            disabled={!source}
+            pending={mutation.isPending}
+            pendingLabel="Revoking…"
             onClick={() =>
               source && mutation.mutate({ kind: 'revoke', id: source.id }, { onSettled: onClose })
             }
           >
-            {mutation.isPending ? 'Revoking…' : 'Revoke source'}
+            Revoke source
           </Button>
         </>
       }

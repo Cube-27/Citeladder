@@ -45,12 +45,16 @@ function refreshWindows(
   windowEnd: string,
   anchor: string | null,
 ): RefreshWindow[] {
-  const windows: RefreshWindow[] = [...analytics.snapshot_granularities]
-    .sort(compareText)
-    .map((granularity) => ({ start: windowStart, end: windowEnd, granularity, presetDays: null }));
+  const granularities = [...analytics.snapshot_granularities].sort(compareText);
+  const windows: RefreshWindow[] = granularities.map((granularity) => ({
+    start: windowStart,
+    end: windowEnd,
+    granularity,
+    presetDays: null,
+  }));
   if (anchor === null) return windows;
   for (const days of analytics.snapshot_window_days)
-    for (const granularity of [...analytics.snapshot_granularities].sort(compareText))
+    for (const granularity of granularities)
       windows.push({
         start: addDays(anchor, -(days - 1)),
         end: anchor,

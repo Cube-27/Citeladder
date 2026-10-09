@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
-import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
+import { CRAWL_LOG_SETUPS, UPLOAD_PROCESSING_POLL_MS } from '@/lib/config/crawl-logs';
 import { uploadCrawlFile } from './upload';
 import type { z } from 'zod';
 import type { crawlSourceListSchema } from '@citeladder/contracts/ai-traffic';
@@ -25,10 +25,9 @@ export function useCrawlSources(
     queryFn: ({ signal }) => aiTrafficApi.sources(projectId, { workspaceId, signal }),
     enabled: !!projectId && !!workspaceId,
     refetchInterval: (query) =>
-      awaiting && !uploadProcessed(query.state.data, awaiting) ? PROCESSING_POLL_MS : false,
+      awaiting && !uploadProcessed(query.state.data, awaiting) ? UPLOAD_PROCESSING_POLL_MS : false,
   });
 }
-const PROCESSING_POLL_MS = 15000;
 /** A completed upload is processed after a short delay, then its source reports it. */
 type Awaiting = { sourceId: string; since: string };
 function uploadProcessed(
@@ -87,7 +86,6 @@ export function useCrawlConnections({
     uploadId: string;
     scanned: number;
     matched: number;
-    ack: number;
   } | null>(null);
   const refresh = () => client.invalidateQueries({ queryKey: queryKeys.aiTraffic.all });
   const mutation = useMutation({
@@ -121,6 +119,7 @@ export function useCrawlConnections({
   });
   const upload = useMutation({
     mutationFn: async (resumeId?: string) => {
+      setProgress(null);
       const source = sources.data?.items.find((s) => s.id === sourceId);
       if (!file || !source) throw new Error('Choose a source and a file');
       const catalog = await aiTrafficApi.catalog(projectId, options);
@@ -139,7 +138,10 @@ export function useCrawlConnections({
         onProgress: setProgress,
       });
       setAwaiting({ sourceId, since: new Date().toISOString() });
-      await refresh();
+      // The rows appear after processing; the effect above refreshes every read then.
+      await client.invalidateQueries({
+        queryKey: queryKeys.aiTraffic.view(workspaceId, projectId, 'sources'),
+      });
       return result;
     },
   });

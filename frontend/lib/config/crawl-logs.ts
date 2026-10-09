@@ -33,12 +33,18 @@ export const CRAWL_LOG_SETUPS = [
 ] as const;
 export const CRAWL_INGEST_ORIGIN = process.env.PUBLIC_WEBSITE_ORIGIN || 'http://localhost:4321';
 export const TRAFFIC_TABS = [
-  { value: 'overview', label: 'Overview' },
-  { value: 'crawlers', label: 'Crawlers' },
-  { value: 'referrals', label: 'Referrals' },
-  { value: 'pages', label: 'Pages' },
-  { value: 'activity', label: 'Activity' },
+  { value: 'overview', label: 'Overview', crawlOnly: false },
+  { value: 'crawlers', label: 'Crawlers', crawlOnly: true },
+  { value: 'referrals', label: 'Referrals', crawlOnly: false },
+  { value: 'pages', label: 'Pages', crawlOnly: false },
+  { value: 'activity', label: 'Activity', crawlOnly: true },
 ] as const;
+/** Views that show crawl logs alone; they are dropped when collection is unavailable. */
+export const CRAWL_ONLY_TABS: ReadonlySet<string> = new Set(
+  TRAFFIC_TABS.filter((t) => t.crawlOnly).map((t) => t.value),
+);
+/** How often the screen rechecks a source while an upload is being processed. */
+export const UPLOAD_PROCESSING_POLL_MS = 15000;
 export const TRAFFIC_RANGES = [
   { value: '30d', label: 'Last 30 days' },
   { value: '90d', label: 'Last 90 days' },

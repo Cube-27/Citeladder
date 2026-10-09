@@ -33,7 +33,7 @@ export function words(token: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-function label<T extends Record<string, string>>(table: T, token: string): string {
+export function label<T extends Record<string, string>>(table: T, token: string): string {
   return token in table ? table[token as keyof T]! : words(token);
 }
 
@@ -81,3 +81,19 @@ export const reasonLabel = (token: string) =>
     .split(', ')
     .map((part) => label(REASON, part))
     .join('; ');
+
+export const LOG_FORMATS = ['ndjson', 'json_array', 'combined'] as const;
+const LOG_FORMAT: Record<(typeof LOG_FORMATS)[number], string> = {
+  ndjson: 'NDJSON',
+  json_array: 'JSON array',
+  combined: 'Apache/Nginx Combined',
+};
+export const logFormatLabel = (token: string) => label(LOG_FORMAT, token);
+
+const PATTERN = {
+  crawled_without_referrals: 'crawled without AI referrals',
+  referrals_without_recent_crawl: 'AI referrals without recent crawls',
+  crawler_errors_on_valuable_pages: 'crawler errors on valuable pages',
+  key_event_concentration: 'key events concentrated here',
+} as const;
+export const patternLabel = (token: string) => label(PATTERN, token);

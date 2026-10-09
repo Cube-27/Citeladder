@@ -79,6 +79,15 @@ function prepareLine(line: string, input: Input) {
   };
   return { kind: 'prepared' as const, at, row };
 }
+/** A line without the identifying fields is rejected on its own, not with its batch. */
+function prepareLineOrFormatError(line: string, input: Input) {
+  try {
+    return prepareLine(line, input);
+  } catch (error) {
+    if (error instanceof UnsupportedLogFormat) return error;
+    throw error;
+  }
+}
 /** CPU-only parsing and sanitization; transient input is never persisted here. */
 export function prepareBatch(input: Input) {
   const counts = {
@@ -96,13 +105,9 @@ export function prepareBatch(input: Input) {
     last: Date | null = null,
     unsupported: UnsupportedLogFormat | null = null;
   for (const line of input.lines) {
-    let result: ReturnType<typeof prepareLine>;
-    try {
-      result = prepareLine(line, input);
-    } catch (error) {
-      // A line without the identifying fields is rejected on its own.
-      if (!(error instanceof UnsupportedLogFormat)) throw error;
-      unsupported ??= error;
+    const result = prepareLineOrFormatError(line, input);
+    if (result instanceof UnsupportedLogFormat) {
+      unsupported ??= result;
       counts.lines_rejected++;
       continue;
     }

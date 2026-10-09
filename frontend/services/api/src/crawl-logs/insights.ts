@@ -11,6 +11,7 @@ import {
   type CrawlReadOptions,
 } from './reads.ts';
 import { partitionAnchor } from '../integrations/partitions.ts';
+import { addDays } from '../referrals/projection.ts';
 import { pageDataset, type JoinedPage } from './pages-data.ts';
 import { ga4Mapped, insightSnapshot, pageContext, pageComparable } from './pages.ts';
 import { aiTraffic } from '../config/ai-traffic.ts';
@@ -102,17 +103,15 @@ export function insightPatterns(
   }
   return patterns;
 }
-const shiftDay = (day: string, days: number) =>
-  new Date(Date.parse(day) + days * 86400000).toISOString().slice(0, 10);
 /** Each preset ends on the last closed reporting day that crawl logs and GA4 can both cover. */
 async function insightWindows(db: Database, scope: CrawlScope, now = new Date()) {
   const options = await withReportingTimezone(db, scope, {});
-  const closed = shiftDay(currentReportingDay(options, now), -1);
+  const closed = addDays(currentReportingDay(options, now), -1);
   const anchor = await partitionAnchor(db, scope.workspaceId, scope.projectId, 'ga4_landing_daily');
   const end = anchor && anchor < closed ? anchor : closed;
   return Object.values(policy.analytics.preset_range_days).map((days) => ({
     ...options,
-    start_date: shiftDay(end, 1 - days),
+    start_date: addDays(end, 1 - days),
     end_date: end,
   }));
 }
@@ -206,9 +205,12 @@ export async function insightsRead(db: Database, scope: CrawlScope, input: Crawl
       patterns: [],
       coverage: { crawl: 'unknown', ga4_complete: false, notice },
     });
-  if (!(await ga4Mapped(db, scope)))
+  const [mapped, row] = await Promise.all([
+    ga4Mapped(db, scope),
+    insightSnapshot(db, scope, options),
+  ]);
+  if (!mapped)
     return empty('Connect Google Analytics to compare crawler requests with AI referrals.');
-  const row = await insightSnapshot(db, scope, options);
   if (!row) return empty('Insights are awaiting a persisted refresh.');
   return aiTrafficInsightsSchema.parse({
     snapshot_id: row.id,

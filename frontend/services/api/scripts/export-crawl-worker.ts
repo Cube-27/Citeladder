@@ -13,7 +13,7 @@ const catalog =
   ) +
   ';\n';
 const matcher = matchesCrawlerUserAgent.toString() + '\n';
-const worker = `
+const worker = String.raw`
 // Recognized requests are buffered per isolate and sent as one NDJSON batch when the
 // oldest has waited ${crawlLogs.worker_flush_seconds} s or ${crawlLogs.worker_batch_lines} are pending. Best effort: a buffer
 // is lost if Cloudflare evicts the isolate first, so coverage is never complete.
@@ -23,7 +23,7 @@ function deliver(env, lines) {
   return fetch(env.CITELADDER_INGEST_URL, {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + env.CITELADDER_CRAWL_TOKEN, 'Content-Type': 'application/x-ndjson' },
-    body: lines.join('\\n'),
+    body: lines.join('\n'),
     signal: AbortSignal.timeout(${crawlLogs.worker_timeout_ms})
   }).then(result => {
     if (!result.ok) console.error('CiteLadder crawl log delivery failed', result.status);
