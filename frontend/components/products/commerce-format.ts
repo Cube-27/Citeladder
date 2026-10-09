@@ -1,3 +1,5 @@
+import type { CompetitorCandidate } from '@citeladder/contracts/commerce-suite';
+
 import type { StatusValue } from '@/components/ui/badge-variants';
 
 /**
@@ -30,13 +32,16 @@ export function competitorHost(url: string): string {
   }
 }
 
-const COMPETITOR_STATES: Record<string, { tone: StatusValue; label: string }> = {
+const COMPETITOR_STATES: Record<
+  CompetitorCandidate['state'],
+  { tone: StatusValue; label: string }
+> = {
   approved: { tone: 'success', label: 'Approved' },
   rejected: { tone: 'danger', label: 'Rejected' },
   excluded: { tone: 'danger', label: 'Excluded' },
   pending: { tone: 'info', label: 'Needs review' },
 };
 
-export function competitorState(state: string): { tone: StatusValue; label: string } {
-  return COMPETITOR_STATES[state] ?? { tone: 'info', label: 'Needs review' };
+export function competitorState(state: CompetitorCandidate['state']) {
+  return COMPETITOR_STATES[state];
 }

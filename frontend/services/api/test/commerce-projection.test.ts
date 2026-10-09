@@ -402,5 +402,15 @@ describe('projection decisions over stored facts', () => {
         '',
       ),
     ).toBe('Tools');
+    // An index crumb or the platform default names no shelf.
+    expect(
+      categoryTitle(
+        readFacts({
+          commerce: { breadcrumbs: ['Tools', 'Shop all', 'Uncategorized'] },
+          headings: { h1_texts: ['Shop all'] },
+        }),
+        '',
+      ),
+    ).toBe('Tools');
   });
 });

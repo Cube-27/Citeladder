@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { MetricGroup, metricItemClasses } from '@/components/ui/workspace';
+import { pluralCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 import type { CommerceQueries } from './commerce-queries';
@@ -88,10 +89,8 @@ export function TargetShelfBand({ query }: Readonly<{ query: CommerceQueries['sh
         {snapshot ? (
           <p className="type-caption">
             Measured <DisplayTime value={snapshot.measured_at} dateOnly /> from{' '}
-            {snapshot.successful_execution_count}{' '}
-            {snapshot.successful_execution_count === 1 ? 'answer' : 'answers'} and{' '}
-            {snapshot.recognized_slot_count} recognized{' '}
-            {snapshot.recognized_slot_count === 1 ? 'recommendation' : 'recommendations'}.
+            {pluralCount(snapshot.successful_execution_count, 'answer')} and{' '}
+            {pluralCount(snapshot.recognized_slot_count, 'recognized recommendation')}.
           </p>
         ) : null}
       </CardContent>

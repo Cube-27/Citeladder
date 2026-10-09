@@ -9,6 +9,8 @@ export const commerceTargetSchema = z.strictObject({
   kind: z.enum(['category', 'product']),
   id: uuid,
 });
+/** The targets one discovery or prompt-generation request names. */
+export const commerceTargetsSchema = z.array(commerceTargetSchema).min(1).max(COMMERCE_TARGETS_MAX);
 export const commerceCategorySchema = z.strictObject({
   id: uuid,
   name: z.string(),
@@ -107,7 +109,7 @@ const shelfSnapshotSchema = z.strictObject({
   measured_at: z.string(),
 });
 /** Who an answer recommended for the target, folded across the latest audit's executions. */
-const shelfHolderSchema = z.strictObject({
+export const shelfHolderSchema = z.strictObject({
   kind: z.enum(['owned', 'approved_competitor', 'ai_observed_competitor']),
   name: z.string(),
   brand: z.string(),

@@ -237,11 +237,14 @@ export async function prepareShelfExecution(
           observedCandidate = candidate;
         }
       }
-      const price =
-        resolved?.price !== null && resolved?.price !== undefined
-          ? { price: resolved.price, currency: resolved.currency.toUpperCase() }
-          : observedPrice(span.text, locale);
-      const merchant = observedMerchant(span.text, resolved?.merchant_url);
+      // Price and seller come from the answer's own text; a resolver-supplied
+      // merchant link counts only when the answer carries it.
+      const price = observedPrice(span.text, locale);
+      const merchantUrl = resolved?.merchant_url.trim() ?? '';
+      const merchant = observedMerchant(
+        span.text,
+        merchantUrl && artifact.answer_text.includes(merchantUrl) ? merchantUrl : undefined,
+      );
       const id = randomUUID();
       await trx
         .insertInto('commerce_recommendation_observations')

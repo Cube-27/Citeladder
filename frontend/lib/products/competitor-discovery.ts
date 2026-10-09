@@ -43,7 +43,12 @@ export function useCompetitorDiscovery(projectId: string) {
   // first one's progress. They do not survive a reload, so an empty set falls
   // back to asking the server what is still in flight — the only form reload
   // recovery can take.
-  const [trackedIds, setTrackedIds] = useState<string[]>([]);
+  // Keyed by project, so switching projects never polls another project's IDs.
+  const [tracked, setTracked] = useState<{ projectId: string; ids: string[] }>({
+    projectId,
+    ids: [],
+  });
+  const trackedIds = tracked.projectId === projectId ? tracked.ids : [];
   const queryKey = trackedIds.length
     ? queryKeys.commerce.discoveryTasks(projectId, trackedIds)
     : queryKeys.commerce.activeDiscoveries(projectId);
@@ -66,7 +71,13 @@ export function useCompetitorDiscovery(projectId: string) {
   const discover = useMutation({
     mutationFn: (targets: CommerceTarget[]) =>
       commerceApi.discoverCompetitors(projectId, targets, { workspaceId }),
-    onSuccess: (data) => setTrackedIds((current) => [...new Set([...current, ...data.task_ids])]),
+    onSuccess: (data) =>
+      setTracked((current) => ({
+        projectId,
+        ids: [
+          ...new Set([...(current.projectId === projectId ? current.ids : []), ...data.task_ids]),
+        ],
+      })),
   });
 
   return { tasks: query.data ?? [], discover };

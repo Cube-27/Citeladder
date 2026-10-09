@@ -21,6 +21,7 @@ import { competitorHost, competitorState, discoveryMessage } from './commerce-fo
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { sameTarget } from '@/lib/products/use-commerce-target';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
 
@@ -29,7 +30,7 @@ function forTarget(
   rows: NonNullable<CommerceQueries['competitors']['data']>,
   target: CommerceTarget,
 ) {
-  return rows.filter((row) => row.target_kind === target.kind && row.target_id === target.id);
+  return rows.filter((row) => sameTarget({ kind: row.target_kind, id: row.target_id }, target));
 }
 
 export function TargetCompetitors({
@@ -56,9 +57,7 @@ export function TargetCompetitors({
   // The tracker follows every run in the project, so a bulk discovery across
   // three categories otherwise showed all three banners on each one, and made
   // every target read as "Finding…" while any of them was running.
-  const tasks = discovery.tasks.filter(
-    (task) => task.target.kind === target.kind && task.target.id === target.id,
-  );
+  const tasks = discovery.tasks.filter((task) => sameTarget(task.target, target));
   const running = tasks.some((task) => !task.terminal);
   const rows = query.data ? forTarget(query.data, target) : [];
   return (

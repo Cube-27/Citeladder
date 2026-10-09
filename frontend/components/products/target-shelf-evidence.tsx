@@ -9,6 +9,7 @@ import type { StatusValue } from '@/components/ui/badge-variants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
+import { pluralCount } from '@/lib/format';
 
 type Holder = Shelf['holders'][number];
 
@@ -20,7 +21,7 @@ const HOLDER_KIND: Record<Holder['kind'], { label: string; tone: StatusValue }> 
 
 /** "In 3 of 5 answers · best #2", from the folded recommendation counts. */
 function holderReach(holder: Holder, answers: number): string {
-  const reach = `In ${holder.appearances} of ${answers} ${answers === 1 ? 'answer' : 'answers'}`;
+  const reach = `In ${holder.appearances} of ${pluralCount(answers, 'answer')}`;
   return holder.best_rank === null ? reach : `${reach} · best #${holder.best_rank}`;
 }
 
@@ -33,7 +34,6 @@ function holderReach(holder: Holder, answers: number): string {
  */
 export function TargetShelfEvidence({ shelf }: Readonly<{ shelf: Shelf }>) {
   const { snapshot, holders, unresolved_count: unresolved, actions } = shelf;
-  if (!snapshot && !actions.length) return null;
   const answers = snapshot?.successful_execution_count ?? 0;
   return (
     <>
@@ -97,9 +97,9 @@ export function TargetShelfEvidence({ shelf }: Readonly<{ shelf: Shelf }>) {
             )}
             {unresolved ? (
               <p className="type-caption">
-                {unresolved} other {unresolved === 1 ? 'recommendation' : 'recommendations'} named
-                products outside your catalog and approved competitors. Approving competitors lets
-                the next audit count them.
+                {pluralCount(unresolved, 'other recommendation')} named products outside your
+                catalog and approved competitors. Approving competitors lets the next audit count
+                them.
               </p>
             ) : null}
           </CardContent>

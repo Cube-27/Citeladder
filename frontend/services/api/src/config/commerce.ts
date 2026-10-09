@@ -1,5 +1,3 @@
-import { COMMERCE_TARGETS_MAX } from '@citeladder/contracts/commerce-suite';
-
 /** Native Commerce admission, acquisition and buyer-prompt policy. */
 export const commerce = {
   importer_version: 'commerce-catalog-importer-1',
@@ -92,7 +90,6 @@ export const commerce = {
     min: 2,
     max: 10,
     default: 5,
-    targets_max: COMMERCE_TARGETS_MAX,
     min_words: 4,
     max_words: 24,
     survey_markers: [

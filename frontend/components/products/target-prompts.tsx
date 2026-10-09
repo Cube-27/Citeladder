@@ -18,6 +18,7 @@ import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { useRunEvents } from '@/lib/runs/use-run-events';
+import { sameTarget } from '@/lib/products/use-commerce-target';
 
 import type { CommerceQueries } from './commerce-queries';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -29,7 +30,7 @@ function forTarget(
   rows: NonNullable<CommerceQueries['buyerPrompts']['data']>,
   target: CommerceTarget,
 ) {
-  return rows.filter((row) => row.target.kind === target.kind && row.target.id === target.id);
+  return rows.filter((row) => sameTarget(row.target, target));
 }
 
 export function TargetPrompts({

@@ -9,6 +9,11 @@ export function targetKey(target: CommerceTarget): string {
   return `${target.kind}:${target.id}`;
 }
 
+/** Whether two targets name the same category or product. */
+export function sameTarget(a: CommerceTarget, b: CommerceTarget): boolean {
+  return a.kind === b.kind && a.id === b.id;
+}
+
 /** A well-formed `?target=` value, or undefined: a malformed one never reaches the API. */
 export function parseTargetKey(value: string | null | undefined): CommerceTarget | undefined {
   const [kind, id] = (value ?? '').split(':');

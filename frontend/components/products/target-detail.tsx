@@ -12,20 +12,8 @@ import { TargetPrompts } from './target-prompts';
 import { TargetNextStep } from './target-next-step';
 import { TargetShelfBand } from './target-shelf-band';
 import { TargetShelfEvidence } from './target-shelf-evidence';
-import { targetKey } from '@/lib/products/use-commerce-target';
+import { sameTarget, targetKey } from '@/lib/products/use-commerce-target';
 import { Stack } from '@/components/ui/layout';
-
-/** The project-wide rows that belong to one target. */
-function ofTarget<Row>(
-  rows: readonly Row[] | undefined,
-  target: CommerceTarget,
-  targetOf: (row: Row) => CommerceTarget,
-): Row[] {
-  return (rows ?? []).filter((row) => {
-    const own = targetOf(row);
-    return own.kind === target.kind && own.id === target.id;
-  });
-}
 
 type ShownTarget = Readonly<{
   target: CommerceTarget;
@@ -97,15 +85,19 @@ export function TargetDetail({
       <TargetShelfBand query={shown.shelf} />
       {shown.shelf.data ? (
         <>
-          <TargetNextStep
-            kind={shown.target.kind}
-            competitors={ofTarget(queries.competitors.data, shown.target, (row) => ({
-              kind: row.target_kind,
-              id: row.target_id,
-            }))}
-            prompts={ofTarget(queries.buyerPrompts.data, shown.target, (row) => row.target)}
-            shelf={shown.shelf.data}
-          />
+          {/* A pending or failed read is not an empty list: no advice from it. */}
+          {queries.competitors.isSuccess && queries.buyerPrompts.isSuccess ? (
+            <TargetNextStep
+              kind={shown.target.kind}
+              competitors={(queries.competitors.data ?? []).filter((row) =>
+                sameTarget({ kind: row.target_kind, id: row.target_id }, shown.target),
+              )}
+              prompts={(queries.buyerPrompts.data ?? []).filter((row) =>
+                sameTarget(row.target, shown.target),
+              )}
+              shelf={shown.shelf.data}
+            />
+          ) : null}
           <TargetShelfEvidence shelf={shown.shelf.data} />
         </>
       ) : null}

@@ -4,6 +4,7 @@ import {
   commerceProductSchema,
   competitorCandidateSchema,
   competitorDiscoveryTaskSchema,
+  shelfHolderSchema,
   shelfSchema,
 } from '@citeladder/contracts/commerce-suite';
 import { sql } from 'kysely';
@@ -13,6 +14,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { sellsCatalog, UNCATEGORIZED_KEY } from './projection-facts.ts';
+import { holderIdentity, orderedRank } from './shelf-metrics.ts';
 import { ApiError } from '../errors.ts';
 
 export type CommerceScope = { workspaceId: string; projectId: string };
@@ -28,6 +30,7 @@ function numeric(value: string | null): number | null {
 }
 
 export async function catalog(db: Database, scope: CommerceScope) {
+  const projection = projectionState(db, scope);
   const products = await db
     .selectFrom('commerce_products')
     .selectAll()
@@ -36,8 +39,8 @@ export async function catalog(db: Database, scope: CommerceScope) {
     .orderBy('name')
     .orderBy('canonical_url')
     .execute();
-  // Rows named "Uncategorized" (the platform default, or an earlier sentinel)
-  // are no category: their products read as uncategorized.
+  // A row named "Uncategorized" (the platform default) is no category: its
+  // products read as uncategorized.
   const categories = await db
     .selectFrom('commerce_categories')
     .selectAll()
@@ -83,7 +86,7 @@ export async function catalog(db: Database, scope: CommerceScope) {
           a.name.localeCompare(b.name) ||
           a.id.localeCompare(b.id),
       ),
-    projection: await projectionState(db, scope),
+    projection: await projection,
   });
 }
 
@@ -106,30 +109,30 @@ async function projectionState(db: Database, scope: CommerceScope) {
     .where('t.workspace_id', '=', scope.workspaceId)
     .where('t.project_id', '=', scope.projectId)
     .where('t.task_kind', '=', PROJECTION_TASK);
-  const inFlight = await tasks
+  const inFlight = tasks
     .select(db.fn.countAll<string>().as('count'))
     .where('t.status', 'not in', terminal)
     .executeTakeFirstOrThrow();
-  const sources = tasks.innerJoin('site_page_analyses as a', (join) =>
-    join.on(sql`a.id::text`, '=', sql`t.payload->>'source_analysis_id'`),
-  );
+  const sources = tasks
+    .innerJoin('site_page_analyses as a', (join) =>
+      join.on(sql`a.id::text`, '=', sql`t.payload->>'source_analysis_id'`),
+    )
+    .where('a.workspace_id', '=', scope.workspaceId);
   const latest = await sources
     .select('a.crawl_id')
-    .where('a.workspace_id', '=', scope.workspaceId)
     .orderBy('t.created_at', 'desc')
     .limit(1)
     .executeTakeFirst();
   const failed = latest
     ? await sources
         .select(db.fn.countAll<string>().as('count'))
-        .where('a.workspace_id', '=', scope.workspaceId)
         .where('a.crawl_id', '=', latest.crawl_id)
         .where('t.status', 'in', ['failed', 'cancelled'])
         .executeTakeFirstOrThrow()
     : { count: '0' };
   return {
     applies: sellsCatalog(profile?.business_context),
-    in_flight: Number(inFlight.count),
+    in_flight: Number((await inFlight).count),
     failed: Number(failed.count),
   };
 }
@@ -224,10 +227,7 @@ export async function buyerPrompts(db: Database, scope: CommerceScope, id?: stri
   );
 }
 
-const HOLDER_KINDS = ['owned', 'approved_competitor', 'ai_observed_competitor'] as const;
-type HolderKind = (typeof HOLDER_KINDS)[number];
-const isHolderKind = (value: string): value is HolderKind =>
-  HOLDER_KINDS.some((kind) => kind === value);
+type HolderKind = z.infer<typeof shelfHolderSchema>['kind'];
 const SETTLED_ACTION_STATUSES = ['done', 'dismissed'];
 
 /**
@@ -242,6 +242,8 @@ export async function shelf(
   scope: CommerceScope,
   target: { kind: 'category' | 'product'; id: string },
 ) {
+  // Independent of the snapshot; read alongside it.
+  const actions = targetActions(db, scope, target);
   const snapshot = await db
     .selectFrom('commerce_shelf_snapshots')
     .select([
@@ -298,14 +300,15 @@ export async function shelf(
   >();
   let unresolved = 0;
   for (const row of observations) {
-    const identity = row.classification === 'owned' ? row.product_id : row.competitor_candidate_id;
-    if (!isHolderKind(row.classification) || identity === null) {
+    const identity = holderIdentity(row);
+    const kind = shelfHolderSchema.shape.kind.safeParse(row.classification);
+    if (identity === null || !kind.success) {
       unresolved++;
       continue;
     }
-    const key = JSON.stringify([row.classification, identity]);
+    const key = JSON.stringify([kind.data, identity]);
     const holder = holders.get(key) ?? {
-      kind: row.classification,
+      kind: kind.data,
       name: row.observed_product,
       brand: row.observed_brand,
       merchant_domain: row.merchant_domain,
@@ -314,7 +317,7 @@ export async function shelf(
     };
     holder.tasks.add(row.task_id);
     holder.merchant_domain ||= row.merchant_domain;
-    const rank = row.order_observable ? row.rank : null;
+    const rank = orderedRank(row);
     if (rank !== null && (holder.best_rank === null || rank < holder.best_rank))
       holder.best_rank = rank;
     holders.set(key, holder);
@@ -344,7 +347,7 @@ export async function shelf(
           a.name.localeCompare(b.name),
       ),
     unresolved_count: unresolved,
-    actions: await targetActions(db, scope, target),
+    actions: await actions,
   });
 }
 

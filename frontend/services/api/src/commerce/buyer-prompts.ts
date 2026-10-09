@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { commerceTargetsSchema } from '@citeladder/contracts/commerce-suite';
 import { sql } from 'kysely';
 import { z } from 'zod';
 
@@ -23,7 +24,7 @@ const stringField = (value: unknown) => (typeof value === 'string' ? value.trim(
 const targetSchema = z.object({ kind: z.enum(['product', 'category']), id: z.uuid() });
 type Target = z.infer<typeof targetSchema>;
 export const buyerGenerateInput = z.object({
-  targets: z.array(targetSchema).min(1).max(P.targets_max),
+  targets: commerceTargetsSchema,
   count: z.number().int().min(P.min).max(P.max).default(P.default),
 });
 export const buyerManualInput = z.object({

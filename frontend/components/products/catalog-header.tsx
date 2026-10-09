@@ -12,9 +12,11 @@ import { textRole } from '@/components/ui/typography';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthApi, siteHealthQueries } from '@/lib/api/site-health';
+import { pluralCount } from '@/lib/format';
 import { crawlBadgeValue, crawlPollInterval, statusLabel } from '@/lib/site-health/status';
 
 import type { SiteCrawl } from '@/lib/api/types';
+import type { CommerceCatalog } from '@citeladder/contracts/commerce-suite';
 
 import type { CommerceQueries } from './commerce-queries';
 
@@ -35,7 +37,7 @@ function analyzedLabel(crawl: SiteHealthCrawl): string | null {
   return `${crawl.analyzed_count}/${Math.max(known, crawl.analyzed_count)}`;
 }
 
-type Projection = NonNullable<CommerceQueries['catalog']['data']>['projection'];
+type Projection = CommerceCatalog['projection'];
 
 /**
  * Pages still being turned into catalog rows, then pages of the latest crawl
@@ -51,7 +53,7 @@ function projectionBadge(projection: Projection | undefined) {
   if (projection?.failed)
     return (
       <Badge variant="status" value="danger">
-        {projection.failed} {projection.failed === 1 ? 'page' : 'pages'} not projected
+        {pluralCount(projection.failed, 'page')} not projected
       </Badge>
     );
   return null;

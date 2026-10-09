@@ -17,7 +17,25 @@ type Observation = Pick<
   | 'competitor_candidate_id'
 >;
 
-const orderedRank = (row: Observation) => (row.order_observable ? row.rank : null);
+/** A rank only an ordered answer supplies. */
+export const orderedRank = (row: Pick<Observation, 'order_observable' | 'rank'>) =>
+  row.order_observable ? row.rank : null;
+
+/**
+ * The product or competitor an observation recommends, or null when it names
+ * neither: unresolved, or any classification the shelf does not recognize.
+ */
+export function holderIdentity(
+  row: Pick<Observation, 'classification' | 'product_id' | 'competitor_candidate_id'>,
+): string | null {
+  if (row.classification === 'owned') return row.product_id;
+  if (
+    row.classification === 'approved_competitor' ||
+    row.classification === 'ai_observed_competitor'
+  )
+    return row.competitor_candidate_id;
+  return null;
+}
 
 /**
  * One slot per product or competitor per execution, at its best rank: an
@@ -26,8 +44,8 @@ const orderedRank = (row: Observation) => (row.order_observable ? row.rank : nul
 function shelfSlots(observations: Observation[]) {
   const held = new Map<string, Observation>();
   for (const row of observations) {
-    const holder = row.classification === 'owned' ? row.product_id : row.competitor_candidate_id;
-    if (row.classification === 'unresolved' || holder === null) continue;
+    const holder = holderIdentity(row);
+    if (holder === null) continue;
     const key = JSON.stringify([row.task_id, row.classification, holder]);
     const kept = held.get(key);
     const rank = orderedRank(row),
@@ -41,7 +59,7 @@ export function shelfMetrics(taskIds: string[], observations: Observation[]) {
   const recognized = shelfSlots(observations);
   const owned = recognized.filter((row) => row.classification === 'owned');
   const ownedTasks = new Set(owned.map((row) => row.task_id));
-  const rankedOwned = owned.filter((row) => row.order_observable && row.rank !== null);
+  const rankedOwned = owned.filter((row) => orderedRank(row) !== null);
   // The first-ranked observation of each execution that ranked any.
   const ranked = taskIds
     .map(

@@ -1,4 +1,5 @@
 import {
+  COMMERCE_TARGETS_MAX,
   buyerPromptSchema,
   catalogImportSchema,
   commerceCatalogSchema,
@@ -49,7 +50,7 @@ const candidateBody = z.object({
 const promptBody = z.object({ approved: z.boolean() });
 const executeDiscoveriesBody = z
   .object({
-    task_ids: z.array(z.uuid()).min(1).max(policy.commerce.buyer_prompts.targets_max),
+    task_ids: z.array(z.uuid()).min(1).max(COMMERCE_TARGETS_MAX),
   })
   .strict();
 

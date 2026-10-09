@@ -54,7 +54,7 @@ export const UNCATEGORIZED_KEY = 'uncategorized';
 const named = (name: string) => /[\p{L}\p{N}]/u.test(name);
 /** A name that identifies a real category. */
 export const isCategoryName = (name: string) =>
-  named(name) && categoryKey(name) !== UNCATEGORIZED_KEY;
+  named(name) && categoryKey(name) !== UNCATEGORIZED_KEY && !indexNames.has(categoryKey(name));
 
 export function catalogUrl(value: string, base?: string): string {
   try {

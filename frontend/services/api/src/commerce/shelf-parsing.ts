@@ -4,6 +4,7 @@ import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import { canonicalPage } from '../traffic/normalization.ts';
 import { localizedPrice } from './projection-facts.ts';
 import { onlyOf } from '../lists.ts';
+import { domainMatches } from '../analysis/domains.ts';
 
 export const shelfPolicy = auditPolicy.commerce_shelf;
 export const boundedText = (text: string, limit: number) => [...text].slice(0, limit).join('');
@@ -164,8 +165,6 @@ const resolvedRecommendationSchema = z.object({
   brand: z.string().max(255).default(''),
   product_url: z.string().max(2048).default(''),
   merchant_url: z.string().max(2048).default(''),
-  price: z.number().nonnegative().nullable().default(null),
-  currency: z.string().max(3).default(''),
   surface_kind: z.enum(['recommendation', 'shopping_result']).default('recommendation'),
 });
 export const resolvedBatchSchema = z.object({
@@ -273,9 +272,8 @@ export function resolvedCompetitorUrl(
   );
   if (!inAnswer) return null;
   const parsed = new URL(canonical);
-  const host = parsed.hostname.replace(/^www\./u, '');
   const within = (domains: readonly string[]) =>
-    domains.some((domain) => domain && (host === domain || host.endsWith(`.${domain}`)));
+    domains.some((domain) => domainMatches(parsed.hostname, domain));
   if (within(shelfPolicy.non_pdp_hosts) || within(evidence.ownedHosts)) return null;
   if (shelfPolicy.excluded_paths.some((token) => parsed.pathname.toLowerCase().includes(token)))
     return null;

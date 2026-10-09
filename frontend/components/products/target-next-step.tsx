@@ -3,6 +3,7 @@
 import type { BuyerPrompt, CompetitorCandidate, Shelf } from '@citeladder/contracts/commerce-suite';
 
 import { Alert } from '@/components/ui/alert';
+import { pluralCount } from '@/lib/format';
 
 type Inputs = Readonly<{
   kind: 'category' | 'product';
@@ -10,8 +11,6 @@ type Inputs = Readonly<{
   prompts: readonly Pick<BuyerPrompt, 'enabled'>[];
   shelf: Pick<Shelf, 'snapshot' | 'actions'>;
 }>;
-
-const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 /**
  * The one thing that moves this target forward, in the order the work runs:
@@ -24,13 +23,13 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 export function nextStep({ kind, competitors, prompts, shelf }: Inputs): string {
   const actions = shelf.actions.length;
   if (actions)
-    return `${plural(actions, 'Action', 'Actions')} can raise this ${kind}'s visibility in AI answers. Start with the first one below.`;
+    return `${pluralCount(actions, 'Action')} can raise this ${kind}'s visibility in AI answers. Start with the first one below.`;
   if (shelf.snapshot)
     return `No open Actions for this ${kind}. Launch the audit again after you change its pages to see the effect.`;
   const pending = competitors.filter((row) => row.state === 'pending').length;
   if (!competitors.length)
     return `Find competitors for this ${kind}, so measurement can tell who holds the rest of the shelf.`;
-  if (pending) return `Review ${plural(pending, 'competitor candidate', 'competitor candidates')}.`;
+  if (pending) return `Review ${pluralCount(pending, 'competitor candidate')}.`;
   if (!prompts.length) return `Generate buyer prompts to measure this ${kind}.`;
   if (!prompts.some((row) => row.enabled))
     return 'Approve the buyer prompts that a real shopper would type.';
