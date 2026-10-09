@@ -135,7 +135,7 @@ export function paletteDeclarations(source, selector) {
     rules
       .filter(({ selectors }) => selectors.includes(scope))
       .flatMap(({ body }) =>
-        [...body.replace(/\{[^{}]*\}/g, '').matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)].map(
+        [...body.replace(/\{[^{}]*\}/g, '').matchAll(/(--[\w-]+)\s*:([^;{}]+);/g)].map(
           ([, token, value]) => [token, value.trim()],
         ),
       );
@@ -186,6 +186,19 @@ function opaque(palette, token, backdrop) {
   return composite(palette.get(token), backdrop);
 }
 
+/** The violation for one ink on one surface, or null when it reads. */
+function inkViolation(palette, { scope, cssLabel, minimum }, inkToken, surfaceToken, surface) {
+  const ink = opaque(palette, inkToken, surface);
+  if (!isHex(ink) || !isHex(surface)) {
+    return `${cssLabel}: ${scope} cannot resolve ${inkToken} on ${surfaceToken}`;
+  }
+  const ratio = contrastRatio(ink, surface);
+  if (ratio < minimum) {
+    return `${cssLabel}: ${scope} ${inkToken} on ${surfaceToken} is ${ratio.toFixed(2)}:1; needs ${minimum}:1`;
+  }
+  return null;
+}
+
 function contrastViolations(palette, scope, cssLabel) {
   const panel = palette.get(color('panel'));
   const violations = [];
@@ -194,17 +207,14 @@ function contrastViolations(palette, scope, cssLabel) {
     for (const surfaceToken of surfaces) {
       const surface = opaque(palette, surfaceToken, panel);
       for (const inkToken of inks) {
-        const ink = opaque(palette, inkToken, surface);
-        if (!isHex(ink) || !isHex(surface)) {
-          violations.push(`${cssLabel}: ${scope} cannot resolve ${inkToken} on ${surfaceToken}`);
-          continue;
-        }
-        const ratio = contrastRatio(ink, surface);
-        if (ratio < minimum) {
-          violations.push(
-            `${cssLabel}: ${scope} ${inkToken} on ${surfaceToken} is ${ratio.toFixed(2)}:1; needs ${minimum}:1`,
-          );
-        }
+        const violation = inkViolation(
+          palette,
+          { scope, cssLabel, minimum },
+          inkToken,
+          surfaceToken,
+          surface,
+        );
+        if (violation) violations.push(violation);
       }
     }
   }
@@ -244,7 +254,7 @@ function stateLadderViolations(palette, scope, cssLabel) {
   const panel = palette.get(color('panel'));
   const steps = STATE_LADDER.map((token) => opaque(palette, token, panel));
   if (!steps.every(isHex)) return [`${cssLabel}: ${scope} cannot resolve the state tint ladder`];
-  const levels = steps.map(lightness);
+  const levels = steps.map((step) => lightness(step));
   const darkening = levels[0] > 50;
   const violations = [];
   for (let index = 1; index < levels.length; index += 1) {
