@@ -14,7 +14,7 @@ import { UsageMeter } from './usage-meter';
  * bar reads as "none left" when it means "we could not resolve this" — the user
  * then believes they are out of quota they may well have. `unlimited` drawn as
  * a bar is the mirror mistake. Both are asserted here as the ABSENCE of a
- * progressbar, which is the thing that would mislead.
+ * meter, which is the thing that would mislead.
  */
 function item(overrides: Partial<UsageItem> = {}): UsageItem {
   return {
@@ -53,7 +53,7 @@ describe('UsageMeter', () => {
     expect(screen.getByText('Not available')).toBeVisible();
     expect(screen.getByText(/could not be resolved/)).toBeVisible();
     // Drawing a meter here would read as "none left".
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
   it('shows consumption with no ceiling for an unlimited allowance', () => {
@@ -61,7 +61,7 @@ describe('UsageMeter', () => {
 
     expect(screen.getByText('Unlimited')).toBeVisible();
     expect(screen.getByText('42 slots')).toBeVisible();
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
   it('treats a null consumption on an unlimited row as zero, not blank', () => {
@@ -70,10 +70,10 @@ describe('UsageMeter', () => {
     expect(screen.getByText('0 slots')).toBeVisible();
   });
 
-  it('renders a finite row as an accessible progressbar', () => {
+  it('renders a finite row as an accessible meter', () => {
     render(<UsageMeter item={item({ allowance: 100, consumed: 25, remaining: 75 })} />);
 
-    const bar = screen.getByRole('progressbar', { name: 'Prompt slots usage' });
+    const bar = screen.getByRole('meter', { name: 'Prompt slots usage' });
     expect(bar).toHaveAttribute('aria-valuemin', '0');
     expect(bar).toHaveAttribute('aria-valuemax', '100');
     expect(bar).toHaveAttribute('aria-valuenow', '25');
@@ -84,7 +84,7 @@ describe('UsageMeter', () => {
   it('does not divide by a zero allowance', () => {
     render(<UsageMeter item={item({ allowance: 0, consumed: 0, remaining: 0 })} />);
 
-    const bar = screen.getByRole('progressbar');
+    const bar = screen.getByRole('meter');
     expect(bar).toHaveAttribute('aria-valuemax', '0');
     expect(bar.firstElementChild).toHaveStyle({ width: '0%' });
   });
@@ -94,7 +94,7 @@ describe('UsageMeter', () => {
     // clamp rather than overflow its track.
     render(<UsageMeter item={item({ allowance: 100, consumed: 150, remaining: 0 })} />);
 
-    expect(screen.getByRole('progressbar').firstElementChild).toHaveStyle({ width: '100%' });
+    expect(screen.getByRole('meter').firstElementChild).toHaveStyle({ width: '100%' });
   });
 
   it('mentions reserved usage only when some is reserved', () => {

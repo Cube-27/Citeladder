@@ -14,12 +14,14 @@ import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { WorkflowGallery, WorkflowStart } from '@/components/agent/workflow-gallery';
 import { PageShell } from '@/components/layout/page-shell';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
@@ -54,7 +56,7 @@ export function NewChatScreen() {
     />
   ) : (
     <PageShell measure="workflow">
-      <Alert tone="info">Select or create a project to start a chat.</Alert>
+      <ProjectRequiredState />
     </PageShell>
   );
 }
@@ -185,7 +187,7 @@ function PinnedWorkflow({
       onClick={onRemove}
     >
       {label ?? 'Workflow'}
-      <X aria-hidden className="size-4" />
+      <X aria-hidden className="size-3.5" />
     </Button>
   );
 }
@@ -203,12 +205,9 @@ function AttachedAction({
     <section aria-label="Working on" className={panelClasses({ pad: 'compact' }, 'grid gap-1')}>
       <span className={textRole('label')}>Working on</span>
       <div className="flex flex-wrap items-center gap-2">
-        <ProjectLink
-          href={`/agent/actions/${action.id}`}
-          className={textRole('itemTitle', 'hover:text-accent-text')}
-        >
-          {action.target_label}
-        </ProjectLink>
+        <TextLink asChild text="itemTitle">
+          <ProjectLink href={`/agent/actions/${action.id}`}>{action.target_label}</ProjectLink>
+        </TextLink>
         <ActionStatusBadge status={action.status} />
       </div>
       <span className={textRole('caption')}>
@@ -251,12 +250,9 @@ function TopActionRow({ action }: Readonly<{ action: Action }>) {
   return (
     <li className={panelClasses({ pad: 'compact' }, 'flex flex-wrap items-center gap-3')}>
       <div className="grid min-w-0 flex-1 gap-0.5">
-        <ProjectLink
-          href={`/agent/actions/${action.id}`}
-          className={textRole('itemTitle', 'hover:text-accent-text truncate')}
-        >
-          {action.target_label}
-        </ProjectLink>
+        <TextLink asChild text="itemTitle" className="truncate">
+          <ProjectLink href={`/agent/actions/${action.id}`}>{action.target_label}</ProjectLink>
+        </TextLink>
         <span className={textRole('caption')}>
           {[approachLabel(action.approach), `${action.families.length} evidence systems`]
             .filter(Boolean)

@@ -53,6 +53,9 @@ const catalogQuery = (overrides: Record<string, unknown> = {}) =>
     ...overrides,
   }) as never;
 
+/** The value a stat label names: the definition after its term. */
+const statValue = (label: string) => screen.getByText(label).closest('dt')?.nextElementSibling;
+
 /**
  * The header is a hook now — its two halves go to different bands of the page
  * grammar — so the test mounts a host that renders both, exactly as a screen
@@ -84,8 +87,8 @@ describe('CatalogHeader', () => {
       />,
     );
 
-    expect(screen.getByText('Products').nextSibling).toHaveTextContent('2');
-    expect(screen.getByText('Categories').nextSibling).toHaveTextContent('1');
+    expect(statValue('Products')).toHaveTextContent('2');
+    expect(statValue('Categories')).toHaveTextContent('1');
     await waitFor(() => expect(screen.getByText('49/50')).toBeInTheDocument());
     // The mechanism paragraph is gone — the numbers say it.
     expect(screen.queryByText(/project automatically/)).not.toBeInTheDocument();
@@ -123,6 +126,6 @@ describe('CatalogHeader', () => {
       expect(screen.getByRole('button', { name: 'Run Site Health crawl' })).toBeInTheDocument(),
     );
     expect(screen.getByText('No crawl yet')).toBeInTheDocument();
-    expect(screen.getByText('Pages analyzed').nextSibling).toHaveTextContent('Not measured');
+    expect(statValue('Pages analyzed')).toHaveTextContent('Not measured');
   });
 });

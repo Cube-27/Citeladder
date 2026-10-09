@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
+import { TextLink } from '@/components/ui/text-link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { TrafficUrlButton } from './url-panel';
 
@@ -49,9 +49,8 @@ export function InsightStrip({
               <li key={r.pattern} className="grid gap-2 py-3 first:pt-0 last:pb-0">
                 <p className="type-body">{r.copy}</p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                  <Link
-                    className="type-control text-accent-text hover:underline"
-                    to={projectDestination(
+                  <TextLink
+                    href={projectDestination(
                       '/ai-traffic',
                       new URLSearchParams({
                         tab: 'pages',
@@ -66,7 +65,7 @@ export function InsightStrip({
                     )}
                   >
                     Inspect pages
-                  </Link>
+                  </TextLink>
                   {r.url_hashes.slice(0, 3).map((hash, index) => (
                     <TrafficUrlButton
                       key={hash}

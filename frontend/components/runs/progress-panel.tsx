@@ -7,6 +7,7 @@ import { MeasurementContext } from '@/components/runs/measurement-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { Meter } from '@/components/ui/meter';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
 import { MetricGroup, MetricItem, metricItemClasses } from '@/components/ui/workspace';
@@ -159,12 +160,7 @@ function ProgressBar({
         <span>Progress</span>
         <span>{percent}%</span>
       </div>
-      <div className="bg-well h-1.5 w-full overflow-hidden rounded-full">
-        <div
-          className="bg-chart-1 h-full transition-[width] duration-[var(--motion-normal)]"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
+      <Meter kind="progress" tone="info" label="Progress" value={percent} />
     </div>
   );
 }

@@ -33,7 +33,7 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
         </blockquote>
       ) : null}
       {url ? (
-        <p className="type-caption text-accent-text bg-background-alt rounded-[var(--radius-control)] px-3 py-2 break-all tabular-nums">
+        <p className="type-caption text-foreground bg-background-alt rounded-[var(--radius-control)] px-3 py-2 break-all tabular-nums">
           {url}
         </p>
       ) : null}

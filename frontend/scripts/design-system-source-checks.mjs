@@ -637,6 +637,33 @@ export function nestedCardViolations(source, label, ownsProductUi) {
   return violations;
 }
 
+/**
+ * A card header lays out its actions through `CardHeader actions={…}`. The
+ * retired shape re-laid the header out at each call site (`flex-row`,
+ * `justify-between`), so every card's title row sat differently.
+ */
+const CARD_HEADER_LAYOUT = /(?:^|\s)(?:[\w-]+:)*(?:flex-row|justify-between|items-center)(?=\s|$)/;
+
+export function cardHeaderLayoutViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi || !label.endsWith('.tsx') || label.startsWith('components/ui/')) return [];
+  const program = parseSource(source, label);
+  const lineOf = lineIndex(source);
+  const violations = [];
+  walk(program, (node) => {
+    if (node.type !== 'JSXOpeningElement' || nameText(node.name) !== 'CardHeader') return;
+    const className = node.attributes.find(
+      (attribute) => attribute.type === 'JSXAttribute' && nameText(attribute.name) === 'className',
+    );
+    if (!className?.value) return;
+    if (stringFragments(className.value).some(({ text }) => CARD_HEADER_LAYOUT.test(text))) {
+      violations.push(
+        `${label}:${lineOf(node.start)}: CardHeader lays out its own row; pass the trailing controls as actions={…}`,
+      );
+    }
+  });
+  return violations;
+}
+
 const BUTTON_COLOR_ROLE =
   /^text-(?:foreground|secondary|muted|subtle|accent|danger|success|warning|info|on-|inverse)/;
 

@@ -14,11 +14,14 @@ import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
 import { formatSearchNumber, reportedCost } from './search-intelligence-format';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Drawer } from '@/components/ui/drawer';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { panelClasses } from '@/components/ui/panel';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatGrid } from '@/components/ui/stat-grid';
+import { TextLink } from '@/components/ui/text-link';
 import { SavedViewControls, ScopeBand } from './search-intelligence-scope';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
@@ -179,12 +182,9 @@ export function SearchIntelligencePage() {
             heading="Connect DataForSEO"
             description="Search Intelligence needs an enabled workspace DataForSEO credential before it can prepare a priced acquisition."
             action={
-              <ProjectLink
-                className="focus-ring text-accent-text underline"
-                href="/settings?tab=providers"
-              >
-                Open provider settings
-              </ProjectLink>
+              <TextLink asChild>
+                <ProjectLink href="/settings?tab=providers">Open provider settings</ProjectLink>
+              </TextLink>
             }
           />
         </PageShell>
@@ -299,7 +299,7 @@ export function SearchIntelligencePage() {
             onOpenChange={setCostOpen}
             runs={runsQuery.data}
             pending={runsQuery.isPending}
-            failed={runsQuery.isError}
+            error={runsQuery.isError ? runsQuery.error : null}
             onRetry={() => void runsQuery.refetch()}
           />
           <SearchIntelligenceReviewDrawer
@@ -333,13 +333,13 @@ function PageActions({
 }>) {
   return (
     <>
-      <Button variant="ghost" onClick={onCost}>
+      <Button variant="ghost" size="sm" onClick={onCost}>
         Cost details
       </Button>
-      <Button variant="secondary" onClick={() => onReview('analysis')}>
+      <Button variant="secondary" size="sm" onClick={() => onReview('analysis')}>
         Analysis settings
       </Button>
-      <Button onClick={() => onReview(hasDatasets ? 'refresh' : 'analysis')}>
+      <Button size="sm" onClick={() => onReview(hasDatasets ? 'refresh' : 'analysis')}>
         {hasDatasets ? 'Refresh' : 'Run first analysis'}
       </Button>
     </>
@@ -350,7 +350,7 @@ function RunNotice({ run }: Readonly<{ run: SearchIntelligenceRun | null }>) {
   if (!run) return null;
   if (run.status === 'queued' || run.status === 'running')
     return (
-      <div className="type-body bg-accent-soft text-accent-text flex items-center gap-2 rounded-[var(--radius-control)] p-3">
+      <div className="type-body bg-info-bg text-info-text flex items-center gap-2 rounded-[var(--radius-control)] p-3">
         <RefreshCw className="size-4 animate-spin" aria-hidden />
         Acquisition in progress: {run.completed_calls} of {run.planned_calls} calls complete.
       </div>
@@ -374,64 +374,61 @@ function CostDetails({
   onOpenChange,
   runs,
   pending,
-  failed,
+  error,
   onRetry,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   runs: SearchIntelligenceRun[] | undefined;
   pending: boolean;
-  failed: boolean;
+  /** The failed read, or null when the history loaded. */
+  error: unknown;
   onRetry: () => void;
 }>) {
-  let content = (
-    <p className={textRole('body')}>No Search Intelligence operation has been recorded.</p>
-  );
+  let content = <InlineEmpty>No Search Intelligence operation has been recorded.</InlineEmpty>;
   if (runs?.length) {
     content = (
-      <div className="grid gap-3">
+      <ul className="grid gap-3">
         {runs.map((run) => (
-          <Card key={run.id}>
-            <CardContent className="grid gap-3">
+          <li key={run.id} className={panelClasses({ tone: 'well' }, 'grid gap-3')}>
+            <div className="grid gap-1">
               <p className={textRole('itemTitle', 'capitalize')}>
                 {run.action.replaceAll('_', ' ')} · {run.status.replaceAll('_', ' ')}
               </p>
               <p className={textRole('caption')}>
                 <DisplayTime value={run.created_at} />
               </p>
-              <dl className="type-body grid grid-cols-2 gap-3">
-                <div>
-                  <dt className={textRole('label')}>Estimated</dt>
-                  <dd>${formatSearchNumber(run.estimated_cost_usd, 6)}</dd>
-                </div>
-                <div>
-                  <dt className={textRole('label')}>Provider reported</dt>
-                  <dd>{reportedCost(run)}</dd>
-                </div>
-                <div>
-                  <dt className={textRole('label')}>Calls completed</dt>
-                  <dd>
-                    {run.completed_calls} of {run.planned_calls}
-                  </dd>
-                </div>
-                <div>
-                  <dt className={textRole('label')}>Saved result rows</dt>
-                  <dd>{formatSearchNumber(run.received_rows)}</dd>
-                </div>
-                <div>
-                  <dt className={textRole('label')}>Uncertain calls</dt>
-                  <dd>{run.uncertain_calls}</dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
+            </div>
+            <StatGrid
+              columns={2}
+              items={[
+                {
+                  key: 'estimated',
+                  label: 'Estimated',
+                  value: `$${formatSearchNumber(run.estimated_cost_usd, 6)}`,
+                },
+                { key: 'reported', label: 'Provider reported', value: reportedCost(run) },
+                {
+                  key: 'calls',
+                  label: 'Calls completed',
+                  value: `${run.completed_calls} of ${run.planned_calls}`,
+                },
+                {
+                  key: 'rows',
+                  label: 'Saved result rows',
+                  value: formatSearchNumber(run.received_rows),
+                },
+                { key: 'uncertain', label: 'Uncertain calls', value: run.uncertain_calls },
+              ]}
+            />
+          </li>
         ))}
-      </div>
+      </ul>
     );
   }
-  if (failed)
+  if (error)
     content = (
-      <ReadError error={null} fallback="Cost history could not be loaded." onRetry={onRetry} />
+      <ReadError error={error} fallback="Cost history could not be loaded." onRetry={onRetry} />
     );
   if (pending) content = <Skeleton className="h-32 w-full" />;
   return (

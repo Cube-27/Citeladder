@@ -9,6 +9,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -54,7 +55,7 @@ export function InvoiceHistory({
       {downloadError ? <Alert tone="danger">Receipt download failed. Please retry.</Alert> : null}
       {loading ? <Skeleton className="h-16 w-full" /> : null}
       {!loading && !error && invoices.length === 0 ? (
-        <p className={textRole('caption')}>No invoices have been issued yet.</p>
+        <InlineEmpty>No invoices have been issued yet.</InlineEmpty>
       ) : null}
       {invoices.length > 0 ? (
         <div className={ledgerClasses('boxed')}>

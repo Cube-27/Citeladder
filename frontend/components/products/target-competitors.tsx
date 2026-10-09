@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -110,7 +111,15 @@ function CompetitorRows({
   pending: boolean;
   onDecide: (id: string, decision: 'approved' | 'rejected') => void;
 }>) {
-  if (query.isError) return <Alert tone="danger">Competitors could not be loaded.</Alert>;
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Competitors could not be loaded."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
   if (query.isPending) return <Skeleton className="h-24 w-full" />;
   if (!rows.length) {
     return (

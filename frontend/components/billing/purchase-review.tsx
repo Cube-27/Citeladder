@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { BillingCatalog } from '@/lib/api/billing';
 import { catalogPlanByKey, formatMoney } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
@@ -42,16 +43,17 @@ export function PurchaseReview({
     prepared.kind === 'upgrade' ? catalogPlanByKey(catalog, prepared.catalog_key) : undefined;
   return (
     <section className={panelClasses({}, 'grid gap-3')} aria-labelledby="purchase-review-title">
-      <div className="grid gap-0.5">
-        <h2 id="purchase-review-title" className={textRole('sectionTitle')}>
-          {KIND_TITLE[prepared.kind]}
-        </h2>
-        <p className={textRole('caption')}>
-          {itemName(prepared.catalog_key)}
-          {prepared.quantity > 1 ? ` × ${prepared.quantity}` : ''}
-          {prepared.kind === 'upgrade' ? ' · prorated for the rest of this period' : ''}
-        </p>
-      </div>
+      <EditorialSectionHeader
+        headingId="purchase-review-title"
+        title={KIND_TITLE[prepared.kind]}
+        description={
+          <>
+            {itemName(prepared.catalog_key)}
+            {prepared.quantity > 1 ? ` × ${prepared.quantity}` : ''}
+            {prepared.kind === 'upgrade' ? ' · prorated for the rest of this period' : ''}
+          </>
+        }
+      />
       <BillingQuoteSummary
         quote={prepared.quote}
         currencyMinorUnits={catalog.currency_minor_units}

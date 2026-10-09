@@ -30,9 +30,8 @@ function SignalCard({
 }: Readonly<{ title: string; status?: string; action?: ReactNode; children: ReactNode }>) {
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
+      <CardHeader actions={status ? <Badge>{status}</Badge> : null}>
         <CardTitle>{title}</CardTitle>
-        {status ? <Badge>{status}</Badge> : null}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-3">
         {children}

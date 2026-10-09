@@ -14,10 +14,10 @@ import {
   DropdownSeparator,
   DropdownTrigger,
 } from '@/components/ui/dropdown';
+import { FilterRow, FilterTrigger } from '@/components/ui/filter-row';
 import { SearchField } from '@/components/ui/search-field';
 import { intentLabels, intentValues } from '@/lib/prompts/forms';
 import type { EnabledFilter, PromptFilters } from '@/lib/prompts/filter';
-import { textRole } from '@/components/ui/typography';
 
 /**
  * The prompt library's narrowing controls: a search box and the intent /
@@ -71,9 +71,9 @@ export function PromptFilterControls({
   const setBranded = (value: EnabledFilter) => onFiltersChange({ ...filters, branded: value });
 
   return (
-    // `contents`: the control band owns the row, its height and its rule.
-    <div className="contents">
-      <div className="max-w-sm min-w-55 flex-1">
+    <FilterRow
+      searchWidth="lg"
+      search={
         <SearchField
           size="compact"
           value={search}
@@ -81,24 +81,11 @@ export function PromptFilterControls({
           placeholder="Search prompts"
           aria-label="Search prompts"
         />
-      </div>
-
+      }
+    >
       <Dropdown>
         <DropdownTrigger asChild>
-          <Button variant="secondary" size="sm">
-            <Filter className="size-4" aria-hidden />
-            Filter
-            {activeFilterCount > 0 ? (
-              <span
-                className={textRole(
-                  'label',
-                  'bg-accent-subtle text-accent-text ml-1 rounded-full px-2 tabular-nums',
-                )}
-              >
-                {activeFilterCount}
-              </span>
-            ) : null}
-          </Button>
+          <FilterTrigger label="Filter" icon={Filter} count={activeFilterCount} />
         </DropdownTrigger>
         <DropdownContent align="end" className="w-56">
           <DropdownLabel>Intent</DropdownLabel>
@@ -144,7 +131,7 @@ export function PromptFilterControls({
           ))}
         </DropdownContent>
       </Dropdown>
-    </div>
+    </FilterRow>
   );
 }
 

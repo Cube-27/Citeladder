@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -140,7 +141,15 @@ function PromptRows({
   pending: boolean;
   onToggle: (id: string, approved: boolean) => void;
 }>) {
-  if (query.isError) return <Alert tone="danger">Buyer prompts could not be loaded.</Alert>;
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Buyer prompts could not be loaded."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
   if (query.isPending) return <Skeleton className="h-24 w-full" />;
   if (!rows.length) {
     // Left-hung and compactly padded, matching the shared empty-state shape.

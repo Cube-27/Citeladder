@@ -6,14 +6,15 @@ import { useState } from 'react';
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { Alert } from '@/components/ui/alert';
-import { CursorPager } from '@/components/ui/cursor-pager';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterRow } from '@/components/ui/filter-row';
 import { Stack } from '@/components/ui/layout';
+import { Pager } from '@/components/ui/pager';
 import { ReadError } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+import { TextLink } from '@/components/ui/text-link';
 import {
   Table,
   TableBody,
@@ -64,7 +65,7 @@ export function ActionsScreen() {
   return (
     <PageShell
       controls={
-        <>
+        <FilterRow>
           <Select
             ariaLabel="Status"
             value={status}
@@ -77,7 +78,7 @@ export function ActionsScreen() {
             options={TARGET_OPTIONS}
             onValueChange={(value) => setTarget(value, 'replace')}
           />
-        </>
+        </FilterRow>
       }
     >
       {activeProjectId && activeWorkspaceId ? (
@@ -97,7 +98,7 @@ export function ActionsScreen() {
 
 function ProjectRequired({ loading }: Readonly<{ loading: boolean }>) {
   if (loading) return <PageLoading />;
-  return <Alert tone="info">Select or create a project to see its Actions.</Alert>;
+  return <ProjectRequiredState />;
 }
 
 function ActionsList({
@@ -122,7 +123,7 @@ function ActionsList({
     }),
   );
 
-  if (query.isPending) return <Skeleton className="h-40 w-full" />;
+  if (query.isPending) return <PageLoading label="Loading Actions…" />;
   if (query.isError)
     return (
       <ReadError
@@ -154,17 +155,14 @@ function ActionsList({
   return (
     <Stack aria-busy={query.isFetching || undefined}>
       <ActionsTable actions={page.items} />
-      {cursors.length > 0 || next ? (
-        <div className="flex items-center justify-end gap-2">
-          <CursorPager
-            page={cursors.length + 1}
-            canPrev={cursors.length > 0}
-            canNext={Boolean(next)}
-            onPrev={() => setCursors((stack) => stack.slice(0, -1))}
-            onNext={() => next && setCursors((stack) => [...stack, next])}
-          />
-        </div>
-      ) : null}
+      <Pager
+        hideWhenSinglePage
+        page={cursors.length + 1}
+        canPrev={cursors.length > 0}
+        canNext={Boolean(next)}
+        onPrev={() => setCursors((stack) => stack.slice(0, -1))}
+        onNext={() => next && setCursors((stack) => [...stack, next])}
+      />
     </Stack>
   );
 }
@@ -186,12 +184,11 @@ function ActionsTable({ actions }: Readonly<{ actions: Action[] }>) {
           <TableRow key={action.id} density="multiline">
             <TableCell>
               <div className="grid max-w-96 min-w-0 gap-1">
-                <ProjectLink
-                  href={`/agent/actions/${action.id}`}
-                  className={textRole('itemTitle', 'hover:text-accent-text truncate')}
-                >
-                  {action.target_label}
-                </ProjectLink>
+                <TextLink asChild text="itemTitle" className="truncate">
+                  <ProjectLink href={`/agent/actions/${action.id}`}>
+                    {action.target_label}
+                  </ProjectLink>
+                </TextLink>
                 <span className={textRole('caption')}>
                   {[
                     targetKindLabel(action.target_kind),

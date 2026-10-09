@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
 import { ReadError } from '@/components/ui/read-error';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { DisplayTime } from '@/components/ui/display-time';
 import {
   Table,
@@ -58,18 +59,21 @@ function Connections({
   return (
     <section id="crawl-log-connections" className="grid gap-3" aria-label="Crawl log connections">
       {showHeader ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="type-section-title">Crawl logs</h2>
-          <Button
-            onClick={() => {
-              setIssued(null);
-              setOpen(true);
-            }}
-            disabled={!canManage}
-          >
-            Connect crawl logs
-          </Button>
-        </div>
+        <EditorialSectionHeader
+          title="Crawl logs"
+          actions={
+            <Button
+              size="sm"
+              onClick={() => {
+                setIssued(null);
+                setOpen(true);
+              }}
+              disabled={!canManage}
+            >
+              Connect crawl logs
+            </Button>
+          }
+        />
       ) : null}
       {sources.isError ? (
         <ReadError

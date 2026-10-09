@@ -272,7 +272,7 @@ describe('DemandProjection', () => {
     expect(screen.getByText('school fees')).toBeInTheDocument();
   });
 
-  it('announces the initial load while the skeleton remains decorative', () => {
+  it('announces the initial load', async () => {
     vi.mocked(demandApi.getLatest).mockImplementation(
       () =>
         new Promise(() => {
@@ -281,7 +281,7 @@ describe('DemandProjection', () => {
     );
     renderProjection();
 
-    expect(screen.getByRole('status')).toHaveAccessibleName('Loading search demand…');
+    expect(await screen.findByRole('status')).toHaveAccessibleName('Loading search demand…');
   });
 
   it('distinguishes unavailable Search Console evidence', async () => {

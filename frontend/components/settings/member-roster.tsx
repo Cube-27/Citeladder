@@ -3,6 +3,7 @@
 import { Trash2 } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -16,9 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
 import type { AssignableWorkspaceRole, WorkspaceMember } from '@/lib/api/workspaces';
-import { emailInitials } from '@/lib/utils';
 
 import { ROLE_OPTIONS } from './member-roles';
 
@@ -100,15 +99,7 @@ function MemberRow({
     <TableRow>
       <TableCell>
         <div className="flex min-w-0 items-center gap-2">
-          <span
-            aria-hidden
-            className={textRole(
-              'label',
-              'type-caption bg-well text-secondary flex size-7 shrink-0 items-center justify-center rounded-full uppercase',
-            )}
-          >
-            {emailInitials(member.email)}
-          </span>
+          <Avatar name={member.email} size="sm" decorative />
           <span className="min-w-0 truncate">{member.email}</span>
           {member.is_self ? <Badge variant="neutral">You</Badge> : null}
         </div>

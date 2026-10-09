@@ -3,7 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Stack } from '@/components/ui/layout';
+import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { UsageMeter } from '@/components/billing/usage-meter';
@@ -81,7 +83,14 @@ function UsageBody({
     );
   }
   if (query.isError || !query.data) {
-    return <Alert tone="danger">Could not load usage. Check your connection and retry.</Alert>;
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Could not load usage. Check your connection and retry."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
   }
   if (query.data.status !== 'resolved') {
     return (
@@ -92,7 +101,7 @@ function UsageBody({
     );
   }
   if (query.data.items.length === 0) {
-    return <p className="type-body">No measurable allowances on this account yet.</p>;
+    return <InlineEmpty>No measurable allowances on this account yet.</InlineEmpty>;
   }
   return (
     <>

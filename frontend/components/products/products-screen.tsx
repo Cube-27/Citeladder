@@ -2,7 +2,7 @@
 
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
-import { Alert } from '@/components/ui/alert';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { CommerceWorkspace } from './commerce-workspace';
@@ -29,7 +29,7 @@ export function ProductsScreen() {
   if (!projectId)
     return (
       <PageShell>
-        <Alert tone="info">Select or create a project to use Commerce.</Alert>
+        <ProjectRequiredState />
       </PageShell>
     );
   return <CommerceWorkspace projectId={projectId} />;

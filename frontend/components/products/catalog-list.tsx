@@ -6,11 +6,12 @@ import { ChevronDown, ChevronRight, PackageOpen, SearchX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { EmptyState } from '@/components/ui/empty-state';
+import { listRowClasses } from '@/components/ui/list-row';
 import { panelClasses } from '@/components/ui/panel';
 import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pressable } from '@/components/ui/pressable';
-import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { targetKey } from '@/lib/products/use-commerce-target';
 import { cn } from '@/lib/utils';
@@ -104,9 +105,8 @@ function CatalogRow({
           reading. */}
       <div
         className={cn(
-          'group flex min-w-0 items-center gap-1 rounded-[var(--radius-control)] px-1 transition-colors',
-          'hover:bg-background-alt',
-          selected && 'bg-active',
+          'group flex min-w-0 items-center gap-1 px-1',
+          listRowClasses({ selected, interactive: true }),
           nested && 'border-border-subtle ml-6 border-l pl-3',
         )}
       >
@@ -142,9 +142,7 @@ function CatalogRow({
           aria-current={selected ? 'true' : undefined}
           className="type-control flex min-w-0 flex-1 items-center justify-between gap-2 py-2 text-left"
         >
-          <span className={cn('truncate', selected ? 'text-accent-text' : 'text-secondary')}>
-            {entry.label}
-          </span>
+          <span className="truncate">{entry.label}</span>
           {entry.count === undefined ? null : (
             <span className="text-muted shrink-0 tabular-nums">{entry.count}</span>
           )}
@@ -314,7 +312,16 @@ export function CatalogList({
   const empty = !shown.categories.length && !shown.uncategorized.length;
 
   if (query.isPending) return <Skeleton className="h-96 w-full" />;
-  if (query.isError) return <Alert tone="danger">The catalog could not be loaded.</Alert>;
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="The catalog could not be loaded."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+        className="p-[var(--card-padding)]"
+      />
+    );
   return (
     <div className="grid min-w-0 content-start">
       <div

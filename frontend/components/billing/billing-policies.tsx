@@ -4,15 +4,21 @@ import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { contactSalesHref } from '@/lib/config/contact';
 
 import { panelClasses } from '@/components/ui/panel';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 
-const LINK = 'text-accent-text underline underline-offset-2';
-
+/**
+ * A website page in a new tab. The origin may be unset in development (a
+ * relative path), so the anchor is ours and only the link recipe is shared.
+ */
 function PolicyLink({ path, children }: Readonly<{ path: `/${string}`; children: string }>) {
   return (
-    <a className={LINK} href={websiteHref(path)} target="_blank" rel="noreferrer">
-      {children}
-    </a>
+    <TextLink asChild text="inherit">
+      <a href={websiteHref(path)} target="_blank" rel="noreferrer">
+        {children}
+      </a>
+    </TextLink>
   );
 }
 
@@ -48,18 +54,18 @@ export function BillingSupport({
   const url = contactSalesHref(contact?.contact_url, websiteHref('/contact'));
   return (
     <section className={panelClasses({}, 'grid gap-2')} aria-labelledby="billing-support-title">
-      <h2 id="billing-support-title" className={textRole('sectionTitle')}>
-        Billing help
-      </h2>
+      <EditorialSectionHeader title="Billing help" headingId="billing-support-title" />
       <p className={textRole('body')}>
         Questions about a charge, a refund or cancelling? Email{' '}
-        <a className={LINK} href={`mailto:${email}`}>
-          {email}
-        </a>
+        <TextLink asChild text="inherit">
+          <a href={`mailto:${email}`}>{email}</a>
+        </TextLink>
         {contact?.phone ? `, call ${contact.phone}` : ''} or use the{' '}
-        <a className={LINK} href={url} target="_blank" rel="noreferrer">
-          contact form
-        </a>
+        <TextLink asChild text="inherit">
+          <a href={url} target="_blank" rel="noreferrer">
+            contact form
+          </a>
+        </TextLink>
         {'. '}Include your workspace name and the invoice number; never send card details.
       </p>
       <p className={textRole('caption')}>

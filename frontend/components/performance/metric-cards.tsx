@@ -1,12 +1,12 @@
 'use client';
 
-import { Check, HelpCircle } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { LegendSwatch } from '@/components/ui/chart';
 import { Stack } from '@/components/ui/layout';
 import { MetricValue } from '@/components/ui/metric-value';
-import { Pressable } from '@/components/ui/pressable';
-import { panelClasses } from '@/components/ui/panel';
+import { StatGrid, StatItem } from '@/components/ui/stat-grid';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { MetricGroup, MetricItem } from '@/components/ui/workspace';
@@ -17,7 +17,6 @@ import {
   formatMetric,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
-import { cn } from '@/lib/utils';
 
 /** The one missing-figure label on this surface. */
 const NOT_MEASURED = availabilityLabel('not_measured');
@@ -39,44 +38,12 @@ function measured(key: PerformanceMetricKey, value: number | null | undefined): 
  * Selecting a card toggles its series on the chart below. At least one metric
  * always stays selected, so the chart never renders as an empty plot.
  *
- * The four render as ONE connected strip rather than four detached cards:
- * they are a single control group over one window, and gaps between them
- * read as unrelated panels.
- *
- * The cards are NEUTRAL surfaces. They were once filled edge to edge with
- * their metric's colour, which made four saturated blue/purple/teal/orange
- * tiles the loudest thing on the screen — an ordinary metric read as an alert,
- * and the chart beneath, where the colours actually encode something, had to
- * compete with them. The colour still identifies the series, but as a short
- * rule under the value rather than as the whole card, so the hue stays a key
- * to the plot instead of decoration.
- *
- * Selection is carried the way a selection normally is: a checkbox, an accent
- * edge, and a quiet tinted surface.
+ * The four render as ONE connected band (`StatGrid surface="band"`) rather
+ * than four detached cards: they are a single control group over one window.
+ * The cards are neutral; the metric's chart colour appears only as the series
+ * key beside the label, and only while the metric is plotted. Selection is the
+ * shared selected-row face plus `aria-pressed`.
  */
-/**
- * The internal seams of the four-card strip, by POSITION.
- *
- * Not `divide-*`: those rules are sibling-wide, so they draw a top border on
- * cards 2-4 once the strip is one `lg` row, and a left border on the first
- * card of the `sm` second row. The strip's OUTER edges belong to the chart
- * card that contains it, so only the seams between cards are drawn here.
- */
-function seamClasses(index: number): string {
-  return cn(
-    'border-border-subtle',
-    // One column: every card after the first sits below its predecessor.
-    index > 0 && 'border-t',
-    // Two columns: the left seam applies to the odd cards, the top seam only
-    // to the second row.
-    index % 2 === 0 ? 'sm:border-l-0' : 'sm:border-l',
-    index >= 2 ? 'sm:border-t' : 'sm:border-t-0',
-    // Four columns: one row, so every seam is a left edge except the first.
-    index === 0 ? 'lg:border-l-0' : 'lg:border-l',
-    'lg:border-t-0',
-  );
-}
-
 const METRIC_HELP: Record<PerformanceMetricKey, string> = {
   clicks: 'Total clicks from Google Search results',
   impressions: 'Total impressions in Google Search results',
@@ -87,11 +54,6 @@ const METRIC_HELP: Record<PerformanceMetricKey, string> = {
 /**
  * The comparison half of a card: the comparison window's own absolute value,
  * under a label that names THAT window.
- *
- * The label LEADS its value here rather than trailing it. The rule above this
- * block detaches it from the selected value higher up, so a label sitting at
- * the top of the block reads as this block's caption — which makes naming the
- * selected period there a mislabel of the comparison figure.
  */
 function MetricCardComparison({
   metricKey,
@@ -109,118 +71,41 @@ function MetricCardComparison({
   const statusLabel =
     comparison.evidence_state === 'not_run' ? `${compareLabel} — not imported` : compareLabel;
   return (
-    <div className="border-border-subtle grid gap-0.5 border-t pt-1">
-      <span className={textRole('caption')}>{statusLabel}</span>
+    <span className="border-border-subtle grid gap-0.5 border-t pt-1">
+      <span>{statusLabel}</span>
       <MetricValue
         size="figureSm"
         value={measured(metricKey, comparisonValue)}
         label={NOT_MEASURED}
         loading={loading}
       />
-    </div>
+    </span>
   );
 }
 
-function MetricCard({
-  card,
-  index,
-  isActive,
-  value,
-  comparisonValue,
-  comparison,
-  selectedLabel,
-  compareLabel,
+/**
+ * The label row's end: the series key (shown only while the metric is plotted
+ * — a key on an unplotted metric would point at a line that is not there) and
+ * the metric's definition. Raised above the cell's stretched toggle so the
+ * definition stays reachable by hover.
+ */
+function MetricMarker({
+  metricKey,
   color,
-  loading,
-  onToggle,
-}: Readonly<{
-  card: (typeof METRIC_CARDS)[number];
-  index: number;
-  isActive: boolean;
-  value: number | null;
-  comparisonValue: number | null | undefined;
-  comparison: PerformanceWindow | null;
-  selectedLabel: string;
-  compareLabel: string;
-  color: string;
-  loading: boolean;
-  onToggle: (key: PerformanceMetricKey) => void;
-}>) {
+  plotted,
+}: Readonly<{ metricKey: PerformanceMetricKey; color: string; plotted: boolean }>) {
   return (
-    <Pressable
-      type="button"
-      aria-pressed={isActive}
-      onClick={() => onToggle(card.key)}
-      data-testid={`metric-card-${card.key}`}
-      className={cn(
-        panelClasses({ tone: 'panel', pad: 'none', edge: 'flush' }),
-        // The metric band's cell rhythm (`metricItemClasses`): the strip is a
-        // pressable MetricGroup, so its cells sit on the same padding.
-        'text-foreground relative flex flex-col justify-between gap-1 px-4 py-3 text-left transition-colors',
-        index === 0 && 'rounded-tl-[var(--radius-card)]',
-        seamClasses(index),
-        // Selected is a quiet accent wash, not a filled tile. Unselected is
-        // plain paper, so the strip reads as four controls rather than four
-        // competing statements.
-        isActive ? 'bg-accent-soft' : 'bg-panel hover:bg-background-alt',
-      )}
-    >
-      <div className="flex items-center gap-2">
+    <span className="relative z-10 flex shrink-0 items-center gap-2">
+      <LegendSwatch color={color} shape="line" className={plotted ? undefined : 'invisible'} />
+      <Tooltip content={METRIC_HELP[metricKey]}>
         <span
-          aria-hidden
-          className={cn(
-            'inline-flex size-4 shrink-0 items-center justify-center rounded-xs border transition-colors',
-            isActive
-              ? 'border-accent bg-accent text-accent-fg'
-              : 'border-border-strong bg-panel text-transparent',
-          )}
+          className="type-caption hover:text-foreground inline-flex size-4 shrink-0 items-center justify-center rounded-full transition-colors"
+          aria-label={METRIC_HELP[metricKey]}
         >
-          {isActive ? <Check className="size-3 stroke-[2.5]" /> : null}
+          <HelpCircle className="size-3.5" aria-hidden />
         </span>
-        <span
-          className={cn('select-none', textRole('label', isActive ? 'text-foreground' : undefined))}
-        >
-          {card.label}
-        </span>
-      </div>
-
-      {/* The period labels earn their place only when TWO values stack: with
-          one number the range is already stated once in the toolbar, and
-          repeating it on four cards is noise. */}
-      <div className="grid gap-1">
-        {comparison ? <span className={textRole('caption')}>{selectedLabel}</span> : null}
-        <MetricValue value={measured(card.key, value)} label={NOT_MEASURED} loading={loading} />
-        {/* The series key: the metric's chart colour, shown only while the
-            metric is actually plotted. A colour chip on an unplotted metric
-            would point at a line that is not there. */}
-        <span
-          aria-hidden
-          className="h-0.5 w-7 rounded-full transition-opacity"
-          style={{ backgroundColor: color, opacity: isActive ? 1 : 0 }}
-        />
-      </div>
-
-      {comparison ? (
-        <MetricCardComparison
-          metricKey={card.key}
-          comparison={comparison}
-          comparisonValue={comparisonValue}
-          compareLabel={compareLabel}
-          loading={loading}
-        />
-      ) : null}
-
-      <div className="mt-auto flex justify-end pt-1">
-        <Tooltip content={METRIC_HELP[card.key]}>
-          <span
-            className="type-caption hover:text-foreground inline-flex size-4 shrink-0 items-center justify-center rounded-full transition-colors"
-            aria-label={METRIC_HELP[card.key]}
-          >
-            <HelpCircle className="size-3.5" aria-hidden />
-          </span>
-        </Tooltip>
-      </div>
-    </Pressable>
+      </Tooltip>
+    </span>
   );
 }
 
@@ -233,7 +118,6 @@ export function MetricCards({
   onToggle,
   colors,
   loading = false,
-  className,
 }: Readonly<{
   selected: PerformanceWindow;
   comparison: PerformanceWindow | null;
@@ -244,36 +128,51 @@ export function MetricCards({
   colors: Record<PerformanceMetricKey, string>;
   /** A read is in flight. The cards spin rather than claiming a value is absent. */
   loading?: boolean;
-  className?: string;
 }>) {
   return (
-    <fieldset
-      className={cn(
-        // The strip sits inside the chart card. Only internal seams are drawn
-        // between cards; outer borders are managed by the container.
-        'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
-        className,
-      )}
-      data-testid="metric-card-strip"
-    >
-      <legend className="sr-only">Search Console metrics</legend>
-      {METRIC_CARDS.map((card, index) => (
-        <MetricCard
-          key={card.key}
-          card={card}
-          index={index}
-          isActive={active.has(card.key)}
-          value={selected.totals[card.key]}
-          comparisonValue={comparison ? comparison.totals[card.key] : undefined}
-          comparison={comparison}
-          selectedLabel={selectedLabel}
-          compareLabel={compareLabel}
-          color={colors[card.key]}
-          loading={loading}
-          onToggle={onToggle}
-        />
-      ))}
-    </fieldset>
+    <StatGrid surface="band" columns={4} size="figure" label="Search Console metrics">
+      {METRIC_CARDS.map((card) => {
+        const value = measured(card.key, selected.totals[card.key]);
+        const plotted = active.has(card.key);
+        return (
+          <StatItem
+            key={card.key}
+            label={card.label}
+            // The period labels earn their place only when TWO values stack:
+            // with one number the range is already stated in the toolbar.
+            value={
+              comparison ? (
+                <span className="grid gap-1">
+                  <span className={textRole('caption')}>{selectedLabel}</span>
+                  <MetricValue value={value} label={NOT_MEASURED} loading={loading} />
+                </span>
+              ) : (
+                value
+              )
+            }
+            missingLabel={NOT_MEASURED}
+            loading={comparison ? false : loading}
+            detail={
+              comparison ? (
+                <MetricCardComparison
+                  metricKey={card.key}
+                  comparison={comparison}
+                  comparisonValue={comparison.totals[card.key]}
+                  compareLabel={compareLabel}
+                  loading={loading}
+                />
+              ) : undefined
+            }
+            marker={
+              <MetricMarker metricKey={card.key} color={colors[card.key]} plotted={plotted} />
+            }
+            onSelect={() => onToggle(card.key)}
+            actionLabel={`Plot ${card.label.toLowerCase()}`}
+            selected={plotted}
+          />
+        );
+      })}
+    </StatGrid>
   );
 }
 

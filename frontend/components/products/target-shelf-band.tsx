@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert } from '@/components/ui/alert';
+import { ReadError } from '@/components/ui/read-error';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Stack } from '@/components/ui/layout';
@@ -28,7 +28,15 @@ export function TargetShelfBand({ query }: Readonly<{ query: CommerceQueries['sh
   // A failed read is not an unmeasured target. Rendering "Not measured" for a
   // request that never landed reports a missing metric as an observed absence,
   // which is exactly the unknown/zero collapse the repo forbids.
-  if (query.isError) return <Alert tone="danger">AI Shelf metrics could not be loaded.</Alert>;
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="AI Shelf metrics could not be loaded."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
   const latest = query.data?.snapshots[0];
   const metrics: Array<[string, string | null]> = [
     ['Product visibility', percentage(latest?.product_visibility)],

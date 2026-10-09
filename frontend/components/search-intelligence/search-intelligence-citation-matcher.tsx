@@ -5,7 +5,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
@@ -59,40 +58,37 @@ export function SearchIntelligenceCitationMatcher({
       current.includes(auditId) ? current.filter((id) => id !== auditId) : [...current, auditId],
     );
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Match backlinks to Visibility citations</CardTitle>
-        <p className="type-body">
-          Select the exact persisted audits to intersect with this referring-domain snapshot.
-        </p>
-      </CardHeader>
-      <CardContent className="grid gap-3">
-        {derive.isError ? <Alert>{derive.error.message}</Alert> : null}
-        <div className="grid max-h-44 gap-2 overflow-y-auto">
-          {audits.data?.slice(0, 20).map((audit) => (
-            <label
-              key={audit.id}
-              className="type-body border-border-subtle flex items-center justify-between gap-3 border-b py-2"
-            >
-              <Checkbox
-                checked={selectedAudits.includes(audit.id)}
-                onCheckedChange={() => toggle(audit.id)}
-                label={formatDisplayTimestamp(audit.created_at, timeZone)}
-              />
-              <span className="text-muted">{audit.status}</span>
-            </label>
-          ))}
-        </div>
-        <div>
-          <Button
-            size="sm"
-            disabled={!selectedAudits.length || derive.isPending}
-            onClick={() => derive.mutate()}
+    // The drawer is the surface and its title the heading; a Card here would
+    // nest one object inside another.
+    <div className="grid gap-3">
+      <p className="type-body">
+        Select the exact persisted audits to intersect with this referring-domain snapshot.
+      </p>
+      {derive.isError ? <Alert>{derive.error.message}</Alert> : null}
+      <div className="grid max-h-44 gap-2 overflow-y-auto">
+        {audits.data?.slice(0, 20).map((audit) => (
+          <label
+            key={audit.id}
+            className="type-body border-border-subtle flex items-center justify-between gap-3 border-b py-2"
           >
-            Create citation match dataset
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+            <Checkbox
+              checked={selectedAudits.includes(audit.id)}
+              onCheckedChange={() => toggle(audit.id)}
+              label={formatDisplayTimestamp(audit.created_at, timeZone)}
+            />
+            <span className="text-muted">{audit.status}</span>
+          </label>
+        ))}
+      </div>
+      <div>
+        <Button
+          size="sm"
+          disabled={!selectedAudits.length || derive.isPending}
+          onClick={() => derive.mutate()}
+        >
+          Create citation match dataset
+        </Button>
+      </div>
+    </div>
   );
 }

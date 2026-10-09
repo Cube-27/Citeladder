@@ -1,8 +1,6 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Pressable } from '@/components/ui/pressable';
-import { sortIndicator } from '@/components/ui/sort-indicator';
 import {
+  SortableTableHead,
   Table,
   TableBody,
   TableCell,
@@ -37,11 +35,7 @@ export function SearchIntelligenceRowsTable({
 }>) {
   const columns = SEARCH_COLUMNS_BY_KIND[kind] ?? SEARCH_COLUMNS_BY_KIND.footprint;
   return (
-    <Table
-      className={
-        kind === 'ranking_keywords' ? 'min-w-[1200px] table-fixed' : 'min-w-[900px] table-fixed'
-      }
-    >
+    <Table minWidth={kind === 'ranking_keywords' ? 'xl' : 'lg'} className="table-fixed">
       <colgroup>
         {columns.map((column) => (
           <col key={column.field} className={column.numeric ? 'w-28' : 'w-48'} />
@@ -55,9 +49,10 @@ export function SearchIntelligenceRowsTable({
                 {column.label}
               </TableHead>
             ) : (
-              <SortableHead
+              <SortableTableHead
                 key={column.field}
-                column={column}
+                label={column.label}
+                numeric={column.numeric}
                 active={order.sort === column.field}
                 descending={order.direction === 'desc'}
                 onSort={() => onSort(column.field)}
@@ -99,36 +94,5 @@ export function SearchIntelligenceRowsTable({
         ) : null}
       </TableBody>
     </Table>
-  );
-}
-
-function SortableHead({
-  column,
-  active,
-  descending,
-  onSort,
-}: Readonly<{
-  column: SearchColumn;
-  active: boolean;
-  descending: boolean;
-  onSort: () => void;
-}>) {
-  const { ariaSort, icon: Icon } = sortIndicator(active, descending, {
-    ascending: ArrowUp,
-    descending: ArrowDown,
-    inactive: ArrowUpDown,
-  });
-  return (
-    <TableHead numeric={column.numeric} aria-sort={ariaSort}>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onSort}
-        className={column.numeric ? 'w-full justify-center' : 'w-full justify-start'}
-      >
-        <span className="truncate">{column.label}</span>
-        <Icon className="size-4 shrink-0" aria-hidden />
-      </Button>
-    </TableHead>
   );
 }

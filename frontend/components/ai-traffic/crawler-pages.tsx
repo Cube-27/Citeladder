@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Drawer } from '@/components/ui/drawer';
 import { ReadError } from '@/components/ui/read-error';
 import { PageLoading } from '@/components/layout/page-loading';
-import { TrafficPager } from './traffic-pager';
+import { Pager } from '@/components/ui/pager';
 import { aiTrafficApi, type TrafficFilters } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -44,7 +44,8 @@ export function CrawlerPages({
       {query.data && !query.isError ? (
         <>
           <TrafficPages data={query.data} filters={filters} />
-          <TrafficPager
+          <Pager
+            hideWhenSinglePage
             page={pager.page}
             canPrev={pager.canPrev}
             canNext={!!query.data.next_cursor}

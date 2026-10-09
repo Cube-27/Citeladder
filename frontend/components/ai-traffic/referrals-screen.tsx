@@ -4,7 +4,17 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { AiReferralsContent } from '@/components/ai-traffic/referrals-content';
-import { AnalyticsToolbar } from '@/components/ui/analytics-toolbar';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownLabel,
+  DropdownRadioGroup,
+  DropdownRadioItem,
+  DropdownTrigger,
+} from '@/components/ui/dropdown';
+import { FilterRow, FilterTrigger } from '@/components/ui/filter-row';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Spinner } from '@/components/ui/spinner';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
@@ -79,17 +89,41 @@ function AiReferralsToolbar({
   fetching: boolean;
 }>) {
   return (
-    <AnalyticsToolbar
-      range={range}
-      defaultRange="latest"
-      rangeLabel={rangeLabel(range)}
-      rangeOptions={RANGE_OPTIONS}
-      onChangeRange={onChangeRange}
-      granularity={granularity}
-      granularityOptions={GRANULARITY_OPTIONS}
-      onChangeGranularity={onChangeGranularity}
-      fetching={fetching}
-      testId="ai-traffic-toolbar"
-    />
+    <FilterRow
+      status={
+        fetching ? (
+          <>
+            <Spinner size="sm" />
+            Updating data… Previous data shown.
+          </>
+        ) : null
+      }
+    >
+      <Dropdown>
+        <DropdownTrigger asChild>
+          <FilterTrigger label="Range" value={rangeLabel(range)} active={range !== 'latest'} />
+        </DropdownTrigger>
+        <DropdownContent>
+          <DropdownLabel>Date range</DropdownLabel>
+          <DropdownRadioGroup value={range}>
+            {RANGE_OPTIONS.map((option) => (
+              <DropdownRadioItem
+                key={option.value}
+                value={option.value}
+                onSelect={() => onChangeRange(option.value)}
+              >
+                {option.label}
+              </DropdownRadioItem>
+            ))}
+          </DropdownRadioGroup>
+        </DropdownContent>
+      </Dropdown>
+      <SegmentedControl
+        value={granularity}
+        onChange={onChangeGranularity}
+        options={GRANULARITY_OPTIONS}
+        ariaLabel="Chart interval"
+      />
+    </FilterRow>
   );
 }

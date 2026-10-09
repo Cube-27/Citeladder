@@ -1,7 +1,8 @@
 import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row';
-import { Label, textRole } from '@/components/ui/typography';
+import { TextLink } from '@/components/ui/text-link';
+import { Label } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@/lib/api/types';
 import { formatAudited } from '@/lib/site-health/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -11,7 +12,7 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
-/** One deep-link row in the Source list (label + accent link, like the tables). */
+/** One deep-link row in the Source list (label + text link, like the tables). */
 function SourceLink({
   label,
   href,
@@ -20,12 +21,9 @@ function SourceLink({
   return (
     <div className="flex items-start justify-between gap-3 py-1">
       <span className="type-caption shrink-0">{label}</span>
-      <ProjectLink
-        href={href}
-        className={textRole('itemTitle', 'text-accent-text hover:underline')}
-      >
-        {linkText}
-      </ProjectLink>
+      <TextLink asChild text="itemTitle">
+        <ProjectLink href={href}>{linkText}</ProjectLink>
+      </TextLink>
     </div>
   );
 }

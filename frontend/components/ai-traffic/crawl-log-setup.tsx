@@ -12,6 +12,7 @@ import { panelClasses } from '@/components/ui/panel';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { Alert } from '@/components/ui/alert';
 import { CopyButton } from '@/components/ui/copy-button';
+import { TextLink } from '@/components/ui/text-link';
 const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], string>> = {
   cloudflare_worker:
     'Deploy the downloadable template yourself. Store the token as a Worker secret, use a fail-open route, and expect partial coverage. Every routed request uses your Workers quota.',
@@ -69,14 +70,9 @@ export function CrawlLogSetup({
       />
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-2')}>
         {steps ? <p className="type-body text-secondary">{steps}</p> : null}
-        <a
-          className="type-control text-accent-text w-fit hover:underline"
-          href={chosen.guide}
-          target="_blank"
-          rel="noreferrer"
-        >
+        <TextLink variant="external" href={chosen.guide} className="w-fit">
           Setup guide: {chosen.label}
-        </a>
+        </TextLink>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Site origin" className="sm:col-span-2">

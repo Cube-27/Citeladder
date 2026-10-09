@@ -37,7 +37,8 @@ import {
 } from './overview-signals';
 import { CrawlerPages } from './crawler-pages';
 import { TrafficNoResults } from './empty-state';
-import { TrafficPager } from './traffic-pager';
+import { Pager } from '@/components/ui/pager';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { TrafficFilters } from '@/lib/api/ai-traffic';
 export { CrawlSignalPanel } from './overview-signals';
 export function TrafficOverview({
@@ -239,9 +240,10 @@ function CoverageTable({
   const data = query.data;
   return (
     <section className="grid gap-3" aria-labelledby="ai-traffic-coverage">
-      <h2 id="ai-traffic-coverage" className="type-section-title">
-        Coverage by source and reporting day
-      </h2>
+      <EditorialSectionHeader
+        headingId="ai-traffic-coverage"
+        title="Coverage by source and reporting day"
+      />
       {query.isError ? (
         <ReadError
           error={query.error}
@@ -295,7 +297,8 @@ function CoverageTable({
               ))}
             </TableBody>
           </Table>
-          <TrafficPager
+          <Pager
+            hideWhenSinglePage
             page={pager.page}
             canPrev={pager.canPrev}
             canNext={!!data.next_cursor}

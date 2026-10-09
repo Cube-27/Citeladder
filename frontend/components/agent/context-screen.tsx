@@ -5,8 +5,8 @@ import { useState } from 'react';
 
 import { BrandProfilePanel } from '@/components/knowledge-base/brand-profile-panel';
 import { PageShell } from '@/components/layout/page-shell';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
@@ -34,7 +34,7 @@ export function ContextScreen() {
   if (!activeProject || !activeWorkspaceId)
     return (
       <PageShell measure="workflow">
-        <Alert tone="info">Select or create a project to edit its context.</Alert>
+        <ProjectRequiredState />
       </PageShell>
     );
   return (

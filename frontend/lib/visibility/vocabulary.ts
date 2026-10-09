@@ -21,23 +21,6 @@
 import { availabilityLabel } from '@/lib/format';
 
 /**
- * A change in percentage points, or `null` when there is none to show.
- *
- * Returning `null` rather than a sentence is the point: the old
- * "No comparable change" string was rendered inside numeric table cells, where
- * it wrapped across three lines and buried the numbers it sat beside. Callers
- * decide how absence reads — usually by not drawing the column.
- */
-export function changeLabel(value: number | null | undefined): string | null {
-  if (value === null || value === undefined) return null;
-  // Decide the sign from the value the reader will SEE. Signing the raw number
-  // rendered a movement of +0.04pp as "+0.0 pp", which claims a direction the
-  // displayed figure does not support.
-  const rounded = Number(value.toFixed(1));
-  return `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)} pp`;
-}
-
-/**
  * What the reader is told when a measurement produced no observations at all —
  * distinct from an observed zero, which stays `0%` (design.md, availability
  * vocabulary).

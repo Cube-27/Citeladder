@@ -13,6 +13,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { runErrorCopy, runStepLabel } from '@/lib/agent/vocabulary';
@@ -213,12 +214,11 @@ function MessageBubble({
             <ul aria-label="Mentioned Actions" className="flex flex-wrap gap-2">
               {message.mentions.map((mention) => (
                 <li key={mention.id}>
-                  <ProjectLink
-                    href={`/agent/actions/${mention.id}`}
-                    className={textRole('caption', 'hover:text-accent-text underline')}
-                  >
-                    @{mention.label}
-                  </ProjectLink>
+                  <TextLink asChild text="caption">
+                    <ProjectLink href={`/agent/actions/${mention.id}`}>
+                      @{mention.label}
+                    </ProjectLink>
+                  </TextLink>
                 </li>
               ))}
             </ul>

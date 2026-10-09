@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
   BillingCatalog,
   BillingEntitlement,
@@ -72,15 +73,11 @@ export function PlanChanges({
   if (options.length === 0) return null;
   return (
     <section className={panelClasses({}, 'grid gap-3')} aria-labelledby="plan-changes-title">
-      <div className="grid gap-0.5">
-        <h2 id="plan-changes-title" className={textRole('sectionTitle')}>
-          Change plan
-        </h2>
-        <p className="type-caption">
-          Upgrades start as soon as the prorated charge for the rest of this period is paid.
-          Downgrades take effect at your next renewal, with no refund for the current period.
-        </p>
-      </div>
+      <EditorialSectionHeader
+        headingId="plan-changes-title"
+        title="Change plan"
+        description="Upgrades start as soon as the prorated charge for the rest of this period is paid. Downgrades take effect at your next renewal, with no refund for the current period."
+      />
       <div className="grid gap-2">
         {options.map((option) => (
           <div

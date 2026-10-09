@@ -8,7 +8,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
@@ -41,7 +43,7 @@ export function SearchIntelligenceCompetitors({
         <CardTitle>Competitive footprint</CardTitle>
       </CardHeader>
       <CardContent flush>
-        <Table className="min-w-[720px]">
+        <Table minWidth="md">
           <TableHeader>
             <TableRow>
               <TableHead>Competitor</TableHead>
@@ -83,14 +85,15 @@ export function SearchIntelligenceCompetitors({
                     return (
                       <TableCell numeric key={kind}>
                         {dataset ? (
-                          <Pressable
-                            type="button"
-                            className="text-accent-text w-auto text-center underline underline-offset-4"
-                            aria-label={`${kind.replaceAll('_', ' ')} for ${competitor.label}`}
-                            onClick={() => onOpen(dataset)}
-                          >
-                            {datasetCount(dataset)}
-                          </Pressable>
+                          <TextLink asChild text="inherit">
+                            <Pressable
+                              className="w-auto text-center"
+                              aria-label={`${kind.replaceAll('_', ' ')} for ${competitor.label}`}
+                              onClick={() => onOpen(dataset)}
+                            >
+                              {datasetCount(dataset)}
+                            </Pressable>
+                          </TextLink>
                         ) : (
                           'Not fetched'
                         )}
@@ -103,7 +106,7 @@ export function SearchIntelligenceCompetitors({
           </TableBody>
         </Table>
         {!competitors.length ? (
-          <p className={textRole('body', 'p-4')}>No competitors saved for this project.</p>
+          <InlineEmpty className="p-4">No competitors saved for this project.</InlineEmpty>
         ) : null}
       </CardContent>
     </Card>

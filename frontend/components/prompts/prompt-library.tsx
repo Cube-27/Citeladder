@@ -3,8 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
+import { ReadError } from '@/components/ui/read-error';
 import { PageLoading } from '@/components/layout/page-loading';
 import { ICONS } from '@/lib/icons';
 import {
@@ -81,7 +82,7 @@ export function PromptLibrary({
 }>) {
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
-  const { projectId, promptSet, prompts, isLoading, isError, ensurePromptSet, retry } =
+  const { projectId, promptSet, prompts, isLoading, isError, error, ensurePromptSet, retry } =
     usePromptSet();
   const requestScope = resolveProjectRequestScope(workspaceId, projectId);
   const requestOptions = () => {
@@ -303,9 +304,7 @@ export function PromptLibrary({
   if (!requestScope.enabled) {
     return (
       <PageShell>
-        <Alert tone="info">
-          Select or create a project first — prompts belong to a project&apos;s prompt set.
-        </Alert>
+        <ProjectRequiredState />
       </PageShell>
     );
   }
@@ -386,7 +385,13 @@ export function PromptLibrary({
     >
       <Stack gap="workspace">
         {isError ? (
-          <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
+          <ReadError
+            error={error}
+            fallback="Could not load prompts. Check your connection and try again."
+            onRetry={() => {
+              void retry();
+            }}
+          />
         ) : null}
         <PendingReviewNotice
           count={review.candidates.length}
@@ -401,7 +406,6 @@ export function PromptLibrary({
           railId="prompt-topic-rail"
           rail={
             <TopicRail
-              desktopId="prompt-topic-rail"
               topics={topics}
               selectedTopicId={selectedTopicId}
               onSelect={setSelectedTopicId}

@@ -6,11 +6,10 @@ import { useMemo, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { panelClasses } from '@/components/ui/panel';
-import { textRole } from '@/components/ui/typography';
 import { providersApi, type ProviderAppRouteInput } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { ProviderConnection } from '@/lib/api/types';
@@ -229,38 +228,35 @@ function FormActions({ controller }: Readonly<{ controller: Controller }>) {
 export function AppModelCard({ connections }: Readonly<{ connections: ProviderConnection[] }>) {
   const controller = useAppModelForm(connections);
   return (
-    <section className={panelClasses({}, 'grid gap-4')} aria-labelledby="app-model-title">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <h2 id="app-model-title" className={textRole('itemTitle')}>
-            Custom model (Agent)
-          </h2>
-          <p className={textRole('body')}>
-            True BYOK is customer-funded and spends no platform AI credits.
-          </p>
-        </div>
-        <ConnectionStatus controller={controller} />
-      </div>
-      <DestinationFields controller={controller} />
-      <CredentialField controller={controller} />
-      <Checkbox
-        checked={controller.form.acknowledged}
-        onCheckedChange={(checked) => controller.update('acknowledged', checked === true)}
-        label={
-          <>
-            I authorize sending Agent messages, selected workspace evidence, instructions and
-            outputs to {controller.form.baseUrl || 'the destination above'}. My provider terms,
-            retention and training settings apply. I am responsible for selecting this provider;
-            Cube27 retains its own applicable duties.
-          </>
-        }
-      />
-      <Alert tone="info">
-        Fallback: none. If this route is missing, revoked, or fails validation, the request is
-        refused rather than silently using a platform key.
-      </Alert>
-      <OperationFeedback controller={controller} />
-      <FormActions controller={controller} />
-    </section>
+    <Card aria-labelledby="app-model-title">
+      <CardHeader actions={<ConnectionStatus controller={controller} />}>
+        <CardTitle id="app-model-title">Custom model (Agent)</CardTitle>
+        <CardDescription>
+          True BYOK is customer-funded and spends no platform AI credits.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <DestinationFields controller={controller} />
+        <CredentialField controller={controller} />
+        <Checkbox
+          checked={controller.form.acknowledged}
+          onCheckedChange={(checked) => controller.update('acknowledged', checked === true)}
+          label={
+            <>
+              I authorize sending Agent messages, selected workspace evidence, instructions and
+              outputs to {controller.form.baseUrl || 'the destination above'}. My provider terms,
+              retention and training settings apply. I am responsible for selecting this provider;
+              Cube27 retains its own applicable duties.
+            </>
+          }
+        />
+        <Alert tone="info">
+          Fallback: none. If this route is missing, revoked, or fails validation, the request is
+          refused rather than silently using a platform key.
+        </Alert>
+        <OperationFeedback controller={controller} />
+        <FormActions controller={controller} />
+      </CardContent>
+    </Card>
   );
 }

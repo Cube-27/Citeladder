@@ -50,25 +50,6 @@ export function textRole(role: TextRole, className?: string) {
   return cn(TEXT_ROLES[role], className);
 }
 
-/**
- * Section heading (card / block level) — the `sectionTitle` role.
- *
- * @deprecated A section header is `EditorialSectionHeader` (open sections) or
- * `CardHeader` + `CardTitle` with `actions` (cards). Kept for its remaining
- * callers until they migrate; do not add new ones.
- */
-export function SectionTitle({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'h2'>>) {
-  return (
-    <h2 {...props} className={textRole('sectionTitle', className)}>
-      {children}
-    </h2>
-  );
-}
-
 /** A label naming a value — the `label` role. */
 export function Label({
   children,

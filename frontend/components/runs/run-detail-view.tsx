@@ -1,12 +1,8 @@
-import { ProjectLink } from '@/components/layout/scoped-link';
-
-import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Stack } from '@/components/ui/layout';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { ExecutionsTable } from '@/components/runs/executions-table';
 import { ProgressPanel } from '@/components/runs/progress-panel';
@@ -23,7 +19,9 @@ type RunDetailViewProps = {
   onRetryAudit: () => void;
   executions: Execution[] | undefined;
   executionsLoading: boolean;
-  executionsError: boolean;
+  executionsError: unknown;
+  executionsRetrying: boolean;
+  onRetryExecutions: () => void;
   exportError: string | null;
   cancelNotice: MutationNotice | null;
   rerunNotice: MutationNotice | null;
@@ -73,13 +71,28 @@ function ExecutionsSection({
   executions,
   executionsLoading,
   executionsError,
+  executionsRetrying,
+  onRetryExecutions,
   onSelectEvidence,
 }: Pick<
   RunDetailViewProps,
-  'executions' | 'executionsLoading' | 'executionsError' | 'onSelectEvidence'
+  | 'executions'
+  | 'executionsLoading'
+  | 'executionsError'
+  | 'executionsRetrying'
+  | 'onRetryExecutions'
+  | 'onSelectEvidence'
 >) {
-  if (executionsError && !executions)
-    return <Alert tone="danger">Could not load executions.</Alert>;
+  if (executionsError && !executions) {
+    return (
+      <ReadError
+        error={executionsError}
+        fallback="Could not load executions."
+        onRetry={onRetryExecutions}
+        pending={executionsRetrying}
+      />
+    );
+  }
   if (executionsLoading || !executions) {
     return (
       <Card>
@@ -113,13 +126,6 @@ function ExecutionsSection({
 export function RunDetailView(props: RunDetailViewProps) {
   return (
     <Stack gap="workspace">
-      <ProjectLink
-        href="/runs"
-        projectId={props.audit?.project_id}
-        className={textRole('label', 'text-accent-text hover:underline')}
-      >
-        ← Back to runs
-      </ProjectLink>
       <AuditSection {...props} />
       <Stack gap="compact">
         <EditorialSectionHeader title="Executions" />

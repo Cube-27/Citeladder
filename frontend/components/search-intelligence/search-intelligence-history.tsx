@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
-import { ChartContainer } from '@/components/ui/chart';
+import { axisProps, ChartContainer, LegendSwatch } from '@/components/ui/chart';
+import { InlineEmpty } from '@/components/ui/inline-empty';
 import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import {
@@ -48,9 +49,7 @@ export function SearchIntelligenceHistory({
     .sort((left, right) => left.date.localeCompare(right.date));
   if (observations.length < 2)
     return (
-      <p className={textRole('caption')}>
-        History needs at least two saved observations to show a trend.
-      </p>
+      <InlineEmpty>History needs at least two saved observations to show a trend.</InlineEmpty>
     );
   const data = fillMonths(observations);
   return (
@@ -61,15 +60,18 @@ export function SearchIntelligenceHistory({
         may differ from the live summary. Missing observations are gaps.
       </p>
       <div className="grid min-w-0 content-start gap-2">
-        <h3 className={textRole('itemTitle', 'min-h-6 text-chart-1')}>Total backlinks</h3>
+        <h3 className={textRole('itemTitle', 'flex min-h-6 items-center gap-2')}>
+          <LegendSwatch color="var(--color-chart-1)" shape="line" />
+          Total backlinks
+        </h3>
         <ChartContainer
           config={{ backlinks: { label: 'Backlinks', color: 'var(--color-chart-1)' } }}
-          height={200}
+          size="md"
           description="Saved monthly backlink totals; missing observations break the line."
         >
           <LineChart data={data}>
-            <XAxis {...historyAxis} dataKey="date" tickFormatter={shortMonth} />
-            <YAxis {...historyAxis} width={48} tickFormatter={compactCount} />
+            <XAxis {...axisProps} dataKey="date" tickFormatter={shortMonth} />
+            <YAxis {...axisProps} width={48} tickFormatter={compactCount} />
             <Tooltip />
             <Line
               dataKey="backlinks"
@@ -84,8 +86,14 @@ export function SearchIntelligenceHistory({
         <div className="flex min-h-6 flex-wrap items-center gap-x-4 gap-y-1">
           <h3 className={textRole('itemTitle')}>Monthly changes</h3>
           <div className="type-caption flex flex-wrap gap-x-4 gap-y-1">
-            <span className="text-chart-2">New backlinks</span>
-            <span className="text-chart-3">Lost backlinks</span>
+            <span className="flex items-center gap-2">
+              <LegendSwatch color="var(--color-chart-2)" shape="line" />
+              New backlinks
+            </span>
+            <span className="flex items-center gap-2">
+              <LegendSwatch color="var(--color-chart-3)" shape="line" />
+              Lost backlinks
+            </span>
           </div>
         </div>
         <ChartContainer
@@ -93,12 +101,12 @@ export function SearchIntelligenceHistory({
             new: { label: 'New backlinks', color: 'var(--color-chart-2)' },
             lost: { label: 'Lost backlinks', color: 'var(--color-chart-3)' },
           }}
-          height={200}
+          size="md"
           description="Saved monthly new and lost backlinks, shown as separate labelled lines."
         >
           <LineChart data={data}>
-            <XAxis {...historyAxis} dataKey="date" tickFormatter={shortMonth} />
-            <YAxis {...historyAxis} width={48} tickFormatter={compactCount} />
+            <XAxis {...axisProps} dataKey="date" tickFormatter={shortMonth} />
+            <YAxis {...axisProps} width={48} tickFormatter={compactCount} />
             <Tooltip />
             <Line
               name="New backlinks"
@@ -121,12 +129,6 @@ export function SearchIntelligenceHistory({
     </section>
   );
 }
-
-const historyAxis = {
-  axisLine: false,
-  tickLine: false,
-  tick: { fill: 'var(--color-foreground)', fontSize: 11 },
-} as const;
 
 function shortMonth(date: string): string {
   return `${date.slice(5, 7)}/${date.slice(2, 4)}`;

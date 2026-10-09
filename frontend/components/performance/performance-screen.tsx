@@ -24,6 +24,8 @@ import { Stack } from '@/components/ui/layout';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
+import { ReadError } from '@/components/ui/read-error';
 import { ChartNoAxesColumn } from 'lucide-react';
 import { integrationsApi } from '@/lib/api/integrations';
 import { performanceQueries, type PerformanceDashboard } from '@/lib/api/performance';
@@ -186,17 +188,18 @@ function SearchConsoleWorkspace({
   return (
     <Card className="overflow-hidden">
       <div className="border-border-subtle flex flex-col border-b lg:flex-row lg:items-stretch lg:justify-between">
-        <MetricCards
-          selected={selected}
-          comparison={comparison}
-          compareLabel={compareLabel}
-          selectedLabel={selectedLabel}
-          active={activeMetrics}
-          onToggle={onToggleMetric}
-          colors={METRIC_COLORS}
-          loading={refreshing}
-          className="flex-1"
-        />
+        <div data-testid="metric-card-strip" className="min-w-0 flex-1">
+          <MetricCards
+            selected={selected}
+            comparison={comparison}
+            compareLabel={compareLabel}
+            selectedLabel={selectedLabel}
+            active={activeMetrics}
+            onToggle={onToggleMetric}
+            colors={METRIC_COLORS}
+            loading={refreshing}
+          />
+        </div>
         <div className="border-border-subtle flex shrink-0 items-center justify-end border-t px-3 py-2 lg:border-t-0 lg:border-l">
           <GranularitySelect value={granularity} onChange={onGranularityChange} />
         </div>
@@ -277,19 +280,18 @@ export function PerformanceScreen() {
   if (!projectId)
     return (
       <PageShell>
-        {isLoading ? (
-          <PageLoading label="Loading performance…" />
-        ) : (
-          <Alert tone="info">Select or create a project to see its search performance.</Alert>
-        )}
+        {isLoading ? <PageLoading label="Loading performance…" /> : <ProjectRequiredState />}
       </PageShell>
     );
   if (dashboard.isError)
     return (
       <PageShell>
-        <Alert tone="danger">
-          Could not load performance data. Check your connection and try again.
-        </Alert>
+        <ReadError
+          error={dashboard.error}
+          fallback="Could not load performance data. Check your connection and try again."
+          onRetry={() => void dashboard.refetch()}
+          pending={dashboard.isFetching}
+        />
       </PageShell>
     );
   // Only the dashboard controls the screen's first paint. Connections feeds

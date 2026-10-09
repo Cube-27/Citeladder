@@ -10,12 +10,14 @@ import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { RunsTable } from '@/components/runs/runs-table';
 import { PageShell } from '@/components/layout/page-shell';
 import { PageLoading } from '@/components/layout/page-loading';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FilterChip } from '@/components/ui/filter-chip';
+import { FilterRow } from '@/components/ui/filter-row';
 import { Stack } from '@/components/ui/layout';
+import { ProjectRequiredState } from '@/components/layout/project-required-state';
+import { ReadError } from '@/components/ui/read-error';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
@@ -86,40 +88,45 @@ export function RunsScreen() {
   // Gate only on the runs list: the schedules query errors independently
   // (and refetches whenever its card remounts onto the errored cache entry),
   // so gating the whole screen on it would pin the page on a spinner forever.
+  // The page keeps its action and status filters while the first load lands.
+  const actions = (
+    <Button size="sm" onClick={() => setLaunchOpen(true)} disabled={!projectId}>
+      Launch audit
+    </Button>
+  );
+  const controls = (
+    <FilterRow>
+      <fieldset className="contents" aria-label="Filter by status">
+        {STATUS_FILTERS.map((filter) => (
+          <FilterChip
+            key={filter.id}
+            active={statusFilter === filter.id}
+            onClick={() => setStatusFilter(filter.id)}
+            count={audits.filter(filter.match).length}
+          >
+            {filter.label}
+          </FilterChip>
+        ))}
+      </fieldset>
+    </FilterRow>
+  );
+
   if (runsQuery.isLoading) {
     return (
-      <PageShell>
+      <PageShell actions={actions} controls={controls}>
         <PageLoading label="Loading runs…" />
       </PageShell>
     );
   }
 
   return (
-    <PageShell
-      actions={
-        <Button size="sm" onClick={() => setLaunchOpen(true)} disabled={!projectId}>
-          Launch audit
-        </Button>
-      }
-      controls={
-        <fieldset className="contents" aria-label="Filter by status">
-          {STATUS_FILTERS.map((filter) => (
-            <FilterChip
-              key={filter.id}
-              active={statusFilter === filter.id}
-              onClick={() => setStatusFilter(filter.id)}
-              count={audits.filter(filter.match).length}
-            >
-              {filter.label}
-            </FilterChip>
-          ))}
-        </fieldset>
-      }
-    >
+    <PageShell actions={actions} controls={controls}>
       <Stack gap="section">
         <RunsContent
           projectId={projectId}
-          isError={runsQuery.isError}
+          error={runsQuery.isError ? runsQuery.error : null}
+          retrying={runsQuery.isFetching}
+          onRetry={() => void runsQuery.refetch()}
           audits={audits}
           filteredAudits={filteredAudits}
           statusFilter={statusFilter}
@@ -146,7 +153,9 @@ export function RunsScreen() {
 
 function RunsContent({
   projectId,
-  isError,
+  error,
+  retrying,
+  onRetry,
   audits,
   filteredAudits,
   statusFilter,
@@ -154,16 +163,25 @@ function RunsContent({
   onLaunch,
 }: Readonly<{
   projectId: string | null;
-  isError: boolean;
+  error: unknown;
+  retrying: boolean;
+  onRetry: () => void;
   audits: Audit[];
   filteredAudits: Audit[];
   statusFilter: StatusFilter;
   anyActive: boolean;
   onLaunch: () => void;
 }>) {
-  if (!projectId) return <Alert tone="info">Select or create a project to launch runs.</Alert>;
-  if (isError) {
-    return <Alert tone="danger">Could not load runs. Check your connection and try again.</Alert>;
+  if (!projectId) return <ProjectRequiredState />;
+  if (error) {
+    return (
+      <ReadError
+        error={error}
+        fallback="Could not load runs. Check your connection and try again."
+        onRetry={onRetry}
+        pending={retrying}
+      />
+    );
   }
   if (audits.length === 0) {
     return (
@@ -189,23 +207,29 @@ function RunsContent({
   )?.label.toLowerCase();
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="flex-row flex-wrap items-baseline justify-between gap-2 border-b-0 pb-3">
+      <CardHeader
+        actions={
+          anyActive ? (
+            <span className="type-caption inline-flex items-center gap-2 tabular-nums">
+              <span
+                className="bg-info inline-block size-1.5 animate-pulse rounded-full"
+                aria-hidden
+              />
+              polling every 3s while a run is active
+            </span>
+          ) : null
+        }
+      >
         <CardTitle>All runs</CardTitle>
-        {anyActive ? (
-          <span className="type-caption inline-flex items-center gap-2 tabular-nums">
-            <span
-              className="bg-info inline-block size-1.5 animate-pulse rounded-full"
-              aria-hidden
-            />
-            polling every 3s while a run is active
-          </span>
-        ) : null}
       </CardHeader>
       <CardContent className="p-0">
         {filteredAudits.length === 0 ? (
-          <p className="type-body border-border-subtle border-t px-[var(--card-padding)] py-10 text-center">
-            {`No ${filterLabel} runs.`}
-          </p>
+          <EmptyState
+            variant="compact"
+            headingLevel={3}
+            icon={Play}
+            heading={`No ${filterLabel} runs.`}
+          />
         ) : (
           <RunsTable audits={filteredAudits} />
         )}

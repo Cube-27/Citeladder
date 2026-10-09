@@ -29,7 +29,7 @@ export function SettingsRouteContent() {
 export function AcceptInvitationRouteContent() {
   return (
     <Suspense>
-      <PageShell>
+      <PageShell measure="workflow">
         <AcceptInvitationScreen />
       </PageShell>
     </Suspense>

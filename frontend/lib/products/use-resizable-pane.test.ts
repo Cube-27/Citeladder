@@ -8,6 +8,8 @@ import {
   useResizablePane,
 } from './use-resizable-pane';
 
+const STORAGE_KEY = 'citeladder:commerce:catalog-pane-width';
+
 describe('useResizablePane', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -18,93 +20,41 @@ describe('useResizablePane', () => {
     expect(result.current.width).toBe(DEFAULT_PANE_WIDTH);
   });
 
-  it('clamps a drag to the pane bounds instead of collapsing either side', () => {
+  it('keeps a committed width, clamped to the bounds, across mounts', () => {
     const { result } = renderHook(() => useResizablePane());
-    act(() => result.current.beginDrag(0));
-    act(() => result.current.dragTo(-500));
+    act(() => result.current.commit(DEFAULT_PANE_WIDTH + 60));
+    expect(renderHook(() => useResizablePane()).result.current.width).toBe(DEFAULT_PANE_WIDTH + 60);
+
+    act(() => result.current.commit(-500));
     expect(result.current.width).toBe(MIN_PANE_WIDTH);
-    act(() => result.current.dragTo(99_999));
+    act(() => result.current.commit(99_999));
     expect(result.current.width).toBe(MAX_PANE_WIDTH);
   });
 
-  it('moves by the pointer delta, and keeps the width the drag ended on', () => {
-    const { result } = renderHook(() => useResizablePane());
-    act(() => result.current.beginDrag(400));
-    act(() => result.current.dragTo(460));
-    expect(result.current.width).toBe(DEFAULT_PANE_WIDTH + 60);
-    expect(result.current.dragging).toBe(true);
-    act(() => result.current.endDrag());
-    expect(result.current.dragging).toBe(false);
-    expect(renderHook(() => useResizablePane()).result.current.width).toBe(DEFAULT_PANE_WIDTH + 60);
-  });
-
-  it('keeps the landed width in memory when browser storage rejects writes', () => {
+  it('keeps the width in memory when browser storage rejects writes', () => {
     const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('Storage is blocked', 'SecurityError');
     });
     const { result } = renderHook(() => useResizablePane());
-
-    act(() => result.current.beginDrag(400));
-    act(() => result.current.dragTo(460));
-    act(() => result.current.endDrag());
-
-    expect(result.current.dragging).toBe(false);
+    act(() => result.current.commit(DEFAULT_PANE_WIDTH + 60));
     expect(result.current.width).toBe(DEFAULT_PANE_WIDTH + 60);
-
     setItem.mockRestore();
-    act(() => result.current.reset());
+    act(() => result.current.commit(DEFAULT_PANE_WIDTH));
   });
 
-  it('keeps one active pointer and discards an interrupted width', () => {
+  it('follows another tab resizing the same pane', () => {
     const { result } = renderHook(() => useResizablePane());
-    const handle = {
-      setPointerCapture: vi.fn(),
-      hasPointerCapture: vi.fn(() => true),
-      releasePointerCapture: vi.fn(),
-    };
-    const pointer = (pointerId: number, clientX = 400) =>
-      ({ button: 0, pointerId, clientX, currentTarget: handle, preventDefault: vi.fn() }) as never;
-
-    act(() => result.current.interaction.onPointerDown(pointer(7)));
-    act(() => result.current.interaction.onPointerDown(pointer(8, 500)));
-    expect(handle.setPointerCapture).toHaveBeenCalledTimes(1);
-    act(() => result.current.interaction.onPointerMove(pointer(7, 460)));
-    expect(result.current.width).toBe(DEFAULT_PANE_WIDTH + 60);
-    act(() => result.current.interaction.onLostPointerCapture(pointer(8)));
-    expect(result.current.dragging).toBe(true);
-    act(() => result.current.interaction.onPointerCancel(pointer(7)));
-    expect(result.current.dragging).toBe(false);
-    expect(result.current.width).toBe(DEFAULT_PANE_WIDTH);
-    expect(window.localStorage.getItem('citeladder:commerce:catalog-pane-width')).toBeNull();
     act(() => {
-      window.localStorage.setItem('citeladder:commerce:catalog-pane-width', '352');
+      window.localStorage.setItem(STORAGE_KEY, '352');
       window.dispatchEvent(new Event('storage'));
     });
     expect(result.current.width).toBe(352);
   });
 
-  it('nudges by keyboard and remembers the result', () => {
-    const { result } = renderHook(() => useResizablePane());
-    act(() => result.current.nudge(result.current.keyboardStep));
-    expect(result.current.width).toBe(DEFAULT_PANE_WIDTH + result.current.keyboardStep);
-
-    // A second hook — a fresh mount — restores what the first one stored.
-    const restored = renderHook(() => useResizablePane());
-    expect(restored.result.current.width).toBe(DEFAULT_PANE_WIDTH + result.current.keyboardStep);
-  });
-
-  it('restores the default, and persists that too', () => {
-    const { result } = renderHook(() => useResizablePane());
-    act(() => result.current.nudge(64));
-    act(() => result.current.reset());
-    expect(result.current.width).toBe(DEFAULT_PANE_WIDTH);
-    expect(renderHook(() => useResizablePane()).result.current.width).toBe(DEFAULT_PANE_WIDTH);
-  });
-
   it('ignores a stored width that is out of bounds or not a number', () => {
-    window.localStorage.setItem('citeladder:commerce:catalog-pane-width', 'not-a-width');
+    window.localStorage.setItem(STORAGE_KEY, 'not-a-width');
     expect(renderHook(() => useResizablePane()).result.current.width).toBe(DEFAULT_PANE_WIDTH);
-    window.localStorage.setItem('citeladder:commerce:catalog-pane-width', '99999');
+    window.localStorage.setItem(STORAGE_KEY, '99999');
     expect(renderHook(() => useResizablePane()).result.current.width).toBe(MAX_PANE_WIDTH);
   });
 });
