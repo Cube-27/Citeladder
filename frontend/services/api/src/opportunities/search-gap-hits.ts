@@ -20,14 +20,14 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { classifyProjectQueries, normalizeQuery } from '../demand/classification.ts';
 import { latestQuerySnapshot } from '../demand/query-evidence.ts';
 import { preferencesBody } from '../routes/search-intelligence-contracts.ts';
-import { competitorTarget, ownedTargets } from '../search-intelligence/targets.ts';
+import { competitorTarget, ownedTargets, searchMarket } from '../search-intelligence/targets.ts';
 import { normalizeQuery as trafficQueryKey } from '../traffic/normalization.ts';
 import { canonicalJson } from '../search-intelligence/requests.ts';
 import { compareText } from '../text-order.ts';
+import { OWNED_RANK } from './keyword-verification.ts';
 import type { CrawlSource, DemandSource, Scope } from './sources.ts';
 
 const g = policy.opportunity.opportunities.SEARCH_GAP;
-const RULE = 'search_keyword_gap';
 const USABLE_COVERAGE = ['complete', 'partial', 'empty'];
 const savedDomains = z.array(z.string());
 
@@ -86,11 +86,8 @@ async function projectContext(db: Database, scope: Scope) {
   const saved = preferencesBody.parse(project.search_intelligence_preferences);
   return {
     owned: ownedTargets(project, domains).map((target) => target.origin),
-    // The market readiness shows: the saved preference, else the project's SERP market.
-    market: {
-      location_code: saved.location_code ?? (project.serp_location_code || null),
-      language_code: saved.language_code || project.serp_language_code || project.language_code,
-    },
+    // The market readiness shows.
+    market: searchMarket(project, saved),
     competitors: competitors.flatMap((row) => {
       const target = competitorTarget(row, savedDomains.parse(row.domains));
       return target ? [{ id: row.id, name: row.name, domain: target.registrable_domain }] : [];
@@ -117,7 +114,7 @@ export async function searchGapSource(
     )
     .where('project_id', '=', scope.projectId)
     .where('status', '=', 'published')
-    .where('dataset_kind', 'in', ['missing_keywords', 'shared_keywords', 'ranking_keywords'])
+    .where('dataset_kind', 'in', ['missing_keywords', ...Object.keys(OWNED_RANK)])
     .where('coverage', 'in', USABLE_COVERAGE)
     .where('target_origin', 'in', context.owned)
     .where('location_code', '=', context.market.location_code)
@@ -127,28 +124,36 @@ export async function searchGapSource(
     .orderBy('id', 'desc')
     .execute();
   const byDomain = new Map(context.competitors.map((item) => [item.domain, item]));
-  const latest = new Map<string, (typeof candidates)[number]>();
+  const latest = new Map<
+    string,
+    { dataset: (typeof candidates)[number]; competitor: Competitor | undefined }
+  >();
   for (const dataset of candidates) {
-    const competitor = dataset.comparison_origin ? hostDomain(dataset.comparison_origin) : '';
+    const domain = dataset.comparison_origin ? hostDomain(dataset.comparison_origin) : '';
+    const competitor = domain ? byDomain.get(domain) : undefined;
     // A comparison with a competitor no longer saved is not evidence about this project.
-    if (competitor && !byDomain.has(competitor)) continue;
-    const key = `${dataset.dataset_kind}:${dataset.target_origin}:${competitor}`;
-    if (!latest.has(key)) latest.set(key, dataset);
+    if (domain && !competitor) continue;
+    const key = `${dataset.dataset_kind}:${dataset.target_origin}:${domain}`;
+    if (!latest.has(key)) latest.set(key, { dataset, competitor });
   }
-  const datasets = [...latest.values()]
-    .filter((dataset) => dataset.dataset_kind === 'missing_keywords')
-    .map((dataset) => ({
-      id: dataset.id,
-      competitor: byDomain.get(hostDomain(dataset.comparison_origin)!)!,
-      target_origin: dataset.target_origin,
-      coverage: dataset.coverage,
-      truncated: dataset.truncated,
-      published_at: dataset.published,
-    }));
+  const datasets = [...latest.values()].flatMap(({ dataset, competitor }) =>
+    dataset.dataset_kind === 'missing_keywords' && competitor
+      ? [
+          {
+            id: dataset.id,
+            competitor,
+            target_origin: dataset.target_origin,
+            coverage: dataset.coverage,
+            truncated: dataset.truncated,
+            published_at: dataset.published,
+          },
+        ]
+      : [],
+  );
   if (!datasets.length) return null;
   const ranked = [...latest.values()]
-    .filter((dataset) => dataset.dataset_kind !== 'missing_keywords')
-    .map((dataset) => dataset.id)
+    .filter(({ dataset }) => dataset.dataset_kind !== 'missing_keywords')
+    .map(({ dataset }) => dataset.id)
     .sort(compareText);
   return {
     revision: createHash('sha256')
@@ -191,18 +196,20 @@ export type GapInputs = {
   pages: GapPage[];
 };
 
-type Abstained = Record<
-  | 'unknown_volume'
-  | 'low_volume'
-  | 'unknown_rank'
-  | 'low_rank'
-  | 'intent'
-  | 'branded'
-  | 'competitor_named'
-  | 'already_ranking'
-  | 'search_console',
-  number
->;
+/** Why a row was not promoted, in gate order. */
+const ABSTAIN_REASONS = [
+  'unknown_volume',
+  'low_volume',
+  'unknown_rank',
+  'low_rank',
+  'intent',
+  'branded',
+  'competitor_named',
+  'already_ranking',
+  'search_console',
+] as const;
+type AbstainReason = (typeof ABSTAIN_REASONS)[number];
+type PageTerms = { page: GapPage; tokens: ReadonlySet<string> };
 
 const namedTerms = (competitor: Competitor) =>
   [competitor.name, competitor.domain.split('.')[0] ?? ''].map(normalizeQuery).filter(Boolean);
@@ -211,7 +218,12 @@ const namedTerms = (competitor: Competitor) =>
 const names = (query: string, terms: string[]) =>
   terms.some((term) => ` ${query} `.includes(` ${term} `));
 
-function gate(row: GapRow, normalized: string, inputs: GapInputs, named: string[]) {
+function gate(
+  row: GapRow,
+  normalized: string,
+  inputs: GapInputs,
+  named: string[],
+): AbstainReason | null {
   if (row.search_volume === null) return 'unknown_volume';
   if (row.search_volume < g.MIN_SEARCH_VOLUME) return 'low_volume';
   if (row.rank_group === null) return 'unknown_rank';
@@ -226,13 +238,12 @@ function gate(row: GapRow, normalized: string, inputs: GapInputs, named: string[
 }
 
 /** One page whose title and H1 hold every term, or why there is none. */
-function resolvePage(keyword: string, pages: GapPage[]) {
+function resolvePage(keyword: string, pages: readonly PageTerms[]) {
   const terms = [...lexicalTokens(keyword)];
   if (!terms.length) return { state: 'no_usable_terms' as const, candidates: [] };
-  const covering = pages.filter((page) => {
-    const tokens = lexicalTokens(page.text);
-    return terms.every((term) => tokens.has(term));
-  });
+  const covering = pages
+    .filter(({ tokens }) => terms.every((term) => tokens.has(term)))
+    .map(({ page }) => page);
   if (covering.length === 1)
     return { state: 'resolved' as const, page: covering[0]!, candidates: [] };
   return {
@@ -255,17 +266,7 @@ export function searchGapDecisions(inputs: GapInputs): {
   limitations: string[];
 } {
   const datasets = new Map(inputs.source.datasets.map((dataset) => [dataset.id, dataset]));
-  const abstained: Abstained = {
-    unknown_volume: 0,
-    low_volume: 0,
-    unknown_rank: 0,
-    low_rank: 0,
-    intent: 0,
-    branded: 0,
-    competitor_named: 0,
-    already_ranking: 0,
-    search_console: 0,
-  };
+  const abstained = new Map<AbstainReason, number>(ABSTAIN_REASONS.map((reason) => [reason, 0]));
   const named = inputs.source.competitors.flatMap(namedTerms);
   const gaps = new Map<string, { rows: GapRow[]; terms: string }>();
   for (const row of inputs.rows) {
@@ -273,7 +274,7 @@ export function searchGapDecisions(inputs: GapInputs): {
     if (!normalized) continue;
     const reason = gate(row, normalized, inputs, named);
     if (reason) {
-      abstained[reason]++;
+      abstained.set(reason, abstained.get(reason)! + 1);
       continue;
     }
     // One gap per term set: "shoes running" and "running shoes" are one search.
@@ -300,8 +301,9 @@ export function searchGapDecisions(inputs: GapInputs): {
         compareText(a.gap.terms, b.gap.terms),
     );
   const kept = ranked.slice(0, g.MAX_HITS_PER_REFRESH);
+  const pages = inputs.pages.map((page) => ({ page, tokens: lexicalTokens(page.text) }));
   const hits = kept.map(({ gap, lead, competitors }) =>
-    gapHit(inputs, datasets, gap.rows, lead, competitors.length),
+    gapHit(inputs, datasets, pages, gap, lead, competitors.length),
   );
   const limitations: string[] = [];
   if (ranked.length > kept.length)
@@ -316,7 +318,7 @@ export function searchGapDecisions(inputs: GapInputs): {
     limitations.push(
       'Search Console is not connected; some keyword gaps may already earn impressions.',
     );
-  const skipped = Object.entries(abstained).filter(([, count]) => count > 0);
+  const skipped = [...abstained].filter(([, count]) => count > 0);
   if (skipped.length)
     limitations.push(
       `Keyword gaps not promoted: ${skipped.map(([reason, count]) => `${count} ${reason.replaceAll('_', ' ')}`).join(', ')}.`,
@@ -327,17 +329,18 @@ export function searchGapDecisions(inputs: GapInputs): {
 function gapHit(
   inputs: GapInputs,
   datasets: Map<string, GapDataset>,
-  rows: GapRow[],
+  pages: readonly PageTerms[],
+  { rows, terms }: { rows: GapRow[]; terms: string },
   lead: GapRow,
   competitorCount: number,
 ): DetectorHit {
   const normalized = normalizeQuery(lead.keyword);
-  const resolution = resolvePage(lead.keyword, inputs.pages);
+  const resolution = resolvePage(lead.keyword, pages);
   const page = resolution.state === 'resolved' ? resolution.page : null;
   const sources = rows.map((row) => datasets.get(row.dataset_id)!);
   return {
-    rule_id: RULE,
-    target_key: `search-gap:${[...lexicalTokens(normalized)].sort(compareText).join(' ') || normalized}`,
+    rule_id: g.RULE_ID,
+    target_key: `search-gap:${terms}`,
     target_prompt_id: null,
     target_url: page?.url ?? null,
     target_theme: lead.keyword,
@@ -410,10 +413,11 @@ async function rankedSearches(db: Database, scope: Scope, source: SearchGapSourc
     .where('project_id', '=', scope.projectId)
     .where('dataset_id', 'in', source.ranked_dataset_ids)
     .where((eb) =>
-      eb.or([
-        eb.and([eb('row_kind', '=', 'ranking_keywords'), eb('rank_group', 'is not', null)]),
-        eb.and([eb('row_kind', '=', 'shared_keywords'), eb('owned_rank_group', 'is not', null)]),
-      ]),
+      eb.or(
+        Object.entries(OWNED_RANK).map(([kind, column]) =>
+          eb.and([eb('row_kind', '=', kind), eb(column, 'is not', null)]),
+        ),
+      ),
     )
     .execute();
   return new Set(rows.map((row) => normalizeQuery(row.keyword)));
@@ -504,24 +508,33 @@ export async function searchGapHits(
   crawl: CrawlSource | null,
 ): Promise<{ hits: DetectorHit[]; limitations: string[] }> {
   if (source === null) return { hits: [], limitations: [] };
-  const { rows, truncated } = await gapRows(db, scope, source);
-  const classifications = await classifyProjectQueries(
-    db,
-    scope.workspaceId,
-    scope.projectId,
-    rows.map((row) => row.keyword),
-  );
+  // Only classification waits on the rows; the other reads are independent.
+  const [gaps, ranked, searchConsole, pages] = await Promise.all([
+    gapRows(db, scope, source).then(async ({ rows, truncated }) => ({
+      rows,
+      truncated,
+      classifications: await classifyProjectQueries(
+        db,
+        scope.workspaceId,
+        scope.projectId,
+        rows.map((row) => row.keyword),
+      ),
+    })),
+    rankedSearches(db, scope, source),
+    searchConsoleSearches(db, scope, demand),
+    crawlPages(db, scope, crawl),
+  ]);
   return searchGapDecisions({
     source,
-    rows,
-    rows_truncated: truncated,
-    ranked: await rankedSearches(db, scope, source),
+    rows: gaps.rows,
+    rows_truncated: gaps.truncated,
+    ranked,
     branded: new Set(
-      [...classifications.values()]
+      [...gaps.classifications.values()]
         .filter((item) => item.classification !== 'non_branded')
         .map((item) => item.normalized_query),
     ),
-    search_console: await searchConsoleSearches(db, scope, demand),
-    pages: await crawlPages(db, scope, crawl),
+    search_console: searchConsole,
+    pages,
   });
 }

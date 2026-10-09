@@ -9,10 +9,9 @@ import { measurementLegs } from './measurement-legs.ts';
 import { declarationCheckSchema, measurementLegSchema } from '@citeladder/contracts/actions';
 import { expectedCheckSchema } from '@citeladder/contracts/opportunities';
 import { z } from 'zod';
-import { storedOutcomes } from './verification-decisions.ts';
+import { checkWindowDays, storedOutcomes } from './verification-decisions.ts';
 import { scalarText } from '../text-order.ts';
 import { ruleTitle } from '../site-health/reads/rules.ts';
-import { checkWindowDays } from './verification-decisions.ts';
 
 const observationKind = z.enum(['observed', 'verified', 'contradicted']);
 const o = policy.opportunity.opportunities;

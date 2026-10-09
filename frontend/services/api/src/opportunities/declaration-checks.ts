@@ -128,7 +128,7 @@ async function trafficCheck(
 }
 
 const legs = policy.opportunity.actions;
-const KEYWORD_GAP_RULE = 'search_keyword_gap';
+const KEYWORD_GAP_RULE = o.SEARCH_GAP.RULE_ID;
 
 /**
  * A keyword gap is measured by appearing for the search, not by clicks: a
@@ -160,7 +160,7 @@ export function memberMeasurementLeg(
   >,
 ): string | null {
   if (o.EARNED_RULE_IDS.includes(member.rule_id)) return legs.LEG_PLACEMENT_RECHECK;
-  if (member.rule_id === KEYWORD_GAP_RULE) return legs.LEG_SEARCH_CONSOLE_WINDOW;
+  if (member.rule_id === KEYWORD_GAP_RULE) return legs.CHECK_KIND_MEASUREMENT_LEG.keyword_presence;
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_SITE) return legs.LEG_CRAWL;
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_TRAFFIC)
     return member.target_theme || member.target_url ? legs.LEG_SEARCH_CONSOLE_WINDOW : null;

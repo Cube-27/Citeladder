@@ -440,6 +440,7 @@ export const opportunities = {
   },
   // Keyword gaps from published Search Intelligence datasets (owner, 2026-10-09).
   SEARCH_GAP: {
+    RULE_ID: 'search_keyword_gap',
     MIN_SEARCH_VOLUME: 50,
     MAX_COMPETITOR_RANK: 10,
     MAX_HITS_PER_REFRESH: 25,

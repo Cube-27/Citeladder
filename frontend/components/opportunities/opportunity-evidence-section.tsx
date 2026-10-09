@@ -25,6 +25,7 @@ function KeywordGapEvidence({ evidence }: Readonly<{ evidence: Record<string, un
         (item): item is Record<string, unknown> => typeof item === 'object' && item !== null,
       )
     : [];
+  const statement = asString(evidence.statement);
   return (
     <div className="grid gap-2">
       {volume === null ? null : (
@@ -34,17 +35,18 @@ function KeywordGapEvidence({ evidence }: Readonly<{ evidence: Record<string, un
         />
       )}
       <ul className="type-body grid gap-1">
-        {competitors.map((item) => (
-          <li key={String(item.row_id)}>
-            {asString(item.name)} ranks
-            {typeof item.rank_group === 'number' ? ` #${item.rank_group}` : ''}
-            {asString(item.url) ? ` with ${asString(item.url)}` : ''}
-          </li>
-        ))}
+        {competitors.map((item) => {
+          const url = asString(item.url);
+          return (
+            <li key={String(item.row_id)}>
+              {asString(item.name)} ranks
+              {typeof item.rank_group === 'number' ? ` #${item.rank_group}` : ''}
+              {url ? ` with ${url}` : ''}
+            </li>
+          );
+        })}
       </ul>
-      {asString(evidence.statement) ? (
-        <p className="type-caption">{asString(evidence.statement)}</p>
-      ) : null}
+      {statement ? <p className="type-caption">{statement}</p> : null}
     </div>
   );
 }

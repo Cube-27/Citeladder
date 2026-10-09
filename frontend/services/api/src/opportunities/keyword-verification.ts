@@ -67,7 +67,8 @@ function providerInstant(value: unknown): number | null {
   return Number.isFinite(time) ? time : null;
 }
 
-const OWNED_RANK: Record<string, 'rank_group' | 'owned_rank_group'> = {
+/** Where each dataset kind records the project's own rank for a search. */
+export const OWNED_RANK: Record<string, 'rank_group' | 'owned_rank_group'> = {
   ranking_keywords: 'rank_group',
   shared_keywords: 'owned_rank_group',
 };

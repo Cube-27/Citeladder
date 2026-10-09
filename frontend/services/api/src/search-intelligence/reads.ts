@@ -10,7 +10,7 @@ import { z } from 'zod';
 
 import type { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Database } from '../db/database.ts';
-import { record } from '../db/json.ts';
+import { strings } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
 import {
   decodeKeysetCursor,
@@ -21,7 +21,7 @@ import { containsPattern } from '../db/like.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { policy } from '../config.ts';
 import { preferencesBody } from '../routes/search-intelligence-contracts.ts';
-import { competitorTarget, ownedTargets } from './targets.ts';
+import { competitorTarget, ownedTargets, searchMarket } from './targets.ts';
 import { datasetView, rowView, runView } from './views.ts';
 
 const si = policy.search_intelligence;
@@ -124,12 +124,7 @@ export async function readiness(
     competitors: competitors.flatMap(
       (row) => competitorTarget(row, savedDomains.parse(row.domains)) ?? [],
     ),
-    // An unset market falls back to the project's SERP market.
-    preferences: {
-      ...saved,
-      location_code: saved.location_code ?? (project.serp_location_code || null),
-      language_code: saved.language_code || project.serp_language_code || project.language_code,
-    },
+    preferences: { ...saved, ...searchMarket(project, saved) },
     latest_run: latest ? runView(latest) : null,
     datasets: datasets.map(datasetView),
   };
@@ -279,22 +274,19 @@ export async function datasetPage(
   };
 }
 
-/** The Action each live keyword-gap finding names a row of, by row; a read, never a refresh. */
+/** The Action each live keyword-gap finding cites a row of, by row; a read, never a refresh. */
 async function gapActions(db: Database, scope: Scope) {
   const live = await scope.workspace
     .selectFrom(db, 'opportunities')
-    .select(['action_id', 'evidence'])
+    .select(['action_id', 'source_metric_ids'])
     .where('project_id', '=', scope.projectId)
-    .where('rule_id', '=', 'search_keyword_gap')
+    .where('rule_id', '=', policy.opportunity.opportunities.SEARCH_GAP.RULE_ID)
     .where('superseded_at', 'is', null)
     .where('action_id', 'is not', null)
     .execute();
   const byRow = new Map<string, string>();
-  for (const finding of live) {
-    const competitors = record(finding.evidence).competitors;
-    for (const item of Array.isArray(competitors) ? competitors.map(record) : [])
-      if (typeof item.row_id === 'string') byRow.set(item.row_id, finding.action_id!);
-  }
+  for (const finding of live)
+    for (const id of strings(finding.source_metric_ids)) byRow.set(id, finding.action_id!);
   return byRow;
 }
 
