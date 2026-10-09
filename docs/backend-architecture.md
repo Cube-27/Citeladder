@@ -158,7 +158,7 @@ source IDs and relevant versions. Native policy lives under
 Python consumers are SQLAlchemy metadata, Alembic and schema maintenance/checks.
 `app/core/config/` contains only the constants required by schema declarations;
 there is no Python application policy exporter or generated policy artifact.
-Opportunity/Action catalogs, source-page inspection and placement policy are
+Opportunity/Action catalogs and source-page inspection policy are
 native; Python retains schema defaults and shared provenance versions.
 Commerce acquisition/admission policy and buyer-prompt templates, plus scheduler
 runtime settings and the pinned timezone catalog, are native. Commerce persisted
