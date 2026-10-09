@@ -1,5 +1,5 @@
 import { words } from '@/lib/ai-traffic/vocabulary';
-import { formatDisplayDate } from '@/lib/format';
+import { formatDisplayDate, formatWindowDate } from '@/lib/format';
 
 /** A provider figure, or null when the provider did not report one. */
 export function searchNumber(value: unknown, maximumFractionDigits = 0): string | null {
@@ -96,7 +96,7 @@ function evidenceValue(value: unknown, timeZone: string): string | null {
   // Nested provider objects are summarised elsewhere, never printed as text.
   if (typeof value !== 'string' || !value) return null;
   if (!DATE_TIME.test(value) || Number.isNaN(Date.parse(value))) return value;
-  // A bare date parses as UTC midnight; shown in a zone west of UTC it would
-  // read as the day before, so a calendar date keeps its own day.
-  return formatDisplayDate(value, DATE_ONLY.test(value) ? 'UTC' : timeZone);
+  // A calendar date is a day, not an instant: zoning it would show the day
+  // before west of UTC.
+  return DATE_ONLY.test(value) ? formatWindowDate(value) : formatDisplayDate(value, timeZone);
 }

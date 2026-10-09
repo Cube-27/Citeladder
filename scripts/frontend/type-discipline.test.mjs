@@ -35,6 +35,7 @@ test('flags a cast in a value-change handler outside the generic controls', () =
   const source = '<Select value={scope} onValueChange={(next) => setScope(next as Scope)} />';
   assert.deepEqual(rules(source, 'components/settings/scope.tsx'), ['value-change-cast@1']);
   assert.deepEqual(rules(source, 'components/ui/select.tsx'), []);
+  assert.deepEqual(rules(source, 'components/ui/filter-row.tsx'), ['value-change-cast@1']);
   assert.deepEqual(
     rules('<Select value={scope} onValueChange={setScope} />', 'components/settings/scope.tsx'),
     [],

@@ -82,13 +82,6 @@ export function ChartContainer({
   );
 }
 
-/**
- * The key beside a legend entry: a dot (a series or point) or a short rule (a
- * line). Its colour is a `DataTone` — a series index for categorical identity
- * or an outcome family for a state — or, inside a Recharts frame, the
- * series' token `color` from `ChartConfig`. Decorative: the entry's text is
- * what names the series.
- */
 /** Exactly one paint: two would stack, and none renders an invisible swatch. */
 type SwatchPaint =
   | { tone: DataTone; color?: never; fillClass?: never }
@@ -99,11 +92,19 @@ type SwatchPaint =
       fillClass?: never;
     }
   | {
-      /** A fill utility the caller already resolved. */ fillClass: string;
+      /** A fill utility the caller already resolved. */
+      fillClass: string;
       tone?: never;
       color?: never;
     };
 
+/**
+ * The key beside a legend entry: a dot (a series or point) or a short rule (a
+ * line). Its colour is a `DataTone` — a series index for categorical identity
+ * or an outcome family for a state — or, inside a Recharts frame, the
+ * series' token `color` from `ChartConfig`. Decorative: the entry's text is
+ * what names the series.
+ */
 export function LegendSwatch({
   tone,
   color,

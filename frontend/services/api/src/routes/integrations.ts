@@ -24,7 +24,11 @@ import {
   startOAuth,
   stateReturnPath,
 } from '../integrations/oauth.ts';
-import { projectSiteDomains, propertyMatchesSite } from '../integrations/host-scope.ts';
+import {
+  projectSiteDomains,
+  propertyMatchesSite,
+  siteDomainsOf,
+} from '../integrations/host-scope.ts';
 import {
   enqueueHistoryBackfill,
   enqueueSyncRun,
@@ -562,7 +566,7 @@ export const integrationRoutes = [
           });
         const project = await trx
           .selectFrom('projects')
-          .select('id')
+          .select(['id', 'website_url'])
           .where('id', '=', input.project_id)
           .where('workspace_id', '=', workspaceId)
           .executeTakeFirst();
@@ -574,14 +578,7 @@ export const integrationRoutes = [
             throw new ApiError(422, 'The property does not belong to the selected project', {
               code: 'mapping_property_not_owned',
             });
-        } else if (
-          // The project was just read in this transaction; were it gone, no
-          // sites would match and the property would be refused.
-          !propertyMatchesSite(
-            ref,
-            (await projectSiteDomains(trx, workspaceId, project.id)) ?? new Set(),
-          )
-        ) {
+        } else if (!propertyMatchesSite(ref, await siteDomainsOf(trx, project))) {
           throw new ApiError(422, 'The property does not belong to the selected project', {
             code: 'mapping_property_not_owned',
           });

@@ -190,10 +190,15 @@ export type AppShellChrome = { title: string } & (
  * page on a floating white sheet with its title, actions, tabs and filters.
  */
 export function AppShellFrame({
+  mode = 'dashboard',
+  active,
+  title,
+  action,
+  tabs,
+  activeTab,
+  filters,
   children,
-  ...chrome
 }: Readonly<AppShellChrome & { children: ReactNode }>) {
-  const { mode = 'dashboard', active, title, action, tabs, activeTab, filters } = chrome;
   return (
     <div className="product-frame pv-shell app-type-scale">
       <ShellSidebar mode={mode} active={active} />

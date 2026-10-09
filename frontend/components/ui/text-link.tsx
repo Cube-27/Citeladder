@@ -56,7 +56,8 @@ type TextLinkTarget =
     }
   | {
       variant: 'external';
-      /** An http(s) URL. */ href?: string | null;
+      /** An http(s) URL. */
+      href?: string | null;
       projectId?: never;
       asChild?: false;
     }

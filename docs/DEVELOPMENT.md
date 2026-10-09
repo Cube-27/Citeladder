@@ -364,15 +364,15 @@ from `frontend/`; never raise it to make a change pass. The generated value
 tables in `docs/design.md` are refreshed with
 `node scripts/audit-design-tokens.mjs --write` (quality fix mode runs it).
 
-The type-discipline policy (`frontend/scripts/check-type-discipline.mjs`, part of
-`check:policy`) ratchets the same way against
+The same run ratchets the type-discipline rules
+(`frontend/scripts/type-discipline-checks.mjs`) against
 `frontend/scripts/type-discipline-baseline.json`, over browser, package and API
-service source. It counts the casts and assertions reviews kept finding:
+service source. They count the casts and assertions reviews kept finding:
 `Object.keys(...)`/`Object.entries(...)` cast to a key type, a non-null
 assertion on an indexed element (`list[0]!`, `list.at(-1)!`; a `split` part is
 exempt), and a cast inside an `onValueChange` handler outside `components/ui`,
-whose generic controls already hand the handler the option type. Lower the
-baseline with `node scripts/check-type-discipline.mjs --write-baseline`.
+whose generic controls already hand the handler the option type.
+`--write-baseline` lowers both baselines.
 
 ```powershell
 .\scripts\check.ps1            # affected owners, affected builds, with fixes

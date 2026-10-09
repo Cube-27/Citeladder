@@ -12,14 +12,21 @@ import { lineIndex, parseSource, walk } from './source-ast.mjs';
  *     yields at least one part.
  *   - `value-change-cast`: a cast inside an `onValueChange` handler. The shared
  *     Select, RadioGroup and Tabs are generic over their option values, so the
- *     handler receives the option type; `components/ui` owns the one cast from
- *     Radix's string.
+ *     handler receives the option type; those three controls own the one cast
+ *     from Radix's string.
  *
- * Findings are ratcheted per file and rule (see design-system-ratchet.mjs), so
- * recorded debt burns down and a new occurrence fails.
+ * check-design-system.mjs runs these in its file walk and ratchets them per
+ * file and rule against type-discipline-baseline.json, so recorded debt burns
+ * down and a new occurrence fails.
  */
 
 const OBJECT_KEY_READERS = new Set(['keys', 'entries']);
+/** The generic controls that turn Radix's string into their option type. */
+const RADIX_VALUE_OWNERS = new Set([
+  'components/ui/radio-group.tsx',
+  'components/ui/select.tsx',
+  'components/ui/tabs.tsx',
+]);
 
 const propertyName = (node) =>
   node?.type === 'MemberExpression' && !node.computed ? node.property?.name : undefined;
@@ -35,10 +42,10 @@ function keysCast(node) {
   const call = node.expression;
   return (
     call?.type === 'CallExpression' &&
-    call.callee?.type === 'MemberExpression' &&
-    call.callee.object?.type === 'Identifier' &&
-    call.callee.object.name === 'Object' &&
-    OBJECT_KEY_READERS.has(propertyName(call.callee))
+    // A named property implies a member callee, so `object` is then defined.
+    OBJECT_KEY_READERS.has(propertyName(call.callee)) &&
+    call.callee.object.type === 'Identifier' &&
+    call.callee.object.name === 'Object'
   );
 }
 
@@ -64,7 +71,7 @@ export function typeDisciplineFindings(source, label) {
   const findings = [];
   const add = (node, rule, message) =>
     findings.push({ file: label, rule, line: lineOf(node.start), message });
-  const ownsRadixCast = label.startsWith('components/ui/');
+  const ownsRadixCast = RADIX_VALUE_OWNERS.has(label);
   walk(program, (node) => {
     if (keysCast(node))
       add(
