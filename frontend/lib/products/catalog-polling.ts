@@ -1,25 +1,14 @@
+import type { CommerceCatalog } from '@citeladder/contracts/commerce-suite';
+
 import { ACTIVE_RUN_POLL_MS } from '@/lib/config/operational';
 
 /**
- * Task statuses that mean work is still coming. Anything else is finished, so
- * the projection counts cannot change again on their own.
- */
-const IN_FLIGHT_STATUSES = ['queued', 'leased', 'running', 'retry_wait'] as const;
-
-/**
- * How often to re-read the catalog, or `false` to stop.
- *
- * The Catalog tab polled every three seconds for as long as it was open, even
- * with nothing projecting — a request every three seconds, forever, to learn
- * that a finished crawl was still finished. Poll while projection tasks are
- * actually in flight, then stop.
- *
- * Pure and exported so the rule is testable without mounting the screen.
+ * How often to re-read the catalog, or `false` to stop: poll while projection
+ * tasks are in flight, then stop, rather than re-reading a finished crawl
+ * every few seconds for as long as the screen is open.
  */
 export function catalogPollingInterval(
-  projectionTasks: Record<string, number> | undefined,
+  projection: CommerceCatalog['projection'] | undefined,
 ): number | false {
-  if (!projectionTasks) return false;
-  const inFlight = IN_FLIGHT_STATUSES.some((status) => (projectionTasks[status] ?? 0) > 0);
-  return inFlight ? ACTIVE_RUN_POLL_MS : false;
+  return projection?.in_flight ? ACTIVE_RUN_POLL_MS : false;
 }

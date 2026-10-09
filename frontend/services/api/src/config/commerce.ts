@@ -1,3 +1,5 @@
+import { COMMERCE_TARGETS_MAX } from '@citeladder/contracts/commerce-suite';
+
 /** Native Commerce admission, acquisition and buyer-prompt policy. */
 export const commerce = {
   importer_version: 'commerce-catalog-importer-1',
@@ -90,7 +92,7 @@ export const commerce = {
     min: 2,
     max: 10,
     default: 5,
-    targets_max: 10,
+    targets_max: COMMERCE_TARGETS_MAX,
     min_words: 4,
     max_words: 24,
     survey_markers: [
@@ -143,6 +145,8 @@ export const commerceShelf = {
   span_limit: 12,
   span_chars: 2000,
   result_limit: 8,
+  match_min_chars: 3,
+  attribute_min_chars: 4,
   excluded_paths: ['/blog/', '/news/', '/article/', '/search'],
   non_pdp_hosts: ['reddit.com', 'youtube.com', 'youtu.be', 'medium.com'],
   dollar_currencies: {

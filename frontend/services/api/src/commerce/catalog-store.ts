@@ -4,17 +4,25 @@ import type { Insertable, Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { CommerceProducts, CommerceProductObservations } from '../generated/db-schema.ts';
-import { categoryKey } from './projection-facts.ts';
+import { categoryKey, isCategoryName } from './projection-facts.ts';
 import { commerceMissing, type CommerceScope } from './reads.ts';
 
-/** Import and projection serialize at the project, before touching catalog rows. */
+/**
+ * Catalog writers serialize at the project, before touching catalog rows.
+ *
+ * `FOR NO KEY UPDATE`, not `FOR UPDATE`: every insert into a table that
+ * references `projects` takes a key-share lock on the row, so a full update
+ * lock would stall the project's audits, crawls and queue writes for as long
+ * as a large import runs. This still excludes other catalog writers and a
+ * concurrent project delete.
+ */
 export async function lockCatalog(db: Database, scope: CommerceScope) {
   const project = await db
     .selectFrom('projects')
     .select('id')
     .where('workspace_id', '=', scope.workspaceId)
     .where('id', '=', scope.projectId)
-    .forUpdate()
+    .forNoKeyUpdate()
     .executeTakeFirst();
   if (!project) commerceMissing('Project not found');
 }
@@ -52,7 +60,8 @@ export function newProduct(
 }
 
 export async function categoryByName(db: Database, scope: CommerceScope, name: string) {
-  const normalized = categoryKey(name) || 'uncategorized';
+  const normalized = categoryKey(name);
+  if (!isCategoryName(name)) throw new Error('A catalog category needs a real name');
   const existing = await db
     .selectFrom('commerce_categories')
     .selectAll()
@@ -67,7 +76,7 @@ export async function categoryByName(db: Database, scope: CommerceScope, name: s
       id: randomUUID(),
       workspace_id: scope.workspaceId,
       project_id: scope.projectId,
-      name: normalized === 'uncategorized' ? 'Uncategorized' : name.trim(),
+      name: name.trim(),
       normalized_name: normalized,
       role: 'unknown',
       canonical_url: '',

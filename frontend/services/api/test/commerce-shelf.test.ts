@@ -14,6 +14,7 @@ import { finalizeCommerceShelf, shelfMetrics } from '../src/commerce/shelf-metri
 import { auditProjections } from '../src/audits/projections.ts';
 import {
   observedPrice,
+  matchRecommendation,
   prepareRecommendations,
   resolvedCompetitorUrl,
   type FrozenShelfTarget,
@@ -73,49 +74,140 @@ describe('frozen Commerce shelf projections', () => {
     ]);
     const extracted = await prepareRecommendations('1. Choose either option', emptyTarget, {
       model: 'fixture',
-      resolve: async () => ({ recommendations: [{ title: 'A' }, { title: 'B' }] }),
+      resolve: async () => ({
+        recommendations: [
+          { span: 0, title: 'A' },
+          { span: 0, title: 'B' },
+        ],
+      }),
     });
-    expect(extracted).toHaveLength(2);
-    expect(extracted.every((row) => row.span.rank === null && !row.span.orderObservable)).toBe(
-      true,
-    );
+    expect(extracted.map((row) => [row.resolved?.title, row.span.rank])).toEqual([
+      ['A', null],
+      ['B', null],
+    ]);
     expect(observedPrice('$1,299.50', 'en-US')).toEqual({ price: 1299.5, currency: 'USD' });
     expect(observedPrice('$12.50', 'en')).toEqual({ price: 12.5, currency: '' });
-    expect(
-      resolvedCompetitorUrl('https://retailer.example/product?a=1', [
-        'https://retailer.example/product?a=1&utm_source=x',
-      ]),
-    ).toBeNull();
-    expect(resolvedCompetitorUrl('https://reddit.com/product', [])).toBeNull();
-    expect(resolvedCompetitorUrl('https://amazon.com/dp/item', [])).toBe(
-      'https://amazon.com/dp/item',
+  });
+  it('sends one resolver call per answer, for unmatched spans with a product signal only', async () => {
+    const calls: string[][] = [];
+    await prepareRecommendations(
+      'Shoes matter. Try the Rival Runner at $90. Comfort is key.',
+      emptyTarget,
+      {
+        model: 'fixture',
+        resolve: async (spans) => {
+          calls.push(spans);
+          return { recommendations: [] };
+        },
+      },
     );
+    expect(calls).toEqual([['Try the Rival Runner at $90.']]);
+  });
+  it("accepts an AI-observed PDP only when the answer carries it and it is not the business's own", () => {
+    const answer = 'Try https://rival.example/p/1 or https://www.shop.example/p/2';
+    const evidence = { answer, citations: [], ownedHosts: ['shop.example'] };
+    expect(resolvedCompetitorUrl('https://rival.example/p/1', evidence)).toBe(
+      'https://rival.example/p/1',
+    );
+    // Invented by the resolver: nowhere in the answer.
+    expect(resolvedCompetitorUrl('https://other.example/p/3', evidence)).toBeNull();
+    // The business's own product page.
+    expect(resolvedCompetitorUrl('https://www.shop.example/p/2', evidence)).toBeNull();
+    // A citation alone is not an independently resolved PDP.
+    expect(
+      resolvedCompetitorUrl('https://rival.example/p/1', {
+        ...evidence,
+        citations: ['https://rival.example/p/1?utm_source=x'],
+      }),
+    ).toBeNull();
+  });
+  it('matches whole names, gives the slot to whoever the span names first, and ignores shared attributes', () => {
+    const product = {
+      id: randomUUID(),
+      canonical_url: 'https://shop.example/p/runner',
+      name: 'Acme Runner',
+      brand: 'Acme',
+      attributes: { colour: 'black', size: 10, series: 'Trailblazer' },
+    };
+    const sibling = {
+      ...product,
+      id: randomUUID(),
+      canonical_url: 'https://shop.example/p/walker',
+      name: 'Acme Walker',
+      attributes: { colour: 'black' },
+    };
+    const target: FrozenShelfTarget = {
+      kind: 'category',
+      id: randomUUID(),
+      products: [product, sibling],
+      approved_competitors: [
+        {
+          id: randomUUID(),
+          canonical_url: 'https://rival.example/p/1',
+          product_name: 'Rival Runner',
+          brand_name: 'Rival',
+        },
+      ],
+    };
+    const holder = (text: string) => {
+      const match = matchRecommendation(text, target);
+      if (match.product) return `owned:${match.product.name}`;
+      return match.competitor ? 'competitor' : 'none';
+    };
+    expect(holder('The Acme Runner is the pick')).toBe('owned:Acme Runner');
+    expect(holder('Rival Runner, a cheaper alternative to the Acme Runner')).toBe('competitor');
+    expect(holder('The Acme Runner beats the Rival Runner')).toBe('owned:Acme Runner');
+    // A prefix of a longer word is not the product.
+    expect(holder('Acme Runners club meets weekly')).toBe('none');
+    // Brand plus a colour both Acme products share names neither.
+    expect(holder('Anything black from Acme')).toBe('none');
+    expect(holder('Acme Trailblazer edition')).toBe('owned:Acme Runner');
   });
   it('distinguishes zero visibility from unavailable slot and position metrics', () => {
+    const row = (values: Record<string, unknown> = {}) => ({
+      id: randomUUID(),
+      task_id: 'one',
+      classification: 'owned',
+      rank: null,
+      order_observable: false,
+      product_id: 'product',
+      competitor_candidate_id: null,
+      ...values,
+    });
     expect(shelfMetrics(['one'], [])).toMatchObject({
       product_visibility: 0,
       share_of_shelf: null,
       average_shelf_position: null,
       first_position_win_rate: null,
     });
-    expect(
-      shelfMetrics(
-        ['one', 'two'],
-        [
-          {
-            id: 'evidence',
-            task_id: 'one',
-            classification: 'owned',
-            rank: null,
-            order_observable: false,
-          },
-        ],
-      ),
-    ).toMatchObject({
+    expect(shelfMetrics(['one', 'two'], [row()])).toMatchObject({
       product_visibility: 0.5,
       share_of_shelf: 1,
       average_shelf_position: null,
       first_position_win_rate: null,
+    });
+    // One answer naming the same product three times holds one slot, at its best rank.
+    expect(
+      shelfMetrics(
+        ['one'],
+        [
+          row({ rank: 3, order_observable: true }),
+          row({ rank: 1, order_observable: true }),
+          row(),
+          row({
+            classification: 'approved_competitor',
+            product_id: null,
+            competitor_candidate_id: 'rival',
+            rank: 2,
+            order_observable: true,
+          }),
+        ],
+      ),
+    ).toMatchObject({
+      share_of_shelf: 0.5,
+      average_shelf_position: 1,
+      first_position_win_rate: 1,
+      recognized_slot_count: 2,
     });
   });
   it('persists frozen matches, pending independent PDPs, citation provenance and replay-safe target snapshots', async () => {
@@ -173,7 +265,7 @@ describe('frozen Commerce shelf projections', () => {
       transport_provider: 'openai',
       transport_model: task.transport_model,
       answer_text:
-        '1. Frozen road shoe $12.50 https://evidence.example/review\n2. New rival option\n3. Citation-only option',
+        '1. Frozen road shoe $12.50 https://evidence.example/review\n2. New rival option https://rival.example/products/new\n3. Citation-only option',
       search_used: false,
       search_events: [],
       finish_reason: 'stop',
@@ -204,23 +296,23 @@ describe('frozen Commerce shelf projections', () => {
     let calls = 0;
     const derive = await prepareShelfExecution(db, task, result, {
       model: 'fixture',
-      resolve: async (span) => {
+      resolve: async (spans) => {
         calls++;
         // Model I/O runs after the context read, with no persistence transaction/row lock.
         return {
-          recommendations: [
-            {
-              title: span.includes('Citation-only') ? 'Citation-only option' : 'New rival',
-              product_url: span.includes('Citation-only')
-                ? 'https://evidence.example/review'
-                : 'https://rival.example/products/new',
-              merchant_url: 'https://seller.example/buy',
-            },
-          ],
+          recommendations: spans.map((span, index) => ({
+            span: index,
+            title: span.includes('Citation-only') ? 'Citation-only option' : 'New rival',
+            product_url: span.includes('Citation-only')
+              ? 'https://evidence.example/review'
+              : 'https://rival.example/products/new',
+            merchant_url: 'https://seller.example/buy',
+          })),
         };
       },
     });
-    expect(calls).toBe(2);
+    // The owned span matches deterministically; the other two share one call.
+    expect(calls).toBe(1);
     await expect(
       prepareShelfExecution(db, { ...task, workspace_id: foreign.workspaceId }, result, null),
     ).rejects.toThrow();

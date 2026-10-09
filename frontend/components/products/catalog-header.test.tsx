@@ -48,7 +48,7 @@ const catalogQuery = (overrides: Record<string, unknown> = {}) =>
     data: {
       products: [{ id: 'p1' }, { id: 'p2' }],
       categories: [{ id: 'c1' }],
-      projection_tasks: { succeeded: 10 },
+      projection: { applies: true, in_flight: 0, failed: 0 },
     },
     ...overrides,
   }) as never;
@@ -90,8 +90,43 @@ describe('CatalogHeader', () => {
     expect(statValue('Products')).toHaveTextContent('2');
     expect(statValue('Categories')).toHaveTextContent('1');
     await waitFor(() => expect(screen.getByText('49/50')).toBeInTheDocument());
-    // The mechanism paragraph is gone — the numbers say it.
-    expect(screen.queryByText(/project automatically/)).not.toBeInTheDocument();
+  });
+
+  it('reports projection work in flight, then failures, and nothing once clean', async () => {
+    const withProjection = (in_flight: number, failed: number) =>
+      catalogQuery({
+        data: {
+          products: [],
+          categories: [],
+          projection: { applies: true, in_flight, failed },
+        },
+      });
+    const { rerender } = renderWithProviders(
+      <CatalogHeaderHost
+        workspaceId={WORKSPACE_ID}
+        projectId={PROJECT_ID}
+        query={withProjection(3, 1)}
+      />,
+    );
+    expect(statValue('Projection')).toHaveTextContent('3 projecting');
+
+    rerender(
+      <CatalogHeaderHost
+        workspaceId={WORKSPACE_ID}
+        projectId={PROJECT_ID}
+        query={withProjection(0, 2)}
+      />,
+    );
+    expect(statValue('Projection')).toHaveTextContent('2 pages not projected');
+
+    rerender(
+      <CatalogHeaderHost
+        workspaceId={WORKSPACE_ID}
+        projectId={PROJECT_ID}
+        query={withProjection(0, 0)}
+      />,
+    );
+    expect(screen.queryByText('Projection')).not.toBeInTheDocument();
   });
 
   it('never prints a progress fraction that reads backwards', async () => {

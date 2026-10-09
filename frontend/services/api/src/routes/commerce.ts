@@ -205,7 +205,6 @@ export const commerceRoutes = [
     params: {
       path: projectPath,
       query: {
-        audit_id: { scalar: { kind: 'uuid' } },
         target_id: { scalar: { kind: 'uuid' } },
         target_kind: { scalar: { kind: 'literal', values: ['category', 'product'] } },
       },
@@ -217,7 +216,7 @@ export const commerceRoutes = [
         throw new ApiError(422, 'AI Shelf requires a product or category target', {
           code: 'commerce_target_required',
         });
-      return shelf(db, scope, { kind: query.target_kind, id: query.target_id }, query.audit_id);
+      return shelf(db, scope, { kind: query.target_kind, id: query.target_id });
     },
   }),
 ];

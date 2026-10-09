@@ -8,10 +8,37 @@ import { frozenShelfIds } from './shelf.ts';
 
 type Observation = Pick<
   Selectable<CommerceRecommendationObservations>,
-  'id' | 'task_id' | 'classification' | 'rank' | 'order_observable'
+  | 'id'
+  | 'task_id'
+  | 'classification'
+  | 'rank'
+  | 'order_observable'
+  | 'product_id'
+  | 'competitor_candidate_id'
 >;
+
+const orderedRank = (row: Observation) => (row.order_observable ? row.rank : null);
+
+/**
+ * One slot per product or competitor per execution, at its best rank: an
+ * answer that names the same product in three sentences recommends it once.
+ */
+function shelfSlots(observations: Observation[]) {
+  const held = new Map<string, Observation>();
+  for (const row of observations) {
+    const holder = row.classification === 'owned' ? row.product_id : row.competitor_candidate_id;
+    if (row.classification === 'unresolved' || holder === null) continue;
+    const key = JSON.stringify([row.task_id, row.classification, holder]);
+    const kept = held.get(key);
+    const rank = orderedRank(row),
+      keptRank = kept ? orderedRank(kept) : null;
+    if (!kept || (rank !== null && (keptRank === null || rank < keptRank))) held.set(key, row);
+  }
+  return [...held.values()];
+}
+
 export function shelfMetrics(taskIds: string[], observations: Observation[]) {
-  const recognized = observations.filter((row) => row.classification !== 'unresolved');
+  const recognized = shelfSlots(observations);
   const owned = recognized.filter((row) => row.classification === 'owned');
   const ownedTasks = new Set(owned.map((row) => row.task_id));
   const rankedOwned = owned.filter((row) => row.order_observable && row.rank !== null);
@@ -25,6 +52,8 @@ export function shelfMetrics(taskIds: string[], observations: Observation[]) {
     )
     .filter((row) => row !== undefined);
   return {
+    // The column is not nullable: with no successful execution the read
+    // reports visibility unavailable from `successful_execution_count`.
     product_visibility: taskIds.length
       ? taskIds.filter((id) => ownedTasks.has(id)).length / taskIds.length
       : 0,
@@ -55,9 +84,11 @@ export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audi
       typeof frozen[key] === 'string' ? frozen[key] : value,
     ]),
   );
+  // Several prompts share one target; each target gets one snapshot.
   const targets = await db
     .selectFrom('commerce_prompt_targets')
-    .selectAll()
+    .select(['target_kind', 'target_id'])
+    .distinct()
     .where('workspace_id', '=', audit.workspace_id)
     .where('project_id', '=', audit.project_id)
     .where('id', 'in', ids)

@@ -48,7 +48,9 @@ export async function freezeCommerceContext(
         .execute()
     : [];
   const evidence = [];
-  for (const target of targets) {
+  // Several approved prompts share one target; its evidence is frozen once.
+  const distinct = new Map(targets.map((row) => [`${row.target_kind}:${row.target_id}`, row]));
+  for (const target of distinct.values()) {
     const category =
       target.target_kind === 'category'
         ? await db

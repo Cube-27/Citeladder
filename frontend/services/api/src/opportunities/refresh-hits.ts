@@ -394,6 +394,8 @@ export async function commerceHits(
     .select(['id', 'target_id', 'target_kind', 'product_visibility'])
     .where('project_id', '=', scope.projectId)
     .where('audit_id', '=', auditId)
+    // A target with no successful execution was not measured, not unmentioned.
+    .where('successful_execution_count', '>', 0)
     .orderBy('id')
     .execute();
   const hits = [

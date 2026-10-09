@@ -11,12 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { commerceApi } from '@/lib/api/commerce';
+import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 
 import type { CommerceQueries } from './commerce-queries';
-import { competitorHost, competitorTone, discoveryMessage } from './commerce-format';
+import { competitorHost, competitorState, discoveryMessage } from './commerce-format';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
@@ -82,6 +83,16 @@ export function TargetCompetitors({
             {discoveryMessage(task.status, task.target.kind, task.error_code)}
           </Alert>
         ))}
+        {discovery.discover.isError ? (
+          <Alert tone="danger">
+            {
+              humanizeApiError(
+                discovery.discover.error,
+                'Competitor discovery could not start. Please try again.',
+              ).message
+            }
+          </Alert>
+        ) : null}
         {decide.isError ? (
           <Alert tone="danger">The competitor decision failed. Please try again.</Alert>
         ) : null}
@@ -128,16 +139,27 @@ function CompetitorRows({
     <ul className={ledgerClasses()}>
       {rows.map((row) => (
         <li key={row.id} className="flex flex-wrap items-center gap-3 py-2">
-          <a
-            className={textRole('emphasis', 'text-link min-w-0 flex-1 truncate')}
-            href={row.canonical_url}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {competitorHost(row.canonical_url)}
-          </a>
-          <Badge variant="status" value={competitorTone(row.state)}>
-            {row.state}
+          <div className="grid min-w-0 flex-1 gap-0.5">
+            <a
+              className={textRole('emphasis', 'text-link truncate')}
+              href={row.canonical_url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {row.product_name || competitorHost(row.canonical_url)}
+            </a>
+            <span className="type-caption truncate">
+              {[
+                row.brand_name,
+                competitorHost(row.canonical_url),
+                row.source_kind === 'ai_observed' ? 'Seen in AI answers' : '',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+          </div>
+          <Badge variant="status" value={competitorState(row.state).tone}>
+            {competitorState(row.state).label}
           </Badge>
           {row.state === 'pending' ? (
             <div className="flex gap-2">

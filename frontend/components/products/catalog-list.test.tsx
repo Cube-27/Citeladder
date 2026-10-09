@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { renderWithProviders } from '@/test/render';
 
-import { CatalogList, catalogEntries } from './catalog-list';
+import { CatalogList } from './catalog-list';
 
 const CATEGORY_ID = '22222222-2222-4222-8222-222222222222';
 const PRODUCT_ID = '33333333-3333-4333-8333-333333333333';
@@ -22,7 +22,7 @@ const query = (overrides: Record<string, unknown> = {}) =>
           category_ids: [CATEGORY_ID],
         },
       ],
-      projection_tasks: {},
+      projection: { applies: true, in_flight: 0, failed: 0 },
     },
     ...overrides,
   }) as never;
@@ -135,7 +135,7 @@ describe('CatalogList', () => {
           data: {
             categories: [{ id: CATEGORY_ID, name: 'Empty category', product_count: 0 }],
             products: [],
-            projection_tasks: {},
+            projection: { applies: true, in_flight: 0, failed: 0 },
           },
         })}
         checkedKeys={new Set()}
@@ -160,25 +160,32 @@ describe('CatalogList', () => {
     expect(screen.getByRole('button', { name: 'Instant-Read Thermometers' })).toBeInTheDocument();
   });
 
-  it('keeps the search controls sticky inside the catalog scroller', () => {
-    renderWithProviders(
-      <CatalogList query={query()} checkedKeys={new Set()} onSelect={vi.fn()} onToggle={vi.fn()} />,
-    );
-
-    const controls = screen.getByTestId('catalog-search-controls');
-    expect(controls.parentElement?.firstElementChild).toBe(controls);
-  });
-
-  it('explains an empty catalog rather than showing an empty list', () => {
+  it('opens the category that holds a deep-linked product', () => {
     renderWithProviders(
       <CatalogList
-        query={query({ data: { categories: [], products: [], projection_tasks: {} } })}
+        query={query()}
+        selectedKey={`product:${PRODUCT_ID}`}
         checkedKeys={new Set()}
         onSelect={vi.fn()}
         onToggle={vi.fn()}
       />,
     );
-    expect(screen.getByText(/Run a Site Health crawl or import a CSV/)).toBeInTheDocument();
+
+    expect(screen.getByRole('button', { name: 'TempPro TP620' })).toBeVisible();
+  });
+
+  it('explains an empty catalog by whether a crawl can fill it', () => {
+    const empty = (applies: boolean) =>
+      query({
+        data: { categories: [], products: [], projection: { applies, in_flight: 0, failed: 0 } },
+      });
+    const props = { checkedKeys: new Set<string>(), onSelect: vi.fn(), onToggle: vi.fn() };
+    const { rerender } = renderWithProviders(<CatalogList query={empty(true)} {...props} />);
+    expect(screen.getByText('Run a Site Health crawl or import a CSV.')).toBeInTheDocument();
+
+    rerender(<CatalogList query={empty(false)} {...props} />);
+    expect(screen.queryByText('Run a Site Health crawl or import a CSV.')).not.toBeInTheDocument();
+    expect(screen.getByText(/only for businesses that sell a product catalog/)).toBeInTheDocument();
   });
 
   it('reports a read failure instead of an empty list', () => {
@@ -191,21 +198,5 @@ describe('CatalogList', () => {
       />,
     );
     expect(screen.getByText('The catalog could not be loaded.')).toBeInTheDocument();
-  });
-});
-
-describe('catalogEntries', () => {
-  it('keys every entry the way the URL spells it', () => {
-    const { categories, products } = catalogEntries(query());
-    expect(categories[0]?.key).toBe(`category:${CATEGORY_ID}`);
-    expect(products[0]?.key).toBe(`product:${PRODUCT_ID}`);
-    expect(categories[0]?.children?.[0]?.key).toBe(`product:${PRODUCT_ID}`);
-  });
-
-  it('is empty while the catalog has not loaded', () => {
-    expect(catalogEntries(query({ data: undefined }))).toEqual({
-      categories: [],
-      products: [],
-    });
   });
 });

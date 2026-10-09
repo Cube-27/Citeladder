@@ -48,8 +48,11 @@ export function useRunEvents(
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(auditId) });
     if (families.has('executions'))
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.executions(auditId) });
-    if (families.has('visibility') && projectId)
+    if (families.has('visibility') && projectId) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.visibility.all });
+      // A finished Commerce audit writes AI Shelf snapshots and may open Actions.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.commerce.all });
+    }
   }, [auditId, projectId, queryClient]);
 
   useSseEventStream({

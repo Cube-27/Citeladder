@@ -2,36 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
 import { commerceApi } from './commerce';
-import { commerceCatalogSchema, shelfSchema } from '@citeladder/contracts/commerce-suite';
 
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
-describe('Commerce replacement contracts', () => {
-  it('keeps catalog provenance and empty persisted shelf states explicit', () => {
-    const catalog = commerceCatalogSchema.parse({
-      products: [],
-      categories: [],
-      projection_tasks: { queued: 1 },
-    });
-    expect(catalog.projection_tasks.queued).toBe(1);
-    expect(
-      shelfSchema.parse({
-        target: null,
-        selected_audit_id: null,
-        snapshots: [],
-        observations: [],
-      }),
-    ).toEqual({
-      target: null,
-      selected_audit_id: null,
-      snapshots: [],
-      observations: [],
-    });
-  });
-
+describe('Commerce API client', () => {
   it('keeps model-backed buyer-prompt generation alive beyond the default API timeout', async () => {
     const projectId = '10000000-0000-4000-8000-000000000001';
     const targetId = '20000000-0000-4000-8000-000000000002';

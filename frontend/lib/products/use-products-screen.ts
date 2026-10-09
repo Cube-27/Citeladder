@@ -24,7 +24,7 @@ export function useCommerceQueries(projectId: string, target?: CommerceTarget) {
     queryKey: queryKeys.commerce.catalog(projectId),
     queryFn: ({ signal }) => commerceApi.catalog(projectId, { signal, workspaceId }),
     enabled: hasProject,
-    refetchInterval: (query) => catalogPollingInterval(query.state.data?.projection_tasks),
+    refetchInterval: (query) => catalogPollingInterval(query.state.data?.projection),
   });
   const competitors = useQuery({
     queryKey: queryKeys.commerce.competitors(projectId),
@@ -40,8 +40,7 @@ export function useCommerceQueries(projectId: string, target?: CommerceTarget) {
   });
   const shelf = useQuery({
     queryKey: queryKeys.commerce.shelf(projectId, target),
-    queryFn: ({ signal }) =>
-      commerceApi.shelf(projectId, target!, undefined, { signal, workspaceId }),
+    queryFn: ({ signal }) => commerceApi.shelf(projectId, target!, { signal, workspaceId }),
     enabled: hasProject && Boolean(target),
   });
   return { catalog, competitors, buyerPrompts, shelf };

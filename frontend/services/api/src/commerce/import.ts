@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { catalogImportSchema } from '@citeladder/contracts/commerce-suite';
 import { parse } from 'csv-parse/sync';
-import type { Updateable } from 'kysely';
+import type { Selectable, Updateable } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
@@ -17,7 +17,7 @@ import {
   newProduct,
 } from './catalog-store.ts';
 import type { CommerceScope } from './reads.ts';
-import { catalogUrl } from './projection-facts.ts';
+import { catalogUrl, categoryKey, isCategoryName } from './projection-facts.ts';
 
 const productInput = z
   .object({
@@ -76,7 +76,7 @@ function productValues(row: Record<string, string>) {
     (row.categories || row.category || '')
       .split(/[;|]/u)
       .map((name) => name.trim())
-      .filter(Boolean),
+      .filter(isCategoryName),
   );
   if ([...categories].some((name) => name.length > 255))
     throw new Error('Category name exceeds 255 characters');
@@ -100,9 +100,70 @@ function outcome(rowNumber: number, status: Outcome['status'], productId: string
   return { row_number: rowNumber, status, product_id: productId, error_code: '', detail: '' };
 }
 
+type Product = Omit<Selectable<CommerceProducts>, 'field_sources'> & {
+  field_sources: Record<string, unknown>;
+};
+const indexed = (row: Selectable<CommerceProducts>): Product => ({
+  ...row,
+  field_sources: jsonObject(row.field_sources, 'commerce_products.field_sources'),
+});
+type Identity = { canonical_url?: string | null; sku?: string | null; gtin?: string | null };
+const identityKeys = (row: Identity) =>
+  [
+    row.canonical_url ? `url:${row.canonical_url}` : '',
+    row.sku ? `sku:${row.sku}` : '',
+    row.gtin ? `gtin:${row.gtin}` : '',
+  ].filter(Boolean);
+
+/**
+ * The project's products by URL, SKU and GTIN, read once per import (under the
+ * catalog lock) and kept current as rows write, so each row matches in memory
+ * instead of scanning unindexed identifier columns.
+ */
+class ProductIndex {
+  private readonly rows = new Map<string, Product>();
+  private readonly keys = new Map<string, Set<string>>();
+  private readonly categories = new Map<string, string>();
+
+  static async load(db: Database, scope: CommerceScope) {
+    const index = new ProductIndex();
+    const rows = await db
+      .selectFrom('commerce_products')
+      .selectAll()
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .execute();
+    for (const row of rows) index.put(indexed(row));
+    return index;
+  }
+
+  matches(values: Identity): Product[] {
+    const ids = new Set(identityKeys(values).flatMap((key) => [...(this.keys.get(key) ?? [])]));
+    return [...ids].flatMap((id) => this.rows.get(id) ?? []);
+  }
+
+  put(row: Product) {
+    const prior = this.rows.get(row.id);
+    if (prior) for (const key of identityKeys(prior)) this.keys.get(key)?.delete(row.id);
+    this.rows.set(row.id, row);
+    for (const key of identityKeys(row))
+      this.keys.set(key, (this.keys.get(key) ?? new Set()).add(row.id));
+  }
+
+  async category(db: Database, scope: CommerceScope, name: string) {
+    const key = categoryKey(name);
+    const known = this.categories.get(key);
+    if (known) return known;
+    const { id } = await categoryByName(db, scope, name);
+    this.categories.set(key, id);
+    return id;
+  }
+}
+
 async function importRow(
   db: Database,
   scope: CommerceScope,
+  index: ProductIndex,
   importId: string,
   rowNumber: number,
   row: Record<string, string>,
@@ -120,21 +181,9 @@ async function importRow(
     };
   }
   const { values, categories } = parsed;
-  const matches = await db
-    .selectFrom('commerce_products')
-    .selectAll()
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where((eb) =>
-      eb.or([
-        ...(values.canonical_url ? [eb('canonical_url', '=', values.canonical_url)] : []),
-        ...(values.sku ? [eb('sku', '=', values.sku)] : []),
-        ...(values.gtin ? [eb('gtin', '=', values.gtin)] : []),
-      ]),
-    )
-    .execute();
+  const matches = index.matches(values);
   if (matches.length > 1)
-    throw new ApiError(409, 'Identifiers resolve to different products', {
+    throw new ApiError(409, `Row ${rowNumber}: identifiers resolve to different products`, {
       code: 'commerce_conflict',
     });
   if (!matches.length && !values.canonical_url)
@@ -145,8 +194,8 @@ async function importRow(
       error_code: 'invalid_row',
       detail: 'canonical_url is required for a new product',
     };
-  const product = matches[0] ?? (await newProduct(db, scope, values.canonical_url!));
-  const sources = jsonObject(product.field_sources, 'commerce_products.field_sources');
+  const product = matches[0] ?? indexed(await newProduct(db, scope, values.canonical_url!));
+  const sources = { ...product.field_sources };
   let changed = false;
   for (const [field, value] of Object.entries(values)) {
     const previous = product[field as keyof typeof values];
@@ -178,10 +227,20 @@ async function importRow(
     observed_fields: JSON.stringify(values),
     importer_version: policy.commerce.importer_version,
   });
-  for (const name of categories) {
-    const category = await categoryByName(db, scope, name);
-    await addMembership(db, scope, product.id, category.id, observationId);
-  }
+  index.put({
+    ...product,
+    ...values,
+    price: values.price === undefined ? product.price : String(values.price),
+    field_sources: sources,
+  });
+  for (const name of categories)
+    await addMembership(
+      db,
+      scope,
+      product.id,
+      await index.category(db, scope, name),
+      observationId,
+    );
   if (!matches.length) return outcome(rowNumber, 'created', product.id);
   return outcome(rowNumber, changed ? 'updated' : 'unchanged', product.id);
 }
@@ -234,9 +293,10 @@ export function importCatalog(
         created_at: new Date(),
       })
       .execute();
+    const index = await ProductIndex.load(trx, scope);
     const outcomes: Outcome[] = [];
-    for (const [index, row] of rows.entries())
-      outcomes.push(await importRow(trx, scope, id, index + 2, row));
+    for (const [position, row] of rows.entries())
+      outcomes.push(await importRow(trx, scope, index, id, position + 2, row));
     const counts = { created: 0, updated: 0, unchanged: 0, rejected: 0 };
     for (const row of outcomes) counts[row.status]++;
     await trx

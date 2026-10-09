@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import { ACTIVE_RUN_POLL_MS } from '@/lib/config/operational';
-import { discoveryPollInterval, discoverySettled } from './competitor-discovery';
+import { discoveryFinished, discoveryPollInterval } from './competitor-discovery';
 
 const task = (id: string, status: string, terminal: boolean) => ({
   id,
@@ -28,27 +28,37 @@ describe('discoveryPollInterval', () => {
   });
 });
 
-describe('discoverySettled', () => {
-  it('fires on the read where the tracked tasks are all terminal', () => {
-    expect(discoverySettled([task('a', 'running', false)], [task('a', 'succeeded', true)])).toBe(
+describe('discoveryFinished', () => {
+  it('fires on the read where a tracked task becomes terminal', () => {
+    expect(discoveryFinished([task('a', 'running', false)], [task('a', 'succeeded', true)])).toBe(
       true,
     );
-    expect(discoverySettled(undefined, [task('a', 'failed', true)])).toBe(true);
-    expect(discoverySettled(undefined, [task('a', 'cancelled', true)])).toBe(true);
+    expect(discoveryFinished(undefined, [task('a', 'failed', true)])).toBe(true);
   });
 
-  it('fires when the recovered in-flight list empties after a reload', () => {
-    expect(discoverySettled([task('a', 'running', false)], [])).toBe(true);
+  it('fires for one finished run while another is still running', () => {
+    expect(
+      discoveryFinished(
+        [task('a', 'running', false), task('b', 'running', false)],
+        [task('a', 'succeeded', true), task('b', 'running', false)],
+      ),
+    ).toBe(true);
   });
 
-  it('does not fire while work is still running, or when nothing ever ran', () => {
-    expect(discoverySettled([task('a', 'running', false)], [task('a', 'running', false)])).toBe(
+  it('fires when a task drops off the recovered in-flight list after a reload', () => {
+    expect(discoveryFinished([task('a', 'running', false)], [])).toBe(true);
+  });
+
+  it('does not fire for work still running, an already-known result, or nothing at all', () => {
+    expect(discoveryFinished([task('a', 'running', false)], [task('a', 'running', false)])).toBe(
       false,
     );
-    expect(discoverySettled([task('a', 'succeeded', true)], [task('b', 'queued', false)])).toBe(
+    expect(discoveryFinished([task('a', 'succeeded', true)], [task('a', 'succeeded', true)])).toBe(
       false,
     );
-    expect(discoverySettled(undefined, [])).toBe(false);
-    expect(discoverySettled([], [])).toBe(false);
+    expect(discoveryFinished([task('a', 'succeeded', true)], [task('b', 'queued', false)])).toBe(
+      false,
+    );
+    expect(discoveryFinished(undefined, [])).toBe(false);
   });
 });

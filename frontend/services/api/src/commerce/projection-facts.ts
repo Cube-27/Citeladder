@@ -1,7 +1,7 @@
 import { getDomain } from 'tldts';
 import { z } from 'zod';
 import { policy } from '../config.ts';
-import { jsonObject } from '../db/json.ts';
+import { jsonObject, record, strings } from '../db/json.ts';
 import { onlyOf } from '../lists.ts';
 
 const texts = z.array(z.string()).default([]);
@@ -49,7 +49,12 @@ const ignoredQueryKeys = new Set<string>(policy.traffic.ignored_query_keys);
 const indexNames = new Set<string>(policy.commerce.breadcrumb_index_names);
 /** Category identity: `commerce_categories.normalized_name`. */
 export const categoryKey = (name: string) => name.trim().toLowerCase().replaceAll(/\s+/gu, ' ');
+/** The platform default (WooCommerce's "Uncategorized") names no category; a product without one has none. */
+export const UNCATEGORIZED_KEY = 'uncategorized';
 const named = (name: string) => /[\p{L}\p{N}]/u.test(name);
+/** A name that identifies a real category. */
+export const isCategoryName = (name: string) =>
+  named(name) && categoryKey(name) !== UNCATEGORIZED_KEY;
 
 export function catalogUrl(value: string, base?: string): string {
   try {
@@ -206,10 +211,10 @@ export function productFacts(facts: CatalogFacts, url: string) {
 }
 
 export function categoryTitle(facts: CatalogFacts, fallback: string): string {
-  const crumb = facts.commerce.breadcrumbs.findLast(named);
-  const heading = facts.headings.h1_texts.find(named);
+  const crumb = facts.commerce.breadcrumbs.findLast(isCategoryName);
+  const heading = facts.headings.h1_texts.find(isCategoryName);
   const title = (facts.title || fallback).split(/\||–|—|·|»| - /u)[0]!.trim();
-  return (crumb || heading || (named(title) ? title : 'Uncategorized')).trim().slice(0, 255);
+  return (crumb || heading || (isCategoryName(title) ? title : '')).trim().slice(0, 255);
 }
 
 export function productCategories(facts: CatalogFacts, url: string, aliases: string[]): string[] {
@@ -231,7 +236,7 @@ export function productCategories(facts: CatalogFacts, url: string, aliases: str
   }
   const ancestors = crumbs.slice(1, linked.has(crumbs.length - 1) ? undefined : -1);
   return [...new Set([...facts.structured_data.product.category, ...ancestors])].filter(
-    (name) => named(name) && !indexNames.has(categoryKey(name)),
+    (name) => isCategoryName(name) && !indexNames.has(categoryKey(name)),
   );
 }
 
@@ -239,4 +244,14 @@ export function shelfLinks(facts: CatalogFacts, base: string): string[] {
   const cards = facts.commerce.product_cards.filter((link) => link.url.trim());
   const links = cards.length ? cards : facts.links.anchors.filter((link) => link.region === 'main');
   return [...new Set(links.map((link) => catalogUrl(link.url, base)).filter(Boolean))];
+}
+
+const CATALOG_MODELS = new Set<string>(policy.discovery.constants.commerce_business_models);
+
+/** Whether a brand's confirmed business model, primary or secondary, sells a catalog. Unknown fails closed. */
+export function sellsCatalog(businessContext: unknown): boolean {
+  const context = record(businessContext);
+  return [context.business_model, ...strings(context.secondary_business_models)].some(
+    (model) => typeof model === 'string' && CATALOG_MODELS.has(model),
+  );
 }

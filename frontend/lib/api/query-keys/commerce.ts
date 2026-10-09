@@ -9,13 +9,12 @@ export const commerceKeys = {
   /** Whatever discovery is in flight for the project, per the server. */
   activeDiscoveries: (projectId: string) =>
     ['commerce', projectId, 'competitor-discoveries', 'active'] as const,
-  shelf: (projectId: string, target?: { kind: string; id: string }, auditId?: string) =>
+  shelf: (projectId: string, target?: { kind: string; id: string }) =>
     [
       'commerce',
       projectId,
       'ai-shelf',
       target?.kind ?? 'no-target',
       target?.id ?? 'no-target',
-      auditId ?? 'latest',
     ] as const,
 };
