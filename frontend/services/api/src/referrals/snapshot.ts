@@ -24,6 +24,7 @@ import {
   type ReferralFact,
 } from './projection.ts';
 import { compareText } from '../text-order.ts';
+import { isNonEmpty, lastOf } from '../lists.ts';
 import { selectedPartition, partitionAnchor, partitionEpoch } from '../integrations/partitions.ts';
 import { referralEvidence, referralExtras, replaceReferralLandings } from './landing.ts';
 import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
@@ -124,14 +125,15 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
     const epoch = await partitionEpoch(trx, { workspaceId: task.workspace_id, projectId });
     const windows = refreshWindows(windowStart, windowEnd, anchor);
     // The family is nested and ends at the anchor, so one scan covers them all.
+    const starts = windows.map((window) => window.start).sort(compareText);
+    const ends = windows.map((window) => window.end).sort(compareText);
+    if (!isNonEmpty(starts) || !isNonEmpty(ends))
+      throw new Error('Expected at least one referral refresh window');
     const scope = {
       workspaceId: task.workspace_id,
       projectId,
-      start: windows.map((window) => window.start).sort(compareText)[0]!,
-      end: windows
-        .map((window) => window.end)
-        .sort(compareText)
-        .at(-1)!,
+      start: starts[0],
+      end: lastOf(ends),
     };
 
     const facts: ReferralFact[] = [];
@@ -150,8 +152,8 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
           resync_seq: row.resync_seq,
         });
       }
-      if (batch.length < BATCH_SIZE) break;
-      afterId = batch.at(-1)!.id;
+      if (batch.length < BATCH_SIZE || !isNonEmpty(batch)) break;
+      afterId = lastOf(batch).id;
     }
 
     const evidence = await referralEvidence(trx, scope);

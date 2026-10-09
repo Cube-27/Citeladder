@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 
 import { normalizeDomain } from '../analysis/domains.ts';
 import { policy } from '../config.ts';
+import type { NonEmpty } from '../lists.ts';
 
 const { referrals } = policy;
 
@@ -51,7 +52,7 @@ export function sanitizeReferralUrl(url: string | null): string {
 }
 
 /** `unpack_dimension_key`: the declared values, split from the right. */
-function unpackDimensionKey(dataset: string, key: string): string[] | null {
+function unpackDimensionKey(dataset: string, key: string): NonEmpty<string> | null {
   const arity: number | undefined = (referrals.dimension_arity as Record<string, number>)[dataset];
   if (arity === undefined) return null;
   const parts = key.split(referrals.dimension_key_separator);
@@ -75,10 +76,12 @@ function signalsForRow(row: MetricRowIdentity): Signals | null {
   };
   if (row.dataset === referrals.datasets.referrer_daily) {
     // (pageReferrer, date): the full referring URL.
-    return { ...empty, referrer_url: values[0]!.trim() };
+    return { ...empty, referrer_url: values[0].trim() };
   }
   // (sessionSource, sessionMedium, date): the session's traffic-source tags.
-  return { ...empty, utm_source: values[0]!.trim(), utm_medium: values[1]!.trim() };
+  const [source, medium] = values;
+  if (medium === undefined) throw new Error(`Expected a session medium on a ${row.dataset} row`);
+  return { ...empty, utm_source: source.trim(), utm_medium: medium.trim() };
 }
 
 /** The sanitized event fields for one metric row, or null when it maps to no signals. */
