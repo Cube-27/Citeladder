@@ -51,7 +51,9 @@ Admission checks workspace role, the Agent capability and a funding route, then
 freezes on the run the runtime/protocol versions, the skill catalog and tool
 registry versions, the budget, the time bound, any workflow and the funding
 identity. A configuration change never alters a queued turn; a turn whose skill
-catalog changed before it ran ends with `skills_changed` before any model call.
+catalog, tool registry, protocol or runtime version changed before it ran ends
+with `skills_changed` ("the agent was updated; send it again") before any model
+call.
 
 A chat owns one deliverable of one kind. Agent saves and user edits both append
 an immutable [output revision](../frontend/services/api/src/agent/outputs.ts): an
@@ -102,7 +104,7 @@ never sliced. If the exact current revision cannot fit, the turn ends with
 `output_context_size_limit` before dispatch.
 
 The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a bounded loop of
-structured steps under [protocol v2](../frontend/services/api/src/agent/contracts.ts).
+structured steps under [protocol v3](../frontend/services/api/src/agent/contracts.ts).
 Each step is one of:
 
 - `use_skill`: load a methodology without reading anything;
@@ -114,11 +116,20 @@ Questions need no methodology. A deliverable is accepted only after its
 methodology has been supplied: without a selected skill the response schema
 forbids `output`, so an auto-routed deliverable is generated once. The skill is
 taken, in order, from the user's pick or workflow, the chat's pin, the attached
-Action's diagnosis, and otherwise the model's `use_skill`/`skill_id`. The
-schema limits `skill_id` to the selected skill or catalog IDs. Invalid steps get
-a bounded repair hint containing only server-owned instructions, never the
-rejected provider text. The last step may only respond (reply-only when no
-methodology was selected); calls with no read budget omit the tool catalog.
+Action's diagnosis, and otherwise the model's `use_skill`/`skill_id`. Fixed
+handoffs such as Site Health's **Ask agent** pin their skill.
+
+Each step has one step specification: the actions, skill IDs and content
+formats it allows. The provider is held to it as a strict structured-output
+schema (every field present and nullable, every object closed), and the reply
+is parsed against the same specification, so the model is never told one shape
+and judged by another. Tool arguments travel as `arguments_json`, one JSON
+object encoded in a string, because each tool's arguments differ. `format_id`
+is offered only for skills whose kind uses content formats; any other skill's
+value is dropped. Invalid steps get a bounded repair hint containing only
+server-owned instructions and catalog IDs, never the rejected provider text.
+The last step may only respond (reply-only when no methodology was selected);
+calls with no read budget omit the tool catalog.
 
 A response cut off by the model's output limit (`finish_status: length`) ends
 the turn as `output_too_long` after that one call; asking again would be cut
@@ -255,7 +266,10 @@ The platform model streams. When the runtime attaches a listener, the
 [gateway](../frontend/services/api/src/models/gateway.ts) requests `stream: true`
 with usage on the final chunk and folds the event stream into the same
 completion result, so settlement and parsing are unchanged; a provider that
-answers with JSON is read as usual. Customer (BYOK) routes buffer and answer in
+answers with JSON is read as usual. Structured calls send the step schema as a
+strict `json_schema` response format; a destination that rejects it (some
+customer routes) is asked again with the schema in the prompt, and the gateway
+remembers that for the destination. Customer (BYOK) routes buffer and answer in
 one piece.
 
 The runtime emits `step` events, and for a respond step `text` events carrying

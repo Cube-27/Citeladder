@@ -181,7 +181,11 @@ describe('Agent bindings to the evidence and Action owners', () => {
     const store = fixtures.store({ registryVersion: tools.version });
     const queue = new AgentQueue(db, 30);
     const uri = `citeladder://project/${scope.projectId}`;
-    const fetch = { action: 'call_tool', tool: 'fetch', arguments: { id: uri } };
+    const fetch = {
+      action: 'call_tool',
+      tool: 'fetch',
+      arguments_json: JSON.stringify({ id: uri }),
+    };
     const answer = { action: 'respond', reply: `Project evidence ${uri}` };
     const first = await store.enqueue(scope, { key: randomUUID(), message: 'Explain project' });
     const execute = async (steps: unknown[], inspect?: Parameters<typeof scripted>[1]) => {

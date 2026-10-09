@@ -49,6 +49,7 @@ export function IssueDetailRail({
   useAgentPanelSeed({
     issueGroup: { crawlId, groupId: issue.group_id },
     prompt: askAgentPrompt(issue),
+    skillId: 'technical_health',
   });
   return (
     <section
@@ -136,6 +137,7 @@ function IssueActions({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: 
           href={agentHandoffHref({
             issueGroup: { crawlId, groupId: issue.group_id },
             prompt: askAgentPrompt(issue),
+            skillId: 'technical_health',
           })}
         >
           Ask agent
@@ -224,6 +226,7 @@ function OccurrenceList({
               href={agentHandoffHref({
                 issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: occurrence.site_url_id },
                 prompt: askAgentPrompt(issue, occurrence.display_url),
+                skillId: 'technical_health',
               })}
             >
               Ask agent about this page

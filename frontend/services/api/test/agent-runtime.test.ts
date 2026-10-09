@@ -217,8 +217,13 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const claimed = await queue.claim('prompt-worker', [scope.workspaceId]);
     const lease = await queue.start(claimed!, 'prompt-worker');
     const steps: Record<string, unknown>[] = [
-      { action: 'call_tool', skill_id: 'prompt_portfolio', tool: 'read_evidence', arguments: {} },
-      { action: 'call_tool', skill_id: '', tool: 'read_evidence', arguments: {} },
+      {
+        action: 'call_tool',
+        skill_id: 'prompt_portfolio',
+        tool: 'read_evidence',
+        arguments_json: '{}',
+      },
+      { action: 'call_tool', skill_id: '', tool: 'read_evidence', arguments_json: '{}' },
       deliverable('outline', 'Coverage plan grounded in the current portfolio.'),
     ];
     await fixtures
@@ -302,6 +307,49 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     expect(detail.output).toMatchObject({ phase: 'outline', format_id: 'page' });
     expect(detail.messages.at(-1)?.content).toContain('Saved outline in Website page format');
     expect(detail.messages.filter((message) => message.role === 'agent')).toHaveLength(1);
+  });
+  it('saves a deliverable whose skill has no formats even when the model names one', async () => {
+    const scope = await fixtures.scope();
+    const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });
+    const formats = new Map([
+      ['page', { id: 'page', label: 'Website page', body: 'Write a page.', longForm: true }],
+    ]);
+    await fixtures
+      .runtime(
+        scope,
+        scripted([
+          { ...deliverable(), output: { ...deliverable().output, format_id: 'markdown' } },
+        ]),
+        { catalog: { ...catalog, formats } },
+      )
+      .execute(lease);
+    const detail = await readChat(db, scope, run.chat_id);
+    expect(detail.latest_run).toMatchObject({ status: 'succeeded' });
+    expect(detail.output).toMatchObject({ format_id: null });
+    expect(detail.output?.latest_revision?.body).toBe('Requested document');
+  });
+  it('decodes tool arguments from their string form and repairs a malformed one', async () => {
+    const scope = await fixtures.scope();
+    const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });
+    await fixtures
+      .runtime(
+        scope,
+        scripted([
+          { action: 'call_tool', tool: 'read_evidence', arguments_json: '{"oops"' },
+          { action: 'call_tool', tool: 'read_evidence', arguments_json: '{}' },
+          deliverable(),
+        ]),
+      )
+      .execute(lease);
+    const tools = await db
+      .selectFrom('agent_tool_attempts')
+      .select(['status', 'input'])
+      .where('run_id', '=', run.id)
+      .execute();
+    expect(tools).toEqual([{ status: 'completed', input: {} }]);
+    expect((await readChat(db, scope, run.chat_id)).latest_run).toMatchObject({
+      status: 'succeeded',
+    });
   });
   it('claims once under contention, never revives expiry, and fences previous attempts after recovery', async () => {
     const scope = await fixtures.scope();
@@ -389,7 +437,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const uri = `citeladder://project/${scope.projectId}`;
     const fake = scripted(
       [
-        { action: 'call_tool', skill_id: 'plan', tool: 'read_evidence', arguments: {} },
+        { action: 'call_tool', skill_id: 'plan', tool: 'read_evidence', arguments_json: '{}' },
         {
           action: 'respond',
           reply: `Read ${uri}; invented citeladder://project/${randomUUID()}.`,
@@ -697,9 +745,13 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .runtime(
         scope,
         scripted([
-          { action: 'call_tool', tool: 'read_evidence', arguments: { project_id: randomUUID() } },
-          { action: 'call_tool', tool: 'unknown_tool', arguments: {} },
-          { action: 'call_tool', tool: 'read_evidence', arguments: {} },
+          {
+            action: 'call_tool',
+            tool: 'read_evidence',
+            arguments_json: JSON.stringify({ project_id: randomUUID() }),
+          },
+          { action: 'call_tool', tool: 'unknown_tool', arguments_json: '{}' },
+          { action: 'call_tool', tool: 'read_evidence', arguments_json: '{}' },
         ]),
       )
       .execute(lease);
@@ -748,7 +800,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .runtime(
         scope,
         scripted([
-          { action: 'call_tool', tool: 'missing', arguments: {} },
+          { action: 'call_tool', tool: 'missing', arguments_json: '{}' },
           reply(`Source citeladder://evidence/${sourceId} (${sourceId})`),
         ]),
         { tools },
@@ -870,8 +922,8 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const model = {
       ...scripted(
         [
-          { action: 'call_tool', skill_id: 'plan', tool: 'read_evidence', arguments: {} },
-          { action: 'call_tool', tool: 'read_evidence', arguments: {} },
+          { action: 'call_tool', skill_id: 'plan', tool: 'read_evidence', arguments_json: '{}' },
+          { action: 'call_tool', tool: 'read_evidence', arguments_json: '{}' },
         ],
         async (_request, ordinal) => {
           if (ordinal === 3) throw new Error('Transient failure');
@@ -997,7 +1049,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
               complete: (_request: unknown, signal: AbortSignal) => interrupt(signal),
             }
           : scripted([
-              JSON.stringify({ action: 'call_tool', tool: 'read_evidence', arguments: {} }),
+              JSON.stringify({ action: 'call_tool', tool: 'read_evidence', arguments_json: '{}' }),
             ]);
       const tools = new ToolRegistry('test-tools-1', [
         {
@@ -1248,7 +1300,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
         scope,
         scripted(
           [
-            { action: 'call_tool', tool: 'read_evidence', arguments: {} },
+            { action: 'call_tool', tool: 'read_evidence', arguments_json: '{}' },
             reply('The observed value is zero.'),
           ],
           async (request, ordinal) => {
@@ -1343,7 +1395,10 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     await fixtures
       .runtime(
         scope,
-        scripted([{ action: 'call_tool', tool: 'read_evidence', arguments: {} }, deliverable()]),
+        scripted([
+          { action: 'call_tool', tool: 'read_evidence', arguments_json: '{}' },
+          deliverable(),
+        ]),
       )
       .execute(first.lease);
     const next = await fixtures.claimed(scope, { chatId: first.run.chat_id });
