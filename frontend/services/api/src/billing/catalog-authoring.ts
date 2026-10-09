@@ -9,10 +9,9 @@ import { compareText } from '../text-order.ts';
 
 /** Decimal strings are converted to rational integers, never binary floating-point money. */
 function fraction(value: string) {
-  const match = /^(\d+)(?:\.(\d+))?$/u.exec(value);
-  if (!match || value.length > 100) throw new Error('invalid_decimal_rate');
-  const places = match[2] ?? '';
-  return { numerator: BigInt(match[1]! + places), denominator: 10n ** BigInt(places.length) };
+  const [, whole, places = ''] = /^(\d+)(?:\.(\d+))?$/u.exec(value) ?? [];
+  if (whole === undefined || value.length > 100) throw new Error('invalid_decimal_rate');
+  return { numerator: BigInt(whole + places), denominator: 10n ** BigInt(places.length) };
 }
 function safeAmount(value: bigint) {
   if (value < 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('amount_overflow');

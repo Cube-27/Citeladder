@@ -10,6 +10,7 @@ import { catalog } from './catalog.ts';
 import { conflict, digest } from './contracts.ts';
 import { policy } from '../config.ts';
 import { uuidV5 } from '../uuid-v5.ts';
+import { firstOf } from '../lists.ts';
 
 export const claimRequest = z
   .object({
@@ -200,6 +201,7 @@ export function claimOffer(
       profile: 'no_card_promotion',
       priority: policy.billing.contracts.plan_bundle_priority,
     });
+    const primary = firstOf(grants, 'the issued introductory grant');
     await trx
       .insertInto('introductory_claims')
       .values({
@@ -208,7 +210,7 @@ export function claimOffer(
         campaign_id: offer.campaign_id,
         introduction_kind: 'no_card_promotion',
         tier_key: 'tier_1',
-        primary_grant_id: grants[0]!.id,
+        primary_grant_id: primary.id,
         idempotency_key: key,
         request_fingerprint: fingerprint,
         terms_consent_version: 'no-card-intro-v1',
@@ -224,7 +226,7 @@ export function claimOffer(
       .execute();
     return noCardClaimSchema.parse({
       campaign_id: offer.campaign_id,
-      grant_id: grants[0]!.id,
+      grant_id: primary.id,
       tier_key: 'tier_1',
       starts_at: now.toISOString(),
       expires_at: end.toISOString(),
