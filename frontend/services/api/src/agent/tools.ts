@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { authorize } from './access.ts';
 import { abortable } from './async.ts';
+import { callerMessage } from '../mcp/types.ts';
 import { agentPolicy, type Scope, type Json } from './contracts.ts';
 
 type ToolResult = {
@@ -80,7 +81,10 @@ export class ToolRegistry {
         hash: createHash('sha256').update(serialized).digest('hex'),
         error: '',
       };
-    } catch {
+    } catch (error) {
+      // A correctable argument is refused with the owner's reason; anything else failed.
+      const problem = callerMessage(error);
+      if (problem !== null) return { ...refused('invalid_arguments'), text: problem };
       return { ...refused('tool_failed'), status: 'failed' };
     }
   }

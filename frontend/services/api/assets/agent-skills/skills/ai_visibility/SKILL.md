@@ -16,7 +16,7 @@ Find where a relevant buyer question fails to produce a useful, accurate mention
 
 ## Read the right data
 
-1. `read_visibility_audit` to pick the audit. If the newest one is running or failed, use a completed one (`completed_baseline: true`) or say there is no usable baseline.
+1. `read_visibility_overview` for the latest completed run and its status. If it has no completed run, say there is no usable baseline.
 2. `read_visibility_results` with that `audit_id` for the actual answers. Filter by `prompt_id`, `domain` or `url` to narrow. If a result only summarizes a record, open it with `fetch`.
 3. `read_visibility_sources` with the same `audit_id` for cited domains (`level: domain`) or URLs (`level: url` with `domain`).
 4. As needed: `read_visibility_overview` for headline rates, `read_prompt_portfolio` for which prompts are tracked, `get_project_business_context` for offers and competitors.
@@ -36,7 +36,7 @@ Engines and surfaces are whatever the data shows; do not assume a fixed set. Kee
    - **Fit gap:** the answer knows the brand but prefers another option. Check whether that limitation is real; never write false superiority claims.
    - **Volatility:** results differ across runs or engines. Look at repeated runs before calling one loss a trend.
 5. **Compare competitors fairly.** Keep direct competitors apart from publishers. Look at what claims or criteria earn their inclusion, not just mention counts.
-6. **Owned-page gaps.** `list_content_differentiation` (no arguments) returns up to 10 reports comparing an owned page with inspected organic results. Use the report for the relevant prompt if one is listed; if none is, treat the comparison as unavailable, not as parity. Quote any gap with its count out of pages inspected, and call a topic "unique" only within that inspected set. These are organic results, not AI citations.
+6. **Owned-page gaps.** `read_content_differentiation` returns up to 10 reports comparing an owned page with inspected organic results. Use the report for the relevant prompt if one is listed; if none is, treat the comparison as unavailable, not as parity. Quote any gap with its count out of pages inspected, and call a topic "unique" only within that inspected set. These are organic results, not AI citations.
 
 ## Rules
 

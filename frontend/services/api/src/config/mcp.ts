@@ -1,8 +1,6 @@
 /** MCP protocol bounds and environment specifications. */
 export const mcp = {
   settings: {
-    ui_enabled: { env: ['MCP_UI_ENABLED'], type: 'bool', default: false },
-    extensions_enabled: { env: ['MCP_EXTENSIONS_ENABLED'], type: 'bool', default: false },
     enabled: {
       env: ['MCP_ENABLED'],
       type: 'bool',
@@ -61,9 +59,6 @@ export const mcp = {
     consent_csp:
       "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
     read_scope: 'citeladder:read',
-    scope_descriptions: {
-      'citeladder:read': 'Read CiteLadder project data',
-    },
     server_version: '1.1.0',
     documentation_url: 'https://docs.citeladder.com/mcp/',
     max_search_results: 20,

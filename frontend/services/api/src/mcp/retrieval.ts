@@ -7,9 +7,11 @@ import { currentIssueFilter } from '../site-health/reads/page-rows.ts';
 import type { DB } from '../generated/db-schema.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { effectiveStatus } from '../opportunities/action-status.ts';
+import { getAction } from '../opportunities/actions.ts';
 import { getExecutionEvidence } from '../visibility/execution.ts';
 import { authorizedWorkspaceIds, authorizeProject } from './data.ts';
-import { projectBusinessContext } from './evidence.ts';
+import { businessContext } from './context.ts';
+import { appLink, recordPath } from './links.ts';
 import { mcpPolicy } from './config.ts';
 import { McpInputError, type Evidence, type EvidencePrincipal } from './types.ts';
 
@@ -198,25 +200,6 @@ const records = {
     'created_at',
     'completed_at',
   ]),
-  citation: descriptor('citations', 'Citation', [
-    'id',
-    'audit_id',
-    'analysis_id',
-    'ordinal',
-    'url',
-    'title',
-    'domain',
-    'classification',
-    'source_class',
-    'source_origin',
-    'is_owned',
-    'is_unintended',
-    'matched_competitor',
-    'resolved_url',
-    'canonical_url',
-    'analyzer_version',
-    'created_at',
-  ]),
   traffic_snapshot: descriptor('traffic_snapshots', 'Traffic Snapshot', [
     'id',
     'project_id',
@@ -229,27 +212,6 @@ const records = {
     'formula_version',
     'normalization_version',
     'created_at',
-  ]),
-  earned_source_snapshot: descriptor('source_page_snapshots', 'Earned Source Snapshot', [
-    'id',
-    'project_id',
-    'source_page_id',
-    'audit_id',
-    'requested_url',
-    'final_url',
-    'redirect_chain',
-    'status_code',
-    'content_type',
-    'body_bytes',
-    'page_facts',
-    'evidence_passages',
-    'extracted_chars',
-    'robots_state',
-    'outcome',
-    'outcome_reason',
-    'extractor_version',
-    'inspector_version',
-    'fetched_at',
   ]),
   search_run: descriptor('search_intelligence_runs', 'Search Run', [
     'id',
@@ -314,7 +276,7 @@ const records = {
     'created_at',
   ]),
 } as const;
-type Kind = keyof typeof records | 'project' | 'prompt';
+type Kind = keyof typeof records | 'project' | 'prompt' | 'action';
 
 const NOT_A_RECORD = 'id must be an allowlisted citeladder:// record URI';
 export function parseRecordId(value: string): { kind: Kind; id: string; part: number } {
@@ -329,7 +291,7 @@ export function parseRecordId(value: string): { kind: Kind; id: string; part: nu
     uri.port ||
     uri.hash ||
     !id ||
-    (kind !== 'project' && kind !== 'prompt' && !Object.hasOwn(records, kind))
+    (!['project', 'prompt', 'action'].includes(kind) && !Object.hasOwn(records, kind))
   ) {
     throw new McpInputError(NOT_A_RECORD);
   }
@@ -361,18 +323,36 @@ async function resolveRecord(
   principal: EvidencePrincipal,
   kind: Kind,
   id: string,
+  origin: string,
 ): Promise<{ record: Evidence; title: string; projectId: string; observedAt: unknown }> {
   if (kind === 'project') {
-    const project = await authorizeProject(db, principal, id);
+    const record = await businessContext(db, principal, id, origin);
     return {
-      record: await projectBusinessContext(db, principal, id),
-      title: project.name,
+      record,
+      title: text(jsonObject(record.project, 'project').name),
       projectId: id,
       observedAt: null,
     };
   }
   const workspaces = await authorizedWorkspaceIds(db, principal);
   if (!workspaces.length) throw missing();
+  if (kind === 'action') {
+    const row = await db
+      .selectFrom('actions')
+      .select(['id', 'workspace_id', 'project_id'])
+      .where('id', '=', id)
+      .where('workspace_id', 'in', workspaces)
+      .executeTakeFirst();
+    if (!row) throw missing();
+    await authorizeProject(db, principal, row.project_id);
+    const action = await getAction(db, row.workspace_id, row.id);
+    return {
+      record: action,
+      title: action.target_label || 'Action',
+      projectId: row.project_id,
+      observedAt: action.updated_at,
+    };
+  }
   if (kind === 'prompt') {
     const row = await db
       .selectFrom('prompts as p')
@@ -416,18 +396,7 @@ async function resolveRecord(
     )
   ).rows[0];
   if (!row) throw missing();
-  let projectId = text(row.project_id);
-  if (kind === 'citation') {
-    const audit = await db
-      .selectFrom('audits')
-      .select('project_id')
-      .where('id', '=', text(row.audit_id))
-      .where('workspace_id', '=', text(row.workspace_id))
-      .executeTakeFirst();
-    if (!audit) throw missing();
-    projectId = audit.project_id;
-    row.project_id = projectId;
-  }
+  const projectId = text(row.project_id);
   const project = await authorizeProject(db, principal, projectId);
   if (project.workspace_id !== row.workspace_id) throw missing();
   const observedAt =
@@ -465,13 +434,13 @@ async function resolveRecord(
           .where('project_id', '=', projectId)
           .executeTakeFirst()
       : undefined;
-    row.status = status?.status ?? 'open';
+    // No Action row is an unknown status, never an open one.
+    row.status = status?.status ?? null;
     row.provenance = {
       analyzer_version: row.analyzer_version,
       rule_version: row.rule_version,
       formula_version: row.formula_version,
     };
-    delete row.action_id;
   }
   if (kind === 'site_snapshot') {
     row.scores = {
@@ -589,42 +558,6 @@ async function resolveRecord(
       record_uri: `citeladder://site_issue/${text(issue.occurrence_id)}`,
     }));
   }
-  if (kind === 'earned_source_snapshot') {
-    const source = await db
-      .selectFrom('source_pages')
-      .select(['canonical_url', 'source_class', 'page_format', 'page_format_method'])
-      .where('id', '=', text(row.source_page_id))
-      .where('workspace_id', '=', project.workspace_id)
-      .where('project_id', '=', projectId)
-      .executeTakeFirst();
-    Object.assign(
-      row,
-      source ?? {
-        canonical_url: null,
-        source_class: null,
-        page_format: null,
-        page_format_method: null,
-      },
-    );
-    row.entity_presences = await db
-      .selectFrom('source_page_entity_presences')
-      .select([
-        'id',
-        'entity_kind',
-        'entity_name',
-        'presence',
-        'match_method',
-        'match_count',
-        'passage_refs',
-      ])
-      .where('snapshot_id', '=', id)
-      .where('workspace_id', '=', project.workspace_id)
-      .where('project_id', '=', projectId)
-      .orderBy('id')
-      .execute();
-    title =
-      text(jsonObject(row.page_facts ?? {}, 'page_facts').title) || text(row.final_url) || title;
-  }
   if (kind === 'search_dataset') {
     row.acquisition = jsonObject(row.provider_filters, 'provider_filters');
     row.research_scope =
@@ -642,35 +575,6 @@ async function resolveRecord(
   return { record, title, projectId, observedAt };
 }
 
-function recordUrl(
-  kind: Kind,
-  projectId: string,
-  id: string,
-  record: Evidence,
-  origin: string,
-): string {
-  const path = kind.startsWith('site_')
-    ? '/website'
-    : ['audit', 'visibility_result', 'citation'].includes(kind)
-      ? '/visibility'
-      : kind === 'opportunity'
-        ? '/agent/actions'
-        : kind === 'prompt'
-          ? '/visibility/prompts'
-          : kind.startsWith('search_')
-            ? '/search-intelligence'
-            : ['traffic_snapshot', 'demand_snapshot', 'query_snapshot', 'query_row'].includes(kind)
-              ? '/performance'
-              : '/dashboard';
-  const params = new URLSearchParams({ project: projectId });
-  if (kind !== 'opportunity') params.set(kind === 'prompt' ? 'prompt' : 'evidence', id);
-  if (['audit', 'visibility_result', 'citation'].includes(kind) && text(record.url))
-    params.set('source', text(record.url));
-  const relative = `${path}?${params}`;
-  // Internal Agent reads have no HTTP origin; their links remain same-origin.
-  return origin ? new URL(relative, origin).href : relative;
-}
-
 /** Split by Unicode code points, measuring the entire encoded document in UTF-8. */
 export function retrievalDocument(
   kind: Kind,
@@ -686,10 +590,10 @@ export function retrievalDocument(
   const normalized = z.record(z.string(), z.json()).parse(jsonValue(record));
   const serialized = JSON.stringify(normalized);
   const uri = `citeladder://${kind}/${id}`;
-  const url = recordUrl(kind, projectId, id, normalized, origin);
+  const url = appLink(origin, recordPath(kind, normalized), projectId);
   const limit = Math.min(maxBytes, mcpPolicy.max_document_bytes);
+  // The record travels once, as the document text.
   const document = (textPart: string, partUris: string[] = []) => ({
-    ...(partUris.length ? {} : normalized),
     id: partUris.length ? `${uri}?part=${part}` : uri,
     title,
     text: textPart,
@@ -699,7 +603,6 @@ export function retrievalDocument(
       record_type: kind,
       observed_at: jsonValue(observedAt),
       complete: partUris.length === 0,
-      record: partUris.length ? {} : normalized,
       part: partUris.length ? part : null,
       part_count: partUris.length || 1,
       part_uris: partUris,
@@ -742,7 +645,7 @@ export async function fetchRecord(
   maxBytes = mcpPolicy.max_document_bytes,
 ): Promise<Evidence> {
   const { kind, id, part } = parseRecordId(value);
-  const resolved = await resolveRecord(db, principal, kind, id);
+  const resolved = await resolveRecord(db, principal, kind, id, origin);
   return retrievalDocument(
     kind,
     id,

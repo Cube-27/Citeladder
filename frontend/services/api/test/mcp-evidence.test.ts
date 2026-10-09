@@ -10,6 +10,7 @@ import { prompt, promptSet } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
+import { attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { getVisibility } from '../src/visibility/dashboard.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 
@@ -67,6 +68,8 @@ afterAll(async () => {
 });
 const read = (name: string, args: Record<string, unknown> = {}) =>
   dispatchTool(db, principal, name, { project_id: tenant.projectId, ...args }, origin);
+/** A complete fetched document carries its record once, as the text. */
+const record = (document: Record<string, unknown>) => JSON.parse(String(document.text));
 
 it('retains the selected Site Health snapshot and partial/unknown coverage when newer snapshots arrive', async () => {
   const seed = await siteFixtures.crawl();
@@ -77,21 +80,6 @@ it('retains the selected Site Health snapshot and partial/unknown coverage when 
     projectId: seed.projectId,
   };
   const first = await siteFixtures.snapshot(seed);
-  const source = await siteFixtures.page(seed, '/', {});
-  await db
-    .updateTable('site_health_snapshots')
-    .set({
-      source_analysis_ids: [source.analysisId],
-      source_artifact_ids: [source.artifactId],
-      source_task_ids: [source.taskId],
-      classification_source_analysis_ids: [source.analysisId],
-      classification_source_artifact_ids: [source.artifactId],
-      classification_source_task_ids: [source.taskId],
-      coverage_formula_version: 'retained-coverage',
-      profile_version: 'retained-profile',
-    })
-    .where('id', '=', first)
-    .execute();
   const render = (snapshot_id?: string) =>
     dispatchTool(
       db,
@@ -112,11 +100,9 @@ it('retains the selected Site Health snapshot and partial/unknown coverage when 
   expect(await render(first)).toMatchObject({
     selection: { snapshot_id: first },
     evidence: {
+      snapshot_id: first,
+      crawl_id: seed.crawlId,
       measurement_states: { coverage: 'partial' },
-      source_artifact_ids: [source.artifactId],
-      source_task_ids: [source.taskId],
-      classification_source_analysis_ids: [source.analysisId],
-      versions: { coverage_formula: 'retained-coverage', profile: 'retained-profile' },
     },
   });
   await expect(render(randomUUID())).rejects.toThrow('unavailable');
@@ -143,7 +129,10 @@ it('pins the Visibility review to canonical measures and source-to-answer eviden
   });
   const rendered = await read('render_visibility', { view: 'overview' });
   const handoff = new URL((rendered.links as { application: string }).application);
-  expect(handoff.searchParams.get('run')).toBe(auditId);
+  expect([handoff.pathname, handoff.searchParams.get('project')]).toEqual([
+    '/visibility',
+    tenant.projectId,
+  ]);
   const canonical = await getVisibility(
     db,
     { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
@@ -172,19 +161,14 @@ it('pins the Visibility review to canonical measures and source-to-answer eviden
     selection: { audit_id: auditId },
     evidence: {
       coverage: { responses: 1 },
-      items: [
-        expect.objectContaining({
-          key: 'publisher.example',
-          inspected_page_presence_is_separate: true,
-        }),
-      ],
+      items: [expect.objectContaining({ key: 'publisher.example' })],
     },
   });
   const answers = await read('read_visibility_results', {
     audit_id: auditId,
     domain: 'publisher.example',
   });
-  expect(answers.items).toEqual([expect.objectContaining({ id: execution.taskId })]);
+  expect(answers.items).toEqual([expect.objectContaining({ task_id: execution.taskId })]);
   expect(
     (await fetchRecord(db, principal, `citeladder://visibility_result/${execution.taskId}`, origin))
       .text,
@@ -213,11 +197,9 @@ it('refuses foreign render objects, unsupported filters, forged totals and revok
   await expect(read('render_visibility', { project_id: foreign.projectId })).rejects.toThrow(
     'not found',
   );
-  await expect(read('render_visibility', { audit_id: foreignAudit })).rejects.toThrow(
-    'unavailable',
-  );
+  await expect(read('render_visibility', { audit_id: foreignAudit })).rejects.toThrow('not found');
   await expect(read('read_visibility_overview', { baseline_id: foreignAudit })).rejects.toThrow(
-    'unavailable',
+    'not found',
   );
   await expect(read('render_site_health', { snapshot_id: randomUUID() })).rejects.toThrow(
     'unavailable',
@@ -263,9 +245,7 @@ it('keeps crawlability unavailable without a crawl, including business context',
     reason: 'no_site_crawl',
   });
   const context = await read('get_project_business_context', { sections: ['crawlability'] });
-  expect(context.evidence).toMatchObject({
-    crawlability: { state: 'unavailable', reason: 'no_site_crawl' },
-  });
+  expect(context.crawlability).toMatchObject({ state: 'unavailable', reason: 'no_site_crawl' });
 });
 
 it('pages prompts stably while context includes only active prompts and foreign IDs cannot fetch', async () => {
@@ -277,23 +257,19 @@ it('pages prompts stably while context includes only active prompts and foreign 
   const retired = await prompt(db, set, 'Acme retired', { status: 'retired', createdAt: at(2) });
   const page = await read('read_prompt_portfolio', { limit: 1 });
   expect(page.items).toEqual([expect.objectContaining({ id: first })]);
-  expect(page).toMatchObject({
-    project_id: tenant.projectId,
-    applicability: { pagination: 'applicable' },
-  });
-  expect(await read('read_site_health')).toMatchObject({
-    applicability: { pagination: 'not_applicable' },
-  });
   const next = await read('read_prompt_portfolio', {
     limit: 1,
     cursor: (page.pagination as { next_cursor: string }).next_cursor,
   });
   expect(next.items).toEqual([expect.objectContaining({ id: second })]);
   const context = await read('get_project_business_context', { sections: ['prompts'] });
-  expect((context.active_prompts as { id: string }[]).map((r) => r.id)).toEqual([first, second]);
+  expect((context.prompts as { items: { id: string }[] }).items.map((r) => r.id)).toEqual([
+    first,
+    second,
+  ]);
   expect(
-    (await fetchRecord(db, principal, `citeladder://prompt/${retired}`, origin)).metadata,
-  ).toMatchObject({ record: { status: 'retired' } });
+    record(await fetchRecord(db, principal, `citeladder://prompt/${retired}`, origin)),
+  ).toMatchObject({ status: 'retired' });
   const foreign = await fixtures.tenant();
   const secret = await prompt(db, await promptSet(db, foreign.projectId), 'Acme private');
   await expect(fetchRecord(db, principal, `citeladder://prompt/${secret}`, origin)).rejects.toThrow(
@@ -328,7 +304,6 @@ it('keeps a missing exact query window and unmeasured snapshots unavailable whil
   ).toMatchObject({
     state: 'unavailable',
     reason: 'exact_query_evidence_window_not_projected',
-    items: [],
   });
   expect(await read('read_site_health')).toMatchObject({
     state: 'unavailable',
@@ -408,12 +383,10 @@ it('fetches the exact page analysis after a newer analysis replaces it, with fac
       .values({ ...source, id: finalId, is_current: true, aeo_readiness_score: 99 })
       .execute();
     const fetched = await fetchRecord(db, principal, `citeladder://site_page/${source.id}`, origin);
-    expect(fetched.metadata).toMatchObject({
-      record: {
-        id: source.id,
-        aeo_readiness_score: source.aeo_readiness_score,
-        artifact: { id: source.artifact_id, normalized_facts: expect.any(Object) },
-      },
+    expect(record(fetched)).toMatchObject({
+      id: source.id,
+      aeo_readiness_score: source.aeo_readiness_score,
+      artifact: { id: source.artifact_id, normalized_facts: expect.any(Object) },
     });
     const evaluation = await db
       .selectFrom('site_rule_evaluations')
@@ -421,13 +394,13 @@ it('fetches the exact page analysis after a newer analysis replaces it, with fac
       .where('analysis_id', '=', source.id)
       .executeTakeFirstOrThrow();
     expect(
-      (fetched.metadata as { record: { evaluations: { id: string }[] } }).record.evaluations.map(
-        (r) => r.id,
-      ),
+      (record(fetched) as { evaluations: { id: string }[] }).evaluations.map((r) => r.id),
     ).toContain(evaluation.id);
-    const final = await fetchRecord(db, principal, `citeladder://site_page/${finalId}`, origin);
-    expect(final.evaluations).toEqual(fetched.evaluations);
-    expect(final.issues).toEqual(fetched.issues);
+    const final = record(
+      await fetchRecord(db, principal, `citeladder://site_page/${finalId}`, origin),
+    );
+    expect(final.evaluations).toEqual(record(fetched).evaluations);
+    expect(final.issues).toEqual(record(fetched).issues);
     expect(final.issues).not.toEqual([]);
     const scope = {
       userId: seed.user_id,
@@ -444,11 +417,11 @@ it('fetches the exact page analysis after a newer analysis replaces it, with fac
     };
     const first = await readPart(`citeladder://site_page/${finalId}`);
     const parts = first.metadata.part_uris as string[];
-    const record = parts.length
+    const whole = parts.length
       ? JSON.parse((await Promise.all(parts.map(readPart))).map((part) => part.text).join(''))
-      : first.metadata.record;
-    expect(record.issues).toEqual(final.issues);
-    expect(record.evaluations).toEqual(final.evaluations);
+      : JSON.parse(first.text);
+    expect(whole.issues).toEqual(final.issues);
+    expect(whole.evaluations).toEqual(final.evaluations);
   } finally {
     await db.deleteFrom('mcp_oauth_grants').where('id', '=', principal.grantId).execute();
     await db.deleteFrom('workspaces').where('id', '=', seed.workspace_id).execute();
@@ -552,13 +525,11 @@ it('exposes published dataset aggregates without treating them as backlink edges
     .execute();
   const page = await read('read_search_dataset', { dataset_id: datasetId, limit: 1 });
   expect(page).toMatchObject({
-    grain: 'referring_domains',
-    limitations: ['aggregate_not_individual_backlink_edges'],
+    dataset: { dataset_kind: 'referring_domains' },
+    aggregate_not_individual_links: true,
   });
   const fetched = await fetchRecord(db, principal, `citeladder://search_row/${rowId}`, origin);
-  expect(fetched.metadata).toMatchObject({
-    record: { id: rowId, project_id: tenant.projectId, backlinks: 0 },
-  });
+  expect(record(fetched)).toMatchObject({ id: rowId, project_id: tenant.projectId, backlinks: 0 });
   await db
     .updateTable('search_intelligence_datasets')
     .set({ status: 'collecting' })
@@ -569,7 +540,7 @@ it('exposes published dataset aggregates without treating them as backlink edges
   ).rejects.toThrow('not found');
 });
 
-it('preserves answer and citation artifact identity through the existing visibility owner', async () => {
+it('keeps answer identity through the visibility owner and refuses another project', async () => {
   const auditId = await fixtures.audit(tenant);
   const { taskId } = await fixtures.execution(tenant, {
     auditId,
@@ -581,20 +552,19 @@ it('preserves answer and citation artifact identity through the existing visibil
   });
   const page = await read('read_visibility_results', { audit_id: auditId });
   const items = page.items as {
-    id: string;
+    task_id: string;
     record_uri: string;
-    citations: { id: string; record_uri: string }[];
+    citations: { url: string }[];
   }[];
-  expect(items[0]?.id).toBe(taskId);
+  expect(items.map((item) => [item.task_id, item.citations[0]?.url])).toEqual([
+    [taskId, 'https://publisher.example/review'],
+  ]);
   const answer = await fetchRecord(db, principal, items[0]!.record_uri, origin);
   expect(answer.metadata).toMatchObject({
     project_id: tenant.projectId,
     record_type: 'visibility_result',
   });
-  const citation = await fetchRecord(db, principal, items[0]!.citations[0]!.record_uri, origin);
-  expect(citation.metadata).toMatchObject({
-    record: { url: 'https://publisher.example/review', analysis_id: expect.any(String) },
-  });
+  expect(new URL(String(answer.url)).pathname).toBe(`/runs/${auditId}`);
   const foreign = await fixtures.tenant();
   await expect(
     dispatchTool(
@@ -605,4 +575,34 @@ it('preserves answer and citation artifact identity through the existing visibil
       origin,
     ),
   ).rejects.toThrow('not found');
+  await expect(
+    read('read_visibility_results', { audit_id: await fixtures.audit(foreign) }),
+  ).rejects.toThrow('not found');
+});
+
+it('lists only active Actions as the current work and reads a dismissed one only by name', async () => {
+  const scope = { workspaceId: tenant.workspaceId, projectId: tenant.projectId };
+  const attach = (topic: string) =>
+    db
+      .transaction()
+      .execute((trx) => attachOrCreateAction(trx, scope, 'planned_page', topic, tenant.userId));
+  const kept = await attach('Buyer guide');
+  const dismissed = await attach('Old guide');
+  await db
+    .updateTable('actions')
+    .set({ status: 'dismissed' })
+    .where('id', '=', dismissed.id)
+    .execute();
+  const current = await read('read_actions');
+  expect((current.items as { id: string }[]).map((item) => item.id)).toEqual([kept.id]);
+  expect(current.status_counts).toMatchObject({ open: 1, dismissed: 1 });
+  expect((await read('read_actions', { status: 'dismissed' })).items as { id: string }[]).toEqual([
+    expect.objectContaining({ id: dismissed.id }),
+  ]);
+  const one = await read('read_actions', { action_id: dismissed.id });
+  expect(one.action).toMatchObject({ id: dismissed.id, status: 'dismissed' });
+  const searched = await dispatchTool(db, principal, 'search', { query: 'guide' }, origin);
+  expect((searched.results as { id: string }[]).map((r) => r.id)).toEqual([
+    `citeladder://action/${kept.id}`,
+  ]);
 });

@@ -4,20 +4,40 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { utcText } from '../db/timestamps.ts';
-import { McpInputError, type EvidencePrincipal } from './types.ts';
+import { McpInputError, type Evidence, type EvidencePrincipal } from './types.ts';
 import { mcpPolicy } from './config.ts';
 import { workspaceAccess } from '../entitlements/access.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
+import { effectiveStatus } from '../opportunities/action-status.ts';
+import { appLink, recordPath } from './links.ts';
 
 /** Roles whose capabilities include reading workspace evidence. */
 export const READ_ROLES = Object.entries(policy.workspaces.roles)
   .filter(([, caps]) => caps.includes('read'))
   .map(([role]) => role);
 
-export async function authorizedWorkspaceIds(
+// A tool call that authorizes several reads checks grant and membership once.
+// Only a principal minted for one call shares its check; any other is live.
+const perCall = new WeakMap<EvidencePrincipal, Promise<string[]> | null>();
+export function principalForCall(principal: EvidencePrincipal): EvidencePrincipal {
+  const call = { ...principal };
+  perCall.set(call, null);
+  return call;
+}
+export function authorizedWorkspaceIds(
   db: Database,
   principal: EvidencePrincipal,
 ): Promise<string[]> {
+  if (!perCall.has(principal)) return liveWorkspaceIds(db, principal);
+  let result = perCall.get(principal);
+  if (!result) {
+    result = liveWorkspaceIds(db, principal);
+    perCall.set(principal, result);
+    result.catch(() => perCall.set(principal, null));
+  }
+  return result;
+}
+async function liveWorkspaceIds(db: Database, principal: EvidencePrincipal): Promise<string[]> {
   const identity = await db
     .selectFrom('users')
     .selectAll()
@@ -67,8 +87,9 @@ export async function authorizeProject(
 ) {
   const id = parseUuid(projectId);
   if (!id) throw new McpInputError('project_id must be a UUID');
+  // A pinned caller learns no more about a sibling project than about a missing one.
   if ('kind' in principal && principal.projectId !== id)
-    throw new McpInputError('Project is fixed by the caller');
+    throw new McpInputError('Project was not found in this account');
   const workspaces = await authorizedWorkspaceIds(db, principal);
   const row = workspaces.length
     ? await db
@@ -97,6 +118,18 @@ export function decodeCursor(value: string, size: number): string[] {
     throw new McpInputError('cursor is invalid');
   }
 }
+/** A record a later `fetch` can resolve; the Agent derives a turn's sources from these. */
+export const reference = (kind: string, id: string) => ({
+  kind,
+  id,
+  record_uri: `citeladder://${kind}/${id}`,
+});
+/** Evidence that does not exist yet: never zero, never repaired by reading it. */
+export const unavailable = (reason: string): Evidence => ({
+  state: 'unavailable',
+  reason,
+  artifact_refs: [],
+});
 export const pagination = (
   items: unknown[],
   cursor: string | null,
@@ -170,73 +203,71 @@ export async function searchBusinessContext(
   }
   const normalized = query.trim();
   if (!normalized) throw new McpInputError('query must not be empty');
-  if (projectId) await authorizeProject(db, principal, projectId);
-  const workspaces = await authorizedWorkspaceIds(db, principal),
-    results: Record<string, string>[] = [];
+  const workspaces = await authorizedWorkspaceIds(db, principal);
+  const results: Record<string, string>[] = [];
+  if (!workspaces.length) return { query: normalized, results };
+  if (projectId) {
+    const owned = await db
+      .selectFrom('projects')
+      .select('id')
+      .where('id', '=', projectId)
+      .where('workspace_id', 'in', workspaces)
+      .executeTakeFirst();
+    if (!owned) throw new McpInputError('Project was not found in this account');
+  }
   const pattern = `%${normalized
     .replaceAll('\\', String.raw`\\`)
     .replaceAll('%', String.raw`\%`)
     .replaceAll('_', String.raw`\_`)}%`;
-  const append = (kind: string, id: string, title: string, text: string) => {
-    const uri = `citeladder://${kind}/${id}`;
+  const like = (column: string) => sql<boolean>`${sql.ref(column)} ilike ${pattern} escape '\\'`;
+  const append = (kind: string, id: string, project: string, title: string, text: string) =>
     results.push({
-      id: uri,
-      type: kind,
+      id: `citeladder://${kind}/${id}`,
       title,
       text: text.slice(0, mcpPolicy.search_snippet_chars),
-      url: `${origin}/dashboard?record=${encodeURIComponent(uri)}`,
+      url: appLink(origin, recordPath(kind, { id }), project),
     });
-  };
-  if (workspaces.length) {
-    let projects = db
-      .selectFrom('projects')
-      .select(['id', 'name', 'brand_name', 'website_url'])
+  let projects = db
+    .selectFrom('projects')
+    .select(['id', 'name', 'brand_name', 'website_url'])
+    .where('workspace_id', 'in', workspaces)
+    .where((eb) =>
+      eb.or([like('name'), like('brand_name'), like('website_url'), like('industry')]),
+    );
+  if (projectId) projects = projects.where('id', '=', projectId);
+  for (const row of await projects.orderBy('name').orderBy('id').limit(limit).execute())
+    append('project', row.id, row.id, row.name, `${row.brand_name} — ${row.website_url}`);
+  if (results.length < limit) {
+    // Active Actions only: dismissed and finished work is not a current lead.
+    let actions = db
+      .selectFrom('actions')
+      .select(['id', 'project_id', 'target_label', 'approach'])
       .where('workspace_id', 'in', workspaces)
-      .where(
-        sql<boolean>`(name ilike ${pattern} escape '\\' or brand_name ilike ${pattern} escape '\\' or website_url ilike ${pattern} escape '\\' or industry ilike ${pattern} escape '\\')`,
-      );
-    if (projectId) projects = projects.where('id', '=', projectId);
-    for (const row of await projects.orderBy('id').limit(limit).execute())
-      append('project', row.id, row.name, `${row.brand_name} — ${row.website_url}`);
-    if (results.length < limit) {
-      let opportunities = db
-        .selectFrom('opportunities')
-        .select(['id', 'title', 'remediation'])
-        .where('workspace_id', 'in', workspaces)
-        .where('superseded_at', 'is', null)
-        .where(
-          sql<boolean>`(title ilike ${pattern} escape '\\' or remediation ilike ${pattern} escape '\\' or target_url ilike ${pattern} escape '\\')`,
-        );
-      if (projectId) opportunities = opportunities.where('project_id', '=', projectId);
-      for (const row of await opportunities
-        .orderBy('priority_score', 'desc')
-        .orderBy('id')
-        .limit(limit - results.length)
-        .execute())
-        append('opportunity', row.id, row.title, row.remediation);
-    }
-    if (results.length < limit) {
-      let prompts = db
-        .selectFrom('prompts as p')
-        .innerJoin('prompt_sets as s', 's.id', 'p.prompt_set_id')
-        .innerJoin('projects as project', 'project.id', 's.project_id')
-        .select(['p.id', 'p.text', 'p.theme'])
-        .where('project.workspace_id', 'in', workspaces)
-        .where(
-          sql<boolean>`(p.text ilike ${pattern} escape '\\' or p.theme ilike ${pattern} escape '\\')`,
-        );
-      if (projectId) prompts = prompts.where('project.id', '=', projectId);
-      for (const row of await prompts
-        .orderBy('p.id')
-        .limit(limit - results.length)
-        .execute())
-        append('prompt', row.id, row.theme || 'Prompt', row.text);
-    }
+      .where(effectiveStatus(), 'in', policy.opportunity.actions.ACTION_ACTIVE_STATUSES)
+      .where((eb) => eb.or([like('target_label'), like('approach'), like('target_url')]));
+    if (projectId) actions = actions.where('project_id', '=', projectId);
+    for (const row of await actions
+      .orderBy(sql`priority_score desc nulls last`)
+      .orderBy('id')
+      .limit(limit - results.length)
+      .execute())
+      append('action', row.id, row.project_id, row.target_label || 'Action', row.approach ?? '');
   }
-  return {
-    query: normalized,
-    results,
-    count: results.length,
-    pagination: pagination(results, null),
-  };
+  if (results.length < limit) {
+    let prompts = db
+      .selectFrom('prompts as p')
+      .innerJoin('prompt_sets as s', 's.id', 'p.prompt_set_id')
+      .innerJoin('projects as project', 'project.id', 's.project_id')
+      .select(['p.id', 's.project_id', 'p.text', 'p.theme'])
+      .where('project.workspace_id', 'in', workspaces)
+      .where((eb) => eb.or([like('p.text'), like('p.theme')]));
+    if (projectId) prompts = prompts.where('project.id', '=', projectId);
+    for (const row of await prompts
+      .orderBy('p.text')
+      .orderBy('p.id')
+      .limit(limit - results.length)
+      .execute())
+      append('prompt', row.id, row.project_id, row.theme || 'Prompt', row.text);
+  }
+  return { query: normalized, results };
 }

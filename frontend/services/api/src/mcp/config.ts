@@ -73,8 +73,6 @@ export function loadMcpConfig(
   }
   return {
     enabled,
-    uiEnabled: value('ui_enabled') as boolean,
-    extensionsEnabled: value('extensions_enabled') as boolean,
     origin,
     browserOrigin,
     allowedEmail,

@@ -11,7 +11,7 @@ import { contentHandoff as siteHandoff } from '../site-health/reads/content-hand
 import { contentHandoff as searchHandoff } from '../search-intelligence/reads.ts';
 import { comparableUrl, selectContentFragments } from '../site-health/reads/content-fragments.ts';
 import { issueDetail } from '../site-health/reads/issues.ts';
-import { crawlability } from '../mcp/evidence.ts';
+import { crawlability } from '../mcp/evidence-site.ts';
 import { revisionRefs } from './outputs.ts';
 import type { ContextReader } from './context.ts';
 import { AgentError } from './contracts.ts';
@@ -103,7 +103,10 @@ async function resolveOrigins(
     };
   }
   const siteFacts = refs.site_facts_reference
-    ? await crawlability(db, scope, refs.site_facts_reference.crawl_id)
+    ? await crawlability(
+        { db, scope, origin: '' },
+        { crawl_id: refs.site_facts_reference.crawl_id },
+      )
     : null;
   const upstreamRef = refs.output_revision_reference;
   let upstream = null;

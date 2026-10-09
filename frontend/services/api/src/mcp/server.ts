@@ -6,16 +6,11 @@ import type { Database } from '../db/database.ts';
 import { loadMcpConfig, mcpPolicy } from './config.ts';
 import { authenticateMcp } from './oauth.ts';
 import { registerOAuthRoutes } from './oauth-routes.ts';
-import { dispatchTool, tools } from './tools.ts';
-import { McpInputError } from './types.ts';
+import { dispatchTool, presentationTools, tools } from './tools.ts';
+import { callerMessage } from './types.ts';
 import { getLogger } from '../logging.ts';
 import { parseUuid } from '../http/uuid.ts';
-import {
-  appResource,
-  appToolMetadata,
-  presentationTools,
-  readAppResource,
-} from './app-resource.ts';
+import { appResource, appToolMetadata, readAppResource } from './app-resource.ts';
 const logger = getLogger('mcp');
 
 const MCP_PROTOCOL_PATHS = [
@@ -30,8 +25,13 @@ const MCP_PROTOCOL_PATHS = [
   '/.well-known/oauth-protected-resource/mcp',
 ] as const;
 const VERSIONS = ['2026-07-28', '2025-11-25'];
-const INSTRUCTIONS =
-  'This server is read-only. Begin with list_projects when no project ID is known. Use get_project_business_context for a complete persisted overview, then search and fetch specific evidence. Missing evidence is unavailable, never zero. Do not infer causation.';
+const INSTRUCTIONS = [
+  "Read-only CiteLadder data about a business's visibility in AI answers and search.",
+  'Start with list_projects, then get_project_business_context; use the focused reads for detail.',
+  'Missing evidence is unavailable, never zero. Report change without claiming its cause.',
+  'IDs and citeladder:// references are for your tool calls only: never show them to the user. Name the page, prompt, competitor or Action instead, and give app links as links.',
+].join(' ');
+const toolNames = new Set(tools.map((tool) => tool.name));
 const CAPABILITIES = { tools: {}, resources: {}, prompts: {} };
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -222,14 +222,11 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           break;
         case 'tools/list':
           result = {
-            tools: tools
-              .filter((tool) => settings.uiEnabled || !presentationTools.has(tool.name))
-              .map((tool) => ({
-                ...tool,
-                ...(settings.uiEnabled && presentationTools.has(tool.name)
-                  ? { _meta: appToolMetadata(tool.name, settings.extensionsEnabled) }
-                  : {}),
-              })),
+            tools: tools.map((tool) =>
+              presentationTools.has(tool.name)
+                ? { ...tool, _meta: appToolMetadata(tool.name) }
+                : tool,
+            ),
           };
           break;
         case 'tools/call': {
@@ -238,9 +235,9 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
             (params.arguments !== undefined && !object(params.arguments))
           )
             return c.json(rpcError(message.id, -32602, 'Invalid tool arguments'), 400);
+          if (!toolNames.has(params.name))
+            return c.json(rpcError(message.id, -32602, `Unknown tool: ${params.name}`), 400);
           try {
-            if (!settings.uiEnabled && presentationTools.has(params.name))
-              throw new McpInputError('Analytics UI is disabled');
             const value = await dispatchTool(
               db,
               principal,
@@ -252,26 +249,27 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
               content: [{ type: 'text', text: JSON.stringify(value) }],
               structuredContent: value,
               isError: false,
-              ...(settings.uiEnabled && presentationTools.has(params.name)
+              ...(presentationTools.has(params.name)
                 ? { _meta: appToolMetadata(params.name) }
                 : {}),
             };
           } catch (error) {
-            if (error instanceof McpInputError)
-              return c.json(rpcError(message.id, -32602, error.message), 400);
-            logger.warning('MCP evidence read failed', {
-              tool: params.name,
-              exceptionType: error instanceof Error ? error.name : 'unknown',
-            });
+            // A caller's mistake is a tool error the model can read and correct.
+            const problem = callerMessage(error);
+            if (problem === null)
+              logger.warning('MCP evidence read failed', {
+                tool: params.name,
+                exceptionType: error instanceof Error ? error.name : 'unknown',
+              });
             result = {
-              content: [{ type: 'text', text: 'Evidence is unavailable.' }],
+              content: [{ type: 'text', text: problem ?? 'Evidence is unavailable.' }],
               isError: true,
             };
           }
           break;
         }
         case 'resources/list':
-          result = { resources: settings.uiEnabled ? [appResource] : [] };
+          result = { resources: [appResource] };
           break;
         case 'resources/templates/list':
           result = {
@@ -286,7 +284,7 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           };
           break;
         case 'resources/read': {
-          if (settings.uiEnabled && params.uri === appResource.uri) {
+          if (params.uri === appResource.uri) {
             result = await readAppResource();
             break;
           }
@@ -309,9 +307,12 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
               ],
             };
           } catch (error) {
-            if (error instanceof McpInputError)
+            if (callerMessage(error) !== null)
               return c.json(rpcError(message.id, -32602, 'Resource not found'), 400);
-            throw error;
+            logger.warning('MCP resource read failed', {
+              exceptionType: error instanceof Error ? error.name : 'unknown',
+            });
+            return c.json(rpcError(message.id, -32603, 'Resource is unavailable'), 500);
           }
           break;
         }
@@ -340,7 +341,7 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
                 role: 'user',
                 content: {
                   type: 'text',
-                  text: `Use get_project_business_context for project ${params.arguments.project_id}. Summarize known Site Health, demand, opportunities and visibility. Keep unavailable evidence distinct from zero, cite artifacts, and do not infer causality.`,
+                  text: `Review project ${params.arguments.project_id} with get_project_business_context: what its AI visibility is, what holds it back and which Actions come first. Keep unavailable evidence distinct from zero, do not claim causes, and show no IDs.`,
                 },
               },
             ],
