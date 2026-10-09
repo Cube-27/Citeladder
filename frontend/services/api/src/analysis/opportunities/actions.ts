@@ -3,6 +3,7 @@ import { round } from '../../demand/projection.ts';
 import { normalizedUrlForCompare } from '../url-compare.ts';
 import { rules } from './detectors.ts';
 import { compareText } from '../../text-order.ts';
+import type { NonEmpty } from '../../lists.ts';
 const p = policy.opportunity.actions;
 export type ActionMember = {
   opportunity_id: string;
@@ -89,8 +90,13 @@ export function selectApproach(ids: string[], kind: string) {
     ) ?? p.DEFAULT_APPROACH
   );
 }
-function group(t: ReturnType<typeof targetFor>, members: ActionMember[], available: string[]) {
-  const ordered = [...members].sort(
+function group(
+  t: ReturnType<typeof targetFor>,
+  members: NonEmpty<ActionMember>,
+  available: string[],
+) {
+  const ordered: [ActionMember, ...ActionMember[]] = [...members];
+  ordered.sort(
     (a, b) =>
       b.priority_score - a.priority_score ||
       compareText(a.rule_id, b.rule_id) ||
@@ -109,7 +115,7 @@ function group(t: ReturnType<typeof targetFor>, members: ActionMember[], availab
     target: t,
     members: ordered,
     families,
-    priority_score: actionPriority(ordered[0]!.priority_score, families.length),
+    priority_score: actionPriority(ordered[0].priority_score, families.length),
     approach: branch.approach,
     skill_id: branch.skill_id,
     diagnosis: {
@@ -148,13 +154,13 @@ function group(t: ReturnType<typeof targetFor>, members: ActionMember[], availab
 export function groupMembers(members: ActionMember[], available: string[]) {
   const groups = new Map<
     string,
-    { target: ReturnType<typeof targetFor>; members: ActionMember[] }
+    { target: ReturnType<typeof targetFor>; members: [ActionMember, ...ActionMember[]] }
   >();
   for (const member of members) {
     const t = targetFor(member);
-    const entry = groups.get(t.group_key) ?? { target: t, members: [] };
-    entry.members.push(member);
-    groups.set(t.group_key, entry);
+    const entry = groups.get(t.group_key);
+    if (entry) entry.members.push(member);
+    else groups.set(t.group_key, { target: t, members: [member] });
   }
   return [...groups.values()]
     .map((g) => group(g.target, g.members, available))

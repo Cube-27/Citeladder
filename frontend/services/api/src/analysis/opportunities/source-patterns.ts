@@ -9,11 +9,10 @@ const p = policy.opportunity.source_patterns;
  * test, so `google.evil.com` is an ordinary publisher.
  */
 function isGoogleSearchSurface(domain: string): boolean {
-  const [first, ...suffix] = domain.split('.');
-  if (first !== 'google' || suffix.length === 0) return false;
+  const [first, secondLevel, ...rest] = domain.split('.');
+  if (first !== 'google' || secondLevel === undefined) return false;
   return (
-    suffix.length === 1 ||
-    (suffix.length === 2 && p._PUBLIC_SECOND_LEVEL_LABELS.includes(suffix[0]!))
+    rest.length === 0 || (rest.length === 1 && p._PUBLIC_SECOND_LEVEL_LABELS.includes(secondLevel))
   );
 }
 export function classifySourceOrigin(domain: string): string {

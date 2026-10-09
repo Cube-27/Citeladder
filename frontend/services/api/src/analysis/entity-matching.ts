@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { record, strings } from '../db/json.ts';
 import { normalizeAlias } from './aliases.ts';
+import { onlyOf } from '../lists.ts';
 
 const A = policy.audits.analysis;
 const COMMON_WORDS = new Set([
@@ -42,8 +43,8 @@ export const entityKey = (name: string) => normalizeAlias(name);
 /** Whether any of the entity's names is a single common word. */
 function commonWordName(entity: MatchedEntity): boolean {
   return [entity.name, ...entity.aliases].some((name) => {
-    const tokens = normalizeAlias(name).split(' ').filter(Boolean);
-    return tokens.length === 1 && COMMON_WORDS.has(tokens[0]!);
+    const only = onlyOf(normalizeAlias(name).split(' ').filter(Boolean));
+    return only !== undefined && COMMON_WORDS.has(only);
   });
 }
 

@@ -202,9 +202,12 @@ function composite(group: AggregateExecution[], config: ScoringConfig) {
   };
 }
 export function promptMetrics(rows: AggregateExecution[], config: ScoringConfig) {
-  const grouped = new Map<number, AggregateExecution[]>();
-  for (const row of rows)
-    grouped.set(row.prompt_index, [...(grouped.get(row.prompt_index) ?? []), row]);
+  const grouped = new Map<number, [AggregateExecution, ...AggregateExecution[]]>();
+  for (const row of rows) {
+    const group = grouped.get(row.prompt_index);
+    if (group) group.push(row);
+    else grouped.set(row.prompt_index, [row]);
+  }
   return [...grouped]
     .map(([index, group]) => {
       const values = composite(group, config),
@@ -224,8 +227,8 @@ export function promptMetrics(rows: AggregateExecution[], config: ScoringConfig)
       const points = Object.values(engineScores);
       return {
         prompt_index: index,
-        prompt_text: group[0]!.prompt_text_snapshot,
-        theme: group[0]!.prompt_theme_snapshot,
+        prompt_text: group[0].prompt_text_snapshot,
+        theme: group[0].prompt_theme_snapshot,
         repetitions: n,
         brand_mentioned_count: values.mentioned,
         owned_cited_count: values.ownedRaw,
