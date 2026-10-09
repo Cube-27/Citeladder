@@ -89,6 +89,13 @@ test('the token owner and custom properties are not judged', () => {
   assert.deepEqual(rules('.a { --gap: 6px; --radius: 6px; }'), []);
 });
 
+test('a custom property that reads itself is a cycle', () => {
+  assert.deepEqual(rules('.a { --text-sm--line-height: var(--text-sm--line-height); }'), [
+    'css-cycle',
+  ]);
+  assert.deepEqual(rules('.a { --gap: var(--card-padding); }'), []);
+});
+
 test('astro style blocks report lines in the component', () => {
   const source =
     '---\nconst a = 1;\n---\n<div />\n<style>\n  .a {\n    border-radius: 6px;\n  }\n</style>\n';

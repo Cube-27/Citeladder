@@ -17,8 +17,7 @@ const fromLinear = (channel) =>
 
 export const isHex = (value) => /^#[0-9a-f]{6}$/i.test(value ?? '');
 
-/** @public — part of the colour toolkit, consumed through contrastRatio. */
-export function relativeLuminance(hex) {
+function relativeLuminance(hex) {
   const [red, green, blue] = channels(hex).map(toLinear);
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
@@ -53,8 +52,7 @@ function linearToLab([red, green, blue]) {
   return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
 }
 
-/** @public — part of the colour toolkit, consumed through lightness. */
-export const lab = (hex) => linearToLab(channels(hex).map(toLinear));
+const lab = (hex) => linearToLab(channels(hex).map(toLinear));
 export const lightness = (hex) => lab(hex)[0];
 
 // Machado, Oliveira and Fernandes (2009), severity 1.0, applied in linear RGB.
@@ -71,8 +69,7 @@ const DEFICIENCY = {
   ],
 };
 
-/** @public — part of the colour toolkit, consumed through separation. */
-export function simulate(hex, deficiency) {
+function simulate(hex, deficiency) {
   const matrix = DEFICIENCY[deficiency];
   const linear = channels(hex).map(toLinear);
   const mixed = matrix.map((row) =>

@@ -7,6 +7,7 @@ import {
   LOGO_GLYPH_SCALE,
   LOGO_GLYPH_STROKE,
   LOGO_GLYPHS,
+  LOGO_MARK_WIDTH,
   LOGO_VIEWBOX_WIDTH,
 } from './logo-glyphs';
 
@@ -28,10 +29,6 @@ export const BRAND_LOGO_SIZES = {
 
 export type BrandLogoVariant = keyof typeof BRAND_LOGO_SIZES;
 
-function Bars() {
-  return LOGO_BARS.map((bar) => <rect key={bar.x} {...bar} rx="1.1" className="fill-accent" />);
-}
-
 export function LogoMark({
   size,
   variant = 'brand',
@@ -46,7 +43,7 @@ export function LogoMark({
   className?: string;
 }>) {
   const resolvedSize = size ?? BRAND_LOGO_SIZES[variant];
-  const viewWidth = wordmark ? LOGO_VIEWBOX_WIDTH : 98;
+  const viewWidth = wordmark ? LOGO_VIEWBOX_WIDTH : LOGO_MARK_WIDTH;
 
   return (
     <span
@@ -64,7 +61,9 @@ export function LogoMark({
         className="block shrink-0 fill-current"
       >
         <path d={LOGO_BUBBLE} />
-        <Bars />
+        {LOGO_BARS.map((bar) => (
+          <rect key={bar.x} {...bar} rx="1.1" className="fill-accent" />
+        ))}
         {wordmark
           ? LOGO_GLYPHS.map((glyph) => (
               <path

@@ -41,10 +41,14 @@ test('two tokens with one value fail unless aliased or declared the same', () =>
     ),
     [],
   );
-  const both = [{ theme: 'both', tokens: ['--color-panel', '--color-input'], reason: 'x' }];
+  const pair = { tokens: ['--color-panel', '--color-input'], reason: 'x' };
+  const both = [
+    { ...pair, theme: 'light' },
+    { ...pair, theme: 'dark' },
+  ];
   assert.deepEqual(duplicateTokenFindings(source(''), both), []);
   // A light allowance does not excuse the dark theme.
-  const light = [{ ...both[0], theme: 'light' }];
+  const light = [{ ...pair, theme: 'light' }];
   assert.deepEqual(
     duplicateTokenFindings(source(''), light).map((finding) => finding.split(' ')[1]),
     ['dark'],
@@ -53,7 +57,11 @@ test('two tokens with one value fail unless aliased or declared the same', () =>
 
 test('a chart series may never wear a status or action value, allowlisted or not', () => {
   const source = '@theme { --color-chart-1: #0d9488; --color-success: #0d9488; }';
-  const sameAs = [{ theme: 'both', tokens: ['--color-chart-1', '--color-success'], reason: 'x' }];
+  const sameAs = ['light', 'dark'].map((theme) => ({
+    theme,
+    tokens: ['--color-chart-1', '--color-success'],
+    reason: 'x',
+  }));
   const findings = duplicateTokenFindings(source, sameAs);
   assert.equal(findings.length, 2);
   assert.ok(findings.every((finding) => finding.includes('chart series never wear')));

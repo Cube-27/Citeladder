@@ -38,7 +38,7 @@
   /* Recessed selection track; state tints follow their enclosing surface. */
   --color-track: #eceeed;
   --color-input: #ffffff;
-  --color-surface-inverse: #0b0f0d;
+  --color-surface-inverse: var(--color-foreground);
 
   /* The separation ladder. Four rungs that must each be visibly different
      from the one above it, because they carry the whole hierarchy: the app
@@ -77,9 +77,9 @@
   --color-accent-subtle: #dcfce7;
   --color-accent-soft: #f0fdf4;
   --color-accent-border: #86efac;
-  --color-accent-text: #14532d;
+  --color-accent-text: var(--color-accent);
   --color-selection: #bbf7d0;
-  --color-selection-fg: #0b0f0d;
+  --color-selection-fg: var(--color-foreground);
 
   /* Google's mark (sign-in button, engine logo); identity, never state. */
   --color-brand-google-blue: #4285f4;
@@ -104,12 +104,12 @@
   --color-warning-bg: #fff5db;
   --color-warning-text: #8a4600;
   --color-danger: #b42332;
-  --color-danger-solid: #b42332;
+  --color-danger-solid: var(--color-danger);
   --color-danger-solid-hover: #8f1d29;
   --color-danger-fg: #ffffff;
   --color-danger-bg: #fff0f1;
   --color-danger-border: #f2c6cb;
-  --color-danger-text: #b42332;
+  --color-danger-text: var(--color-danger);
   --color-info: #2f6fdb;
   --color-info-bg: #eef4fd;
   --color-info-border: #c5d7f5;
@@ -191,6 +191,8 @@
   --motion-menu: 280ms;
   --motion-reveal: 720ms;
   --motion-drift: 48s;
+  /* The beat between siblings that settle in sequence. */
+  --motion-stagger: 60ms;
   --ease-standard: cubic-bezier(0.33, 1, 0.68, 1);
   --ease-exit: cubic-bezier(0.2, 0, 1, 0.9);
   /* A long, soft settle for public menus and reveals. */
@@ -390,7 +392,7 @@
 
 /* Firefox + modern browsers supporting scrollbar-color */
 *:hover {
-  scrollbar-color: rgb(142 150 144 / 35%) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-ink-faint) 35%, transparent) transparent;
 }
 
 /* Chromium / Safari fallback */
@@ -411,12 +413,12 @@
 }
 
 *:hover::-webkit-scrollbar-thumb {
-  background-color: rgb(142 150 144 / 35%);
+  background-color: color-mix(in srgb, var(--color-ink-faint) 35%, transparent);
 }
 
 /* Slightly stronger feedback when the thumb itself is hovered */
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(92 100 95 / 50%);
+  background-color: color-mix(in srgb, var(--color-muted) 50%, transparent);
 }
 
 /* Wide content scrolls in its owning region; document overflow stays observable. */
@@ -427,7 +429,7 @@ html {
      and locking body scroll for a modal doesn't shift layout sideways.
      No-op where the OS uses overlay scrollbars. */
   scrollbar-gutter: stable;
-  scrollbar-color: rgb(92 100 95 / 35%) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-muted) 35%, transparent) transparent;
   scrollbar-width: thin;
 }
 
@@ -915,7 +917,6 @@ a.focus-ring:active .type-caption {
   height: auto;
   min-height: var(--control-height-lg);
   padding-inline: 1rem;
-  border-radius: var(--radius-control);
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
   font-weight: 500;
@@ -923,6 +924,8 @@ a.focus-ring:active .type-caption {
   transition-property: transform, background-color, color, border-color, box-shadow;
 }
 
+/* The CTA rule above outranks the button's size utilities, so the hero rung
+   restates them here. */
 [data-public-surface] .marketing-cta-button[data-button-size='marketing'] {
   min-height: var(--control-height-xl);
   padding-inline: 1.25rem;
@@ -1124,8 +1127,7 @@ input:-webkit-autofill:focus {
   --color-accent-border: rgb(118 223 156 / 45%);
   --color-selection: rgb(118 223 156 / 35%);
   --color-selection-fg: #f1f4f2;
-  --color-state-ink: #e1e5e2;
-  --color-surface-inverse: #e1e5e2;
+  --color-state-ink: var(--color-foreground);
   --color-on-inverse: #0b0d0c;
   --color-success: #2ec4b0;
   --color-success-bg: rgb(46 196 176 / 13%);
@@ -1615,7 +1617,7 @@ samp {
 }
 
 .marketing-nav-panel > * {
-  animation: marketing-nav-content-in var(--motion-menu) var(--ease-out-expo) calc(var(--motion-fast) / 2) both;
+  animation: marketing-nav-content-in var(--motion-menu) var(--ease-out-expo) var(--motion-stagger) both;
 }
 
 .marketing-nav-panel-out {

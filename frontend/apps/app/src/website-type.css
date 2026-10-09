@@ -11,28 +11,13 @@
   /* The public and focused-flow type world (docs/design.md §Typography):
      Satoshi carries body, UI and data type; Sentient carries display type. */
   --font-display: var(--font-editorial), serif;
-  /* One ladder, one ratio. Each rung is ~1.2x its neighbour (the minor third
-     the display rungs already used), so the steps are even instead of the old
-     mix of 1.14x at the bottom and 1.27x at the top. The bottom three rungs are
-     also no longer shifted up a size: `xs` is 12px and `base` is 16px here, the
-     same as everywhere else, because a marketing surface being "roomier" is a
-     job for measure and rhythm, not for renaming 14px to `xs`. */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
+  /* The scale is the product's (globals.css @theme) except for the three
+     rungs below: roomier leading at 18px and larger display rungs. Being
+     "roomier" is otherwise a job for measure and rhythm, not for renaming
+     sizes, so every other rung is inherited unchanged. */
+  --text-lg--line-height: 1.75rem;
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
-  --text-xs--line-height: 1rem;
-  --text-sm--line-height: var(--text-sm--line-height);
-  --text-base--line-height: 1.5rem;
-  --text-lg--line-height: 1.75rem;
-  --text-xl--line-height: 1.75rem;
-  --text-2xl--line-height: 2rem;
-  --text-3xl--line-height: 2.25rem;
-  --text-4xl--line-height: 2.5rem;
   --tracking-tight: -0.03em;
   --tracking-wide: 0.02em;
   --tracking-wider: 0.06em;
@@ -59,7 +44,7 @@
   --flow-stack: 0.5rem;
   --flow-step-mark: 1.5rem;
   --flow-step-connector: clamp(1.5rem, 4vw, 4rem);
-  --flow-result-stagger: calc(var(--motion-fast) / 2);
+  --flow-result-stagger: var(--motion-stagger);
 }
 
 .flow-title {
@@ -120,18 +105,8 @@
 .website-feature-heading {
   font-family: var(--font-display);
   font-optical-sizing: auto;
+  font-weight: 500;
   text-wrap: balance;
-}
-
-.website-hero-display,
-.website-page-title,
-.website-section-heading {
-  font-weight: 500;
-}
-
-.website-feature-heading {
-  font-weight: 500;
-  letter-spacing: -0.011em;
 }
 
 /* Centred display headings compress around their own centre line instead of
@@ -169,6 +144,7 @@
 .website-feature-heading {
   font-size: 1.125rem;
   line-height: 1.625rem;
+  letter-spacing: -0.011em;
 }
 
 .website-lead,
@@ -258,13 +234,7 @@
   letter-spacing: -0.005em;
 }
 
-/* Controls take the shared 8px control radius on every surface. The one pill
-   exception is the hero CTA, which opts in with `data-shape='pill'`. */
-:where([data-public-surface]) [data-button-size='md']:not(.app-type-scale *),
-:where([data-public-surface]) [data-button-size='lg']:not(.app-type-scale *) {
-  border-radius: var(--radius-control);
-}
-
+/* The hero CTA is the one pill: it opts in with `data-shape='pill'`. */
 :where([data-public-surface]) [data-shape='pill']:not(.app-type-scale *) {
   border-radius: var(--radius-full);
 }
@@ -1101,42 +1071,22 @@
   }
 }
 
-/* A coded product preview is product UI, not oversized marketing copy. */
+/* A coded product preview is product UI, not oversized marketing copy: it
+   resets exactly the rungs the public scope above (and its 768px step)
+   changes, back to the product scale. */
 .app-type-scale {
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.75rem;
-  --text-4xl: 2rem;
-  --text-xs--line-height: 1rem;
-  --text-sm--line-height: var(--text-sm--line-height);
-  --text-base--line-height: 1.5rem;
   --text-lg--line-height: 1.625rem;
-  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
   --text-2xl--line-height: 2rem;
+  --text-3xl: 1.75rem;
   --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2rem;
   --text-4xl--line-height: 2.5rem;
   --leading-relaxed: 1.625;
   /* Product headings stay in the text face, not the public serif. */
   --font-display: var(--font-heading), sans-serif;
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
-}
-
-/* The squeeze stays marketing-only: product windows reset it, so an
-   embedded canvas keeps reading as the product. */
-.app-type-scale
-  :where(
-    .website-hero-display,
-    .website-page-title,
-    .website-section-heading,
-    .website-feature-heading
-  ) {
-  transform: none;
-  transform-origin: unset;
 }
 
 .app-type-scale :where(.website-feature-heading) {
@@ -1147,11 +1097,6 @@
 .app-type-scale :where(.website-body) {
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
-}
-
-.app-type-scale :where(.website-label) {
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
 }
 
 /* Two steps, not three. The ladder above is the phone; this is the tablet-and-up

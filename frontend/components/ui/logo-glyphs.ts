@@ -6,6 +6,8 @@
  */
 
 export const LOGO_VIEWBOX_WIDTH = 662.356616;
+/** The speech-bubble mark alone, the left edge of the lockup. */
+export const LOGO_MARK_WIDTH = 98;
 export const LOGO_GLYPH_BASELINE = 87.65;
 export const LOGO_GLYPH_SCALE = 0.052002762431;
 export const LOGO_GLYPH_STROKE = 23.07569721;

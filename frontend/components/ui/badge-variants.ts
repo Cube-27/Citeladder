@@ -31,18 +31,12 @@ export const statusBadge = {
 } as const satisfies Record<string, BadgeTone>;
 
 export const sentimentBadge = {
-  positive: {
-    label: 'bg-success-bg text-success-text',
-    dot: 'bg-success',
-  },
+  positive: statusBadge.success,
   neutral: {
     label: 'bg-neutral-bg text-secondary',
     dot: 'bg-neutral',
   },
-  negative: {
-    label: 'bg-danger-bg text-danger-text',
-    dot: 'bg-danger',
-  },
+  negative: statusBadge.danger,
 } as const satisfies Record<string, BadgeTone>;
 
 export const classificationBadge = {

@@ -4,7 +4,15 @@ import { join, relative } from 'node:path';
 import { visitorKeys } from 'oxc-parser';
 export { textContrastViolations } from './design-system-contrast.mjs';
 
-import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './source-ast.mjs';
+import {
+  lineIndex,
+  nameText,
+  parseSource,
+  stringFragments,
+  stringValue,
+  unwrap,
+  walk,
+} from './source-ast.mjs';
 
 const EDITORIAL_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']);
 const EDITORIAL_SIZE = /\btext-(?:2xs|xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)\b/;
@@ -197,9 +205,9 @@ const TYPE_SIZES = [
   'lg',
   'xl',
   ...['2', '3', '4', '5', '6', '7', '8', '9'].map((step) => `${step}xl`),
-  'support',
+  'label',
+  'field',
   'page-title',
-  'heading-sm',
   'role-meta',
   'role-body',
   'role-section',
@@ -766,17 +774,13 @@ const STYLE_COLOUR = /#[\da-f]{3,8}\b|\b(?:rgba?|hsla?|oklch|lab)\(/i;
 
 /** Every class-like token in a module's string and template text. */
 function classTokens(program, lineOf) {
-  const tokens = [];
-  walk(program, (node) => {
-    const text =
-      node.type === 'TemplateElement'
-        ? (node.value.cooked ?? node.value.raw ?? '')
-        : stringValue(node);
-    if (!text) return;
-    const line = lineOf(node.start);
-    for (const token of text.split(/\s+/)) if (token) tokens.push({ token, line });
+  return stringFragments(program).flatMap(({ text, start }) => {
+    const line = lineOf(start);
+    return text
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((token) => ({ token, line }));
   });
-  return tokens;
 }
 
 function styleObjectFindings(node, label, lineOf) {

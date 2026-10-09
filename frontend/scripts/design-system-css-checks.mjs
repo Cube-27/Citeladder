@@ -57,6 +57,7 @@ const RULE_MESSAGES = {
   'css-motion': 'timing must consume var(--motion-*) and var(--ease-*)',
   'css-outline': 'focus outlines belong to the shared focus rule in globals.css',
   'css-shadow': 'box-shadow must be var(--shadow-*), var(--elevation-*) or a 1px token hairline',
+  'css-cycle': 'a custom property must not reference itself',
 };
 
 const isVar = (node) => node.type === 'function' && node.value === 'var';
@@ -212,7 +213,13 @@ function enclosingRule(node) {
 
 function declarationFinding(decl, label) {
   const property = decl.prop.toLowerCase();
-  if (property.startsWith('--')) return null;
+  // A custom property that reads itself is a cycle: the browser drops it and
+  // every consumer silently falls back to the inherited value.
+  if (property.startsWith('--')) {
+    return decl.value.includes(`var(${decl.prop})`)
+      ? ['css-cycle', `${decl.prop}: ${decl.value}`]
+      : null;
+  }
   const value = decl.value;
   if (RADIUS_PROPERTY.test(property)) {
     return radiusAllowed(value) ? null : ['css-radius', value];

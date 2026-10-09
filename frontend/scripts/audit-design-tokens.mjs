@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import postcss from 'postcss';
 
 import { paletteDeclarations, resolvePalette } from './design-system-contrast.mjs';
-import { parseSource, stringValue, walk } from './source-ast.mjs';
+import { parseSource, stringFragments } from './source-ast.mjs';
 
 /**
  * Token audit: globals.css stays the sole value authority, and this reads it.
@@ -61,28 +61,8 @@ const SAME_AS = [
   },
   {
     theme: 'light',
-    tokens: ['--color-foreground', '--color-surface-inverse', '--color-selection-fg'],
-    reason: 'the inverse surface and the selected label are printed in the primary ink',
-  },
-  {
-    theme: 'light',
-    tokens: ['--color-danger', '--color-danger-solid', '--color-danger-text'],
-    reason: 'the light danger red already passes 4.5:1 as mark, fill and text',
-  },
-  {
-    theme: 'light',
-    tokens: ['--color-accent', '--color-accent-text'],
-    reason: 'forest passes 4.5:1 as text in light; dark lifts the text rung',
-  },
-  {
-    theme: 'light',
     tokens: ['--color-border-subtle', '--color-track'],
     reason: 'the recessed track is drawn in the hairline tone in light',
-  },
-  {
-    theme: 'dark',
-    tokens: ['--color-foreground', '--color-surface-inverse', '--color-state-ink'],
-    reason: 'dark inverts on the reading ink, and state tints mix that same ink into a surface',
   },
   {
     theme: 'dark',
@@ -147,9 +127,7 @@ function aliasChain(declarations, token) {
 const sameAsAllowed = (sameAs, theme, first, second) =>
   sameAs.some(
     (group) =>
-      (group.theme === theme || group.theme === 'both') &&
-      group.tokens.includes(first) &&
-      group.tokens.includes(second),
+      group.theme === theme && group.tokens.includes(first) && group.tokens.includes(second),
   );
 
 /**
@@ -221,17 +199,8 @@ function utilityTokens(className) {
 }
 
 /** Literal text of a module: string and template fragments from its AST. */
-function moduleStrings(text, path) {
-  const strings = [];
-  walk(parseSource(text, path), (node) => {
-    const value =
-      node.type === 'TemplateElement'
-        ? (node.value.cooked ?? node.value.raw ?? '')
-        : stringValue(node);
-    if (value) strings.push(value);
-  });
-  return strings;
-}
+const moduleStrings = (text, path) =>
+  stringFragments(parseSource(text, path)).map((fragment) => fragment.text);
 
 /** Every token name a source file consumes, by var(), utility or literal name. */
 function consumedTokens({ path, text }) {
@@ -268,11 +237,6 @@ export function zeroConsumerTokens(source, files) {
     .sort(byName);
 }
 
-const px = (value) => {
-  const rem = /^(-?[\d.]+)rem$/.exec(value);
-  if (rem) return `${Number(rem[1]) * 16}px`;
-  return value;
-};
 const cell = (value) => (value ? `\`${value}\`` : '—');
 const table = (header, rows) =>
   [
@@ -369,7 +333,7 @@ export function generatedBlocks(tokenCss, websiteCss) {
       'radii',
       table(
         ['Token', 'Value'],
-        radii.map(([token, value]) => [cell(token), cell(px(value))]),
+        radii.map(([token, value]) => [cell(token), cell(value)]),
       ),
     ],
     [
@@ -435,14 +399,17 @@ function readSources(base) {
   };
 }
 
+/** design.md with every generated block rebuilt from the CSS. */
+function refreshDesignDoc({ tokenCss, websiteCss, document }) {
+  return refreshGeneratedBlocks(document, generatedBlocks(tokenCss, websiteCss));
+}
+
 /** Everything --check enforces, as violation strings. */
 export function tokenAuditViolations(base = root) {
-  const { tokenCss, websiteCss, document } = readSources(base);
+  const sources = readSources(base);
+  const { tokenCss } = sources;
   const files = CONSUMER_ROOTS.flatMap((directory) => sourceFiles(join(base, directory)));
-  const { stale, missing } = refreshGeneratedBlocks(
-    document,
-    generatedBlocks(tokenCss, websiteCss),
-  );
+  const { stale, missing } = refreshDesignDoc(sources);
   return [
     ...duplicateTokenFindings(tokenCss),
     ...zeroConsumerTokens(tokenCss, files).map(
@@ -469,11 +436,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     }
     console.log('Design tokens are unique, consumed and documented.');
   } else if (mode === '--write') {
-    const { tokenCss, websiteCss, document } = readSources(root);
-    const { text, stale, missing } = refreshGeneratedBlocks(
-      document,
-      generatedBlocks(tokenCss, websiteCss),
-    );
+    const { text, stale, missing } = refreshDesignDoc(readSources(root));
     if (stale.length) writeFileSync(join(root, DESIGN_DOC), text);
     for (const name of missing)
       console.warn(`docs/design.md: generated ${name} markers are missing`);
@@ -483,16 +446,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   } else {
     const { tokenCss } = readSources(root);
     const files = CONSUMER_ROOTS.flatMap((directory) => sourceFiles(join(root, directory)));
-    const rows = tokenInventory(tokenCss).map((row) => {
-      const role = escaped(row.token.slice('--color-'.length));
-      const consumption = new RegExp(
-        `var\\(${escaped(row.token)}\\)|(?:bg|text|border|stroke|fill|from|via|to|ring|divide|decoration|outline|caret|placeholder|shadow)-${role}(?![\\w-])`,
-      );
-      return {
-        ...row,
-        consumers: files.filter(({ text }) => consumption.test(text)).map(({ path }) => path),
-      };
-    });
+    // The same consumption rule the --check gate applies.
+    const consumption = files.map((file) => ({ path: file.path, tokens: consumedTokens(file) }));
+    const rows = tokenInventory(tokenCss).map((row) => ({
+      ...row,
+      consumers: consumption.filter(({ tokens }) => tokens.has(row.token)).map(({ path }) => path),
+    }));
     console.log(JSON.stringify(rows, null, 2));
   }
 }
