@@ -24,7 +24,10 @@ const rangeCodec = stringUrlCodec<AiReferralsRange>(
   RANGE_OPTIONS.map((option) => option.value),
   'latest',
 );
-const granularityCodec = stringUrlCodec<AiReferralsGranularity>(['day', 'week', 'month'], 'week');
+const granularityCodec = stringUrlCodec<AiReferralsGranularity>(
+  GRANULARITY_OPTIONS.map((option) => option.value),
+  'week',
+);
 
 export function AiReferralsScreen({ tabs }: Readonly<{ tabs?: React.ReactNode }> = {}) {
   const { activeProject, isLoading: isProjectLoading } = useProjectContext();

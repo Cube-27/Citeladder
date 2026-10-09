@@ -8,12 +8,10 @@ import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
+type TrafficControlsProps = ControlProps & Readonly<{ crawlAvailable: boolean }>;
 /** Narrow screens give every field the band's full width instead of a ragged wrap. */
 const FIELD = 'max-[700px]:w-full';
-export function TrafficControls({
-  model,
-  crawlAvailable,
-}: Readonly<{ model: ReturnType<typeof useTrafficData>; crawlAvailable: boolean }>) {
+export function TrafficControls({ model, crawlAvailable }: TrafficControlsProps) {
   const { tab } = model;
   const { range, setRange, verification, setVerification } = model.selection;
   return (

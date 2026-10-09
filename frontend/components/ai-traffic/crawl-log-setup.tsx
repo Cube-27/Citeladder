@@ -1,6 +1,11 @@
 'use client';
 import { useId } from 'react';
-import { collectionPointLabel, COLLECTION_POINTS } from '@/lib/ai-traffic/vocabulary';
+import {
+  collectionPointLabel,
+  COLLECTION_POINTS,
+  LOG_FORMATS,
+  logFormatLabel,
+} from '@/lib/ai-traffic/vocabulary';
 import type { useCrawlConnections } from '@/lib/ai-traffic/use-crawl-connections';
 import { CRAWL_LOG_SETUPS, CRAWL_INGEST_ORIGIN } from '@/lib/config/crawl-logs';
 import { Button } from '@/components/ui/button';
@@ -13,12 +18,6 @@ import { RadioGroup } from '@/components/ui/radio-group';
 import { Alert } from '@/components/ui/alert';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
-const FORMATS = [
-  { value: 'ndjson', label: 'NDJSON' },
-  { value: 'json_array', label: 'JSON array' },
-  { value: 'combined', label: 'Apache/Nginx Combined' },
-] as const;
-const formatLabel = (value: string) => FORMATS.find((f) => f.value === value)?.label ?? value;
 const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], string>> = {
   cloudflare_worker:
     'Deploy the downloadable template yourself. Store the token as a Worker secret, use a fail-open route, and expect partial coverage. Every routed request uses your Workers quota.',
@@ -93,7 +92,7 @@ export function CrawlLogSetup({
               ariaLabel="Log format"
               value={format}
               onValueChange={setFormat}
-              options={FORMATS}
+              options={LOG_FORMATS.map((value) => ({ value, label: logFormatLabel(value) }))}
             />
           )}
         </Field>
@@ -220,7 +219,7 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
             onValueChange={setSourceId}
             options={uploadSources.map((s) => ({
               value: s.id,
-              label: s.host + ' · ' + formatLabel(s.format),
+              label: s.host + ' · ' + logFormatLabel(s.format),
             }))}
           />
         )}

@@ -20,6 +20,7 @@ import {
 import { isoDateText, utcTextOf, pydanticUtc } from '../db/timestamps.ts';
 import { sourceList } from './source-reads.ts';
 import { reportingDay, type CrawlScope } from './state.ts';
+import { addDays } from '../referrals/projection.ts';
 
 export type CrawlReadOptions = {
   range?: string | null;
@@ -72,6 +73,14 @@ export function presetDays(options: CrawlReadOptions) {
   if (!days) throw new ApiError(422, 'Invalid crawl range');
   return days;
 }
+/** A window's first and last instants: local midnights in the reporting timezone. */
+export function windowBounds(w: { start: string; end: string }, options: CrawlReadOptions) {
+  const tz = options.reporting_timezone ?? crawlLogs.default_reporting_timezone;
+  return {
+    from: sql<Date>`${w.start}::date::timestamp at time zone ${tz}`,
+    to: sql<Date>`(${w.end}::date + 1)::timestamp at time zone ${tz}`,
+  };
+}
 /** The reporting window every crawl read and the overview route share. */
 export function crawlWindow(options: CrawlReadOptions, now = new Date()) {
   if (Boolean(options.start_date) !== Boolean(options.end_date))
@@ -89,10 +98,7 @@ export function crawlWindow(options: CrawlReadOptions, now = new Date()) {
   }
   const days = presetDays(options);
   const end = currentReportingDay(options, now);
-  return {
-    start: new Date(Date.parse(end) - (days - 1) * 86400000).toISOString().slice(0, 10),
-    end,
-  };
+  return { start: addDays(end, 1 - days), end };
 }
 function purposeBots(purpose?: string | null) {
   if (!purpose) return null;
@@ -278,11 +284,8 @@ export async function activityPage(db: Database, scope: CrawlScope, input: Crawl
   if (options.folder) query = query.where('folder', '=', options.folder);
   if (options.resource_class) query = query.where('resource_class', '=', options.resource_class);
   if (options.range || options.start_date || options.end_date) {
-    const w = crawlWindow(options),
-      tz = options.reporting_timezone;
-    query = query
-      .where('occurred_at', '>=', sql<Date>`${w.start}::date::timestamp at time zone ${tz}`)
-      .where('occurred_at', '<', sql<Date>`(${w.end}::date + 1)::timestamp at time zone ${tz}`);
+    const { from, to } = windowBounds(crawlWindow(options), options);
+    query = query.where('occurred_at', '>=', from).where('occurred_at', '<', to);
   }
   if (binding.keys.length) {
     if (
@@ -456,21 +459,21 @@ function coverageQuality(
   w: { start: string; end: string },
   today: string,
 ) {
-  const end =
-    w.end < today ? w.end : new Date(Date.parse(today) - 86400000).toISOString().slice(0, 10);
+  const end = w.end < today ? w.end : addDays(today, -1);
   const rows = all.filter((row) => row.day <= end);
   const expected = (Date.parse(end) - Date.parse(w.start)) / 86400000 + 1;
-  if (expected < 1) return all.some((row) => row.coverage !== 'unknown') ? 'partial' : 'unknown';
   const hosts = new Set(all.map((row) => row.host));
+  // A window of only the day in progress has no closed day to be complete.
+  const judged = expected >= 1 && hosts.size > 0;
   const keys = (row: (typeof rows)[number]) => row.day + ':' + row.host;
   const complete = new Set(rows.filter((row) => row.coverage === 'complete').map(keys));
-  if (hosts.size > 0 && complete.size === expected * hosts.size) return 'complete';
+  if (judged && complete.size === expected * hosts.size) return 'complete';
   const covered = new Set(
     rows
       .filter((row) => row.coverage === 'complete' || row.coverage === 'declared_complete')
       .map(keys),
   );
-  if (hosts.size > 0 && covered.size === expected * hosts.size) return 'declared_complete';
+  if (judged && covered.size === expected * hosts.size) return 'declared_complete';
   return all.some((row) => row.coverage !== 'unknown') ? 'partial' : 'unknown';
 }
 

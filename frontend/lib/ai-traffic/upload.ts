@@ -167,7 +167,7 @@ export async function uploadCrawlFile(input: {
   sourceId: string;
   resumeId?: string;
   options: ApiRequestOptions;
-  onProgress: (value: { uploadId: string; scanned: number; matched: number; ack: number }) => void;
+  onProgress: (value: { uploadId: string; scanned: number; matched: number }) => void;
 }) {
   const { file, format, mapping, catalog, projectId, sourceId, options } = input;
   const iterator = fileLines(file, format, catalog.max_line_bytes)[Symbol.asyncIterator]();
@@ -179,10 +179,11 @@ export async function uploadCrawlFile(input: {
     if (upload.status !== 'open') throw new Error('Upload is closed');
     if (input.resumeId && (upload.filename !== file.name || upload.size_bytes !== file.size))
       throw new Error('Resume requires the original file');
+    // Reported before the first batch, so a failure there can still be resumed.
+    input.onProgress({ uploadId: upload.id, scanned: 0, matched: 0 });
     let scanned = 0,
       matched = 0,
       seq = 0,
-      ack = upload.last_ack_seq,
       batch: string[] = [],
       batchBytes = 0;
     const scan: Scan = { first: null, last: null, dates: new Set<string>() };
@@ -195,15 +196,13 @@ export async function uploadCrawlFile(input: {
     let envelope = envelopeBytes();
     const flush = async () => {
       if (!batch.length) return;
-      if (seq > upload.last_ack_seq) {
+      if (seq > upload.last_ack_seq)
         await aiTrafficApi.uploadBatch(projectId, sourceId, upload.id, seq, batch, options);
-        ack = seq;
-      }
       seq++;
       envelope = envelopeBytes();
       batch = [];
       batchBytes = 0;
-      input.onProgress({ uploadId: upload.id, scanned, matched, ack });
+      input.onProgress({ uploadId: upload.id, scanned, matched });
     };
     async function consume(line: string) {
       if (options.signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError');
@@ -246,7 +245,7 @@ export async function uploadCrawlFile(input: {
       },
       options,
     );
-    input.onProgress({ uploadId: upload.id, scanned, matched, ack });
+    input.onProgress({ uploadId: upload.id, scanned, matched });
     return { uploadId: upload.id, scanned, matched };
   } finally {
     await iterator.return?.();

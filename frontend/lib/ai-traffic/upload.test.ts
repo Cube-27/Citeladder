@@ -185,6 +185,23 @@ describe('local streaming upload privacy', () => {
       expect.anything(),
     );
   });
+  it('names the created upload before its first batch, so a failed first batch can resume', async () => {
+    vi.mocked(aiTrafficApi.uploadBatch).mockRejectedValueOnce(new Error('network'));
+    const onProgress = vi.fn();
+    await expect(
+      uploadCrawlFile({
+        file: file(JSON.stringify(event('known-robot'))),
+        format: 'ndjson',
+        mapping,
+        catalog,
+        projectId: 'project',
+        sourceId: 'source',
+        options: { workspaceId: 'workspace' },
+        onProgress,
+      }),
+    ).rejects.toThrow('network');
+    expect(onProgress).toHaveBeenCalledWith({ uploadId: 'upload', scanned: 0, matched: 0 });
+  });
   it('skips lines older than the admission window and refuses files with none inside it', async () => {
     const old = { ...event('known-robot', '/old'), timestamp: '2026-01-01T12:00:00Z' };
     await run(file([old, event('known-robot')].map((row) => JSON.stringify(row)).join('\n')));

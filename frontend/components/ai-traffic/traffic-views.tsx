@@ -7,6 +7,7 @@ import type {
   botCrawlersResponseSchema,
   botActivityResponseSchema,
   crawlCatalogSchema,
+  crawlCoverageResponseSchema,
 } from '@citeladder/contracts/ai-traffic';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -219,6 +220,11 @@ export function TrafficActivity({
     </TabPanel>
   );
 }
+function SourceLines({
+  source,
+}: Readonly<{ source?: z.infer<typeof crawlCoverageResponseSchema>['sources'][number] }>) {
+  return <CellLines lines={[source?.host ?? 'Removed source', words(source?.setup ?? '')]} />;
+}
 /** A primary value with its qualifiers beneath it in caption ink. */
 function CellLines({ lines }: Readonly<{ lines: string[] }>) {
   const [first, ...rest] = lines.filter(Boolean);
@@ -294,12 +300,7 @@ function CoverageTable({
                     <CellLines lines={[r.reporting_date, r.reporting_timezone]} />
                   </TableCell>
                   <TableCell>
-                    <CellLines
-                      lines={[
-                        data.sources.find((s) => s.id === r.source_id)?.host ?? 'Removed source',
-                        words(data.sources.find((s) => s.id === r.source_id)?.setup ?? ''),
-                      ]}
-                    />
+                    <SourceLines source={data.sources.find((s) => s.id === r.source_id)} />
                   </TableCell>
                   <TableCell>
                     <CellLines lines={[coverageLabel(r.coverage), reasonLabel(r.reason)]} />

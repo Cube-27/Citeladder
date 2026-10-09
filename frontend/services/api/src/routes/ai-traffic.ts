@@ -20,6 +20,7 @@ import {
   crawlerPage,
   activityPage,
   coveragePage,
+  windowBounds,
   withReportingTimezone,
   type CrawlReadOptions,
 } from '../crawl-logs/reads.ts';
@@ -86,10 +87,8 @@ export const aiTrafficRoutes = [
         .orderBy('audit_scope')
         .orderBy('created_at', 'desc')
         .orderBy('id', 'desc');
-      const w = crawlWindow(options);
-      audits = audits
-        .where('created_at', '>=', new Date(w.start + 'T00:00:00Z'))
-        .where('created_at', '<', new Date(Date.parse(w.end) + 86400000));
+      const bounds = windowBounds(crawlWindow(options), options);
+      audits = audits.where('created_at', '>=', bounds.from).where('created_at', '<', bounds.to);
       const ids = (await audits.execute()).map((a) => a.id);
       const citations = ids.length
         ? await db
