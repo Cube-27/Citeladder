@@ -14,7 +14,7 @@
 @theme {
   --font-sans:
     var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: var(--font-heading), sans-serif;
+  --font-display: var(--font-text), sans-serif;
 
   /* One palette for every surface (owner decision, 2026-10-07): a quiet
      green-tinted neutral ground with white paper, near-black green ink and
@@ -733,7 +733,7 @@ body {
      rendered size: a flat 2 paints a 1px stem at 12px and a 2px stem at
      24px, which is why large icons currently read heavier than small ones.
      These rungs compensate so every glyph lands near a 1.3px stem, in step
-     with Satoshi at body sizes. Compensation is partial on purpose: an
+     with Geist at body sizes. Compensation is partial on purpose: an
      identical absolute stem at 12px closes up the counters and muddies the
      glyph.
 
